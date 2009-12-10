@@ -1,9 +1,9 @@
-Orange is a component based machine learning library for Python developed at
-Laboratory of Artificial Intelligence, Faculty of Computer and Information
-Science, University of Ljubljana, Slovenia.
+Orange is a comprehensive, component-based framework for machine
+learning and data mining, developed at Laboratory of Artificial
+Intelligence, Faculty of Computer and Information Science,
+University of Ljubljana, Slovenia.
 
 For licensing information about Orange see orange/doc/LICENSES file.
 
-For licensing information about Orange Bioinformatics add-on see
-add-ons/Bioinformatics/doc/LICENSES file.
-
+For licensing information about specific Orange add-ons see their 
+license files (orange/add-ons/*/doc/LICENCES).
