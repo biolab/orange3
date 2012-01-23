@@ -90,7 +90,7 @@ class pyxtract_build_ext(build_ext):
         if not self.inplace:
             self.library_dirs.append(self.build_lib) 
         else:
-            self.library_dirs.append("./") 
+            self.library_dirs.append("./orange")
         
     def build_extension(self, ext):
         if isinstance(ext, LibStatic):
