@@ -9,7 +9,8 @@ from distutils.command.install_lib import install_lib
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
 
-have_setuptools = getattr(distutils.core, "have_setuptools", False) # This is set in setupegg.py
+# This is set in setupegg.py
+have_setuptools = getattr(distutils.core, "have_setuptools", False) 
 
 import re
 import glob
@@ -23,6 +24,7 @@ from distutils.file_util import copy_file
 from distutils import log
 
 from distutils.sysconfig import get_python_inc, get_config_var
+
 import numpy
 numpy_include_dir = numpy.get_include()
 python_include_dir = get_python_inc(plat_specific=1)
@@ -79,11 +81,14 @@ class pyxtract_build_ext(build_ext):
         
     def finalize_options(self):
         build_ext.finalize_options(self)
-        # add the build_lib dir (for liborange_include)
+        # add the build_lib dir and build_temp (for 
+        # liborange_include and liborange)            
         if not self.inplace:
-            self.library_dirs.append(self.build_lib) 
+            self.library_dirs.append(self.build_lib) # for linking with liborange.so
+            self.library_dirs.append(self.build_temp) # for linking with liborange_include.a
         else:
-            self.library_dirs.append("./orange")
+            self.library_dirs.append("./orange") # for linking with liborange.so
+            self.library_dirs.append(self.build_temp) # for linking with liborange_include.a
         
     def build_extension(self, ext):
         if isinstance(ext, LibStatic):
@@ -99,8 +104,6 @@ class pyxtract_build_ext(build_ext):
                 ext_fullpath = self.get_ext_fullpath(ext.name)
                 lib = glob.glob(os.path.join(self.build_temp, "*", "*", ext.name + ".lib"))[0]
                 copy_file(lib, os.path.splitext(ext_fullpath)[0] + ".lib")
-                          
-                #self.get
             else:
                 # Make lib{name}.so link to {name}.so
                 ext_path = self.get_ext_fullpath(ext.name)
@@ -128,8 +131,6 @@ class pyxtract_build_ext(build_ext):
         sources = list(sources)
         
         ext_path = self.get_ext_fullpath(ext.name)
-#        output_dir, _ = os.path.split(ext_path)
-#        lib_filename = self.compiler.library_filename(ext.name, lib_type='static', output_dir=output_dir)
         
         depends = sources + ext.depends
         if not (self.force or newer_group(depends, ext_path, 'newer')):
@@ -218,10 +219,11 @@ class pyxtract_build_ext(build_ext):
                    "a list of source filenames") % ext.name
         sources = list(sources)
         
-        ext_path = self.get_ext_fullpath(ext.name)
-        output_dir, _ = os.path.split(ext_path)
+        # Static libs get build in the build_temp directory
+        output_dir = self.build_temp
         if not os.path.exists(output_dir): #VSC fails if the dir does not exist
             os.makedirs(output_dir)
+            
         lib_filename = self.compiler.library_filename(ext.name, lib_type='static', output_dir=output_dir)
         
         depends = sources + ext.depends
@@ -285,12 +287,14 @@ class pyxtract_build_ext(build_ext):
         # Detect target language, if not provided
         language = ext.language or self.compiler.detect_language(sources)
         
-        #first remove old library (ar only appends the contents if archive already exists
+        #first remove old library (ar only appends the contents if archive already exists)
         try:
             os.remove(lib_filename)
         except OSError, ex:
             log.debug("failed to remove obsolete static library %s: %s" %(ext.name, str(ex)))
 
+        # The static library is created in the temp dir, it is used during the compile step only
+        # it should not be included in the final install
         self.compiler.create_static_lib(
             objects, ext.name, output_dir,
             debug=self.debug,
