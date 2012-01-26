@@ -1,15 +1,6 @@
 #!usr/bin/env python
 
-import os, sys
-have_setuptools = False
-
-if "USE_SETUPTOOLS" in os.environ:
-    try:
-        from setuptools import setup
-        have_setuptools = True
-    except ImportError:
-        have_setuptools = False
-        
+import os, sys        
 import distutils.core
 from distutils.core import setup
 from distutils.core import Extension
@@ -17,6 +8,8 @@ from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
+
+have_setuptools = getattr(distutils.core, "have_setuptools", False) # This is set in setupegg.py
 
 import re
 import glob
