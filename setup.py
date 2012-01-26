@@ -482,7 +482,7 @@ else:
 
 setup(cmdclass={"build_ext": pyxtract_build_ext, "install_lib": my_install_lib},
       name ="Orange",
-      version = "2.5a1",
+      version = "2.5a2",
       description = "Orange data mining library for python.",
       author = "Bioinformatics Laboratory, FRI UL",
       author_email = "orange@fri.uni-lj.si",
