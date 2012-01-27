@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Orange Canvas
+GenericName=Data Mining Suite
+Comment=Explore and analyze your data
+Exec=orange-canvas
+Icon=orange-canvas
+Terminal=false
+Type=Application
+Categories=Education;Science;ArtificialIntelligence;DataVisualization;Qt;
+X-GNOME-FullName=Orange Canvas Data Mining Suite
