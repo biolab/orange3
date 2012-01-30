@@ -1,1 +1,1 @@
-graft source
+recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip
