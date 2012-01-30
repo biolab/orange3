@@ -4,7 +4,7 @@ Installing
 To build and install Orange run ::
 
      python setup.py build
-	 python setup.py install
+     python setup.py install
 
 from the command line. You can customize the build process by
 editing the setup-site.cfg file in this directory (see the comments
@@ -15,4 +15,4 @@ Starting Orange Canvas
 
 Start orange canvas from the command line with ::
 
-	orange-canvas
+     orange-canvas
