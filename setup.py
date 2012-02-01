@@ -300,6 +300,23 @@ class pyxtract_build_ext(build_ext):
             debug=self.debug,
             target_lang=language)
         
+    def get_libraries(self, ext):
+        """ Change the 'orange' library name to 'orange_d' if
+        building in debug mode. Using ``get_ext_filename`` to discover if
+        _d postfix is required.
+        
+        """
+        libraries = build_ext.get_libraries(self, ext)
+        if "orange" in libraries and self.debug:
+            filename = self.get_ext_filename("orange")
+            basename = os.path.basename(filename)
+            name, ext = os.path.splitext(basename)
+            if name.endswith("_d"):
+                index = libraries.index("orange")
+                libraries[index] = "orange_d"
+            
+        return libraries
+        
     if not hasattr(build_ext, "get_ext_fullpath"):
         #On mac OS X python 2.6.1 distutils does not have this method
         def get_ext_fullpath(self, ext_name):
