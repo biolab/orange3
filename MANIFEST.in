@@ -1,1 +1,3 @@
 recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip
+recursive-include docs *.rst *.py *.png
+graft docs/sphinx-ext
