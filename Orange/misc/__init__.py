@@ -3,6 +3,63 @@
 
 Module Orange.misc contains common functions and classes which are used in other modules.
 
+.. index: Random number generator
+
+-----------------------
+Random number generator
+-----------------------
+
+:obj:`Random` uses the 
+`Mersenne twister <http://en.wikipedia.org/wiki/Mersenne_twister>`_ algorithm
+to generate random numbers.
+
+::
+
+    >>> import Orange
+    >>> rg = Orange.misc.Random(42)
+    >>> rg(10)
+    4
+    >>> rg(10)
+    7
+    >>> rg.uses  # We called rg two times.
+    2
+    >>> rg.reset()
+    >>> rg(10)
+    4
+    >>> rg(10)
+    7
+    >>> rg.uses
+    2
+
+
+.. class:: Random(initseed)
+
+    :param initseed: Seed used for initializing the random generator.
+    :type initseed: int
+
+    .. method:: __call__(n)
+
+        Return a random integer R such that 0 <= R < n.
+
+        :type n: int
+
+    .. method:: reset([initseed])
+
+        Reinitialize the random generator with `initseed`. If `initseed`
+        is not given use the existing value of attribute `initseed`.
+
+    .. attribute:: uses
+        
+        The number of times the generator was called after
+        initialization/reset.
+    
+    .. attribute:: initseed
+
+        Random seed.
+
+Two examples or random number generator uses found in the documentation
+are :obj:`Orange.evaluation.testing` and :obj:`Orange.data.Table`.
+
 .. automodule:: Orange.misc.counters
   :members:
 
@@ -19,13 +76,14 @@ Module Orange.misc contains common functions and classes which are used in other
 
 .. automodule:: Orange.misc.r
 
-.. automodule:: Orange.misc.random
 
 """
 import environ
 import counters
 import render
 import serverfiles
+
+from Orange.core import RandomGenerator as Random
 
 # addons is intentionally not imported; if it were, add-ons' directories would
 # be added to the python path. If that sounds OK, this can be changed ...

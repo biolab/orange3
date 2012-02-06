@@ -64,7 +64,7 @@ for details.
         These two fields deal with the way :obj:`SubsetIndices` generates
         random numbers.
 
-        If :obj:`random_generator` (of type :obj:`orange.RandomGenerator`)
+        If :obj:`random_generator` (of type :obj:`Orange.misc.Random`)
         is set, it is used. The same random generator can be shared
         between different objects; this can be useful when constructing an
         experiment that depends on a single random seed. If you use this,
