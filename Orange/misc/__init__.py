@@ -81,7 +81,6 @@ are :obj:`Orange.evaluation.testing` and :obj:`Orange.data.Table`.
 import environ
 import counters
 import render
-import serverfiles
 
 from Orange.core import RandomGenerator as Random
 
