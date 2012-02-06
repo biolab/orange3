@@ -100,7 +100,7 @@ from Orange.data import variable
 from Orange.data.variable import Variable
 MakeStatus = Variable.MakeStatus
 
-def loadARFF(filename, create_on_new = MakeStatus.Incompatible, **kwargs):
+def loadARFF(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in Weka ARFF format
        if there exists no .xml file with the same name. If it does, a multi-label
        dataset is read and returned.
@@ -108,35 +108,35 @@ def loadARFF(filename, create_on_new = MakeStatus.Incompatible, **kwargs):
     if filename[-5:] == ".arff":
         filename = filename[:-5]
     if os.path.exists(filename + ".xml") and os.path.exists(filename + ".arff"):
-        xml_name = filename + ".xml" 
-        arff_name = filename + ".arff" 
-        return Orange.multilabel.mulan.trans_mulan_data(xml_name,arff_name,create_on_new)
+        xml_name = filename + ".xml"
+        arff_name = filename + ".arff"
+        return Orange.multilabel.mulan.trans_mulan_data(xml_name, arff_name, create_on_new)
     else:
         return loadARFF_Weka(filename, create_on_new)
-        
-def loadARFF_Weka(filename, create_on_new = Orange.data.variable.Variable.MakeStatus.Incompatible, **kwargs):
+
+def loadARFF_Weka(filename, create_on_new=Orange.data.variable.Variable.MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in Weka ARFF format"""
     if not os.path.exists(filename) and os.path.exists(filename + ".arff"):
-        filename = filename + ".arff" 
-    f = open(filename,'r')
-    
+        filename = filename + ".arff"
+    f = open(filename, 'r')
+
     attributes = []
     attributeLoadStatus = []
-    
+
     name = ''
     state = 0 # header
     data = []
     for l in f.readlines():
         l = l.rstrip("\n") # strip \n
-        l = l.replace('\t',' ') # get rid of tabs
+        l = l.replace('\t', ' ') # get rid of tabs
         x = l.split('%')[0] # strip comments
         if len(x.strip()) == 0:
             continue
         if state == 0 and x[0] != '@':
-            print "ARFF import ignoring:",x
+            print "ARFF import ignoring:", x
         if state == 1:
             if x[0] == '{':#sparse data format, begin with '{', ends with '}'
-                r = [None]*len(attributes)
+                r = [None] * len(attributes)
                 dd = x[1:-1]
                 dd = dd.split(',')
                 for xs in dd:
@@ -151,7 +151,7 @@ def loadARFF_Weka(filename, create_on_new = Orange.data.variable.Variable.MakeSt
                 for xs in dd:
                     y = xs.strip(" ")
                     if len(y) > 0:
-                        if y[0]=="'" or y[0]=='"':
+                        if y[0] == "'" or y[0] == '"':
                             r.append(xs.strip("'\""))
                         else:
                             ns = xs.split()
@@ -176,7 +176,7 @@ def loadARFF_Weka(filename, create_on_new = Orange.data.variable.Variable.MakeSt
                     idx = 1
                     while y[idx][-1] != "'":
                         idx += 1
-                        atn += ' '+y[idx]
+                        atn += ' ' + y[idx]
                     atn = atn.strip("' ")
                 else:
                     atn = y[1]
@@ -187,26 +187,26 @@ def loadARFF_Weka(filename, create_on_new = Orange.data.variable.Variable.MakeSt
                     vals = []
                     for y in w[0].split(','):
                         sy = y.strip(" '\"")
-                        if len(sy)>0:
+                        if len(sy) > 0:
                             vals.append(sy)
                     a, s = Variable.make(atn, Orange.data.Type.Discrete, vals, [], create_on_new)
                 else:
                     # real...
                     a, s = Variable.make(atn, Orange.data.Type.Continuous, [], [], create_on_new)
-                    
+
                 attributes.append(a)
                 attributeLoadStatus.append(s)
     # generate the domain
     d = Orange.data.Domain(attributes)
     lex = []
     for dd in data:
-        e = Orange.data.Instance(d,dd)
+        e = Orange.data.Instance(d, dd)
         lex.append(e)
-    t = Orange.data.Table(d,lex)
+    t = Orange.data.Table(d, lex)
     t.name = name
-    
-    if hasattr(t, "attribute_load_status"):
-        t.attribute_load_status = attributeLoadStatus
+
+    #if hasattr(t, "attribute_load_status"):
+    t.setattr("attribute_load_status", attributeLoadStatus)
     return t
 loadARFF = Orange.misc.deprecated_keywords(
 {"createOnNew": "create_on_new"}
@@ -219,8 +219,8 @@ def toARFF(filename, table, try_numericize=0):
     if filename[-5:] == ".arff":
         filename = filename[:-5]
     #print filename
-    f = open(filename+'.arff','w')
-    f.write('@relation %s\n'%t.domain.classVar.name)
+    f = open(filename + '.arff', 'w')
+    f.write('@relation %s\n' % t.domain.classVar.name)
     # attributes
     ats = [i for i in t.domain.attributes]
     ats.append(t.domain.classVar)
@@ -239,21 +239,21 @@ def toARFF(filename, table, try_numericize=0):
                 real = 0
         iname = str(i.name)
         if iname.find(" ") != -1:
-            iname = "'%s'"%iname
-        if real==1:
-            f.write('@attribute %s real\n'%iname)
+            iname = "'%s'" % iname
+        if real == 1:
+            f.write('@attribute %s real\n' % iname)
         else:
-            f.write('@attribute %s { '%iname)
+            f.write('@attribute %s { ' % iname)
             x = []
             for j in i.values:
                 s = str(j)
                 if s.find(" ") == -1:
-                    x.append("%s"%s)
+                    x.append("%s" % s)
                 else:
-                    x.append("'%s'"%s)
+                    x.append("'%s'" % s)
             for j in x[:-1]:
-                f.write('%s,'%j)
-            f.write('%s }\n'%x[-1])
+                f.write('%s,' % j)
+            f.write('%s }\n' % x[-1])
 
     # examples
     f.write('@data\n')
@@ -262,21 +262,21 @@ def toARFF(filename, table, try_numericize=0):
         for i in range(len(ats)):
             s = str(j[i])
             if s.find(" ") == -1:
-                x.append("%s"%s)
+                x.append("%s" % s)
             else:
-                x.append("'%s'"%s)
+                x.append("'%s'" % s)
         for i in x[:-1]:
-            f.write('%s,'%i)
-        f.write('%s\n'%x[-1])
+            f.write('%s,' % i)
+        f.write('%s\n' % x[-1])
 
-def loadMULAN(filename, create_on_new = Orange.data.variable.Variable.MakeStatus.Incompatible, **kwargs):
+def loadMULAN(filename, create_on_new=Orange.data.variable.Variable.MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in Mulan ARFF and XML format"""
     if filename[-4:] == ".xml":
         filename = filename[:-4]
     if os.path.exists(filename + ".xml") and os.path.exists(filename + ".arff"):
-        xml_name = filename + ".xml" 
-        arff_name = filename + ".arff" 
-        return Orange.multilabel.mulan.trans_mulan_data(xml_name,arff_name)
+        xml_name = filename + ".xml"
+        arff_name = filename + ".arff"
+        return Orange.multilabel.mulan.trans_mulan_data(xml_name, arff_name)
     else:
         return None
 loadARFF = Orange.misc.deprecated_keywords(
@@ -308,7 +308,7 @@ def toC50(filename, table, try_numericize=0):
                         break
             else:
                 real = 0
-        if real==1:
+        if real == 1:
             f.write('%s: continuous.\n' % i.name)
         else:
             f.write('%s: ' % i.name)
@@ -320,7 +320,7 @@ def toC50(filename, table, try_numericize=0):
             f.write('%s.\n' % x[-1])
     # examples
     f.close()
-    
+
     f = open('%s.data' % filename_prefix, 'w')
     for j in t:
         x = []
@@ -330,11 +330,11 @@ def toC50(filename, table, try_numericize=0):
             f.write('%s,' % i)
         f.write('%s\n' % x[-1])
 
-def toR(filename,t):
+def toR(filename, t):
     """Save class:`Orange.data.Table` to file in R format"""
     if str.upper(filename[-2:]) == ".R":
         filename = filename[:-2]
-    f = open(filename+'.R','w')
+    f = open(filename + '.R', 'w')
 
     atyp = []
     aord = []
@@ -351,25 +351,25 @@ def toR(filename,t):
     f.write('data <- data.frame(\n')
     for i in xrange(len(labels)):
         if atyp[i] == 2: # continuous
-            f.write('"%s" = c('%(labels[i]))
+            f.write('"%s" = c(' % (labels[i]))
             for j in xrange(len(t)):
                 if t[j][i].isSpecial():
                     f.write('NA')
                 else:
                     f.write(str(t[j][i]))
-                if (j == len(t)-1):
+                if (j == len(t) - 1):
                     f.write(')')
                 else:
                     f.write(',')
         elif atyp[i] == 1: # discrete
             if aord[i]: # ordered
-                f.write('"%s" = ordered('%labels[i])
+                f.write('"%s" = ordered(' % labels[i])
             else:
-                f.write('"%s" = factor('%labels[i])
+                f.write('"%s" = factor(' % labels[i])
             f.write('levels=c(')
             for j in xrange(len(as0[i].values)):
-                f.write('"x%s"'%(as0[i].values[j]))
-                if j == len(as0[i].values)-1:
+                f.write('"x%s"' % (as0[i].values[j]))
+                if j == len(as0[i].values) - 1:
                     f.write('),c(')
                 else:
                     f.write(',')
@@ -377,22 +377,22 @@ def toR(filename,t):
                 if t[j][i].isSpecial():
                     f.write('NA')
                 else:
-                    f.write('"x%s"'%str(t[j][i]))
-                if (j == len(t)-1):
+                    f.write('"x%s"' % str(t[j][i]))
+                if (j == len(t) - 1):
                     f.write('))')
                 else:
                     f.write(',')
         else:
             raise "Unknown attribute type."
-        if (i < len(labels)-1):
+        if (i < len(labels) - 1):
             f.write(',\n')
     f.write(')\n')
-    
+
 def toLibSVM(filename, example):
     """Save class:`Orange.data.Table` to file in LibSVM format"""
     import Orange.classification.svm
     Orange.classification.svm.tableToSVMFormat(example, open(filename, "wb"))
-    
+
 def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in LibSVM format"""
     attributeLoadStatus = {}
@@ -400,12 +400,12 @@ def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
         attr, s = Orange.data.variable.make(name, Orange.data.Type.Continuous, [], [], create_on_new)
         attributeLoadStatus[attr] = s
         return attr
-    
+
     def make_disc(name, unordered):
         attr, s = Orange.data.variable.make(name, Orange.data.Type.Discrete, [], unordered, create_on_new)
         attributeLoadStatus[attr] = s
         return attr
-    
+
     data = [line.split() for line in open(filename, "rb").read().splitlines() if line.strip()]
     vars = type("attr", (dict,), {"__missing__": lambda self, key: self.setdefault(key, make_float(key))})()
     item = lambda i, v: (vars[i], vars[i](v))
@@ -446,11 +446,11 @@ def split_escaped_str(str, split_str=" ", escape="\\"):
             else:
                 res.append(str[start:index])
                 start = find_start = index + 1
-                
+
         elif index == -1:
             res.append(str[start:])
     return res
-    
+
 def is_standard_var_def(cell):
     """Is the cell a standard variable definition (empty, cont, disc, string)
     """
@@ -459,12 +459,12 @@ def is_standard_var_def(cell):
         return True
     except ValueError, ex:
         return False
-    
+
 def is_var_types_row(row):
     """ Is the row a variable type definition row (as in the orange .tab file)
     """
     return all(map(is_standard_var_def, row))
-        
+
 def var_type(cell):
     """ Return variable type from a variable type definition in cell. 
     """
@@ -487,7 +487,7 @@ def var_types(row):
     """ Return variable types from row. 
     """
     return map(var_type, row)
-    
+
 def is_var_attributes_row(row):
     """ Is the row an attribute definition row (i.e. the third row in the
     standard orange .tab file format).
@@ -532,20 +532,20 @@ def var_attribute(cell):
         return specifier, dict(map(_var_attribute_label_parse, items))
     else:
         raise ValueError("Unknown attribute label definition")
-    
+
 def var_attributes(row):
     """ Return variable specifiers and label definitions for row
     """
     return map(var_attribute, row)
-    
-        
+
+
 class _var_placeholder(object):
     """ A place holder for an arbitrary variable while it's values are still unknown.
     """
     def __init__(self, name="", values=[]):
         self.name = name
         self.values = set(values)
-        
+
 class _disc_placeholder(_var_placeholder):
     """ A place holder for discrete variables while their values are not yet known.
     """
@@ -559,7 +559,7 @@ def is_val_cont(cell):
         return True
     except ValueError:
         return False
-    
+
 def is_variable_cont(values, n=None, cutoff=0.5):
     """ Is variable with ``values`` in column (``n`` rows) a continuous variable. 
     """
@@ -567,8 +567,8 @@ def is_variable_cont(values, n=None, cutoff=0.5):
     if n is None:
         n = len(values) or 1
     return (float(cont) / n) > cutoff
-    
-    
+
+
 def is_variable_discrete(values, n=None, cutoff=0.3):
     """ Is variable with ``values`` in column (``n`` rows) a discrete variable. 
     """
@@ -590,40 +590,40 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
     has_header = snifer.has_header(sample)
     file.seek(0) # Rewind
     reader = csv.reader(file, dialect=dialect)
-    
+
     header = types = var_attrs = None
-    
+
 #    if not has_header:
 #        raise ValueError("No header in the data file.")
-    
+
     header = reader.next()
-    
+
     if header:
         # Try to get variable definitions
         types_row = reader.next()
         if is_var_types_row(types_row):
             types = var_types(types_row)
-    
+
     if types:
         # Try to get the variable attributes
         # (third line in the standard orange tab format).
         labels_row = reader.next()
         if is_var_attributes_row(labels_row):
             var_attrs = var_attributes(labels_row)
-            
+
     # If definitions not present fill with blanks
     if not types:
         types = [None] * len(header)
     if not var_attrs:
         var_attrs = [None] * len(header)
-    
+
     # start from the beginning
     file.seek(0)
     reader = csv.reader(file, dialect=dialect)
     for defined in [header, types, var_attrs]:
         if any(defined): # skip definition rows if present in the file
             reader.next()
-    
+
     variables = []
     undefined_vars = []
     for i, (name, var_t) in enumerate(zip(header, types)):
@@ -645,16 +645,16 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
         elif var_t is None:
             variables.append(_var_placeholder(name))
             undefined_vars.append((i, variables[-1]))
-            
+
     data = []
     for row in reader:
         data.append(row)
         for ind, var_def in undefined_vars:
             var_def.values.add(row[ind])
-    
+
     for ind, var_def in undefined_vars:
         values = var_def.values - set(["?", ""]) # TODO: Other unknown strings?
-        values = sorted(values)  
+        values = sorted(values)
         if isinstance(var_def, _disc_placeholder):
             variables[ind] = variable.make(var_def.name, Orange.data.Type.Discrete, [], values, create_new_on)
         elif isinstance(var_def, _var_placeholder):
@@ -666,7 +666,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
                 variables[ind] = variable.make(var_def.name, Orange.data.Type.String, [], [], create_new_on)
             else:
                 raise ValueError("Strange column in the data")
-    
+
     vars = []
     vars_load_status = []
     attribute_load_status = []
@@ -675,7 +675,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
     for var, status in vars:
         vars.append(var)
         vars_load_status.append(status)
-        
+
     attributes = []
     class_var = []
     metas = {}
@@ -704,26 +704,26 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
             attributes.append(var)
             attribute_load_status.append(status)
             attribute_indices.append(i)
-            
+
     if len(class_var) > 1:
         raise ValueError("Multiple class variables defined")
-    
+
     class_var = class_var[0] if class_var else None
-    
+
     attribute_load_status += class_var_load_status
     variable_indices = attribute_indices + class_indices
     domain = Orange.data.Domain(attributes, class_var)
     domain.add_metas(metas)
     normal = [[row[i] for i in variable_indices] for row in data]
-    meta_part = [[row[i] for i,_ in meta_indices] for row in data]
+    meta_part = [[row[i] for i, _ in meta_indices] for row in data]
     table = Orange.data.Table(domain, normal)
     for ex, m_part in zip(table, meta_part):
         for (column, var), val in zip(meta_indices, m_part):
             ex[var] = var(val)
-            
+
     table.metaAttributeLoadStatus = meta_attribute_load_status
     table.attributeLoadStatus = attribute_load_status
-    
+
     return table
 
 def as_open_file(file, mode="rb"):
@@ -732,7 +732,7 @@ def as_open_file(file, mode="rb"):
     else: # assuming it is file like with proper mode, could check for write, read
         pass
     return file
-        
+
 def save_csv(file, table, orange_specific=True, **kwargs):
     import csv
     file = as_open_file(file, "wb")
@@ -744,7 +744,7 @@ def save_csv(file, table, orange_specific=True, **kwargs):
     all_vars = attrs + ([class_var] if class_var else []) + metas
     names = [v.name for v in all_vars]
     writer.writerow(names)
-    
+
     if orange_specific:
         type_cells = []
         for v in all_vars:
@@ -759,22 +759,22 @@ def save_csv(file, table, orange_specific=True, **kwargs):
             else:
                 raise TypeError("Unknown variable type")
         writer.writerow(type_cells)
-        
+
         var_attr_cells = []
         for spec, var in [("", v) for v in attrs] + \
-                         ([("class", class_var)] if class_var else []) +\
+                         ([("class", class_var)] if class_var else []) + \
                          [("m", v) for v in metas]:
-            
+
             labels = ["{0}={1}".format(*t) for t in var.attributes.items()] # TODO escape spaces
             var_attr_cells.append(" ".join([spec] if spec else [] + labels))
-            
+
         writer.writerow(var_attr_cells)
-        
+
     for instance in table:
         instance = list(instance) + [instance[m] for m in metas]
         writer.writerow(instance)
-    
-        
+
+
 register_file_type("R", None, toR, ".R")
 register_file_type("Weka", loadARFF, toARFF, ".arff")
 register_file_type("Mulan", loadMULAN, None, ".xml")
@@ -824,7 +824,7 @@ from ConfigParser import SafeConfigParser
 def persistent_search_paths():
     """ Return a list of persistent registered (prefix, path) pairs
     """
-    
+
     global_settings_dir = Orange.misc.environ.install_dir
     user_settings_dir = Orange.misc.environ.orange_settings_dir
     parser = SafeConfigParser()
@@ -845,28 +845,28 @@ def save_persistent_search_path(prefix, path):
     """
     if isinstance(path, list):
         path = os.path.pathsep.join(path)
-        
+
     user_settings_dir = Orange.misc.environ.orange_settings_dir
     if not os.path.exists(user_settings_dir):
         try:
             os.makedirs(user_settings_dir)
         except OSError:
             pass
-    
+
     filename = os.path.join(user_settings_dir, "orange-search-paths.cfg")
     parser = SafeConfigParser()
     parser.read([filename])
-    
+
     if not parser.has_section("paths"):
         parser.add_section("paths")
-        
+
     if path is not None:
         parser.set("paths", prefix, path)
     elif parser.has_option("paths", prefix):
         # Remove the registered prefix 
         parser.remove_option("paths", prefix)
     parser.write(open(filename, "wb"))
-    
+
 def search_paths(prefix=None):
     """ Return a list of the registered (prefix, path) pairs.
     """
@@ -879,7 +879,7 @@ def search_paths(prefix=None):
         return ""
     else:
         return paths
-    
+
 def set_search_path(prefix, path, persistent=False):
     """ Associate a search path with a prefix.
     
@@ -895,17 +895,17 @@ def set_search_path(prefix, path, persistent=False):
     
     """
     global _session_paths
-    
+
     if isinstance(path, list):
         path = os.path.pathsep.join(path)
-        
+
     if persistent:
         save_persistent_search_path(prefix, path)
         # Invalidate the persistent_search_paths cache.
         persistent_search_paths.clear()
     else:
         _session_paths.append((prefix, path))
-        
+
 
 def expand_filename(prefixed_name):
     """ Expand the prefixed filename with the full path.
@@ -925,14 +925,14 @@ def expand_filename(prefixed_name):
         return os.path.join(path, filename)
     else:
         raise ValueError("Unknown prefix %r." % prefix)
-    
+
 def find_file(prefixed_name):
     """ Find the prefixed filename and return its full path.
     """
     if not os.path.exists(prefixed_name):
         if ":" not in prefixed_name:
-            raise ValueError("Not a prefixed name.") 
-        prefix, filename = prefixed_name.split(":", 1) 
+            raise ValueError("Not a prefixed name.")
+        prefix, filename = prefixed_name.split(":", 1)
         paths = search_paths(prefix)
         if paths:
             for path in paths.split(os.path.pathsep):
@@ -944,4 +944,4 @@ def find_file(prefixed_name):
             raise ValueError("Unknown prefix %r." % prefix)
     else:
         return prefixed_name
-    
+
