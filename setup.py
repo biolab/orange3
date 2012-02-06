@@ -422,7 +422,7 @@ else:
     orange_sources += get_source_files("source/orange/libsvm/", "cpp")
     
 
-orange_ext = PyXtractSharedExtension("orange", orange_sources,
+orange_ext = PyXtractSharedExtension("Orange.orange", orange_sources,
                                       include_dirs=orange_include_dirs,
                                       extra_compile_args = extra_compile_args + ["-DORANGE_EXPORTS"],
                                       extra_link_args = extra_link_args,
@@ -452,28 +452,29 @@ else:
     orangeom_include_dirs += ["source/orangeom"]
 
 
-orangeom_ext = PyXtractExtension("orangeom", orangeom_sources,
+orangeom_ext = PyXtractExtension("Orange.orangeom", orangeom_sources,
                                   include_dirs=orangeom_include_dirs + ["source/orange/"],
                                   extra_compile_args = extra_compile_args + ["-DORANGEOM_EXPORTS"],
                                   extra_link_args = extra_link_args,
                                   libraries=orangeom_libraries,
                                   )
 
-orangene_ext = PyXtractExtension("orangene", get_source_files("source/orangene/", exclude=["lib_vectors.cpp"]), 
+orangene_ext = PyXtractExtension("Orange.orangene",
+    get_source_files("source/orangene/", exclude=["lib_vectors.cpp"]),
                                   include_dirs=include_dirs + ["source/orange/"], 
                                   extra_compile_args = extra_compile_args + ["-DORANGENE_EXPORTS"],
                                   extra_link_args = extra_link_args,
                                   libraries=shared_libs,
                                   )
 
-corn_ext = Extension("corn", get_source_files("source/corn/"), 
+corn_ext = Extension("Orange.corn", get_source_files("source/corn/"),
                      include_dirs=include_dirs + ["source/orange/"], 
                      extra_compile_args = extra_compile_args + ["-DCORN_EXPORTS"],
                      extra_link_args = extra_link_args,
                      libraries=libraries
                      )
 
-statc_ext = Extension("statc", get_source_files("source/statc/"), 
+statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       include_dirs=include_dirs + ["source/orange/"], 
                       extra_compile_args = extra_compile_args + ["-DSTATC_EXPORTS"],
                       extra_link_args = extra_link_args,
@@ -482,12 +483,11 @@ statc_ext = Extension("statc", get_source_files("source/statc/"),
 
 import fnmatch
 matches = []
-os.chdir("orange")
-for root, dirnames, filenames in os.walk('Orange'): #Recursively find '__init__.py's
+for root, dirnames, filenames in os.walk('Orange'): #Recursively find
+# '__init__.py's
   for filename in fnmatch.filter(filenames, '__init__.py'):
       matches.append(os.path.join(root, filename))
 packages = [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
-os.chdir("..")
 
 if have_setuptools:
     setuptools_args = {"zip_safe": False,
@@ -505,37 +505,44 @@ setup(cmdclass={"build_ext": pyxtract_build_ext, "install_lib": my_install_lib},
       author_email = "orange@fri.uni-lj.si",
       url = "http://orange.biolab.si",
       download_url = "http://orange.biolab.si/svn/orange/trunk",
-      packages = packages + ["",
-                             "OrangeCanvas",
-                             "OrangeWidgets", 
-                             "OrangeWidgets.Associate",
-                             "OrangeWidgets.Classify",
-                             "OrangeWidgets.Data",
-                             "OrangeWidgets.Evaluate",
-                             "OrangeWidgets.Prototypes",
-                             "OrangeWidgets.Regression",
-                             "OrangeWidgets.Unsupervised",
-                             "OrangeWidgets.Visualize",
-                             "OrangeWidgets.Visualize Qt",
-                             "OrangeWidgets.plot",
-                             "OrangeWidgets.plot.primitives",
-                             "doc",
+      packages = packages + ["Orange.OrangeCanvas",
+                             "Orange.OrangeWidgets",
+                             "Orange.OrangeWidgets.Associate",
+                             "Orange.OrangeWidgets.Classify",
+                             "Orange.OrangeWidgets.Data",
+                             "Orange.OrangeWidgets.Evaluate",
+                             "Orange.OrangeWidgets.Prototypes",
+                             "Orange.OrangeWidgets.Regression",
+                             "Orange.OrangeWidgets.Unsupervised",
+                             "Orange.OrangeWidgets.Visualize",
+                             "Orange.OrangeWidgets.Visualize Qt",
+                             "Orange.OrangeWidgets.plot",
+                             "Orange.OrangeWidgets.plot.primitives",
+                             "Orange.doc",
                              ],
-      package_dir = {"": "orange"},
-      package_data = {"OrangeCanvas": ["icons/*.png", "orngCanvas.pyw", "WidgetTabs.txt"],
-                      "OrangeWidgets": ["icons/*.png", "icons/backgrounds/*.png", "report/index.html"],
-                      "OrangeWidgets.Associate": ["icons/*.png"],
-                      "OrangeWidgets.Classify": ["icons/*.png"],
-                      "OrangeWidgets.Data": ["icons/*.png"],
-                      "OrangeWidgets.Evaluate": ["icons/*.png"],
-                      "OrangeWidgets.Prototypes": ["icons/*.png"],
-                      "OrangeWidgets.Regression": ["icons/*.png"],
-                      "OrangeWidgets.Unsupervised": ["icons/*.png"],
-                      "OrangeWidgets.Visualize": ["icons/*.png"],
-                      "OrangeWidgets.plot": ["*.gs", "*.vs"],
-                      "OrangeWidgets.plot.primitives": ["*.obj"],
-                      "doc": ["datasets/*.tab", ],
-                      "": ["orangerc.cfg"]
+      package_dir = {"Orange": "Orange"},
+      package_data = {"Orange": [
+          "Orange/Orange/OrangeCanvas/icons/*.png",
+          "Orange/OrangeCanvas/orngCanvas.pyw",
+          "Orange/OrangeCanvas/WidgetTabs.txt",
+          "Orange/OrangeWidgets/icons/*.png",
+          "Orange/OrangeWidgets/icons/backgrounds/*.png",
+          "Orange/OrangeWidgets/report/index.html",
+          "Orange/OrangeWidgets/Associate/icons/*.png",
+          "Orange/OrangeWidgets/Classify/icons/*.png",
+          "Orange/OrangeWidgets/Data/icons/*.png",
+          "Orange/OrangeWidgets/Evaluate/icons/*.png",
+          "Orange/OrangeWidgets/Prototypes/icons/*.png",
+          "Orange/OrangeWidgets/Regression/icons/*.png",
+          "Orange/OrangeWidgets/Unsupervised/icons/*.png",
+          "Orange/OrangeWidgets/Visualize/icons/*.png",
+          "Orange/OrangeWidgets/Visualize/icons/*.png",
+          "Orange/OrangeWidgets/Visualize/icons/*.png",
+          "Orange/OrangeWidgets/plot/*.gs",
+          "Orange/OrangeWidgets/plot/*.vs",
+          "Orange/OrangeWidgets/plot/primitives/*.obj",
+          "Orange/doc/datasets/*.tab",
+          "Orange/orangerc.cfg"]
                       },
       ext_modules = [include_ext, orange_ext, orangeom_ext, orangene_ext, corn_ext, statc_ext],
       extra_path=("orange", "orange"),
