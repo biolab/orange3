@@ -264,7 +264,7 @@ Output::
 
 Let us construct a list of indices that would assign half of examples
 to the first set and a quarter to the second and third (part of
-:download:`randomindicesn.py <code/randomindicesn.py>`, uses :download:`lenses.tab <code/lenses.tab>`):
+:download:`randomindicesn.py <code/randomindicesn.py>`):
 
 .. literalinclude:: code/randomindicesn.py
     :lines: 9-14
@@ -291,7 +291,7 @@ Count them and you'll see there are 12 zero's and 6 one's and two's out of 24.
 We shall prepare indices for an ordinary ten-fold cross validation and
 indices for 10 examples for 5-fold cross validation. For the latter,
 we shall only pass the number of examples, which, of course, prevents
-the stratification. Part of :download:`randomindicescv.py <code/randomindicescv.py>`, uses :download:`lenses.tab <code/lenses.tab>`):
+the stratification. Part of :download:`randomindicescv.py <code/randomindicescv.py>`):
 
 .. literalinclude:: code/randomindicescv.py
     :lines: 7-12
