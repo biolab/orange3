@@ -334,8 +334,7 @@ class ConsoleProgressBar(object):
         >>> progress = ConsoleProgressBar("Example", output=sys.stdout)
         >>> for i in range(100):
         ...    progress.advance()
-        ...    # Or
-        ...    progress.set_state(i)
+        ...    # Or progress.set_state(i)
         ...    time.sleep(0.01)
         ...
         ...
