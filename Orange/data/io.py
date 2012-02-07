@@ -65,13 +65,13 @@ Implementing custom import/export functions.
 
 The signature for the custom load functions should be
 
-``load_myformat(filename, create_new_on=Variable.MakeStatus.NoRecognizedValues, **kwargs)``
+``load_myformat(filename, create_new_on=Orange.feature.Descriptor.MakeStatus.NoRecognizedValues, **kwargs)``
     
-When constructing variables :obj:`Orange.data.variable.make` should 
+When constructing variables :obj:`Orange.feature.Descriptor.make` should 
 be used with the ``create_new_on`` parameter. 
-:obj:`~Orange.data.variable.make` will return an attribute and the 
+:obj:`~Orange.feature.Descriptor.make` will return an attribute and the 
 status of the variable, telling whether a new attribute was created 
-or the old one reused and why (see :mod:`Orange.data.variable`). 
+or the old one reused and why (see :mod:`Orange.feature`). 
 Additional keyword arguments can be provided in the call to 
 :obj:`~Orange.data.Table` constructor. These will be passed in the 
 ``**kwargs``. 
@@ -89,7 +89,7 @@ Similar as above the ``**kwargs`` contains any additional arguments
 import os
 
 import Orange
-import Orange.data.variable
+import Orange.feature
 import Orange.misc
 from Orange.core import \
      BasketFeeder, FileExampleGenerator, BasketExampleGenerator, \
@@ -97,8 +97,9 @@ from Orange.core import \
      registerFileType as register_file_type
 
 from Orange.data import variable
-from Orange.data.variable import Variable
-MakeStatus = Variable.MakeStatus
+from Orange.feature import Descriptor
+MakeStatus = Orange.feature.Descriptor.MakeStatus
+make = Orange.feature.Descriptor.make
 
 def loadARFF(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in Weka ARFF format
@@ -114,7 +115,7 @@ def loadARFF(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     else:
         return loadARFF_Weka(filename, create_on_new)
 
-def loadARFF_Weka(filename, create_on_new=Orange.data.variable.Variable.MakeStatus.Incompatible, **kwargs):
+def loadARFF_Weka(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in Weka ARFF format"""
     if not os.path.exists(filename) and os.path.exists(filename + ".arff"):
         filename = filename + ".arff"
@@ -189,10 +190,10 @@ def loadARFF_Weka(filename, create_on_new=Orange.data.variable.Variable.MakeStat
                         sy = y.strip(" '\"")
                         if len(sy) > 0:
                             vals.append(sy)
-                    a, s = Variable.make(atn, Orange.data.Type.Discrete, vals, [], create_on_new)
+                    a, s = make(atn, Orange.data.Type.Discrete, vals, [], create_on_new)
                 else:
                     # real...
-                    a, s = Variable.make(atn, Orange.data.Type.Continuous, [], [], create_on_new)
+                    a, s = make(atn, Orange.data.Type.Continuous, [], [], create_on_new)
 
                 attributes.append(a)
                 attributeLoadStatus.append(s)
@@ -269,7 +270,7 @@ def toARFF(filename, table, try_numericize=0):
             f.write('%s,' % i)
         f.write('%s\n' % x[-1])
 
-def loadMULAN(filename, create_on_new=Orange.data.variable.Variable.MakeStatus.Incompatible, **kwargs):
+def loadMULAN(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in Mulan ARFF and XML format"""
     if filename[-4:] == ".xml":
         filename = filename[:-4]
@@ -397,12 +398,12 @@ def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in LibSVM format"""
     attributeLoadStatus = {}
     def make_float(name):
-        attr, s = Orange.data.variable.make(name, Orange.data.Type.Continuous, [], [], create_on_new)
+        attr, s = Orange.feature.Descriptor.make(name, Orange.data.Type.Continuous, [], [], create_on_new)
         attributeLoadStatus[attr] = s
         return attr
 
     def make_disc(name, unordered):
-        attr, s = Orange.data.variable.make(name, Orange.data.Type.Discrete, [], unordered, create_on_new)
+        attr, s = Orange.feature.Descriptor.make(name, Orange.data.Type.Discrete, [], unordered, create_on_new)
         attributeLoadStatus[attr] = s
         return attr
 
@@ -477,7 +478,7 @@ def var_type(cell):
     elif cell.startswith("pyhton"):
         return variable.Python
     elif cell == "":
-        return variable.Variable
+        return variable.Descriptor
     elif len(cell.split(",")) > 1:
         return variable.Discrete, cell.split(",")
     else:
