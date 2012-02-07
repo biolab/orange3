@@ -21,12 +21,12 @@ construction time (and stored in :obj:`SymMatrix.dim`).
     .. attribute:: matrix_type 
 
         Can be ``SymMatrix.Lower`` (0), ``SymMatrix.Upper`` (1), 
-        ``SymMatrix.Symmetric`` (2, default), ``SymMatrix.Lower_Filled`` (3) or
+        ``SymMatrix.Symmetric`` (2, default), ``SymMatrix.LowerFilled`` (3) or
         ``SymMatrix.Upper_Filled`` (4). 
 
         If the matrix type is ``Lower`` or ``Upper``, indexing 
         above or below the diagonal, respectively, will fail. 
-        With ``Lower_Filled`` and ``Upper_Filled``,
+        With ``LowerFilled`` and ``Upper_Filled``,
         the elements upper or lower, respectively, still 
         exist and are set to zero, but they cannot be modified. The 
         default matrix type is ``Symmetric``, but can be changed 
@@ -34,6 +34,12 @@ construction time (and stored in :obj:`SymMatrix.dim`).
 
         If matrix type is ``Upper``, it is printed as:
 
+        >>> import Orange
+        >>> m = Orange.misc.SymMatrix(
+        ...     [[1], 
+        ...      [2, 4], 
+        ...      [3, 6, 9], 
+        ...      [4, 8, 12, 16]])
         >>> m.matrix_type = m.Upper
         >>> print m
         (( 1.000,  2.000,  3.000,  4.000),
@@ -41,9 +47,9 @@ construction time (and stored in :obj:`SymMatrix.dim`).
          (                 9.000, 12.000),
          (                        16.000))
 
-        Changing the type to ``Lower_Filled`` changes the printout to
+        Changing the type to ``LowerFilled`` changes the printout to
 
-        >>> m.matrix_type = m.Lower_Filled
+        >>> m.matrix_type = m.LowerFilled
         >>> print m
         (( 1.000,  0.000,  0.000,  0.000),
          ( 2.000,  4.000,  0.000,  0.000),
@@ -144,8 +150,16 @@ Indexing
 For symmetric matrices the order of indices is not important: 
 if ``m`` is a SymMatrix, then ``m[2, 4]`` addresses the same element as ``m[4, 2]``.
 
-.. literalinclude:: code/symmatrix.py
-    :lines: 1-6
+..
+    .. literalinclude:: code/symmatrix.py
+        :lines: 1-6
+
+>>> import Orange
+>>> m = Orange.misc.SymMatrix(4)
+>>> for i in range(4):
+...    for j in range(i+1):
+...        m[i, j] = (i+1)*(j+1)
+
 
 Although only the lower left half of the matrix was set explicitely, 
 the whole matrix is constructed.
@@ -160,7 +174,7 @@ Entire rows are indexed with a single index. They can be iterated
 over in a for loop or sliced (with, for example, ``m[:3]``):
 
 >>> print m[1]
-(3.0, 6.0, 9.0, 0.0)
+(2.0, 4.0, 6.0, 8.0)
 >>> m.matrix_type = m.Lower
 >>> for row in m:
 ...     print row
@@ -334,8 +348,7 @@ class ConsoleProgressBar(object):
         >>> progress = ConsoleProgressBar("Example", output=sys.stdout)
         >>> for i in range(100):
         ...    progress.advance()
-        ...    # Or
-        ...    progress.set_state(i)
+        ...    # Or progress.set_state(i)
         ...    time.sleep(0.01)
         ...
         ...
@@ -682,6 +695,10 @@ def deprecated_keywords(name_map):
 def deprecated_attribute(old_name, new_name):
     """ Return a property object that accesses an attribute named `new_name`
     and raises a deprecation warning when doing so.
+
+    ..
+
+        >>> sys.stderr = sys.stdout
     
     Example ::
     
@@ -693,7 +710,7 @@ def deprecated_attribute(old_name, new_name):
         ...
         >>> a = A()
         >>> print a.myAttr
-        __main__:1: DeprecationWarning: 'myAttr' is deprecated. Use 'my_attr' instead!
+        ...:1: DeprecationWarning: 'myAttr' is deprecated. Use 'my_attr' instead!
         123
         
     .. note:: This decorator does nothing and returns None if \

@@ -108,8 +108,16 @@ class pyxtract_build_ext(build_ext):
             if isinstance(self.compiler, MSVCCompiler):
                 # Copy ${TEMP}/orange/orange.lib to ${BUILD}/orange.lib
                 ext_fullpath = self.get_ext_fullpath(ext.name)
-                lib = glob.glob(os.path.join(self.build_temp, "*", "*", ext.name + ".lib"))[0]
-                copy_file(lib, os.path.splitext(ext_fullpath)[0] + ".lib")
+                # Get the last component of the name
+                ext_name = ext.name.rsplit(".", 1)[-1]
+                libs = glob.glob(os.path.join(self.build_temp, 
+                                              "*", "*", ext_name + ".lib"))
+                if not libs:
+                    log.info("Could not locate library %r in directory %r" \
+                             %(ext_name, self.build_temp))
+                else:
+                    lib = libs[0]
+                    copy_file(lib, os.path.splitext(ext_fullpath)[0] + ".lib")
             else:
                 # Make lib{name}.so link to {name}.so
                 ext_path = self.get_ext_fullpath(ext.name)
