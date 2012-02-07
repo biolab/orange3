@@ -9,5 +9,3 @@ from orange import Value, StringValue, Domain
 from orange import VarTypes as Type
 
 from orange import newmetaid as new_meta_id
-
-from orange import SymMatrix
