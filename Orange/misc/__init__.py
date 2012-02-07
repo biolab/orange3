@@ -678,6 +678,10 @@ def deprecated_keywords(name_map):
     """
     if environ.orange_no_deprecated_members:
         return lambda func: func
+    for name in name_map.values():
+        if name in name_map:
+            raise ValueError("Deprecation keys and values overlap; this could"
+                             " cause trouble!")
     
     def decorator(func):
         @wraps(func)
