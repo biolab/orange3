@@ -96,7 +96,7 @@ from Orange.core import \
      C45ExampleGenerator, TabDelimExampleGenerator, \
      registerFileType as register_file_type
 
-from Orange.data import variable
+import Orange.feature as variable
 from Orange.feature import Descriptor
 MakeStatus = Orange.feature.Descriptor.MakeStatus
 make = Orange.feature.Descriptor.make
