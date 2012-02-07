@@ -18,7 +18,8 @@ def _import(name):
 _import("data")
 _import("data.io")
 _import("data.sample")
-_import("data.variable")
+_import("data.utils")
+_import("data.discretization")
 _import("data.filter")
 
 _import("network")

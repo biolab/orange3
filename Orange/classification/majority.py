@@ -61,8 +61,7 @@ Examples
 
 This "learning algorithm" will most often be used as a baseline,
 that is, to determine if some other learning algorithm provides
-any information about the class (:download:`majority-classification.py <code/majority-classification.py>`,
-uses: :download:`monks-1.tab <code/monks-1.tab>`):
+any information about the class (:download:`majority-classification.py <code/majority-classification.py>`):
 
 .. literalinclude:: code/majority-classification.py
     :lines: 7-
