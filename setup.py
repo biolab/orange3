@@ -6,6 +6,8 @@ from distutils.core import setup
 from distutils.core import Extension
 from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
+from distutils.command.install import install
+from distutils.util import convert_path
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
 
@@ -82,13 +84,17 @@ class pyxtract_build_ext(build_ext):
     def finalize_options(self):
         build_ext.finalize_options(self)
         # add the build_lib dir and build_temp (for 
-        # liborange_include and liborange)            
+        # liborange_include and liborange linking)            
         if not self.inplace:
-            self.library_dirs.append(self.build_lib) # for linking with liborange.so
-            self.library_dirs.append(self.build_temp) # for linking with liborange_include.a
+            # for linking with liborange.so (it is in Orange package)
+            self.library_dirs.append(os.path.join(self.build_lib, "Orange"))
+            # for linking with liborange_include.a
+            self.library_dirs.append(self.build_temp)
         else:
-            self.library_dirs.append("./orange") # for linking with liborange.so
-            self.library_dirs.append(self.build_temp) # for linking with liborange_include.a
+            # for linking with liborange.so
+            self.library_dirs.append("./Orange") 
+            # for linking with liborange_include.a
+            self.library_dirs.append(self.build_temp)
         
     def build_extension(self, ext):
         if isinstance(ext, LibStatic):
@@ -112,7 +118,8 @@ class pyxtract_build_ext(build_ext):
                 try:
                     os.chdir(ext_path)
                     # Get the shared library name
-                    lib_filename = self.compiler.library_filename(ext.name, lib_type="shared")
+                    _, name = ext.name.rsplit(".", 1)
+                    lib_filename = self.compiler.library_filename(name, lib_type="shared")
                     # Create the link
                     copy_file(ext_filename, lib_filename, link="sym")
                 except OSError, ex:
@@ -366,12 +373,30 @@ class my_install_lib(install_lib):
         # A Hack to unlink liborange.so -> orange.so if it already exists,
         # because copy_tree fails to overwrite it
         # 
-        liborange = os.path.join(self.install_dir, "liborange.so")
+        liborange = os.path.join(self.install_dir, "Orange", "liborange.so")
         if self.force and os.path.exists(liborange) and os.path.islink(liborange):
             log.info("unlinking %s -> %s", liborange, os.path.join(self.install_dir, "orange.so"))
             os.unlink(liborange)
             
         return install_lib.install(self)
+    
+    
+class my_install(install):
+    """ A command to install orange while also creating
+    a .pth path to access the old orng* modules and orange, 
+    orangeom etc. 
+    
+    """
+    def run(self):
+        install.run(self)
+        
+        # Create a .pth file wiht a path inside the Orange/orng directory
+        # so the old modules are importable
+        self.path_file, self.extra_dirs = ("orange-orng-modules", "Orange/orng")
+        self.extra_dirs = convert_path(self.extra_dirs)
+        log.info("creating portal path for orange compatibility.")
+        self.create_path_file()
+        self.path_file, self.extra_dirs = None, None
         
             
 def get_source_files(path, ext="cpp", exclude=[]):
@@ -379,7 +404,10 @@ def get_source_files(path, ext="cpp", exclude=[]):
     files = [file for file in files if os.path.basename(file) not in exclude]
     return files
 
-include_ext = LibStatic("orange_include", get_source_files("source/include/"), include_dirs=include_dirs)
+
+include_ext = LibStatic("orange_include",
+                        get_source_files("source/include/"),
+                        include_dirs=include_dirs)
 
 
 if sys.platform == "win32": # ?? mingw/cygwin
@@ -428,12 +456,13 @@ orange_ext = PyXtractSharedExtension("Orange.orange", orange_sources,
                                       extra_link_args = extra_link_args,
                                       libraries=orange_libraries,
                                       extra_pyxtract_cmds = ["../pyxtract/defvectors.py"],
-#                                      depends=["orange/ppp/lists"]
                                       )
 
 if sys.platform == "darwin":
     build_shared_cmd = get_config_var("BLDSHARED")
-    if "-bundle" in build_shared_cmd.split(): #dont link liborange.so with orangeom and orangene - MacOS X treats loadable modules and shared libraries different
+    # Dont link liborange.so with orangeom and orangene - MacOS X treats
+    # loadable modules and shared libraries different
+    if "-bundle" in build_shared_cmd.split():
         shared_libs = libraries
     else:
         shared_libs = libraries + ["orange"]
@@ -483,8 +512,10 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
 
 import fnmatch
 matches = []
-for root, dirnames, filenames in os.walk('Orange'): #Recursively find
-# '__init__.py's
+
+#Recursively find '__init__.py's
+for root, dirnames, filenames in os.walk('Orange'): 
+
   for filename in fnmatch.filter(filenames, '__init__.py'):
       matches.append(os.path.join(root, filename))
 packages = [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
@@ -497,14 +528,16 @@ if have_setuptools:
 else:
     setuptools_args = {}
 
-setup(cmdclass={"build_ext": pyxtract_build_ext, "install_lib": my_install_lib},
+setup(cmdclass={"build_ext": pyxtract_build_ext,
+                "install_lib": my_install_lib,
+                "install": my_install},
       name ="Orange",
       version = "2.5a2",
       description = "Orange data mining library for python.",
       author = "Bioinformatics Laboratory, FRI UL",
       author_email = "orange@fri.uni-lj.si",
       url = "http://orange.biolab.si",
-      download_url = "http://orange.biolab.si/svn/orange/trunk",
+      download_url = "https://bitbucket.org/biolab/orange/downloads",
       packages = packages + ["Orange.OrangeCanvas",
                              "Orange.OrangeWidgets",
                              "Orange.OrangeWidgets.Associate",
@@ -519,10 +552,8 @@ setup(cmdclass={"build_ext": pyxtract_build_ext, "install_lib": my_install_lib},
                              "Orange.OrangeWidgets.plot",
                              "Orange.OrangeWidgets.plot.primitives",
                              "Orange.doc",
-                             "", # Backward compatibility
                              ],
-      package_dir = {"Orange": "Orange",
-                     "" : "Orange/orng"}, # Backward compatibility
+      
       package_data = {"Orange": [
           "OrangeCanvas/icons/*.png",
           "OrangeCanvas/orngCanvas.pyw",
@@ -546,8 +577,8 @@ setup(cmdclass={"build_ext": pyxtract_build_ext, "install_lib": my_install_lib},
           "doc/datasets/*.tab",
           "orangerc.cfg"]
                       },
-      ext_modules = [include_ext, orange_ext, orangeom_ext, orangene_ext, corn_ext, statc_ext],
-      extra_path=("orange", "orange"),
+      ext_modules = [include_ext, orange_ext, orangeom_ext,
+                     orangene_ext, corn_ext, statc_ext],
       scripts = ["bin/orange-canvas"],
       license = "GNU General Public License (GPL)",
       keywords = ["data mining", "machine learning", "artificial intelligence"],
