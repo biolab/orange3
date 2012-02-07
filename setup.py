@@ -390,7 +390,7 @@ class my_install(install):
     def run(self):
         install.run(self)
         
-        # Create a .pth file wiht a path inside the Orange/orng directory
+        # Create a .pth file with a path inside the Orange/orng directory
         # so the old modules are importable
         self.path_file, self.extra_dirs = ("orange-orng-modules", "Orange/orng")
         self.extra_dirs = convert_path(self.extra_dirs)
