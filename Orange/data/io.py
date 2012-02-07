@@ -190,10 +190,10 @@ def loadARFF_Weka(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
                         sy = y.strip(" '\"")
                         if len(sy) > 0:
                             vals.append(sy)
-                    a, s = make(atn, Orange.data.Type.Discrete, vals, [], create_on_new)
+                    a, s = make(atn, Orange.feature.Type.Discrete, vals, [], create_on_new)
                 else:
                     # real...
-                    a, s = make(atn, Orange.data.Type.Continuous, [], [], create_on_new)
+                    a, s = make(atn, Orange.feature.Type.Continuous, [], [], create_on_new)
 
                 attributes.append(a)
                 attributeLoadStatus.append(s)
@@ -398,12 +398,12 @@ def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in LibSVM format"""
     attributeLoadStatus = {}
     def make_float(name):
-        attr, s = Orange.feature.Descriptor.make(name, Orange.data.Type.Continuous, [], [], create_on_new)
+        attr, s = Orange.feature.Descriptor.make(name, Orange.feature.Type.Continuous, [], [], create_on_new)
         attributeLoadStatus[attr] = s
         return attr
 
     def make_disc(name, unordered):
-        attr, s = Orange.feature.Descriptor.make(name, Orange.data.Type.Discrete, [], unordered, create_on_new)
+        attr, s = Orange.feature.Descriptor.make(name, Orange.feature.Type.Discrete, [], unordered, create_on_new)
         attributeLoadStatus[attr] = s
         return attr
 
@@ -632,15 +632,15 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
             variables.append(_disc_placeholder(name))
             undefined_vars.append((i, variables[-1]))
         elif var_t == variable.Continuous:
-            variables.append(variable.make(name, Orange.data.Type.Continuous, [], [], create_new_on))
+            variables.append(variable.make(name, Orange.feature.Type.Continuous, [], [], create_new_on))
         elif var_t == variable.String:
-            variables.append(variable.make(name, Orange.data.Type.String, [], [], create_new_on))
+            variables.append(variable.make(name, Orange.feature.Type.String, [], [], create_new_on))
         elif var_t == variable.Python:
             variables.append(variable.Python(name))
         elif isinstance(var_t, tuple):
             var_t, values = var_t
             if var_t == variable.Discrete:
-                variables.append(variable.make(name, Orange.data.Type.Discrete, values, [], create_new_on))
+                variables.append(variable.make(name, Orange.feature.Type.Discrete, values, [], create_new_on))
             elif var_t == variable.Python:
                 raise NotImplementedError()
         elif var_t is None:
@@ -657,14 +657,14 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
         values = var_def.values - set(["?", ""]) # TODO: Other unknown strings?
         values = sorted(values)
         if isinstance(var_def, _disc_placeholder):
-            variables[ind] = variable.make(var_def.name, Orange.data.Type.Discrete, [], values, create_new_on)
+            variables[ind] = variable.make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
         elif isinstance(var_def, _var_placeholder):
             if is_variable_cont(values):
-                variables[ind] = variable.make(var_def.name, Orange.data.Type.Continuous, [], [], create_new_on)
+                variables[ind] = variable.make(var_def.name, Orange.feature.Type.Continuous, [], [], create_new_on)
             elif is_variable_discrete(values):
-                variables[ind] = variable.make(var_def.name, Orange.data.Type.Discrete, [], values, create_new_on)
+                variables[ind] = variable.make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
             elif is_variable_string(values):
-                variables[ind] = variable.make(var_def.name, Orange.data.Type.String, [], [], create_new_on)
+                variables[ind] = variable.make(var_def.name, Orange.feature.Type.String, [], [], create_new_on)
             else:
                 raise ValueError("Strange column in the data")
 
