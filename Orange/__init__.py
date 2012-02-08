@@ -14,7 +14,9 @@ def _import(name):
         __import__(name, globals(), locals(), [], -1)
     except Exception:
         warnings.warn("Some features are disabled, because Orange could not import: " + name, UserWarning, 2)
+        raise
 
+_import("misc")
 _import("data")
 _import("data.io")
 _import("data.sample")
@@ -81,7 +83,6 @@ _import("multilabel.mulan")
 _import("associate")
 
 _import("preprocess")
-_import("preprocess.outliers")
 _import("preprocess.scaling")
 
 _import("distance")
