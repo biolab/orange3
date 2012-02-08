@@ -632,15 +632,15 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
             variables.append(_disc_placeholder(name))
             undefined_vars.append((i, variables[-1]))
         elif var_t == variable.Continuous:
-            variables.append(variable.make(name, Orange.feature.Type.Continuous, [], [], create_new_on))
+            variables.append(make(name, Orange.feature.Type.Continuous, [], [], create_new_on))
         elif var_t == variable.String:
-            variables.append(variable.make(name, Orange.feature.Type.String, [], [], create_new_on))
+            variables.append(make(name, Orange.feature.Type.String, [], [], create_new_on))
         elif var_t == variable.Python:
             variables.append(variable.Python(name))
         elif isinstance(var_t, tuple):
             var_t, values = var_t
             if var_t == variable.Discrete:
-                variables.append(variable.make(name, Orange.feature.Type.Discrete, values, [], create_new_on))
+                variables.append(make(name, Orange.feature.Type.Discrete, values, [], create_new_on))
             elif var_t == variable.Python:
                 raise NotImplementedError()
         elif var_t is None:
@@ -657,14 +657,14 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
         values = var_def.values - set(["?", ""]) # TODO: Other unknown strings?
         values = sorted(values)
         if isinstance(var_def, _disc_placeholder):
-            variables[ind] = variable.make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
+            variables[ind] = make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
         elif isinstance(var_def, _var_placeholder):
             if is_variable_cont(values):
-                variables[ind] = variable.make(var_def.name, Orange.feature.Type.Continuous, [], [], create_new_on)
+                variables[ind] = make(var_def.name, Orange.feature.Type.Continuous, [], [], create_new_on)
             elif is_variable_discrete(values):
-                variables[ind] = variable.make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
+                variables[ind] = make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
             elif is_variable_string(values):
-                variables[ind] = variable.make(var_def.name, Orange.feature.Type.String, [], [], create_new_on)
+                variables[ind] = make(var_def.name, Orange.feature.Type.String, [], [], create_new_on)
             else:
                 raise ValueError("Strange column in the data")
 
