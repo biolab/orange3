@@ -9,7 +9,9 @@ from orange import \
    CartesianClassifier, \
    ClassifierFromVar, \
    RandomClassifier, \
-   RandomLearner
+   RandomLearner, \
+   ClassifierFromVar
+   
 
 from orange import DefaultClassifier as ConstantClassifier
 
