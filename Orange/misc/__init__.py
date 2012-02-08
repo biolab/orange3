@@ -3,6 +3,94 @@
 
 Module Orange.misc contains common functions and classes which are used in other modules.
 
+.. index: CostMatrix
+
+-----------------------
+CostMatrix
+-----------------------
+
+CostMatrix is an object that stores costs of (mis)classifications. Costs can be either negative or positive.
+
+.. class:: CostMatrix
+
+    .. attribute:: classVar 
+        
+        The (class) attribute to which the matrix applies. This can also be None.
+        
+    .. attribute:: dimension (read only)
+    
+        Matrix dimension, ie. number of classes.
+        
+    .. method:: CostMatrix(dimension[, default cost])
+    
+        Constructs a matrix of the given size and initializes it with the default
+        cost (1, if not given). All elements of the matrix are assigned the given
+        cost, except for the diagonal that have the default cost of 0.
+        (Diagonal elements represent correct classifications and these usually
+        have no price; you can, however, change this.)
+        
+        .. literalinclude:: code/CostMatrix.py
+            :lines: 1-8
+        
+        This initializes the matrix and print it out:
+        
+        .. literalinclude:: code/CostMatrix.res
+            :lines: 1-3
+    
+    .. method:: CostMatrix(class descriptor[, default cost])
+    
+        Similar as above, except that classVar is also set to the given descriptor.
+        The number of values of the given attribute (which must be discrete) is used
+        for dimension.
+        
+        .. literalinclude:: code/CostMatrix.py
+            :lines: 10-11
+            
+        This constructs a matrix similar to the one above (the class attribute in iris
+        domain is three-valued) except that the matrix contains 2s instead of 1s.
+        
+    .. method:: CostMatrix([attribute descriptor, ]matrix)
+    
+        Initializes the matrix with the elements given as a sequence of sequences (you
+        can mix lists and tuples if you find it funny). Each subsequence represents a row.
+        
+        .. literalinclude:: code/CostMatrix.py
+            :lines: 13
+
+        If you print this matrix out, will it look like this:
+        
+        .. literalinclude:: code/CostMatrix.res
+            :lines: 5-7
+            
+    .. method:: setcost(predicted value, correct value, cost)
+    
+        Set the misclassification cost. The matrix above could be constructed by first
+        initializing it with 2s and then changing the prices for virginica's into 1s.
+        
+        .. literalinclude:: code/CostMatrix.py
+            :lines: 15-17
+            
+    .. method:: getcost(predicted value, correct value)
+    
+        Returns the cost of prediction. Values must be integer indices; if classVar is
+        set, you can also use symbolic values (strings). Note that there's no way to
+        change the size of the matrix. Size is set at construction and does not change.
+        For the final example, we shall compute the profits of knowing attribute values
+        in the dataset lenses with the same cost-matrix as printed above.
+        
+        .. literalinclude:: code/CostMatrix.py
+            :lines: 19-23
+            
+        As the script shows, you don't have to (and usually won't) call the constructor
+        explicitly. Instead, you will set the corresponding field (in our case meas.cost)
+        to a matrix and let Orange convert it to CostMatrix automatically. Funny as it
+        might look, but since Orange uses constructor to perform such conversion, even
+        the above statement is correct (although the cost matrix is rather dull,
+        with 0s on the diagonal and 1s around):            
+            
+        .. literalinclude:: code/CostMatrix.py
+            :lines: 25
+                
 .. index: SymMatrix
 
 -----------------------
