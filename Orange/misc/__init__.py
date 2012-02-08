@@ -830,6 +830,30 @@ def deprecated_attribute(old_name, new_name):
                     doc="A deprecated member '%s'. Use '%s' instead." % (old_name, new_name))
     return prop 
 
+class class_property(object):
+    def __init__(self, fget=None, fset=None, fdel=None, doc="class property"):
+        self.fget = fget
+        self.fset = fset
+        self.fdel = fdel
+        self.__doc__ = doc
+        
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self.fget(owner)
+        else:
+            return self.fget(instance)                
+            
+def deprecated_class_attribute(old_name, new_name):
+    if environ.orange_no_deprecated_members:
+        return None
+    
+    def fget(self):
+        deprecation_warning(old_name, new_name, stacklevel=3)
+        return getattr(self, new_name)
+        
+    prop = class_property(fget,
+                    doc="A deprecated class member '%s'. Use '%s' instead." % (old_name, new_name))
+    return prop
 
 def deprecated_function_name(func):
     """ Return a wrapped function that raises an deprecation warning when
