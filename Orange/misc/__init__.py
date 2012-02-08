@@ -264,6 +264,7 @@ import render
 
 from Orange.core import RandomGenerator as Random
 from orange import SymMatrix
+from orange import CostMatrix
 
 # addons is intentionally not imported; if it were, add-ons' directories would
 # be added to the python path. If that sounds OK, this can be changed ...
