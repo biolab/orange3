@@ -844,6 +844,10 @@ class class_property(object):
             return self.fget(instance)                
             
 def deprecated_class_attribute(old_name, new_name):
+    """ Return a property object that accesses an class attribute
+    named `new_name` and raises a deprecation warning when doing so.
+    
+    """
     if environ.orange_no_deprecated_members:
         return None
     
