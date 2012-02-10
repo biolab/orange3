@@ -14,7 +14,6 @@ def _import(name):
         __import__(name, globals(), locals(), [], -1)
     except Exception:
         warnings.warn("Some features are disabled, because Orange could not import: " + name, UserWarning, 2)
-        raise
 
 _import("misc")
 _import("data")
