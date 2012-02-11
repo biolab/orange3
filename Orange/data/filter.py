@@ -13,5 +13,6 @@ from orange import\
     ValueFilter_discrete as ValueFilterDiscrete,\
     ValueFilter_continuous as ValueFilterContinuous,\
     ValueFilter_string as ValueFilterString,\
+    ValueFilter_stringList as ValueFilterStringList,\
     Filter_conjunction as Conjunction,\
     Filter_disjunction as Disjunction
