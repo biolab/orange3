@@ -101,6 +101,7 @@ _import("evaluation.reliability")
 _import("clustering")
 _import("clustering.kmeans")
 _import("clustering.hierarchical")
+_import("clustering.consensus")
 
 _import("misc")
 _import("misc.environ")
