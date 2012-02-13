@@ -1,9 +1,10 @@
 """
 .. autoclass:: Table
 """
+from Orange import core
 
-from orange import ExampleTable as Table
-from orange import Example as Instance
-from orange import Value, StringValue, Domain
-
-import outliers
+Table = core.ExampleTable
+Instance = core.Example
+Value = core.Value
+StringValue = core.StringValue
+Domain = core.Domain
