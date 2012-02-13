@@ -24,6 +24,16 @@ _import("data.discretization")
 _import("data.filter")
 _import("data.imputation")
 
+_import("feature")
+_import("feature.construction")
+_import("feature.construction.functionDecomposition")
+_import("feature.construction.univariate")
+_import("feature.continuization")
+_import("feature.discretization")
+_import("feature.imputation")
+_import("feature.scoring")
+_import("feature.selection")
+
 _import("network")
 
 _import("stat")
