@@ -341,6 +341,7 @@ are :obj:`Orange.evaluation.testing` and :obj:`Orange.data.Table`.
 .. automodule:: Orange.misc.serverfiles
 
 .. automodule:: Orange.misc.environ
+
 """
 import environ
 import counters
