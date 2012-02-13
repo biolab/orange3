@@ -68,4 +68,6 @@ any information about the class (:download:`majority-classification.py <code/maj
 
 """
 
-from Orange.core import MajorityLearner
+from Orange import core
+
+MajorityLearner = core.MajorityLearner
