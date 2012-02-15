@@ -426,7 +426,10 @@ else:
 
 import ConfigParser
 config = ConfigParser.RawConfigParser()
-config.read("setup-site.cfg")
+
+config.read(["setup-site.cfg",
+             os.path.expanduser("~/.orange-site.cfg")]
+            )
 
 orange_sources = get_source_files("source/orange/")
 orange_include_dirs = list(include_dirs)
