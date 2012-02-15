@@ -389,11 +389,14 @@ def toR(filename, t):
             f.write(',\n')
     f.write(')\n')
 
+
 def toLibSVM(filename, example):
     """Save class:`Orange.data.Table` to file in LibSVM format"""
     import Orange.classification.svm
     Orange.classification.svm.tableToSVMFormat(example, open(filename, "wb"))
 
+
+@Orange.misc.deprecated_keywords({"createOnNew": "create_on_new"})
 def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in LibSVM format"""
     attributeLoadStatus = {}
@@ -419,8 +422,9 @@ def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
                           [attributeLoadStatus[classVar]]
     domain = Orange.data.Domain(attributes, classVar)
     table = Orange.data.Table([Orange.data.Instance(domain, [ex.get(attr, attr("?")) for attr in attributes] + [c]) for ex, c in zip(values, classes)])
-    table.attribute_load_status = attributeLoadStatus
+    table.setattr("attribute_load_status", attributeLoadStatus)
     return table
+
 loadLibSVM = Orange.misc.deprecated_keywords(
 {"createOnNew": "create_on_new"}
 )(loadLibSVM)
@@ -722,8 +726,8 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
         for (column, var), val in zip(meta_indices, m_part):
             ex[var] = var(val)
 
-    table.metaAttributeLoadStatus = meta_attribute_load_status
-    table.attributeLoadStatus = attribute_load_status
+    table.setattr("meta_attribute_load_status", meta_attribute_load_status)
+    table.setattr("attribute_load_status", attribute_load_status)
 
     return table
 
