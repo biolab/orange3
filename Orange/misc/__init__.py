@@ -13,9 +13,10 @@ CostMatrix is an object that stores costs of (mis)classifications. Costs can be 
 
 .. class:: CostMatrix
 
-    .. attribute:: classVar 
+    .. attribute:: class_var 
         
-        The (class) attribute to which the matrix applies. This can also be None.
+        The (class) attribute to which the matrix applies. This can
+        also be None.
         
     .. attribute:: dimension (read only)
     
@@ -23,11 +24,12 @@ CostMatrix is an object that stores costs of (mis)classifications. Costs can be 
         
     .. method:: CostMatrix(dimension[, default cost])
     
-        Constructs a matrix of the given size and initializes it with the default
-        cost (1, if not given). All elements of the matrix are assigned the given
-        cost, except for the diagonal that have the default cost of 0.
-        (Diagonal elements represent correct classifications and these usually
-        have no price; you can, however, change this.)
+        Constructs a matrix of the given size and initializes it with
+        the default cost (1, if not given). All elements of the matrix
+        are assigned the given cost, except for the diagonal that have
+        the default cost of 0.  (Diagonal elements represent correct
+        classifications and these usually have no price; you can,
+        however, change this.)
         
         .. literalinclude:: code/CostMatrix.py
             :lines: 1-8
@@ -62,21 +64,24 @@ CostMatrix is an object that stores costs of (mis)classifications. Costs can be 
         .. literalinclude:: code/CostMatrix.res
             :lines: 5-7
             
-    .. method:: setcost(predicted value, correct value, cost)
+    .. method:: setcost(predicted, correct, cost)
     
-        Set the misclassification cost. The matrix above could be constructed by first
-        initializing it with 2s and then changing the prices for virginica's into 1s.
+        Set the misclassification cost. The matrix above could be
+        constructed by first initializing it with 2s and then changing
+        the prices for virginica's into 1s.
         
         .. literalinclude:: code/CostMatrix.py
             :lines: 15-17
             
-    .. method:: getcost(predicted value, correct value)
+    .. method:: getcost(predicted, correct)
     
-        Returns the cost of prediction. Values must be integer indices; if classVar is
-        set, you can also use symbolic values (strings). Note that there's no way to
-        change the size of the matrix. Size is set at construction and does not change.
-        For the final example, we shall compute the profits of knowing attribute values
-        in the dataset lenses with the same cost-matrix as printed above.
+        Returns the cost of prediction. Values must be integer
+        indices; if class_var is set, you can also use symbolic values
+        (strings). Note that there's no way to change the size of the
+        matrix. Size is set at construction and does not change.  For
+        the final example, we shall compute the profits of knowing
+        attribute values in the dataset lenses with the same
+        cost-matrix as printed above.
         
         .. literalinclude:: code/CostMatrix.py
             :lines: 19-23
@@ -144,24 +149,21 @@ construction time (and stored in :obj:`SymMatrix.dim`).
          ( 3.000,  6.000,  9.000,  0.000),
          ( 4.000,  8.000, 12.000, 16.000))
 	
-    .. method:: __init__(dim[, default_value])
+    .. method:: __init__(dim[, value])
 
         Construct a symmetric matrix of the given dimension.
 
         :param dim: matrix dimension
         :type dim: int
 
-        :param default_value: default value (0 by default)
-        :type default_value: double
+        :param value: default value (0 by default)
+        :type value: double
         
         
-    .. method:: __init__(instances)
+    .. method:: __init__(data)
 
-        Construct a new symmetric matrix containing the given data instances. 
+        Construct a new symmetric matrix containing the given data. 
         These can be given as Python list containing lists or tuples.
-
-        :param instances: data instances
-        :type instances: list of lists
         
         The following example fills a matrix created above with
         data in a list::
@@ -231,9 +233,9 @@ construction time (and stored in :obj:`SymMatrix.dim`).
         :type type: int
         
         
--------------------
+
 Indexing
--------------------
+..........
 
 For symmetric matrices the order of indices is not important: 
 if ``m`` is a SymMatrix, then ``m[2, 4]`` addresses the same element as ``m[4, 2]``.
@@ -300,7 +302,7 @@ to generate random numbers.
     2
 
 
-.. class:: Random(initseed)
+.. class:: Random(seed)
 
     :param initseed: Seed used for initializing the random generator.
     :type initseed: int
@@ -311,7 +313,7 @@ to generate random numbers.
 
         :type n: int
 
-    .. method:: reset([initseed])
+    .. method:: reset([seed])
 
         Reinitialize the random generator with `initseed`. If `initseed`
         is not given use the existing value of attribute `initseed`.
