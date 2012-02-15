@@ -722,7 +722,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
         for (column, var), val in zip(meta_indices, m_part):
             ex[var] = var(val)
 
-    table.metaAttributeLoadStatus = meta_attribute_load_status
+    table.setattr("metaAttributeLoadStatus", meta_attribute_load_status)
     table.setattr("attributeLoadStatus", attribute_load_status)
 
     return table
