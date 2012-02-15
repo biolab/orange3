@@ -389,11 +389,14 @@ def toR(filename, t):
             f.write(',\n')
     f.write(')\n')
 
+
 def toLibSVM(filename, example):
     """Save class:`Orange.data.Table` to file in LibSVM format"""
     import Orange.classification.svm
     Orange.classification.svm.tableToSVMFormat(example, open(filename, "wb"))
 
+
+@Orange.misc.deprecated_keywords({"createOnNew": "create_on_new"})
 def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in LibSVM format"""
     attributeLoadStatus = {}
@@ -421,9 +424,6 @@ def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     table = Orange.data.Table([Orange.data.Instance(domain, [ex.get(attr, attr("?")) for attr in attributes] + [c]) for ex, c in zip(values, classes)])
     table.setattr("attribute_load_status", attributeLoadStatus)
     return table
-loadLibSVM = Orange.misc.deprecated_keywords(
-{"createOnNew": "create_on_new"}
-)(loadLibSVM)
 
 
 """\
