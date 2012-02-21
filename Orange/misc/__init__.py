@@ -330,6 +330,32 @@ to generate random numbers.
 Two examples or random number generator uses found in the documentation
 are :obj:`Orange.evaluation.testing` and :obj:`Orange.data.Table`.
 
+------------------
+Reporting progress
+------------------
+
+.. autoclass:: Orange.misc.ConsoleProgressBar
+    :members:
+
+-----------------------------
+Deprecation utility functions
+-----------------------------
+
+.. autofunction:: Orange.misc.deprecation_warning
+
+.. autofunction:: Orange.misc.deprecated_members
+
+.. autofunction:: Orange.misc.deprecated_keywords
+
+.. autofunction:: Orange.misc.deprecated_attribute
+
+.. autofunction:: Orange.misc.deprecated_function_name 
+
+
+----------------
+Other submodules
+----------------
+
 .. automodule:: Orange.misc.counters
   :members:
 
@@ -417,15 +443,6 @@ def print_verbose(text, *verb):
     if len(verb) and verb[0] or verbose:
         print text
 
-__doc__ += """\
-------------------
-Reporting progress
-------------------
-
-.. autoclass:: Orange.misc.ConsoleProgressBar
-    :members:
-
-"""
 
 class ConsoleProgressBar(object):
     """ A class to for printing progress bar reports in the console.
@@ -613,24 +630,7 @@ class recursion_limit(object):
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.setrecursionlimit(self.old_limit)
-
-
-__doc__ += """\
------------------------------
-Deprecation utility functions
------------------------------
-
-.. autofunction:: Orange.misc.deprecation_warning
-
-.. autofunction:: Orange.misc.deprecated_members
-
-.. autofunction:: Orange.misc.deprecated_keywords
-
-.. autofunction:: Orange.misc.deprecated_attribute
-
-.. autofunction:: Orange.misc.deprecated_function_name 
-
-"""
+        
 
 import warnings
 def deprecation_warning(old, new, stacklevel=-2):
