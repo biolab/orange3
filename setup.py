@@ -2,11 +2,15 @@
 
 import os, sys        
 import distutils.core
+try:
+    from setuptools.command.install import install 
+except ImportError:
+    from distutils.command.install import install
+
 from distutils.core import setup
 from distutils.core import Extension
 from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
-from distutils.command.install import install
 from distutils.util import convert_path
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
