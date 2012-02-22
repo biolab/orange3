@@ -404,7 +404,7 @@ class my_install(install):
         
         # Create a .pth file with a path inside the Orange/orng directory
         # so the old modules are importable
-        self.path_file, self.extra_dirs = ("orange-orng-modules", "Orange/orng")
+        self.path_file, self.extra_dirs = ("Orange-orng-modules", "Orange/orng")
         self.extra_dirs = convert_path(self.extra_dirs)
         log.info("creating portal path for orange compatibility.")
         self.create_path_file()
