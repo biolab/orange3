@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 __version__ = "2.5a3"
 
-import orange
+from . import orange
 
 # Definitely ugly, but I see no other workaround.
 # When, e.g. data.io executes "from orange import ExampleTable"
