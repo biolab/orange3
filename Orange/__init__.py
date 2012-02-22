@@ -1,3 +1,5 @@
+__version__ = "2.5a3"
+
 import orange
 
 # Definitely ugly, but I see no other workaround.
@@ -128,3 +130,4 @@ _import("misc.render")
 _import("misc.selection")
 _import("misc.serverfiles")
 #_import("misc.r")
+
