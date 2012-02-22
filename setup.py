@@ -42,8 +42,13 @@ from distutils import log
 
 from distutils.sysconfig import get_python_inc, get_config_var
 
-import numpy
-numpy_include_dir = numpy.get_include()
+try:
+    import numpy
+    numpy_include_dir = numpy.get_include()
+except ImportError:
+    # When setup.py is first run to install orange, numpy can still be missing
+    pass
+    numpy_include_dir = None
 python_include_dir = get_python_inc(plat_specific=1)
 
 include_dirs = [python_include_dir, numpy_include_dir, "source/include"]
