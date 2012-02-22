@@ -1,4 +1,10 @@
-recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip
-recursive-include docs *.rst *.py *.png
+recursive-include Orange *
+recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip *.defs *.cmake
+recursive-include docs *.rst *.py *.png *.css
 graft docs/sphinx-ext
 graft distribute
+include COPYING
+include LICENSES
+include setup-site.cfg
+include setupegg.py
+include setup.py

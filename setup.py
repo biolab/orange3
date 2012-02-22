@@ -23,7 +23,8 @@ have_setuptools = getattr(distutils.core, "have_setuptools", have_setuptools)
 if have_setuptools:
     setuptools_args = {"zip_safe": False,
                        "install_requires": ["numpy"],
-                       "extra_requires": ["networkx", "PyQt4", "PyQwt"]
+                       "extra_requires": {"GUI": ["networkx", "PyQt4",
+                                                  "PyQwt"]}
                       }
 else:
     setuptools_args = {}
@@ -577,29 +578,22 @@ setup(cmdclass={"build_ext": pyxtract_build_ext,
                              "Orange.doc",
                              ],
       
-      package_data = {"Orange": [
-          "OrangeCanvas/icons/*.png",
-          "OrangeCanvas/orngCanvas.pyw",
-          "OrangeCanvas/WidgetTabs.txt",
-          "OrangeWidgets/icons/*.png",
-          "OrangeWidgets/icons/backgrounds/*.png",
-          "OrangeWidgets/report/index.html",
-          "OrangeWidgets/Associate/icons/*.png",
-          "OrangeWidgets/Classify/icons/*.png",
-          "OrangeWidgets/Data/icons/*.png",
-          "OrangeWidgets/Evaluate/icons/*.png",
-          "OrangeWidgets/Prototypes/icons/*.png",
-          "OrangeWidgets/Regression/icons/*.png",
-          "OrangeWidgets/Unsupervised/icons/*.png",
-          "OrangeWidgets/Visualize/icons/*.png",
-          "OrangeWidgets/Visualize/icons/*.png",
-          "OrangeWidgets/Visualize/icons/*.png",
-          "OrangeWidgets/plot/*.gs",
-          "OrangeWidgets/plot/*.vs",
-          "OrangeWidgets/plot/primitives/*.obj",
-          "doc/datasets/*.tab",
-          "orangerc.cfg"]
-                      },
+      package_data = {
+          "Orange" : ["orangerc.cfg"],
+          "Orange.OrangeCanvas": ["icons/*.png", "orngCanvas.pyw", "WidgetTabs.txt"],
+          "Orange.OrangeWidgets":["icons/*.png", "icons/backgrounds/*.png", "report/index.html"],
+          "Orange.OrangeWidgets.Associate": ["icons/*.png"],
+          "Orange.OrangeWidgets.Classify": ["icons/*.png"],
+          "Orange.OrangeWidgets.Data": ["icons/*.png"],
+          "Orange.OrangeWidgets.Evaluate": ["icons/*.png"],
+          "Orange.OrangeWidgets.Prototypes": ["icons/*.png"],
+          "Orange.OrangeWidgets.Regression": ["icons/*.png"],
+          "Orange.OrangeWidgets.Unsupervised": ["icons/*.png"],
+          "Orange.OrangeWidgets.Visualize": ["icons/*.png"],
+          "Orange.OrangeWidgets.plot": ["*.gs", "*.vs"],
+          "Orange.OrangeWidgets.plot/primitives": ["*.obj"],
+          "doc/datasets": ["*.tab"],
+          },
       ext_modules = [include_ext, orange_ext, orangeom_ext,
                      orangene_ext, corn_ext, statc_ext],
       scripts = ["bin/orange-canvas"],
