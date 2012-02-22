@@ -1,4 +1,3 @@
-recursive-include Orange *
 recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip *.defs *.cmake
 recursive-include docs *.rst *.py *.png *.css
 graft docs/sphinx-ext
