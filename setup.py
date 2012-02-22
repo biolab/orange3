@@ -3,11 +3,14 @@
 import os, sys        
 import distutils.core
 try:
-    from setuptools.command.install import install 
+    from setuptools import setup
+    from setuptools.command.install import install
+    have_setuptools = True
 except ImportError:
+    from distutils.core import setup
     from distutils.command.install import install
+    have_setuptools = False
 
-from distutils.core import setup
 from distutils.core import Extension
 from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
@@ -16,7 +19,15 @@ from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
 
 # This is set in setupegg.py
-have_setuptools = getattr(distutils.core, "have_setuptools", False) 
+have_setuptools = getattr(distutils.core, "have_setuptools", have_setuptools) 
+if have_setuptools:
+    setuptools_args = {"zip_safe": False,
+                       "install_requires": ["numpy"],
+                       "extra_requires": ["networkx", "PyQt4", "PyQwt"]
+                      }
+else:
+    setuptools_args = {}
+
 
 import re
 import glob
@@ -534,14 +545,6 @@ for root, dirnames, filenames in os.walk('Orange'):
   for filename in fnmatch.filter(filenames, '__init__.py'):
       matches.append(os.path.join(root, filename))
 packages = [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
-
-if have_setuptools:
-    setuptools_args = {"zip_safe": False,
-                       "install_requires": ["numpy"],
-                       "extra_requires": ["networkx", "PyQt4", "PyQwt"]
-                       }
-else:
-    setuptools_args = {}
 
 setup(cmdclass={"build_ext": pyxtract_build_ext,
                 "install_lib": my_install_lib,
