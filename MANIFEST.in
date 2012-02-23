@@ -1,7 +1,16 @@
+recursive-include Orange/testing *
+recursive-include Orange/doc *
+
+recursive-include Orange/OrangeWidgets *.png *.gs *.vs *.obj *.html
+recursive-include Orange/OrangeCanvas *.png *.pyw *.txt
+recursive-include Orange/orng *.cfg *.c
+
 recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip *.defs *.cmake
-recursive-include docs *.rst *.py *.png *.css
+recursive-include docs *.rst *.py *.png *.css *.txt Makefile
+
 graft docs/sphinx-ext
 graft distribute
+
 include COPYING
 include LICENSES
 include setup-site.cfg
