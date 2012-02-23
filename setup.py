@@ -565,6 +565,9 @@ setup(cmdclass={"build_ext": pyxtract_build_ext,
                              "Orange.doc",
                              ],
       
+      # Python 2.6 does not include files from package_data into
+      # the manifest so also add all these files in MANIFEST.in
+      # manually 
       package_data = {"Orange": [
           "OrangeCanvas/icons/*.png",
           "OrangeCanvas/orngCanvas.pyw",
@@ -580,14 +583,20 @@ setup(cmdclass={"build_ext": pyxtract_build_ext,
           "OrangeWidgets/Regression/icons/*.png",
           "OrangeWidgets/Unsupervised/icons/*.png",
           "OrangeWidgets/Visualize/icons/*.png",
-          "OrangeWidgets/Visualize/icons/*.png",
-          "OrangeWidgets/Visualize/icons/*.png",
+          "OrangeWidgets/Visualize Qt/icons/*.png",
           "OrangeWidgets/plot/*.gs",
           "OrangeWidgets/plot/*.vs",
           "OrangeWidgets/plot/primitives/*.obj",
+          # TODO: Doc datasets and files should be installed using data_files.
           "doc/datasets/*.tab",
-          "orangerc.cfg"]
+          "doc/networks/*.net",
+          "doc/networks/*.tab",
+          "doc/style.css",
+          "doc/widgets/*/*.*",
+          "orng/orangerc.cfg"
+          ]
                       },
+      
       ext_modules = [include_ext, orange_ext, orangeom_ext,
                      orangene_ext, corn_ext, statc_ext],
       scripts = ["bin/orange-canvas"],
