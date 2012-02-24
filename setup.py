@@ -21,8 +21,8 @@ from distutils.unixccompiler import UnixCCompiler
 if have_setuptools:
     setuptools_args = {"zip_safe": False,
                        "install_requires": ["numpy"],
-                       "extra_requires": {"GUI": ["networkx", "PyQt4",
-                                                  "PyQwt"]}
+                       "extras_require": {"GUI": ["PyQt4", "PyQwt"],
+                                          "NETWORK": ["networkx"]}
                       }
 else:
     setuptools_args = {}
@@ -48,6 +48,7 @@ except ImportError:
     # When setup.py is first run to install orange, numpy can still be missing
     pass
     numpy_include_dir = None
+    
 python_include_dir = get_python_inc(plat_specific=1)
 
 include_dirs = [python_include_dir, numpy_include_dir, "source/include"]
