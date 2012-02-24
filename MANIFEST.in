@@ -6,6 +6,10 @@ recursive-include Orange/OrangeCanvas *.png *.pyw *.txt
 recursive-include Orange/orng *.cfg *.c
 
 recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip *.defs *.cmake
+prune source/orangeqt/build
+prune source/*/px
+prune source/*/ppp
+
 recursive-include docs *.rst *.py *.png *.css *.txt Makefile
 
 graft docs/sphinx-ext
