@@ -576,10 +576,13 @@ setup(cmdclass={"build_ext": pyxtract_build_ext,
                              ],
       
       package_data = {
-          "Orange" : ["orangerc.cfg", "doc/datasets/*.tab",
+          "Orange" : ["orangerc.cfg", "doc/datasets/*.tab", "doc/datasets/*.csv", "doc/datasets/*.basket",
                       "doc/networks/*.net", "doc/networks/*.tab",
-                      "doc/style.css", "doc/widgets/*/*.*"
-                      ],
+                      "doc/style.css", "doc/widgets/*/*.*",
+                      "testing/regression/tests_20/*.tab",
+                      "testing/regression/tests_20/*.net",
+                      "testing/regression/tests_20/*.basket",
+                      "testing/regression/tests_20/*.csv"],
           "Orange.OrangeCanvas": ["icons/*.png", "orngCanvas.pyw", "WidgetTabs.txt"],
           "Orange.OrangeWidgets":["icons/*.png", "icons/backgrounds/*.png", "report/index.html"],
           "Orange.OrangeWidgets.Associate": ["icons/*.png"],
