@@ -17,9 +17,7 @@ from distutils.command.install_lib import install_lib
 from distutils.util import convert_path
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
-
-# This is set in setupegg.py
-have_setuptools = getattr(distutils.core, "have_setuptools", have_setuptools) 
+ 
 if have_setuptools:
     setuptools_args = {"zip_safe": False,
                        "install_requires": ["numpy"],

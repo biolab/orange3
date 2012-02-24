@@ -14,5 +14,4 @@ graft distribute
 include COPYING
 include LICENSES
 include setup-site.cfg
-include setupegg.py
 include setup.py
