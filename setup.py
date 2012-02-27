@@ -540,7 +540,7 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       extra_link_args = extra_link_args,
                       libraries=libraries
                       )
-
+    
 import fnmatch
 matches = []
 
@@ -551,11 +551,26 @@ for root, dirnames, filenames in os.walk('Orange'):
       matches.append(os.path.join(root, filename))
 packages = [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
 
+
+default_version = "2.5a3"
+############################################
+# Try to get the hg revision. Do
+#     $ hg parent --template="2.5a3-r{rev} > version
+# before running setup.py (note the example shown does 
+# not conform to StrictVersion needed by bdist_msi). 
+############################################
+if os.path.exists("version"):
+    f = open("version")
+    version = f.read()
+else:
+    version = default_version
+    
+
 setup(cmdclass={"build_ext": pyxtract_build_ext,
                 "install_lib": my_install_lib,
                 "install": my_install},
       name ="Orange",
-      version = "2.5a3",
+      version = version,
       description = "Machine learning and interactive data mining toolbox.",
       author = "Bioinformatics Laboratory, FRI UL",
       author_email = "orange@fri.uni-lj.si",
