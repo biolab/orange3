@@ -5,10 +5,20 @@ recursive-include Orange/OrangeWidgets *.png *.gs *.vs *.obj *.html
 recursive-include Orange/OrangeCanvas *.png *.pyw *.txt
 recursive-include Orange/orng *.cfg *.c
 
-recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip *.defs *.cmake
-prune source/orangeqt/build
-prune source/*/px
-prune source/*/ppp
+recursive-include source *.bat *.c *.cpp *.h *.hpp *.mak COPYRIGHT *.py *.txt *.sip *.defs *.cmake Makefile
+recursive-exclude source/orangeqt/build *
+
+prune source/orange/px
+prune source/orange/ppp
+
+prune source/orangeom/px
+prune source/orangene/ppp
+
+prune source/orangene/px
+prune source/orangene/ppp
+
+exclude source/orangeom/lib_vectors.cpp
+exclude source/orangene/lib_vectors.cpp
 
 recursive-include docs *.rst *.py *.png *.css *.txt Makefile
 
