@@ -552,7 +552,7 @@ for root, dirnames, filenames in os.walk('Orange'):
 packages = [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
 
 
-default_version = "2.5a3"
+default_version = "2.5a4"
 ############################################
 # Try to get the hg revision. Do
 #     $ hg parent --template="2.5a3-r{rev} > version
