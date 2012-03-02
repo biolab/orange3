@@ -1,4 +1,20 @@
 #!usr/bin/env python
+"""Orange: Machine learning and interactive data mining toolbox.
+
+Orange is a scriptable environment for fast prototyping of new
+algorithms and testing schemes. It is a collection of Python packages
+that sit over the core library and implement some functionality for
+which execution time is not crucial and which is easier done in Python
+than in C++. This includes a variety of tasks such as attribute subset,
+bagging and boosting, and alike.
+
+Orange also includes a set of graphical widgets that use methods from
+core library and Orange modules. Through visual programming, widgets
+can be assembled together into an application by a visual programming
+tool called Orange Canvas.
+"""
+
+DOCLINES = __doc__.split("\n")
 
 import os, sys        
 import distutils.core
@@ -17,7 +33,42 @@ from distutils.command.install_lib import install_lib
 from distutils.util import convert_path
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
- 
+import subprocess
+
+CLASSIFIERS = """\
+Development Status :: 4 - Beta
+Programming Language :: Python
+License :: OSI Approved :: GNU General Public License (GPL)
+Operating System :: POSIX
+Operating System :: Microsoft :: Windows
+Topic :: Scientific/Engineering :: Artificial Intelligence
+Topic :: Scientific/Engineering :: Visualization
+Intended Audience :: Education
+Intended Audience :: Science/Research
+"""
+
+KEYWORDS = """\
+data mining
+machine learning
+artificial intelligence
+"""
+
+NAME                = 'Orange'
+DESCRIPTION         = DOCLINES[0]
+LONG_DESCRIPTION    = "\n".join(DOCLINES[2:])
+URL                 = "http://orange.biolab.si"
+DOWNLOAD_URL        = "https://bitbucket.org/biolab/orange/downloads"
+LICENSE             = 'GNU General Public License (GPL)'
+CLASSIFIERS         = filter(None, CLASSIFIERS.split('\n'))
+AUTHOR              = "Bioinformatics Laboratory, FRI UL"
+AUTHOR_EMAIL        = "orange@fri.uni-lj.si"
+KEYWORDS            = filter(None, KEYWORDS.split('\n'))
+MAJOR               = 2
+MINOR               = 5
+MICRO               = 0
+ISRELEASED          = False
+VERSION             = '%d.%d.%da5' % (MAJOR, MINOR, MICRO)
+
 if have_setuptools:
     setuptools_args = {"zip_safe": False,
                        "install_requires": ["numpy"],
@@ -541,109 +592,127 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       libraries=libraries
                       )
     
-import fnmatch
-matches = []
 
-#Recursively find '__init__.py's
-for root, dirnames, filenames in os.walk('Orange'): 
+def get_packages():
+    import fnmatch
+    matches = []
 
-  for filename in fnmatch.filter(filenames, '__init__.py'):
-      matches.append(os.path.join(root, filename))
-packages = [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
+    #Recursively find '__init__.py's
+    for root, dirnames, filenames in os.walk('Orange'):
+      # Add packages for Orange
+      for filename in fnmatch.filter(filenames, '__init__.py'):
+          matches.append(os.path.join(root, filename))
+    return [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
 
+def get_package_data():
+    package_data = {
+        "Orange":
+            ["orangerc.cfg", "doc/style.css", "doc/widgets/*/*.*"] +\
+             all_with_extension(path="doc/datasets", extensions=("tab", "csv", "basket")) +\
+             all_with_extension(path="doc/networks", extensions=("net", "tab")) +\
+             all_with_extension(path="testing/regression/tests_20", extensions=("net", "tab", "basket", "csv")),
+        "Orange.OrangeCanvas": ["icons/*.png", "orngCanvas.pyw", "WidgetTabs.txt"],
+        "Orange.OrangeWidgets": ["icons/*.png", "icons/backgrounds/*.png", "report/index.html"],
+        "Orange.OrangeWidgets.Associate": ["icons/*.png"],
+        "Orange.OrangeWidgets.Classify": ["icons/*.png"],
+        "Orange.OrangeWidgets.Data": ["icons/*.png"],
+        "Orange.OrangeWidgets.Evaluate": ["icons/*.png"],
+        "Orange.OrangeWidgets.Prototypes": ["icons/*.png"],
+        "Orange.OrangeWidgets.Regression": ["icons/*.png"],
+        "Orange.OrangeWidgets.Unsupervised": ["icons/*.png"],
+        "Orange.OrangeWidgets.Visualize": ["icons/*.png"],
+        "Orange.OrangeWidgets.Visualize Qt": ["icons/*.png"],
+        "Orange.OrangeWidgets.plot": ["*.gs", "*.vs"],
+        "Orange.OrangeWidgets.plot.primitives": ["*.obj"],
+    }
 
-default_version = "2.5a4"
-############################################
-# Try to get the hg revision. Do
-#     $ hg parent --template="2.5a3-r{rev} > version
-# before running setup.py (note the example shown does 
-# not conform to StrictVersion needed by bdist_msi). 
-############################################
-if os.path.exists("version"):
-    f = open("version")
-    version = f.read()
-else:
-    version = default_version
-    
+    return package_data
 
-setup(cmdclass={"build_ext": pyxtract_build_ext,
-                "install_lib": my_install_lib,
-                "install": my_install},
-      name ="Orange",
-      version = version,
-      description = "Machine learning and interactive data mining toolbox.",
-      author = "Bioinformatics Laboratory, FRI UL",
-      author_email = "orange@fri.uni-lj.si",
-      url = "http://orange.biolab.si",
-      download_url = "https://bitbucket.org/biolab/orange/downloads",
-      packages = packages + ["Orange.OrangeCanvas",
-                             "Orange.OrangeWidgets",
-                             "Orange.OrangeWidgets.Associate",
-                             "Orange.OrangeWidgets.Classify",
-                             "Orange.OrangeWidgets.Data",
-                             "Orange.OrangeWidgets.Evaluate",
-                             "Orange.OrangeWidgets.Prototypes",
-                             "Orange.OrangeWidgets.Regression",
-                             "Orange.OrangeWidgets.Unsupervised",
-                             "Orange.OrangeWidgets.Visualize",
-                             "Orange.OrangeWidgets.Visualize Qt",
-                             "Orange.OrangeWidgets.plot",
-                             "Orange.OrangeWidgets.plot.primitives",
-                             ],
-      
-      package_data = {
-          "Orange" : ["orangerc.cfg", "doc/datasets/*.tab", "doc/datasets/*.csv", "doc/datasets/*.basket",
-                      "doc/networks/*.net", "doc/networks/*.tab",
-                      "doc/style.css", "doc/widgets/*/*.*",
-                      "testing/regression/tests_20/*.tab",
-                      "testing/regression/tests_20/*.net",
-                      "testing/regression/tests_20/*.basket",
-                      "testing/regression/tests_20/*.csv"],
-          "Orange.OrangeCanvas": ["icons/*.png", "orngCanvas.pyw", "WidgetTabs.txt"],
-          "Orange.OrangeWidgets":["icons/*.png", "icons/backgrounds/*.png", "report/index.html"],
-          "Orange.OrangeWidgets.Associate": ["icons/*.png"],
-          "Orange.OrangeWidgets.Classify": ["icons/*.png"],
-          "Orange.OrangeWidgets.Data": ["icons/*.png"],
-          "Orange.OrangeWidgets.Evaluate": ["icons/*.png"],
-          "Orange.OrangeWidgets.Prototypes": ["icons/*.png"],
-          "Orange.OrangeWidgets.Regression": ["icons/*.png"],
-          "Orange.OrangeWidgets.Unsupervised": ["icons/*.png"],
-          "Orange.OrangeWidgets.Visualize": ["icons/*.png"],
-          "Orange.OrangeWidgets.Visualize Qt": ["icons/*.png"],
-          "Orange.OrangeWidgets.plot": ["*.gs", "*.vs"],
-          "Orange.OrangeWidgets.plot.primitives": ["*.obj"],
-          },
-      ext_modules = [include_ext, orange_ext, orangeom_ext,
-                     orangene_ext, corn_ext, statc_ext],
-      scripts = ["bin/orange-canvas"],
-      license = "GNU General Public License (GPL)",
-      keywords = ["data mining", "machine learning", "artificial intelligence"],
-      classifiers = ["Development Status :: 4 - Beta",
-                     "Programming Language :: Python",
-                     "License :: OSI Approved :: GNU General Public License (GPL)",
-                     "Operating System :: POSIX",
-                     "Operating System :: Microsoft :: Windows",
-                     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-                     "Topic :: Scientific/Engineering :: Visualization",
-                     "Intended Audience :: Education",
-                     "Intended Audience :: Science/Research"
-                     ],
-      long_description="""\
-Orange data mining library
-==========================
+def all_with_extension(path, extensions):
+    return [os.path.join(path, "*.%s"%extension) for extension in extensions]
 
-Orange is a scriptable environment for fast prototyping of new
-algorithms and testing schemes. It is a collection of Python packages
-that sit over the core library and implement some functionality for
-which execution time is not crucial and which is easier done in Python
-than in C++. This includes a variety of tasks such as attribute subset,
-bagging and boosting, and alike.
+def hg_revision():
+    # Copied from numpy setup.py and modified to work with hg
+    def _minimal_ext_cmd(cmd):
+        # construct minimal environment
+        env = {}
+        for k in ['SYSTEMROOT', 'PATH']:
+            v = os.environ.get(k)
+            if v is not None:
+                env[k] = v
+        # LANGUAGE is used on win32
+        env['LANGUAGE'] = 'C'
+        env['LANG'] = 'C'
+        env['LC_ALL'] = 'C'
+        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
+        return out
 
-Orange also includes a set of graphical widgets that use methods from 
-core library and Orange modules. Through visual programming, widgets
-can be assembled together into an application by a visual programming
-tool called Orange Canvas.
-""",
-      **setuptools_args)
-      
+    try:
+        out = _minimal_ext_cmd(['hg', 'ide', '-i'])
+        HG_REVISION = out.strip().decode('ascii')
+    except OSError:
+        HG_REVISION = "Unknown"
 
+    return HG_REVISION
+
+def write_version_py(filename='Orange/version.py'):
+    # Copied from numpy setup.py
+    cnt = """
+# THIS FILE IS GENERATED FROM ORANGE SETUP.PY
+short_version = '%(version)s'
+version = '%(version)s'
+full_version = '%(full_version)s'
+hg_revision = '%(hg_revision)s'
+release = %(isrelease)s
+
+if not release:
+    version = full_version
+"""
+    FULLVERSION = VERSION
+    if os.path.exists('.hg'):
+        HG_REVISION = hg_revision()
+    elif os.path.exists('Orange/version.py'):
+        # must be a source distribution, use existing version file
+        from Orange.version import hg_revision as HG_REVISION
+    else:
+        HG_REVISION = "Unknown"
+
+    if not ISRELEASED:
+        FULLVERSION += '.dev-' + HG_REVISION[:7]
+
+    a = open(filename, 'w')
+    try:
+        a.write(cnt % {'version': VERSION,
+                       'full_version' : FULLVERSION,
+                       'hg_revision' : HG_REVISION,
+                       'isrelease': str(ISRELEASED)})
+    finally:
+        a.close()
+
+def setup_package():
+    write_version_py()
+
+    setup(name =NAME,
+          description = DESCRIPTION,
+          version = VERSION,
+          author = AUTHOR,
+          author_email = AUTHOR_EMAIL,
+          url = URL,
+          download_url = DOWNLOAD_URL,
+          classifiers = CLASSIFIERS,
+          long_description=LONG_DESCRIPTION,
+          license = LICENSE,
+          keywords = KEYWORDS,
+
+          cmdclass={"build_ext": pyxtract_build_ext,
+                    "install_lib": my_install_lib,
+                    "install": my_install},
+          packages = get_packages(),
+          package_data = get_package_data(),
+          ext_modules = [include_ext, orange_ext, orangeom_ext,
+                         orangene_ext, corn_ext, statc_ext],
+          scripts = ["bin/orange-canvas"],
+          **setuptools_args)
+
+if __name__ == '__main__':
+    setup_package()
