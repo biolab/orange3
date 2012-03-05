@@ -591,7 +591,14 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       extra_link_args = extra_link_args,
                       libraries=libraries
                       )
-    
+
+
+import __builtin__ as builtins
+
+# We are setting a global variable so that the main Orange __init__ can detect
+# if it is being loaded by the setup routine, to avoid attempting to
+# load components that aren't built yet.
+builtins.__ORANGE_SETUP__ = True
 
 def get_packages():
     import fnmatch
