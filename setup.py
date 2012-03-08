@@ -656,7 +656,7 @@ def hg_revision():
 
     try:
         out = _minimal_ext_cmd(['hg', 'ide', '-i'])
-        HG_REVISION = out.strip().decode('ascii')
+        HG_REVISION = str(out.strip().decode('ascii'))
     except OSError:
         HG_REVISION = "Unknown"
 
@@ -682,7 +682,9 @@ if not release:
         HG_REVISION = hg_revision()
     elif os.path.exists('Orange/version.py'):
         # must be a source distribution, use existing version file
-        from Orange.version import hg_revision as HG_REVISION
+        import imp
+        version = imp.load_source("Orange.version", "Orange/version.py")
+        HG_REVISION = version.hg_revision
     else:
         HG_REVISION = "Unknown"
 
@@ -703,7 +705,7 @@ if not release:
 
 def setup_package():
     write_version_py()
-    setup(name =NAME,
+    setup(name = NAME,
           description = DESCRIPTION,
           version = VERSION,
           author = AUTHOR,
