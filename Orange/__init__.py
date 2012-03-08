@@ -30,7 +30,7 @@ else:
         global alreadyWarned
         try:
             __import__(name, globals(), locals(), [], -1)
-        except Exception as err:
+        except ImportError, err:
             warnings.warn("%sImporting '%s' failed: %s" %
                 (disabledMsg if not alreadyWarned else "", name, err),
                 UserWarning, 2)
