@@ -74,7 +74,6 @@ _import("projection")
 _import("projection.linear")
 _import("projection.mds")
 _import("projection.som")
-_import("projection.pca")
 
 _import("ensemble")
 _import("ensemble.bagging")
