@@ -675,8 +675,6 @@ release = %(isrelease)s
 if not release:
     version = full_version
 """
-    global VERSION
-    
     FULLVERSION = VERSION
     if os.path.exists('.hg'):
         HG_REVISION = hg_revision()
@@ -699,9 +697,6 @@ if not release:
                        'isrelease': str(ISRELEASED)})
     finally:
         a.close()
-    
-    if not ISRELEASED:
-        VERSION = FULLVERSION 
 
 def setup_package():
     write_version_py()
