@@ -479,8 +479,8 @@ def var_type(cell):
         return variable.Python
     elif cell == "":
         return variable.Descriptor
-    elif len(cell.split(",")) > 1:
-        return variable.Discrete, cell.split(",")
+    elif len(split_escaped_str(cell, " ")) > 1:
+        return variable.Discrete, split_escaped_str(cell, " ")
     else:
         raise ValueError("Unknown variable type definition %r." % cell)
 
@@ -580,7 +580,9 @@ def is_variable_string(values, n=None, cutuff=0.1):
     """
     return False
 
-def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
+def load_csv(file, create_new_on=MakeStatus.Incompatible, 
+             delimiter=None, quotechar=None, escapechar=None,
+             has_header=None, has_types=None, has_annotations=None, **kwargs):
     """ Load an Orange.data.Table from s csv file.
     """
     import csv, numpy
@@ -588,43 +590,74 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible, **kwargs):
     snifer = csv.Sniffer()
     sample = file.read(5 * 2 ** 20) # max 5MB sample TODO: What if this is not enough. Try with a bigger sample
     dialect = snifer.sniff(sample)
-    has_header = snifer.has_header(sample)
+    
+    if has_header is None:
+        has_header = snifer.has_header(sample)
+    
     file.seek(0) # Rewind
-    reader = csv.reader(file, dialect=dialect)
+    
+    def kwparams(**kwargs):
+        """Return not None kwargs.
+        """
+        return dict([(k, v) for k, v in kwargs.items() if v is not None])
+    
+    fmtparam = kwparams(delimiter=delimiter,
+                        quotechar=quotechar,
+                        escapechar=escapechar)
+    
+    reader = csv.reader(file, dialect=dialect,
+                        **fmtparam)
 
     header = types = var_attrs = None
 
-#    if not has_header:
-#        raise ValueError("No header in the data file.")
+    row = first_row = reader.next()
+    
+    if has_header:
+        header = row
+        # Eat this row and move to the next
+        row = reader.next()
 
-    header = reader.next()
+    # Guess types row
+    if has_types is None:
+        has_types = has_header and is_var_types_row(row)
+        
+    if has_types:
+        types = var_types(row)
+        # Eat this row and move to the next
+        row = reader.next()
 
-    if header:
-        # Try to get variable definitions
-        types_row = reader.next()
-        if is_var_types_row(types_row):
-            types = var_types(types_row)
+    # Guess variable annotations row
+    if has_annotations is None:
+        has_annotations = has_header and has_types and \
+                          is_var_attributes_row(row)
+        
+    if has_annotations:
+        labels_row = row
+        var_attrs = var_attributes(row)
+        # Eat this row and move to the next
+        row = reader.next()
 
-    if types:
-        # Try to get the variable attributes
-        # (third line in the standard orange tab format).
-        labels_row = reader.next()
-        if is_var_attributes_row(labels_row):
-            var_attrs = var_attributes(labels_row)
-
-    # If definitions not present fill with blanks
+    if not header:
+        # Create a default header
+        header = ["F_%i" % i for i in range(len(first_row))]
+        
     if not types:
+        # Create blank variable types
         types = [None] * len(header)
+        
     if not var_attrs:
+        # Create blank variable attributes
         var_attrs = [None] * len(header)
 
     # start from the beginning
     file.seek(0)
-    reader = csv.reader(file, dialect=dialect)
-    for defined in [header, types, var_attrs]:
-        if any(defined): # skip definition rows if present in the file
+    reader = csv.reader(file, dialect=dialect, **fmtparam)
+    
+    for defined in [has_header, has_types, has_annotations]:
+        if defined: 
+            # skip definition rows if present in the file
             reader.next()
-
+    
     variables = []
     undefined_vars = []
     for i, (name, var_t) in enumerate(zip(header, types)):
