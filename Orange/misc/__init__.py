@@ -910,7 +910,11 @@ def _orange__new__(base=None):
         
     @wraps(base.__new__)
     def _orange__new_wrapped(cls, data=None, **kwargs):
-        self = base.__new__(cls, **kwargs)
+        if base == object:
+            self = base.__new__(cls)
+        else:
+            self = base.__new__(cls, **kwargs)
+
         if data:
             self.__init__(**kwargs)
             return self.__call__(data)
