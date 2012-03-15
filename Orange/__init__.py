@@ -79,6 +79,7 @@ _import("ensemble")
 _import("ensemble.bagging")
 _import("ensemble.boosting")
 _import("ensemble.forest")
+_import("ensemble.stacking")
 
 _import("regression")
 _import("regression.base")
