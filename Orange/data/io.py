@@ -530,12 +530,18 @@ def var_attribute(cell):
         elif items[0] == "class":
             specifier = "class"
             items = items[1:]
+        elif items[0] == "multiclass":
+            specifier = "multiclass"
+            items = items[1:]
+        elif items[0] in ["i", "ignore"]:
+            specifier = "ignore"
+            items = items[1:]
         return specifier, dict(map(_var_attribute_label_parse, items))
     else:
         raise ValueError("Unknown attribute label definition")
 
 def var_attributes(row):
-    """ Return variable specifiers and label definitions for row
+    """ Return variable specifiers and label definitions for row.
     """
     return map(var_attribute, row)
 
@@ -582,7 +588,8 @@ def is_variable_string(values, n=None, cutuff=0.1):
 
 def load_csv(file, create_new_on=MakeStatus.Incompatible, 
              delimiter=None, quotechar=None, escapechar=None,
-             has_header=None, has_types=None, has_annotations=None, **kwargs):
+             skipinitialspace=None, has_header=None, 
+             has_types=None, has_annotations=None, DK=None, **kwargs):
     """ Load an Orange.data.Table from s csv file.
     """
     import csv, numpy
@@ -603,7 +610,8 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     
     fmtparam = kwparams(delimiter=delimiter,
                         quotechar=quotechar,
-                        escapechar=escapechar)
+                        escapechar=escapechar,
+                        skipinitialspace=skipinitialspace)
     
     reader = csv.reader(file, dialect=dialect,
                         **fmtparam)
@@ -660,8 +668,15 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     
     variables = []
     undefined_vars = []
+    # Missing value flags 
+    missing_flags = DK.split(",") if DK is not None else ["?", "", "NA", "~", "*"]
+    missing_map = dict.fromkeys(missing_flags, "?")
+    missing_translate = lambda val: missing_map.get(val, val)
+       
+    # Create domain variables or corresponding place holders
     for i, (name, var_t) in enumerate(zip(header, types)):
-        if var_t == variable.Discrete:# We do not have values yet.
+        if var_t == variable.Discrete:
+            # We do not have values yet
             variables.append(_disc_placeholder(name))
             undefined_vars.append((i, variables[-1]))
         elif var_t == variable.Continuous:
@@ -673,19 +688,28 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
         elif isinstance(var_t, tuple):
             var_t, values = var_t
             if var_t == variable.Discrete:
+                # We have values for discrete variable
                 variables.append(make(name, Orange.feature.Type.Discrete, values, [], create_new_on))
             elif var_t == variable.Python:
+                # Python variables are not supported yet
                 raise NotImplementedError()
         elif var_t is None:
+            # Unknown variable type, to be deduced at the end
             variables.append(_var_placeholder(name))
             undefined_vars.append((i, variables[-1]))
 
     data = []
+    # Read all the rows
     for row in reader:
-        data.append(row)
-        for ind, var_def in undefined_vars:
-            var_def.values.add(row[ind])
-
+        # check for final newline.
+        if row:
+            row = map(missing_translate, row)
+            data.append(row)
+            # For undefined variables collect all their values
+            for ind, var_def in undefined_vars:
+                var_def.values.add(row[ind])
+    
+    # Process undefined variables now that we can deduce their type 
     for ind, var_def in undefined_vars:
         values = var_def.values - set(["?", ""]) # TODO: Other unknown strings?
         values = sorted(values)
@@ -701,22 +725,21 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
             else:
                 raise ValueError("Strange column in the data")
 
-    vars = []
-    vars_load_status = []
     attribute_load_status = []
     meta_attribute_load_status = {}
     class_var_load_status = []
-    for var, status in vars:
-        vars.append(var)
-        vars_load_status.append(status)
+    multiclass_var_load_status = []
 
     attributes = []
     class_var = []
+    class_vars = []
     metas = {}
     attribute_indices = []
     variable_indices = []
     class_indices = []
+    multiclass_indices = []
     meta_indices = []
+    ignore_indices = []
     for i, ((var, status), var_attr) in enumerate(zip(variables, var_attrs)):
         if var_attr:
             flag, attrs = var_attr
@@ -724,11 +747,17 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
                 class_var.append(var)
                 class_var_load_status.append(status)
                 class_indices.append(i)
+            elif flag == "multiclass":
+                class_vars.append(var)
+                multiclass_var_load_status.append(status)
+                multiclass_indices.append(i)
             elif flag == "meta":
                 mid = Orange.feature.Descriptor.new_meta_id()
                 metas[mid] = var
                 meta_attribute_load_status[mid] = status
                 meta_indices.append((i, var))
+            elif flag == "ignore":
+                ignore_indices.append(i)
             else:
                 attributes.append(var)
                 attribute_load_status.append(status)
@@ -741,19 +770,24 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
 
     if len(class_var) > 1:
         raise ValueError("Multiple class variables defined")
+    if class_var and class_vars:
+        raise ValueError("Both 'class' and 'multiclass' used.")
 
     class_var = class_var[0] if class_var else None
-
+    
     attribute_load_status += class_var_load_status
     variable_indices = attribute_indices + class_indices
-    domain = Orange.data.Domain(attributes, class_var)
+    domain = Orange.data.Domain(attributes, class_var, class_vars=class_vars)
     domain.add_metas(metas)
     normal = [[row[i] for i in variable_indices] for row in data]
     meta_part = [[row[i] for i, _ in meta_indices] for row in data]
+    multiclass_part = [[row[i] for i in multiclass_indices] for row in data]
     table = Orange.data.Table(domain, normal)
-    for ex, m_part in zip(table, meta_part):
+    for ex, m_part, mc_part in zip(table, meta_part, multiclass_part):
         for (column, var), val in zip(meta_indices, m_part):
             ex[var] = var(val)
+        if mc_part:
+            ex.set_classes(mc_part)
 
     table.setattr("metaAttributeLoadStatus", meta_attribute_load_status)
     table.setattr("attributeLoadStatus", attribute_load_status)
