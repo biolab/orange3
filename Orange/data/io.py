@@ -450,7 +450,7 @@ def split_escaped_str(str, split_str=" ", escape="\\"):
 
         elif index == -1:
             res.append(str[start:])
-    return res
+    return [r.replace(escape + split_str, split_str) for r in res]
 
 def is_standard_var_def(cell):
     """Is the cell a standard variable definition (empty, cont, disc, string)
@@ -672,7 +672,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     missing_flags = DK.split(",") if DK is not None else ["?", "", "NA", "~", "*"]
     missing_map = dict.fromkeys(missing_flags, "?")
     missing_translate = lambda val: missing_map.get(val, val)
-       
+    
     # Create domain variables or corresponding place holders
     for i, (name, var_t) in enumerate(zip(header, types)):
         if var_t == variable.Discrete:
@@ -817,7 +817,8 @@ def save_csv(file, table, orange_specific=True, **kwargs):
         type_cells = []
         for v in all_vars:
             if isinstance(v, variable.Discrete):
-                type_cells.append(",".join(v.values))
+                escaped_values = [val.replace(" ", r"\ ") for val in v.values]
+                type_cells.append(" ".join(escaped_values))
             elif isinstance(v, variable.Continuous):
                 type_cells.append("continuous")
             elif isinstance(v, variable.String):
