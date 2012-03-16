@@ -30,6 +30,8 @@ _import("data")
 _import("data.io")
 _import("data.sample")
 _import("data.outliers")
+_import("data.preprocess")
+_import("data.preprocess.scaling")
 _import("data.utils")
 _import("data.discretization")
 _import("data.continuization")
@@ -101,9 +103,6 @@ _import("multilabel.brknn")
 _import("multilabel.mulan")
 
 _import("associate")
-
-_import("preprocess")
-_import("preprocess.scaling")
 
 _import("distance")
 
