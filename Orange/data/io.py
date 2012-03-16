@@ -573,18 +573,20 @@ def is_variable_cont(values, n=None, cutoff=0.5):
     cont = sum(map(is_val_cont, values)) or 1e-30
     if n is None:
         n = len(values) or 1
-    return (float(cont) / n) > cutoff
+    return (float(cont) / n) >= cutoff
 
 
 def is_variable_discrete(values, n=None, cutoff=0.3):
     """ Is variable with ``values`` in column (``n`` rows) a discrete variable. 
     """
-    return not is_variable_cont(values, n)
+    return not is_variable_cont(values, n, cutoff=1.0 - cutoff)
 
-def is_variable_string(values, n=None, cutuff=0.1):
+def is_variable_string(values, n=None, cutuff=0.75):
     """ Is variable with ``values`` in column (``n`` rows) a string variable. 
     """
-    return False
+    if n is None:
+        n = len(values)
+    return float(len(set(values))) / (n or 1.0) > cutoff
 
 def load_csv(file, create_new_on=MakeStatus.Incompatible, 
              delimiter=None, quotechar=None, escapechar=None,
@@ -716,14 +718,15 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
         if isinstance(var_def, _disc_placeholder):
             variables[ind] = make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
         elif isinstance(var_def, _var_placeholder):
-            if is_variable_cont(values):
+            if is_variable_cont(values, cutoff=1.0):
                 variables[ind] = make(var_def.name, Orange.feature.Type.Continuous, [], [], create_new_on)
-            elif is_variable_discrete(values):
+            elif is_variable_discrete(values, cutoff=0.0):
                 variables[ind] = make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
             elif is_variable_string(values):
                 variables[ind] = make(var_def.name, Orange.feature.Type.String, [], [], create_new_on)
             else:
-                raise ValueError("Strange column in the data")
+                # Treat it as a string anyway
+                variables[ind] = make(var_def.name, Orange.feature.Type.String, [], [], create_new_on)
 
     attribute_load_status = []
     meta_attribute_load_status = {}
