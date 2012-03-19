@@ -209,7 +209,7 @@ def loadARFF_Weka(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     #if hasattr(t, "attribute_load_status"):
     t.setattr("attribute_load_status", attributeLoadStatus)
     return t
-loadARFF = Orange.misc.deprecated_keywords(
+loadARFF = Orange.utils.deprecated_keywords(
 {"createOnNew": "create_on_new"}
 )(loadARFF)
 
@@ -280,7 +280,7 @@ def loadMULAN(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
         return Orange.multilabel.mulan.trans_mulan_data(xml_name, arff_name)
     else:
         return None
-loadARFF = Orange.misc.deprecated_keywords(
+loadARFF = Orange.utils.deprecated_keywords(
 {"createOnNew": "create_on_new"}
 )(loadARFF)
 
@@ -396,7 +396,7 @@ def toLibSVM(filename, example):
     Orange.classification.svm.tableToSVMFormat(example, open(filename, "wb"))
 
 
-@Orange.misc.deprecated_keywords({"createOnNew": "create_on_new"})
+@Orange.utils.deprecated_keywords({"createOnNew": "create_on_new"})
 def loadLibSVM(filename, create_on_new=MakeStatus.Incompatible, **kwargs):
     """Return class:`Orange.data.Table` containing data from file in LibSVM format"""
     attributeLoadStatus = {}
@@ -853,7 +853,7 @@ register_file_type("Mulan", loadMULAN, None, ".xml")
 #registerFileType("C50", None, toC50, [".names", ".data", ".test"])
 register_file_type("libSVM", loadLibSVM, toLibSVM, ".svm")
 
-registerFileType = Orange.misc.deprecated_function_name(register_file_type)
+registerFileType = Orange.utils.deprecated_function_name(register_file_type)
 
 #__doc__ +=  \
 """\
@@ -897,8 +897,8 @@ def persistent_search_paths():
     """ Return a list of persistent registered (prefix, path) pairs
     """
 
-    global_settings_dir = Orange.misc.environ.install_dir
-    user_settings_dir = Orange.misc.environ.orange_settings_dir
+    global_settings_dir = Orange.utils.environ.install_dir
+    user_settings_dir = Orange.utils.environ.orange_settings_dir
     parser = SafeConfigParser()
     parser.read([os.path.join(global_settings_dir, "orange-search-paths.cfg"),
                  os.path.join(user_settings_dir, "orange-search-paths.cfg")])
@@ -918,7 +918,7 @@ def save_persistent_search_path(prefix, path):
     if isinstance(path, list):
         path = os.path.pathsep.join(path)
 
-    user_settings_dir = Orange.misc.environ.orange_settings_dir
+    user_settings_dir = Orange.utils.environ.orange_settings_dir
     if not os.path.exists(user_settings_dir):
         try:
             os.makedirs(user_settings_dir)

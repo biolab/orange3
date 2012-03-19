@@ -124,13 +124,15 @@ _import("clustering.hierarchical")
 _import("clustering.consensus")
 
 _import("misc")
-_import("misc.environ")
 _import("misc.counters")
 _import("misc.addons")
 _import("misc.render")
 _import("misc.selection")
 _import("misc.serverfiles")
 #_import("misc.r")
+
+_import("utils") #TODO hide utils from the user
+_import("utils.environ")
 
 try:
     from . import version
