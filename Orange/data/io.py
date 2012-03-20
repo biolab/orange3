@@ -892,7 +892,7 @@ _session_paths = []
 import ConfigParser
 from ConfigParser import SafeConfigParser
 
-@Orange.misc.lru_cache(maxsize=1)
+@Orange.utils.lru_cache(maxsize=1)
 def persistent_search_paths():
     """ Return a list of persistent registered (prefix, path) pairs
     """

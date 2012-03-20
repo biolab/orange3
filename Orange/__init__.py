@@ -124,16 +124,16 @@ _import("clustering.hierarchical")
 _import("clustering.consensus")
 
 _import("misc")
-_import("misc.counters")
-_import("misc.addons")
-_import("misc.render")
 _import("misc.selection")
-_import("misc.serverfiles")
 #_import("misc.r")
 
 _import("utils") #TODO hide utils from the user
 _import("utils.environ")
-
+_import("utils.counters")
+_import("utils.addons")
+_import("utils.render")
+_import("utils.serverfiles")
+#
 try:
     from . import version
     # Always use short_version here (see PEP 386)
