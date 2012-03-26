@@ -143,3 +143,6 @@ except ImportError:
     # Leave the default version defined at the top.
     pass
 
+del _import
+del alreadyWarned
+del disabledMsg
