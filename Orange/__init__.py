@@ -25,7 +25,8 @@ def _import(name):
             UserWarning, 2)
         alreadyWarned = True
 
-_import("misc")
+_import("utils")
+
 _import("data")
 _import("data.io")
 _import("data.sample")
@@ -124,7 +125,6 @@ _import("clustering.hierarchical")
 _import("clustering.consensus")
 
 _import("misc")
-_import("misc.selection")
 
 _import("utils") #TODO hide utils from the user
 _import("utils.environ")

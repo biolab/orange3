@@ -328,19 +328,8 @@ to generate random numbers.
 Two examples or random number generator uses found in the documentation
 are :obj:`Orange.evaluation.testing` and :obj:`Orange.data.Table`.
 
-
-----------------
-Other submodules
-----------------
-
-.. automodule:: Orange.misc.selection
-
 """
 from functools import wraps
 from Orange.core import RandomGenerator as Random
 from Orange.core import SymMatrix
 from Orange.core import CostMatrix
-
-__all__ = ["selection" ]
-# Must be imported after deprecation function definitions
-import selection
