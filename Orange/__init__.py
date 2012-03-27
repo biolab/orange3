@@ -125,7 +125,6 @@ _import("clustering.consensus")
 
 _import("misc")
 _import("misc.selection")
-#_import("misc.r")
 
 _import("utils") #TODO hide utils from the user
 _import("utils.environ")
