@@ -14,7 +14,7 @@ can be assembled together into an application by a visual programming
 tool called Orange Canvas.
 """
 
-DOCLINES = __doc__.split("\n")
+DOCLINES = __doc__.splitlines()
 
 import os, sys        
 import distutils.core
@@ -59,10 +59,10 @@ LONG_DESCRIPTION    = "\n".join(DOCLINES[2:])
 URL                 = "http://orange.biolab.si"
 DOWNLOAD_URL        = "https://bitbucket.org/biolab/orange/downloads"
 LICENSE             = 'GNU General Public License (GPL)'
-CLASSIFIERS         = filter(None, CLASSIFIERS.split('\n'))
+CLASSIFIERS         = filter(None, CLASSIFIERS.splitlines())
 AUTHOR              = "Bioinformatics Laboratory, FRI UL"
 AUTHOR_EMAIL        = "orange@fri.uni-lj.si"
-KEYWORDS            = filter(None, KEYWORDS.split('\n'))
+KEYWORDS            = filter(None, KEYWORDS.splitlines())
 MAJOR               = 2
 MINOR               = 5
 MICRO               = 0
