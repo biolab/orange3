@@ -71,7 +71,7 @@ _import("classification.logreg")
 _import("classification.knn")
 _import("classification.majority")
 
-_import("optimization")
+_import("tuning")
 
 _import("projection")
 _import("projection.linear")
