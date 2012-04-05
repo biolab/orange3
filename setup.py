@@ -453,7 +453,7 @@ class my_install_lib(install_lib):
         # because copy_tree fails to overwrite it
         # 
         liborange = os.path.join(self.install_dir, "Orange", "liborange.so")
-        if self.force and os.path.exists(liborange) and os.path.islink(liborange):
+        if os.path.exists(liborange) and os.path.islink(liborange):
             log.info("unlinking %s -> %s", liborange, os.path.join(self.install_dir, "orange.so"))
             os.unlink(liborange)
             
@@ -591,14 +591,6 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       extra_link_args = extra_link_args,
                       libraries=libraries
                       )
-
-
-import __builtin__ as builtins
-
-# We are setting a global variable so that the main Orange __init__ can detect
-# if it is being loaded by the setup routine, to avoid attempting to
-# load components that aren't built yet.
-builtins.__ORANGE_SETUP__ = True
 
 def get_packages():
     import fnmatch
