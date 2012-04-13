@@ -16,8 +16,7 @@ tool called Orange Canvas.
 
 DOCLINES = __doc__.splitlines()
 
-import os, sys        
-import distutils.core
+import os, sys
 try:
     from setuptools import setup
     from setuptools.command.install import install
@@ -28,9 +27,11 @@ except ImportError:
     have_setuptools = False
 
 from distutils.core import Extension
+from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
 from distutils.util import convert_path
+from distutils.errors import DistutilsSetupError
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
 import subprocess
@@ -78,10 +79,7 @@ if have_setuptools:
 else:
     setuptools_args = {}
 
-
-import re
 import glob
-
 from subprocess import check_call
 
 import types
@@ -99,7 +97,7 @@ except ImportError:
     # When setup.py is first run to install orange, numpy can still be missing
     pass
     numpy_include_dir = None
-    
+
 python_include_dir = get_python_inc(plat_specific=1)
 
 include_dirs = [python_include_dir, numpy_include_dir, "source/include"]
@@ -112,11 +110,19 @@ elif sys.platform == "win32":
     extra_link_args = []
 elif sys.platform.startswith("linux"):
     extra_compile_args = "-fPIC -fpermissive -w -DLINUX".split()
-    extra_link_args = ["-Wl,-R$ORIGIN"]    
+    extra_link_args = ["-Wl,-R$ORIGIN"]
 else:
     extra_compile_args = []
     extra_link_args = []
-        
+
+
+# Get the command for building orangeqt extension from
+# source/orangeqt/setup.py file
+import imp
+orangeqt_setup = imp.load_source("orangeqt_setup", "source/orangeqt/setup.py")
+
+build_pyqt_ext = orangeqt_setup.build_pyqt_ext
+
 class LibStatic(Extension):
     pass
 
@@ -124,14 +130,14 @@ class PyXtractExtension(Extension):
     def __init__(self, *args, **kwargs):
         for name, default in [("extra_pyxtract_cmds", []), ("lib_type", "dynamic")]:
             setattr(self, name, kwargs.get(name, default))
-            if name in kwargs:    
+            if name in kwargs:
                 del kwargs[name]
-            
+
         Extension.__init__(self, *args, **kwargs)
-        
+
 class PyXtractSharedExtension(PyXtractExtension):
     pass
-        
+
 class pyxtract_build_ext(build_ext):
     def run_pyxtract(self, ext, dir):
         original_dir = os.path.realpath(os.path.curdir)
@@ -140,7 +146,7 @@ class pyxtract_build_ext(build_ext):
             os.chdir(dir)
             ## we use the commands which are used for building under windows
             pyxtract_cmds = [cmd.split() for cmd in getattr(ext, "extra_pyxtract_cmds", [])]
-            if os.path.exists("_pyxtract.bat"): 
+            if os.path.exists("_pyxtract.bat"):
                 pyxtract_cmds.extend([cmd.split()[1:] for cmd in open("_pyxtract.bat").read().strip().splitlines()])
             for cmd in pyxtract_cmds:
                 log.info(" ".join([sys.executable] + cmd))
@@ -151,11 +157,11 @@ class pyxtract_build_ext(build_ext):
 
         finally:
             os.chdir(original_dir)
-        
+
     def finalize_options(self):
         build_ext.finalize_options(self)
         # add the build_lib dir and build_temp (for 
-        # liborange_include and liborange linking)            
+        # liborange_include and liborange linking)
         if not self.inplace:
             # for linking with liborange.so (it is in Orange package)
             self.library_dirs.append(os.path.join(self.build_lib, "Orange"))
@@ -166,16 +172,23 @@ class pyxtract_build_ext(build_ext):
             self.library_dirs.append("./Orange") 
             # for linking with liborange_include.a
             self.library_dirs.append(self.build_temp)
-        
+
     def build_extension(self, ext):
         if isinstance(ext, LibStatic):
+            # Build static library
             self.build_static(ext)
         elif isinstance(ext, PyXtractExtension):
+            # Build pyextract extension
             self.build_pyxtract(ext)
+        elif isinstance(ext, orangeqt_setup.PyQt4Extension):
+            # Skip the build (will be handled by build_pyqt_ext command)
+            return
         else:
             build_ext.build_extension(self, ext)
-            
+
         if isinstance(ext, PyXtractSharedExtension):
+            # Fix extension modules so they can be linked
+            # by other modules
             if isinstance(self.compiler, MSVCCompiler):
                 # Copy ${TEMP}/orange/orange.lib to ${BUILD}/orange.lib
                 ext_fullpath = self.get_ext_fullpath(ext.name)
@@ -205,7 +218,7 @@ class pyxtract_build_ext(build_ext):
                     log.info("failed to create shared library for %s: %s" % (ext.name, str(ex)))
                 finally:
                     os.chdir(realpath)
-            
+
     def build_pyxtract(self, ext):
         ## mostly copied from build_extension
         sources = ext.sources
@@ -215,9 +228,9 @@ class pyxtract_build_ext(build_ext):
                    "'sources' must be present and must be " +
                    "a list of source filenames") % ext.name
         sources = list(sources)
-        
+
         ext_path = self.get_ext_fullpath(ext.name)
-        
+
         depends = sources + ext.depends
         if not (self.force or newer_group(depends, ext_path, 'newer')):
             log.debug("skipping '%s' extension (up-to-date)", ext.name)
@@ -229,7 +242,7 @@ class pyxtract_build_ext(build_ext):
         # SWIG on 'em to create .c files, and modify the sources list
         # accordingly.
         sources = self.swig_sources(sources, ext)
-        
+
         # Run pyxtract in dir this adds ppp and px dirs to include_dirs
         dir = os.path.commonprefix([os.path.split(s)[0] for s in ext.sources])
         self.run_pyxtract(ext, dir)
@@ -293,8 +306,8 @@ class pyxtract_build_ext(build_ext):
             debug=self.debug,
             build_temp=self.build_temp,
             target_lang=language)
-        
-        
+
+
     def build_static(self, ext):
         ## mostly copied from build_extension, changed
         sources = ext.sources
@@ -304,14 +317,14 @@ class pyxtract_build_ext(build_ext):
                    "'sources' must be present and must be " +
                    "a list of source filenames") % ext.name
         sources = list(sources)
-        
+
         # Static libs get build in the build_temp directory
         output_dir = self.build_temp
         if not os.path.exists(output_dir): #VSC fails if the dir does not exist
             os.makedirs(output_dir)
-            
+
         lib_filename = self.compiler.library_filename(ext.name, lib_type='static', output_dir=output_dir)
-        
+
         depends = sources + ext.depends
         if not (self.force or newer_group(depends, lib_filename, 'newer')):
             log.debug("skipping '%s' extension (up-to-date)", ext.name)
@@ -385,7 +398,7 @@ class pyxtract_build_ext(build_ext):
             objects, ext.name, output_dir,
             debug=self.debug,
             target_lang=language)
-        
+
     def get_libraries(self, ext):
         """ Change the 'orange' library name to 'orange_d' if
         building in debug mode. Using ``get_ext_filename`` to discover if
@@ -400,9 +413,9 @@ class pyxtract_build_ext(build_ext):
             if name.endswith("_d"):
                 index = libraries.index("orange")
                 libraries[index] = "orange_d"
-            
+
         return libraries
-        
+
     if not hasattr(build_ext, "get_ext_fullpath"):
         #On mac OS X python 2.6.1 distutils does not have this method
         def get_ext_fullpath(self, ext_name):
@@ -433,19 +446,33 @@ class pyxtract_build_ext(build_ext):
             # returning
             #   package_dir/filename
             return os.path.join(package_dir, filename)
-        
-        
-class my_install_lib(install_lib):
+
+
+# Add build_pyqt_ext to build subcommands
+class orange_build(build):
+    def has_pyqt_extensions(self):
+        # For now this is disabled unless specifically requested
+        # using build_pyqt_ext command
+        return False
+#        return any([isinstance(ext, orangeqt_setup.PyQt4Extension) \
+#                   for ext in self.distribution.ext_modules]
+#                   )
+
+    sub_commands = build.sub_commands + \
+                   [("build_pyqt_ext", has_pyqt_extensions)]
+
+
+class orange_install_lib(install_lib):
     """ An command to install orange (preserves liborange.so -> orange.so symlink)
     """
     def run(self):
         install_lib.run(self)
-        
+
     def copy_tree(self, infile, outfile, preserve_mode=1, preserve_times=1, preserve_symlinks=1, level=1):
         """ Run copy_tree with preserve_symlinks=1 as default
         """ 
         install_lib.copy_tree(self, infile, outfile, preserve_mode, preserve_times, preserve_symlinks, level)
-        
+
     def install(self):
         """ Copy build_dir to install_dir
         """
@@ -456,11 +483,11 @@ class my_install_lib(install_lib):
         if os.path.exists(liborange) and os.path.islink(liborange):
             log.info("unlinking %s -> %s", liborange, os.path.join(self.install_dir, "orange.so"))
             os.unlink(liborange)
-            
+
         return install_lib.install(self)
-    
-    
-class my_install(install):
+
+
+class orange_install(install):
     """ A command to install orange while also creating
     a .pth path to access the old orng* modules and orange, 
     orangeom etc. 
@@ -468,7 +495,6 @@ class my_install(install):
     """
     def run(self):
         install.run(self)
-        
         # Create a .pth file with a path inside the Orange/orng directory
         # so the old modules are importable
         self.path_file, self.extra_dirs = ("Orange-orng-modules", "Orange/orng")
@@ -476,8 +502,8 @@ class my_install(install):
         log.info("creating portal path for orange compatibility.")
         self.create_path_file()
         self.path_file, self.extra_dirs = None, None
-        
-            
+
+
 def get_source_files(path, ext="cpp", exclude=[]):
     files = glob.glob(os.path.join(path, "*." + ext))
     files = [file for file in files if os.path.basename(file) not in exclude]
@@ -511,26 +537,26 @@ if config.has_option("blas", "library"):
     orange_libraries += [config.get("blas", "library")]
 else:
     orange_sources += get_source_files("source/orange/blas/", "c")
-    
+
 if config.has_option("R", "library"):
     # Link external R library (for linpack)
     orange_libraries += [config.get("R", "library")]
 else:
     orange_sources += get_source_files("source/orange/linpack/", "c")
-    
+
 if config.has_option("liblinear", "library"):
     # Link external LIBLINEAR library
     orange_libraries += [config.get("liblinear", "library")]
 else:
     orange_sources += get_source_files("source/orange/liblinear/", "cpp")
     orange_include_dirs += ["source/orange/liblinear"]
-    
+
 if config.has_option("libsvm", "library"):
     # Link external LibSVM library
     orange_libraries += [config.get("libsvm", "library")]
 else:
     orange_sources += get_source_files("source/orange/libsvm/", "cpp")
-    
+
 
 orange_ext = PyXtractSharedExtension("Orange.orange", orange_sources,
                                       include_dirs=orange_include_dirs,
@@ -550,7 +576,7 @@ if sys.platform == "darwin":
         shared_libs = libraries + ["orange"]
 else:
     shared_libs = libraries + ["orange"]
-    
+
 orangeom_sources = get_source_files("source/orangeom/", exclude=["lib_vectors.cpp"])
 orangeom_libraries = list(shared_libs)
 orangeom_include_dirs = list(include_dirs)
@@ -592,16 +618,28 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       libraries=libraries
                       )
 
+
+orangeqt_ext = orangeqt_setup.orangeqt_ext
+# Fix relative paths, name etc.
+orangeqt_ext.name = "Orange.orangeqt"
+orangeqt_ext.sources = ["source/orangeqt/orangeqt.sip"] + \
+                       get_source_files("source/orangeqt", "cpp",
+                            exclude=["canvas3d.cpp", "plot3d.cpp", 
+                                     "glextensions.cpp"]
+                                        )
+orangeqt_ext.include_dirs += ["source/orangeqt"]
+
 def get_packages():
     import fnmatch
     matches = []
 
     #Recursively find '__init__.py's
     for root, dirnames, filenames in os.walk('Orange'):
-      # Add packages for Orange
-      for filename in fnmatch.filter(filenames, '__init__.py'):
-          matches.append(os.path.join(root, filename))
+        # Add packages for Orange
+        for filename in fnmatch.filter(filenames, '__init__.py'):
+            matches.append(os.path.join(root, filename))
     return [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
+
 
 def get_package_data():
     package_data = {
@@ -672,7 +710,6 @@ if not release:
         HG_REVISION = hg_revision()
     elif os.path.exists('Orange/version.py'):
         # must be a source distribution, use existing version file
-        import imp
         version = imp.load_source("Orange.version", "Orange/version.py")
         HG_REVISION = version.hg_revision
     else:
@@ -690,6 +727,11 @@ if not release:
     finally:
         a.close()
 
+ext_modules = [include_ext, orange_ext, orangeom_ext,
+               orangene_ext, corn_ext, statc_ext,
+               orangeqt_ext
+               ]
+
 def setup_package():
     write_version_py()
     setup(name = NAME,
@@ -704,13 +746,14 @@ def setup_package():
           license = LICENSE,
           keywords = KEYWORDS,
 
-          cmdclass={"build_ext": pyxtract_build_ext,
-                    "install_lib": my_install_lib,
-                    "install": my_install},
+          cmdclass={"build": orange_build,
+                    "build_ext": pyxtract_build_ext,
+                    "build_pyqt_ext": build_pyqt_ext,
+                    "install_lib": orange_install_lib,
+                    "install": orange_install},
           packages = get_packages(),
           package_data = get_package_data(),
-          ext_modules = [include_ext, orange_ext, orangeom_ext,
-                         orangene_ext, corn_ext, statc_ext],
+          ext_modules = ext_modules,
           scripts = ["bin/orange-canvas"],
           **setuptools_args)
 
