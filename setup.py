@@ -117,11 +117,15 @@ else:
 
 
 # Get the command for building orangeqt extension from
-# source/orangeqt/setup.py file
+# source/orangeqt/setup.py file.
+# Fails  without PyQt4.
 import imp
-orangeqt_setup = imp.load_source("orangeqt_setup", "source/orangeqt/setup.py")
-
-build_pyqt_ext = orangeqt_setup.build_pyqt_ext
+try:
+    orangeqt_setup = imp.load_source("orangeqt_setup", "source/orangeqt/setup.py")
+    build_pyqt_ext = orangeqt_setup.build_pyqt_ext
+except ImportError:
+    orangeqt_setup = None
+    build_pyqt_ext = None
 
 class LibStatic(Extension):
     pass
@@ -180,7 +184,7 @@ class pyxtract_build_ext(build_ext):
         elif isinstance(ext, PyXtractExtension):
             # Build pyextract extension
             self.build_pyxtract(ext)
-        elif isinstance(ext, orangeqt_setup.PyQt4Extension):
+        elif orangeqt_setup and isinstance(ext, orangeqt_setup.PyQt4Extension):
             # Skip the build (will be handled by build_pyqt_ext command)
             return
         else:
@@ -458,8 +462,9 @@ class orange_build(build):
 #                   for ext in self.distribution.ext_modules]
 #                   )
 
-    sub_commands = build.sub_commands + \
-                   [("build_pyqt_ext", has_pyqt_extensions)]
+    sub_commands = build.sub_commands
+    if orangeqt_setup:
+        sub_commands += [("build_pyqt_ext", has_pyqt_extensions)]
 
 
 class orange_install_lib(install_lib):
@@ -619,15 +624,30 @@ statc_ext = Extension("Orange.statc", get_source_files("source/statc/"),
                       )
 
 
-orangeqt_ext = orangeqt_setup.orangeqt_ext
-# Fix relative paths, name etc.
-orangeqt_ext.name = "Orange.orangeqt"
-orangeqt_ext.sources = ["source/orangeqt/orangeqt.sip"] + \
-                       get_source_files("source/orangeqt", "cpp",
-                            exclude=["canvas3d.cpp", "plot3d.cpp", 
-                                     "glextensions.cpp"]
-                                        )
-orangeqt_ext.include_dirs += ["source/orangeqt"]
+ext_modules = [include_ext, orange_ext, orangeom_ext,
+               orangene_ext, corn_ext, statc_ext]
+
+cmdclass = {"build": orange_build,
+            "build_ext": pyxtract_build_ext,
+            "install_lib": orange_install_lib,
+            "install": orange_install}
+                    
+if orangeqt_setup:
+    orangeqt_ext = orangeqt_setup.orangeqt_ext
+    # Fix relative paths, name etc.
+    orangeqt_ext.name = "Orange.orangeqt"
+    orangeqt_ext.sources = ["source/orangeqt/orangeqt.sip"] + \
+                           get_source_files("source/orangeqt", "cpp",
+                                exclude=["canvas3d.cpp", "plot3d.cpp", 
+                                         "glextensions.cpp"]
+                                            )
+
+    orangeqt_ext.include_dirs += ["source/orangeqt"]
+
+    ext_modules += [orangeqt_ext]
+
+    cmdclass["build_pyqt_ext"] = build_pyqt_ext
+
 
 def get_packages():
     import fnmatch
@@ -727,10 +747,6 @@ if not release:
     finally:
         a.close()
 
-ext_modules = [include_ext, orange_ext, orangeom_ext,
-               orangene_ext, corn_ext, statc_ext,
-               orangeqt_ext
-               ]
 
 def setup_package():
     write_version_py()
@@ -745,12 +761,7 @@ def setup_package():
           long_description=LONG_DESCRIPTION,
           license = LICENSE,
           keywords = KEYWORDS,
-
-          cmdclass={"build": orange_build,
-                    "build_ext": pyxtract_build_ext,
-                    "build_pyqt_ext": build_pyqt_ext,
-                    "install_lib": orange_install_lib,
-                    "install": orange_install},
+          cmdclass=cmdclass,
           packages = get_packages(),
           package_data = get_package_data(),
           ext_modules = ext_modules,
