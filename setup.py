@@ -3,102 +3,61 @@
 import distribute_setup
 distribute_setup.use_setuptools()
 
-"""Orange: Machine learning and interactive data mining toolbox.
-
-Orange is a scriptable environment for fast prototyping of new
-algorithms and testing schemes. It is a collection of Python packages
-that sit over the core library and implement some functionality for
-which execution time is not crucial and which is easier done in Python
-than in C++. This includes a variety of tasks such as attribute subset,
-bagging and boosting, and alike.
-
-Orange also includes a set of graphical widgets that use methods from
-core library and Orange modules. Through visual programming, widgets
-can be assembled together into an application by a visual programming
-tool called Orange Canvas.
-"""
-
-DOCLINES = __doc__.splitlines()
-
-import os, sys
-try:
-    from setuptools import setup
-    from setuptools.command.install import install
-    have_setuptools = True
-except ImportError:
-    from distutils.core import setup
-    from distutils.command.install import install
-    have_setuptools = False
-
+import glob, os, sys, types
+from distutils import log
 from distutils.core import Extension
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
-from distutils.util import convert_path
+from distutils.dep_util import newer_group
 from distutils.errors import DistutilsSetupError
+from distutils.file_util import copy_file
 from distutils.msvccompiler import MSVCCompiler
 from distutils.unixccompiler import UnixCCompiler
+from distutils.util import convert_path
+from distutils.sysconfig import get_python_inc, get_config_var
 import subprocess
-
-CLASSIFIERS = """\
-Development Status :: 4 - Beta
-Environment :: X11 Applications :: Qt
-Environment :: Console
-Environment :: Plugins
-Programming Language :: Python
-Framework :: Orange
-License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
-Operating System :: POSIX
-Operating System :: Microsoft :: Windows
-Topic :: Scientific/Engineering :: Artificial Intelligence
-Topic :: Scientific/Engineering :: Visualization
-Topic :: Software Development :: Libraries :: Python Modules
-Intended Audience :: Education
-Intended Audience :: Science/Research
-Intended Audience :: Developers
-"""
-
-KEYWORDS = """\
-data mining
-machine learning
-artificial intelligence
-"""
-
-NAME                = 'Orange'
-DESCRIPTION         = DOCLINES[0]
-LONG_DESCRIPTION    = "\n".join(DOCLINES[2:])
-URL                 = "http://orange.biolab.si/"
-DOWNLOAD_URL        = "https://bitbucket.org/biolab/orange/downloads"
-LICENSE             = 'GPLv3'
-CLASSIFIERS         = filter(None, CLASSIFIERS.splitlines())
-AUTHOR              = "Bioinformatics Laboratory, FRI UL"
-AUTHOR_EMAIL        = "contact@orange.biolab.si"
-KEYWORDS            = filter(None, KEYWORDS.splitlines())
-MAJOR               = 2
-MINOR               = 5
-MICRO               = 0
-ISRELEASED          = False
-VERSION             = '%d.%d.%da5' % (MAJOR, MINOR, MICRO)
-
-if have_setuptools:
-    setuptools_args = {"zip_safe": False,
-                       "install_requires": ["numpy"],
-                       "extras_require": {"GUI": ["PyQt4", "PyQwt"],
-                                          "NETWORK": ["networkx"]}
-                      }
-else:
-    setuptools_args = {}
-
-import glob
 from subprocess import check_call
 
-import types
+from setuptools import setup, find_packages
+from setuptools.command.install import install
 
-from distutils.dep_util import newer_group
-from distutils.file_util import copy_file
-from distutils import log
+NAME = 'Orange'
 
-from distutils.sysconfig import get_python_inc, get_config_var
+VERSION = '2.6a1'
+ISRELEASED = False
+
+DESCRIPTION = 'Orange, a component-based data mining framework.'
+LONG_DESCRIPTION = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
+AUTHOR = 'Bioinformatics Laboratory, FRI UL'
+AUTHOR_EMAIL = 'contact@orange.biolab.si'
+URL = 'http://orange.biolab.si/'
+DOWNLOAD_URL = 'https://bitbucket.org/biolab/orange/downloads'
+LICENSE = 'GPLv3'
+
+KEYWORDS = (
+    'data mining',
+    'machine learning',
+    'artificial intelligence',
+)
+
+CLASSIFIERS = (
+    'Development Status :: 4 - Beta',
+    'Environment :: X11 Applications :: Qt',
+    'Environment :: Console',
+    'Environment :: Plugins',
+    'Programming Language :: Python',
+    'Framework :: Orange',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'Operating System :: POSIX',
+    'Operating System :: Microsoft :: Windows',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Scientific/Engineering :: Visualization',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Intended Audience :: Education',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: Developers',
+)
 
 try:
     import numpy
@@ -110,28 +69,27 @@ except ImportError:
 
 python_include_dir = get_python_inc(plat_specific=1)
 
-include_dirs = [python_include_dir, numpy_include_dir, "source/include"]
+include_dirs = [python_include_dir, numpy_include_dir, 'source/include']
 
-if sys.platform == "darwin":
-    extra_compile_args = "-fPIC -fpermissive -fno-common -w -DDARWIN".split()
-    extra_link_args = "-headerpad_max_install_names -undefined dynamic_lookup".split()
-elif sys.platform == "win32":
-    extra_compile_args = ["-EHsc"]
+if sys.platform == 'darwin':
+    extra_compile_args = '-fPIC -fpermissive -fno-common -w -DDARWIN'.split()
+    extra_link_args = '-headerpad_max_install_names -undefined dynamic_lookup'.split()
+elif sys.platform == 'win32':
+    extra_compile_args = ['-EHsc']
     extra_link_args = []
-elif sys.platform.startswith("linux"):
-    extra_compile_args = "-fPIC -fpermissive -w -DLINUX".split()
-    extra_link_args = ["-Wl,-R$ORIGIN"]
+elif sys.platform.startswith('linux'):
+    extra_compile_args = '-fPIC -fpermissive -w -DLINUX'.split()
+    extra_link_args = ['-Wl,-R$ORIGIN']
 else:
     extra_compile_args = []
     extra_link_args = []
 
-
 # Get the command for building orangeqt extension from
 # source/orangeqt/setup.py file.
-# Fails  without PyQt4.
+# Fails without PyQt4.
 import imp
 try:
-    orangeqt_setup = imp.load_source("orangeqt_setup", "source/orangeqt/setup.py")
+    orangeqt_setup = imp.load_source('orangeqt_setup', 'source/orangeqt/setup.py')
     build_pyqt_ext = orangeqt_setup.build_pyqt_ext
 except ImportError:
     orangeqt_setup = None
@@ -461,7 +419,6 @@ class pyxtract_build_ext(build_ext):
             #   package_dir/filename
             return os.path.join(package_dir, filename)
 
-
 # Add build_pyqt_ext to build subcommands
 class orange_build(build):
     def has_pyqt_extensions(self):
@@ -475,7 +432,6 @@ class orange_build(build):
     sub_commands = build.sub_commands
     if orangeqt_setup:
         sub_commands += [("build_pyqt_ext", has_pyqt_extensions)]
-
 
 class orange_install_lib(install_lib):
     """ An command to install orange (preserves liborange.so -> orange.so symlink)
@@ -501,7 +457,6 @@ class orange_install_lib(install_lib):
 
         return install_lib.install(self)
 
-
 class orange_install(install):
     """ A command to install orange while also creating
     a .pth path to access the old orng* modules and orange, 
@@ -518,12 +473,10 @@ class orange_install(install):
         self.create_path_file()
         self.path_file, self.extra_dirs = None, None
 
-
 def get_source_files(path, ext="cpp", exclude=[]):
     files = glob.glob(os.path.join(path, "*." + ext))
     files = [file for file in files if os.path.basename(file) not in exclude]
     return files
-
 
 include_ext = LibStatic("orange_include",
                         get_source_files("source/include/"),
@@ -534,7 +487,6 @@ if sys.platform == "win32": # ?? mingw/cygwin
     libraries = ["orange_include"]
 else:
     libraries = ["stdc++", "orange_include"]
-
 
 import ConfigParser
 config = ConfigParser.RawConfigParser()
@@ -572,7 +524,6 @@ if config.has_option("libsvm", "library"):
 else:
     orange_sources += get_source_files("source/orange/libsvm/", "cpp")
 
-
 orange_ext = PyXtractSharedExtension("Orange.orange", orange_sources,
                                       include_dirs=orange_include_dirs,
                                       extra_compile_args = extra_compile_args + ["-DORANGE_EXPORTS"],
@@ -602,7 +553,6 @@ if config.has_option("qhull", "library"):
 else:
     orangeom_sources += get_source_files("source/orangeom/qhull/", "c")
     orangeom_include_dirs += ["source/orangeom"]
-
 
 orangeom_ext = PyXtractExtension("Orange.orangeom", orangeom_sources,
                                   include_dirs=orangeom_include_dirs + ["source/orange/"],
@@ -658,19 +608,10 @@ if orangeqt_setup:
 
     cmdclass["build_pyqt_ext"] = build_pyqt_ext
 
+def all_with_extension(path, extensions):
+    return [os.path.join(path, "*.%s"%extension) for extension in extensions]
 
-def get_packages():
-    import fnmatch
-    matches = []
-
-    #Recursively find '__init__.py's
-    for root, dirnames, filenames in os.walk('Orange'):
-        # Add packages for Orange
-        for filename in fnmatch.filter(filenames, '__init__.py'):
-            matches.append(os.path.join(root, filename))
-    return [os.path.dirname(pkg).replace(os.path.sep, '.') for pkg in matches]
-
-
+# TODO: Simply replace with include_package_data = True and configure missed files in MANIFEST.in?
 def get_package_data():
     package_data = {
         "Orange":
@@ -694,9 +635,6 @@ def get_package_data():
     }
 
     return package_data
-
-def all_with_extension(path, extensions):
-    return [os.path.join(path, "*.%s"%extension) for extension in extensions]
 
 def hg_revision():
     # Copied from numpy setup.py and modified to work with hg
@@ -757,26 +695,66 @@ if not release:
     finally:
         a.close()
 
+PACKAGES = find_packages()
+
+PACKAGE_DATA = get_package_data()
+
+SETUP_REQUIRES = (
+)
+
+INSTALL_REQUIRES = (
+    'numpy',
+)
+
+EXTRAS_REQUIRE = {
+    'GUI': (
+        'PyQt4',
+        'PyQwt',
+    ),
+    'NETWORK': (
+        'networkx',
+    ),
+}
+
+DEPENDENCY_LINKS = (
+)
+
+# TODO: Use entry points for automatic script creation
+# http://packages.python.org/distribute/setuptools.html#automatic-script-creation
+ENTRY_POINTS = {
+}
 
 def setup_package():
     write_version_py()
-    setup(name = NAME,
-          description = DESCRIPTION,
-          version = VERSION,
-          author = AUTHOR,
-          author_email = AUTHOR_EMAIL,
-          url = URL,
-          download_url = DOWNLOAD_URL,
-          classifiers = CLASSIFIERS,
-          long_description=LONG_DESCRIPTION,
-          license = LICENSE,
-          keywords = KEYWORDS,
-          cmdclass=cmdclass,
-          packages = get_packages(),
-          package_data = get_package_data(),
-          ext_modules = ext_modules,
-          scripts = ["bin/orange-canvas"],
-          **setuptools_args)
+    setup(
+        name = NAME,
+        version = VERSION,
+        description = DESCRIPTION,
+        long_description = LONG_DESCRIPTION,
+        author = AUTHOR,
+        author_email = AUTHOR_EMAIL,
+        url = URL,
+        download_url = DOWNLOAD_URL,
+        license = LICENSE,
+        keywords = KEYWORDS,
+        classifiers = CLASSIFIERS,
+        packages = PACKAGES,
+        package_data = PACKAGE_DATA,
+        setup_requires = SETUP_REQUIRES,
+        extras_require = EXTRAS_REQUIRE,
+        install_requires = INSTALL_REQUIRES,
+        dependency_links = DEPENDENCY_LINKS,
+        entry_points = ENTRY_POINTS,
+        include_package_data = True,
+        zip_safe = False,
+
+        # TODO: Should migrate those for distribute (using entry points)
+        cmdclass = cmdclass,
+        ext_modules = ext_modules,
+        scripts = (
+            "bin/orange-canvas",
+        ),
+    )
 
 if __name__ == '__main__':
     setup_package()

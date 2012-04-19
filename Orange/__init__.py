@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-__version__ = "2.5a4"
+__version__ = "2.6a1"
 
 ADDONS_ENTRY_POINT = 'orange.addons'
 
