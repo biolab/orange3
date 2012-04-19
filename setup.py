@@ -38,14 +38,20 @@ import subprocess
 
 CLASSIFIERS = """\
 Development Status :: 4 - Beta
+Environment :: X11 Applications :: Qt
+Environment :: Console
+Environment :: Plugins
 Programming Language :: Python
-License :: OSI Approved :: GNU General Public License (GPL)
+Framework :: Orange
+License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
 Operating System :: POSIX
 Operating System :: Microsoft :: Windows
 Topic :: Scientific/Engineering :: Artificial Intelligence
 Topic :: Scientific/Engineering :: Visualization
+Topic :: Software Development :: Libraries :: Python Modules
 Intended Audience :: Education
 Intended Audience :: Science/Research
+Intended Audience :: Developers
 """
 
 KEYWORDS = """\
@@ -57,12 +63,12 @@ artificial intelligence
 NAME                = 'Orange'
 DESCRIPTION         = DOCLINES[0]
 LONG_DESCRIPTION    = "\n".join(DOCLINES[2:])
-URL                 = "http://orange.biolab.si"
+URL                 = "http://orange.biolab.si/"
 DOWNLOAD_URL        = "https://bitbucket.org/biolab/orange/downloads"
-LICENSE             = 'GNU General Public License (GPL)'
+LICENSE             = 'GPLv3'
 CLASSIFIERS         = filter(None, CLASSIFIERS.splitlines())
 AUTHOR              = "Bioinformatics Laboratory, FRI UL"
-AUTHOR_EMAIL        = "orange@fri.uni-lj.si"
+AUTHOR_EMAIL        = "contact@orange.biolab.si"
 KEYWORDS            = filter(None, KEYWORDS.splitlines())
 MAJOR               = 2
 MINOR               = 5
