@@ -1,4 +1,8 @@
 #!usr/bin/env python
+
+import distribute_setup
+distribute_setup.use_setuptools()
+
 """Orange: Machine learning and interactive data mining toolbox.
 
 Orange is a scriptable environment for fast prototyping of new
