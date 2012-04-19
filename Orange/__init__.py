@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 __version__ = "2.5a4"
 
+ADDONS_ENTRY_POINT = 'orange.addons'
+
 from . import orange
 
 # Definitely ugly, but I see no other workaround.
@@ -12,6 +14,7 @@ import sys
 sys.modules["orange"] = orange
 
 import warnings
+import pkg_resources
 
 alreadyWarned = False
 disabledMsg = "Some features will be disabled due to failing modules\n"
@@ -24,6 +27,17 @@ def _import(name):
             (disabledMsg if not alreadyWarned else "", name, err),
             UserWarning, 2)
         alreadyWarned = True
+
+def _import_addons():
+    globals_dict = globals()
+    for entry_point in pkg_resources.iter_entry_points(ADDONS_ENTRY_POINT):
+        try:
+            module = entry_point.load()
+            if '.' not in entry_point.name:
+                globals_dict[entry_point.name] = module
+            sys.modules['Orange.%s' % (entry_point.name,)] = module
+        except ImportError, err:
+            warnings.warn("Importing add-on '%s' failed: %s" % (entry_point.name, err), UserWarning, 2)
 
 _import("utils")
 
@@ -132,7 +146,9 @@ _import("utils.counters")
 _import("utils.addons")
 _import("utils.render")
 _import("utils.serverfiles")
-#
+
+_import_addons()
+
 try:
     from . import version
     # Always use short_version here (see PEP 386)
@@ -143,5 +159,6 @@ except ImportError:
     pass
 
 del _import
+del _import_addons
 del alreadyWarned
 del disabledMsg
