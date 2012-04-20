@@ -18,16 +18,11 @@ from distutils.sysconfig import get_python_inc, get_config_var
 import subprocess
 from subprocess import check_call
 
-# A hack to make setuptools in distutils work together on Ubuntu
-import distutils.extension
-import distutils.command.build_ext
-from distutils.extension import Extension as _Extension
-distutils.extension.Extension = _Extension
-distutils.command.build_ext.Extension = _Extension
-Extension = _Extension
-
 from setuptools import setup, find_packages
 from setuptools.command.install import install
+
+# Has to be last import as it seems something is changing it somewhere
+from distutils.extension import Extension
 
 NAME = 'Orange'
 
