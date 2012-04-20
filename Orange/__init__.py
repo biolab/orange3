@@ -13,6 +13,10 @@ from . import orange
 import sys
 sys.modules["orange"] = orange
 
+# Little trick so that legacy imports work automatically
+import Orange.orng
+sys.path = Orange.orng.__path__ + sys.path
+
 import warnings
 import pkg_resources
 
