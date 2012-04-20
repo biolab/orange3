@@ -5,7 +5,6 @@ distribute_setup.use_setuptools()
 
 import glob, os, sys, types
 from distutils import log
-from distutils.core import Extension
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.install_lib import install_lib
@@ -18,6 +17,14 @@ from distutils.util import convert_path
 from distutils.sysconfig import get_python_inc, get_config_var
 import subprocess
 from subprocess import check_call
+
+# A hack to make setuptools in distutils work together on Ubuntu
+import distutils.extension
+import distutils.command.build_ext
+from distutils.extension import Extension as _Extension
+distutils.extension.Extension = _Extension
+distutils.command.build_ext.Extension = _Extension
+Extension = _Extension
 
 from setuptools import setup, find_packages
 from setuptools.command.install import install
