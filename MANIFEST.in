@@ -29,3 +29,4 @@ include COPYING
 include LICENSES
 include setup-site.cfg
 include setup.py
+include distribute_setup.py
