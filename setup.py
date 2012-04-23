@@ -702,9 +702,11 @@ PACKAGES = find_packages()
 PACKAGE_DATA = get_package_data()
 
 SETUP_REQUIRES = (
+    'distribute',
 )
 
 INSTALL_REQUIRES = (
+    'distribute',
     'numpy',
 )
 
