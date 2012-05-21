@@ -42,6 +42,11 @@ def _import_addons():
             sys.modules['Orange.%s' % (entry_point.name,)] = module
         except ImportError, err:
             warnings.warn("Importing add-on '%s' failed: %s" % (entry_point.name, err), UserWarning, 2)
+        except pkg_resources.DistributionNotFound, err:
+            warnings.warn("Loading add-on '%s' failed because of a missing dependency: '%s'" % (entry_point.name, err), UserWarning, 2)
+        except Exception, err:
+            warning.warn("An exception occurred during the loading of '%s':\n%r" %(entry_point.name, err), UserWarning, 2)
+
 
 _import("utils")
 
