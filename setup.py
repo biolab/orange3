@@ -1,7 +1,12 @@
 #!usr/bin/env python
 
-import distribute_setup
-distribute_setup.use_setuptools()
+try:
+    import distribute_setup
+    distribute_setup.use_setuptools()
+except ImportError:
+    # For documentation we load setup.py to get version
+    # so it does not matter if importing fails
+    pass
 
 import glob, os, sys, types
 from distutils import log
@@ -91,7 +96,7 @@ else:
 # Fails without PyQt4.
 import imp
 try:
-    orangeqt_setup = imp.load_source('orangeqt_setup', 'source/orangeqt/setup.py')
+    orangeqt_setup = imp.load_source('orangeqt_setup', os.path.join(os.path.dirname(__file__), 'source/orangeqt/setup.py'))
     build_pyqt_ext = orangeqt_setup.build_pyqt_ext
 except ImportError:
     orangeqt_setup = None
