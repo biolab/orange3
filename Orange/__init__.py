@@ -39,15 +39,23 @@ def _import_addons():
     for entry_point in pkg_resources.iter_entry_points(ADDONS_ENTRY_POINT):
         try:
             module = entry_point.load()
-            if '.' not in entry_point.name:
-                globals_dict[entry_point.name] = module
-            sys.modules['Orange.%s' % (entry_point.name,)] = module
+            # Dot is not allowed in an entry point name (it should
+            # be a Python identifier, because it is used as a class
+            # name), so we are using __ instead
+            name = entry_point.name.replace('__', '.')
+            if '.' not in name:
+                globals_dict[name] = module
+            else:
+                path, mod = name.rsplit('.', 1)
+                parent_module = sys.modules['Orange.%s' % (path,)]
+                setattr(parent_module, mod, module)
+            sys.modules['Orange.%s' % (name,)] = module
         except ImportError, err:
             warnings.warn("Importing add-on '%s' failed: %s" % (entry_point.name, err), UserWarning, 2)
         except pkg_resources.DistributionNotFound, err:
             warnings.warn("Loading add-on '%s' failed because of a missing dependency: '%s'" % (entry_point.name, err), UserWarning, 2)
         except Exception, err:
-            warning.warn("An exception occurred during the loading of '%s':\n%r" %(entry_point.name, err), UserWarning, 2)
+            warnings.warn("An exception occurred during the loading of '%s':\n%r" %(entry_point.name, err), UserWarning, 2)
 
 
 _import("utils")
