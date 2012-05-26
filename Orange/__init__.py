@@ -47,7 +47,12 @@ def _import_addons():
                 globals_dict[name] = module
             else:
                 path, mod = name.rsplit('.', 1)
-                parent_module = sys.modules['Orange.%s' % (path,)]
+                parent_module_name = 'Orange.%s' % (path,)
+                try:
+                    parent_module = sys.modules[parent_module_name]
+                except KeyError:
+                    warnings.warn("Loading add-on '%s' failed because destination namespace point '%s' was not found." % (entry_point.name, parent_module_name), UserWarning, 2)
+                    continue
                 setattr(parent_module, mod, module)
             sys.modules['Orange.%s' % (name,)] = module
         except ImportError, err:
