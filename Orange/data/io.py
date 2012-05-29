@@ -87,6 +87,7 @@ Similar as above the ``**kwargs`` contains any additional arguments
   
 """
 import os
+import warnings
 
 import Orange
 import Orange.feature
@@ -855,24 +856,30 @@ register_file_type("libSVM", loadLibSVM, toLibSVM, ".svm")
 
 registerFileType = Orange.utils.deprecated_function_name(register_file_type)
 
-#__doc__ +=  \
+__doc__ +=  \
 """\
 Search Paths
 ============
 
 Associate a prefix with a search path for easier data loading.
-The paths can be stored in a user specific file.
+The paths can be stored in a user specific configuration file.
 
-Example ::
+.. note: The '' (empty string) prefix can be used to add search paths
+         to the default search path.
+
+.. note: Add-ons can register their search paths using
+        'orange.data.io.search_paths' entry point
+
+Example
 
     >>> import Orange, os
     >>> from Orange.data import io
-    >>> io.set_search_path("my_datasets",
-    ...                     os.path.expanduser("~/Documents/My Datasets"))
-    ...                     persistent=True)
-    ...
-    
-    >>> data = Orange.data.Table("mydatasets:dataset1.tab")
+    >>> directory = os.path.expanduser("~/Documents/My Datasets"))
+    >>> io.set_search_path("my_datasets", directory, persistent=True)
+    >>> data = Orange.data.Table("my_datasets:dataset1.tab")
+    >>> # Add directory to the default search path
+    >>> io.set_search_path("", directory)
+    >>> data = Orange.data.Table("dataset1.tab")
 
 
 .. autofunction:: set_search_path
@@ -886,15 +893,52 @@ Example ::
 .. autofunction:: expand_filename
 
 """
+
+
 # Non-persistent registered paths
 _session_paths = []
 
 import ConfigParser
 from ConfigParser import SafeConfigParser
 
+DATA_PATHS_ENTRY_POINT = "orange.data.io.search_paths"
+
+
+def addon_data_search_paths():
+    """Return the search paths registered by setuptools
+    'orange.data.io.search_paths' entry point.
+
+    """
+    import pkg_resources
+    search_paths = []
+    for entry_point in pkg_resources.iter_entry_points(DATA_PATHS_ENTRY_POINT):
+        try:
+            call = entry_point.load()
+            paths = call()
+        except pkg_resources.DistributionNotFound, ex:
+            warnings.warn("Missing dependency for %r: %r" % (entry_point, ex),
+                         UserWarning)
+            paths = []
+        except Exception, ex:
+            warnings.warn("Error calling %r: %r" % (entry_point, ex),
+                         UserWarning)
+            paths = []
+
+        for path in paths:
+            if isinstance(path, tuple) and len(path) == 2 and \
+                    all(isinstance(p, basestring) for p in path):
+                search_paths.append(path)
+            elif isinstance(path, basestring):
+                search_paths.append(("", path))
+            else:
+                warnings.warn("Invalid search path %r. Expected tuple or "
+                              "string, got %r" % (entry_point, type(path)))
+    return search_paths
+
+
 @Orange.utils.lru_cache(maxsize=1)
 def persistent_search_paths():
-    """ Return a list of persistent registered (prefix, path) pairs
+    """Return a list of persistent registered (prefix, path) pairs.
     """
 
     global_settings_dir = Orange.utils.environ.install_dir
@@ -908,15 +952,23 @@ def persistent_search_paths():
         items = [i for i in items if i not in defaults]
     except ConfigParser.NoSectionError:
         items = []
+    # Replace "__default__" prefix with ""
+    items = [item if item[0] != "__default__" else ("", item[1]) \
+             for item in items]
     return items
 
+
 def save_persistent_search_path(prefix, path):
-    """ Save the prefix, path pair. If path is None delete the 
+    """Save the prefix, path pair. If path is None delete the
     registered prefix.
-    
+
     """
     if isinstance(path, list):
         path = os.path.pathsep.join(path)
+
+    if prefix == "":
+        # Store "" prefix as "__default__"
+        prefix = "__default__"
 
     user_settings_dir = Orange.utils.environ.orange_settings_dir
     if not os.path.exists(user_settings_dir):
@@ -935,36 +987,44 @@ def save_persistent_search_path(prefix, path):
     if path is not None:
         parser.set("paths", prefix, path)
     elif parser.has_option("paths", prefix):
-        # Remove the registered prefix 
+        # Remove the registered prefix
         parser.remove_option("paths", prefix)
     parser.write(open(filename, "wb"))
 
+
 def search_paths(prefix=None):
-    """ Return a list of the registered (prefix, path) pairs.
+    """Return the search path for `prefix`. The search path is
+    the union of registered session paths, user specified persistent
+    search paths and any search paths registered by
+    'orange.data.io.search_path' `pkg_resources` entry points.
+
     """
     persistent_paths = persistent_search_paths()
-    paths = _session_paths + persistent_paths
+    addon_paths = addon_data_search_paths()
+    paths = _session_paths + persistent_paths + addon_paths
     if prefix is not None:
+        ppaths = []
         for pref, path in paths:
             if pref == prefix:
-                return path
-        return ""
+                ppaths.extend(path.split(os.path.pathsep))
+        return os.path.pathsep.join(ppaths)
     else:
         return paths
 
+
 def set_search_path(prefix, path, persistent=False):
-    """ Associate a search path with a prefix.
-    
+    """Associate a search path with a prefix.
+
     :param prefix: a prefix
     :type prefix: str
-    
+
     :param path: search path (can also be a list of path strings)
     :type paths: str
-    
-    :param persistent: if True then the prefix-paths pair will be 
+
+    :param persistent: if `True` then the (prefix, path) pair will be
         saved between sessions (default False).
-    :type persistent: bool 
-    
+    :type persistent: bool
+
     """
     global _session_paths
 
@@ -980,40 +1040,36 @@ def set_search_path(prefix, path, persistent=False):
 
 
 def expand_filename(prefixed_name):
-    """ Expand the prefixed filename with the full path.
-    ::
-        
+    """Expand the prefixed filename with the full path.
+
         >>> from Orange.data import io
         >>> io.set_search_paths("docs", "/Users/aleserjavec/Documents")
         >>> io.expand_filename("docs:my_tab_file.tab")
         '/Users/aleserjavec/Documents/my_tab_file.tab'
-        
-        
+
     """
-    prefix, filename = prefixed_name.split(":", 1) #TODO: windows drive letters.
+    # TODO: handle windows drive letters.
+    if ":" in prefixed_name:
+        prefix, filename = prefixed_name.split(":", 1)
+    else:
+        prefix, filename = "", prefixed_name
     paths = search_paths(prefix)
     if paths:
-        path = paths.split(os.path.pathsep, 1)[0]
-        return os.path.join(path, filename)
+        paths = paths.split(os.path.pathsep)
+        for path in paths:
+            if os.path.exists(os.path.join(path, filename)):
+                return os.path.join(path, filename)
+        raise ValueError("%r not found on the search path." % filename)
     else:
         raise ValueError("Unknown prefix %r." % prefix)
 
+
 def find_file(prefixed_name):
-    """ Find the prefixed filename and return its full path.
+    """Find the prefixed filename and return its full path.
     """
+    # This function is called from C++ if the default search
+    # fails
     if not os.path.exists(prefixed_name):
-        if ":" not in prefixed_name:
-            raise ValueError("Not a prefixed name.")
-        prefix, filename = prefixed_name.split(":", 1)
-        paths = search_paths(prefix)
-        if paths:
-            for path in paths.split(os.path.pathsep):
-                if os.path.exists(os.path.join(path, filename)):
-                    return os.path.join(path, filename)
-            raise ValueError("No file %r on prefixed search path %r." % \
-                             (filename, paths))
-        else:
-            raise ValueError("Unknown prefix %r." % prefix)
+        return expand_filename(prefixed_name)
     else:
         return prefixed_name
-
