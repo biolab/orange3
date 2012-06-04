@@ -915,24 +915,21 @@ def addon_data_search_paths():
         try:
             call = entry_point.load()
             paths = call()
+            for path in paths:
+                if isinstance(path, tuple) and len(path) == 2 and \
+                        all(isinstance(p, basestring) for p in path):
+                    search_paths.append(path)
+                elif isinstance(path, basestring):
+                    search_paths.append(("", path))
+                else:
+                    warnings.warn("Invalid search path %r. Expected tuple or "
+                                  "string, got %r" % (entry_point, type(path)))
         except pkg_resources.DistributionNotFound, ex:
             warnings.warn("Missing dependency for %r: %r" % (entry_point, ex),
                          UserWarning)
-            paths = []
         except Exception, ex:
             warnings.warn("Error calling %r: %r" % (entry_point, ex),
                          UserWarning)
-            paths = []
-
-        for path in paths:
-            if isinstance(path, tuple) and len(path) == 2 and \
-                    all(isinstance(p, basestring) for p in path):
-                search_paths.append(path)
-            elif isinstance(path, basestring):
-                search_paths.append(("", path))
-            else:
-                warnings.warn("Invalid search path %r. Expected tuple or "
-                              "string, got %r" % (entry_point, type(path)))
     return search_paths
 
 
