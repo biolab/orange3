@@ -598,31 +598,42 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     import csv, numpy
     file = as_open_file(file, "rb")
     snifer = csv.Sniffer()
-    sample = file.read(5 * 2 ** 20) # max 5MB sample TODO: What if this is not enough. Try with a bigger sample
-    dialect = snifer.sniff(sample)
-    
+
+    # Max 5MB sample
+    # TODO: What if this is not enough. Try with a bigger sample
+    sample = file.read(5 * 2 ** 20)
+    try:
+        dialect = snifer.sniff(sample)
+    except csv.Error:
+        # try the default, hope the provided arguments are correct
+        dialect = "excel"
+
     if has_header is None:
-        has_header = snifer.has_header(sample)
-    
-    file.seek(0) # Rewind
-    
+        try:
+            has_header = snifer.has_header(sample)
+        except csv.Error:
+            has_header = False
+
+    file.seek(0)  # Rewind
+
     def kwparams(**kwargs):
         """Return not None kwargs.
         """
         return dict([(k, v) for k, v in kwargs.items() if v is not None])
-    
+
+    # non-None format parameters.
     fmtparam = kwparams(delimiter=delimiter,
                         quotechar=quotechar,
                         escapechar=escapechar,
                         skipinitialspace=skipinitialspace)
-    
+
     reader = csv.reader(file, dialect=dialect,
                         **fmtparam)
 
     header = types = var_attrs = None
 
     row = first_row = reader.next()
-    
+
     if has_header:
         header = row
         # Eat this row and move to the next
@@ -631,7 +642,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     # Guess types row
     if has_types is None:
         has_types = has_header and is_var_types_row(row)
-        
+
     if has_types:
         types = var_types(row)
         # Eat this row and move to the next
@@ -641,7 +652,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     if has_annotations is None:
         has_annotations = has_header and has_types and \
                           is_var_attributes_row(row)
-        
+
     if has_annotations:
         labels_row = row
         var_attrs = var_attributes(row)
@@ -651,31 +662,36 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
     if not header:
         # Create a default header
         header = ["F_%i" % i for i in range(len(first_row))]
-        
+
     if not types:
         # Create blank variable types
         types = [None] * len(header)
-        
+
     if not var_attrs:
         # Create blank variable attributes
         var_attrs = [None] * len(header)
+    else:
+        # Pad the vars_attrs if it is not complete
+        # (orange tab format allows this line to be shorter then header).
+        if len(var_attrs) < len(header):
+            var_attrs += [None] * (len(header) - len(var_attrs))
 
     # start from the beginning
     file.seek(0)
     reader = csv.reader(file, dialect=dialect, **fmtparam)
-    
+
     for defined in [has_header, has_types, has_annotations]:
-        if defined: 
+        if defined:
             # skip definition rows if present in the file
             reader.next()
-    
+
     variables = []
     undefined_vars = []
-    # Missing value flags 
+    # Missing value flags
     missing_flags = DK.split(",") if DK is not None else ["?", "", "NA", "~", "*"]
     missing_map = dict.fromkeys(missing_flags, "?")
     missing_translate = lambda val: missing_map.get(val, val)
-    
+
     # Create domain variables or corresponding place holders
     for i, (name, var_t) in enumerate(zip(header, types)):
         if var_t == variable.Discrete:
@@ -711,10 +727,10 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
             # For undefined variables collect all their values
             for ind, var_def in undefined_vars:
                 var_def.values.add(row[ind])
-    
-    # Process undefined variables now that we can deduce their type 
+
+    # Process undefined variables now that we can deduce their type
     for ind, var_def in undefined_vars:
-        values = var_def.values - set(["?", ""]) # TODO: Other unknown strings?
+        values = var_def.values - set(["?", ""])  # TODO: Other unknown strings
         values = sorted(values)
         if isinstance(var_def, _disc_placeholder):
             variables[ind] = make(var_def.name, Orange.feature.Type.Discrete, [], values, create_new_on)
@@ -778,7 +794,7 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
         raise ValueError("Both 'class' and 'multiclass' used.")
 
     class_var = class_var[0] if class_var else None
-    
+
     attribute_load_status += class_var_load_status
     variable_indices = attribute_indices + class_indices
     domain = Orange.data.Domain(attributes, class_var, class_vars=class_vars)
@@ -798,10 +814,11 @@ def load_csv(file, create_new_on=MakeStatus.Incompatible,
 
     return table
 
+
 def as_open_file(file, mode="rb"):
     if isinstance(file, basestring):
         file = open(file, mode)
-    else: # assuming it is file like with proper mode, could check for write, read
+    else:  # assuming it is file like with proper mode, could check for write, read
         pass
     return file
 
