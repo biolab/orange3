@@ -1,10 +1,10 @@
 """
 .. autoclass:: Table
 """
-from Orange import core
 
-Table = core.ExampleTable
-Instance = core.Example
-Value = core.Value
-StringValue = core.StringValue
-Domain = core.Domain
+from .instance import *
+from .value import *
+from .variable import *
+from .domain import *
+from .table import *
+
