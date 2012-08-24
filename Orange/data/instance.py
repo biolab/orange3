@@ -2,7 +2,7 @@ from numbers import Real
 from ..data.value import Value, Unknown
 
 
-class Example:
+class Instance:
     def __init__(self, domain):
         self.domain = domain
         self._values = self._metas = [] # to avoid PyCharm warnings
@@ -46,10 +46,10 @@ class Example:
     __repr__ = __str__
 
 
-class FreeExample(Example):
+class FreeInstance(Instance):
     def __init__(self, domain, values):
         super().__init__(domain)
-        if isinstance(values, Example):
+        if isinstance(values, Instance):
             self._values = self.domain.convert_values(values)
         else:
             self._values = values
@@ -88,7 +88,7 @@ class FreeExample(Example):
 
 
 
-class RowExample(Example):
+class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
         self._x, self._y = table._X[row_index], table._Y[row_index]

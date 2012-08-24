@@ -7,7 +7,7 @@ from numbers import Real
 import numpy as np
 import bottleneck as bn
 
-from ..data import Value, Example, RowExample, Domain, Unknown
+from ..data import Value, Instance, RowInstance, Domain, Unknown
 from ..data.io import TabDelimReader
 from ..misc import IdemMap
 
@@ -237,7 +237,7 @@ class Table(MutableSequence):
         if isinstance(key, int):
             if self.row_indices is not ...:
                 key = self.row_indices[key]
-            return RowExample(self, key)
+            return RowInstance(self, key)
 
         # single index -- multiple rows
         if not isinstance(key, tuple):
@@ -271,7 +271,7 @@ class Table(MutableSequence):
     def _setitem_row(self, row_idx, value):
         if isinstance(value, Real):
             self._X[row_idx, :] = value
-        elif isinstance(value, Example):
+        elif isinstance(value, Instance):
             # TODO domain conversion
             self._X[row_idx, :] = value._values[:self._X.shape[1]]
             self._Y[row_idx, :] = value._values[self._X.shape[1]:]
