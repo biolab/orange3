@@ -106,15 +106,14 @@ class TabDelimReader:
 
     def read_data(self, filename, table):
         _X, _Y = table._X, table._Y
-        _W = getattr(table, "_W", None)
+        _W = table._W if table._W.shape[-1] else None
         f = open(filename)
         f.readline(); f.readline(); f.readline()
         padding = [""] * self.n_columns
         if self.basket_column >= 0:
             table._Xsparse = _Xsparse = sparse.lil_matrix(len(_X), 100) # TODO how many columns?!
-        if self.meta_columns:
-            table._metas = _metas = np.empty(
-                (len(_X), len(self.meta_columns)), dtype=object)
+        table._metas = _metas = \
+            np.empty((len(_X), len(self.meta_columns)), dtype=object)
         line_count = 0
         _Xr = None # To be able to delete it below even when there are no attributes
         for lne in f:
@@ -140,10 +139,11 @@ class TabDelimReader:
             del _Xr, _X, _Y, _W, _metas
             table._X.resize(line_count, len(table.domain.attributes))
             table._Y.resize(line_count, len(table.domain.class_vars))
-            if table._W is not None:
+            if table._W.ndim == 1:
                 table._W.resize(line_count)
-            if table._metas is not None:
-                table._metas.resize(line_count)
+            else:
+                table._W.resize((line_count, 0))
+            table._metas.resize((line_count, len(self.meta_columns)))
         table.n_rows = line_count
 
 
