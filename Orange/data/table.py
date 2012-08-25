@@ -14,15 +14,19 @@ EllipsisType = type(...)
 
 class Table(MutableSequence):
     def __new__(cls, *args, **argkw):
+        self = None
         if not args:
             if not args and not argkw:
                 self = super().__new__(cls)
             elif "filename" in argkw:
                 self = cls.read_data(argkw["filename"])
         elif len(args) == 1:
-            if isinstance(args[0], str):
+            arg = args[0]
+            if isinstance(arg, str):
                 self = Table.read_data(args[0])
-        else:
+            elif isinstance(arg, Domain):
+                self = Table.new_from_domain(arg, 0)
+        if self is None:
             raise ValueError("Invalid arguments for Table.__new__")
         self.clear_cache()
         return self
@@ -37,7 +41,7 @@ class Table(MutableSequence):
         if weights:
             self._W = np.ones(n_rows)
         else:
-            self._W = None
+            self._W = np.empty((n_rows, 0))
         self._metas = np.empty((n_rows, len(self.domain.metas)), object)
         return self
 
@@ -49,8 +53,7 @@ class Table(MutableSequence):
         self._X = table._X[row_indices, col_indices]
         self._Y = table._Y[row_indices]
         self._metas = table._metas[row_indices]
-        if table._W:
-            self._W = np.array(table._W[row_indices])
+        self._W = np.array(table._W[row_indices])
         return self
 
 
@@ -58,22 +61,22 @@ class Table(MutableSequence):
         return self._X.base is not None and \
                self._Y.base is not None and \
                self._metas.base is not None and \
-               (self._W is None or self._W.base is not None)
+               self._W.base is not None
 
     def is_copy(self):
         return self._X.base is None and \
                self._Y.base is None and \
                self._metas.base is None and \
-               (self._W is None or self._W.base is None)
+               self._W.base is None
 
     def ensure_copy(self):
-        if self._X.base:
+        if self._X.base is not None:
             self._X = self._X.copy()
-        if self._Y.base:
+        if self._Y.base is not None:
             self._Y = self._Y.copy()
-        if self._metas.base:
+        if self._metas.base is not None:
             self._metas = self._metas.copy()
-        if self._W and self._W.base:
+        if self._W.base is not None:
             self._W = self._W.copy()
 
     def getX(self):
@@ -97,7 +100,7 @@ class Table(MutableSequence):
         pass
 
     def set_weights(self, val=1):
-        if self._W:
+        if self._W.shape[-1]:
             self._W[:] = val
         else:
             self._W = np.empty(len(self))
@@ -270,8 +273,7 @@ class Table(MutableSequence):
         self._X = np.delete(self._X, key, axis=0)
         self._Y = np.delete(self._Y, key, axis=0)
         self._metas = np.delete(self._metas, key, axis=0)
-        if self._W is not None:
-            self._W = np.delete(self._W, key, axis=0)
+        self._W = np.delete(self._W, key, axis=0)
         self.clear_cache()
 
 
@@ -281,9 +283,80 @@ class Table(MutableSequence):
     def __len__(self):
         return len(self._X)
 
-    def insert(self, key, value):
-        ...
+    def resize_all(self, new_length):
+        old_length = len(self._X)
+        if old_length == new_length:
+            return
+        try:
+            self._X.resize(new_length, self._X.shape[1])
+            self._Y.resize(new_length, self._Y.shape[1])
+            self._metas.resize(new_length, self._metas.shape[1])
+            if self._W.ndim == 2:
+                self._W.resize((new_length, 0))
+            else:
+                self._W.resize(new_length)
+        except Exception:
+            if len(self._X) == new_length:
+                self._X.resize(old_length, self._X.shape[1])
+            if len(self._Y) == new_length:
+                self._Y.resize(old_length, self._Y.shape[1])
+            if len(self._metas) == new_length:
+                self._metas.resize(old_length, self._metas.shape[1])
+            if len(self._W) == new_length:
+                if self._W.ndim == 2:
+                    self._W.resize((old_length, 0))
+                else:
+                    self._W.resize(old_length)
+            raise
 
+    def extend(self, examples):
+        old_length = len(self)
+        self.resize_all(old_length + len(examples))
+        try:
+            # shortcut
+            if isinstance(examples, Table) and examples.domain == self.domain:
+                self._X[old_length:] = examples._X
+                self._Y[old_length:] = examples._Y
+                self._metas[old_length:]  = examples._metas
+                if self._W.shape[-1]:
+                    if examples._W.shape[-1]:
+                        self._W[old_length:] = examples._W
+                    else:
+                        self._W[old_length:] = 1
+            else:
+                for i, example in enumerate(examples):
+                    self[old_length + i] = example
+        except Exception:
+            self.resize_all(old_length)
+            raise
+
+    def insert(self, key, value):
+        if key < 0:
+            key += len(self)
+        if key < 0 or key > len(self):
+            raise IndexError("Index out of range")
+        self.resize_all(len(self) + 1)
+        if key < len(self):
+            self._X[key+1:] = self._X[key:-1]
+            self._Y[key+1:] = self._Y[key:-1]
+            self._metas[key+1:] = self._metas[key:-1]
+            self._W[key+1:] = self._W[key:-1]
+        try:
+            self.domain.convert_to_row(
+                value, self._X[key], self._Y[key], self._metas[key])
+            if self._W.shape[-1]:
+                self._W[key] = 1
+        except Exception:
+            self._X[key:-1] = self._X[key+1:]
+            self._Y[key:-1] = self._Y[key+1:]
+            self._metas[key:-1] = self._metas[key+1:]
+            self._W[key:-1] = self._W[key+1:]
+            self.resize_all(len(self-1))
+            raise
+
+
+    def append(self, value):
+        self.insert(len(self), value)
 
     def random_example(self):
         n_examples = len(self)
@@ -292,9 +365,9 @@ class Table(MutableSequence):
         return self[random.randint(0, n_examples-1)]
 
     def total_weight(self):
-        if self._W is None:
-            return len(self)
-        return sum(self._W)
+        if self._W.shape[-1]:
+            return sum(self._W)
+        return len(self)
 
 
     def has_missing(self):
@@ -303,25 +376,24 @@ class Table(MutableSequence):
     def has_missing_class(self):
         return bn.anynan(self.Y)
 
-    def checksum(self, include_metas=False):
+    def checksum(self, include_metas=True):
         #TODO: check whether .data builds a new buffer; try avoiding it
         cs = 1
         cs = zlib.adler32(self._X.data)
         cs = zlib.adler32(self._Y.data, cs)
-        cs = zlib.adler32(self._metas.data, cs)
-        if self._W:
+        if include_metas:
             cs = zlib.adler32(self._metas.data, cs)
+        cs = zlib.adler32(self._W.data, cs)
         return cs
 
     def shuffle(self):
         # TODO: write a function in Cython that would do this in place
-        ind = np.range(len(self._X))
+        ind = np.arange(len(self._X))
         np.random.shuffle(ind)
         self._X = self._X[ind]
         self._Y = self._Y[ind]
         self._metas = self._metas[ind]
-        if self._W is not None:
-            self._W = self._W[ind]
+        self._W = self._W[ind]
         self.clear_cache()
 
     def sort(self, attributes=None):
@@ -336,12 +408,10 @@ class Table(MutableSequence):
                 data = np.hstack((self._X, self._Y))
             ranks = bn.nanrankdata(data[col_indices], axis=0)
             del data
-        print(ranks.shape, self.n_rows, len(self._X))
         if self.row_indices is ...:
             rank_row = np.hstack((ranks, np.arange(self.n_rows)))
         else:
             rank_row = np.hstack((ranks, self.row_indices))
         rank_row = np.sort(rank_row, axis=0)
-        print(rank_row)
         self.row_indices = rank_row[:, 1]
         self.clear_cache()
