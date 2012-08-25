@@ -40,18 +40,22 @@ class Instance:
         return Value(self.domain[key], value)
 
     def __str__(self):
-        res = "<"
-        res += ", ".join(var.str_val(value)
-            for var, value in zip(self.domain.variables, self._values[:5]))
-        if len(self._values) > 5:
-            res += ", ..., %s" % self.domain.variables[-1].str_val(self._values[-1])
-        res += ">"
-        if self._metas:
+        res = "["
+        res += ", ".join(var.str_val(value) for var, value in
+                         zip(self.domain.attributes, self._values[:5]))
+        n_attrs = len(self.domain.attributes)
+        if n_attrs > 5:
+            res += ", ..."
+        if self.domain.class_vars:
+            res += " | " + ", ".join(var.str_val(value) for var, value in
+                zip(self.domain.class_vars, self._values[n_attrs:n_attrs+5]))
+        res += "]"
+        if self.domain.metas:
             res += " {"
             res += ", ".join(var.str_val(value)
                 for var, value in zip(self.domain.metas, self._metas[:5]))
             if len(self._metas) > 5:
-                res += ", ..., %s" % self.domain.metas[-1].str_val(self._metas[-1])
+                res += ", ..."
             res += "}"
         return res
 

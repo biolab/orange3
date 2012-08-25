@@ -199,8 +199,7 @@ class Table(MutableSequence):
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self._X[key, :] = value
-            self.domain.convert_to_row(value,
-                self._X[key], self._Y[key], self._metas[key])
+            self.domain.convert_to_row(value, self, key)
             self.clear_cache()
             return
 
@@ -283,6 +282,14 @@ class Table(MutableSequence):
     def __len__(self):
         return len(self._X)
 
+
+    def __str__(self):
+        s = "[" + ",\n ".join(str(ex) for ex in self[:5])
+        if len(self) > 5:
+            s += ",\n ..."
+        s += "\n]"
+        return s
+
     def resize_all(self, new_length):
         old_length = len(self._X)
         if old_length == new_length:
@@ -342,8 +349,7 @@ class Table(MutableSequence):
             self._metas[key+1:] = self._metas[key:-1]
             self._W[key+1:] = self._W[key:-1]
         try:
-            self.domain.convert_to_row(
-                value, self._X[key], self._Y[key], self._metas[key])
+            self.domain.convert_to_row(value, self, key)
             if self._W.shape[-1]:
                 self._W[key] = 1
         except Exception:

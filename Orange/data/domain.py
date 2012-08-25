@@ -200,30 +200,32 @@ class Domain:
                 dst._metas[:] = metas
         return dst
 
-    def convert_to_row(self, example, x, y, metas):
+    def convert_to_row(self, example, table, key):
+        # NB. this is wrong - Domain should not access Table's internal data
+        # We will have to fix this when we implement an SQL proxy table
         if isinstance(example, Instance):
             if example.domain == self:
                 if isinstance(example, RowInstance):
-                    x[:] = example._x
-                    y[:] = example._y
+                    table._X[key] = example._x
+                    table._Y[key] = example._y
                 else:
-                    x[:] = example._values[:len(self.attributes)]
-                    y[:] = example._values[len(self.attributes):]
-                metas[:] = example._metas
+                    table._X[key] = example._values[:len(self.attributes)]
+                    table._Y[key] = example._values[len(self.attributes):]
+                table._metas[key] = example._metas
                 return
             c = self.get_conversion(example.domain)
-            x[:] = [example._values[i] if isinstance(i, int) else
+            table._X[key] = [example._values[i] if isinstance(i, int) else
                     (Unknown if not i else i(example)) for i in c.attributes]
-            y[:] = [example._values[i] if isinstance(i, int) else
+            table._Y[key] = [example._values[i] if isinstance(i, int) else
                     (Unknown if not i else i(example)) for i in c.classes]
-            metas[:] = [example._values[i] if isinstance(i, int) else
+            table._metas[key] = [example._values[i] if isinstance(i, int) else
                     (Unknown if not i else i(example)) for i in c.metas]
         else:
-            x[:] = [var.to_val(val)
+            table._X[key] = [var.to_val(val)
                     for var, val in zip(self.attributes, example)]
-            y[:] = [var.to_val(val)
+            table._Y[key] = [var.to_val(val)
                     for var, val in zip(self.class_vars, example[len(self.attributes):])]
-            metas[:] = Unknown
+            table._metas[key] = Unknown
 
 
 
