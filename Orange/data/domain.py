@@ -1,5 +1,18 @@
-from ..data.variable import *
 from collections import Iterable
+import weakref
+from .variable import *
+from .instance import *
+
+class DomainConversion:
+    def __init__(self, source, destination):
+        self.domain = destination
+        self.attributes = [source.index(var) if var in source else var.get_value_from
+                                for var in destination.attributes]
+        self.classes = [source.index(var) if var in source else var.get_value_from
+                                for var in destination.classes]
+        self.variables = self.attributes + self.classes
+        self.metas = [source.index(var) if var in source else var.get_value_from
+                        for var in destination]
 
 class Domain:
     class MetaDescriptor:
@@ -41,6 +54,9 @@ class Domain:
 
         Domain.version += 1
         self.domain_version = Domain.version
+
+        self.known_domains = weakref.WeakKeyDictionary()
+        self.last_conversion = None
 
 
     def var_from_domain(self, var, check_included=False, no_index=False):
@@ -122,6 +138,80 @@ class Domain:
                    for var in self.attributes) \
             or include_class and any(isinstance(var, ContinuousVariable)
                                      for var in self.class_vars)
+
+
+    def get_conversion(self, domain):
+        # the method is thread-safe
+        c = self.last_conversion
+        if c.domain is example.domain:
+            return c
+        c = self.known_domains.get(example.domain, None)
+        if not c:
+            c = DomainConversion(self, example.domain)
+            self.known_domains[example.domain] = self.last_conversion = c
+        return c
+
+    def convert_as_list(self, example):
+        if isinstance(example, Instance):
+            if example.domain == self:
+                return example.values, example.metas
+            c = self.get_conversion(example.domain)
+            attributes = [example._values[i] if isinstance(i, int) else
+                      (Unknown if not i else i(example)) for i in c.attributes]
+            classes = [example._values[i] if isinstance(i, int) else
+                      (Unknown if not i else i(example)) for i in c.classes]
+            metas = [example._values[i] if isinstance(i, int) else
+                     (Unknown if not i else i(example)) for i in c.metas]
+            return attributes, classes, metas
+        return [var.to_val(val) for var, val in zip(self.attributes, example)], \
+               [var.to_val(val) for var, val in zip(self.classes, example)], \
+               []
+
+    def convert(self, example, dst=None):
+        if dst is not None:
+            if isinstance(dst, FreeInstance):
+                dst.domain = self
+            else:
+                raise ValueError(
+                    "Destination is a row in a table from a different domain")
+
+        attributes, classes, metas = self.convert_to_values(example)
+        if dst is None:
+            dst = FreeInstance(self, attributes + classes)
+            dst.metas = metas
+        else:
+            dst.values = attributes + classes
+            dst.metas = metas
+            if isinstance(dst, RowInstance):
+                dst._x[:] = attributes
+                dst._y[:] = classes
+                dst._metas[:] = metas
+        return dst
+
+    def convert_to_row(self, example, x, y, metas):
+        if isinstance(example, Instance):
+            if example.domain == self:
+                if isinstance(example, RowInstance):
+                    x[:] = example._x
+                    y[:] = example._y
+                else:
+                    x[:] = example._values[:len(self.attributes)]
+                    y[:] = example._values[len(self.attributes):]
+                metas[:] = example._metas
+                return
+            c = self.get_conversion(example.domain)
+            x[:] = [example._values[i] if isinstance(i, int) else
+                    (Unknown if not i else i(example)) for i in c.attributes]
+            y[:] = [example._values[i] if isinstance(i, int) else
+                    (Unknown if not i else i(example)) for i in c.classes]
+            metas[:] = [example._values[i] if isinstance(i, int) else
+                    (Unknown if not i else i(example)) for i in c.metas]
+        else:
+            x[:] = [var.to_val(val)
+                    for var, val in zip(self.attributes, example)]
+            y[:] = [var.to_val(val)
+                    for var, val in zip(self.class_vars, example[len(self.attributes):])]
+            metas[:] = Unknown
 
 
 

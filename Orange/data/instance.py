@@ -91,8 +91,17 @@ class FreeInstance(Instance):
 class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
-        self._x, self._y = table._X[row_index], table._Y[row_index]
-        self._values = list(self._x) +  list(self._y)
+        if table._X is not None:
+            self._x = table._X[row_index]
+            self._values = list(self._x)
+        else:
+            self._x = None
+            self._values = []
+        if table._Y is not None:
+            self._y = table._Y[row_index]
+            self._values += list(self._y)
+        else:
+            self._y = None
         self.row_index = row_index
         self._metas = table._metas is not None and table._metas[row_index]
         self.table = table

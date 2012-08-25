@@ -38,10 +38,7 @@ class Table(MutableSequence):
             self._W = np.ones(n_rows)
         else:
             self._W = None
-        if domain.metas:
-            self._metas = np.empty((n_rows, len(self.domain.metas)), object)
-        else:
-            self._metas = None
+        self._metas = np.empty((n_rows, len(self.domain.metas)), object)
         return self
 
 
@@ -58,26 +55,26 @@ class Table(MutableSequence):
 
 
     def is_view(self):
-        return (self._X is None or self._X.base) and \
-               (self._Y is None or self._Y.base) and \
-               (self._W is None or self._W.base) and \
-               (self._metas is None or self._metas.base)
+        return self._X.base is not None and \
+               self._Y.base is not None and \
+               self._metas.base is not None and \
+               (self._W is None or self._W.base is not None)
 
     def is_copy(self):
-        return (self._X is None or not self._X.base) and \
-               (self._Y is None or not self._Y.base) and \
-               (self._W is None or not self._W.base) and \
-               (self._metas is None or not self._metas.base)
+        return self._X.base is None and \
+               self._Y.base is None and \
+               self._metas.base is None and \
+               (self._W is None or self._W.base is None)
 
     def ensure_copy(self):
-        if self._X and self._X.base:
+        if self._X.base:
             self._X = self._X.copy()
-        if self._Y and self._Y.base:
+        if self._Y.base:
             self._Y = self._Y.copy()
+        if self._metas.base:
+            self._metas = self._metas.copy()
         if self._W and self._W.base:
             self._W = self._W.copy()
-        if self._metas and self._metas.base:
-            self._metas = self._metas.copy()
 
     def getX(self):
         return self._X
@@ -151,34 +148,6 @@ class Table(MutableSequence):
             return [attr], np.array([col_idx])
 
 
-    def _getitem_from_row(self, row_idx, col_idx):
-        # single row, multiple columns
-        if isinstance(col_idx, slice):
-            columns = range(*col_idx.indices(len(self.domain.attributes)))
-        elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
-            columns = [col if isinstance(col, int) else self.domain.index(col)
-                       for col in col_idx]
-        else:
-            columns = None
-        if columns:
-            row = self._X[row_idx]
-            return [Value(self.domain[col], row[col]) for col in columns]
-
-        # single row, single column
-        if not isinstance(col_idx, int):
-            col_idx = self.domain.index(col_idx)
-        var = self.domain[col_idx]
-        if col_idx >= 0:
-            if col_idx < len(self.domain.attributes):
-                return Value(var, self._X[row_idx, col_idx])
-            else:
-                return Value(var,
-                    self._X[row_idx, col_idx - len(self.domain.attributes)])
-        else:
-            return Value(var, self._metas[row_idx, -1-col_idx])
-        #TODO implement metas
-
-
     def __getitem__(self, key):
         if isinstance(key, int):
             return RowInstance(self, key)
@@ -190,8 +159,31 @@ class Table(MutableSequence):
 
         row_idx, col_idx = key
         if isinstance(row_idx, int):
-            return self._getitem_from_row(row_idx, col_idx)
+            if isinstance(col_idx, slice):
+                columns = range(*col_idx.indices(len(self.domain.attributes)))
+            elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
+                columns = [col if isinstance(col, int) else self.domain.index(col)
+                           for col in col_idx]
+            else:
+                columns = None
+            if columns:
+                row = self._X[row_idx]
+                return [Value(self.domain[col], row[col]) for col in columns]
 
+            # single row, single column
+            if not isinstance(col_idx, int):
+                col_idx = self.domain.index(col_idx)
+            var = self.domain[col_idx]
+            if col_idx >= 0:
+                if col_idx < len(self.domain.attributes):
+                    return Value(var, self._X[row_idx, col_idx])
+                else:
+                    return Value(var,
+                        self._Y[row_idx, col_idx - len(self.domain.attributes)])
+            else:
+                return Value(var, self._metas[row_idx, -1-col_idx])
+
+        # multiple rows: construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
         if attributes:
             domain = Domain(attributes, self.domain.class_vars)
@@ -200,48 +192,14 @@ class Table(MutableSequence):
         return Table.new_as_reference(domain, self, row_idx, col_indices)
 
 
-    def _setitem_row(self, row_idx, value):
-        if isinstance(value, Real):
-            self._X[row_idx, :] = value
-        elif isinstance(value, Instance):
-            # TODO domain conversion
-            self._X[row_idx, :] = value._values[:self._X.shape[1]]
-            self._Y[row_idx, :] = value._values[self._X.shape[1]:]
-            if value.metas:
-                self._metas[row_idx] = value.metas
-        self._X[row_idx, :] = value[:self._X.shape[1]]
-        if len(value) > value[:self._X.shape[1]]:
-            self_Y[row_idx, :] = value[self._X.shape[1]:]
-        self.clear_cache("X Y")
-
-
-    def _setitem_row_col(self, row_idx, col_idx, value):
-        if isinstance(col_idx, slice):
-            col_idx = range(*slice.indices(col_idx, self._X.shape[1]))
-        if not isinstance(col_idx, str) and isinstance(col_idx, Iterable):
-            ...
-            return
-
-        if not isinstance(value, int):
-            value = self.domain[col_idx].to_val(value)
-        if not isinstance(col_idx, int):
-            col_idx = self.domain.index(col_idx)
-        if col_idx >= 0:
-            self._X[row_idx, col_idx] = value
-            self.clear_cache("X")
-        else:
-            self._metas[row_idx, -1-col_idx] = value
-            self.clear_cache("m")
-
-
     def __setitem__(self, key, value):
-        # single index -- one row
-        if isinstance(key, int):
-            self._setitem_row(key, value)
-
-        # single index -- multiple rows
         if not isinstance(key, tuple):
-            self._set_item_row(key, value)
+            if isinstance(value, Real):
+                self._X[key, :] = value
+            self.domain.convert_to_row(value,
+                self._X[key], self._Y[key], self._metas[key])
+            self.clear_cache()
+            return
 
         if len(key) != 2:
             raise IndexError("Table indices must be one- or two-dimensional")
@@ -249,7 +207,22 @@ class Table(MutableSequence):
 
         # single row
         if isinstance(row_idx, int):
-            return self._setitem_row_col(row_idx, col_idx, value)
+            if isinstance(col_idx, slice):
+                col_idx = range(*slice.indices(col_idx, self._X.shape[1]))
+            if not isinstance(col_idx, str) and isinstance(col_idx, Iterable):
+                ...
+                return
+
+            if not isinstance(value, int):
+                value = self.domain[col_idx].to_val(value)
+            if not isinstance(col_idx, int):
+                col_idx = self.domain.index(col_idx)
+            if col_idx >= 0:
+                self._X[row_idx, col_idx] = value
+                self.clear_cache("X")
+            else:
+                self._metas[row_idx, -1-col_idx] = value
+                self.clear_cache("m")
 
         # multiple rows, multiple columns
         attributes, col_indices = self._compute_col_indices(col_idx)
@@ -294,14 +267,11 @@ class Table(MutableSequence):
     def __delitem__(self, key):
         if key is ...:
             key = range(len(self))
-        if self._X is not None:
-            self._X = np.delete(self._X, key, axis=0)
-        if self._Y is not None:
-            self._Y = np.delete(self._Y, key, axis=0)
+        self._X = np.delete(self._X, key, axis=0)
+        self._Y = np.delete(self._Y, key, axis=0)
+        self._metas = np.delete(self._metas, key, axis=0)
         if self._W is not None:
             self._W = np.delete(self._W, key, axis=0)
-        if self._metas is not None:
-            self._metas = np.delete(self._metas, key, axis=0)
         self.clear_cache()
 
 
@@ -309,25 +279,10 @@ class Table(MutableSequence):
         del self[...]
 
     def __len__(self):
-        if self._X is not None:
-            return len(self._X)
-        if self._Y is not None:
-            return len(self._Y)
-        if self._metas is not None:
-            return len(self._metas)
-        raise ValueError("Invalid Table (no data)")
+        return len(self._X)
 
     def insert(self, key, value):
         ...
-
-
-    def convert(self, example):
-        if example.domain == self.domain:
-            return example
-        if self.last_domain is not example.domain:
-            self.last_domain = self.known_domains.get(example.domain, None)
-            if not self.last_domain:
-                pass
 
 
     def random_example(self):
@@ -343,35 +298,30 @@ class Table(MutableSequence):
 
 
     def has_missing(self):
-        if self._X is None:
-            return False
         return bn.anynan(self._X)
 
     def has_missing_class(self):
-        if self._Y is None:
-            return False
         return bn.anynan(self.Y)
 
     def checksum(self, include_metas=False):
         #TODO: check whether .data builds a new buffer; try avoiding it
         cs = 1
-        if self._X is not None:
-            cs = zlib.adler32(self.X.data)
-        if self._Y is not None:
-            cs = zlib.adler32(self.Y.data, cs)
-        if include_metas and self._metas is not None:
-            cs = zlib.adler32(self.metas.data, cs)
+        cs = zlib.adler32(self._X.data)
+        cs = zlib.adler32(self._Y.data, cs)
+        cs = zlib.adler32(self._metas.data, cs)
+        if self._W:
+            cs = zlib.adler32(self._metas.data, cs)
         return cs
 
     def shuffle(self):
-        if self._X is not None:
-            np.random.shuffle(self._X)
-        if self._Y is not None:
-            np.random.shuffle(self._Y)
+        # TODO: write a function in Cython that would do this in place
+        ind = np.range(len(self._X))
+        np.random.shuffle(ind)
+        self._X = self._X[ind]
+        self._Y = self._Y[ind]
+        self._metas = self._metas[ind]
         if self._W is not None:
-            np.random.shuffle(self._W)
-        if self._metas is not None:
-            np.random.shuffle(self._metas)
+            self._W = self._W[ind]
         self.clear_cache()
 
     def sort(self, attributes=None):
