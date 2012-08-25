@@ -92,8 +92,7 @@ class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
         self._x, self._y = table._X[row_index], table._Y[row_index]
-        self.col_indices = table.col_indices
-        self._values = list(self._x[self.col_indices]) +  list(self._y)
+        self._values = list(self._x) +  list(self._y)
         self.row_index = row_index
         self._metas = table._metas is not None and table._metas[row_index]
         self.table = table
@@ -140,15 +139,9 @@ class RowInstance(Instance):
             if not isinstance(value, Real):
                 raise TypeError("Expected primitive value, got '%s'" %
                                 type(value).__name__)
-            if self.col_indices is ...:
-                if key < len(self._x):
-                    self._x[key] = value
-                else:
-                    self._y[key - len(self._x)] = value
+            if key < len(self._x):
+                self._x[key] = value
             else:
-                if key < len(self.col_indices):
-                    self._x[self.col_indices[key]] = value
-                else:
-                    self._y[key - len(self.col_indices)] = value
+                self._y[key - len(self._x)] = value
         else:
             self._metas[-1-key] = value

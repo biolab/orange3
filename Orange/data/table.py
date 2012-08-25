@@ -9,7 +9,6 @@ import bottleneck as bn
 
 from ..data import Value, Instance, RowInstance, Domain, Unknown
 from ..data.io import TabDelimReader
-from ..misc import IdemMap
 
 EllipsisType = type(...)
 
@@ -39,8 +38,6 @@ class Table(MutableSequence):
             self._W = np.ones(n_rows)
         else:
             self._W = None
-        self.row_indices = ...
-        self.col_indices = ...
         if domain.metas:
             self._metas = np.empty((n_rows, len(self.domain.metas)), object)
         else:
@@ -52,68 +49,55 @@ class Table(MutableSequence):
     def new_as_reference(domain, table, row_indices=..., col_indices=...):
         self = Table.__new__(Table)
         self.domain = domain
-        self._X = table._X
-        self._Y = table._Y
-        self._metas = table._metas
+        self._X = table._X[row_indices, col_indices]
+        self._Y = table._Y[row_indices]
+        self._metas = table._metas[row_indices]
         if table._W:
-            if row_indices is None:
-                self._W = np.array(table._W)
-            else:
-                self._W = table._W[row_indices]
-        if not isinstance(row_indices, (np.ndarray, EllipsisType)):
-            self.row_indices = np.array(row_indices)
-        else:
-            self.row_indices = row_indices
-        self.col_indices = col_indices
-        if self.row_indices is not ...:
-            self.n_rows = len(row_indices)
-        elif self._X is not None:
-            self.n_rows = self._X.shape[1]
-        elif self._Y is not None:
-            self.n_rows = self._Y.shape[-1]
-        else:
-            self.n_rows = 0
+            self._W = np.array(table._W[row_indices])
         return self
 
 
+    def is_view(self):
+        return (self._X is None or self._X.base) and \
+               (self._Y is None or self._Y.base) and \
+               (self._W is None or self._W.base) and \
+               (self._metas is None or self._metas.base)
+
+    def is_copy(self):
+        return (self._X is None or not self._X.base) and \
+               (self._Y is None or not self._Y.base) and \
+               (self._W is None or not self._W.base) and \
+               (self._metas is None or not self._metas.base)
+
+    def ensure_copy(self):
+        if self._X and self._X.base:
+            self._X = self._X.copy()
+        if self._Y and self._Y.base:
+            self._Y = self._Y.copy()
+        if self._W and self._W.base:
+            self._W = self._W.copy()
+        if self._metas and self._metas.base:
+            self._metas = self._metas.copy()
+
     def getX(self):
-        if self._Xcache is None and self._X is not None:
-            self._Xcache = self._X[self.row_indices, self.col_indices]
-        return self._Xcache
+        return self._X
 
     def getY(self):
-        if self._Ycache is None and self._Y is not None:
-            self._Ycache = self._Y[self.row_indices]
-        return self._Ycache
+        return self._Y
 
     def get_metas(self):
-        if self._metas_cache is None and self._metas is not None:
-            self._metas_cache = self._metas[self.row_indices]
-        return self._metas_cache
+        return self._metas
 
     def get_weights(self):
-        if self._Wcache is None and self._W is not None:
-            self._Wcache = self._W[self.row_indices]
-        return self._Wcache
-
-    def clear_cache(self, what=None):
-        if what:
-            for w in what:
-                if w == "X":
-                    self._Xcache = None
-                elif w == "Y":
-                    self._Ycache = None
-                elif w == "m":
-                    self._metas_cache = None
-                elif w == "w":
-                    self._Wcache = None
-        else:
-            self._Xcache = self._Ycache = self._metas_cache = self._Wcache = None
+        return self._W
 
     X = property(getX)
     Y = property(getY)
     W = property(get_weights)
     metas = property(get_metas)
+
+    def clear_cache(self, what="XYWm"):
+        pass
 
     def set_weights(self, val=1):
         if self._W:
@@ -121,7 +105,6 @@ class Table(MutableSequence):
         else:
             self._W = np.empty(len(self))
             self._W.fill(val)
-        self._Wcache = None
 
     @staticmethod
     def read_data(filename):
@@ -139,28 +122,6 @@ class Table(MutableSequence):
             raise IOError('Extension "{}" is not recognized'.format(filename))
 
 
-    def _compute_row_indices(self, row_idx):
-        if isinstance(row_idx, slice):
-            start, stop, stride = row_idx.indices(self.n_rows)
-            if (start, stop, stride) == (0, self.n_rows, 1):
-                return self.row_indices
-            if self.row_indices is ...:
-                return np.arange(start, stop, stride)
-            else:
-                return self.row_indices[start:stop:stride]
-        if isinstance(row_idx, np.ndarray) and row_idx.dtype == bool:
-            if self.row_indices is ...:
-                return np.nonzero(row_idx)
-            else:
-                return self.row_indices[row_idx]
-        if isinstance(row_idx, Iterable):
-            if self.row_indices is ...:
-                return np.fromiter(row_idx, int)
-            else:
-                return self.row_indices[np.fromiter(row_idx, int)]
-        raise IndexError("Invalid index type")
-
-
     def _compute_col_indices(self, col_idx):
         """Return a list of new attributes and column indices,
            or (None, self.col_indices) if no new domain needs to be constructed"""
@@ -168,8 +129,6 @@ class Table(MutableSequence):
             return [attr for attr, c in zip(self.domain, col_idx) if c], \
                    np.nonzero(col_idx)
         elif isinstance(col_idx, slice):
-            if self.col_indices is not ...:
-                return self.domain[col_idx], self.col_indices(col_idx)
             s = len(self.domain.variables)
             start, end, stride = col_idx.indices(s)
             if col_idx.indices(s) == (0, s, 1):
@@ -181,21 +140,14 @@ class Table(MutableSequence):
             attributes = [self.domain[col] for col in col_idx]
             if attributes == self.domain.attributes:
                 return None, self.col_indices
-            if self.col_indices is ...:
-                return attributes, np.fromiter(
-                    (self.domain.index(attr) for attr in attributes), int)
-            else:
-                return attributes, np.fromiter(
-                    (self.col_indices[self.domain.index(attr)]
-                        for attr in attributes), int)
+            return attributes, np.fromiter(
+                (self.domain.index(attr) for attr in attributes), int)
         else:
             if isinstance(col_idx, int):
                 attr = self.domain[col_idx]
             else:
                 attr = self.domain[col_idx]
                 col_idx =  self.domain.index(attr)
-            if self.col_indices is not ...:
-                col_idx = self.col_indices[col_idx]
             return [attr], np.array([col_idx])
 
 
@@ -203,19 +155,14 @@ class Table(MutableSequence):
         # single row, multiple columns
         if isinstance(col_idx, slice):
             columns = range(*col_idx.indices(len(self.domain.attributes)))
-        elif isinstance(col_idx, Iterable) and \
-             not isinstance(col_idx, str):
+        elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             columns = [col if isinstance(col, int) else self.domain.index(col)
                        for col in col_idx]
         else:
             columns = None
         if columns:
             row = self._X[row_idx]
-            if self.col_indices is ...:
-                return [Value(self.domain[col], row[col]) for col in columns]
-            else:
-                return [Value(self.domain[col], row[self.col_indices[col]])
-                        for col in columns]
+            return [Value(self.domain[col], row[col]) for col in columns]
 
         # single row, single column
         if not isinstance(col_idx, int):
@@ -233,39 +180,24 @@ class Table(MutableSequence):
 
 
     def __getitem__(self, key):
-        # single index -- one row
         if isinstance(key, int):
-            if self.row_indices is not ...:
-                key = self.row_indices[key]
             return RowInstance(self, key)
-
-        # single index -- multiple rows
         if not isinstance(key, tuple):
-            return Table.new_as_reference(
-                self.domain, self,
-                self._compute_row_indices(key))
+            return Table.new_as_reference(self.domain, self, key)
 
         if len(key) != 2:
             raise IndexError("Table indices must be one- or two-dimensional")
-        row_idx, col_idx = key
 
-        # single row
+        row_idx, col_idx = key
         if isinstance(row_idx, int):
-            if self.row_indices is not ...:
-                row_idx = self.row_indices[row_idx]
             return self._getitem_from_row(row_idx, col_idx)
 
-        # multiple rows, multiple columns;
-        # return a new table, create new domain if needed
         attributes, col_indices = self._compute_col_indices(col_idx)
         if attributes:
             domain = Domain(attributes, self.domain.class_vars)
         else:
             domain = self.table.domain
-
-        row_indices = self._compute_row_indices(row_idx)
-        return Table.new_as_reference(domain, self, row_indices, col_indices)
-
+        return Table.new_as_reference(domain, self, row_idx, col_indices)
 
 
     def _setitem_row(self, row_idx, value):
@@ -281,7 +213,6 @@ class Table(MutableSequence):
         if len(value) > value[:self._X.shape[1]]:
             self_Y[row_idx, :] = value[self._X.shape[1]:]
         self.clear_cache("X Y")
-
 
 
     def _setitem_row_col(self, row_idx, col_idx, value):
@@ -306,14 +237,11 @@ class Table(MutableSequence):
     def __setitem__(self, key, value):
         # single index -- one row
         if isinstance(key, int):
-            if self.row_indices is ...:
-                self._setitem_row(key, value)
-            else:
-                self._setitem_row(self.row_indices[key], value)
+            self._setitem_row(key, value)
 
         # single index -- multiple rows
         if not isinstance(key, tuple):
-            self._set_item_row(self._compute_row_indices(key), value)
+            self._set_item_row(key, value)
 
         if len(key) != 2:
             raise IndexError("Table indices must be one- or two-dimensional")
@@ -321,14 +249,10 @@ class Table(MutableSequence):
 
         # single row
         if isinstance(row_idx, int):
-            if self.row_indices is not ...:
-                row_idx = self.row_indices[row_idx]
             return self._setitem_row_col(row_idx, col_idx, value)
 
         # multiple rows, multiple columns
-        row_indices = self._compute_row_indices(row_idx)
         attributes, col_indices = self._compute_col_indices(col_idx)
-        print(attributes, col_indices)
         if col_indices is ...:
             col_indices = range(len(self.domain))
         n_attrs = self._X.shape[1]
@@ -337,11 +261,11 @@ class Table(MutableSequence):
                 attributes = self.domain.attributes
             for var, col in zip(attributes, col_indices):
                 if 0 <= col < n_attrs:
-                    self._X[row_indices, col] = var.to_val(value)
+                    self._X[row_idx, col] = var.to_val(value)
                 elif col >= n_attrs:
-                    self._Y[row_indices, col - n_attrs] = var.to_val(value)
+                    self._Y[row_idx, col - n_attrs] = var.to_val(value)
                 else:
-                    self._metas[row_indices, -1-col] = var.to_val(value)
+                    self._metas[row_idx, -1-col] = var.to_val(value)
         else:
             attr_cols = np.fromiter(
                 (col for col in col_indices if 0 <= col < n_attrs), int)
@@ -353,67 +277,45 @@ class Table(MutableSequence):
                 value = Unknown
             if not isinstance(value, Real) and attr_cols or class_cols:
                 raise TypeError("Ordinary attributes can only have primitive values")
-            print(attr_cols, bool(attr_cols), row_indices)
             if len(attr_cols):
-                self._X[row_indices, attr_cols] = value
+                self._X[row_idx, attr_cols] = value
             if len(class_cols):
-                self._Y[row_indices, class_cols] = value
+                self._Y[row_idx, class_cols] = value
             if len(meta_cols):
-                self._metas[row_indices, meta_cols] = value
-            print(self._X)
-        if any(0 <= col_indices < n_attrs for i in col_indices):
+                self._metas[row_idx, meta_cols] = value
+        if any(0 <= col < n_attrs for col in col_indices):
             self.clear_cache("X")
-        if any(i >= n_attrs for i in col_indices):
+        if any(col >= n_attrs for col in col_indices):
             self.clear_cache("Y")
-        if any(i < 0 for i in col_indices):
+        if any(col < 0 for col in col_indices):
             self.clear_cache("m")
 
 
     def __delitem__(self, key):
-        if self.row_indices is ...:
-            if isinstance(key, int):
-                if key > self.n_rows:
-                    raise IndexError("Row {} is out of range".format(key))
-                self.row_indices = np.hstack((np.arange(key),
-                                              np.arange(key+1, self.n_rows)))
-            elif isinstance(key, slice):
-                start, end, stride = key.indices(self.n_rows)
-                if stride == 1:
-                    self.row_indices = np.hstack((np.arange(start),
-                                                  np.arange(end,self.n_rows)))
-                else:
-                    self.row_indices = np.hstack((
-                        np.arange(start),
-                        np.arange(start, end)[np.arange(end-start) % stride != 0],
-                        np.arange(end, self.n_rows)))
-            elif isinstance(key, np.ndarray) and key.dtype == bool:
-                self.row_indices = np.logical_not(key).nonzero()
-            elif isinstance(key, Iterable):
-                key = np.fromiter(key, int)
-                self.row_indices = np.setdiff1d(np.arange(self.n_rows, key))
-            else:
-                raise IndexError("Invalid index type")
-        else:
-            if isinstance(key, np.ndarray) and key.dtype == bool:
-                self.row_indices = self.row_indices[key]
-            else:
-                if isinstance(key, Iterable):
-                    key = sorted(key, reverse=True)
-                if isinstance(key, (int, slice, np.ndarray, list)):
-                    self.row_indices = np.delete(self.row_indices, key)
-                else:
-                    raise IndexError("Invalid index type")
-        self.n_rows = len(self.row_indices)
+        if key is ...:
+            key = range(len(self))
+        if self._X is not None:
+            self._X = np.delete(self._X, key, axis=0)
+        if self._Y is not None:
+            self._Y = np.delete(self._Y, key, axis=0)
+        if self._W is not None:
+            self._W = np.delete(self._W, key, axis=0)
+        if self._metas is not None:
+            self._metas = np.delete(self._metas, key, axis=0)
         self.clear_cache()
 
 
     def clear(self):
-        self.row_indices = np.array([], int)
-        self.n_rows = 0
-        self.clear_cache()
+        del self[...]
 
     def __len__(self):
-        return self.n_rows
+        if self._X is not None:
+            return len(self._X)
+        if self._Y is not None:
+            return len(self._Y)
+        if self._metas is not None:
+            return len(self._metas)
+        raise ValueError("Invalid Table (no data)")
 
     def insert(self, key, value):
         ...
@@ -425,25 +327,25 @@ class Table(MutableSequence):
         if self.last_domain is not example.domain:
             self.last_domain = self.known_domains.get(example.domain, None)
             if not self.last_domain:
+                pass
 
 
     def random_example(self):
         n_examples = len(self)
-        print(n_examples)
         if not n_examples:
             raise IndexError("Table is empty")
         return self[random.randint(0, n_examples-1)]
 
     def total_weight(self):
         if self._W is None:
-            return self.n_rows
-        return sum(self._W[self.row_indices])
+            return len(self)
+        return sum(self._W)
 
 
     def has_missing(self):
         if self._X is None:
             return False
-        return bn.anynan(self.X)
+        return bn.anynan(self._X)
 
     def has_missing_class(self):
         if self._Y is None:
@@ -452,7 +354,6 @@ class Table(MutableSequence):
 
     def checksum(self, include_metas=False):
         #TODO: check whether .data builds a new buffer; try avoiding it
-        #TODO: is there a better way to do it?!
         cs = 1
         if self._X is not None:
             cs = zlib.adler32(self.X.data)
@@ -463,9 +364,14 @@ class Table(MutableSequence):
         return cs
 
     def shuffle(self):
-        if self.row_indices is ...:
-            self.row_indices = np.arange(self.n_rows)
-        np.random.shuffle(self.row_indices)
+        if self._X is not None:
+            np.random.shuffle(self._X)
+        if self._Y is not None:
+            np.random.shuffle(self._Y)
+        if self._W is not None:
+            np.random.shuffle(self._W)
+        if self._metas is not None:
+            np.random.shuffle(self._metas)
         self.clear_cache()
 
     def sort(self, attributes=None):
