@@ -6,19 +6,6 @@ __version__ = "unknown"
 
 ADDONS_ENTRY_POINT = 'orange.addons'
 
-from . import orange
-
-# Definitely ugly, but I see no other workaround.
-# When, e.g. data.io executes "from orange import ExampleTable"
-# orange gets imported again since it is not in sys.modules
-# before this entire file is executed
-import sys
-sys.modules["orange"] = orange
-
-# Little trick so that legacy imports work automatically
-import Orange.orng
-sys.path = Orange.orng.__path__ + sys.path
-
 import warnings
 import pkg_resources
 
@@ -28,7 +15,7 @@ def _import(name):
     global alreadyWarned
     try:
         __import__(name, globals(), locals(), [], -1)
-    except ImportError, err:
+    except ImportError as err:
         warnings.warn("%sImporting '%s' failed: %s" %
             (disabledMsg if not alreadyWarned else "", name, err),
             UserWarning, 2)
@@ -55,18 +42,25 @@ def _import_addons():
                     continue
                 setattr(parent_module, mod, module)
             sys.modules['Orange.%s' % (name,)] = module
-        except ImportError, err:
+        except ImportError as err:
             warnings.warn("Importing add-on '%s' failed: %s" % (entry_point.name, err), UserWarning, 2)
-        except pkg_resources.DistributionNotFound, err:
+        except pkg_resources.DistributionNotFound as err:
             warnings.warn("Loading add-on '%s' failed because of a missing dependency: '%s'" % (entry_point.name, err), UserWarning, 2)
-        except Exception, err:
+        except Exception as err:
             warnings.warn("An exception occurred during the loading of '%s':\n%r" %(entry_point.name, err), UserWarning, 2)
 
 
-_import("utils")
+#_import("utils")
 
 _import("data")
 _import("data.io")
+_import("data.table")
+_import("data.value")
+_import("data.instance")
+_import("data.variable")
+_import("data.domain")
+
+"""
 _import("data.sample")
 _import("data.outliers")
 _import("data.preprocess")
@@ -171,7 +165,7 @@ _import("utils.render")
 _import("utils.serverfiles")
 
 _import_addons()
-
+"""
 try:
     from . import version
     # Always use short_version here (see PEP 386)

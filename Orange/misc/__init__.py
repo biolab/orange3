@@ -330,6 +330,3 @@ are :obj:`Orange.evaluation.testing` and :obj:`Orange.data.Table`.
 
 """
 from functools import wraps
-from Orange.core import RandomGenerator as Random
-from Orange.core import SymMatrix
-from Orange.core import CostMatrix
