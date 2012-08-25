@@ -1,11 +1,23 @@
 from numbers import Real
 from ..data.value import Value, Unknown
-
+import numpy as np
+from math import isnan
 
 class Instance:
-    def __init__(self, domain):
-        self.domain = domain
-        self._values = self._metas = [] # to avoid PyCharm warnings
+    def __init__(self, domain, values=None):
+        # First handle copy constructor
+        if values is None and isinstance(domain, Instance):
+            values = domain
+            domain = domain.domain
+
+        if values is not None:
+            self.domain = None
+            domain.convert(values, self)
+        else:
+            self.domain = domain
+            self._values = []
+        self._metas = [Unknown] * len(self.domain.metas)
+        self.weight = 1
 
     def __iter__(self):
         return (Value(var, value)
@@ -46,16 +58,6 @@ class Instance:
     __repr__ = __str__
 
 
-class FreeInstance(Instance):
-    def __init__(self, domain, values):
-        super().__init__(domain)
-        if isinstance(values, Instance):
-            self._values = self.domain.convert_values(values)
-        else:
-            self._values = values
-        self._metas = [Unknown] * len(self.domain.metas)
-        self.weight = 1
-
     def get_class(self):
         if self.domain.class_var:
             return Value(self.domain.class_var, self._values[-1])
@@ -85,6 +87,17 @@ class FreeInstance(Instance):
         else:
             self._metas[-1-key] = value
 
+    def __eq__(self, other):
+        # TODO: rewrite to Cython
+        if not isinstance(other, Instance):
+            other = Instance(self.domain, other)
+        for v1, v2 in zip(self._values, other._values):
+            if not (isnan(v1) or isnan(v2) or v1 == v2):
+                return False
+        for m1, m2 in zip(self._metas, other._metas):
+            if not (isnan(m1) or isnan(m2) or m1 == m2):
+                return False
+        return True
 
 
 
