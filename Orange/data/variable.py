@@ -2,6 +2,7 @@ from ..misc.enum import Enum
 import threading
 from ..data.value import Value, Unknown
 import collections
+from math import isnan
 
 class Variable:
     VarTypes = Enum("None", "Discrete", "Continuous", "String")
@@ -83,6 +84,8 @@ class DiscreteVariable(Variable):
             return len(self.values) - 1
 
     def repr_val(self, val):
+        if isnan(val):
+            return "?"
         return '{}'.format(self.values[int(val)])
 
     str_val = repr_val
@@ -167,6 +170,8 @@ class ContinuousVariable(Variable):
     val_from_str_add = to_val
 
     def repr_val(self, val):
+        if isnan(val):
+            return "?"
         return "%.*f" % (self.number_of_decimals, val)
 
     str_val = repr_val
