@@ -5,14 +5,14 @@ from .instance import *
 
 class DomainConversion:
     def __init__(self, source, destination):
-        self.domain = destination
+        self.source = destination
         self.attributes = [source.index(var) if var in source else var.get_value_from
                                 for var in destination.attributes]
         self.classes = [source.index(var) if var in source else var.get_value_from
-                                for var in destination.classes]
+                                for var in destination.class_vars]
         self.variables = self.attributes + self.classes
         self.metas = [source.index(var) if var in source else var.get_value_from
-                        for var in destination]
+                        for var in destination.metas]
 
 class Domain:
     class MetaDescriptor:
@@ -103,6 +103,14 @@ class Domain:
     def __iter__(self):
         return iter(self.variables)
 
+    def __str__(self):
+        s = "[" + ", ".join(attr.name for attr in self.attributes)
+        if self.class_vars:
+            s += " | " + ", ".join(cls.name for cls in self.class_vars)
+        s += "]"
+        if self.metas:
+            s += "{" + ", ".join(meta.name for meta in self.metas) + "}"
+        return s
 
     def index(self, var):
         if isinstance(var, str):
@@ -140,21 +148,23 @@ class Domain:
                                      for var in self.class_vars)
 
 
-    def get_conversion(self, domain):
+    def get_conversion(self, source):
         # the method is thread-safe
         c = self.last_conversion
-        if c.domain is example.domain:
+        if c and c.source is source:
             return c
-        c = self.known_domains.get(example.domain, None)
+        c = self.known_domains.get(source, None)
         if not c:
-            c = DomainConversion(self, example.domain)
-            self.known_domains[example.domain] = self.last_conversion = c
+            c = DomainConversion(source, self)
+            self.known_domains[source] = self.last_conversion = c
         return c
 
     def convert_as_list(self, example):
         if isinstance(example, Instance):
             if example.domain == self:
-                return example.values, example.metas
+                return example._values[:len(self.attributes)], \
+                       example._values[len(self.attributes):], \
+                       example._metas
             c = self.get_conversion(example.domain)
             attributes = [example._values[i] if isinstance(i, int) else
                       (Unknown if not i else i(example)) for i in c.attributes]
@@ -164,24 +174,26 @@ class Domain:
                      (Unknown if not i else i(example)) for i in c.metas]
             return attributes, classes, metas
         return [var.to_val(val) for var, val in zip(self.attributes, example)], \
-               [var.to_val(val) for var, val in zip(self.classes, example)], \
+               [var.to_val(val) for var, val in zip(self.class_vars, example[len(self.attributes):])], \
                []
 
     def convert(self, example, dst=None):
         if dst is not None:
-            if isinstance(dst, FreeInstance):
+            if dst.domain == self:
+                return
+            if not isinstance(dst, RowInstance):
                 dst.domain = self
             else:
                 raise ValueError(
                     "Destination is a row in a table from a different domain")
 
-        attributes, classes, metas = self.convert_to_values(example)
+        attributes, classes, metas = self.convert_as_list(example)
         if dst is None:
-            dst = FreeInstance(self, attributes + classes)
+            dst = Instance(self, attributes + classes)
             dst.metas = metas
         else:
-            dst.values = attributes + classes
-            dst.metas = metas
+            dst._values = attributes + classes
+            dst._metas = metas
             if isinstance(dst, RowInstance):
                 dst._x[:] = attributes
                 dst._y[:] = classes
