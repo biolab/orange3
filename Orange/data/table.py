@@ -117,9 +117,35 @@ class Table(MutableSequence):
     def new_as_reference(domain, table, row_indices=..., col_indices=...):
         self = Table.__new__(Table)
         self.domain = domain
-        self._X = table._X[row_indices, col_indices]
-        self._Y = table._Y[row_indices]
-        self._metas = table._metas[row_indices]
+        if col_indices is not ...:
+            n_attrs = table._X.shape[1]
+            attr_cols = np.fromiter(
+                (col for col in col_indices if 0 <= col < n_attrs), int)
+            class_cols = np.fromiter(
+                (col - n_attrs for col in col_indices if col >= n_attrs), int)
+            meta_cols = np.fromiter(
+                (-1-col for col in col_indices if col < col), int)
+        else:
+            attr_cols = class_cols = meta_cols = ...
+        if isinstance(row_indices, slice):
+            start, stop, stride = row_indices.indices(len(table._X))
+            n_rows = (stop - start) / stride
+        elif isinstance(row_indices, ...):
+            n_rows = len(table._X)
+        else:
+            n_rows = len(row_indices)
+        if len(attr_cols):
+            self._X = table._X[row_indices, attr_cols]
+        else:
+            self._X = np.empty((n_rows, 0), table._X.dtype)
+        if len(class_cols):
+            self._Y = table._Y[row_indices, class_cols]
+        else:
+            self._Y = np.empty((n_rows, 0), table._Y.dtype)
+        if len(meta_cols):
+            self._metas = table._metas[row_indices, meta_cols]
+        else:
+            self._metas = np.empty((n_rows, 0), table._metas.dtype)
         self._W = np.array(table._W[row_indices])
         return self
 
