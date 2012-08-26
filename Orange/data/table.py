@@ -130,19 +130,19 @@ class Table(MutableSequence):
         if isinstance(row_indices, slice):
             start, stop, stride = row_indices.indices(len(table._X))
             n_rows = (stop - start) / stride
-        elif isinstance(row_indices, ...):
+        elif row_indices is ...:
             n_rows = len(table._X)
         else:
             n_rows = len(row_indices)
-        if len(attr_cols):
+        if attr_cols is ... or len(attr_cols):
             self._X = table._X[row_indices, attr_cols]
         else:
             self._X = np.empty((n_rows, 0), table._X.dtype)
-        if len(class_cols):
+        if class_cols is ... or len(class_cols):
             self._Y = table._Y[row_indices, class_cols]
         else:
             self._Y = np.empty((n_rows, 0), table._Y.dtype)
-        if len(meta_cols):
+        if meta_cols is ... or len(meta_cols):
             self._metas = table._metas[row_indices, meta_cols]
         else:
             self._metas = np.empty((n_rows, 0), table._metas.dtype)
