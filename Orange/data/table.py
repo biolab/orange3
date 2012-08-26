@@ -93,6 +93,10 @@ class Table(MutableSequence):
                 self = Table.read_data(args[0])
             elif isinstance(arg, Domain):
                 self = Table.new_from_domain(arg, 0)
+        elif 2 <= len(args) <= 4:
+            if isinstance(args[0], Domain) and \
+               all(isinstance(arg, np.ndarray) for arg in args[1:]):
+                self = Table.new_from_numpy(*args)
         if self is None:
             raise ValueError("Invalid arguments for Table.__new__")
         self.clear_cache()
@@ -114,7 +118,11 @@ class Table(MutableSequence):
 
 
     @staticmethod
-    def new_as_reference(domain, table, row_indices=..., col_indices=...):
+    def new_from_table(domain, table, row_indices=..., col_indices=...):
+        if col_indices is ... and row_indices is not ... and \
+           domain == table.domain:
+            return new_from_table_rows(table, row_indices)
+
         self = Table.__new__(Table)
         self.domain = domain
         if col_indices is not ...:
@@ -149,6 +157,39 @@ class Table(MutableSequence):
         self._W = np.array(table._W[row_indices])
         return self
 
+
+    @staticmethod
+    def new_from_table_rows(table, row_indices):
+        self = Table.__new__(Table)
+        self.domain = table.domain
+        self._X = table._X[row_indices]
+        self._Y = table._Y[row_indices]
+        self._metas = table._metas[row_indices]
+        self._W = table._W[row_indices]
+        return self
+
+    @staticmethod
+    def new_from_numpy(domain, X, Y=None, metas=None, W=None):
+        if Y is None:
+            Y = X[:, len(domain.attributes):]
+            X = X[:, :len(domain.attributes)]
+        if X.shape[1] != len(domain.attributes):
+            raise ValueError("Invalid number of variable columns ({} != {}".
+                format(X.shape[1], len(domain.attributes)))
+        if Y.shape[1] != len(domain.class_vars):
+            raise ValueError("Invalid number of class columns ({} != {}".
+                format(Y.shape[1], len(domain.class_vars)))
+        if metas is not None and metas.shape[1] != len(domain.metas):
+            raise ValueError("Invalid number of meta attribute columns ({} != {}".
+                format(metas.shape[1], len(domain.metas)))
+        self = Table.__new__(Table)
+        self.domain = domain
+        self._X = X
+        self._Y = Y
+        self._metas = metas
+        self._W = W
+        self.n_rows = len(self._X)
+        return self
 
     def is_view(self):
         return self._X.base is not None and \
@@ -274,7 +315,7 @@ class Table(MutableSequence):
         if isinstance(key, int):
             return RowInstance(self, key)
         if not isinstance(key, tuple):
-            return Table.new_as_reference(self.domain, self, key)
+            return Table.new_from_table_rows(self, key)
 
         if len(key) != 2:
             raise IndexError("Table indices must be one- or two-dimensional")
@@ -311,7 +352,7 @@ class Table(MutableSequence):
             domain = Domain(attributes, self.domain.class_vars)
         else:
             domain = self.table.domain
-        return Table.new_as_reference(domain, self, row_idx, col_indices)
+        return Table.new_from_table(domain, self, row_idx, col_indices)
 
 
     def __setitem__(self, key, value):
@@ -339,8 +380,12 @@ class Table(MutableSequence):
             if not isinstance(col_idx, int):
                 col_idx = self.domain.index(col_idx)
             if col_idx >= 0:
-                self._X[row_idx, col_idx] = value
-                self.clear_cache("X")
+                if col_idx < self._X.shape[1]:
+                    self._X[row_idx, col_idx] = value
+                    self.clear_cache("X")
+                else:
+                    self._Y[row_idx, col_idx - self._X.shape[1]] = value
+                    self.clear_cache("Y")
             else:
                 self._metas[row_idx, -1-col_idx] = value
                 self.clear_cache("m")
@@ -496,7 +541,7 @@ class Table(MutableSequence):
 
 
     def has_missing(self):
-        return bn.anynan(self._X)
+        return bn.anynan(self._X) or bn.anynan(self._Y)
 
     def has_missing_class(self):
         return bn.anynan(self.Y)
@@ -541,5 +586,24 @@ class Table(MutableSequence):
         self.row_indices = rank_row[:, 1]
         self.clear_cache()
 
+
+
+    def filter_is_defined(self, negate=False, check=None, inst=None):
+        #TODO implement checking by columns
+        if inst:
+            negate, check = inst.negate, inst.check
+        retain = np.logical_or(bn.anynan(self._X, axis=1),
+                                bn.anynan(self._Y, axis=1))
+        if not negate:
+            retain = np.logical_not(retain)
+        return Table.new_from_table_rows(self, retain)
+
+    def filter_has_class(self, negate=False, inst=None):
+        if inst:
+            negate = inst.negate
+        retain = bn.anynan(self._Y, axis=1)
+        if not negate:
+            retain = np.logical_not(retain)
+        return Table.new_from_table_rows(self, retain)
 
     #TODO fast mapping of entire example tables, not just examples

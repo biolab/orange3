@@ -1,3 +1,5 @@
+"""
+
 from orange import\
     Filter as Filter,\
     FilterList as FilterList,\
@@ -16,3 +18,4 @@ from orange import\
     ValueFilter_stringList as ValueFilterStringList,\
     Filter_conjunction as Conjunction,\
     Filter_disjunction as Disjunction
+"""
