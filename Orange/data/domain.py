@@ -175,4 +175,4 @@ class Domain:
             return attributes, classes, metas
         return [var.to_val(val) for var, val in zip(self.attributes, example)], \
                [var.to_val(val) for var, val in zip(self.class_vars, example[len(self.attributes):])], \
-               []
+               [Unknown] * len(self.metas)
