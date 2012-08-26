@@ -1,8 +1,9 @@
+from numbers import Real
 from ..misc.enum import Enum
 import threading
 from ..data.value import Value, Unknown
 import collections
-from math import isnan
+from math import isnan, floor
 
 class Variable:
     VarTypes = Enum("None", "Discrete", "Continuous", "String")
@@ -69,6 +70,8 @@ class DiscreteVariable(Variable):
     def to_val(self, s):
         if isinstance(s, int):
             return s
+        if isinstance(s, Real):
+            return s if isnan(s) else floor(s+0.25)
         if s in self.unknown_str:
             return Unknown
         if not isinstance(s, str):
