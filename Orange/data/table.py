@@ -670,6 +670,8 @@ class Table(MutableSequence):
                         fmin = f.min.lower()
                         if f.operator in [f.Operator.Between, f.Operator.Outside]:
                             fmax = f.max.lower()
+                    else:
+                        fmin, fmax = f.min, f.max
                 if f.operator == f.Operator.Equal:
                     col = (col == fmin)
                 elif f.operator == f.operator.NotEqual:
