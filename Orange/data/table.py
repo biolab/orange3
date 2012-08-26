@@ -3,6 +3,8 @@ import random
 import zlib
 from collections import MutableSequence, Iterable
 from numbers import Real
+import operator
+from functools import reduce
 
 import numpy as np
 import bottleneck as bn
@@ -121,7 +123,7 @@ class Table(MutableSequence):
     def new_from_table(domain, table, row_indices=..., col_indices=...):
         if col_indices is ... and row_indices is not ... and \
            domain == table.domain:
-            return new_from_table_rows(table, row_indices)
+            return Table.new_from_table_rows(table, row_indices)
 
         self = Table.__new__(Table)
         self.domain = domain
@@ -588,6 +590,17 @@ class Table(MutableSequence):
 
 
 
+    def get_column_view(self, index):
+        if not isinstance(index, int):
+            index = self.domain.index(index)
+        if index >= 0:
+            if index < self._X.shape[1]:
+                return self._X[:, index]
+            else:
+                return self._Y[:, index - self._X.shape[1]]
+        else:
+            return self._metas[:, -1-index]
+
     def filter_is_defined(self, check=None, negate=False):
         #TODO implement checking by columns
         retain = np.logical_or(bn.anynan(self._X, axis=1),
@@ -614,21 +627,73 @@ class Table(MutableSequence):
         return Table.new_from_table_rows(self, retain)
 
     def filter_same_value(self, position, value, negate=False):
-        if not isinstance(position, int):
-            position = self.domain.index(position)
         if not isinstance(value, Real):
             value = self.domain[position].to_val(value)
-        if position >= 0:
-            if position < self._X.shape[1]:
-                sel = self._X[:, position] == value
-            else:
-                sel = self._Y[:, position - self._X.shape[1]] == value
-        else:
-            sel = self._metas[:, -1-position] == value
+        sel = self.get_column_view(position) == value
         if negate:
             sel = np.logical_not(sel)
         return Table.new_from_table_rows(self, sel)
 
-
+    def filter_values(self, filter):
+        import Orange.data.filter
+        if filter.conjunction:
+            sel = np.ones(len(self), dtype=bool)
+        else:
+            sel = np.zeros(len(self), dtype=bool)
+        for f in filter.conditions:
+            col = self.get_column_view(f.position)
+            if isinstance(f, filter.FilterDiscrete):
+                if filter.conjunction:
+                    s2 = np.zeros(len(self))
+                    for val in f.values:
+                        if not isinstance(val, Real):
+                            val = self.domain[f.position].to_val(val)
+                        s2 += (col==val)
+                    sel *= s2
+                else:
+                    for val in f.values:
+                        if not isinstance(val, Real):
+                            val = self.domain[f.position].to_val(val)
+                        sel += (col==val)
+            elif isinstance(f, filter.FilterString):
+                if not f.case_sensitive:
+                    col = np.char.lower(np.array(col, dtype=str))
+                    vals = [val.lower() for val in f.values]
+                if filter.conjunction:
+                    sel *= reduce(operator.add, (col==val for val in vals))
+                else:
+                    sel = reduce(operator.add, (col==val for val in vals), sel)
+            elif isinstance(f, filter.FilterContinuous, filter.FilterString):
+                if isinstance(f, filter.FilterString):
+                    if not f.case_sensitive:
+                        col = np.char.lower(np.array(col, dtype=str))
+                        fmin = f.min.lower()
+                        if f.operator in [f.Operator.Between, f.Operator.Outside]:
+                            fmax = f.max.lower()
+                if f.operator == f.Operator.Equal:
+                    col = (col == fmin)
+                elif f.operator == f.operator.NotEqual:
+                    col = (col != fmin)
+                elif f.operator == f.operator.Less:
+                    col = (col < fmin)
+                elif f.operator == f.operator.LessEqual:
+                    col = (col <= fmin)
+                elif f.operator == f.operator.Greater:
+                    col = (col > fmin)
+                elif f.operator == f.operator.GreaterEqual:
+                    col = (col >= fmin)
+                elif f.operator == f.operator.Between:
+                    col = (col >= fmin) * (col <= fmax)
+                elif f.operator == f.operator.Outside:
+                    col = (col < fmin) + (col > fmax)
+                else:
+                    raise TypeError("Invalid operator")
+                if filter.conjunction:
+                    sel *= col
+                else:
+                    sel += col
+            else:
+                raise TypeError("Invalid filter")
+        return Table.new_from_table_rows(self, sel)
 
     #TODO fast mapping of entire example tables, not just examples
