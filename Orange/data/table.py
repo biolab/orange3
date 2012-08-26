@@ -122,6 +122,32 @@ class Table(MutableSequence):
             raise IOError('Extension "{}" is not recognized'.format(filename))
 
 
+    def convert_to_row(self, example, key):
+        domain = self.domain
+        if isinstance(example, Instance):
+            if example.domain == domain:
+                if isinstance(example, RowInstance):
+                    self._X[key] = example._x
+                    self._Y[key] = example._y
+                else:
+                    self._X[key] = example._values[:len(domain.attributes)]
+                    self._Y[key] = example._values[len(domain.attributes):]
+                self._metas[key] = example._metas
+                return
+            c = self.domain.get_conversion(example.domain)
+            self._X[key] = [example._values[i] if isinstance(i, int) else
+                    (Unknown if not i else i(example)) for i in c.attributes]
+            self._Y[key] = [example._values[i] if isinstance(i, int) else
+                    (Unknown if not i else i(example)) for i in c.classes]
+            self._metas[key] = [example._values[i] if isinstance(i, int) else
+                    (Unknown if not i else i(example)) for i in c.metas]
+        else:
+            self._X[key] = [var.to_val(val)
+                    for var, val in zip(domain.attributes, example)]
+            self._Y[key] = [var.to_val(val)
+                    for var, val in zip(domain.class_vars, example[len(domain.attributes):])]
+            self._metas[key] = Unknown
+
     def _compute_col_indices(self, col_idx):
         """Return a list of new attributes and column indices,
            or (None, self.col_indices) if no new domain needs to be constructed"""
@@ -199,7 +225,7 @@ class Table(MutableSequence):
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self._X[key, :] = value
-            self.domain.convert_to_row(value, self, key)
+            self.convert_to_row(value, key)
             self.clear_cache()
             return
 
@@ -349,7 +375,7 @@ class Table(MutableSequence):
             self._metas[key+1:] = self._metas[key:-1]
             self._W[key+1:] = self._W[key:-1]
         try:
-            self.domain.convert_to_row(value, self, key)
+            self.convert_to_row(value, key)
             if self._W.shape[-1]:
                 self._W[key] = 1
         except Exception:
@@ -403,6 +429,7 @@ class Table(MutableSequence):
         self.clear_cache()
 
     def sort(self, attributes=None):
+        # TODO Does not work
         if attributes is not None:
             attributes, col_indices = self._compute_col_indices(attributes)
         if not attributes:
