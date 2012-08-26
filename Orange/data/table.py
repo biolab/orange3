@@ -383,7 +383,7 @@ class Table(MutableSequence):
             self._Y[key:-1] = self._Y[key+1:]
             self._metas[key:-1] = self._metas[key+1:]
             self._W[key:-1] = self._W[key+1:]
-            self.resize_all(len(self-1))
+            self.resize_all(len(self)-1)
             raise
 
 
@@ -410,7 +410,6 @@ class Table(MutableSequence):
 
     def checksum(self, include_metas=True):
         #TODO: check whether .data builds a new buffer; try avoiding it
-        cs = 1
         cs = zlib.adler32(self._X.data)
         cs = zlib.adler32(self._Y.data, cs)
         if include_metas:
