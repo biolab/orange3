@@ -1,7 +1,6 @@
 from collections import Iterable
 import weakref
 from .variable import *
-from .instance import *
 
 class DomainConversion:
     def __init__(self, source, destination):
@@ -160,6 +159,7 @@ class Domain:
         return c
 
     def convert_as_list(self, example):
+        from .instance import Instance
         if isinstance(example, Instance):
             if example.domain == self:
                 return example._values[:len(self.attributes)], \
@@ -176,31 +176,3 @@ class Domain:
         return [var.to_val(val) for var, val in zip(self.attributes, example)], \
                [var.to_val(val) for var, val in zip(self.class_vars, example[len(self.attributes):])], \
                []
-
-    def convert(self, example, dst=None):
-        if dst is not None:
-            if dst.domain == self:
-                return
-            if not isinstance(dst, RowInstance):
-                dst.domain = self
-            else:
-                raise ValueError(
-                    "Destination is a row in a table from a different domain")
-
-        attributes, classes, metas = self.convert_as_list(example)
-        if dst is None:
-            dst = Instance(self, attributes + classes)
-            dst.metas = metas
-        else:
-            dst._values = attributes + classes
-            dst._metas = metas
-            if isinstance(dst, RowInstance):
-                dst._x[:] = attributes
-                dst._y[:] = classes
-                dst._metas[:] = metas
-        return dst
-
-
-
-
-    #TODO fast mapping of entire example tables, not just examples

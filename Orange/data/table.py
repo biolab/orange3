@@ -7,10 +7,77 @@ from numbers import Real
 import numpy as np
 import bottleneck as bn
 
-from ..data import Value, Instance, RowInstance, Domain, Unknown
+from ..data import Value, Instance, Domain, Unknown
 from ..data.io import TabDelimReader
 
-EllipsisType = type(...)
+class RowInstance(Instance):
+    def __init__(self, table, row_index):
+        super().__init__(table.domain)
+        if table._X is not None:
+            self._x = table._X[row_index]
+            self._values = list(self._x)
+        else:
+            self._x = None
+            self._values = []
+        if table._Y is not None:
+            self._y = table._Y[row_index]
+            self._values += list(self._y)
+        else:
+            self._y = None
+        self.row_index = row_index
+        self._metas = table._metas is not None and table._metas[row_index]
+        self.table = table
+
+    def _check_single_class(self):
+        if not self.domain.class_vars:
+            raise TypeError("Domain has no class variable")
+        elif len(self.domain.class_vars) > 1:
+            raise TypeError("Domain has multiple class variables")
+
+    def get_class(self):
+        self._check_single_class()
+        if self.table.domain.class_var:
+            return Value(self.table.domain.class_var, self._y[0])
+
+    def set_class(self, value):
+        self._check_single_class()
+        if not isinstance(value, Real):
+            self._y[0] = self.table.domain.class_var.to_val(value)
+        else:
+            self._y[0] = value
+
+    def get_classes(self):
+        return (Value(var, value) for var, value in
+            zip(self.table.domain.class_vars, self._y))
+
+    def set_weight(self, weight):
+        if self.table._W is None:
+            self.table.set_weights()
+        self.table._W[self.row_index] = weight
+
+    def get_weight(self):
+        if not self.table._W:
+            raise ValueError("Instances in the referenced table have no weights")
+        return self.table._W[self.row_index]
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, int):
+            key = self.domain.index(key)
+        if isinstance(value, str):
+            var = self.domain[key]
+            value = var.to_val(value)
+        if key >= 0:
+            if not isinstance(value, Real):
+                raise TypeError("Expected primitive value, got '%s'" %
+                                type(value).__name__)
+            if key < len(self._x):
+                self._x[key] = value
+            else:
+                self._y[key - len(self._x)] = value
+        else:
+            self._metas[-1-key] = value
+
+
 
 class Table(MutableSequence):
     def __new__(cls, *args, **argkw):
@@ -96,7 +163,7 @@ class Table(MutableSequence):
     W = property(get_weights)
     metas = property(get_metas)
 
-    def clear_cache(self, what="XYWm"):
+    def clear_cache(self, _="XYWm"):
         pass
 
     def set_weights(self, val=1):
@@ -447,3 +514,6 @@ class Table(MutableSequence):
         rank_row = np.sort(rank_row, axis=0)
         self.row_indices = rank_row[:, 1]
         self.clear_cache()
+
+
+    #TODO fast mapping of entire example tables, not just examples
