@@ -588,22 +588,47 @@ class Table(MutableSequence):
 
 
 
-    def filter_is_defined(self, negate=False, check=None, inst=None):
+    def filter_is_defined(self, check=None, negate=False):
         #TODO implement checking by columns
-        if inst:
-            negate, check = inst.negate, inst.check
         retain = np.logical_or(bn.anynan(self._X, axis=1),
-                                bn.anynan(self._Y, axis=1))
+                               bn.anynan(self._Y, axis=1))
         if not negate:
             retain = np.logical_not(retain)
         return Table.new_from_table_rows(self, retain)
 
-    def filter_has_class(self, negate=False, inst=None):
-        if inst:
-            negate = inst.negate
+    def filter_has_class(self, negate=False):
         retain = bn.anynan(self._Y, axis=1)
         if not negate:
             retain = np.logical_not(retain)
         return Table.new_from_table_rows(self, retain)
+
+    def filter_random(self, prob, negate=False):
+        retain = np.zeros(len(self), dtype=bool)
+        if prob < 1:
+            prob *= len(self)
+        if negate:
+            retain[prob:] = True
+        else:
+            retain[:prob] = True
+        np.random.shuffle(retain)
+        return Table.new_from_table_rows(self, retain)
+
+    def filter_same_value(self, position, value, negate=False):
+        if not isinstance(position, int):
+            position = self.domain.index(position)
+        if not isinstance(value, Real):
+            value = self.domain[position].to_val(value)
+        if position >= 0:
+            if position < self._X.shape[1]:
+                sel = self._X[:, position] == value
+            else:
+                sel = self._Y[:, position - self._X.shape[1]] == value
+        else:
+            sel = self._metas[:, -1-position] == value
+        if negate:
+            sel = np.logical_not(sel)
+        return Table.new_from_table_rows(self, sel)
+
+
 
     #TODO fast mapping of entire example tables, not just examples
