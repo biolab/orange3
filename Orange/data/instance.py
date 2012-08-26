@@ -8,8 +8,8 @@ class Instance:
         if values is None:
             if isinstance(domain, Instance):
                 self.domain = domain.domain
-                self._values = domain._values[:]
-                self._metas = domain._metas[:]
+                self._values = list(domain._values)
+                self._metas = list(domain._metas)
                 self.weight = domain.weight
                 return
             elif isinstance(domain, Domain):
