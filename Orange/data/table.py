@@ -80,6 +80,12 @@ class RowInstance(Instance):
             self._metas[-1-key] = value
 
 
+class Columns:
+    def __init__(self, domain):
+        for v in domain:
+            setattr(self, v.name.replace(" ", "_"), v)
+        for v in domain.metas:
+            setattr(self, v.name.replace(" ", "_"), v)
 
 class Table(MutableSequence):
     def __new__(cls, *args, **argkw):
@@ -231,6 +237,8 @@ class Table(MutableSequence):
     Y = property(getY)
     W = property(get_weights)
     metas = property(get_metas)
+
+    columns= property(lambda self: Columns(self.domain))
 
     def clear_cache(self, _="XYWm"):
         pass
@@ -634,16 +642,23 @@ class Table(MutableSequence):
             sel = np.logical_not(sel)
         return Table.new_from_table_rows(self, sel)
 
-    def filter_values(self, filter):
-        import Orange.data.filter
-        if filter.conjunction:
+    def filter_values(self, filt):
+        from Orange.data import filter
+        if isinstance(filt, filter.Values):
+            conditions = filt.conditions
+            conjunction = filt.conjunction
+        else:
+            conditions = [filt]
+            conjunction = True
+        if conjunction:
             sel = np.ones(len(self), dtype=bool)
         else:
             sel = np.zeros(len(self), dtype=bool)
-        for f in filter.conditions:
+
+        for f in conditions:
             col = self.get_column_view(f.position)
             if isinstance(f, filter.FilterDiscrete):
-                if filter.conjunction:
+                if conjunction:
                     s2 = np.zeros(len(self))
                     for val in f.values:
                         if not isinstance(val, Real):
@@ -659,38 +674,37 @@ class Table(MutableSequence):
                 if not f.case_sensitive:
                     col = np.char.lower(np.array(col, dtype=str))
                     vals = [val.lower() for val in f.values]
-                if filter.conjunction:
+                if conjunction:
                     sel *= reduce(operator.add, (col==val for val in vals))
                 else:
                     sel = reduce(operator.add, (col==val for val in vals), sel)
-            elif isinstance(f, filter.FilterContinuous, filter.FilterString):
-                if isinstance(f, filter.FilterString):
-                    if not f.case_sensitive:
-                        col = np.char.lower(np.array(col, dtype=str))
-                        fmin = f.min.lower()
-                        if f.operator in [f.Operator.Between, f.Operator.Outside]:
-                            fmax = f.max.lower()
-                    else:
-                        fmin, fmax = f.min, f.max
-                if f.operator == f.Operator.Equal:
+            elif isinstance(f, (filter.FilterContinuous, filter.FilterString)):
+                if isinstance(f, filter.FilterString) and not f.case_sensitive:
+                    col = np.char.lower(np.array(col, dtype=str))
+                    fmin = f.min.lower()
+                    if f.oper in [f.Operator.Between, f.Operator.Outside]:
+                        fmax = f.max.lower()
+                else:
+                    fmin, fmax = f.min, f.max
+                if f.oper == f.Operator.Equal:
                     col = (col == fmin)
-                elif f.operator == f.operator.NotEqual:
+                elif f.oper == f.Operator.NotEqual:
                     col = (col != fmin)
-                elif f.operator == f.operator.Less:
+                elif f.oper == f.Operator.Less:
                     col = (col < fmin)
-                elif f.operator == f.operator.LessEqual:
+                elif f.oper == f.Operator.LessEqual:
                     col = (col <= fmin)
-                elif f.operator == f.operator.Greater:
+                elif f.oper == f.Operator.Greater:
                     col = (col > fmin)
-                elif f.operator == f.operator.GreaterEqual:
+                elif f.oper == f.Operator.GreaterEqual:
                     col = (col >= fmin)
-                elif f.operator == f.operator.Between:
+                elif f.oper == f.Operator.Between:
                     col = (col >= fmin) * (col <= fmax)
-                elif f.operator == f.operator.Outside:
+                elif f.oper == f.Operator.Outside:
                     col = (col < fmin) + (col > fmax)
                 else:
                     raise TypeError("Invalid operator")
-                if filter.conjunction:
+                if conjunction:
                     sel *= col
                 else:
                     sel += col

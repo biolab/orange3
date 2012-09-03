@@ -8,6 +8,9 @@
 #      they will construct such a list and pass it to collection
 #   -- otherwise, they construct a new collection and add examples one by one???
 
+# Hint: parameters can be set using introspection into method arguments
+# (set the arguments whose names match the filter's attributes)
+
 from ..misc.enum import Enum
 
 class Filter:
@@ -22,7 +25,7 @@ class Values(Filter):
 
 
 class ValueFilter:
-    Operators = Enum("Equal", "NotEqual",
+    Operator = Enum("Equal", "NotEqual",
                      "Less", "LessEqual", "Greater", "GreaterEqual",
                      "Between", "Outside")
 
@@ -30,15 +33,20 @@ class ValueFilter:
         self.position = position
 
 
-class ValueFilterDiscrete(ValueFilter):
+class FilterDiscrete(ValueFilter):
     def __init__(self, position, values):
-        super().__init__(self, position)
+        super().__init__(position)
         self.values = values
 
 
-class ValueFilterContinuous(ValueFilter):
-    def __init__(self, position, min, max=None, oper=0, case_sensitive=True):
-        super().__init__(self, position)
+class FilterContinuous(ValueFilter):
+    def __init__(self, position, oper, min=None, max=None, case_sensitive=True, **a):
+        super().__init__(position)
+        if a:
+            if len(a) != 1 or "ref" not in a:
+                raise TypeError("FilterContinuous got unexpected keyword arguments")
+            else:
+                min = a["ref"]
         self.min = min
         self.max = max
         self.oper = oper
@@ -50,21 +58,26 @@ class ValueFilterContinuous(ValueFilter):
         self.min = value
     ref = property(get_ref, set_ref)
 
-class ValueFilterString(ValueFilter):
-    def __init__(self, position, min, max=None, oper=0, case_sensitive=True):
+class FilterString(ValueFilter):
+    def __init__(self, position, oper, min=None, max=None, case_sensitive=True, **a):
         super().__init__(self, position)
+        if a:
+            print(a, "X")
+            if len(a) != 1 or "ref" not in a:
+                raise TypeError("FilterContinuous got unexpected keyword arguments")
+            else:
+                min = a["ref"]
         self.min = min
         self.max = max
         self.oper = oper
         self.case_sensitive = True
 
 
-class ValueFilterStringList(ValueFilter):
+class FilterStringList(ValueFilter):
     def __init__(self, position, values, case_sensitive=True):
-        super().__init__(self, position)
+        super().__init__(position)
         self.min = min
         self.max = max
-        self.oper = oper
         self.case_sensitive = True
 
 """
