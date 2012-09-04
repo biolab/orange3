@@ -49,6 +49,13 @@ class Instance:
             value = self._metas[-1-key]
         return Value(self.domain[key], value)
 
+    #TODO Should we return an instance of `object` if we have a meta attribute
+    #     that is not Discrete or Continuous? E.g. when we have strings, we'd
+    #     like to be able to use startswith, lower etc...
+    #     Or should we even return Continuous as floats and use Value only
+    #     for discrete attributes?!
+    #     Same in Table.__getitem__
+
     def __str__(self):
         res = "["
         res += ", ".join(var.str_val(value) for var, value in

@@ -126,23 +126,34 @@ class Table(MutableSequence):
 
 
     @staticmethod
-    def new_from_table(domain, table, row_indices=..., col_indices=...):
-        if col_indices is ... and row_indices is not ... and \
-           domain == table.domain:
+    def compose_cols_from(table, row_indices, src_cols, n_rows):
+        if not len(src_cols):
+            return np.zeros((n_rows, 0), dtype=table._X.dtype)
+
+        n_src_attrs = len(table.domain.attributes)
+        if all(0 <= x < n_src_attrs for x in src_cols):
+            return table._X[row_indices, src_cols]
+        if all(x < 0 for x in src_cols):
+            return table._metas[row_indices, [-1-x for x in src_cols]]
+        if all(x >= n_src_attrs for x in src_cols):
+            return table._Y[row_indices, [x-n_src_attrs for x in src_cols]]
+
+        a = np.empty((n_rows, len(src_cols)), dtype=table._X.dtype)
+        for i, col in enumerate(src_cols):
+            if col < 0:
+                a[:, i] = table._metas[row_indices, -1 - col]
+            elif col < n_src_attrs:
+                a[:, i] = table._X[row_indices, col]
+            else:
+                a[:, i] = table._Y[row_indices, col - n_src_attrs]
+        return a
+
+
+    @staticmethod
+    def new_from_table(domain, table, row_indices=...):
+        if domain == table.domain:
             return Table.new_from_table_rows(table, row_indices)
 
-        self = Table.__new__(Table)
-        self.domain = domain
-        if col_indices is not ...:
-            n_attrs = table._X.shape[1]
-            attr_cols = np.fromiter(
-                (col for col in col_indices if 0 <= col < n_attrs), int)
-            class_cols = np.fromiter(
-                (col - n_attrs for col in col_indices if col >= n_attrs), int)
-            meta_cols = np.fromiter(
-                (-1-col for col in col_indices if col < col), int)
-        else:
-            attr_cols = class_cols = meta_cols = ...
         if isinstance(row_indices, slice):
             start, stop, stride = row_indices.indices(len(table._X))
             n_rows = (stop - start) / stride
@@ -150,18 +161,16 @@ class Table(MutableSequence):
             n_rows = len(table._X)
         else:
             n_rows = len(row_indices)
-        if attr_cols is ... or len(attr_cols):
-            self._X = table._X[row_indices, attr_cols]
-        else:
-            self._X = np.empty((n_rows, 0), table._X.dtype)
-        if class_cols is ... or len(class_cols):
-            self._Y = table._Y[row_indices, class_cols]
-        else:
-            self._Y = np.empty((n_rows, 0), table._Y.dtype)
-        if meta_cols is ... or len(meta_cols):
-            self._metas = table._metas[row_indices, meta_cols]
-        else:
-            self._metas = np.empty((n_rows, 0), table._metas.dtype)
+
+        self = Table.__new__(Table)
+        self.domain = domain
+        conversion = domain.get_conversion(table.domain)
+        self._X = Table.compose_cols_from(
+            table, row_indices, conversion.attributes, n_rows)
+        self._Y = Table.compose_cols_from(
+            table, row_indices, conversion.classes, n_rows)
+        self._metas = Table.compose_cols_from(
+            table, row_indices, conversion.metas, n_rows)
         self._W = np.array(table._W[row_indices])
         return self
 
@@ -358,17 +367,23 @@ class Table(MutableSequence):
 
         # multiple rows: construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
+        n_attrs = len(self.domain.attributes)
+        r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_atrs]
+        r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
+        r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
         if attributes:
-            domain = Domain(attributes, self.domain.class_vars)
+            domain = Domain(r_attrs, r_classes)
+            domain.metas = r_metas
         else:
             domain = self.table.domain
-        return Table.new_from_table(domain, self, row_idx, col_indices)
+        return Table.new_from_table(domain, self, row_idx)
 
 
     def __setitem__(self, key, value):
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self._X[key, :] = value
+                return
             self.convert_to_row(value, key)
             self.clear_cache()
             return
@@ -704,6 +719,14 @@ class Table(MutableSequence):
                     col = (col >= fmin) * (col <= fmax)
                 elif f.oper == f.Operator.Outside:
                     col = (col < fmin) + (col > fmax)
+                elif not isinstance(f, filter.FilterString):
+                    raise TypeError("Invalid operator")
+                elif f.oper == f.Operator.Contains:
+                    col = np.fromiter((fmin in e for e in col), dtype=bool)
+                elif f.oper == f.Operator.BeginsWith:
+                    col = np.fromiter((e.startswith(fmin) for e in col), dtype=bool)
+                elif f.oper == f.Operator.EndsWith:
+                    col = np.fromiter((e.endswith(fmin) for e in col), dtype=bool)
                 else:
                     raise TypeError("Invalid operator")
                 if conjunction:
@@ -714,4 +737,3 @@ class Table(MutableSequence):
                 raise TypeError("Invalid filter")
         return Table.new_from_table_rows(self, sel)
 
-    #TODO fast mapping of entire example tables, not just examples

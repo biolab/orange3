@@ -35,6 +35,13 @@ class Value(float):
                 other = other.value
             return self.value == other
         return super().__eq__(other)
+
+    def __contains__(self, other):
+        if self.value is not None and isinstance(self.value, str) and \
+           isinstance(other, str):
+            return other in self.value
+        raise TypeError("invalid operation on Value()")
+
 """
 Remove when implemented (or when decided to not reimplement)
 

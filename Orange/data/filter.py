@@ -73,6 +73,11 @@ class FilterString(ValueFilter):
         self.oper = oper
         self.case_sensitive = True
 
+    def get_ref(self):
+        return self.min
+    def set_ref(self, value):
+        self.min = value
+    ref = property(get_ref, set_ref)
 
 class FilterStringList(ValueFilter):
     def __init__(self, position, values, case_sensitive=True):
