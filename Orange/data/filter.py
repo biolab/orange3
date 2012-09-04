@@ -27,7 +27,8 @@ class Values(Filter):
 class ValueFilter:
     Operator = Enum("Equal", "NotEqual",
                      "Less", "LessEqual", "Greater", "GreaterEqual",
-                     "Between", "Outside")
+                     "Between", "Outside",
+                     "Contains", "BeginsWith", "EndsWith")
 
     def __init__(self, position):
         self.position = position
@@ -60,7 +61,7 @@ class FilterContinuous(ValueFilter):
 
 class FilterString(ValueFilter):
     def __init__(self, position, oper, min=None, max=None, case_sensitive=True, **a):
-        super().__init__(self, position)
+        super().__init__(position)
         if a:
             print(a, "X")
             if len(a) != 1 or "ref" not in a:

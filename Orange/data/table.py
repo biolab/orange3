@@ -306,7 +306,7 @@ class Table(MutableSequence):
             else:
                 return self.domain.attributes[col_idx], \
                        self.arange(start, end, stride)
-        elif isinstance(col_idx, Iterable):
+        elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self.domain[col] for col in col_idx]
             if attributes == self.domain.attributes:
                 return None, self.col_indices
@@ -670,10 +670,12 @@ class Table(MutableSequence):
                         if not isinstance(val, Real):
                             val = self.domain[f.position].to_val(val)
                         sel += (col==val)
-            elif isinstance(f, filter.FilterString):
+            elif isinstance(f, filter.FilterStringList):
                 if not f.case_sensitive:
                     col = np.char.lower(np.array(col, dtype=str))
                     vals = [val.lower() for val in f.values]
+                else:
+                    vals = f.values
                 if conjunction:
                     sel *= reduce(operator.add, (col==val for val in vals))
                 else:
