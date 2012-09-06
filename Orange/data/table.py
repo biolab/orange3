@@ -9,23 +9,18 @@ from functools import reduce
 import numpy as np
 import bottleneck as bn
 
-from ..data import Value, Instance, Domain, Unknown
-from ..data.io import TabDelimReader
+from .instance import *
+from .domain import *
+from .value import *
+from Orange.data import io
 
 class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
-        if table._X is not None:
-            self._x = table._X[row_index]
-            self._values = list(self._x)
-        else:
-            self._x = None
-            self._values = []
-        if table._Y is not None:
-            self._y = table._Y[row_index]
-            self._values += list(self._y)
-        else:
-            self._y = None
+        self._x = table._X[row_index]
+        self._values = list(self._x)
+        self._y = table._Y[row_index]
+        self._values += list(self._y)
         self.row_index = row_index
         self._metas = table._metas is not None and table._metas[row_index]
         self.table = table
@@ -270,7 +265,7 @@ class Table(MutableSequence):
         if not os.path.exists(filename):
             raise IOError('File "{}" is not found'.format(filename))
         if ext == ".tab":
-            return TabDelimReader().read_file(filename)
+            return io.TabDelimReader().read_file(filename)
         else:
             raise IOError('Extension "{}" is not recognized'.format(filename))
 
@@ -368,7 +363,7 @@ class Table(MutableSequence):
         # multiple rows: construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
         n_attrs = len(self.domain.attributes)
-        r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_atrs]
+        r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
         r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
         r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
         if attributes:
@@ -397,7 +392,7 @@ class Table(MutableSequence):
             if isinstance(col_idx, slice):
                 col_idx = range(*slice.indices(col_idx, self._X.shape[1]))
             if not isinstance(col_idx, str) and isinstance(col_idx, Iterable):
-                ...
+                #TODO implement
                 return
 
             if not isinstance(value, int):
@@ -592,21 +587,16 @@ class Table(MutableSequence):
 
     def sort(self, attributes=None):
         # TODO Does not work
-        if attributes is not None:
+        if attributes:
             attributes, col_indices = self._compute_col_indices(attributes)
-        if not attributes:
-            ranks = bn.nanrankdata(self._X, axis=0)
-        else:
             if np.any(col_indices < 0):
                 data = np.hstack((self._X, self._Y, self._metas))
             else:
                 data = np.hstack((self._X, self._Y))
             ranks = bn.nanrankdata(data[col_indices], axis=0)
-            del data
-        if self.row_indices is ...:
-            rank_row = np.hstack((ranks, np.arange(self.n_rows)))
         else:
-            rank_row = np.hstack((ranks, self.row_indices))
+            ranks = bn.nanrankdata(self._X, axis=0)
+        rank_row = np.hstack((ranks, np.arange(self.n_rows)))
         rank_row = np.sort(rank_row, axis=0)
         self.row_indices = rank_row[:, 1]
         self.clear_cache()
