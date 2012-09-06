@@ -194,6 +194,8 @@ class Table(MutableSequence):
         if metas is not None and metas.shape[1] != len(domain.metas):
             raise ValueError("Invalid number of meta attribute columns ({} != {}".
                 format(metas.shape[1], len(domain.metas)))
+        if W is None:
+            W = np.array((X.shape[0], 0))
         self = Table.__new__(Table)
         self.domain = domain
         self._X = X
