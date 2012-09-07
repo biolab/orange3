@@ -22,6 +22,7 @@ class Domain:
     version = 0
 
     def __init__(self, variables, class_variables=None, source=None):
+        #TODO use source if provided!
         if isinstance(class_variables, Variable):
             attributes = list(variables)
             class_vars = [class_variables]
