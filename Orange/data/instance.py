@@ -84,23 +84,30 @@ class Instance:
     __repr__ = __str__
 
 
-    def get_class(self):
-        if len(self._y) == 1:
-            return Value(self.domain.class_var, self._y[0])
-        if len(self.domain.class_vars) == 0:
+    def _check_single_class(self):
+        if not self.domain.class_vars:
             raise TypeError("Domain has no class variable")
-        else:
+        elif len(self.domain.class_vars) > 1:
             raise TypeError("Domain has multiple class variables")
+
+
+    def get_class(self):
+        self._check_single_class()
+        return Value(self.domain.class_var, self._y[0])
+
 
     def get_classes(self):
         return (Value(var, value) for var, value in
             zip(self.domain.class_vars, self._y))
 
+
     def set_weight(self, weight):
         self.weight = weight
 
+
     def get_weight(self):
         return self.weight
+
 
     def __setitem__(self, key, value):
         if not isinstance(key, int):
@@ -113,6 +120,7 @@ class Instance:
         else:
             self._metas[-1 - key] = value
 
+
     def __eq__(self, other):
         # TODO: rewrite to Cython
         if not isinstance(other, Instance):
@@ -124,6 +132,7 @@ class Instance:
             if not (m1 == m2 or isnan(m1) or m1 is None or isnan(m2) or m2 is None):
                 return False
         return True
+
 
     def checksum(self):
         return zlib.adler32(self._metas, zlib.adler32(self._values))

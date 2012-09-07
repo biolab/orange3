@@ -18,18 +18,11 @@ class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
         self._x = table._X[row_index]
-        self._values = list(self._x)
         self._y = table._Y[row_index]
-        self._values += list(self._y)
+        self._values = np.hstack((self._x, self._y))
+        self._metas = table._metas[row_index]
         self.row_index = row_index
-        self._metas = table._metas is not None and table._metas[row_index]
         self.table = table
-
-    def _check_single_class(self):
-        if not self.domain.class_vars:
-            raise TypeError("Domain has no class variable")
-        elif len(self.domain.class_vars) > 1:
-            raise TypeError("Domain has multiple class variables")
 
     def get_class(self):
         self._check_single_class()
@@ -42,6 +35,7 @@ class RowInstance(Instance):
             self._y[0] = self.table.domain.class_var.to_val(value)
         else:
             self._y[0] = value
+        self._values[len(table.domain.attributes)] = self._y[0]
 
     def get_classes(self):
         return (Value(var, value) for var, value in
@@ -68,9 +62,9 @@ class RowInstance(Instance):
                 raise TypeError("Expected primitive value, got '%s'" %
                                 type(value).__name__)
             if key < len(self._x):
-                self._x[key] = value
+                self._values[key] = self._x[key] = value
             else:
-                self._y[key - len(self._x)] = value
+                self._values[key] = self._y[key - len(self._x)] = value
         else:
             self._metas[-1-key] = value
 
@@ -571,12 +565,11 @@ class Table(MutableSequence):
         return bn.anynan(self.Y)
 
     def checksum(self, include_metas=True):
-        #TODO: check whether .data builds a new buffer; try avoiding it
-        cs = zlib.adler32(self._X.data)
-        cs = zlib.adler32(self._Y.data, cs)
+        cs = zlib.adler32(self._X)
+        cs = zlib.adler32(self._Y, cs)
         if include_metas:
-            cs = zlib.adler32(self._metas.data, cs)
-        cs = zlib.adler32(self._W.data, cs)
+            cs = zlib.adler32(self._metas, cs)
+        cs = zlib.adler32(self._W, cs)
         return cs
 
     def shuffle(self):
