@@ -177,19 +177,23 @@ class Table(MutableSequence):
         if Y is None:
             Y = X[:, len(domain.attributes):]
             X = X[:, :len(domain.attributes)]
+        if metas is None:
+            metas = np.empty((X.shape[0], 0), object)
+        if W is None:
+            W = np.empty((X.shape[0], 0))
+
         if X.shape[1] != len(domain.attributes):
             raise ValueError("Invalid number of variable columns ({} != {}".
                 format(X.shape[1], len(domain.attributes)))
         if Y.shape[1] != len(domain.class_vars):
             raise ValueError("Invalid number of class columns ({} != {}".
                 format(Y.shape[1], len(domain.class_vars)))
-        if metas is not None and metas.shape[1] != len(domain.metas):
+        if metas.shape[1] != len(domain.metas):
             raise ValueError("Invalid number of meta attribute columns ({} != {}".
                 format(metas.shape[1], len(domain.metas)))
-        if metas is None:
-            metas = np.empty((X.shape[0], 0), object)
-        if W is None:
-            W = np.empty((X.shape[0], 0))
+        if not X.shape[0] == Y.shape[0] == metas.shape[0] == W.shape[0]:
+            raise ValueError("Parts of data contain different numbers of rows.")
+
         self = Table.__new__(Table)
         self.domain = domain
         self._X = X
