@@ -87,7 +87,7 @@ class Table(MutableSequence):
             if isinstance(arg, str):
                 self = Table.read_data(args[0])
             elif isinstance(arg, Domain):
-                self = Table.new_from_domain(arg, 0)
+                self = Table.new_from_domain(arg)
         elif 2 <= len(args) <= 4:
             if isinstance(args[0], Domain) and \
                all(isinstance(arg, np.ndarray) for arg in args[1:]):
@@ -98,7 +98,7 @@ class Table(MutableSequence):
         return self
 
     @staticmethod
-    def new_from_domain(domain, n_rows, weights=True):
+    def new_from_domain(domain, n_rows=0, weights=True):
         self = Table.__new__(Table)
         self.domain = domain
         self.n_rows = n_rows
