@@ -14,8 +14,8 @@ class Instance:
                 self.domain = domain = domain.domain
             else:
                 self._values = np.repeat(Unknown, len(domain.variables))
-                self._attributes = self._values[:len(domain.attributes)]
-                self._classes = self._values[len(domain.attributes):]
+                self._x = self._values[:len(domain.attributes)]
+                self._y = self._values[len(domain.attributes):]
                 self._metas = np.array(
                     [Unknown if var.is_primitive else None for var in
                      domain.metas],
@@ -30,8 +30,8 @@ class Instance:
         else:
             self._values, self._metas = domain.convert(values)
             self.weight = 1
-        self._attributes = self._values[:len(domain.attributes)]
-        self._classes = self._values[len(domain.attributes):]
+        self._x = self._values[:len(domain.attributes)]
+        self._y = self._values[len(domain.attributes):]
 
 
     def __iter__(self):
@@ -64,13 +64,13 @@ class Instance:
     def __str__(self):
         res = "["
         res += ", ".join(var.str_val(value) for var, value in
-            zip(self.domain.attributes, self._attributes[:5]))
+            zip(self.domain.attributes, self._x[:5]))
         n_attrs = len(self.domain.attributes)
         if n_attrs > 5:
             res += ", ..."
         if self.domain.class_vars:
             res += " | " + ", ".join(var.str_val(value) for var, value in
-                zip(self.domain.class_vars, self._classes[:5]))
+                zip(self.domain.class_vars, self._y[:5]))
         res += "]"
         if self.domain.metas:
             res += " {"
@@ -85,8 +85,8 @@ class Instance:
 
 
     def get_class(self):
-        if len(self._classes) == 1:
-            return Value(self.domain.class_var, self._classes[0])
+        if len(self._y) == 1:
+            return Value(self.domain.class_var, self._y[0])
         if len(self.domain.class_vars) == 0:
             raise TypeError("Domain has no class variable")
         else:
@@ -94,7 +94,7 @@ class Instance:
 
     def get_classes(self):
         return (Value(var, value) for var, value in
-            zip(self.domain.class_vars, self._classes))
+            zip(self.domain.class_vars, self._y))
 
     def set_weight(self, weight):
         self.weight = weight
