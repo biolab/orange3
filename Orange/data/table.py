@@ -10,8 +10,6 @@ import numpy as np
 import bottleneck as bn
 
 from .instance import *
-from .domain import *
-from .value import *
 from Orange.data import io
 
 class RowInstance(Instance):
@@ -35,7 +33,7 @@ class RowInstance(Instance):
             self._y[0] = self.table.domain.class_var.to_val(value)
         else:
             self._y[0] = value
-        self._values[len(table.domain.attributes)] = self._y[0]
+        self._values[len(self.table.domain.attributes)] = self._y[0]
 
     def get_classes(self):
         return (Value(var, value) for var, value in
