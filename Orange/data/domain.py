@@ -1,6 +1,7 @@
 from collections import Iterable
 import weakref
 from .variable import *
+import numpy as np
 
 class DomainConversion:
     def __init__(self, source, destination):
@@ -159,21 +160,18 @@ class Domain:
             self.known_domains[source] = self.last_conversion = c
         return c
 
-    def convert_as_list(self, example):
+    def convert(self, example):
         from .instance import Instance
         if isinstance(example, Instance):
             if example.domain == self:
-                return example._values[:len(self.attributes)], \
-                       example._values[len(self.attributes):], \
-                       example._metas
+                return example._values, example._metas
             c = self.get_conversion(example.domain)
-            attributes = [example._values[i] if isinstance(i, int) else
-                      (Unknown if not i else i(example)) for i in c.attributes]
-            classes = [example._values[i] if isinstance(i, int) else
-                      (Unknown if not i else i(example)) for i in c.classes]
+            values = [example._values[i] if isinstance(i, int) else
+                      (Unknown if not i else i(example)) for i in c.variables]
             metas = [example._values[i] if isinstance(i, int) else
                      (Unknown if not i else i(example)) for i in c.metas]
-            return attributes, classes, metas
-        return [var.to_val(val) for var, val in zip(self.attributes, example)], \
-               [var.to_val(val) for var, val in zip(self.class_vars, example[len(self.attributes):])], \
-               [Unknown] * len(self.metas)
+        else:
+            values = [var.to_val(val) for var, val in zip(self.variables, example)]
+            metas = [Unknown if var.is_primitive else None for var in self.metas]
+        # Let np.array decide dtype for values
+        return np.array(values), np.array(metas, dtype=object)

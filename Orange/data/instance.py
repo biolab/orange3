@@ -1,41 +1,46 @@
 from ..data.value import Value, Unknown
 from .domain import Domain
 from math import isnan
+import zlib
+import numpy as np
 
 class Instance:
     def __init__(self, domain, values=None):
-        # First handle copy constructor
+        self.domain = domain
+
         if values is None:
             if isinstance(domain, Instance):
-                self.domain = domain.domain
-                self._values = list(domain._values)
-                self._metas = list(domain._metas)
-                self.weight = domain.weight
-                return
-            elif isinstance(domain, Domain):
-                self.domain = domain
-                self._values = [Unknown] * len(domain.variables)
-                self._metas =  [Unknown] * len(domain.metas)
+                values = domain
+                self.domain = domain = domain.domain
+            else:
+                self._values = np.repeat(Unknown, len(domain.variables))
+                self._attributes = self._values[:len(domain.attributes)]
+                self._classes = self._values[len(domain.attributes):]
+                self._metas = np.array(
+                    [Unknown if var.is_primitive else None for var in
+                     domain.metas],
+                    dtype=object)
                 self.weight = 1
                 return
+
+        if isinstance(values, Instance) and values.domain == domain:
+            self._values = np.array(values._values)
+            self._metas = np.array(values._metas)
+            self.weight = values.weight
         else:
-            self.domain = domain
-            attributes, classes, metas = domain.convert_as_list(values)
-            self._values = attributes + classes
-            self._metas = metas
+            self._values, self._metas = domain.convert(values)
             self.weight = 1
-            return
-        raise TypeError("Expected an instance of Domain, not '%s'",
-            domain.__class__.name)
+        self._attributes = self._values[:len(domain.attributes)]
+        self._classes = self._values[len(domain.attributes):]
 
 
     def __iter__(self):
         return (Value(var, value)
-                for var, value in zip(self.domain.variables, self._values))
+            for var, value in zip(self.domain.variables, self._values))
 
     def attributes(self):
         return (Value(var, value)
-                for var, value in zip(self.domain.attributes, self._values))
+            for var, value in zip(self.domain.attributes, self._values))
 
     def variables(self):
         return self.__iter__()
@@ -46,7 +51,7 @@ class Instance:
         if key >= 0:
             value = self._values[key]
         else:
-            value = self._metas[-1-key]
+            value = self._metas[-1 - key]
         return Value(self.domain[key], value)
 
     #TODO Should we return an instance of `object` if we have a meta attribute
@@ -59,13 +64,13 @@ class Instance:
     def __str__(self):
         res = "["
         res += ", ".join(var.str_val(value) for var, value in
-                         zip(self.domain.attributes, self._values[:5]))
+            zip(self.domain.attributes, self._attributes[:5]))
         n_attrs = len(self.domain.attributes)
         if n_attrs > 5:
             res += ", ..."
         if self.domain.class_vars:
             res += " | " + ", ".join(var.str_val(value) for var, value in
-                zip(self.domain.class_vars, self._values[n_attrs:n_attrs+5]))
+                zip(self.domain.class_vars, self._classes[:5]))
         res += "]"
         if self.domain.metas:
             res += " {"
@@ -80,16 +85,16 @@ class Instance:
 
 
     def get_class(self):
-        if self.domain.class_var:
-            return Value(self.domain.class_var, self._values[-1])
-        elif not self.domain.class_vars:
+        if len(self._classes) == 1:
+            return Value(self.domain.class_var, self._classes[0])
+        if len(self.domain.class_vars) == 0:
             raise TypeError("Domain has no class variable")
         else:
             raise TypeError("Domain has multiple class variables")
 
     def get_classes(self):
         return (Value(var, value) for var, value in
-            zip(self.domain.class_vars, self._values[:len(self.domain.attributes)]))
+            zip(self.domain.class_vars, self._classes))
 
     def set_weight(self, weight):
         self.weight = weight
@@ -106,7 +111,7 @@ class Instance:
                                 type(value).__name__)
             self._values[key] = value
         else:
-            self._metas[-1-key] = value
+            self._metas[-1 - key] = value
 
     def __eq__(self, other):
         # TODO: rewrite to Cython
@@ -116,6 +121,9 @@ class Instance:
             if not (isnan(v1) or isnan(v2) or v1 == v2):
                 return False
         for m1, m2 in zip(self._metas, other._metas):
-            if not (isnan(m1) or isnan(m2) or m1 == m2):
+            if not (m1 == m2 or isnan(m1) or m1 is None or isnan(m2) or m2 is None):
                 return False
         return True
+
+    def checksum(self):
+        return zlib.adler32(self._metas, zlib.adler32(self._values))
