@@ -114,6 +114,7 @@ class Table(MutableSequence):
 
     @staticmethod
     def compose_cols_from(table, row_indices, src_cols, n_rows):
+        #TODO: handle get_value_from
         if not len(src_cols):
             return np.zeros((n_rows, 0), dtype=table._X.dtype)
 
