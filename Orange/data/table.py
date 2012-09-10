@@ -155,7 +155,7 @@ class Table(MutableSequence):
         self._X = Table.compose_cols_from(
             table, row_indices, conversion.attributes, n_rows)
         self._Y = Table.compose_cols_from(
-            table, row_indices, conversion.classes, n_rows)
+            table, row_indices, conversion.class_vars, n_rows)
         self._metas = Table.compose_cols_from(
             table, row_indices, conversion.metas, n_rows)
         self._W = np.array(table._W[row_indices])
@@ -286,7 +286,7 @@ class Table(MutableSequence):
             self._X[key] = [example._values[i] if isinstance(i, int) else
                     (Unknown if not i else i(example)) for i in c.attributes]
             self._Y[key] = [example._values[i] if isinstance(i, int) else
-                    (Unknown if not i else i(example)) for i in c.classes]
+                    (Unknown if not i else i(example)) for i in c.class_vars]
             self._metas[key] = [example._values[i] if isinstance(i, int) else
                     (Unknown if not i else i(example)) for i in c.metas]
         else:

@@ -8,9 +8,9 @@ class DomainConversion:
         self.source = destination
         self.attributes = [source.index(var) if var in source else var.get_value_from
                                 for var in destination.attributes]
-        self.classes = [source.index(var) if var in source else var.get_value_from
+        self.class_vars = [source.index(var) if var in source else var.get_value_from
                                 for var in destination.class_vars]
-        self.variables = self.attributes + self.classes
+        self.variables = self.attributes + self.class_vars
         self.metas = [source.index(var) if var in source else var.get_value_from
                         for var in destination.metas]
 
