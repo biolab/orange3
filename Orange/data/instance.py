@@ -103,7 +103,8 @@ class Instance:
     def set_weight(self, weight):
         self.weight = weight
 
-    def get_weight(self):        return self.weight
+    def get_weight(self):
+        return self.weight
 
 
     def __setitem__(self, key, value):
