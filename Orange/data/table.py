@@ -337,31 +337,24 @@ class Table(MutableSequence):
 
         row_idx, col_idx = key
         if isinstance(row_idx, int):
-            if isinstance(col_idx, slice):
-                columns = range(*col_idx.indices(len(self.domain.attributes)))
-            elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
-                columns = [col if isinstance(col, int) else self.domain.index(col)
-                           for col in col_idx]
+            if isinstance(col_idx, slice) or \
+               isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
+                row_idx = [row_idx]
             else:
-                columns = None
-            if columns:
-                row = self._X[row_idx]
-                return [Value(self.domain[col], row[col]) for col in columns]
-
-            # single row, single column
-            if not isinstance(col_idx, int):
-                col_idx = self.domain.index(col_idx)
-            var = self.domain[col_idx]
-            if col_idx >= 0:
-                if col_idx < len(self.domain.attributes):
-                    return Value(var, self._X[row_idx, col_idx])
+                # single row, single column
+                if not isinstance(col_idx, int):
+                    col_idx = self.domain.index(col_idx)
+                var = self.domain[col_idx]
+                if col_idx >= 0:
+                    if col_idx < len(self.domain.attributes):
+                        return Value(var, self._X[row_idx, col_idx])
+                    else:
+                        return Value(var,
+                            self._Y[row_idx, col_idx - len(self.domain.attributes)])
                 else:
-                    return Value(var,
-                        self._Y[row_idx, col_idx - len(self.domain.attributes)])
-            else:
-                return Value(var, self._metas[row_idx, -1-col_idx])
+                    return Value(var, self._metas[row_idx, -1-col_idx])
 
-        # multiple rows: construct a new table
+        # multiple rows OR single row but multiple columns: construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
         n_attrs = len(self.domain.attributes)
         r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
