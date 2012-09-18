@@ -42,6 +42,10 @@ class Instance:
         return (Value(var, value)
             for var, value in zip(self.domain.attributes, self._values))
 
+    def classes(self):
+        return (Value(var, value) for var, value in
+            zip(self.domain.class_vars, self._y))
+
     def variables(self):
         return self.__iter__()
 
@@ -96,17 +100,10 @@ class Instance:
         return Value(self.domain.class_var, self._y[0])
 
 
-    def get_classes(self):
-        return (Value(var, value) for var, value in
-            zip(self.domain.class_vars, self._y))
-
-
     def set_weight(self, weight):
         self.weight = weight
 
-
-    def get_weight(self):
-        return self.weight
+    def get_weight(self):        return self.weight
 
 
     def __setitem__(self, key, value):
