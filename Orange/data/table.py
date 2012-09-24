@@ -360,11 +360,11 @@ class Table(MutableSequence):
         r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
         r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
         r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
-        if attributes:
+        if attributes is not None:
             domain = Domain(r_attrs, r_classes)
             domain.metas = r_metas
         else:
-            domain = self.table.domain
+            domain = self.domain
         return Table.new_from_table(domain, self, row_idx)
 
 
