@@ -34,20 +34,17 @@ class Instance:
         self._y = self._values[len(domain.attributes):]
 
 
-    def __iter__(self):
-        return (Value(var, value)
-            for var, value in zip(self.domain.variables, self._values))
+    def variables(self):
+        return iter(self._values)
+
+    __iter__ = variables
 
     def attributes(self):
-        return (Value(var, value)
-            for var, value in zip(self.domain.attributes, self._values))
+        return iter(self._values[:len(self.domain.attributes)])
 
     def classes(self):
-        return (Value(var, value) for var, value in
-            zip(self.domain.class_vars, self._y))
+        return iter(self._y)
 
-    def variables(self):
-        return self.__iter__()
 
     def __getitem__(self, key):
         if not isinstance(key, int):

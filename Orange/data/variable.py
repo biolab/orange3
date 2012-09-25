@@ -24,9 +24,9 @@ class Variable:
 
     def computeValue(self, inst):
         if self.get_value_from is None:
-            return Value(self)
+            return Unknown
         with self.get_value_lock:
-            return Value(self, self.get_value_from(inst))
+            return self.get_value_from(inst)
 
     def is_primitive(self):
         return False
