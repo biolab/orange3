@@ -36,7 +36,7 @@ class Classifier:
         a normalized vector with probabilities) for instance
         `inst` of type :class:`~Orange.data.Instance`.
 
-    .. method: predict_X(X)
+    .. method: predict_X_prob(X)
 
         Predict probability distributions for data instances in 2d array X.
         Result is a two-dimensional array, with rows containing normalized
@@ -72,7 +72,7 @@ class Classifier:
     predict_table_class = None
     predict_table_prob = None
     predict_table = None
-    predict_X = None
+    predict_X_prob = None
 
     def _predict_instance(self, inst, ret=Class):
         """Internal function; do not implement or call directly"""
@@ -83,15 +83,15 @@ class Classifier:
                 value = self.predict_inst(inst)[0]
             elif self.predict_inst_prob:
                 value = np.argmax(self.predict_inst_prob(inst))
-            elif self.predict_X:
-                value = np.argmax(self.predict_X(np.atleast_2d(inst._values))[0])
+            elif self.predict_X_prob:
+                value = np.argmax(self.predict_X_prob(np.atleast_2d(inst._values))[0])
                 raise SystemError("invalid classifier")
             return Value(self.domain.class_var, value)
         elif ret == Classifier.Prob:
             if self.predict_inst_prob:
                 return self.predict_inst_prob(inst)
-            elif self.predict_X:
-                return self.predict_X(np.atleast_2d(inst._values))[0]
+            elif self.predict_X_prob:
+                return self.predict_X_prob(np.atleast_2d(inst._values))[0]
             elif self.predict_inst:
                 return self.predict_inst(inst)[1]
             elif self.predict_inst_class:
@@ -106,8 +106,8 @@ class Classifier:
             elif self.predict_inst_prob:
                 dist = self.predict_inst_prob(inst)
                 return np.argmax(dist), dist
-            elif self.predict_X:
-                dist = self.predict_X(np.atleast_2d(inst))
+            elif self.predict_X_prob:
+                dist = self.predict_X_prob(np.atleast_2d(inst))
                 return np.argmax(dist), dist
             elif self.predict_inst_class:
                 value = self.predict_inst_class(inst)
@@ -120,7 +120,7 @@ class Classifier:
 
     def _predict_X(self, x, ret=Class):
         """Internal function; do not implement or call directly"""
-        prediction = self.predict_X(x)
+        prediction = self.predict_X_prob(x)
         if x.ndim == 1:
             if ret == Classifier.Class:
                 return np.argmax(prediction[0])
@@ -145,7 +145,7 @@ class Classifier:
         if 0 <= ret <= 2:
             raise ValueError("invalid value of 'ret'")
 
-        if self.predict_X and isinstance(data, np.array):
+        if self.predict_X_prob and isinstance(data, np.array):
             return self._predict_X(data.X, ret)
 
         if isinstance(data, Instance):
