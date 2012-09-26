@@ -1,57 +1,50 @@
-import collections
 import numpy as np
-import bottleneck as bn
 from Orange import classification
-from Orange import data
 
 class MajorityLearner(classification.Learner):
     def __call__(self, data):
         if len(data.domain.class_vars) > 1:
             raise NotImplementedError(
                 "Majority learner does not support multiple classes")
-        class_var = data.domain.class_var
+
         y = data.Y
-        if isinstance(data.domain.class_var, data.ContinuousVariable):
-            return DefaultClassifier(data.domain, bn.nanmedian(y))
+        w = data.W if data.W.shape[-1] != 0 else None
+        assert np.issubdtype(y.dtype, int)
+
+        n_values = data.domain.class_var.values()
+        dist = np.bincount(y, w, minlength=n_values).astype(float)[:n_values]
+        N = sum(dist)
+        if N > 0:
+            dist /= sum(dist)
         else:
-            n_values = data.domain.class_var.values()
-            if y.dtype != int:
-                nans = y.isnan()
-                y = np.array(y, dtype=int)
-                y[nans] = len(n_values)
-            if data.W.shape[-1] == 0:
-                distr = np.bincount(y, minlength=n_values)
-            else:
-                distr = np.bincount(y, data.W, minlength=n_values)
-            distr = np.asarray(distr, np.float)[:n_values]
-            return DefaultClassifier(data.domain, distr=distr)
+            dist.fill(1/len(dist))
+        return ConstantClassifier(data.domain, dist=dist)
 
 
-class DefaultClassifier(classification.Classifier):
-    def __init__(self, value=None, distr=None):
+class ConstantClassifier(classification.Classifier):
+    def __init__(self, domain, value=None, dist=None):
+        super().__init__(self, domain)
         if value is None:
-            mx = np.max(distr)
-            value = [i for i, e in enumerate(distr) if e == mx]
-        self.value = value[0] if len(value) == 1 else value
-        self.distr = distr
-
-    def __call__(self, x):
-        if isinstance(x, data.Instance):
-            if isinstance(self.value, collections.Sequence):
-                return self.value[x.checksum() % len(self.value)]
-            else:
-                return self.value
+            self.value = np.argmax(dist)
         else:
-            if isinstance(self.value, collections.Sequence):
-                rand = np.random.RandomState(x.checksum())
-                return self.value[rand.randint(len(self.value), size=len(x))]
-            else:
-                return np.tile(self.value, len(x))
-
-    def p(self, x):
-        if self.distr is None:
-            raise ValueError("Distribution is unknown")
-        if isinstance(x, data.Instance):
-            return self.distr
+            self.value = value
+        if self.dist is None:
+            self.dist = np.zeros(len(domain.class_var.values), float)
+            self.dist[self.value] = 1
         else:
-            return np.tile(self.distr, len(x)).reshape(len(x), -1)
+            self.dist = dist
+
+    def predict_class(self, _):
+        return self.value
+
+    def predict_dist(self, _):
+        return self.dist
+
+    def predict_inst(self, x):
+        return self.value, self.dist
+
+    def predict_table_class(self, data):
+        return np.tile(self.value, len(data))
+
+    def predict_table_prob(self, data):
+        return np.tile(self.dist, (len(data), 1))
