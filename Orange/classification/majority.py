@@ -34,17 +34,5 @@ class ConstantClassifier(classification.Classifier):
         else:
             self.dist = dist
 
-    def predict_class(self, _):
-        return self.value
-
-    def predict_dist(self, _):
-        return self.dist
-
-    def predict_inst(self, x):
-        return self.value, self.dist
-
-    def predict_table_class(self, data):
-        return np.tile(self.value, len(data))
-
-    def predict_table_prob(self, data):
-        return np.tile(self.dist, (len(data), 1))
+    def predict(self, X):
+        return np.tile(self.value, len(X)), np.tile(self.dist, (len(X), 1))
