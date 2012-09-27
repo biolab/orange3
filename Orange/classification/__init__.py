@@ -3,11 +3,26 @@ import numpy as np
 from Orange import data
 from ..data.value import Value
 
+
 class Fitter:
-    def __call__(self, data):
-        model = copy.deepcopy(self)
-        model.fit(data.X)
-        return model
+    """
+    Return a model build from the data given as a :class:`data.Table`
+
+    Models can be implemented using one or two classes.
+
+    In a two-class model, the first class is derived from `Fitter` and overloads
+    the `__call__` method. The method gets a :class:`~Orange.data.Table` and
+    returns an instance of the corresponding Model class. The `Model` should
+    implement method `predict` (see documentation on :class:`Model`).
+
+    In a single-class model, the class should be derived from :class:`Fitter`
+    and :class:`Model` and provide two methods:
+
+    - `fit` gets X, Y, and weights (or `None`) as arguments and initializes the
+       model's parameters
+
+    - `predict` (see documentation on :class:`~Orange.classification.Model`).
+    """
 
 
 class Model:
@@ -15,13 +30,27 @@ class Model:
     Probs = 1
     ValueProbs =2
 
-    def __init__(self, domain):
+
+    def __init__(self, domain=None):
+        if isinstance(self, Fitter):
+            domain = None
+        elif not domain:
+            raise ValueError("unspecified domain")
         self.domain = domain
+
 
     def predict(self, data):
         raise TypeError("Descendants of Model must overload method predict")
 
+
     def __call__(self, data, ret=Value):
+        # Check if this is an unfitted single-class model
+        if isinstance(self, Fitter) and self.domain is None:
+            model = copy.deepcopy(self)
+            model.fit(data.X, data.Y, data.W if data.has_weights else None)
+            model.domain = data.domain
+            return model
+
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if ret > 0 and any(isinstance(v, data.ContinuousVariable)
