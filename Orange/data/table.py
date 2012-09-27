@@ -255,6 +255,9 @@ class Table(MutableSequence):
             self._W = np.empty(len(self))
             self._W.fill(val)
 
+    def has_weights(self):
+        return self._W.shape[-1] != 0
+
     @staticmethod
     def read_data(filename):
         ext = os.path.splitext(filename)[1]
