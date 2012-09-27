@@ -1,169 +1,83 @@
+import copy
 import numpy as np
-import Orange.data
+from Orange import data
 from ..data.value import Value
-from ..data.instance import Instance
 
-class Learner:
-    pass
+class Fitter:
+    def __call__(self, data):
+        model = copy.deepcopy(self)
+        model.fit(data.X)
+        return model
 
 
-class Classifier:
-    """
-    Pure virtual methods
-    --------------------
-
-    Derived classes should overload at least one of the following methods:
-    :method:`predict_inst_class`, :method:`predict_inst_prob`,
-    :method:`predict_inst`, :method:`predict_X`. Most operations will be
-    much faster if the classifier also overloads at least one of
-    :method:`predict_data_class`, :method:`predict_data_prob`,
-    :method:`predict_data`, :method:`predict_X`.
-
-    .. method: predict_inst_class(inst)
-
-        Predict the class for instance `inst` of type
-        :class:`~Orange.data.Instance`.
-
-    .. method: predict_inst_prob(inst)
-
-        Predict probability distribution for instance `inst` of
-        type :class:`~Orange.data.Instance`. Result is a vector of
-        normalized probabilities.
-
-    .. method: predict_inst(inst)
-
-        Return a tuple with predicted value and probability distribution (as
-        a normalized vector with probabilities) for instance
-        `inst` of type :class:`~Orange.data.Instance`.
-
-    .. method: predict_X_prob(X)
-
-        Predict probability distributions for data instances in 2d array X.
-        Result is a two-dimensional array, with rows containing normalized
-        probabilities.
-
-    .. method: predict_table_class(data)
-
-        Predict classes of data instances given as an :class:`Orange.data.Table`.
-        Result is a vector with the length equal to the number of instances.
-
-    .. method: predict_table_prob(data)
-
-        Predict probability distributions for data instances given as an
-        :class:`Orange.data.Table`. Result is a two-dimensional vector,
-        array, with rows containing normalized probabilities.
-
-    .. method: predict_table(data)
-
-        Return a tuple of a vector with class predictions and a two-dimensional
-        array, with rows containing normalized probabilities.
-    """
-
-    Class = 0
-    Prob = 1
-    ClassProb =2
+class Model:
+    Value = 0
+    Probs = 1
+    ValueProbs =2
 
     def __init__(self, domain):
         self.domain = domain
 
-    predict_inst_class = None
-    predict_inst_prob = None
-    predict_inst = None
-    predict_table_class = None
-    predict_table_prob = None
-    predict_table = None
-    predict_X_prob = None
+    def predict(self, data):
+        raise TypeError("Descendants of Model must overload method predict")
 
-    def _predict_instance(self, inst, ret=Class):
-        """Internal function; do not implement or call directly"""
-        if ret == Classifier.Class:
-            if self.predict_inst_class:
-                value = self.predict_inst_class(inst)
-            elif self.predict_inst:
-                value = self.predict_inst(inst)[0]
-            elif self.predict_inst_prob:
-                value = np.argmax(self.predict_inst_prob(inst))
-            elif self.predict_X_prob:
-                value = np.argmax(self.predict_X_prob(np.atleast_2d(inst._values))[0])
-                raise SystemError("invalid classifier")
-            return Value(self.domain.class_var, value)
-        elif ret == Classifier.Prob:
-            if self.predict_inst_prob:
-                return self.predict_inst_prob(inst)
-            elif self.predict_X_prob:
-                return self.predict_X_prob(np.atleast_2d(inst._values))[0]
-            elif self.predict_inst:
-                return self.predict_inst(inst)[1]
-            elif self.predict_inst_class:
-                dist = np.zeros(len(self.domain.class_var.values))
-                dist[self.predict_inst_class(inst)] = 1
-                return dist
-            else:
-                raise SystemError("invalid classifier")
-        else:
-            if self.predict_inst:
-                return self.predict_inst(inst)
-            elif self.predict_inst_prob:
-                dist = self.predict_inst_prob(inst)
-                return np.argmax(dist), dist
-            elif self.predict_X_prob:
-                dist = self.predict_X_prob(np.atleast_2d(inst))
-                return np.argmax(dist), dist
-            elif self.predict_inst_class:
-                value = self.predict_inst_class(inst)
-                dist = np.zeros(len(self.domain.class_var.values))
-                dist[value] = 1
-                return value, dist
-            else:
-                raise SystemError("invalid classifier")
+    def __call__(self, data, ret=Value):
+        if not 0 <= ret <= 2:
+            raise ValueError("invalid value of argument 'ret'")
+        if ret > 0 and any(isinstance(v, data.ContinuousVariable)
+                           for v in self.domain.class_vars):
+            raise ValueError("cannot predict continuous distributions")
 
-
-    def _predict_X(self, x, ret=Class):
-        """Internal function; do not implement or call directly"""
-        prediction = self.predict_X_prob(x)
-        if x.ndim == 1:
-            if ret == Classifier.Class:
-                return np.argmax(prediction[0])
-            elif ret == Classifier.Prob:
-                return prediction[0]
-            else:
-                return np.argmax(prediction[0]), prediction[0]
-        else:
-            if ret == Classifier.Class:
-                return np.argmax(prediction, axis=1)
-            elif ret == Classifier.Prob:
-                return prediction
-            else:
-                return np.argmax(prediction[0], axis=1), prediction
-
-
-    def _predict_data(self, data, ret=Class):
-        ...
-
-
-    def __call__(self, data, ret=Class):
-        if 0 <= ret <= 2:
-            raise ValueError("invalid value of 'ret'")
-
-        if self.predict_X_prob and isinstance(data, np.array):
-            return self._predict_X(data.X, ret)
-
-        if isinstance(data, Instance):
-            if data.domain != self.domain:
-                inst = Instance(self.domain, data, ret)
-            return self._predict_instance(data, ret)
-
+        # Call the predictor
         if isinstance(data, np.array):
-            if data.ndim == 1:
-                inst = Instance(self.domain, data)
-                return self._predict_instance(inst, ret)
-            else:
-                data = data.Table.new_from_domain(self.domain, data)
-                return self._predict_data(data, ret)
-
-        if isinstance(data, data.Table):
+            prediction = self.predict(np.atleast_2d(data))
+        elif isinstance(data, data.Instance):
+            if data.domain != self.domain:
+                data = data.Instance(self.domain, data)
+            prediction = self.predict(np.atleast_2d(data._values))
+        elif isinstance(data, data.Table):
             if data.domain != self.domain:
                 data = data.Table.new_from_table(self.domain, data)
-            return self._predict_data(data, ret)
+            prediction = self.predict(data.X)
+        else:
+            raise TypeError("Unrecognized argument (instance of '%s')",
+                            type(data).__name__)
 
-        raise TypeError("invalid arguments for classifier")
+        # Parse the result into value and probs
+        multitarget = len(self.domain.class_vars) > 1
+        if isinstance(prediction, tuple):
+            value, probs = prediction
+        elif prediction.ndim == 1 + multitarget:
+            value, probs = prediction, None
+        elif prediction.ndim == 2 + multitarget:
+            value, probs = None, prediction
+        else:
+            raise TypeError("model returned a %i-dimensional array",
+                            prediction.ndim)
+
+        # Ensure that we have what we need to return
+        if ret != Model.Probs and value is None:
+            value = np.argmax(probs, axis=1)
+        if ret != Model.Value and probs is None:
+            if multitarget:
+                max_card = max(len(c.values) for c in self.domain.class_vars)
+                probs = np.zeros(value.shape + (max_card,), float)
+                for i, cvar in enumerate(self.domain.class_vars):
+                    for cval in len(cvar.values):
+                        probs[i, value[:, i]==cval] = 1
+            else:
+                probs = np.zeros((len(value), len(self.domain.class_var.values)),
+                                 float)
+                for cval in probs.shape[1]:
+                    probs[value==cval] = 1
+            return probs
+
+        # Return what we need to
+        if ret == Model.Value:
+            if isinstance(data, data.Instance) and not multitarget:
+                value = Value(self.domain.class_var, value[0])
+            return value
+        if ret == Model.Probs:
+            return probs
+        else: # ret == Model.ValueProbs
+            return value, probs
