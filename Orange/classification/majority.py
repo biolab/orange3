@@ -1,4 +1,5 @@
 import numpy as np
+import bottleneck as bn
 from Orange import classification
 
 class MajorityLearner(classification.Fitter):
@@ -12,7 +13,7 @@ class MajorityLearner(classification.Fitter):
         assert np.issubdtype(y.dtype, int)
 
         n_values = data.domain.class_var.values()
-        dist = np.bincount(y, w, minlength=n_values).astype(float)[:n_values]
+        dist, _ = bn.bincount(y, n_values-1, w)
         N = np.sum(dist)
         if N > 0:
             dist /= N
