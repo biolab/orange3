@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import bottleneck as bn
 from Orange import data
 from ..data.value import Value
 
@@ -92,13 +93,10 @@ class Model:
                 max_card = max(len(c.values) for c in self.domain.class_vars)
                 probs = np.zeros(value.shape + (max_card,), float)
                 for i, cvar in enumerate(self.domain.class_vars):
-                    for cval in len(cvar.values):
-                        probs[i, value[:, i]==cval] = 1
+                    probs[i] = bn.bincount(np.atleast_2d(value[:, i]), max_card)
             else:
-                probs = np.zeros((len(value), len(self.domain.class_var.values)),
-                                 float)
-                for cval in probs.shape[1]:
-                    probs[value==cval] = 1
+                probs = bn.bincount(np.atleast_2d(value),
+                                    len(self.domain.class_var.values))
             return probs
 
         # Return what we need to
