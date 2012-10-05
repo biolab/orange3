@@ -88,7 +88,7 @@ class Table(MutableSequence):
                 self = Table.read_data(args[0])
             elif isinstance(arg, Domain):
                 self = Table.new_from_domain(arg)
-        elif 2 <= len(args) <= 4:
+        elif 2 <= len(args) <= 5:
             if isinstance(args[0], Domain) and \
                all(isinstance(arg, np.ndarray) for arg in args[1:]):
                 self = Table.new_from_numpy(*args)
