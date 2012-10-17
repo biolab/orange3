@@ -2,6 +2,7 @@ import os
 import random
 import zlib
 from collections import MutableSequence, Iterable
+from itertools import chain
 from numbers import Real
 import operator
 from functools import reduce
@@ -69,33 +70,26 @@ class RowInstance(Instance):
 
 class Columns:
     def __init__(self, domain):
-        for v in domain:
-            setattr(self, v.name.replace(" ", "_"), v)
-        for v in domain.metas:
+        for v in chain(domain, domain.metas):
             setattr(self, v.name.replace(" ", "_"), v)
 
 class Table(MutableSequence):
     def __new__(cls, *args, **argkw):
-        self = None
-        if not args:
-            if not args and not argkw:
-                self = super().__new__(cls)
-            elif "filename" in argkw:
-                self = cls.read_data(argkw["filename"])
-        elif len(args) == 1:
-            arg = args[0]
-            if isinstance(arg, str):
-                self = Table.read_data(args[0])
-            elif isinstance(arg, Domain):
-                self = Table.new_from_domain(arg)
-        elif 2 <= len(args) <= 5:
+        if not args and not argkw:
+            return super().__new__(cls)
+        if "filename" in argkw:
+           return cls.read_data(argkw["filename"])
+        try:
+            if isinstance(args[0], str):
+                return cls.read_data(args[0])
+            if isinstance(args[0], Domain):
+                return cls.new_from_domain(args[0])
             if isinstance(args[0], Domain) and \
                all(isinstance(arg, np.ndarray) for arg in args[1:]):
-                self = Table.new_from_numpy(*args)
-        if self is None:
-            raise ValueError("Invalid arguments for Table.__new__")
-        self.clear_cache()
-        return self
+                return cls.new_from_numpy(*args)
+        except IndexError:
+            pass
+        raise ValueError("Invalid arguments for Table.__new__")
 
     @staticmethod
     def new_from_domain(domain, n_rows=0, weights=True):
