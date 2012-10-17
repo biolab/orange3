@@ -1561,9 +1561,6 @@ class TableIndexingTests(SlicingTests):
                 value = self.table[r][c]
                 self.assertAlmostEqual(value, magic_table[r,c])
 
-                value = self.table[r, :][c]
-                self.assertAlmostEqual(value, magic_table[r,c])
-
 
     def test_can_select_a_single_row(self):
         for r in (0, -1):

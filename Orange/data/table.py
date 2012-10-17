@@ -310,14 +310,14 @@ class Table(MutableSequence):
             s = len(self.domain.variables)
             start, end, stride = col_idx.indices(s)
             if col_idx.indices(s) == (0, s, 1):
-                return None, self.col_indices
+                return None, None
             else:
                 return self.domain.attributes[col_idx], \
-                       self.arange(start, end, stride)
+                       np.arange(start, end, stride)
         elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self.domain[col] for col in col_idx]
             if attributes == self.domain.attributes:
-                return None, self.col_indices
+                return None, None
             return attributes, np.fromiter(
                 (self.domain.index(attr) for attr in attributes), int)
         else:
@@ -359,11 +359,11 @@ class Table(MutableSequence):
 
         # multiple rows OR single row but multiple columns: construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
-        n_attrs = len(self.domain.attributes)
-        r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
-        r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
-        r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
         if attributes is not None:
+            n_attrs = len(self.domain.attributes)
+            r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
+            r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
+            r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
             domain = Domain(r_attrs, r_classes)
             domain.metas = r_metas
         else:
