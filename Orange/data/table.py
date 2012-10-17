@@ -340,22 +340,17 @@ class Table(MutableSequence):
 
         row_idx, col_idx = key
         if isinstance(row_idx, int):
-            if isinstance(col_idx, slice) or \
-               isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
-                row_idx = [row_idx]
-            else:
-                # single row, single column
-                if not isinstance(col_idx, int):
-                    col_idx = self.domain.index(col_idx)
+            try:
+                col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                if col_idx >= 0:
-                    if col_idx < len(self.domain.attributes):
-                        return Value(var, self._X[row_idx, col_idx])
-                    else:
-                        return Value(var,
-                            self._Y[row_idx, col_idx - len(self.domain.attributes)])
-                else:
+                if 0 <= col_idx < len(self.domain.attributes):
+                    return Value(var, self._X[row_idx, col_idx])
+                elif col_idx >= len(self.domain.attributes):
+                    return Value(var, self._Y[row_idx, col_idx - len(self.domain.attributes)])
+                elif col_idx < 0:
                     return Value(var, self._metas[row_idx, -1-col_idx])
+            except TypeError:
+                row_idx = [row_idx]
 
         # multiple rows OR single row but multiple columns: construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
