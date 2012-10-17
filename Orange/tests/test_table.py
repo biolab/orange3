@@ -1,12 +1,14 @@
 import os
 import unittest
+from itertools import chain
+from math import isnan
+import random
+
 from Orange import data
 from Orange.data import filter
 from Orange.data import Unknown
-from math import isnan
-import numpy as np
-import random
 
+import numpy as np
 from mock import Mock, MagicMock, patch
 
 
@@ -1548,82 +1550,77 @@ class CreateTableWithDomainAndTable(SlicingTests):
         new_table = data.Table.new_from_table(new_domain, self.table)
         self.assert_table_with_filter_matches(new_table, self.table, xcols=order, ycols=order, mcols=order)
 
+def isspecial(s):
+    return isinstance(s, slice) or s is Ellipsis
+def split_columns(indices, t):
+    a, c, m = column_sizes(t)
+    if indices is ...:
+        return slice(a), slice(c), slice(m)
+    elif isinstance(indices, slice):
+        return indices, slice(0,0), slice(0,0)
+    elif not isinstance(indices, list) and not isinstance(indices, tuple):
+        indices = [indices]
+    return (
+            [t.domain.index(x) for x in indices if 0 <= t.domain.index(x) < a] or slice(0, 0),
+            [t.domain.index(x)-a for x in indices if t.domain.index(x) >= a] or slice(0, 0),
+            [-t.domain.index(x)-1 for x in indices if t.domain.index(x) < 0] or slice(0, 0))
+def getname(variable): return variable.name
+
 
 class TableIndexingTests(SlicingTests):
-    def test_can_select_a_single_value(self):
-        magic_table = np.hstack((self.table.X, self.table.Y, self.table.metas[:, ::-1]))
 
-        for r in range(len(self.table)):
-            for c in range(len(self.domain.attributes)):
+    def setUp(self):
+        d = self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
+        t = self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
+        self.magic_table = np.hstack((self.table.X, self.table.Y, self.table.metas[:, ::-1]))
+
+        self.rows = [0, -1]
+        self.multiple_rows = [slice(0,0), ..., slice(1, -1, -1)]
+        a, c, m = column_sizes(t)
+        columns = [0, a-1, a, a+c-1, -1, -m]
+        self.columns = chain(columns,
+                                       map(lambda x:d[x], columns),
+                                       map(lambda x:d[x].name, columns))
+        self.multiple_columns = chain(self.multiple_rows,
+                                      [d.attributes, d.class_vars, d.metas, [0,a,-1]],
+                                      [self.attributes, self.class_vars, self.metas],
+                                      [self.attributes + self.class_vars + self.metas])
+
+        # TODO: indexing with [[0,1], [0,1]] produces weird results
+        # TODO: what should be the results of table[1, :]
+
+    def test_can_select_a_single_value(self):
+        for r in self.rows:
+            for c in self.columns:
                 value = self.table[r, c]
-                self.assertAlmostEqual(value, magic_table[r,c])
+                self.assertAlmostEqual(value, self.magic_table[r,self.domain.index(c)])
 
                 value = self.table[r][c]
-                self.assertAlmostEqual(value, magic_table[r,c])
-
+                self.assertAlmostEqual(value, self.magic_table[r,self.domain.index(c)])
 
     def test_can_select_a_single_row(self):
-        for r in (0, -1):
+        for r in self.rows:
             row = self.table[r]
             np.testing.assert_almost_equal(np.array(list(row)), np.hstack((self.data[r, :], self.class_data[r, :])))
 
-    def test_can_select_multiple_rows_with_indices(self):
-        for s in ([1,2,3], [0,2,4], [5,3,1], [-1, 4, 2]):
-            subset = self.table[s]
-            self.assert_table_with_filter_matches(subset, self.table, s)
+    def test_can_select_a_subset_of_rows_and_columns(self):
+        for r in self.rows:
+            for c in self.multiple_columns:
+                table = self.table[r, c]
 
-            subset = self.table[s, :]
-            self.assert_table_with_filter_matches(subset, self.table, s)
+                attr, cls, metas = split_columns(c, self.table)
+                np.testing.assert_almost_equal(table.X, self.table.X[[r], attr])
+                np.testing.assert_almost_equal(table.Y, self.table.Y[[r], cls])
+                np.testing.assert_almost_equal(table.metas, self.table.metas[[r], metas])
 
-    def test_can_select_multiple_rows_with_slice(self):
-        for s in self.interesting_slices:
-            subset = self.table[s]
-            self.assert_table_with_filter_matches(subset, self.table, s)
+        for r in self.multiple_rows:
+            for c in chain(self.columns, self.multiple_rows):
+                table = self.table[r, c]
 
-            subset = self.table[s, :]
-            self.assert_table_with_filter_matches(subset, self.table, s)
-
-
-    def test_can_select_a_single_column(self):
-        subset = self.table[:, 0]
-        self.assert_table_with_filter_matches(subset, self.table, rows=slice(None), xcols=[0], ycols=[], mcols=[])
-
-    def test_can_select_a_single_column_with_name(self):
-        subset = self.table[:, self.domain.attributes[0].name]
-        self.assert_table_with_filter_matches(subset, self.table, rows=slice(None), xcols=[0], ycols=[], mcols=[])
-
-    def test_can_select_a_single_column_with_variable(self):
-        subset = self.table[:, self.domain.attributes[0]]
-        self.assert_table_with_filter_matches(subset, self.table, rows=slice(None), xcols=[0], ycols=[], mcols=[])
-
-
-    def test_can_select_multiple_columns(self):
-        idx, names, vars = map(list, zip(*[(i, v.name, v) for i, v in enumerate(self.domain.attributes)]))
-
-        for s in self.interesting_slices:
-            subset = self.table[:, idx[s]]
-            self.assert_table_with_filter_matches(subset, self.table, rows=..., xcols=idx[s], ycols=[], mcols=[])
-
-            subset = self.table[:, names[s]]
-            self.assert_table_with_filter_matches(subset, self.table, rows=..., xcols=idx[s], ycols=[], mcols=[])
-
-            subset = self.table[:, vars[s]]
-            self.assert_table_with_filter_matches(subset, self.table, rows=..., xcols=idx[s], ycols=[], mcols=[])
-
-    def test_can_select_rows_and_columns_at_the_same_time(self):
-        idx, names, vars = map(list, zip(*[(i, v.name, v) for i, v in enumerate(self.domain.attributes)]))
-
-        for rs in self.interesting_slices:
-            for cs in self.interesting_slices:
-                subset = self.table[rs, idx[cs]]
-                self.assert_table_with_filter_matches(subset, self.table, rows=rs, xcols=idx[cs], ycols=[], mcols=[])
-
-                subset = self.table[rs, names[cs]]
-                self.assert_table_with_filter_matches(subset, self.table, rows=rs, xcols=idx[cs], ycols=[], mcols=[])
-
-                subset = self.table[rs, vars[cs]]
-                self.assert_table_with_filter_matches(subset, self.table, rows=rs, xcols=idx[cs], ycols=[], mcols=[])
-
+                attr, cls, metas = split_columns(c, self.table)
+                np.testing.assert_almost_equal(table.X, self.table.X[r, attr])
+                np.testing.assert_almost_equal(table.Y, self.table.Y[r, cls])
+                np.testing.assert_almost_equal(table.metas, self.table.metas[r, metas])
 
 class TableElementAssignmentTest(SlicingTests):
     def test_can_assign_values(self):
