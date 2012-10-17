@@ -145,6 +145,8 @@ class Table(MutableSequence):
         if isinstance(row_indices, slice):
             start, stop, stride = row_indices.indices(len(table._X))
             n_rows = (stop - start) / stride
+            if n_rows < 0:
+                n_rows = 0
         elif row_indices is ...:
             n_rows = len(table._X)
         else:
@@ -304,6 +306,8 @@ class Table(MutableSequence):
     def _compute_col_indices(self, col_idx):
         """Return a list of new attributes and column indices,
            or (None, self.col_indices) if no new domain needs to be constructed"""
+        if col_idx is ...:
+            return None, None
         if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
             return [attr for attr, c in zip(self.domain, col_idx) if c], \
                    np.nonzero(col_idx)
@@ -313,7 +317,7 @@ class Table(MutableSequence):
             if col_idx.indices(s) == (0, s, 1):
                 return None, None
             else:
-                return self.domain.attributes[col_idx], \
+                return self.domain.variables[col_idx], \
                        np.arange(start, end, stride)
         elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self.domain[col] for col in col_idx]
