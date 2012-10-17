@@ -1642,5 +1642,26 @@ class TableElementAssignmentTest(SlicingTests):
         self.table[0, -1] = 42.
         self.assertAlmostEqual(self.table.metas[0, 0], 42.)
 
+    def test_can_assign_rows_to_rows(self):
+        self.table[0] = self.table[1]
+        np.testing.assert_almost_equal(self.table.X[0], self.table.X[1])
+        np.testing.assert_almost_equal(self.table.Y[0], self.table.Y[1])
+        np.testing.assert_almost_equal(self.table.metas[0], self.table.metas[1])
+
+    def test_can_assign_lists(self):
+        a, c, m = column_sizes(self.table)
+        new_example = [float(i) for i in range(13)]
+        self.table[0] = new_example
+        np.testing.assert_almost_equal(self.table.X[0], np.array(new_example[:a]))
+        np.testing.assert_almost_equal(self.table.Y[0], np.array(new_example[a:]))
+
+    def test_can_assign_np_array(self):
+        a, c, m = column_sizes(self.table)
+        new_example = np.array([float(i) for i in range(13)])
+        self.table[0] = new_example
+        np.testing.assert_almost_equal(self.table.X[0], new_example[:a])
+        np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
+
+
 if __name__ == "__main__":
     unittest.main()
