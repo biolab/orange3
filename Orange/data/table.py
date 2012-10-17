@@ -325,13 +325,12 @@ class Table(MutableSequence):
                 return None, None
             return attributes, np.fromiter(
                 (self.domain.index(attr) for attr in attributes), int)
+        elif isinstance(col_idx, int):
+            attr = self.domain[col_idx]
         else:
-            if isinstance(col_idx, int):
-                attr = self.domain[col_idx]
-            else:
-                attr = self.domain[col_idx]
-                col_idx =  self.domain.index(attr)
-            return [attr], np.array([col_idx])
+            attr = self.domain[col_idx]
+            col_idx =  self.domain.index(attr)
+        return [attr], np.array([col_idx])
 
 
     def __getitem__(self, key):
