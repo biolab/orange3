@@ -242,6 +242,7 @@ class Table(MutableSequence):
     Y = property(getY)
     W = property(get_weights)
     metas = property(get_metas)
+    domain = None
 
     columns= property(lambda self: Columns(self.domain))
 
