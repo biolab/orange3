@@ -1,4 +1,5 @@
 from collections import Iterable
+from itertools import chain
 import weakref
 from .variable import *
 import numpy as np
@@ -160,26 +161,23 @@ class Domain:
         :return: an instance of :class:`Variable` described by `var`
         """
         if isinstance(var, str):
-            for each in self.variables:
-                if each.name == var:
-                    return each
-            for each in self.metas:
+            for each in chain(self.variables, self.metas):
                 if each.name == var:
                     return each
             raise IndexError("Variable '%s' is not in the domain", var)
+
         if not no_index and isinstance(var, int):
             return self.variables[var] if var >= 0 else self.metas[-1-var]
+
         if isinstance(var, Variable):
             if check_included:
-                for each in self.variables:
-                    if each is var:
-                        return var
-                for each in self.metas:
+                for each in chain(self.variables, self.metas):
                     if each is var:
                         return var
                 raise IndexError("Variable '%s' is not in the domain", var.name)
             else:
                 return var
+
         raise TypeError("Expected str, int or Variable, got '%s'" %
                         type(var).__name__)
 
@@ -193,8 +191,7 @@ class Domain:
         instance of :class:`Variable`.
         """
         if isinstance(index, slice):
-            return [self.variables[i]
-                    for i in range(*index.indices(len(self.variables)))]
+            return self.variables[index]
         return self.var_from_domain(index, True)
 
     def __contains__(self, item):
