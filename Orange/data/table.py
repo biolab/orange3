@@ -82,7 +82,7 @@ class Table(MutableSequence):
         try:
             if isinstance(args[0], str):
                 return cls.read_data(args[0])
-            if isinstance(args[0], Domain):
+            if isinstance(args[0], Domain) and len(args) == 1:
                 return cls.new_from_domain(args[0])
             if isinstance(args[0], Domain) and \
                all(isinstance(arg, np.ndarray) for arg in args[1:]):
