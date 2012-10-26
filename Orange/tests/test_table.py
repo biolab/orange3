@@ -1333,6 +1333,27 @@ class CreateTableWithDomain(TableTests):
 
         new_from_domain.assert_called_with(domain)
 
+class CreateTableWithNumpyData(TableTests):
+    def test_creates_a_table_with_given_X(self):
+        table = data.Table(self.data)
+
+        self.assertIsInstance(table.domain, data.Domain)
+        np.testing.assert_almost_equal(table.X, self.data)
+
+    def test_creates_a_table_with_given_X_and_Y(self):
+        table = data.Table(self.data, self.class_data)
+
+        self.assertIsInstance(table.domain, data.Domain)
+        np.testing.assert_almost_equal(table.X, self.data)
+        np.testing.assert_almost_equal(table.Y, self.class_data)
+
+    def test_creates_a_table_with_given_X_Y_and_metas(self):
+        table = data.Table(self.data, self.class_data, self.meta_data)
+
+        self.assertIsInstance(table.domain, data.Domain)
+        np.testing.assert_almost_equal(table.X, self.data)
+        np.testing.assert_almost_equal(table.Y, self.class_data)
+        np.testing.assert_almost_equal(table.metas, self.meta_data)
 
 class CreateTableWithDomainAndNumpyData(TableTests):
     def test_creates_a_table_with_given_domain(self):

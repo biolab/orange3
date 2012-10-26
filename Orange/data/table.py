@@ -11,7 +11,7 @@ import numpy as np
 import bottleneck as bn
 
 from .instance import *
-from Orange.data import io
+from Orange.data import domain as orange_domain, io, variable
 
 class RowInstance(Instance):
     def __init__(self, table, row_index):
@@ -84,12 +84,25 @@ class Table(MutableSequence):
                 return cls.read_data(args[0])
             if isinstance(args[0], Domain) and len(args) == 1:
                 return cls.new_from_domain(args[0])
+            if all(isinstance(arg, np.ndarray) for arg in args):
+                domain = cls.create_anonymous_domain(*args[:3])
+                return cls.new_from_numpy(domain, *args)
             if isinstance(args[0], Domain) and \
                all(isinstance(arg, np.ndarray) for arg in args[1:]):
                 return cls.new_from_numpy(*args)
         except IndexError:
             pass
         raise ValueError("Invalid arguments for Table.__new__")
+
+    @staticmethod
+    def create_anonymous_domain(X, Y=..., metas=...):
+        attr_vars = [variable.ContinuousVariable(name=a) for a in range(X.shape[1])]
+        class_vars = [variable.ContinuousVariable(name=c) for c in range(Y.shape[1])] if Y is not ... else []
+        meta_vars = [variable.StringVariable(name=m) for m in range(metas.shape[1])] if metas is not ... else []
+
+        domain = orange_domain.Domain(attr_vars, class_vars)
+        domain.metas = meta_vars
+        return domain
 
     @staticmethod
     def new_from_domain(domain, n_rows=0, weights=True):
