@@ -1,11 +1,11 @@
 from Orange import classification
 from Orange.data import Table
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
 
 class BayesLearner(classification.Fitter):
     def __call__(self, data):
         assert isinstance(data, Table)
-        clf = MultinomialNB()
+        clf = GaussianNB()
         clf.fit(data.X, data.Y[:,0])
         return BayesClassifier(data.domain, clf)
 
@@ -19,4 +19,4 @@ class BayesClassifier(classification.Model):
         return self.predict(X)
 
     def predict(self, X):
-        return self.clf.predict(X)
+        return self.clf.predict(X).reshape(X.shape[0],1)
