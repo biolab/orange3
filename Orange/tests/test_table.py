@@ -1226,7 +1226,7 @@ def column_sizes(table):
 
 class TableTests(unittest.TestCase):
     attributes = ["Feature %i" % i for i in range(10)]
-    class_vars = ["Class %i" % i for i in range(3)]
+    class_vars = ["Class %i" % i for i in range(1)]
     metas = ["Meta %i" % i for i in range(5)]
     nrows = 10
     row_indices = (1, 5, 7, 9)
@@ -1664,14 +1664,14 @@ class TableElementAssignmentTest(TableTests):
 
     def test_can_assign_lists(self):
         a, c, m = column_sizes(self.table)
-        new_example = [float(i) for i in range(13)]
+        new_example = [float(i) for i in range(len(self.attributes + self.class_vars))]
         self.table[0] = new_example
         np.testing.assert_almost_equal(self.table.X[0], np.array(new_example[:a]))
         np.testing.assert_almost_equal(self.table.Y[0], np.array(new_example[a:]))
 
     def test_can_assign_np_array(self):
         a, c, m = column_sizes(self.table)
-        new_example = np.array([float(i) for i in range(13)])
+        new_example = np.array([float(i) for i in range(len(self.attributes + self.class_vars))])
         self.table[0] = new_example
         np.testing.assert_almost_equal(self.table.X[0], new_example[:a])
         np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
