@@ -3,6 +3,7 @@ import numpy as np
 
 from Orange import data
 import Orange.classification.naive_bayes as nb
+from Orange.classification import Model
 
 class NaiveBayesTest(unittest.TestCase):
 
@@ -19,4 +20,4 @@ class NaiveBayesTest(unittest.TestCase):
         learn = nb.BayesLearner()
         clf = learn(t)
         z = clf(x2)
-        self.assertTrue((z==y2).all())
+        self.assertTrue((z.reshape(-1,1)==y2).all())

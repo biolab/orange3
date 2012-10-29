@@ -1,6 +1,7 @@
 from Orange import classification
 from Orange.data import Table
 from sklearn.naive_bayes import GaussianNB
+import numpy as np
 
 class BayesLearner(classification.Fitter):
     def __call__(self, data):
@@ -15,8 +16,7 @@ class BayesClassifier(classification.Model):
         super().__init__(domain)
         self.clf = clf
 
-    def __call__(self, X):
-        return self.predict(X)
-
     def predict(self, X):
-        return self.clf.predict(X).reshape(X.shape[0],1)
+        value = self.clf.predict(X)
+        prob = self.clf.predict_proba(X)
+        return value, prob
