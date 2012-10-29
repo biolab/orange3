@@ -95,19 +95,19 @@ class Table(MutableSequence):
         raise ValueError("Invalid arguments for Table.__new__")
 
     @staticmethod
-    def create_anonymous_domain(X, Y=..., metas=...):
+    def create_anonymous_domain(X, Y=None, metas=None):
         attr_vars = [variable.ContinuousVariable(name="Feature %i" % a) for a in range(X.shape[1])]
         class_vars = []
-        if Y is not ...:
+        if Y is not None:
             for i, class_ in enumerate(Y.T):
                 values = np.unique(class_)
                 if len(values) < 20:
                     class_vars.append(variable.DiscreteVariable(name="Class %i" % i, values=list(map(int, values))))
                 else:
                     class_vars.append(variable.ContinuousVariable(name="Class %i" % i))
-        meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in range(metas.shape[1])] if metas is not ... else []
+        meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in range(metas.shape[1])] if metas is not None else []
 
-        domain = orange_domain.Domain(attr_vars, class_vars, metas)
+        domain = orange_domain.Domain(attr_vars, class_vars, meta_vars)
         domain.anonymous = True
         return domain
 
