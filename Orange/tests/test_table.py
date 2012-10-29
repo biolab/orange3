@@ -1365,6 +1365,14 @@ class CreateTableWithNumpyData(TableTests):
         np.testing.assert_almost_equal(table.Y, self.class_data)
         np.testing.assert_almost_equal(table.metas, self.meta_data)
 
+    def test_creates_a_discrete_class_if_Y_has_few_distinct_values(self):
+        Y = np.array([float(np.random.randint(0, 2)) for i in self.data]).reshape(len(self.data), 1)
+        table = data.Table(self.data, Y, self.meta_data)
+
+        np.testing.assert_almost_equal(table.Y, Y)
+        self.assertIsInstance(table.domain.class_vars[0], data.DiscreteVariable)
+        self.assertEqual(table.domain.class_vars[0].values, [0, 1])
+
 class CreateTableWithDomainAndNumpyData(TableTests):
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
