@@ -113,6 +113,7 @@ class Table(MutableSequence):
 
     @staticmethod
     def new_from_domain(domain, n_rows=0, weights=True):
+        assert(len(domain.class_vars) <= 1)
         self = Table.__new__(Table)
         self.domain = domain
         self.n_rows = n_rows
@@ -191,6 +192,7 @@ class Table(MutableSequence):
 
     @staticmethod
     def new_from_numpy(domain, X, Y=None, metas=None, W=None):
+        assert(len(domain.class_vars) <= 1)
         if Y is None:
             Y = X[:, len(domain.attributes):]
             X = X[:, :len(domain.attributes)]
