@@ -1243,6 +1243,15 @@ class TableTests(unittest.TestCase):
         variables = attributes + class_vars
         return MagicMock(data.Domain, attributes=attributes, class_vars=class_vars, metas=metas, variables=variables)
 
+    def create_domain(self, attributes=(), classes=(), metas=()):
+        attr_vars = [data.ContinuousVariable(name=a) if isinstance(a, str) else a for a in attributes]
+        class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str) else c for c in classes]
+        meta_vars = [data.StringVariable(name=m) if isinstance(m, str) else m for m in metas]
+
+        domain = data.Domain(attr_vars, class_vars)
+        domain.metas = meta_vars
+        return domain
+
 
 class CreateEmptyTable(TableTests):
     def test_calling_new_with_no_parameters_constructs_a_new_instance(self):
@@ -1452,7 +1461,7 @@ class CreateTableWithDomainAndNumpyData(TableTests):
         new_from_numpy.assert_called_with(domain, self.data, self.class_data, self.meta_data, self.weight_data)
 
 
-class SlicingTests(TableTests):
+class CreateTableWithDomainAndTable(TableTests):
     interesting_slices = [slice(0, 0), #[0:0] - empty slice
                           slice(1), #[:1]  - only first element
                           slice(1, None), #[1:]  - all but first
@@ -1469,47 +1478,7 @@ class SlicingTests(TableTests):
         self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
         self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
 
-    def assert_can_select(self, rows=..., columns=...):
-        if columns is Ellipsis:
-            new_domain = self.domain
-            a, c, m = len(self.attributes), len(self.class_vars), len(self.metas)
-            xcols, ycols, mcols = slice(a), slice(a, a + c), slice(None, -m - 1, -1)
-        else:
-            all_vars = list(self.table.domain.variables) + self.table.domain.metas[::-1]
-            variables = [all_vars[c] for c in columns]
-            new_domain = self.create_domain(*[variables] * 3)
-            xcols = ycols = mcols = columns
 
-        new_table = data.Table.new_from_table(new_domain, self.table, rows)
-
-        self.assert_table_with_filter_matches(new_table, self.table, rows, xcols, ycols, mcols)
-
-    def assert_table_with_filter_matches(self, new_table, old_table, rows=..., xcols=..., ycols=..., mcols=...):
-        a, c, m = column_sizes(old_table)
-        xcols = slice(a) if xcols is Ellipsis else xcols
-        ycols = slice(a, a + c) if ycols is Ellipsis else ycols
-        mcols = slice(None, -m - 1, -1) if mcols is Ellipsis else mcols
-
-        # Indexing used by convert_domain uses positive indices for variables and classes (classes come after
-        # attributes) and negative indices for meta features. This is equivalent to ordinary indexing in  a magic table
-        # below.
-        magic_table = np.hstack((old_table.X, old_table.Y, old_table.metas[:, ::-1]))
-        np.testing.assert_almost_equal(new_table.X, magic_table[rows, xcols])
-        np.testing.assert_almost_equal(new_table.Y, magic_table[rows, ycols])
-        np.testing.assert_almost_equal(new_table.metas, magic_table[rows, mcols])
-        np.testing.assert_almost_equal(new_table.W, self.table.W[rows])
-
-    def create_domain(self, attributes=(), classes=(), metas=()):
-        attr_vars = [data.ContinuousVariable(name=a) if isinstance(a, str) else a for a in attributes]
-        class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str) else c for c in classes]
-        meta_vars = [data.StringVariable(name=m) if isinstance(m, str) else m for m in metas]
-
-        domain = data.Domain(attr_vars, class_vars)
-        domain.metas = meta_vars
-        return domain
-
-
-class CreateTableWithDomainAndTable(SlicingTests):
     def test_creates_table_with_given_domain(self):
         new_table = data.Table.new_from_table(self.table.domain, self.table)
 
@@ -1572,6 +1541,22 @@ class CreateTableWithDomainAndTable(SlicingTests):
         new_table = data.Table.new_from_table(new_domain, self.table)
         self.assert_table_with_filter_matches(new_table, self.table, xcols=order, ycols=order, mcols=order)
 
+    def assert_table_with_filter_matches(self, new_table, old_table, rows=..., xcols=..., ycols=..., mcols=...):
+        a, c, m = column_sizes(old_table)
+        xcols = slice(a) if xcols is Ellipsis else xcols
+        ycols = slice(a, a + c) if ycols is Ellipsis else ycols
+        mcols = slice(None, -m - 1, -1) if mcols is Ellipsis else mcols
+
+        # Indexing used by convert_domain uses positive indices for variables and classes (classes come after
+        # attributes) and negative indices for meta features. This is equivalent to ordinary indexing in  a magic table
+        # below.
+        magic_table = np.hstack((old_table.X, old_table.Y, old_table.metas[:, ::-1]))
+        np.testing.assert_almost_equal(new_table.X, magic_table[rows, xcols])
+        np.testing.assert_almost_equal(new_table.Y, magic_table[rows, ycols])
+        np.testing.assert_almost_equal(new_table.metas, magic_table[rows, mcols])
+        np.testing.assert_almost_equal(new_table.W, self.table.W[rows])
+
+
 def isspecial(s):
     return isinstance(s, slice) or s is Ellipsis
 def split_columns(indices, t):
@@ -1589,8 +1574,7 @@ def split_columns(indices, t):
 def getname(variable): return variable.name
 
 
-class TableIndexingTests(SlicingTests):
-
+class TableIndexingTests(TableTests):
     def setUp(self):
         d = self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
         t = self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
@@ -1644,7 +1628,13 @@ class TableIndexingTests(SlicingTests):
                 np.testing.assert_almost_equal(table.Y, self.table.Y[r, cls])
                 np.testing.assert_almost_equal(table.metas, self.table.metas[r, metas])
 
-class TableElementAssignmentTest(SlicingTests):
+
+class TableElementAssignmentTest(TableTests):
+    def setUp(self):
+        self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
+        self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
+
+
     def test_can_assign_values(self):
         self.table[0, 0] = 42.
         self.assertAlmostEqual(self.table.X[0, 0], 42.)
