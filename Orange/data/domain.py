@@ -223,6 +223,11 @@ class Domain:
             s += "{" + ", ".join(meta.name for meta in self.metas) + "}"
         return s
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop("known_domains")
+        return state
+
     def index(self, var):
         """
         Return the index of the given variable or meta attribute, represented

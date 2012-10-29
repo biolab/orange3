@@ -41,6 +41,17 @@ class Variable:
 
     __repr__ = __str__
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop("get_value_lock")
+        state["var_type"] = str(state["var_type"])
+        print(state["var_type"], type(state["var_type"]))
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.get_value_lock = threading.Lock()
+        self.var_type =  getattr(Variable.VarTypes, state["var_type"])
 
 
 class DiscreteVariable(Variable):
