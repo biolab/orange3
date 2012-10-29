@@ -101,7 +101,7 @@ class Domain:
         :attribute:`known_domains`.
     """
 
-    def __init__(self, variables, class_variables=None, source=None):
+    def __init__(self, variables, class_variables=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
         the class attribute(s). Feature and attributes can be given by
@@ -140,7 +140,7 @@ class Domain:
         if not all(var.is_primitive for var in self.variables):
             raise TypeError("variables must be primitive")
 
-        self.metas = []
+        self.metas = metas if metas is not None else []
         self.anonymous = False
 
         self.known_domains = weakref.WeakKeyDictionary()
