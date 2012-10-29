@@ -107,8 +107,8 @@ class Table(MutableSequence):
                     class_vars.append(variable.ContinuousVariable(name="Class %i" % i))
         meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in range(metas.shape[1])] if metas is not ... else []
 
-        domain = orange_domain.Domain(attr_vars, class_vars)
-        domain.metas = meta_vars
+        domain = orange_domain.Domain(attr_vars, class_vars, metas)
+        domain.anonymous = True
         return domain
 
     @staticmethod
