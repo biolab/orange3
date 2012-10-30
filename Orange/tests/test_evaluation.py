@@ -16,5 +16,17 @@ class CrossValidationTest(unittest.TestCase):
         t = data.Table(x, y)
 
         cv = CrossValidation(t, BayesLearner())
-        z = cv.KFold(3)
-        self.assertTrue((z==y).all())
+        z, prob = cv.KFold(3)
+        self.assertTrue((z.reshape((-1,1))==y).all())
+
+    def test_KFold_probs(self):
+        nrows = 19
+        ncols = 5
+        x = np.random.random_integers(1, 3, (nrows, ncols))
+        col = np.random.randint(ncols)
+        y = np.random.random_integers(1, 19, (nrows, 1))
+        t = data.Table(x, y)
+
+        cv = CrossValidation(t, BayesLearner())
+        z, prob = cv.KFold(3)
+        self.assertEqual(prob.shape, (nrows, len(t.domain.class_var.values)))

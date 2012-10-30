@@ -3,6 +3,7 @@ from sklearn import cross_validation
 from Orange import data
 from Orange import classification
 from Orange.classification import Model
+from Orange.data import domain as orange_domain
 
 class CrossValidation:
 
@@ -14,15 +15,17 @@ class CrossValidation:
 
     def KFold(self, k):
         n = len(self.tab)
-        predictions = np.ndarray((n,1))
-
+        n_class = len(self.tab.domain.class_var.values)
+        values = np.empty(n)
+        probs = np.empty((n,n_class))
         kf = cross_validation.KFold(n, k)
         for train_index, test_index in kf:
             train = self.tab.new_from_table_rows(self.tab, train_index)
             test = self.tab.new_from_table_rows(self.tab, test_index)
             model = self.learner(train)
-            fold_predictions = model(test.X, Model.ValueProbs)
-            predictions[test_index] = fold_predictions
+            val, prob = model(test.X, Model.ValueProbs)
+            values[test_index] = val
+            probs[test_index] = prob
 
-        return predictions
+        return values, probs
 

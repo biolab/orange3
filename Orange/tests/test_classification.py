@@ -20,4 +20,4 @@ class NaiveBayesTest(unittest.TestCase):
         learn = nb.BayesLearner()
         clf = learn(t)
         z = clf(x2)
-        self.assertTrue((z.reshape(-1,1)==y2).all())
+        self.assertTrue((z.reshape((-1,1))==y2).all())
