@@ -397,29 +397,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(crc, d.checksum(True))
         del x[4:9]
         self.assertEqual(crc, d.checksum(True))
-        x[2, "name"] = "leocorn"
-        self.assertEqual(d[2, "name"], "leocorn")
-        x[2, 1] = 0
-        self.assertEqual(d[2, 1], 0)
-        x[2, 1] = 1
-        self.assertEqual(d[2, 1], 1)
-        x[2][1] = 0
-        self.assertEqual(d[2, 1], 0)
-
-        d[2][1] = 1
-        self.assertEqual(x[2, 1], 1)
-        d[2, 1] = 0
-        self.assertEqual(x[2, 1], 0)
-
-        x[2, "name"] = "dinosaur"
-        self.assertEqual(d[2, "name"], "dinosaur")
-        x[2]["name"] = "yeti"
-        self.assertEqual(d[2, "name"], "yeti")
-
-        d[2, "name"] = "dinosaur"
-        self.assertEqual(x[2, "name"], "dinosaur")
-        d[2]["name"] = "yeti"
-        self.assertEqual(x[2, "name"], "yeti")
 
 
     def test_bool(self):
