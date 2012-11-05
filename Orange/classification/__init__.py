@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import bottleneck as bn
-from Orange import data
+from Orange import data as Orange_data
 from ..data.value import Value
 
 
@@ -40,7 +40,7 @@ class Model:
         self.domain = domain
 
 
-    def predict(self, data):
+    def predict(self, table):
         raise TypeError("Descendants of Model must overload method predict")
 
 
@@ -54,20 +54,20 @@ class Model:
 
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
-        if ret > 0 and any(isinstance(v, data.ContinuousVariable)
+        if ret > 0 and any(isinstance(v, Orange_data.ContinuousVariable)
                            for v in self.domain.class_vars):
             raise ValueError("cannot predict continuous distributions")
 
         # Call the predictor
-        if isinstance(data, np.array):
+        if isinstance(data, np.ndarray):
             prediction = self.predict(np.atleast_2d(data))
-        elif isinstance(data, data.Instance):
+        elif isinstance(data, Orange_data.Instance):
             if data.domain != self.domain:
-                data = data.Instance(self.domain, data)
+                data = Orange_data.Instance(self.domain, data)
             prediction = self.predict(np.atleast_2d(data._values))
-        elif isinstance(data, data.Table):
+        elif isinstance(data, Orange_data.Table):
             if data.domain != self.domain:
-                data = data.Table.new_from_table(self.domain, data)
+                data = Orange_data.Table.new_from_table(self.domain, data)
             prediction = self.predict(data.X)
         else:
             raise TypeError("Unrecognized argument (instance of '%s')",
@@ -101,7 +101,7 @@ class Model:
 
         # Return what we need to
         if ret == Model.Value:
-            if isinstance(data, data.Instance) and not multitarget:
+            if isinstance(data, Orange_data.Instance) and not multitarget:
                 value = Value(self.domain.class_var, value[0])
             return value
         if ret == Model.Probs:
