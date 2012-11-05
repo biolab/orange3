@@ -25,6 +25,19 @@ class Fitter:
     - `predict` (see documentation on :class:`~Orange.classification.Model`).
     """
 
+    def fit(self, X, Y, W):
+        raise TypeError("Descendants of Fitter must overload method fit")
+
+    def __call__(self, data):
+        X, Y, W = data.X, data.Y, data.W if data.has_weights else None
+        if np.shape(Y)[0]!=1 and np.shape(Y)[1]!=1:
+            raise ValueError("more than one class variable")
+        Y = np.reshape(Y, -1)
+        clf = self.fit(X,Y,W)
+        clf.domain = data.domain
+        clf.used_vals = np.unique(Y)
+        return clf
+
 
 class Model:
     Value = 0
@@ -98,6 +111,19 @@ class Model:
                 probs = bn.bincount(np.atleast_2d(value),
                                     len(self.domain.class_var.values))
             return probs
+
+        # Expand probability predictions for class values which are not present
+        if isinstance(self.domain.class_var, Orange_data.DiscreteVariable):
+            if len(self.domain.class_var.values) != len(probs):
+                probs_ext = np.ndarray((len(value), len(self.domain.class_var.values)))
+                i = 0
+                for ci, cv in enumerate(self.domain.class_var.values):
+                    if i < len(self.used_vals) and cv == self.used_vals[i]:
+                        probs_ext[:,ci] = probs[:,i]
+                        i += 1
+                    else:
+                        probs_ext[:,ci] = np.zeros(len(value))
+                probs = probs_ext
 
         # Return what we need to
         if ret == Model.Value:
