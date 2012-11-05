@@ -299,7 +299,6 @@ class TableTestCase(unittest.TestCase):
             del d[:]
             self.assertEqual(len(d), 0)
 
-
     def test_set_slice_example(self):
         import warnings
 
@@ -522,13 +521,6 @@ class TableTestCase(unittest.TestCase):
                 return False
         return True
 
-    def test_remove_duplicates(self):
-        d = data.Table("zoo")
-        d.remove_duplicates()
-        d.sort()
-        for i in range(1, len(d)):
-            self.assertNotEqual(d[i - 1].native(), d[i].native())
-
     def test_append(self):
         d = data.Table("test3")
         d.append([None] * 3)
@@ -602,49 +594,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d[0], d2[0])
         self.assertEqual(d.checksum(), d2.checksum())
 
-    def test_pickle_ref(self):
-        import pickle
-
-        d = data.Table("zoo")
-        dr = d[:10]
-        self.assertEqual(dr.base, d)
-
-        s = pickle.dumps(dr)
-        d2 = pickle.loads(s)
-        self.assertEqual(d[0], d2[0])
-        self.assertEqual(dr.checksum(), d2.checksum())
-
-
-    def test_sample(self):
-        d = data.Table("iris")
-
-        li = [1] * 10 + [0] * 140
-        d1 = d.sample(li)
-        self.assertEqual(len(d1), 10)
-        for i in range(10):
-            self.assertEqual(d1[i], d[i])
-            self.assertEqual(d1[i].id, d[i].id)
-        d[0, 0] = 42
-        self.assertEqual(d1[0, 0], 42)
-
-        d1 = d.sample(li, copy=True)
-        self.assertEqual(len(d1), 10)
-        self.assertEqual(d1[0], d[0])
-        self.assertNotEqual(d1[0].id, d[0].id)
-        d[0, 0] = 41
-        self.assertEqual(d1[0, 0], 42)
-
-        li = [1, 2, 3, 4, 5] * 30
-        d1 = d.sample(li, 2)
-        self.assertEqual(len(d1), 30)
-        for i in range(30):
-            self.assertEqual(d1[i].id, d[1 + 5 * i].id)
-
-        ri = orange.MakeRandomIndicesCV(d)
-        for fold in range(10):
-            d1 = d.sample(ri, fold)
-            self.assertEqual(orange.get_class_distribution(d1), [5, 5, 5])
-
     def test_translate_through_slice(self):
         d = data.Table("iris")
         dom = data.Domain(["petal length", "sepal length", "iris"], source=d.domain)
@@ -655,95 +604,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d_ref[0, "sepal length"], d[0, "sepal length"])
         self.assertEqual(d_ref.X.shape, (10, 2))
         self.assertEqual(d_ref.Y.shape, (10, 1))
-
-
-    def test_indexing_filter_cont(self):
-        d = data.Table("iris")
-        v = d.columns
-        d2 = d[v.sepal_length < 5]
-        self.assertEqual(len(d2), 22)
-        d2[0, 0] = 42
-        d3 = [e for e in d if e[0] == 42]
-        self.assertEqual(len(d3), 1)
-        self.assertEqual(d3[0], d2[0])
-
-        d = data.Table("iris")
-        v = d.columns
-        self.assertEqual(len(d[v.sepal_length <= 5]), 32)
-        self.assertEqual(len(d[v.sepal_length > 5]), 118)
-        self.assertEqual(len(d[v.sepal_length >= 5]), 128)
-        self.assertEqual(len(d[v.sepal_length == 5]), 10)
-
-        self.assertEqual(len(d[(v.sepal_length == 5) & (v.sepal_width < 3.3)]), 4)
-        self.assertEqual(len(d[(v.sepal_length < 4.5) | (v.sepal_width == 3.0)]), 28)
-
-        self.assertEqual(len(d[v.sepal_width == (3.0, 3.3)]), 57)
-        self.assertEqual(len(d[v.sepal_width != (3.0, 3.3)]), 93)
-        self.assertEqual(len(d[v.sepal_length < (5.0, 5.3)]), 22)
-        self.assertEqual(len(d[v.sepal_length <= (5.0, 5.3)]), 32)
-        self.assertEqual(len(d[v.sepal_length > (4.7, 5.0)]), 118)
-        self.assertEqual(len(d[v.sepal_length >= (4.7, 5.0)]), 128)
-
-    def test_indexing_filter_disc(self):
-        d = data.Table("iris")
-        v = d.columns
-        self.assertEqual(len(d[v.iris == "Iris-setosa"]), 50)
-        self.assertEqual(len(d[v.iris == ["Iris-setosa", "Iris-versicolor"]]), 100)
-        self.assertEqual(len(d[v.iris != "Iris-setosa"]), 100)
-        self.assertEqual(len(d[v.iris != ["Iris-setosa", "Iris-versicolor"]]), 50)
-        with self.assertRaises(TypeError):
-            d[v.iris < "Iris-setosa"]
-
-    def test_indexing_filter_string(self):
-        d = data.Table("zoo")
-        name = d.domain["name"]
-        self.assertEqual(len(d[name == "girl"]), 1)
-        self.assertEqual(len(d[name != "girl"]), 100)
-        self.assertEqual(len(d[name == ["girl", "gull", "mole"]]), 3)
-        self.assertEqual(len(d[name != ["girl", "gull", "mole"]]), 98)
-
-        self.assertEqual(len(d[name < "calf"]), 6)
-        self.assertEqual(len(d[name <= "calf"]), 7)
-        self.assertEqual(len(d[name > "calf"]), 94)
-        self.assertEqual(len(d[name >= "calf"]), 95)
-
-        with self.assertRaises(TypeError):
-            d[name < ["calf", "girl"]]
-
-    def test_indexing_filter_assign(self):
-        d = data.Table("iris")
-        v = d.columns
-        d[v.iris == "Iris-setosa", v.petal_length] = 42
-        for e in d:
-            if e[-1] == "Iris-setosa":
-                self.assertEqual(e["petal length"], 42)
-            else:
-                self.assertNotEqual(e["petal length"], 42)
-
-        """
-        # This does not work yet for ass_subscript in general, not only for filters
-
-        d = data.Table("iris")
-        v = d.columns
-        d[v.iris == "Iris-setosa", (v.petal_length, v.sepal_length)] = 42
-        for e in d:
-            if e[-1] == "Iris-setosa":
-                self.assertEqual(e["petal length"], 42)
-                self.assertEqual(e["sepal length"], 42)
-            else:
-                self.assertNotEqual(e["petal length"], 42)
-                self.assertNotEqual(e["sepal length"], 42)
-            self.assertNotEqual(e["petal width"], 42)
-            self.assertNotEqual(e["sepal width"], 42)
-         """
-
-        d = data.Table("iris")
-        v = d.columns
-        del d[v.sepal_length <= 5]
-        self.assertEqual(len(d), 118)
-        for e in d:
-            self.assertGreater(e["sepal length"], 5)
-
 
     def test_saveTab(self):
         d = data.Table("iris")[:3]
