@@ -2,6 +2,8 @@ import pickle
 import unittest
 
 class PickleTest(unittest.TestCase):
+    DEBUG = False
+
     def test_pickling(self):
         if not hasattr(self, "generate_objects"):
             unittest.skip("Method generate_objects does not exist.")
