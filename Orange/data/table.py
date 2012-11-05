@@ -13,6 +13,8 @@ import bottleneck as bn
 from .instance import *
 from Orange.data import domain as orange_domain, io, variable
 
+dataset_dirs = ['']
+
 class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
@@ -279,18 +281,23 @@ class Table(MutableSequence):
 
     @staticmethod
     def read_data(filename):
-        ext = os.path.splitext(filename)[1]
-        if not ext:
-            for ext in [".tab"]:
-                if os.path.exists(filename + ext):
-                    filename += ext
-                    break
-        if not os.path.exists(filename):
-            raise IOError('File "{}" is not found'.format(filename))
+        for dir in dataset_dirs:
+            ext = os.path.splitext(filename)[1]
+            absolute_filename = os.path.join(dir, filename)
+            if not ext:
+                for ext in [".tab"]:
+                    if os.path.exists(absolute_filename + ext):
+                        absolute_filename += ext
+                        break
+            if os.path.exists(absolute_filename):
+                break
+
+        if not os.path.exists(absolute_filename):
+            raise IOError('File "{}" is not found'.format(absolute_filename))
         if ext == ".tab":
-            return io.TabDelimReader().read_file(filename)
+            return io.TabDelimReader().read_file(absolute_filename)
         else:
-            raise IOError('Extension "{}" is not recognized'.format(filename))
+            raise IOError('Extension "{}" is not recognized'.format(absolute_filename))
 
 
     def convert_to_row(self, example, key):

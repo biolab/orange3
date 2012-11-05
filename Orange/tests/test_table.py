@@ -14,7 +14,7 @@ from mock import Mock, MagicMock, patch
 
 class TableTestCase(unittest.TestCase):
     def setUp(self):
-        pass
+        data.table.dataset_dirs.append("Orange/tests")
 
     def test_indexing_class(self):
         d = data.Table("test1")
@@ -209,7 +209,7 @@ class TableTestCase(unittest.TestCase):
                 del d[-100]
             self.assertEqual(len(d), initlen - 5)
 
-    @unittest.skip("Are discrete attributes represented as pzthon strings of floats?")
+    @unittest.skip("Are discrete attributes represented as python strings of floats?")
     def test_indexing_assign_example(self):
         import warnings
 
