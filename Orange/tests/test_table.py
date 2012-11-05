@@ -522,32 +522,6 @@ class TableTestCase(unittest.TestCase):
                 return False
         return True
 
-    def test_sort(self):
-        d = data.Table("iris")
-        d.sort()
-        self.assertTrue(TableTestCase.sorted(d))
-
-        for order in ([1], [], [4, 1, 2]):
-            d.sort(order)
-            self.assertTrue(TableTestCase.sorted_ord(d, order))
-
-        e = d[0]
-        self.assertRaises(RuntimeError, d.shuffle)
-        self.assertRaises(RuntimeError, d.sort)
-        del e
-
-        d.shuffle()
-        order = [4, 1, 2]
-        crc = d.checksum()
-        x = d[:]
-        x.sort()
-        self.assertEqual(crc, d.checksum())
-        self.assertTrue(TableTestCase.sorted(x))
-
-        x.sort(order)
-        self.assertEqual(crc, d.checksum())
-        self.assertTrue(TableTestCase.sorted_ord(x, order))
-
     def test_remove_duplicates(self):
         d = data.Table("zoo")
         d.remove_duplicates()

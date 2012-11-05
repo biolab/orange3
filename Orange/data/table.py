@@ -596,24 +596,6 @@ class Table(MutableSequence):
         self._W = self._W[ind]
         self.clear_cache()
 
-    def sort(self, attributes=None):
-        # TODO Does not work
-        if attributes:
-            attributes, col_indices = self._compute_col_indices(attributes)
-            if np.any(col_indices < 0):
-                data = np.hstack((self._X, self._Y, self._metas))
-            else:
-                data = np.hstack((self._X, self._Y))
-            ranks = bn.nanrankdata(data[col_indices], axis=0)
-        else:
-            ranks = bn.nanrankdata(self._X, axis=0)
-        rank_row = np.hstack((ranks, np.arange(self.n_rows)))
-        rank_row = np.sort(rank_row, axis=0)
-        self.row_indices = rank_row[:, 1]
-        self.clear_cache()
-
-
-
     def get_column_view(self, index):
         if not isinstance(index, int):
             index = self.domain.index(index)
