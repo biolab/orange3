@@ -800,52 +800,6 @@ class TableTestCase(unittest.TestCase):
         with self.assertRaises(IndexError):
             table[0, -5] = 5
 
-    @unittest.skip("Probably obsolete")
-    def test_anonymous_from_numpy(self):
-        a = numpy.zeros((4, 5))
-        a[0, 0] = 0.5
-        a[3, 1] = 11
-        a[3, 2] = -1
-        a[1, 3] = 5
-        knn = orange.kNNLearner(a)
-        data = knn.find_nearest.examples
-        domain = data.domain
-        self.assertEqual([var.name for var in domain.variables],
-                         ["var%05i" % i for i in range(5)])
-        self.assertEqual(domain[0].var_type, orange.VarTypes.Continuous)
-        self.assertEqual(domain[1].var_type, orange.VarTypes.Continuous)
-        self.assertEqual(domain[2].var_type, orange.VarTypes.Continuous)
-        self.assertEqual(domain[3].var_type, orange.VarTypes.Discrete)
-        self.assertEqual(domain[3].values, ["v%i" % i for i in range(6)])
-        self.assertEqual(domain[4].var_type, orange.VarTypes.Discrete)
-        self.assertEqual(domain[4].values, ["v0"])
-
-        dom2 = data.Domain([data.ContinuousVariable("a"),
-                            data.ContinuousVariable("b"),
-                            data.ContinuousVariable("c"),
-                            data.DiscreteVariable("d", values="abcdef"),
-                            data.DiscreteVariable("e", values="ab")])
-        ex = data.Instance(dom2, [3.14, 42, 2.7, "d", "a"])
-        knn(ex)
-        ex1 = domain(ex)
-        self.assertEqual(list(map(float, ex1)), list(map(float, ex)))
-        ex2 = dom2(ex1)
-        self.assertEqual(list(map(float, ex1)), list(map(float, ex2)))
-        self.assertEqual(ex1, ex2)
-        self.assertEqual(ex1, ex)
-
-        iris = data.Table("iris")
-        with self.assertRaises(ValueError):
-            domain(iris[0])
-
-        knn.find_nearest.examples = numpy.zeros((3, 3))
-        domain = knn.find_nearest.examples.domain
-        for i in range(3):
-            var = domain[i]
-            self.assertEqual(var.name, "var%05i" % i)
-            self.assertEqual(var.values, ["v0"])
-
-
     def test_filter_is_defined(self):
         d = data.Table("iris")
         d[1, 4] = Unknown
