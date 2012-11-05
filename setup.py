@@ -1,17 +1,7 @@
 #! /usr/bin/env python3
 
-try:
-    import distribute_setup
-    distribute_setup.use_setuptools()
-except ImportError:
-    # For documentation we load setup.py to get version
-    # so it does not matter if importing fails
-    pass
-
 import  imp, os, subprocess
 from setuptools import setup
-
-# Has to be last import as it seems something is changing it somewhere
 
 NAME = 'Orange'
 
