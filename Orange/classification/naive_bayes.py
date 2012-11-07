@@ -5,7 +5,7 @@ import numpy as np
 class BayesLearner(classification.Fitter):
     def fit(self, X, Y, W):
         clf = GaussianNB()
-        return BayesClassifier(clf.fit(X, Y))
+        return BayesClassifier(clf.fit(X, Y.reshape(-1)))
 
 
 class BayesClassifier(classification.Model):

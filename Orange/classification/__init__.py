@@ -6,33 +6,16 @@ from ..data.value import Value
 
 
 class Fitter:
-    """
-    Return a model build from the data given as a :class:`data.Table`
-
-    Models can be implemented using one or two classes.
-
-    In a two-class model, the first class is derived from `Fitter` and overloads
-    the `__call__` method. The method gets a :class:`~Orange.data.Table` and
-    returns an instance of the corresponding Model class. The `Model` should
-    implement method `predict` (see documentation on :class:`Model`).
-
-    In a single-class model, the class should be derived from :class:`Fitter`
-    and :class:`Model` and provide two methods:
-
-    - `fit` gets X, Y, and weights (or `None`) as arguments and initializes the
-       model's parameters
-
-    - `predict` (see documentation on :class:`~Orange.classification.Model`).
-    """
+    I_can_has_multiclass = False
 
     def fit(self, X, Y, W):
         raise TypeError("Descendants of Fitter must overload method fit")
 
     def __call__(self, data):
         X, Y, W = data.X, data.Y, data.W if data.has_weights else None
-        if np.shape(Y)[0]!=1 and np.shape(Y)[1]!=1:
-            raise ValueError("more than one class variable")
-        Y = np.reshape(Y, -1)
+        if np.shape(Y)[1] > 1 and not self.I_can_has_multiclass:
+            raise TypeError("fitter doesn't support multiple class variables")
+
         clf = self.fit(X,Y,W)
         clf.domain = data.domain
         clf.used_vals = np.unique(Y)

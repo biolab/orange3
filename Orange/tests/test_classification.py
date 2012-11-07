@@ -3,7 +3,6 @@ import numpy as np
 
 from Orange import data
 import Orange.classification.naive_bayes as nb
-from Orange.classification import Model
 
 class NaiveBayesTest(unittest.TestCase):
 
@@ -21,3 +20,25 @@ class NaiveBayesTest(unittest.TestCase):
         clf = learn(t)
         z = clf(x2)
         self.assertTrue((z.reshape((-1,1))==y2).all())
+
+    def test_class_variable(self):
+        nrows = 20
+        ncols = 10
+        x = np.random.random_integers(1, 3, (nrows, ncols))
+
+        # multiple class variables
+        y = np.random.random_integers(10, 11, (nrows, 2))
+        t = data.Table(x, y)
+        learn = nb.BayesLearner()
+        try: clf = learn(t)
+        except TypeError: pass
+        else: raise self.failureException("BayesLearner shouldn't support multiple class variables")
+
+        # single class variable
+        y = np.random.random_integers(10, 11, (nrows, 1))
+        t = data.Table(x, y)
+        learn = nb.BayesLearner()
+        clf = learn(t)
+
+        # TODO
+        # test with a classifier that supports mmultiple class vars

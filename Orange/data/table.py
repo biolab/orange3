@@ -194,7 +194,7 @@ class Table(MutableSequence):
 
     @staticmethod
     def new_from_numpy(domain, X, Y=None, metas=None, W=None):
-        assert(len(domain.class_vars) <= 1)
+        #assert(len(domain.class_vars) <= 1)
         if Y is None:
             Y = X[:, len(domain.attributes):]
             X = X[:, :len(domain.attributes)]
