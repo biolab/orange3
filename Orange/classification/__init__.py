@@ -1,4 +1,3 @@
-import copy
 import numpy as np
 import bottleneck as bn
 from Orange import data as Orange_data
@@ -41,13 +40,6 @@ class Model:
 
 
     def __call__(self, data, ret=Value):
-        # Check if this is an unfitted single-class model
-        if isinstance(self, Fitter) and self.domain is None:
-            model = copy.deepcopy(self)
-            model.fit(data.X, data.Y, data.W if data.has_weights else None)
-            model.domain = data.domain
-            return model
-
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if ret > 0 and any(isinstance(v, Orange_data.ContinuousVariable)

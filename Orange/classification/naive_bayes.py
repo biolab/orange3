@@ -1,6 +1,5 @@
 from Orange import classification
 from sklearn.naive_bayes import GaussianNB
-import numpy as np
 
 class BayesLearner(classification.Fitter):
     def fit(self, X, Y, W):

@@ -30,9 +30,8 @@ class NaiveBayesTest(unittest.TestCase):
         y = np.random.random_integers(10, 11, (nrows, 2))
         t = data.Table(x, y)
         learn = nb.BayesLearner()
-        try: clf = learn(t)
-        except TypeError: pass
-        else: raise self.failureException("BayesLearner shouldn't support multiple class variables")
+        with self.assertRaises(TypeError):
+            clf = learn(t)
 
         # single class variable
         y = np.random.random_integers(10, 11, (nrows, 1))
