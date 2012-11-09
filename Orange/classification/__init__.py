@@ -14,7 +14,7 @@ class Fitter:
         X, Y, W = data.X, data.Y, data.W if data.has_weights else None
         if np.shape(Y)[1] > 1 and not self.I_can_has_multiclass:
             raise TypeError("fitter doesn't support multiple class variables")
-
+        self.domain = data.domain
         clf = self.fit(X,Y,W)
         clf.domain = data.domain
         clf.used_vals = np.unique(Y)
@@ -89,7 +89,7 @@ class Model:
 
         # Expand probability predictions for class values which are not present
         if isinstance(self.domain.class_var, Orange_data.DiscreteVariable):
-            if len(self.domain.class_var.values) != len(probs):
+            if len(self.domain.class_var.values) != probs.shape[1]:
                 probs_ext = np.ndarray((len(value), len(self.domain.class_var.values)))
                 i = 0
                 for ci, cv in enumerate(self.domain.class_var.values):

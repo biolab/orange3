@@ -2,8 +2,26 @@ import unittest
 import numpy as np
 
 from Orange import data
+import Orange.classification.majority as maj
 import Orange.classification.naive_bayes as nb
 import Orange.classification.linear_regression as lr
+
+class MajorityTest(unittest.TestCase):
+
+    def test_Majority(self):
+        nrows = 1000
+        ncols = 10
+        x = np.random.random_integers(1, 3, (nrows, ncols))
+        y = np.random.random_integers(1, 3, (nrows, 1)) // 2
+        y[0] = 4
+        t = data.Table(x, y)
+        learn = maj.MajorityLearner()
+        clf = learn(t)
+
+        x2 = np.random.random_integers(1, 3, (nrows, ncols))
+        y2 = clf(x2)
+        self.assertTrue((y2==1).all())
+
 
 class NaiveBayesTest(unittest.TestCase):
 
