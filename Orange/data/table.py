@@ -88,7 +88,7 @@ class Table(MutableSequence):
                 return cls.new_from_domain(args[0])
             if all(isinstance(arg, np.ndarray) for arg in args):
                 domain = cls.create_anonymous_domain(*args[:3])
-                return cls.new_from_numpy(domain, *args)
+                return cls.new_from_numpy(domain, *args, **argkw)
             if isinstance(args[0], Domain) and \
                all(isinstance(arg, np.ndarray) for arg in args[1:]):
                 return cls.new_from_numpy(*args)

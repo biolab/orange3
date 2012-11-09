@@ -7,7 +7,10 @@ class MajorityLearner(classification.Fitter):
         assert np.issubdtype(Y.dtype, int)
         n_values = len(self.domain.class_var.values)
         # dist, _ = bn.bincount(Y, n_values-1, W)
-        dist = np.bincount(Y.reshape(-1), minlength=n_values)
+        if W != None and W.size == Y.size:
+            dist = np.bincount(Y.reshape(-1), weights=W.reshape(-1), minlength=n_values)
+        else:
+            dist = np.bincount(Y.reshape(-1), minlength=n_values)
         N = np.sum(dist)
         if N > 0:
             dist = dist / N

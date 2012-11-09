@@ -22,6 +22,21 @@ class MajorityTest(unittest.TestCase):
         y2 = clf(x2)
         self.assertTrue((y2==1).all())
 
+    def test_weights(self):
+        nrows = 100
+        ncols = 10
+        x = np.random.random_integers(1, 3, (nrows, ncols))
+        y = np.random.random_integers(1, 5, (nrows, 1))
+        heavy = 3
+        w = (y==heavy)*123+1
+        t = data.Table(x, y, W=w)
+        learn = maj.MajorityLearner()
+        clf = learn(t)
+
+        x2 = np.random.random_integers(1, 3, (nrows, ncols))
+        y2 = clf(x2)
+        self.assertTrue((y2==heavy).all())
+
 
 class NaiveBayesTest(unittest.TestCase):
 
