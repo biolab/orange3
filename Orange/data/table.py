@@ -9,6 +9,7 @@ from functools import reduce
 
 import numpy as np
 import bottleneck as bn
+from scipy import sparse
 
 from .instance import *
 from Orange.data import domain as orange_domain, io, variable
@@ -160,7 +161,7 @@ class Table(MutableSequence):
             return Table.new_from_table_rows(table, row_indices)
 
         if isinstance(row_indices, slice):
-            start, stop, stride = row_indices.indices(len(table._X))
+            start, stop, stride = row_indices.indices(table._X.shape[0])
             n_rows = (stop - start) / stride
             if n_rows < 0:
                 n_rows = 0
@@ -196,8 +197,11 @@ class Table(MutableSequence):
     def new_from_numpy(domain, X, Y=None, metas=None, W=None):
         #assert(len(domain.class_vars) <= 1)
         if Y is None:
-            Y = X[:, len(domain.attributes):]
-            X = X[:, :len(domain.attributes)]
+            if sparse.issparse(X):
+                Y = np.empty((X.shape[0], 0), object)
+            else:
+                Y = X[:, len(domain.attributes):]
+                X = X[:, :len(domain.attributes)]
         if metas is None:
             metas = np.empty((X.shape[0], 0), object)
         if W is None:
@@ -221,7 +225,7 @@ class Table(MutableSequence):
         self._Y = Y
         self._metas = metas
         self._W = W
-        self.n_rows = len(self._X)
+        self.n_rows = self._X.shape[0]
         return self
 
     def is_view(self):
@@ -285,7 +289,7 @@ class Table(MutableSequence):
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
             if not ext:
-                for ext in [".tab"]:
+                for ext in [".tab", ".basket"]:
                     if os.path.exists(absolute_filename + ext):
                         absolute_filename += ext
                         break
@@ -296,6 +300,8 @@ class Table(MutableSequence):
             raise IOError('File "{}" is not found'.format(absolute_filename))
         if ext == ".tab":
             return io.TabDelimReader().read_file(absolute_filename)
+        elif ext == ".basket":
+            return io.BasketReader().read_file(absolute_filename)
         else:
             raise IOError('Extension "{}" is not recognized'.format(absolute_filename))
 
@@ -483,7 +489,7 @@ class Table(MutableSequence):
         del self[...]
 
     def __len__(self):
-        return len(self._X)
+        return self._X.shape[0]
 
 
     def __str__(self):
@@ -494,7 +500,7 @@ class Table(MutableSequence):
         return s
 
     def resize_all(self, new_length):
-        old_length = len(self._X)
+        old_length = self._X.shape[0]
         if old_length == new_length:
             return
         try:
@@ -506,13 +512,13 @@ class Table(MutableSequence):
             else:
                 self._W.resize(new_length)
         except Exception:
-            if len(self._X) == new_length:
+            if self._X.shape[0] == new_length:
                 self._X.resize(old_length, self._X.shape[1])
-            if len(self._Y) == new_length:
+            if self._Y.shape[0] == new_length:
                 self._Y.resize(old_length, self._Y.shape[1])
-            if len(self._metas) == new_length:
+            if self._metas.shape[0] == new_length:
                 self._metas.resize(old_length, self._metas.shape[1])
-            if len(self._W) == new_length:
+            if self._W.shape[0] == new_length:
                 if self._W.ndim == 2:
                     self._W.resize((old_length, 0))
                 else:
@@ -595,7 +601,7 @@ class Table(MutableSequence):
 
     def shuffle(self):
         # TODO: write a function in Cython that would do this in place
-        ind = np.arange(len(self._X))
+        ind = np.arange(self._X.shape[0])
         np.random.shuffle(ind)
         self._X = self._X[ind]
         self._Y = self._Y[ind]

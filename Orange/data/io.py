@@ -4,6 +4,8 @@ from scipy import sparse
 import numpy as np
 import bottleneck as bn
 
+import re
+
 class FileReader:
     def prescan_file(self, f, delim, nvars, disc_cols, cont_cols):
         values = [set() for _ in range(nvars)]
@@ -92,8 +94,7 @@ class TabDelimReader:
                 attributes.append(var)
                 self.attribute_columns.append((col, var.val_from_str_add))
 
-        domain = Domain(attributes, class_vars)
-        domain.metas = metas
+        domain = Domain(attributes, class_vars, metas)
         return domain
 
 
@@ -172,4 +173,42 @@ class TabDelimReader:
         self.read_data(filename, table)
         self.reorder_values(table)
         return table
+
+
+class BasketReader():
+    re_name = re.compile("([^,=\\n]+)(=((\d+\.?)|(\d*\.\d+)))?")
+    def prescan_file(self, filename):
+        """Return a list of attributes that appear in the file"""
+        names = set()
+        n_elements = 0
+        n_rows = 0
+        for line in open(filename):
+            items = set(mo.group(1).strip() for mo in self.re_name.finditer(line))
+            names.update(items)
+            n_elements += len(items)
+            n_rows += 1
+        return names, n_elements, n_rows
+
+    def construct_domain(self, names):
+        attributes = [ContinuousVariable.make(name) for name in sorted(names)]
+        return Domain(attributes)
+
+    def read_file(self, filename):
+        names, n_elements, n_rows = self.prescan_file(filename)
+        domain = self.construct_domain(names)
+        data = np.ones(n_elements)
+        indices = np.empty(n_elements, dtype=int)
+        indptr = np.empty(n_rows+1, dtype=int)
+        indptr[0] = curptr = 0
+        for row, line in enumerate(open(filename)):
+            items = {mo.group(1).strip(): float(mo.group(3) or 1)
+                     for mo in self.re_name.finditer(line)}
+            nextptr = curptr + len(items)
+            data[curptr:nextptr] = list(items.values())
+            indices[curptr:nextptr] = [domain.index(name) for name in items]
+            indptr[row+1] = nextptr
+            curptr = nextptr
+        X = sparse.csr_matrix((data, indices, indptr), (n_rows, len(domain.variables)))
+        from ..data import Table
+        return Table.new_from_numpy(domain, X)
 
