@@ -137,10 +137,16 @@ class Domain:
         self.variables = self.attributes + self.class_vars
         self.class_var = self.class_vars[0] if len(self.class_vars)==1 else None
 
+        self.indices = {var.name:idx for idx, var in enumerate(self.variables)}
+
         if not all(var.is_primitive for var in self.variables):
             raise TypeError("variables must be primitive")
 
-        self.metas = metas if metas is not None else []
+        if metas is not None:
+            self.metas = metas
+            self.indices.update((var.name, -1-idx) for idx, var in enumerate(metas))
+        else:
+            self.metas = []
         self.anonymous = False
 
         self.known_domains = weakref.WeakKeyDictionary()
@@ -151,7 +157,7 @@ class Domain:
         """
         Return a variable descriptor from the given argument, which can be
         a descriptor, index or name. If `var` is a descriptor, the function
-        return it
+        returns it
 
         :param var: an instance of :class:`Variable`, int or str
         :param check_included: if `var` is an instance of :class:`Variable`,
@@ -161,10 +167,10 @@ class Domain:
         :return: an instance of :class:`Variable` described by `var`
         """
         if isinstance(var, str):
-            for each in chain(self.variables, self.metas):
-                if each.name == var:
-                    return each
-            raise IndexError("Variable '%s' is not in the domain", var)
+            if not var in self.indices:
+                raise IndexError("Variable '%s' is not in the domain", var)
+            idx = self.indices[var]
+            return self.variables[idx] if idx >= 0 else self.metas[-1-idx]
 
         if not no_index and isinstance(var, int):
             return self.variables[var] if var >= 0 else self.metas[-1-var]
@@ -198,6 +204,11 @@ class Domain:
         """
         Return true if the item (str, int, :class:`Variable`) is in the domain.
         """
+        if isinstance(item, str):
+            return item in self.indices
+        if isinstance(item, Variable) and not item.name in self.indices:
+            return False
+            # ... but not the opposite, it may just be a variable with the same name
         try:
             self.var_from_domain(item, True)
             return True
@@ -234,13 +245,11 @@ class Domain:
         with an instance of :class:`Variable`, int or str.
         """
         if isinstance(var, str):
-            for i, each in enumerate(self.variables):
-                if each.name == var:
-                    return i
-            for i, each in enumerate(self.metas):
-                if each.name == var:
-                    return -1-i
-            raise ValueError("'%s' is not in domain" % var)
+            idx = self.indices.get(var, None)
+            if idx is None:
+                raise ValueError("'%s' is not in domain" % var)
+            else:
+                return idx
         if isinstance(var, Variable):
             if var in self.variables:
                 return self.variables.index(var)
