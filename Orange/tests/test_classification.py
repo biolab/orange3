@@ -37,6 +37,24 @@ class MajorityTest(unittest.TestCase):
         y2 = clf(x2)
         self.assertTrue((y2==heavy).all())
 
+    def test_multiclass(self):
+        nrows = 100
+        ncols = 10
+        nclass = 4
+        x = np.random.random_integers(1, 3, (nrows, ncols))
+        y = np.random.random_integers(10, 19, (nrows, nclass))
+        for i in range(nclass):
+            length = nrows // 2
+            start = np.random.randint(nrows-length+1)
+            y[start:start+length,i] = np.tile(i,length)
+        t = data.Table(x, y)
+        learn = maj.MajorityLearner()
+        clf = learn(t)
+
+        x2 = np.random.random_integers(1, 3, (nrows, ncols))
+        y2 = clf(x2)
+        self.assertTrue(all(all(y2[:,i]==i) for i in range(nclass)))
+
 
 class NaiveBayesTest(unittest.TestCase):
 
@@ -95,6 +113,17 @@ class MultiClassTest(unittest.TestCase):
         t = data.Table(x, y)
         learn = nb.BayesLearner()
         clf = learn(t)
+        z = clf(x)
+        self.assertEqual(z.ndim, 1)
 
+    # Majority classifier supports multiple class variables
     def test_supported(self):
-        pass
+        nrows = 20
+        ncols = 10
+        x = np.random.random_integers(1, 3, (nrows, ncols))
+        y = np.random.random_integers(10, 11, (nrows, 2))
+        t = data.Table(x, y)
+        learn = maj.MajorityLearner()
+        clf = learn(t)
+        z = clf(x)
+        self.assertEqual(z.shape, y.shape)
