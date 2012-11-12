@@ -75,7 +75,7 @@ class Model:
 
         # Ensure that we have what we need to return
         if ret != Model.Probs and value is None:
-            value = np.argmax(probs, axis=1)
+            value = np.argmax(probs, axis=-1)
         if ret != Model.Value and probs is None:
             if multitarget:
                 max_card = max(len(c.values) for c in self.domain.class_vars)

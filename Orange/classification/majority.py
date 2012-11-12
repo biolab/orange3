@@ -30,6 +30,7 @@ class ConstantClassifier(classification.Model):
         self.value = value
         self.probs = probs
         self.multitarget = len(value) > 1
+        self.ret = classification.Model.ValueProbs
 
     def predict(self, X):
         if self.multitarget:
@@ -38,4 +39,7 @@ class ConstantClassifier(classification.Model):
         else:
             pred_value = np.tile(self.value[0], len(X))
             pred_probs = np.tile(self.probs[0], (len(X),1))
-        return pred_value, pred_probs
+
+        if self.ret == classification.Model.Value: return pred_value
+        elif self.ret == classification.Model.Probs: return pred_probs
+        else: return pred_value, pred_probs
