@@ -5,10 +5,11 @@ from Orange import data
 from Orange.evaluation.cross import CrossValidation
 from Orange.evaluation import scoring
 import Orange.classification.naive_bayes as nb
+import Orange.classification.linear_regression as lr
 
 class CrossValidationTest(unittest.TestCase):
 
-    def test_KFold(self):
+    def test_KFold_classification(self):
         nrows = 1000
         ncols = 10
         x = np.random.random_integers(1, 3, (nrows, ncols))
@@ -19,6 +20,19 @@ class CrossValidationTest(unittest.TestCase):
         cv = CrossValidation(t, nb.BayesLearner())
         z, prob = cv.KFold(3)
         self.assertTrue((z.reshape((-1,1))==y).all())
+
+    def test_KFold_regression(self):
+        nrows = 1000
+        ncols = 3
+        x = np.random.random_integers(-20, 50, (nrows, ncols))
+        c = np.random.rand(ncols, 1)*10-3
+        e = np.random.rand(nrows, 1)-0.5
+        y = np.dot(x,c) + e
+        t = data.Table(x, y)
+
+        cv = CrossValidation(t, lr.LinearRegressionLearner())
+        z = cv.KFold(3)
+        self.assertTrue((abs(z.reshape(-1,1)-y)<2.0).all())
 
     def test_KFold_probs(self):
         nrows = 19
