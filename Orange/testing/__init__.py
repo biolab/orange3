@@ -51,4 +51,5 @@ def create_pickling_tests(classname, *objs):
 
     tests = dict(map(create_test, objs))
     return type(classname, (PickleTest,), tests)
+create_pickling_tests.__test__ = False # Tell nose this is not a test.
 
