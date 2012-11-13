@@ -600,7 +600,6 @@ class TableTestCase(unittest.TestCase):
     def test_translate_through_slice(self):
         d = data.Table("iris")
         dom = data.Domain(["petal length", "sepal length", "iris"], source=d.domain)
-        print(d.domain)
         d_ref = d[:10, dom]
         self.assertEqual(d_ref.domain.class_var, d.domain.class_var)
         self.assertEqual(d_ref[0, "petal length"], d[0, "petal length"])
@@ -933,7 +932,6 @@ class TableTestCase(unittest.TestCase):
         f.oper = f.Operator.Less
         f.ref = "CHiCKEN"
         x = d.filter_values(f)
-        print(x.metas)
         self.assertEqual(len(x), sum(col < "chicken") - 1) ## girl!
         self.assertTrue(np.all(x.metas < "chicken"))
 
@@ -1017,8 +1015,7 @@ class TableTests(unittest.TestCase):
         class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str) else c for c in classes]
         meta_vars = [data.StringVariable(name=m) if isinstance(m, str) else m for m in metas]
 
-        domain = data.Domain(attr_vars, class_vars)
-        domain.metas = meta_vars
+        domain = data.Domain(attr_vars, class_vars, meta_vars)
         return domain
 
 
