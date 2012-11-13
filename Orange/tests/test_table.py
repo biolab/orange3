@@ -7,6 +7,7 @@ import random
 from Orange import data
 from Orange.data import filter
 from Orange.data import Unknown
+from Orange.testing import create_pickling_tests
 
 import numpy as np
 from mock import Mock, MagicMock, patch
@@ -1441,6 +1442,14 @@ class TableElementAssignmentTest(TableTests):
         np.testing.assert_almost_equal(self.table.X[0], new_example[:a])
         np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
 
+
+PickleTableTest = create_pickling_tests("PickleTableTest",
+    ("empty", lambda: data.Table()),
+    ("from_datafile", lambda: data.Table("iris")),
+    ("from_")
+
+
+)
 
 if __name__ == "__main__":
     unittest.main()

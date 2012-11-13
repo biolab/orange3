@@ -1,44 +1,44 @@
+import math
 import unittest
 
-from Orange import testing
+from Orange.testing import create_pickling_tests
 from Orange import data
 
+class DiscreteVariableTest(unittest.TestCase):
+    def test_to_val(self):
+        values = ["F", "M"]
+        var = data.DiscreteVariable(name="Feature 0", values=values)
 
-class PickleContinuousVariable(testing.PickleTest):
-    def generate_objects(self):
-        yield data.ContinuousVariable()
-        yield data.ContinuousVariable(name="Feature 0")
+        self.assertEqual(var.to_val(0), 0)
+        self.assertEqual(var.to_val("F"), 0)
+        self.assertEqual(var.to_val(0.), 0)
+        self.assertTrue(math.isnan(var.to_val("?")))
 
-    def assertEqual(self, original, unpickled, msg=None):
-        super().assertEqual(original.var_type, unpickled.var_type)
-        super().assertEqual(original.name, unpickled.name)
-
-
-class PickleDiscreteVariable(testing.PickleTest):
-    def generate_objects(self):
-        yield data.DiscreteVariable()
-        yield data.DiscreteVariable(name="Feature 0")
-        yield data.DiscreteVariable(name="Feature 0", values=[1,2,3])
-        yield data.DiscreteVariable(name="Feature 0", values=["F", "M"])
-        yield data.DiscreteVariable(name="Feature 0", values=["F", "M"], ordered=True)
-        yield data.DiscreteVariable(name="Feature 0", values=["F", "M"], base_value=0)
+        with self.assertRaises(ValueError): var.to_val(2)
+        with self.assertRaises(ValueError): var.to_val("G")
 
 
-    def assertEqual(self, original, unpickled, msg=None):
-        super().assertEqual(original.var_type, unpickled.var_type)
-        super().assertEqual(original.name, unpickled.name)
-        super().assertEqual(original.values, unpickled.values)
-        super().assertEqual(original.ordered, unpickled.ordered)
-        super().assertEqual(original.base_value, unpickled.base_value)
 
-class PickleStringVariable(testing.PickleTest):
-    def generate_objects(self):
-        yield data.StringVariable()
-        yield data.StringVariable(name="Feature 0")
 
-    def assertEqual(self, original, unpickled, msg=None):
-        super().assertEqual(original.var_type, unpickled.var_type)
-        super().assertEqual(original.name, unpickled.name)
+PickleContinuousVariable = create_pickling_tests("PickleContinuousVariable",
+    ("variable",  lambda: data.ContinuousVariable()),
+    ("with_name", lambda: data.ContinuousVariable(name="Feature 0")),
+)
+
+PickleDiscreteVariable = create_pickling_tests("PickleDiscreteVariable",
+    ("variable",        lambda: data.DiscreteVariable()),
+    ("with_name",       lambda: data.DiscreteVariable(name="Feature 0")),
+    ("with_int_values", lambda: data.DiscreteVariable(name="Feature 0", values=[1,2,3])),
+    ("with_str_value",  lambda: data.DiscreteVariable(name="Feature 0", values=["F", "M"])),
+    ("ordered",         lambda: data.DiscreteVariable(name="Feature 0", values=["F", "M"], ordered=True)),
+    ("with_base_value", lambda: data.DiscreteVariable(name="Feature 0", values=["F", "M"], base_value=0)),
+)
+
+PickleStringVariable = create_pickling_tests("PickleStringVariable",
+    ("variable",  lambda: data.StringVariable()),
+    ("with_name", lambda: data.StringVariable(name="Feature 0")),
+)
+
 
 if __name__ == "__main__":
     unittest.main()
