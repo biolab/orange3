@@ -116,7 +116,6 @@ class Table(MutableSequence):
 
     @staticmethod
     def new_from_domain(domain, n_rows=0, weights=True):
-        assert(len(domain.class_vars) <= 1)
         self = Table.__new__(Table)
         self.domain = domain
         self.n_rows = n_rows
