@@ -1443,13 +1443,5 @@ class TableElementAssignmentTest(TableTests):
         np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
 
 
-PickleTableTest = create_pickling_tests("PickleTableTest",
-    ("empty", lambda: data.Table()),
-    ("from_datafile", lambda: data.Table("iris")),
-    ("from_")
-
-
-)
-
 if __name__ == "__main__":
     unittest.main()
