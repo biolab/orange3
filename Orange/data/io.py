@@ -177,12 +177,12 @@ class TabDelimReader:
 
 class BasketReader():
     re_name = re.compile("([^,=\\n]+)(=((\d+\.?)|(\d*\.\d+)))?")
-    def prescan_file(self, filename):
+    def prescan_file(self, file):
         """Return a list of attributes that appear in the file"""
         names = set()
         n_elements = 0
         n_rows = 0
-        for line in open(filename):
+        for line in file:
             items = set(mo.group(1).strip() for mo in self.re_name.finditer(line))
             names.update(items)
             n_elements += len(items)
@@ -194,13 +194,19 @@ class BasketReader():
         return Domain(attributes)
 
     def read_file(self, filename):
-        names, n_elements, n_rows = self.prescan_file(filename)
+        with open(filename) as file:
+            return self._read_file(file)
+
+    def _read_file(self, file):
+        names, n_elements, n_rows = self.prescan_file(file)
         domain = self.construct_domain(names)
         data = np.ones(n_elements)
         indices = np.empty(n_elements, dtype=int)
         indptr = np.empty(n_rows+1, dtype=int)
         indptr[0] = curptr = 0
-        for row, line in enumerate(open(filename)):
+
+        file.seek(0)
+        for row, line in enumerate(file):
             items = {mo.group(1).strip(): float(mo.group(3) or 1)
                      for mo in self.re_name.finditer(line)}
             nextptr = curptr + len(items)
