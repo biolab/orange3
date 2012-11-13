@@ -134,24 +134,33 @@ class Domain:
                     lst[i] = source[var]
         self.attributes = tuple(attributes)
         self.class_vars = tuple(class_vars)
-        self.variables = self.attributes + self.class_vars
+        self._variables = self.attributes + self.class_vars
         self.class_var = self.class_vars[0] if len(self.class_vars)==1 else None
 
-        self.indices = {var.name:idx for idx, var in enumerate(self.variables)}
+        self.indices = {var.name:idx for idx, var in enumerate(self._variables)}
 
-        if not all(var.is_primitive for var in self.variables):
+        if not all(var.is_primitive for var in self._variables):
             raise TypeError("variables must be primitive")
 
         if metas is not None:
-            self.metas = metas
+            self._metas = metas
             self.indices.update((var.name, -1-idx) for idx, var in enumerate(metas))
         else:
-            self.metas = []
+            self._metas = []
         self.anonymous = False
 
         self.known_domains = weakref.WeakKeyDictionary()
         self.last_conversion = None
 
+    def get_variables(self):
+        return self._variables
+
+    variables = property(get_variables)
+
+    def get_metas(self):
+        return self._metas
+
+    metas = property(get_metas)
 
     def var_from_domain(self, var, check_included=False, no_index=False):
         """
@@ -170,10 +179,10 @@ class Domain:
             if not var in self.indices:
                 raise IndexError("Variable '%s' is not in the domain", var)
             idx = self.indices[var]
-            return self.variables[idx] if idx >= 0 else self.metas[-1-idx]
+            return self._variables[idx] if idx >= 0 else self._metas[-1-idx]
 
         if not no_index and isinstance(var, int):
-            return self.variables[var] if var >= 0 else self.metas[-1-var]
+            return self._variables[var] if var >= 0 else self._metas[-1-var]
 
         if isinstance(var, Variable):
             if check_included:
@@ -189,7 +198,7 @@ class Domain:
 
     def __len__(self):
         """Return the number of variables (features and class attributes)"""
-        return len(self.variables)
+        return len(self._variables)
 
     def __getitem__(self, index):
         """
@@ -197,7 +206,7 @@ class Domain:
         instance of :class:`Variable`.
         """
         if isinstance(index, slice):
-            return self.variables[index]
+            return self._variables[index]
         return self.var_from_domain(index, True)
 
     def __contains__(self, item):
@@ -219,7 +228,7 @@ class Domain:
         """
         Return an iterator through variables (features and class attributes)
         """
-        return iter(self.variables)
+        return iter(self._variables)
 
     def __str__(self):
         """
@@ -230,8 +239,8 @@ class Domain:
         if self.class_vars:
             s += " | " + ", ".join(cls.name for cls in self.class_vars)
         s += "]"
-        if self.metas:
-            s += "{" + ", ".join(meta.name for meta in self.metas) + "}"
+        if self._metas:
+            s += "{" + ", ".join(meta.name for meta in self._metas) + "}"
         return s
 
     def __getstate__(self):
@@ -251,13 +260,13 @@ class Domain:
             else:
                 return idx
         if isinstance(var, Variable):
-            if var in self.variables:
-                return self.variables.index(var)
-            if var in self.metas:
-                return -1-self.metas.index(var)
+            if var in self._variables:
+                return self._variables.index(var)
+            if var in self._metas:
+                return -1-self._metas.index(var)
             raise ValueError("'%s' is not in domain" % var.name)
         if isinstance(var, int):
-            if -len(self.metas) <= var < len(self.variables):
+            if -len(self._metas) <= var < len(self._variables):
                 return var
             raise ValueError("there is no variable with index '%i'" % var)
         raise TypeError("Expected str, int or Variable, got '%s'" %
@@ -322,7 +331,7 @@ class Domain:
             metas = [inst._values[i] if isinstance(i, int) else
                      (Unknown if not i else i(inst)) for i in c.metas]
         else:
-            values = [var.to_val(val) for var, val in zip(self.variables, inst)]
-            metas = [Unknown if var.is_primitive else None for var in self.metas]
+            values = [var.to_val(val) for var, val in zip(self._variables, inst)]
+            metas = [Unknown if var.is_primitive else None for var in self._metas]
         # Let np.array decide dtype for values
         return np.array(values), np.array(metas, dtype=object)
