@@ -44,10 +44,12 @@ class PickleTest(unittest.TestCase):
 def create_pickling_tests(classname, *objs):
     def create_test(descr):
         name, construct_object = descr
+        name = "test_{}".format(name)
         def f(self):
             obj = construct_object()
             self.assertPicklingPreserves(obj)
-        return "test_{}".format(name), f
+        f.__name__ = name
+        return name, f
 
     tests = dict(map(create_test, objs))
     return type(classname, (PickleTest,), tests)
