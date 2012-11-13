@@ -24,8 +24,8 @@ class FileReader:
 
 
 class TabDelimReader:
-    def read_header(self, filename):
-        f = open(filename)
+    def read_header(self, f):
+        f.seek(0)
         names = f.readline().strip("\n\r").split("\t")
         types = f.readline().strip("\n\r").split("\t")
         flags = f.readline().strip("\n\r").split("\t")
@@ -98,17 +98,18 @@ class TabDelimReader:
         return domain
 
 
-    def count_lines(self, filename):
+    def count_lines(self, file):
+        file.seek(0)
         i = -3
-        for _ in open(filename):
+        for _ in file:
             i += 1
         return i
 
 
-    def read_data(self, filename, table):
+    def read_data(self, f, table):
         _X, _Y = table._X, table._Y
         _W = table._W if table._W.shape[-1] else None
-        f = open(filename)
+        f.seek(0)
         f.readline(); f.readline(); f.readline()
         padding = [""] * self.n_columns
         if self.basket_column >= 0:
@@ -166,11 +167,15 @@ class TabDelimReader:
         self.reorder_values_array(table._Y, table.domain.class_vars)
 
     def read_file(self, filename):
+        with open(filename) as file:
+            return self._read_file(file)
+
+    def _read_file(self, file):
         from ..data import Table
-        domain = self.read_header(filename)
-        nExamples = self.count_lines(filename)
+        domain = self.read_header(file)
+        nExamples = self.count_lines(file)
         table = Table.new_from_domain(domain, nExamples, self.weight_column >= 0)
-        self.read_data(filename, table)
+        self.read_data(file, table)
         self.reorder_values(table)
         return table
 
