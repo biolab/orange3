@@ -45,7 +45,6 @@ class Variable:
         state = self.__dict__.copy()
         state.pop("get_value_lock")
         state["var_type"] = str(state["var_type"])
-        print(state["var_type"], type(state["var_type"]))
         return state
 
     def __setstate__(self, state):
