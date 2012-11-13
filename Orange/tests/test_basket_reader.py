@@ -61,3 +61,7 @@ class TestBasketReader(unittest.TestCase):
 
         self.assertEqual(len(table.domain.variables), 3)
         np.testing.assert_almost_equal(table.X.todense(), np.array([[1,1,1]]))
+
+
+if __name__ == "__main__":
+    unittest.main()
