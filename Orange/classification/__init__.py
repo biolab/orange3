@@ -88,7 +88,7 @@ class Model:
             return probs
 
         # Expand probability predictions for class values which are not present
-        if isinstance(self.domain.class_var, Orange_data.DiscreteVariable):
+        if ret > 0 and isinstance(self.domain.class_var, Orange_data.DiscreteVariable):
             if len(self.domain.class_var.values) != probs.shape[1]:
                 probs_ext = np.ndarray((len(value), len(self.domain.class_var.values)))
                 i = 0
