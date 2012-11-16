@@ -29,10 +29,19 @@ class TestBasketReader(unittest.TestCase):
 
     def test_handles_duplicate_variables(self):
         file = io.StringIO("""a=1, b=2, a=3""")
-        table = BasketReader()._read_file(file)
+        with self.assertWarns(UserWarning):
+            table = BasketReader()._read_file(file)
 
         self.assertEqual(len(table.domain.variables), 2)
         np.testing.assert_almost_equal(table.X.todense(), np.array([[3,2]]))
+
+    def test_handles_duplicate_variables2(self):
+        file = io.StringIO("""a, b, b, a, a, c, c, d, e""")
+        with self.assertWarns(UserWarning):
+            table = BasketReader()._read_file(file)
+
+        self.assertEqual(len(table.domain.variables), 5)
+        np.testing.assert_almost_equal(table.X.todense(), np.array([[1, 1, 1, 1, 1]]))
 
     def test_variables_can_be_listed_in_any_order(self):
         file = io.StringIO("""a=1, b=2\na=1, b=4""")

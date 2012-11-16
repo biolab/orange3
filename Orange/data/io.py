@@ -1,10 +1,11 @@
+import re
+import warnings
+import collections
 from ..data.variable import *
 from ..data import Domain
 from scipy import sparse
 import numpy as np
 import bottleneck as bn
-
-import re
 
 class FileReader:
     def prescan_file(self, f, delim, nvars, disc_cols, cont_cols):
@@ -212,8 +213,18 @@ class BasketReader():
 
         file.seek(0)
         for row, line in enumerate(file):
-            items = {mo.group(1).strip(): float(mo.group(3) or 1)
-                     for mo in self.re_name.finditer(line)}
+            matches = [mo for mo in self.re_name.finditer(line)]
+            items = {mo.group(1).strip(): float(mo.group(3) or 1) for mo in matches}
+            if len(matches) != len(items):
+                counts = collections.Counter(mo.group(1).strip() for mo in matches)
+                multiples = ["'%s'" % k for k, v in counts.items() if v > 1]
+                if len(multiples) > 1:
+                    multiples.sort()
+                    attrs = "attributes %s and %s" % (
+                        ", ".join(multiples[:-1]), multiples[-1])
+                else:
+                    attrs = "attribute " + multiples[0]
+                warnings.warn("Ignoring multiple values for %s in row %i" % (attrs, row+1))
             nextptr = curptr + len(items)
             data[curptr:nextptr] = list(items.values())
             indices[curptr:nextptr] = [domain.index(name) for name in items]
