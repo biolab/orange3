@@ -17,7 +17,8 @@ class Fitter:
         self.domain = data.domain
         clf = self.fit(X,Y,W)
         clf.domain = data.domain
-        clf.used_vals = np.unique(Y)
+        clf.Y = Y
+        clf.I_can_has_multiclass = self.I_can_has_multiclass
         return clf
 
 
@@ -88,17 +89,22 @@ class Model:
             return probs
 
         # Expand probability predictions for class values which are not present
-        if ret > 0 and isinstance(self.domain.class_var, Orange_data.DiscreteVariable):
-            if len(self.domain.class_var.values) != probs.shape[1]:
-                probs_ext = np.ndarray((len(value), len(self.domain.class_var.values)))
-                i = 0
-                for ci, cv in enumerate(self.domain.class_var.values):
-                    if i < len(self.used_vals) and cv == self.used_vals[i]:
-                        probs_ext[:,ci] = probs[:,i]
-                        i += 1
-                    else:
-                        probs_ext[:,ci] = np.zeros(len(value))
-                probs = probs_ext
+        if ret != self.Value:
+            n_class = len(self.domain.class_vars)
+            used_vals = [len(np.unique(self.Y)) for y in self.Y.T]
+            max_values = max(len(cv.values) for cv in self.domain.class_vars)
+            if max_values != probs.shape[-1]:
+                if not self.I_can_has_multiclass: probs = probs[:,np.newaxis,:]
+                probs_ext = np.zeros((len(value), n_class, max_values))
+                for c in range(n_class):
+                    i = 0
+                    class_values = len(self.domain.class_vars[c].values)
+                    for cv in range(class_values):
+                        if i < len(used_vals) and cv == used_vals[i]:
+                            probs_ext[:,c,cv] = probs[:,c,i]
+                            i += 1
+                if self.I_can_has_multiclass: probs = probs_ext
+                else: probs = probs_ext[:,0,:]
 
         # Return what we need to
         if ret == Model.Value:
