@@ -91,16 +91,16 @@ class Model:
         # Expand probability predictions for class values which are not present
         if ret != self.Value:
             n_class = len(self.domain.class_vars)
-            used_vals = [len(np.unique(self.Y)) for y in self.Y.T]
+            used_vals = [np.unique(y) for y in self.Y.T]
             max_values = max(len(cv.values) for cv in self.domain.class_vars)
             if max_values != probs.shape[-1]:
                 if not self.I_can_has_multiclass: probs = probs[:,np.newaxis,:]
-                probs_ext = np.zeros((len(value), n_class, max_values))
+                probs_ext = np.zeros((len(probs), n_class, max_values))
                 for c in range(n_class):
                     i = 0
                     class_values = len(self.domain.class_vars[c].values)
                     for cv in range(class_values):
-                        if i < len(used_vals) and cv == used_vals[i]:
+                        if i < len(used_vals[c]) and cv == used_vals[c][i]:
                             probs_ext[:,c,cv] = probs[:,c,i]
                             i += 1
                 if self.I_can_has_multiclass: probs = probs_ext

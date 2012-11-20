@@ -71,3 +71,46 @@ class ModelTest(unittest.TestCase):
         self.assertTrue((y2[:,0]==1).all() and (y2[:,1]==2).all())
         y2, probs = clf(x, ret=Orange.classification.Model.ValueProbs)
         self.assertTrue((y2[:,0]==1).all() and (y2[:,1]==2).all())
+
+    def test_probs_from_value(self):
+        pass
+
+
+class ExpandProbabilitiesTest(unittest.TestCase):
+
+    def prepareTable(self, rows, attr, vars, class_var_domain):
+        attributes = ["Feature %i" % i for i in range(attr)]
+        classes = ["Class %i" % i for i in range(vars)]
+        attr_vars = [data.DiscreteVariable(name=a) for a in attributes]
+        class_vars = [data.DiscreteVariable(name=c, values=range(class_var_domain)) for c in classes]
+        meta_vars = []
+        self.domain = data.Domain(attr_vars, class_vars, meta_vars)
+        self.x = np.random.random_integers(0, 1, (rows, attr))
+
+    def test_single_class(self):
+        rows = 10
+        attr = 3
+        vars = 1
+        class_var_domain = 20
+        self.prepareTable(rows, attr, vars, class_var_domain)
+        y = np.random.random_integers(2, 5, (rows, vars)) * 2
+        t = data.Table(self.domain, self.x, y)
+        learn = dummies.DummyLearner()
+        clf = learn(t)
+        z, p = clf(self.x, ret=Orange.classification.Model.ValueProbs)
+        self.assertEqual(p.shape, (rows, class_var_domain))
+        self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
+
+    def test_multi_class(self):
+        rows = 10
+        attr = 3
+        vars = 5
+        class_var_domain = 20
+        self.prepareTable(rows, attr, vars, class_var_domain)
+        y = np.random.random_integers(2, 5, (rows, vars)) * 2
+        t = data.Table(self.domain, self.x, y)
+        learn = dummies.DummyMulticlassLearner()
+        clf = learn(t)
+        z, p = clf(self.x, ret=Orange.classification.Model.ValueProbs)
+        self.assertEqual(p.shape, (rows, vars, class_var_domain))
+        self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
