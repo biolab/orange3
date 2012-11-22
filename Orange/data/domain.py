@@ -229,24 +229,22 @@ class Domain:
         """
 
         #TODO: we do not want this for slices, do we?
-        """
-        if index.stop < 0 or index.stop == 0 and \
-           index.start is not None and index.start < 0:
-            if index.start > 0:
-                raise IndexError("slice indices for Domain should be"
-                                 "either positive or negative")
-            if index.start is None:
-                start = 0
-            else:
-                start = -index.start-1
-            stop = -index.stop-1
-            return self._metas[start:stop:(index.step or 1)]
-        else:
-            if index.start is not None and index.start < 0:
-                raise IndexError("slice indices for Domain should be"
-                                 "either positive or negative")
-            return self._variables[index]
-        """
+#        if index.stop < 0 or index.stop == 0 and \
+#           index.start is not None and index.start < 0:
+#            if index.start > 0:
+#                raise IndexError("slice indices for Domain should be"
+#                                 "either positive or negative")
+#            if index.start is None:
+#                start = 0
+#            else:
+#                start = -index.start-1
+#            stop = -index.stop-1
+#            return self._metas[start:stop:(index.step or 1)]
+#        else:
+#            if index.start is not None and index.start < 0:
+#                raise IndexError("slice indices for Domain should be"
+#                                 "either positive or negative")
+#            return self._variables[index]
         if isinstance(index, slice):
             return self._variables[index]
         else:
