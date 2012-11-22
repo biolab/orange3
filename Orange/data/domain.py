@@ -14,9 +14,8 @@ class DomainConversion:
 
     .. attribute:: source
 
-        The source domain. The destination is not specifically stored since
-        destination domain is the one which contains the instance of
-        DomainConversion.
+        The source domain. The destination is not stored since destination
+        domain is the one which contains the instance of DomainConversion.
 
     .. attribute:: attributes
 
@@ -38,7 +37,7 @@ class DomainConversion:
 
     def __init__(self, source, destination):
         """
-        Compute the conversion indices from the given source to destination
+        Compute the conversion indices from the given `source` to `destination`
         """
         self.source = source
         self.attributes = [source.index(var) if var in source else var.get_value_from
@@ -54,7 +53,7 @@ class Domain:
     """
     Description of a domain. It stores a list of attribute, class and meta
     attribute descriptors with methods for indexing, printing out and
-    conversion between domain.
+    conversions between domain. All lists are constant.
 
     .. attribute:: attributes
 
@@ -79,12 +78,16 @@ class Domain:
 
         List of meta attributes.
 
+    .. attribute:: indices
+        A dictionary that maps variable names into indices. It includes
+        ordinary attributes, class variables and meta attributes
+
     .. attribute:: anonymous
 
-        True if the domain was constructed when converting numpy array to
+        `True` if the domain was constructed when converting numpy array to
         :class:`Orange.data.Table`. Such domains can be converted to and
-        from other domains even if they consist of different variables for
-        as long as their types match.
+        from other domains even if they consist of different variable
+        descriptors for as long as their number and types match.
 
     .. attribute:: known_domains
 
@@ -96,7 +99,7 @@ class Domain:
     .. attribute:: last_conversion
 
         The last conversion returned by :method:`get_conversion`. Most
-        conversions into the domain used the same domain as a source, so
+        conversions into the domain use the same domain as the source, so
         storing the last conversions saves a lookup into
         :attribute:`known_domains`.
     """
@@ -110,6 +113,7 @@ class Domain:
 
         :param variables: a list of variables; if sole argument, it includes the class
         :param class_variables: a list of class variables
+        :param metas: a list of meta attributes
         :param source: the source domain for attributes
         :return: a new instance of :class:`domain`
         """
@@ -168,11 +172,11 @@ class Domain:
         a descriptor, index or name. If `var` is a descriptor, the function
         returns it
 
-        :param var: an instance of :class:`Variable`, int or str
+        :param var: an instance of :class:`Variable`, `int` or `str`
         :param check_included: if `var` is an instance of :class:`Variable`,
             this flags tells whether to check that the domain contains this
             variable
-        :param no_index: if True, `var` must not be an int
+        :param no_index: if `True`, `var` must not be an `int`
         :return: an instance of :class:`Variable` described by `var`
         """
         if isinstance(var, str):
@@ -211,13 +215,13 @@ class Domain:
 
     def __contains__(self, item):
         """
-        Return true if the item (str, int, :class:`Variable`) is in the domain.
+        Return `True` if the item (`str`, `int`, :class:`Variable`) is in the domain.
         """
         if isinstance(item, str):
             return item in self.indices
         if isinstance(item, Variable) and not item.name in self.indices:
             return False
-            # ... but not the opposite, it may just be a variable with the same name
+            # ... but not the opposite! It may just be a variable with the same name
         try:
             self.var_from_domain(item, True)
             return True
@@ -251,7 +255,7 @@ class Domain:
     def index(self, var):
         """
         Return the index of the given variable or meta attribute, represented
-        with an instance of :class:`Variable`, int or str.
+        with an instance of :class:`Variable`, `int` or `str`.
         """
         if isinstance(var, str):
             idx = self.indices.get(var, None)
@@ -275,9 +279,9 @@ class Domain:
 
     def has_discrete_attributes(self, include_class=False):
         """
-        Return True if domain has any discrete attributes.
+        Return `True` if domain has any discrete attributes.
 
-        :param include_class: if True (default is False), the check includes
+        :param include_class: if `True` (default is `False`), the check includes
             the class attribute(s)
         """
         return any(isinstance(var, DiscreteVariable)
@@ -287,9 +291,9 @@ class Domain:
 
     def has_continuous_attributes(self, include_class=False):
         """
-        Return True if domain has any continuous attributes.
+        Return `True` if domain has any continuous attributes.
 
-        :param include_class: if True (default is False), the check includes
+        :param include_class: if `True` (default is `False`), the check includes
             the class attribute(s)
         """
         return any(isinstance(var, ContinuousVariable)
@@ -301,7 +305,7 @@ class Domain:
         """
         Return an instance of :class:`DomainConversion` for conversion from the
         given source domain to this domain. Domain conversions are cached to
-        avoid unnecessary construction in the common case in which the domain
+        speed-up the conversion in the common case in which the domain
         is based on another domain, for instance, when the domain contains
         discretized variables from another domain.
         """
