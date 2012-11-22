@@ -28,7 +28,8 @@ class Variable:
         with self.get_value_lock:
             return self.get_value_from(inst)
 
-    def is_primitive(self):
+    @staticmethod
+    def is_primitive():
         return False
 
     def repr_val(self, val):
@@ -74,7 +75,7 @@ class DiscreteVariable(Variable):
         return "{}('{}', {})".format(self.__class__.__name__, self.name, args)
 
     @staticmethod
-    def is_primitive(self):
+    def is_primitive():
         return True
 
     def to_val(self, s):
@@ -174,8 +175,9 @@ class ContinuousVariable(Variable):
         return ContinuousVariable.all_continuous_vars.get(name) or \
                ContinuousVariable(name, default_meta_id)
 
-    def is_primitive(self):
-        return False
+    @staticmethod
+    def is_primitive():
+        return True
 
     def to_val(self, s):
         return Unknown if s in self.unknown_str else float(s)
