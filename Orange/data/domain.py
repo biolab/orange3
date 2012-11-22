@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections import Sequence
 from itertools import chain
 import weakref
 from .variable import *
@@ -104,7 +104,7 @@ class Domain:
         :attribute:`known_domains`.
     """
 
-    def __init__(self, variables, class_variables=None, metas=None, source=None):
+    def __init__(self, variables, class_variables=..., metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
         the class attribute(s). Feature and attributes can be given by
@@ -117,44 +117,61 @@ class Domain:
         :param source: the source domain for attributes
         :return: a new instance of :class:`domain`
         """
-        #TODO use source if provided!
-        if isinstance(class_variables, Variable):
+
+        # TODO ... or have we decided that the arguments should be
+        #    (self, attributes, class_variables, metas, source), without
+        #    this magic here below?
+        # Decypher what we got for class_vars;
+        # in the end we have 'attributes' and 'class_vars'
+        if class_variables is False:
+            class_variables = None # bool is derived from int...
+        if isinstance(class_variables, (Variable, int, str)):
             attributes = list(variables)
             class_vars = [class_variables]
-        elif isinstance(class_variables, Iterable):
+        elif isinstance(class_variables, Sequence):
             attributes = list(variables)
             class_vars = list(class_variables)
         else:
             variables = list(variables)
-            if class_variables:
+            if class_variables is ...:
                 attributes = variables[:-1]
                 class_vars = variables[-1:]
-            else:
+            elif class_variables is None:
                 attributes = variables
-                class_vars = []
-        for lst in (attributes, class_vars):
+                class_vars = ()
+            else:
+                raise TypeError("class variable(s) cannot be given as `%s`" %
+                                type(class_variables).__name__)
+
+        # Replace str's and int's with descriptors if 'source' is given;
+        # complain otherwise
+        metas = list(metas) if metas else []
+        for lst in (attributes, class_vars, metas):
             for i, var in enumerate(lst):
                 if not isinstance(var, Variable):
-                    lst[i] = source[var]
+                    if source and isinstance(var, (str, int)):
+                        lst[i] = source[var]
+                    else:
+                        raise TypeError(
+                            "descriptors must be instances of Variable, not '%s'"
+                            % type(var).__name__)
+
+        # Store everything
         self.attributes = tuple(attributes)
         self.class_vars = tuple(class_vars)
         self._variables = self.attributes + self.class_vars
+        self._metas = tuple(metas)
         self.class_var = self.class_vars[0] if len(self.class_vars)==1 else None
-
-        self.indices = {var.name:idx for idx, var in enumerate(self._variables)}
-
-        if not all(var.is_primitive for var in self._variables):
+        if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        if metas is not None:
-            self._metas = metas
-            self.indices.update((var.name, -1-idx) for idx, var in enumerate(metas))
-        else:
-            self._metas = []
-        self.anonymous = False
+        self.indices = {var.name:idx for idx, var in enumerate(self._variables)}
+        self.indices.update((var.name, -1-idx) for idx, var in enumerate(metas))
 
+        self.anonymous = False
         self.known_domains = weakref.WeakKeyDictionary()
         self.last_conversion = None
+
 
     def get_variables(self):
         return self._variables
@@ -207,11 +224,34 @@ class Domain:
     def __getitem__(self, index):
         """
         Same as var_from_domain. Index can be a slice, an int, str or
-        instance of :class:`Variable`.
+        instance of :class:`Variable`. Slices apply to variables, not meta
+        attributes.
+        """
+
+        #TODO: we do not want this for slices, do we?
+        """
+        if index.stop < 0 or index.stop == 0 and \
+           index.start is not None and index.start < 0:
+            if index.start > 0:
+                raise IndexError("slice indices for Domain should be"
+                                 "either positive or negative")
+            if index.start is None:
+                start = 0
+            else:
+                start = -index.start-1
+            stop = -index.stop-1
+            return self._metas[start:stop:(index.step or 1)]
+        else:
+            if index.start is not None and index.start < 0:
+                raise IndexError("slice indices for Domain should be"
+                                 "either positive or negative")
+            return self._variables[index]
         """
         if isinstance(index, slice):
             return self._variables[index]
-        return self.var_from_domain(index, True)
+        else:
+            return self.var_from_domain(index, True)
+
 
     def __contains__(self, item):
         """
@@ -244,7 +284,7 @@ class Domain:
             s += " | " + ", ".join(cls.name for cls in self.class_vars)
         s += "]"
         if self._metas:
-            s += "{" + ", ".join(meta.name for meta in self._metas) + "}"
+            s += " {" + ", ".join(meta.name for meta in self._metas) + "}"
         return s
 
     def __getstate__(self):
@@ -322,6 +362,7 @@ class Domain:
     def convert(self, inst):
         """
         Convert a data instance from another domain.
+
         :param inst: The data instance to be converted
         :return: The data instance in this domain
         """

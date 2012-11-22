@@ -5,21 +5,348 @@ from Orange import data
 
 age = data.ContinuousVariable(name="AGE")
 gender = data.DiscreteVariable(name="Gender", values=["M", "F"])
-income = data.ContinuousVariable(name="AGE")
+incomeA = data.ContinuousVariable(name="AGE")
+income = data.ContinuousVariable(name="income")
 education = data.DiscreteVariable(name="education", values=["GS","HS", "C"])
 ssn = data.StringVariable(name="SSN")
+race = data.DiscreteVariable(name="race", values=["White", "Hypsanic", "African", "Other"])
 
 PickleDomain = create_pickling_tests("PickleDomain",
     ("empty_domain",             lambda: data.Domain([])),
     ("with_continuous_variable", lambda: data.Domain([age])),
     ("with_discrete_variable",   lambda: data.Domain([gender])),
     ("with_mixed_variables",     lambda: data.Domain([age, gender])),
-    ("with_continuous_class",    lambda: data.Domain([age, gender], [income])),
+    ("with_continuous_class",    lambda: data.Domain([age, gender], [incomeA])),
     ("with_discrete_class",      lambda: data.Domain([age, gender], [education])),
-    ("with_multiple_classes",    lambda: data.Domain([age, gender], [income, education])),
+    ("with_multiple_classes",    lambda: data.Domain([age, gender], [incomeA, education])),
     ("with_metas",               lambda: data.Domain([age, gender], metas=[ssn])),
-    ("with_class_and_metas",     lambda: data.Domain([age, gender], [income, education], [ssn])),
+    ("with_class_and_metas",     lambda: data.Domain([age, gender], [incomeA, education], [ssn])),
 )
+
+
+class TestDomainInit(unittest.TestCase):
+    def test_init_vars(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables)
+        self.assertEqual(d.variables, variables)
+        self.assertEqual(d.attributes, variables[:-1])
+        self.assertEqual(d.class_var, variables[-1])
+        self.assertEqual(d.class_vars, variables[-1:])
+        self.assertEqual(d.metas, ())
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2})
+
+    def test_init_no_class(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, None)
+        self.assertEqual(d.variables, variables)
+        self.assertEqual(d.attributes, variables)
+        self.assertEqual(d.class_var, None)
+        self.assertEqual(d.class_vars, ())
+        self.assertEqual(d.metas, ())
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2})
+
+    def test_init_no_class_false(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, False)
+        self.assertEqual(d.variables, variables)
+        self.assertEqual(d.attributes, variables)
+        self.assertEqual(d.class_var, None)
+        self.assertEqual(d.class_vars, ())
+        self.assertEqual(d.metas, ())
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2})
+
+    def test_init_class(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, education)
+        self.assertEqual(d.variables, variables + (education, ))
+        self.assertEqual(d.attributes, variables)
+        self.assertEqual(d.class_var, education)
+        self.assertEqual(d.class_vars, (education,))
+        self.assertEqual(d.metas, ())
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2,
+                                     "education": 3})
+
+    def test_init_one_class(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, (education,))
+        self.assertEqual(d.variables, variables + (education, ))
+        self.assertEqual(d.attributes, variables)
+        self.assertEqual(d.class_var, education)
+        self.assertEqual(d.class_vars, (education,))
+        self.assertEqual(d.metas, ())
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2,
+                                     "education": 3})
+
+    def test_init_multi_class(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, (education, race))
+        self.assertEqual(d.variables, variables + (education, race))
+        self.assertEqual(d.attributes, variables)
+        self.assertIsNone(d.class_var)
+        self.assertEqual(d.class_vars, (education, race))
+        self.assertEqual(d.metas, ())
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2,
+                                     "education": 3, "race": 4})
+
+    def test_init_source(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, (education, race))
+        d2 = data.Domain(["Gender", 0, income], False, source=d)
+        self.assertEqual(d2.variables, (gender, age, income))
+
+    def test_init_source_class(self):
+        variables = (age, gender, income)
+        d = data.Domain(variables, (education, race))
+        d2 = data.Domain(["Gender", 0], "income", source=d)
+        self.assertEqual(d2.variables, (gender, age, income))
+
+    def test_init_metas(self):
+        variables = (age, gender, income)
+        metas = (ssn, race)
+        d = data.Domain(variables, metas=metas)
+        self.assertEqual(d.variables, variables)
+        self.assertEqual(d.attributes, variables[:-1])
+        self.assertEqual(d.class_var, variables[-1])
+        self.assertEqual(d.class_vars, variables[-1:])
+        self.assertEqual(d.metas, metas)
+        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2,
+                                     "SSN": -1, "race": -2})
+
+    def test_wrong_vartypes(self):
+        variables = (age, gender, income)
+        with self.assertRaises(TypeError):
+            d = data.Domain(variables, ssn)
+        with self.assertRaises(TypeError):
+            d = data.Domain(variables + (ssn,))
+        with self.assertRaises(TypeError):
+            d = data.Domain((ssn, ) + variables)
+
+    def test_wrong_vartypes_w_source(self):
+        d = data.Domain((age, gender), metas=(ssn,))
+        with self.assertRaises(TypeError):
+            d = data.Domain(-1, source=d)
+
+    def test_wrong_types(self):
+        with self.assertRaises(TypeError):
+            d = data.Domain((age, []))
+        with self.assertRaises(TypeError):
+            d = data.Domain((age, "income"))
+        with self.assertRaises(TypeError):
+            d = data.Domain(([], age))
+        with self.assertRaises(TypeError):
+            d = data.Domain(("income", age))
+        with self.assertRaises(TypeError):
+            d = data.Domain((age,), {})
+        with self.assertRaises(TypeError):
+            d = data.Domain((age,), metas=("income"))
+
+    def test_get_item(self):
+        d = data.Domain((age, gender, income), metas=(ssn, race))
+        self.assertEqual(d[age], age)
+        self.assertEqual(d["AGE"], age)
+        self.assertEqual(d[0], age)
+
+        self.assertEqual(d[income], income)
+        self.assertEqual(d["income"], income)
+        self.assertEqual(d[2], income)
+
+        self.assertEqual(d[ssn], ssn)
+        self.assertEqual(d["SSN"], ssn)
+        self.assertEqual(d[-1], ssn)
+
+        self.assertEqual(d[-2], race)
+
+    def test_index(self):
+        d = data.Domain((age, gender, income), metas=(ssn, race))
+        self.assertEqual(d.index(age), 0)
+        self.assertEqual(d.index("AGE"), 0)
+        self.assertEqual(d.index(0), 0)
+
+        self.assertEqual(d.index(income), 2)
+        self.assertEqual(d.index("income"), 2)
+        self.assertEqual(d.index(2), 2)
+
+        self.assertEqual(d.index(ssn), -1)
+        self.assertEqual(d.index("SSN"), -1)
+        self.assertEqual(d.index(-1), -1)
+
+        self.assertEqual(d.index(-2), -2)
+
+    def test_get_item_slices(self):
+        d = data.Domain((age, gender, income, race), metas=(ssn, race))
+        self.assertEqual(d[:2], (age, gender))
+        self.assertEqual(d[1:3], (gender, income))
+        self.assertEqual(d[2:], (income, race))
+
+    def test_get_item_error(self):
+        d = data.Domain((age, gender, income), metas=(ssn, race))
+        with self.assertRaises(IndexError):
+            d[3]
+        with self.assertRaises(IndexError):
+            d[-3]
+        with self.assertRaises(IndexError):
+            d[incomeA]
+        with self.assertRaises(IndexError):
+            d["no_such_thing"]
+        with self.assertRaises(TypeError):
+            d[[2]]
+
+    def test_index_error(self):
+        d = data.Domain((age, gender, income), metas=(ssn, race))
+        with self.assertRaises(ValueError):
+            d.index(3)
+        with self.assertRaises(ValueError):
+            d.index(-3)
+        with self.assertRaises(ValueError):
+            d.index(incomeA)
+        with self.assertRaises(ValueError):
+            d.index("no_such_thing")
+        with self.assertRaises(TypeError):
+            d.index([2])
+
+    def test_var_from_domain(self):
+        d = data.Domain((age, gender, income), metas=(ssn, race))
+        self.assertEqual(d.var_from_domain(incomeA), incomeA)
+        self.assertEqual(d.var_from_domain(incomeA, False), incomeA)
+        with self.assertRaises(IndexError):
+            d.var_from_domain(incomeA, True)
+        with self.assertRaises(TypeError):
+            d.var_from_domain(1, no_index=True)
+        with self.assertRaises(TypeError):
+            d.var_from_domain(-1, no_index=True)
+
+    def test_contains(self):
+        d = data.Domain((age, gender, income), metas=(ssn,))
+        self.assertTrue("AGE" in d)
+        self.assertTrue(age in d)
+        self.assertTrue(0 in d)
+        self.assertTrue("income" in d)
+        self.assertTrue(income in d)
+        self.assertTrue(2 in d)
+        self.assertTrue("SSN" in d)
+        self.assertTrue(ssn in d)
+        self.assertTrue(-1 in d)
+
+        self.assertFalse("no_such_thing" in d)
+        self.assertFalse(race in d)
+        self.assertFalse(3 in d)
+        self.assertFalse(-2 in d)
+
+        with self.assertRaises(TypeError):
+            {} in d
+        with self.assertRaises(TypeError):
+            [] in d
+
+    def test_iter(self):
+        d = data.Domain((age, gender, income), metas=(ssn,))
+        self.assertEqual([var for var in d], [age, gender, income])
+
+        d = data.Domain((age, ), metas=(ssn,))
+        self.assertEqual([var for var in d], [age])
+
+        d = data.Domain((), metas=(ssn,))
+        self.assertEqual([var for var in d], [])
+
+    def test_str(self):
+        for args, printout in (
+            (((),), "[]"),
+            (((age,), None), "[AGE]"),
+            (((age,),), "[ | AGE]"),
+            (((gender,), age), "[Gender | AGE]"),
+            (((gender, income), None), "[Gender, income]"),
+            (((gender, income), age), "[Gender, income | AGE]"),
+            (((gender,), (age, income)), "[Gender | AGE, income]"),
+            (((gender,), (age, income), (ssn,)), "[Gender | AGE, income] {SSN}"),
+            (((gender,), (age, income), (ssn, race)), "[Gender | AGE, income] {SSN, race}"),
+            (((), (), (ssn, race)), "[] {SSN, race}"),
+        ):
+            self.assertEqual(str(data.Domain(*args)), printout)
+
+    def test_has_discrete(self):
+        self.assertFalse(data.Domain([]).has_discrete_attributes())
+        self.assertFalse(data.Domain([age]).has_discrete_attributes())
+        self.assertFalse(data.Domain([race]).has_discrete_attributes())
+
+        self.assertFalse(data.Domain([age], None).has_discrete_attributes())
+        self.assertTrue(data.Domain([race], None).has_discrete_attributes())
+        self.assertTrue(data.Domain([age, race], None).has_discrete_attributes())
+        self.assertTrue(data.Domain([race, age], None).has_discrete_attributes())
+
+        self.assertFalse(data.Domain([age]).has_discrete_attributes(True))
+        self.assertTrue(data.Domain([race]).has_discrete_attributes(True))
+        self.assertFalse(data.Domain([age], None).has_discrete_attributes(True))
+        self.assertTrue(data.Domain([race], None).has_discrete_attributes(True))
+        self.assertTrue(data.Domain([age, race]).has_discrete_attributes(True))
+        self.assertTrue(data.Domain([race, age]).has_discrete_attributes(True))
+        self.assertTrue(data.Domain([], [race, age]).has_discrete_attributes(True))
+
+    def test_has_continuous(self):
+        self.assertFalse(data.Domain([]).has_continuous_attributes())
+        self.assertFalse(data.Domain([age]).has_continuous_attributes())
+        self.assertFalse(data.Domain([race]).has_continuous_attributes())
+
+        self.assertTrue(data.Domain([age], None).has_continuous_attributes())
+        self.assertFalse(data.Domain([race], None).has_continuous_attributes())
+        self.assertTrue(data.Domain([age, race], None).has_continuous_attributes())
+        self.assertTrue(data.Domain([race, age], None).has_continuous_attributes())
+
+        self.assertTrue(data.Domain([age]).has_continuous_attributes(True))
+        self.assertFalse(data.Domain([race]).has_continuous_attributes(True))
+        self.assertTrue(data.Domain([age], None).has_continuous_attributes(True))
+        self.assertFalse(data.Domain([race], None).has_continuous_attributes(True))
+        self.assertTrue(data.Domain([age, race]).has_continuous_attributes(True))
+        self.assertTrue(data.Domain([race, age]).has_continuous_attributes(True))
+        self.assertTrue(data.Domain([], [race, age]).has_continuous_attributes(True))
+
+    def test_get_conversion(self):
+        d = data.Domain((age, gender, income), metas=(ssn, race))
+        e = data.Domain((gender, race), None, metas=(age, gender, ssn))
+        f = data.Domain((gender,), (race, income), metas=(age, income, ssn))
+        g = data.Domain((), metas=(age, gender, ssn))
+
+        d_to_e = e.get_conversion(d)
+        self.assertIs(d_to_e.source, d)
+        self.assertEqual(d_to_e.attributes, [1, -2])
+        self.assertEqual(d_to_e.class_vars, [])
+        self.assertEqual(d_to_e.metas, [0, 1, -1])
+
+        d_to_e = e.get_conversion(d)
+        self.assertIs(d_to_e.source, d)
+        self.assertEqual(d_to_e.attributes, [1, -2])
+        self.assertEqual(d_to_e.class_vars, [])
+        self.assertEqual(d_to_e.metas, [0, 1, -1])
+
+        d_to_f = f.get_conversion(d)
+        self.assertIs(d_to_f.source, d)
+        self.assertEqual(d_to_f.attributes, [1])
+        self.assertEqual(d_to_f.class_vars, [-2, 2])
+        self.assertEqual(d_to_f.metas, [0, 2, -1])
+
+        d_to_e = e.get_conversion(d)
+        self.assertIs(d_to_e.source, d)
+        self.assertEqual(d_to_e.attributes, [1, -2])
+        self.assertEqual(d_to_e.class_vars, [])
+        self.assertEqual(d_to_e.metas, [0, 1, -1])
+
+        d_to_f = f.get_conversion(d)
+        self.assertIs(d_to_f.source, d)
+        self.assertEqual(d_to_f.attributes, [1])
+        self.assertEqual(d_to_f.class_vars, [-2, 2])
+        self.assertEqual(d_to_f.metas, [0, 2, -1])
+
+        f_to_g = g.get_conversion(f)
+        self.assertIs(f_to_g.source, f)
+        self.assertEqual(f_to_g.attributes, [])
+        self.assertEqual(f_to_g.class_vars, [])
+        self.assertEqual(f_to_g.metas, [-1, 0, -3])
+
+        x = lambda: 42
+        income.get_value_from = x
+        g_to_f = f.get_conversion(g)
+        self.assertIs(g_to_f.source, g)
+        self.assertEqual(g_to_f.attributes, [-2])
+        self.assertEqual(g_to_f.class_vars, [None, x])
+        self.assertEqual(g_to_f.metas, [-1, x, -3])
 
 if __name__ == "__main__":
     unittest.main()
