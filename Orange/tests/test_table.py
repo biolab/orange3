@@ -1013,7 +1013,7 @@ class TableTests(unittest.TestCase):
     def create_domain(self, attributes=(), classes=(), metas=()):
         attr_vars = [data.ContinuousVariable(name=a) if isinstance(a, str) else a for a in attributes]
         class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str) else c for c in classes]
-        meta_vars = [data.StringVariable(name=m) if isinstance(m, str) else m for m in metas]
+        meta_vars = [data.DiscreteVariable(name=m) if isinstance(m, str) else m for m in metas]
 
         domain = data.Domain(attr_vars, class_vars, meta_vars)
         return domain

@@ -1,6 +1,6 @@
 numpy>=1.6.2
 scipy>=0.11.0
--e hg+https://bitbucket.org/janezd/bottlechest@afd4564035eba91f46261559df2248461dce2959#egg=bottleneck-dev
+-e hg+https://bitbucket.org/janezd/bottlechest@e320ba73d7915b3c86c4f86f73627733378ad77a#egg=bottleneck-dev
 -e git+https://github.com/scikit-learn/scikit-learn@a88ee541f27330a0877cae2cac9a5b0986865035#egg=scikit-learn-dev
 nose==1.2.1
 
