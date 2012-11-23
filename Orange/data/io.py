@@ -153,7 +153,7 @@ class TabDelimReader:
     def reorder_values_array(self, arr, variables):
         for col, var in enumerate(variables):
             if var.fix_order and len(var.values) < 1000:
-                new_order = var.order_values(var.values)
+                new_order = var.ordered_values(var.values)
                 if new_order == var.values:
                     continue
                 arr[:, col] += 1000
