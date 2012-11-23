@@ -1308,7 +1308,7 @@ class CreateTableWithDomainAndTable(TableTests):
                 [random.randrange(a, a + c) for _ in self.domain.class_vars] +\
                 [random.randrange(-m + 1, 0) for _ in self.domain.metas]
         random.shuffle(order)
-        vars = list(self.domain.variables) + self.domain.metas[::-1]
+        vars = list(self.domain.variables) + list(self.domain.metas[::-1])
         vars = [vars[i] for i in order]
 
         new_domain = self.create_domain(vars, vars, vars)
