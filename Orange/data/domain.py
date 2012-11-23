@@ -1,4 +1,4 @@
-from collections import Sequence
+from collections import Iterable
 from itertools import chain
 import weakref
 from .variable import *
@@ -104,48 +104,38 @@ class Domain:
         :attribute:`known_domains`.
     """
 
-    def __init__(self, variables, class_variables=..., metas=None, source=None):
+    def __init__(self, attributes, class_vars=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
-        the class attribute(s). Feature and attributes can be given by
-        descriptors (instances of :class:`Variable`) or by indices and names
-        if the source domain is given.
+        the class attribute(s). They can be described by descriptors (instances
+        of :class:`Variable`), or by indices or names if the source domain is
+        given.
 
-        :param variables: a list of variables; if sole argument, it includes the class
-        :param class_variables: a list of class variables
+        :param attributes: a list of attributes
+        :param class_vars: the target variable or a list of target variables
         :param metas: a list of meta attributes
         :param source: the source domain for attributes
         :return: a new instance of :class:`domain`
         """
 
-        # TODO ... or have we decided that the arguments should be
-        #    (self, attributes, class_variables, metas, source), without
-        #    this magic here below?
-        # Decypher what we got for class_vars;
-        # in the end we have 'attributes' and 'class_vars'
-        if class_variables is False:
-            class_variables = None # bool is derived from int...
-        if isinstance(class_variables, (Variable, int, str)):
-            attributes = list(variables)
-            class_vars = [class_variables]
-        elif isinstance(class_variables, Sequence):
-            attributes = list(variables)
-            class_vars = list(class_variables)
-        else:
-            variables = list(variables)
-            if class_variables is ...:
-                attributes = variables[:-1]
-                class_vars = variables[-1:]
-            elif class_variables is None:
-                attributes = variables
-                class_vars = ()
-            else:
-                raise TypeError("class variable(s) cannot be given as `%s`" %
-                                type(class_variables).__name__)
+        if class_vars is None:
+            class_vars = []
+        elif isinstance(class_vars, (Variable, int, str)):
+            class_vars = [class_vars]
+        elif isinstance(class_vars, Iterable):
+            class_vars = list(class_vars)
+
+        metas = list(metas) if metas else []
 
         # Replace str's and int's with descriptors if 'source' is given;
         # complain otherwise
-        metas = list(metas) if metas else []
+        if source:
+            if not isinstance(attributes, list):
+                attributes = list(attributes)
+            if metas and not isinstance(metas, list):
+                metas = list(metas)
+        if metas is None:
+            metas = []
         for lst in (attributes, class_vars, metas):
             for i, var in enumerate(lst):
                 if not isinstance(var, Variable):
@@ -227,24 +217,6 @@ class Domain:
         instance of :class:`Variable`. Slices apply to variables, not meta
         attributes.
         """
-
-        #TODO: we do not want this for slices, do we?
-#        if index.stop < 0 or index.stop == 0 and \
-#           index.start is not None and index.start < 0:
-#            if index.start > 0:
-#                raise IndexError("slice indices for Domain should be"
-#                                 "either positive or negative")
-#            if index.start is None:
-#                start = 0
-#            else:
-#                start = -index.start-1
-#            stop = -index.stop-1
-#            return self._metas[start:stop:(index.step or 1)]
-#        else:
-#            if index.start is not None and index.start < 0:
-#                raise IndexError("slice indices for Domain should be"
-#                                 "either positive or negative")
-#            return self._variables[index]
         if isinstance(index, slice):
             return self._variables[index]
         else:
