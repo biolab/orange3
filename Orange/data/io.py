@@ -79,7 +79,7 @@ class TabDelimReader:
             elif tpe in ["s", "string"]:
                 var = StringVariable.make(name)
             else:
-                var = DiscreteVariable.make(name, values=tpe.split())
+                var = DiscreteVariable.make(name, tpe.split(), True)
             var.fix_order = isinstance(var, DiscreteVariable) and not var.values
 
             if is_class:
