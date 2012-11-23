@@ -114,7 +114,7 @@ class TabDelimReader:
         f.readline(); f.readline(); f.readline()
         padding = [""] * self.n_columns
         if self.basket_column >= 0:
-            table._Xsparse = _Xsparse = sparse.lil_matrix(len(_X), 100) # TODO how many columns?!
+            table._Xsparse = sparse.lil_matrix(len(_X), 100) # TODO how many columns?!
         table._metas = _metas = \
             np.empty((len(_X), len(self.meta_columns)), dtype=object)
         line_count = 0
