@@ -18,12 +18,11 @@ class Fitter:
         clf = self.fit(X, Y, W)
         clf.domain = data.domain
         clf.Y = Y
-        clf.I_can_has_multiclass = self.supports_multiclass
+        clf.supports_multiclass = self.supports_multiclass
         return clf
 
 
 class Model:
-    supports_multiclass = False
     Value = 0
     Probs = 1
     ValueProbs = 2
