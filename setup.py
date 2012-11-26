@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 
-import  imp, os, subprocess
+import imp
+import os
+import subprocess
 from setuptools import setup
 
 NAME = 'Orange'
@@ -40,6 +42,7 @@ CLASSIFIERS = (
     'Intended Audience :: Developers',
 )
 
+
 def hg_revision():
     # Copied from numpy setup.py and modified to work with hg
     def _minimal_ext_cmd(cmd):
@@ -49,11 +52,11 @@ def hg_revision():
             v = os.environ.get(k)
             if v is not None:
                 env[k] = v
-        # LANGUAGE is used on win32
+                # LANGUAGE is used on win32
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
+        out = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
         return out
 
     try:
@@ -63,6 +66,7 @@ def hg_revision():
         HG_REVISION = "Unknown"
 
     return HG_REVISION
+
 
 def write_version_py(filename='Orange/version.py'):
     # Copied from numpy setup.py
@@ -93,8 +97,8 @@ if not release:
     a = open(filename, 'w')
     try:
         a.write(cnt % {'version': VERSION,
-                       'full_version' : FULLVERSION,
-                       'hg_revision' : HG_REVISION,
+                       'full_version': FULLVERSION,
+                       'hg_revision': HG_REVISION,
                        'isrelease': str(ISRELEASED)})
     finally:
         a.close()
@@ -111,24 +115,25 @@ INSTALL_REQUIRES = (
 ENTRY_POINTS = {
 }
 
+
 def setup_package():
     write_version_py()
     setup(
-        name = NAME,
-        version = VERSION,
-        description = DESCRIPTION,
-        long_description = LONG_DESCRIPTION,
-        author = AUTHOR,
-        author_email = AUTHOR_EMAIL,
-        url = URL,
-        download_url = DOWNLOAD_URL,
-        license = LICENSE,
-        keywords = KEYWORDS,
-        classifiers = CLASSIFIERS,
-        packages = ["Orange", "Orange.classification", "Orange.data", "Orange.misc", "Orange.testing", "Orange.tests"],
-        install_requires = INSTALL_REQUIRES,
-        entry_points = ENTRY_POINTS,
-        zip_safe = False,
+        name=NAME,
+        version=VERSION,
+        description=DESCRIPTION,
+        long_description=LONG_DESCRIPTION,
+        author=AUTHOR,
+        author_email=AUTHOR_EMAIL,
+        url=URL,
+        download_url=DOWNLOAD_URL,
+        license=LICENSE,
+        keywords=KEYWORDS,
+        classifiers=CLASSIFIERS,
+        packages=["Orange", "Orange.classification", "Orange.data", "Orange.misc", "Orange.testing", "Orange.tests"],
+        install_requires=INSTALL_REQUIRES,
+        entry_points=ENTRY_POINTS,
+        zip_safe=False,
     )
 
 if __name__ == '__main__':
