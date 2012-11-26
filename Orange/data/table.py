@@ -198,7 +198,7 @@ class Table(MutableSequence):
         :param n_rows: number of rows in the new table
         :type n_rows: int
         :param weights: indicates whether to construct a vector of weights
-        :type bool:
+        :type weights: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
@@ -278,11 +278,11 @@ class Table(MutableSequence):
         return self
 
     @staticmethod
-    def new_from_table_rows(table, row_indices):
+    def new_from_table_rows(source, row_indices):
         """
         Construct a new table by selecting rows from the source table.
 
-        :param table: an existing table
+        :param source: an existing table
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
@@ -290,11 +290,11 @@ class Table(MutableSequence):
         :rtype: Orange.data.Table
         """
         self = Table.__new__(Table)
-        self.domain = table.domain
-        self._X = table._X[row_indices]
-        self._Y = table._Y[row_indices]
-        self._metas = table._metas[row_indices]
-        self._W = table._W[row_indices]
+        self.domain = source.domain
+        self._X = source._X[row_indices]
+        self._Y = source._Y[row_indices]
+        self._metas = source._metas[row_indices]
+        self._W = source._W[row_indices]
         return self
 
     @staticmethod
@@ -433,6 +433,8 @@ class Table(MutableSequence):
                         break
             if os.path.exists(absolute_filename):
                 break
+        else:
+            absolute_filename = ext = ""
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" is not found'.format(absolute_filename))
