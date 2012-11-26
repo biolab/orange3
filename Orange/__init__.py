@@ -2,14 +2,13 @@ from __future__ import absolute_import
 from importlib import import_module
 
 try:
-    from . import version
+    from .import version
     # Always use short_version here (see PEP 386)
     __version__ = version.short_version
     __hg_revision__ = version.hg_revision
 except ImportError:
     __version__ = "unknown"
     __hg_revision__ = "unknown"
-
 
 ADDONS_ENTRY_POINT = 'orange.addons'
 
@@ -18,15 +17,18 @@ import pkg_resources
 
 alreadyWarned = False
 disabledMsg = "Some features will be disabled due to failing modules\n"
+
+
 def _import(name):
     global alreadyWarned
     try:
         import_module(name, package='Orange')
     except ImportError as err:
         warnings.warn("%sImporting '%s' failed: %s" %
-            (disabledMsg if not alreadyWarned else "", name, err),
-            UserWarning, 2)
+                      (disabledMsg if not alreadyWarned else "", name, err),
+                      UserWarning, 2)
         alreadyWarned = True
+
 
 def _import_addons():
     globals_dict = globals()
@@ -45,16 +47,20 @@ def _import_addons():
                 try:
                     parent_module = sys.modules[parent_module_name]
                 except KeyError:
-                    warnings.warn("Loading add-on '%s' failed because destination namespace point '%s' was not found." % (entry_point.name, parent_module_name), UserWarning, 2)
+                    warnings.warn(
+                        "Loading add-on '%s' failed because destination namespace point '%s' was not found." % (
+                        entry_point.name, parent_module_name), UserWarning, 2)
                     continue
                 setattr(parent_module, mod, module)
             sys.modules['Orange.%s' % (name,)] = module
         except ImportError as err:
             warnings.warn("Importing add-on '%s' failed: %s" % (entry_point.name, err), UserWarning, 2)
         except pkg_resources.DistributionNotFound as err:
-            warnings.warn("Loading add-on '%s' failed because of a missing dependency: '%s'" % (entry_point.name, err), UserWarning, 2)
+            warnings.warn("Loading add-on '%s' failed because of a missing dependency: '%s'" % (entry_point.name, err),
+                          UserWarning, 2)
         except Exception as err:
-            warnings.warn("An exception occurred during the loading of '%s':\n%r" %(entry_point.name, err), UserWarning, 2)
+            warnings.warn("An exception occurred during the loading of '%s':\n%r" % (entry_point.name, err),
+                          UserWarning, 2)
 
 
 #_import("utils")
@@ -173,7 +179,6 @@ _import("utils.serverfiles")
 
 _import_addons()
 """
-
 
 del _import
 del _import_addons

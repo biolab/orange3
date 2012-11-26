@@ -51,7 +51,7 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0][varb], 0)
             self.assertEqual(d[0]["b"], 0)
 
-            #negative
+            # negative
             varb = d.domain["b"]
             self.assertEqual(d[-2, 0], 3.333)
             self.assertEqual(d[-2, varb], 3.333)
@@ -79,7 +79,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0][metae], "i")
             self.assertEqual(d[0][vare], "i")
             self.assertEqual(d[0]["e"], "i")
-
 
     def test_indexing_example(self):
         import warnings
@@ -114,7 +113,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[metae], "i")
             self.assertEqual(e[vare], "i")
             self.assertEqual(e["e"], "i")
-
 
     def test_indexing_assign_value(self):
         import warnings
@@ -161,7 +159,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0, "b"], 42)
             d[0][0] = 0
             self.assertEqual(d[0, "b"], 0)
-
 
     def test_indexing_del_example(self):
         import warnings
@@ -263,7 +260,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(len(x), 3)
             self.assertEqual([e[0] for e in x], [2.26, 3.333, Unknown])
 
-
     def test_assign_slice_value(self):
         import warnings
 
@@ -279,7 +275,6 @@ class TableTestCase(unittest.TestCase):
 
             d[2:5, "a"] = "A"
             self.assertEqual([e["a"] for e in d], list("ABAAACCDE"))
-
 
     def test_del_slice_example(self):
         import warnings
@@ -341,7 +336,6 @@ class TableTestCase(unittest.TestCase):
             #            x = d[(x for x in range(5, 2, -1))]
             #            self.assertEqual([e[0] for e in x], [2.25, 2.24, 2.23])
 
-
     def test_assign_multiple_indices_value(self):
         import warnings
 
@@ -354,7 +348,6 @@ class TableTestCase(unittest.TestCase):
 
             d[range(5, 2, -1), "b"] = None
             self.assertEqual([e[d.domain[0]] for e in d], [0, 42, 42, None, "?", "", 2.26, 3.333, None])
-
 
     def test_del_multiple_indices_example(self):
         import warnings
@@ -375,7 +368,6 @@ class TableTestCase(unittest.TestCase):
             del vals[1:3]
             self.assertEqual([e[0] for e in d], vals)
 
-
     def test_set_multiple_indices_example(self):
         import warnings
 
@@ -388,7 +380,6 @@ class TableTestCase(unittest.TestCase):
             vals[1] = vals[2] = vals[5] = 42
             self.assertEqual([e[0] for e in d], vals)
 
-
     def test_views(self):
         d = data.Table("zoo")
         crc = d.checksum(True)
@@ -398,7 +389,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(crc, d.checksum(True))
         del x[4:9]
         self.assertEqual(crc, d.checksum(True))
-
 
     def test_bool(self):
         d = data.Table("iris")
@@ -413,7 +403,6 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(d)
         d.clear()
         self.assertFalse(d)
-
 
     def test_checksum(self):
         d = data.Table("zoo")
@@ -455,7 +444,6 @@ class TableTestCase(unittest.TestCase):
         self.assertAlmostEqual(d.total_weight(), 0.4)
         d.clear()
         self.assertAlmostEqual(d.total_weight(), 0)
-
 
     def test_has_missing(self):
         d = data.Table("zoo")
@@ -553,7 +541,6 @@ class TableTestCase(unittest.TestCase):
         x.append(d[50])
         self.assertEqual(x[50], d[50])
 
-
     def test_extend(self):
         d = data.Table("iris")
         d.shuffle()
@@ -644,7 +631,6 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("test-save.tab")
 
-
     def test_from_numpy(self):
         import random
 
@@ -731,7 +717,7 @@ class TableTestCase(unittest.TestCase):
         x = d.filter_values(f)
         self.assertTrue(np.all(4.5 <= x.X[:, 2]))
         self.assertTrue(np.all(x.X[:, 2] <= 5.1))
-        self.assertEqual(sum((col >= 4.5 ) * (col <= 5.1)), len(x))
+        self.assertEqual(sum((col >= 4.5) * (col <= 5.1)), len(x))
 
         f.ref = 5.1
         f.oper = filter.ValueFilter.Operator.Equal
@@ -770,7 +756,6 @@ class TableTestCase(unittest.TestCase):
         for e in x:
             self.assertTrue(e[2] < 4.5 or e[2] > 5.1)
         self.assertEqual(sum((col < 4.5) + (col > 5.1)), len(x))
-
 
     def test_filter_value_continuous_args(self):
         d = data.Table("iris")
@@ -819,7 +804,6 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
-
     def test_valueFilter_discrete(self):
         d = data.Table("zoo")
 
@@ -840,7 +824,6 @@ class TableTestCase(unittest.TestCase):
 
         f = filter.FilterDiscrete(d.domain.class_var, values=[2, data.Table])
         self.assertRaises(TypeError, d.filter_values, f)
-
 
     def test_valueFilter_string_case_sens(self):
         d = data.Table("zoo")
@@ -910,7 +893,6 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue(str(e["name"]).endswith("ion"))
         self.assertEqual(len(x), len([e for e in col if e.endswith("ion")]))
 
-
     def test_valueFilter_string_case_insens(self):
         d = data.Table("zoo")
         d[d[:, "name"].metas[:, 0] == "girl", "name"] = "GIrl"
@@ -932,7 +914,7 @@ class TableTestCase(unittest.TestCase):
         f.oper = f.Operator.Less
         f.ref = "CHiCKEN"
         x = d.filter_values(f)
-        self.assertEqual(len(x), sum(col < "chicken") - 1) ## girl!
+        self.assertEqual(len(x), sum(col < "chicken") - 1)  # girl!
         self.assertTrue(np.all(x.metas < "chicken"))
 
         f.oper = f.Operator.LessEqual
@@ -988,8 +970,10 @@ class TableTestCase(unittest.TestCase):
 
         #TODO Test conjunctions and disjunctions of conditions
 
+
 def column_sizes(table):
     return len(table.domain.attributes), len(table.domain.class_vars), len(table.domain.metas)
+
 
 class TableTests(unittest.TestCase):
     attributes = ["Feature %i" % i for i in range(10)]
@@ -1109,6 +1093,7 @@ class CreateTableWithDomain(TableTests):
 
         new_from_domain.assert_called_with(domain)
 
+
 class CreateTableWithNumpyData(TableTests):
     def test_creates_a_table_with_given_X(self):
         table = data.Table(self.data)
@@ -1138,6 +1123,7 @@ class CreateTableWithNumpyData(TableTests):
         np.testing.assert_almost_equal(table.Y, Y)
         self.assertIsInstance(table.domain.class_vars[0], data.DiscreteVariable)
         self.assertEqual(table.domain.class_vars[0].values, [0, 1])
+
 
 class CreateTableWithDomainAndNumpyData(TableTests):
     def test_creates_a_table_with_given_domain(self):
@@ -1236,14 +1222,15 @@ class CreateTableWithDomainAndNumpyData(TableTests):
 
 
 class CreateTableWithDomainAndTable(TableTests):
-    interesting_slices = [slice(0, 0), #[0:0] - empty slice
-                          slice(1), #[:1]  - only first element
-                          slice(1, None), #[1:]  - all but first
-                          slice(-1, None), #[-1:] - only last element
-                          slice(-1), #[:-1] - all but last
-                          slice(None), #[:]   - all elements
-                          slice(None, None, 2), #[::2] - even elements
-                          slice(None, None, -1), #[::-1]- all elements reversed
+    interesting_slices = [
+        slice(0, 0),  # [0:0] - empty slice
+        slice(1),  # [:1]  - only first element
+        slice(1, None),  # [1:]  - all but first
+        slice(-1, None),  # [-1:] - only last element
+        slice(-1),  # [:-1] - all but last
+        slice(None),  # [:]   - all elements
+        slice(None, None, 2),  # [::2] - even elements
+        slice(None, None, -1),  # [::-1]- all elements reversed
     ]
 
     row_indices = [1, 5, 6, 7]
@@ -1251,7 +1238,6 @@ class CreateTableWithDomainAndTable(TableTests):
     def setUp(self):
         self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
         self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
-
 
     def test_creates_table_with_given_domain(self):
         new_table = data.Table.new_from_table(self.table.domain, self.table)
@@ -1274,7 +1260,6 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table = data.Table.new_from_table(self.domain, self.table, row_indices=slice_)
             self.assert_table_with_filter_matches(new_table, self.table, rows=slice_)
 
-
     def test_can_use_attributes_as_new_columns(self):
         a, c, m = column_sizes(self.table)
         order = [random.randrange(a) for _ in self.domain.attributes]
@@ -1287,7 +1272,7 @@ class CreateTableWithDomainAndTable(TableTests):
     def test_can_use_class_vars_as_new_columns(self):
         a, c, m = column_sizes(self.table)
         order = [random.randrange(a, a + c) for _ in self.domain.class_vars]
-        new_classes = [self.domain.class_vars[i-a] for i in order]
+        new_classes = [self.domain.class_vars[i - a] for i in order]
         new_domain = self.create_domain(new_classes, new_classes, new_classes)
         new_table = data.Table.new_from_table(new_domain, self.table)
 
@@ -1333,19 +1318,24 @@ class CreateTableWithDomainAndTable(TableTests):
 
 def isspecial(s):
     return isinstance(s, slice) or s is Ellipsis
+
+
 def split_columns(indices, t):
     a, c, m = column_sizes(t)
     if indices is ...:
         return slice(a), slice(c), slice(m)
     elif isinstance(indices, slice):
-        return indices, slice(0,0), slice(0,0)
+        return indices, slice(0, 0), slice(0, 0)
     elif not isinstance(indices, list) and not isinstance(indices, tuple):
         indices = [indices]
     return (
-            [t.domain.index(x) for x in indices if 0 <= t.domain.index(x) < a] or slice(0, 0),
-            [t.domain.index(x)-a for x in indices if t.domain.index(x) >= a] or slice(0, 0),
-            [-t.domain.index(x)-1 for x in indices if t.domain.index(x) < 0] or slice(0, 0))
-def getname(variable): return variable.name
+        [t.domain.index(x) for x in indices if 0 <= t.domain.index(x) < a] or slice(0, 0),
+        [t.domain.index(x) - a for x in indices if t.domain.index(x) >= a] or slice(0, 0),
+        [-t.domain.index(x) - 1 for x in indices if t.domain.index(x) < 0] or slice(0, 0))
+
+
+def getname(variable):
+    return variable.name
 
 
 class TableIndexingTests(TableTests):
@@ -1355,14 +1345,14 @@ class TableIndexingTests(TableTests):
         self.magic_table = np.hstack((self.table.X, self.table.Y, self.table.metas[:, ::-1]))
 
         self.rows = [0, -1]
-        self.multiple_rows = [slice(0,0), ..., slice(1, -1, -1)]
+        self.multiple_rows = [slice(0, 0), ..., slice(1, -1, -1)]
         a, c, m = column_sizes(t)
-        columns = [0, a-1, a, a+c-1, -1, -m]
+        columns = [0, a - 1, a, a + c - 1, -1, -m]
         self.columns = chain(columns,
-                                       map(lambda x:d[x], columns),
-                                       map(lambda x:d[x].name, columns))
+                             map(lambda x: d[x], columns),
+                             map(lambda x: d[x].name, columns))
         self.multiple_columns = chain(self.multiple_rows,
-                                      [d.attributes, d.class_vars, d.metas, [0,a,-1]],
+                                      [d.attributes, d.class_vars, d.metas, [0, a, -1]],
                                       [self.attributes, self.class_vars, self.metas],
                                       [self.attributes + self.class_vars + self.metas])
 
@@ -1373,10 +1363,10 @@ class TableIndexingTests(TableTests):
         for r in self.rows:
             for c in self.columns:
                 value = self.table[r, c]
-                self.assertAlmostEqual(value, self.magic_table[r,self.domain.index(c)])
+                self.assertAlmostEqual(value, self.magic_table[r, self.domain.index(c)])
 
                 value = self.table[r][c]
-                self.assertAlmostEqual(value, self.magic_table[r,self.domain.index(c)])
+                self.assertAlmostEqual(value, self.magic_table[r, self.domain.index(c)])
 
     def test_can_select_a_single_row(self):
         for r in self.rows:
@@ -1407,7 +1397,6 @@ class TableElementAssignmentTest(TableTests):
     def setUp(self):
         self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
         self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
-
 
     def test_can_assign_values(self):
         self.table[0, 0] = 42.

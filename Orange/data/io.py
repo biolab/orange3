@@ -7,10 +7,11 @@ from scipy import sparse
 import numpy as np
 import bottleneck as bn
 
+
 class FileReader:
     def prescan_file(self, f, delim, nvars, disc_cols, cont_cols):
         values = [set() for _ in range(nvars)]
-        decimals = [-1]*nvars
+        decimals = [-1] * nvars
         for lne in f:
             lne = lne.split(delim)
             for vs, col in zip(values, disc_cols):
@@ -58,9 +59,9 @@ class TabDelimReader:
                 self.basket_column = col
                 continue
             is_class = "class" in flag
-            is_meta = "m" in flag or "meta" in flag or \
+            is_meta = "m" in flag or "meta" in flag or\
                       "s" in tpe or "string" in tpe
-            is_weight = "w" in tpe or "weight" in tpe or \
+            is_weight = "w" in tpe or "weight" in tpe or\
                         "w" in flag or "weight" in flag
 
             if is_weight:
@@ -98,7 +99,6 @@ class TabDelimReader:
         domain = Domain(attributes, class_vars, metas)
         return domain
 
-
     def count_lines(self, file):
         file.seek(0)
         i = -3
@@ -106,25 +106,26 @@ class TabDelimReader:
             i += 1
         return i
 
-
     def read_data(self, f, table):
         _X, _Y = table._X, table._Y
         _W = table._W if table._W.shape[-1] else None
         f.seek(0)
-        f.readline(); f.readline(); f.readline()
+        f.readline()
+        f.readline()
+        f.readline()
         padding = [""] * self.n_columns
         if self.basket_column >= 0:
-            table._Xsparse = sparse.lil_matrix(len(_X), 100) # TODO how many columns?!
-        table._metas = _metas = \
-            np.empty((len(_X), len(self.meta_columns)), dtype=object)
+            table._Xsparse = sparse.lil_matrix(len(_X), 100)  # TODO how many columns?!
+        table._metas = _metas = (
+            np.empty((len(_X), len(self.meta_columns)), dtype=object))
         line_count = 0
-        _Xr = None # To be able to delete it below even when there are no attributes
+        _Xr = None  # To be able to delete it below even when there are no attributes
         for lne in f:
             values = lne.strip().split()
             if not values:
                 continue
             if len(values) > self.n_columns:
-                raise ValueError("Too many columns in line {}", 4+line_count)
+                raise ValueError("Too many columns in line {}", 4 + line_count)
             elif len(values) < self.n_columns:
                 values += padding
             if self.attribute_columns:
@@ -149,7 +150,6 @@ class TabDelimReader:
             table._metas.resize((line_count, len(self.meta_columns)))
         table.n_rows = line_count
 
-
     def reorder_values_array(self, arr, variables):
         for col, var in enumerate(variables):
             if var.fix_order and len(var.values) < 1000:
@@ -158,10 +158,9 @@ class TabDelimReader:
                     continue
                 arr[:, col] += 1000
                 for i, val in enumerate(var.values):
-                    bn.replace(arr[:,col], 1000+i, new_order.index(val))
+                    bn.replace(arr[:, col], 1000 + i, new_order.index(val))
                 var.values = new_order
             delattr(var, "fix_order")
-
 
     def reorder_values(self, table):
         self.reorder_values_array(table._X, table.domain.attributes)
@@ -173,6 +172,7 @@ class TabDelimReader:
 
     def _read_file(self, file):
         from ..data import Table
+
         domain = self.read_header(file)
         nExamples = self.count_lines(file)
         table = Table.new_from_domain(domain, nExamples, self.weight_column >= 0)
@@ -183,6 +183,7 @@ class TabDelimReader:
 
 class BasketReader():
     re_name = re.compile("([^,=\\n]+)(=((\d+\.?)|(\d*\.\d+)))?")
+
     def prescan_file(self, file):
         """Return a list of attributes that appear in the file"""
         names = set()
@@ -208,7 +209,7 @@ class BasketReader():
         domain = self.construct_domain(names)
         data = np.ones(n_elements)
         indices = np.empty(n_elements, dtype=int)
-        indptr = np.empty(n_rows+1, dtype=int)
+        indptr = np.empty(n_rows + 1, dtype=int)
         indptr[0] = curptr = 0
 
         file.seek(0)
@@ -224,13 +225,13 @@ class BasketReader():
                         ", ".join(multiples[:-1]), multiples[-1])
                 else:
                     attrs = "attribute " + multiples[0]
-                warnings.warn("Ignoring multiple values for %s in row %i" % (attrs, row+1))
+                warnings.warn("Ignoring multiple values for %s in row %i" % (attrs, row + 1))
             nextptr = curptr + len(items)
             data[curptr:nextptr] = list(items.values())
             indices[curptr:nextptr] = [domain.index(name) for name in items]
-            indptr[row+1] = nextptr
+            indptr[row + 1] = nextptr
             curptr = nextptr
         X = sparse.csr_matrix((data, indices, indptr), (n_rows, len(domain.variables)))
         from ..data import Table
-        return Table.new_from_numpy(domain, X)
 
+        return Table.new_from_numpy(domain, X)

@@ -5,6 +5,7 @@ from ..data.value import Value, Unknown
 import collections
 from math import isnan, floor
 
+
 class Variable:
     """
     The base class for variable descriptors, which contains the variable's name,
@@ -59,8 +60,8 @@ class Variable:
     """
     VarTypes = Enum("None", "Discrete", "Continuous", "String")
     MakeStatus = Enum("OK", "MissingValues", "NoRecognizedValues",
-        "Incompatible", "NotFound")
-    DefaultUnknownStr =  {"?", ".", "", "NA", "~", None}
+                      "Incompatible", "NotFound")
+    DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
 
     def __init__(self, var_type, name="", ordered=False):
         """
@@ -79,7 +80,6 @@ class Variable:
         # TODO: the original intention was to prevent deadlocks. Locks block,
         #       we would need more like a semaphore. But then - which reasonable
         #       use of get_value_from can lead to deadlocks?!
-
 
     def compute_value(self, inst):
         """
@@ -104,7 +104,6 @@ class Variable:
         Derived classes should overload the function.
         """
         raise RuntimeError("variable descriptors should overload is_primitive()")
-
 
     def repr_val(self, val):
         """
@@ -137,7 +136,7 @@ class Variable:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._get_value_lock = threading.Lock()
-        self.var_type =  getattr(Variable.VarTypes, state["var_type"])
+        self.var_type = getattr(Variable.VarTypes, state["var_type"])
 
 
 class DiscreteVariable(Variable):
@@ -171,8 +170,8 @@ class DiscreteVariable(Variable):
         Give a string representation of the variable, for instance,
         `"DiscreteVariable('Gender', values=['male', 'female'], base_value=1)"`.
         """
-        args = "values=[" + ", ".join(self.values[:5]) + \
-               "..."*(len(self.values)>5) + "]"
+        args = "values=[" + ", ".join(self.values[:5]) +\
+               "..." * (len(self.values) > 5) + "]"
         if self.ordered:
             args += ", ordered=True"
         if self.base_value >= 0:
@@ -199,12 +198,12 @@ class DiscreteVariable(Variable):
         if isinstance(s, int):
             return s
         if isinstance(s, Real):
-            return s if isnan(s) else floor(s+0.25)
+            return s if isnan(s) else floor(s + 0.25)
         if s in self.unknown_str:
             return Unknown
         if not isinstance(s, str):
-            raise TypeError('Cannot convert {} to value of "{}"'
-                            .format(type(s).__name__, self.name))
+            raise TypeError('Cannot convert {} to value of "{}"'.format(
+                type(s).__name__, self.name))
         return self.values.index(s)
 
     def add_value(self, s):
@@ -304,8 +303,8 @@ class DiscreteVariable(Variable):
         if not ordered:
             values = DiscreteVariable.ordered_values(values)
         for var in existing:
-            if var.ordered != ordered or \
-               var.base_value != -1 and var.values[var.base_value] != base_rep:
+            if (var.ordered != ordered or
+                    var.base_value != -1 and var.values[var.base_value] != base_rep):
                 continue
             if ordered:
                 i = 0
@@ -313,13 +312,13 @@ class DiscreteVariable(Variable):
                     if values[i] == val:
                         i += 1
                         if i == len(values):
-                            break # we have all the values
-                else: # We have some remaining values: check them, add them
+                            break  # we have all the values
+                else:  # We have some remaining values: check them, add them
                     if set(ordered[i:]) & set(var.values):
-                        continue # next var in existing
+                        continue  # next var in existing
                     for val in values[i:]:
-                            var.add_value(val)
-                break # we have the variable
+                        var.add_value(val)
+                break  # we have the variable
             elif not var.values or not values or set(var.values) & set(values):
                 vv = set(var.values)
                 for val in values:
@@ -332,7 +331,6 @@ class DiscreteVariable(Variable):
             var.base_value = var.values.index(base_rep)
         return var
 
-
     @staticmethod
     def ordered_values(values):
         """
@@ -342,9 +340,8 @@ class DiscreteVariable(Variable):
         """
         for presorted in DiscreteVariable.presorted_values:
             if values == set(presorted):
-                    return presorted
+                return presorted
         return sorted(values)
-
 
 
 class ContinuousVariable(Variable):
@@ -383,8 +380,8 @@ class ContinuousVariable(Variable):
         Return an existing continuous variable with the given name, or
         construct and return a new one.
         """
-        return ContinuousVariable.all_continuous_vars.get(name) or \
-               ContinuousVariable(name)
+        existing_var = ContinuousVariable.all_continuous_vars.get(name)
+        return existing_var or ContinuousVariable(name)
 
     @staticmethod
     def is_primitive():
@@ -468,5 +465,5 @@ class StringVariable(Variable):
         Return an existing string variable with the given name, or construct
         and return a new one.
         """
-        return StringVariable.all_string_vars.get(name) or \
-               StringVariable(name)
+        existing_var = StringVariable.all_string_vars.get(name)
+        return existing_var or StringVariable(name)

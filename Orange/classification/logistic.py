@@ -7,6 +7,7 @@ import scipy.sparse as sp
 from Orange import classification
 import Orange.data
 
+
 # helper functions
 def append_ones(X):
     if sp.issparse(X):
@@ -14,8 +15,10 @@ def append_ones(X):
     else:
         return np.hstack((np.ones((X.shape[0], 1)), X))
 
+
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
+
 
 def cost_grad(theta, X, y, lambda_):
     sx = sigmoid(X.dot(theta))
@@ -30,12 +33,14 @@ def cost_grad(theta, X, y, lambda_):
 
     return j, grad
 
+
 def fit(X, y, lambda_):
     theta = np.zeros(X.shape[1])
     theta, _, ret = fmin_l_bfgs_b(cost_grad, theta, args=(X, y, lambda_))
     if ret['warnflag'] != 0:
         warnings.warn('L-BFGS failed to converge')
     return theta
+
 
 def predict(X, theta):
     return sigmoid(X.dot(theta))
@@ -62,14 +67,14 @@ class LogisticRegressionLearner(classification.Learner):
         theta = fit(data.X, data.Y.ravel(), self.lambda_)
         return LogisticRegressionClassifier(theta)
 
+
 class LogisticRegressionClassifier(classification.Classifier):
     def __init__(self, theta):
         self.theta = theta
 
     def __call__(self, X):
         return predict(X.X, self.theta)
-        
-        
+
 
 if __name__ == '__main__':
     iris = Orange.data.Table('../doc/datasets/iris')
@@ -84,4 +89,3 @@ if __name__ == '__main__':
     p_orange = l(iris)
 
     assert np.allclose(p_simple, p_orange)
-    

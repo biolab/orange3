@@ -7,20 +7,21 @@ age = data.ContinuousVariable(name="AGE")
 gender = data.DiscreteVariable(name="Gender", values=["M", "F"])
 incomeA = data.ContinuousVariable(name="AGE")
 income = data.ContinuousVariable(name="income")
-education = data.DiscreteVariable(name="education", values=["GS","HS", "C"])
+education = data.DiscreteVariable(name="education", values=["GS", "HS", "C"])
 ssn = data.StringVariable(name="SSN")
 race = data.DiscreteVariable(name="race", values=["White", "Hypsanic", "African", "Other"])
 
-PickleDomain = create_pickling_tests("PickleDomain",
-    ("empty_domain",             lambda: data.Domain([])),
+PickleDomain = create_pickling_tests(
+    "PickleDomain",
+    ("empty_domain", lambda: data.Domain([])),
     ("with_continuous_variable", lambda: data.Domain([age])),
-    ("with_discrete_variable",   lambda: data.Domain([gender])),
-    ("with_mixed_variables",     lambda: data.Domain([age, gender])),
-    ("with_continuous_class",    lambda: data.Domain([age, gender], [incomeA])),
-    ("with_discrete_class",      lambda: data.Domain([age, gender], [education])),
-    ("with_multiple_classes",    lambda: data.Domain([age, gender], [incomeA, education])),
-    ("with_metas",               lambda: data.Domain([age, gender], metas=[ssn])),
-    ("with_class_and_metas",     lambda: data.Domain([age, gender], [incomeA, education], [ssn])),
+    ("with_discrete_variable", lambda: data.Domain([gender])),
+    ("with_mixed_variables", lambda: data.Domain([age, gender])),
+    ("with_continuous_class", lambda: data.Domain([age, gender], [incomeA])),
+    ("with_discrete_class", lambda: data.Domain([age, gender], [education])),
+    ("with_multiple_classes", lambda: data.Domain([age, gender], [incomeA, education])),
+    ("with_metas", lambda: data.Domain([age, gender], metas=[ssn])),
+    ("with_class_and_metas", lambda: data.Domain([age, gender], [incomeA, education], [ssn])),
 )
 
 
@@ -236,7 +237,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual([var for var in d], [])
 
     def test_str(self):
-        for args, printout in (
+        cases = (
             (((),), "[]"),
             (((age,),), "[AGE]"),
             (((), age), "[ | AGE]"),
@@ -247,7 +248,9 @@ class TestDomainInit(unittest.TestCase):
             (((gender,), (age, income), (ssn,)), "[Gender | AGE, income] {SSN}"),
             (((gender,), (age, income), (ssn, race)), "[Gender | AGE, income] {SSN, race}"),
             (((), (), (ssn, race)), "[] {SSN, race}"),
-        ):
+        )
+
+        for args, printout in cases:
             self.assertEqual(str(data.Domain(*args)), printout)
 
     def test_has_discrete(self):

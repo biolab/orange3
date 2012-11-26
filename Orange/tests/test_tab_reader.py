@@ -14,6 +14,7 @@ c        \tM F      \tc      \td
 2.0      \tF        \t7      \tpoor
 """
 
+
 class TestTabReader(unittest.TestCase):
     def test_read_easy(self):
         file = io.StringIO(simplefile)
@@ -29,6 +30,6 @@ class TestTabReader(unittest.TestCase):
         self.assertIsInstance(c2, DiscreteVariable)
         self.assertEqual(c2.name, "Class 42")
 
-        print(table.domain.class_vars[1].values)
-        np.testing.assert_almost_equal(table.X, np.array([[1, 0],[2, 1]]))
-        np.testing.assert_almost_equal(table.Y, np.array([[5,1],[7,0]]))
+        print(table.domain.attributes[1].values)
+        np.testing.assert_almost_equal(table.X, np.array([[1, 0], [2, 1]]))
+        np.testing.assert_almost_equal(table.Y, np.array([[5, 1], [7, 0]]))

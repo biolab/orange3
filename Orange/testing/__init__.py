@@ -1,8 +1,8 @@
-import functools
 import pickle
 import unittest
 
 from Orange import data
+
 
 class PickleTest(unittest.TestCase):
     def setUp(self):
@@ -15,9 +15,11 @@ class PickleTest(unittest.TestCase):
         self.add_comparator(data.StringVariable,
                             compare_members=("var_type", "name"))
         self.add_comparator(data.Domain,
-                            compare_members=("attributes", "class_vars", "class_var", "variables", "metas", "anonymous"))
+                            compare_members=("attributes", "class_vars", "class_var",
+                                             "variables", "metas", "anonymous"))
 
     old_comparators = {}
+
     def add_comparator(self, class_, compare_members):
         def compare(self, y):
             for m in compare_members:
@@ -26,7 +28,7 @@ class PickleTest(unittest.TestCase):
             return True
 
         def hash(self):
-            return "".join(map(lambda m : str(getattr(self, m)), compare_members)).__hash__()
+            return "".join(map(lambda m: str(getattr(self, m)), compare_members)).__hash__()
 
         self.old_comparators[class_] = (class_.__eq__, class_.__hash__)
         class_.__eq__ = compare
@@ -41,17 +43,20 @@ class PickleTest(unittest.TestCase):
             obj2 = pickle.loads(pickle.dumps(obj, protocol))
             self.assertEqual(obj, obj2)
 
+
 def create_pickling_tests(classname, *objs):
     def create_test(descr):
         name, construct_object = descr
         name = "test_{}".format(name)
+
         def f(self):
             obj = construct_object()
             self.assertPicklingPreserves(obj)
+
         f.__name__ = name
         return name, f
 
     tests = dict(map(create_test, objs))
     return type(classname, (PickleTest,), tests)
-create_pickling_tests.__test__ = False # Tell nose this is not a test.
 
+create_pickling_tests.__test__ = False  # Tell nose this is not a test.

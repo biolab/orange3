@@ -13,6 +13,7 @@
 
 from ..misc.enum import Enum
 
+
 class Filter:
     def __init__(self, negate=False):
         self.negate = negate
@@ -26,9 +27,9 @@ class Values(Filter):
 
 class ValueFilter:
     Operator = Enum("Equal", "NotEqual",
-                     "Less", "LessEqual", "Greater", "GreaterEqual",
-                     "Between", "Outside",
-                     "Contains", "BeginsWith", "EndsWith")
+                    "Less", "LessEqual", "Greater", "GreaterEqual",
+                    "Between", "Outside",
+                    "Contains", "BeginsWith", "EndsWith")
 
     def __init__(self, position):
         self.position = position
@@ -55,9 +56,12 @@ class FilterContinuous(ValueFilter):
 
     def get_ref(self):
         return self.min
+
     def set_ref(self, value):
         self.min = value
+
     ref = property(get_ref, set_ref)
+
 
 class FilterString(ValueFilter):
     def __init__(self, position, oper, min=None, max=None, case_sensitive=True, **a):
@@ -75,9 +79,12 @@ class FilterString(ValueFilter):
 
     def get_ref(self):
         return self.min
+
     def set_ref(self, value):
         self.min = value
+
     ref = property(get_ref, set_ref)
+
 
 class FilterStringList(ValueFilter):
     def __init__(self, position, values, case_sensitive=True):

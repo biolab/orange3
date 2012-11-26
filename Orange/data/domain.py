@@ -4,6 +4,7 @@ import weakref
 from .variable import *
 import numpy as np
 
+
 class DomainConversion:
     """
     Indices and functions for conversion between domains.
@@ -41,12 +42,12 @@ class DomainConversion:
         """
         self.source = source
         self.attributes = [source.index(var) if var in source else var.get_value_from
-                                for var in destination.attributes]
+                           for var in destination.attributes]
         self.class_vars = [source.index(var) if var in source else var.get_value_from
-                                for var in destination.class_vars]
+                           for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
         self.metas = [source.index(var) if var in source else var.get_value_from
-                        for var in destination.metas]
+                      for var in destination.metas]
 
 
 class Domain:
@@ -151,17 +152,16 @@ class Domain:
         self.class_vars = tuple(class_vars)
         self._variables = self.attributes + self.class_vars
         self._metas = tuple(metas)
-        self.class_var = self.class_vars[0] if len(self.class_vars)==1 else None
+        self.class_var = self.class_vars[0] if len(self.class_vars) == 1 else None
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        self.indices = {var.name:idx for idx, var in enumerate(self._variables)}
-        self.indices.update((var.name, -1-idx) for idx, var in enumerate(metas))
+        self.indices = {var.name: idx for idx, var in enumerate(self._variables)}
+        self.indices.update((var.name, -1 - idx) for idx, var in enumerate(metas))
 
         self.anonymous = False
         self.known_domains = weakref.WeakKeyDictionary()
         self.last_conversion = None
-
 
     def get_variables(self):
         return self._variables
@@ -190,10 +190,10 @@ class Domain:
             if not var in self.indices:
                 raise IndexError("Variable '%s' is not in the domain", var)
             idx = self.indices[var]
-            return self._variables[idx] if idx >= 0 else self._metas[-1-idx]
+            return self._variables[idx] if idx >= 0 else self._metas[-1 - idx]
 
         if not no_index and isinstance(var, int):
-            return self._variables[var] if var >= 0 else self._metas[-1-var]
+            return self._variables[var] if var >= 0 else self._metas[-1 - var]
 
         if isinstance(var, Variable):
             if check_included:
@@ -221,7 +221,6 @@ class Domain:
             return self._variables[index]
         else:
             return self.var_from_domain(index, True)
-
 
     def __contains__(self, item):
         """
@@ -277,7 +276,7 @@ class Domain:
             if var in self._variables:
                 return self._variables.index(var)
             if var in self._metas:
-                return -1-self._metas.index(var)
+                return -1 - self._metas.index(var)
             raise ValueError("'%s' is not in domain" % var.name)
         if isinstance(var, int):
             if -len(self._metas) <= var < len(self._variables):
@@ -286,7 +285,6 @@ class Domain:
         raise TypeError("Expected str, int or Variable, got '%s'" %
                         type(var).__name__)
 
-
     def has_discrete_attributes(self, include_class=False):
         """
         Return `True` if domain has any discrete attributes.
@@ -294,10 +292,10 @@ class Domain:
         :param include_class: if `True` (default is `False`), the check includes
             the class attribute(s)
         """
-        return any(isinstance(var, DiscreteVariable)
-                   for var in self.attributes) \
-            or include_class and any(isinstance(var, DiscreteVariable)
-                                     for var in self.class_vars)
+        if not include_class:
+            return any(isinstance(var, DiscreteVariable) for var in self.attributes)
+        else:
+            return any(isinstance(var, DiscreteVariable) for var in self.variables)
 
     def has_continuous_attributes(self, include_class=False):
         """
@@ -306,10 +304,10 @@ class Domain:
         :param include_class: if `True` (default is `False`), the check includes
             the class attribute(s)
         """
-        return any(isinstance(var, ContinuousVariable)
-                   for var in self.attributes) \
-            or include_class and any(isinstance(var, ContinuousVariable)
-                                     for var in self.class_vars)
+        if not include_class:
+            return any(isinstance(var, ContinuousVariable) for var in self.attributes)
+        else:
+            return any(isinstance(var, ContinuousVariable) for var in self.variables)
 
     def get_conversion(self, source):
         """
@@ -337,6 +335,7 @@ class Domain:
         :return: The data instance in this domain
         """
         from .instance import Instance
+
         if isinstance(inst, Instance):
             if inst.domain == self:
                 return inst._values, inst._metas
@@ -348,5 +347,5 @@ class Domain:
         else:
             values = [var.to_val(val) for var, val in zip(self._variables, inst)]
             metas = [Unknown if var.is_primitive else None for var in self._metas]
-        # Let np.array decide dtype for values
+            # Let np.array decide dtype for values
         return np.array(values), np.array(metas, dtype=object)

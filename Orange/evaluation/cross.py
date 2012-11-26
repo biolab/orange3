@@ -5,6 +5,7 @@ from Orange import classification
 from Orange.classification import Model
 from Orange.data import domain as orange_domain
 
+
 class CrossValidation:
 
     def __init__(self, tab, fit):
@@ -28,5 +29,7 @@ class CrossValidation:
                 values[test_index], probs[test_index] = model(test.X, Model.ValueProbs)
             else:
                 values[test_index] = model(test.X)
-        if get_probs: return values, probs
-        else: return values
+        if get_probs:
+            return values, probs
+        else:
+            return values

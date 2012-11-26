@@ -1,6 +1,7 @@
 from Orange import classification
 from sklearn.linear_model import LinearRegression
 
+
 class LinearRegressionLearner(classification.Fitter):
     def fit(self, X, Y, W):
         clf = LinearRegression()

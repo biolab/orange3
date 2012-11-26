@@ -1,9 +1,12 @@
 from numbers import Real
 from math import isnan
+
 Unknown = float("nan")
+
 
 class Value(float):
     __slots__ = "variable", "value"
+
     def __new__(cls, variable, value=Unknown):
         if isinstance(value, Real):
             self = super().__new__(cls, value)
@@ -26,8 +29,8 @@ class Value(float):
 
     def __eq__(self, other):
         if isinstance(self, Real) and isnan(self):
-            return isinstance(other, Real) and isnan(other) or \
-                   other in self.variable.unknown_str
+            return (isinstance(other, Real) and isnan(other)
+                    or other in self.variable.unknown_str)
         if isinstance(other, str):
             return self.variable.str_val(self) == other
         if self.value:
@@ -37,8 +40,9 @@ class Value(float):
         return super().__eq__(other)
 
     def __contains__(self, other):
-        if self.value is not None and isinstance(self.value, str) and \
-           isinstance(other, str):
+        if (self.value is not None
+                and isinstance(self.value, str)
+                and isinstance(other, str)):
             return other in self.value
         raise TypeError("invalid operation on Value()")
 

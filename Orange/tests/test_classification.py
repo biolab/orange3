@@ -6,8 +6,8 @@ import Orange.classification
 import Orange.classification.dummies as dummies
 import Orange.classification.majority as maj
 
-class MultiClassTest(unittest.TestCase):
 
+class MultiClassTest(unittest.TestCase):
     def test_unsupported(self):
         nrows = 20
         ncols = 10
@@ -41,7 +41,6 @@ class MultiClassTest(unittest.TestCase):
 
 
 class ModelTest(unittest.TestCase):
-
     def test_value_from_probs(self):
         nrows = 100
         ncols = 5
@@ -54,30 +53,29 @@ class ModelTest(unittest.TestCase):
         clf = learn(t)
         clf.ret = Orange.classification.Model.Probs
         y2 = clf(x, ret=Orange.classification.Model.Value)
-        self.assertTrue((y2==1).all())
+        self.assertTrue((y2 == 1).all())
         y2, probs = clf(x, ret=Orange.classification.Model.ValueProbs)
-        self.assertTrue((y2==1).all())
+        self.assertTrue((y2 == 1).all())
 
         # multitarget
         y = np.random.random_integers(1, 5, (nrows, 2))
-        y[:,0] = y[:,0] // 3        # majority = 1
-        y[:,1] = (y[:,1]+4) // 3    # majority = 2
+        y[:, 0] = y[:, 0] // 3        # majority = 1
+        y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
         t = data.Table(x, y)
         learn = maj.MajorityLearner()
         clf = learn(t)
         clf.ret = Orange.classification.Model.Probs
         y2 = clf(x, ret=Orange.classification.Model.Value)
         self.assertEqual(y2.shape, y.shape)
-        self.assertTrue((y2[:,0]==1).all() and (y2[:,1]==2).all())
+        self.assertTrue((y2[:, 0] == 1).all() and (y2[:, 1] == 2).all())
         y2, probs = clf(x, ret=Orange.classification.Model.ValueProbs)
-        self.assertTrue((y2[:,0]==1).all() and (y2[:,1]==2).all())
+        self.assertTrue((y2[:, 0] == 1).all() and (y2[:, 1] == 2).all())
 
     def test_probs_from_value(self):
         pass
 
 
 class ExpandProbabilitiesTest(unittest.TestCase):
-
     def prepareTable(self, rows, attr, vars, class_var_domain):
         attributes = ["Feature %i" % i for i in range(attr)]
         classes = ["Class %i" % i for i in range(vars)]

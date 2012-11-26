@@ -5,28 +5,28 @@ from ..data.value import Value
 
 
 class Fitter:
-    I_can_has_multiclass = False
+    supports_multiclass = False
 
     def fit(self, X, Y, W):
         raise TypeError("Descendants of Fitter must overload method fit")
 
     def __call__(self, data):
         X, Y, W = data.X, data.Y, data.W if data.has_weights else None
-        if np.shape(Y)[1] > 1 and not self.I_can_has_multiclass:
+        if np.shape(Y)[1] > 1 and not self.supports_multiclass:
             raise TypeError("fitter doesn't support multiple class variables")
         self.domain = data.domain
-        clf = self.fit(X,Y,W)
+        clf = self.fit(X, Y, W)
         clf.domain = data.domain
         clf.Y = Y
-        clf.I_can_has_multiclass = self.I_can_has_multiclass
+        clf.I_can_has_multiclass = self.supports_multiclass
         return clf
 
 
 class Model:
+    supports_multiclass = False
     Value = 0
     Probs = 1
-    ValueProbs =2
-
+    ValueProbs = 2
 
     def __init__(self, domain=None):
         if isinstance(self, Fitter):
@@ -35,16 +35,15 @@ class Model:
             raise ValueError("unspecified domain")
         self.domain = domain
 
-
     def predict(self, table):
         raise TypeError("Descendants of Model must overload method predict")
-
 
     def __call__(self, data, ret=Value):
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
-        if ret > 0 and any(isinstance(v, Orange_data.ContinuousVariable)
-                           for v in self.domain.class_vars):
+        if (ret > 0
+            and any(isinstance(v, Orange_data.ContinuousVariable)
+                    for v in self.domain.class_vars)):
             raise ValueError("cannot predict continuous distributions")
 
         # Call the predictor
@@ -94,17 +93,20 @@ class Model:
             used_vals = [np.unique(y) for y in self.Y.T]
             max_values = max(len(cv.values) for cv in self.domain.class_vars)
             if max_values != probs.shape[-1]:
-                if not self.I_can_has_multiclass: probs = probs[:,np.newaxis,:]
+                if not self.supports_multiclass:
+                    probs = probs[:, np.newaxis, :]
                 probs_ext = np.zeros((len(probs), n_class, max_values))
                 for c in range(n_class):
                     i = 0
                     class_values = len(self.domain.class_vars[c].values)
                     for cv in range(class_values):
                         if i < len(used_vals[c]) and cv == used_vals[c][i]:
-                            probs_ext[:,c,cv] = probs[:,c,i]
+                            probs_ext[:, c, cv] = probs[:, c, i]
                             i += 1
-                if self.I_can_has_multiclass: probs = probs_ext
-                else: probs = probs_ext[:,0,:]
+                if self.supports_multiclass:
+                    probs = probs_ext
+                else:
+                    probs = probs_ext[:, 0, :]
 
         # Return what we need to
         if ret == Model.Value:
@@ -113,5 +115,5 @@ class Model:
             return value
         if ret == Model.Probs:
             return probs
-        else: # ret == Model.ValueProbs
+        else:  # ret == Model.ValueProbs
             return value, probs

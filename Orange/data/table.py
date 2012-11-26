@@ -16,6 +16,7 @@ from Orange.data import domain as orange_domain, io, variable
 
 dataset_dirs = ['']
 
+
 class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
@@ -40,8 +41,8 @@ class RowInstance(Instance):
         self._values[len(self.table.domain.attributes)] = self._y[0]
 
     def get_classes(self):
-        return (Value(var, value) for var, value in
-            zip(self.table.domain.class_vars, self._y))
+        return (Value(var, value) for var, value in zip(self.table.domain.class_vars,
+                                                        self._y))
 
     def set_weight(self, weight):
         if self.table._W is None:
@@ -68,7 +69,7 @@ class RowInstance(Instance):
             else:
                 self._values[key] = self._y[key - len(self._x)] = value
         else:
-            self._metas[-1-key] = value
+            self._metas[-1 - key] = value
 
 
 class Columns:
@@ -76,22 +77,23 @@ class Columns:
         for v in chain(domain, domain.metas):
             setattr(self, v.name.replace(" ", "_"), v)
 
+
 class Table(MutableSequence):
     def __new__(cls, *args, **argkw):
         if not args and not argkw:
             return super().__new__(cls)
         if "filename" in argkw:
-           return cls.read_data(argkw["filename"])
+            return cls.read_data(argkw["filename"])
         try:
             if isinstance(args[0], str):
                 return cls.read_data(args[0])
-            if isinstance(args[0], Domain) and len(args) == 1:
+            if isinstance(args[0], orange_domain.Domain) and len(args) == 1:
                 return cls.new_from_domain(args[0])
             if all(isinstance(arg, np.ndarray) for arg in args):
                 domain = cls.create_anonymous_domain(*args[:3])
                 return cls.new_from_numpy(domain, *args, **argkw)
-            if isinstance(args[0], Domain) and \
-               all(isinstance(arg, np.ndarray) for arg in args[1:]):
+            if (isinstance(args[0], orange_domain.Domain) and
+                    all(isinstance(arg, np.ndarray) for arg in args[1:])):
                 return cls.new_from_numpy(*args)
         except IndexError:
             pass
@@ -108,7 +110,8 @@ class Table(MutableSequence):
                     class_vars.append(variable.DiscreteVariable(name="Class %i" % i, values=list(map(int, values))))
                 else:
                     class_vars.append(variable.ContinuousVariable(name="Class %i" % i))
-        meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in range(metas.shape[1])] if metas is not None else []
+        meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in
+                     range(metas.shape[1])] if metas is not None else []
 
         domain = orange_domain.Domain(attr_vars, class_vars, meta_vars)
         domain.anonymous = True
@@ -128,7 +131,6 @@ class Table(MutableSequence):
         self._metas = np.empty((n_rows, len(self.domain.metas)), object)
         return self
 
-
     @staticmethod
     def compose_cols_from(table, row_indices, src_cols, n_rows):
         #TODO: handle get_value_from
@@ -139,9 +141,9 @@ class Table(MutableSequence):
         if all(0 <= x < n_src_attrs for x in src_cols):
             return table._X[row_indices, src_cols]
         if all(x < 0 for x in src_cols):
-            return table._metas[row_indices, [-1-x for x in src_cols]]
+            return table._metas[row_indices, [-1 - x for x in src_cols]]
         if all(x >= n_src_attrs for x in src_cols):
-            return table._Y[row_indices, [x-n_src_attrs for x in src_cols]]
+            return table._Y[row_indices, [x - n_src_attrs for x in src_cols]]
 
         a = np.empty((n_rows, len(src_cols)), dtype=table._X.dtype)
         for i, col in enumerate(src_cols):
@@ -152,7 +154,6 @@ class Table(MutableSequence):
             else:
                 a[:, i] = table._Y[row_indices, col - n_src_attrs]
         return a
-
 
     @staticmethod
     def new_from_table(domain, table, row_indices=...):
@@ -181,7 +182,6 @@ class Table(MutableSequence):
         self._W = np.array(table._W[row_indices])
         return self
 
-
     @staticmethod
     def new_from_table_rows(table, row_indices):
         self = Table.__new__(Table)
@@ -207,14 +207,20 @@ class Table(MutableSequence):
             W = np.empty((X.shape[0], 0))
 
         if X.shape[1] != len(domain.attributes):
-            raise ValueError("Invalid number of variable columns ({} != {}".
-                format(X.shape[1], len(domain.attributes)))
+            raise ValueError(
+                "Invalid number of variable columns ({} != {}".format(
+                    X.shape[1], len(domain.attributes))
+            )
         if Y.shape[1] != len(domain.class_vars):
-            raise ValueError("Invalid number of class columns ({} != {}".
-                format(Y.shape[1], len(domain.class_vars)))
+            raise ValueError(
+                "Invalid number of class columns ({} != {}".format(
+                    Y.shape[1], len(domain.class_vars))
+            )
         if metas.shape[1] != len(domain.metas):
-            raise ValueError("Invalid number of meta attribute columns ({} != {}".
-                format(metas.shape[1], len(domain.metas)))
+            raise ValueError(
+                "Invalid number of meta attribute columns ({} != {}".format(
+                    metas.shape[1], len(domain.metas))
+            )
         if not X.shape[0] == Y.shape[0] == metas.shape[0] == W.shape[0]:
             raise ValueError("Parts of data contain different numbers of rows.")
 
@@ -228,16 +234,16 @@ class Table(MutableSequence):
         return self
 
     def is_view(self):
-        return self._X.base is not None and \
-               self._Y.base is not None and \
-               self._metas.base is not None and \
-               self._W.base is not None
+        return (self._X.base is not None and
+                self._Y.base is not None and
+                self._metas.base is not None and
+                self._W.base is not None)
 
     def is_copy(self):
-        return self._X.base is None and \
-               self._Y.base is None and \
-               self._metas.base is None and \
-               self._W.base is None
+        return (self._X.base is None and
+                self._Y.base is None and
+                self._metas.base is None and
+                self._W.base is None)
 
     def ensure_copy(self):
         if self._X.base is not None:
@@ -267,7 +273,7 @@ class Table(MutableSequence):
     metas = property(get_metas)
     domain = None
 
-    columns= property(lambda self: Columns(self.domain))
+    columns = property(lambda self: Columns(self.domain))
 
     def clear_cache(self, _="XYWm"):
         pass
@@ -304,7 +310,6 @@ class Table(MutableSequence):
         else:
             raise IOError('Extension "{}" is not recognized'.format(absolute_filename))
 
-
     def convert_to_row(self, example, key):
         domain = self.domain
         if isinstance(example, Instance):
@@ -319,16 +324,16 @@ class Table(MutableSequence):
                 return
             c = self.domain.get_conversion(example.domain)
             self._X[key] = [example._values[i] if isinstance(i, int) else
-                    (Unknown if not i else i(example)) for i in c.attributes]
+                            (Unknown if not i else i(example)) for i in c.attributes]
             self._Y[key] = [example._values[i] if isinstance(i, int) else
-                    (Unknown if not i else i(example)) for i in c.class_vars]
+                            (Unknown if not i else i(example)) for i in c.class_vars]
             self._metas[key] = [example._values[i] if isinstance(i, int) else
-                    (Unknown if not i else i(example)) for i in c.metas]
+                                (Unknown if not i else i(example)) for i in c.metas]
         else:
             self._X[key] = [var.to_val(val)
-                    for var, val in zip(domain.attributes, example)]
+                            for var, val in zip(domain.attributes, example)]
             self._Y[key] = [var.to_val(val)
-                    for var, val in zip(domain.class_vars, example[len(domain.attributes):])]
+                            for var, val in zip(domain.class_vars, example[len(domain.attributes):])]
             self._metas[key] = Unknown
 
     def _compute_col_indices(self, col_idx):
@@ -337,16 +342,16 @@ class Table(MutableSequence):
         if col_idx is ...:
             return None, None
         if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
-            return [attr for attr, c in zip(self.domain, col_idx) if c], \
-                   np.nonzero(col_idx)
+            return ([attr for attr, c in zip(self.domain, col_idx) if c],
+                    np.nonzero(col_idx))
         elif isinstance(col_idx, slice):
             s = len(self.domain.variables)
             start, end, stride = col_idx.indices(s)
             if col_idx.indices(s) == (0, s, 1):
                 return None, None
             else:
-                return self.domain.variables[col_idx], \
-                       np.arange(start, end, stride)
+                return (self.domain.variables[col_idx],
+                        np.arange(start, end, stride))
         elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self.domain[col] for col in col_idx]
             if attributes == self.domain.attributes:
@@ -357,9 +362,8 @@ class Table(MutableSequence):
             attr = self.domain[col_idx]
         else:
             attr = self.domain[col_idx]
-            col_idx =  self.domain.index(attr)
+            col_idx = self.domain.index(attr)
         return [attr], np.array([col_idx])
-
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -380,7 +384,7 @@ class Table(MutableSequence):
                 elif col_idx >= len(self.domain.attributes):
                     return Value(var, self._Y[row_idx, col_idx - len(self.domain.attributes)])
                 elif col_idx < 0:
-                    return Value(var, self._metas[row_idx, -1-col_idx])
+                    return Value(var, self._metas[row_idx, -1 - col_idx])
             except TypeError:
                 row_idx = [row_idx]
 
@@ -391,11 +395,10 @@ class Table(MutableSequence):
             r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
             r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
             r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
-            domain = Domain(r_attrs, r_classes, r_metas)
+            domain = orange_domain.Domain(r_attrs, r_classes, r_metas)
         else:
             domain = self.domain
         return Table.new_from_table(domain, self, row_idx)
-
 
     def __setitem__(self, key, value):
         if not isinstance(key, tuple):
@@ -430,7 +433,7 @@ class Table(MutableSequence):
                     self._Y[row_idx, col_idx - self._X.shape[1]] = value
                     self.clear_cache("Y")
             else:
-                self._metas[row_idx, -1-col_idx] = value
+                self._metas[row_idx, -1 - col_idx] = value
                 self.clear_cache("m")
 
         # multiple rows, multiple columns
@@ -447,14 +450,14 @@ class Table(MutableSequence):
                 elif col >= n_attrs:
                     self._Y[row_idx, col - n_attrs] = var.to_val(value)
                 else:
-                    self._metas[row_idx, -1-col] = var.to_val(value)
+                    self._metas[row_idx, -1 - col] = var.to_val(value)
         else:
             attr_cols = np.fromiter(
                 (col for col in col_indices if 0 <= col < n_attrs), int)
             class_cols = np.fromiter(
                 (col - n_attrs for col in col_indices if col >= n_attrs), int)
             meta_cols = np.fromiter(
-                (-1-col for col in col_indices if col < col), int)
+                (-1 - col for col in col_indices if col < col), int)
             if value is None:
                 value = Unknown
             if not isinstance(value, Real) and attr_cols or class_cols:
@@ -472,7 +475,6 @@ class Table(MutableSequence):
         if any(col < 0 for col in col_indices):
             self.clear_cache("m")
 
-
     def __delitem__(self, key):
         if key is ...:
             key = range(len(self))
@@ -482,13 +484,11 @@ class Table(MutableSequence):
         self._W = np.delete(self._W, key, axis=0)
         self.clear_cache()
 
-
     def clear(self):
         del self[...]
 
     def __len__(self):
         return self._X.shape[0]
-
 
     def __str__(self):
         s = "[" + ",\n ".join(str(ex) for ex in self[:5])
@@ -531,7 +531,7 @@ class Table(MutableSequence):
             if isinstance(examples, Table) and examples.domain == self.domain:
                 self._X[old_length:] = examples._X
                 self._Y[old_length:] = examples._Y
-                self._metas[old_length:]  = examples._metas
+                self._metas[old_length:] = examples._metas
                 if self._W.shape[-1]:
                     if examples._W.shape[-1]:
                         self._W[old_length:] = examples._W
@@ -551,22 +551,21 @@ class Table(MutableSequence):
             raise IndexError("Index out of range")
         self.resize_all(len(self) + 1)
         if key < len(self):
-            self._X[key+1:] = self._X[key:-1]
-            self._Y[key+1:] = self._Y[key:-1]
-            self._metas[key+1:] = self._metas[key:-1]
-            self._W[key+1:] = self._W[key:-1]
+            self._X[key + 1:] = self._X[key:-1]
+            self._Y[key + 1:] = self._Y[key:-1]
+            self._metas[key + 1:] = self._metas[key:-1]
+            self._W[key + 1:] = self._W[key:-1]
         try:
             self.convert_to_row(value, key)
             if self._W.shape[-1]:
                 self._W[key] = 1
         except Exception:
-            self._X[key:-1] = self._X[key+1:]
-            self._Y[key:-1] = self._Y[key+1:]
-            self._metas[key:-1] = self._metas[key+1:]
-            self._W[key:-1] = self._W[key+1:]
-            self.resize_all(len(self)-1)
+            self._X[key:-1] = self._X[key + 1:]
+            self._Y[key:-1] = self._Y[key + 1:]
+            self._metas[key:-1] = self._metas[key + 1:]
+            self._W[key:-1] = self._W[key + 1:]
+            self.resize_all(len(self) - 1)
             raise
-
 
     def append(self, value):
         self.insert(len(self), value)
@@ -575,13 +574,12 @@ class Table(MutableSequence):
         n_examples = len(self)
         if not n_examples:
             raise IndexError("Table is empty")
-        return self[random.randint(0, n_examples-1)]
+        return self[random.randint(0, n_examples - 1)]
 
     def total_weight(self):
         if self._W.shape[-1]:
             return sum(self._W)
         return len(self)
-
 
     def has_missing(self):
         return bn.anynan(self._X) or bn.anynan(self._Y)
@@ -616,7 +614,7 @@ class Table(MutableSequence):
             else:
                 return self._Y[:, index - self._X.shape[1]]
         else:
-            return self._metas[:, -1-index]
+            return self._metas[:, -1 - index]
 
     def filter_is_defined(self, check=None, negate=False):
         #TODO implement checking by columns
@@ -653,6 +651,7 @@ class Table(MutableSequence):
 
     def filter_values(self, filt):
         from Orange.data import filter
+
         if isinstance(filt, filter.Values):
             conditions = filt.conditions
             conjunction = filt.conjunction
@@ -672,13 +671,13 @@ class Table(MutableSequence):
                     for val in f.values:
                         if not isinstance(val, Real):
                             val = self.domain[f.position].to_val(val)
-                        s2 += (col==val)
+                        s2 += (col == val)
                     sel *= s2
                 else:
                     for val in f.values:
                         if not isinstance(val, Real):
                             val = self.domain[f.position].to_val(val)
-                        sel += (col==val)
+                        sel += (col == val)
             elif isinstance(f, filter.FilterStringList):
                 if not f.case_sensitive:
                     col = np.char.lower(np.array(col, dtype=str))
@@ -686,9 +685,9 @@ class Table(MutableSequence):
                 else:
                     vals = f.values
                 if conjunction:
-                    sel *= reduce(operator.add, (col==val for val in vals))
+                    sel *= reduce(operator.add, (col == val for val in vals))
                 else:
-                    sel = reduce(operator.add, (col==val for val in vals), sel)
+                    sel = reduce(operator.add, (col == val for val in vals), sel)
             elif isinstance(f, (filter.FilterContinuous, filter.FilterString)):
                 if isinstance(f, filter.FilterString) and not f.case_sensitive:
                     col = np.char.lower(np.array(col, dtype=str))
@@ -730,4 +729,3 @@ class Table(MutableSequence):
             else:
                 raise TypeError("Invalid filter")
         return Table.new_from_table_rows(self, sel)
-
