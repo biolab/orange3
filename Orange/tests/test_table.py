@@ -1122,7 +1122,7 @@ class CreateTableWithNumpyData(TableTests):
 
         np.testing.assert_almost_equal(table.Y, Y)
         self.assertIsInstance(table.domain.class_vars[0], data.DiscreteVariable)
-        self.assertEqual(table.domain.class_vars[0].values, [0, 1])
+        self.assertEqual(table.domain.class_vars[0].values, ["v1", "v2"])
 
 
 class CreateTableWithDomainAndNumpyData(TableTests):

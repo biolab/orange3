@@ -15,7 +15,7 @@ class CrossValidationTest(unittest.TestCase):
         ncols = 10
         x = np.random.random_integers(1, 3, (nrows, ncols))
         col = np.random.randint(ncols)
-        y = x[:nrows, col].reshape(nrows, 1) + 100
+        y = x[:nrows, col].reshape(nrows, 1)
         t = data.Table(x, y)
 
         cv = CrossValidation(t, nb.BayesLearner())

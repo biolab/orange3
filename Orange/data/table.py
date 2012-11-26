@@ -41,8 +41,8 @@ class RowInstance(Instance):
         self._values[len(self.table.domain.attributes)] = self._y[0]
 
     def get_classes(self):
-        return (Value(var, value) for var, value in zip(self.table.domain.class_vars,
-                                                        self._y))
+        return (Value(var, value)
+                for var, value in zip(self.table.domain.class_vars, self._y))
 
     def set_weight(self, weight):
         if self.table._W is None:
@@ -79,6 +79,53 @@ class Columns:
 
 
 class Table(MutableSequence):
+    """
+    Stores data instances as a set of 2d tables representing the independent
+    variables (attributes, features) and dependent variables (classes, targets),
+    and the corresponding weights and meta attributes.
+
+    The data is stored in 2d numpy arrays :obj:`X`, :obj:`Y`, :obj:`W`,
+    :obj:`metas`. The arrays may be dense or sparse. All arrays have the same
+    number of rows. If certain data is missing, the corresponding array has zero
+    columns.
+
+    Arrays can be of any type; default is `float` (that is, double precision).
+    Values of discrete variables are stored as whole numbers.
+    Arrays for meta attributes usually contain instances of `object`.
+
+    The table also stores the associated information about the variables
+    as an instance of :obj:`Domain`. The number of columns must match the
+    corresponding number of variables in the description.
+
+    .. attribute:: X
+
+        Dependent variables (attributes, features) a 2-d array with dimension
+        `(N, len(domain.attributes))`.
+
+    .. attribute:: Y
+
+        Dependent variables (features, targets); a 2-d array with dimension
+        `(N, len(domain.class_vars))`, typically `(N, 1)`.
+
+    .. attribute:: W
+
+        Instance weights; a vector of length N. If the data is not weighted,
+        `W` is, for practical reasons, a 2d array with shape `(N, 0)`.
+
+    .. attribute:: metas
+
+        Meta attributes with additional data that is not used in modelling,
+        like instance names or id's. Typically an array of objects of shape
+        `(N, len(domain.metas))`
+
+    .. attribute:: domain
+
+        Description of the variables corresponding to the table's columns.
+        The domain is used for determining the variable types, printing the
+        data in human-readable form, conversions between data tables and
+        similar.
+    """
+
     def __new__(cls, *args, **argkw):
         if not args and not argkw:
             return super().__new__(cls)
@@ -101,15 +148,37 @@ class Table(MutableSequence):
 
     @staticmethod
     def create_anonymous_domain(X, Y=None, metas=None):
-        attr_vars = [variable.ContinuousVariable(name="Feature %i" % a) for a in range(X.shape[1])]
+        """
+        Create a :obj:`~Orange.data.Domain` corresponding to the given numpy arrays.
+
+        All attributes are assumed to be continuous and are named "Feature <n>".
+        Target variables are discrete if the all values are whole numbers
+        between 0 and 19; otherwise they are continuous. Discrete classes are
+        named "Class <n>" and continuous are named "Target <n>". Domain is
+        marked as anonymous, so data from any other domain of the same shape can
+        be converted into this one and vice-versa.
+
+        :param X: attributes
+        :param Y: class variables
+        :param metas: meta attributes
+        :return: a new :obj:`~Orange.data.Domain`
+        """
+        attr_vars = [variable.ContinuousVariable(name="Feature %i" % (a + 1)) for a in range(X.shape[1])]
         class_vars = []
         if Y is not None:
             for i, class_ in enumerate(Y.T):
-                values = np.unique(class_)
-                if len(values) < 20:
-                    class_vars.append(variable.DiscreteVariable(name="Class %i" % i, values=list(map(int, values))))
-                else:
-                    class_vars.append(variable.ContinuousVariable(name="Class %i" % i))
+                mn, mx = np.min(class_), np.max(class_)
+                if 0 <= mn and mx <= 20:
+                    values = np.unique(class_)
+                    if all(int(x)==x and 0 <= x <= 19 for x in values):
+                        mx = int(mx)
+                        places = 1 + (mx >= 10)
+                        values = ["v%*i" % (places, i+1) for i in range(mx+1)]
+                        name = "Class %i" % (i + 1)
+                        class_vars.append(variable.DiscreteVariable(name, values))
+                        continue
+                class_vars.append(
+                    variable.ContinuousVariable(name="Target %i" % (i + 1)))
         meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in
                      range(metas.shape[1])] if metas is not None else []
 

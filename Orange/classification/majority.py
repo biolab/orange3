@@ -11,7 +11,7 @@ class MajorityLearner(classification.Fitter):
 
         weights = (W is not None and W.size == Y.size)
         n_class_vars = len(self.domain.class_vars)
-        n_values = max(max(cv.values) + 1 for cv in self.domain.class_vars)
+        n_values = max(len(cv.values) for cv in self.domain.class_vars)
         value = np.empty(n_class_vars, dtype=int)
         probs = np.empty((n_class_vars, n_values), dtype=float)
         for i, y in enumerate(Y.T):
