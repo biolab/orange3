@@ -56,7 +56,7 @@ class Model:
             prediction = self.predict(np.atleast_2d(data._values))
         elif isinstance(data, Orange_data.Table):
             if data.domain != self.domain:
-                data = Orange_data.Table.new_from_table(self.domain, data)
+                data = Orange_data.Table.from_table(self.domain, data)
             prediction = self.predict(data.X)
         else:
             raise TypeError("Unrecognized argument (instance of '%s')",

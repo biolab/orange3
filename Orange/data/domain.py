@@ -36,21 +36,22 @@ class DomainConversion:
         Indices for meta attributes
     """
 
+
     def __init__(self, source, destination):
         """
         Compute the conversion indices from the given `source` to `destination`
         """
         self.source = source
         self.attributes = [
-            source.index(var) if var in source
-            else var.get_value_from for var in destination.attributes]
+        source.index(var) if var in source
+        else var.get_value_from for var in destination.attributes]
         self.class_vars = [
-            source.index(var) if var in source
-            else var.get_value_from for var in destination.class_vars]
+        source.index(var) if var in source
+        else var.get_value_from for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
         self.metas = [
-            source.index(var) if var in source
-            else var.get_value_from for var in destination.metas]
+        source.index(var) if var in source
+        else var.get_value_from for var in destination.metas]
 
 
 class Domain:
@@ -108,6 +109,7 @@ class Domain:
         :attribute:`known_domains`.
     """
 
+
     def __init__(self, attributes, class_vars=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
@@ -155,29 +157,81 @@ class Domain:
         self.class_vars = tuple(class_vars)
         self._variables = self.attributes + self.class_vars
         self._metas = tuple(metas)
-        self.class_var = \
-            self.class_vars[0] if len(self.class_vars) == 1 else None
+        self.class_var =\
+        self.class_vars[0] if len(self.class_vars) == 1 else None
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
         self.indices = {var.name: idx
                         for idx, var in enumerate(self._variables)}
         self.indices.update((var.name, -1 - idx)
-                            for idx, var in enumerate(metas))
+            for idx, var in enumerate(metas))
 
         self.anonymous = False
         self.known_domains = weakref.WeakKeyDictionary()
         self.last_conversion = None
 
+
+    @classmethod
+    def from_numpy(cls, X, Y=None, metas=None):
+        """
+        Create a domain corresponding to the given numpy arrays.
+
+        All attributes are assumed to be continuous and are named
+        "Feature <n>". Target variables are discrete if the all values are
+        whole numbers between 0 and 19; otherwise they are continuous. Discrete
+        classes are named "Class <n>" and continuous are named "Target <n>".
+        Domain is marked as anonymous, so data from any other domain of the
+        same shape can be converted into this one and vice-versa.
+
+        :param X: attributes
+        :param Y: class variables
+        :param metas: meta attributes
+        :return: a new domain
+        :rtype: Orange.data.Domain
+        """
+        attr_vars = [ContinuousVariable(name="Feature %i" % (a + 1))
+                     for a in range(X.shape[1])]
+        class_vars = []
+        if Y is not None:
+            for i, class_ in enumerate(Y.T):
+                mn, mx = np.min(class_), np.max(class_)
+                if 0 <= mn and mx <= 20:
+                    values = np.unique(class_)
+                    if all(int(x) == x and 0 <= x <= 19 for x in values):
+                        mx = int(mx)
+                        places = 1 + (mx >= 10)
+                        values = ["v%*i" % (places, i + 1)
+                                  for i in range(mx + 1)]
+                        name = "Class %i" % (i + 1)
+                        class_vars.append(DiscreteVariable(name, values))
+                        continue
+                class_vars.append(
+                    ContinuousVariable(name="Target %i" % (i + 1)))
+        if metas is not None:
+            meta_vars = [StringVariable(name="Meta %i" % m)
+                         for m in range(metas.shape[1])]
+        else:
+            meta_vars = []
+
+        domain = cls(attr_vars, class_vars, meta_vars)
+        domain.anonymous = True
+        return domain
+
+
     def get_variables(self):
         return self._variables
 
+
     variables = property(get_variables)
+
 
     def get_metas(self):
         return self._metas
 
+
     metas = property(get_metas)
+
 
     def var_from_domain(self, var, check_included=False, no_index=False):
         """
@@ -214,9 +268,11 @@ class Domain:
         raise TypeError(
             "Expected str, int or Variable, got '%s'" % type(var).__name__)
 
+
     def __len__(self):
         """Return the number of variables (features and class attributes)"""
         return len(self._variables)
+
 
     def __getitem__(self, index):
         """
@@ -228,6 +284,7 @@ class Domain:
             return self._variables[index]
         else:
             return self.var_from_domain(index, True)
+
 
     def __contains__(self, item):
         """
@@ -246,11 +303,13 @@ class Domain:
         except IndexError:
             return False
 
+
     def __iter__(self):
         """
         Return an iterator through variables (features and class attributes)
         """
         return iter(self._variables)
+
 
     def __str__(self):
         """
@@ -265,10 +324,12 @@ class Domain:
             s += " {" + ", ".join(meta.name for meta in self._metas) + "}"
         return s
 
+
     def __getstate__(self):
         state = self.__dict__.copy()
         state.pop("known_domains")
         return state
+
 
     def index(self, var):
         """
@@ -294,6 +355,7 @@ class Domain:
         raise TypeError("Expected str, int or Variable, got '%s'" %
                         type(var).__name__)
 
+
     def has_discrete_attributes(self, include_class=False):
         """
         Return `True` if domain has any discrete attributes.
@@ -303,10 +365,11 @@ class Domain:
         """
         if not include_class:
             return any(isinstance(var, DiscreteVariable)
-                       for var in self.attributes)
+                for var in self.attributes)
         else:
             return any(isinstance(var, DiscreteVariable)
-                       for var in self.variables)
+                for var in self.variables)
+
 
     def has_continuous_attributes(self, include_class=False):
         """
@@ -317,10 +380,11 @@ class Domain:
         """
         if not include_class:
             return any(isinstance(var, ContinuousVariable)
-                       for var in self.attributes)
+                for var in self.attributes)
         else:
             return any(isinstance(var, ContinuousVariable)
-                       for var in self.variables)
+                for var in self.variables)
+
 
     def get_conversion(self, source):
         """
@@ -339,6 +403,7 @@ class Domain:
             c = DomainConversion(source, self)
             self.known_domains[source] = self.last_conversion = c
         return c
+
 
     def convert(self, inst):
         """

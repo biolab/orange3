@@ -23,8 +23,8 @@ class CrossValidation:
             probs = np.empty((n, len(self.tab.domain.class_var.values)))
         kf = cross_validation.KFold(n, k)
         for train_index, test_index in kf:
-            train = self.tab.new_from_table_rows(self.tab, train_index)
-            test = self.tab.new_from_table_rows(self.tab, test_index)
+            train = self.tab.from_table_rows(self.tab, train_index)
+            test = self.tab.from_table_rows(self.tab, test_index)
             model = self.learner(train)
             if get_probs:
                 values[test_index], probs[test_index] = model(test.X,

@@ -12,7 +12,7 @@ import bottleneck as bn
 from scipy import sparse
 
 from .instance import *
-from Orange.data import domain as orange_domain, io, variable
+from Orange.data import domain as orange_domain, io
 
 dataset_dirs = ['']
 
@@ -27,10 +27,12 @@ class RowInstance(Instance):
         self.row_index = row_index
         self.table = table
 
+
     def get_class(self):
         self._check_single_class()
         if self.table.domain.class_var:
             return Value(self.table.domain.class_var, self._y[0])
+
 
     def set_class(self, value):
         self._check_single_class()
@@ -40,20 +42,24 @@ class RowInstance(Instance):
             self._y[0] = value
         self._values[len(self.table.domain.attributes)] = self._y[0]
 
+
     def get_classes(self):
         return (Value(var, value)
-                for var, value in zip(self.table.domain.class_vars, self._y))
+            for var, value in zip(self.table.domain.class_vars, self._y))
+
 
     def set_weight(self, weight):
         if self.table._W is None:
             self.table.set_weights()
         self.table._W[self.row_index] = weight
 
+
     def get_weight(self):
         if not self.table._W:
             raise ValueError(
                 "Instances in the referenced table have no weights")
         return self.table._W[self.row_index]
+
 
     def __setitem__(self, key, value):
         if not isinstance(key, int):
@@ -98,26 +104,26 @@ class Table(MutableSequence):
     as an instance of :obj:`Domain`. The number of columns must match the
     corresponding number of variables in the description.
 
-    .. attribute:: X
+    There are numerous ways for indexing the table. To retrieve the data, the
+    following forms of indexing can be used
 
-        Dependent variables (attributes, features) a 2-d array with dimension
-        `(N, len(domain.attributes))`.
+    - The index can be an int, e.g. `table[7]`; the corresponding row is
+      returned as an instance of :obj:RowInstance.
 
-    .. attribute:: Y
+    - The index can be a slice or a sequence of ints (e.g. `table[7:10]` or
+      `table[[7, 42, 15]]`, indexing returns a new data table with the
+      selected rows.
 
-        Dependent variables (features, targets); a 2-d array with dimension
-        `(N, len(domain.class_vars))`, typically `(N, 1)`.
+    - If there are two indices, where the first is an int (a row number) and
+      the second can be interpreted as a columns, e.g. `table[3, 5]` or
+      `table[3, 'gender']` or `table[3, y]` (where `y` is an instance of
+      :obj:`~Orange.data.Variable`), a single value is returned as an instance
+      of :obj:`~Orange.data.Value`.
 
-    .. attribute:: W
-
-        Instance weights; a vector of length N. If the data is not weighted,
-        `W` is, for practical reasons, a 2d array with shape `(N, 0)`.
-
-    .. attribute:: metas
-
-        Meta attributes with additional data that is not used in modelling,
-        like instance names or id's. Typically an array of objects of shape
-        `(N, len(domain.metas))`
+    - In all other cases, the first index should be a row index, a slice or
+      a sequence, and the second index, which represent a set of columns,
+      should be an int, a slice, a sequence or a numpy array. The result is
+      a new table with a new domain.
 
     .. attribute:: domain
 
@@ -125,75 +131,81 @@ class Table(MutableSequence):
         The domain is used for determining the variable types, printing the
         data in human-readable form, conversions between data tables and
         similar.
+
     """
+
+
+    @property
+    def X(self):
+        """
+        Dependent variables (attributes, features) a 2-d array with
+        dimension `(N, len(domain.attributes))`.
+        """
+        return self._X
+
+
+    @property
+    def Y(self):
+        """
+        Dependent variables (features, targets); a 2-d array with dimension
+        `(N, len(domain.class_vars))`, typically `(N, 1)`."""
+
+        return self._Y
+
+
+    @property
+    def metas(self):
+        """
+        Meta attributes with additional data that is not used in modelling,
+        like instance names or id's. Typically an array of objects of shape
+        `(N, len(domain.metas))`
+        """
+        return self._metas
+
+
+    @property
+    def W(self):
+        """
+        Instance weights; a vector of length N. If the data is not weighted,
+        `W` is, for practical reasons, a 2d array with shape `(N, 0)`.
+        """
+        return self._W
+
+
+    @property
+    def columns(self):
+        """
+        A class whose attributes contain attribute descriptors for columns.
+        """
+        return Columns(self.domain)
+
+
+    domain = None
+
 
     def __new__(cls, *args, **argkw):
         if not args and not argkw:
             return super().__new__(cls)
         if "filename" in argkw:
-            return cls.read_data(argkw["filename"])
+            return cls.from_file(argkw["filename"])
         try:
             if isinstance(args[0], str):
-                return cls.read_data(args[0])
+                return cls.from_file(args[0])
             if isinstance(args[0], orange_domain.Domain) and len(args) == 1:
-                return cls.new_from_domain(args[0])
+                return cls.from_domain(args[0])
             if all(isinstance(arg, np.ndarray) for arg in args):
-                domain = cls.create_anonymous_domain(*args[:3])
-                return cls.new_from_numpy(domain, *args, **argkw)
+                domain = orange_domain.Domain.from_numpy(*args[:3])
+                return cls.from_numpy(domain, *args, **argkw)
             if (isinstance(args[0], orange_domain.Domain) and
-                    all(isinstance(arg, np.ndarray) for arg in args[1:])):
-                return cls.new_from_numpy(*args)
+                all(isinstance(arg, np.ndarray) for arg in args[1:])):
+                return cls.from_numpy(*args)
         except IndexError:
             pass
         raise ValueError("Invalid arguments for Table.__new__")
 
-    @staticmethod
-    def create_anonymous_domain(X, Y=None, metas=None):
-        """
-        Create a :obj:`~Orange.data.Domain` corresponding to the given
-        numpy arrays.
 
-        All attributes are assumed to be continuous and are named
-        "Feature <n>". Target variables are discrete if the all values are
-        whole numbers between 0 and 19; otherwise they are continuous. Discrete
-        classes are named "Class <n>" and continuous are named "Target <n>".
-        Domain is marked as anonymous, so data from any other domain of the
-        same shape can be converted into this one and vice-versa.
-
-        :param X: attributes
-        :param Y: class variables
-        :param metas: meta attributes
-        :return: a new domain
-        :rtype: Orange.data.Domain
-        """
-        attr_vars = [variable.ContinuousVariable(name="Feature %i" % (a + 1))
-                     for a in range(X.shape[1])]
-        class_vars = []
-        if Y is not None:
-            for i, class_ in enumerate(Y.T):
-                mn, mx = np.min(class_), np.max(class_)
-                if 0 <= mn and mx <= 20:
-                    values = np.unique(class_)
-                    if all(int(x) == x and 0 <= x <= 19 for x in values):
-                        mx = int(mx)
-                        places = 1 + (mx >= 10)
-                        values = ["v%*i" % (places, i + 1)
-                                  for i in range(mx + 1)]
-                        name = "Class %i" % (i + 1)
-                        class_vars.append(
-                            variable.DiscreteVariable(name, values))
-                        continue
-                class_vars.append(
-                    variable.ContinuousVariable(name="Target %i" % (i + 1)))
-        meta_vars = [variable.StringVariable(name="Meta %i" % m) for m in
-                     range(metas.shape[1])] if metas is not None else []
-
-        domain = orange_domain.Domain(attr_vars, class_vars, meta_vars)
-        domain.anonymous = True
-        return domain
-
-    @staticmethod
-    def new_from_domain(domain, n_rows=0, weights=False):
+    @classmethod
+    def from_domain(cls, domain, n_rows=0, weights=False):
         """
         Construct a new `Table` with the given number of rows for the given
         domain. The optional vector of weights is initialized to 1's.
@@ -207,7 +219,7 @@ class Table(MutableSequence):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        self = Table.__new__(Table)
+        self = cls.__new__(Table)
         self.domain = domain
         self.n_rows = n_rows
         self._X = np.zeros((n_rows, len(domain.attributes)))
@@ -219,30 +231,9 @@ class Table(MutableSequence):
         self._metas = np.empty((n_rows, len(self.domain.metas)), object)
         return self
 
-    def _get_columns(self, row_indices, src_cols, n_rows):
-        if not len(src_cols):
-            return np.zeros((n_rows, 0), dtype=self._X.dtype)
 
-        n_src_attrs = len(self.domain.attributes)
-        if all(0 <= x < n_src_attrs for x in src_cols):
-            return self._X[row_indices, src_cols]
-        if all(x < 0 for x in src_cols):
-            return self._metas[row_indices, [-1 - x for x in src_cols]]
-        if all(x >= n_src_attrs for x in src_cols):
-            return self._Y[row_indices, [x - n_src_attrs for x in src_cols]]
-
-        a = np.empty((n_rows, len(src_cols)), dtype=self._X.dtype)
-        for i, col in enumerate(src_cols):
-            if col < 0:
-                a[:, i] = self._metas[row_indices, -1 - col]
-            elif col < n_src_attrs:
-                a[:, i] = self._X[row_indices, col]
-            else:
-                a[:, i] = self._Y[row_indices, col - n_src_attrs]
-        return a
-
-    @staticmethod
-    def new_from_table(domain, source, row_indices=...):
+    @classmethod
+    def from_table(cls, domain, source, row_indices=...):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -260,8 +251,34 @@ class Table(MutableSequence):
         :return: a new table
         :rtype: Orange.data.Table
         """
+
+
+        def get_columns(row_indices, src_cols, n_rows):
+            if not len(src_cols):
+                return np.zeros((n_rows, 0), dtype=source.X.dtype)
+
+            n_src_attrs = len(source.domain.attributes)
+            if all(0 <= x < n_src_attrs for x in src_cols):
+                return source.X[row_indices, src_cols]
+            if all(x < 0 for x in src_cols):
+                return source.metas[row_indices, [-1 - x for x in src_cols]]
+            if all(x >= n_src_attrs for x in src_cols):
+                return source.Y[row_indices, [x - n_src_attrs for x in
+                                              src_cols]]
+
+            a = np.empty((n_rows, len(src_cols)), dtype=source.X.dtype)
+            for i, col in enumerate(src_cols):
+                if col < 0:
+                    a[:, i] = source.metas[row_indices, -1 - col]
+                elif col < n_src_attrs:
+                    a[:, i] = source.X[row_indices, col]
+                else:
+                    a[:, i] = source.Y[row_indices, col - n_src_attrs]
+            return a
+
+
         if domain == source.domain:
-            return Table.new_from_table_rows(source, row_indices)
+            return Table.from_table_rows(source, row_indices)
 
         if isinstance(row_indices, slice):
             start, stop, stride = row_indices.indices(source._X.shape[0])
@@ -273,23 +290,18 @@ class Table(MutableSequence):
         else:
             n_rows = len(row_indices)
 
-        self = Table.__new__(Table)
+        self = cls.__new__(Table)
         self.domain = domain
         conversion = domain.get_conversion(source.domain)
-        self._X = source._get_columns(row_indices,
-                                      conversion.attributes,
-                                      n_rows)
-        self._Y = source._get_columns(row_indices,
-                                      conversion.class_vars,
-                                      n_rows)
-        self._metas = source._get_columns(row_indices,
-                                          conversion.metas,
-                                          n_rows)
+        self._X = get_columns(row_indices, conversion.attributes, n_rows)
+        self._Y = get_columns(row_indices, conversion.class_vars, n_rows)
+        self._metas = get_columns(row_indices, conversion.metas, n_rows)
         self._W = np.array(source._W[row_indices])
         return self
 
-    @staticmethod
-    def new_from_table_rows(source, row_indices):
+
+    @classmethod
+    def from_table_rows(cls, source, row_indices):
         """
         Construct a new table by selecting rows from the source table.
 
@@ -300,7 +312,7 @@ class Table(MutableSequence):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        self = Table.__new__(Table)
+        self = cls.__new__(Table)
         self.domain = source.domain
         self._X = source._X[row_indices]
         self._Y = source._Y[row_indices]
@@ -308,8 +320,9 @@ class Table(MutableSequence):
         self._W = source._W[row_indices]
         return self
 
-    @staticmethod
-    def new_from_numpy(domain, X, Y=None, metas=None, W=None):
+
+    @classmethod
+    def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -368,73 +381,18 @@ class Table(MutableSequence):
         self.n_rows = self._X.shape[0]
         return self
 
-    def is_view(self):
+
+    @classmethod
+    def from_file(cls, filename):
         """
-        Return `True` if all arrays represent a view referring to another table
+        Read a data table from a file. The path can be absolute or relative.
+        The
+
+        :param filename: File name
+        :type filename: str
+        :return: a new data table
+        :rtype: Orange.data.Table
         """
-        return ((not self._X.shape[-1] or self._X.base is not None) and
-                (not self._Y.shape[-1] or self._Y.base is not None) and
-                (not self._metas.shape[-1] or self._metas.base is not None) and
-                (not self._weights.shape[-1] or self._W.base is not None))
-
-    def is_copy(self):
-        """
-        Return `True` if the table owns its data
-        """
-        return ((not self._X.shape[-1] or self._X.base is None) and
-                (self._Y.base is None) and
-                (self._metas.base is None) and
-                (self._W.base is None))
-
-    def ensure_copy(self):
-        """
-        Ensure that the table owns its data; copy arrays when necessary
-        """
-        if self._X.base is not None:
-            self._X = self._X.copy()
-        if self._Y.base is not None:
-            self._Y = self._Y.copy()
-        if self._metas.base is not None:
-            self._metas = self._metas.copy()
-        if self._W.base is not None:
-            self._W = self._W.copy()
-
-    def getX(self):
-        return self._X
-
-    def getY(self):
-        return self._Y
-
-    def get_metas(self):
-        return self._metas
-
-    def get_weights(self):
-        return self._W
-
-    X = property(getX)
-    Y = property(getY)
-    W = property(get_weights)
-    metas = property(get_metas)
-    domain = None
-
-    columns = property(lambda self: Columns(self.domain))
-
-    def set_weights(self, weight=1):
-        """
-        Set weights of data instances; create a vector of weights if necessary.
-        """
-        if self._W.shape[-1]:
-            self._W[:] = weight
-        else:
-            self._W = np.empty(len(self))
-            self._W.fill(weight)
-
-    def has_weights(self):
-        """Return `True` if the data instances are weighed. """
-        return self._W.shape[-1] != 0
-
-    @staticmethod
-    def read_data(filename):
         for dir in dataset_dirs:
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
@@ -451,49 +409,52 @@ class Table(MutableSequence):
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" is not found'.format(absolute_filename))
         if ext == ".tab":
-            return io.TabDelimReader().read_file(absolute_filename)
+            return io.TabDelimReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
-            return io.BasketReader().read_file(absolute_filename)
+            return io.BasketReader().read_file(absolute_filename, cls)
         else:
             raise IOError(
                 'Extension "{}" is not recognized'.format(absolute_filename))
 
-    def convert_to_row(self, example, key):
+
+    # Helper function for __setitem__ and insert:
+    # Set the row of table data matrices
+    def _set_row(self, example, row):
         domain = self.domain
         if isinstance(example, Instance):
             if example.domain == domain:
                 if isinstance(example, RowInstance):
-                    self._X[key] = example._x
-                    self._Y[key] = example._y
+                    self._X[row] = example._x
+                    self._Y[row] = example._y
                 else:
-                    self._X[key] = example._values[:len(domain.attributes)]
-                    self._Y[key] = example._values[len(domain.attributes):]
-                self._metas[key] = example._metas
+                    self._X[row] = example._values[:len(domain.attributes)]
+                    self._Y[row] = example._values[len(domain.attributes):]
+                self._metas[row] = example._metas
                 return
             c = self.domain.get_conversion(example.domain)
-            self._X[key] = [example._values[i] if isinstance(i, int) else
+            self._X[row] = [example._values[i] if isinstance(i, int) else
                             (Unknown if not i else i(example))
                             for i in c.attributes]
-            self._Y[key] = [example._values[i] if isinstance(i, int) else
+            self._Y[row] = [example._values[i] if isinstance(i, int) else
                             (Unknown if not i else i(example))
                             for i in c.class_vars]
-            self._metas[key] = [example._values[i] if isinstance(i, int) else
+            self._metas[row] = [example._values[i] if isinstance(i, int) else
                                 (Unknown if not i else i(example))
                                 for i in c.metas]
         else:
-            self._X[key] = [var.to_val(val)
+            self._X[row] = [var.to_val(val)
                             for var, val in zip(domain.attributes, example)]
-            self._Y[key] = [var.to_val(val)
+            self._Y[row] = [var.to_val(val)
                             for var, val in
                             zip(domain.class_vars,
                                 example[len(domain.attributes):])]
-            self._metas[key] = Unknown
+            self._metas[row] = Unknown
 
+
+    # Helper function for __setitem__ and insert:
+    # Return a list of new attributes and column indices,
+    #  or (None, self.col_indices) if no new domain needs to be constructed
     def _compute_col_indices(self, col_idx):
-        """
-        Return a list of new attributes and column indices,
-        or (None, self.col_indices) if no new domain needs to be constructed
-        """
         if col_idx is ...:
             return None, None
         if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
@@ -520,11 +481,12 @@ class Table(MutableSequence):
             col_idx = self.domain.index(attr)
         return [attr], np.array([col_idx])
 
+
     def __getitem__(self, key):
         if isinstance(key, int):
             return RowInstance(self, key)
         if not isinstance(key, tuple):
-            return Table.new_from_table_rows(self, key)
+            return Table.from_table_rows(self, key)
 
         if len(key) != 2:
             raise IndexError("Table indices must be one- or two-dimensional")
@@ -562,14 +524,15 @@ class Table(MutableSequence):
             domain = orange_domain.Domain(r_attrs, r_classes, r_metas)
         else:
             domain = self.domain
-        return Table.new_from_table(domain, self, row_idx)
+        return Table.from_table(domain, self, row_idx)
+
 
     def __setitem__(self, key, value):
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self._X[key, :] = value
                 return
-            self.convert_to_row(value, key)
+            self._set_row(value, key)
             return
 
         if len(key) != 2:
@@ -630,6 +593,7 @@ class Table(MutableSequence):
             if len(meta_cols):
                 self._metas[row_idx, meta_cols] = value
 
+
     def __delitem__(self, key):
         if key is ...:
             key = range(len(self))
@@ -638,11 +602,10 @@ class Table(MutableSequence):
         self._metas = np.delete(self._metas, key, axis=0)
         self._W = np.delete(self._W, key, axis=0)
 
-    def clear(self):
-        del self[...]
 
     def __len__(self):
         return self._X.shape[0]
+
 
     def __str__(self):
         s = "[" + ",\n ".join(str(ex) for ex in self[:5])
@@ -650,6 +613,111 @@ class Table(MutableSequence):
             s += ",\n ..."
         s += "\n]"
         return s
+
+
+    def clear(self):
+        del self[...]
+
+
+    def extend(self, examples):
+        old_length = len(self)
+        self.resize_all(old_length + len(examples))
+        try:
+            # shortcut
+            if isinstance(examples, Table) and examples.domain == self.domain:
+                self._X[old_length:] = examples._X
+                self._Y[old_length:] = examples._Y
+                self._metas[old_length:] = examples._metas
+                if self._W.shape[-1]:
+                    if examples._W.shape[-1]:
+                        self._W[old_length:] = examples._W
+                    else:
+                        self._W[old_length:] = 1
+            else:
+                for i, example in enumerate(examples):
+                    self[old_length + i] = example
+        except Exception:
+            self.resize_all(old_length)
+            raise
+
+
+    def insert(self, key, value):
+        if key < 0:
+            key += len(self)
+        if key < 0 or key > len(self):
+            raise IndexError("Index out of range")
+        self.resize_all(len(self) + 1)
+        if key < len(self):
+            self._X[key + 1:] = self._X[key:-1]
+            self._Y[key + 1:] = self._Y[key:-1]
+            self._metas[key + 1:] = self._metas[key:-1]
+            self._W[key + 1:] = self._W[key:-1]
+        try:
+            self._set_row(value, key)
+            if self._W.shape[-1]:
+                self._W[key] = 1
+        except Exception:
+            self._X[key:-1] = self._X[key + 1:]
+            self._Y[key:-1] = self._Y[key + 1:]
+            self._metas[key:-1] = self._metas[key + 1:]
+            self._W[key:-1] = self._W[key + 1:]
+            self.resize_all(len(self) - 1)
+            raise
+
+
+    def append(self, value):
+        self.insert(len(self), value)
+
+
+    def is_view(self):
+        """
+        Return `True` if all arrays represent a view referring to another table
+        """
+        return ((not self._X.shape[-1] or self._X.base is not None) and
+                (not self._Y.shape[-1] or self._Y.base is not None) and
+                (not self._metas.shape[-1] or self._metas.base is not None) and
+                (not self._weights.shape[-1] or self._W.base is not None))
+
+
+    def is_copy(self):
+        """
+        Return `True` if the table owns its data
+        """
+        return ((not self._X.shape[-1] or self._X.base is None) and
+                (self._Y.base is None) and
+                (self._metas.base is None) and
+                (self._W.base is None))
+
+
+    def ensure_copy(self):
+        """
+        Ensure that the table owns its data; copy arrays when necessary
+        """
+        if self._X.base is not None:
+            self._X = self._X.copy()
+        if self._Y.base is not None:
+            self._Y = self._Y.copy()
+        if self._metas.base is not None:
+            self._metas = self._metas.copy()
+        if self._W.base is not None:
+            self._W = self._W.copy()
+
+
+    def set_weights(self, weight=1):
+        """
+        Set weights of data instances; create a vector of weights if necessary.
+        """
+        if self._W.shape[-1]:
+            self._W[:] = weight
+        else:
+            self._W = np.empty(len(self))
+            self._W.fill(weight)
+
+
+    def has_weights(self):
+        """Return `True` if the data instances are weighed. """
+        return self._W.shape[-1] != 0
+
 
     def resize_all(self, new_length):
         old_length = self._X.shape[0]
@@ -677,52 +745,6 @@ class Table(MutableSequence):
                     self._W.resize(old_length)
             raise
 
-    def extend(self, examples):
-        old_length = len(self)
-        self.resize_all(old_length + len(examples))
-        try:
-            # shortcut
-            if isinstance(examples, Table) and examples.domain == self.domain:
-                self._X[old_length:] = examples._X
-                self._Y[old_length:] = examples._Y
-                self._metas[old_length:] = examples._metas
-                if self._W.shape[-1]:
-                    if examples._W.shape[-1]:
-                        self._W[old_length:] = examples._W
-                    else:
-                        self._W[old_length:] = 1
-            else:
-                for i, example in enumerate(examples):
-                    self[old_length + i] = example
-        except Exception:
-            self.resize_all(old_length)
-            raise
-
-    def insert(self, key, value):
-        if key < 0:
-            key += len(self)
-        if key < 0 or key > len(self):
-            raise IndexError("Index out of range")
-        self.resize_all(len(self) + 1)
-        if key < len(self):
-            self._X[key + 1:] = self._X[key:-1]
-            self._Y[key + 1:] = self._Y[key:-1]
-            self._metas[key + 1:] = self._metas[key:-1]
-            self._W[key + 1:] = self._W[key:-1]
-        try:
-            self.convert_to_row(value, key)
-            if self._W.shape[-1]:
-                self._W[key] = 1
-        except Exception:
-            self._X[key:-1] = self._X[key + 1:]
-            self._Y[key:-1] = self._Y[key + 1:]
-            self._metas[key:-1] = self._metas[key + 1:]
-            self._W[key:-1] = self._W[key + 1:]
-            self.resize_all(len(self) - 1)
-            raise
-
-    def append(self, value):
-        self.insert(len(self), value)
 
     def random_example(self):
         n_examples = len(self)
@@ -730,16 +752,20 @@ class Table(MutableSequence):
             raise IndexError("Table is empty")
         return self[random.randint(0, n_examples - 1)]
 
+
     def total_weight(self):
         if self._W.shape[-1]:
             return sum(self._W)
         return len(self)
 
+
     def has_missing(self):
         return bn.anynan(self._X) or bn.anynan(self._Y)
 
+
     def has_missing_class(self):
         return bn.anynan(self.Y)
+
 
     def checksum(self, include_metas=True):
         cs = zlib.adler32(self._X)
@@ -749,6 +775,7 @@ class Table(MutableSequence):
         cs = zlib.adler32(self._W, cs)
         return cs
 
+
     def shuffle(self):
         # TODO: write a function in Cython that would do this in place
         ind = np.arange(self._X.shape[0])
@@ -757,6 +784,7 @@ class Table(MutableSequence):
         self._Y = self._Y[ind]
         self._metas = self._metas[ind]
         self._W = self._W[ind]
+
 
     def get_column_view(self, index):
         if not isinstance(index, int):
@@ -769,19 +797,22 @@ class Table(MutableSequence):
         else:
             return self._metas[:, -1 - index]
 
+
     def filter_is_defined(self, check=None, negate=False):
         #TODO implement checking by columns
         retain = np.logical_or(bn.anynan(self._X, axis=1),
                                bn.anynan(self._Y, axis=1))
         if not negate:
             retain = np.logical_not(retain)
-        return Table.new_from_table_rows(self, retain)
+        return Table.from_table_rows(self, retain)
+
 
     def filter_has_class(self, negate=False):
         retain = bn.anynan(self._Y, axis=1)
         if not negate:
             retain = np.logical_not(retain)
-        return Table.new_from_table_rows(self, retain)
+        return Table.from_table_rows(self, retain)
+
 
     def filter_random(self, prob, negate=False):
         retain = np.zeros(len(self), dtype=bool)
@@ -792,7 +823,8 @@ class Table(MutableSequence):
         else:
             retain[:prob] = True
         np.random.shuffle(retain)
-        return Table.new_from_table_rows(self, retain)
+        return Table.from_table_rows(self, retain)
+
 
     def filter_same_value(self, position, value, negate=False):
         if not isinstance(value, Real):
@@ -800,7 +832,8 @@ class Table(MutableSequence):
         sel = self.get_column_view(position) == value
         if negate:
             sel = np.logical_not(sel)
-        return Table.new_from_table_rows(self, sel)
+        return Table.from_table_rows(self, sel)
+
 
     def filter_values(self, filt):
         from Orange.data import filter
@@ -886,4 +919,4 @@ class Table(MutableSequence):
                     sel += col
             else:
                 raise TypeError("Invalid filter")
-        return Table.new_from_table_rows(self, sel)
+        return Table.from_table_rows(self, sel)

@@ -169,17 +169,17 @@ class TabDelimReader:
         self.reorder_values_array(table._X, table.domain.attributes)
         self.reorder_values_array(table._Y, table.domain.class_vars)
 
-    def read_file(self, filename):
+    def read_file(self, filename, cls=None):
         with open(filename) as file:
-            return self._read_file(file)
+            return self._read_file(file, cls)
 
-    def _read_file(self, file):
+    def _read_file(self, file, cls=None):
         from ..data import Table
-
+        if cls is None:
+            cls = Table
         domain = self.read_header(file)
         nExamples = self.count_lines(file)
-        table = Table.new_from_domain(domain, nExamples,
-                                      self.weight_column >= 0)
+        table = cls.from_domain(domain, nExamples, self.weight_column >= 0)
         self.read_data(file, table)
         self.reorder_values(table)
         return table
@@ -205,11 +205,13 @@ class BasketReader():
         attributes = [ContinuousVariable.make(name) for name in sorted(names)]
         return Domain(attributes)
 
-    def read_file(self, filename):
+    def read_file(self, filename, cls=None):
         with open(filename) as file:
-            return self._read_file(file)
+            return self._read_file(file, cls)
 
-    def _read_file(self, file):
+    def _read_file(self, file, cls=None):
+        if cls is None:
+            from ..data import Table as cls
         names, n_elements, n_rows = self.prescan_file(file)
         domain = self.construct_domain(names)
         data = np.ones(n_elements)
@@ -242,6 +244,4 @@ class BasketReader():
             curptr = nextptr
         X = sparse.csr_matrix((data, indices, indptr),
                               (n_rows, len(domain.variables)))
-        from ..data import Table
-
-        return Table.new_from_numpy(domain, X)
+        return cls.from_numpy(domain, X)

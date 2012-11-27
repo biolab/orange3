@@ -1031,28 +1031,28 @@ class CreateTableWithFilename(TableTests):
         reader_instance = reader_mock.return_value = \
             Mock(read_file=Mock(return_value=table_mock))
 
-        table = data.Table.read_data(self.filename)
+        table = data.Table.from_file(self.filename)
 
-        reader_instance.read_file.assert_called_with(self.filename)
+        reader_instance.read_file.assert_called_with(self.filename, data.Table)
         self.assertEqual(table, table_mock)
 
     @patch("os.path.exists", Mock(return_value=False))
     def test_raises_error_if_file_does_not_exist(self):
         with self.assertRaises(IOError):
-            data.Table.read_data(self.filename)
+            data.Table.from_file(self.filename)
 
     @patch("os.path.exists", Mock(return_value=True))
     def test_raises_error_if_file_has_unknown_extension(self):
         with self.assertRaises(IOError):
-            data.Table.read_data("file.invalid_extension")
+            data.Table.from_file("file.invalid_extension")
 
-    @patch("Orange.data.table.Table.read_data")
+    @patch("Orange.data.table.Table.from_file")
     def test_calling_new_with_string_argument_calls_read_data(self, read_data):
         data.Table(self.filename)
 
         read_data.assert_called_with(self.filename)
 
-    @patch("Orange.data.table.Table.read_data")
+    @patch("Orange.data.table.Table.from_file")
     def test_calling_new_with_keyword_argument_filename_calls_read_data(
             self, read_data):
         data.Table(filename=self.filename)
@@ -1063,44 +1063,44 @@ class CreateTableWithFilename(TableTests):
 class CreateTableWithDomain(TableTests):
     def test_creates_an_empty_table_with_given_domain(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_domain(domain)
+        table = data.Table.from_domain(domain)
 
         self.assertEqual(table.domain, domain)
 
     def test_creates_zero_filled_rows_in_X_if_domain_contains_attributes(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_domain(domain, self.nrows)
+        table = data.Table.from_domain(domain, self.nrows)
 
         self.assertEqual(table.X.shape, (self.nrows, len(domain.attributes)))
         self.assertFalse(table.X.any())
 
     def test_creates_zero_filled_rows_in_Y_if_domain_contains_class_vars(self):
         domain = self.mock_domain(with_classes=True)
-        table = data.Table.new_from_domain(domain, self.nrows)
+        table = data.Table.from_domain(domain, self.nrows)
 
         self.assertEqual(table.Y.shape, (self.nrows, len(domain.class_vars)))
         self.assertFalse(table.Y.any())
 
     def test_creates_zero_filled_rows_in_metas_if_domain_contains_metas(self):
         domain = self.mock_domain(with_metas=True)
-        table = data.Table.new_from_domain(domain, self.nrows)
+        table = data.Table.from_domain(domain, self.nrows)
 
         self.assertEqual(table.metas.shape, (self.nrows, len(domain.metas)))
         self.assertFalse(table.metas.any())
 
     def test_creates_weights_if_weights_are_true(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_domain(domain, self.nrows, True)
+        table = data.Table.from_domain(domain, self.nrows, True)
 
         self.assertEqual(table.W.shape, (self.nrows, ))
 
     def test_does_not_create_weights_if_weights_are_false(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_domain(domain, self.nrows, False)
+        table = data.Table.from_domain(domain, self.nrows, False)
 
         self.assertEqual(table.W.shape, (self.nrows, 0))
 
-    @patch("Orange.data.table.Table.new_from_domain")
+    @patch("Orange.data.table.Table.from_domain")
     def test_calling_new_with_domain_calls_new_from_domain(
             self, new_from_domain):
         domain = self.mock_domain()
@@ -1145,32 +1145,32 @@ class CreateTableWithNumpyData(TableTests):
 class CreateTableWithDomainAndNumpyData(TableTests):
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_numpy(domain, self.data)
+        table = data.Table.from_numpy(domain, self.data)
 
         self.assertEqual(table.domain, domain)
 
     def test_sets_X(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_numpy(domain, self.data)
+        table = data.Table.from_numpy(domain, self.data)
 
         np.testing.assert_almost_equal(table.X, self.data)
 
     def test_sets_Y_if_given(self):
         domain = self.mock_domain(with_classes=True)
-        table = data.Table.new_from_numpy(domain, self.data, self.class_data)
+        table = data.Table.from_numpy(domain, self.data, self.class_data)
 
         np.testing.assert_almost_equal(table.Y, self.class_data)
 
     def test_sets_metas_if_given(self):
         domain = self.mock_domain(with_metas=True)
-        table = data.Table.new_from_numpy(domain, self.data,
+        table = data.Table.from_numpy(domain, self.data,
                                           metas=self.meta_data)
 
         np.testing.assert_almost_equal(table.metas, self.meta_data)
 
     def test_sets_weights_if_given(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_numpy(domain, self.data,
+        table = data.Table.from_numpy(domain, self.data,
                                           W=self.weight_data)
 
         np.testing.assert_almost_equal(table.W, self.weight_data)
@@ -1178,14 +1178,14 @@ class CreateTableWithDomainAndNumpyData(TableTests):
     def test_splits_X_and_Y_if_given_in_same_array(self):
         joined_data = np.hstack((self.data, self.class_data))
         domain = self.mock_domain(with_classes=True)
-        table = data.Table.new_from_numpy(domain, joined_data)
+        table = data.Table.from_numpy(domain, joined_data)
 
         np.testing.assert_almost_equal(table.X, self.data)
         np.testing.assert_almost_equal(table.Y, self.class_data)
 
     def test_initializes_Y_metas_and_W_if_not_given(self):
         domain = self.mock_domain()
-        table = data.Table.new_from_numpy(domain, self.data)
+        table = data.Table.from_numpy(domain, self.data)
 
         self.assertEqual(table.Y.shape, (self.nrows, len(domain.class_vars)))
         self.assertEqual(table.metas.shape, (self.nrows, len(domain.metas)))
@@ -1197,17 +1197,17 @@ class CreateTableWithDomainAndNumpyData(TableTests):
 
         with self.assertRaises(ValueError):
             data_ = np.hstack((self.data, ones))
-            data.Table.new_from_numpy(domain, data_, self.class_data,
+            data.Table.from_numpy(domain, data_, self.class_data,
                                       self.meta_data)
 
         with self.assertRaises(ValueError):
             classes_ = np.hstack((self.class_data, ones))
-            data.Table.new_from_numpy(domain, self.data, classes_,
+            data.Table.from_numpy(domain, self.data, classes_,
                                       self.meta_data)
 
         with self.assertRaises(ValueError):
             metas_ = np.hstack((self.meta_data, ones))
-            data.Table.new_from_numpy(domain, self.data, self.class_data,
+            data.Table.from_numpy(domain, self.data, self.class_data,
                                       metas_)
 
     def test_raises_error_if_lengths_of_data_do_not_match(self):
@@ -1227,7 +1227,7 @@ class CreateTableWithDomainAndNumpyData(TableTests):
                                     np.zeros((1, len(self.metas)))))
             data.Table(domain, self.data, self.class_data, meta_data_)
 
-    @patch("Orange.data.table.Table.new_from_numpy")
+    @patch("Orange.data.table.Table.from_numpy")
     def test_calling_new_with_domain_and_numpy_arrays_calls_new_from_numpy(
             self, new_from_numpy):
         domain = self.mock_domain()
@@ -1270,26 +1270,26 @@ class CreateTableWithDomainAndTable(TableTests):
             self.domain, self.data, self.class_data, self.meta_data)
 
     def test_creates_table_with_given_domain(self):
-        new_table = data.Table.new_from_table(self.table.domain, self.table)
+        new_table = data.Table.from_table(self.table.domain, self.table)
 
         self.assertIsInstance(new_table, data.Table)
         self.assertIsNot(self.table, new_table)
         self.assertEqual(new_table.domain, self.domain)
 
     def test_can_copy_table(self):
-        new_table = data.Table.new_from_table(self.domain, self.table)
+        new_table = data.Table.from_table(self.domain, self.table)
         self.assert_table_with_filter_matches(new_table, self.table)
 
     def test_can_filter_rows_with_list(self):
         for indices in ([0], [1, 5, 6, 7]):
-            new_table = data.Table.new_from_table(
+            new_table = data.Table.from_table(
                 self.domain, self.table, row_indices=indices)
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=indices)
 
     def test_can_filter_row_with_slice(self):
         for slice_ in self.interesting_slices:
-            new_table = data.Table.new_from_table(
+            new_table = data.Table.from_table(
                 self.domain, self.table, row_indices=slice_)
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=slice_)
@@ -1300,7 +1300,7 @@ class CreateTableWithDomainAndTable(TableTests):
         new_attributes = [self.domain.attributes[i] for i in order]
         new_domain = self.create_domain(
             new_attributes, new_attributes, new_attributes)
-        new_table = data.Table.new_from_table(new_domain, self.table)
+        new_table = data.Table.from_table(new_domain, self.table)
 
         self.assert_table_with_filter_matches(
             new_table, self.table, xcols=order, ycols=order, mcols=order)
@@ -1310,7 +1310,7 @@ class CreateTableWithDomainAndTable(TableTests):
         order = [random.randrange(a, a + c) for _ in self.domain.class_vars]
         new_classes = [self.domain.class_vars[i - a] for i in order]
         new_domain = self.create_domain(new_classes, new_classes, new_classes)
-        new_table = data.Table.new_from_table(new_domain, self.table)
+        new_table = data.Table.from_table(new_domain, self.table)
 
         self.assert_table_with_filter_matches(
             new_table, self.table, xcols=order, ycols=order, mcols=order)
@@ -1320,7 +1320,7 @@ class CreateTableWithDomainAndTable(TableTests):
         order = [random.randrange(-m + 1, 0) for _ in self.domain.metas]
         new_metas = [self.domain.metas[::-1][i] for i in order]
         new_domain = self.create_domain(new_metas, new_metas, new_metas)
-        new_table = data.Table.new_from_table(new_domain, self.table)
+        new_table = data.Table.from_table(new_domain, self.table)
 
         self.assert_table_with_filter_matches(
             new_table, self.table, xcols=order, ycols=order, mcols=order)
@@ -1335,7 +1335,7 @@ class CreateTableWithDomainAndTable(TableTests):
         vars = [vars[i] for i in order]
 
         new_domain = self.create_domain(vars, vars, vars)
-        new_table = data.Table.new_from_table(new_domain, self.table)
+        new_table = data.Table.from_table(new_domain, self.table)
         self.assert_table_with_filter_matches(
             new_table, self.table, xcols=order, ycols=order, mcols=order)
 
