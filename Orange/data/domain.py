@@ -99,14 +99,14 @@ class Domain:
         A weak dictionary containing instances of :class:`DomainConversion` for
         conversion from other domains into this one. Source domains are used
         as keys. The dictionary is used for caching the conversions constructed
-        by :method:`get_conversion`.
+        by :obj:`get_conversion`.
 
     .. attribute:: last_conversion
 
-        The last conversion returned by :method:`get_conversion`. Most
+        The last conversion returned by :obj:`get_conversion`. Most
         conversions into the domain use the same domain as the source, so
         storing the last conversions saves a lookup into
-        :attribute:`known_domains`.
+        :obj:`known_domains`.
     """
 
 
