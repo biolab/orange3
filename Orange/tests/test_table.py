@@ -297,7 +297,6 @@ class TableTestCase(unittest.TestCase):
             del d[:]
             self.assertEqual(len(d), 0)
 
-    @unittest.skip("Are we going to have type checking in slice assignment?")
     def test_set_slice_example(self):
         import warnings
 
@@ -313,8 +312,10 @@ class TableTestCase(unittest.TestCase):
                              [42, 42, 42, 3, 3, 3, 2.26, 3.333, None])
             self.assertTrue(isnan(d[3, 2]))
 
-            with self.assertRaises(TypeError):
-                d[2:5] = 42
+            d[2:5] = 42
+            self.assertTrue(np.all(d.X[2:5] == 42))
+            self.assertEqual(d.Y[2, 0], 0)
+
 
     def test_multiple_indices(self):
         import warnings

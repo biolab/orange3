@@ -1,7 +1,7 @@
 import os
 import random
 import zlib
-from collections import MutableSequence, Iterable
+from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
 from numbers import Real
 import operator
@@ -104,8 +104,7 @@ class Table(MutableSequence):
     as an instance of :obj:`Domain`. The number of columns must match the
     corresponding number of variables in the description.
 
-    There are numerous ways for indexing the table. To retrieve the data, the
-    following forms of indexing can be used
+    There are multiple ways to get values or entire rows of the table.
 
     - The index can be an int, e.g. `table[7]`; the corresponding row is
       returned as an instance of :obj:RowInstance.
@@ -124,6 +123,27 @@ class Table(MutableSequence):
       a sequence, and the second index, which represent a set of columns,
       should be an int, a slice, a sequence or a numpy array. The result is
       a new table with a new domain.
+
+    Rules for setting the data are as follows.
+
+    - If there is a single index (an `int`, `slice`, or a sequence of row
+      indices) and the value being set is a single scalar, all
+      attributes (not including the classes) are set to that value. That
+      is, `table[r] = v` is equivalent to `table.X[r] = v`.
+
+    - If there is a single index and the value is a data instance
+      (:obj:`Orange.data.Instance`), it is converted into the table's domain
+      and set to the corresponding rows.
+
+    - Final option for a single index is that the value is a sequence whose
+      length equals the number of attributes and target variables. The
+      corresponding rows are set; meta attributes are set to unknowns.
+
+    - For two indices, the row can again be given as a single `int`, a
+       `slice` or a sequence of indices. Column indices can be a single
+       `int`, `str` or :obj:`Orange.data.Variable`, a sequence of them,
+       a `slice` or any iterable. The value can be a single value, or a
+       sequence of appropriate length.
 
     .. attribute:: domain
 
@@ -544,20 +564,31 @@ class Table(MutableSequence):
             if isinstance(col_idx, slice):
                 col_idx = range(*slice.indices(col_idx, self._X.shape[1]))
             if not isinstance(col_idx, str) and isinstance(col_idx, Iterable):
-                #TODO implement
-                return
-
-            if not isinstance(value, int):
-                value = self.domain[col_idx].to_val(value)
-            if not isinstance(col_idx, int):
-                col_idx = self.domain.index(col_idx)
-            if col_idx >= 0:
-                if col_idx < self._X.shape[1]:
-                    self._X[row_idx, col_idx] = value
+                col_idx = list(col_idx)
+            if not isinstance(col_idx, str) and isinstance(col_idx, Sized):
+                if isinstance(value, (Sequence, np.ndarray)):
+                    values = value
+                elif isinstance(value, Iterable):
+                    values = list(value)
                 else:
-                    self._Y[row_idx, col_idx - self._X.shape[1]] = value
+                    raise TypeError("Setting multiple values requires a "
+                                    "sequence or numpy array")
+                if len(values) != len(col_idx):
+                    raise ValueError("Invalid number of values")
             else:
-                self._metas[row_idx, -1 - col_idx] = value
+                col_idx, values = [col_idx], [value]
+            for value, col_idx in zip(values, col_idx):
+                if not isinstance(value, int):
+                    value = self.domain[col_idx].to_val(value)
+                if not isinstance(col_idx, int):
+                    col_idx = self.domain.index(col_idx)
+                if col_idx >= 0:
+                    if col_idx < self._X.shape[1]:
+                        self._X[row_idx, col_idx] = value
+                    else:
+                        self._Y[row_idx, col_idx - self._X.shape[1]] = value
+                else:
+                    self._metas[row_idx, -1 - col_idx] = value
 
         # multiple rows, multiple columns
         attributes, col_indices = self._compute_col_indices(col_idx)
@@ -616,6 +647,7 @@ class Table(MutableSequence):
 
 
     def clear(self):
+        """Remove all rows from the table."""
         del self[...]
 
 
