@@ -15,7 +15,8 @@ def AUC_binary(data, prob):
     if P == 0 or N == 0:
         raise ValueError("no positive or no negative values")
     dx, dy = 1.0 / N, 1.0 / P
-    pred = sorted([(p[1], y == 1) for y, p in zip(data.Y[:, 0], prob)], reverse=True)
+    pred = sorted([(p[1], y == 1)
+                   for y, p in zip(data.Y[:, 0], prob)], reverse=True)
     x, y = 0, 0
     auc = 0
     for p, ok in pred:

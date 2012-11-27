@@ -17,7 +17,8 @@ class CrossValidation:
     def KFold(self, k):
         n = len(self.tab)
         values = np.empty(n)
-        get_probs = isinstance(self.tab.domain.class_var, data.DiscreteVariable)
+        get_probs = isinstance(self.tab.domain.class_var,
+                               data.DiscreteVariable)
         if get_probs:
             probs = np.empty((n, len(self.tab.domain.class_var.values)))
         kf = cross_validation.KFold(n, k)
@@ -26,7 +27,8 @@ class CrossValidation:
             test = self.tab.new_from_table_rows(self.tab, test_index)
             model = self.learner(train)
             if get_probs:
-                values[test_index], probs[test_index] = model(test.X, Model.ValueProbs)
+                values[test_index], probs[test_index] = model(test.X,
+                                                              Model.ValueProbs)
             else:
                 values[test_index] = model(test.X)
         if get_probs:

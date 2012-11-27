@@ -1,5 +1,5 @@
 ## Based on PEP-354, copied and adapted from
-## http://stackoverflow.com/questions/36932/whats-the-best-way-to-implement-an-enum-in-python
+## http://stackoverflow.com/questions/36932/
 
 
 def Enum(*names):

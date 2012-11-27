@@ -51,7 +51,8 @@ class RowInstance(Instance):
 
     def get_weight(self):
         if not self.table._W:
-            raise ValueError("Instances in the referenced table have no weights")
+            raise ValueError(
+                "Instances in the referenced table have no weights")
         return self.table._W[self.row_index]
 
     def __setitem__(self, key, value):
@@ -81,13 +82,13 @@ class Columns:
 class Table(MutableSequence):
     """
     Stores data instances as a set of 2d tables representing the independent
-    variables (attributes, features) and dependent variables (classes, targets),
-    and the corresponding weights and meta attributes.
+    variables (attributes, features) and dependent variables
+    (classes, targets), and the corresponding weights and meta attributes.
 
     The data is stored in 2d numpy arrays :obj:`X`, :obj:`Y`, :obj:`W`,
     :obj:`metas`. The arrays may be dense or sparse. All arrays have the same
-    number of rows. If certain data is missing, the corresponding array has zero
-    columns.
+    number of rows. If certain data is missing, the corresponding array has
+    zero columns.
 
     Arrays can be of any type; default is `float` (that is, double precision).
     Values of discrete variables are stored as whole numbers.
@@ -149,14 +150,15 @@ class Table(MutableSequence):
     @staticmethod
     def create_anonymous_domain(X, Y=None, metas=None):
         """
-        Create a :obj:`~Orange.data.Domain` corresponding to the given numpy arrays.
+        Create a :obj:`~Orange.data.Domain` corresponding to the given
+        numpy arrays.
 
-        All attributes are assumed to be continuous and are named "Feature <n>".
-        Target variables are discrete if the all values are whole numbers
-        between 0 and 19; otherwise they are continuous. Discrete classes are
-        named "Class <n>" and continuous are named "Target <n>". Domain is
-        marked as anonymous, so data from any other domain of the same shape can
-        be converted into this one and vice-versa.
+        All attributes are assumed to be continuous and are named
+        "Feature <n>". Target variables are discrete if the all values are
+        whole numbers between 0 and 19; otherwise they are continuous. Discrete
+        classes are named "Class <n>" and continuous are named "Target <n>".
+        Domain is marked as anonymous, so data from any other domain of the
+        same shape can be converted into this one and vice-versa.
 
         :param X: attributes
         :param Y: class variables
@@ -164,19 +166,22 @@ class Table(MutableSequence):
         :return: a new domain
         :rtype: Orange.data.Domain
         """
-        attr_vars = [variable.ContinuousVariable(name="Feature %i" % (a + 1)) for a in range(X.shape[1])]
+        attr_vars = [variable.ContinuousVariable(name="Feature %i" % (a + 1))
+                     for a in range(X.shape[1])]
         class_vars = []
         if Y is not None:
             for i, class_ in enumerate(Y.T):
                 mn, mx = np.min(class_), np.max(class_)
                 if 0 <= mn and mx <= 20:
                     values = np.unique(class_)
-                    if all(int(x)==x and 0 <= x <= 19 for x in values):
+                    if all(int(x) == x and 0 <= x <= 19 for x in values):
                         mx = int(mx)
                         places = 1 + (mx >= 10)
-                        values = ["v%*i" % (places, i+1) for i in range(mx+1)]
+                        values = ["v%*i" % (places, i + 1)
+                                  for i in range(mx + 1)]
                         name = "Class %i" % (i + 1)
-                        class_vars.append(variable.DiscreteVariable(name, values))
+                        class_vars.append(
+                            variable.DiscreteVariable(name, values))
                         continue
                 class_vars.append(
                     variable.ContinuousVariable(name="Target %i" % (i + 1)))
@@ -239,8 +244,8 @@ class Table(MutableSequence):
     @staticmethod
     def new_from_table(domain, source, row_indices=...):
         """
-        Create a new table from selected columns and/or rows of an existing one.
-        The columns are chosen using a domain. The domain may also include
+        Create a new table from selected columns and/or rows of an existing
+        one. The columns are chosen using a domain. The domain may also include
         variables that do not appear in the source table; they are computed
         from source variables if possible.
 
@@ -271,9 +276,15 @@ class Table(MutableSequence):
         self = Table.__new__(Table)
         self.domain = domain
         conversion = domain.get_conversion(source.domain)
-        self._X = source._get_columns(row_indices, conversion.attributes, n_rows)
-        self._Y = source._get_columns(row_indices, conversion.class_vars, n_rows)
-        self._metas = source._get_columns(row_indices, conversion.metas, n_rows)
+        self._X = source._get_columns(row_indices,
+                                      conversion.attributes,
+                                      n_rows)
+        self._Y = source._get_columns(row_indices,
+                                      conversion.class_vars,
+                                      n_rows)
+        self._metas = source._get_columns(row_indices,
+                                          conversion.metas,
+                                          n_rows)
         self._W = np.array(source._W[row_indices])
         return self
 
@@ -300,8 +311,8 @@ class Table(MutableSequence):
     @staticmethod
     def new_from_numpy(domain, X, Y=None, metas=None, W=None):
         """
-        Construct a table from numpy arrays with the given domain. The number of
-        variables in the domain must match the number of columns in the
+        Construct a table from numpy arrays with the given domain. The number
+        of variables in the domain must match the number of columns in the
         corresponding arrays. All arrays must have the same number of rows.
         Arrays may be of different numpy types, and may be dense or sparse.
 
@@ -345,7 +356,8 @@ class Table(MutableSequence):
                     metas.shape[1], len(domain.metas))
             )
         if not X.shape[0] == Y.shape[0] == metas.shape[0] == W.shape[0]:
-            raise ValueError("Parts of data contain different numbers of rows.")
+            raise ValueError(
+                "Parts of data contain different numbers of rows.")
 
         self = Table.__new__(Table)
         self.domain = domain
@@ -443,7 +455,8 @@ class Table(MutableSequence):
         elif ext == ".basket":
             return io.BasketReader().read_file(absolute_filename)
         else:
-            raise IOError('Extension "{}" is not recognized'.format(absolute_filename))
+            raise IOError(
+                'Extension "{}" is not recognized'.format(absolute_filename))
 
     def convert_to_row(self, example, key):
         domain = self.domain
@@ -459,21 +472,28 @@ class Table(MutableSequence):
                 return
             c = self.domain.get_conversion(example.domain)
             self._X[key] = [example._values[i] if isinstance(i, int) else
-                            (Unknown if not i else i(example)) for i in c.attributes]
+                            (Unknown if not i else i(example))
+                            for i in c.attributes]
             self._Y[key] = [example._values[i] if isinstance(i, int) else
-                            (Unknown if not i else i(example)) for i in c.class_vars]
+                            (Unknown if not i else i(example))
+                            for i in c.class_vars]
             self._metas[key] = [example._values[i] if isinstance(i, int) else
-                                (Unknown if not i else i(example)) for i in c.metas]
+                                (Unknown if not i else i(example))
+                                for i in c.metas]
         else:
             self._X[key] = [var.to_val(val)
                             for var, val in zip(domain.attributes, example)]
             self._Y[key] = [var.to_val(val)
-                            for var, val in zip(domain.class_vars, example[len(domain.attributes):])]
+                            for var, val in
+                            zip(domain.class_vars,
+                                example[len(domain.attributes):])]
             self._metas[key] = Unknown
 
     def _compute_col_indices(self, col_idx):
-        """Return a list of new attributes and column indices,
-           or (None, self.col_indices) if no new domain needs to be constructed"""
+        """
+        Return a list of new attributes and column indices,
+        or (None, self.col_indices) if no new domain needs to be constructed
+        """
         if col_idx is ...:
             return None, None
         if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
@@ -517,19 +537,28 @@ class Table(MutableSequence):
                 if 0 <= col_idx < len(self.domain.attributes):
                     return Value(var, self._X[row_idx, col_idx])
                 elif col_idx >= len(self.domain.attributes):
-                    return Value(var, self._Y[row_idx, col_idx - len(self.domain.attributes)])
+                    return Value(
+                        var,
+                        self._Y[row_idx,
+                                col_idx - len(self.domain.attributes)])
                 elif col_idx < 0:
                     return Value(var, self._metas[row_idx, -1 - col_idx])
             except TypeError:
                 row_idx = [row_idx]
 
-        # multiple rows OR single row but multiple columns: construct a new table
+        # multiple rows OR single row but multiple columns:
+        # construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
         if attributes is not None:
             n_attrs = len(self.domain.attributes)
-            r_attrs = [attributes[i] for i, col in enumerate(col_indices) if 0 <= col < n_attrs]
-            r_classes = [attributes[i] for i, col in enumerate(col_indices) if col >= n_attrs]
-            r_metas = [attributes[i] for i, col in enumerate(col_indices) if col < 0]
+            r_attrs = [attributes[i]
+                       for i, col in enumerate(col_indices)
+                       if 0 <= col < n_attrs]
+            r_classes = [attributes[i]
+                         for i, col in enumerate(col_indices)
+                         if col >= n_attrs]
+            r_metas = [attributes[i]
+                       for i, col in enumerate(col_indices) if col < 0]
             domain = orange_domain.Domain(r_attrs, r_classes, r_metas)
         else:
             domain = self.domain
@@ -592,7 +621,8 @@ class Table(MutableSequence):
             if value is None:
                 value = Unknown
             if not isinstance(value, Real) and attr_cols or class_cols:
-                raise TypeError("Ordinary attributes can only have primitive values")
+                raise TypeError(
+                    "Ordinary attributes can only have primitive values")
             if len(attr_cols):
                 self._X[row_idx, attr_cols] = value
             if len(class_cols):
@@ -808,9 +838,11 @@ class Table(MutableSequence):
                 else:
                     vals = f.values
                 if conjunction:
-                    sel *= reduce(operator.add, (col == val for val in vals))
+                    sel *= reduce(operator.add,
+                                  (col == val for val in vals))
                 else:
-                    sel = reduce(operator.add, (col == val for val in vals), sel)
+                    sel = reduce(operator.add,
+                                 (col == val for val in vals), sel)
             elif isinstance(f, (filter.FilterContinuous, filter.FilterString)):
                 if isinstance(f, filter.FilterString) and not f.case_sensitive:
                     col = np.char.lower(np.array(col, dtype=str))
@@ -838,11 +870,14 @@ class Table(MutableSequence):
                 elif not isinstance(f, filter.FilterString):
                     raise TypeError("Invalid operator")
                 elif f.oper == f.Operator.Contains:
-                    col = np.fromiter((fmin in e for e in col), dtype=bool)
+                    col = np.fromiter((fmin in e for e in col),
+                                      dtype=bool)
                 elif f.oper == f.Operator.BeginsWith:
-                    col = np.fromiter((e.startswith(fmin) for e in col), dtype=bool)
+                    col = np.fromiter((e.startswith(fmin) for e in col),
+                                      dtype=bool)
                 elif f.oper == f.Operator.EndsWith:
-                    col = np.fromiter((e.endswith(fmin) for e in col), dtype=bool)
+                    col = np.fromiter((e.endswith(fmin) for e in col),
+                                      dtype=bool)
                 else:
                     raise TypeError("Invalid operator")
                 if conjunction:

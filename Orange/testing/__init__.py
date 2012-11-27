@@ -9,14 +9,16 @@ class PickleTest(unittest.TestCase):
         """ Override __eq__ for Orange objects that do not implement it"""
 
         self.add_comparator(data.DiscreteVariable,
-                            compare_members=("var_type", "name", "values", "ordered", "base_value"))
+                            compare_members=("var_type", "name", "values",
+                                             "ordered", "base_value"))
         self.add_comparator(data.ContinuousVariable,
                             compare_members=("var_type", "name"))
         self.add_comparator(data.StringVariable,
                             compare_members=("var_type", "name"))
         self.add_comparator(data.Domain,
-                            compare_members=("attributes", "class_vars", "class_var",
-                                             "variables", "metas", "anonymous"))
+                            compare_members=("attributes", "class_vars",
+                                             "class_var", "variables",
+                                             "metas", "anonymous"))
 
     old_comparators = {}
 
@@ -28,7 +30,8 @@ class PickleTest(unittest.TestCase):
             return True
 
         def hash(self):
-            return "".join(map(lambda m: str(getattr(self, m)), compare_members)).__hash__()
+            return "".join(
+                [str(getattr(self, m)) for m in compare_members]).__hash__()
 
         self.old_comparators[class_] = (class_.__eq__, class_.__hash__)
         class_.__eq__ = compare

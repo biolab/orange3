@@ -32,7 +32,8 @@ class DummyMulticlassLearner(classification.Fitter):
         prob = np.zeros((class_vars, max_vals))
         for c in range(class_vars):
             class_prob = (used_vals[c] == value[c]) * 0.8 + 0.1
-            prob[c, :] = np.hstack((class_prob, np.zeros(max_vals - len(class_prob))))
+            prob[c, :] = np.hstack((class_prob,
+                                    np.zeros(max_vals - len(class_prob))))
         return DummyMulticlassPredictor(value, prob)
 
 

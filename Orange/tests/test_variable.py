@@ -30,10 +30,16 @@ PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
     ("variable", lambda: data.DiscreteVariable()),
     ("with_name", lambda: data.DiscreteVariable(name="Feature 0")),
-    ("with_int_values", lambda: data.DiscreteVariable(name="Feature 0", values=[1, 2, 3])),
-    ("with_str_value", lambda: data.DiscreteVariable(name="Feature 0", values=["F", "M"])),
-    ("ordered", lambda: data.DiscreteVariable(name="Feature 0", values=["F", "M"], ordered=True)),
-    ("with_base_value", lambda: data.DiscreteVariable(name="Feature 0", values=["F", "M"], base_value=0)),
+    ("with_int_values", lambda: data.DiscreteVariable(name="Feature 0",
+                                                      values=[1, 2, 3])),
+    ("with_str_value", lambda: data.DiscreteVariable(name="Feature 0",
+                                                     values=["F", "M"])),
+    ("ordered", lambda: data.DiscreteVariable(name="Feature 0",
+                                              values=["F", "M"],
+                                              ordered=True)),
+    ("with_base_value", lambda: data.DiscreteVariable(name="Feature 0",
+                                                      values=["F", "M"],
+                                                      base_value=0)),
 )
 
 PickleStringVariable = create_pickling_tests(

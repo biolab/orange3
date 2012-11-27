@@ -81,12 +81,14 @@ class TabDelimReader:
                 var = StringVariable.make(name)
             else:
                 var = DiscreteVariable.make(name, tpe.split(), True)
-            var.fix_order = isinstance(var, DiscreteVariable) and not var.values
+            var.fix_order = (isinstance(var, DiscreteVariable)
+                             and not var.values)
 
             if is_class:
                 if is_meta:
-                    raise ValueError("Variable {} (column {}) is marked as "
-                                     "class and meta attribute".format(name, col))
+                    raise ValueError(
+                        "Variable {} (column {}) is marked as "
+                        "class and meta attribute".format(name, col))
                 class_vars.append(var)
                 self.classvar_columns.append((col, var.val_from_str_add))
             elif is_meta:
@@ -115,11 +117,12 @@ class TabDelimReader:
         f.readline()
         padding = [""] * self.n_columns
         if self.basket_column >= 0:
-            table._Xsparse = sparse.lil_matrix(len(_X), 100)  # TODO how many columns?!
+            # TODO how many columns?!
+            table._Xsparse = sparse.lil_matrix(len(_X), 100)
         table._metas = _metas = (
             np.empty((len(_X), len(self.meta_columns)), dtype=object))
         line_count = 0
-        _Xr = None  # To be able to delete it below even when there are no attributes
+        _Xr = None
         for lne in f:
             values = lne.strip().split()
             if not values:
@@ -175,7 +178,8 @@ class TabDelimReader:
 
         domain = self.read_header(file)
         nExamples = self.count_lines(file)
-        table = Table.new_from_domain(domain, nExamples, self.weight_column >= 0)
+        table = Table.new_from_domain(domain, nExamples,
+                                      self.weight_column >= 0)
         self.read_data(file, table)
         self.reorder_values(table)
         return table
@@ -190,7 +194,8 @@ class BasketReader():
         n_elements = 0
         n_rows = 0
         for line in file:
-            items = set(mo.group(1).strip() for mo in self.re_name.finditer(line))
+            items = set(mo.group(1).strip()
+                        for mo in self.re_name.finditer(line))
             names.update(items)
             n_elements += len(items)
             n_rows += 1
@@ -215,9 +220,11 @@ class BasketReader():
         file.seek(0)
         for row, line in enumerate(file):
             matches = [mo for mo in self.re_name.finditer(line)]
-            items = {mo.group(1).strip(): float(mo.group(3) or 1) for mo in matches}
+            items = {mo.group(1).strip(): float(mo.group(3) or 1)
+                     for mo in matches}
             if len(matches) != len(items):
-                counts = collections.Counter(mo.group(1).strip() for mo in matches)
+                counts = collections.Counter(mo.group(1).strip()
+                                             for mo in matches)
                 multiples = ["'%s'" % k for k, v in counts.items() if v > 1]
                 if len(multiples) > 1:
                     multiples.sort()
@@ -225,13 +232,16 @@ class BasketReader():
                         ", ".join(multiples[:-1]), multiples[-1])
                 else:
                     attrs = "attribute " + multiples[0]
-                warnings.warn("Ignoring multiple values for %s in row %i" % (attrs, row + 1))
+                warnings.warn(
+                    "Ignoring multiple values for %s in row %i" %
+                    (attrs, row + 1))
             nextptr = curptr + len(items)
             data[curptr:nextptr] = list(items.values())
             indices[curptr:nextptr] = [domain.index(name) for name in items]
             indptr[row + 1] = nextptr
             curptr = nextptr
-        X = sparse.csr_matrix((data, indices, indptr), (n_rows, len(domain.variables)))
+        X = sparse.csr_matrix((data, indices, indptr),
+                              (n_rows, len(domain.variables)))
         from ..data import Table
 
         return Table.new_from_numpy(domain, X)

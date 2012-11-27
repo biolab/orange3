@@ -6,7 +6,7 @@
 #   -- if not, they will find out whether the collection provides a method to
 #      construct a new collection or view based on row indices; if possible,
 #      they will construct such a list and pass it to collection
-#   -- otherwise, they construct a new collection and add examples one by one???
+#   -- otherwise, they construct a new collection and add examples one by one??
 
 # Hint: parameters can be set using introspection into method arguments
 # (set the arguments whose names match the filter's attributes)
@@ -42,11 +42,13 @@ class FilterDiscrete(ValueFilter):
 
 
 class FilterContinuous(ValueFilter):
-    def __init__(self, position, oper, min=None, max=None, case_sensitive=True, **a):
+    def __init__(self, position, oper, min=None, max=None,
+                 case_sensitive=True, **a):
         super().__init__(position)
         if a:
             if len(a) != 1 or "ref" not in a:
-                raise TypeError("FilterContinuous got unexpected keyword arguments")
+                raise TypeError(
+                    "FilterContinuous got unexpected keyword arguments")
             else:
                 min = a["ref"]
         self.min = min
@@ -64,12 +66,14 @@ class FilterContinuous(ValueFilter):
 
 
 class FilterString(ValueFilter):
-    def __init__(self, position, oper, min=None, max=None, case_sensitive=True, **a):
+    def __init__(self, position, oper, min=None, max=None,
+                 case_sensitive=True, **a):
         super().__init__(position)
         if a:
             print(a, "X")
             if len(a) != 1 or "ref" not in a:
-                raise TypeError("FilterContinuous got unexpected keyword arguments")
+                raise TypeError(
+                    "FilterContinuous got unexpected keyword arguments")
             else:
                 min = a["ref"]
         self.min = min

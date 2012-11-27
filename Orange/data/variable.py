@@ -8,8 +8,8 @@ from math import isnan, floor
 
 class Variable:
     """
-    The base class for variable descriptors, which contains the variable's name,
-    type and basic properties. The basic functions of descriptors are:
+    The base class for variable descriptors, which contains the variable's
+    name, type and basic properties. The basic functions of descriptors are:
 
     - storing additional data, like list of symbolic values,
     - conversion from textual format to floats and back,
@@ -25,8 +25,8 @@ class Variable:
 
     .. attribute:: var_type
 
-        The variable type; should be `VarTypes.Discrete`, `VarTypes.Continuous`,
-        or `VarTypes.String`.
+        The variable type; should be `VarTypes.Discrete`,
+        `VarTypes.Continuous`, or `VarTypes.String`.
 
     .. attribute:: ordered
 
@@ -78,8 +78,8 @@ class Variable:
         # TODO: do we need locking? Don't we expect the code to be reentrant?
 
         # TODO: the original intention was to prevent deadlocks. Locks block,
-        #       we would need more like a semaphore. But then - which reasonable
-        #       use of get_value_from can lead to deadlocks?!
+        #       we would need more like a semaphore. But then - which
+        #       reasonable use of get_value_from can lead to deadlocks?!
 
     def compute_value(self, inst):
         """
@@ -103,7 +103,8 @@ class Variable:
 
         Derived classes should overload the function.
         """
-        raise RuntimeError("variable descriptors should overload is_primitive()")
+        raise RuntimeError(
+            "variable descriptors should overload is_primitive()")
 
     def repr_val(self, val):
         """
@@ -120,8 +121,8 @@ class Variable:
     def __str__(self):
         """
         Return a representation of the variable, like,
-        `'DiscreteVariable("gender")'`. Derived classes may overload this method
-        to provide a more informative representation.
+        `'DiscreteVariable("gender")'`. Derived classes may overload this
+        method to provide a more informative representation.
         """
         return "{}('{}')".format(self.__class__.__name__, self.name)
 
@@ -168,7 +169,7 @@ class DiscreteVariable(Variable):
     def __str__(self):
         """
         Give a string representation of the variable, for instance,
-        `"DiscreteVariable('Gender', values=['male', 'female'], base_value=1)"`.
+        `"DiscreteVariable('Gender', values=['male', 'female'])"`.
         """
         args = "values=[" + ", ".join(self.values[:5]) +\
                "..." * (len(self.values) > 5) + "]"
@@ -246,17 +247,17 @@ class DiscreteVariable(Variable):
     def make(name, values=(), ordered=False, base_value=-1):
         """
         Return a variable with the given name and other properties. The method
-        first looks for a useful existing variable. First, the existing variable
-        must have the same name and both variables must have either ordered or
-        unordered values. If values are ordered, the order must be compatible:
-        all common values must have the same order. If values are unordered, the
-        existing variable must have at least one common value with the new
-        one, except when any of the two lists of values is empty.
+        first looks for a useful existing variable. First, the existing
+        variable must have the same name and both variables must have either
+        ordered or unordered values. If values are ordered, the order must be
+        compatible: all common values must have the same order. If values are
+        unordered, the existing variable must have at least one common value
+        with the new one, except when any of the two lists of values is empty.
 
         If a compatible variable is find, it is returned, with missing values
         appended to the end of the list. If there is no explicit order, the
-        values are ordered using :obj:`ordered_values`. Otherwise, it constructs
-        and returns a new variable descriptor.
+        values are ordered using :obj:`ordered_values`. Otherwise, it
+        constructs and returns a new variable descriptor.
 
         :param name: the name of the variable
         :type name: str
@@ -268,7 +269,8 @@ class DiscreteVariable(Variable):
         :type base_value: int
         :returns: an existing compatible variable or `None `
         """
-        var = DiscreteVariable.find_compatible(name, values, ordered, base_value)
+        var = DiscreteVariable.find_compatible(name, values, ordered,
+                                               base_value)
         if var:
             return var
         if not ordered:
@@ -283,8 +285,8 @@ class DiscreteVariable(Variable):
         """
         Return a compatible existing value, or `None` if there is None.
         See :obj:`make` for details; this function differs by returning `None`
-        instead of constructing a new descriptor. (Method :obj:`make` calls this
-        function.)
+        instead of constructing a new descriptor. (Method :obj:`make` calls
+        this function.)
 
         :param name: the name of the variable
         :type name: str
@@ -304,7 +306,8 @@ class DiscreteVariable(Variable):
             values = DiscreteVariable.ordered_values(values)
         for var in existing:
             if (var.ordered != ordered or
-                    var.base_value != -1 and var.values[var.base_value] != base_rep):
+                    var.base_value != -1
+                    and var.values[var.base_value] != base_rep):
                 continue
             if ordered:
                 i = 0

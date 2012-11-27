@@ -41,13 +41,16 @@ class DomainConversion:
         Compute the conversion indices from the given `source` to `destination`
         """
         self.source = source
-        self.attributes = [source.index(var) if var in source else var.get_value_from
-                           for var in destination.attributes]
-        self.class_vars = [source.index(var) if var in source else var.get_value_from
-                           for var in destination.class_vars]
+        self.attributes = [
+            source.index(var) if var in source
+            else var.get_value_from for var in destination.attributes]
+        self.class_vars = [
+            source.index(var) if var in source
+            else var.get_value_from for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
-        self.metas = [source.index(var) if var in source else var.get_value_from
-                      for var in destination.metas]
+        self.metas = [
+            source.index(var) if var in source
+            else var.get_value_from for var in destination.metas]
 
 
 class Domain:
@@ -144,20 +147,23 @@ class Domain:
                         lst[i] = source[var]
                     else:
                         raise TypeError(
-                            "descriptors must be instances of Variable, not '%s'"
-                            % type(var).__name__)
+                            "descriptors must be instances of Variable, "
+                            "not '%s'" % type(var).__name__)
 
         # Store everything
         self.attributes = tuple(attributes)
         self.class_vars = tuple(class_vars)
         self._variables = self.attributes + self.class_vars
         self._metas = tuple(metas)
-        self.class_var = self.class_vars[0] if len(self.class_vars) == 1 else None
+        self.class_var = \
+            self.class_vars[0] if len(self.class_vars) == 1 else None
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        self.indices = {var.name: idx for idx, var in enumerate(self._variables)}
-        self.indices.update((var.name, -1 - idx) for idx, var in enumerate(metas))
+        self.indices = {var.name: idx
+                        for idx, var in enumerate(self._variables)}
+        self.indices.update((var.name, -1 - idx)
+                            for idx, var in enumerate(metas))
 
         self.anonymous = False
         self.known_domains = weakref.WeakKeyDictionary()
@@ -200,12 +206,13 @@ class Domain:
                 for each in chain(self.variables, self.metas):
                     if each is var:
                         return var
-                raise IndexError("Variable '%s' is not in the domain", var.name)
+                raise IndexError(
+                    "Variable '%s' is not in the domain", var.name)
             else:
                 return var
 
-        raise TypeError("Expected str, int or Variable, got '%s'" %
-                        type(var).__name__)
+        raise TypeError(
+            "Expected str, int or Variable, got '%s'" % type(var).__name__)
 
     def __len__(self):
         """Return the number of variables (features and class attributes)"""
@@ -224,13 +231,15 @@ class Domain:
 
     def __contains__(self, item):
         """
-        Return `True` if the item (`str`, `int`, :class:`Variable`) is in the domain.
+        Return `True` if the item (`str`, `int`, :class:`Variable`) is
+        in the domain.
         """
         if isinstance(item, str):
             return item in self.indices
         if isinstance(item, Variable) and not item.name in self.indices:
             return False
-            # ... but not the opposite! It may just be a variable with the same name
+            # ... but not the opposite!
+            # It may just be a variable with the same name
         try:
             self.var_from_domain(item, True)
             return True
@@ -289,25 +298,29 @@ class Domain:
         """
         Return `True` if domain has any discrete attributes.
 
-        :param include_class: if `True` (default is `False`), the check includes
-            the class attribute(s)
+        :param include_class: if `True` (default is `False`), the check
+            includes the class attribute(s)
         """
         if not include_class:
-            return any(isinstance(var, DiscreteVariable) for var in self.attributes)
+            return any(isinstance(var, DiscreteVariable)
+                       for var in self.attributes)
         else:
-            return any(isinstance(var, DiscreteVariable) for var in self.variables)
+            return any(isinstance(var, DiscreteVariable)
+                       for var in self.variables)
 
     def has_continuous_attributes(self, include_class=False):
         """
         Return `True` if domain has any continuous attributes.
 
-        :param include_class: if `True` (default is `False`), the check includes
-            the class attribute(s)
+        :param include_class: if `True` (default is `False`), the check
+            includes the class attribute(s)
         """
         if not include_class:
-            return any(isinstance(var, ContinuousVariable) for var in self.attributes)
+            return any(isinstance(var, ContinuousVariable)
+                       for var in self.attributes)
         else:
-            return any(isinstance(var, ContinuousVariable) for var in self.variables)
+            return any(isinstance(var, ContinuousVariable)
+                       for var in self.variables)
 
     def get_conversion(self, source):
         """
@@ -345,7 +358,9 @@ class Domain:
             metas = [inst._values[i] if isinstance(i, int) else
                      (Unknown if not i else i(inst)) for i in c.metas]
         else:
-            values = [var.to_val(val) for var, val in zip(self._variables, inst)]
-            metas = [Unknown if var.is_primitive else None for var in self._metas]
+            values = [var.to_val(val)
+                      for var, val in zip(self._variables, inst)]
+            metas = [Unknown if var.is_primitive else None
+                     for var in self._metas]
             # Let np.array decide dtype for values
         return np.array(values), np.array(metas, dtype=object)

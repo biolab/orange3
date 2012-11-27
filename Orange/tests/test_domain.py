@@ -4,12 +4,15 @@ from Orange.testing import create_pickling_tests
 from Orange import data
 
 age = data.ContinuousVariable(name="AGE")
-gender = data.DiscreteVariable(name="Gender", values=["M", "F"])
+gender = data.DiscreteVariable(name="Gender",
+                               values=["M", "F"])
 incomeA = data.ContinuousVariable(name="AGE")
 income = data.ContinuousVariable(name="income")
-education = data.DiscreteVariable(name="education", values=["GS", "HS", "C"])
+education = data.DiscreteVariable(name="education",
+                                  values=["GS", "HS", "C"])
 ssn = data.StringVariable(name="SSN")
-race = data.DiscreteVariable(name="race", values=["White", "Hypsanic", "African", "Other"])
+race = data.DiscreteVariable(name="race",
+                             values=["White", "Hypsanic", "African", "Other"])
 
 PickleDomain = create_pickling_tests(
     "PickleDomain",
@@ -17,11 +20,16 @@ PickleDomain = create_pickling_tests(
     ("with_continuous_variable", lambda: data.Domain([age])),
     ("with_discrete_variable", lambda: data.Domain([gender])),
     ("with_mixed_variables", lambda: data.Domain([age, gender])),
-    ("with_continuous_class", lambda: data.Domain([age, gender], [incomeA])),
-    ("with_discrete_class", lambda: data.Domain([age, gender], [education])),
-    ("with_multiple_classes", lambda: data.Domain([age, gender], [incomeA, education])),
+    ("with_continuous_class", lambda: data.Domain([age, gender],
+                                                  [incomeA])),
+    ("with_discrete_class", lambda: data.Domain([age, gender],
+                                                [education])),
+    ("with_multiple_classes", lambda: data.Domain([age, gender],
+                                                  [incomeA, education])),
     ("with_metas", lambda: data.Domain([age, gender], metas=[ssn])),
-    ("with_class_and_metas", lambda: data.Domain([age, gender], [incomeA, education], [ssn])),
+    ("with_class_and_metas", lambda: data.Domain([age, gender],
+                                                 [incomeA, education],
+                                                 [ssn])),
 )
 
 
@@ -34,7 +42,8 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race,))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
+        self.assertEqual(d.indices,
+                         {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
 
     def test_init_class_list(self):
         attributes = (age, gender, income)
@@ -44,7 +53,8 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race,))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
+        self.assertEqual(d.indices,
+                         {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
 
     def test_init_no_class(self):
         attributes = (age, gender, income)
@@ -54,7 +64,8 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, None)
         self.assertEqual(d.class_vars, ())
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2})
+        self.assertEqual(d.indices,
+                         {"AGE": 0, "Gender": 1, "income": 2})
 
     def test_init_no_class_false(self):
         attributes = (age, gender, income)
@@ -64,7 +75,8 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, None)
         self.assertEqual(d.class_vars, ())
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2})
+        self.assertEqual(d.indices,
+                         {"AGE": 0, "Gender": 1, "income": 2})
 
     def test_init_multi_class(self):
         attributes = (age, gender, income)
@@ -74,8 +86,9 @@ class TestDomainInit(unittest.TestCase):
         self.assertIsNone(d.class_var)
         self.assertEqual(d.class_vars, (education, race))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2,
-                                     "education": 3, "race": 4})
+        self.assertEqual(d.indices,
+                         {"AGE": 0, "Gender": 1, "income": 2,
+                          "education": 3, "race": 4})
 
     def test_init_source(self):
         attributes = (age, gender, income)
@@ -245,8 +258,10 @@ class TestDomainInit(unittest.TestCase):
             (((gender, income), None), "[Gender, income]"),
             (((gender, income), age), "[Gender, income | AGE]"),
             (((gender,), (age, income)), "[Gender | AGE, income]"),
-            (((gender,), (age, income), (ssn,)), "[Gender | AGE, income] {SSN}"),
-            (((gender,), (age, income), (ssn, race)), "[Gender | AGE, income] {SSN, race}"),
+            (((gender,), (age, income), (ssn,)),
+             "[Gender | AGE, income] {SSN}"),
+            (((gender,), (age, income), (ssn, race)),
+             "[Gender | AGE, income] {SSN, race}"),
             (((), (), (ssn, race)), "[] {SSN, race}"),
         )
 
@@ -254,40 +269,68 @@ class TestDomainInit(unittest.TestCase):
             self.assertEqual(str(data.Domain(*args)), printout)
 
     def test_has_discrete(self):
-        self.assertFalse(data.Domain([]).has_discrete_attributes())
-        self.assertFalse(data.Domain([], [age]).has_discrete_attributes())
-        self.assertFalse(data.Domain([], race).has_discrete_attributes())
+        self.assertFalse(
+            data.Domain([]).has_discrete_attributes())
+        self.assertFalse(
+            data.Domain([], [age]).has_discrete_attributes())
+        self.assertFalse(
+            data.Domain([], race).has_discrete_attributes())
 
-        self.assertFalse(data.Domain([age], None).has_discrete_attributes())
-        self.assertTrue(data.Domain([race], None).has_discrete_attributes())
-        self.assertTrue(data.Domain([age, race], None).has_discrete_attributes())
-        self.assertTrue(data.Domain([race, age], None).has_discrete_attributes())
+        self.assertFalse(
+            data.Domain([age], None).has_discrete_attributes())
+        self.assertTrue(
+            data.Domain([race], None).has_discrete_attributes())
+        self.assertTrue(
+            data.Domain([age, race], None).has_discrete_attributes())
+        self.assertTrue(
+            data.Domain([race, age], None).has_discrete_attributes())
 
-        self.assertFalse(data.Domain([], [age]).has_discrete_attributes(True))
-        self.assertTrue(data.Domain([], [race]).has_discrete_attributes(True))
-        self.assertFalse(data.Domain([age], None).has_discrete_attributes(True))
-        self.assertTrue(data.Domain([race], None).has_discrete_attributes(True))
-        self.assertTrue(data.Domain([age], race).has_discrete_attributes(True))
-        self.assertTrue(data.Domain([race], age).has_discrete_attributes(True))
-        self.assertTrue(data.Domain([], [race, age]).has_discrete_attributes(True))
+        self.assertFalse(
+            data.Domain([], [age]).has_discrete_attributes(True))
+        self.assertTrue(
+            data.Domain([], [race]).has_discrete_attributes(True))
+        self.assertFalse(
+            data.Domain([age], None).has_discrete_attributes(True))
+        self.assertTrue(
+            data.Domain([race], None).has_discrete_attributes(True))
+        self.assertTrue(
+            data.Domain([age], race).has_discrete_attributes(True))
+        self.assertTrue(
+            data.Domain([race], age).has_discrete_attributes(True))
+        self.assertTrue(
+            data.Domain([], [race, age]).has_discrete_attributes(True))
 
     def test_has_continuous(self):
-        self.assertFalse(data.Domain([]).has_continuous_attributes())
-        self.assertFalse(data.Domain([], [age]).has_continuous_attributes())
-        self.assertFalse(data.Domain([], [race]).has_continuous_attributes())
+        self.assertFalse(
+            data.Domain([]).has_continuous_attributes())
+        self.assertFalse(
+            data.Domain([], [age]).has_continuous_attributes())
+        self.assertFalse(
+            data.Domain([], [race]).has_continuous_attributes())
 
-        self.assertTrue(data.Domain([age], None).has_continuous_attributes())
-        self.assertFalse(data.Domain([race], None).has_continuous_attributes())
-        self.assertTrue(data.Domain([age, race], None).has_continuous_attributes())
-        self.assertTrue(data.Domain([race, age], None).has_continuous_attributes())
+        self.assertTrue(
+            data.Domain([age], None).has_continuous_attributes())
+        self.assertFalse(
+            data.Domain([race], None).has_continuous_attributes())
+        self.assertTrue(
+            data.Domain([age, race], None).has_continuous_attributes())
+        self.assertTrue(
+            data.Domain([race, age], None).has_continuous_attributes())
 
-        self.assertTrue(data.Domain([], [age]).has_continuous_attributes(True))
-        self.assertFalse(data.Domain([], [race]).has_continuous_attributes(True))
-        self.assertTrue(data.Domain([age], None).has_continuous_attributes(True))
-        self.assertFalse(data.Domain([race], None).has_continuous_attributes(True))
-        self.assertTrue(data.Domain([age], race).has_continuous_attributes(True))
-        self.assertTrue(data.Domain([race], age).has_continuous_attributes(True))
-        self.assertTrue(data.Domain([], [race, age]).has_continuous_attributes(True))
+        self.assertTrue(
+            data.Domain([], [age]).has_continuous_attributes(True))
+        self.assertFalse(
+            data.Domain([], [race]).has_continuous_attributes(True))
+        self.assertTrue(
+            data.Domain([age], None).has_continuous_attributes(True))
+        self.assertFalse(
+            data.Domain([race], None).has_continuous_attributes(True))
+        self.assertTrue(
+            data.Domain([age], race).has_continuous_attributes(True))
+        self.assertTrue(
+            data.Domain([race], age).has_continuous_attributes(True))
+        self.assertTrue(
+            data.Domain([], [race, age]).has_continuous_attributes(True))
 
     def test_get_conversion(self):
         d = data.Domain((age, gender, income), metas=(ssn, race))

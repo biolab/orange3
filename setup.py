@@ -11,7 +11,8 @@ VERSION = '3.0'
 ISRELEASED = False
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
-LONG_DESCRIPTION = open(os.path.join(os.path.dirname(__file__), 'README.txt')).read()
+README_FILE = os.path.join(os.path.dirname(__file__), 'README.txt')
+LONG_DESCRIPTION = open(README_FILE).read()
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'contact@orange.biolab.si'
 URL = 'http://orange.biolab.si/'
@@ -31,7 +32,8 @@ CLASSIFIERS = (
     'Environment :: Plugins',
     'Programming Language :: Python',
     'Framework :: Orange',
-    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'License :: OSI Approved :: '
+    'GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: POSIX',
     'Operating System :: Microsoft :: Windows',
     'Topic :: Scientific/Engineering :: Artificial Intelligence',
@@ -56,7 +58,9 @@ def hg_revision():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
+        out = subprocess.Popen(cmd,
+                               stdout=subprocess.PIPE,
+                               env=env).communicate()[0]
         return out
 
     try:
@@ -110,11 +114,6 @@ INSTALL_REQUIRES = (
     'bottleneck'
 )
 
-# TODO: Use entry points for automatic script creation
-# http://packages.python.org/distribute/setuptools.html#automatic-script-creation
-ENTRY_POINTS = {
-}
-
 
 def setup_package():
     write_version_py()
@@ -130,9 +129,13 @@ def setup_package():
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
-        packages=["Orange", "Orange.classification", "Orange.data", "Orange.misc", "Orange.testing", "Orange.tests"],
+        packages=["Orange",
+                  "Orange.classification",
+                  "Orange.data",
+                  "Orange.misc",
+                  "Orange.testing",
+                  "Orange.tests"],
         install_requires=INSTALL_REQUIRES,
-        entry_points=ENTRY_POINTS,
         zip_safe=False,
     )
 

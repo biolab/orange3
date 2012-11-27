@@ -63,21 +63,21 @@ class Instance:
     def __str__(self):
         res = "["
         res += ", ".join(
-            var.str_val(value) for var, value in zip(self.domain.attributes,
-                                                     self._x[:5]))
+            var.str_val(value)
+            for var, value in zip(self.domain.attributes, self._x[:5]))
         n_attrs = len(self.domain.attributes)
         if n_attrs > 5:
             res += ", ..."
         if self.domain.class_vars:
             res += " | " + ", ".join(
-                var.str_val(value) for var, value in zip(self.domain.class_vars,
-                                                         self._y[:5]))
+                var.str_val(value)
+                for var, value in zip(self.domain.class_vars, self._y[:5]))
         res += "]"
         if self.domain.metas:
             res += " {"
             res += ", ".join(
-                var.str_val(value) for var, value in zip(self.domain.metas,
-                                                         self._metas[:5]))
+                var.str_val(value)
+                for var, value in zip(self.domain.metas, self._metas[:5]))
             if len(self._metas) > 5:
                 res += ", ..."
             res += "}"
@@ -120,7 +120,9 @@ class Instance:
             if not (isnan(v1) or isnan(v2) or v1 == v2):
                 return False
         for m1, m2 in zip(self._metas, other._metas):
-            if not (m1 == m2 or isnan(m1) or m1 is None or isnan(m2) or m2 is None):
+            if not (m1 == m2
+                    or isnan(m1) or m1 is None
+                    or isnan(m2) or m2 is None):
                 return False
         return True
 

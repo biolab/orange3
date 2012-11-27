@@ -80,7 +80,9 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         attributes = ["Feature %i" % i for i in range(attr)]
         classes = ["Class %i" % i for i in range(vars)]
         attr_vars = [data.DiscreteVariable(name=a) for a in attributes]
-        class_vars = [data.DiscreteVariable(name=c, values=range(class_var_domain)) for c in classes]
+        class_vars = [data.DiscreteVariable(name=c,
+                                            values=range(class_var_domain))
+                      for c in classes]
         meta_vars = []
         self.domain = data.Domain(attr_vars, class_vars, meta_vars)
         self.x = np.random.random_integers(0, 1, (rows, attr))

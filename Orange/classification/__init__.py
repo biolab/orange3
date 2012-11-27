@@ -23,6 +23,8 @@ class Fitter:
 
 
 class Model:
+    supports_multiclass = False
+    Y = None
     Value = 0
     Probs = 1
     ValueProbs = 2
@@ -80,7 +82,8 @@ class Model:
                 max_card = max(len(c.values) for c in self.domain.class_vars)
                 probs = np.zeros(value.shape + (max_card,), float)
                 for i, cvar in enumerate(self.domain.class_vars):
-                    probs[i] = bn.bincount(np.atleast_2d(value[:, i]), max_card)
+                    probs[i] = bn.bincount(np.atleast_2d(value[:, i]),
+                                           max_card)
             else:
                 probs = bn.bincount(np.atleast_2d(value),
                                     len(self.domain.class_var.values))
