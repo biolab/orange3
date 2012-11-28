@@ -502,6 +502,35 @@ class Table(MutableSequence):
         return [attr], np.array([col_idx])
 
 
+    # A helper function for extend and insert
+    # Resize _X, _Y, _metas and _W.
+    def _resize_all(self, new_length):
+        old_length = self._X.shape[0]
+        if old_length == new_length:
+            return
+        try:
+            self._X.resize(new_length, self._X.shape[1])
+            self._Y.resize(new_length, self._Y.shape[1])
+            self._metas.resize(new_length, self._metas.shape[1])
+            if self._W.ndim == 2:
+                self._W.resize((new_length, 0))
+            else:
+                self._W.resize(new_length)
+        except Exception:
+            if self._X.shape[0] == new_length:
+                self._X.resize(old_length, self._X.shape[1])
+            if self._Y.shape[0] == new_length:
+                self._Y.resize(old_length, self._Y.shape[1])
+            if self._metas.shape[0] == new_length:
+                self._metas.resize(old_length, self._metas.shape[1])
+            if self._W.shape[0] == new_length:
+                if self._W.ndim == 2:
+                    self._W.resize((old_length, 0))
+                else:
+                    self._W.resize(old_length)
+            raise
+
+
     def __getitem__(self, key):
         if isinstance(key, int):
             return RowInstance(self, key)
@@ -651,54 +680,76 @@ class Table(MutableSequence):
         del self[...]
 
 
-    def extend(self, examples):
+    def append(self, instance):
+        """
+        Append a data instance to the table.
+
+        :param instance: a data instance
+        :type instance: Orange.data.Instance or a sequence of values
+        """
+        self.insert(len(self), instance)
+
+
+    def insert(self, row, instance):
+        """
+        Insert a data instance into the table.
+
+        :param row: row index
+        :type row: int
+        :param instance: a data instance
+        :type instance: Orange.data.Instance or a sequence of values
+        """
+        if row < 0:
+            row += len(self)
+        if row < 0 or row > len(self):
+            raise IndexError("Index out of range")
+        self._resize_all(len(self) + 1)
+        if row < len(self):
+            self._X[row + 1:] = self._X[row:-1]
+            self._Y[row + 1:] = self._Y[row:-1]
+            self._metas[row + 1:] = self._metas[row:-1]
+            self._W[row + 1:] = self._W[row:-1]
+        try:
+            self._set_row(instance, row)
+            if self._W.shape[-1]:
+                self._W[row] = 1
+        except Exception:
+            self._X[row:-1] = self._X[row + 1:]
+            self._Y[row:-1] = self._Y[row + 1:]
+            self._metas[row:-1] = self._metas[row + 1:]
+            self._W[row:-1] = self._W[row + 1:]
+            self._resize_all(len(self) - 1)
+            raise
+
+    def extend(self, instances):
+        """
+        Extend the table with the given instances. The instances can be given
+        as a table of the same or a different domain, or a sequence. In the
+        latter case, each instances can be given as :obj:~Orange.data.Instance
+        or a sequence of values (e.g. list, tuple, numpy.array).
+
+        :param instances: additional instances
+        :type instances: Orange.data.Table or a sequence of instances
+        """
         old_length = len(self)
-        self.resize_all(old_length + len(examples))
+        self._resize_all(old_length + len(instances))
         try:
             # shortcut
-            if isinstance(examples, Table) and examples.domain == self.domain:
-                self._X[old_length:] = examples._X
-                self._Y[old_length:] = examples._Y
-                self._metas[old_length:] = examples._metas
+            if isinstance(instances, Table) and instances.domain == self.domain:
+                self._X[old_length:] = instances._X
+                self._Y[old_length:] = instances._Y
+                self._metas[old_length:] = instances._metas
                 if self._W.shape[-1]:
-                    if examples._W.shape[-1]:
-                        self._W[old_length:] = examples._W
+                    if instances._W.shape[-1]:
+                        self._W[old_length:] = instances._W
                     else:
                         self._W[old_length:] = 1
             else:
-                for i, example in enumerate(examples):
+                for i, example in enumerate(instances):
                     self[old_length + i] = example
         except Exception:
-            self.resize_all(old_length)
+            self._resize_all(old_length)
             raise
-
-
-    def insert(self, key, value):
-        if key < 0:
-            key += len(self)
-        if key < 0 or key > len(self):
-            raise IndexError("Index out of range")
-        self.resize_all(len(self) + 1)
-        if key < len(self):
-            self._X[key + 1:] = self._X[key:-1]
-            self._Y[key + 1:] = self._Y[key:-1]
-            self._metas[key + 1:] = self._metas[key:-1]
-            self._W[key + 1:] = self._W[key:-1]
-        try:
-            self._set_row(value, key)
-            if self._W.shape[-1]:
-                self._W[key] = 1
-        except Exception:
-            self._X[key:-1] = self._X[key + 1:]
-            self._Y[key:-1] = self._Y[key + 1:]
-            self._metas[key:-1] = self._metas[key + 1:]
-            self._W[key:-1] = self._W[key + 1:]
-            self.resize_all(len(self) - 1)
-            raise
-
-
-    def append(self, value):
-        self.insert(len(self), value)
 
 
     def is_view(self):
@@ -751,34 +802,9 @@ class Table(MutableSequence):
         return self._W.shape[-1] != 0
 
 
-    def resize_all(self, new_length):
-        old_length = self._X.shape[0]
-        if old_length == new_length:
-            return
-        try:
-            self._X.resize(new_length, self._X.shape[1])
-            self._Y.resize(new_length, self._Y.shape[1])
-            self._metas.resize(new_length, self._metas.shape[1])
-            if self._W.ndim == 2:
-                self._W.resize((new_length, 0))
-            else:
-                self._W.resize(new_length)
-        except Exception:
-            if self._X.shape[0] == new_length:
-                self._X.resize(old_length, self._X.shape[1])
-            if self._Y.shape[0] == new_length:
-                self._Y.resize(old_length, self._Y.shape[1])
-            if self._metas.shape[0] == new_length:
-                self._metas.resize(old_length, self._metas.shape[1])
-            if self._W.shape[0] == new_length:
-                if self._W.ndim == 2:
-                    self._W.resize((old_length, 0))
-                else:
-                    self._W.resize(old_length)
-            raise
-
-
     def random_example(self):
+        # TODO: this is unnecessary, let's remove it
+        """Return a random example from the table"""
         n_examples = len(self)
         if not n_examples:
             raise IndexError("Table is empty")
@@ -786,20 +812,29 @@ class Table(MutableSequence):
 
 
     def total_weight(self):
+        """
+        Return the total weight of instances in the table, or their number if
+        they are unweighted.
+        """
         if self._W.shape[-1]:
             return sum(self._W)
         return len(self)
 
 
     def has_missing(self):
+        """Return `True` if there are any missing attribute or class values."""
         return bn.anynan(self._X) or bn.anynan(self._Y)
 
 
     def has_missing_class(self):
+        """Return `True` if there are any missing class values."""
         return bn.anynan(self.Y)
 
 
     def checksum(self, include_metas=True):
+        # TODO: do I remember correctly that Anze says it doesn't work
+        # Why, and should we fix it or remove it?
+        """Return a checksum over X, Y, metas and W."""
         cs = zlib.adler32(self._X)
         cs = zlib.adler32(self._Y, cs)
         if include_metas:
@@ -809,7 +844,7 @@ class Table(MutableSequence):
 
 
     def shuffle(self):
-        # TODO: write a function in Cython that would do this in place
+        """Randomly shuffle the rows of the table."""
         ind = np.arange(self._X.shape[0])
         np.random.shuffle(ind)
         self._X = self._X[ind]
@@ -819,6 +854,13 @@ class Table(MutableSequence):
 
 
     def get_column_view(self, index):
+        """
+        Return a vector - as a view, not a copy - with a column of the table.
+
+        :param index: the index of the column
+        :type index: int, str or Orange.data.Variable
+        :return: one-dimensional numpy array
+        """
         if not isinstance(index, int):
             index = self.domain.index(index)
         if index >= 0:
@@ -830,16 +872,40 @@ class Table(MutableSequence):
             return self._metas[:, -1 - index]
 
 
-    def filter_is_defined(self, check=None, negate=False):
-        #TODO implement checking by columns
-        retain = np.logical_or(bn.anynan(self._X, axis=1),
-                               bn.anynan(self._Y, axis=1))
+    def filter_is_defined(self, columns=None, negate=False):
+        """
+        Extract rows without undefined values.
+
+        :param columns: optional list of columns that are checked for unknowns
+        :type columns: sequence of ints, variable names or descriptors
+        :param negate: invert the selection
+        :type negate: bool
+        :return: a new Table
+        :rtype: Orange.data.Table
+        """
+        if columns is None:
+            retain = np.logical_or(bn.anynan(self._X, axis=1),
+                                   bn.anynan(self._Y, axis=1))
+        else:
+            retain = np.zeros(len(self), dtype=bool)
+            for column in columns:
+                retain = np.logical_or(retain,
+                                       bn.anynan(self.get_column_view(column)))
         if not negate:
             retain = np.logical_not(retain)
         return Table.from_table_rows(self, retain)
 
 
     def filter_has_class(self, negate=False):
+        """
+        Return rows with known class attribute. If there are multiple classes,
+        all must be defined.
+
+        :param negate: invert the selection
+        :type negate: bool
+        :return: new table
+        :rtype: Orange.data.Table
+        """
         retain = bn.anynan(self._Y, axis=1)
         if not negate:
             retain = np.logical_not(retain)
@@ -847,6 +913,16 @@ class Table(MutableSequence):
 
 
     def filter_random(self, prob, negate=False):
+        """
+        Return a random selection of rows.
+
+        :param prob: the proportion or the number (if above 1) of selected rows
+        :type prob: int or float
+        :param negate: invert the selection
+        :type negate: bool
+        :return: new table
+        :rtype: Orange.data.Table
+        """
         retain = np.zeros(len(self), dtype=bool)
         if prob < 1:
             prob *= len(self)
@@ -858,23 +934,43 @@ class Table(MutableSequence):
         return Table.from_table_rows(self, retain)
 
 
-    def filter_same_value(self, position, value, negate=False):
+    def filter_same_value(self, column, value, negate=False):
+        """
+        Select rows based on a value of the given variable.
+
+        :param column: the column that is checked
+        :type column: int, str or Orange.data.Variable
+        :param value: the value of the variable
+        :type value: int, float or str
+        :param negate: invert the selection
+        :type negate: bool
+        :return: new table
+        :rtype: Orange.data.Table
+        """
         if not isinstance(value, Real):
-            value = self.domain[position].to_val(value)
-        sel = self.get_column_view(position) == value
+            value = self.domain[column].to_val(value)
+        sel = self.get_column_view(column) == value
         if negate:
             sel = np.logical_not(sel)
         return Table.from_table_rows(self, sel)
 
 
-    def filter_values(self, filt):
-        from Orange.data import filter
+    def filter_values(self, filter):
+        """
+        Apply a filter to the data.
 
-        if isinstance(filt, filter.Values):
-            conditions = filt.conditions
-            conjunction = filt.conjunction
+        :param filter: A filter for selecting the rows
+        :type filter: Orange.data.Filter
+        :return: new table
+        :rtype: Orange.data.Table
+        """
+        from Orange.data import filter as data_filter
+
+        if isinstance(filter, data_filter.Values):
+            conditions = filter.conditions
+            conjunction = filter.conjunction
         else:
-            conditions = [filt]
+            conditions = [filter]
             conjunction = True
         if conjunction:
             sel = np.ones(len(self), dtype=bool)
@@ -883,7 +979,7 @@ class Table(MutableSequence):
 
         for f in conditions:
             col = self.get_column_view(f.position)
-            if isinstance(f, filter.FilterDiscrete):
+            if isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
                     s2 = np.zeros(len(self))
                     for val in f.values:
@@ -896,8 +992,9 @@ class Table(MutableSequence):
                         if not isinstance(val, Real):
                             val = self.domain[f.position].to_val(val)
                         sel += (col == val)
-            elif isinstance(f, filter.FilterStringList):
+            elif isinstance(f, data_filter.FilterStringList):
                 if not f.case_sensitive:
+                    #noinspection PyTypeChecker
                     col = np.char.lower(np.array(col, dtype=str))
                     vals = [val.lower() for val in f.values]
                 else:
@@ -908,8 +1005,11 @@ class Table(MutableSequence):
                 else:
                     sel = reduce(operator.add,
                                  (col == val for val in vals), sel)
-            elif isinstance(f, (filter.FilterContinuous, filter.FilterString)):
-                if isinstance(f, filter.FilterString) and not f.case_sensitive:
+            elif isinstance(f, (data_filter.FilterContinuous,
+                                data_filter.FilterString)):
+                if (isinstance(f, data_filter.FilterString) and
+                        not f.case_sensitive):
+                    #noinspection PyTypeChecker
                     col = np.char.lower(np.array(col, dtype=str))
                     fmin = f.min.lower()
                     if f.oper in [f.Operator.Between, f.Operator.Outside]:
@@ -932,7 +1032,7 @@ class Table(MutableSequence):
                     col = (col >= fmin) * (col <= fmax)
                 elif f.oper == f.Operator.Outside:
                     col = (col < fmin) + (col > fmax)
-                elif not isinstance(f, filter.FilterString):
+                elif not isinstance(f, data_filter.FilterString):
                     raise TypeError("Invalid operator")
                 elif f.oper == f.Operator.Contains:
                     col = np.fromiter((fmin in e for e in col),
