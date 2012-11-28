@@ -93,9 +93,8 @@ class FilterString(ValueFilter):
 class FilterStringList(ValueFilter):
     def __init__(self, position, values, case_sensitive=True):
         super().__init__(position)
-        self.min = min
-        self.max = max
-        self.case_sensitive = True
+        self.values = values
+        self.case_sensitive = case_sensitive
 
 """
 
