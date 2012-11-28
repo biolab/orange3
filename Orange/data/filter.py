@@ -70,7 +70,6 @@ class FilterString(ValueFilter):
                  case_sensitive=True, **a):
         super().__init__(position)
         if a:
-            print(a, "X")
             if len(a) != 1 or "ref" not in a:
                 raise TypeError(
                     "FilterContinuous got unexpected keyword arguments")
