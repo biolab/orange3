@@ -109,7 +109,6 @@ class Domain:
         :obj:`known_domains`.
     """
 
-
     def __init__(self, attributes, class_vars=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
