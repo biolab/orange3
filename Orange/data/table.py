@@ -20,6 +20,7 @@ dataset_dirs = ['']
 class RowInstance(Instance):
     def __init__(self, table, row_index):
         super().__init__(table.domain)
+        # TODO Patch for sparse data or add another class
         self._x = table._X[row_index]
         self._y = table._Y[row_index]
         self._values = np.hstack((self._x, self._y))

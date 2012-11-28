@@ -25,14 +25,16 @@ class TestBasketReader(unittest.TestCase):
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 1, 1, 1]]))
 
+    @unittest.skip(
+
     def test_handles_spaces_between_variables(self):
         file = io.StringIO("""a=1, b=2, c=3""")
         table = BasketReader()._read_file(file)
 
         self.assertEqual(len(table.domain.variables), 3)
-        np.testing.assert_almost_equal(table.X.todense(),
-                                       np.array([[1, 2, 3]]))
+        self.assertEqual(set(x for x in table[0]), {1, 2, 3})
 
+    @unittest.skip("Issuing warnings in basket reader is too expensive")
     def test_handles_duplicate_variables(self):
         file = io.StringIO("""a=1, b=2, a=3""")
         with self.assertWarns(UserWarning):
@@ -42,6 +44,7 @@ class TestBasketReader(unittest.TestCase):
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[3, 2]]))
 
+    @unittest.skip("Issuing warnings in basket reader is too expensive")
     def test_handles_duplicate_variables2(self):
         file = io.StringIO("""a, b, b, a, a, c, c, d, e""")
         with self.assertWarns(UserWarning):

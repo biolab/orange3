@@ -1,4 +1,5 @@
 import re
+import csv
 import warnings
 import collections
 from ..data.variable import *
@@ -186,24 +187,28 @@ class TabDelimReader:
 
 
 class BasketReader():
-    re_name = re.compile("([^,=\\n]+)(=((\d+\.?)|(\d*\.\d+)))?")
-
     def prescan_file(self, file):
         """Return a list of attributes that appear in the file"""
-        names = set()
         n_elements = 0
-        n_rows = 0
-        for line in file:
-            items = set(mo.group(1).strip()
-                        for mo in self.re_name.finditer(line))
-            names.update(items)
-            n_elements += len(items)
-            n_rows += 1
-        return names, n_elements, n_rows
+        classes = file.readline().strip()
+        header = classes.lower().startswith("classes:")
+        if header:
+            classes = set(x.strip() for x in classes[8:].split(","))
+            names = set(classes)
+        else:
+            names = set()
+            classes = set()
+            file.seek(0)
+        reader = csv.reader(file)
+        for line in reader:
+            names.update(mo.split("=")[0] for mo in line)
+            n_elements += len(line)
+        return names - classes, classes, n_elements, reader.line_num, header
 
-    def construct_domain(self, names):
+    def construct_domain(self, names, classes):
         attributes = [ContinuousVariable.make(name) for name in sorted(names)]
-        return Domain(attributes)
+        classes = [ContinuousVariable.make(name) for name in sorted(classes)]
+        return Domain(attributes, classes)
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:
@@ -212,35 +217,24 @@ class BasketReader():
     def _read_file(self, file, cls=None):
         if cls is None:
             from ..data import Table as cls
-        names, n_elements, n_rows = self.prescan_file(file)
-        domain = self.construct_domain(names)
+        attrs, classes, n_elements, n_rows, header = self.prescan_file(file)
+        domain = self.construct_domain(attrs, classes)
         data = np.ones(n_elements)
         indices = np.empty(n_elements, dtype=int)
         indptr = np.empty(n_rows + 1, dtype=int)
         indptr[0] = curptr = 0
 
         file.seek(0)
-        for row, line in enumerate(file):
-            matches = [mo for mo in self.re_name.finditer(line)]
-            items = {mo.group(1).strip(): float(mo.group(3) or 1)
-                     for mo in matches}
-            if len(matches) != len(items):
-                counts = collections.Counter(mo.group(1).strip()
-                                             for mo in matches)
-                multiples = ["'%s'" % k for k, v in counts.items() if v > 1]
-                if len(multiples) > 1:
-                    multiples.sort()
-                    attrs = "attributes %s and %s" % (
-                        ", ".join(multiples[:-1]), multiples[-1])
-                else:
-                    attrs = "attribute " + multiples[0]
-                warnings.warn(
-                    "Ignoring multiple values for %s in row %i" %
-                    (attrs, row + 1))
+        if header:
+            file.readline()
+        reader = csv.reader(file)
+        attr_indices = domain.indices
+        for line in reader:
+            items = [l.split("=") if "=" in l else (l, 1) for l in line]
             nextptr = curptr + len(items)
-            data[curptr:nextptr] = list(items.values())
-            indices[curptr:nextptr] = [domain.index(name) for name in items]
-            indptr[row + 1] = nextptr
+            data[curptr:nextptr] = [x[1] for x in items]
+            indices[curptr:nextptr] = [attr_indices[name[0]] for name in items]
+            indptr[reader.line_num] = nextptr
             curptr = nextptr
         X = sparse.csr_matrix((data, indices, indptr),
                               (n_rows, len(domain.variables)))
