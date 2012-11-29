@@ -25,8 +25,6 @@ class TestBasketReader(unittest.TestCase):
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 1, 1, 1]]))
 
-    @unittest.skip(
-        "RowInstance and Instance need to be patched to handle sparse data")
     def test_handles_spaces_between_variables(self):
         file = io.StringIO("""a=1, b=2, c=3""")
         table = BasketReader()._read_file(file)
