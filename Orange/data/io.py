@@ -238,4 +238,5 @@ class BasketReader():
             curptr = nextptr
         X = sparse.csr_matrix((data, indices, indptr),
                               (n_rows, len(domain.variables)))
+        X.sort_indices()
         return cls.from_numpy(domain, X)
