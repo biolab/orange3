@@ -851,15 +851,6 @@ class Table(MutableSequence):
         return self._W.shape[-1] != 0
 
 
-    def random_example(self):
-        # TODO: this is unnecessary, let's remove it
-        """Return a random example from the table"""
-        n_examples = len(self)
-        if not n_examples:
-            raise IndexError("Table is empty")
-        return self[random.randint(0, n_examples - 1)]
-
-
     def total_weight(self):
         """
         Return the total weight of instances in the table, or their number if
@@ -881,7 +872,7 @@ class Table(MutableSequence):
 
 
     def checksum(self, include_metas=True):
-        # TODO: do I remember correctly that Anze says it doesn't work
+        # TODO: do I remember correctly that Anze says it doesn't work?
         # Why, and should we fix it or remove it?
         """Return a checksum over X, Y, metas and W."""
         cs = zlib.adler32(self._X)
