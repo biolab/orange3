@@ -218,20 +218,6 @@ class Domain:
         return domain
 
 
-    def get_variables(self):
-        return self._variables
-
-
-    variables = property(get_variables)
-
-
-    def get_metas(self):
-        return self._metas
-
-
-    metas = property(get_metas)
-
-
     def var_from_domain(self, var, check_included=False, no_index=False):
         """
         Return a variable descriptor from the given argument, which can be
@@ -266,6 +252,16 @@ class Domain:
 
         raise TypeError(
             "Expected str, int or Variable, got '%s'" % type(var).__name__)
+
+
+    @property
+    def variables(self):
+        return self._variables
+
+
+    @property
+    def metas(self):
+        return self._metas
 
 
     def __len__(self):
