@@ -1,3 +1,4 @@
+from numbers import Real
 import random
 
 from ..misc.enum import Enum
@@ -35,7 +36,7 @@ class Filter:
         return
 
 
-class Filter_IsDefined(Filter):
+class IsDefined(Filter):
     def __init__(self, columns=None, negate=False):
         super().__init__(negate)
         self.columns = columns
@@ -48,6 +49,7 @@ class Filter_IsDefined(Filter):
                 return data._filter_is_defined(self.columns, self.negate)
             except NotImplementedError:
                 pass
+
         r = np.fromiter((bn.anynan(inst._values) for inst in data),
                         dtype=bool, count=len(data))
         if self.negate:
@@ -55,7 +57,7 @@ class Filter_IsDefined(Filter):
         return data[r]
 
 
-class Filter_HasClass(Filter):
+class HasClass(Filter):
     def __call__(self, data):
         if isinstance(data, Instance):
             return self.negate != bn.anynan(data._y)
@@ -64,13 +66,14 @@ class Filter_HasClass(Filter):
                 return data._filter_has_class(self.negate)
             except NotImplementedError:
                 pass
+
         r = np.fromiter((bn.anynan(inst._y) for inst in data), bool, len(data))
         if self.negate:
             r = np.logical_not(r)
         return data[r]
 
 
-class Filter_Random(Filter):
+class Random(Filter):
     def __init__(self, prob=None, negate=False):
         super().__init__(negate)
         self.prob = prob
@@ -83,6 +86,7 @@ class Filter_Random(Filter):
                 return data._filter_random(self.prob, self.negate)
             except NotImplementedError:
                 pass
+
         retain = np.zeros(len(data), dtype=bool)
         n = self.prob if self.prob >= 1 else self.prob*len(data)
         if self.negate:
@@ -93,11 +97,80 @@ class Filter_Random(Filter):
         return data[retain]
 
 
+class SameValue(Filter):
+    def __init__(self, column, value, negate=False):
+        super().__init__(negate)
+        self.column = column
+        self.value = value
+
+    def __call__(self, data):
+        if isinstance(data, Instance):
+            return self.negate != (data[self.column] == self.value)
+        if isinstance(data, Storage):
+            try:
+                data._filter_same_value(self.column, self.value, self.negate)
+            except NotImplementedError:
+                pass
+
+        column = data.domain.index(self.column)
+        if (data.domain[column].is_primitive() and
+                not isinstance(self.value, Real)):
+            value = data.domain[column].to_val(self.value)
+        else:
+            value = self.value
+
+        if column >= 0:
+            if self.negate:
+                retain = np.fromiter(
+                    (inst._values[column] != value for inst in data),
+                     bool, len(data))
+            else:
+                retain = np.fromiter(
+                    (inst._values[column] == value for inst in data),
+                     bool, len(data))
+        else:
+            column = -1 - column
+            if self.negate:
+                retain = np.fromiter(
+                    (inst._metas[column] != value for inst in data),
+                     bool, len(data))
+            else:
+                retain = np.fromiter(
+                    (inst._metas[column] == value for inst in data),
+                     bool, len(data))
+        return data[retain]
+
+
 class Values(Filter):
-    def __init__(self, conjunction=True, conditions=[]):
+    def __init__(self, conditions=[], conjunction=True, negate=False):
+        super().__init__(negate)
         self.conjunction = conjunction
         self.conditions = conditions
 
+
+    def __call__(self, data):
+        if isinstance(data, Instance):
+            agg = all if self.conjunction else any
+            return self.negate != agg(cond(data) for cond in self.conditions)
+        if isinstance(data, Storage):
+            try:
+                return data._filter_values(self)
+            except NotImplementedError:
+                pass
+        N = len(data)
+        if self.conjunction:
+            sel, agg = np.ones(N, bool), np.logical_and
+        else:
+            sel, agg = np.zeros(N, bool), np.logical_or
+        for cond in self.conditions:
+            sel = agg(sel, np.fromiter((cond(inst) for inst in data), bool, count=N))
+        if self.negate:
+            sel = np.logical_not(sel)
+        return data[sel]
+
+
+
+# TODO Implement __call__ methods for filters below
 
 class ValueFilter:
     Operator = Enum("Equal", "NotEqual",
