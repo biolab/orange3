@@ -1,22 +1,96 @@
-# Filters will be defined as follows:
-# - when given a data instance, they return True/False, as usual
-# - when given a data collection (Table, SQL proxy...)
-#   -- they will inquire whether the collection implements a faster filter and
-#      use it if possible;
-#   -- if not, they will find out whether the collection provides a method to
-#      construct a new collection or view based on row indices; if possible,
-#      they will construct such a list and pass it to collection
-#   -- otherwise, they construct a new collection and add examples one by one??
-
-# Hint: parameters can be set using introspection into method arguments
-# (set the arguments whose names match the filter's attributes)
+import random
 
 from ..misc.enum import Enum
-
+import numpy as np
+import bottleneck as bn
+from Orange.data import Instance, Storage
 
 class Filter:
+    """
+    Instances of classes derived from `Filter` are used for filtering the data.
+
+    When called with an individual data instance (:obj:Orange.data.Instance),
+    they accept or reject the instance by returning either `True` or `False`.
+
+    When called with a data storage (e.g. an instance of
+    :obj:Orange.data.Table) they check whether the corresponding class
+    provides the method that implements the particular filter. If so, the
+    method is called and the result should be of the same type as the
+    storage; e.g., filter methods of :obj:Orange.data.Table return new
+    instances of :obj:Orange.data.Table, and filter methods of SQL proxies
+    return new SQL proxies.
+
+    If the class corresponding to the storage does not implement a particular
+    filter, the fallback computes the indices of the rows to be selected and
+
+
+    .. attribute:: negate
+
+        If `True`, it reverts the selection
+    """
     def __init__(self, negate=False):
         self.negate = negate
+
+    def __call__(self, data):
+        return
+
+
+class Filter_IsDefined(Filter):
+    def __init__(self, columns=None, negate=False):
+        super().__init__(negate)
+        self.columns = columns
+
+    def __call__(self, data):
+        if isinstance(data, Instance):
+            return self.negate != bn.anynan(data._values)
+        if isinstance(data, Storage):
+            try:
+                return data._filter_is_defined(self.columns, self.negate)
+            except NotImplementedError:
+                pass
+        r = np.fromiter((bn.anynan(inst._values) for inst in data),
+                        dtype=bool, count=len(data))
+        if self.negate:
+            r = np.logical_not(r)
+        return data[r]
+
+
+class Filter_HasClass(Filter):
+    def __call__(self, data):
+        if isinstance(data, Instance):
+            return self.negate != bn.anynan(data._y)
+        if isinstance(data, Storage):
+            try:
+                return data._filter_has_class(self.negate)
+            except NotImplementedError:
+                pass
+        r = np.fromiter((bn.anynan(inst._y) for inst in data), bool, len(data))
+        if self.negate:
+            r = np.logical_not(r)
+        return data[r]
+
+
+class Filter_Random(Filter):
+    def __init__(self, prob=None, negate=False):
+        super().__init__(negate)
+        self.prob = prob
+
+    def __call__(self, data):
+        if isinstance(data, Instance):
+            return self.negate != (random.random() < self.prob)
+        if isinstance(data, Storage):
+            try:
+                return data._filter_random(self.prob, self.negate)
+            except NotImplementedError:
+                pass
+        retain = np.zeros(len(data), dtype=bool)
+        n = self.prob if self.prob >= 1 else self.prob*len(data)
+        if self.negate:
+            retain[n:] = True
+        else:
+            retain[:n] = True
+        np.random.shuffle(retain)
+        return data[retain]
 
 
 class Values(Filter):

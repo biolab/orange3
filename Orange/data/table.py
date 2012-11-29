@@ -12,6 +12,7 @@ from scipy import sparse as sp
 
 from .instance import *
 from Orange.data import domain as orange_domain, io
+from Orange.data.storage import Storage
 
 dataset_dirs = ['']
 
@@ -133,7 +134,7 @@ class Columns:
             setattr(self, v.name.replace(" ", "_"), v)
 
 
-class Table(MutableSequence):
+class Table(MutableSequence, Storage):
     """
     Stores data instances as a set of 2d tables representing the independent
     variables (attributes, features) and dependent variables
@@ -919,7 +920,7 @@ class Table(MutableSequence):
             return rx(self._metas[:, -1 - index])
 
 
-    def filter_is_defined(self, columns=None, negate=False):
+    def _filter_is_defined(self, columns=None, negate=False):
         """
             Extract rows without undefined values.
 
@@ -953,7 +954,7 @@ class Table(MutableSequence):
         return Table.from_table_rows(self, retain)
 
 
-    def filter_has_class(self, negate=False):
+    def _filter_has_class(self, negate=False):
         """
         Return rows with known class attribute. If there are multiple classes,
         all must be defined.
@@ -977,29 +978,11 @@ class Table(MutableSequence):
         return Table.from_table_rows(self, retain)
 
 
-    def filter_random(self, prob, negate=False):
-        """
-        Return a random selection of rows.
-
-        :param prob: the proportion or the number (if above 1) of selected rows
-        :type prob: int or float
-        :param negate: invert the selection
-        :type negate: bool
-        :return: new table
-        :rtype: Orange.data.Table
-        """
-        retain = np.zeros(len(self), dtype=bool)
-        if prob < 1:
-            prob *= len(self)
-        if negate:
-            retain[prob:] = True
-        else:
-            retain[:prob] = True
-        np.random.shuffle(retain)
-        return Table.from_table_rows(self, retain)
+    # filter_random is not defined - the one implemented in the
+    # filter.py is just as fast
 
 
-    def filter_same_value(self, column, value, negate=False):
+    def _filter_same_value(self, column, value, negate=False):
         """
         Select rows based on a value of the given variable.
 
@@ -1020,7 +1003,7 @@ class Table(MutableSequence):
         return Table.from_table_rows(self, sel)
 
 
-    def filter_values(self, filter):
+    def _filter_values(self, filter):
         """
         Apply a filter to the data.
 
