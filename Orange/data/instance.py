@@ -1,3 +1,4 @@
+from numbers import Real
 from ..data.value import Value, Unknown
 from math import isnan
 import zlib
@@ -5,13 +6,34 @@ import numpy as np
 
 
 class Instance:
-    def __init__(self, domain, values=None):
-        self.domain = domain
+    """
+    Class `Instance` represents a data instance. The base class stores its own
+    data, and derived classes are used to represent views into tables.
 
-        if values is None:
+    Like data tables, every data instance is associated with a domain and its
+    data is split into attributes, classes, meta attributes and the weight.
+
+    The instance's data can be retrieved through attributes :obj:x, :obj:y and
+    :obj:metas. For derived classes, changing this data does not necessarily
+    modify the corresponding data tables or other structures. Use indexing to
+    modify the data.
+    """
+
+    def __init__(self, domain, data=None):
+        """
+        Construct a new data instance.
+
+        :param domain: domain that describes the instance's variables
+        :type domain: Orange.data.domain
+        :param data: instance's values
+        :type data: Orange.data.Instance or a sequence of values
+        """
+        self._domain = domain
+
+        if data is None:
             if isinstance(domain, Instance):
-                values = domain
-                self.domain = domain = domain.domain
+                data = domain
+                self._domain = domain = domain.domain
             else:
                 self._values = np.repeat(Unknown, len(domain.variables))
                 self._x = self._values[:len(domain.attributes)]
@@ -20,38 +42,71 @@ class Instance:
                     [Unknown if var.is_primitive else None for var in
                      domain.metas],
                     dtype=object)
-                self.weight = 1
+                self._weight = 1
                 return
-
-        if isinstance(values, Instance) and values.domain == domain:
-            self._values = np.array(values._values)
-            self._metas = np.array(values._metas)
-            self.weight = values.weight
+        if isinstance(data, Instance) and data.domain == domain:
+            self._values = np.array(data._values)
+            self._metas = np.array(data._metas)
+            self._weight = data._weight
         else:
-            self._values, self._metas = domain.convert(values)
-            self.weight = 1
+            self._values, self._metas = domain.convert(data)
+            self._weight = 1
         self._x = self._values[:len(domain.attributes)]
         self._y = self._values[len(domain.attributes):]
 
-    def variables(self):
-        return iter(self._values)
 
-    __iter__ = variables
+    @property
+    def x(self):
+        """
+        Instance's attributes as a 1-dimensional numpy array whose length
+        equals len(self.domain.attributes)
+        """
+        return self._x
 
-    def attributes(self):
-        return iter(self._values[:len(self.domain.attributes)])
 
-    def classes(self):
-        return iter(self._y)
+    @property
+    def y(self):
+        """
+        Instance's classes as a 1-dimensional numpy array whose length
+        equals len(self.domain.attributes)
+        """
+        return self._y
+
+
+    @property
+    def metas(self):
+        """
+        Instance's meta attributes as a 1-dimensional numpy array whose length
+        equals len(self.domain.attributes)
+        """
+        return self._metas
+
+
+    @property
+    def domain(self):
+        """The domain describing the instance's values."""
+        return self._domain
+
+
+    @property
+    def weight(self):
+        """The weight of the data instance. Default is 1."""
+        return self._weight
+
+
+    @weight.setter
+    def weight(self, weight):
+        self._weight = weight
+
 
     def __getitem__(self, key):
         if not isinstance(key, int):
-            key = self.domain.index(key)
+            key = self._domain.index(key)
         if key >= 0:
             value = self._values[key]
         else:
             value = self._metas[-1 - key]
-        return Value(self.domain[key], value)
+        return Value(self._domain[key], value)
 
     #TODO Should we return an instance of `object` if we have a meta attribute
     #     that is not Discrete or Continuous? E.g. when we have strings, we'd
@@ -60,50 +115,29 @@ class Instance:
     #     for discrete attributes?!
     #     Same in Table.__getitem__
 
+    @staticmethod
+    def str_values(data, variables):
+        s = ", ".join(var.str_val(val)
+            for var, val in zip(variables, data[:5]))
+        if len(data) > 5:
+            s += ", ..."
+        return s
+
     def __str__(self):
-        res = "["
-        res += ", ".join(
-            var.str_val(value)
-            for var, value in zip(self.domain.attributes, self._x[:5]))
-        n_attrs = len(self.domain.attributes)
-        if n_attrs > 5:
-            res += ", ..."
-        if self.domain.class_vars:
-            res += " | " + ", ".join(
-                var.str_val(value)
-                for var, value in zip(self.domain.class_vars, self._y[:5]))
-        res += "]"
-        if self.domain.metas:
-            res += " {"
-            res += ", ".join(
-                var.str_val(value)
-                for var, value in zip(self.domain.metas, self._metas[:5]))
-            if len(self._metas) > 5:
-                res += ", ..."
-            res += "}"
-        return res
+        s = "[" + self.str_values(self._x, self._domain.attributes)
+        if self._domain.class_vars:
+            s += " | " + self.str_values(self._y, self._domain.class_vars)
+        s += "]"
+        if self._domain.metas:
+            s += " {" + self.str_values(self._metas, self._domain.metas) + "}"
+        return s
 
     __repr__ = __str__
 
-    def _check_single_class(self):
-        if not self.domain.class_vars:
-            raise TypeError("Domain has no class variable")
-        elif len(self.domain.class_vars) > 1:
-            raise TypeError("Domain has multiple class variables")
-
-    def get_class(self):
-        self._check_single_class()
-        return Value(self.domain.class_var, self._y[0])
-
-    def set_weight(self, weight):
-        self.weight = weight
-
-    def get_weight(self):
-        return self.weight
 
     def __setitem__(self, key, value):
         if not isinstance(key, int):
-            key = self.domain.index(key)
+            key = self._domain.index(key)
         if key >= 0:
             if not isinstance(value, float):
                 raise TypeError("Expected primitive value, got '%s'" %
@@ -112,10 +146,11 @@ class Instance:
         else:
             self._metas[-1 - key] = value
 
+
     def __eq__(self, other):
         # TODO: rewrite to Cython
         if not isinstance(other, Instance):
-            other = Instance(self.domain, other)
+            other = Instance(self._domain, other)
         for v1, v2 in zip(self._values, other._values):
             if not (isnan(v1) or isnan(v2) or v1 == v2):
                 return False
@@ -126,5 +161,55 @@ class Instance:
                 return False
         return True
 
-    def checksum(self):
-        return zlib.adler32(self._metas, zlib.adler32(self._values))
+
+    def __iter__(self):
+        return iter(self._values)
+
+
+    def attributes(self):
+        """Return iterator over the instance's attributes"""
+        return iter(self._values[:len(self._domain.attributes)])
+
+
+    def classes(self):
+        """Return iterator over the instance's class attributes"""
+        return iter(self._y)
+
+
+    # A helper function for get_class and set_class
+    def _check_single_class(self):
+        if not self._domain.class_vars:
+            raise TypeError("Domain has no class variable")
+        elif len(self._domain.class_vars) > 1:
+            raise TypeError("Domain has multiple class variables")
+
+
+    def get_class(self):
+        """
+        Return the class value as an instance of :obj:Orange.data.Value.
+        Throws an exception if there are multiple classes.
+        """
+        self._check_single_class()
+        return Value(self._domain.class_var, self._y[0])
+
+
+    def get_classes(self):
+        """
+        Return the class value as a list of instances of
+        :obj:Orange.data.Value.
+        """
+        return (Value(var, value)
+            for var, value in zip(self._domain.class_vars, self._y))
+
+
+    def set_class(self, value):
+        """
+        Set the instance's class. Throws an exception if there are multiple
+        classes.
+        """
+        self._check_single_class()
+        if not isinstance(value, Real):
+            self._y[0] = self._domain.class_var.to_val(value)
+        else:
+            self._y[0] = value
+        self._values[len(self._domain.attributes)] = self._y[0]
