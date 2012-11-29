@@ -9,7 +9,7 @@ from functools import reduce
 
 import numpy as np
 import bottleneck as bn
-from scipy import sparse
+from scipy import sparse as sp
 
 from .instance import *
 from Orange.data import domain as orange_domain, io
@@ -18,55 +18,65 @@ dataset_dirs = ['']
 
 
 class RowInstance(Instance):
+    """
+    `RowInstance` is a specialization of :obj:Orange.data.instance that
+    represents a row of :obj:Orange.data.Table.
+
+    Although the instance's data can be retrieved through attributes :obj:x,
+    :obj:y and :obj:metas, changing them modifies the corresponding table only
+    if the underlying numpy arrays are not sparse.
+    """
     def __init__(self, table, row_index):
+        """
+        Construct a data instance representing the given row of the table.
+        """
         super().__init__(table.domain)
-        # TODO Patch for sparse data or add another class
         self._x = table._X[row_index]
+        self.sparse_x = sp.issparse(self._x)
+        if self.sparse_x:
+            self._x = np.asarray(self._x.todense())[0]
         self._y = table._Y[row_index]
-        self._values = np.hstack((self._x, self._y))
+        self.sparse_y = sp.issparse(self._y)
+        if self.sparse_y:
+            self._y = np.asarray(self._y.todense())[0]
         self._metas = table._metas[row_index]
+        self.sparse_metas = sp.issparse(self._metas)
+        if self.sparse_metas:
+            self._metas = np.asarray(self._metas.todense())[0]
+        self._values = np.hstack((self._x, self._y))
         self.row_index = row_index
         self.table = table
 
 
-    def get_class(self):
-        self._check_single_class()
-        if self.table.domain.class_var:
-            return Value(self.table.domain.class_var, self._y[0])
+    @property
+    def weight(self):
+        if not self.table.has_weights():
+            return 1
+        return self.table._W[self.row_index]
+
+
+    #noinspection PyMethodOverriding
+    @weight.setter
+    def weight(self, weight):
+        if not self.table.has_weights():
+            self.table.set_weights()
+        self.table._W[self.row_index] = weight
 
 
     def set_class(self, value):
         self._check_single_class()
         if not isinstance(value, Real):
-            self._y[0] = self.table.domain.class_var.to_val(value)
-        else:
-            self._y[0] = value
-        self._values[len(self.table.domain.attributes)] = self._y[0]
-
-
-    def get_classes(self):
-        return (Value(var, value)
-            for var, value in zip(self.table.domain.class_vars, self._y))
-
-
-    def set_weight(self, weight):
-        if self.table._W is None:
-            self.table.set_weights()
-        self.table._W[self.row_index] = weight
-
-
-    def get_weight(self):
-        if not self.table._W:
-            raise ValueError(
-                "Instances in the referenced table have no weights")
-        return self.table._W[self.row_index]
+            value = self.table.domain.class_var.to_val(value)
+        self._values[len(self.table.domain.attributes)] = self._y[0] = value
+        if self.sparse_y:
+            self.table._Y[self.row_index, 0] = value
 
 
     def __setitem__(self, key, value):
         if not isinstance(key, int):
-            key = self.domain.index(key)
+            key = self._domain.index(key)
         if isinstance(value, str):
-            var = self.domain[key]
+            var = self._domain[key]
             value = var.to_val(value)
         if key >= 0:
             if not isinstance(value, Real):
@@ -74,10 +84,48 @@ class RowInstance(Instance):
                                 type(value).__name__)
             if key < len(self._x):
                 self._values[key] = self._x[key] = value
+                if self.sparse_x:
+                    self.table._X[self.row_index, key] = value
             else:
                 self._values[key] = self._y[key - len(self._x)] = value
+                if self.sparse_y:
+                    self.table._Y[self.row_index, key - len(self._x)] = value
         else:
             self._metas[-1 - key] = value
+            if self.sparse_metas:
+                self.table._metas[self.row_index, -1 - key] = value
+
+
+    @staticmethod
+    def sp_values(matrix, row, variables):
+        if sp.issparse(matrix):
+            begptr, endptr = matrix.indptr[row:row + 2]
+            rendptr = min(endptr, begptr + 5)
+            variables = [variables[var]
+                         for var in matrix.indices[begptr:rendptr]]
+            print([v.name for v in variables])
+            s = ", ".join("{}={}".format(var.name, var.str_val(val))
+                for var, val in zip(variables, matrix.data[begptr:rendptr]))
+            if rendptr != endptr:
+                s += ", ..."
+            return s
+        else:
+            return Instance.str_values(matrix[row], variables)
+
+
+    def __str__(self):
+        table = self.table
+        domain = table.domain
+        row = self.row_index
+        s = "[" + self.sp_values(table._X, row, domain.attributes)
+        if domain.class_vars:
+            s += " | " + self.sp_values(table._Y, row, domain.class_vars)
+        s += "]"
+        if self._domain.metas:
+            s += " {" + self.sp_values(table._metas, row, domain.metas) + "}"
+        return s
+
+    __repr__ = __str__
 
 
 class Columns:
@@ -364,7 +412,7 @@ class Table(MutableSequence):
         """
         #assert(len(domain.class_vars) <= 1)
         if Y is None:
-            if sparse.issparse(X):
+            if sp.issparse(X):
                 Y = np.empty((X.shape[0], 0), object)
             else:
                 Y = X[:, len(domain.attributes):]
