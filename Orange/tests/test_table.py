@@ -424,12 +424,6 @@ class TableTestCase(unittest.TestCase):
         self.assertNotEqual(crc1, crc5)
         self.assertEqual(crc1, crc6)
 
-    def test_random(self):
-        d = data.Table("zoo")
-        self.assertTrue(isinstance(d.random_example(), data.Instance))
-        d.clear()
-        self.assertRaises(IndexError, d.random_example)
-
     def test_total_weight(self):
         d = data.Table("zoo")
         self.assertEqual(d.total_weight(), len(d))
