@@ -435,9 +435,9 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d.total_weight(), len(d))
 
         d.set_weights(0)
-        d[0].set_weight(0.1)
-        d[10].set_weight(0.2)
-        d[-1].set_weight(0.3)
+        d[0].weight = 0.1
+        d[10].weight = 0.2
+        d[-1].weight = 0.3
         self.assertAlmostEqual(d.total_weight(), 0.6)
         del d[10]
         self.assertAlmostEqual(d.total_weight(), 0.4)
