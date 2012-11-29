@@ -1,5 +1,4 @@
 import os
-import random
 import zlib
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
