@@ -201,7 +201,7 @@ class BasketReader():
             file.seek(0)
         reader = csv.reader(file)
         for line in reader:
-            names.update(mo.split("=")[0] for mo in line)
+            names.update(mo.split("=")[0].strip() for mo in line)
             n_elements += len(line)
         return names - classes, classes, n_elements, reader.line_num, header
 
@@ -233,7 +233,8 @@ class BasketReader():
             items = [l.split("=") if "=" in l else (l, 1) for l in line]
             nextptr = curptr + len(items)
             data[curptr:nextptr] = [x[1] for x in items]
-            indices[curptr:nextptr] = [attr_indices[name[0]] for name in items]
+            indices[curptr:nextptr] = [attr_indices[name[0].strip()]
+                                       for name in items]
             indptr[reader.line_num] = nextptr
             curptr = nextptr
         X = sparse.csr_matrix((data, indices, indptr),
