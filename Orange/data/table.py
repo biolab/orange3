@@ -894,26 +894,34 @@ class Table(MutableSequence):
 
     def get_column_view(self, index):
         """
-        Return a vector - as a view, not a copy - with a column of the table.
+        Return a vector - as a view, not a copy - with a column of the table,
+        and a bool flag telling whether this column is sparse. Note that
+        vertical slicing of sparse matrices is inefficient.
 
         :param index: the index of the column
         :type index: int, str or Orange.data.Variable
-        :return: one-dimensional numpy array
+        :return: (one-dimensional numpy array, sparse)
         """
+        def rx(M):
+            if sp.issparse(M):
+                return np.asarray(M.todense())[:, 0], True
+            else:
+                return M, False
+
         if not isinstance(index, int):
             index = self.domain.index(index)
         if index >= 0:
             if index < self._X.shape[1]:
-                return self._X[:, index]
+                return rx(self._X[:, index])
             else:
-                return self._Y[:, index - self._X.shape[1]]
+                return rx(self._Y[:, index - self._X.shape[1]])
         else:
-            return self._metas[:, -1 - index]
+            return rx(self._metas[:, -1 - index])
 
 
     def filter_is_defined(self, columns=None, negate=False):
         """
-        Extract rows without undefined values.
+            Extract rows without undefined values.
 
         :param columns: optional list of columns that are checked for unknowns
         :type columns: sequence of ints, variable names or descriptors
@@ -923,15 +931,25 @@ class Table(MutableSequence):
         :rtype: Orange.data.Table
         """
         if columns is None:
-            retain = np.logical_or(bn.anynan(self._X, axis=1),
-                                   bn.anynan(self._Y, axis=1))
+            if sp.issparse(self._X):
+                remove = (self._X.indptr[1:] !=
+                          self._X.indptr[-1:] + self._X.shape[1])
+            else:
+                remove = bn.anynan(self._X, axis=1)
+            if sp.issparse(self._Y):
+                remove = np.logical_or(remove, self._Y.indptr[1:] !=
+                                       self._Y.indptr[-1:] + self._Y.shape[1])
+            else:
+                remove = np.logical_or(remove, bn.anynan(self._Y, axis=1))
         else:
-            retain = np.zeros(len(self), dtype=bool)
+            remove = np.zeros(len(self), dtype=bool)
             for column in columns:
-                retain = np.logical_or(retain,
-                                       bn.anynan(self.get_column_view(column)))
-        if not negate:
-            retain = np.logical_not(retain)
+                col, sparse = self.get_column_view(column)
+                if sparse:
+                    remove = np.logical_or(remove, col == 0)
+                else:
+                    remove = np.logical_or(remove, bn.anynan(col))
+        retain = remove if negate else np.logical_not(remove)
         return Table.from_table_rows(self, retain)
 
 
@@ -945,9 +963,17 @@ class Table(MutableSequence):
         :return: new table
         :rtype: Orange.data.Table
         """
-        retain = bn.anynan(self._Y, axis=1)
-        if not negate:
-            retain = np.logical_not(retain)
+        if sp.issparse(self._Y):
+            if negate:
+                retain = (self._Y.indptr[1:] !=
+                          self._Y.indptr[-1:] + self._Y.shape[1])
+            else:
+                retain = (self._Y.indptr[1:] ==
+                          self._Y.indptr[-1:] + self._Y.shape[1])
+        else:
+            retain = bn.anynan(self._Y, axis=1)
+            if not negate:
+               retain = np.logical_not(retain)
         return Table.from_table_rows(self, retain)
 
 
@@ -988,7 +1014,7 @@ class Table(MutableSequence):
         """
         if not isinstance(value, Real):
             value = self.domain[column].to_val(value)
-        sel = self.get_column_view(column) == value
+        sel = self.get_column_view(column)[0] == value
         if negate:
             sel = np.logical_not(sel)
         return Table.from_table_rows(self, sel)
@@ -1017,7 +1043,7 @@ class Table(MutableSequence):
             sel = np.zeros(len(self), dtype=bool)
 
         for f in conditions:
-            col = self.get_column_view(f.position)
+            col = self.get_column_view(f.position)[0]
             if isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
                     s2 = np.zeros(len(self))

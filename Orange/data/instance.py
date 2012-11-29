@@ -1,7 +1,6 @@
 from numbers import Real
 from ..data.value import Value, Unknown
 from math import isnan
-import zlib
 import numpy as np
 
 
