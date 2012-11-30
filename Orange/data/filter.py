@@ -170,8 +170,6 @@ class Values(Filter):
 
 
 
-# TODO Implement __call__ methods for filters below
-
 class ValueFilter:
     Operator = Enum("Equal", "NotEqual",
                     "Less", "LessEqual", "Greater", "GreaterEqual",
