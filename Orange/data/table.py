@@ -1026,19 +1026,19 @@ class Table(MutableSequence, Storage):
             sel = np.zeros(len(self), dtype=bool)
 
         for f in conditions:
-            col = self.get_column_view(f.position)[0]
+            col = self.get_column_view(f.column)[0]
             if isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
                     s2 = np.zeros(len(self))
                     for val in f.values:
                         if not isinstance(val, Real):
-                            val = self.domain[f.position].to_val(val)
+                            val = self.domain[f.column].to_val(val)
                         s2 += (col == val)
                     sel *= s2
                 else:
                     for val in f.values:
                         if not isinstance(val, Real):
-                            val = self.domain[f.position].to_val(val)
+                            val = self.domain[f.column].to_val(val)
                         sel += (col == val)
             elif isinstance(f, data_filter.FilterStringList):
                 if not f.case_sensitive:
@@ -1060,35 +1060,35 @@ class Table(MutableSequence, Storage):
                     #noinspection PyTypeChecker
                     col = np.char.lower(np.array(col, dtype=str))
                     fmin = f.min.lower()
-                    if f.oper in [f.Operator.Between, f.Operator.Outside]:
+                    if f.oper in [f.Between, f.Outside]:
                         fmax = f.max.lower()
                 else:
                     fmin, fmax = f.min, f.max
-                if f.oper == f.Operator.Equal:
+                if f.oper == f.Equal:
                     col = (col == fmin)
-                elif f.oper == f.Operator.NotEqual:
+                elif f.oper == f.NotEqual:
                     col = (col != fmin)
-                elif f.oper == f.Operator.Less:
+                elif f.oper == f.Less:
                     col = (col < fmin)
-                elif f.oper == f.Operator.LessEqual:
+                elif f.oper == f.LessEqual:
                     col = (col <= fmin)
-                elif f.oper == f.Operator.Greater:
+                elif f.oper == f.Greater:
                     col = (col > fmin)
-                elif f.oper == f.Operator.GreaterEqual:
+                elif f.oper == f.GreaterEqual:
                     col = (col >= fmin)
-                elif f.oper == f.Operator.Between:
+                elif f.oper == f.Between:
                     col = (col >= fmin) * (col <= fmax)
-                elif f.oper == f.Operator.Outside:
+                elif f.oper == f.Outside:
                     col = (col < fmin) + (col > fmax)
                 elif not isinstance(f, data_filter.FilterString):
                     raise TypeError("Invalid operator")
-                elif f.oper == f.Operator.Contains:
+                elif f.oper == f.Contains:
                     col = np.fromiter((fmin in e for e in col),
                                       dtype=bool)
-                elif f.oper == f.Operator.StartsWith:
+                elif f.oper == f.StartsWith:
                     col = np.fromiter((e.startswith(fmin) for e in col),
                                       dtype=bool)
-                elif f.oper == f.Operator.EndsWith:
+                elif f.oper == f.EndsWith:
                     col = np.fromiter((e.endswith(fmin) for e in col),
                                       dtype=bool)
                 else:

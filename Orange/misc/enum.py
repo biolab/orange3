@@ -26,6 +26,10 @@ def Enum(*names):
             setattr(self, value, value)
             constants.append(value)
 
+        def pull_up(self, cls):
+            for name, value in zip(names, constants):
+                setattr(cls, name, value)
+
     class EnumValue:
         __slots__ = ('__value')
         Value = property(lambda self: self.__value)

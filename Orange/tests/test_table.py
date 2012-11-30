@@ -706,7 +706,7 @@ class TableTestCase(unittest.TestCase):
 
         v = d.columns
         f = filter.FilterContinuous(v.petal_length,
-                                    filter.ValueFilter.Operator.Between,
+                                    filter.FilterContinuous.Between,
                                     min=4.5, max=5.1)
 
         x = filter.Values([f])(d)
@@ -715,38 +715,38 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(sum((col >= 4.5) * (col <= 5.1)), len(x))
 
         f.ref = 5.1
-        f.oper = filter.ValueFilter.Operator.Equal
+        f.oper = filter.FilterContinuous.Equal
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
-        f.oper = filter.ValueFilter.Operator.NotEqual
+        f.oper = filter.FilterContinuous.NotEqual
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] != 5.1))
         self.assertEqual(sum(col != 5.1), len(x))
 
-        f.oper = filter.ValueFilter.Operator.Less
+        f.oper = filter.FilterContinuous.Less
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] < 5.1))
         self.assertEqual(sum(col < 5.1), len(x))
 
-        f.oper = filter.ValueFilter.Operator.LessEqual
+        f.oper = filter.FilterContinuous.LessEqual
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] <= 5.1))
         self.assertEqual(sum(col <= 5.1), len(x))
 
-        f.oper = filter.ValueFilter.Operator.Greater
+        f.oper = filter.FilterContinuous.Greater
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] > 5.1))
         self.assertEqual(sum(col > 5.1), len(x))
 
-        f.oper = filter.ValueFilter.Operator.GreaterEqual
+        f.oper = filter.FilterContinuous.GreaterEqual
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] >= 5.1))
         self.assertEqual(sum(col >= 5.1), len(x))
 
-        f.oper = filter.ValueFilter.Operator.Outside
-        f.min, f.max = 4.5, 5.1
+        f.oper = filter.FilterContinuous.Outside
+        f.ref, f.max = 4.5, 5.1
         x = filter.Values([f])(d)
         for e in x:
             self.assertTrue(e[2] < 4.5 or e[2] > 5.1)
@@ -758,43 +758,43 @@ class TableTestCase(unittest.TestCase):
         v = d.columns
 
         f = filter.FilterContinuous(v.petal_length,
-                                    filter.ValueFilter.Operator.Equal, ref=5.1)
+                                    filter.FilterContinuous.Equal, ref=5.1)
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
         f = filter.FilterContinuous(2,
-                                    filter.ValueFilter.Operator.Equal, ref=5.1)
+                                    filter.FilterContinuous.Equal, ref=5.1)
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
         f = filter.FilterContinuous("petal length",
-                                    filter.ValueFilter.Operator.Equal, ref=5.1)
+                                    filter.FilterContinuous.Equal, ref=5.1)
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
         f = filter.FilterContinuous("sepal length",
-                                    filter.ValueFilter.Operator.Equal, ref=5.1)
-        f.position = 2
+                                    filter.FilterContinuous.Equal, ref=5.1)
+        f.column = 2
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
         f = filter.FilterContinuous("sepal length",
-                                    filter.ValueFilter.Operator.Equal, ref=5.1)
-        f.position = v.petal_length
+                                    filter.FilterContinuous.Equal, ref=5.1)
+        f.column = v.petal_length
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
         f = filter.FilterContinuous(v.petal_length,
-                                    filter.ValueFilter.Operator.Equal, ref=18)
+                                    filter.FilterContinuous.Equal, ref=18)
         f.ref = 5.1
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
 
         f = filter.FilterContinuous(v.petal_length,
-                                    filter.ValueFilter.Operator.Equal, ref=18)
-        f.min = 5.1
+                                    filter.FilterContinuous.Equal, ref=18)
+        f.ref = 5.1
         x = filter.Values([f])(d)
         self.assertTrue(np.all(x.X[:, 2] == 5.1))
         self.assertEqual(sum(col == 5.1), len(x))
@@ -825,64 +825,64 @@ class TableTestCase(unittest.TestCase):
         col = d[:, "name"].metas[:, 0]
 
         f = filter.FilterString("name",
-                                filter.ValueFilter.Operator.Equal, "girl")
+                                filter.FilterString.Equal, "girl")
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 1)
         self.assertEqual(x[0, "name"], "girl")
         self.assertTrue(np.all(x.metas == "girl"))
 
-        f.oper = f.Operator.NotEqual
+        f.oper = f.NotEqual
         x = filter.Values([f])(d)
         self.assertEqual(len(x), len(d) - 1)
         self.assertTrue(np.all(x[:, "name"] != "girl"))
 
-        f.oper = f.Operator.Less
+        f.oper = f.Less
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col < "girl"))
         self.assertTrue(np.all(x.metas < "girl"))
 
-        f.oper = f.Operator.LessEqual
+        f.oper = f.LessEqual
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col <= "girl"))
         self.assertTrue(np.all(x.metas <= "girl"))
 
-        f.oper = f.Operator.Greater
+        f.oper = f.Greater
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col > "girl"))
         self.assertTrue(np.all(x.metas > "girl"))
 
-        f.oper = f.Operator.GreaterEqual
+        f.oper = f.GreaterEqual
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col >= "girl"))
         self.assertTrue(np.all(x.metas >= "girl"))
 
-        f.oper = f.Operator.Between
+        f.oper = f.Between
         f.max = "lion"
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(("girl" <= col) * (col <= "lion")))
         self.assertTrue(np.all(x.metas >= "girl"))
         self.assertTrue(np.all(x.metas <= "lion"))
 
-        f.oper = f.Operator.Outside
+        f.oper = f.Outside
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col < "girl") + sum(col > "lion"))
         self.assertTrue(np.all((x.metas < "girl") + (x.metas > "lion")))
 
-        f.oper = f.Operator.Contains
+        f.oper = f.Contains
         f.ref = "ea"
         x = filter.Values([f])(d)
         for e in x:
             self.assertTrue("ea" in e["name"])
         self.assertEqual(len(x), len([e for e in col if "ea" in e]))
 
-        f.oper = f.Operator.StartsWith
+        f.oper = f.StartsWith
         f.ref = "sea"
         x = filter.Values([f])(d)
         for e in x:
             self.assertTrue(str(e["name"]).startswith("sea"))
         self.assertEqual(len(x), len([e for e in col if e.startswith("sea")]))
 
-        f.oper = f.Operator.EndsWith
+        f.oper = f.EndsWith
         f.ref = "ion"
         x = filter.Values([f])(d)
         for e in x:
@@ -896,61 +896,61 @@ class TableTestCase(unittest.TestCase):
         col = d[:, "name"].metas[:, 0]
 
         f = filter.FilterString("name",
-                                filter.ValueFilter.Operator.Equal, "giRL")
+                                filter.FilterString.Equal, "giRL")
         f.case_sensitive = False
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 1)
         self.assertEqual(x[0, "name"], "GIrl")
         self.assertTrue(np.all(x.metas == "GIrl"))
 
-        f.oper = f.Operator.NotEqual
+        f.oper = f.NotEqual
         x = filter.Values([f])(d)
         self.assertEqual(len(x), len(d) - 1)
         self.assertTrue(np.all(x[:, "name"] != "GIrl"))
 
-        f.oper = f.Operator.Less
+        f.oper = f.Less
         f.ref = "CHiCKEN"
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col < "chicken") - 1)  # girl!
         self.assertTrue(np.all(x.metas < "chicken"))
 
-        f.oper = f.Operator.LessEqual
+        f.oper = f.LessEqual
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col <= "chicken") - 1)
         self.assertTrue(np.all(x.metas <= "chicken"))
 
-        f.oper = f.Operator.Greater
+        f.oper = f.Greater
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col > "chicken") + 1)
         for e in x:
             self.assertGreater(str(e["name"]).lower(), "chicken")
 
-        f.oper = f.Operator.GreaterEqual
+        f.oper = f.GreaterEqual
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col >= "chicken") + 1)
         for e in x:
             self.assertGreaterEqual(str(e["name"]).lower(), "chicken")
 
-        f.oper = f.Operator.Between
+        f.oper = f.Between
         f.max = "liOn"
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum((col >= "chicken") * (col <= "lion")) + 1)
         for e in x:
             self.assertTrue("chicken" <= str(e["name"]).lower() <= "lion")
 
-        f.oper = f.Operator.Outside
+        f.oper = f.Outside
         x = filter.Values([f])(d)
         self.assertEqual(len(x), sum(col < "chicken") + sum(col > "lion") - 1)
         self.assertTrue(np.all((x.metas < "chicken") + (x.metas > "lion")))
 
-        f.oper = f.Operator.Contains
+        f.oper = f.Contains
         f.ref = "iR"
         x = filter.Values([f])(d)
         for e in x:
             self.assertTrue("ir" in str(e["name"]).lower())
         self.assertEqual(len(x), len([e for e in col if "ir" in e]) + 1)
 
-        f.oper = f.Operator.StartsWith
+        f.oper = f.StartsWith
         f.ref = "GI"
         x = filter.Values([f])(d)
         for e in x:
@@ -958,7 +958,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(x),
                          len([e for e in col if e.lower().startswith("gi")]))
 
-        f.oper = f.Operator.EndsWith
+        f.oper = f.EndsWith
         f.ref = "ion"
         x = filter.Values([f])(d)
         for e in x:
