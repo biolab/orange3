@@ -142,10 +142,10 @@ class SameValue(Filter):
 
 
 class Values(Filter):
-    def __init__(self, conditions=[], conjunction=True, negate=False):
+    def __init__(self, conditions=None, conjunction=True, negate=False):
         super().__init__(negate)
         self.conjunction = conjunction
-        self.conditions = conditions
+        self.conditions = conditions if conditions is not None else []
 
 
     def __call__(self, data):
@@ -176,21 +176,30 @@ class ValueFilter:
     Operator = Enum("Equal", "NotEqual",
                     "Less", "LessEqual", "Greater", "GreaterEqual",
                     "Between", "Outside",
-                    "Contains", "BeginsWith", "EndsWith")
+                    "Contains", "StartsWith", "EndsWith")
 
     def __init__(self, position):
         self.position = position
+        self.last_domain = None
 
+    def cache_position(self, domain):
+        self.pos_cache = domain.index(self.position)
+        self.last_domain = domain
 
 class FilterDiscrete(ValueFilter):
     def __init__(self, position, values):
         super().__init__(position)
         self.values = values
 
+    def __call__(self, inst):
+        if inst.domain is not self.last_domain:
+            self.cache_position(inst.domain)
+        return inst[self.pos_cache] in self.values
+
+
 
 class FilterContinuous(ValueFilter):
-    def __init__(self, position, oper, min=None, max=None,
-                 case_sensitive=True, **a):
+    def __init__(self, position, oper, min=None, max=None, **a):
         super().__init__(position)
         if a:
             if len(a) != 1 or "ref" not in a:
@@ -201,15 +210,36 @@ class FilterContinuous(ValueFilter):
         self.min = min
         self.max = max
         self.oper = oper
-        self.case_sensitive = True
 
-    def get_ref(self):
+    @property
+    def ref(self):
         return self.min
 
-    def set_ref(self, value):
+    @ref.setter
+    def ref(self, value):
         self.min = value
 
-    ref = property(get_ref, set_ref)
+    def __call__(self, inst):
+        if inst.domain is not self.last_domain:
+            self.cache_position(inst.domain)
+        value = inst[self.pos_cache]
+        if self.oper == self.Operator.Equal:
+            return value == self.min
+        if self.oper == self.Operator.NotEqual:
+            return value != self.min
+        if self.oper == self.Operator.Less:
+            return value < self.min
+        if self.oper == self.Operator.LessEqual:
+            return value <= self.min
+        if self.oper == self.Operator.Greater:
+            return value > self.min
+        if self.oper == self.Operator.GreaterEqual:
+            return value >= self.min
+        if self.oper == self.Operator.Between:
+            return self.min <= value <= self.max
+        if self.oper == self.Operator.Outside:
+            return not self.min <= value <= self.max
+        raise ValueError("invalid operator")
 
 
 class FilterString(ValueFilter):
@@ -225,15 +255,49 @@ class FilterString(ValueFilter):
         self.min = min
         self.max = max
         self.oper = oper
-        self.case_sensitive = True
+        self.case_sensitive = case_sensitive
 
-    def get_ref(self):
+    @property
+    def ref(self):
         return self.min
 
-    def set_ref(self, value):
+    @ref.setter
+    def ref(self, value):
         self.min = value
 
-    ref = property(get_ref, set_ref)
+    def __call__(self, inst):
+        if inst.domain is not self.last_domain:
+            self.cache_position(inst.domain)
+        value = inst[self.pos_cache]
+        if self.case_sensitive:
+            refval = self.min
+        else:
+            value = value.lower()
+            refval = self.min.lower()
+        if self.oper == self.Operator.Equal:
+            return value == refval
+        if self.oper == self.Operator.NotEqual:
+            return value != refval
+        if self.oper == self.Operator.Less:
+            return value < refval
+        if self.oper == self.Operator.LessEqual:
+            return value <= refval
+        if self.oper == self.Operator.Greater:
+            return value > refval
+        if self.oper == self.Operator.GreaterEqual:
+            return value >= refval
+        if self.oper == self.Operator.Contains:
+            return value in refval
+        if self.oper == self.Operator.StartsWith:
+            return value.startswith(refval)
+        if self.oper == self.Operator.EndsWith:
+            return value.endswith(refval)
+        high = self.max if self.case_sensitive else self.max.lower()
+        if self.oper == self.Operator.Between:
+            return refval <= value <= high
+        if self.oper == self.Operator.Outside:
+            return not refval <= value <= high
+        raise ValueError("invalid operator")
 
 
 class FilterStringList(ValueFilter):
@@ -241,19 +305,3 @@ class FilterStringList(ValueFilter):
         super().__init__(position)
         self.values = values
         self.case_sensitive = case_sensitive
-
-"""
-
-from orange import\
-    Filter as Filter,\
-    FilterList as FilterList,\
-    Filter_random as Random,\
-    Filter_isDefined as IsDefined,\
-    Filter_hasClassValue as HasClassValue,\
-    Filter_hasMeta as HasMeta,\
-    Filter_sameValue as SameValue,\
-    Filter_values as Values,\
-    Filter_hasSpecial as HasSpecial,\
-    Filter_conjunction as Conjunction,\
-    Filter_disjunction as Disjunction
-"""

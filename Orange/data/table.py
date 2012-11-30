@@ -1085,7 +1085,7 @@ class Table(MutableSequence, Storage):
                 elif f.oper == f.Operator.Contains:
                     col = np.fromiter((fmin in e for e in col),
                                       dtype=bool)
-                elif f.oper == f.Operator.BeginsWith:
+                elif f.oper == f.Operator.StartsWith:
                     col = np.fromiter((e.startswith(fmin) for e in col),
                                       dtype=bool)
                 elif f.oper == f.Operator.EndsWith:

@@ -875,7 +875,7 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue("ea" in e["name"])
         self.assertEqual(len(x), len([e for e in col if "ea" in e]))
 
-        f.oper = f.Operator.BeginsWith
+        f.oper = f.Operator.StartsWith
         f.ref = "sea"
         x = filter.Values([f])(d)
         for e in x:
@@ -950,7 +950,7 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue("ir" in str(e["name"]).lower())
         self.assertEqual(len(x), len([e for e in col if "ir" in e]) + 1)
 
-        f.oper = f.Operator.BeginsWith
+        f.oper = f.Operator.StartsWith
         f.ref = "GI"
         x = filter.Values([f])(d)
         for e in x:
