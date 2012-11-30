@@ -1,4 +1,6 @@
 class Storage:
+    domain = None
+
     def _filter_is_defined(self, columns=None, negate=False):
         raise NotImplementedError
 

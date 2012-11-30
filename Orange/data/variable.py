@@ -9,15 +9,7 @@ from math import isnan, floor
 class Variable:
     """
     The base class for variable descriptors, which contains the variable's
-    name, type and basic properties. The basic functions of descriptors are:
-
-    - storing additional data, like list of symbolic values,
-    - conversion from textual format to floats and back,
-    - guarding the computation of derived variables from circular deadlocks.
-
-    Derived classes store lists of existing descriptors for variables of each
-    particular type. The provide a supplementary constructor :obj:`make`, which
-    returns an existing variable instead of creating a new one, when possible.
+    name, type and basic properties.
 
     .. attribute:: name
 
@@ -48,15 +40,6 @@ class Variable:
 
         If a variable is computed (via :obj:`getValueFrom` from another
         variable, this attribute contains its descriptor.
-
-    Descriptors facilitate computation of variables from other variables. This
-    is used in domain conversion: if the destination domain contains a variable
-    that is not present in the original domain, the variables value is computed
-    by calling its method :obj:`compute_value`, passing the data instance from
-    the original domain as an argument. Method :obj:`compute_value` calls
-    :obj:`get_value_from` if defined and returns its result. If the variables
-    does not have :obj:`get_value_from`, :obj:`compute_value` returns
-    :obj:`Unknown`.
     """
     VarTypes = Enum("None", "Discrete", "Continuous", "String")
     MakeStatus = Enum("OK", "MissingValues", "NoRecognizedValues",
@@ -267,7 +250,7 @@ class DiscreteVariable(Variable):
         :type ordered: bool
         :param base_value: the index of the base value, or -1 if there is none
         :type base_value: int
-        :returns: an existing compatible variable or `None `
+        :returns: an existing compatible variable or `None`
         """
         var = DiscreteVariable.find_compatible(name, values, ordered,
                                                base_value)
@@ -296,7 +279,7 @@ class DiscreteVariable(Variable):
         :type ordered: bool
         :param base_value: the index of the base value, or -1 if there is none
         :type base_value: int
-        :returns: an existing compatible variable or `None `
+        :returns: an existing compatible variable or `None`
         """
         base_rep = base_value != -1 and values[base_value]
         existing = DiscreteVariable.all_discrete_vars.get(name)
