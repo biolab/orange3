@@ -8,12 +8,16 @@ class Value(float):
     __slots__ = "variable", "value"
 
     def __new__(cls, variable, value=Unknown):
-        if isinstance(value, Real):
-            self = super().__new__(cls, value)
-            self.value = None
-        else:
-            self = super().__new__(cls, -1)
-            self.value = value
+        if not isinstance(value, str):
+            try:
+                self = super().__new__(cls, value)
+                self.variable = variable
+                self.value = None
+                return self
+            except:
+                pass
+        self = super().__new__(cls, -1)
+        self.value = value
         self.variable = variable
         return self
 

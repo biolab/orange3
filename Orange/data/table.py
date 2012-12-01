@@ -11,7 +11,7 @@ import bottleneck as bn
 from scipy import sparse as sp
 
 from .instance import *
-from Orange.data import domain as orange_domain, io
+from Orange.data import domain as orange_domain, io, DiscreteVariable
 from Orange.data.storage import Storage
 
 dataset_dirs = ['']
@@ -1024,3 +1024,26 @@ class Table(MutableSequence, Storage):
             else:
                 raise TypeError("Invalid filter")
         return Table.from_table_rows(self, sel)
+
+
+    def _compute_distributions(self, columns=None):
+        if columns is None:
+            columns = [i for i, var in enumerate(self.domain.variables)
+                       if isinstance(var, DiscreteVariable)]
+        else:
+            columns = [self.domain.index(var) for var in columns]
+        distributions = []
+        for col in columns:
+            var = self.domain[col]
+            if col < self._X.shape[1]:
+                m = self._X
+            else:
+                m = self._Y
+                col -= self._X.shape[1]
+            if sp.issparse(m):
+                raise NotImplementedError("table does not yet compute "
+                                          "distributions on sparse data")
+            else:
+                distributions.append(bn.bincount(m[:, col], len(var.values)-1,
+                            self._W if self.has_weights() else None))
+        return distributions
