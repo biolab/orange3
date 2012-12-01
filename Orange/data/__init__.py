@@ -1,7 +1,3 @@
-"""
-.. autoclass:: Table
-"""
-
 from .instance import *
 from .value import *
 from .variable import *

@@ -28,7 +28,7 @@ class IsDefined(Filter):
 
     The filter's behaviour may depend upon the storage implementation.
 
-    In particular, :obj:~Orange.data.Table with sparse matrix representation
+    In particular, :obj:`~Orange.data.Table` with sparse matrix representation
     will select all data instances whose values are defined, even if they are
     zero. However, if individual columns are checked, it will select all
     rows with non-zero entries for this columns, disregarding whether they

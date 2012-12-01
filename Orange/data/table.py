@@ -18,14 +18,6 @@ dataset_dirs = ['']
 
 
 class RowInstance(Instance):
-    """
-    `RowInstance` is a specialization of :obj:`~Orange.data.Instance` that
-    represents a row of :obj:`Orange.data.Table`.
-
-    Although the instance's data can be retrieved through attributes :obj:x,
-    :obj:y and :obj:metas, changing them modifies the corresponding table only
-    if the underlying numpy arrays are not sparse.
-    """
     def __init__(self, table, row_index):
         """
         Construct a data instance representing the given row of the table.
@@ -705,8 +697,9 @@ class Table(MutableSequence, Storage):
         """
         Extend the table with the given instances. The instances can be given
         as a table of the same or a different domain, or a sequence. In the
-        latter case, each instances can be given as :obj:~Orange.data.Instance
-        or a sequence of values (e.g. list, tuple, numpy.array).
+        latter case, each instances can be given as
+        :obj:`~Orange.data.Instance` or a sequence of values (e.g. list,
+        tuple, numpy.array).
 
         :param instances: additional instances
         :type instances: Orange.data.Table or a sequence of instances

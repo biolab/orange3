@@ -10,8 +10,8 @@ storages.
 Like data tables, every data instance is associated with a domain and its
 data is split into attributes, classes, meta attributes and the weight.
 
-The instance's data can be retrieved through attributes :obj:x, :obj:y and
-:obj:metas. For derived classes, changing this data does not necessarily
+The instance's data can be retrieved through attributes :obj:`x`, :obj:`y` and
+:obj:`metas`. For derived classes, changing this data does not necessarily
 modify the corresponding data tables or other structures. Use indexing to
 modify the data.
 
@@ -23,3 +23,11 @@ Rows of Data Tables
 -------------------
 
 .. autoclass:: RowInstance
+    :members:
+
+    `RowInstance` is a specialization of :obj:`~Orange.data.Instance` that
+    represents a row of :obj:`Orange.data.Table`.
+
+    Although the instance's data can be retrieved through attributes :obj:`x`,
+    :obj:`y` and :obj:`metas`, changing them modifies the corresponding table
+    only if the underlying numpy arrays are not sparse.

@@ -26,7 +26,7 @@ Data Table
     There are multiple ways to get values or entire rows of the table.
 
     - The index can be an int, e.g. `table[7]`; the corresponding row is
-      returned as an instance of :obj:RowInstance.
+      returned as an instance of :obj:`RowInstance`.
 
     - The index can be a slice or a sequence of ints (e.g. `table[7:10]` or
       `table[[7, 42, 15]]`, indexing returns a new data table with the

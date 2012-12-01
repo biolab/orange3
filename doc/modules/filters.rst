@@ -1,4 +1,4 @@
-.. currentmodule:: Orange.data.filter
+.. currentmodule:: Orange.data
 
 Filters
 =======

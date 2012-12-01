@@ -213,7 +213,7 @@ class DiscreteVariable(Variable):
     def repr_val(self, val):
         """
         Return a textual representation of a value. The result is a "?" for
-        unknowns and the symbolic representation from :obj:values
+        unknowns and the symbolic representation from :obj:`values`
         (that is, `self.values[int(val)]`) otherwise.
 
         :param val: value

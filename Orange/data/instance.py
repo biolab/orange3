@@ -42,6 +42,12 @@ class Instance:
 
 
     @property
+    def domain(self):
+        """The domain describing the instance's values."""
+        return self._domain
+
+
+    @property
     def x(self):
         """
         Instance's attributes as a 1-dimensional numpy array whose length
@@ -66,12 +72,6 @@ class Instance:
         equals len(self.domain.attributes)
         """
         return self._metas
-
-
-    @property
-    def domain(self):
-        """The domain describing the instance's values."""
-        return self._domain
 
 
     @property
