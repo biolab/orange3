@@ -143,7 +143,7 @@ class Discrete(np.ndarray):
     def normalize(self):
         t = np.sum(self)
         self[:] /= t
-        np.unknowns /= t
+        self.unknowns /= t
 
 
     def modus(self):
@@ -153,7 +153,7 @@ class Discrete(np.ndarray):
 
     def random(self):
         v = random.random() * np.sum(self)
-        s = 0
+        s = i = 0
         for i, e in enumerate(self):
             s += e
             if s > v:
