@@ -141,7 +141,9 @@ class Discrete(np.ndarray):
 
 
     def normalize(self):
-        self /= np.sum(self)
+        t = np.sum(self)
+        self[:] /= t
+        np.unknowns /= t
 
 
     def modus(self):
@@ -157,6 +159,7 @@ class Discrete(np.ndarray):
             if s > v:
                 break
         return Value(self.variable, i) if self.variable is not None else i
+
 
 def class_distribution(data):
     nattrs = len(data.domain.attributes)
