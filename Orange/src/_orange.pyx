@@ -16,6 +16,13 @@ def valuecount(np.ndarray[np.float64_t, ndim=2] a):
     by merging consecutive columns with the same value in the first row,
     and adding the corresponding weights in the second row.
 
+    It does so in-place, on a 2-d array of shape (2, N); the first row
+    contains values and the second contains weights (1's, if unweighted).
+    The array should be sorted by the elements in the first row (e.g.
+    a.sort(axis=0)). The function 'compresses' the array by merging
+    consecutive columns with the same value in the first row, and adding
+    the corresponding weights in the second row.
+
     >>> a = np.array([[1, 1, 2, 3, 3], [0.1, 0.2, 0.3, 0.4, 0.5]])
     >>> _orange.valuecount(a)
     [[ 1.   2.   3. ]
