@@ -31,3 +31,14 @@ class test_valuecount(unittest.TestCase):
         a = np.ones((2, 1))
         b = _orange.valuecount(a)
         np.testing.assert_almost_equal(b, a)
+
+        a = np.array([[0, 1], [2, 3]])
+        self.assertRaises(ValueError, _orange.valuecount, a)
+
+        a = np.ones(2)
+        self.assertRaises(ValueError, _orange.valuecount, a)
+
+        a = np.ones((3, 3))
+        self.assertRaises(ValueError, _orange.valuecount, a)
+
+        self.assertRaises(ValueError, _orange.valuecount, None)
