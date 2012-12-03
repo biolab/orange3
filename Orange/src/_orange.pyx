@@ -10,11 +10,7 @@ from numpy cimport NPY_FLOAT64 as NPY_float64
 @cython.wraparound(False)
 def valuecount(np.ndarray[np.float64_t, ndim=2] a):
     """
-    Count the occurrences of each value. Function requires a 2xN array
-    of type float64; the first row must contain *sorted values* and the
-    second contains their weights. The function 'compresses' the array
-    by merging consecutive columns with the same value in the first row,
-    and adding the corresponding weights in the second row.
+    Count the occurrences of each value.
 
     It does so in-place, on a 2-d array of shape (2, N); the first row
     contains values and the second contains weights (1's, if unweighted).
