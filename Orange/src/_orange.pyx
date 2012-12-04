@@ -27,7 +27,7 @@ def valuecount(np.ndarray[np.float64_t, ndim=2] a):
     cdef np.npy_intp *dim
     dim = np.PyArray_DIMS(a)
     if dim[0] != 2:
-        raise ValueError("value count requires an array with shape (2, N)")
+        raise ValueError("valuecount expects an array with shape (2, N)")
     cdef Py_ssize_t N = dim[1]
 
     cdef Py_ssize_t src

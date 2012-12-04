@@ -13,6 +13,7 @@ from scipy import sparse as sp
 from .instance import *
 from Orange.data import domain as orange_domain, io, DiscreteVariable
 from Orange.data.storage import Storage
+import _orange
 
 dataset_dirs = ['']
 
@@ -1044,6 +1045,19 @@ class Table(MutableSequence, Storage):
                 raise NotImplementedError("table does not yet compute "
                                           "distributions on sparse data")
             else:
-                distributions.append(bn.bincount(m[:, col], len(var.values)-1,
-                            self._W if self.has_weights() else None))
+                if isinstance(var, DiscreteVariable):
+                    dist, unknowns = bn.bincount(
+                        m[:, col], len(var.values)-1,
+                        self._W if self.has_weights() else None)
+                else:
+                    if self.has_weights():
+                        vals = np.hstack((m[:, col], self._weights))
+                    else:
+                        vals = np.ones((2, m.shape[0]))
+                        vals[1, :] = m[:, col]
+                    unknowns = bn.countnans(m[:, col], self._weights)
+                    vals.sort(axis=0)
+                    dist = np.array(_orange.valuecount(vals))
+                distributions.append((dist, unknowns))
+
         return distributions
