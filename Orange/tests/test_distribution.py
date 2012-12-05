@@ -263,3 +263,59 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
             ans.add(v)
         self.assertTrue(len(ans) > 10)
 
+
+class Class_Distribution_Test(unittest.TestCase):
+    def test_class_distribution(self):
+        d = data.Table("zoo")
+        disc = distribution.class_distribution(d)
+        self.assertIsInstance(disc, np.ndarray)
+        self.assertIs(disc.variable, d.domain["type"])
+        self.assertEquals(disc.unknowns, 0)
+        np.testing.assert_array_equal(disc,
+                                      [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
+
+class Get_Distribution_Test(unittest.TestCase):
+    def test_get_distribution(self):
+        d = data.Table("iris")
+        cls = d.domain.class_var
+        disc = distribution.get_distribution(cls, d)
+        self.assertIsInstance(disc, np.ndarray)
+        self.assertIs(disc.variable, cls)
+        self.assertEquals(disc.unknowns, 0)
+        np.testing.assert_array_equal(disc, [50, 50, 50])
+
+        petal_length = d.columns.petal_length
+        freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
+                      (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
+                      (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
+                      (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
+                      (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
+                      (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
+                      (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
+                      (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
+                      (6.6, 1), (6.7, 2), (6.9, 1)]).T
+        disc = distribution.get_distribution(petal_length, d)
+        np.testing.assert_almost_equal(disc, freqs)
+
+class Domain_Distribution_Test(unittest.TestCase):
+    def test_get_distributions(self):
+        d = data.Table("iris")
+        ddist = distribution.get_distributions(d)
+
+        self.assertEqual(len(ddist), 5)
+        for i in range(4):
+            self.assertIsInstance(ddist[i], distribution.Continuous)
+        self.assertIsInstance(ddist[-1], distribution.Discrete)
+
+        freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
+                      (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
+                      (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
+                      (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
+                      (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
+                      (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
+                      (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
+                      (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
+                      (6.6, 1), (6.7, 2), (6.9, 1)]).T
+        np.testing.assert_almost_equal(ddist[2], freqs)
+        np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
+

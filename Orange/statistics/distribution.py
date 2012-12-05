@@ -5,13 +5,35 @@ from numbers import Real
 import numpy as np
 from Orange import data
 
+
+def _get_variable(variable, dat, expected_type=None, expected_name=""):
+    if isinstance(variable, data.Variable):
+        datvar = getattr(dat, "variable", None)
+        if datvar is not None and datvar is not variable:
+            raise ValueError("variable does not match the variable"
+                             "in the data")
+    else:
+        if hasattr(dat, "domain"):
+            variable = dat.domain[variable]
+        if hasattr(dat, "variable"):
+            variable = dat.variable
+    if expected_type is not None and not isinstance(variable, expected_type):
+        if isinstance(variable, data.Variable):
+            raise ValueError(
+                "expected %s variable not %s" % (expected_name, variable))
+        else:
+            raise ValueError("expected expected, not '%s'" %
+                             (expected_type.__name, type(variable).__name__))
+    return variable
+
+
 class Discrete(np.ndarray):
     def __new__(cls, variable, dat=None):
         if isinstance(dat, data.Storage):
             return cls.from_data(variable, dat)
 
         if variable is not None:
-            variable = cls._get_variable(variable, dat)
+            variable = _get_variable(variable, dat)
             n = len(variable.values)
         else:
             n = len(dat)
@@ -26,31 +48,9 @@ class Discrete(np.ndarray):
         return self
 
 
-    @staticmethod
-    def _get_variable(variable, dat):
-        if isinstance(variable, data.Variable):
-            datvar = getattr(dat, "variable", None)
-            if datvar is not None and datvar is not variable:
-                raise ValueError("variable does not match the variable "
-                                 "in the data")
-        else:
-            if hasattr(dat, "domain"):
-                variable = dat.domain[variable]
-            if hasattr(dat, "variable"):
-                variable = dat.variable
-        if not isinstance(variable, data.DiscreteVariable):
-            if isinstance(variable, data.Variable):
-                raise ValueError(
-                    "expected discrete variable not %s" % variable)
-            else:
-                raise ValueError("expected DiscreteVariable, not '%s'" %
-                                 type(variable).__name__)
-        return variable
-
-
     @classmethod
     def from_data(cls, variable, data):
-        variable = cls._get_variable(variable, data)
+        variable = _get_variable(variable, data)
         try:
             dist, unknowns = data._compute_distributions([variable])[0]
             self = super().__new__(cls, len(dist))
@@ -154,8 +154,8 @@ class Discrete(np.ndarray):
         if t > 1e-6:
             self[:] /= t
             self.unknowns /= t
-        elif len(self):
-            self[:] = 1 / len(self)
+        elif self.shape[0]:
+            self[:] = 1 / self.shape[0]
 
 
     def modus(self):
@@ -191,31 +191,9 @@ class Continuous(np.ndarray):
         return self
 
 
-    @staticmethod
-    def _get_variable(variable, dat):
-        if isinstance(variable, data.Variable):
-            datvar = getattr(dat, "variable", None)
-            if datvar is not None and datvar is not variable:
-                raise ValueError("variable does not match the variable "
-                                 "in the data")
-        else:
-            if hasattr(dat, "domain"):
-                variable = dat.domain[variable]
-            if hasattr(dat, "variable"):
-                variable = dat.variable
-        if not isinstance(variable, data.ContinuousVariable):
-            if isinstance(variable, data.Variable):
-                raise ValueError(
-                    "expected discrete variable not %s" % variable)
-            else:
-                raise ValueError("expected DiscreteVariable, not '%s'" %
-                                 type(variable).__name__)
-        return variable
-
-
     @classmethod
     def from_data(cls, variable, data):
-        variable = cls._get_variable(variable, data)
+        variable = _get_variable(variable, data)
         try:
             dist, unknowns = data._compute_distributions([variable])[0]
         except NotImplementedError:
@@ -274,8 +252,24 @@ class Continuous(np.ndarray):
 
 
 def class_distribution(data):
-    nattrs = len(data.domain.attributes)
     if data.domain.class_var:
-        return Discrete(nattrs, data)
-    return [Discrete(nattrs + i, data)
-            for i in range(len(data.domain.class_vars))]
+        return get_distribution(data.domain.class_var, data)
+    elif data.domain.class_vars:
+        return [get_distribution(cls, data) for cls in data.domain.class_vars]
+    else:
+        raise ValueError("domain has no class attribute")
+
+
+def get_distribution(variable, dat):
+    variable = _get_variable(variable, dat)
+    if isinstance(variable, data.DiscreteVariable):
+        return Discrete(variable, dat)
+    elif isinstance(variable, data.ContinuousVariable):
+        return Continuous(variable, dat)
+    else:
+        raise TypeError("cannot compute distribution of '%s'" %
+                        type(variable).__name__)
+
+
+def get_distributions(dat):
+    return [get_distribution(var, dat) for var in dat.domain]
