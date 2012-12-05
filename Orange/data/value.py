@@ -50,6 +50,12 @@ class Value(float):
             return other in self.value
         raise TypeError("invalid operation on Value()")
 
+    def __hash__(self):
+        if self.value is None:
+            return super().__hash__(self)
+        else:
+            return super().__hash__(self) ^ hash(self.value)
+
 """
 Remove when implemented (or when decided to not reimplement)
 
