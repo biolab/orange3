@@ -151,8 +151,11 @@ class Discrete(np.ndarray):
 
     def normalize(self):
         t = np.sum(self)
-        self[:] /= t
-        self.unknowns /= t
+        if t > 1e-6:
+            self[:] /= t
+            self.unknowns /= t
+        elif len(self):
+            self[:] = 1 / len(self)
 
 
     def modus(self):
@@ -172,17 +175,17 @@ class Discrete(np.ndarray):
 
 
 class Continuous(np.ndarray):
-    def __new__(cls, variable, dat=None):
-        if dat is None:
-            raise ValueError(
-                "continuous distribution cannot be constructed without data")
+    def __new__(cls, variable, dat):
         if isinstance(dat, data.Storage):
             return cls.from_data(variable, dat)
         if isinstance(dat, int):
-            self = super().__new__(cls, dat)
+            self = super().__new__(cls, (2, dat))
             self[:] = self.unknowns = 0
         else:
-            self = super().__new__(cls, dat)
+            if not isinstance(dat, np.ndarray):
+                dat = np.asarray(dat)
+            self = super().__new__(cls, dat.shape)
+            self[:] = dat
             self.unknowns = getattr(dat, "unknowns", 0)
         self.variable = variable
         return self
@@ -231,7 +234,7 @@ class Continuous(np.ndarray):
             dist = np.array(_orange.valuecount(dist))
             unknowns = len(col) - dist.shape[1]
 
-        self = super().__new__(cls, len(dist))
+        self = super().__new__(cls, dist.shape)
         self[:] = dist
         self.unknowns = unknowns
         self.variable = variable
@@ -243,84 +246,17 @@ class Continuous(np.ndarray):
             not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
 
 
-    def __getitem__(self, index):
-        i = np.searchsorted(self[0, :], index)
-        if super().__getitem__((0, i)) != index:
-            raise KeyError("distribution does not have value %.3f" % index)
-        return super().__getitem__((1, i))
-
-
-    def __setitem__(self, index, value):
-        i = np.searchsorted(self[0, :], index)
-        if super().__setitem__((0, i)) != index:
-            raise KeyError("distribution does not have value %.3f" % index)
-        super().__setitem__((1, i), value)
-
-
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
 
 
-    def __add__(self, other):
-        raise TypeError("continuous distribution does not implement addition")
-
-
-    def __iadd__(self, other):
-        raise TypeError("continuous distribution does not implement addition")
-
-
-    def __sub__(self, other):
-        raise TypeError(
-            "continuous distribution does not implement subtraction")
-
-
-    def __isub__(self, other):
-        raise TypeError(
-            "continuous distribution does not implement subtraction")
-
-
-    def __mul__(self, other):
-        if isinstance(other, Real):
-            dist = self.__class__(self)
-            super().__mul__(dist[1, :], other)
-            dist.unknowns *= other
-            return dist
-        else:
-            raise TypeError("cannot multiply continuous distributions")
-
-
-    def __imul__(self, other):
-        if isinstance(other, Real):
-            super().__mul__(self[1, :], other)
-            self.unknowns *= other
-            return self
-        else:
-            raise TypeError("cannot multiply continuous distributions")
-
-
-    def __div__(self, other):
-        if isinstance(other, Real):
-            dist = self.__class__(self)
-            super().__div__(dist[1, :], other)
-            dist.unknowns /= other
-            return dist
-        else:
-            raise TypeError("cannot divide continuous distributions")
-
-
-    def __idiv__(self, other):
-        if isinstance(other, Real):
-            super().__div__(self[1, :], other)
-            self.unknowns /= other
-            return self
-        else:
-            raise TypeError("cannot divide continuous distributions")
-
-
     def normalize(self):
-        t = np.sum(self)
-        self[1, :] /= t
-        self.unknowns /= t
+        t = np.sum(self[1, :])
+        if t > 1e-6:
+            self[1, :] /= t
+            self.unknowns /= t
+        elif self.shape[1]:
+            self[1, :] = 1 / self.shape[1]
 
 
     def modus(self):
@@ -331,7 +267,7 @@ class Continuous(np.ndarray):
     def random(self):
         v = random.random() * np.sum(self[1, :])
         s = 0
-        for prob, x in enumerate(self.T):
+        for x, prob in self.T:
             s += prob
             if s > v:
                 return x

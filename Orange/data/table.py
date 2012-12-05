@@ -1051,12 +1051,13 @@ class Table(MutableSequence, Storage):
                         self._W if self.has_weights() else None)
                 else:
                     if self.has_weights():
-                        vals = np.hstack((m[:, col], self._weights))
+                        vals = np.hstack((m[:, col], self._W))
+                        unknowns = bn.countnans(m[:, col], self._W)
                     else:
                         vals = np.ones((2, m.shape[0]))
-                        vals[1, :] = m[:, col]
-                    unknowns = bn.countnans(m[:, col], self._weights)
-                    vals.sort(axis=0)
+                        vals[0, :] = m[:, col]
+                        unknowns = bn.countnans(m[:, col])
+                    vals.sort(axis=1)
                     dist = np.array(_orange.valuecount(vals))
                 distributions.append((dist, unknowns))
 
