@@ -127,6 +127,7 @@ INSTALL_REQUIRES = (
 
 from numpy.distutils.core import setup
 
+
 def configuration(parent_package='', top_path=None):
     if os.path.exists('MANIFEST'):
         os.remove('MANIFEST')
@@ -144,8 +145,6 @@ def configuration(parent_package='', top_path=None):
     config.add_subpackage('Orange')
 
     return config
-
-
 
 
 def setup_package():

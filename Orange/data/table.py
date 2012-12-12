@@ -400,14 +400,14 @@ class Table(MutableSequence, Storage):
             absolute_filename = ext = ""
 
         if not os.path.exists(absolute_filename):
-            raise IOError('File "{}" is not found'.format(absolute_filename))
+            raise IOError('File "{}" was not found.'.format(filename))
         if ext == ".tab":
             return io.TabDelimReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
             return io.BasketReader().read_file(absolute_filename, cls)
         else:
             raise IOError(
-                'Extension "{}" is not recognized'.format(absolute_filename))
+                'Extension "{}" is not recognized'.format(filename))
 
 
     # Helper function for __setitem__ and insert:

@@ -4,19 +4,23 @@ import numpy as np
 from Orange.statistics import distribution
 from Orange import data
 
+
 class Distribution_DiscreteTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        data.table.dataset_dirs.append("Orange/tests")
+
     def setUp(self):
         self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
         s = sum(self.freqs)
         self.rfreqs = [x/s for x in self.freqs]
-
 
     def test_from_table(self):
         d = data.Table("zoo")
         disc = distribution.Discrete("type", d)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
-        self.assertEquals(disc.unknowns, 0)
+        self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc, self.freqs)
 
         disc2 = distribution.Discrete(d.domain.class_var, d)
@@ -41,19 +45,19 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         disc = distribution.Discrete("type", d)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
-        self.assertEquals(disc.unknowns, 0)
+        self.assertEqual(disc.unknowns, 0)
         self.assertIs(disc.variable, d.domain.class_var)
 
         disc7 = distribution.Discrete(None, self.freqs)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIsNone(disc7.variable)
-        self.assertEquals(disc7.unknowns, 0)
+        self.assertEqual(disc7.unknowns, 0)
         self.assertEqual(disc, disc7)
 
         disc1 = distribution.Discrete(d.domain.class_var)
         self.assertIsInstance(disc1, np.ndarray)
         self.assertIs(disc1.variable, d.domain.class_var)
-        self.assertEquals(disc.unknowns, 0)
+        self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc1,
                                       [0]*len(d.domain.class_var.values))
 
@@ -142,6 +146,10 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
 
 
 class Distribution_ContinuousTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        data.table.dataset_dirs.append("Orange/tests")
+
     def setUp(self):
         self.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
                       (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
@@ -161,7 +169,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         disc = distribution.Continuous("petal length", d)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, petal_length)
-        self.assertEquals(disc.unknowns, 0)
+        self.assertEqual(disc.unknowns, 0)
         np.testing.assert_almost_equal(disc, self.freqs)
 
         disc2 = distribution.Continuous(d.domain[2], d)
@@ -185,26 +193,26 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         disc7 = distribution.Continuous(None, self.freqs)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIsNone(disc7.variable)
-        self.assertEquals(disc7.unknowns, 0)
+        self.assertEqual(disc7.unknowns, 0)
         self.assertEqual(disc, disc7)
 
         disc7 = distribution.Continuous(petal_length, self.freqs)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc7.variable, petal_length)
-        self.assertEquals(disc7.unknowns, 0)
+        self.assertEqual(disc7.unknowns, 0)
         self.assertEqual(disc, disc7)
 
         disc1 = distribution.Continuous(petal_length, 10)
         self.assertIsInstance(disc1, np.ndarray)
         self.assertIs(disc7.variable, petal_length)
-        self.assertEquals(disc7.unknowns, 0)
+        self.assertEqual(disc7.unknowns, 0)
         np.testing.assert_array_equal(disc1, np.zeros((2, 10)))
 
         dd = [list(range(5)), [1, 1, 2, 5, 1]]
         disc2 = distribution.Continuous(None, dd)
         self.assertIsInstance(disc2, np.ndarray)
         self.assertIsNone(disc2.variable)
-        self.assertEquals(disc2.unknowns, 0)
+        self.assertEqual(disc2.unknowns, 0)
         np.testing.assert_array_equal(disc2, dd)
 
     def test_hash(self):
@@ -265,23 +273,31 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
 
 class Class_Distribution_Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        data.table.dataset_dirs.append("Orange/tests")
+
     def test_class_distribution(self):
         d = data.Table("zoo")
         disc = distribution.class_distribution(d)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
-        self.assertEquals(disc.unknowns, 0)
+        self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc,
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
 class Get_Distribution_Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        data.table.dataset_dirs.append("Orange/tests")
+
     def test_get_distribution(self):
         d = data.Table("iris")
         cls = d.domain.class_var
         disc = distribution.get_distribution(cls, d)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, cls)
-        self.assertEquals(disc.unknowns, 0)
+        self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc, [50, 50, 50])
 
         petal_length = d.columns.petal_length
@@ -298,6 +314,10 @@ class Get_Distribution_Test(unittest.TestCase):
         np.testing.assert_almost_equal(disc, freqs)
 
 class Domain_Distribution_Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        data.table.dataset_dirs.append("Orange/tests")
+
     def test_get_distributions(self):
         d = data.Table("iris")
         ddist = distribution.get_distributions(d)
@@ -319,3 +339,5 @@ class Domain_Distribution_Test(unittest.TestCase):
         np.testing.assert_almost_equal(ddist[2], freqs)
         np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
 
+if __name__ == "__main__":
+    unittest.main()
