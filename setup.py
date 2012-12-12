@@ -2,8 +2,8 @@
 
 import imp
 import os
+import sys
 import subprocess
-from setuptools import setup
 
 NAME = 'Orange'
 
@@ -43,6 +43,17 @@ CLASSIFIERS = (
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
 )
+
+if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
+        'install_egg_info', 'build_sphinx', 'egg_info', 'easy_install',
+        'upload'}.intersection(sys.argv)) > 0:
+    import setuptools
+    extra_setuptools_args = dict(
+        zip_safe=False,  # the package can run out of an .egg file
+        include_package_data=True,
+        )
+else:
+    extra_setuptools_args = dict()
 
 
 def hg_revision():
@@ -114,10 +125,33 @@ INSTALL_REQUIRES = (
     'bottleneck'
 )
 
+from numpy.distutils.core import setup
+
+def configuration(parent_package='', top_path=None):
+    if os.path.exists('MANIFEST'):
+        os.remove('MANIFEST')
+
+    from numpy.distutils.misc_util import Configuration
+    config = Configuration(None, parent_package, top_path)
+
+    # Avoid non-useful msg:
+    # "Ignoring attempt to set 'name' (from ... "
+    config.set_options(ignore_setup_xxx_py=True,
+                       assume_default_configuration=True,
+                       delegate_options_to_subpackages=True,
+                       quiet=True)
+
+    config.add_subpackage('Orange')
+
+    return config
+
+
+
 
 def setup_package():
     write_version_py()
     setup(
+        configuration=configuration,
         name=NAME,
         version=VERSION,
         description=DESCRIPTION,

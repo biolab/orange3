@@ -13,7 +13,7 @@ from scipy import sparse as sp
 from .instance import *
 from Orange.data import domain as orange_domain, io, DiscreteVariable
 from Orange.data.storage import Storage
-from . import _orange
+from . import _valuecount
 
 dataset_dirs = ['']
 
@@ -1065,7 +1065,7 @@ class Table(MutableSequence, Storage):
                         vals[0, :] = m[:, col]
                         unknowns = bn.countnans(m[:, col])
                     vals.sort(axis=1)
-                    dist = np.array(_orange.valuecount(vals))
+                    dist = np.array(_valuecount.valuecount(vals))
                 distributions.append((dist, unknowns))
 
         return distributions
