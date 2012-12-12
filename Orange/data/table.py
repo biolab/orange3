@@ -13,7 +13,7 @@ from scipy import sparse as sp
 from .instance import *
 from Orange.data import domain as orange_domain, io, DiscreteVariable
 from Orange.data.storage import Storage
-import _orange
+from . import _orange
 
 dataset_dirs = ['']
 
@@ -616,12 +616,18 @@ class Table(MutableSequence, Storage):
                 (-1 - col for col in col_indices if col < col), int)
             if value is None:
                 value = Unknown
-            if not isinstance(value, Real) and attr_cols or class_cols:
+            if not isinstance(value, Real) and (attr_cols or class_cols):
                 raise TypeError(
                     "Ordinary attributes can only have primitive values")
             if len(attr_cols):
+                if len(attr_cols) == 1:
+                    # scipy.sparse matrices only allow primitive indices.
+                    attr_cols = attr_cols[0]
                 self._X[row_idx, attr_cols] = value
             if len(class_cols):
+                if len(class_cols) == 1:
+                    # scipy.sparse matrices only allow primitive indices.
+                    class_cols = class_cols[0]
                 self._Y[row_idx, class_cols] = value
             if len(meta_cols):
                 self._metas[row_idx, meta_cols] = value
@@ -797,7 +803,8 @@ class Table(MutableSequence, Storage):
 
 
     def checksum(self, include_metas=True):
-        # TODO: do I remember correctly that Anze says it doesn't work?
+        # TODO: zlib.adler32 does not work for numpy arrays with dtype object
+        # (after pickling and unpickling such arrays, checksum changes)
         # Why, and should we fix it or remove it?
         """Return a checksum over X, Y, metas and W."""
         cs = zlib.adler32(self._X)

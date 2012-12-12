@@ -1494,5 +1494,111 @@ class TableElementAssignmentTest(TableTests):
         np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
 
 
+class InterfaceTest(unittest.TestCase):
+    """Basic tests each implementation of Table should pass."""
+
+    features = (
+        data.ContinuousVariable(name="Continuous Feature 1"),
+        data.ContinuousVariable(name="Continuous Feature 2"),
+        data.DiscreteVariable(name="Discrete Feature 1", values=[0,1]),
+        data.DiscreteVariable(name="Discrete Feature 2", values=["value1", "value2"]),
+    )
+
+    class_vars = (
+        data.ContinuousVariable(name="Continuous Class"),
+        data.DiscreteVariable(name="Discrete Class")
+    )
+
+    feature_data = (
+        (1, 0, 0, 0),
+        (0, 1, 0, 0),
+        (0, 0, 1, 0),
+        (0, 0, 0, 1),
+    )
+
+    class_data = (
+        (1, 0),
+        (0, 1),
+        (1, 0),
+        (0, 1)
+    )
+
+    data = tuple(a + c for a, c in zip(feature_data, class_data))
+
+    nrows = 4
+
+    def setUp(self):
+        self.domain = data.Domain(attributes=self.features, class_vars=self.class_vars)
+        self.table = data.Table.from_numpy(
+            self.domain,
+            np.array(self.feature_data),
+            np.array(self.class_data),
+        )
+
+    def test_len(self):
+        self.assertEqual(len(self.table), self.nrows)
+
+    def test_row_len(self):
+        for i in range(self.nrows):
+            self.assertEqual(len(self.table[i]), len(self.data[i]))
+
+    def test_iteration(self):
+        for row, expected_data in zip(self.table, self.data):
+            self.assertEqual(tuple(row), expected_data)
+
+    def test_row_indexing(self):
+        for i in range(self.nrows):
+            self.assertEqual(tuple(self.table[i]), self.data[i])
+
+    def test_row_slicing(self):
+        t = self.table[1:]
+        self.assertEqual(len(t), self.nrows - 1)
+
+    def test_value_indexing(self):
+        for i in range(self.nrows):
+            for j in range(len(self.table[i])):
+                self.assertEqual(self.table[i, j], self.data[i][j])
+
+    def test_row_assignment(self):
+        new_value = 2.
+        for i in range(self.nrows):
+            new_row = [new_value] * len(self.data[i])
+            self.table[i] = np.array(new_row)
+            self.assertEqual(list(self.table[i]), new_row)
+
+    def test_value_assignment(self):
+        new_value = 0.
+        for i in range(self.nrows):
+            for j in range(len(self.table[i])):
+                self.table[i, j] = new_value
+                self.assertEqual(self.table[i, j], new_value)
+
+    def test_append_rows(self):
+        new_value = 2
+        new_row = [new_value] * len(self.data[0])
+        self.table.append(new_row)
+        self.assertEqual(list(self.table[-1]), new_row)
+
+    def test_insert_rows(self):
+        new_value = 2
+        new_row = [new_value] * len(self.data[0])
+        self.table.insert(0, new_row)
+        self.assertEqual(list(self.table[0]), new_row)
+        for row, expected in zip(self.table[1:], self.data):
+            self.assertEqual(tuple(row), expected)
+
+    def test_delete_rows(self):
+        for i in range(self.nrows):
+            del self.table[0]
+            for j in range(len(self.table)):
+                self.assertEqual(tuple(self.table[j]), self.data[i+j+1])
+
+    def test_clear(self):
+        self.table.clear()
+        self.assertEqual(len(self.table), 0)
+        for i in self.table:
+            self.fail("Table should not contain any rows.")
+
+
 if __name__ == "__main__":
     unittest.main()
