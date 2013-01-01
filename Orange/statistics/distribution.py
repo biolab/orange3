@@ -6,6 +6,8 @@ import numpy as np
 from Orange import data
 
 
+#TODO: Handle sparse data -- at least by get_distributions
+
 def _get_variable(variable, dat, expected_type=None, expected_name=""):
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
@@ -271,5 +273,8 @@ def get_distribution(variable, dat):
                         type(variable).__name__)
 
 
-def get_distributions(dat):
-    return [get_distribution(var, dat) for var in dat.domain]
+def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
+    collect = [not skipDiscrete, not skipContinuous]
+    return [get_distribution(var, dat)
+            if collect[isinstance(var, data.ContinuousVariable)] else None
+            for var in dat.domain]
