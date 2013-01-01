@@ -5,6 +5,7 @@ from itertools import chain
 from numbers import Real
 import operator
 from functools import reduce
+from warnings import warn
 
 import numpy as np
 import bottleneck as bn
@@ -1028,36 +1029,47 @@ class Table(MutableSequence, Storage):
 
 
     def _compute_distributions(self, columns=None):
+        def _get_matrix(M, cachedM, col):
+            nonlocal single_column
+            if not sp.issparse(M):
+                return M[:, col], None
+            if not cachedM:
+                if single_column:
+                    warn(ResourceWarning,
+                         "computing distributions on sparse data"
+                         "for a single column is inefficient")
+                cachedM = sp.csc_matrix(self._X)
+            return (cachedM,
+                    cachedM.data[cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col+1]]])
+
         if columns is None:
             columns = range(len(self.domain.variables))
+            single_column = False
         else:
             columns = [self.domain.index(var) for var in columns]
+            single_column = len(columns) == 1 and len(self.domain) > 1
         distributions = []
+        Xcsc = Ycsc = None
         for col in columns:
             var = self.domain[col]
             if col < self._X.shape[1]:
-                m = self._X
+                m, Xcsc = _get_matrix(self._X, Xcsc, col)
             else:
-                m = self._Y
-                col -= self._X.shape[1]
-            if sp.issparse(m):
-                raise NotImplementedError("table does not yet compute "
-                                          "distributions on sparse data")
+                m, Ycsc = _get_matrix(self._Y, Ycsc, col - self._X.shape[1])
+            if isinstance(var, DiscreteVariable):
+                dist, unknowns = bn.bincount(
+                    m, len(var.values)-1,
+                    self._W if self.has_weights() else None)
             else:
-                if isinstance(var, DiscreteVariable):
-                    dist, unknowns = bn.bincount(
-                        m[:, col], len(var.values)-1,
-                        self._W if self.has_weights() else None)
+                if self.has_weights():
+                    vals = np.hstack((m, self._W))
+                    unknowns = bn.countnans(m, self._W)
                 else:
-                    if self.has_weights():
-                        vals = np.hstack((m[:, col], self._W))
-                        unknowns = bn.countnans(m[:, col], self._W)
-                    else:
-                        vals = np.ones((2, m.shape[0]))
-                        vals[0, :] = m[:, col]
-                        unknowns = bn.countnans(m[:, col])
-                    vals.sort(axis=1)
-                    dist = np.array(_orange.valuecount(vals))
-                distributions.append((dist, unknowns))
+                    vals = np.ones((2, m.shape[0]))
+                    vals[0, :] = m
+                    unknowns = bn.countnans(m)
+                vals.sort(axis=1)
+                dist = np.array(_orange.valuecount(vals))
+            distributions.append((dist, unknowns))
 
         return distributions
