@@ -30,8 +30,11 @@ def _get_variable(variable, dat, expected_type=None, expected_name=""):
 
 
 class Discrete(np.ndarray):
-    def __new__(cls, variable, dat=None):
+    def __new__(cls, variable, dat=None, unknowns=None):
         if isinstance(dat, data.Storage):
+            if unknowns is not None:
+                raise TypeError(
+                    "incompatible arguments (data storage and 'unknowns'")
             return cls.from_data(variable, dat)
 
         if variable is not None:
@@ -43,10 +46,12 @@ class Discrete(np.ndarray):
         self = super().__new__(cls, n)
         self.variable = variable
         if dat is None:
-            self[:] = self.unknowns = 0
+            self[:] = 0
+            self.unknowns = unknowns or 0
         else:
             self[:] = dat
-            self.unknowns = getattr(dat, "unknowns", 0)
+            self.unknowns = (unknowns if unknowns is not None
+                             else getattr(dat, "unknowns", 0))
         return self
 
 
@@ -177,18 +182,23 @@ class Discrete(np.ndarray):
 
 
 class Continuous(np.ndarray):
-    def __new__(cls, variable, dat):
+    def __new__(cls, variable, dat, unknowns=None):
         if isinstance(dat, data.Storage):
+            if unknowns is not None:
+                raise TypeError(
+                    "incompatible arguments (data storage and 'unknowns'")
             return cls.from_data(variable, dat)
         if isinstance(dat, int):
             self = super().__new__(cls, (2, dat))
-            self[:] = self.unknowns = 0
+            self[:] = 0
+            self.unknowns = unknowns or 0
         else:
             if not isinstance(dat, np.ndarray):
                 dat = np.asarray(dat)
             self = super().__new__(cls, dat.shape)
             self[:] = dat
-            self.unknowns = getattr(dat, "unknowns", 0)
+            self.unknowns = (unknowns if unknowns is not None
+                             else getattr(dat, "unknowns", 0))
         self.variable = variable
         return self
 
@@ -262,19 +272,38 @@ def class_distribution(data):
         raise ValueError("domain has no class attribute")
 
 
-def get_distribution(variable, dat):
+def get_distribution(variable, dat, unknowns=None):
     variable = _get_variable(variable, dat)
     if isinstance(variable, data.DiscreteVariable):
-        return Discrete(variable, dat)
+        return Discrete(variable, dat, unknowns)
     elif isinstance(variable, data.ContinuousVariable):
-        return Continuous(variable, dat)
+        return Continuous(variable, dat, unknowns)
     else:
         raise TypeError("cannot compute distribution of '%s'" %
                         type(variable).__name__)
 
 
 def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
-    collect = [not skipDiscrete, not skipContinuous]
-    return [get_distribution(var, dat)
-            if collect[isinstance(var, data.ContinuousVariable)] else None
-            for var in dat.domain]
+    vars = dat.domain.variables
+    if skipDiscrete:
+        if skipContinuous:
+            return []
+        columns = [i for i, var in enumerate(vars)
+                   if isinstance(var, data.ContinuousVariable)]
+    elif skipContinuous:
+        columns = [i for i, var in enumerate(vars)
+                   if isinstance(var, data.DiscreteVariable)]
+    else:
+        columns = None
+    try:
+        dist_unks = dat._compute_distributions(columns)
+        if columns is None:
+            columns = np.arange(len(vars))
+        distributions = []
+        for col, (dist, unks) in zip(columns, dist_unks):
+            distributions.append(get_distribution(vars[col], dist, unks))
+    except NotImplementedError:
+        if columns is None:
+            columns = np.arange(len(vars))
+        distributions = [get_distribution(i, dat) for i in columns]
+    return distributions

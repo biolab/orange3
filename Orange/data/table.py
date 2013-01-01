@@ -1029,8 +1029,7 @@ class Table(MutableSequence, Storage):
 
     def _compute_distributions(self, columns=None):
         if columns is None:
-            columns = [i for i, var in enumerate(self.domain.variables)
-                       if isinstance(var, DiscreteVariable)]
+            columns = range(len(self.domain.variables))
         else:
             columns = [self.domain.index(var) for var in columns]
         distributions = []
