@@ -151,6 +151,9 @@ class Instance:
     def __iter__(self):
         return iter(self._values)
 
+    def __len__(self):
+        return len(self._values)
+
 
     def attributes(self):
         """Return iterator over the instance's attributes"""
