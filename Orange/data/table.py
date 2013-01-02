@@ -97,7 +97,6 @@ class RowInstance(Instance):
             rendptr = min(endptr, begptr + 5)
             variables = [variables[var]
                          for var in matrix.indices[begptr:rendptr]]
-            print([v.name for v in variables])
             s = ", ".join("{}={}".format(var.name, var.str_val(val))
                 for var, val in zip(variables, matrix.data[begptr:rendptr]))
             if rendptr != endptr:

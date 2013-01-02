@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse as sp
 from Orange.statistics import distribution
 from Orange import data
 
@@ -338,6 +339,25 @@ class Domain_Distribution_Test(unittest.TestCase):
                       (6.6, 1), (6.7, 2), (6.9, 1)]).T
         np.testing.assert_almost_equal(ddist[2], freqs)
         np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
+
+    def test_sparse_get_distributions(self):
+        domain = data.Domain(
+            [data.DiscreteVariable("d%i" % i, values=list("abc"))
+                 for i in range(10)] +
+            [data.ContinuousVariable("c%i" % i) for i in range(10)])
+
+        sdata = np.array([2, 2, 1, 1, 2, 1, 1, 1, 2, 0, 2,
+                 1, 1, 0, 0, 1, 2, 2, 1, 0,
+                 1, 2, 0,
+                 2, 0, 1, 1.1])
+        indices = [1, 3, 4, 5, 6, 9, 13, 14, 16, 17, 18,
+                  2, 3, 4, 5, 6, 8, 14, 16, 17,
+                  3, 5, 6,
+                  2, 5, 6, 13]
+        indptr = [0, 11, 20, 23, 23, 27]
+        X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
+        d = data.Table.from_numpy(domain, X)
+        print(d[1])
 
 if __name__ == "__main__":
     unittest.main()
