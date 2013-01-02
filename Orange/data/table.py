@@ -770,11 +770,9 @@ class Table(MutableSequence, Storage):
         """
         Set weights of data instances; create a vector of weights if necessary.
         """
-        if self._W.shape[-1]:
-            self._W[:] = weight
-        else:
+        if not self._W.shape[-1]:
             self._W = np.empty(len(self))
-            self._W.fill(weight)
+        self._W[:] = weight
 
 
     def has_weights(self):
@@ -1038,15 +1036,21 @@ class Table(MutableSequence, Storage):
         def _get_matrix(M, cachedM, col):
             nonlocal single_column
             if not sp.issparse(M):
-                return M[:, col], None
-            if not cachedM:
+                return M[:, col], self._W if self.has_weights() else None, None
+            if cachedM is None:
                 if single_column:
                     warn(ResourceWarning,
                          "computing distributions on sparse data"
                          "for a single column is inefficient")
                 cachedM = sp.csc_matrix(self._X)
-            return (cachedM,
-                    cachedM.data[cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col+1]]])
+            data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col+1]]
+            if self.has_weights():
+                weights = self._W[
+                    cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col+1]]]
+            else:
+                weights = None
+            return data, weights, cachedM
+
 
         if columns is None:
             columns = range(len(self.domain.variables))
@@ -1059,21 +1063,23 @@ class Table(MutableSequence, Storage):
         for col in columns:
             var = self.domain[col]
             if col < self._X.shape[1]:
-                m, Xcsc = _get_matrix(self._X, Xcsc, col)
+                m, W, Xcsc = _get_matrix(self._X, Xcsc, col)
             else:
-                m, Ycsc = _get_matrix(self._Y, Ycsc, col - self._X.shape[1])
+                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self._X.shape[1])
             if isinstance(var, DiscreteVariable):
-                dist, unknowns = bn.bincount(
-                    m, len(var.values)-1,
-                    self._W if self.has_weights() else None)
+                dist, unknowns = bn.bincount(m, len(var.values)-1, W)
+            elif not len(m):
+                dist, unknowns = np.zeros((2, 0)), 0
             else:
-                if self.has_weights():
-                    vals = np.hstack((m, self._W))
-                    unknowns = bn.countnans(m, self._W)
+                if W is not None:
+                    vals = np.vstack((m, W))
+                    unknowns = bn.countnans(m, W)
                 else:
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     unknowns = bn.countnans(m)
+                # TODO: unit tests do not pass because sort does not sort by "header row", but rather sorts each row separately
+                # ranksorting the first row and then rearranging the table, but only if W is not None?
                 vals.sort(axis=1)
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))

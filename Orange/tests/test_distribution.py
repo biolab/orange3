@@ -340,6 +340,8 @@ class Domain_Distribution_Test(unittest.TestCase):
         np.testing.assert_almost_equal(ddist[2], freqs)
         np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
 
+
+    #noinspection PyTypeChecker
     def test_sparse_get_distributions(self):
         domain = data.Domain(
             [data.DiscreteVariable("d%i" % i, values=list("abc"))
@@ -357,7 +359,62 @@ class Domain_Distribution_Test(unittest.TestCase):
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
         d = data.Table.from_numpy(domain, X)
-        print(d[1])
+
+        ddist = distribution.get_distributions(d)
+
+        self.assertEqual(len(ddist), 20)
+        np.testing.assert_almost_equal(ddist[0], [0, 0, 0])
+        np.testing.assert_almost_equal(ddist[1], [0, 0, 1])
+        np.testing.assert_almost_equal(ddist[2], [0, 1, 1])
+        np.testing.assert_almost_equal(ddist[3], [0, 2, 1])
+        np.testing.assert_almost_equal(ddist[4], [1, 1, 0])
+        np.testing.assert_almost_equal(ddist[5], [2, 1, 1])
+        np.testing.assert_almost_equal(ddist[6], [1, 2, 1])
+        np.testing.assert_almost_equal(ddist[7], [0, 0, 0])
+        np.testing.assert_almost_equal(ddist[8], [0, 0, 1])
+        np.testing.assert_almost_equal(ddist[9], [0, 1, 0])
+
+        z = np.zeros((2, 0))
+        np.testing.assert_almost_equal(ddist[10], z)
+        np.testing.assert_almost_equal(ddist[11], z)
+        np.testing.assert_almost_equal(ddist[12], z)
+        np.testing.assert_almost_equal(ddist[13], [[1, 1.1], [1, 1]])
+        np.testing.assert_almost_equal(ddist[14], [[1, 2], [1, 1]])
+        np.testing.assert_almost_equal(ddist[15], z)
+        np.testing.assert_almost_equal(ddist[16], [[1, 2], [1, 1]])
+        np.testing.assert_almost_equal(ddist[17], [[0], [2]])
+        np.testing.assert_almost_equal(ddist[18], [[2], [1]])
+        np.testing.assert_almost_equal(ddist[19], z)
+
+
+        d.set_weights(np.array([1, 2, 3, 4, 5]))
+        print(d[1].weight)
+
+        ddist = distribution.get_distributions(d)
+
+        self.assertEqual(len(ddist), 20)
+        np.testing.assert_almost_equal(ddist[0], [0, 0, 0])
+        np.testing.assert_almost_equal(ddist[1], [0, 0, 1])
+        np.testing.assert_almost_equal(ddist[2], [0, 2, 5])
+        np.testing.assert_almost_equal(ddist[3], [0, 5, 1])
+        np.testing.assert_almost_equal(ddist[4], [2, 1, 0])
+        np.testing.assert_almost_equal(ddist[5], [7, 1, 3])
+        np.testing.assert_almost_equal(ddist[6], [3, 7, 1])
+        np.testing.assert_almost_equal(ddist[7], [0, 0, 0])
+        np.testing.assert_almost_equal(ddist[8], [0, 0, 2])
+        np.testing.assert_almost_equal(ddist[9], [0, 1, 0])
+
+        z = np.zeros((2, 0))
+        np.testing.assert_almost_equal(ddist[10], z)
+        np.testing.assert_almost_equal(ddist[11], z)
+        np.testing.assert_almost_equal(ddist[12], z)
+        np.testing.assert_almost_equal(ddist[13], [[1, 1.1], [1, 5]])
+        np.testing.assert_almost_equal(ddist[14], [[1, 2], [1, 2]])
+        np.testing.assert_almost_equal(ddist[15], z)
+        np.testing.assert_almost_equal(ddist[16], [[1, 2], [2, 1]])
+        np.testing.assert_almost_equal(ddist[17], [[0], [3]])
+        np.testing.assert_almost_equal(ddist[18], [[2], [1]])
+        np.testing.assert_almost_equal(ddist[19], z)
 
 if __name__ == "__main__":
     unittest.main()
