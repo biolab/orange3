@@ -1,0 +1,13 @@
+# Build files
+build
+Orange.egg-info/*
+Orange/version.py
+doc/build
+*.so
+
+# Cython generated files
+__pycache__
+
+# Editor files
+.idea/*
+*~
