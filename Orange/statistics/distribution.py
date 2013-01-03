@@ -6,8 +6,6 @@ import numpy as np
 from Orange import data
 
 
-#TODO: Handle sparse data -- at least by get_distributions
-
 def _get_variable(variable, dat, expected_type=None, expected_name=""):
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
