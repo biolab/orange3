@@ -388,7 +388,6 @@ class Domain_Distribution_Test(unittest.TestCase):
 
 
         d.set_weights(np.array([1, 2, 3, 4, 5]))
-        print(d[1].weight)
 
         ddist = distribution.get_distributions(d)
 

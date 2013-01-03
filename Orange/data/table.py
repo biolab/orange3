@@ -1072,15 +1072,14 @@ class Table(MutableSequence, Storage):
                 dist, unknowns = np.zeros((2, 0)), 0
             else:
                 if W is not None:
-                    vals = np.vstack((m, W))
+                    ranks = np.argsort(m)
+                    vals = np.vstack((m[ranks], W[ranks]))
                     unknowns = bn.countnans(m, W)
                 else:
+                    m.sort()
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     unknowns = bn.countnans(m)
-                # TODO: unit tests do not pass because sort does not sort by "header row", but rather sorts each row separately
-                # ranksorting the first row and then rearranging the table, but only if W is not None?
-                vals.sort(axis=1)
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))
 
