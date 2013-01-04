@@ -12,7 +12,8 @@ import bottleneck as bn
 from scipy import sparse as sp
 
 from .instance import *
-from Orange.data import domain as orange_domain, io, DiscreteVariable
+from Orange.data import (domain as orange_domain,
+                         io, DiscreteVariable, ContinuousVariable)
 from Orange.data.storage import Storage
 from . import _valuecount
 
@@ -1076,7 +1077,7 @@ class Table(MutableSequence, Storage):
                     vals = np.vstack((m[ranks], W[ranks]))
                     unknowns = bn.countnans(m, W)
                 else:
-                    m.sort()
+                    np.sort(m)
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     unknowns = bn.countnans(m)
@@ -1084,3 +1085,110 @@ class Table(MutableSequence, Storage):
             distributions.append((dist, unknowns))
 
         return distributions
+
+
+
+    def _compute_contingency(self, col_vars=None, row_var=None):
+        n_atts = self._X.shape[1]
+
+        if col_vars is None:
+            col_vars = range(len(self.domain.variables))
+            single_column = False
+        else:
+            col_vars = [self.domain.index(var) for var in col_vars]
+            single_column = len(col_vars) == 1 and len(self.domain) > 1
+        if row_var is None:
+            row_var = self.domain.class_var
+            if row_var is None:
+                raise ValueError("No row variable")
+
+        row_desc = self.domain[row_var]
+        if not isinstance(row_desc, DiscreteVariable):
+            raise TypeError("Row variable must be discrete")
+        row_indi = self.domain.index(row_var)
+        if 0 <= row_indi < n_atts:
+            row_data = self._X[:, row_indi]
+        elif row_indi < 0:
+            row_data = self._metas[:, -1 - row_indi]
+        else:
+            row_data = self._Y[:, row_indi - n_atts]
+
+        W = self._W if self.has_weights() else None
+        col_desc = [self.domain[var] for var in col_vars]
+        col_indi = [self.domain.index(var) for var in col_vars]
+        n_rows = len(row_desc.values)
+
+        if any(not isinstance(var, (ContinuousVariable, DiscreteVariable))
+               for var in col_desc):
+            raise ValueError("contingency can be computed only for discrete "
+                             "and continuous values")
+
+        disc = [i for var, i in zip(col_desc, col_indi)
+                if isinstance(var, DiscreteVariable)]
+
+        discX = [i for i in disc if 0 <= i < n_atts]
+        if discX:
+            max_cols = max(len(self.domain[i].values) for i in discX)
+            mask = [i in discX for i in range(n_atts)
+                   ] if len(discX) < n_atts else None
+            contsX, nansX = bn.contingency(self._X, row_data,
+                                           max_cols-1, n_rows-1, W, mask)
+
+        discY = [i for i in disc if i >= n_atts]
+        if discY:
+            max_cols = max(len(self.domain[i].values) for i in discY)
+            mask = [i - n_atts in discY for i in range(self._Y.shape[1])
+                   ] if len(discY) < self._Y.shape else None
+            contsY, nansY = bn.contingency(self._Y, row_data, W, mask)
+
+        discM = [i for i in disc if i < 0]
+        if discM:
+            max_cols = max(len(self.domain[i].values) for i in discM)
+            mask = [i in discM for i in range(self._metas.shape[1])
+                   ] if len(discM) < self._metas.shape[1] else None
+            contsM, nansM = bn.contingency(self._metas, row_data, W, mask)
+
+        contigs = []
+        for var, ind in zip(col_desc, col_indi):
+            if isinstance(var, DiscreteVariable):
+                if ind < 0:
+                    contigs.append((contsM[-1 - ind], nansM[-1 - ind]))
+                elif ind < n_atts:
+                    contigs.append((contsX[ind], nansX[ind]))
+                else:
+                    contigs.append((contsY[ind - n_atts], nansY[ind - n_atts]))
+            else:
+                contigs.append(([], np.empty(len(row_desc.values))))
+
+        if any(isinstance(var, ContinuousVariable) for var in col_desc):
+            dep_indices = np.argsort(row_data)
+            dep_sizes = np.bincount(row_data, W, n_rows)
+            fr = 0
+            for clsi, cs in enumerate(dep_sizes):
+                to = fr + cs
+                inds = dep_indices[fr:to]
+                for conti, ind in enumerate(col_indi):
+                    # TODO Add sparse data like in distributions
+                    if isinstance(col_desc[clsi], DiscreteVariable):
+                        continue
+                    if ind < 0:
+                        col_data = self._metas[inds, -1 - ind]
+                    elif ind < n_atts:
+                        col_data = self._X[inds, ind]
+                    else:
+                        col_data = self._Y[inds, ind - n_atts]
+                    if W is not None:
+                        ranks = np.argsort(col_data)
+                        vals = np.vstack((col_data[ranks], W[ranks]))
+                        unknowns = bn.countnans(col_data, W)
+                    else:
+                        np.sort(col_data)
+                        vals = np.ones((2, len(col_data)))
+                        vals[0, :] = col_data
+                        unknowns[clsi] = bn.countnans(col_data)
+                    dist = np.array(_valuecount.valuecount(vals))
+                    contigs[conti][0].append(dist)
+                    contigs[conti][1][clsi] = unknowns
+                fr = to
+
+        return contigs

@@ -18,3 +18,6 @@ class Storage:
 
     def _compute_distributions(self, columns=None):
         raise NotImplementedError
+
+    def _compute_contingency(self, col_vars=None, row_var=None):
+        raise NotImplementedError
