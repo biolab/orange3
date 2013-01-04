@@ -7,23 +7,26 @@ from Orange import data
 
 
 def _get_variable(variable, dat, expected_type=None, expected_name=""):
+    failed = False
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
             raise ValueError("variable does not match the variable"
                              "in the data")
+    elif hasattr(dat, "domain"):
+        variable = dat.domain[variable]
+    elif hasattr(dat, "variable"):
+        variable = dat.variable
     else:
-        if hasattr(dat, "domain"):
-            variable = dat.domain[variable]
-        if hasattr(dat, "variable"):
-            variable = dat.variable
-    if expected_type is not None and not isinstance(variable, expected_type):
+        failed = True
+    if failed or (expected_type is not None
+                  and not isinstance(variable, expected_type)):
         if isinstance(variable, data.Variable):
             raise ValueError(
                 "expected %s variable not %s" % (expected_name, variable))
         else:
-            raise ValueError("expected expected, not '%s'" %
-                             (expected_type.__name, type(variable).__name__))
+            raise ValueError("expected %s, not '%s'" %
+                             (expected_type.__name__, type(variable).__name__))
     return variable
 
 
