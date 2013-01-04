@@ -29,7 +29,7 @@ def _get_variable(variable, dat, attr_name,
     return variable
 
 
-class Contingency(np.ndarray):
+class Discrete(np.ndarray):
     def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
@@ -98,39 +98,119 @@ class Contingency(np.ndarray):
 
     def __eq__(self, other):
         return np.array_equal(self, other) and (
-            not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
+            not hasattr(other, "unknowns") or
+            np.array_equal(self.unknowns, other.unknowns))
 
 
     def __getitem__(self, index):
         if isinstance(index, str):
-            index = self.variable.to_val(index)
+            index = self.row_variable.to_val(index)
         elif isinstance(index, tuple):
             if isinstance(index[0], str):
-                index = (self.variable.to_val(index[0]), index[1])
+                index = (self.row_variable.to_val(index[0]), index[1])
             if isinstance(index[1], str):
-                index = (index[0], self.variable.to_val(index[1]))
+                index = (index[0], self.col_variable.to_val(index[1]))
         return super().__getitem__(index)
 
 
     def __setitem__(self, index, value):
         if isinstance(index, str):
-            index = self.variable.to_val(index)
+            index = self.row_variable.to_val(index)
         elif isinstance(index, tuple):
             if isinstance(index[0], str):
-                index = (self.variable.to_val(index[0]), index[1])
+                index = (self.row_variable.to_val(index[0]), index[1])
             if isinstance(index[1], str):
-                index = (index[0], self.variable.to_val(index[1]))
+                index = (index[0], self.col_variable.to_val(index[1]))
         super().__setitem__(index, value)
-
-
-    def __hash__(self):
-        return zlib.adler32(self) ^ hash(self.unknowns)
 
 
     def normalize(self, axis=None):
         t = np.sum(self, axis=axis)
         if t > 1e-6:
             self[:] /= t
-            if axis == 0:
+            if axis is None or axis == 1:
                 self.unknowns /= t
 
+
+class Continuous(list):
+    def __init__(self, dat=None, col_variable=None, row_variable=None,
+                unknowns=None):
+        if isinstance(dat, data.Storage):
+            if unknowns is not None:
+                raise TypeError(
+                    "incompatible arguments (data storage and 'unknowns'")
+            return self.from_data(dat, col_variable, row_variable)
+
+        if row_variable is not None:
+            row_variable = _get_variable(row_variable, dat, "row_variable")
+            rows = len(row_variable.values)
+        else:
+            rows = len(dat)
+        if col_variable is not None:
+            col_variable = _get_variable(col_variable, dat, "col_variable")
+
+        if dat is not None:
+            self[:] = dat
+        self.row_variable = row_variable
+        self.col_variable = col_variable
+        if unknowns is not None:
+            self.unknowns = unknowns
+        elif row_variable:
+            self.unknowns = np.zeros(len(row_variable.values))
+        else:
+            self.unknowns = None
+
+
+    def from_data(self, data, col_variable, row_variable=None):
+        if row_variable is None:
+            row_variable = data.domain.class_var
+            if row_variable is None:
+                raise ValueError("row_variable needs to be specified (data"
+                                 "has no class)")
+        self.row_variable = _get_variable(row_variable, data, "row_variable")
+        self.col_variable = _get_variable(col_variable, data, "col_variable")
+        try:
+            self[:], self.unknowns = data._compute_contingency(
+                [col_variable], row_variable)[0]
+        except NotImplementedError:
+            raise NotImplementedError("Fallback method for computation of "
+                                      "contingencies is not implemented yet")
+
+
+    def __eq__(self, other):
+        return (len(self) == len(other) and
+                all(np.array_equal(rs, ro) for rs, ro in zip(self, other)) and
+                (not hasattr(other, "unknowns") or
+                 np.array_equal(self.unknowns, other.unknowns)))
+
+
+    def __getitem__(self, index):
+        if isinstance(index, (str, float)):
+            index = self.row_variable.to_val(index)
+        return super().__getitem__(index)
+
+
+    def __setitem__(self, index, value):
+        if isinstance(index, (str, float)):
+            index = self.row_variable.to_val(index)
+        super().__setitem__(index, value)
+
+
+    def normalize(self, axis=None):
+        if axis is None:
+            t = sum(np.sum(x[:, 1]) for x in self)
+            if t > 1e-6:
+                for x in self:
+                    x[:, 1] /= t
+        elif axis != 1:
+            raise ValueError("contingencies can be normalized only with axis=1"
+                             " or without axis")
+        else:
+            for i, x in enumerate(self):
+                t = np.sum(x[:, 1])
+                if t > 1e-6:
+                    x[:, 1] /= t
+                    self.unknowns[i] /= t
+                else:
+                    if self.unknowns[i] > 1e-6:
+                        self.unknowns[i] = 1

@@ -1106,6 +1106,7 @@ class Table(MutableSequence, Storage):
         if not isinstance(row_desc, DiscreteVariable):
             raise TypeError("Row variable must be discrete")
         row_indi = self.domain.index(row_var)
+        n_rows = len(row_desc.values)
         if 0 <= row_indi < n_atts:
             row_data = self._X[:, row_indi]
         elif row_indi < 0:
@@ -1114,81 +1115,77 @@ class Table(MutableSequence, Storage):
             row_data = self._Y[:, row_indi - n_atts]
 
         W = self._W if self.has_weights() else None
+
         col_desc = [self.domain[var] for var in col_vars]
         col_indi = [self.domain.index(var) for var in col_vars]
-        n_rows = len(row_desc.values)
 
         if any(not isinstance(var, (ContinuousVariable, DiscreteVariable))
                for var in col_desc):
             raise ValueError("contingency can be computed only for discrete "
                              "and continuous values")
 
-        disc = [i for var, i in zip(col_desc, col_indi)
-                if isinstance(var, DiscreteVariable)]
-
-        discX = [i for i in disc if 0 <= i < n_atts]
-        if discX:
-            max_cols = max(len(self.domain[i].values) for i in discX)
-            mask = [i in discX for i in range(n_atts)
-                   ] if len(discX) < n_atts else None
-            contsX, nansX = bn.contingency(self._X, row_data,
-                                           max_cols-1, n_rows-1, W, mask)
-
-        discY = [i for i in disc if i >= n_atts]
-        if discY:
-            max_cols = max(len(self.domain[i].values) for i in discY)
-            mask = [i - n_atts in discY for i in range(self._Y.shape[1])
-                   ] if len(discY) < self._Y.shape else None
-            contsY, nansY = bn.contingency(self._Y, row_data, W, mask)
-
-        discM = [i for i in disc if i < 0]
-        if discM:
-            max_cols = max(len(self.domain[i].values) for i in discM)
-            mask = [i in discM for i in range(self._metas.shape[1])
-                   ] if len(discM) < self._metas.shape[1] else None
-            contsM, nansM = bn.contingency(self._metas, row_data, W, mask)
-
-        contigs = []
-        for var, ind in zip(col_desc, col_indi):
-            if isinstance(var, DiscreteVariable):
-                if ind < 0:
-                    contigs.append((contsM[-1 - ind], nansM[-1 - ind]))
-                elif ind < n_atts:
-                    contigs.append((contsX[ind], nansX[ind]))
-                else:
-                    contigs.append((contsY[ind - n_atts], nansY[ind - n_atts]))
-            else:
-                contigs.append(([], np.empty(len(row_desc.values))))
-
         if any(isinstance(var, ContinuousVariable) for var in col_desc):
             dep_indices = np.argsort(row_data)
-            dep_sizes = np.bincount(row_data, W, n_rows)
-            fr = 0
-            for clsi, cs in enumerate(dep_sizes):
-                to = fr + cs
-                inds = dep_indices[fr:to]
-                for conti, ind in enumerate(col_indi):
-                    # TODO Add sparse data like in distributions
-                    if isinstance(col_desc[clsi], DiscreteVariable):
-                        continue
-                    if ind < 0:
-                        col_data = self._metas[inds, -1 - ind]
-                    elif ind < n_atts:
-                        col_data = self._X[inds, ind]
-                    else:
-                        col_data = self._Y[inds, ind - n_atts]
-                    if W is not None:
-                        ranks = np.argsort(col_data)
-                        vals = np.vstack((col_data[ranks], W[ranks]))
-                        unknowns = bn.countnans(col_data, W)
-                    else:
-                        np.sort(col_data)
-                        vals = np.ones((2, len(col_data)))
-                        vals[0, :] = col_data
-                        unknowns[clsi] = bn.countnans(col_data)
-                    dist = np.array(_valuecount.valuecount(vals))
-                    contigs[conti][0].append(dist)
-                    contigs[conti][1][clsi] = unknowns
-                fr = to
+            dep_sizes, nans = bn.bincount(row_data, n_rows - 1)
+            if nans:
+                raise ValueError("cannot compute contigencies with missing "
+                                 "row data")
+        else:
+            dep_indices = dep_sizes = None
 
-        return contigs
+        contingencies = [None] * len(col_desc)
+        for arr, f_cond, f_ind in (
+                (self._X, lambda i: 0 <= i < n_atts, lambda i: i),
+                (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
+                (self._metas, lambda i: i < 0, lambda i: -1 - i)):
+
+            arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
+
+            vars = [(e, f_ind(col_indi[e]), col_desc[e]) for e in arr_indi]
+            disc_vars = [v for v in vars if isinstance(v[2], DiscreteVariable)]
+            if disc_vars:
+                if sp.issparse(arr):
+                    max_vals = max(len(v[2].values) for v in disc_vars)
+                    disc_indi = {i for _, i, _ in disc_vars}
+                    mask = [i in disc_indi for i in range(arr.shape[1])]
+                    conts, nans = bn.contingency(arr, row_data, max_vals - 1,
+                                                 n_rows - 1, W, mask)
+                    for col_i, arr_i, _ in disc_vars:
+                        contingencies[col_i] = (conts[arr_i], nans[arr_i])
+                else:
+                    for col_i, arr_i, var in disc_vars:
+                        contingencies[col_i] = bn.contingency(arr[:, arr_i],
+                            row_data, len(var.values) - 1, n_rows - 1, W)
+
+            cont_vars = [v for v in vars if isinstance(v[2], ContinuousVariable)]
+            if cont_vars:
+                for col_i, _, _ in cont_vars:
+                    contingencies[col_i] = ([], np.empty(n_rows))
+                fr = 0
+                for clsi, cs in enumerate(dep_sizes):
+                    to = fr + cs
+                    grp_rows = dep_indices[fr:to]
+                    grp_data = arr[grp_rows, :]
+                    grp_W = W and W[grp_rows]
+                    if sp.issparse(grp_data):
+                        grp_data = sp.csc_matrix(col_data)
+                    for col_i, arr_i, _ in cont_vars:
+                        if sp.issparse(grp_data):
+                            col_data = grp_data[grp_data.indptr[col_i]:
+                                                grp_data.indptr[col_i+1]]
+                        else:
+                            col_data = grp_data[:, col_i]
+                        if W is not None:
+                            ranks = np.argsort(col_data)
+                            vals = np.vstack((col_data[ranks], grp_W[ranks]))
+                            nans = bn.countnans(col_data, grp_W)
+                        else:
+                            np.sort(col_data)
+                            vals = np.ones((2, len(col_data)))
+                            vals[0, :] = col_data
+                            nans = bn.countnans(col_data)
+                        dist = np.array(_valuecount.valuecount(vals))
+                        contingencies[col_i][0].append(dist)
+                        contingencies[col_i][1][clsi] = nans
+                    fr = to
+        return contingencies
