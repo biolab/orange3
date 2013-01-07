@@ -1077,7 +1077,7 @@ class Table(MutableSequence, Storage):
                     vals = np.vstack((m[ranks], W[ranks]))
                     unknowns = bn.countnans(m, W)
                 else:
-                    np.sort(m)
+                    m.sort()
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     unknowns = bn.countnans(m)
