@@ -1168,11 +1168,11 @@ class Table(MutableSequence, Storage):
                     grp_data = arr[grp_rows, :]
                     grp_W = W and W[grp_rows]
                     if sp.issparse(grp_data):
-                        grp_data = sp.csc_matrix(col_data)
+                        grp_data = sp.csc_matrix(grp_data)
                     for col_i, arr_i, _ in cont_vars:
                         if sp.issparse(grp_data):
-                            col_data = grp_data[grp_data.indptr[col_i]:
-                                                grp_data.indptr[col_i+1]]
+                            col_data = grp_data.data[grp_data.indptr[arr_i]:
+                                                     grp_data.indptr[arr_i+1]]
                         else:
                             col_data = grp_data[:, arr_i]
                         if W is not None:
