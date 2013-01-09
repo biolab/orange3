@@ -42,7 +42,8 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont[2], correct)
 
 
-    def test_sparse(self):
+    @staticmethod
+    def _construct_sparse():
         domain = data.Domain(
             [data.DiscreteVariable("d%i" % i, values=list("abc"))
                  for i in range(10)] +
@@ -68,8 +69,12 @@ class Discrete_Test(unittest.TestCase):
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
         Y = np.array([[1, 2, 1, 0, 0]]).T
-        d = data.Table.from_numpy(domain, X, Y)
-        cont = contingency.Continuous(d, 5)
+        return data.Table.from_numpy(domain, X, Y)
+
+
+    def test_sparse(self):
+        d = self._construct_sparse()
+        cont = contingency.Discrete(d, 5)
         np.testing.assert_almost_equal(cont[0], [1, 0, 0])
         np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
@@ -79,7 +84,7 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont["b"], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
-        cont = contingency.Continuous(d, 13)
+        cont = contingency.Continuous(d, "c4")
         np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
         np.testing.assert_almost_equal(cont["b"], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[], []])
@@ -94,3 +99,59 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont[0], [[], []])
         np.testing.assert_almost_equal(cont["b"], [[], []])
         np.testing.assert_almost_equal(cont[2], [[], []])
+
+
+    def test_get_contingency(self):
+        d = self._construct_sparse()
+        cont = contingency.get_contingency(d, 5)
+        self.assertIsInstance(cont, contingency.Discrete)
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[2], [1, 0, 0])
+
+        cont = contingency.get_contingency(d, "c4")
+        self.assertIsInstance(cont, contingency.Continuous)
+        np.testing.assert_almost_equal(cont[0], [[], []])
+        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+
+        cont = contingency.get_contingency(d, d.domain[13])
+        self.assertIsInstance(cont, contingency.Continuous)
+        np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
+        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[2], [[], []])
+        np.testing.assert_almost_equal(cont[2], [[], []])
+
+    def test_get_contingencies(self):
+        d = self._construct_sparse()
+        conts = contingency.get_contingencies(d)
+
+        self.assertEqual(len(conts), 20)
+
+        cont = conts[5]
+        self.assertIsInstance(cont, contingency.Discrete)
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[2], [1, 0, 0])
+
+        cont = conts[14]
+        self.assertIsInstance(cont, contingency.Continuous)
+        np.testing.assert_almost_equal(cont[0], [[], []])
+        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+
+        conts = contingency.get_contingencies(d, skipDiscrete=True)
+        self.assertEqual(len(conts), 10)
+        cont = conts[4]
+        self.assertIsInstance(cont, contingency.Continuous)
+        np.testing.assert_almost_equal(cont[0], [[], []])
+        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+
+        conts = contingency.get_contingencies(d, skipContinuous=True)
+        self.assertEqual(len(conts), 10)
+        cont = conts[5]
+        self.assertIsInstance(cont, contingency.Discrete)
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[2], [1, 0, 0])

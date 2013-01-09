@@ -214,3 +214,43 @@ class Continuous(list):
                 else:
                     if self.unknowns[i] > 1e-6:
                         self.unknowns[i] = 1
+
+
+def get_contingency(dat, col_variable, row_variable=None, unknowns=None):
+    variable = _get_variable(col_variable, dat, "col_variable")
+    if isinstance(variable, data.DiscreteVariable):
+        return Discrete(dat, col_variable, row_variable, unknowns)
+    elif isinstance(variable, data.ContinuousVariable):
+        return Continuous(dat, col_variable, row_variable, unknowns)
+    else:
+        raise TypeError("cannot compute distribution of '%s'" %
+                        type(variable).__name__)
+
+
+def get_contingencies(dat, skipDiscrete=False, skipContinuous=False):
+    vars = dat.domain.attributes
+    row_var = dat.domain.class_var
+    if row_var is None:
+        raise ValueError("data has no target variable")
+    if skipDiscrete:
+        if skipContinuous:
+            return []
+        columns = [i for i, var in enumerate(vars)
+                   if isinstance(var, data.ContinuousVariable)]
+    elif skipContinuous:
+        columns = [i for i, var in enumerate(vars)
+                   if isinstance(var, data.DiscreteVariable)]
+    else:
+        columns = None
+    try:
+        dist_unks = dat._compute_contingency(columns)
+        if columns is None:
+            columns = np.arange(len(vars))
+        contigs = []
+        for col, (cont, unks) in zip(columns, dist_unks):
+            contigs.append(get_contingency(cont, vars[col], row_var, unks))
+    except NotImplementedError:
+        if columns is None:
+            columns = np.arange(len(vars))
+        contigs = [get_contingency(dat, i) for i in columns]
+    return contigs
