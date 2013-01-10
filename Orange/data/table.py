@@ -1084,7 +1084,7 @@ class Table(MutableSequence, Storage):
                     vals = np.vstack((m[ranks], W[ranks]))
                     unknowns = bn.countnans(m, W)
                 else:
-                    np.sort(m)
+                    m.sort()
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     unknowns = bn.countnans(m)
@@ -1175,19 +1175,19 @@ class Table(MutableSequence, Storage):
                     grp_data = arr[grp_rows, :]
                     grp_W = W and W[grp_rows]
                     if sp.issparse(grp_data):
-                        grp_data = sp.csc_matrix(col_data)
+                        grp_data = sp.csc_matrix(grp_data)
                     for col_i, arr_i, _ in cont_vars:
                         if sp.issparse(grp_data):
-                            col_data = grp_data[grp_data.indptr[col_i]:
-                                                grp_data.indptr[col_i+1]]
+                            col_data = grp_data.data[grp_data.indptr[arr_i]:
+                                                     grp_data.indptr[arr_i+1]]
                         else:
-                            col_data = grp_data[:, col_i]
+                            col_data = grp_data[:, arr_i]
                         if W is not None:
                             ranks = np.argsort(col_data)
                             vals = np.vstack((col_data[ranks], grp_W[ranks]))
                             nans = bn.countnans(col_data, grp_W)
                         else:
-                            np.sort(col_data)
+                            col_data.sort()
                             vals = np.ones((2, len(col_data)))
                             vals[0, :] = col_data
                             nans = bn.countnans(col_data)
