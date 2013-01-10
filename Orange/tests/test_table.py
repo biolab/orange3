@@ -987,6 +987,12 @@ class TableTests(unittest.TestCase):
     meta_data = np.random.random((nrows, len(metas)))
     weight_data = np.random.random((nrows, ))
 
+    def setUp(self):
+        self.data = np.random.random((self.nrows, len(self.attributes)))
+        self.class_data = np.random.random((self.nrows, len(self.class_vars)))
+        self.meta_data = np.random.random((self.nrows, len(self.metas)))
+        self.weight_data = np.random.random((self.nrows, ))
+
     def mock_domain(self, with_classes=False, with_metas=False):
         attributes = self.attributes
         class_vars = self.class_vars if with_classes else []
@@ -1104,12 +1110,32 @@ class CreateTableWithDomain(TableTests):
         new_from_domain.assert_called_with(domain)
 
 
-class CreateTableWithNumpyData(TableTests):
+class CreateTableWithData(TableTests):
     def test_creates_a_table_with_given_X(self):
-        table = data.Table(self.data)
-
+        # from numpy
+        table = data.Table(np.array(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
+
+        # from list
+        table = data.Table(list(self.data))
+        self.assertIsInstance(table.domain, data.Domain)
+        np.testing.assert_almost_equal(table.X, self.data)
+
+        # from tuple
+        table = data.Table(tuple(self.data))
+        self.assertIsInstance(table.domain, data.Domain)
+        np.testing.assert_almost_equal(table.X, self.data)
+
+    def test_creates_a_table_with_domain_and_given_X(self):
+        domain = self.mock_domain()
+
+        table = data.Table(domain, self.data)
+        self.assertIsInstance(table.domain, data.Domain)
+        self.assertEqual(table.domain, domain)
+        np.testing.assert_almost_equal(table.X, self.data)
+
+
 
     def test_creates_a_table_with_given_X_and_Y(self):
         table = data.Table(self.data, self.class_data)
@@ -1136,19 +1162,11 @@ class CreateTableWithNumpyData(TableTests):
                               data.DiscreteVariable)
         self.assertEqual(table.domain.class_vars[0].values, ["v1", "v2"])
 
-
-class CreateTableWithDomainAndNumpyData(TableTests):
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
         table = data.Table.from_numpy(domain, self.data)
 
         self.assertEqual(table.domain, domain)
-
-    def test_sets_X(self):
-        domain = self.mock_domain()
-        table = data.Table.from_numpy(domain, self.data)
-
-        np.testing.assert_almost_equal(table.X, self.data)
 
     def test_sets_Y_if_given(self):
         domain = self.mock_domain(with_classes=True)
@@ -1158,15 +1176,13 @@ class CreateTableWithDomainAndNumpyData(TableTests):
 
     def test_sets_metas_if_given(self):
         domain = self.mock_domain(with_metas=True)
-        table = data.Table.from_numpy(domain, self.data,
-                                          metas=self.meta_data)
+        table = data.Table.from_numpy(domain, self.data, metas=self.meta_data)
 
         np.testing.assert_almost_equal(table.metas, self.meta_data)
 
     def test_sets_weights_if_given(self):
         domain = self.mock_domain()
-        table = data.Table.from_numpy(domain, self.data,
-                                          W=self.weight_data)
+        table = data.Table.from_numpy(domain, self.data, W=self.weight_data)
 
         np.testing.assert_almost_equal(table.W, self.weight_data)
 
@@ -1380,6 +1396,7 @@ def getname(variable):
 
 class TableIndexingTests(TableTests):
     def setUp(self):
+        super().setUp()
         d = self.domain = \
             self.create_domain(self.attributes, self.class_vars, self.metas)
         t = self.table = \
@@ -1447,6 +1464,7 @@ class TableIndexingTests(TableTests):
 
 class TableElementAssignmentTest(TableTests):
     def setUp(self):
+        super().setUp()
         self.domain = \
             self.create_domain(self.attributes, self.class_vars, self.metas)
         self.table = \

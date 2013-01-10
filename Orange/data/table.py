@@ -10,6 +10,7 @@ from warnings import warn
 import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
+from sklearn.utils import validation
 
 from .instance import *
 from Orange.data import (domain as orange_domain,
@@ -177,22 +178,25 @@ class Table(MutableSequence, Storage):
         return Columns(self.domain)
 
 
-    def __new__(cls, *args, **argkw):
-        if not args and not argkw:
+    def __new__(cls, *args, **kwargs):
+        if not args and not kwargs:
             return super().__new__(cls)
-        if "filename" in argkw:
-            return cls.from_file(argkw["filename"])
+
+        if 'filename' in kwargs:
+            args = [kwargs.pop('filename')]
+
         try:
             if isinstance(args[0], str):
-                return cls.from_file(args[0])
-            if isinstance(args[0], orange_domain.Domain) and len(args) == 1:
-                return cls.from_domain(args[0])
-            if all(isinstance(arg, np.ndarray) for arg in args):
-                domain = orange_domain.Domain.from_numpy(*args[:3])
-                return cls.from_numpy(domain, *args, **argkw)
-            if (isinstance(args[0], orange_domain.Domain) and
-                all(isinstance(arg, np.ndarray) for arg in args[1:])):
-                return cls.from_numpy(*args)
+                return cls.from_file(args[0], **kwargs)
+
+            if isinstance(args[0], orange_domain.Domain):
+                domain, args = args[0], args[1:]
+                if not args:
+                    return cls.from_domain(domain, **kwargs)
+            else:
+                domain = None
+
+            return cls.from_numpy(domain, *args, **kwargs)
         except IndexError:
             pass
         raise ValueError("Invalid arguments for Table.__new__")
@@ -335,7 +339,11 @@ class Table(MutableSequence, Storage):
         :type W: np.array
         :return:
         """
-        #assert(len(domain.class_vars) <= 1)
+        X, Y, metas, W = validation.check_arrays(X, Y, metas, W)
+
+        if domain is None:
+            domain = orange_domain.Domain.from_numpy(X, Y, metas)
+
         if Y is None:
             if sp.issparse(X):
                 Y = np.empty((X.shape[0], 0), object)
@@ -380,7 +388,6 @@ class Table(MutableSequence, Storage):
     def from_file(cls, filename):
         """
         Read a data table from a file. The path can be absolute or relative.
-        The
 
         :param filename: File name
         :type filename: str
