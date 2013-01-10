@@ -84,7 +84,7 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont["b"], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
-        cont = contingency.Continuous(d, "c4")
+        cont = contingency.Continuous(d, "c3")
         np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
         np.testing.assert_almost_equal(cont["b"], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[], []])
