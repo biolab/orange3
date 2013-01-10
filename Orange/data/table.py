@@ -187,16 +187,16 @@ class Table(MutableSequence, Storage):
 
         try:
             if isinstance(args[0], str):
-                return cls.from_file(args[0])
+                return cls.from_file(args[0], **kwargs)
 
             if isinstance(args[0], orange_domain.Domain):
                 domain, args = args[0], args[1:]
                 if not args:
-                    return cls.from_domain(domain)
+                    return cls.from_domain(domain, **kwargs)
             else:
                 domain = None
 
-            return cls.from_numpy(domain, *args)
+            return cls.from_numpy(domain, *args, **kwargs)
         except IndexError:
             pass
         raise ValueError("Invalid arguments for Table.__new__")
