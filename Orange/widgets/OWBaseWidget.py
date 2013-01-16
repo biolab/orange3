@@ -7,12 +7,13 @@ from Orange.utils import environ
 from Orange.orng.orngEnviron import directoryNames as old_directory_names
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+from functools import reduce
 
 # Define  pyqtConfigure not available in PyQt4 versions prior to 4.6
 if not hasattr(QObject, "pyqtConfigure"):
     def pyqtConfigure(obj, **kwargs):
         meta = obj.metaObject()
-        for name, val in kwargs.items():
+        for name, val in list(kwargs.items()):
             if meta.indexOfProperty(name) >= 0:
                 obj.setProperty(name, QVariant(val))
             elif meta.indexOfSignal(meta.normalizedSignature(name)) >= 0:
@@ -20,7 +21,7 @@ if not hasattr(QObject, "pyqtConfigure"):
     QObject.pyqtConfigure = pyqtConfigure
 
 from OWContexts import *
-import sys, time, random, user, os, os.path, cPickle, copy
+import sys, time, random, user, os, os.path, pickle, copy
 import orange
 from Orange import misc
 import Orange.utils
@@ -44,7 +45,7 @@ def unisetattr(self, name, value, grandparent):
         lastname, obj = name, self
 
     if not obj:
-        print "unable to set setting ", name, " to value ", value
+        print("unable to set setting ", name, " to value ", value)
     else:
         if hasattr(grandparent, "__setattr__") and isinstance(obj, grandparent):
             grandparent.__setattr__(obj, lastname,  value)
@@ -62,7 +63,7 @@ def unisetattr(self, name, value, grandparent):
     # controlled things (checkboxes...) never have __attributeControllers
     else:
         if hasattr(self, "__attributeControllers"):
-            for controller, myself in self.__attributeControllers.keys():
+            for controller, myself in list(self.__attributeControllers.keys()):
                 if getattr(controller, myself, None) != self:
                     del self.__attributeControllers[(controller, myself)]
                     continue
@@ -79,7 +80,7 @@ def unisetattr(self, name, value, grandparent):
                     else:
                         lname = fullName + "."
                         dlen = len(lname)
-                        for controlled in controlledAttributes.keys():
+                        for controlled in list(controlledAttributes.keys()):
                             if controlled[:dlen] == lname:
                                 self.setControllers(value, controlled[dlen:], controller, fullName)
                                 # no break -- can have a.b.c.d and a.e.f.g; needs to set controller for all!
@@ -87,7 +88,7 @@ def unisetattr(self, name, value, grandparent):
 
     # if there are any context handlers, call the fastsave to write the value into the context
     if hasattr(self, "contextHandlers") and hasattr(self, "currentContexts"):
-        for contextName, contextHandler in self.contextHandlers.items():
+        for contextName, contextHandler in list(self.contextHandlers.items()):
             contextHandler.fastSave(self.currentContexts.get(contextName), self, name, value)
 
 
@@ -97,7 +98,7 @@ class ControlledAttributesDict(dict):
         self.master = master
 
     def __setitem__(self, key, value):
-        if not self.has_key(key):
+        if key not in self:
             dict.__setitem__(self, key, [value])
         else:
             dict.__getitem__(self, key).append(value)
@@ -182,7 +183,7 @@ class OWBaseWidget(QDialog):
         self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
 
         if hasattr(self, "contextHandlers"):
-            for contextHandler in self.contextHandlers.values():
+            for contextHandler in list(self.contextHandlers.values()):
                 contextHandler.initLocalContext(self)
                 
         global widgetId
@@ -386,7 +387,7 @@ class OWBaseWidget(QDialog):
             self.parent.setTabText(self.parent.indexOf(self), caption)
         else:
             # we have to save caption title in case progressbar will change it
-            self.captionTitle = unicode(caption)
+            self.captionTitle = str(caption)
             self.setWindowTitle(caption)
 
     # put this widget on top of all windows
@@ -398,9 +399,9 @@ class OWBaseWidget(QDialog):
 
     def send(self, signalName, value, id = None):
         if not self.hasOutputName(signalName):
-            print "Warning! Signal '%s' is not a valid signal name for the '%s' widget. Please fix the signal name." % (signalName, self.captionTitle)
+            print("Warning! Signal '%s' is not a valid signal name for the '%s' widget. Please fix the signal name." % (signalName, self.captionTitle))
 
-        if self.linksOut.has_key(signalName):
+        if signalName in self.linksOut:
             self.linksOut[signalName][id] = value
         else:
             self.linksOut[signalName] = {id:value}
@@ -412,10 +413,10 @@ class OWBaseWidget(QDialog):
         try:
             return reduce(lambda o, n: getattr(o, n, None),  attr.split("."), self)
         except:
-            if argkw.has_key("default"):
+            if "default" in argkw:
                 return argkw[default]
             else:
-                raise AttributeError, "'%s' has no attribute '%s'" % (self, attr)
+                raise AttributeError("'%s' has no attribute '%s'" % (self, attr))
 
 
     # Set all settings
@@ -440,7 +441,7 @@ class OWBaseWidget(QDialog):
         if alsoContexts:
             self.synchronizeContexts()
             contextHandlers = getattr(self, "contextHandlers", {})
-            for contextHandler in contextHandlers.values():
+            for contextHandler in list(contextHandlers.values()):
                 contextHandler.mergeBack(self)
 #                settings[contextHandler.localContextName] = contextHandler.globalContexts
 # Instead of the above line, I found this; as far as I recall this was a fix
@@ -465,11 +466,11 @@ class OWBaseWidget(QDialog):
             if not os.path.exists(file):
                 try:
                     f = open(file, "wb")
-                    cPickle.dump({}, f)
+                    pickle.dump({}, f)
                     f.close()
                 except IOError:
                     return 
-        if isinstance(file, basestring):
+        if isinstance(file, str):
             if os.path.exists(file):
                 return open(file, "r")
         else:
@@ -481,9 +482,9 @@ class OWBaseWidget(QDialog):
         file = self.getSettingsFile(file)
         if file:
             try:
-                settings = cPickle.load(file)
-            except Exception, ex:
-                print >> sys.stderr, "Failed to load settings!", repr(ex)
+                settings = pickle.load(file)
+            except Exception as ex:
+                print("Failed to load settings!", repr(ex), file=sys.stderr)
                 settings = None
             
             if hasattr(self, "_settingsFromSchema"):
@@ -496,12 +497,12 @@ class OWBaseWidget(QDialog):
                     self.setSettings(settings)
 
                 contextHandlers = getattr(self, "contextHandlers", {})
-                for contextHandler in contextHandlers.values():
+                for contextHandler in list(contextHandlers.values()):
                     localName = contextHandler.localContextName
 
                     structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
                     if (structureVersion < contextStructureVersion or dataVersion < contextHandler.contextDataVersion) \
-                       and settings.has_key(localName):
+                       and localName in settings:
                         del settings[localName]
                         delattr(self, localName)
                         contextHandler.initLocalContext(self)
@@ -520,22 +521,22 @@ class OWBaseWidget(QDialog):
         if settings:
             if file==None:
                 file = os.path.join(self.widgetSettingsDir, self.captionTitle + ".ini")
-            if isinstance(file, basestring):
+            if isinstance(file, str):
                 file = open(file, "w")
-            cPickle.dump(settings, file)
+            pickle.dump(settings, file)
 
     # Loads settings from string str which is compatible with cPickle
     def loadSettingsStr(self, str):
         if str == None or str == "":
             return
 
-        settings = cPickle.loads(str)
+        settings = pickle.loads(str)
         self.setSettings(settings)
 
         contextHandlers = getattr(self, "contextHandlers", {})
-        for contextHandler in contextHandlers.values():
+        for contextHandler in list(contextHandlers.values()):
             localName = contextHandler.localContextName
-            if settings.has_key(localName):
+            if localName in settings:
                 structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
                 if structureVersion < contextStructureVersion or dataVersion < contextHandler.contextDataVersion:
                     del settings[localName]
@@ -547,7 +548,7 @@ class OWBaseWidget(QDialog):
     # return settings in string format compatible with cPickle
     def saveSettingsStr(self):
         settings = self.getSettings()
-        return cPickle.dumps(settings)
+        return pickle.dumps(settings)
 
     def onDeleteWidget(self):
         pass
@@ -616,7 +617,7 @@ class OWBaseWidget(QDialog):
                 break
 
         existing = []
-        if self.linksIn.has_key(signalName):
+        if signalName in self.linksIn:
             existing = self.linksIn[signalName]
             for (dirty, widget, handler, data) in existing:
                 if widget == widgetFrom: return             # no need to add new tuple, since one from the same widget already exists
@@ -625,7 +626,7 @@ class OWBaseWidget(QDialog):
 
     # delete a link from widgetFrom and this widget with name signalName
     def removeInputConnection(self, widgetFrom, signalName):
-        if self.linksIn.has_key(signalName):
+        if signalName in self.linksIn:
             links = self.linksIn[signalName]
             for i in range(len(self.linksIn[signalName])):
                 if widgetFrom == self.linksIn[signalName][i][1]:
@@ -640,7 +641,7 @@ class OWBaseWidget(QDialog):
             input = InputSignal(*i)
             if input.name == signal and not input.single: return None
 
-        for signalName in self.linksIn.keys():
+        for signalName in list(self.linksIn.keys()):
             if signalName == signal:
                 widget = self.linksIn[signalName][0][1]
                 del self.linksIn[signalName]
@@ -663,7 +664,7 @@ class OWBaseWidget(QDialog):
         # we define only a way to handle signals that have defined a handler function
         for signal in self.inputs:        # we go from the first to the last defined input
             key = signal[0]
-            if self.linksIn.has_key(key):
+            if key in self.linksIn:
                 for i in range(len(self.linksIn[key])):
                     (dirty, widgetFrom, handler, signalData) = self.linksIn[key][i]
                     if not (handler and dirty): continue
@@ -698,7 +699,7 @@ class OWBaseWidget(QDialog):
 
     # set new data from widget widgetFrom for a signal with name signalName
     def updateNewSignalData(self, widgetFrom, signalName, value, id, signalNameFrom):
-        if not self.linksIn.has_key(signalName): return
+        if signalName not in self.linksIn: return
         for i in range(len(self.linksIn[signalName])):
             (dirty, widget, handler, signalData) = self.linksIn[signalName][i]
             if widget == widgetFrom:
@@ -825,14 +826,14 @@ class OWBaseWidget(QDialog):
         changed = 0
         if type(id) == list:
             for val in id:
-                if self.widgetState[stateType].has_key(val):
+                if val in self.widgetState[stateType]:
                     self.widgetState[stateType].pop(val)
                     changed = 1
         else:
             if type(id) == str:
                 text = id; id = 0       # if we call information(), warning(), or error() function with only one parameter - a string - then set id = 0
             if not text:
-                if self.widgetState[stateType].has_key(id):
+                if id in self.widgetState[stateType]:
                     self.widgetState[stateType].pop(id)
                     changed = 1
             else:
@@ -868,7 +869,7 @@ class OWBaseWidget(QDialog):
                     "Error": "canvasIcons:error.png"}
         for show, what in [(info, "Info"), (warning, "Warning"),(error, "Error")]:
             if show and self.widgetState[what]:
-                items.append('<img src="%s" style="float: left;"> %s' % (iconPath[what], "\n".join(self.widgetState[what].values())))
+                items.append('<img src="%s" style="float: left;"> %s' % (iconPath[what], "\n".join(list(self.widgetState[what].values()))))
         return "<br>".join(items)
         
     @classmethod
@@ -886,7 +887,7 @@ class OWBaseWidget(QDialog):
 
     def synchronizeContexts(self):
         if hasattr(self, "contextHandlers"):
-            for contextName, handler in self.contextHandlers.items():
+            for contextName, handler in list(self.contextHandlers.items()):
                 context = self.currentContexts.get(contextName, None)
                 if context:
                     handler.settingsFromWidget(self, context)
@@ -918,7 +919,7 @@ class OWBaseWidget(QDialog):
         while obj:
             if prefix:
 #                print "SET CONTROLLERS: %s %s + %s" % (obj.__class__.__name__, prefix, controlledName)
-                if obj.__dict__.has_key("attributeController"):
+                if "attributeController" in obj.__dict__:
                     obj.__dict__["__attributeControllers"][(controller, prefix)] = True
                 else:
                     obj.__dict__["__attributeControllers"] = {(controller, prefix): True}
@@ -962,7 +963,8 @@ class OWBaseWidget(QDialog):
         """
         return self.asyncBlock or any(a.blocking for a in self.asyncCalls)
     
-    def asyncExceptionHandler(self, (etype, value, tb)):
+    def asyncExceptionHandler(self, xxx_todo_changeme):
+        (etype, value, tb) = xxx_todo_changeme
         import traceback
         sys.excepthook(etype, value, tb)
         

@@ -18,16 +18,16 @@ class TestOutputView(QAppTestCase):
         line1 = "A line \n"
         line2 = "A different line\n"
         output.write(line1)
-        self.assertEqual(unicode(output.toPlainText()), line1)
+        self.assertEqual(str(output.toPlainText()), line1)
 
         output.write(line2)
-        self.assertEqual(unicode(output.toPlainText()), line1 + line2)
+        self.assertEqual(str(output.toPlainText()), line1 + line2)
 
         output.clear()
-        self.assertEqual(unicode(output.toPlainText()), "")
+        self.assertEqual(str(output.toPlainText()), "")
 
         output.writelines([line1, line2])
-        self.assertEqual(unicode(output.toPlainText()), line1 + line2)
+        self.assertEqual(str(output.toPlainText()), line1 + line2)
 
         output.setMaximumLines(5)
 
@@ -35,7 +35,7 @@ class TestOutputView(QAppTestCase):
             now = datetime.now().strftime("%c\n")
             output.write(now)
 
-            text = unicode(output.toPlainText())
+            text = str(output.toPlainText())
             self.assertLessEqual(len(text.splitlines()), 5)
 
             self.singleShot(500, advance)
@@ -101,7 +101,7 @@ class TestOutputView(QAppTestCase):
                                                 fizzbuz))
 
         pool = multiprocessing.pool.ThreadPool(100)
-        res = pool.map_async(printer, range(10000))
+        res = pool.map_async(printer, list(range(10000)))
 
         self.app.exec_()
 
@@ -133,7 +133,7 @@ class TestOutputView(QAppTestCase):
                 hook(*sys.exc_info())
 
         pool = multiprocessing.pool.ThreadPool(10)
-        res = pool.map_async(raise_exception, range(100))
+        res = pool.map_async(raise_exception, list(range(100)))
 
         self.app.exec_()
 

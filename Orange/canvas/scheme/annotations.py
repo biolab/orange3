@@ -20,7 +20,7 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
     """An arrow annotation in the scheme.
     """
 
-    color_changed = Signal(unicode)
+    color_changed = Signal(str)
 
     def __init__(self, start_pos, end_pos, color="red", anchor=None,
                  parent=None):
@@ -51,11 +51,12 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
 
     end_pos = Property(tuple, fget=end_pos)
 
-    def set_geometry(self, (start_pos, end_pos)):
+    def set_geometry(self, xxx_todo_changeme):
         """Set the geometry of the arrow as a start and end position tuples
         (e.g. `set_geometry(((0, 0), (100, 0))).
 
         """
+        (start_pos, end_pos) = xxx_todo_changeme
         self.set_line(start_pos, end_pos)
 
     def geometry(self):
@@ -72,8 +73,8 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
         names).
 
         """
-        check_type(color, (basestring, QString))
-        color = unicode(color)
+        check_type(color, (str, QString))
+        color = str(color)
         if self.__color != color:
             self.__color = color
             self.color_changed.emit(color)
@@ -83,13 +84,13 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
         """
         return self.__color
 
-    color = Property(unicode, fget=color, fset=set_color)
+    color = Property(str, fget=color, fset=set_color)
 
 
 class SchemeTextAnnotation(BaseSchemeAnnotation):
     """Text annotation in the scheme.
     """
-    text_changed = Signal(unicode)
+    text_changed = Signal(str)
     font_changed = Signal(dict)
 
     def __init__(self, rect, text="", font=None, anchor=None, parent=None):
@@ -99,11 +100,12 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
         self.__font = {} if font is None else font
         self.__anchor = anchor
 
-    def set_rect(self, (x, y, w, h)):
+    def set_rect(self, xxx_todo_changeme1):
         """Set the text geometry bounding rectangle
         ((x, y, width, height) tuple).
 
         """
+        (x, y, w, h) = xxx_todo_changeme1
         rect = (x, y, w, h)
         if self.__rect != rect:
             self.__rect = rect
@@ -129,8 +131,8 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
     def set_text(self, text):
         """Set the annotation text.
         """
-        check_type(text, (basestring, QString))
-        text = unicode(text)
+        check_type(text, (str, QString))
+        text = str(text)
         if self.__text != text:
             self.__text = text
             self.text_changed.emit(text)
@@ -160,4 +162,4 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
         """
         return dict(self.__font)
 
-    font = Property(unicode, fget=font, fset=set_font)
+    font = Property(str, fget=font, fset=set_font)

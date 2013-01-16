@@ -11,10 +11,10 @@ class TestMenu(QAppTestCase):
         menu = QuickMenu()
 
         def triggered(action):
-            print "Triggered", action.text()
+            print("Triggered", action.text())
 
         def hovered(action):
-            print "Hover", action.text()
+            print("Hover", action.text())
 
         menu.triggered.connect(triggered)
         menu.hovered.connect(hovered)
@@ -42,13 +42,13 @@ class TestMenu(QAppTestCase):
         triggered_action = []
 
         def triggered(action):
-            print "Triggered", action.text()
+            print("Triggered", action.text())
             self.assertIsInstance(action, QAction)
             triggered_action.append(action)
 
         def hovered(action):
             self.assertIsInstance(action, QAction)
-            print "Hover", action.text()
+            print("Hover", action.text())
 
         menu.triggered.connect(triggered)
         menu.hovered.connect(hovered)

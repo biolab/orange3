@@ -166,7 +166,7 @@ class TestNodeItem(TestItems):
 
         def advance():
             t = anchoritem.anchorPositions()
-            t = map(lambda t: (t + 0.05) % 1.0, t)
+            t = [(t + 0.05) % 1.0 for t in t]
             anchoritem.setAnchorPositions(t)
             self.singleShot(20, advance)
 

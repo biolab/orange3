@@ -765,7 +765,7 @@ class CanvasMainWindow(QMainWindow):
         property.
 
         """
-        filename = unicode(filename)
+        filename = str(filename)
         dirname = os.path.dirname(filename)
 
         self.last_scheme_dir = dirname
@@ -894,7 +894,7 @@ class CanvasMainWindow(QMainWindow):
                 )
 
             title = curr_scheme.title or "untitled"
-            start_dir = os.path.join(unicode(start_dir), title + ".ows")
+            start_dir = os.path.join(str(start_dir), title + ".ows")
 
         filename = QFileDialog.getSaveFileName(
             self, self.tr("Save Orange Scheme File"),
@@ -902,7 +902,7 @@ class CanvasMainWindow(QMainWindow):
         )
 
         if filename:
-            filename = unicode(filename)
+            filename = str(filename)
             dirname, basename = os.path.split(filename)
             self.last_scheme_dir = dirname
 
@@ -984,7 +984,7 @@ class CanvasMainWindow(QMainWindow):
 
             selected = model.item(index)
 
-            self.load_scheme(unicode(selected.path()))
+            self.load_scheme(str(selected.path()))
 
         return status
 
@@ -1022,7 +1022,7 @@ class CanvasMainWindow(QMainWindow):
 
             selected = model.item(index)
 
-            new_scheme = self.new_scheme_from(unicode(selected.path()))
+            new_scheme = self.new_scheme_from(str(selected.path()))
 
             self.set_new_scheme(new_scheme)
 
@@ -1271,7 +1271,7 @@ class CanvasMainWindow(QMainWindow):
 
         actions_by_filename = {}
         for action in self.recent_scheme_action_group.actions():
-            path = unicode(action.data().toString())
+            path = str(action.data().toString())
             actions_by_filename[path] = action
 
         if filename in actions_by_filename:
@@ -1306,7 +1306,7 @@ class CanvasMainWindow(QMainWindow):
 
         # Exclude permanent actions (Browse Recent, separators, Clear List)
         actions_to_remove = [action for action in actions \
-                             if unicode(action.data().toString())]
+                             if str(action.data().toString())]
 
         for action in actions_to_remove:
             self.recent_menu.removeAction(action)
@@ -1322,7 +1322,7 @@ class CanvasMainWindow(QMainWindow):
             if self.ask_save_changes() == QDialog.Rejected:
                 return
 
-        filename = unicode(action.data().toString())
+        filename = str(action.data().toString())
         self.load_scheme(filename)
 
     def _on_dock_location_changed(self, location):
@@ -1442,7 +1442,7 @@ class CanvasMainWindow(QMainWindow):
     def tr(self, sourceText, disambiguation=None, n=-1):
         """Translate the string.
         """
-        return unicode(QMainWindow.tr(self, sourceText, disambiguation, n))
+        return str(QMainWindow.tr(self, sourceText, disambiguation, n))
 
     def __update_from_settings(self):
         settings = QSettings()

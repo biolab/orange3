@@ -198,7 +198,7 @@ class QueuedCallEvent(QEvent):
         try:
             self._result = self.function(*self.args, **self.kwargs)
             self._state = 1
-        except Exception, ex:
+        except Exception as ex:
             self._exc_info = (type(ex), ex.args, None)
             raise
 
@@ -206,7 +206,7 @@ class QueuedCallEvent(QEvent):
         if self._state == 1:
             return self._result
         elif self._exc_info:
-            raise self._exc_info[0], self._exc_info[1]
+            raise self._exc_info[0](self._exc_info[1])
         else:
             # Should this block, add timeout?
             raise RuntimeError("Result not yet ready")
@@ -244,8 +244,8 @@ def queued_blocking(method):
 
 
 class TextStream(QObject):
-    stream = Signal(basestring)
-    flushed = Signal(basestring)
+    stream = Signal(str)
+    flushed = Signal(str)
 
     def __init__(self, parent=None):
         QObject.__init__(self, parent)

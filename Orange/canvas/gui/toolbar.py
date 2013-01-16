@@ -2,7 +2,7 @@
 A custom toolbar.
 
 """
-from __future__ import division
+
 
 import logging
 
@@ -68,7 +68,7 @@ class DynamicResizeToolBar(QToolBar):
         mygeom.adjust(dx, dy, -dw, -dh)
 
         actions = self.actions()
-        widgets = map(self.widgetForAction, actions)
+        widgets = list(map(self.widgetForAction, actions))
 
         orientation = self.orientation()
         if orientation == Qt.Horizontal:

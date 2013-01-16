@@ -114,7 +114,7 @@ class OWWidget(OWBaseWidget):
         for state, widget, use in [("Warning", self._warningWidget, self._owWarning), ("Error", self._errorWidget, self._owError)]:
             if not widget: continue
             if use and self.widgetState[state] != {}:
-                widget.setToolTip("\n".join(self.widgetState[state].values()))
+                widget.setToolTip("\n".join(list(self.widgetState[state].values())))
                 widget.show()
                 iconsShown = 1
             else:
@@ -171,7 +171,7 @@ class OWWidget(OWBaseWidget):
         
     def startReport(self, name=None, needDirectory=False):
         if self.__reportData is not None:
-            print "Cannot open a new report when an old report is still active"
+            print("Cannot open a new report when an old report is still active")
             return False
         self.reportName = name or self.windowTitle()
         self.__reportData = ""
@@ -208,7 +208,7 @@ class OWWidget(OWBaseWidget):
         if self.__reportData is None:
             self.startReport()
             
-        if type(filenameOrFunc) in [str, unicode]:
+        if type(filenameOrFunc) in [str, str]:
             self.__reportData += '    <IMG src="%s"/>\n' % filenameOrFunc
         else:
             sfn, ffn = self.getUniqueImageName()
@@ -219,7 +219,7 @@ class OWWidget(OWBaseWidget):
     def reportObject(self, type, data, **attrs):
         if self.__reportData is None:
             self.startReport()
-        self.__reportData += '<object type="%s" data="%s" %s></object>' % (type, data, " ".join('%s="%s"' % attr for attr in attrs.items()))
+        self.__reportData += '<object type="%s" data="%s" %s></object>' % (type, data, " ".join('%s="%s"' % attr for attr in list(attrs.items())))
 
     def startReportList(self):
         if self.__reportData is None:
@@ -253,14 +253,14 @@ class OWWidget(OWBaseWidget):
                 if data.domain.attributes:
                     res.append(("Attributes", "%i %s" % ( 
                                 len(data.domain.attributes), 
-                                 "(%s%s)" % (", ".join(x.name for foo, x in zip(xrange(30), data.domain.attributes)), "..." if len(data.domain.attributes) > 30 else "")
+                                 "(%s%s)" % (", ".join(x.name for foo, x in zip(range(30), data.domain.attributes)), "..." if len(data.domain.attributes) > 30 else "")
                               )))
                 else:
                     res.append(("Attributes", "0"))
                 metas = data.domain.getmetas()
                 if metas:
                   if len(metas) <= 100:
-                      res.append(("Meta attributes", "%i (%s)" % (len(metas), ", ".join(x.name for x in metas.values()))))
+                      res.append(("Meta attributes", "%i (%s)" % (len(metas), ", ".join(x.name for x in list(metas.values())))))
                   else:
                       res.append(("Meta attributes", str(len(metas))))
                 res.append(("Class", data.domain.classVar.name if data.domain.classVar else "<none>"))

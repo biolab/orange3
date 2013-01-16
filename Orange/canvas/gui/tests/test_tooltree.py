@@ -35,7 +35,7 @@ class TestToolTree(QAppTestCase):
         model.appendRow([cat])
 
         def p(action):
-            print "triggered", action.text()
+            print("triggered", action.text())
 
         tree.triggered.connect(p)
 
@@ -52,7 +52,7 @@ class TestToolTree(QAppTestCase):
         tree.show()
 
         def p(action):
-            print "triggered", action.text()
+            print("triggered", action.text())
 
         tree.triggered.connect(p)
 
@@ -94,7 +94,7 @@ class TestToolTree(QAppTestCase):
         self.assertTrue(model.rowCount() == 3)
 
         def p(action):
-            print "triggered", action.text()
+            print("triggered", action.text())
 
         tree.triggered.connect(p)
 

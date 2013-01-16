@@ -97,14 +97,14 @@ def scan_update(item):
 
     """
 
-    path = unicode(item.path())
+    path = str(item.path())
 
     # workaround for bugs.python.org/issue11159
     path = path.encode(sys.getfilesystemencoding())
 
     try:
         title, desc, svg = preview_parse(path)
-    except SAXParseException, ex:
+    except SAXParseException as ex:
         log.error("%r is malformed (%r)", path, ex)
         item.setEnabled(False)
         item.setSelectable(False)

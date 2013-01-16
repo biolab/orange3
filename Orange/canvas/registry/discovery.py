@@ -20,6 +20,7 @@ from .description import (
 )
 
 from . import VERSION_HEX
+import collections
 
 
 log = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ def default_category_for_module(module):
     for `module`.
 
     """
-    if isinstance(module, basestring):
+    if isinstance(module, str):
         module = __import__(module, fromlist=[""])
     name = module.__name__.rsplit(".", 1)[-1]
     qualified_name = module.__name__
@@ -180,7 +181,7 @@ class WidgetDiscovery(object):
         try:
             desc = self.widget_description(module, widget_name=name,
                                            distribution=distribution)
-        except (WidgetSpecificationError, Exception), ex:
+        except (WidgetSpecificationError, Exception) as ex:
             log.info("Invalid widget specification.", exc_info=True)
             return
 
@@ -207,7 +208,7 @@ class WidgetDiscovery(object):
         else:
             try:
                 cat_desc = CategoryDescription.from_package(category)
-            except (CategorySpecificationError, Exception), ex:
+            except (CategorySpecificationError, Exception) as ex:
                 log.info("Package %r does not describe a category.", category,
                          exc_info=True)
                 cat_desc = default_category_for_module(category)
@@ -233,7 +234,7 @@ class WidgetDiscovery(object):
         """Process a callable loader function.
         """
         try:
-            callable(self)
+            isinstance(self, collections.Callable)
         except Exception:
             log.error("Error calling %r", callable, exc_info=True)
 
@@ -329,7 +330,7 @@ class WidgetDiscovery(object):
                            category_name=None, distribution=None):
         """Return a widget description from a module.
         """
-        if isinstance(module, basestring):
+        if isinstance(module, str):
             module = __import__(module, fromlist=[""])
 
         desc = None
@@ -551,7 +552,7 @@ def asmodule(module):
     """
     if isinstance(module, types.ModuleType):
         return module
-    elif isinstance(module, basestring):
+    elif isinstance(module, str):
         return __import__(module, fromlist=[""])
     else:
         raise TypeError(type(module))

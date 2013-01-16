@@ -27,7 +27,7 @@ class QuickHelp(QTextBrowser):
 
         """
         if self.__text != text:
-            self.__text = unicode(text)
+            self.__text = str(text)
             self.__update()
             self.textChanged.emit()
 
@@ -69,7 +69,7 @@ class QuickHelp(QTextBrowser):
 
 
 class QuickHelpTipEvent(QStatusTipEvent):
-    Temporary, Normal, Permanent = range(1, 4)
+    Temporary, Normal, Permanent = list(range(1, 4))
 
     def __init__(self, tip, html=None, priority=Normal, timeout=None):
         QStatusTipEvent.__init__(self, tip)

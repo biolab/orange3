@@ -11,7 +11,7 @@ from ..readwrite import scheme_to_ows_stream, parse_scheme
 
 class TestReadWrite(test.QAppTestCase):
     def test_io(self):
-        from StringIO import StringIO
+        from io import StringIO
         reg = global_registry()
 
         base = "Orange.OrangeWidgets"

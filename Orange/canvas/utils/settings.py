@@ -72,11 +72,11 @@ class _Settings(QSettings):
         QSettings.__init__(self, parent)
 
     def _fullKey(self, key):
-        group = unicode(self.group())
+        group = str(self.group())
         if group:
-            return "{0}/{1}".format(group.rstrip("/"), unicode(key))
+            return "{0}/{1}".format(group.rstrip("/"), str(key))
         else:
-            return unicode(key)
+            return str(key)
 
     def _value(self, key, defaultValue, type):
         if PYQT_VERSION < 0x40803:
@@ -100,7 +100,8 @@ class _Settings(QSettings):
         return value
 
 
-def _check_error((val, status)):
+def _check_error(xxx_todo_changeme):
+    (val, status) = xxx_todo_changeme
     if not status:
         raise TypeError()
     else:
@@ -120,14 +121,14 @@ def qvariant_to_py(variant, py_type):
 
     elif vtype in [QVariant.Hash, QVariant.Map]:
         variant = variant.toPyObject()
-        return dict((unicode(key), py_type(value))
-                    for key, value in variant.items())
+        return dict((str(key), py_type(value))
+                    for key, value in list(variant.items()))
 
     elif vtype == QVariant.List:
         variant = variant.toPyObject()
         return [py_type(item) for item in variant]
 
-    if issubclass(py_type, basestring):
+    if issubclass(py_type, str):
         return py_type(variant.toString())
     elif py_type == bool:
         return variant.toBool()
@@ -145,7 +146,7 @@ def qt_to_mapped_type(value):
 
     """
     if isinstance(value, QString):
-        return unicode(value)
+        return str(value)
     elif isinstance(value, QChar):
         return str(value)
     else:
@@ -163,12 +164,10 @@ class _pickledvalue(object):
         self.value = value
 
 
-class Settings(QObject, MutableMapping):
-    __metaclass__ = QABCMeta
-
-    valueChanged = Signal(unicode, object)
-    valueAdded = Signal(unicode, object)
-    keyRemoved = Signal(unicode)
+class Settings(QObject, MutableMapping, metaclass=QABCMeta):
+    valueChanged = Signal(str, object)
+    valueAdded = Signal(str, object)
+    keyRemoved = Signal(str)
 
     def __init__(self, parent=None, defaults=(), path=None, store=None):
         QObject.__init__(self, parent)
@@ -290,7 +289,7 @@ class Settings(QObject, MutableMapping):
         """
         Set the setting for key.
         """
-        if not isinstance(key, basestring):
+        if not isinstance(key, str):
             raise TypeError(key)
 
         fullkey = self.__key(key)
@@ -329,12 +328,12 @@ class Settings(QObject, MutableMapping):
     def __iter__(self):
         """Return an iterator over over all keys.
         """
-        keys = map(unicode, self.__store.allKeys()) + \
-               self.__defaults.keys()
+        keys = list(map(str, self.__store.allKeys())) + \
+               list(self.__defaults.keys())
 
         if self.__path:
             path = self.__path + "/"
-            keys = filter(lambda key: key.startswith(path), keys)
+            keys = [key for key in keys if key.startswith(path)]
             keys = [key[len(path):] for key in keys]
 
         return iter(sorted(set(keys)))
@@ -346,7 +345,7 @@ class Settings(QObject, MutableMapping):
         if self.__path:
             path = "/".join([self.__path, path])
 
-        return Settings(self, self.__defaults.values(), path, self.__store)
+        return Settings(self, list(self.__defaults.values()), path, self.__store)
 
     def isgroup(self, key):
         """Is the `key` a settings group i.e. does it have subkeys.

@@ -51,8 +51,8 @@ class Scheme(QObject):
 
     node_property_changed = Signal(SchemeNode, str, object)
 
-    title_changed = Signal(unicode)
-    description_changed = Signal(unicode)
+    title_changed = Signal(str)
+    description_changed = Signal(str)
 
     def __init__(self, parent=None, title=None, description=None):
         QObject.__init__(self, parent)
@@ -87,7 +87,7 @@ class Scheme(QObject):
     def title(self):
         return self.__title
 
-    title = Property(unicode, fget=title, fset=set_title)
+    title = Property(str, fget=title, fset=set_title)
 
     def set_description(self, description):
         if self.__description != description:
@@ -97,7 +97,7 @@ class Scheme(QObject):
     def description(self):
         return self.__description
 
-    description = Property(unicode, fget=description, fset=set_description)
+    description = Property(str, fget=description, fset=set_description)
 
     def add_node(self, node):
         """Add a node to the scheme.
@@ -389,7 +389,7 @@ class Scheme(QObject):
     def save_to(self, stream, pretty=True):
         """Save the scheme as an xml formated file to `stream`
         """
-        if isinstance(stream, basestring):
+        if isinstance(stream, str):
             stream = open(stream, "wb")
 
         scheme_to_ows_stream(self, stream, pretty)
@@ -401,7 +401,7 @@ class Scheme(QObject):
             # TODO: should we clear the scheme and load it.
             raise ValueError("Scheme is not empty.")
 
-        if isinstance(stream, basestring):
+        if isinstance(stream, str):
             stream = open(stream, "rb")
 
         parse_scheme(self, stream)

@@ -292,7 +292,7 @@ class LinkItem(QGraphicsObject):
 
         if self.__sourceName or self.__sinkName:
             if self.__sourceName != self.__sinkName:
-                text = u"{0} \u2192 {1}".format(self.__sourceName,
+                text = "{0} \u2192 {1}".format(self.__sourceName,
                                                 self.__sinkName)
             else:
                 # If the names are the same show only one.

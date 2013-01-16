@@ -152,7 +152,7 @@ class UserSettingsModel(QAbstractItemModel):
 
     def _keyFromIndex(self, index):
         row = index.row()
-        return self.__settings.keys()[row]
+        return list(self.__settings.keys())[row]
 
 
 def container_widget_helper(orientation=Qt.Vertical, spacing=None, margin=0):

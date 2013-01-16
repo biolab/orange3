@@ -11,7 +11,7 @@ class Context:
     def __getstate__(self):
         s = dict(self.__dict__)
         for nc in getattr(self, "noCopy", []):
-            if s.has_key(nc):
+            if nc in s:
                 del s[nc]
         return s
 
@@ -126,7 +126,7 @@ class ContextField:
     
 
 class DomainContextHandler(ContextHandler):
-    Optional, SelectedRequired, Required = range(3)
+    Optional, SelectedRequired, Required = list(range(3))
     RequirementMask = 3
     NotAttribute = 4
     List = 8
@@ -134,7 +134,7 @@ class DomainContextHandler(ContextHandler):
     SelectedRequiredList = SelectedRequired + List
     ExcludeOrdinaryAttributes, IncludeMetaAttributes = 16, 32
 
-    MatchValuesNo, MatchValuesClass, MatchValuesAttributes = range(3)
+    MatchValuesNo, MatchValuesClass, MatchValuesAttributes = list(range(3))
     
     def __init__(self, contextName, fields = [],
                  cloneIfImperfect = True, findImperfect = True, syncWithGlobal = True,
@@ -175,7 +175,7 @@ class DomainContextHandler(ContextHandler):
                                 for attr in domain])
             metas = self.hasMetaAttributes and \
                          dict([(attr.name, attr.varType != orange.VarTypes.Discrete and attr.varType or attr.values)
-                                for attr in domain.getmetas().values()])
+                                for attr in list(domain.getmetas().values())])
         else:
             if self.hasOrdinaryAttributes:
                 attributes = dict([(attr.name, attr.varType) for attr in domain.attributes])
@@ -188,7 +188,7 @@ class DomainContextHandler(ContextHandler):
             else:
                 attributes = False
 
-            metas = self.hasMetaAttributes and dict([(attr.name, attr.varType) for attr in domain.getmetas().values()]) or {}
+            metas = self.hasMetaAttributes and dict([(attr.name, attr.varType) for attr in list(domain.getmetas().values())]) or {}
 
         return attributes, metas
     
@@ -209,7 +209,7 @@ class DomainContextHandler(ContextHandler):
         else:
             context.attributes, context.classVar, context.metas = encodedDomain
 
-        metaIds = domain.getmetas().keys()
+        metaIds = list(domain.getmetas().keys())
         metaIds.sort()
         context.orderedDomain = []
         if self.hasOrdinaryAttributes:
@@ -246,7 +246,7 @@ class DomainContextHandler(ContextHandler):
             
         def attrSet(attrs):
             if isinstance(attrs, dict):
-                return set_if_all_hashable(attrs.items())
+                return set_if_all_hashable(list(attrs.items()))
             elif isinstance(attrs, bool):
                 return {}
             else:
@@ -268,7 +268,7 @@ class DomainContextHandler(ContextHandler):
                     if flags & self.IncludeMetaAttributes:
                         addMetaTo.append(exclude)                    
 
-            if not context.values.has_key(name):
+            if name not in context.values:
                 continue
             
             value = context.values[name]
@@ -300,7 +300,7 @@ class DomainContextHandler(ContextHandler):
                 for exclude in excludes:
                     excluded[exclude].extend(value)
 
-        for name, values in excluded.items():
+        for name, values in list(excluded.items()):
             addOrd, addMeta = name in addOrdinaryTo, name in addMetaTo
             ll = [a for a in context.orderedDomain if a not in values and ((addOrd and context.attributes.get(a[0], None) == a[1]) or (addMeta and context.metas.get(a[0], None) == a[1]))]
             setattr(widget, name, ll)
@@ -435,7 +435,7 @@ class DomainContextHandler(ContextHandler):
         if not self.syncWithGlobal or getattr(widget, self.localContextName) is not self.globalContexts:
             self.globalContexts.extend([c for c in getattr(widget, self.localContextName) if c not in self.globalContexts])
             mp = self.maxAttributesToPickle
-            self.globalContexts[:] = filter(lambda c: (c.attributes and len(c.attributes) or 0) + (c.metas and len(c.metas) or 0) < mp, self.globalContexts)
+            self.globalContexts[:] = [c for c in self.globalContexts if (c.attributes and len(c.attributes) or 0) + (c.metas and len(c.metas) or 0) < mp]
             self.globalContexts.sort(lambda c1,c2: -cmp(c1.time, c2.time))
             self.globalContexts[:] = self.globalContexts[:self.maxSavedContexts]
 
@@ -509,13 +509,13 @@ class PerfectDomainContextHandler(DomainContextHandler):
             if classVar:
                 classVar = classVar.name, classVar.varType != orange.VarTypes.Discrete and classVar.varType or classVar.values
             metas = dict([(attr.name, attr.varType != orange.VarTypes.Discrete and attr.varType or attr.values)
-                         for attr in domain.getmetas().values()])
+                         for attr in list(domain.getmetas().values())])
         else:
             attributes = tuple([(attr.name, attr.varType) for attr in domain.attributes])
             classVar = domain.classVar
             if classVar:
                 classVar = classVar.name, classVar.varType
-            metas = dict([(attr.name, attr.varType) for attr in domain.getmetas().values()])
+            metas = dict([(attr.name, attr.varType) for attr in list(domain.getmetas().values())])
         return attributes, classVar, metas
     
 

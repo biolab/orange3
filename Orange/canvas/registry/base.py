@@ -76,14 +76,14 @@ class WidgetRegistry(object):
         """
         if category is None:
             categories = self.categories()
-        elif isinstance(category, basestring):
+        elif isinstance(category, str):
             categories = [self.category(category)]
         else:
             categories = [category]
 
         widgets = []
         for cat in categories:
-            if isinstance(cat, basestring):
+            if isinstance(cat, str):
                 cat = self.category(cat)
             cat_widgets = self._categories_dict[cat.name][1]
             widgets.extend(sorted(cat_widgets,

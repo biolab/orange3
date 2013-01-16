@@ -5,7 +5,7 @@ Orange Canvas Configuration
 
 import os
 import logging
-import cPickle as pickle
+import pickle as pickle
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ spec = \
      ("startup/show-welcome-screen", bool, True,
       "Show Welcome screen at startup"),
 
-     ("stylesheet", unicode, "orange",
+     ("stylesheet", str, "orange",
       "QSS stylesheet to use"),
 
      ("schemeinfo/show-at-new-scheme", bool, True,
@@ -131,7 +131,7 @@ def data_dir():
     """
     init()
     datadir = QDesktopServices.storageLocation(QDesktopServices.DataLocation)
-    datadir = unicode(datadir)
+    datadir = str(datadir)
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     return datadir
@@ -144,7 +144,7 @@ def cache_dir():
     """
     init()
     datadir = QDesktopServices.storageLocation(QDesktopServices.DataLocation)
-    datadir = unicode(datadir)
+    datadir = str(datadir)
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     return datadir

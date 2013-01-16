@@ -613,7 +613,7 @@ class QuickMenu(FramelessWindow):
             # bar at the top.
             view.setAttribute(Qt.WA_MacShowFocusRect, False)
 
-        name = unicode(index.data(Qt.DisplayRole))
+        name = str(index.data(Qt.DisplayRole))
         page.setTitle(name)
 
         icon = index.data(Qt.DecorationRole).toPyObject()

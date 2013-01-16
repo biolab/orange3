@@ -81,6 +81,6 @@ class TestCanvasDockWidget(test.QAppTestCase):
         w.show()
 
         def p(action):
-            print action.text()
+            print(action.text())
 
         self.app.exec_()

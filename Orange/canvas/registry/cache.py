@@ -4,7 +4,7 @@ Widget Registry cache.
 """
 
 import os
-import cPickle
+import pickle
 import logging
 
 from .. import config
@@ -34,7 +34,7 @@ def registry_cache():
     log.debug("Loading widget registry cache (%r).", filename)
     if os.path.exists(filename):
         try:
-            return cPickle.load(open(filename, "rb"))
+            return pickle.load(open(filename, "rb"))
         except Exception:
             log.error("Could not load registry cache.", exc_info=True)
 
@@ -50,7 +50,7 @@ def save_registry_cache(cache):
     log.debug("Saving widget registry cache with %i entries (%r).",
               len(cache), filename)
     try:
-        cPickle.dump(cache, open(filename, "wb"))
+        pickle.dump(cache, open(filename, "wb"))
         return True
     except Exception:
         log.error("Could not save registry cache", exc_info=True)

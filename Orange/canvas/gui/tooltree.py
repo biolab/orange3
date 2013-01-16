@@ -82,7 +82,7 @@ class ToolTree(QWidget):
         """
         return self.__title
 
-    title_ = Property(unicode, fget=title, fset=setTitle)
+    title_ = Property(str, fget=title, fset=setTitle)
 
     def setIcon(self, icon):
         """Set icon for this tool tree.

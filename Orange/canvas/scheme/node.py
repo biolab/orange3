@@ -79,14 +79,14 @@ class SchemeNode(QObject):
     def __repr__(self):
         return str(self)
 
-    title_changed = Signal(unicode)
+    title_changed = Signal(str)
     """The title of the node has changed"""
 
     def set_title(self, title):
         """Set the node's title
         """
         if self.__title != title:
-            self.__title = unicode(title)
+            self.__title = str(title)
             self.title_changed.emit(self.__title)
 
     def title(self):
@@ -94,7 +94,7 @@ class SchemeNode(QObject):
         """
         return self.__title
 
-    title = Property(unicode, fset=set_title, fget=title)
+    title = Property(str, fset=set_title, fget=title)
 
     position_changed = Signal(tuple)
     """Position of the node in the scheme has changed"""

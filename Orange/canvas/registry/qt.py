@@ -5,7 +5,7 @@ Qt Model classes for widget registry.
 import bisect
 
 from xml.sax.saxutils import escape
-from urllib import urlencode
+from urllib.parse import urlencode
 
 from PyQt4.QtGui import (
     QStandardItemModel, QStandardItem, QColor, QBrush, QAction
@@ -123,7 +123,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
     def item_for_widget(self, widget):
         """Return the QStandardItem for the widget.
         """
-        if isinstance(widget, basestring):
+        if isinstance(widget, str):
             widget = self.widget(widget)
         cat = self.category(widget.category)
         cat_ind = self.categories().index(cat)

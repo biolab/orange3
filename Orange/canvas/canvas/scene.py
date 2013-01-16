@@ -378,7 +378,7 @@ class CanvasScene(QGraphicsScene):
         item.setSinkItem(sink_item)
 
         def channel_name(channel):
-            if isinstance(channel, basestring):
+            if isinstance(channel, str):
                 return channel
             else:
                 return channel.name
@@ -386,7 +386,7 @@ class CanvasScene(QGraphicsScene):
         source_name = channel_name(source_channel)
         sink_name = channel_name(sink_channel)
 
-        fmt = u"<b>{0}</b>&nbsp; \u2192 &nbsp;<b>{1}</b>"
+        fmt = "<b>{0}</b>&nbsp; \u2192 &nbsp;<b>{1}</b>"
         item.setToolTip(
             fmt.format(escape(source_name),
                        escape(sink_name))
@@ -515,7 +515,7 @@ class CanvasScene(QGraphicsScene):
 
     def annotation_for_item(self, item):
         rev = dict(reversed(item) \
-                   for item in self.__item_for_annotation.items())
+                   for item in list(self.__item_for_annotation.items()))
         return rev[item]
 
     def commit_scheme_node(self, node):
@@ -557,7 +557,7 @@ class CanvasScene(QGraphicsScene):
     def node_for_item(self, item):
         """Return the `SchemeNode` for the `item`.
         """
-        rev = dict([(v, k) for k, v in self.__item_for_node.items()])
+        rev = dict([(v, k) for k, v in list(self.__item_for_node.items())])
         return rev[item]
 
     def item_for_node(self, node):
@@ -568,7 +568,7 @@ class CanvasScene(QGraphicsScene):
     def link_for_item(self, item):
         """Return the `SchemeLink for `item` (:class:`LinkItem`).
         """
-        rev = dict([(v, k) for k, v in self.__item_for_link.items()])
+        rev = dict([(v, k) for k, v in list(self.__item_for_link.items())])
         return rev[item]
 
     def item_for_link(self, link):
@@ -607,11 +607,11 @@ class CanvasScene(QGraphicsScene):
     def neighbor_nodes(self, node_item):
         """Return a list of `node_item`'s (class:`NodeItem`) neighbor nodes.
         """
-        neighbors = map(attrgetter("sourceItem"),
-                        self.node_input_links(node_item))
+        neighbors = list(map(attrgetter("sourceItem"),
+                        self.node_input_links(node_item)))
 
-        neighbors.extend(map(attrgetter("sinkItem"),
-                             self.node_output_links(node_item)))
+        neighbors.extend(list(map(attrgetter("sinkItem"),
+                             self.node_output_links(node_item))))
         return neighbors
 
     def on_widget_state_change(self, widget, state):
@@ -677,15 +677,15 @@ class CanvasScene(QGraphicsScene):
 
         def items(self, *args, **kwargs):
             items = QGraphicsScene.items(self, *args, **kwargs)
-            return map(toGraphicsObjectIfPossible, items)
+            return list(map(toGraphicsObjectIfPossible, items))
 
         def selectedItems(self, *args, **kwargs):
-            return map(toGraphicsObjectIfPossible,
-                       QGraphicsScene.selectedItems(self, *args, **kwargs))
+            return list(map(toGraphicsObjectIfPossible,
+                       QGraphicsScene.selectedItems(self, *args, **kwargs)))
 
         def collidingItems(self, *args, **kwargs):
-            return map(toGraphicsObjectIfPossible,
-                       QGraphicsScene.collidingItems(self, *args, **kwargs))
+            return list(map(toGraphicsObjectIfPossible,
+                       QGraphicsScene.collidingItems(self, *args, **kwargs)))
 
         def focusItem(self, *args, **kwargs):
             item = QGraphicsScene.focusItem(self, *args, **kwargs)
@@ -817,4 +817,4 @@ def grab_svg(scene):
     painter.end()
 
     buffer_str = str(svg_buffer.buffer())
-    return unicode(buffer_str.decode("utf-8"))
+    return str(buffer_str.decode("utf-8"))

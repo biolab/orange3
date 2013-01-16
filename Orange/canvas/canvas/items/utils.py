@@ -105,7 +105,7 @@ def linspace(count):
     both end points, e.g. `linspace(3) == [0.25, 0.5, 0.75]`.
 
     """
-    return map(float, numpy.linspace(0.0, 1.0, count + 2, endpoint=True)[1:-1])
+    return list(map(float, numpy.linspace(0.0, 1.0, count + 2, endpoint=True)[1:-1]))
 
 
 def uniform_linear_layout(points):

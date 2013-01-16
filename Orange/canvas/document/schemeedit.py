@@ -73,9 +73,9 @@ class SchemeEditWidget(QWidget):
     undoCommandAdded = Signal()
     selectionChanged = Signal()
 
-    titleChanged = Signal(unicode)
+    titleChanged = Signal(str)
 
-    pathChanged = Signal(unicode)
+    pathChanged = Signal(str)
 
     # Quick Menu triggers
     (NoTriggers,
@@ -90,7 +90,7 @@ class SchemeEditWidget(QWidget):
         self.__modified = False
         self.__registry = None
         self.__scheme = None
-        self.__path = u""
+        self.__path = ""
         self.__quickMenuTriggers = SchemeEditWidget.SpaceKey | \
                                    SchemeEditWidget.DoubleClicked
         self.__emptyClickButtons = 0
@@ -431,7 +431,7 @@ class SchemeEditWidget(QWidget):
 
         """
         if self.__path != path:
-            self.__path = unicode(path)
+            self.__path = str(path)
             self.pathChanged.emit(self.__path)
 
     def path(self):
@@ -642,7 +642,7 @@ class SchemeEditWidget(QWidget):
     def selectAll(self):
         """Select all selectable items in the scheme.
         """
-        for item in self.__scene.items():
+        for item in list(self.__scene.items()):
             if item.flags() & QGraphicsItem.ItemIsSelectable:
                 item.setSelected(True)
 
@@ -684,14 +684,14 @@ class SchemeEditWidget(QWidget):
     def selectedNodes(self):
         """Return all selected `SchemeNode` items.
         """
-        return map(self.scene().node_for_item,
-                   self.scene().selected_node_items())
+        return list(map(self.scene().node_for_item,
+                   self.scene().selected_node_items()))
 
     def selectedAnnotations(self):
         """Return all selected `SchemeAnnotation` items.
         """
-        return map(self.scene().annotation_for_item,
-                   self.scene().selected_annotation_items())
+        return list(map(self.scene().annotation_for_item,
+                   self.scene().selected_annotation_items()))
 
     def openSelected(self):
         """Open (show and raise) all widgets for selected nodes.
@@ -705,7 +705,7 @@ class SchemeEditWidget(QWidget):
         """
         name, ok = QInputDialog.getText(
                     self, self.tr("Rename"),
-                    unicode(self.tr("Enter a new name for the %r widget")) \
+                    str(self.tr("Enter a new name for the %r widget")) \
                     % node.title,
                     text=node.title
                     )
@@ -713,7 +713,7 @@ class SchemeEditWidget(QWidget):
         if ok:
             self.__undoStack.push(
                 commands.RenameNodeCommand(self.__scheme, node, node.title,
-                                           unicode(name))
+                                           str(name))
             )
 
     def __onCleanChanged(self, clean):
@@ -738,7 +738,7 @@ class SchemeEditWidget(QWidget):
                 qname = data.data(
                     "application/vnv.orange-canvas.registry.qualified-name"
                 )
-                desc = self.__registry.widget(unicode(qname))
+                desc = self.__registry.widget(str(qname))
                 pos = event.scenePos()
                 node = scheme.SchemeNode(desc, position=(pos.x(), pos.y()))
                 self.addNode(node)
@@ -834,7 +834,7 @@ class SchemeEditWidget(QWidget):
                 self.__scene.mouseReleaseEvent(event)
                 stack = self.undoStack()
                 stack.beginMacro(self.tr("Move"))
-                for scheme_item, (old, new) in self.__itemsMoving.items():
+                for scheme_item, (old, new) in list(self.__itemsMoving.items()):
                     if isinstance(scheme_item, scheme.SchemeNode):
                         command = commands.MoveNodeCommand(
                             self.scheme(), scheme_item, old, new
@@ -1026,7 +1026,7 @@ class SchemeEditWidget(QWidget):
         widget = self.sender()
         self.scheme()
         widget_to_node = dict(reversed(item) for item in \
-                              self.__scheme.widget_for_node.items())
+                              list(self.__scheme.widget_for_node.items()))
         node = widget_to_node[widget]
         item = self.__scene.item_for_node(node)
 
@@ -1118,7 +1118,7 @@ class SchemeEditWidget(QWidget):
         """Text annotation editing has finished.
         """
         annot = self.__scene.annotation_for_item(item)
-        text = unicode(item.toPlainText())
+        text = str(item.toPlainText())
         if annot.text != text:
             self.__undoStack.push(
                 commands.TextChangeCommand(self.scheme(), annot,

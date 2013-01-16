@@ -8,7 +8,7 @@ import copy
 import logging
 import logging.handlers
 
-import __builtin__
+import builtins
 
 import orange
 from Orange.utils import debugging
@@ -75,7 +75,7 @@ class OutputSignal(object):
 
         self.dynamic = parameters & Dynamic
         if self.dynamic and self.single:
-            print "Output signal can not be Multiple and Dynamic"
+            print("Output signal can not be Multiple and Dynamic")
             self.dynamic = 0
 
 
@@ -98,7 +98,7 @@ def resolveSignal(signal, globals={}):
     the signal copy with the resolved `type`, else return the signal
     unchanged.
     """
-    if isinstance(signal.type, basestring):
+    if isinstance(signal.type, str):
         type_name = signal.type
         if "." in type_name:
             module, name = type_name.split(".", 1)
@@ -247,21 +247,21 @@ class SignalManager(object):
     def exceptionSeen(self, type, value, tracebackInfo):
         import traceback, os
         shortEStr = "".join(traceback.format_exception(type, value, tracebackInfo))[-2:]
-        return self._seenExceptions.has_key(shortEStr)
+        return shortEStr in self._seenExceptions
 
     def exceptionHandler(self, type, value, tracebackInfo):
-        import traceback, os, StringIO
+        import traceback, os, io
 
         # every exception show only once
         shortEStr = "".join(traceback.format_exception(type, value, tracebackInfo))[-2:]
-        if self._seenExceptions.has_key(shortEStr):
+        if shortEStr in self._seenExceptions:
             return
         self._seenExceptions[shortEStr] = 1
         
         list = traceback.extract_tb(tracebackInfo, 10)
         space = "\t"
         totalSpace = space
-        message = StringIO.StringIO()
+        message = io.StringIO()
         message.write("Unhandled exception of type %s\n" % ( str(type)))
         message.write("Traceback:\n")
 
@@ -423,7 +423,7 @@ class SignalManager(object):
                 found = 1
                 
         if not found:
-            print "Error. Widget %s changed its output signals. It does not have signal %s anymore." % (str(getattr(widgetFrom, "captionTitle", "")), signalNameFrom)
+            print("Error. Widget %s changed its output signals. It does not have signal %s anymore." % (str(getattr(widgetFrom, "captionTitle", "")), signalNameFrom))
             return 0
 
         found = 0
@@ -439,12 +439,12 @@ class SignalManager(object):
                 found = 1
                 
         if not found:
-            print "Error. Widget %s changed its input signals. It does not have signal %s anymore." % (str(getattr(widgetTo, "captionTitle", "")), signalNameTo)
+            print("Error. Widget %s changed its input signals. It does not have signal %s anymore." % (str(getattr(widgetTo, "captionTitle", "")), signalNameTo))
             return 0
 
-        if self.links.has_key(widgetFrom):
+        if widgetFrom in self.links:
             if self.getLinks(widgetFrom, widgetTo, signalNameFrom, signalNameTo):
-                print "connection ", widgetFrom, " to ", widgetTo, " alread exists. Error!!"
+                print("connection ", widgetFrom, " to ", widgetTo, " alread exists. Error!!")
                 return
 
         link = SignalLink(widgetFrom, self.outputSignal(widgetFrom, signalNameFrom),
@@ -454,7 +454,7 @@ class SignalManager(object):
         widgetTo.addInputConnection(widgetFrom, signalNameTo)
 
         # if there is no key for the signalNameFrom, create it and set its id=None and data = None
-        if not widgetFrom.linksOut.has_key(signalNameFrom):
+        if signalNameFrom not in widgetFrom.linksOut:
             widgetFrom.linksOut[signalNameFrom] = {None:None}
 
         # if channel is enabled, send data through it
@@ -516,10 +516,10 @@ class SignalManager(object):
         self.addEvent("Remove link from " + widgetFrom.captionTitle + " to " + widgetTo.captionTitle, eventVerbosity = 2)
 
         # no need to update topology, just remove the link
-        if self.links.has_key(widgetFrom):
+        if widgetFrom in self.links:
             links = self.getLinks(widgetFrom, widgetTo, signalNameFrom, signalNameTo)
             if len(links) != 1:
-                print "Error removing a link with none or more then one entries"
+                print("Error removing a link with none or more then one entries")
                 return
                 
             link = links[0]
@@ -561,7 +561,7 @@ class SignalManager(object):
         # if not freezed -> process dirty widgets
         self.addEvent("Send data from " + widgetFrom.captionTitle + ". Signal = " + signalNameFrom, value, eventVerbosity = 2)
 
-        if not self.links.has_key(widgetFrom):
+        if widgetFrom not in self.links:
             return
         
         for link in self.getLinks(widgetFrom, None, signalNameFrom, None):
@@ -580,14 +580,14 @@ class SignalManager(object):
     def pushAllOnLink(self, link):
         """ Send all data on link
         """
-        for key in link.widgetFrom.linksOut[link.signalNameFrom].keys():
+        for key in list(link.widgetFrom.linksOut[link.signalNameFrom].keys()):
             self.pushToLink(link, link.widgetFrom.linksOut[link.signalNameFrom][key], key)
 
 
     def purgeLink(self, link):
         """ Clear all data on link (i.e. send None for all keys)
         """
-        for key in link.widgetFrom.linksOut[link.signalNameFrom].keys():
+        for key in list(link.widgetFrom.linksOut[link.signalNameFrom].keys()):
             self.pushToLink(link, None, key)
             
     def pushToLink(self, link, value, id):
@@ -665,7 +665,7 @@ class SignalManager(object):
         """ Is there a path between `widgetFrom` and `widgetTo` 
         """
         # is there a direct link
-        if not self.links.has_key(widgetFrom):
+        if widgetFrom not in self.links:
             return 0
 
         for link in self.links[widgetFrom]:

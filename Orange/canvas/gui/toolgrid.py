@@ -46,7 +46,7 @@ class _ToolGridButton(QToolButton):
 
     def __textLayout(self):
         fm = QFontMetrics(self.font())
-        text = unicode(self.defaultAction().iconText())
+        text = str(self.defaultAction().iconText())
         words = deque(text.split())
 
         lines = []
@@ -76,7 +76,7 @@ class _ToolGridButton(QToolButton):
                     # Warning: hardcoded max lines
                     curr_line = fm.elidedText(line_extended, Qt.ElideRight,
                                               width)
-                    curr_line = unicode(curr_line)
+                    curr_line = str(curr_line)
                 else:
                     # Put the word back
                     words.appendleft(w)
@@ -329,7 +329,7 @@ class ToolGrid(QWidget):
     def __relayout(self):
         """Relayout the buttons.
         """
-        for i in reversed(range(self.layout().count())):
+        for i in reversed(list(range(self.layout().count()))):
             self.layout().takeAt(i)
 
         self.__gridSlots = [_ToolGridSlot(slot.button, slot.action,
@@ -348,7 +348,7 @@ class ToolGrid(QWidget):
         return buttons.index(button)
 
     def __onButtonRightClick(self, button):
-        print button
+        print(button)
 
     def __onButtonEnter(self, button):
         action = button.defaultAction()

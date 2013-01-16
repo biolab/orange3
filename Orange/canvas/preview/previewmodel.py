@@ -58,7 +58,7 @@ class PreviewModel(QStandardItemModel):
                     scanner.scan_update(item)
                 except Exception:
                     log.error("An unexpected error occurred while "
-                              "scanning %r.", unicode(item.text()),
+                              "scanning %r.", str(item.text()),
                               exc_info=True)
                     item.setEnabled(False)
                 yield
@@ -69,7 +69,7 @@ class PreviewModel(QStandardItemModel):
 
         def process_one():
             try:
-                iter_scan.next()
+                next(iter_scan)
                 QTimer.singleShot(delay, process_one)
             except StopIteration:
                 pass

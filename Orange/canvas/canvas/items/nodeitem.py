@@ -759,7 +759,7 @@ class NodeItem(QGraphicsObject):
     def title(self):
         return self.__title
 
-    title_ = Property(unicode, fget=title, fset=setTitle)
+    title_ = Property(str, fget=title, fset=setTitle)
 
     def setProcessingState(self, state):
         """Set the node processing state i.e. the node is processing

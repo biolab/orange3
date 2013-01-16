@@ -77,7 +77,7 @@ class InputSignal(object):
         self.id = id
         self.doc = doc
 
-        if isinstance(flags, basestring):
+        if isinstance(flags, str):
             # flags are stored as strings
             warnings.warn("Passing 'flags' as string is deprecated, use "
                           "integer constants instead",
@@ -131,7 +131,7 @@ class OutputSignal(object):
         self.id = id
         self.doc = doc
 
-        if isinstance(flags, basestring):
+        if isinstance(flags, str):
             # flags are stored as strings
             warnings.warn("Passing 'flags' as string is deprecated, use "
                           "integer constants instead",
@@ -226,7 +226,7 @@ class WidgetDescription(object):
                  author=None, author_email=None,
                  maintainer=None, maintainer_email=None,
                  help=None, url=None, keywords=None,
-                 priority=sys.maxint,
+                 priority=sys.maxsize,
                  icon=None, background=None,
                  replaces=None,
                  ):
@@ -285,7 +285,7 @@ class WidgetDescription(object):
 
         try:
             meta = WidgetMetaData(contents, default_cat)
-        except Exception, ex:
+        except Exception as ex:
             if "Not an Orange widget module." in str(ex):
                 raise WidgetSpecificationError
             else:
@@ -302,9 +302,9 @@ class WidgetDescription(object):
         inputs = eval(meta.inputList)
         outputs = eval(meta.outputList)
 
-        inputs = map(input_channel_from_args, inputs)
+        inputs = list(map(input_channel_from_args, inputs))
 
-        outputs = map(output_channel_from_args, outputs)
+        outputs = list(map(output_channel_from_args, outputs))
 
         # Resolve signal type names into concrete type instances
         inputs = [resolveSignal(input, globals=wmod.__dict__)
@@ -348,7 +348,7 @@ class WidgetDescription(object):
             as a string (qualified import name).
 
         """
-        if isinstance(module, basestring):
+        if isinstance(module, str):
             module = __import__(module, fromlist=[""])
 
         module_name = module.__name__.rsplit(".", 1)[-1]
@@ -388,13 +388,13 @@ class WidgetDescription(object):
         url = getattr(module, "URL", None)
 
         icon = getattr(module, "ICON", None)
-        priority = getattr(module, "PRIORITY", sys.maxint)
+        priority = getattr(module, "PRIORITY", sys.maxsize)
         keywords = getattr(module, "KEYWORDS", None)
         background = getattr(module, "BACKGROUND", None)
         replaces = getattr(module, "REPLACES", None)
 
-        inputs = map(input_channel_from_args, inputs)
-        outputs = map(output_channel_from_args, outputs)
+        inputs = list(map(input_channel_from_args, inputs))
+        outputs = list(map(output_channel_from_args, outputs))
 
         # Convert all signal types into qualified names.
         # This is to prevent any possible import problems when cached
@@ -460,7 +460,7 @@ class CategoryDescription(object):
                  project_name=None, author=None, author_email=None,
                  maintainer=None, maintainer_email=None,
                  url=None, help=None, keywords=None,
-                 widgets=None, priority=sys.maxint,
+                 widgets=None, priority=sys.maxsize,
                  icon=None, background=None
                  ):
 
@@ -499,7 +499,7 @@ class CategoryDescription(object):
             A package containing the category.
 
         """
-        if isinstance(package, basestring):
+        if isinstance(package, str):
             package = __import__(package, fromlist=[""])
         package_name = package.__name__
         qualified_name = package_name
@@ -516,12 +516,12 @@ class CategoryDescription(object):
         help = getattr(package, "HELP", None)
         keywords = getattr(package, "KEYWORDS", None)
         widgets = getattr(package, "WIDGETS", None)
-        priority = getattr(package, "PRIORITY", sys.maxint - 1)
+        priority = getattr(package, "PRIORITY", sys.maxsize - 1)
         icon = getattr(package, "ICON", None)
         background = getattr(package, "BACKGROUND", None)
 
-        if priority == sys.maxint - 1 and name.lower() == "prototypes":
-            priority = sys.maxint
+        if priority == sys.maxsize - 1 and name.lower() == "prototypes":
+            priority = sys.maxsize
 
         return CategoryDescription(
             name=name,

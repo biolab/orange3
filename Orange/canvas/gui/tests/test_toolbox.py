@@ -24,7 +24,7 @@ class TestToolBox(test.QAppTestCase):
         i3 = w.addItem(p3, "t3")
         i4 = w.addItem(p4, "t4")
 
-        self.assertSequenceEqual([i1, i2, i3, i4], range(4))
+        self.assertSequenceEqual([i1, i2, i3, i4], list(range(4)))
         self.assertEqual(w.count(), 4)
 
         for i, item in enumerate([p1, p2, p3, p4]):

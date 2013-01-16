@@ -18,7 +18,7 @@ svg2 = pkg_resources.resource_string("Orange.OrangeCanvas",
 
 
 def construct_test_preview_model():
-    items = [("Name1", "A preview item 1", svg1, u"~/bla", ),
+    items = [("Name1", "A preview item 1", svg1, "~/bla", ),
              ("Name2", "A preview item 2" + "long text" * 5, svg2, "~/item")
              ]
 
@@ -35,7 +35,7 @@ class TestPreviewBrowser(test.QAppTestCase):
         w.show()
 
         def p(index):
-            print index
+            print(index)
 
         w.currentIndexChanged.connect(p)
         self.app.exec_()

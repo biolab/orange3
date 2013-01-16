@@ -2,7 +2,7 @@
 Scheme save/load routines.
 """
 import sys
-import StringIO
+import io
 import shutil
 
 from xml.etree.ElementTree import TreeBuilder, Element, ElementTree
@@ -10,7 +10,7 @@ from xml.dom import minidom
 
 from collections import defaultdict
 
-import cPickle
+import pickle
 
 from ast import literal_eval
 
@@ -116,7 +116,7 @@ def parse_scheme_v_2_0(etree, scheme, widget_registry=None):
             if format != "pickle":
                 raise ValueError("Cannot handle %r format" % format)
 
-            properties = cPickle.loads(data)
+            properties = pickle.loads(data)
         except Exception:
             log.error("Could not load properties for %r.", node.title,
                       exc_info=True)
@@ -143,7 +143,7 @@ def parse_scheme_v_2_0(etree, scheme, widget_registry=None):
         elif annot_el.tag == "arrow":
             start = annot_el.attrib.get("start", "(0, 0)")
             end = annot_el.attrib.get("end", "(0, 0)")
-            start, end = map(literal_eval, (start, end))
+            start, end = list(map(literal_eval, (start, end)))
 
             color = annot_el.attrib.get("fill", "red")
             annot = SchemeArrowAnnotation(start, end, color=color)
@@ -212,7 +212,7 @@ def parse_scheme_v_1_0(etree, scheme, widget_registry=None):
     for node in nodes:
         if node.title in properties:
             try:
-                node.properties = cPickle.loads(properties[node.title])
+                node.properties = pickle.loads(properties[node.title])
             except Exception:
                 log.error("Could not unpickle properties for the node %r.",
                           node.title, exc_info=True)
@@ -240,7 +240,7 @@ def scheme_to_etree(scheme):
                              "description": scheme.description or ""})
 
     ## Nodes
-    node_ids = defaultdict(inf_range().next)
+    node_ids = defaultdict(inf_range().__next__)
     builder.start("nodes", {})
     for node in scheme.nodes:
         desc = node.description
@@ -263,7 +263,7 @@ def scheme_to_etree(scheme):
     builder.end("nodes")
 
     ## Links
-    link_ids = defaultdict(inf_range().next)
+    link_ids = defaultdict(inf_range().__next__)
     builder.start("links", {})
     for link in scheme.links:
         source = link.source_node
@@ -283,7 +283,7 @@ def scheme_to_etree(scheme):
     builder.end("links")
 
     ## Annotations
-    annotation_ids = defaultdict(inf_range().next)
+    annotation_ids = defaultdict(inf_range().__next__)
     builder.start("annotations", {})
     for annotation in scheme.annotations:
         annot_id = annotation_ids[annotation]
@@ -297,9 +297,9 @@ def scheme_to_etree(scheme):
             font = annotation.font
             attrs.update({"font-family": font.get("family", None),
                           "font-size": font.get("size", None)})
-            attrs = [(key, value) for key, value in attrs.items() \
+            attrs = [(key, value) for key, value in list(attrs.items()) \
                      if value is not None]
-            attrs = dict((key, unicode(value)) for key, value in attrs)
+            attrs = dict((key, str(value)) for key, value in attrs)
 
             data = annotation.text
 
@@ -335,7 +335,7 @@ def scheme_to_etree(scheme):
         data = None
         if node.properties:
             try:
-                data = cPickle.dumps(node.properties)
+                data = pickle.dumps(node.properties)
             except Exception:
                 log.error("Error serializing properties for node %r",
                           node.title, exc_info=True)
@@ -359,7 +359,7 @@ def scheme_to_ows_stream(scheme, stream, pretty=False):
     """Write scheme to a a stream in Orange Scheme .ows (v 2.0) format.
     """
     tree = scheme_to_etree(scheme)
-    buffer = StringIO.StringIO()
+    buffer = io.StringIO()
 
     if sys.version_info < (2, 7):
         # in Python 2.6 the write does not have xml_declaration parameter.
@@ -368,9 +368,9 @@ def scheme_to_ows_stream(scheme, stream, pretty=False):
         tree.write(buffer, encoding="utf-8", xml_declaration=True)
 
     if pretty:
-        dom = minidom.parse(StringIO.StringIO(buffer.getvalue()))
+        dom = minidom.parse(io.StringIO(buffer.getvalue()))
         pretty_xml = dom.toprettyxml(encoding="utf-8")
-        buffer = StringIO.StringIO(pretty_xml)
+        buffer = io.StringIO(pretty_xml)
     else:
         buffer.seek(0)
 

@@ -13,7 +13,7 @@ class TestSchemeInfo(test.QAppTestCase):
 
         if status == dialog.Accepted:
             self.assertEqual(scheme.title.strip(),
-                             unicode(dialog.editor.name_edit.text()).strip())
+                             str(dialog.editor.name_edit.text()).strip())
             self.assertEqual(scheme.description,
-                             unicode(dialog.editor.desc_edit \
+                             str(dialog.editor.desc_edit \
                                            .toPlainText()).strip())

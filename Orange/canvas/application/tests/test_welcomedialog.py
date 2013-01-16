@@ -32,7 +32,7 @@ class TestDialog(QAppTestCase):
         action = [None]
 
         def p(a):
-            print str(a.text())
+            print(str(a.text()))
             action[0] = a
 
         d.triggered.connect(p)

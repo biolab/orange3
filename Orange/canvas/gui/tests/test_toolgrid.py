@@ -18,7 +18,7 @@ class TestToolGrid(test.QAppTestCase):
             return sorted(buttons, key=lambda b: (b.y(), b.x()))
 
         def buttonsOrderedLogical():
-            return map(w.buttonForAction, w.actions())
+            return list(map(w.buttonForAction, w.actions()))
 
         def assertOrdered():
             self.assertSequenceEqual(buttonsOrderedLogical(),
@@ -88,7 +88,7 @@ class TestToolGrid(test.QAppTestCase):
         triggered_actions = []
 
         def p(action):
-            print action.text()
+            print(action.text())
 
         w.actionTriggered.connect(p)
         w.actionTriggered.connect(triggered_actions.append)

@@ -1,6 +1,7 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import math
+from functools import reduce
 #import sys, traceback
 
 YesNo = NoYes = ("No", "Yes")
@@ -28,7 +29,7 @@ def getdeepattr(obj, attr, **argkw):
 #        if argkw.has_key("default"):
 #            return argkw["default"]
 #        else:
-            raise AttributeError, "'%s' has no attribute '%s'" % (obj, attr)
+            raise AttributeError("'%s' has no attribute '%s'" % (obj, attr))
 
 
 def getEnterIcon():
@@ -42,7 +43,7 @@ def getEnterIcon():
 def widgetBox(widget, box=None, orientation='vertical', addSpace=False, sizePolicy = None, margin = -1, spacing = -1, flat = 0, addToLayout = 1):
     if box:
         b = QGroupBox(widget)
-        if type(box) in (str, unicode): # if you pass 1 for box, there will be a box, but no text
+        if type(box) in (str, str): # if you pass 1 for box, there will be a box, but no text
             b.setTitle(" "+box.strip()+" ")
         if margin == -1: margin = groupBoxMargin
         b.setFlat(flat)
@@ -426,7 +427,7 @@ class LineEditWFocusOut(QLineEdit):
 
 def lineEdit(widget, master, value,
              label=None, labelWidth=None, orientation='vertical', box=None, tooltip=None,
-             callback=None, valueType = unicode, validator=None, controlWidth = None, callbackOnType = False, focusInCallback = None, enterPlaceholder=False, **args):
+             callback=None, valueType = str, validator=None, controlWidth = None, callbackOnType = False, focusInCallback = None, enterPlaceholder=False, **args):
     if box or label:
         b = widgetBox(widget, box, orientation)
         widgetLabel(b, label, labelWidth)
@@ -435,7 +436,7 @@ def lineEdit(widget, master, value,
         b = widget
         hasHBox = False
 
-    if args.has_key("baseClass"):
+    if "baseClass" in args:
         wa = args["baseClass"](b)
         wa.enterButton = None
         if b and b.layout() is not None:
@@ -453,7 +454,7 @@ def lineEdit(widget, master, value,
             b.layout().addWidget(wa)
 
     if value:
-        wa.setText(unicode(getdeepattr(master, value)))
+        wa.setText(str(getdeepattr(master, value)))
 
     if controlWidth:
         wa.setFixedWidth(controlWidth)
@@ -503,7 +504,7 @@ def button(widget, master, label, callback = None, disabled=0, tooltip=None,
     return btn
 
 def toolButton(widget, master, label="", callback = None, width = None, height = None, tooltip = None, addToLayout = 1, debuggingEnabled = 1):
-    if not isinstance(label, basestring) and hasattr(label, "__call__"):
+    if not isinstance(label, str) and hasattr(label, "__call__"):
         import warnings
         warnings.warn("Third positional argument to 'OWGUI.toolButton' must be a string.", DeprecationWarning)
         label, callback = "", label
@@ -634,10 +635,10 @@ def appendRadioButton(bg, master, value, label, tooltip = None, insertInto = Non
         bg.buttons = []
     i = len(bg.buttons)
 
-    if type(label) in (str, unicode):
+    if type(label) in (str, str):
         w = QRadioButton(label)
     else:
-        w = QRadioButton(unicode(i))
+        w = QRadioButton(str(i))
         w.setIcon(QIcon(label))
     #w.ogValue = value
     if addToLayout and dest.layout() is not None:
@@ -914,7 +915,7 @@ class OrangeListBox(QListWidget):
                     else:
                         index = max(0, index - len(selectedItems))
                     setattr(self.widget, self.ogLabels, items[:index] + selectedItems + items[index:])
-                setattr(self.widget, self.ogValue, range(index, index+len(selectedItems)))
+                setattr(self.widget, self.ogValue, list(range(index, index+len(selectedItems))))
             else:       # if we don't have variables ogValue and ogLabel
                 if source != self:
                     self.insertItems(source.selectedItems())
@@ -961,7 +962,7 @@ class SmallWidgetButton(QPushButton):
         if pixmap != None:
             import os
             iconDir = os.path.join(os.path.dirname(__file__), "icons")
-            if isinstance(pixmap, basestring):
+            if isinstance(pixmap, str):
                 if os.path.exists(pixmap):
                     name = pixmap
                 elif os.path.exists(os.path.join(iconDir, pixmap)):
@@ -1016,7 +1017,7 @@ class SmallWidgetLabel(QLabel):
         elif pixmap != None:
             import os
             iconDir = os.path.join(os.path.dirname(__file__), "icons")
-            if isinstance(pixmap, basestring):
+            if isinstance(pixmap, str):
                 if os.path.exists(pixmap):
                     name = pixmap
                 elif os.path.exists(os.path.join(iconDir, pixmap)):
@@ -1139,7 +1140,7 @@ class Searcher:
 
 
 
-def comboBox(widget, master, value, box=None, label=None, labelWidth=None, orientation='vertical', items=None, tooltip=None, callback=None, sendSelectedValue = 0, valueType = unicode, control2attributeDict = {}, emptyString = None, editable = 0, searchAttr = False, indent = 0, addToLayout = 1, addSpace = False, debuggingEnabled = 1):
+def comboBox(widget, master, value, box=None, label=None, labelWidth=None, orientation='vertical', items=None, tooltip=None, callback=None, sendSelectedValue = 0, valueType = str, control2attributeDict = {}, emptyString = None, editable = 0, searchAttr = False, indent = 0, addToLayout = 1, addSpace = False, debuggingEnabled = 1):
     hb = widgetBox(widget, box, orientation)
     widgetLabel(hb, label, labelWidth)
     if tooltip:
@@ -1163,7 +1164,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None, orien
         hb.layout().addWidget(combo)
 
     if items:
-        combo.addItems([unicode(i) for i in items])
+        combo.addItems([str(i) for i in items])
         if len(items)>0 and value != None:
             if sendSelectedValue and getdeepattr(master, value) in items: combo.setCurrentIndex(items.index(getdeepattr(master, value)))
             elif not sendSelectedValue and getdeepattr(master, value) < combo.count():
@@ -1205,7 +1206,7 @@ class collapsableWidgetBox(QGroupBox):
 
         if widget.layout() is not None:
             widget.layout().addWidget(self)
-        if type(box) in (str, unicode): # if you pass 1 for box, there will be a box, but no text
+        if type(box) in (str, str): # if you pass 1 for box, there will be a box, but no text
             self.setTitle(" " + box.strip() + " ")
 
         self.setCheckable(1)
@@ -1302,8 +1303,8 @@ class ControlledList(list):
 
     def __reduce__(self):
         # cannot pickle self.listBox, but can't discard it (ControlledList may live on)
-        import copy_reg
-        return copy_reg._reconstructor, (list, list, ()), None, self.__iter__()
+        import copyreg
+        return copyreg._reconstructor, (list, list, ()), None, self.__iter__()
 
     def item2name(self, item):
         item = self.listBox.labels[item]
@@ -1402,9 +1403,9 @@ class ControlledCallback:
             return
 
         if isinstance(value, QString):
-            value = unicode(value)
+            value = str(value)
         if self.f:
-            if self.f in [int, float] and (not value or type(value) in [str, unicode] and value in "+-"):
+            if self.f in [int, float] and (not value or type(value) in [str, str] and value in "+-"):
                 value = self.f(0)
             else:
                 value = self.f(value)
@@ -1428,7 +1429,7 @@ class ValueCallback(ControlledCallback):
             try:
                 self.acyclic_setattr(value)
             except:
-                print "OWGUI.ValueCallback: %s" % value
+                print("OWGUI.ValueCallback: %s" % value)
                 import traceback, sys
                 traceback.print_exception(*sys.exc_info())
 
@@ -1439,7 +1440,7 @@ class ValueCallbackCombo(ValueCallback):
         self.control2attributeDict = control2attributeDict
 
     def __call__(self, value):
-        value = unicode(value)
+        value = str(value)
         return ValueCallback.__call__(self, self.control2attributeDict.get(value, value))
 
 
@@ -1456,7 +1457,7 @@ class ValueCallbackLineEdit(ControlledCallback):
                 self.acyclic_setattr(value)
                 self.control.setCursorPosition(pos)
             except:
-                print "invalid value ", value, type(value)
+                print("invalid value ", value, type(value))
 
 
 class SetLabelCallback:
@@ -1490,7 +1491,7 @@ class FunctionCallback:
     def __call__(self, *value):
         if not self.disabled and value!=None:
             kwds = {}
-            if self.id <> None:
+            if self.id != None:
                 kwds['id'] = self.id
             if self.getwidget:
                 kwds['widget'] = self.widget
@@ -1581,7 +1582,7 @@ class CallFrontComboBox(ControlledCallFront):
     def __init__(self, control, valType = None, control2attributeDict = {}):
         ControlledCallFront.__init__(self, control)
         self.valType = valType
-        self.attribute2controlDict = dict([(y, x) for x, y in control2attributeDict.items()])
+        self.attribute2controlDict = dict([(y, x) for x, y in list(control2attributeDict.items())])
 
     def action(self, value):
         if value is not None:
@@ -1594,7 +1595,7 @@ class CallFrontComboBox(ControlledCallFront):
                 values = ""
                 for i in range(self.control.count()):
                     values += str(self.control.itemText(i)) + (i < self.control.count()-1 and ", " or ".")
-                print "unable to set %s to value '%s'. Possible values are %s" % (self.control, value, values)
+                print("unable to set %s to value '%s'. Possible values are %s" % (self.control, value, values))
                 #import traceback
                 #traceback.print_stack()
             else:
@@ -1612,14 +1613,14 @@ class CallFrontLogSlider(ControlledCallFront):
     def action(self, value):
         if value is not None:
             if value < 1e-30:
-                print "unable to set ", self.control, "to value ", value, " (value too small)"
+                print("unable to set ", self.control, "to value ", value, " (value too small)")
             else:
                 self.control.setValue(math.log10(value))
 
 
 class CallFrontLineEdit(ControlledCallFront):
     def action(self, value):
-        self.control.setText(unicode(value))
+        self.control.setText(str(value))
 
 
 class CallFrontRadioButtons(ControlledCallFront):
@@ -1740,20 +1741,20 @@ class tableItem(QTableWidgetItem):
 
 import orange
 
-TableValueRole = OrangeUserRole.next() # Role to retrieve orange.Value 
-TableClassValueRole = OrangeUserRole.next() # Role to retrieve the class value for the row's example
-TableDistribution = OrangeUserRole.next() # Role to retrieve the distribution of the column's attribute
-TableVariable = OrangeUserRole.next() # Role to retrieve the column's variable
+TableValueRole = next(OrangeUserRole) # Role to retrieve orange.Value 
+TableClassValueRole = next(OrangeUserRole) # Role to retrieve the class value for the row's example
+TableDistribution = next(OrangeUserRole) # Role to retrieve the distribution of the column's attribute
+TableVariable = next(OrangeUserRole) # Role to retrieve the column's variable
 
-BarRatioRole = OrangeUserRole.next() # Ratio for drawing distribution bars
-BarBrushRole = OrangeUserRole.next() # Brush for distribution bar
+BarRatioRole = next(OrangeUserRole) # Ratio for drawing distribution bars
+BarBrushRole = next(OrangeUserRole) # Brush for distribution bar
 
-SortOrderRole = OrangeUserRole.next() # Used for sorting
+SortOrderRole = next(OrangeUserRole) # Used for sorting
 
 
 class TableBarItem(QItemDelegate):
-    BarRole = OrangeUserRole.next()
-    ColorRole = OrangeUserRole.next()
+    BarRole = next(OrangeUserRole)
+    ColorRole = next(OrangeUserRole)
     def __init__(self, widget, table = None, color = QColor(255, 170, 127), color_schema=None):
         """
         :param widget: OWWidget instance
@@ -1850,7 +1851,7 @@ class BarItemDelegate(QStyledItemDelegate):
             painter.restore()
         
 class IndicatorItemDelegate(QStyledItemDelegate):
-    IndicatorRole = OrangeUserRole.next()
+    IndicatorRole = next(OrangeUserRole)
     def __init__(self, parent, role=IndicatorRole, indicatorSize=2):
         QStyledItemDelegate.__init__(self, parent)
         self.role = role
@@ -1869,7 +1870,7 @@ class IndicatorItemDelegate(QStyledItemDelegate):
             painter.restore()
 
 class LinkStyledItemDelegate(QStyledItemDelegate):
-    LinkRole = OrangeUserRole.next()
+    LinkRole = next(OrangeUserRole)
     def __init__(self, parent):
         QStyledItemDelegate.__init__(self, parent)
         self.mousePressState = QModelIndex(), QPoint()
@@ -1897,7 +1898,7 @@ class LinkStyledItemDelegate(QStyledItemDelegate):
         elideText = metrics.elidedText(text, option.textElideMode, textRect.width())
         try:
             str(elideText)  ## on Windows with PyQt 4.4 sometimes this fails
-        except Exception, ex:
+        except Exception as ex:
             elideText = text
         return metrics.boundingRect(textRect, option.displayAlignment, elideText)
       
@@ -1982,7 +1983,7 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
         obj = _toPyObject(value)
         if isinstance(obj, float):
             return self.float_fmt % obj
-        elif isinstance(obj, basestring):
+        elif isinstance(obj, str):
             return obj
         elif obj is None:
             return "NA"

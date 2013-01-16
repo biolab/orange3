@@ -9,7 +9,7 @@ import gc
 import re
 import logging
 import optparse
-import cPickle
+import pickle
 from contextlib import nested
 
 import pkg_resources
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def qt_logging_handle(msg_type, message):
-    print msg_type, message
+    print(msg_type, message)
 
 
 def running_in_ipython():
@@ -199,13 +199,13 @@ def main(argv=None):
 
     cache_filename = os.path.join(cache_dir(), "widget-registry.pck")
     if options.no_discovery:
-        widget_registry = cPickle.load(open(cache_filename, "rb"))
+        widget_registry = pickle.load(open(cache_filename, "rb"))
         widget_registry = qt.QtWidgetRegistry(widget_registry)
     else:
         widget_discovery.run()
         # Store cached descriptions
         cache.save_registry_cache(widget_discovery.cached_descriptions)
-        cPickle.dump(WidgetRegistry(widget_registry),
+        pickle.dump(WidgetRegistry(widget_registry),
                      open(cache_filename, "wb"))
     set_global_registry(widget_registry)
     canvas_window.set_widget_registry(widget_registry)

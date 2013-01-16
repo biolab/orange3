@@ -14,6 +14,7 @@ from PyQt4.QtCore import QRectF, QLineF, QTimer
 from .items import NodeItem, LinkItem, SourceAnchorItem, SinkAnchorItem
 from .items.utils import typed_signal_mapper, invert_permutation_indices, \
                          linspace
+from functools import reduce
 
 LinkItemSignalMapper = typed_signal_mapper(LinkItem)
 
@@ -56,10 +57,10 @@ class AnchorLayout(QGraphicsObject):
             return
 
         scene = self.scene()
-        items = scene.items()
+        items = list(scene.items())
         links = [item for item in items if isinstance(item, LinkItem)]
         point_pairs = [(link.sourceAnchor, link.sinkAnchor) for link in links]
-        point_pairs.extend(map(reversed, point_pairs))
+        point_pairs.extend(list(map(reversed, point_pairs)))
         to_other = dict(point_pairs)
 
         anchors = set(self.__invalidatedAnchors)
@@ -91,7 +92,7 @@ class AnchorLayout(QGraphicsObject):
         self.__invalidatedAnchors = []
 
     def invalidate(self):
-        items = self.scene().items()
+        items = list(self.scene().items())
         nodes = [item for item in items is isinstance(item, NodeItem)]
         anchors = reduce(add,
                          [[node.outputAnchorItem, node.inputAnchorItem]
@@ -127,7 +128,7 @@ class AnchorLayout(QGraphicsObject):
         else:
             raise TypeError(type(anchor))
 
-        self.__invalidatedAnchors.extend(map(getter, links))
+        self.__invalidatedAnchors.extend(list(map(getter, links)))
 
         self.scheduleDelayedActivate()
 

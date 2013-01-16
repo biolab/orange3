@@ -32,7 +32,7 @@ class TestWidgetToolBox(test.QAppTestCase):
             "Orange.OrangeWidgets.Data.OWFile.OWFile"
         )
 
-        actions = map(qt_reg.action_for_widget, data_descriptions)
+        actions = list(map(qt_reg.action_for_widget, data_descriptions))
 
         grid = ToolGrid(w)
         grid.setActions(actions)

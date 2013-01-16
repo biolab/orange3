@@ -30,7 +30,7 @@ class PreviewDialog(QDialog):
         self.setContentsMargins(0, 0, 0, 0)
 
         heading = self.tr("Preview")
-        heading = u"<h3>{0}</h3>".format(heading)
+        heading = "<h3>{0}</h3>".format(heading)
         self.__heading = QLabel(heading, self,
                                 objectName="heading")
 

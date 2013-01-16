@@ -65,9 +65,9 @@ class SchemeInfoEdit(QWidget):
             # 'untitled' text was not changed
             name = ""
         else:
-            name = unicode(self.name_edit.text()).strip()
+            name = str(self.name_edit.text()).strip()
 
-        description = unicode(self.desc_edit.toPlainText()).strip()
+        description = str(self.desc_edit.toPlainText()).strip()
         self.scheme.title = name
         self.scheme.description = description
 
@@ -75,10 +75,10 @@ class SchemeInfoEdit(QWidget):
         return StyledWidget_paintEvent(self, event)
 
     def title(self):
-        return unicode(self.name_edit.text()).strip()
+        return str(self.name_edit.text()).strip()
 
     def description(self):
-        return unicode(self.desc_edit.toPlainText()).strip()
+        return str(self.desc_edit.toPlainText()).strip()
 
 
 class SchemeInfoDialog(QDialog):

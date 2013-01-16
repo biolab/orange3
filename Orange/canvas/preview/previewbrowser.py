@@ -27,7 +27,7 @@ NO_PREVIEW_SVG = """
 
 
 # Default description template
-DESCRIPTION_TEMPLATE = u"""
+DESCRIPTION_TEMPLATE = """
 <h3 class=item-heading>{name}</h3>
 <p class=item-description>
 {description}
@@ -82,9 +82,9 @@ class TextLabel(QWidget):
     def setText(self, text):
         """Set the `text` string to display.
         """
-        check_type(text, basestring)
+        check_type(text, str)
         if self.__text != text:
-            self.__text = unicode(text)
+            self.__text = str(text)
             self.__update()
 
     def text(self):
@@ -312,17 +312,17 @@ class PreviewBrowser(QWidget):
             path = ""
             svg = NO_PREVIEW_SVG
         else:
-            description = unicode(index.data(Qt.WhatsThisRole).toString())
+            description = str(index.data(Qt.WhatsThisRole).toString())
             if not description:
                 description = "No description."
 
-            name = unicode(index.data(Qt.DisplayRole).toString())
+            name = str(index.data(Qt.DisplayRole).toString())
             if not name:
                 name = "Untitled"
 
-            path = unicode(index.data(Qt.StatusTipRole).toString())
+            path = str(index.data(Qt.StatusTipRole).toString())
 
-            svg = unicode(index.data(previewmodel.ThumbnailSVGRole).toString())
+            svg = str(index.data(previewmodel.ThumbnailSVGRole).toString())
 
         desc_text = self.__template.format(description=description, name=name)
 
