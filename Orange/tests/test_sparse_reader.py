@@ -9,22 +9,31 @@ from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.data.io import TabDelimReader
 
 
-class TestTabReader(unittest.TestCase):
-    def test_read_easy(self):
-        simplefile = """\
+simple_file = """\
 abc, def, g=1, h ,  ij k  =5,   t # ignore this, foo=42
 
 def  , g   , h,ij,kl=4,m,,,
 # nothing here
 \t\t\tdef
-        """
+"""
+
+complex_file = """\
+abc, g=1, h ,  ij | k  =5,   t # ignore this, foo=42
+
+, g   , h,ij|,kl=4, k ;m,,,
+# nothing here
+\t\t\t;def
+"""
+
+class TestTabReader(unittest.TestCase):
+    def test_scan_simple(self):
         f = tempfile.NamedTemporaryFile(delete=False)
+        f.write(simple_file.encode("ascii"))
+        f.close()
         fname = f.name
         try:
-            f.write(simplefile.encode("ascii"))
-            f.close()
             (attributes, classes, metas, n_attributes, n_classes, n_metas, lines
-            ) = _io.prescan(fname.encode("utf-8"))
+            ) = _io.sparse_prescan(fname.encode("utf-8"))
             self.assertEqual(attributes,
                 {x.encode("ascii") for x in ("abc", "g", "ij k", "t", "def",
                                              "g", "h", "ij", "kl", "m")})
@@ -37,21 +46,14 @@ def  , g   , h,ij,kl=4,m,,,
         finally:
             os.remove(fname)
 
-    def test_read_3(self):
-        simplefile = """\
-abc, g=1, h ,  ij | k  =5,   t # ignore this, foo=42
-
- , g   , h,ij|,kl=4, k ;m,,,
-# nothing here
-\t\t\t;def
-        """
+    def test_scan_complex(self):
         f = tempfile.NamedTemporaryFile(delete=False)
+        f.write(complex_file.encode("ascii"))
+        f.close()
         fname = f.name
         try:
-            f.write(simplefile.encode("ascii"))
-            f.close()
             (attributes, classes, metas, n_attributes, n_classes, n_metas, lines
-            ) = _io.prescan(fname.encode("utf-8"))
+            ) = _io.sparse_prescan(fname.encode("utf-8"))
             self.assertEqual(attributes,
                 {x.encode("ascii") for x in ("abc", "g", "h", "ij")})
             self.assertEqual(classes, {b"k", b"t", b"kl", b"k"})
@@ -62,6 +64,7 @@ abc, g=1, h ,  ij | k  =5,   t # ignore this, foo=42
             self.assertEqual(lines, 3)
         finally:
             os.remove(fname)
+
 
 if __name__ == "__main__":
     unittest.main()
