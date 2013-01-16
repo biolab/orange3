@@ -57,10 +57,10 @@ class AnchorLayout(QGraphicsObject):
             return
 
         scene = self.scene()
-        items = list(scene.items())
+        items = scene.items()
         links = [item for item in items if isinstance(item, LinkItem)]
         point_pairs = [(link.sourceAnchor, link.sinkAnchor) for link in links]
-        point_pairs.extend(list(map(reversed, point_pairs)))
+        point_pairs.extend(map(reversed, point_pairs))
         to_other = dict(point_pairs)
 
         anchors = set(self.__invalidatedAnchors)
@@ -92,7 +92,7 @@ class AnchorLayout(QGraphicsObject):
         self.__invalidatedAnchors = []
 
     def invalidate(self):
-        items = list(self.scene().items())
+        items = self.scene().items()
         nodes = [item for item in items is isinstance(item, NodeItem)]
         anchors = reduce(add,
                          [[node.outputAnchorItem, node.inputAnchorItem]
@@ -128,7 +128,7 @@ class AnchorLayout(QGraphicsObject):
         else:
             raise TypeError(type(anchor))
 
-        self.__invalidatedAnchors.extend(list(map(getter, links)))
+        self.__invalidatedAnchors.extend(map(getter, links))
 
         self.scheduleDelayedActivate()
 

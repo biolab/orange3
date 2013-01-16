@@ -7,7 +7,6 @@ import sys
 import logging
 
 from operator import attrgetter
-from contextlib import nested
 
 from PyQt4.QtGui import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
@@ -642,7 +641,7 @@ class SchemeEditWidget(QWidget):
     def selectAll(self):
         """Select all selectable items in the scheme.
         """
-        for item in list(self.__scene.items()):
+        for item in self.__scene.items():
             if item.flags() & QGraphicsItem.ItemIsSelectable:
                 item.setSelected(True)
 
@@ -685,7 +684,7 @@ class SchemeEditWidget(QWidget):
         """Return all selected `SchemeNode` items.
         """
         return list(map(self.scene().node_for_item,
-                   self.scene().selected_node_items()))
+                        self.scene().selected_node_items()))
 
     def selectedAnnotations(self):
         """Return all selected `SchemeAnnotation` items.
@@ -738,7 +737,7 @@ class SchemeEditWidget(QWidget):
                 qname = data.data(
                     "application/vnv.orange-canvas.registry.qualified-name"
                 )
-                desc = self.__registry.widget(str(qname))
+                desc = self.__registry.widget(bytes(qname).decode())
                 pos = event.scenePos()
                 node = scheme.SchemeNode(desc, position=(pos.x(), pos.y()))
                 self.addNode(node)
@@ -834,7 +833,7 @@ class SchemeEditWidget(QWidget):
                 self.__scene.mouseReleaseEvent(event)
                 stack = self.undoStack()
                 stack.beginMacro(self.tr("Move"))
-                for scheme_item, (old, new) in list(self.__itemsMoving.items()):
+                for scheme_item, (old, new) in self.__itemsMoving.items():
                     if isinstance(scheme_item, scheme.SchemeNode):
                         command = commands.MoveNodeCommand(
                             self.scheme(), scheme_item, old, new
@@ -860,8 +859,8 @@ class SchemeEditWidget(QWidget):
                     mouse_drag_distance(event, Qt.LeftButton) < 1:
                 action = interactions.NewNodeAction(self)
 
-                with nested(disabled(self.__undoAction),
-                            disabled(self.__redoAction)):
+                with (disabled(self.__undoAction),
+                      disabled(self.__redoAction)):
                     action.create_new(event.screenPos())
 
                 event.accept()
@@ -881,8 +880,8 @@ class SchemeEditWidget(QWidget):
             # Create a new node using QuickMenu
             action = interactions.NewNodeAction(self)
 
-            with nested(disabled(self.__undoAction),
-                        disabled(self.__redoAction)):
+            with (disabled(self.__undoAction),
+                  disabled(self.__redoAction)):
                 action.create_new(event.screenPos())
 
             event.accept()
@@ -933,9 +932,9 @@ class SchemeEditWidget(QWidget):
             # be selected items in the canvas), so we disable the
             # remove widget action so the text editing follows standard
             # 'look and feel'
-            with nested(disabled(self.__removeSelectedAction),
-                        disabled(self.__undoAction),
-                        disabled(self.__redoAction)):
+            with (disabled(self.__removeSelectedAction),
+                  disabled(self.__undoAction),
+                  disabled(self.__redoAction)):
                 handler.create_new(QCursor.pos())
 
             event.accept()
@@ -1025,8 +1024,8 @@ class SchemeEditWidget(QWidget):
     def __onWidgetStateChanged(self, *args):
         widget = self.sender()
         self.scheme()
-        widget_to_node = dict(reversed(item) for item in \
-                              list(self.__scheme.widget_for_node.items()))
+        widget_to_node = dict((v, k) for k,v in
+                              self.__scheme.widget_for_node.items())
         node = widget_to_node[widget]
         item = self.__scene.item_for_node(node)
 

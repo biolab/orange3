@@ -329,7 +329,7 @@ class ToolGrid(QWidget):
     def __relayout(self):
         """Relayout the buttons.
         """
-        for i in reversed(list(range(self.layout().count()))):
+        for i in reversed(range(self.layout().count())):
             self.layout().takeAt(i)
 
         self.__gridSlots = [_ToolGridSlot(slot.button, slot.action,

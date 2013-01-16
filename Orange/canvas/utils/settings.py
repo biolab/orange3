@@ -100,8 +100,8 @@ class _Settings(QSettings):
         return value
 
 
-def _check_error(xxx_todo_changeme):
-    (val, status) = xxx_todo_changeme
+def _check_error(error):
+    (val, status) = error
     if not status:
         raise TypeError()
     else:
@@ -122,7 +122,7 @@ def qvariant_to_py(variant, py_type):
     elif vtype in [QVariant.Hash, QVariant.Map]:
         variant = variant.toPyObject()
         return dict((str(key), py_type(value))
-                    for key, value in list(variant.items()))
+                    for key, value in variant.items())
 
     elif vtype == QVariant.List:
         variant = variant.toPyObject()

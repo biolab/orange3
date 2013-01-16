@@ -167,7 +167,7 @@ class PropertyBindingExpr(AbstractBoundProperty):
     def get(self):
         locals = dict(self.locals)
         locals.update(dict((name, source.get())
-                           for name, source in list(self._sources.items())))
+                           for name, source in self._sources.items()))
         try:
             value = eval(self.code, self.globals, locals)
         except Exception:
@@ -274,7 +274,7 @@ class BindingManager(QObject):
     def bindings(self):
         """Return (target, source) binding tuples.
         """
-        return reduce(add, list(self._bindings.items()), [])
+        return reduce(add, self._bindings.items(), [])
 
     def commit(self):
         self.__update()

@@ -737,8 +737,8 @@ class NewArrowAnnotation(UserInteraction):
                 self.annotation = annot
 
             if self.arrow_item is not None:
-                p1, p2 = list(map(self.arrow_item.mapFromScene,
-                             (self.down_pos, event.scenePos())))
+                p1, p2 = map(self.arrow_item.mapFromScene,
+                             (self.down_pos, event.scenePos()))
                 self.arrow_item.setLine(QLineF(p1, p2))
                 self.arrow_item.adjustGeometry()
 
@@ -756,7 +756,7 @@ class NewArrowAnnotation(UserInteraction):
 
                 self.document.addAnnotation(self.annotation)
 
-                p1, p2 = list(map(self.arrow_item.mapFromScene, (p1, p2)))
+                p1, p2 = map(self.arrow_item.mapFromScene, (p1, p2))
                 self.arrow_item.setLine(QLineF(p1, p2))
                 self.arrow_item.adjustGeometry()
 
@@ -996,7 +996,7 @@ class ResizeArrowAnnotation(UserInteraction):
         line = item.line()
         self.savedLine = line
 
-        p1, p2 = list(map(item.mapToScene, (line.p1(), line.p2())))
+        p1, p2 = map(item.mapToScene, (line.p1(), line.p2()))
 
         control.setLine(QLineF(p1, p2))
         control.setFocusProxy(item)
@@ -1032,7 +1032,7 @@ class ResizeArrowAnnotation(UserInteraction):
         self.end()
 
     def __on_lineEdited(self, line):
-        p1, p2 = list(map(self.item.mapFromScene, (line.p1(), line.p2())))
+        p1, p2 = map(self.item.mapFromScene, (line.p1(), line.p2()))
         self.item.setLine(QLineF(p1, p2))
         self.item.adjustGeometry()
 
@@ -1041,7 +1041,7 @@ class ResizeArrowAnnotation(UserInteraction):
         # item move as a part of a selection group.
         if not self.control.isControlActive():
             line = self.item.line()
-            p1, p2 = list(map(self.item.mapToScene, (line.p1(), line.p2())))
+            p1, p2 = map(self.item.mapToScene, (line.p1(), line.p2()))
             self.control.setLine(QLineF(p1, p2))
 
     def cancel(self, reason=UserInteraction.OtherReason):

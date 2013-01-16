@@ -119,7 +119,7 @@ class WidgetsScheme(Scheme):
         return widget
 
     def __on_dynamic_link_enabled_changed(self, link, enabled):
-        rev = dict(list(map(reversed, list(self.widget_for_node.items()))))
+        rev = dict(map(reversed, self.widget_for_node.items()))
 
         source_node = rev[link.widgetFrom]
         sink_node = rev[link.widgetTo]
@@ -134,7 +134,7 @@ class WidgetsScheme(Scheme):
             link.set_dynamic_enabled(enabled)
 
     def close_all_open_widgets(self):
-        for widget in list(self.widget_for_node.values()):
+        for widget in self.widget_for_node.values():
             widget.close()
 
     def widget_settings(self):

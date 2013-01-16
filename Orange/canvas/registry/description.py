@@ -302,9 +302,9 @@ class WidgetDescription(object):
         inputs = eval(meta.inputList)
         outputs = eval(meta.outputList)
 
-        inputs = list(map(input_channel_from_args, inputs))
+        inputs = map(input_channel_from_args, inputs)
 
-        outputs = list(map(output_channel_from_args, outputs))
+        outputs = map(output_channel_from_args, outputs)
 
         # Resolve signal type names into concrete type instances
         inputs = [resolveSignal(input, globals=wmod.__dict__)

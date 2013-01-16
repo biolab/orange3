@@ -63,7 +63,7 @@ def unisetattr(self, name, value, grandparent):
     # controlled things (checkboxes...) never have __attributeControllers
     else:
         if hasattr(self, "__attributeControllers"):
-            for controller, myself in list(self.__attributeControllers.keys()):
+            for controller, myself in self.__attributeControllers.keys():
                 if getattr(controller, myself, None) != self:
                     del self.__attributeControllers[(controller, myself)]
                     continue
@@ -80,7 +80,7 @@ def unisetattr(self, name, value, grandparent):
                     else:
                         lname = fullName + "."
                         dlen = len(lname)
-                        for controlled in list(controlledAttributes.keys()):
+                        for controlled in controlledAttributes.keys():
                             if controlled[:dlen] == lname:
                                 self.setControllers(value, controlled[dlen:], controller, fullName)
                                 # no break -- can have a.b.c.d and a.e.f.g; needs to set controller for all!
@@ -88,7 +88,7 @@ def unisetattr(self, name, value, grandparent):
 
     # if there are any context handlers, call the fastsave to write the value into the context
     if hasattr(self, "contextHandlers") and hasattr(self, "currentContexts"):
-        for contextName, contextHandler in list(self.contextHandlers.items()):
+        for contextName, contextHandler in self.contextHandlers.items():
             contextHandler.fastSave(self.currentContexts.get(contextName), self, name, value)
 
 
@@ -121,7 +121,7 @@ widgetId = 0
 class OWBaseWidget(QDialog):
     def __new__(cls, *arg, **args):
         self = QDialog.__new__(cls)
-        
+
         #print "arg", arg
         #print "args: ", args
         self.currentContexts = {}   # the "currentContexts" MUST be the first thing assigned to a widget
@@ -143,7 +143,7 @@ class OWBaseWidget(QDialog):
             QDialog.__init__(self, parent, Qt.Window)
         else:
             QDialog.__init__(self, parent, Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)# | Qt.WindowMinimizeButtonHint)
-            
+
         # do we want to save widget position and restore it on next load
         self.savePosition = savePosition
         if savePosition:
@@ -183,17 +183,17 @@ class OWBaseWidget(QDialog):
         self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
 
         if hasattr(self, "contextHandlers"):
-            for contextHandler in list(self.contextHandlers.values()):
+            for contextHandler in self.contextHandlers.values():
                 contextHandler.initLocalContext(self)
-                
+
         global widgetId
         widgetId += 1
         self.widgetId = widgetId
-        
+
         self._private_thread_pools = {}
         self.asyncCalls = []
         self.asyncBlock = False
-        
+
         self.connect(self, SIGNAL("blockingStateChanged(bool)"), lambda bool :self.signalManager.log.info("Blocking state changed %s %s" % (str(self), str(bool))))
 
 
@@ -210,7 +210,7 @@ class OWBaseWidget(QDialog):
     def getIconNames(self, iconName):
         if type(iconName) == list:      # if canvas sent us a prepared list of valid names, just return those
             return iconName
-        
+
         names = []
         name, ext = os.path.splitext(iconName)
         for num in [16, 32, 42, 60]:
@@ -227,11 +227,11 @@ class OWBaseWidget(QDialog):
         if len(fullPaths) > 1 and fullPaths[-1].endswith(iconName):
             fullPaths.pop()     # if we have the new icons we can remove the default icon
         return fullPaths
-    
+
 
     def setWidgetIcon(self, iconName):
         iconNames = self.getIconNames(iconName)
-            
+
         icon = QIcon()
         for name in iconNames:
             pix = QPixmap(name)
@@ -246,7 +246,7 @@ class OWBaseWidget(QDialog):
 #            painter.end()
 
         self.setWindowIcon(icon)
-        
+
 
     # ##############################################
     def createAttributeIconDict(self):
@@ -285,27 +285,27 @@ class OWBaseWidget(QDialog):
             restored = False
             if geometry is not None:
                restored =  self.restoreGeometry(QByteArray(geometry))
-               
+
             if restored:
                 space = qApp.desktop().availableGeometry(self)
                 frame, geometry = self.frameGeometry(), self.geometry()
-                
+
                 #Fix the widget size to fit inside the available space
                 width = min(space.width() - (frame.width() - geometry.width()), geometry.width())
                 height = min(space.height() - (frame.height() - geometry.height()), geometry.height())
                 self.resize(width, height)
-                
+
                 #Move the widget to the center of available space if it is currently outside it
                 if not space.contains(self.frameGeometry()):
                     x = max(0, space.width() / 2 - width / 2)
                     y = max(0, space.height() / 2 - height / 2)
-            
+
                     self.move(x, y)
-            
-#            geometry.move(frameOffset) #Make sure the title bar is shown 
+
+#            geometry.move(frameOffset) #Make sure the title bar is shown
 #            self.setGeometry(geometry.intersected(space.adjusted(-frameOffset.x(), -frameOffset.y(), 0, 0)))
-            
-            
+
+
 #            if self.isWindow():
 #                frame = self.frameGeometry()
 #                if space.topLeft() != QPoint(0, 0):
@@ -318,7 +318,7 @@ class OWBaseWidget(QDialog):
 #            frame = self.frameGeometry()
 #            area = lambda rect: rect.width() * rect.height()
 #            if area(frame.intersected(space)) < area(frame):
-#                self.move(max(min(space.right() - frame.width(), frame.x()), space.x()), 
+#                self.move(max(min(space.right() - frame.width(), frame.x()), space.x()),
 #                          max(min(space.height() - frame.height(), frame.y()), space.y()))
 
     # this is called in canvas when loading a schema. it opens the widgets that were shown when saving the schema
@@ -362,23 +362,23 @@ class OWBaseWidget(QDialog):
 #        qApp.processEvents()
 
     # set widget state to shown
-    def showEvent(self, ev):    
+    def showEvent(self, ev):
         QDialog.showEvent(self, ev)
         if self.savePosition:
             self.widgetShown = 1
-            
+
         self.restoreWidgetPosition()
-        
+
     def closeEvent(self, ev):
         if self.savePosition:
             self.savedWidgetGeometry = str(self.saveGeometry())
         QDialog.closeEvent(self, ev)
-        
+
     def wheelEvent(self, event):
         """ Silently accept the wheel event. This is to ensure combo boxes
         and other controls that have focus don't receive this event unless
         the cursor is over them.
-        
+
         """
         event.accept()
 
@@ -437,7 +437,7 @@ class OWBaseWidget(QDialog):
                 except:
                     #print "Attribute %s not found in %s widget. Remove it from the settings list." % (name, self.captionTitle)
                     pass
-        
+
         if alsoContexts:
             self.synchronizeContexts()
             contextHandlers = getattr(self, "contextHandlers", {})
@@ -449,14 +449,14 @@ class OWBaseWidget(QDialog):
 # attributes properly, but I dare not add it without understanding what it does.
 # Here it is, if these contexts give us any further trouble.
                 if (contextHandler.syncWithGlobal and contextHandler.globalContexts is getattr(self, contextHandler.localContextName)) or globalContexts:
-                    settings[contextHandler.localContextName] = contextHandler.globalContexts 
+                    settings[contextHandler.localContextName] = contextHandler.globalContexts
                 else:
                     contexts = getattr(self, contextHandler.localContextName, None)
                     if contexts:
                         settings[contextHandler.localContextName] = contexts
 ###
                 settings[contextHandler.localContextName+"Version"] = (contextStructureVersion, contextHandler.contextDataVersion)
-            
+
         return settings
 
 
@@ -469,10 +469,10 @@ class OWBaseWidget(QDialog):
                     pickle.dump({}, f)
                     f.close()
                 except IOError:
-                    return 
+                    return
         if isinstance(file, str):
             if os.path.exists(file):
-                return open(file, "r")
+                return open(file, "rb")
         else:
             return file
 
@@ -486,7 +486,7 @@ class OWBaseWidget(QDialog):
             except Exception as ex:
                 print("Failed to load settings!", repr(ex), file=sys.stderr)
                 settings = None
-            
+
             if hasattr(self, "_settingsFromSchema"):
                 if settings: settings.update(self._settingsFromSchema)
                 else:        settings = self._settingsFromSchema
@@ -497,16 +497,16 @@ class OWBaseWidget(QDialog):
                     self.setSettings(settings)
 
                 contextHandlers = getattr(self, "contextHandlers", {})
-                for contextHandler in list(contextHandlers.values()):
+                for contextHandler in contextHandlers.values():
                     localName = contextHandler.localContextName
 
                     structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
                     if (structureVersion < contextStructureVersion or dataVersion < contextHandler.contextDataVersion) \
-                       and localName in settings:
+                            and localName in settings:
                         del settings[localName]
                         delattr(self, localName)
                         contextHandler.initLocalContext(self)
-                        
+
                     if not hasattr(self, "_settingsFromSchema"): #When running stand alone widgets
                         if contextHandler.syncWithGlobal:
                             contexts = settings.get(localName, None)
@@ -534,7 +534,7 @@ class OWBaseWidget(QDialog):
         self.setSettings(settings)
 
         contextHandlers = getattr(self, "contextHandlers", {})
-        for contextHandler in list(contextHandlers.values()):
+        for contextHandler in contextHandlers.values():
             localName = contextHandler.localContextName
             if localName in settings:
                 structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
@@ -641,7 +641,7 @@ class OWBaseWidget(QDialog):
             input = InputSignal(*i)
             if input.name == signal and not input.single: return None
 
-        for signalName in list(self.linksIn.keys()):
+        for signalName in self.linksIn.keys():
             if signalName == signal:
                 widget = self.linksIn[signalName][0][1]
                 del self.linksIn[signalName]
@@ -688,7 +688,7 @@ class OWBaseWidget(QDialog):
 
         if newSignal == 1:
             self.handleNewSignals()
-        
+
         while self.isBlocking():
             self.thread().msleep(50)
             qApp.processEvents()
@@ -794,14 +794,14 @@ class OWBaseWidget(QDialog):
     def openWidgetHelp(self):
         if "widgetInfo" in self.__dict__:  # This widget is on a canvas.
             qApp.canvasDlg.helpWindow.showHelpFor(self.widgetInfo, True)
-        
+
     def focusInEvent(self, *ev):
         #print "focus in"
-        #if qApp.canvasDlg.settings["synchronizeHelp"]:  on ubuntu: pops up help window on first widget focus for every widget   
+        #if qApp.canvasDlg.settings["synchronizeHelp"]:  on ubuntu: pops up help window on first widget focus for every widget
         #    qApp.canvasDlg.helpWindow.showHelpFor(self, True)
         QDialog.focusInEvent(self, *ev)
-        
-    
+
+
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key_Help, Qt.Key_F1):
             self.openWidgetHelp()
@@ -845,7 +845,7 @@ class OWBaseWidget(QDialog):
                 self.widgetStateHandler()
             elif text: # and stateType != "Info":
                 self.printEvent(stateType + " - " + text)
-            
+
             if type(id) == list:
                 for i in id:
                     self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
@@ -863,15 +863,15 @@ class OWBaseWidget(QDialog):
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
         pixmaps = self.getWidgetStateIcons()
-        items = [] 
+        items = []
         iconPath = {"Info": "canvasIcons:information.png",
                     "Warning": "canvasIcons:warning.png",
                     "Error": "canvasIcons:error.png"}
         for show, what in [(info, "Info"), (warning, "Warning"),(error, "Error")]:
             if show and self.widgetState[what]:
-                items.append('<img src="%s" style="float: left;"> %s' % (iconPath[what], "\n".join(list(self.widgetState[what].values()))))
+                items.append('<img src="%s" style="float: left;"> %s' % (iconPath[what], "\n".join(self.widgetState[what].values())))
         return "<br>".join(items)
-        
+
     @classmethod
     def getWidgetStateIcons(cls):
         if not hasattr(cls, "_cached__widget_state_icons"):
@@ -887,7 +887,7 @@ class OWBaseWidget(QDialog):
 
     def synchronizeContexts(self):
         if hasattr(self, "contextHandlers"):
-            for contextName, handler in list(self.contextHandlers.items()):
+            for contextName, handler in self.contextHandlers.items():
                 context = self.currentContexts.get(contextName, None)
                 if context:
                     handler.settingsFromWidget(self, context)
@@ -933,9 +933,9 @@ class OWBaseWidget(QDialog):
 
     def __setattr__(self, name, value):
         return unisetattr(self, name, value, QDialog)
-    
+
     defaultKeyActions = {}
-    
+
     if sys.platform == "darwin":
         defaultKeyActions = {
             (Qt.ControlModifier, Qt.Key_M): lambda self: self.showMaximized if self.isMinimized() else self.showMinimized(),
@@ -954,54 +954,54 @@ class OWBaseWidget(QDialog):
         self.emit(SIGNAL("blockingStateChanged(bool)"), self.asyncBlock)
         if not self.isBlocking():
             self.scheduleSignalProcessing()
-        
-        
+
+
     def isBlocking(self):
         """ Is this widget blocking signal processing. Widget is blocking if
         asyncBlock value is True or any AsyncCall objects in asyncCalls list
         has blocking flag set
         """
         return self.asyncBlock or any(a.blocking for a in self.asyncCalls)
-    
-    def asyncExceptionHandler(self, xxx_todo_changeme):
-        (etype, value, tb) = xxx_todo_changeme
+
+    def asyncExceptionHandler(self, exception):
+        (etype, value, tb) = exception
         import traceback
         sys.excepthook(etype, value, tb)
-        
+
     def asyncFinished(self, async, string):
         """ Remove async from asyncCalls, update blocking state
         """
-        
+
         index = self.asyncCalls.index(async)
         async = self.asyncCalls.pop(index)
-        
+
         if async.blocking and not self.isBlocking():
             # if we are responsible for unblocking
             self.emit(SIGNAL("blockingStateChanged(bool)"), False)
             self.scheduleSignalProcessing()
-            
+
         async.disconnect(async, SIGNAL("finished(PyQt_PyObject, QString)"), self.asyncFinished)
         self.emit(SIGNAL("asyncCallsStateChange()"))
-                
-            
-    
+
+
+
     def asyncCall(self, func, args=(), kwargs={}, name=None, onResult=None, onStarted=None, onFinished=None, onError=None, blocking=True, thread=None, threadPool=None):
         """ Return an OWConcurent.AsyncCall object func, args and kwargs
-        set and signals connected. 
+        set and signals connected.
         """
         from functools import partial
         from OWConcurrent import AsyncCall
-        
+
         asList = lambda slot: slot if isinstance(slot, list) else ([slot] if slot else [])
-        
+
         onResult = asList(onResult)
         onStarted = asList(onStarted) #+ [partial(self.setBlocking, True)]
         onFinished = asList(onFinished) #+ [partial(self.blockSignals, False)]
         onError = asList(onError) or [self.asyncExceptionHandler]
-        
+
         async = AsyncCall(func, args, kwargs, thread=thread, threadPool=threadPool)
         async.name = name if name is not None else ""
-            
+
         for slot in  onResult:
             async.connect(async, SIGNAL("resultReady(PyQt_PyObject)"), slot, Qt.QueuedConnection)
         for slot in onStarted:
@@ -1010,22 +1010,22 @@ class OWBaseWidget(QDialog):
             async.connect(async, SIGNAL("finished(QString)"), slot, Qt.QueuedConnection)
         for slot in onError:
             async.connect(async, SIGNAL("unhandledException(PyQt_PyObject)"), slot, Qt.QueuedConnection)
-        
+
         self.addAsyncCall(async, blocking)
-            
+
         return async
-    
+
     def addAsyncCall(self, async, blocking=True):
         """ Add AsyncCall object to asyncCalls list (will be removed
         once it finishes processing).
-        
+
         """
         ## TODO: make this thread safe
-        
+
         async.connect(async, SIGNAL("finished(PyQt_PyObject, QString)"), self.asyncFinished)
-        
+
         async.blocking = blocking
-        
+
         if blocking:
             # if we are responsible for blocking
             state = any(a.blocking for a in self.asyncCalls)
@@ -1034,11 +1034,11 @@ class OWBaseWidget(QDialog):
                 self.emit(SIGNAL("blockingStateChanged(bool)"), True)
         else:
             self.asyncCalls.append(async)
-            
+
         self.emit(SIGNAL("asyncCallsStateChange()"))
-        
-    
-    
+
+
+
 def blocking(method):
     """ Return method that sets blocking flag while executing
     """
@@ -1051,7 +1051,7 @@ def blocking(method):
             return method(self, *args, **kwargs)
         finally:
             self.setBlocking(old)
-    
+
 
 if __name__ == "__main__":
     a=QApplication(sys.argv)

@@ -224,7 +224,7 @@ class ControlPointRect(QGraphicsObject):
     def __installFilter(self):
         # Install filters on the control points.
         try:
-            for p in list(self.__points.values()):
+            for p in self.__points.values():
                 p.installSceneEventFilter(self)
         except Exception:
             log.error("Error in ControlPointRect.__installFilter",

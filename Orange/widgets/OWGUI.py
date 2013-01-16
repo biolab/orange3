@@ -13,7 +13,7 @@ def id_generator(id):
     while True:
         id += 1
         yield id
-        
+
 OrangeUserRole = id_generator(Qt.UserRole)
 
 enter_icon = None
@@ -25,7 +25,7 @@ def getdeepattr(obj, attr, **argkw):
         return reduce(lambda o, n: getattr(o, n),  attr.split("."), obj)
     except:
 # I (JD) commented this out. This is ugly and dangerous.
-# If any widget wants this behavour, it should redefine its __getattr__ to return defaults. 
+# If any widget wants this behavour, it should redefine its __getattr__ to return defaults.
 #        if argkw.has_key("default"):
 #            return argkw["default"]
 #        else:
@@ -43,7 +43,7 @@ def getEnterIcon():
 def widgetBox(widget, box=None, orientation='vertical', addSpace=False, sizePolicy = None, margin = -1, spacing = -1, flat = 0, addToLayout = 1):
     if box:
         b = QGroupBox(widget)
-        if type(box) in (str, str): # if you pass 1 for box, there will be a box, but no text
+        if isinstance(box, str): # if you pass 1 for box, there will be a box, but no text
             b.setTitle(" "+box.strip()+" ")
         if margin == -1: margin = groupBoxMargin
         b.setFlat(flat)
@@ -260,7 +260,7 @@ class DoubleSpinBoxWFocusOut(QDoubleSpinBox):
         self.inSetValue = True
         QDoubleSpinBox.setValue(self, value)
         self.inSetValue = False
-        
+
 def doubleSpin(widget, master, value, min, max, step=1,
          box=None, label=None, labelWidth=None, orientation=None, tooltip=None,
          callback=None, debuggingEnabled = 1, controlWidth = None, callbackOnReturn = False,
@@ -485,20 +485,20 @@ def button(widget, master, label, callback = None, disabled=0, tooltip=None,
     btn.setDisabled(disabled)
     if tooltip:
         btn.setToolTip(tooltip)
-        
+
     if toggleButton or value:
         btn.setCheckable(True)
-        
+
     btn.setDefault(default)
     btn.setAutoDefault(autoDefault)
-        
+
     if value:
         btn.setChecked(getdeepattr(master, value))
         cfront, cback, cfunc = connectControl(btn, master, value, None, "toggled(bool)", CallFrontButton(btn),
                                   cfunc = callback and FunctionCallback(master, callback, widget=btn))
     elif callback:
         QObject.connect(btn, SIGNAL("clicked()"), callback)
-        
+
     if debuggingEnabled and hasattr(master, "_guiElements"):
         master._guiElements = getattr(master, "_guiElements", []) + [("button", btn, callback)]
     return btn
@@ -508,7 +508,7 @@ def toolButton(widget, master, label="", callback = None, width = None, height =
         import warnings
         warnings.warn("Third positional argument to 'OWGUI.toolButton' must be a string.", DeprecationWarning)
         label, callback = "", label
-        
+
     btn = QToolButton(widget)
     if addToLayout and widget.layout() is not None:
         widget.layout().addWidget(btn)
@@ -635,7 +635,7 @@ def appendRadioButton(bg, master, value, label, tooltip = None, insertInto = Non
         bg.buttons = []
     i = len(bg.buttons)
 
-    if type(label) in (str, str):
+    if isinstance(label, str):
         w = QRadioButton(label)
     else:
         w = QRadioButton(str(i))
@@ -689,7 +689,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1, ca
         sliderOrient = Qt.Vertical
     else:
         sliderOrient = Qt.Horizontal
-        
+
     if intOnly:
         slider = QSlider(sliderOrient, sliderBox)
         slider.setRange(minValue, maxValue)
@@ -702,7 +702,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1, ca
         slider = FloatSlider(sliderOrient, minValue, maxValue, step)
         signal_signature = "valueChangedFloat(double)"
     slider.setValue(getdeepattr(master, value))
-    
+
     if tooltip:
         slider.setToolTip(tooltip)
 
@@ -757,7 +757,7 @@ def qwtHSlider(widget, master, value, box=None, label=None, labelWidth=None, min
     init = getdeepattr(master, value)
 
     if label:
-        hb = widgetBox(widget, box, orientation) 
+        hb = widgetBox(widget, box, orientation)
         lbl = widgetLabel(hb, label)
         if labelWidth:
             lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
@@ -941,10 +941,10 @@ class OrangeListBox(QListWidget):
             ev.accept()
         else:
             ev.ignore()
-            
+
     def updateGeometries(self):
         """ A workaround for a bug in Qt (see: http://bugreports.qt.nokia.com/browse/QTBUG-14412)
-        """ 
+        """
         if getattr(self, "_updatingGeometriesNow", False):
 #            import sys
 #            print >> sys.stderr, "Suppressing recursive update geometries"
@@ -981,9 +981,9 @@ class SmallWidgetButton(QPushButton):
         # create autohide widget and set a layout
         if autoHideWidget != None:
             self.autohideWidget = autoHideWidget(None, Qt.Popup)
-        else:            
+        else:
             self.autohideWidget = AutoHideWidget(None, Qt.Popup)
-        self.widget = self.autohideWidget 
+        self.widget = self.autohideWidget
 
         if isinstance(orientation, QLayout):
             self.widget.setLayout(orientation)
@@ -1206,11 +1206,11 @@ class collapsableWidgetBox(QGroupBox):
 
         if widget.layout() is not None:
             widget.layout().addWidget(self)
-        if type(box) in (str, str): # if you pass 1 for box, there will be a box, but no text
+        if isinstance(box, str): # if you pass 1 for box, there will be a box, but no text
             self.setTitle(" " + box.strip() + " ")
 
         self.setCheckable(1)
-        
+
         self.master = master
         self.value = value
         self.callback = callback
@@ -1396,7 +1396,7 @@ class ControlledCallback:
         if not hasattr(widget, "callbackDeposit"):
             widget.callbackDeposit = []
         widget.callbackDeposit.append(self)
-        
+
 
     def acyclic_setattr(self, value):
         if self.disabled:
@@ -1741,7 +1741,7 @@ class tableItem(QTableWidgetItem):
 
 import orange
 
-TableValueRole = next(OrangeUserRole) # Role to retrieve orange.Value 
+TableValueRole = next(OrangeUserRole) # Role to retrieve orange.Value
 TableClassValueRole = next(OrangeUserRole) # Role to retrieve the class value for the row's example
 TableDistribution = next(OrangeUserRole) # Role to retrieve the distribution of the column's attribute
 TableVariable = next(OrangeUserRole) # Role to retrieve the column's variable
@@ -1767,7 +1767,7 @@ class TableBarItem(QItemDelegate):
             :class:`OWColorPalette.ColorPaletteGenerator` (note: this
             parameter, if set, overrides the ``color``)
         :type color_schema: :class:`OWColorPalette.ColorPaletteGenerator`
-          
+
         """
         QItemDelegate.__init__(self, widget)
         self.color = color
@@ -1828,13 +1828,13 @@ class TableBarItem(QItemDelegate):
 
         self.drawDisplay(painter, option, text_rect, text)
         painter.restore()
-        
+
 class BarItemDelegate(QStyledItemDelegate):
     def __init__(self, parent, brush=QBrush(QColor(255, 170, 127)), scale=(0.0, 1.0)):
-        QStyledItemDelegate.__init__(self, parent) 
+        QStyledItemDelegate.__init__(self, parent)
         self.brush = brush
         self.scale = scale
-        
+
     def paint(self, painter, option, index):
         qApp.style().drawPrimitive(QStyle.PE_PanelItemViewRow, option, painter)
         qApp.style().drawPrimitive(QStyle.PE_PanelItemViewItem, option, painter)
@@ -1849,14 +1849,14 @@ class BarItemDelegate(QStyledItemDelegate):
             painter.setBrush(self.brush)
             painter.drawRect(rect.adjusted(1, 1, - rect.width() * (1.0 - val) -2, -2))
             painter.restore()
-        
+
 class IndicatorItemDelegate(QStyledItemDelegate):
     IndicatorRole = next(OrangeUserRole)
     def __init__(self, parent, role=IndicatorRole, indicatorSize=2):
         QStyledItemDelegate.__init__(self, parent)
         self.role = role
         self.indicatorSize = indicatorSize
-        
+
     def paint(self, painter, option, index):
         QStyledItemDelegate.paint(self, painter, option, index)
         rect = option.rect
@@ -1875,11 +1875,11 @@ class LinkStyledItemDelegate(QStyledItemDelegate):
         QStyledItemDelegate.__init__(self, parent)
         self.mousePressState = QModelIndex(), QPoint()
         self.connect(parent, SIGNAL("entered(QModelIndex)"), self.onEntered)
-            
+
     def sizeHint(self, option, index):
         size = QStyledItemDelegate.sizeHint(self, option, index)
         return QSize(size.width(), max(size.height(), 20))
-    
+
     def linkRect(self, option, index):
         style = self.parent().style()
         text = self.displayText(index.data(Qt.DisplayRole), QLocale.system())
@@ -1901,11 +1901,11 @@ class LinkStyledItemDelegate(QStyledItemDelegate):
         except Exception as ex:
             elideText = text
         return metrics.boundingRect(textRect, option.displayAlignment, elideText)
-      
+
     def editorEvent(self, event, model, option, index):
         if event.type()==QEvent.MouseButtonPress and self.linkRect(option, index).contains(event.pos()):
             self.mousePressState = QPersistentModelIndex(index), QPoint(event.pos())
-            
+
         elif event.type()== QEvent.MouseButtonRelease:
             link = index.data(LinkRole)
             pressedIndex, pressPos = self.mousePressState
@@ -1913,21 +1913,21 @@ class LinkStyledItemDelegate(QStyledItemDelegate):
                  import webbrowser
                  webbrowser.open(link.toString())
             self.mousePressState = QModelIndex(), event.pos()
-            
+
         elif event.type()==QEvent.MouseMove:
             link = index.data(LinkRole)
             if link.isValid() and self.linkRect(option, index).contains(event.pos()):
                 self.parent().viewport().setCursor(Qt.PointingHandCursor)
             else:
                 self.parent().viewport().setCursor(Qt.ArrowCursor)
-            
+
         return QStyledItemDelegate.editorEvent(self, event, model, option, index)
-    
+
     def onEntered(self, index):
         link = index.data(LinkRole)
         if not link.isValid():
             self.parent().viewport().setCursor(Qt.ArrowCursor)
-    
+
     def paint(self, painter, option, index):
         if index.data(LinkRole).isValid():
             style = qApp.style()
@@ -1951,7 +1951,7 @@ class LinkStyledItemDelegate(QStyledItemDelegate):
             painter.restore()
         else:
             QStyledItemDelegate.paint(self, painter, option, index)
-    
+
 LinkRole = LinkStyledItemDelegate.LinkRole
 
 def _toPyObject(variant):
@@ -1978,7 +1978,7 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
         self.decimals = decimals
         self.float_fmt = "%%.%if" % decimals
         self.color = QColor(color)
-        
+
     def displayText(self, value, locale):
         obj = _toPyObject(value)
         if isinstance(obj, float):
@@ -1989,51 +1989,51 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
             return "NA"
         else:
             return obj.__str__()
-        
+
     def sizeHint(self, option, index):
         font = self.get_font(option, index)
         metrics = QFontMetrics(font)
         height = metrics.lineSpacing() + 8 # 4 pixel margin
         width = metrics.width(self.displayText(index.data(Qt.DisplayRole), QLocale())) + 8
         return QSize(width, height)
-    
+
     def paint(self, painter, option, index):
         self.initStyleOption(option, index)
         text = self.displayText(index.data(Qt.DisplayRole), QLocale())
-        
+
         ratio, have_ratio = self.get_bar_ratio(option, index)
-        
+
         rect = option.rect
         if have_ratio:
             # The text is raised 3 pixels above the bar.
             text_rect = rect.adjusted(4, 1, -4, -4) # TODO: Style dependent margins?
         else:
             text_rect = rect.adjusted(4, 4, -4, -4)
-            
+
         painter.save()
         font = self.get_font(option, index)
         painter.setFont(font)
-        
+
         qApp.style().drawPrimitive(QStyle.PE_PanelItemViewRow, option, painter)
         qApp.style().drawPrimitive(QStyle.PE_PanelItemViewItem, option, painter)
-        
+
         # TODO: Check ForegroundRole.
         if option.state & QStyle.State_Selected:
             color = option.palette.highlightedText().color()
         else:
             color = option.palette.text().color()
         painter.setPen(QPen(color))
-        
+
         align = self.get_text_align(option, index)
-            
+
         metrics = QFontMetrics(font)
         elide_text = metrics.elidedText(text, option.textElideMode, text_rect.width())
         painter.drawText(text_rect, align, elide_text)
-        
+
         painter.setRenderHint(QPainter.Antialiasing, True)
         if have_ratio:
             brush = self.get_bar_brush(option, index)
-            
+
             painter.setBrush(brush)
             painter.setPen(QPen(brush, 1))
             bar_rect = QRect(text_rect)
@@ -2043,7 +2043,7 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
             bar_rect.setWidth(max(0, min(w * ratio, w)))
             painter.drawRoundedRect(bar_rect, 2, 2)
         painter.restore()
-    
+
     def get_font(self, option, index):
         font = index.data(Qt.FontRole)
         if font.isValid():
@@ -2051,7 +2051,7 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
         else:
             font = option.font
         return font
-    
+
     def get_text_align(self, option, index):
         align = index.data(Qt.TextAlignmentRole)
         if align.isValid():
@@ -2059,12 +2059,12 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
         else:
             align = Qt.AlignLeft | Qt.AlignVCenter
         return align
-    
+
     def get_bar_ratio(self, option, index):
         bar_ratio = index.data(BarRatioRole)
         ratio, have_ratio = bar_ratio.toDouble()
         return ratio, have_ratio
-    
+
     def get_bar_brush(self, option, index):
         bar_brush = index.data(BarBrushRole)
         if bar_brush.isValid():
@@ -2076,7 +2076,7 @@ class ColoredBarItemDelegate(QStyledItemDelegate):
         if bar_brush is None:
             bar_brush = self.color
         return QBrush(bar_brush)
-            
+
 ##############################################################################
 # progress bar management
 
@@ -2093,7 +2093,7 @@ class ProgressBar:
 
     def finish(self):
         self.widget.progressBarFinished()
-        
+
 from Orange.utils import progress_bar_milestones as progressBarMilestones
 
 ##############################################################################
@@ -2108,11 +2108,11 @@ def createTabPage(tabWidget, name, widgetToAdd = None, canScroll = False):
     if widgetToAdd == None:
         widgetToAdd = widgetBox(tabWidget, addToLayout = 0, margin = 4)
     if canScroll:
-        scrollArea = QScrollArea() 
+        scrollArea = QScrollArea()
         tabWidget.addTab(scrollArea, name)
         scrollArea.setWidget(widgetToAdd)
-        scrollArea.setWidgetResizable(1) 
-        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        scrollArea.setWidgetResizable(1)
+        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
     else:
         tabWidget.addTab(widgetToAdd, name)
@@ -2123,7 +2123,7 @@ def table(widget, rows = 0, columns = 0, selectionMode = -1, addToLayout = 1):
     if widget and addToLayout and widget.layout() is not None:
         widget.layout().addWidget(w)
     if selectionMode != -1:
-        w.setSelectionMode(selectionMode)   
+        w.setSelectionMode(selectionMode)
     w.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
     w.horizontalHeader().setMovable(True)
     return w
@@ -2137,13 +2137,13 @@ class VisibleHeaderSectionContextEventFilter(QObject):
             model = view.model()
             headers = [(view.isSectionHidden(i), model.headerData(i, view.orientation(), Qt.DisplayRole)) for i in range(view.count())]
             menu = QMenu("Visible headers", view)
-            
+
             for i, (checked, name) in enumerate(headers):
                 action = QAction(name.toString(), menu)
                 action.setCheckable(True)
                 action.setChecked(not checked)
                 menu.addAction(action)
-                
+
                 def toogleHidden(bool, section=i):
                     view.setSectionHidden(section, not bool)
                     if bool:
@@ -2151,14 +2151,14 @@ class VisibleHeaderSectionContextEventFilter(QObject):
                             self.itemView.resizeColumnToContents(section)
                         else:
                             view.resizeSection(section, max(view.sectionSizeHint(section), 10))
-                        
+
                 self.connect(action, SIGNAL("toggled(bool)"), toogleHidden)
 #                self.connect(action, SIGNAL("toggled(bool)"), lambda bool, section=i: view.setSectionHidden(section, not bool))
             menu.exec_(event.globalPos())
             return True
-        
+
         return False
-    
+
 def checkButtonOffsetHint(button, style=None):
     option = QStyleOptionButton()
     option.initFrom(button)
@@ -2174,24 +2174,24 @@ def checkButtonOffsetHint(button, style=None):
     width = style.pixelMetric(pm_indicator_width, option, button)
     style_correction = {"macintosh (aqua)": -2, "macintosh(aqua)": -2, "plastique": 1, "cde": 1, "motif": 1} #TODO: add other styles (Maybe load corrections from .cfg file?)
     return space + width + style_correction.get(str(qApp.style().objectName()).lower(), 0)
-    
-    
+
+
 def toolButtonSizeHint(button=None, style=None):
     if button is None and style is None:
         style = qApp.style()
     elif style is None:
         style = button.style()
-    
+
     button_size = style.pixelMetric(QStyle.PM_SmallIconSize) + \
                   style.pixelMetric(QStyle.PM_ButtonMargin)
     return button_size
-    
+
 class FloatSlider(QSlider):
     def __init__(self, orientation, min_value, max_value, step, parent=None):
         QSlider.__init__(self, orientation, parent)
         self.setScale(min_value, max_value, step)
         QObject.connect(self, SIGNAL("valueChanged(int)"), self.sendValue)
-        
+
     def update(self):
         self.setSingleStep(1)
         if self.min_value != self.max_value:
@@ -2200,14 +2200,14 @@ class FloatSlider(QSlider):
             self.setMaximum(int(self.max_value/self.step))
         else:
             self.setEnabled(False)
-    
+
     def sendValue(self, slider_value):
         value = min(max(slider_value * self.step, self.min_value), self.max_value)
         self.emit(SIGNAL("valueChangedFloat(double)"), value)
-        
+
     def setValue(self, value):
         QSlider.setValue(self, int(value/self.step))
-        
+
     def setScale(self, minValue, maxValue, step=0):
         if minValue >= maxValue:
             ## It would be more logical to disable the slider in this case (self.setEnabled(False))
@@ -2222,7 +2222,7 @@ class FloatSlider(QSlider):
         self.max_value = float(maxValue)
         self.step = step
         self.update()
-        
+
     def setRange(self, minValue, maxValue, step=1.0):
         # For compatibility with qwtSlider
         self.setScale(minValue, maxValue, step)

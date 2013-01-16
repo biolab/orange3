@@ -515,7 +515,7 @@ class CanvasScene(QGraphicsScene):
 
     def annotation_for_item(self, item):
         rev = dict(reversed(item) \
-                   for item in list(self.__item_for_annotation.items()))
+                   for item in self.__item_for_annotation.items())
         return rev[item]
 
     def commit_scheme_node(self, node):
@@ -557,7 +557,7 @@ class CanvasScene(QGraphicsScene):
     def node_for_item(self, item):
         """Return the `SchemeNode` for the `item`.
         """
-        rev = dict([(v, k) for k, v in list(self.__item_for_node.items())])
+        rev = dict([(v, k) for k, v in self.__item_for_node.items()])
         return rev[item]
 
     def item_for_node(self, node):
@@ -568,7 +568,7 @@ class CanvasScene(QGraphicsScene):
     def link_for_item(self, item):
         """Return the `SchemeLink for `item` (:class:`LinkItem`).
         """
-        rev = dict([(v, k) for k, v in list(self.__item_for_link.items())])
+        rev = dict([(v, k) for k, v in self.__item_for_link.items()])
         return rev[item]
 
     def item_for_link(self, link):
@@ -608,10 +608,10 @@ class CanvasScene(QGraphicsScene):
         """Return a list of `node_item`'s (class:`NodeItem`) neighbor nodes.
         """
         neighbors = list(map(attrgetter("sourceItem"),
-                        self.node_input_links(node_item)))
+                             self.node_input_links(node_item)))
 
-        neighbors.extend(list(map(attrgetter("sinkItem"),
-                             self.node_output_links(node_item))))
+        neighbors.extend(map(attrgetter("sinkItem"),
+                             self.node_output_links(node_item)))
         return neighbors
 
     def on_widget_state_change(self, widget, state):
@@ -816,5 +816,5 @@ def grab_svg(scene):
     scene.render(painter, target_rect, source_rect)
     painter.end()
 
-    buffer_str = str(svg_buffer.buffer())
-    return str(buffer_str.decode("utf-8"))
+    buffer_str = bytes(svg_buffer.buffer())
+    return buffer_str.decode("utf-8")

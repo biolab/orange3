@@ -234,7 +234,7 @@ class WidgetDiscovery(object):
         """Process a callable loader function.
         """
         try:
-            isinstance(self, collections.Callable)
+            callable(self)
         except Exception:
             log.error("Error calling %r", callable, exc_info=True)
 

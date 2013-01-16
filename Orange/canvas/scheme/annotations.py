@@ -51,12 +51,12 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
 
     end_pos = Property(tuple, fget=end_pos)
 
-    def set_geometry(self, xxx_todo_changeme):
+    def set_geometry(self, geometry):
         """Set the geometry of the arrow as a start and end position tuples
         (e.g. `set_geometry(((0, 0), (100, 0))).
 
         """
-        (start_pos, end_pos) = xxx_todo_changeme
+        (start_pos, end_pos) = geometry
         self.set_line(start_pos, end_pos)
 
     def geometry(self):
@@ -100,12 +100,12 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
         self.__font = {} if font is None else font
         self.__anchor = anchor
 
-    def set_rect(self, xxx_todo_changeme1):
+    def set_rect(self, rectangle):
         """Set the text geometry bounding rectangle
         ((x, y, width, height) tuple).
 
         """
-        (x, y, w, h) = xxx_todo_changeme1
+        (x, y, w, h) = rectangle
         rect = (x, y, w, h)
         if self.__rect != rect:
             self.__rect = rect

@@ -10,7 +10,6 @@ import re
 import logging
 import optparse
 import pickle
-from contextlib import nested
 
 import pkg_resources
 
@@ -263,7 +262,7 @@ def main(argv=None):
         sys.excepthook = ExceptHook()
         sys.excepthook.handledException.connect(output_view.parent().show)
 
-    with nested(redirect_stdout(stdout), redirect_stderr(stderr)):
+    with (redirect_stdout(stdout), redirect_stderr(stderr)):
         log.info("Entering main event loop.")
         try:
             status = app.exec_()

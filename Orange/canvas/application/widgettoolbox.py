@@ -159,7 +159,7 @@ class WidgetToolGrid(ToolGrid):
         """
         item = self.__model.itemForIndex(parent)
         if item == self.__rootItem:
-            for i in reversed(list(range(start - 1, end))):
+            for i in reversed(range(start - 1, end)):
                 action = self.actions()[i]
                 self.removeAction(action)
 
@@ -250,7 +250,7 @@ class WidgetToolBox(ToolBox):
         """Set fixed widget button size.
         """
         self.__buttonSize = size
-        for widget in map(self.widget, list(range(self.count()))):
+        for widget in map(self.widget, range(self.count())):
             widget.setButtonSize(size)
 
     def buttonSize(self):
@@ -267,7 +267,7 @@ class WidgetToolBox(ToolBox):
         """
         version = 2
 
-        actions = list(map(self.tabAction, list(range(self.count()))))
+        actions = map(self.tabAction, range(self.count()))
         expanded = [action for action in actions if action.isChecked()]
         expanded = [action.text() for action in expanded]
 
@@ -292,7 +292,7 @@ class WidgetToolBox(ToolBox):
             version = stream.readInt()
             if version == 2:
                 expanded = stream.readQStringList()
-                for action in map(self.tabAction, list(range(self.count()))):
+                for action in map(self.tabAction, range(self.count())):
                     if (action.text() in expanded) != action.isChecked():
                         action.trigger()
 

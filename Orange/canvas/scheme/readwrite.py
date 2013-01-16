@@ -143,7 +143,7 @@ def parse_scheme_v_2_0(etree, scheme, widget_registry=None):
         elif annot_el.tag == "arrow":
             start = annot_el.attrib.get("start", "(0, 0)")
             end = annot_el.attrib.get("end", "(0, 0)")
-            start, end = list(map(literal_eval, (start, end)))
+            start, end = map(literal_eval, (start, end))
 
             color = annot_el.attrib.get("fill", "red")
             annot = SchemeArrowAnnotation(start, end, color=color)
@@ -297,7 +297,7 @@ def scheme_to_etree(scheme):
             font = annotation.font
             attrs.update({"font-family": font.get("family", None),
                           "font-size": font.get("size", None)})
-            attrs = [(key, value) for key, value in list(attrs.items()) \
+            attrs = [(key, value) for key, value in attrs.items()
                      if value is not None]
             attrs = dict((key, str(value)) for key, value in attrs)
 
