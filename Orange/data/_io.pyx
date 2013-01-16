@@ -85,8 +85,15 @@ def prescan(fname):
 
             if state == READ or state == EQUALS:
                 endc = strchr(not_in_atom, c)
-                if endc != NULL:
-                    if state != EQUALS and atomp != atom:
+                if endc == NULL:
+                    if state == READ:
+                        atomp[0] = c
+                        atomp += 1
+                        if atomp == atome:
+                            raise ValueError("{}:{}:{}: value name too long"
+                                .format(fname, line, col))
+                else:
+                    if state == READ and atomp != atom:
                         # strip whitespace on the right
                         while atomp != atom and (
                                 atomp[-1] == " " or atomp[-1] == "\t"):
@@ -126,12 +133,6 @@ def prescan(fname):
                             raise ValueError("{}:{}:{}: invalid value"
                                 .format(fname, line, col))
                         state = EQUALS
-                elif state == READ:
-                    atomp[0] = c
-                    atomp += 1
-                    if atomp == atome:
-                        raise ValueError("{}:{}:{}: value name too long"
-                            .format(fname, line, col))
 
             elif state == QUOTED:
                 if c == "\r" or c == "\n":

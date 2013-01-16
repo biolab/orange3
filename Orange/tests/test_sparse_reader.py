@@ -25,8 +25,6 @@ def  , g   , h,ij,kl=4,m,,,
             f.close()
             (attributes, classes, metas, n_attributes, n_classes, n_metas, lines
             ) = _io.prescan(fname.encode("utf-8"))
-            print(attributes, classes, metas, n_attributes, n_classes, n_metas, lines
-                        )
             self.assertEqual(attributes,
                 {x.encode("ascii") for x in ("abc", "g", "ij k", "t", "def",
                                              "g", "h", "ij", "kl", "m")})
@@ -54,8 +52,6 @@ abc, g=1, h ,  ij | k  =5,   t # ignore this, foo=42
             f.close()
             (attributes, classes, metas, n_attributes, n_classes, n_metas, lines
             ) = _io.prescan(fname.encode("utf-8"))
-            print(attributes, classes, metas, n_attributes, n_classes, n_metas, lines
-                        )
             self.assertEqual(attributes,
                 {x.encode("ascii") for x in ("abc", "g", "h", "ij")})
             self.assertEqual(classes, {b"k", b"t", b"kl", b"k"})
