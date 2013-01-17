@@ -99,9 +99,6 @@ def scan_update(item):
 
     path = str(item.path())
 
-    # workaround for bugs.python.org/issue11159
-    path = path.encode(sys.getfilesystemencoding())
-
     try:
         title, desc, svg = preview_parse(path)
     except SAXParseException as ex:
