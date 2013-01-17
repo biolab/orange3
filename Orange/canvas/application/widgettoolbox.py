@@ -133,8 +133,8 @@ class WidgetToolGrid(ToolGrid):
         """Insert a widget action (from a `QStandardItem`) at index.
         """
         value = item.data(self.__actionRole)
-        if value.isValid():
-            action = value.toPyObject()
+        if value is not None:
+            action = value
         else:
             action = QAction(item.text(), self)
             action.setIcon(item.icon())
@@ -167,7 +167,7 @@ class WidgetToolGrid(ToolGrid):
         """Start a drag from button
         """
         action = button.defaultAction()
-        desc = action.data().toPyObject()  # Widget Description
+        desc = action.data()  # Widget Description
         icon = action.icon()
         drag_data = QMimeData()
         drag_data.setData(
@@ -235,7 +235,7 @@ class WidgetToolBox(ToolBox):
         """Set the widget icon size.
         """
         self.__iconSize = size
-        for widget in  map(self.widget, list(range(self.count()))):
+        for widget in map(self.widget, range(self.count())):
             widget.setIconSize(size)
 
     def iconSize(self):
@@ -343,10 +343,10 @@ class WidgetToolBox(ToolBox):
         button = self.tabButton(index)
 
         # Set the 'highlight' color
-        if item.data(Qt.BackgroundRole).isValid():
+        if item.data(Qt.BackgroundRole) is not None:
             brush = item.background()
-        elif item.data(QtWidgetRegistry.BACKGROUND_ROLE).isValid():
-            brush = item.data(QtWidgetRegistry.BACKGROUND_ROLE).toPyObject()
+        elif item.data(QtWidgetRegistry.BACKGROUND_ROLE) is not None:
+            brush = item.data(QtWidgetRegistry.BACKGROUND_ROLE)
         else:
             brush = self.palette().brush(QPalette.Button)
 
@@ -372,7 +372,7 @@ class WidgetToolBox(ToolBox):
         """Items have been inserted in the model.
         """
         # Only the top level items (categories) are handled here.
-        if not parent.isValid():
+        if not parent is not None:
             root = self.__model.invisibleRootItem()
             for i in range(start, end + 1):
                 item = root.child(i)
@@ -382,6 +382,6 @@ class WidgetToolBox(ToolBox):
         """Rows have been removed from the model.
         """
         # Only the top level items (categories) are handled here.
-        if not parent.isValid():
+        if not parent is not None:
             for i in range(end, start - 1, -1):
                 self.removeItem(i)

@@ -126,7 +126,7 @@ def main(argv=None):
 
             if pkg_resources.resource_exists(pkg_name, resource):
                 stylesheet_string = \
-                    pkg_resources.resource_string(pkg_name, resource)
+                    pkg_resources.resource_string(pkg_name, resource).decode()
 
                 base = pkg_resources.resource_filename(pkg_name, "styles")
 
@@ -174,7 +174,7 @@ def main(argv=None):
     )
 
     want_splash = \
-        settings.value("startup/show-splash-screen", True).toBool() and \
+        settings.value("startup/show-splash-screen", True, type=bool) and \
         not options.no_splash
 
     if want_splash:
@@ -211,7 +211,7 @@ def main(argv=None):
     canvas_window.show()
 
     want_welcome = \
-        settings.value("startup/show-welcome-screen", True).toBool() \
+        settings.value("startup/show-welcome-screen", True, type=bool) \
         and not options.no_welcome
 
     canvas_window.raise_()
@@ -229,10 +229,10 @@ def main(argv=None):
         canvas_window.load_scheme(args[0])
 
     stdout_redirect = \
-        settings.value("output/redirect-stdout", True).toBool()
+        settings.value("output/redirect-stdout", True, type=bool)
 
     stderr_redirect = \
-        settings.value("output/redirect-stderr", True).toBool()
+        settings.value("output/redirect-stderr", True, type=bool)
 
     # cmd line option overrides settings / no redirect is possible
     # under ipython

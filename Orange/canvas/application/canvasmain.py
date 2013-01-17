@@ -561,24 +561,24 @@ class CanvasMainWindow(QMainWindow):
         settings.beginGroup("mainwindow")
 
         self.dock_widget.setExpanded(
-            settings.value("canvasdock/expanded", True).toBool()
+            settings.value("canvasdock/expanded", True, type=bool)
         )
 
-        floatable = settings.value("toolbox-dock-floatable", False).toBool()
+        floatable = settings.value("toolbox-dock-floatable", False)
         if floatable:
             self.dock_widget.setFeatures(self.dock_widget.features() | \
                                          QDockWidget.DockWidgetFloatable)
 
         self.widgets_tool_box.setExclusive(
-            settings.value("toolbox-dock-exclusive", False).toBool()
+            settings.value("toolbox-dock-exclusive", False, type=bool)
         )
 
         self.toogle_margins_action.setChecked(
-            settings.value("scheme-margins-enabled", True).toBool()
+            settings.value("scheme-margins-enabled", True, type=bool)
         )
 
         self.last_scheme_dir = \
-            settings.value("last-scheme-dir", None).toPyObject()
+            settings.value("last-scheme-dir", None)
 
         if self.last_scheme_dir is not None and \
                 not os.path.exists(self.last_scheme_dir):
@@ -586,7 +586,7 @@ class CanvasMainWindow(QMainWindow):
             self.last_scheme_dir = None
 
         self.canvas_tool_dock.setQuickHelpVisible(
-            settings.value("quick-help/visible", True).toBool()
+            settings.value("quick-help/visible", True, type=bool)
         )
 
         self.__update_from_settings()
@@ -627,7 +627,7 @@ class CanvasMainWindow(QMainWindow):
         settings = QSettings()
         state = settings.value("mainwindow/widgettoolbox/state",
                                 defaultValue=None)
-        state = state.toPyObject()
+
         if state:
             self.widgets_tool_box.restoreState(state)
 
@@ -640,7 +640,7 @@ class CanvasMainWindow(QMainWindow):
     def on_tool_box_widget_activated(self, action):
         """A widget action in the widget toolbox has been activated.
         """
-        widget_desc = action.data().toPyObject()
+        widget_desc = action.data()
         if widget_desc:
             scheme_widget = self.current_document()
             if scheme_widget:
@@ -714,7 +714,7 @@ class CanvasMainWindow(QMainWindow):
         new_scheme = widgetsscheme.WidgetsScheme()
 
         settings = QSettings()
-        show = settings.value("schemeinfo/show-at-new-scheme", True).toBool()
+        show = settings.value("schemeinfo/show-at-new-scheme", True, type=bool)
 
         if show:
             status = self.show_scheme_properties_for(
@@ -1098,7 +1098,7 @@ class CanvasMainWindow(QMainWindow):
         settings = QSettings()
 
         dialog.setShowAtStartup(
-            settings.value("startup/show-welcome-screen", True).toBool()
+            settings.value("startup/show-welcome-screen", True, type=bool)
         )
 
         status = dialog.exec_()
@@ -1122,7 +1122,7 @@ class CanvasMainWindow(QMainWindow):
         dialog.setFixedSize(725, 450)
 
         dialog.setDontShowAtNewScheme(
-            not settings.value(value_key, True).toBool()
+            not settings.value(value_key, True, type=bool)
         )
 
         return dialog
@@ -1271,7 +1271,7 @@ class CanvasMainWindow(QMainWindow):
 
         actions_by_filename = {}
         for action in self.recent_scheme_action_group.actions():
-            path = str(action.data().toString())
+            path = str(action.data())
             actions_by_filename[path] = action
 
         if filename in actions_by_filename:
@@ -1306,7 +1306,7 @@ class CanvasMainWindow(QMainWindow):
 
         # Exclude permanent actions (Browse Recent, separators, Clear List)
         actions_to_remove = [action for action in actions \
-                             if str(action.data().toString())]
+                             if str(action.data())]
 
         for action in actions_to_remove:
             self.recent_menu.removeAction(action)
@@ -1322,7 +1322,7 @@ class CanvasMainWindow(QMainWindow):
             if self.ask_save_changes() == QDialog.Rejected:
                 return
 
-        filename = str(action.data().toString())
+        filename = str(action.data())
         self.load_scheme(filename)
 
     def _on_dock_location_changed(self, location):
@@ -1388,12 +1388,12 @@ class CanvasMainWindow(QMainWindow):
 
         # Restore geometry and dock/toolbar state
         state = settings.value("state")
-        if state.isValid():
-            self.restoreState(state.toByteArray(),
+        if state is not None:
+            self.restoreState(state,
                               version=self.SETTINGS_VERSION)
         geom_data = settings.value("geometry")
-        if geom_data.isValid():
-            self.restoreGeometry(geom_data.toByteArray())
+        if geom_data is not None:
+            self.restoreGeometry(geom_data)
 
         return QMainWindow.showEvent(self, event)
 
@@ -1448,39 +1448,39 @@ class CanvasMainWindow(QMainWindow):
         settings = QSettings()
         settings.beginGroup("mainwindow")
         toolbox_floatable = settings.value("toolbox-dock-floatable",
-                                           defaultValue=False)
+                                           defaultValue=False, type=bool)
 
         features = self.dock_widget.features()
         features = updated_flags(features, QDockWidget.DockWidgetFloatable,
-                                 toolbox_floatable.toBool())
+                                 toolbox_floatable)
         self.dock_widget.setFeatures(features)
 
         toolbox_exclusive = settings.value("toolbox-dock-exclusive",
-                                           defaultValue=False)
-        self.widgets_tool_box.setExclusive(toolbox_exclusive.toBool())
+                                           defaultValue=False, type=bool)
+        self.widgets_tool_box.setExclusive(toolbox_exclusive)
 
         settings.endGroup()
         settings.beginGroup("quickmenu")
 
         triggers = 0
         dbl_click = settings.value("trigger-on-double-click",
-                                   defaultValue=True)
-        if dbl_click.toBool():
+                                   defaultValue=True, type=bool)
+        if dbl_click:
             triggers |= SchemeEditWidget.DoubleClicked
 
         left_click = settings.value("trigger-on-left-click",
-                                    defaultValue=False)
-        if left_click.toBool():
+                                    defaultValue=False, type=bool)
+        if left_click:
             triggers |= SchemeEditWidget.Clicked
 
         space_press = settings.value("trigger-on-space-key",
-                                     defaultValue=True)
-        if space_press.toBool():
+                                     defaultValue=True, type=bool)
+        if space_press:
             triggers |= SchemeEditWidget.SpaceKey
 
         any_press = settings.value("trigger-on-any-key",
-                                   defaultValue=False)
-        if any_press.toBool():
+                                   defaultValue=False, type=bool)
+        if any_press:
             triggers |= SchemeEditWidget.AnyKey
 
         self.scheme_widget.setQuickMenuTriggers(triggers)
@@ -1488,8 +1488,8 @@ class CanvasMainWindow(QMainWindow):
         settings.endGroup()
         settings.beginGroup("schemeedit")
         show_channel_names = settings.value("show-channel-names",
-                                            defaultValue=True)
-        self.scheme_widget.setChannelNamesVisible(show_channel_names.toBool())
+                                            defaultValue=True, type=bool)
+        self.scheme_widget.setChannelNamesVisible(show_channel_names)
 
 
 def updated_flags(flags, mask, state):

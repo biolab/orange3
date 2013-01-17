@@ -849,14 +849,14 @@ class OWBaseWidget(QDialog):
             if type(id) == list:
                 for i in id:
                     self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
-                              QString(stateType), i,QString(""))
+                              stateType, i, "")
             else:
                 self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
-                             QString(stateType), id, QString(text or ""))
-            #qApp.processEvents()
+                          stateType, id, text or "")
+                #qApp.processEvents()
         return changed
 
-    widgetStateChanged = pyqtSignal(QString, int, QString)
+    widgetStateChanged = pyqtSignal(str, int, str)
     """Widget state has changed first arg is the state type
     ('Info', 'Warning' or 'Error') the second is the message id
     and finally the message string."""

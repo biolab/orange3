@@ -74,19 +74,19 @@ class Test(test.QAppTestCase):
         source.setProperty("source", 1)
         self.assertEqual(len(schanged), 1)
 
-        self.assertEqual(toPyObject(target.property("target")), None)
+        self.assertEqual(target.property("target"), None)
 
         manager.commit()
 
-        self.assertEqual(toPyObject(target.property("target")), 1)
-        self.assertEqual(toPyObject(target.property("target_copy")), 1)
+        self.assertEqual(target.property("target"), 1)
+        self.assertEqual(target.property("target_copy"), 1)
 
         source.setProperty("source", 2)
 
         manager.setSubmitPolicy(BindingManager.AutoSubmit)
 
-        self.assertEqual(toPyObject(target.property("target")), 2)
-        self.assertEqual(toPyObject(target.property("target_copy")), 2)
+        self.assertEqual(target.property("target"), 2)
+        self.assertEqual(target.property("target_copy"), 2)
 
     def test_prop(self):
         w = QWidget()

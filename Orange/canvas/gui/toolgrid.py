@@ -247,7 +247,7 @@ class ToolGrid(QWidget):
             button.setIconSize(self.__iconSize)
 
         button.setToolButtonStyle(self.__toolButtonStyle)
-        button.setProperty("tool-grid-button", QVariant(True))
+        button.setProperty("tool-grid-button", True)
         return button
 
     def count(self):

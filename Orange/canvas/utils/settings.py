@@ -11,7 +11,7 @@ import logging
 
 from collections import namedtuple, MutableMapping
 
-from PyQt4.QtCore import QObject, QVariant, QString, QChar, QEvent, \
+from PyQt4.QtCore import QObject, QVariant, QEvent, \
                          QSettings, QCoreApplication
 
 from PyQt4.QtCore import pyqtSignal as Signal
@@ -145,9 +145,9 @@ def qt_to_mapped_type(value):
     mapped type (i.e. QString to unicode, etc.)
 
     """
-    if isinstance(value, QString):
+    if isinstance(value, str):
         return str(value)
-    elif isinstance(value, QChar):
+    elif isinstance(value, str):
         return str(value)
     else:
         return value
@@ -231,13 +231,13 @@ class Settings(QObject, MutableMapping, metaclass=QABCMeta):
             typesafe = False
         else:
             if value_type is None:
-                value = toPyObject(self.__store.value(fullkey))
+                value = self.__store.value(fullkey)
             else:
                 try:
                     value = self.__store.value(fullkey, type=value_type)
                 except TypeError:
                     # In case the value was pickled in a type unsafe mode
-                    value = toPyObject(self.__store.value(fullkey))
+                    value = self.__store.value(fullkey)
                     typesafe = False
 
         if not typesafe:

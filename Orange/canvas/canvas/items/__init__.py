@@ -18,7 +18,7 @@ from PyQt4.QtGui import (
 )
 
 from PyQt4.QtCore import Qt, QRectF, QPointF, QSizeF, QLineF, QTimer, \
-                         QMargins, QVariant, QEvent
+                         QMargins, QEvent
 
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 

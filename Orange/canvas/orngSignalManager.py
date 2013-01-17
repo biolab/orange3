@@ -113,8 +113,8 @@ def resolveSignal(signal, globals={}):
         else:
             if type_name in globals:
                 sig_type = globals[type_name]
-            elif hasattr(__builtin__, type_name):
-                sig_type = getattr(__builtin__, type_name)
+            elif hasattr(builtins, type_name):
+                sig_type = getattr(builtins, type_name)
             else:
                 raise NameError(type_name)
 

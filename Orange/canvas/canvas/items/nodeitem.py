@@ -236,7 +236,7 @@ class AnchorPoint(QGraphicsObject):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemScenePositionHasChanged:
-            self.scenePositionChanged.emit(value.toPointF())
+            self.scenePositionChanged.emit(value)
 
         return QGraphicsObject.itemChange(self, change, value)
 
@@ -969,7 +969,7 @@ class NodeItem(QGraphicsObject):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedChange:
-            self.shapeItem.setSelected(value.toBool())
+            self.shapeItem.setSelected(value)
         elif change == QGraphicsItem.ItemPositionHasChanged:
             self.positionChanged.emit()
 

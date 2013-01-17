@@ -1,8 +1,7 @@
 import logging
 
 from PyQt4.QtGui import QGraphicsItem, QGraphicsObject, QBrush, QPainterPath
-from PyQt4.QtCore import Qt, QPointF, QLineF, QRectF, QMargins, QVariant, \
-                         QEvent
+from PyQt4.QtCore import Qt, QPointF, QLineF, QRectF, QMargins, QEvent
 
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
@@ -66,7 +65,7 @@ class ControlPoint(GraphicsPathObject):
         if change == QGraphicsItem.ItemPositionChange:
             pos = value.toPointF()
             newpos = self.constrain(pos)
-            return QVariant(newpos)
+            return newpos
 
         return GraphicsPathObject.itemChange(self, change, value)
 

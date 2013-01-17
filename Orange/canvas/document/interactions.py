@@ -349,7 +349,6 @@ class NewLinkAction(UserInteraction):
         def filter(index):
             desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             if desc.isValid():
-                desc = desc.toPyObject()
                 return is_compatible(from_desc, desc)
             else:
                 return False
@@ -361,8 +360,8 @@ class NewLinkAction(UserInteraction):
             menu.setFilterFunc(None)
 
         if action:
-            item = action.property("item").toPyObject()
-            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE).toPyObject()
+            item = action.property("item")
+            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             pos = event.scenePos()
             node = scheme.SchemeNode(desc, position=(pos.x(), pos.y()))
             return node
@@ -510,8 +509,8 @@ class NewNodeAction(UserInteraction):
 
         action = menu.exec_(pos)
         if action:
-            item = action.property("item").toPyObject()
-            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE).toPyObject()
+            item = action.property("item")
+            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             # Get the scene position
             view = self.document.view()
             pos = view.mapToScene(view.mapFromGlobal(pos))

@@ -132,11 +132,11 @@ class PreviewItem(QStandardItem):
         """
         desc = self.data(DescriptionRole)
 
-        if desc.isValid():
-            return desc.toString()
+        if desc is not None:
+            return desc
 
         whatsthis = self.data(Qt.WhatsThisRole)
-        return whatsthis.toString()
+        return whatsthis
 
     def setDescription(self, description):
         self.setData(description, DescriptionRole)
@@ -148,8 +148,8 @@ class PreviewItem(QStandardItem):
         This is stored as `ThumbnailSVGRole`
         """
         thumb = self.data(ThumbnailSVGRole)
-        if thumb.isValid():
-            return thumb.toString()
+        if thumb is not None:
+            return thumb
 
     def setThumbnail(self, thumbnail):
         """Set the thumbnail SVG contents as a string.
@@ -173,7 +173,7 @@ class PreviewItem(QStandardItem):
     def path(self):
         """Return the path item data.
         """
-        return self.data(PathRole).toString()
+        return self.data(PathRole)
 
     def setPath(self, path):
         """Set the path data of the item.

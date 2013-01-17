@@ -1141,7 +1141,7 @@ class SchemeEditWidget(QWidget):
         else:
             handler = interactions.NewArrowAnnotation(self)
             checked = self.__arrowColorActionGroup.checkedAction()
-            handler.setColor(checked.data().toPyObject())
+            handler.setColor(checked.data())
 
             handler.ended.connect(action.toggle)
 
@@ -1188,7 +1188,7 @@ class SchemeEditWidget(QWidget):
             # just update the preferred color on the interaction handler
             handler = self.__scene.user_interaction_handler
             if isinstance(handler, interactions.NewArrowAnnotation):
-                handler.setColor(action.data().toPyObject())
+                handler.setColor(action.data())
 
     def __onCustomContextMenuRequested(self, pos):
         scenePos = self.view().mapToScene(pos)

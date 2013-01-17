@@ -312,17 +312,17 @@ class PreviewBrowser(QWidget):
             path = ""
             svg = NO_PREVIEW_SVG
         else:
-            description = str(index.data(Qt.WhatsThisRole).toString())
+            description = str(index.data(Qt.WhatsThisRole))
             if not description:
                 description = "No description."
 
-            name = str(index.data(Qt.DisplayRole).toString())
+            name = str(index.data(Qt.DisplayRole))
             if not name:
                 name = "Untitled"
 
-            path = str(index.data(Qt.StatusTipRole).toString())
+            path = str(index.data(Qt.StatusTipRole))
 
-            svg = str(index.data(previewmodel.ThumbnailSVGRole).toString())
+            svg = str(index.data(previewmodel.ThumbnailSVGRole))
 
         desc_text = self.__template.format(description=description, name=name)
 

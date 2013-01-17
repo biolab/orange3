@@ -96,7 +96,7 @@ class GraphicsPathObject(QGraphicsObject):
     def itemChange(self, change, value):
         if change == QGraphicsObject.ItemPositionHasChanged:
             self.positionChanged.emit()
-            self.positionChanged[QPointF].emit(value.toPyObject())
+            self.positionChanged[QPointF].emit(value)
 
         return QGraphicsObject.itemChange(self, change, value)
 

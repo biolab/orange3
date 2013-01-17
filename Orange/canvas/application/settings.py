@@ -134,7 +134,6 @@ class UserSettingsModel(QAbstractItemModel):
     def setData(self, index, value, role=Qt.EditRole):
         if self._valid(index) and index.column() == 3:
             key = self._keyFromIndex(index)
-            value = toPyObject(value)
             try:
                 self.__settings[key] = value
             except (TypeError, ValueError) as ex:

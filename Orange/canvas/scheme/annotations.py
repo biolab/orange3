@@ -3,7 +3,7 @@ Scheme Annotations
 
 """
 
-from PyQt4.QtCore import QObject, QString
+from PyQt4.QtCore import QObject
 from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import pyqtProperty as Property
 
@@ -73,7 +73,7 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
         names).
 
         """
-        check_type(color, (str, QString))
+        check_type(color, str)
         color = str(color)
         if self.__color != color:
             self.__color = color
@@ -131,7 +131,7 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
     def set_text(self, text):
         """Set the annotation text.
         """
-        check_type(text, (str, QString))
+        check_type(text, str)
         text = str(text)
         if self.__text != text:
             self.__text = text

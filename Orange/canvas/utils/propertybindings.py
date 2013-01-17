@@ -78,7 +78,7 @@ class AbstractBoundProperty(QObject):
         """
         Return the property value.
         """
-        return toPyObject(self.obj.property(self.propertyName))
+        return self.obj.property(self.propertyName)
 
     @Slot()
     def notifyChanged(self):

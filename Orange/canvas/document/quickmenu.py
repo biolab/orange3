@@ -616,11 +616,11 @@ class QuickMenu(FramelessWindow):
         name = str(index.data(Qt.DisplayRole))
         page.setTitle(name)
 
-        icon = index.data(Qt.DecorationRole).toPyObject()
+        icon = index.data(Qt.DecorationRole)
         if isinstance(icon, QIcon):
             page.setIcon(icon)
 
-        page.setToolTip(index.data(Qt.ToolTipRole).toPyObject())
+        page.setToolTip(index.data(Qt.ToolTipRole))
         return page
 
     def setModel(self, model):
@@ -635,7 +635,6 @@ class QuickMenu(FramelessWindow):
             brush = index.data(QtWidgetRegistry.BACKGROUND_ROLE)
 
             if brush.isValid():
-                brush = brush.toPyObject()
                 button = self.__pages.tabButton(i)
                 palette = button.palette()
                 button.setStyleSheet(

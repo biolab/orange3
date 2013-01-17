@@ -79,7 +79,7 @@ def search_paths_from_description(desc):
 
 
 class resource_loader(object):
-    def __init__(self, search_paths=[]):
+    def __init__(self, search_paths=()):
         self._search_paths = []
         self.add_search_paths(search_paths)
 
@@ -171,7 +171,7 @@ class icon_loader(resource_loader):
         if not path:
             path = self.find(self.DEFAULT_ICON if default is None else default)
         if not path:
-            raise IOError(2, "Cannot find %r in %s" % \
+            raise IOError(2, "Cannot find %r in %s" %
                           (name, self.search_paths()))
         if self.is_icon_glob(path):
             icons = self.icon_glob(path)

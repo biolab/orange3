@@ -157,7 +157,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
 
         widget_desc = item.data(self.WIDGET_DESC_ROLE)
         action.setData(widget_desc)
-        action.setProperty("item", QVariant(item))
+        action.setProperty("item", item)
         return action
 
     def _insert_category(self, desc):
@@ -221,7 +221,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
 
         item.setToolTip(tooltip)
         item.setFlags(Qt.ItemIsEnabled)
-        item.setData(QVariant(desc), self.CATEGORY_DESC_ROLE)
+        item.setData(desc, self.CATEGORY_DESC_ROLE)
         return item
 
     def _widget_desc_to_std_item(self, desc, category):
@@ -255,11 +255,11 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         item.setToolTip(tooltip)
         item.setWhatsThis(whats_this_helper(desc))
         item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-        item.setData(QVariant(desc), self.WIDGET_DESC_ROLE)
+        item.setData(desc, self.WIDGET_DESC_ROLE)
 
         # Create the action for the widget_item
         action = self.create_action_for_item(item)
-        item.setData(QVariant(action), self.WIDGET_ACTION_ROLE)
+        item.setData(action, self.WIDGET_ACTION_ROLE)
         return item
 
 

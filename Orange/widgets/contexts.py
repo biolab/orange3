@@ -375,7 +375,7 @@ class DomainContextHandler(ContextHandler):
                         for i in selected:
                             # TODO: shouldn't we check the attribute type here, too? or should we change self.saveLow for these field types then?
                             if (not flags & self.ExcludeOrdinaryAttributes and value[i] in attributes
-                                 or flags & self.IncludeMetaAttributes and value[i] in metas):
+                                or flags & self.IncludeMetaAttributes and value[i] in metas):
                                 filled += 1
                             else:
                                 if selectedRequired:
@@ -384,7 +384,7 @@ class DomainContextHandler(ContextHandler):
                     potentiallyFilled += 1
                     if value[1] >= 0:
                         if (not flags & self.ExcludeOrdinaryAttributes and attributes.get(value[0], None) == value[1]
-                             or flags & self.IncludeMetaAttributes and metas.get(value[0], None) == value[1]):
+                            or flags & self.IncludeMetaAttributes and metas.get(value[0], None) == value[1]):
                             filled += 1
                         else:
                             if flags & self.Required:

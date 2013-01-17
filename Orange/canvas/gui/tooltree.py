@@ -152,8 +152,8 @@ class ToolTree(QWidget):
 
     def __actionForIndex(self, index):
         val = index.data(self.__actionRole)
-        if val.isValid():
-            action = val.toPyObject()
+        if val is not None:
+            action = val
             if isinstance(action, QAction):
                 return action
             else:

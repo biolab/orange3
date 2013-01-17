@@ -291,11 +291,11 @@ class QuickCategoryToolbar(ToolGrid):
         """
         button = ToolGrid.createButtonForAction(self, action)
 
-        item = action.data().toPyObject()
-        if item.data(Qt.BackgroundRole).isValid():
+        item = action.data()
+        if item.data(Qt.BackgroundRole) is not None:
             brush = item.background()
-        elif item.data(QtWidgetRegistry.BACKGROUND_ROLE).isValid():
-            brush = item.data(QtWidgetRegistry.BACKGROUND_ROLE).toPyObject()
+        elif item.data(QtWidgetRegistry.BACKGROUND_ROLE) is not None:
+            brush = item.data(QtWidgetRegistry.BACKGROUND_ROLE)
         else:
             brush = self.palette().brush(QPalette.Button)
 

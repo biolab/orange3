@@ -79,7 +79,7 @@ class TestMenu(QAppTestCase):
         flat.setSourceModel(model)
 
         def get(row):
-            return flat.index(row, 0).data().toPyObject()
+            return flat.index(row, 0).data()
 
         self.assertEqual(get(0), "0")
         self.assertEqual(get(1), "1")
