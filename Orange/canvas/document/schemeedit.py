@@ -859,8 +859,7 @@ class SchemeEditWidget(QWidget):
                     mouse_drag_distance(event, Qt.LeftButton) < 1:
                 action = interactions.NewNodeAction(self)
 
-                with (disabled(self.__undoAction),
-                      disabled(self.__redoAction)):
+                with disabled(self.__undoAction), disabled(self.__redoAction):
                     action.create_new(event.screenPos())
 
                 event.accept()
@@ -880,8 +879,7 @@ class SchemeEditWidget(QWidget):
             # Create a new node using QuickMenu
             action = interactions.NewNodeAction(self)
 
-            with (disabled(self.__undoAction),
-                  disabled(self.__redoAction)):
+            with disabled(self.__undoAction), disabled(self.__redoAction):
                 action.create_new(event.screenPos())
 
             event.accept()
@@ -932,9 +930,9 @@ class SchemeEditWidget(QWidget):
             # be selected items in the canvas), so we disable the
             # remove widget action so the text editing follows standard
             # 'look and feel'
-            with (disabled(self.__removeSelectedAction),
-                  disabled(self.__undoAction),
-                  disabled(self.__redoAction)):
+            with disabled(self.__removeSelectedAction), \
+                 disabled(self.__undoAction), \
+                 disabled(self.__redoAction):
                 handler.create_new(QCursor.pos())
 
             event.accept()

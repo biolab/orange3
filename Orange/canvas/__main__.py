@@ -262,7 +262,7 @@ def main(argv=None):
         sys.excepthook = ExceptHook()
         sys.excepthook.handledException.connect(output_view.parent().show)
 
-    with (redirect_stdout(stdout), redirect_stderr(stderr)):
+    with redirect_stdout(stdout), redirect_stderr(stderr):
         log.info("Entering main event loop.")
         try:
             status = app.exec_()
