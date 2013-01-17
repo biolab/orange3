@@ -369,3 +369,7 @@ def sparse_read_float(fname):
         res.append(mat)
 
     return tuple(res) + (attr_indices, class_indices, meta_indices)
+
+
+# TODO: this function needs to be bottlenecked (not literally;
+# adding 'char' and 'float32' should suffice)

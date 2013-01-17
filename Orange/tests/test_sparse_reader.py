@@ -122,5 +122,8 @@ class TestTabReader(unittest.TestCase):
         finally:
             os.remove(fname)
 
+
+    # TODO checks for quotes, escapes, error checking
+
 if __name__ == "__main__":
     unittest.main()
