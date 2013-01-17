@@ -104,7 +104,6 @@ def sparse_read_float(fname):
         int attr_index
         float value, decs
 
-        # TODO check if np.int_t is the correct type --> np.intc
         np.ndarray[np.float_t, ndim=1] X_data = np.empty(n_attrs, float)
         np.ndarray[int, ndim=1] X_indices = np.empty(n_attrs, np.intc)
         np.ndarray[int, ndim=1] X_indptr = np.empty(n_lines + 1, np.intc)
