@@ -1,5 +1,6 @@
-import time, copy, orange
-from string import *
+import time, copy
+
+from Orange import data
 
 contextStructureVersion = 100
 
@@ -170,18 +171,18 @@ class DomainContextHandler(ContextHandler):
 
     def encodeDomain(self, domain):
         if self.matchValues == 2:
-            attributes = self.hasOrdinaryAttributes and \
-                         dict([(attr.name, attr.varType != orange.VarTypes.Discrete and attr.varType or attr.values)
-                                for attr in domain])
-            metas = self.hasMetaAttributes and \
-                         dict([(attr.name, attr.varType != orange.VarTypes.Discrete and attr.varType or attr.values)
-                                for attr in domain.getmetas().values()])
+            attributes = self.hasOrdinaryAttributes and\
+                         dict([(attr.name, attr.varType != data.Variable.VarTypes.Discrete and attr.varType or attr.values)
+                               for attr in domain])
+            metas = self.hasMetaAttributes and\
+                    dict([(attr.name, attr.varType != data.Variable.VarTypes.Discrete and attr.varType or attr.values)
+                          for attr in list(domain.getmetas().values())])
         else:
             if self.hasOrdinaryAttributes:
                 attributes = dict([(attr.name, attr.varType) for attr in domain.attributes])
                 classVar = domain.classVar
                 if classVar:
-                    if self.matchValues and classVar.varType == orange.VarTypes.Discrete:
+                    if self.matchValues and classVar.varType == data.Variable.VarTypes.Discrete:
                         attributes[classVar.name] = classVar.values
                     else:
                         attributes[classVar.name] = classVar.varType
@@ -196,7 +197,7 @@ class DomainContextHandler(ContextHandler):
         if not domain:
             return None, False
 
-        if not isinstance(domain, orange.Domain):
+        if not isinstance(domain, data.Domain):
             domain = domain.domain
 
         encodedDomain = self.encodeDomain(domain)
@@ -285,7 +286,7 @@ class DomainContextHandler(ContextHandler):
                 oldSelected = hasattr(field, "selected") and context.values.get(field.selected, []) or []
                 for i, saved in enumerate(value):
                     if not flags & self.ExcludeOrdinaryAttributes and (saved in context.attributes or saved in attrItemsSet) \
-                       or flags & self.IncludeMetaAttributes and (saved in context.metas or saved in metaItemsSet):
+                            or flags & self.IncludeMetaAttributes and (saved in context.metas or saved in metaItemsSet):
                         if i in oldSelected:
                             newSelected.append(len(newLabels))
                         newLabels.append(saved)
@@ -347,8 +348,8 @@ class DomainContextHandler(ContextHandler):
             context.values[field] = value, -2
 
     def attributeExists(self, value, flags, attributes, metas):
-        return not flags & self.ExcludeOrdinaryAttributes and attributes.get(value[0], -1) == value[1] \
-                or flags & self.IncludeMetaAttributes and metas.get(value[0], -1) == value[1]
+        return not flags & self.ExcludeOrdinaryAttributes and attributes.get(value[0], -1) == value[1]\
+        or flags & self.IncludeMetaAttributes and metas.get(value[0], -1) == value[1]
 
     def match(self, context, imperfect, domain, attributes, metas):
         if (attributes, metas) == (context.attributes, context.metas):
@@ -449,8 +450,8 @@ class ClassValuesContextHandler(ContextHandler):
             self.fields = [fields]
 
     def findOrCreateContext(self, widget, classes):
-        if isinstance(classes, orange.Variable):
-            classes = classes.varType == orange.VarTypes.Discrete and classes.values
+        if isinstance(classes, data.Variable):
+            classes = classes.varType == data.Variable.VarTypes.Discrete and classes.values
         if not classes:
             return None, False
         context, isNew = ContextHandler.findOrCreateContext(self, widget, classes)
@@ -498,18 +499,18 @@ class ClassValuesContextHandler(ContextHandler):
 class PerfectDomainContextHandler(DomainContextHandler):
     def __init__(self, contextName = "", fields = [],
                  syncWithGlobal = True, **args):
-            DomainContextHandler.__init__(self, contextName, fields, False, False, syncWithGlobal, **args)
+        DomainContextHandler.__init__(self, contextName, fields, False, False, syncWithGlobal, **args)
 
 
     def encodeDomain(self, domain):
         if self.matchValues == 2:
-            attributes = tuple([(attr.name, attr.varType != orange.VarTypes.Discrete and attr.varType or attr.values)
-                         for attr in domain])
+            attributes = tuple([(attr.name, attr.varType != data.Variable.VarTypes.Discrete and attr.varType or attr.values)
+                                for attr in domain])
             classVar = domain.classVar
             if classVar:
-                classVar = classVar.name, classVar.varType != orange.VarTypes.Discrete and classVar.varType or classVar.values
-            metas = dict([(attr.name, attr.varType != orange.VarTypes.Discrete and attr.varType or attr.values)
-                         for attr in domain.getmetas().values()])
+                classVar = classVar.name, classVar.varType != data.Variable.VarTypes.Discrete and classVar.varType or classVar.values
+            metas = dict([(attr.name, attr.varType != data.Variable.VarTypes.Discrete and attr.varType or attr.values)
+                          for attr in list(domain.getmetas().values())])
         else:
             attributes = tuple([(attr.name, attr.varType) for attr in domain.attributes])
             classVar = domain.classVar
@@ -550,8 +551,8 @@ class PerfectDomainContextHandler(DomainContextHandler):
 class EvaluationResultsContextHandler(ContextHandler):
     def __init__(self, contextName, targetAttr, selectedAttr,
                  syncWithGlobal = True, **args):
-            self.targetAttr, self.selectedAttr = targetAttr, selectedAttr
-            ContextHandler.__init__(self, contextName, False, False, syncWithGlobal, **args)
+        self.targetAttr, self.selectedAttr = targetAttr, selectedAttr
+        ContextHandler.__init__(self, contextName, False, False, syncWithGlobal, **args)
 
     def match(self, context, imperfect, cnames, cvalues):
         return (cnames, cvalues) == (context.classifierNames, context.classValues) and 2

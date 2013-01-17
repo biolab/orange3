@@ -10,7 +10,7 @@ from PyQt4.QtCore import Qt
 
 
 import Orange
-from Orange import OrangeCanvas
+from Orange import canvas
 
 ABOUT_TEMPLATE = """\
 <center>
@@ -36,7 +36,7 @@ class AboutDialog(QDialog):
         label = QLabel(self)
 
         filename = pkg_resources.resource_filename(
-                        OrangeCanvas.__name__,
+                        canvas.__name__,
                         "icons/orange-splash-screen.png")
 
         label.setPixmap(QPixmap(filename))

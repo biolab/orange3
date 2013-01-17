@@ -64,7 +64,7 @@ def default_entry_point():
 
     """
     dist = pkg_resources.get_distribution("Orange")
-    ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.OrangeWidgets",
+    ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.widgets",
                                   dist=dist)
     return ep
 

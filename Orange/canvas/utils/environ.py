@@ -9,10 +9,10 @@ This module contains some basic customization options for Orange
 How it works
 ------------
 
-When this module is imported it will first load and parse a global 
+When this module is imported it will first load and parse a global
 configuration `orangerc.cfg` (located in the root directory of the orange
 installation). Further, it will look for and try to load a user specific
-configuration file located in $(HOME)/.orangerc.cfg or 
+configuration file located in $(HOME)/.orangerc.cfg or
 `application_dir`/orangerc.cfg where `application_dir` is a variable defined
 in the global configuration file.
 
@@ -22,28 +22,28 @@ in the global configuration file.
 After all the parsing has taken place the select variables defined in the
 configuration will be made available as top level module variables.
 
-Example 
+Example
 -------
 
 To change the location where settings are saved for Orange Canvas
 on Windows edit the global `orangerc.cfg` file and in the
 `[directories win32]` section change the `application_dir` variable:
-    
+
     [directories win32]
-    
+
     application_dir = D:/SharedAppData/orange/
-    
+
 In this way we can hard code the path instead of using the system default
 (defined in the the %APPDATA variable)
 
 Variables
 ---------
 
-The following variables are exposed as top level module members 
+The following variables are exposed as top level module members
 
-`install_dir`: 
+`install_dir`:
     Directory where Orange is installed.
-    
+
 `canvas_install_dir`:
     Directory where Orange Canvas is installed.
 
@@ -55,40 +55,40 @@ The following variables are exposed as top level module members
 
 `doc_install_dir`:
     Directory with Orange documentation.
- 
+
 `dataset_install_dir`:
     Directory with example data sets.
 
 `add_ons_dir`:
-    Directory where system-wide add-ons are installed 
-    
+    Directory where system-wide add-ons are installed
+
 `add_ons_dir_user`:
     Directory where user add-ons are installed
-    
+
 `application_dir`:
     Directory where applications can save their data.
-     
+
 `output_dir`:
     Directory where Orange saves settings/data.
-    
+
 `default_reports_dir`:
     Directory where Orange Canvas saves the reports.
-    
+
 `orange_settings_dir`:
     Directory where Orange settings are saved.
-    
+
 `canvas_settings_dir`:
     Directory where Orange Canvas settings are saved.
-    
+
 `widget_settings_dir`:
     Directory where Orange Widgets settings are saved.
-    
+
 `buffer_dir`:
-    Directory where :obj:`Orange.utils.serverfiles` downloads are stored.  
+    Directory where :obj:`Orange.utils.serverfiles` downloads are stored.
 
 `orange_no_deprecated_members`:
     If True all deprecated members in Orange 2.5 will not be available.
-      
+
 """
 
 import os, sys

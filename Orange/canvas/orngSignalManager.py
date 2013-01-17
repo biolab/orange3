@@ -7,11 +7,11 @@ import sys, os, time
 import copy
 import logging
 import logging.handlers
-
 import builtins
 
-import orange
-from Orange.utils import debugging
+import Orange
+
+from .utils import debugging
 
 Single = 2
 Multiple = 4
@@ -181,7 +181,7 @@ class SignalManager(object):
         self.widgetQueue = []
         self.asyncProcessingEnabled = False
 
-        from Orange.utils import environ
+        from .utils import environ
         if not hasattr(self, "log"):
             SignalManager.log = logging.getLogger("SignalManager")
             self.logFileName = os.path.join(environ.canvas_settings_dir,
@@ -231,7 +231,7 @@ class SignalManager(object):
 
     def addEvent(self, strValue, object = None, eventVerbosity = 1):
         info = str(strValue)
-        if isinstance(object, orange.ExampleTable):
+        if isinstance(object, Orange.data.Table):
             name = " " + getattr(object, "name", "")
             info += ". Token type = ExampleTable" + name + ". len = " + str(len(object))
         elif type(object) == list:

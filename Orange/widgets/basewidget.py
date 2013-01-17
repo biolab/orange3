@@ -3,32 +3,18 @@
 # Orange Widget
 # A General Orange Widget, from which all the Orange Widgets are derived
 #
-from Orange.utils import environ
-from Orange.orng.orngEnviron import directoryNames as old_directory_names
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+import sys, time, os, pickle
 from functools import reduce
 
-# Define  pyqtConfigure not available in PyQt4 versions prior to 4.6
-if not hasattr(QObject, "pyqtConfigure"):
-    def pyqtConfigure(obj, **kwargs):
-        meta = obj.metaObject()
-        for name, val in list(kwargs.items()):
-            if meta.indexOfProperty(name) >= 0:
-                obj.setProperty(name, QVariant(val))
-            elif meta.indexOfSignal(meta.normalizedSignature(name)) >= 0:
-                obj.connect(obj, SIGNAL(name), val)
-    QObject.pyqtConfigure = pyqtConfigure
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 
-from OWContexts import *
-import sys, time, random, user, os, os.path, pickle, copy
-import orange
-from Orange import misc
-import Orange.utils
-from Orange.utils import debugging as orngDebugging
-from string import *
-from orngSignalManager import *
-import OWGUI
+from Orange.canvas.orngSignalManager import *
+from Orange.canvas.utils import environ
+
+from Orange.widgets import contexts, gui
+
+from Orange import data as orange_data
 
 ERROR = 0
 WARNING = 1
@@ -108,8 +94,6 @@ class ControlledAttributesDict(dict):
 
 ##################
 # this definitions are needed only to define ExampleTable as subclass of ExampleTableWithClass
-from orange import ExampleTable
-
 class AttributeList(list):
     pass
 
@@ -119,11 +103,9 @@ class ExampleList(list):
 widgetId = 0
 
 class OWBaseWidget(QDialog):
-    def __new__(cls, *arg, **args):
-        self = QDialog.__new__(cls)
+    def __init__(self, parent=None, signalManager=None, title="Orange BaseWidget", modal=FALSE, savePosition = False, resizingEnabled = 1, **args):
+        super().__init__()
 
-        #print "arg", arg
-        #print "args: ", args
         self.currentContexts = {}   # the "currentContexts" MUST be the first thing assigned to a widget
         self._useContexts = 1       # do you want to use contexts
         self._owInfo = 1            # currently disabled !!!
@@ -135,10 +117,6 @@ class OWBaseWidget(QDialog):
             if key in ["_owInfo", "_owWarning", "_owError", "_owShowStatus", "_useContexts", "_category", "_settingsFromSchema"]:
                 self.__dict__[key] = args[key]        # we cannot use __dict__.update(args) since we can have many other
 
-        return self
-
-
-    def __init__(self, parent = None, signalManager = None, title="Orange BaseWidget", modal=FALSE, savePosition = False, resizingEnabled = 1, **args):
         if resizingEnabled:
             QDialog.__init__(self, parent, Qt.Window)
         else:
@@ -150,7 +128,7 @@ class OWBaseWidget(QDialog):
             self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
 
         # directories are better defined this way, otherwise .ini files get written in many places
-        self.__dict__.update(old_directory_names)
+        self.__dict__.update(environ.directories)
         try:
             self.__dict__["thisWidgetDir"] = os.path.dirname(sys.modules[self.__class__.__module__].__file__)
         except:
@@ -250,9 +228,9 @@ class OWBaseWidget(QDialog):
 
     # ##############################################
     def createAttributeIconDict(self):
-        return OWGUI.getAttributeIcons()
+        return gui.getAttributeIcons()
 
-    def isDataWithClass(self, data, wantedVarType = None, checkMissing=False):
+    def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
         self.error([1234, 1235, 1236])
         if not data:
             return 0
@@ -260,7 +238,7 @@ class OWBaseWidget(QDialog):
             self.error(1234, "A data set with a class attribute is required.")
             return 0
         if wantedVarType and data.domain.classVar.varType != wantedVarType:
-            self.error(1235, "Unable to handle %s class." % (data.domain.classVar.varType == orange.VarTypes.Discrete and "discrete" or "continuous"))
+            self.error(1235, "Unable to handle %s class." % (data.domain.classVar.varType == orange_data.Variable.VarTypes.Discrete and "discrete" or "continuous"))
             return 0
         if checkMissing and not orange.Preprocessor_dropMissingClasses(data):
             self.error(1236, "Unable to handle data set with no known classes")
@@ -284,7 +262,7 @@ class OWBaseWidget(QDialog):
             geometry = getattr(self, "savedWidgetGeometry", None)
             restored = False
             if geometry is not None:
-               restored =  self.restoreGeometry(QByteArray(geometry))
+                restored = self.restoreGeometry(QByteArray(geometry))
 
             if restored:
                 space = qApp.desktop().availableGeometry(self)
@@ -451,18 +429,18 @@ class OWBaseWidget(QDialog):
                 if (contextHandler.syncWithGlobal and contextHandler.globalContexts is getattr(self, contextHandler.localContextName)) or globalContexts:
                     settings[contextHandler.localContextName] = contextHandler.globalContexts
                 else:
-                    contexts = getattr(self, contextHandler.localContextName, None)
-                    if contexts:
-                        settings[contextHandler.localContextName] = contexts
-###
-                settings[contextHandler.localContextName+"Version"] = (contextStructureVersion, contextHandler.contextDataVersion)
+                    local_contexts = getattr(self, contextHandler.localContextName, None)
+                    if local_contexts:
+                        settings[contextHandler.localContextName] = local_contexts
+                    ###
+                settings[contextHandler.localContextName+"Version"] = (contexts.contextStructureVersion, contextHandler.contextDataVersion)
 
         return settings
 
 
     def getSettingsFile(self, file):
-        if file==None:
-            file = os.path.join(self.widgetSettingsDir, self.captionTitle + ".ini")
+        if file is None:
+            file = os.path.join(self.widget_settings_dir, self.captionTitle + ".ini")
             if not os.path.exists(file):
                 try:
                     f = open(file, "wb")
@@ -501,7 +479,7 @@ class OWBaseWidget(QDialog):
                     localName = contextHandler.localContextName
 
                     structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
-                    if (structureVersion < contextStructureVersion or dataVersion < contextHandler.contextDataVersion) \
+                    if (structureVersion < contexts.contextStructureVersion or dataVersion < contextHandler.contextDataVersion)\
                             and localName in settings:
                         del settings[localName]
                         delattr(self, localName)
@@ -509,9 +487,9 @@ class OWBaseWidget(QDialog):
 
                     if not hasattr(self, "_settingsFromSchema"): #When running stand alone widgets
                         if contextHandler.syncWithGlobal:
-                            contexts = settings.get(localName, None)
-                            if contexts is not None:
-                                contextHandler.globalContexts = contexts
+                            local_contexts = settings.get(localName, None)
+                            if local_contexts is not None:
+                                contextHandler.globalContexts = local_contexts
                         else:
                             setattr(self, localName, contextHandler.globalContexts)
 
@@ -519,13 +497,13 @@ class OWBaseWidget(QDialog):
     def saveSettings(self, file = None):
         settings = self.getSettings(globalContexts=True)
         if settings:
-            if file==None:
-                file = os.path.join(self.widgetSettingsDir, self.captionTitle + ".ini")
+            if file is None:
+                file = os.path.join(self.widget_settings_dir, self.captionTitle + ".ini")
             if isinstance(file, str):
-                file = open(file, "w")
+                file = open(file, "wb")
             pickle.dump(settings, file)
 
-    # Loads settings from string str which is compatible with cPickle
+    # Loads settings from string str which is compatible with pickle
     def loadSettingsStr(self, str):
         if str == None or str == "":
             return
@@ -538,14 +516,14 @@ class OWBaseWidget(QDialog):
             localName = contextHandler.localContextName
             if localName in settings:
                 structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
-                if structureVersion < contextStructureVersion or dataVersion < contextHandler.contextDataVersion:
+                if structureVersion < contexts.contextStructureVersion or dataVersion < contextHandler.contextDataVersion:
                     del settings[localName]
                     delattr(self, localName)
                     contextHandler.initLocalContext(self)
                 else:
                     setattr(self, localName, settings[localName])
 
-    # return settings in string format compatible with cPickle
+    # return settings in string format compatible with pickle
     def saveSettingsStr(self):
         settings = self.getSettings()
         return pickle.dumps(settings)

@@ -137,7 +137,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
 
         """
         item = self.item_for_widget(widget)
-        return item.data(self.WIDGET_ACTION_ROLE).toPyObject()
+        return item.data(self.WIDGET_ACTION_ROLE)
 
     def create_action_for_item(self, item):
         """Create a QAction instance for the widget description item.

@@ -1,13 +1,13 @@
+import math, os
+from functools import reduce
+
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import math
-from functools import reduce
-#import sys, traceback
+
+import Orange
 
 YesNo = NoYes = ("No", "Yes")
 groupBoxMargin = 7
-
-import os.path
 
 def id_generator(id):
     while True:
@@ -24,11 +24,6 @@ def getdeepattr(obj, attr, **argkw):
     try:
         return reduce(lambda o, n: getattr(o, n),  attr.split("."), obj)
     except:
-# I (JD) commented this out. This is ugly and dangerous.
-# If any widget wants this behavour, it should redefine its __getattr__ to return defaults.
-#        if argkw.has_key("default"):
-#            return argkw["default"]
-#        else:
             raise AttributeError("'%s' has no attribute '%s'" % (obj, attr))
 
 
@@ -262,10 +257,10 @@ class DoubleSpinBoxWFocusOut(QDoubleSpinBox):
         self.inSetValue = False
 
 def doubleSpin(widget, master, value, min, max, step=1,
-         box=None, label=None, labelWidth=None, orientation=None, tooltip=None,
-         callback=None, debuggingEnabled = 1, controlWidth = None, callbackOnReturn = False,
-         checked = "", checkCallback = None, posttext = None, addToLayout=True, alignment = Qt.AlignLeft,
-         keyboardTracking=True, decimals=None):
+               box=None, label=None, labelWidth=None, orientation=None, tooltip=None,
+               callback=None, debuggingEnabled = 1, controlWidth = None, callbackOnReturn = False,
+               checked = "", checkCallback = None, posttext = None, addToLayout=True, alignment = Qt.AlignLeft,
+               keyboardTracking=True, decimals=None):
     if box or label and not checked:
         b = widgetBox(widget, box, orientation)
         hasHBox = orientation == 'horizontal' or not orientation
@@ -495,7 +490,7 @@ def button(widget, master, label, callback = None, disabled=0, tooltip=None,
     if value:
         btn.setChecked(getdeepattr(master, value))
         cfront, cback, cfunc = connectControl(btn, master, value, None, "toggled(bool)", CallFrontButton(btn),
-                                  cfunc = callback and FunctionCallback(master, callback, widget=btn))
+                                              cfunc = callback and FunctionCallback(master, callback, widget=btn))
     elif callback:
         QObject.connect(btn, SIGNAL("clicked()"), callback)
 
@@ -563,9 +558,9 @@ def getAttributeIcons():
     global attributeIconDict
     if not attributeIconDict:
         attributeIconDict = {orange.VarTypes.Continuous: createAttributePixmap("C", QColor(202,0,32)),
-                     orange.VarTypes.Discrete: createAttributePixmap("D", QColor(26,150,65)),
-                     orange.VarTypes.String: createAttributePixmap("S", Qt.black),
-                     -1: createAttributePixmap("?", QColor(128, 128, 128))}
+                             orange.VarTypes.Discrete: createAttributePixmap("D", QColor(26,150,65)),
+                             orange.VarTypes.String: createAttributePixmap("S", Qt.black),
+                             -1: createAttributePixmap("?", QColor(128, 128, 128))}
     return attributeIconDict
 
 
@@ -1293,7 +1288,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
     stopCheckbox.disables.append((-1, sendButton))
     sendButton.setDisabled(stopCheckbox.isChecked())
     QObject.connect(stopCheckbox, SIGNAL("toggled(bool)"),
-                   lambda x, master=master, changedFlag=changedFlag, callback=callback: x and getdeepattr(master, changedFlag, default=True) and callback())
+                    lambda x, master=master, changedFlag=changedFlag, callback=callback: x and getdeepattr(master, changedFlag, default=True) and callback())
 
 
 class ControlledList(list):
@@ -1739,8 +1734,6 @@ class tableItem(QTableWidgetItem):
         table.setItem(x, y, self)
 
 
-import orange
-
 TableValueRole = next(OrangeUserRole) # Role to retrieve orange.Value
 TableClassValueRole = next(OrangeUserRole) # Role to retrieve the class value for the row's example
 TableDistribution = next(OrangeUserRole) # Role to retrieve the distribution of the column's attribute
@@ -1796,9 +1789,9 @@ class TableBarItem(QItemDelegate):
                     ratio = (max - value) / span
 
         color = self.color
-        if self.color_schema is not None and table is not None \
-            and table.domain.classVar \
-            and isinstance(table.domain.classVar, orange.EnumVariable):
+        if self.color_schema is not None and table is not None\
+           and table.domain.classVar\
+        and isinstance(table.domain.classVar, Orange.data.DiscreteVariable):
             class_ = index.data(TableClassValueRole).toPyObject()
             if not class_.isSpecial():
                 color = self.color_schema[int(class_)]
@@ -1910,8 +1903,8 @@ class LinkStyledItemDelegate(QStyledItemDelegate):
             link = index.data(LinkRole)
             pressedIndex, pressPos = self.mousePressState
             if pressedIndex == index and (pressPos - event.pos()).manhattanLength() < 5 and link.isValid():
-                 import webbrowser
-                 webbrowser.open(link.toString())
+                import webbrowser
+                webbrowser.open(link.toString())
             self.mousePressState = QModelIndex(), event.pos()
 
         elif event.type()==QEvent.MouseMove:
@@ -2094,7 +2087,7 @@ class ProgressBar:
     def finish(self):
         self.widget.progressBarFinished()
 
-from Orange.utils import progress_bar_milestones as progressBarMilestones
+
 
 ##############################################################################
 

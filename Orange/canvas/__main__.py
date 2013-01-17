@@ -16,19 +16,19 @@ import pkg_resources
 from PyQt4.QtGui import QFont, QColor
 from PyQt4.QtCore import Qt, QRect, QSettings, QDir
 
-from Orange import OrangeCanvas
-from Orange.OrangeCanvas.application.application import CanvasApplication
-from Orange.OrangeCanvas.application.canvasmain import CanvasMainWindow
-from Orange.OrangeCanvas.application.outputview import TextStream, ExceptHook
+from Orange import canvas
+from Orange.canvas.application.application import CanvasApplication
+from Orange.canvas.application.canvasmain import CanvasMainWindow
+from Orange.canvas.application.outputview import TextStream, ExceptHook
 
-from Orange.OrangeCanvas.gui.splashscreen import SplashScreen, QPixmap
-from Orange.OrangeCanvas.config import cache_dir
-from Orange.OrangeCanvas import config
-from Orange.OrangeCanvas.utils.redirect import redirect_stdout, redirect_stderr
+from Orange.canvas.gui.splashscreen import SplashScreen, QPixmap
+from Orange.canvas.config import cache_dir
+from Orange.canvas import config
+from Orange.canvas.utils.redirect import redirect_stdout, redirect_stderr
 
-from Orange.OrangeCanvas.registry import qt
-from Orange.OrangeCanvas.registry import WidgetRegistry, set_global_registry
-from Orange.OrangeCanvas.registry import cache
+from Orange.canvas.registry import qt
+from Orange.canvas.registry import WidgetRegistry, set_global_registry
+from Orange.canvas.registry import cache
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ def main(argv=None):
                 # no extension
                 stylesheet = os.path.extsep.join([stylesheet, "qss"])
 
-            pkg_name = OrangeCanvas.__name__
+            pkg_name = canvas.__name__
             resource = "styles/" + stylesheet
 
             if pkg_resources.resource_exists(pkg_name, resource):
@@ -151,7 +151,7 @@ def main(argv=None):
         app.setStyleSheet(stylesheet_string)
 
     # Add the default canvas_icons search path
-    dirpath = os.path.abspath(os.path.dirname(OrangeCanvas.__file__))
+    dirpath = os.path.abspath(os.path.dirname(canvas.__file__))
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
     canvas_window = CanvasMainWindow()
