@@ -392,7 +392,7 @@ class WidgetDescription(object):
         help_ref = getattr(module, "HELP_REF", None)
         url = getattr(module, "URL", None)
 
-        icon = getattr(module, "ICON", None)
+        icon = getattr(module, "ICON", "icons/Unknown.png")
         priority = getattr(module, "PRIORITY", sys.maxsize)
         keywords = getattr(module, "KEYWORDS", None)
         background = getattr(module, "BACKGROUND", None)
