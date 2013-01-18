@@ -39,6 +39,7 @@ cpdef sparse_prescan_fast(fname):
 
         if c == "\n":
             state = BEGIN_LINE
+            output_count[0] += 1
             continue
         if c == "\r":
             state = CARRIAGE_RETURNED
@@ -46,6 +47,7 @@ cpdef sparse_prescan_fast(fname):
 
         if state == CARRIAGE_RETURNED:
             state = BEGIN_LINE
+            output_count[0] += 1
             # read one more if needed, else not
             if c == "\n":
                 continue
@@ -62,17 +64,15 @@ cpdef sparse_prescan_fast(fname):
         if state == READ:
             if c == ",":
                 output_count[0] += 1
-            if c == '"':
+            elif c == '"':
                 state = QUOTED
-            if c == "\n" or c == "\r":
-                output_count[0] += 1
-            if c == "|":
+            elif c == "|":
                 output_count[0] += 1
                 output_count = &n_classes
-            if c == ";":
+            elif c == ";":
                 output_count[0] += 1
                 output_count = &n_metas
-            if c == "#":
+            elif c == "#":
                 output_count[0] += 1
                 state = COMMENT
 
@@ -84,6 +84,9 @@ cdef inline void resize_if_needed(np.ndarray a, size):
     dim = np.PyArray_DIMS(a)
     if dim[0] != size:
         a.resize(size, refcheck=False)
+
+cdef enum ColKinds:
+    ATTRIBUTE, CLASS, META
 
 @cython.wraparound(False)
 def sparse_read_float(fname):
@@ -103,31 +106,30 @@ def sparse_read_float(fname):
         int ii
         int attr_index
         float value, decs
+        char col_kind
 
+        # n_lines + 2 -- +2 instead of +1 is needed for the empty last line
+        # it is removed in the end
         np.ndarray[np.float_t, ndim=1] X_data = np.empty(n_attrs, float)
         np.ndarray[int, ndim=1] X_indices = np.empty(n_attrs, np.intc)
-        np.ndarray[int, ndim=1] X_indptr = np.empty(n_lines + 1, np.intc)
+        np.ndarray[int, ndim=1] X_indptr = np.empty(n_lines + 2, np.intc)
 
         np.ndarray[np.float_t, ndim=1] Y_data = np.empty(n_classes, float)
         np.ndarray[int, ndim=1] Y_indices = np.empty(n_classes, np.intc)
-        np.ndarray[int, ndim=1] Y_indptr = np.empty(n_lines + 1, np.intc)
+        np.ndarray[int, ndim=1] Y_indptr = np.empty(n_lines + 2, np.intc)
 
         np.ndarray[np.float_t, ndim=1] metas_data = np.empty(n_metas, float)
         np.ndarray[int, ndim=1] metas_indices = np.empty(n_metas, np.intc)
-        np.ndarray[int, ndim=1] metas_indptr = np.empty(n_lines + 1, np.intc)
+        np.ndarray[int, ndim=1] metas_indptr = np.empty(n_lines + 2, np.intc)
 
-        np.ndarray[np.float_t, ndim=1] t_data
-        np.ndarray[int, ndim=1] t_indices
-        np.ndarray[int, ndim=1] t_indptr
-
+        dict attr_indices = {}
+        dict class_indices = {}
+        dict meta_indices = {}
 
     cdef FILE *f = fopen(fname, "rb")
     if f == NULL:
         raise IOError("File '{}' cannot be opened".format(fname))
 
-    attr_indices = {}
-    class_indices = {}
-    meta_indices = {}
 
     X_indptr[0] = Y_indptr[0] = metas_indptr[0] = 0
     line = 0
@@ -138,15 +140,13 @@ def sparse_read_float(fname):
         state = BEGIN_LINE
         while not (f_eof and state == BEGIN_LINE):
             if state == BEGIN_LINE:
-                t_data = X_data
-                t_indices = X_indices
-                t_indptr = X_indptr
-                t_names = attr_indices
+                col_kind = ATTRIBUTE
                 if in_line or line == 0:
                     line += 1
                     X_indptr[line] = X_indptr[line - 1]
                     Y_indptr[line] = Y_indptr[line - 1]
                     metas_indptr[line] = metas_indptr[line - 1]
+                    t_names = attr_indices
                 cur_line += 1
                 col = in_line = 0
                 state = READ_START_ATOM
@@ -192,6 +192,7 @@ def sparse_read_float(fname):
                 # fall through
                 state = READ
 
+            #TODO: handle utf-8!
             if state == READ:
                 if c == "\\":
                     state = ESCAPE
@@ -269,7 +270,7 @@ def sparse_read_float(fname):
                     state = READ_VALUE
 
             if state == READ_VALUE:
-                if "0" < c < "9":
+                if "0" <= c <= "9":
                     value = value * 10 + (c & 0xf)
                 elif c == ".":
                     decs = 0.1
@@ -284,7 +285,7 @@ def sparse_read_float(fname):
                 continue
 
             if state == READ_DECS:
-                if "0" < c < "9":
+                if "0" <= c <= "9":
                     value = value * decs + (c & 0xf)
                     decs /= 10
                 else:
@@ -297,31 +298,38 @@ def sparse_read_float(fname):
                 continue
 
             if state == SET_VALUE:
-                ii = t_indptr[line]
-                t_data[ii] = value
-                t_indices[ii] = attr_index
-                t_indptr[line] += 1
+                if col_kind == ATTRIBUTE:
+                    ii = X_indptr[line]
+                    X_data[ii] = value
+                    X_indices[ii] = attr_index
+                    X_indptr[line] += 1
+                elif col_kind == CLASS:
+                    ii = Y_indptr[line]
+                    Y_data[ii] = value
+                    Y_indices[ii] = attr_index
+                    Y_indptr[line] += 1
+                else:
+                    ii = metas_indptr[line]
+                    metas_data[ii] = value
+                    metas_indices[ii] = attr_index
+                    metas_indptr[line] += 1
                 in_line += 1
                 state = TO_NEXT
 
             if state == TO_NEXT:
                 if c == "|":
-                    if t_data is not X_data:
+                    if col_kind != ATTRIBUTE:
                         raise ValueError(
                             "{}:{}:{}: classes should follow attributes"
                             .format(fname, cur_line, col))
-                    t_data = Y_data
-                    t_indices = Y_indices
-                    t_indptr = Y_indptr
+                    col_kind = CLASS
                     t_names = class_indices
                     state = READ_START_ATOM
                 elif c == ";":
-                    if t_data is metas_data:
+                    if col_kind == META:
                         raise ValueError("{}:{}:{} duplicated semi-colons"
                             .format(fname, cur_line, col))
-                    t_data = metas_data
-                    t_indices = metas_indices
-                    t_indptr = metas_indptr
+                    col_kind = META
                     t_names = meta_indices
                     state = READ_START_ATOM
                 elif c == ",":

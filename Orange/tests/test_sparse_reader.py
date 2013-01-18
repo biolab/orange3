@@ -36,8 +36,7 @@ class TestTabReader(unittest.TestCase):
             n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(fname)
             # allow for up to one extra occurrence per line
             self.assertGreaterEqual(n_attrs, 13)
-            self.assertLessEqual(n_attrs, 13 + n_lines)
-            self.assertLessEqual(n_attrs, 13 + n_lines)
+            self.assertLessEqual(n_attrs, 20)
             self.assertEqual(n_classes, 0)
             self.assertEqual(n_metas, 0)
             self.assertGreaterEqual(n_lines, 3)
