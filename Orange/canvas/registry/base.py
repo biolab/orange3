@@ -13,7 +13,7 @@ from . import description
 log = logging.getLogger(__name__)
 
 # Registry hex version
-VERSION_HEX = 0x000101
+VERSION_HEX = 0x000102
 
 
 class WidgetRegistry(object):

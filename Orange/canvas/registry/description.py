@@ -199,6 +199,9 @@ class WidgetDescription(object):
         A list of output channels provided by the widget.
     help : str, optional
         URL or an Resource template of a detailed widget help page.
+    help_ref: str, optional
+        A text reference id that can be used to identify the help
+        page, for instance an intersphinx reference.
     author : str, optional
         Author name.
     author_email : str, optional
@@ -225,7 +228,7 @@ class WidgetDescription(object):
                  inputs=[], outputs=[],
                  author=None, author_email=None,
                  maintainer=None, maintainer_email=None,
-                 help=None, url=None, keywords=None,
+                 help=None, help_ref=None, url=None, keywords=None,
                  priority=sys.maxsize,
                  icon=None, background=None,
                  replaces=None,
@@ -247,6 +250,7 @@ class WidgetDescription(object):
         self.inputs = inputs
         self.outputs = outputs
         self.help = help
+        self.help_ref = help_ref
         self.author = author
         self.author_email = author_email
         self.maintainer = maintainer
@@ -385,6 +389,7 @@ class WidgetDescription(object):
         maintainer = getattr(module, "MAINTAINER", None)
         maintainer_email = getattr(module, "MAINTAINER_EMAIL", None)
         help = getattr(module, "HELP", None)
+        help_ref = getattr(module, "HELP_REF", None)
         url = getattr(module, "URL", None)
 
         icon = getattr(module, "ICON", None)
@@ -419,6 +424,7 @@ class WidgetDescription(object):
             maintainer=maintainer,
             maintainer_email=maintainer_email,
             help=help,
+            help_ref=help_ref,
             url=url,
             keywords=keywords,
             priority=priority,

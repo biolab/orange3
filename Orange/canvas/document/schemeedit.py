@@ -7,12 +7,13 @@ import sys
 import logging
 
 from operator import attrgetter
+from urllib.parse import urlencode
 
 from PyQt4.QtGui import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
     QKeySequence, QUndoStack, QGraphicsItem, QGraphicsObject,
     QGraphicsTextItem, QCursor, QFont, QPainter, QPixmap, QColor,
-    QIcon, QDesktopServices
+    QIcon, QDesktopServices, QWhatsThisClickedEvent
 )
 
 from PyQt4.QtCore import (
@@ -1212,21 +1213,25 @@ class SchemeEditWidget(QWidget):
             self.editNodeTitle(selected[0])
 
     def __onHelpAction(self):
+        """Help was requested for the selected widget.
+        """
         nodes = self.selectedNodes()
         help_url = None
         if len(nodes) == 1:
             node = nodes[0]
             desc = node.description
-            if desc.help:
-                help_url = desc.help
 
-        if help_url is not None:
-            QDesktopServices.openUrl(QUrl(help_url))
-        else:
-            message_information(
-                self.tr("Sorry there is documentation available for "
-                        "this widget."),
-                parent=self)
+            help_url = "help://search?" + urlencode({"id": desc.id})
+
+            # Notify the parent chain and let them respond
+            ev = QWhatsThisClickedEvent(help_url)
+            handled = QCoreApplication.sendEvent(self, ev)
+
+            if not handled:
+                message_information(
+                    self.tr("Sorry there is no documentation available for "
+                            "this widget."),
+                    parent=self)
 
     def __toggleLinkEnabled(self, enabled):
         """Link enabled state was toggled in the context menu.

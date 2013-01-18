@@ -1,7 +1,7 @@
 from collections import Callable
 
-from PyQt4.QtGui import QTextBrowser, QStatusTipEvent
-from PyQt4.QtCore import QObject, QCoreApplication, QEvent, QTimer
+from PyQt4.QtGui import QTextBrowser, QStatusTipEvent, QWhatsThisClickedEvent
+from PyQt4.QtCore import QObject, QCoreApplication, QEvent, QTimer, QUrl
 from PyQt4.QtCore import pyqtSignal as Signal
 
 
@@ -19,6 +19,7 @@ class QuickHelp(QTextBrowser):
 
         self.__timer = QTimer(self, timeout=self.__on_timeout,
                               singleShot=True)
+        self.anchorClicked.connect(self.__on_anchorClicked)
 
     def showHelp(self, text, timeout=0):
         """Show help for `timeout` milliseconds. if timeout is 0 then
@@ -67,6 +68,10 @@ class QuickHelp(QTextBrowser):
             self.__update()
             self.textChanged.emit()
 
+    def __on_anchorClicked(self, anchor):
+        ev = QuickHelpDetailRequestEvent(anchor.toString(), anchor)
+        QCoreApplication.postEvent(self, ev)
+
 
 class QuickHelpTipEvent(QStatusTipEvent):
     Temporary, Normal, Permanent = range(1, 4)
@@ -85,6 +90,15 @@ class QuickHelpTipEvent(QStatusTipEvent):
 
     def timeout(self):
         return self.__timeout
+
+
+class QuickHelpDetailRequestEvent(QWhatsThisClickedEvent):
+    def __init__(self, href, url):
+        QWhatsThisClickedEvent.__init__(self, href)
+        self.__url = QUrl(url)
+
+    def url(self):
+        return QUrl(self.__url)
 
 
 class StatusTipPromoter(QObject):

@@ -13,13 +13,14 @@ import pkg_resources
 from PyQt4.QtGui import (
     QMainWindow, QWidget, QAction, QActionGroup, QMenu, QMenuBar, QDialog,
     QFileDialog, QMessageBox, QVBoxLayout, QSizePolicy, QColor, QKeySequence,
-    QIcon, QToolBar, QToolButton, QDockWidget, QDesktopServices,
-    QApplication
+    QIcon, QToolBar, QToolButton, QDockWidget, QDesktopServices, QApplication
 )
 
 from PyQt4.QtCore import (
     Qt, QEvent, QSize, QUrl, QSettings, QTimer, QFile
 )
+
+from PyQt4.QtWebKit import QWebView
 
 from PyQt4.QtCore import pyqtProperty as Property
 
@@ -27,7 +28,9 @@ from PyQt4.QtCore import pyqtProperty as Property
 from ..gui.dropshadow import DropShadowFrame
 from ..gui.dock import CollapsibleDockWidget
 from ..gui.quickhelp import QuickHelpTipEvent
-from ..gui.utils import message_critical, message_question, message_information
+from ..gui.utils import message_critical, message_question
+
+from ..help import HelpManager
 
 from .canvastooldock import CanvasToolDock, QuickCategoryToolbar
 from .aboutdialog import AboutDialog
@@ -109,6 +112,8 @@ class CanvasMainWindow(QMainWindow):
         self.last_scheme_dir = None
 
         self.recent_schemes = config.recent_schemes()
+
+        self.help = HelpManager(self)
 
         self.setup_actions()
         self.setup_ui()
@@ -198,7 +203,7 @@ class CanvasMainWindow(QMainWindow):
 
         self.dock_help = canvas_tool_dock.help
         self.dock_help.setMaximumHeight(150)
-        self.dock_help.document().setDefaultStyleSheet("h3 {color: orange;}")
+        self.dock_help.document().setDefaultStyleSheet("h3, a {color: orange;}")
 
         self.dock_help_action = canvas_tool_dock.toogleQuickHelpAction()
         self.dock_help_action.setText(self.tr("Show Help"))
@@ -267,6 +272,7 @@ class CanvasMainWindow(QMainWindow):
 
         self.output_dock = QDockWidget(self.tr("Output"),
                                        objectName="output-dock")
+
         self.output_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
 
         self.addDockWidget(Qt.BottomDockWidgetArea, self.output_dock)
@@ -276,6 +282,17 @@ class CanvasMainWindow(QMainWindow):
 
         output_view = OutputView()
         self.output_dock.setWidget(output_view)
+
+        self.help_dock = QDockWidget(self.tr("Help"),
+                                     objectName="help-dock")
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.help_dock)
+        self.help_dock.setFloating(True)
+        self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
+
+        self.help_dock.hide()
+
+        self.help_view = QWebView()
+        self.help_dock.setWidget(self.help_view)
 
         self.setMinimumSize(600, 500)
 
@@ -622,6 +639,8 @@ class CanvasMainWindow(QMainWindow):
         self.quick_category.setModel(widget_registry.model())
 
         self.scheme_widget.setRegistry(widget_registry)
+
+        self.help.set_registry(widget_registry)
 
         # Restore possibly saved widget toolbox tab states
         settings = QSettings()
@@ -1209,26 +1228,6 @@ class CanvasMainWindow(QMainWindow):
         if len(nodes) == 1:
             doc.editNodeTitle(nodes[0])
 
-    def widget_help(self):
-        """Open widget help page.
-        """
-        doc = self.current_document()
-        nodes = doc.selectedNodes()
-        help_url = None
-        if len(nodes) == 1:
-            node = nodes[0]
-            desc = node.description
-            if desc.help:
-                help_url = desc.help
-
-        if help_url is not None:
-            QDesktopServices.openUrl(QUrl(help_url))
-        else:
-            message_information(
-                self.tr("Sorry there is documentation available for "
-                        "this widget."),
-                parent=self)
-
     def open_canvas_settings(self):
         """Open canvas settings/preferences dialog
         """
@@ -1417,6 +1416,23 @@ class CanvasMainWindow(QMainWindow):
 
             return True
 
+        elif event.type() == QEvent.WhatsThisClicked:
+            ref = event.href()
+            url = QUrl(ref)
+
+            if url.scheme() == "help" and url.authority() == "search":
+                try:
+                    url = self.help.search(url)
+                except KeyError:
+                    log.info("No help topic found for %r", url)
+                    return False
+
+            if url:
+                log.info("Setting help to url: %r", url)
+                self.help_view.setUrl(QUrl(url))
+                self.help_dock.show()
+                return True
+
         return QMainWindow.event(self, event)
 
     # Mac OS X
@@ -1506,7 +1522,9 @@ def identity(item):
 
 def index(sequence, *what, **kwargs):
     """index(sequence, what, [key=None, [predicate=None]])
+
     Return index of `what` in `sequence`.
+
     """
     what = what[0]
     key = kwargs.get("key", identity)
