@@ -49,7 +49,7 @@ dirname = os.path.abspath(os.path.dirname(__file__))
 
 DEFAULT_SEARCH_PATHS = \
     [("", dirname),
-     ("", os.path.join(dirname, "../OrangeWidgets"))]
+     ("", os.path.join(dirname, "../widgets"))]
 
 del dirname
 
