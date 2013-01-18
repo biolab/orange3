@@ -8,5 +8,5 @@ import pkg_resources
 def widget_discovery(discovery):
     #from . import data
     dist = pkg_resources.get_distribution("Orange")
-    for pkg in []:
+    for pkg in ["Orange.widgets.data"]:
         discovery.process_category_package(pkg, distribution=dist)
