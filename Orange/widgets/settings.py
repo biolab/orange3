@@ -17,7 +17,29 @@ class Context:
         return s
 
 
-class ContextHandler:
+class Setting:
+    CONTEXT = 1
+    LIST = 2
+    OPTIONAL = 4
+    NOT_CALLABLE = 8
+
+    def __init__(self, default, flags=0):
+        self.default = default
+        self.flags = flags
+
+
+class SettingsHandler:
+    def __init__(self):
+        self.settings = {}
+
+    def initialize(self, widget):
+        for name, setting in self.settings.items():
+            if callable(setting.default) and not (
+                    setting.flags & Setting.NOT_CALLABLE):
+                setattr(widget, name, setting.default())
+
+
+class ContextHandler(SettingsHandler):
     maxSavedContexts = 50
 
     def __init__(self, contextName = "", cloneIfImperfect = True, findImperfect = True, syncWithGlobal = True, contextDataVersion = 0, **args):

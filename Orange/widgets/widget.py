@@ -11,7 +11,9 @@ from PyQt4.QtGui import *
 from Orange.widgets import basewidget
 from Orange.widgets import gui as OWGUI
 
+
 class OWWidget(basewidget.OWBaseWidget):
+
     def __init__(self, parent=None, signalManager=None, title="Orange Widget", wantGraph=False, wantStatusBar=False, savePosition=True, wantMainArea=1, noReport=False, showSaveGraph=1, resizingEnabled=1, wantStateInfoWidget=None, **args):
         """
         Initialization
@@ -152,6 +154,11 @@ class OWWidget(basewidget.OWBaseWidget):
     def setStatusBarText(self, text, timeout=5000):
         if hasattr(self, "widgetStatusBar"):
             self.widgetStatusBar.showMessage(" " + text, timeout)
+
+    # TODO add!
+    def prepareDataReport(self, data):
+        pass
+
 
 if __name__ == "__main__":
     a = QApplication(sys.argv)

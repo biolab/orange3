@@ -12,7 +12,7 @@ from PyQt4.QtGui import *
 from Orange.canvas.orngSignalManager import *
 from Orange.canvas.utils import environ
 
-from Orange.widgets import contexts, gui
+from Orange.widgets import settings, gui
 
 from Orange import data as orange_data
 
@@ -102,7 +102,19 @@ class ExampleList(list):
 
 widgetId = 0
 
-class OWBaseWidget(QDialog):
+class BaseWidgetClass(type(QDialog)):
+    def __new__(mcs, name, bases, dict):
+        cls = type.__new__(mcs, name, bases, dict)
+        if not hasattr(cls, "settings"):
+            cls.settings = settings.SettingsHandler()
+        for name, value in cls.__dict__.items():
+            if isinstance(value, settings.Setting):
+                cls.settings.settings[name] = value
+                setattr(cls, name, value.default)
+        return cls
+
+
+class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     def __init__(self, parent=None, signalManager=None, title="Orange BaseWidget", modal=FALSE, savePosition = False, resizingEnabled = 1, **args):
         super().__init__()
 
@@ -160,9 +172,12 @@ class OWBaseWidget(QDialog):
         self.widgetStateHandler = None
         self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
 
+        self.settings.initialize(self)
+
         if hasattr(self, "contextHandlers"):
             for contextHandler in self.contextHandlers.values():
                 contextHandler.initLocalContext(self)
+        self.loadSettings()
 
         global widgetId
         widgetId += 1
@@ -433,7 +448,7 @@ class OWBaseWidget(QDialog):
                     if local_contexts:
                         settings[contextHandler.localContextName] = local_contexts
                     ###
-                settings[contextHandler.localContextName+"Version"] = (contexts.contextStructureVersion, contextHandler.contextDataVersion)
+                settings[contextHandler.localContextName+"Version"] = (settings.contextStructureVersion, contextHandler.contextDataVersion)
 
         return settings
 
@@ -479,7 +494,7 @@ class OWBaseWidget(QDialog):
                     localName = contextHandler.localContextName
 
                     structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
-                    if (structureVersion < contexts.contextStructureVersion or dataVersion < contextHandler.contextDataVersion)\
+                    if (structureVersion < settings.contextStructureVersion or dataVersion < contextHandler.contextDataVersion)\
                             and localName in settings:
                         del settings[localName]
                         delattr(self, localName)
@@ -516,7 +531,7 @@ class OWBaseWidget(QDialog):
             localName = contextHandler.localContextName
             if localName in settings:
                 structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
-                if structureVersion < contexts.contextStructureVersion or dataVersion < contextHandler.contextDataVersion:
+                if structureVersion < settings.contextStructureVersion or dataVersion < contextHandler.contextDataVersion:
                     del settings[localName]
                     delattr(self, localName)
                     contextHandler.initLocalContext(self)
@@ -1014,7 +1029,6 @@ class OWBaseWidget(QDialog):
             self.asyncCalls.append(async)
 
         self.emit(SIGNAL("asyncCallsStateChange()"))
-
 
 
 def blocking(method):
