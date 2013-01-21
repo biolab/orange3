@@ -113,13 +113,10 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
             dist = self.dist[col if col < self.nvariables else -1 - col]
             return (val - dist.min) / (dist.max - dist.min or 1)
         elif role == gui.TableValueRole:
-            # The actual value
             return val
         elif role == gui.TableClassValueRole:
-            # The class value for the row's example
             return example.get_class()
         elif role == gui.TableVariable:
-            # The variable descriptor for column
             return val.variable
 
         return self._other_data.get((index.row(), index.column(), role), None)
@@ -545,7 +542,7 @@ class OWDataTable(widget.OWWidget):
                      QtCore.Qt.DescendingOrder or QtCore.Qt.AscendingOrder)
         else:
             order = QtCore.Qt.AscendingOrder
-        table.sort_by_column(index, order)
+        table.sortByColumn(index, order)
         table.oldSortingIndex = index
         table.oldSortingOrder = order
 
@@ -576,15 +573,12 @@ class OWDataTable(widget.OWWidget):
                 table.resizeColumnToContents(c)
 
     def draw_attribute_labels(self, table):
-#        table.setHorizontalHeaderLabels(table.variableNames)
         table.model().show_attr_labels = bool(self.show_attribute_labels)
         if self.show_attribute_labels:
             labelnames = set()
             for a in table.model().examples.domain:
                 labelnames.update(a.attributes.keys())
             labelnames = sorted(list(labelnames))
-#            if len(labelnames):
-#                table.setHorizontalHeaderLabels([table.variableNames[i] + "\n" + "\n".join(["%s" % a.attributes.get(lab, "") for lab in labelnames]) for (i, a) in enumerate(table.data.domain.attributes)])
             self.set_corner_text(table, "\n".join([""] + labelnames))
         else:
             self.set_corner_text(table, "")
