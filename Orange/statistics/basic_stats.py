@@ -11,7 +11,7 @@ class BasicStats:
                 not isinstance(variable, ContinuousVariable)):
             raise ValueError("variable '{}' is not continuous".
                              format(variable.name))
-        col = data.get_column_view(variable)
+        col, sparse = data.get_column_view(variable)
         self.min = bn.nanmin(col)
         self.max = bn.nanmax(col)
 
