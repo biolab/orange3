@@ -52,8 +52,6 @@ def addOrigin(examples, filename):
     for var in strings:
         if hasattr(var, "type") and not hasattr(var, "origin"):
             var.attributes["origin"] = dirname
-    s = []
-    s.append()
 
 class OWFile(widget.OWWidget):
     """Reads data from a file"""
