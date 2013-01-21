@@ -14,7 +14,7 @@ from PyQt4.QtGui import (
     QButtonGroup, QStackedWidget, QHBoxLayout, QVBoxLayout, QSizePolicy,
     QStandardItemModel, QSortFilterProxyModel, QStyleOptionToolButton,
     QStylePainter, QStyle, QApplication, QStyledItemDelegate,
-    QStyleOptionViewItemV4, QSizeGrip
+    QStyleOptionViewItemV4, QSizeGrip, QBrush
 )
 
 from PyQt4.QtCore import pyqtSignal as Signal
@@ -634,7 +634,7 @@ class QuickMenu(FramelessWindow):
 
             brush = index.data(QtWidgetRegistry.BACKGROUND_ROLE)
 
-            if brush.isValid():
+            if isinstance(brush, QBrush):
                 button = self.__pages.tabButton(i)
                 palette = button.palette()
                 button.setStyleSheet(
