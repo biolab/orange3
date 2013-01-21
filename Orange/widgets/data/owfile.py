@@ -7,13 +7,36 @@ from Orange.data.table import Table
 from Orange.data import io
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
-WIDGET_CLASS = "OWFile"
-NAME = "File"
-#ICON = "icons/Unknown.png"
-PRIORITY = 10
 
-INPUTS = []
-OUTPUTS = [("Data", Table)]
+NAME = "File"
+ID = "orange.widgets.data.file"
+
+DESCRIPTION = """
+Read a data table from a supported file format on the the file system and
+send it to the the output.
+"""
+
+LONG_DESCRIPTION = """
+This is the widget you will probably use at the start of every schema to read
+the input data file (data table with examples). The widget maintains a
+history of most recently used data files. For convenience, the history
+also includes a directory with the sample data sets that come with Orange.
+"""
+
+ICON = "icons/File.svg"
+AUTHOR = "Janez Demsar"
+MAINTAINER_EMAIL = "janez.demsar(@at@)fri.uni-lj.si"
+PRIORITY = 10
+CATEGORY = "Data"
+
+KEYWORDS = ["data", "file", "load", "read"]
+
+OUTPUTS = [{"name": "Data",
+            "type": Table,
+            "doc": "Attribute-valued data set read from the input file."}]
+
+WIDGET_CLASS = "OWFile"
+
 
 
 class FileNameContextHandler(settings.ContextHandler):
@@ -29,17 +52,11 @@ def addOrigin(examples, filename):
     for var in strings:
         if hasattr(var, "type") and not hasattr(var, "origin"):
             var.attributes["origin"] = dirname
-
+    s = []
+    s.append()
 
 class OWFile(widget.OWWidget):
     """Reads data from a file"""
-    __widget__ = "File"
-    __icon__ = "icons/File.png"
-    __priority__ = 10
-
-    __inputs__ = []
-    __outputs__ = [("Data", Table)]
-
     recent_files = Setting(lambda: ["(none)"])
     new_variables = Setting(False, Setting.CONTEXT)
 
