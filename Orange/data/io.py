@@ -1,7 +1,6 @@
-import re
+import os
 import csv
 import warnings
-import collections
 from ..data.variable import *
 from ..data import Domain
 from scipy import sparse
@@ -172,7 +171,9 @@ class TabDelimReader:
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:
-            return self._read_file(file, cls)
+            data = self._read_file(file, cls)
+            data.name = os.path.splitext(os.path.split(filename)[-1])[0]
+            return data
 
     def _read_file(self, file, cls=None):
         from ..data import Table
