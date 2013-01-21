@@ -60,7 +60,7 @@ class AnchorLayout(QGraphicsObject):
         items = scene.items()
         links = [item for item in items if isinstance(item, LinkItem)]
         point_pairs = [(link.sourceAnchor, link.sinkAnchor) for link in links]
-        point_pairs.extend(map(reversed, point_pairs))
+        point_pairs += [(a, b) for b, a in point_pairs]
         to_other = dict(point_pairs)
 
         anchors = set(self.__invalidatedAnchors)
