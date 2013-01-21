@@ -40,6 +40,10 @@ class Variable:
 
         If a variable is computed (via :obj:`getValueFrom` from another
         variable, this attribute contains its descriptor.
+
+    .. attribute:: attributes
+
+        A dictionary with user-defined attributes of the variable
     """
     VarTypes = Enum("None", "Discrete", "Continuous", "String")
     MakeStatus = Enum("OK", "MissingValues", "NoRecognizedValues",
@@ -56,6 +60,7 @@ class Variable:
         self.ordered = ordered
         self.unknown_str = set(Variable.DefaultUnknownStr)
         self.source_variable = None
+        self.attributes = {}
         self.get_value_from = None
         self._get_value_lock = threading.Lock()
         # TODO: do we need locking? Don't we expect the code to be reentrant?
