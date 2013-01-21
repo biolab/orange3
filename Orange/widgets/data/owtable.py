@@ -37,6 +37,8 @@ INPUTS = [("Data", Table, "data set", Multiple + Default)]
 OUTPUTS = [("Selected Data", Table, Default),
            ("Other Data", Table)]
 
+WIDGET_CLASS = "OWDataTable"
+
 ##############################################################################
 
 def safe_call(func):
