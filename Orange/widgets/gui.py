@@ -1397,8 +1397,6 @@ class ControlledCallback:
         if self.disabled:
             return
 
-        if isinstance(value, QString):
-            value = str(value)
         if self.f:
             if self.f in [int, float] and (not value or type(value) in [str, str] and value in "+-"):
                 value = self.f(0)
@@ -1775,50 +1773,38 @@ class TableBarItem(QItemDelegate):
             table = getattr(index.model(), "examples", None)
         else:
             table = self.table
-        ratio = None
-        ratio, ok = index.data(TableBarItem.BarRole).toDouble()
-        if ratio != ratio: # NaN
-            ratio = None
-        if not ok:
-            ratio = None
-            value, ok = index.data(Qt.DisplayRole).toDouble()
-            if ok and getattr(self.widget, "showBars", False) and table is not None:
+        ratio = index.data(TableBarItem.BarRole)
+        if isinstance(ratio, float):
+            if math.isnan(ratio):
+                ratio = None
+        elif table is not None and getattr(self.widget, "show_bars", False):
+            value = index.data(Qt.DisplayRole)
+            if isinstance(value, float):
                 col = index.column()
                 if col < len(table.normalizers):
                     max, span = table.normalizers[col]
                     ratio = (max - value) / span
 
         color = self.color
-        if self.color_schema is not None and table is not None\
-           and table.domain.classVar\
-        and isinstance(table.domain.classVar, Orange.data.DiscreteVariable):
-            class_ = index.data(TableClassValueRole).toPyObject()
-            if not class_.isSpecial():
+        if (self.color_schema is not None and table is not None and
+            isinstance(table.domain.class_var, Orange.data.DiscreteVariable)):
+            class_ = index.data(TableClassValueRole)
+            if not math.isnan(class_):
                 color = self.color_schema[int(class_)]
         else:
             color = self.color
 
         if ratio is not None:
-#            painter.save()
-#            pen = QPen(QBrush(color), 3, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin)
-#            painter.setPen(pen)
-#            painter.drawRect(option.rect.adjusted(0, 3, -option.rect.width() * ratio, -3))
-#            painter.restore()
-
-#            painter.fillRect(option.rect.adjusted(0, 3, -option.rect.width() * ratio, -3), color)
-
             painter.save()
             painter.setPen(QPen(QBrush(color), 5, Qt.SolidLine, Qt.RoundCap))
             rect = option.rect.adjusted(3, 0, -3, -5)
             x, y = rect.x(), rect.y() + rect.height()
             painter.drawLine(x, y, x + rect.width() * ratio, y)
             painter.restore()
-            # raise the lower edge 3 pixels up
             text_rect = option.rect.adjusted(0, 0, 0, -3)
         else:
             text_rect = option.rect
-        text = index.data(Qt.DisplayRole).toString()
-
+        text = index.data(Qt.DisplayRole)
         self.drawDisplay(painter, option, text_rect, text)
         painter.restore()
 
@@ -1832,15 +1818,16 @@ class BarItemDelegate(QStyledItemDelegate):
         qApp.style().drawPrimitive(QStyle.PE_PanelItemViewRow, option, painter)
         qApp.style().drawPrimitive(QStyle.PE_PanelItemViewItem, option, painter)
         rect = option.rect
-        val, ok = index.data(Qt.DisplayRole).toDouble()
-        if ok:
+        val = index.data(Qt.DisplayRole)
+        if isinstance(val, float):
             min, max = self.scale
             val = (val - min) / (max - min)
             painter.save()
             if option.state & QStyle.State_Selected:
                 painter.setOpacity(0.75)
             painter.setBrush(self.brush)
-            painter.drawRect(rect.adjusted(1, 1, - rect.width() * (1.0 - val) -2, -2))
+            painter.drawRect(
+                rect.adjusted(1, 1, - rect.width() * (1.0 - val) - 2, -2))
             painter.restore()
 
 class IndicatorItemDelegate(QStyledItemDelegate):
