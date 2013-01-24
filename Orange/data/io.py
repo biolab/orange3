@@ -1,4 +1,5 @@
 import os
+import sys
 from ..data import _io
 from ..data.variable import *
 from ..data import Domain
@@ -170,9 +171,7 @@ class TabDelimReader:
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:
-            data = self._read_file(file, cls)
-            data.name = os.path.splitext(os.path.split(filename)[-1])[0]
-            return data
+            return self._read_file(file, cls)
 
     def _read_file(self, file, cls=None):
         from ..data import Table
@@ -196,7 +195,7 @@ class BasketReader():
                         sorted((ind, name) for name, ind in inds.items())]
 
         X, Y, metas, attr_indices, class_indices, meta_indices = \
-            _io.sparse_read_float(filename)
+            _io.sparse_read_float(filename.encode(sys.getdefaultencoding()))
 
         attrs = constr_vars(attr_indices)
         classes = constr_vars(class_indices)

@@ -410,13 +410,15 @@ class Table(MutableSequence, Storage):
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
         if ext == ".tab":
-            return io.TabDelimReader().read_file(absolute_filename, cls)
+            data = io.TabDelimReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
-            return io.BasketReader().read_file(absolute_filename, cls)
+            data = io.BasketReader().read_file(absolute_filename, cls)
         else:
             raise IOError(
                 'Extension "{}" is not recognized'.format(filename))
 
+        data.name = os.path.splitext(os.path.split(filename)[-1])[0]
+        return data
 
     # Helper function for __setitem__ and insert:
     # Set the row of table data matrices
