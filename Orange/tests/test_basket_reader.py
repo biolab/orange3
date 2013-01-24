@@ -1,5 +1,7 @@
 # coding=utf-8
 import io
+import functools
+import os, tempfile
 import unittest
 
 import numpy as np
@@ -7,79 +9,81 @@ import numpy as np
 from Orange.data.io import BasketReader
 
 
-class TestBasketReader(unittest.TestCase):
-    def test_read_variable_is_value_syntax(self):
-        file = io.StringIO("""a=1,b=2,c=3""")
-        table = BasketReader()._read_file(file)
+def with_file(s):
+    def fle_decorator(f, s=s):
+        @functools.wraps(f)
+        def decorated(self, s=s):
+            fle = tempfile.NamedTemporaryFile(delete=False)
+            fle.write(s.encode("utf-8"))
+            fle.close()
+            fname = fle.name.encode("utf-8")
+            try:
+                return f(self, fname)
+            finally:
+                os.remove(fname)
+        return decorated
+    return fle_decorator
 
+
+
+class TestBasketReader(unittest.TestCase):
+    @with_file("""a=1,b=2,c=3""")
+    def test_read_variable_is_value_syntax(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 3)
         self.assertEqual(["a", "b", "c"],
                          list(map(lambda x: x.name, table.domain.variables)))
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 2, 3]]))
 
-    def test_read_variable_only_syntax(self):
-        file = io.StringIO("""a,b,c,d,e""")
-        table = BasketReader()._read_file(file)
+    @with_file("""a,b,c,d,e""")
+    def test_read_variable_only_syntax(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 5)
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 1, 1, 1]]))
 
-    def test_handles_spaces_between_variables(self):
-        file = io.StringIO("""a=1, b=2, c=3""")
-        table = BasketReader()._read_file(file)
-
+    @with_file("""a=1, b=2, c=3""")
+    def test_handles_spaces_between_variables(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 3)
         self.assertEqual(set(x for x in table[0]), {1, 2, 3})
 
     @unittest.skip("Issuing warnings in basket reader is too expensive")
-    def test_handles_duplicate_variables(self):
-        file = io.StringIO("""a=1, b=2, a=3""")
-        with self.assertWarns(UserWarning):
-            table = BasketReader()._read_file(file)
-
+    @with_file("""a=1, b=2, a=3""")
+    def test_handles_duplicate_variables(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 2)
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[3, 2]]))
 
     @unittest.skip("Issuing warnings in basket reader is too expensive")
-    def test_handles_duplicate_variables2(self):
-        file = io.StringIO("""a, b, b, a, a, c, c, d, e""")
-        with self.assertWarns(UserWarning):
-            table = BasketReader()._read_file(file)
-
+    @with_file("""a, b, b, a, a, c, c, d, e""")
+    def test_handles_duplicate_variables2(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 5)
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 1, 1, 1]]))
 
-    def test_variables_can_be_listed_in_any_order(self):
-        file = io.StringIO("""a=1, b=2\na=1, b=4""")
-        table = BasketReader()._read_file(file)
-
+    @with_file("""a=1, b=2\na=1, b=4""")
+    def test_variables_can_be_listed_in_any_order(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 2)
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 2], [1, 4]]))
 
-    def test_variables_can_be_listed_in_any_order(self):
-        file = io.StringIO("""a=1, b=2\na=1, b=4""")
-        table = BasketReader()._read_file(file)
 
-        self.assertEqual(len(table.domain.variables), 2)
-        np.testing.assert_almost_equal(table.X.todense(),
-                                       np.array([[1, 2], [1, 4]]))
-
-    def test_variables_can_be_listed_in_any_order(self):
-        file = io.StringIO("""a,b\nc,b,a""")
-        table = BasketReader()._read_file(file)
-
+    @with_file("""a,b\nc,b,a""")
+    def test_variables_can_be_listed_in_any_order(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 3)
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 0], [1, 1, 1]]))
 
-    def test_handles_unicode(self):
-        file = io.StringIO("""č,š,ž""")
-        table = BasketReader()._read_file(file)
-
+    @unittest.skip("Unicode is not properly implemented yet")
+    @with_file("""č,š,ž""")
+    def test_handles_unicode(self, fname):
+        table = BasketReader().read_file(fname)
         self.assertEqual(len(table.domain.variables), 3)
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 1]]))
