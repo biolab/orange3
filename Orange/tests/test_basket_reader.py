@@ -16,7 +16,7 @@ def with_file(s):
             fle = tempfile.NamedTemporaryFile(delete=False)
             fle.write(s.encode("utf-8"))
             fle.close()
-            fname = fle.name.encode("utf-8")
+            fname = fle.name
             try:
                 return f(self, fname)
             finally:
