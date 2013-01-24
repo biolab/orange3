@@ -228,7 +228,6 @@ class TableViewWithCopy(QtGui.QTableView):
 
 class OWDataTable(widget.OWWidget):
     show_distributions = Setting(True)
-    show_meta = Setting(True)
     dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
     auto_commit = Setting(False)
@@ -243,7 +242,6 @@ class OWDataTable(widget.OWWidget):
                         ("Other Data", Table)]
 
         self.data = {}          # key: id, value: ExampleTable
-        self.show_metas = {}     # key: id, value: (True/False, columnList)
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
         self.locale = QtCore.QLocale()
         self.color_settings = None
@@ -266,9 +264,6 @@ class OWDataTable(widget.OWWidget):
         # settings box
         box_settings = gui.widgetBox(self.controlArea, "Settings",
             addSpace=True)
-        self.c_show_meta = gui.checkBox(box_settings, self, "show_meta",
-            'Show meta attributes', callback = self.cbShowMetaClicked)
-        self.c_show_meta.setEnabled(False)
         self.c_show_attribute_labels = gui.checkBox(box_settings, self,
             "show_attribute_labels", 'Show attribute labels (if any)',
             callback=self.c_show_attribute_labels_clicked)
@@ -360,12 +355,10 @@ class OWDataTable(widget.OWWidget):
             if id in self.data:
                 # remove existing table
                 self.data.pop(id)
-                self.show_metas.pop(id)
                 self.id2table[id].hide()
                 self.tabs.removeTab(self.tabs.indexOf(self.id2table[id]))
                 self.table2id.pop(self.id2table.pop(id))
             self.data[id] = data
-            self.show_metas[id] = (True, [])
 
             table = TableViewWithCopy() #QTableView()
             table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -401,7 +394,6 @@ class OWDataTable(widget.OWWidget):
         elif id in self.data:
             table = self.id2table[id]
             self.data.pop(id)
-            self.show_metas.pop(id)
             table.hide()
             self.tabs.removeTab(self.tabs.indexOf(table))
             self.table2id.pop(self.id2table.pop(id))
@@ -410,15 +402,6 @@ class OWDataTable(widget.OWWidget):
         if len(self.data) == 0:
             self.send_button.setEnabled(False)
 
-        self.set_show_meta()
-
-    def set_show_meta(self):
-        for ti in range(self.tabs.count()):
-            if len(self.tabs.widget(ti).model().metas) > 0:
-                self.c_show_meta.setEnabled(True)
-                break
-        else:
-            self.c_show_meta.setEnabled(False)
 
     #TODO Implement
     def sendReport(self):
@@ -470,9 +453,6 @@ class OWDataTable(widget.OWWidget):
         # set the header (attribute names)
         self.draw_attribute_labels(table)
 
-        self.show_metas[id][1].extend(
-            [i for i, attr in enumerate(table.model().all_attrs)
-             if attr in table.model().metas])
         self.connect(table.horizontalHeader(),
                      QtCore.SIGNAL("sectionClicked(int)"), self.sort_by_column)
         self.connect(table.selectionModel(),
@@ -550,29 +530,10 @@ class OWDataTable(widget.OWWidget):
 
 
     def tabClicked(self, qTableInstance):
-        """Updates the info box and show_metas checkbox when a tab is clicked.
-        """
+        """Updates the info box when a tab is clicked."""
         id = self.table2id.get(qTableInstance,None)
         self.setInfo(self.data.get(id,None))
-        show_col = self.show_metas.get(id,None)
-        if show_col:
-            self.c_show_meta.setChecked(show_col[0])
-            self.c_show_meta.setEnabled(len(show_col[1])>0)
         self.update_selection()
-
-    def cbShowMetaClicked(self):
-        table = self.tabs.currentWidget()
-        id = self.table2id.get(table, None)
-        if id in self.show_metas:
-            show, col = self.show_metas[id]
-            self.show_metas[id] = (not show,col)
-        if show:
-            for c in col:
-                table.hideColumn(c)
-        else:
-            for c in col:
-                table.showColumn(c)
-                table.resizeColumnToContents(c)
 
     def draw_attribute_labels(self, table):
         table.model().show_attr_labels = bool(self.show_attribute_labels)
@@ -695,7 +656,9 @@ if __name__=="__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-    d5 = Table('../../tests/iris')
+#    d5 = Table('../../../jrs2012.basket')
+#    d5 = Table('../../tests/iris.tab')
+    d5 = Table('../../tests/zoo.tab')
     ow.show()
     ow.dataset(d5,"adult_sample")
     a.exec()
