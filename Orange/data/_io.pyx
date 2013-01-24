@@ -34,6 +34,7 @@ cpdef sparse_prescan_fast(fname):
     while True:
         ci = fgetc(f)
         if ci == EOF:
+            output_count[0] += 1
             break
         c = <char>ci
 
@@ -73,7 +74,6 @@ cpdef sparse_prescan_fast(fname):
                 output_count[0] += 1
                 output_count = &n_metas
             elif c == "#":
-                output_count[0] += 1
                 state = COMMENT
 
     return n_attributes, n_classes, n_metas, n_lines
@@ -372,6 +372,7 @@ def sparse_read_float(fname):
             resize_if_needed(t_indices, t_indptr[line])
             resize_if_needed(t_data, t_indptr[line])
             mat = sp.csr_matrix((t_data, t_indices, t_indptr), (line, len(ll)))
+            mat.sort_indices()
         else:
             mat = None
         res.append(mat)

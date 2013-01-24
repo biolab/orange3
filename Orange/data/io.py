@@ -1,6 +1,5 @@
 import os
-import csv
-import warnings
+from ..data import _io
 from ..data.variable import *
 from ..data import Domain
 from scipy import sparse
@@ -188,57 +187,20 @@ class TabDelimReader:
 
 
 class BasketReader():
-    def prescan_file(self, file):
-        """Return a list of attributes that appear in the file"""
-        n_elements = 0
-        classes = file.readline().strip()
-        header = classes.lower().startswith("classes:")
-        if header:
-            classes = set(x.strip() for x in classes[8:].split(","))
-            names = set(classes)
-        else:
-            names = set()
-            classes = set()
-            file.seek(0)
-        reader = csv.reader(file)
-        for line in reader:
-            names.update(mo.split("=")[0].strip() for mo in line)
-            n_elements += len(line)
-        return names - classes, classes, n_elements, reader.line_num, header
-
-    def construct_domain(self, names, classes):
-        attributes = [ContinuousVariable.make(name) for name in sorted(names)]
-        classes = [ContinuousVariable.make(name) for name in sorted(classes)]
-        return Domain(attributes, classes)
-
     def read_file(self, filename, cls=None):
-        with open(filename) as file:
-            return self._read_file(file, cls)
-
-    def _read_file(self, file, cls=None):
         if cls is None:
             from ..data import Table as cls
-        attrs, classes, n_elements, n_rows, header = self.prescan_file(file)
-        domain = self.construct_domain(attrs, classes)
-        data = np.ones(n_elements)
-        indices = np.empty(n_elements, dtype=int)
-        indptr = np.empty(n_rows + 1, dtype=int)
-        indptr[0] = curptr = 0
+        def constr_vars(inds):
+            if inds:
+                return [ContinuousVariable(x.decode("utf-8")) for _, x in
+                        sorted((ind, name) for name, ind in inds.items())]
 
-        file.seek(0)
-        if header:
-            file.readline()
-        reader = csv.reader(file)
-        attr_indices = domain.indices
-        for line in reader:
-            items = [l.split("=") if "=" in l else (l, 1) for l in line]
-            nextptr = curptr + len(items)
-            data[curptr:nextptr] = [x[1] for x in items]
-            indices[curptr:nextptr] = [attr_indices[name[0].strip()]
-                                       for name in items]
-            indptr[reader.line_num] = nextptr
-            curptr = nextptr
-        X = sparse.csr_matrix((data, indices, indptr),
-                              (n_rows, len(domain.variables)))
-        X.sort_indices()
-        return cls.from_numpy(domain, X)
+        X, Y, metas, attr_indices, class_indices, meta_indices = \
+            _io.sparse_read_float(filename)
+
+        attrs = constr_vars(attr_indices)
+        classes = constr_vars(class_indices)
+        meta_attrs = constr_vars(meta_indices)
+        domain = Domain(attrs, classes, meta_attrs)
+        return cls.from_numpy(domain,
+                              attrs and X, classes and Y, metas and meta_attrs)
