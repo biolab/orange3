@@ -58,13 +58,12 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def __init__(self, examples, dist, *args):
         QtCore.QAbstractItemModel.__init__(self, *args)
         self.examples = examples
+        domain = examples.domain
         self.dist = dist
-        self.attributes = list(self.examples.domain.attributes)
-        self.nvariables = len(self.examples.domain)
-        self.class_var = self.examples.domain.class_var
-        self.metas = list(self.examples.domain.metas)
-        self.all_attrs = self.attributes + (
-            [self.class_var] if self.class_var else []) + self.metas
+        self.nvariables = len(domain)
+        self.n_attr_cols = len(domain.attributes)
+        self.n_attr_class_cols = self.n_attr_cols + len(domain.class_vars)
+        self.all_attrs = (domain.attributes + domain.class_vars + domain.metas)
         self.cls_color = QtGui.QColor(160,160,160)
         self.meta_color = QtGui.QColor(220,220,200)
         self.sorted_map = range(len(self.examples))
@@ -105,9 +104,9 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
             return str(val)
         elif role == QtCore.Qt.BackgroundRole:
             #check if attr is actual class or a duplication in the meta attributes
-            if attr == self.class_var and col == len(domain.attributes):
+            if self.n_attr_cols <= col < self.n_attr_class_cols:
                 return self.cls_color
-            elif attr in self.metas:
+            elif col >= self.n_attr_class_cols:
                 return self.meta_color
         elif (role == TableBarItem.BarRole and
                 isinstance(attr, ContinuousVariable) and
