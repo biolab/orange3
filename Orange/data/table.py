@@ -178,6 +178,24 @@ class Table(MutableSequence, Storage):
         return Columns(self.domain)
 
 
+    @property
+    def X_is_sparse(self):
+        """Indicates whether the attributes are sparse."""
+        return sp.issparse(self._X)
+
+
+    @property
+    def Y_is_sparse(self):
+        """Indicates whether the class attributes are sparse."""
+        return sp.issparse(self._Y)
+
+
+    @property
+    def metas_is_sparse(self):
+        """Indicates whether the meta attributes are sparse."""
+        return sp.issparse(self._metas)
+
+
     def __new__(cls, *args, **kwargs):
         if not args and not kwargs:
             return super().__new__(cls)
