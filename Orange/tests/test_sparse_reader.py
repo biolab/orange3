@@ -110,8 +110,8 @@ class TestTabReader(unittest.TestCase):
 
 
             self.assertEqual(class_indices, {b"k": 0, b"t": 1, b"kl": 2})
-            np.testing.assert_equal(Y.data,    [5, 1, 4, 1])
-            np.testing.assert_equal(Y.indices, [0, 1, 2, 0])
+            np.testing.assert_equal(Y.data,    [5, 1, 1, 4])
+            np.testing.assert_equal(Y.indices, [0, 1, 0, 2])
             np.testing.assert_equal(Y.indptr,  [0,    2,   4, 4])
 
             self.assertEqual(meta_indices, {b"m": 0, b"def": 1})
