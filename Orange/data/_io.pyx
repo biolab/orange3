@@ -192,7 +192,6 @@ def sparse_read_float(fname):
                 # fall through
                 state = READ
 
-            #TODO: handle utf-8!
             if state == READ:
                 if c == "\\":
                     state = ESCAPE

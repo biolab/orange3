@@ -80,7 +80,6 @@ class TestBasketReader(unittest.TestCase):
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 0], [1, 1, 1]]))
 
-    @unittest.skip("Unicode is not properly implemented yet")
     @with_file("""č,š,ž""")
     def test_handles_unicode(self, fname):
         table = BasketReader().read_file(fname)
