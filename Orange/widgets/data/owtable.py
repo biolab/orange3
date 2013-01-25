@@ -49,24 +49,26 @@ def safe_call(func):
             return func(*args, **kwargs)
         except Exception as ex:
             print(func.__name__, "call error", ex, file=sys.stderr)
-            return QtCore.QVariant()
     return wrapper
 
 
 #noinspection PyMethodOverriding
 class ExampleTableModel(QtCore.QAbstractItemModel):
-    def __init__(self, examples, dist, *args):
+    def __init__(self, data, dist, *args):
         QtCore.QAbstractItemModel.__init__(self, *args)
-        self.examples = examples
-        domain = examples.domain
+        self.examples = data
+        domain = self.domain = data.domain
         self.dist = dist
         self.nvariables = len(domain)
-        self.n_attr_cols = len(domain.attributes)
-        self.n_attr_class_cols = self.n_attr_cols + len(domain.class_vars)
+        self.n_attr_cols = 1 if data.X_is_sparse else len(domain.attributes)
+        self.n_attr_class_cols = self.n_attr_cols + (
+                           1 if data.Y_is_sparse else len(domain.class_vars))
+        self.n_cols = self.n_attr_class_cols + (
+                           1 if data.metas_is_sparse else len(domain.metas))
         self.all_attrs = (domain.attributes + domain.class_vars + domain.metas)
         self.cls_color = QtGui.QColor(160,160,160)
         self.meta_color = QtGui.QColor(220,220,200)
-        self.sorted_map = range(len(self.examples))
+        self.sorted_map = range(len(data))
 
         self.attr_labels = sorted(reduce(set.union,
             [attr.attributes for attr in self.all_attrs], set()))
@@ -97,28 +99,50 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     @safe_call
     def data(self, index, role):
         row, col = self.sorted_map[index.row()], index.column()
-        example, attr = self.examples[row], self.all_attrs[col]
-        val = example[attr]
-        domain = self.examples.domain
-        if role == QtCore.Qt.DisplayRole:
-            return str(val)
-        elif role == QtCore.Qt.BackgroundRole:
-            #check if attr is actual class or a duplication in the meta attributes
-            if self.n_attr_cols <= col < self.n_attr_class_cols:
-                return self.cls_color
-            elif col >= self.n_attr_class_cols:
-                return self.meta_color
-        elif (role == TableBarItem.BarRole and
-                isinstance(attr, ContinuousVariable) and
-                not isnan(val)):
-            dist = self.dist[col if col < self.nvariables else -1 - col]
-            return (val - dist.min) / (dist.max - dist.min or 1)
-        elif role == gui.TableValueRole:
-            return val
-        elif role == gui.TableClassValueRole:
+        example = self.examples[row]
+
+        if role == gui.TableClassValueRole:
             return example.get_class()
-        elif role == gui.TableVariable:
-            return val.variable
+
+        # check whether we have a sparse columns,
+        # handle background color role while you are at it
+        sp_data = vars = None
+        if col < self.n_attr_cols:
+            if role == QtCore.Qt.BackgroundRole:
+                return
+            if example.sparse_x is not None:
+                sp_data, vars = example.sparse_x, self.domain.attributes
+        elif self.n_attr_cols <= col < self.n_attr_class_cols:
+            if role == QtCore.Qt.BackgroundRole:
+                return self.cls_color
+            if example.sparse_y is not None:
+                sp_data, vars = example.sparse_y, self.domain.class_vars
+        else:
+            if role == QtCore.Qt.BackgroundRole:
+                return self.meta_color
+            if example.sparse_metas is not None:
+                sp_data, vars = example.sparse_metas, self.domain.class_vars
+
+        if sp_data is not None:
+            if role == QtCore.Qt.DisplayRole:
+                return ", ".join(
+                    "{}={}".format(vars[i].name, vars[i].repr_val(v))
+                    for i, v in zip(sp_data.indices, sp_data.data))
+        else: #not sparse
+            attr = self.all_attrs[col]
+            val = example[attr]
+            domain = self.examples.domain
+            if role == QtCore.Qt.DisplayRole:
+                return str(val)
+            elif (role == TableBarItem.BarRole and
+                    isinstance(attr, ContinuousVariable) and
+                    not isnan(val)):
+                dist = self.dist[col if col < self.nvariables else -1 - col]
+                return (val - dist.min) / (dist.max - dist.min or 1)
+            elif role == gui.TableValueRole:
+                return val
+            elif role == gui.TableVariable:
+                return val.variable
 
         return self._other_data.get((index.row(), index.column(), role), None)
 
@@ -141,8 +165,7 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
                        [row for row, _, _ in self._other_data.keys()])
 
     def columnCount(self, index=QtCore.QModelIndex()):
-        return max([len(self.all_attrs)] +
-                   [col for _, col, _ in self._other_data.keys()])
+        return self.n_cols
 
     @safe_call
     def headerData(self, section, orientation, role):
@@ -264,7 +287,7 @@ class OWDataTable(widget.OWWidget):
         box_settings = gui.widgetBox(self.controlArea, "Settings",
             addSpace=True)
         self.c_show_attribute_labels = gui.checkBox(box_settings, self,
-            "show_attribute_labels", 'Show attribute labels (if any)',
+            "show_attribute_labels", 'Show variable labels (if present)',
             callback=self.c_show_attribute_labels_clicked)
         self.c_show_attribute_labels.setEnabled(True)
 
@@ -655,9 +678,10 @@ if __name__=="__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-#    d5 = Table('../../../jrs2012.basket')
+#    d5 = Table('../../../jrs-small.basket')
+    d5 = Table('../../../jrs2012.basket')
 #    d5 = Table('../../tests/iris.tab')
-    d5 = Table('../../tests/zoo.tab')
+#    d5 = Table('../../tests/zoo.tab')
     ow.show()
     ow.dataset(d5,"adult_sample")
     a.exec()
