@@ -112,7 +112,7 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
                 return
             if example.sparse_x is not None:
                 sp_data, vars = example.sparse_x, self.domain.attributes
-        elif self.n_attr_cols <= col < self.n_attr_class_cols:
+        elif col < self.n_attr_class_cols:
             if role == QtCore.Qt.BackgroundRole:
                 return self.cls_color
             if example.sparse_y is not None:
@@ -167,29 +167,43 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def columnCount(self, index=QtCore.QModelIndex()):
         return self.n_cols
 
+    def is_sparse(self, col):
+        return (
+            col < self.n_attr_cols
+                and self.examples.X_is_sparse or
+            self.n_attr_cols <= col < self.n_attr_class_cols
+                and self.examples.Y_is_sparse or
+            self.n_attr_class_cols < col
+                and self.examples.metas_is_sparse)
+
     @safe_call
     def headerData(self, section, orientation, role):
-        if orientation == QtCore.Qt.Horizontal:
-            attr = self.all_attrs[section]
-            if role ==QtCore.Qt.DisplayRole:
-                values = [attr.name] + (
-                    [str(attr.attributes.get(label, ""))
-                     for label in self.attr_labels
-                    ]
-                    if self.show_attr_labels else [])
-                return "\n".join(values)
-            if role == QtCore.Qt.ToolTipRole:
-                pairs = [(key, str(attr.attributes[key]))
-                         for key in self.attr_labels if key in attr.attributes]
-                tip = "<b>%s</b>" % attr.name
-                tip = "<br>".join([tip] + ["%s = %s" % pair for pair in pairs])
-                return tip
-        else:
-            if role == QtCore.Qt.DisplayRole:
-                return section + 1
+        display_role = role == QtCore.Qt.DisplayRole
+        if orientation == QtCore.Qt.Vertical:
+            return section + 1 if display_role else None
+        if self.is_sparse(section):
+            return None
+
+        attr = self.all_attrs[section]
+        if role == QtCore.Qt.DisplayRole:
+            if self.show_attr_labels:
+                return attr.name + "\n".join(
+                     str(attr.attributes.get(label, ""))
+                     for label in self.attr_labels)
+            else:
+                return attr.name
+        if role == QtCore.Qt.ToolTipRole:
+            pairs = [(key, str(attr.attributes[key]))
+                     for key in self.attr_labels if key in attr.attributes]
+            tip = "<b>%s</b>" % attr.name
+            tip = "<br>".join([tip] + ["%s = %s" % pair for pair in pairs])
+            return tip
+
         return None
 
     def sort(self, column, order=QtCore.Qt.AscendingOrder):
+        if self.is_sparse(column):
+            return
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         attr = self.all_attrs[column]
         values = [(ex[attr], i) for i, ex in enumerate(self.examples)]
@@ -274,8 +288,6 @@ class OWDataTable(widget.OWWidget):
         self.selected_schema_index = 0
         self.color_by_class = True
 
-
-        # info box
         info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.')
         self.info_miss = gui.widgetLabel(info_box, ' ')
@@ -289,8 +301,6 @@ class OWDataTable(widget.OWWidget):
                    callback=self.reset_sort_clicked,
                    tooltip="Show rows in the original order")
         info_box.setMinimumWidth(200)
-
-
         gui.separator(self.controlArea)
 
         box = gui.widgetBox(self.controlArea, "Variables")
