@@ -12,6 +12,7 @@ from PyQt4.QtCore import Qt, QObject, QSizeF, QPointF, QRect, QRectF, QLineF
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from ..registry.qt import QtWidgetRegistry
+from ..registry.description import WidgetDescription
 from .. import scheme
 from ..canvas import items
 from ..canvas.items import controlpoints
@@ -348,10 +349,8 @@ class NewLinkAction(UserInteraction):
 
         def filter(index):
             desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
-            if desc.isValid():
+            if isinstance(desc, WidgetDescription):
                 return is_compatible(from_desc, desc)
-            else:
-                return False
 
         menu.setFilterFunc(filter)
         try:
