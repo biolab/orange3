@@ -4,6 +4,7 @@ from functools import reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data import ContinuousVariable
 from Orange.statistics import basic_stats
@@ -13,7 +14,6 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils import colorpalette, datacaching
 from Orange.widgets.basewidget import Multiple, Default
 from Orange.widgets.gui import *
-
 
 NAME = "Data Table"
 
@@ -55,18 +55,29 @@ def safe_call(func):
 #noinspection PyMethodOverriding
 class ExampleTableModel(QtCore.QAbstractItemModel):
     def __init__(self, data, dist, *args):
+        def _n_cols(density, attrs):
+            if density == Storage.MISSING:
+                return 0
+            elif density == Storage.DENSE:
+                return len(attrs)
+            else:
+                return 1
+
         QtCore.QAbstractItemModel.__init__(self, *args)
         self.examples = data
         domain = self.domain = data.domain
+        self.all_attrs = domain.attributes + domain.class_vars + domain.metas
+        self.X_density = data.X_density()
+        self.Y_density = data.Y_density()
+        self.metas_density = data.metas_density()
+        self.n_attr_cols = _n_cols(self.X_density, domain.attributes)
+        self.n_attr_class_cols = self.n_attr_cols + _n_cols(self.Y_density,
+                                                            domain.class_vars)
+        self.n_cols = self.n_attr_class_cols + _n_cols(self.metas_density,
+                                                       domain.metas)
+        self.nvariables = len(domain)
         self.dist = None
 
-        self.nvariables = len(domain)
-        self.n_attr_cols = 1 if data.X_is_sparse else len(domain.attributes)
-        self.n_attr_class_cols = self.n_attr_cols + (
-                           1 if data.Y_is_sparse else len(domain.class_vars))
-        self.n_cols = self.n_attr_class_cols + (
-                           1 if data.metas_is_sparse else len(domain.metas))
-        self.all_attrs = (domain.attributes + domain.class_vars + domain.metas)
         self.cls_color = QtGui.QColor(160,160,160)
         self.meta_color = QtGui.QColor(220,220,200)
         self.sorted_map = range(len(data))
@@ -84,18 +95,18 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def set_show_attr_labels(self, val):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self._show_attr_labels = val
-        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)"
-                  ), QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
+        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)")
+                  , QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
                   self.index(0,0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
-                  )
+                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
 
     show_attr_labels = QtCore.pyqtProperty("bool",
                                    fget=get_show_attr_labels,
                                    fset=set_show_attr_labels,
                                    )
+
 
     @safe_call
     def data(self, index, role):
@@ -107,28 +118,35 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
 
         # check whether we have a sparse columns,
         # handle background color role while you are at it
-        sp_data = vars = None
+        sp_data = vars = density = None
         if col < self.n_attr_cols:
             if role == QtCore.Qt.BackgroundRole:
                 return
-            if example.sparse_x is not None:
+            density = self.X_density
+            if density != Storage.DENSE:
                 sp_data, vars = example.sparse_x, self.domain.attributes
         elif col < self.n_attr_class_cols:
             if role == QtCore.Qt.BackgroundRole:
                 return self.cls_color
-            if example.sparse_y is not None:
+            density = self.Y_density
+            if density != Storage.DENSE:
                 sp_data, vars = example.sparse_y, self.domain.class_vars
         else:
             if role == QtCore.Qt.BackgroundRole:
                 return self.meta_color
-            if example.sparse_metas is not None:
+            density = self.metas_density
+            if density != Storage.DENSE:
                 sp_data, vars = example.sparse_metas, self.domain.class_vars
 
         if sp_data is not None:
             if role == QtCore.Qt.DisplayRole:
-                return ", ".join(
-                    "{}={}".format(vars[i].name, vars[i].repr_val(v))
-                    for i, v in zip(sp_data.indices, sp_data.data))
+                if density == Storage.SPARSE:
+                    return ", ".join(
+                        "{}={}".format(vars[i].name, vars[i].repr_val(v))
+                        for i, v in zip(sp_data.indices, sp_data.data))
+                else:
+                    return ", ".join(vars[i].name for i in sp_data.indices)
+
         else: #not sparse
             attr = self.all_attrs[col]
             val = example[attr]
@@ -174,11 +192,11 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def is_sparse(self, col):
         return (
             col < self.n_attr_cols
-                and self.examples.X_is_sparse or
+                and self.examples.X_density or
             self.n_attr_cols <= col < self.n_attr_class_cols
-                and self.examples.Y_is_sparse or
+                and self.examples.Y_density or
             self.n_attr_class_cols < col
-                and self.examples.metas_is_sparse)
+                and self.examples.metas_density)
 
     @safe_call
     def headerData(self, section, orientation, role):
@@ -670,9 +688,9 @@ if __name__=="__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-#    d5 = Table('../../../jrs-small.basket')
+    d5 = Table('../../../jrs-small.basket')
 #    d5 = Table('../../../jrs2012.basket')
-    d5 = Table('../../tests/iris.tab')
+#    d5 = Table('../../tests/iris.tab')
 #    d5 = Table('../../tests/zoo.tab')
     ow.show()
     ow.dataset(d5,"adult_sample")
