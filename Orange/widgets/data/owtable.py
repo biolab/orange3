@@ -284,38 +284,28 @@ class OWDataTable(widget.OWWidget):
         self.info_meta = gui.widgetLabel(info_box, ' ')
         gui.widgetLabel(info_box, ' ')
         self.info_class = gui.widgetLabel(info_box, ' ')
+        gui.separator(info_box)
+        gui.button(info_box, self, "Restore Original Order",
+                   callback=self.reset_sort_clicked,
+                   tooltip="Show rows in the original order")
         info_box.setMinimumWidth(200)
+
+
         gui.separator(self.controlArea)
 
-        # settings box
-        box_settings = gui.widgetBox(self.controlArea, "Settings",
-            addSpace=True)
-        self.c_show_attribute_labels = gui.checkBox(box_settings, self,
+        box = gui.widgetBox(self.controlArea, "Variables")
+        self.c_show_attribute_labels = gui.checkBox(box, self,
             "show_attribute_labels", 'Show variable labels (if present)',
             callback=self.c_show_attribute_labels_clicked)
         self.c_show_attribute_labels.setEnabled(True)
-
-        box = gui.widgetBox(self.controlArea, "Colors")
         gui.checkBox(box, self, "show_distributions",
                      'Visualize continuous values',
                      callback=self.cbShowDistributions)
-        gui.checkBox(box, self, "color_by_class", 'Color by class value',
+        gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self.cbShowDistributions)
         gui.button(box, self, "Set colors", self.set_colors,
                    tooltip="Set the background color and color palette",
                            debuggingEnabled=0)
-
-        resize_cols_box = gui.widgetBox(box_settings, 0, "horizontal", 0)
-        gui.label(resize_cols_box, self, "Resize columns: ")
-        gui.toolButton(resize_cols_box, self, "+", self.increase_col_width,
-                       tooltip="Increase column widths", width=20, height=20)
-        gui.toolButton(resize_cols_box, self, "-", self.decrease_col_width,
-                       tooltip="Decrease column widths", width=20, height=20)
-        gui.rubber(resize_cols_box)
-
-        gui.button(box_settings, self, "Restore Original Order",
-                   callback=self.reset_sort_clicked,
-                   tooltip="Show rows in the original order")
 
         gui.separator(self.controlArea)
         selection_box = gui.widgetBox(self.controlArea, "Selection")
@@ -355,22 +345,6 @@ class OWDataTable(widget.OWWidget):
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.discPalette = dlg.getDiscretePalette("discPalette")
             self.dist_color_RGB = dlg.getColor("Default")
-
-    def increase_col_width(self):
-        table = self.tabs.currentWidget()
-        if table:
-            for col in range(table.model().columnCount(QtCore.QModelIndex())):
-                w = table.columnWidth(col)
-                table.setColumnWidth(col, w + 10)
-
-    def decrease_col_width(self):
-        table = self.tabs.currentWidget()
-        if table:
-            for col in range(table.model().columnCount(QtCore.QModelIndex())):
-                w = table.columnWidth(col)
-                minW = table.sizeHintForColumn(col)
-                table.setColumnWidth(col, max(w - 10, minW))
-
 
     def dataset(self, data, id=None):
         """Generates a new table and adds it to a new tab when new data arrives;
