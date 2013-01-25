@@ -83,8 +83,8 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def set_show_attr_labels(self, val):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self._show_attr_labels = val
-        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)"),
-                  QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
+        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)"
+                  ), QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
                   self.index(0,0),
@@ -263,7 +263,8 @@ class TableViewWithCopy(QtGui.QTableView):
         mime.setData("text/csv", QtCore.QByteArray(csv_lines))
         mime.setData("text/tab-separated-values", QtCore.QByteArray(tsv_lines))
         mime.setData("text/plain", QtCore.QByteArray(tsv_lines))
-        QtGui.QApplication.clipboard().setMimeData(mime, QtGui.QClipboard.Clipboard)
+        QtGui.QApplication.clipboard().setMimeData(mime,
+                                                   QtGui.QClipboard.Clipboard)
 
 
 class OWDataTable(widget.OWWidget):
@@ -335,7 +336,8 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.id2table = {}  # key: widget id, value: table
         self.table2id = {}  # key: table, value: widget id
-        self.connect(self.tabs, QtCore.SIGNAL("currentChanged(QWidget*)"), self.tabClicked)
+        self.connect(self.tabs, QtCore.SIGNAL("currentChanged(QWidget*)"),
+                     self.tabClicked)
         self.selectionChangedFlag = False
 
 
@@ -343,7 +345,8 @@ class OWDataTable(widget.OWWidget):
         c = colorpalette.ColorPaletteDlg(self, "Color Palette")
         c.createDiscretePalette("discPalette", "Discrete Palette")
         box = c.createBox("otherColors", "Other Colors")
-        c.createColorButton(box, "Default", "Default color", QtGui.QColor(QtCore.Qt.white))
+        c.createColorButton(box, "Default", "Default color",
+                            QtGui.QColor(QtCore.Qt.white))
         c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
@@ -359,7 +362,8 @@ class OWDataTable(widget.OWWidget):
     def dataset(self, data, id=None):
         """Generates a new table and adds it to a new tab when new data arrives;
         or hides the table and removes a tab when data==None;
-        or replaces the table when new data arrives together with already existing id."""
+        or replaces the table when new data arrives together with already
+        existing id."""
         if data is not None:  # can be an empty table!
             if id in self.data:
                 # remove existing table
@@ -378,20 +382,20 @@ class OWDataTable(widget.OWWidget):
             table.horizontalHeader().setSortIndicatorShown(False)
 
             option = table.viewOptions()
-            size = table.style().sizeFromContents(QtGui.QStyle.CT_ItemViewItem, option, QtCore.QSize(20, 20), table) #QSize(20, QFontMetrics(option.font).lineSpacing()), table)
+            size = table.style().sizeFromContents(QtGui.QStyle.CT_ItemViewItem,
+                option, QtCore.QSize(20, 20), table)
 
-            table.verticalHeader().setDefaultSectionSize(size.height() + 2) #int(size.height() * 1.25) + 2)
+            table.verticalHeader().setDefaultSectionSize(size.height() + 2)
 
             self.id2table[id] = table
             self.table2id[table] = id
-            if data.name:
-                tabName = "%s " % data.name
-            else:
-                tabName = ""
-            tabName += "(" + str(id[1]) + ")"
+            tab_name = getattr(data, "name", "")
+            if tab_name:
+                tab_name += " "
+            tab_name += "(" + str(id[1]) + ")"
             if id[2] is not None:
-                tabName += " [" + str(id[2]) + "]"
-            self.tabs.addTab(table, tabName)
+                tab_name += " [" + str(id[2]) + "]"
+            self.tabs.addTab(table, tab_name)
 
             self.progressBarInit()
             self.setTable(table, data)
@@ -406,9 +410,10 @@ class OWDataTable(widget.OWWidget):
             table.hide()
             self.tabs.removeTab(self.tabs.indexOf(table))
             self.table2id.pop(self.id2table.pop(id))
-            self.setInfo(self.data.get(self.table2id.get(self.tabs.currentWidget(),None),None))
+            self.setInfo(self.data.get(self.table2id.get(
+                self.tabs.currentWidget(),None),None))
 
-        if len(self.data) == 0:
+        if not len(self.data):
             self.send_button.setEnabled(False)
 
 
@@ -499,7 +504,8 @@ class OWDataTable(widget.OWWidget):
                             opt.state = state
                             opt.rect = btn.rect()
                             opt.text = btn.text()
-                            opt.position = QtGui.QStyleOptionHeader.OnlyOneSection
+                            opt.position = \
+                                QtGui.QStyleOptionHeader.OnlyOneSection
                             painter = QtGui.QStylePainter(btn)
                             painter.drawControl(QtGui.QStyle.CE_Header, opt)
                             return True # eat evebt
@@ -517,8 +523,8 @@ class OWDataTable(widget.OWWidget):
                 opt = QtGui.QStyleOptionHeader()
                 opt.text = btn.text()
                 s = btn.style().sizeFromContents(
-                    QtGui.QStyle.CT_HeaderSection, opt, QtCore.QSize(), btn).expandedTo(
-                        QtGui.QApplication.globalStrut())
+                    QtGui.QStyle.CT_HeaderSection, opt, QtCore.QSize(), btn
+                        ).expandedTo(QtGui.QApplication.globalStrut())
                 if s.isValid():
                     table.verticalHeader().setMinimumWidth(s.width())
             except Exception:
