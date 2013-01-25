@@ -206,6 +206,10 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
 
 #noinspection PyArgumentList
 class TableViewWithCopy(QtGui.QTableView):
+    def dataChanged(self, a, b):
+        self.resizeColumnsToContents()
+        super().dataChanged(a, b)
+
     def keyPressEvent(self, event):
         if event == QtGui.QKeySequence.Copy:
             sel_model = self.selectionModel()
@@ -332,7 +336,6 @@ class OWDataTable(widget.OWWidget):
         self.id2table = {}  # key: widget id, value: table
         self.table2id = {}  # key: table, value: widget id
         self.connect(self.tabs, QtCore.SIGNAL("currentChanged(QWidget*)"), self.tabClicked)
-
         self.selectionChangedFlag = False
 
 
@@ -678,8 +681,8 @@ if __name__=="__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-#    d5 = Table('../../../jrs-small.basket')
-    d5 = Table('../../../jrs2012.basket')
+    d5 = Table('../../../jrs-small.basket')
+#    d5 = Table('../../../jrs2012.basket')
 #    d5 = Table('../../tests/iris.tab')
 #    d5 = Table('../../tests/zoo.tab')
     ow.show()
