@@ -192,11 +192,11 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def is_sparse(self, col):
         return (
             col < self.n_attr_cols
-                and self.examples.X_density or
+                and self.X_density > Storage.DENSE or
             self.n_attr_cols <= col < self.n_attr_class_cols
-                and self.examples.Y_density or
+                and self.Y_density > Storage.DENSE or
             self.n_attr_class_cols < col
-                and self.examples.metas_density)
+                and self.examples.metas_density > Storage.DENSE)
 
     @safe_call
     def headerData(self, section, orientation, role):
@@ -688,8 +688,8 @@ if __name__=="__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-    d5 = Table('../../../jrs-small.basket')
-#    d5 = Table('../../../jrs2012.basket')
+#    d5 = Table('../../../jrs-small.basket')
+    d5 = Table('../../../jrs2012.basket')
 #    d5 = Table('../../tests/iris.tab')
 #    d5 = Table('../../tests/zoo.tab')
     ow.show()
