@@ -58,7 +58,8 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
         QtCore.QAbstractItemModel.__init__(self, *args)
         self.examples = data
         domain = self.domain = data.domain
-        self.dist = dist
+        self.dist = None
+
         self.nvariables = len(domain)
         self.n_attr_cols = 1 if data.X_is_sparse else len(domain.attributes)
         self.n_attr_class_cols = self.n_attr_cols + (
@@ -137,6 +138,9 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
             elif (role == TableBarItem.BarRole and
                     isinstance(attr, ContinuousVariable) and
                     not isnan(val)):
+                if self.dist is None:
+                    self.dist = datacaching.getCached(
+                        self.examples, basic_stats.get_stats, (self.examples,))
                 dist = self.dist[col if col < self.nvariables else -1 - col]
                 return (val - dist.min) / (dist.max - dist.min or 1)
             elif role == gui.TableValueRole:
@@ -434,20 +438,16 @@ class OWDataTable(widget.OWWidget):
         if data is None:
             return
         QtGui.qApp.setOverrideCursor(QtCore.Qt.WaitCursor)
-
         table.oldSortingIndex = -1
         table.oldSortingOrder = 1
 
-        dist = datacaching.getCached(data, basic_stats.get_stats, (data,))
-        datamodel = ExampleTableModel(data, dist, self)
-
+        datamodel = ExampleTableModel(data, self)
         color_schema = self.discPalette if self.color_by_class else None
         if self.show_distributions:
             table.setItemDelegate(gui.TableBarItem(self,
                 color=self.dist_color, color_schema=color_schema))
         else:
             table.setItemDelegate(QtGui.QStyledItemDelegate(self))
-
         table.setModel(datamodel)
         def p():
             try:
@@ -458,7 +458,6 @@ class OWDataTable(widget.OWWidget):
 
         size = table.verticalHeader().sectionSizeHint(0)
         table.verticalHeader().setDefaultSectionSize(size)
-
         self.connect(datamodel, QtCore.SIGNAL("layoutChanged()"),
                      lambda *args: QtCore.QTimer.singleShot(50, p))
 
@@ -671,9 +670,9 @@ if __name__=="__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-    d5 = Table('../../../jrs-small.basket')
+#    d5 = Table('../../../jrs-small.basket')
 #    d5 = Table('../../../jrs2012.basket')
-#    d5 = Table('../../tests/iris.tab')
+    d5 = Table('../../tests/iris.tab')
 #    d5 = Table('../../tests/zoo.tab')
     ow.show()
     ow.dataset(d5,"adult_sample")
