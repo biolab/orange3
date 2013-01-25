@@ -15,6 +15,7 @@ class Instance:
         :type data: Orange.data.Instance or a sequence of values
         """
         self._domain = domain
+        self.sparse_x = self.sparse_y = self.sparse_metas = None
 
         if data is None:
             if isinstance(domain, Instance):
@@ -39,7 +40,6 @@ class Instance:
             self._weight = 1
         self._x = self._values[:len(domain.attributes)]
         self._y = self._values[len(domain.attributes):]
-
 
     @property
     def domain(self):

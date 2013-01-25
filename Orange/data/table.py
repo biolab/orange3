@@ -28,16 +28,16 @@ class RowInstance(Instance):
         """
         super().__init__(table.domain)
         self._x = table._X[row_index]
-        self.sparse_x = sp.issparse(self._x)
-        if self.sparse_x:
+        if sp.issparse(self._x):
+            self.sparse_x = self._x
             self._x = np.asarray(self._x.todense())[0]
         self._y = table._Y[row_index]
-        self.sparse_y = sp.issparse(self._y)
-        if self.sparse_y:
+        if sp.issparse(self._y):
+            self.sparse_y = self._y
             self._y = np.asarray(self._y.todense())[0]
         self._metas = table._metas[row_index]
-        self.sparse_metas = sp.issparse(self._metas)
-        if self.sparse_metas:
+        if sp.issparse(self._metas):
+            self.sparse_metas = self._metas
             self._metas = np.asarray(self._metas.todense())[0]
         self._values = np.hstack((self._x, self._y))
         self.row_index = row_index
