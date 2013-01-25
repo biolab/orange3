@@ -1,31 +1,33 @@
 class Storage:
     domain = None
 
-    @property
-    def X_is_sparse(self):
+    MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
+
+    def X_density(self):
         """
-        Indicates whether the attributes are sparse. The default property in
-        Storage class assumes that sparse data is not supported.
+        Indicates whether the attributes are dense (DENSE) or sparse (SPARSE).
+        If they are sparse and all values are 0 or 1, it is marked as
+        SPARSE_BOOL. The Storage class provides a default DENSE.
         """
-        return False
+        return Storage.DENSE
 
 
-    @property
-    def Y_is_sparse(self):
+    def Y_density(self):
         """
-        Indicates whether the class attributes are sparse. The default property
-        in Storage class assumes that sparse data is not supported.
+        Indicates whether the class attribute(s) are dense (DENSE) or sparse
+        (SPARSE). If they are sparse and all values are 0 or 1, it is marked as
+        SPARSE_BOOL. The Storage class provides a default DENSE.
         """
-        return False
+        return Storage.DENSE
 
 
-    @property
-    def metas_is_sparse(self):
+    def metas_density(self):
         """
-        Indicates whether the meta attributes are sparse. The default property
-        in Storage class assumes that sparse data is not supported.
+        Indicates whether the meta attributes are dense (DENSE) or sparse
+        (SPARSE). If they are sparse and all values are 0 or 1, it is marked as
+        SPARSE_BOOL. The Storage class provides a default DENSE.
         """
-        return False
+        return Storage.DENSE
 
     def _filter_is_defined(self, columns=None, negate=False):
         raise NotImplementedError

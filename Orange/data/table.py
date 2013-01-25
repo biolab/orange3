@@ -178,24 +178,6 @@ class Table(MutableSequence, Storage):
         return Columns(self.domain)
 
 
-    @property
-    def X_is_sparse(self):
-        """Indicates whether the attributes are sparse."""
-        return sp.issparse(self._X)
-
-
-    @property
-    def Y_is_sparse(self):
-        """Indicates whether the class attributes are sparse."""
-        return sp.issparse(self._Y)
-
-
-    @property
-    def metas_is_sparse(self):
-        """Indicates whether the meta attributes are sparse."""
-        return sp.issparse(self._metas)
-
-
     def __new__(cls, *args, **kwargs):
         if not args and not kwargs:
             return super().__new__(cls)
@@ -792,6 +774,39 @@ class Table(MutableSequence, Storage):
             self._metas = self._metas.copy()
         if self._W.base is not None:
             self._W = self._W.copy()
+
+
+    @staticmethod
+    def __determine_density(data):
+        if data is None:
+            return Storage.Missing
+        if data is not None and sp.issparse(data):
+            try:
+                if bn.bincount(data.data, 1)[0][0] == 0:
+                    return Storage.SPARSE_BOOL
+            except ValueError as e:
+                pass
+            return Storage.SPARSE
+        else:
+            return Storage.DENSE
+
+
+    def X_density(self):
+        if not hasattr(self, "_X_density"):
+            self._X_density = Table.__determine_density(self._X)
+        return self._X_density
+
+
+    def Y_density(self):
+        if not hasattr(self, "_Y_density"):
+            self._Y_density = Table.__determine_density(self._Y)
+        return self._Y_density
+
+
+    def metas_density(self):
+        if not hasattr(self, "_metas_density"):
+            self._metas_density = Table.__determine_density(self._metas)
+        return self._metas_density
 
 
     def set_weights(self, weight=1):
