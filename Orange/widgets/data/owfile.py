@@ -69,9 +69,12 @@ class OWFile(widget.OWWidget):
     formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
 
 
+
     def __init__(self, parent=None, signalManager = None):
         super().__init__(parent, signalManager, "File",
                          wantMainArea=0, resizingEnabled=1)
+
+        self.outputs = [("Data", Table)]
 
         self.domain = None
         self.recent_files = [fn for fn in self.recent_files
