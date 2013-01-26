@@ -268,8 +268,15 @@ class LinkItem(QGraphicsObject):
     def __updateCurve(self):
         self.prepareGeometryChange()
         if self.sourceAnchor and self.sinkAnchor:
-            source_pos = self.sourceAnchor.anchorScenePos()
-            sink_pos = self.sinkAnchor.anchorScenePos()
+# TODO: Ales, help!
+#            source_pos = self.sourceAnchor.anchorScenePos()
+#            sink_pos = self.sinkAnchor.anchorScenePos()
+            source_pos = self.sourceItem.pos()
+            if self.sinkItem is not None:
+                sink_pos = self.sinkItem.pos()
+            else:
+                sink_pos = self.sinkAnchor.anchorScenePos()
+
             source_pos = self.curveItem.mapFromScene(source_pos)
             sink_pos = self.curveItem.mapFromScene(sink_pos)
             # TODO: get the orthogonal angle to the anchors path.
