@@ -4,6 +4,8 @@ from functools import reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+import bottleneck as bn
+
 from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data import ContinuousVariable
@@ -313,12 +315,9 @@ class OWDataTable(widget.OWWidget):
 
         info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.')
-        self.info_miss = gui.widgetLabel(info_box, ' ')
-        gui.widgetLabel(info_box, ' ')
         self.info_attr = gui.widgetLabel(info_box, ' ')
-        self.info_meta = gui.widgetLabel(info_box, ' ')
-        gui.widgetLabel(info_box, ' ')
         self.info_class = gui.widgetLabel(info_box, ' ')
+        self.info_meta = gui.widgetLabel(info_box, ' ')
         gui.separator(info_box)
         gui.button(info_box, self, "Restore Original Order",
                    callback=self.reset_sort_clicked,
@@ -622,24 +621,34 @@ class OWDataTable(widget.OWWidget):
             else:
                 return str(n), 's'
 
+        def desc(d, part, s):
+            if not isinstance(d, Table):
+                return ""
+            density = getattr(d, part + "_density")()
+            m = getattr(d, part)
+            dim = m.shape[0] * m.shape[1]
+            if dim == 0:
+                return s
+            if density == Storage.DENSE:
+                return s + " (%.1f%% missing values)" % bn.countnans(m)
+            s += " (sparse" if density == Storage.SPARSE else " (tags"
+            return s + ", density %.2f %%)" % (100 * len(m.data) / dim)
+
         if data is None:
             self.info_ex.setText('No data on input.')
-            self.info_miss.setText('')
             self.info_attr.setText('')
             self.info_meta.setText('')
             self.info_class.setText('')
         else:
-            self.info_ex.setText("%s example%s," % sp(data))
-            # TODO implement
-            missData = [] #orange.Preprocessor_takeMissing(data)
-            self.info_miss.setText('%s (%.1f%s) with missing values.' %
-                (len(missData),
-                 len(data) and 100.*len(missData)/len(data), "%"))
-            self.info_attr.setText("%s attribute%s," %
-                                   sp(data.domain.attributes, True))
-            self.info_meta.setText("%s meta attribute%s." %
-                                   sp(data.domain.metas))
-            if data.domain.class_var is None:
+            self.info_ex.setText("%s instance%s" % sp(data))
+            self.info_attr.setText(desc(data, "X",
+                "%s feature%s" % sp(data.domain.attributes, True)))
+            self.info_meta.setText(desc(data, "metas",
+                "%s meta attribute%s" % sp(data.domain.metas)))
+            if len(data.domain.class_vars) > 1:
+                self.info_class.setText(desc(data, "Y",
+                    "%s outcome%s" % sp(data.domain.class_vars)))
+            elif data.domain.class_var is None:
                 self.info_class.setText('No target variable.')
             elif isinstance(data.domain.class_var, ContinuousVariable):
                 self.info_class.setText('Continuous target variable.')
