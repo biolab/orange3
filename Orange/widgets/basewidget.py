@@ -389,12 +389,12 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.signalManager.send(self, signalName, value, id)
 
 
-    def getdeepattr(self, attr, **argkw):
+    def getdeepattr(self, attr, default=None):
         try:
             return reduce(lambda o, n: getattr(o, n, None),  attr.split("."), self)
-        except:
-            if "default" in argkw:
-                return argkw[default]
+        except AttributeError:
+            if default is not None:
+                return default
             else:
                 raise AttributeError("'%s' has no attribute '%s'" % (self, attr))
 
@@ -564,6 +564,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         return None
 
     # ########################################################################
+    #noinspection PyMethodOverriding
     def connect(self, control, signal, method, type=Qt.AutoConnection):
         wrapper = SignalWrapper(self, method)
         self.connections[(control, signal)] = wrapper   # save for possible disconnect
@@ -572,6 +573,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         #QWidget.connect(control, signal, method)        # ordinary connection useful for dialogs and windows that don't send signals to other widgets
 
 
+    #noinspection PyMethodOverriding
     def disconnect(self, control, signal, method=None):
         wrapper = self.connections[(control, signal)]
         QDialog.disconnect(control, signal, wrapper)
@@ -608,10 +610,10 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     def removeInputConnection(self, widgetFrom, signalName):
         if signalName in self.linksIn:
             links = self.linksIn[signalName]
-            for i in range(len(self.linksIn[signalName])):
-                if widgetFrom == self.linksIn[signalName][i][1]:
-                    self.linksIn[signalName].remove(self.linksIn[signalName][i])
-                    if self.linksIn[signalName] == []:  # if key is empty, delete key value
+            for i in range(len(links)):
+                if widgetFrom == links[i][1]:
+                    links.remove(links[i])
+                    if not links == []:  # if key is empty, delete key value
                         del self.linksIn[signalName]
                     return
 
@@ -636,6 +638,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         pass
 
     # signal manager calls this function when all input signals have updated the data
+    #noinspection PyBroadException
     def processSignals(self):
         if self.processingHandler:
             self.processingHandler(self, 1)    # focus on active widget
@@ -937,10 +940,9 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
     def asyncExceptionHandler(self, exception):
         (etype, value, tb) = exception
-        import traceback
         sys.excepthook(etype, value, tb)
 
-    def asyncFinished(self, async, string):
+    def asyncFinished(self, async, _):
         """ Remove async from asyncCalls, update blocking state
         """
 
