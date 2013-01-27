@@ -30,57 +30,54 @@ def unisetattr(self, name, value, grandparent):
     else:
         lastname, obj = name, self
 
-    if not obj:
-        print("unable to set setting ", name, " to value ", value)
+    if obj is None:
+        print("Internal error: unable to set '%s' to %s " % (name, value))
     else:
-        if hasattr(grandparent, "__setattr__") and isinstance(obj, grandparent):
+        if (hasattr(grandparent, "__setattr__") and
+                isinstance(obj, grandparent)):
             grandparent.__setattr__(obj, lastname,  value)
         else:
             setattr(obj, lastname, value)
-#            obj.__dict__[lastname] = value
 
-    controlledAttributes = hasattr(self, "controlledAttributes") and getattr(self, "controlledAttributes", None)
-    controlCallback = controlledAttributes and controlledAttributes.get(name, None)
+    controlledAttributes = getattr(self, "controlledAttributes", None)
+    controlCallback = controlledAttributes and controlledAttributes.get(name,
+                                                                        None)
     if controlCallback:
         for callback in controlCallback:
             callback(value)
-#        controlCallback(value)
-
     # controlled things (checkboxes...) never have __attributeControllers
-    else:
-        if hasattr(self, "__attributeControllers"):
-            for controller, myself in self.__attributeControllers.keys():
-                if getattr(controller, myself, None) != self:
-                    del self.__attributeControllers[(controller, myself)]
-                    continue
+    elif hasattr(self, "__attributeControllers"):
+        for controller, myself in self.__attributeControllers.keys():
+            if getattr(controller, myself, None) != self:
+                del self.__attributeControllers[(controller, myself)]
+                continue
+            controlledAttributes = getattr(controller, "controlledAttributes",
+                                           None)
+            if not controlledAttributes:
+                continue
+            fullName = myself + "." + name
+            controlCallback = controlledAttributes.get(fullName, None)
+            if controlCallback:
+                for callback in controlCallback:
+                    callback(value)
+            else:
+                lname = fullName + "."
+                dlen = len(lname)
+                for controlled in controlledAttributes.keys():
+                    if controlled[:dlen] == lname:
+                        self.setControllers(value, controlled[dlen:],
+                                            controller, fullName)
+                        # no break -- can have a.b.c.d and a.e.f.g; needs to
+                        # set controller for all!
 
-                controlledAttributes = hasattr(controller, "controlledAttributes") and getattr(controller, "controlledAttributes", None)
-                if controlledAttributes:
-                    fullName = myself + "." + name
-
-                    controlCallback = controlledAttributes.get(fullName, None)
-                    if controlCallback:
-                        for callback in controlCallback:
-                            callback(value)
-
-                    else:
-                        lname = fullName + "."
-                        dlen = len(lname)
-                        for controlled in controlledAttributes.keys():
-                            if controlled[:dlen] == lname:
-                                self.setControllers(value, controlled[dlen:], controller, fullName)
-                                # no break -- can have a.b.c.d and a.e.f.g; needs to set controller for all!
-
-
-    # if there are any context handlers, call the fastsave to write the value into the context
-    if hasattr(self, "contextHandlers") and hasattr(self, "currentContexts"):
-        for contextName, contextHandler in self.contextHandlers.items():
-            contextHandler.fastSave(self.currentContexts.get(contextName), self, name, value)
+    # TODO Reimplement this
+    # self.contextHandler.fastSave(self, name, value)
 
 
 
 class ControlledAttributesDict(dict):
     def __init__(self, master):
+        super().__init__()
         self.master = master
 
     def __setitem__(self, key, value):
@@ -100,69 +97,72 @@ class AttributeList(list):
 class ExampleList(list):
     pass
 
-widgetId = 0
 
 class BaseWidgetClass(type(QDialog)):
+    """Meta class for widgets. If the class definition does not have a
+       specific settings handler, the meta class provides a default one
+       that does not handle contexts. Then it scans for any attributes
+       of class settings.Setting: the setting is stored in the handler and
+       the value of the attribute is replaced with the default."""
+    #noinspection PyMethodParameters
     def __new__(mcs, name, bases, dict):
         cls = type.__new__(mcs, name, bases, dict)
-        if not hasattr(cls, "settings"):
-            cls.settings = settings.SettingsHandler()
+        # TODO Remove this when all widgets are migrated to 3.0
+        if (hasattr(cls, "settingsToWidgetCallback") or
+            hasattr(cls, "settingsFromWidgetCallback")):
+            raise SystemError("Reimplement settingsToWidgetCallback and "
+                              "settingsFromWidgetCallback")
+        if not hasattr(cls, "settingsHandler"):
+            cls.settingsHandler = settings.SettingsHandler()
         for name, value in cls.__dict__.items():
             if isinstance(value, settings.Setting):
-                cls.settings.settings[name] = value
+                cls.settingsHandler.settings[name] = value
                 setattr(cls, name, value.default)
         return cls
 
 
 class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
-    def __init__(self, parent=None, signalManager=None, title="Orange BaseWidget", modal=FALSE, savePosition = False, resizingEnabled = 1, **args):
-        super().__init__()
+    widget_id = 0 # global widget count
 
-        self.currentContexts = {}   # the "currentContexts" MUST be the first thing assigned to a widget
-        self._useContexts = 1       # do you want to use contexts
-        self._owInfo = 1            # currently disabled !!!
-        self._owWarning = 1         # do we want to see warnings
-        self._owError = 1           # do we want to see errors
-        self._owShowStatus = 0      # do we want to see warnings and errors in status bar area of the widget
+    save_position = False
+    resizing_enabled = True
+
+    inputs = []
+    outputs = []
+
+
+    def __init__(self, parent=None, signalManager=None, title="",
+                 _=FALSE, _category=None, _settingsFromSchema=False):
+        super().__init__(parent, Qt.Window if self.resizing_enabled else
+                                 Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
+
+        # 'currentContexts' MUST be the first thing assigned to a widget
+        self.currentContexts = {}
+        self.controlledAttributes = ControlledAttributesDict(self)
+        self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
-        for key in args:
-            if key in ["_owInfo", "_owWarning", "_owError", "_owShowStatus", "_useContexts", "_category", "_settingsFromSchema"]:
-                self.__dict__[key] = args[key]        # we cannot use __dict__.update(args) since we can have many other
+        self._category = _category
+        self._settingsFromSchema = _settingsFromSchema
 
-        if resizingEnabled:
-            QDialog.__init__(self, parent, Qt.Window)
-        else:
-            QDialog.__init__(self, parent, Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)# | Qt.WindowMinimizeButtonHint)
+        # TODO: position used to be saved like this. Reimplement.
+        #if save_position:
+        #    self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
 
-        # do we want to save widget position and restore it on next load
-        self.savePosition = savePosition
-        if savePosition:
-            self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
-
-        # directories are better defined this way, otherwise .ini files get written in many places
         self.__dict__.update(environ.directories)
-        try:
-            self.__dict__["thisWidgetDir"] = os.path.dirname(sys.modules[self.__class__.__module__].__file__)
-        except:
-            pass
 
-        self.setCaption(title.replace("&","")) # used for widget caption
+        self.setCaption(title.replace("&",""))
         self.setFocusPolicy(Qt.StrongFocus)
 
-        # number of control signals, that are currently being processed
+        # number of control signals that are currently being processed
         # needed by signalWrapper to know when everything was sent
-        self.parent = parent
         self.needProcessing = 0     # used by signalManager
-        if not signalManager: self.signalManager = globalSignalManager        # use the global instance of signalManager  - not advised
-        else:                 self.signalManager = signalManager              # use given instance of signal manager
+        self.signalManager = signalManager or globalSignalManager
 
-        self.inputs = []     # signalName:(dataType, handler, onlySingleConnection)
-        self.outputs = []    # signalName: dataType
-        self.wrappers = []    # stored wrappers for widget events
-        self.linksIn = {}      # signalName : (dirty, widgetFrom, handler, signalData)
-        self.linksOut = {}       # signalName: (signalData, id)
-        self.connections = {}   # dictionary where keys are (control, signal) and values are wrapper instances. Used in connect/disconnect
-        self.controlledAttributes = ControlledAttributesDict(self)
+        self.wrappers = [] # stored wrappers for widget events
+        self.linksIn = {}  # signalName : (dirty, widFrom, handler, signalData)
+        self.linksOut = {} # signalName: (signalData, id)
+        self.connections = {} # keys are (control, signal) and values are
+                              # wrapper instances. Used in connect/disconnect
         self.progressBarHandler = None  # handler for progress bar events
         self.processingHandler = None   # handler for processing events
         self.eventHandler = None
@@ -172,16 +172,11 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.widgetStateHandler = None
         self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
 
-        self.settings.initialize(self)
-
-        if hasattr(self, "contextHandlers"):
-            for contextHandler in self.contextHandlers.values():
-                contextHandler.initLocalContext(self)
+        self.settingsHandler.initialize(self)
         self.loadSettings()
 
-        global widgetId
-        widgetId += 1
-        self.widgetId = widgetId
+        OWBaseWidget.widgetId += 1
+        self.widgetId = OWBaseWidget.widgetId
 
         self._private_thread_pools = {}
         self.asyncCalls = []
@@ -229,14 +224,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         for name in iconNames:
             pix = QPixmap(name)
             icon.addPixmap(pix)
-#            frame = QPixmap(os.path.join(self.widgetDir, "icons/frame.png"))
-#            icon = QPixmap(iconName)
-#            result = QPixmap(icon.size())
-#            painter = QPainter()
-#            painter.begin(result)
-#            painter.drawPixmap(0,0, frame)
-#            painter.drawPixmap(0,0, icon)
-#            painter.end()
 
         self.setWindowIcon(icon)
 
@@ -392,8 +379,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
     def send(self, signalName, value, id = None):
         if not self.hasOutputName(signalName):
-            print("Warning! Signal '%s' is not a valid signal name for the '%s' widget. Please fix the signal name." % (signalName, self.captionTitle))
-
+            print("Internal error: signal '%s' is not a valid signal name for"
+                  "widget '%s'." % (signalName, self.captionTitle))
         if signalName in self.linksOut:
             self.linksOut[signalName][id] = value
         else:
@@ -480,7 +467,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                 print("Failed to load settings!", repr(ex), file=sys.stderr)
                 settings = None
 
-            if hasattr(self, "_settingsFromSchema"):
+            if self._settingsFromSchema:
                 if settings: settings.update(self._settingsFromSchema)
                 else:        settings = self._settingsFromSchema
 
@@ -500,7 +487,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                         delattr(self, localName)
                         contextHandler.initLocalContext(self)
 
-                    if not hasattr(self, "_settingsFromSchema"): #When running stand alone widgets
+                    if not _settingsFromSchema: #When running stand alone widgets
                         if contextHandler.syncWithGlobal:
                             local_contexts = settings.get(localName, None)
                             if local_contexts is not None:
@@ -885,14 +872,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                 if context:
                     handler.settingsFromWidget(self, context)
 
-    def openContext(self, contextName="", *arg):
-        if not self._useContexts:
-            return
-        handler = self.contextHandlers[contextName]
-        context = handler.openContext(self, *arg)
-        if context:
-            self.currentContexts[contextName] = context
-
 
     def closeContext(self, contextName=""):
         if not self._useContexts:
@@ -902,10 +881,10 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
             self.contextHandlers[contextName].closeContext(self, curcontext)
             del self.currentContexts[contextName]
 
-    def settingsToWidgetCallback(self, handler, context):
+    def settingsToWidgetCallback(self, context):
         pass
 
-    def settingsFromWidgetCallback(self, handler, context):
+    def settingsFromWidgetCallback(self, context):
         pass
 
     def setControllers(self, obj, controlledName, controller, prefix):

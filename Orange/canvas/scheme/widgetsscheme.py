@@ -88,11 +88,6 @@ class WidgetsScheme(Scheme):
         log.info("Creating %r instance.", klass)
         widget = klass.__new__(
             klass,
-            _owInfo=rc.get("canvas.show-state-info", True),
-            _owWarning=rc.get("canvas.show-state-warning", True),
-            _owError=rc.get("canvas.show-state-error", True),
-            _owShowStatus=rc.get("OWWidget.show-status", True),
-            _useContexts=rc.get("OWWidget.use-contexts", True),
             _category=desc.category,
             _settingsFromSchema=node.properties
         )

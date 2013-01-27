@@ -48,9 +48,7 @@ class OWWidget(basewidget.OWBaseWidget):
             self.graphButton = OWGUI.button(self.buttonBackground, self, "&Save Graph")
             self.graphButton.setAutoDefault(0)
 
-        if wantStateInfoWidget is None:
-            wantStateInfoWidget = self._owShowStatus
-
+        """
         if wantStateInfoWidget:
             # Widget for error, warnings, info.
             self.widgetStateInfoBox = OWGUI.widgetBox(self.leftWidgetPart, "Widget state")
@@ -61,7 +59,7 @@ class OWWidget(basewidget.OWBaseWidget):
             self.widgetStateInfoBox.hide()
 
             self.connect(self, SIGNAL("widgetStateChanged(QString, int, QString)"), self.updateWidgetStateInfo)
-
+        """
 
         self.__reportData = None
 
@@ -146,7 +144,7 @@ class OWWidget(basewidget.OWBaseWidget):
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
             return
-        if self._owShowStatus and (self.widgetState["Warning"] != {} or self.widgetState["Error"] != {}):
+        if self.widgetState["Warning"] or self.widgetState["Error"]:
             self.widgetStatusArea.show()
         else:
             self.widgetStatusArea.hide()
