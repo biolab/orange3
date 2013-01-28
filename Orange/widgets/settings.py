@@ -43,14 +43,12 @@ class SettingsHandler:
     """Flag telling that the initialization of the widget should not call
     the object with the default value, although it is callable"""
 
+    CONTEXT = 2
+    """A flag that marks an attribute as context-dependent"""
+
     def __init__(self):
         self.widget_class = None
         self.settings = {}
-
-    # TODO: this doesn't get called. Qt shuts the application down without
-    # giving it a chance to properly destruct objects?
-#    def __del__(self):
-#        self.write_defaults()
 
     def get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
@@ -63,8 +61,8 @@ class SettingsHandler:
         should overload the latter."""
         filename = self.get_settings_filename()
         if os.path.exists(filename):
-            settings_file = open(filename, "rb")
-            self.read_defaults_file(settings_file)
+            with open(filename, "rb") as settings_file:
+                self.read_defaults_file(settings_file)
 
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
@@ -79,8 +77,8 @@ class SettingsHandler:
         """Write (global) defaults for this widget class to a file.
         Opens a file and calls :obj:`write_defaults_file`. Derived classes
         should overload the latter."""
-        settings_file = open(self.get_settings_filename(), "wb")
-        self.write_defaults_file(settings_file)
+        with open(self.get_settings_filename(), "wb") as settings_file:
+            self.write_defaults_file(settings_file)
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
@@ -157,10 +155,11 @@ class SettingsHandler:
         """
         cls = self.widget_class
         for name, setting in self.settings.items():
-            if (self.settings[name].flags & SettingsHandler.NOT_CALLABLE or
-                    not callable(self.settings[name])):
+            flags = setting.flags
+            if not flags & self.CONTEXT and (
+                   not callable(setting.default) or flags & self.NOT_CALLABLE):
                 setattr(cls, name, widget.getattr_deep(name))
-        # TODO: this is here only since __del__ is not properly called
+        # this is here only since __del__ is never called
         self.write_defaults()
 
     # TODO this method has misleading name (method 'initialize' does what
@@ -185,9 +184,6 @@ class SettingsHandler:
 
 class ContextHandler(SettingsHandler):
     """Base class for setting handlers that can handle contexts."""
-
-    CONTEXT = 2
-    """A flag that marks an attribute as context-dependent"""
 
     maxSavedContexts = 50
 
