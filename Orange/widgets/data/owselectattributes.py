@@ -1,11 +1,3 @@
-"""
-<name>Select Attributes</name>
-<description>Manual selection of attributes.</description>
-<icon>icons/SelectAttributes.svg</icon>
-<priority>1100</priority>
-<contact>Ales Erjavec (ales.erjavec@fri.uni-lj.si)</contact>
-"""
-
 import sys
 
 from PyQt4 import QtCore
@@ -19,6 +11,23 @@ from Orange.data.table import Table
 from Orange.widgets.utils import itemmodels
 
 import Orange
+
+NAME = "Select Attributes"
+
+DESCRIPTION = "Manual selection of attributes."
+
+ICON = "icons/SelectAttributes.svg"
+
+PRIORITY = 100
+
+AUTHOR = "Ales Erjavec"
+
+AUTHOR_EMAIL = "ales.erjavec(@at@)fri.uni-lj.si"
+
+INPUTS = [("Data", Table, "set data")]
+OUTPUTS = [("Data", Table), ("Features", basewidget.AttributeList)]
+
+WIDGET_CLASS = "OWSelectAttributes"
 
 def slices(indices):
     """ Group the given integer indices into slices
