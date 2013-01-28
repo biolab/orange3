@@ -297,7 +297,9 @@ class OWSelectAttributes(widget.OWWidget):
         super().__init__(parent, signalManager)
 
         self.controlArea = QtGui.QWidget(self.leftWidgetPart)
+        self.layout().addWidget(self.controlArea)
         layout = QtGui.QGridLayout()
+        self.controlArea.setLayout(layout)
         layout.setMargin(4)
         box = gui.widgetBox(self.controlArea, "Available attributes",
                             addToLayout=False)
