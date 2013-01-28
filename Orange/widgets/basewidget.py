@@ -90,8 +90,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         super().__init__(parent, Qt.Window if self.resizing_enabled else
                                  Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
-        # 'currentContexts' MUST be the first thing assigned to a widget
-        self.currentContexts = {}
+        # 'currentContext' MUST be the first thing assigned to a widget
+        self.currentContext = {}
         self.controlledAttributes = ControlledAttributesDict(self)
         self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
