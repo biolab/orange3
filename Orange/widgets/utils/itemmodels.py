@@ -1,4 +1,4 @@
-
+import pickle
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -6,6 +6,8 @@ from PyQt4.QtGui import *
 from functools import wraps, partial
 from collections import defaultdict
 from contextlib import contextmanager
+from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
+from Orange.widgets import gui
 
 class _store(dict):
     pass
@@ -35,25 +37,26 @@ class PyListModel(QAbstractListModel):
     """
     MIME_TYPES = ["application/x-Orange-PyListModelData"]
 
-    def __init__(self, iterable=[], parent=None,
+    def __init__(self, iterable=None, parent=None,
                  flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled,
                  list_item_role=Qt.DisplayRole,
                  supportedDropActions=Qt.MoveAction):
-        QAbstractListModel.__init__(self, parent)
+        super().__init__(parent)
         self._list = []
         self._other_data = []
         self._flags = flags
         self.list_item_role = list_item_role
 
         self._supportedDropActions = supportedDropActions
-        self.extend(iterable)
+        if iterable is not None:
+            self.extend(iterable)
 
     def _is_index_valid_for(self, index, list_like):
         if isinstance(index, QModelIndex) and index.isValid() :
             row, column = index.row(), index.column()
-            return row < len(list_like) and row >= 0 and column == 0
+            return 0 <= row < len(list_like) and not column
         elif isinstance(index, int):
-            return index < len(list_like) and index > -len(self)
+            return -len(self) < index < len(list_like)
         else:
             return False
 
@@ -113,7 +116,7 @@ class PyListModel(QAbstractListModel):
             return True
         elif self._is_index_valid_for(index, self._other_data):
             self._other_data[index.row()][role] = value
-            self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+            self.dataChanged.emit(index, index)
             return True
         else:
             return False
@@ -128,7 +131,7 @@ class PyListModel(QAbstractListModel):
                 elif self._is_index_valid_for(index, self._other_data):
                     self._other_data[index.row()][role] = value
 
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        self.dataChanged.emit(index, index)
         return True
 
     def flags(self, index):
@@ -158,7 +161,8 @@ class PyListModel(QAbstractListModel):
 
     def extend(self, iterable):
         list_ = list(iterable)
-        self.beginInsertRows(QModelIndex(), len(self), len(self) + len(list_) - 1)
+        self.beginInsertRows(QModelIndex(),
+                             len(self), len(self) + len(list_) - 1)
         self._list.extend(list_)
         self._other_data.extend([_store() for _ in list_])
         self.endInsertRows()
@@ -226,7 +230,7 @@ class PyListModel(QAbstractListModel):
 
     def __setitem__(self, i, value):
         self._list[i] = value
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), self.index(i), self.index(i))
+        self.dataChanged.emit(self.index(i), self.index(i))
 
     def __setslice__(self, i, j, iterable):
         self.__delslice__(i, j)
@@ -240,7 +244,7 @@ class PyListModel(QAbstractListModel):
     def reverse(self):
         self._list.reverse()
         self._other_data.reverse()
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), self.index(0), self.index(len(self) -1))
+        self.dataChanged.emit(self.index(0), self.index(len(self) -1))
 
     def sort(self, *args, **kwargs):
         indices = _argsort(self._list, *args, **kwargs)
@@ -249,7 +253,7 @@ class PyListModel(QAbstractListModel):
         for i, new_l, new_o in enumerate(zip(list, other)):
             self._list[i] = new_l
             self._other_data[i] = new_o
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), self.index(0), self.index(len(self) -1))
+        self.dataChanged.emit(self.index(0), self.index(len(self) -1))
 
     def __repr__(self):
         return "PyListModel(%s)" % repr(self._list)
@@ -263,7 +267,7 @@ class PyListModel(QAbstractListModel):
 
         #TODO: group indexes into ranges
         for ind in indexList:
-            self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), self.index(ind), self.index(ind))
+            self.dataChanged.emit(self.index(ind), self.index(ind))
 
     ###########
     # Drag/drop
@@ -271,24 +275,6 @@ class PyListModel(QAbstractListModel):
 
     def supportedDropActions(self):
         return self._supportedDropActions
-
-    def decode_qt_data(self, data):
-        """ Decode internal Qt 'application/x-qabstractitemmodeldatalist'
-        mime data
-        """
-        stream = QDataStream(data)
-        items = []
-        while not stream.atEnd():
-            row = ds.readInt()
-            col = ds.readInt()
-            item_count = ds.readInt()
-            item = {}
-            for i in range(item_count):
-                role = ds.readInt()
-                value = ds.readQVariant()
-                item[role] = value
-            items.append((row, column, item))
-        return items
 
     def mimeTypes(self):
         return self.MIME_TYPES + list(QAbstractListModel.mimeTypes(self))
@@ -299,7 +285,7 @@ class PyListModel(QAbstractListModel):
 
         items = [self[i.row()] for i in indexlist]
         mime = QAbstractListModel.mimeData(self, indexlist)
-        data = cPickle.dumps(vars)
+        data = pickle.dumps(vars)
         mime.setData(self.MIME_TYPE, QByteArray(data))
         mime._items = items
         return mime
@@ -315,15 +301,12 @@ class PyListModel(QAbstractListModel):
             vars = mime._vars
         else:
             desc = str(mime.data(self.MIME_TYPE))
-            vars = cPickle.loads(desc)
+            vars = pickle.loads(desc)
 
-        return QAbstractListModel.dropMimeData(self, mime, action, row, column, parent)
+        return QAbstractListModel.dropMimeData(
+            self, mime, action, row, column, parent)
 
 
-import OWGUI
-import orange
-import Orange
-import pickle
 
 class VariableListModel(PyListModel):
 
@@ -336,7 +319,7 @@ class VariableListModel(PyListModel):
             if role == Qt.DisplayRole:
                 return QVariant(var.name)
             elif role == Qt.DecorationRole:
-                return QVariant(OWGUI.getAttributeIcons().get(var.varType, -1))
+                return QVariant(gui.getAttributeIcons().get(var.varType, -1))
             elif role == Qt.ToolTipRole:
                 return QVariant(self.variable_tooltip(var))
             else:
@@ -345,11 +328,11 @@ class VariableListModel(PyListModel):
             return QVariant()
 
     def variable_tooltip(self, var):
-        if isinstance(var, Orange.feature.Discrete):
+        if isinstance(var, DiscreteVariable):
             return self.discrete_variable_tooltip(var)
-        elif isinstance(var, Orange.feature.Continuous):
+        elif isinstance(var, ContinuousVariable):
             return self.continuous_variable_toltip(var)
-        elif isinstance(var, Orange.feature.String):
+        elif isinstance(var, StringVariable):
             return self.string_variable_tooltip(var)
 
     def variable_labels_tooltip(self, var):
@@ -363,7 +346,8 @@ class VariableListModel(PyListModel):
         return text
 
     def discrete_variable_tooltip(self, var):
-        text = "<b>%s</b><br/>Discrete with %i values: " % (safe_text(var.name), len(var.values))
+        text = "<b>%s</b><br/>Discrete with %i values: " %\
+               (safe_text(var.name), len(var.values))
         text += ", ".join("%r" % safe_text(v) for v in var.values)
         text += self.variable_labels_tooltip(var)
         return text
@@ -395,7 +379,7 @@ class VariableEditor(QWidget):
         QWidget.__init__(self, parent)
         self.var = var
         layout = QHBoxLayout()
-        self._attrs = OWGUI.getAttributeIcons()
+        self._attrs = gui.getAttributeIcons()
         self.type_cb = QComboBox(self)
         for attr, icon in self._attrs.items():
             if attr != -1:
@@ -417,17 +401,16 @@ class VariableEditor(QWidget):
         self.type_cb.setCurrentIndex(list(self._attr.keys()).index(type))
         self.name_le.setText(name)
 
-class EnumVariableEditor(VariableEditor):
+class DiscreteVariableEditor(VariableEditor):
     def __init__(self, var, parent):
         VariableEditor.__init__(self, var, parent)
 
-class FloatVariableEditor(QLineEdit):
-
+class ContinuousVariableEditor(QLineEdit):
     def setVariable(self, var):
-        self.setText(str(var.name))
+        self.setText(var.name)
 
     def getVariable(self):
-        return orange.FloatVariable(str(self.text()))
+        return ContinuousVariable(self.text())
 
 
 class StringVariableEditor(QLineEdit):
@@ -435,16 +418,16 @@ class StringVariableEditor(QLineEdit):
         self.setText(str(var.name))
 
     def getVariable(self):
-        return orange.StringVariable(str(self.text()))
+        return StringVariable(self.text())
 
 class VariableDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         var = index.data(Qt.EditRole).toPyObject()
-        if isinstance(var, orange.EnumVariable):
-            return EnumVariableEditor(parent)
-        elif isinstance(var, orange.FloatVariable):
-            return FloatVariableEditor(parent)
-        elif isinstance(var, orange.StringVariable):
+        if isinstance(var, DiscreteVariable):
+            return DiscreteVariableEditor(parent)
+        elif isinstance(var, ContinuousVariable):
+            return ContinuousVariableEditor(parent)
+        elif isinstance(var, StringVariable):
             return StringVariableEditor(parent)
 #        return VariableEditor(var, parent)
 
