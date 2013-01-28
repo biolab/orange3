@@ -1,4 +1,4 @@
-from __future__ import with_statement
+
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -12,11 +12,11 @@ class _store(dict):
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
     if key is not None:
-        items = sorted(zip(range(len(seq)), seq), key=lambda i,v: key(v))
+        items = sorted(enumerate(seq), key=lambda i,v: key(v))
     elif cmp is not None:
-        items = sorted(zip(range(len(seq)), seq), cmp=lambda a,b: cmp(a[1], b[1]))
+        items = sorted(enumerate(seq), cmp=lambda a,b: cmp(a[1], b[1]))
     else:
-        items = sorted(zip(range(len(seq)), seq), key=seq.__getitem__)
+        items = sorted(enumerate(seq), key=seq.__getitem__)
     if reverse:
         items = reversed(items)
     return items
@@ -94,7 +94,7 @@ class PyListModel(QAbstractListModel):
     def itemData(self, index):
         map = QAbstractListModel.itemData(self, index)
         if self._is_index_valid_for(index, self._other_data):
-            items = self._other_data[index.row()].items()
+            items = list(self._other_data[index.row()].items())
         else:
             items = []
 
@@ -138,8 +138,8 @@ class PyListModel(QAbstractListModel):
             return self._flags | Qt.ItemIsDropEnabled
 
     def insertRows(self, row, count, parent=QModelIndex()):
-        """ Insert ``count`` rows at ``row``, the list fill be filled 
-        with ``None`` 
+        """ Insert ``count`` rows at ``row``, the list fill be filled
+        with ``None``
         """
         if not parent.isValid():
             self.__setslice__(row, row, [None] * count)
@@ -194,7 +194,7 @@ class PyListModel(QAbstractListModel):
         return self._list[i:j]
 
     def __add__(self, iterable):
-        new_list = PyListModel(list(self._list), 
+        new_list = PyListModel(list(self._list),
                            self.parent(),
                            flags=self._flags,
                            list_item_role=self.list_item_role,
@@ -254,10 +254,6 @@ class PyListModel(QAbstractListModel):
     def __repr__(self):
         return "PyListModel(%s)" % repr(self._list)
 
-    def __nonzero__(self):
-        return len(self) != 0
-
-    #for Python 3000
     def __bool__(self):
         return len(self) != 0
 
@@ -278,7 +274,7 @@ class PyListModel(QAbstractListModel):
 
     def decode_qt_data(self, data):
         """ Decode internal Qt 'application/x-qabstractitemmodeldatalist'
-        mime data 
+        mime data
         """
         stream = QDataStream(data)
         items = []
@@ -327,7 +323,7 @@ class PyListModel(QAbstractListModel):
 import OWGUI
 import orange
 import Orange
-import cPickle
+import pickle
 
 class VariableListModel(PyListModel):
 
@@ -359,9 +355,9 @@ class VariableListModel(PyListModel):
     def variable_labels_tooltip(self, var):
         text = ""
         if var.attributes:
-            items = var.attributes.items()
-            items = [(safe_text(key), safe_text(value)) for key, value in items]
-            labels = map("%s = %s".__mod__, items)
+            items = [(safe_text(key), safe_text(value))
+                     for key, value in var.attributes.items()]
+            labels = list(map("%s = %s".__mod__, items))
             text += "<br/>Variable Labels:<br/>"
             text += "<br/>".join(labels)
         return text
@@ -405,42 +401,42 @@ class VariableEditor(QWidget):
             if attr != -1:
                 self.type_cb.addItem(icon, str(attr))
         layout.addWidget(self.type_cb)
-        
+
         self.name_le = QLineEdit(self)
         layout.addWidget(self.name_le)
-        
+
         self.setLayout(layout)
-        
+
         self.connect(self.type_cb, SIGNAL("currentIndexChanged(int)"), self.edited)
         self.connect(self.name_le, SIGNAL("editingFinished()"), self.edited)
-    
+
     def edited(self, *args):
         self.emit(SIGNAL("edited()"))
-         
+
     def setData(self, type, name):
-        self.type_cb.setCurrentIndex(self._attr.keys().index(type))
+        self.type_cb.setCurrentIndex(list(self._attr.keys()).index(type))
         self.name_le.setText(name)
-        
+
 class EnumVariableEditor(VariableEditor):
     def __init__(self, var, parent):
         VariableEditor.__init__(self, var, parent)
-        
+
 class FloatVariableEditor(QLineEdit):
-    
+
     def setVariable(self, var):
         self.setText(str(var.name))
-        
+
     def getVariable(self):
         return orange.FloatVariable(str(self.text()))
 
-    
+
 class StringVariableEditor(QLineEdit):
     def setVariable(self, var):
         self.setText(str(var.name))
-        
+
     def getVariable(self):
         return orange.StringVariable(str(self.text()))
-        
+
 class VariableDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         var = index.data(Qt.EditRole).toPyObject()
@@ -451,28 +447,28 @@ class VariableDelegate(QStyledItemDelegate):
         elif isinstance(var, orange.StringVariable):
             return StringVariableEditor(parent)
 #        return VariableEditor(var, parent)
-    
+
     def setEditorData(self, editor, index):
         var = index.data(Qt.EditRole).toPyObject()
         editor.variable = var
-        
+
     def setModelData(self, editor, model, index):
         model.setData(index, QVariant(editor.variable), Qt.EditRole)
-        
+
 #    def displayText(self, value, locale):
 #        return value.toPyObject().name
-        
+
 class ListSingleSelectionModel(QItemSelectionModel):
     """ Item selection model for list item models with single selection.
-    
+
     Defines signal:
         - selectedIndexChanged(QModelIndex)
-        
+
     """
     def __init__(self, model, parent=None):
         QItemSelectionModel.__init__(self, model, parent)
         self.connect(self, SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.onSelectionChanged)
-        
+
     def onSelectionChanged(self, new, old):
         index = list(new.indexes())
         if index:
@@ -480,22 +476,22 @@ class ListSingleSelectionModel(QItemSelectionModel):
         else:
             index = QModelIndex()
         self.emit(SIGNAL("selectedIndexChanged(QModelIndex)"), index)
-        
+
     def selectedRow(self):
-        """ Return QModelIndex of the selected row or invalid if no selection. 
+        """ Return QModelIndex of the selected row or invalid if no selection.
         """
         rows = self.selectedRows()
         if rows:
             return rows[0]
         else:
             return QModelIndex()
-        
+
     def select(self, index, flags=QItemSelectionModel.ClearAndSelect):
         if isinstance(index, int):
             index = self.model().index(index)
         return QItemSelectionModel.select(self, index, flags)
-    
-        
+
+
 class ModelActionsWidget(QWidget):
     def __init__(self, actions=[], parent=None, direction=QBoxLayout.LeftToRight):
         QWidget.__init__(self, parent)
@@ -508,7 +504,7 @@ class ModelActionsWidget(QWidget):
         for action in actions:
             self.addAction(action)
         self.setLayout(layout)
-            
+
     def actionButton(self, action):
         if isinstance(action, QAction):
             button = QToolButton(self)
@@ -516,15 +512,15 @@ class ModelActionsWidget(QWidget):
             return button
         elif isinstance(action, QAbstractButton):
             return action
-            
+
     def insertAction(self, ind, action, *args):
         button = self.actionButton(action)
         self.layout().insertWidget(ind, button, *args)
         self.buttons.insert(ind, button)
         self.actions.insert(ind, action)
         return button
-        
+
     def addAction(self, action, *args):
         return self.insertAction(-1, action, *args)
 
-    
+
