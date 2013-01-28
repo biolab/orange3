@@ -39,11 +39,6 @@ WIDGET_CLASS = "OWFile"
 
 
 
-class FileNameContextHandler(settings.ContextHandler):
-    def match(self, context, _, filename):
-        return context.filename == filename
-
-
 # TODO What is this?!
 def addOrigin(examples, filename):
     vars = examples.domain.variables + examples.domain.metas
@@ -59,7 +54,7 @@ class OWFile(widget.OWWidget):
     outputs = [("Data", Table)]
 
     recent_files = Setting(lambda: ["(none)"])
-    new_variables = Setting(False, ContextHandler.CONTEXT)
+    new_variables = Setting(False)
 
 #    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes() if len(ft)>2 and ft[2]]
     registered_file_types = []
@@ -186,6 +181,7 @@ class OWFile(widget.OWWidget):
         self.error()
         self.warning()
         self.information()
+
 
         if not os.path.exists(fn):
             dirname, basename = os.path.split(fn)
