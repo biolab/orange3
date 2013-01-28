@@ -98,6 +98,11 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         if hasattr(self, "settingsHandler"):
             self.settingsHandler.initialize(self, settings)
 
+        # Bind input signal handlers to instance
+        for i, input in enumerate(self.inputs):
+            self.inputs[i] = (input[:2] + (getattr(self, input[2]), ) +
+                              input[3:])
+
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
         #    self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
