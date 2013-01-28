@@ -411,6 +411,12 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     def __setattr__(self, name, value):
         return self.setattr_deep(name, value, QDialog)
 
+    def openContext(self, *a):
+        self.settingsHandler.openContext(self, *a)
+
+    def closeContext(self):
+        self.settingsHandler.closeContext(self)
+
     def retrieveSpecificSettings(self):
         pass
 
