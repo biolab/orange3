@@ -301,12 +301,12 @@ class OWDataTable(widget.OWWidget):
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
+    inputs = [("Data", Table, "dataset", Multiple + Default)]
+    outputs = [("Selected Data", Table, Default),
+               ("Other Data", Table)]
+
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
-
-        self.inputs = [("Data", Table, self.dataset, Multiple + Default)]
-        self.outputs = [("Selected Data", Table, Default),
-                        ("Other Data", Table)]
 
         self.data = {}          # key: id, value: ExampleTable
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
