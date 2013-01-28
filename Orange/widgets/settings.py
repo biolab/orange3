@@ -9,6 +9,7 @@ from Orange import data
 class Context:
     def __init__(self, **argkw):
         self.time = time.time()
+        self.values = {}
         self.__dict__.update(argkw)
 
     def __getstate__(self):
