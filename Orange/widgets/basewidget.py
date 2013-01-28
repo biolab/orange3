@@ -95,7 +95,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.controlledAttributes = ControlledAttributesDict(self)
         self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
-        self.settingsHandler.initialize(self, settings)
+        if hasattr(self, "settingsHandler"):
+            self.settingsHandler.initialize(self, settings)
 
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
@@ -398,7 +399,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                             # no break -- can have a.b.c.d and a.e.f.g; needs to
                             # set controller for all!
 
-        self.settingsHandler.fastSave(self, name, value)
+        if hasattr(self, "settingsHandler"):
+            self.settingsHandler.fastSave(self, name, value)
 
 
     def __setattr__(self, name, value):
