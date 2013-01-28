@@ -20,8 +20,8 @@ class EvaluationResultsContextHandler(settings.ContextHandler):
     def settingsFromWidget(self, widget):
         super().settingsFromWidget(widget)
         context = widget.currentContext
-        context.targetClass = widget.getdeepattr(self.targetAttr)
-        context.selectedClassifiers = list(widget.getdeepattr(self.selectedAttr))
+        context.targetClass = widget.getattr_deep(self.targetAttr)
+        context.selectedClassifiers = list(widget.getattr_deep(self.selectedAttr))
 
     def settingsToWidget(self, widget):
         super().settingsToWidget(widget)

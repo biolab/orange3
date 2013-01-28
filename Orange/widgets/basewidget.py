@@ -3,7 +3,9 @@
 # Orange Widget
 # A General Orange Widget, from which all the Orange Widgets are derived
 #
-import sys, time, os, pickle
+import sys
+import time
+import os
 from functools import reduce
 
 from PyQt4.QtCore import *
@@ -21,59 +23,6 @@ WARNING = 1
 
 TRUE=1
 FALSE=0
-
-def unisetattr(self, name, value, grandparent):
-    if "." in name:
-        names = name.split(".")
-        lastname = names.pop()
-        obj = reduce(lambda o, n: getattr(o, n, None),  names, self)
-    else:
-        lastname, obj = name, self
-
-    if obj is None:
-        print("Internal error: unable to set '%s' to %s " % (name, value))
-    else:
-        if (hasattr(grandparent, "__setattr__") and
-                isinstance(obj, grandparent)):
-            grandparent.__setattr__(obj, lastname,  value)
-        else:
-            setattr(obj, lastname, value)
-
-    controlledAttributes = getattr(self, "controlledAttributes", None)
-    controlCallback = controlledAttributes and controlledAttributes.get(name,
-                                                                        None)
-    if controlCallback:
-        for callback in controlCallback:
-            callback(value)
-    # controlled things (checkboxes...) never have __attributeControllers
-    elif hasattr(self, "__attributeControllers"):
-        for controller, myself in self.__attributeControllers.keys():
-            if getattr(controller, myself, None) != self:
-                del self.__attributeControllers[(controller, myself)]
-                continue
-            controlledAttributes = getattr(controller, "controlledAttributes",
-                                           None)
-            if not controlledAttributes:
-                continue
-            fullName = myself + "." + name
-            controlCallback = controlledAttributes.get(fullName, None)
-            if controlCallback:
-                for callback in controlCallback:
-                    callback(value)
-            else:
-                lname = fullName + "."
-                dlen = len(lname)
-                for controlled in controlledAttributes.keys():
-                    if controlled[:dlen] == lname:
-                        self.setControllers(value, controlled[dlen:],
-                                            controller, fullName)
-                        # no break -- can have a.b.c.d and a.e.f.g; needs to
-                        # set controller for all!
-
-    # TODO Reimplement this
-    # self.contextHandler.fastSave(self, name, value)
-
-
 
 class ControlledAttributesDict(dict):
     def __init__(self, master):
@@ -107,17 +56,21 @@ class BaseWidgetClass(type(QDialog)):
     #noinspection PyMethodParameters
     def __new__(mcs, name, bases, dict):
         cls = type.__new__(mcs, name, bases, dict)
-        # TODO Remove this when all widgets are migrated to 3.0
+        if not cls._title: # not a widget - no settings
+            return cls
+        # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
             hasattr(cls, "settingsFromWidgetCallback")):
             raise SystemError("Reimplement settingsToWidgetCallback and "
                               "settingsFromWidgetCallback")
         if not hasattr(cls, "settingsHandler"):
             cls.settingsHandler = settings.SettingsHandler()
+        cls.settingsHandler.widget_class = cls
         for name, value in cls.__dict__.items():
             if isinstance(value, settings.Setting):
                 cls.settingsHandler.settings[name] = value
                 setattr(cls, name, value.default)
+        cls.settingsHandler.read_defaults()
         return cls
 
 
@@ -130,9 +83,10 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     inputs = []
     outputs = []
 
+    _title = ""
+    _category = None
 
-    def __init__(self, parent=None, signalManager=None, title="",
-                 _=FALSE, _category=None, _settingsFromSchema=False):
+    def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, Qt.Window if self.resizing_enabled else
                                  Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
@@ -141,16 +95,18 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.controlledAttributes = ControlledAttributesDict(self)
         self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
-        self._category = _category
-        self._settingsFromSchema = _settingsFromSchema
+        self.settingsHandler.initialize(self, settings)
 
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
         #    self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
 
+        OWBaseWidget.widget_id += 1
+        self.widget_id = OWBaseWidget.widget_id
+
         self.__dict__.update(environ.directories)
 
-        self.setCaption(title.replace("&",""))
+        self.setCaption(self._title.replace("&",""))
         self.setFocusPolicy(Qt.StrongFocus)
 
         # number of control signals that are currently being processed
@@ -172,11 +128,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.widgetStateHandler = None
         self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
 
-        self.settingsHandler.initialize(self)
-        self.loadSettings()
-
-        OWBaseWidget.widgetId += 1
-        self.widgetId = OWBaseWidget.widgetId
 
         self._private_thread_pools = {}
         self.asyncCalls = []
@@ -185,15 +136,13 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.connect(self, SIGNAL("blockingStateChanged(bool)"), lambda bool :self.signalManager.log.info("Blocking state changed %s %s" % (str(self), str(bool))))
 
 
-    # uncomment this when you need to see which events occured
-    """
-    def event(self, e):
-        #eventDict = dict([(0, 'None'), (1, 'Timer'), (2, 'MouseButtonPress'), (3, 'MouseButtonRelease'), (4, 'MouseButtonDblClick'), (5, 'MouseMove'), (6, 'KeyPress'), (7, 'KeyRelease'), (8, 'FocusIn'), (9, 'FocusOut'), (10, 'Enter'), (11, 'Leave'), (12, 'Paint'), (13, 'Move'), (14, 'Resize'), (15, 'Create'), (16, 'Destroy'), (17, 'Show'), (18, 'Hide'), (19, 'Close'), (20, 'Quit'), (21, 'Reparent'), (22, 'ShowMinimized'), (23, 'ShowNormal'), (24, 'WindowActivate'), (25, 'WindowDeactivate'), (26, 'ShowToParent'), (27, 'HideToParent'), (28, 'ShowMaximized'), (30, 'Accel'), (31, 'Wheel'), (32, 'AccelAvailable'), (33, 'CaptionChange'), (34, 'IconChange'), (35, 'ParentFontChange'), (36, 'ApplicationFontChange'), (37, 'ParentPaletteChange'), (38, 'ApplicationPaletteChange'), (40, 'Clipboard'), (42, 'Speech'), (50, 'SockAct'), (51, 'AccelOverride'), (60, 'DragEnter'), (61, 'DragMove'), (62, 'DragLeave'), (63, 'Drop'), (64, 'DragResponse'), (70, 'ChildInserted'), (71, 'ChildRemoved'), (72, 'LayoutHint'), (73, 'ShowWindowRequest'), (80, 'ActivateControl'), (81, 'DeactivateControl'), (1000, 'User')])
-        eventDict = dict([(0, "None"), (130, "AccessibilityDescription"), (119, "AccessibilityHelp"), (86, "AccessibilityPrepare"), (114, "ActionAdded"), (113, "ActionChanged"), (115, "ActionRemoved"), (99, "ActivationChange"), (121, "ApplicationActivated"), (122, "ApplicationDeactivated"), (36, "ApplicationFontChange"), (37, "ApplicationLayoutDirectionChange"), (38, "ApplicationPaletteChange"), (35, "ApplicationWindowIconChange"), (68, "ChildAdded"), (69, "ChildPolished"), (71, "ChildRemoved"), (40, "Clipboard"), (19, "Close"), (82, "ContextMenu"), (52, "DeferredDelete"), (60, "DragEnter"), (62, "DragLeave"), (61, "DragMove"), (63, "Drop"), (98, "EnabledChange"), (10, "Enter"), (150, "EnterEditFocus"), (124, "EnterWhatsThisMode"), (116, "FileOpen"), (8, "FocusIn"), (9, "FocusOut"), (97, "FontChange"), (159, "GraphicsSceneContextMenu"), (164, "GraphicsSceneDragEnter"), (166, "GraphicsSceneDragLeave"), (165, "GraphicsSceneDragMove"), (167, "GraphicsSceneDrop"), (163, "GraphicsSceneHelp"), (160, "GraphicsSceneHoverEnter"), (162, "GraphicsSceneHoverLeave"), (161, "GraphicsSceneHoverMove"), (158, "GraphicsSceneMouseDoubleClick"), (155, "GraphicsSceneMouseMove"), (156, "GraphicsSceneMousePress"), (157, "GraphicsSceneMouseRelease"), (168, "GraphicsSceneWheel"), (18, "Hide"), (27, "HideToParent"), (127, "HoverEnter"), (128, "HoverLeave"), (129, "HoverMove"), (96, "IconDrag"), (101, "IconTextChange"), (83, "InputMethod"), (6, "KeyPress"), (7, "KeyRelease"), (89, "LanguageChange"), (90, "LayoutDirectionChange"), (76, "LayoutRequest"), (11, "Leave"), (151, "LeaveEditFocus"), (125, "LeaveWhatsThisMode"), (88, "LocaleChange"), (153, "MenubarUpdated"), (43, "MetaCall"), (102, "ModifiedChange"), (4, "MouseButtonDblClick"), (2, "MouseButtonPress"), (3, "MouseButtonRelease"), (5, "MouseMove"), (109, "MouseTrackingChange"), (13, "Move"), (12, "Paint"), (39, "PaletteChange"), (131, "ParentAboutToChange"), (21, "ParentChange"), (75, "Polish"), (74, "PolishRequest"), (123, "QueryWhatsThis"), (14, "Resize"), (117, "Shortcut"), (51, "ShortcutOverride"), (17, "Show"), (26, "ShowToParent"), (50, "SockAct"), (112, "StatusTip"), (100, "StyleChange"), (87, "TabletMove"), (92, "TabletPress"), (93, "TabletRelease"), (171, "TabletEnterProximity"), (172, "TabletLeaveProximity"), (1, "Timer"), (120, "ToolBarChange"), (110, "ToolTip"), (78, "UpdateLater"), (77, "UpdateRequest"), (111, "WhatsThis"), (118, "WhatsThisClicked"), (31, "Wheel"), (132, "WinEventAct"), (24, "WindowActivate"), (103, "WindowBlocked"), (25, "WindowDeactivate"), (34, "WindowIconChange"), (105, "WindowStateChange"), (33, "WindowTitleChange"), (104, "WindowUnblocked"), (126, "ZOrderChange"), (169, "KeyboardLayoutChange"), (170, "DynamicPropertyChange")])
-        if eventDict.has_key(e.type()):
-            print str(self.windowTitle()), eventDict[e.type()]
-        return QDialog.event(self, e)
-    """
+    # uncomment this to see which events occured
+#    def event(self, e):
+#        #eventDict = dict([(0, 'None'), (1, 'Timer'), (2, 'MouseButtonPress'), (3, 'MouseButtonRelease'), (4, 'MouseButtonDblClick'), (5, 'MouseMove'), (6, 'KeyPress'), (7, 'KeyRelease'), (8, 'FocusIn'), (9, 'FocusOut'), (10, 'Enter'), (11, 'Leave'), (12, 'Paint'), (13, 'Move'), (14, 'Resize'), (15, 'Create'), (16, 'Destroy'), (17, 'Show'), (18, 'Hide'), (19, 'Close'), (20, 'Quit'), (21, 'Reparent'), (22, 'ShowMinimized'), (23, 'ShowNormal'), (24, 'WindowActivate'), (25, 'WindowDeactivate'), (26, 'ShowToParent'), (27, 'HideToParent'), (28, 'ShowMaximized'), (30, 'Accel'), (31, 'Wheel'), (32, 'AccelAvailable'), (33, 'CaptionChange'), (34, 'IconChange'), (35, 'ParentFontChange'), (36, 'ApplicationFontChange'), (37, 'ParentPaletteChange'), (38, 'ApplicationPaletteChange'), (40, 'Clipboard'), (42, 'Speech'), (50, 'SockAct'), (51, 'AccelOverride'), (60, 'DragEnter'), (61, 'DragMove'), (62, 'DragLeave'), (63, 'Drop'), (64, 'DragResponse'), (70, 'ChildInserted'), (71, 'ChildRemoved'), (72, 'LayoutHint'), (73, 'ShowWindowRequest'), (80, 'ActivateControl'), (81, 'DeactivateControl'), (1000, 'User')])
+#        eventDict = dict([(0, "None"), (130, "AccessibilityDescription"), (119, "AccessibilityHelp"), (86, "AccessibilityPrepare"), (114, "ActionAdded"), (113, "ActionChanged"), (115, "ActionRemoved"), (99, "ActivationChange"), (121, "ApplicationActivated"), (122, "ApplicationDeactivated"), (36, "ApplicationFontChange"), (37, "ApplicationLayoutDirectionChange"), (38, "ApplicationPaletteChange"), (35, "ApplicationWindowIconChange"), (68, "ChildAdded"), (69, "ChildPolished"), (71, "ChildRemoved"), (40, "Clipboard"), (19, "Close"), (82, "ContextMenu"), (52, "DeferredDelete"), (60, "DragEnter"), (62, "DragLeave"), (61, "DragMove"), (63, "Drop"), (98, "EnabledChange"), (10, "Enter"), (150, "EnterEditFocus"), (124, "EnterWhatsThisMode"), (116, "FileOpen"), (8, "FocusIn"), (9, "FocusOut"), (97, "FontChange"), (159, "GraphicsSceneContextMenu"), (164, "GraphicsSceneDragEnter"), (166, "GraphicsSceneDragLeave"), (165, "GraphicsSceneDragMove"), (167, "GraphicsSceneDrop"), (163, "GraphicsSceneHelp"), (160, "GraphicsSceneHoverEnter"), (162, "GraphicsSceneHoverLeave"), (161, "GraphicsSceneHoverMove"), (158, "GraphicsSceneMouseDoubleClick"), (155, "GraphicsSceneMouseMove"), (156, "GraphicsSceneMousePress"), (157, "GraphicsSceneMouseRelease"), (168, "GraphicsSceneWheel"), (18, "Hide"), (27, "HideToParent"), (127, "HoverEnter"), (128, "HoverLeave"), (129, "HoverMove"), (96, "IconDrag"), (101, "IconTextChange"), (83, "InputMethod"), (6, "KeyPress"), (7, "KeyRelease"), (89, "LanguageChange"), (90, "LayoutDirectionChange"), (76, "LayoutRequest"), (11, "Leave"), (151, "LeaveEditFocus"), (125, "LeaveWhatsThisMode"), (88, "LocaleChange"), (153, "MenubarUpdated"), (43, "MetaCall"), (102, "ModifiedChange"), (4, "MouseButtonDblClick"), (2, "MouseButtonPress"), (3, "MouseButtonRelease"), (5, "MouseMove"), (109, "MouseTrackingChange"), (13, "Move"), (12, "Paint"), (39, "PaletteChange"), (131, "ParentAboutToChange"), (21, "ParentChange"), (75, "Polish"), (74, "PolishRequest"), (123, "QueryWhatsThis"), (14, "Resize"), (117, "Shortcut"), (51, "ShortcutOverride"), (17, "Show"), (26, "ShowToParent"), (50, "SockAct"), (112, "StatusTip"), (100, "StyleChange"), (87, "TabletMove"), (92, "TabletPress"), (93, "TabletRelease"), (171, "TabletEnterProximity"), (172, "TabletLeaveProximity"), (1, "Timer"), (120, "ToolBarChange"), (110, "ToolTip"), (78, "UpdateLater"), (77, "UpdateRequest"), (111, "WhatsThis"), (118, "WhatsThisClicked"), (31, "Wheel"), (132, "WinEventAct"), (24, "WindowActivate"), (103, "WindowBlocked"), (25, "WindowDeactivate"), (34, "WindowIconChange"), (105, "WindowStateChange"), (33, "WindowTitleChange"), (104, "WindowUnblocked"), (126, "ZOrderChange"), (169, "KeyboardLayoutChange"), (170, "DynamicPropertyChange")])
+#        if eventDict.has_key(e.type()):
+#            print str(self.windowTitle()), eventDict[e.type()]
+#        return QDialog.event(self, e)
 
     def getIconNames(self, iconName):
         if type(iconName) == list:      # if canvas sent us a prepared list of valid names, just return those
@@ -260,7 +209,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
     # this function is called at the end of the widget's __init__ when the widgets is saving its position and size parameters
     def restoreWidgetPosition(self):
-        if self.savePosition:
+        if self.save_position:
             geometry = getattr(self, "savedWidgetGeometry", None)
             restored = False
             if geometry is not None:
@@ -303,7 +252,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
     # this is called in canvas when loading a schema. it opens the widgets that were shown when saving the schema
     def restoreWidgetStatus(self):
-        if self.savePosition and getattr(self, "widgetShown", None):
+        if self.save_position and getattr(self, "widgetShown", None):
             self.show()
 
     # when widget is resized, save new width and height into widgetWidth and widgetHeight. some widgets can put this two
@@ -313,7 +262,7 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         # Don't store geometry if the widget is not visible
         # (the widget receives the resizeEvent before showEvent and we must not
         # overwrite the the savedGeometry before then)
-        if self.savePosition and self.isVisible():
+        if self.save_position and self.isVisible():
             self.savedWidgetGeometry = str(self.saveGeometry())
 
 
@@ -322,14 +271,14 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     # Commented out because of Ubuntu (on call to restoreGeometry calls move event saving pos (0, 0)
 #    def moveEvent(self, ev):
 #        QDialog.moveEvent(self, ev)
-#        if self.savePosition:
+#        if self.save_position:
 #            self.widgetXPosition = self.frameGeometry().x()
 #            self.widgetYPosition = self.frameGeometry().y()
 #            self.savedWidgetGeometry = str(self.saveGeometry())
 
     # set widget state to hidden
     def hideEvent(self, ev):
-        if self.savePosition:
+        if self.save_position:
             self.widgetShown = 0
             self.savedWidgetGeometry = str(self.saveGeometry())
         QDialog.hideEvent(self, ev)
@@ -344,13 +293,13 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     # set widget state to shown
     def showEvent(self, ev):
         QDialog.showEvent(self, ev)
-        if self.savePosition:
+        if self.save_position:
             self.widgetShown = 1
 
         self.restoreWidgetPosition()
 
     def closeEvent(self, ev):
-        if self.savePosition:
+        if self.save_position:
             self.savedWidgetGeometry = str(self.saveGeometry())
         QDialog.closeEvent(self, ev)
 
@@ -389,149 +338,98 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.signalManager.send(self, signalName, value, id)
 
 
-    def getdeepattr(self, attr, default=None):
+    def getattr_deep(self, attr, default=None):
         try:
-            return reduce(lambda o, n: getattr(o, n, None),  attr.split("."), self)
+            return reduce(lambda o, n: getattr(o, n, None),
+                          attr.split("."), self)
         except AttributeError:
             if default is not None:
                 return default
-            else:
-                raise AttributeError("'%s' has no attribute '%s'" % (self, attr))
+            raise AttributeError(
+                "'{}' has no attribute '{}'".format(self, attr))
 
 
-    # Set all settings
-    # settings - the map with the settings
-    def setSettings(self,settings):
-        for key in settings:
-            self.__setattr__(key, settings[key])
-        #self.__dict__.update(settings)
+    def setattr_deep(self, name, value, grandparent):
+        names = name.split(".")
+        lastname = names.pop()
+        obj = reduce(lambda o, n: getattr(o, n, None),  names, self)
+        if obj is None:
+            raise AttributeError("Cannot set '{}' to {} ".format(name, value))
 
-    # Get all settings
-    # returns map with all settings
-    def getSettings(self, alsoContexts = True, globalContexts=False):
-        settings = {}
-        if hasattr(self, "settingsList"):
-            for name in self.settingsList:
-                try:
-                    settings[name] =  self.getdeepattr(name)
-                except:
-                    #print "Attribute %s not found in %s widget. Remove it from the settings list." % (name, self.captionTitle)
-                    pass
-
-        if alsoContexts:
-            self.synchronizeContexts()
-            contextHandlers = getattr(self, "contextHandlers", {})
-            for contextHandler in list(contextHandlers.values()):
-                contextHandler.mergeBack(self)
-#                settings[contextHandler.localContextName] = contextHandler.globalContexts
-# Instead of the above line, I found this; as far as I recall this was a fix
-# for some bugs related to, say, Select Attributes not handling the context
-# attributes properly, but I dare not add it without understanding what it does.
-# Here it is, if these contexts give us any further trouble.
-                if (contextHandler.syncWithGlobal and contextHandler.globalContexts is getattr(self, contextHandler.localContextName)) or globalContexts:
-                    settings[contextHandler.localContextName] = contextHandler.globalContexts
-                else:
-                    local_contexts = getattr(self, contextHandler.localContextName, None)
-                    if local_contexts:
-                        settings[contextHandler.localContextName] = local_contexts
-                    ###
-                settings[contextHandler.localContextName+"Version"] = (settings.contextStructureVersion, contextHandler.contextDataVersion)
-
-        return settings
-
-
-    def getSettingsFile(self, file):
-        if file is None:
-            file = os.path.join(self.widget_settings_dir, self.captionTitle + ".ini")
-            if not os.path.exists(file):
-                try:
-                    f = open(file, "wb")
-                    pickle.dump({}, f)
-                    f.close()
-                except IOError:
-                    return
-        if isinstance(file, str):
-            if os.path.exists(file):
-                return open(file, "rb")
+        if (hasattr(grandparent, "__setattr__") and
+                isinstance(obj, grandparent)):
+            # JD: super().__setattr__ wouldn't work here?
+            grandparent.__setattr__(obj, lastname,  value)
         else:
-            return file
+            setattr(obj, lastname, value)
+            # TODO: Puzzled. setattr calls obj.__setattr__. If obj is self,
+            # then self.__setattr__ again calls setattr_deep so all the code
+            # below here gets executed twice, doesn't it?!
+            # Should we add a 'if self is obj: return' here?
 
-
-    # Loads settings from the widget's .ini file
-    def loadSettings(self, file = None):
-        file = self.getSettingsFile(file)
-        if file:
-            try:
-                settings = pickle.load(file)
-            except Exception as ex:
-                print("Failed to load settings!", repr(ex), file=sys.stderr)
-                settings = None
-
-            if self._settingsFromSchema:
-                if settings: settings.update(self._settingsFromSchema)
-                else:        settings = self._settingsFromSchema
-
-            # can't close everything into one big try-except since this would mask all errors in the below code
-            if settings:
-                if hasattr(self, "settingsList"):
-                    self.setSettings(settings)
-
-                contextHandlers = getattr(self, "contextHandlers", {})
-                for contextHandler in contextHandlers.values():
-                    localName = contextHandler.localContextName
-
-                    structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
-                    if (structureVersion < settings.contextStructureVersion or dataVersion < contextHandler.contextDataVersion)\
-                            and localName in settings:
-                        del settings[localName]
-                        delattr(self, localName)
-                        contextHandler.initLocalContext(self)
-
-                    if not _settingsFromSchema: #When running stand alone widgets
-                        if contextHandler.syncWithGlobal:
-                            local_contexts = settings.get(localName, None)
-                            if local_contexts is not None:
-                                contextHandler.globalContexts = local_contexts
-                        else:
-                            setattr(self, localName, contextHandler.globalContexts)
-
-
-    def saveSettings(self, file = None):
-        settings = self.getSettings(globalContexts=True)
-        if settings:
-            if file is None:
-                file = os.path.join(self.widget_settings_dir, self.captionTitle + ".ini")
-            if isinstance(file, str):
-                file = open(file, "wb")
-            pickle.dump(settings, file)
-
-    # Loads settings from string str which is compatible with pickle
-    def loadSettingsStr(self, str):
-        if str == None or str == "":
-            return
-
-        settings = pickle.loads(str)
-        self.setSettings(settings)
-
-        contextHandlers = getattr(self, "contextHandlers", {})
-        for contextHandler in contextHandlers.values():
-            localName = contextHandler.localContextName
-            if localName in settings:
-                structureVersion, dataVersion = settings.get(localName+"Version", (0, 0))
-                if structureVersion < settings.contextStructureVersion or dataVersion < contextHandler.contextDataVersion:
-                    del settings[localName]
-                    delattr(self, localName)
-                    contextHandler.initLocalContext(self)
+        controlledAttributes = getattr(self, "controlledAttributes", None)
+        controlCallback = (controlledAttributes and
+                           controlledAttributes.get(name, None))
+        if controlCallback:
+            for callback in controlCallback:
+                callback(value)
+        # controlled things (checkboxes...) never have __attributeControllers
+        elif hasattr(self, "__attributeControllers"):
+            for controller, myself in self.__attributeControllers.keys():
+                if getattr(controller, myself, None) != self:
+                    del self.__attributeControllers[(controller, myself)]
+                    continue
+                controlledAttributes = getattr(controller, "controlledAttributes",
+                                               None)
+                if not controlledAttributes:
+                    continue
+                fullName = myself + "." + name
+                controlCallback = controlledAttributes.get(fullName, None)
+                if controlCallback:
+                    for callback in controlCallback:
+                        callback(value)
                 else:
-                    setattr(self, localName, settings[localName])
+                    lname = fullName + "."
+                    dlen = len(lname)
+                    for controlled in controlledAttributes.keys():
+                        if controlled[:dlen] == lname:
+                            self.setControllers(value, controlled[dlen:],
+                                                controller, fullName)
+                            # no break -- can have a.b.c.d and a.e.f.g; needs to
+                            # set controller for all!
 
-    # return settings in string format compatible with pickle
-    def saveSettingsStr(self):
-        settings = self.getSettings()
-        return pickle.dumps(settings)
+        self.settingsHandler.fastSave(self, name, value)
+
+
+    def __setattr__(self, name, value):
+        return self.setattr_deep(name, value, QDialog)
+
+    def retrieveSpecificSettings(self):
+        pass
+
+    def storeSpecificSettings(self):
+        pass
+
+    def setControllers(self, obj, controlledName, controller, prefix):
+        while obj:
+            if prefix:
+#                print "SET CONTROLLERS: %s %s + %s" % (obj.__class__.__name__, prefix, controlledName)
+                if "attributeController" in obj.__dict__:
+                    obj.__dict__["__attributeControllers"][(controller, prefix)] = True
+                else:
+                    obj.__dict__["__attributeControllers"] = {(controller, prefix): True}
+
+            parts = controlledName.split(".", 1)
+            if len(parts) < 2:
+                break
+            obj = getattr(obj, parts[0], None)
+            prefix += parts[0]
+            controlledName = parts[1]
+
+
 
     def onDeleteWidget(self):
-        pass
+        self.settingsHandler.update_class_defaults()
 
     # this function is only intended for derived classes to send appropriate signals when all settings are loaded
     def activateLoadedSettings(self):
@@ -867,47 +765,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
             cls._cached__widget_state_icons = \
                     {"Info": info, "Warning": warning, "Error": error}
         return cls._cached__widget_state_icons
-
-    def synchronizeContexts(self):
-        if hasattr(self, "contextHandlers"):
-            for contextName, handler in self.contextHandlers.items():
-                context = self.currentContexts.get(contextName, None)
-                if context:
-                    handler.settingsFromWidget(self, context)
-
-
-    def closeContext(self, contextName=""):
-        if not self._useContexts:
-            return
-        curcontext = self.currentContexts.get(contextName)
-        if curcontext:
-            self.contextHandlers[contextName].closeContext(self, curcontext)
-            del self.currentContexts[contextName]
-
-    def settingsToWidgetCallback(self, context):
-        pass
-
-    def settingsFromWidgetCallback(self, context):
-        pass
-
-    def setControllers(self, obj, controlledName, controller, prefix):
-        while obj:
-            if prefix:
-#                print "SET CONTROLLERS: %s %s + %s" % (obj.__class__.__name__, prefix, controlledName)
-                if "attributeController" in obj.__dict__:
-                    obj.__dict__["__attributeControllers"][(controller, prefix)] = True
-                else:
-                    obj.__dict__["__attributeControllers"] = {(controller, prefix): True}
-
-            parts = controlledName.split(".", 1)
-            if len(parts) < 2:
-                break
-            obj = getattr(obj, parts[0], None)
-            prefix += parts[0]
-            controlledName = parts[1]
-
-    def __setattr__(self, name, value):
-        return unisetattr(self, name, value, QDialog)
 
     defaultKeyActions = {}
 

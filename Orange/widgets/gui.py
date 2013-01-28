@@ -665,7 +665,7 @@ def appendRadioButton(bg, master, value, label, tooltip = None, insertInto = Non
 #        w.setPixmap(label)
 #    if bg.layout(): bg.layout().addWidget(w)
 #
-#    w.setChecked(getdeepattr(master, value))
+#    w.setChecked(getattr_deep(master, value))
 #    if tooltip:
 #        w.setToolTip(tooltip)
 #
@@ -1221,7 +1221,7 @@ class collapsableWidgetBox(QGroupBox):
             self.callback()
 
     def updateControls(self):
-        val = self.master.getdeepattr(self.value)
+        val = self.master.getattr_deep(self.value)
         width = self.width()
         self.setChecked(val)
         self.setFlat(not val)

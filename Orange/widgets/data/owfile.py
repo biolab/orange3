@@ -2,7 +2,7 @@ import os, sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, ContextHandler
 from Orange.data.table import Table
 from Orange.data import io
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
@@ -55,8 +55,11 @@ def addOrigin(examples, filename):
 
 class OWFile(widget.OWWidget):
     """Reads data from a file"""
+    _title = "File"
+    outputs = [("Data", Table)]
+
     recent_files = Setting(lambda: ["(none)"])
-    new_variables = Setting(False, Setting.CONTEXT)
+    new_variables = Setting(False, ContextHandler.CONTEXT)
 
 #    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes() if len(ft)>2 and ft[2]]
     registered_file_types = []
@@ -69,12 +72,8 @@ class OWFile(widget.OWWidget):
     formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
 
 
-
-    def __init__(self, parent=None, signalManager = None):
-        super().__init__(parent, signalManager, "File",
-                         wantMainArea=0, resizingEnabled=1)
-
-        self.outputs = [("Data", Table)]
+    def __init__(self, parent=None, signalManager=None, settings=None):
+        super().__init__(parent, signalManager, settings)
 
         self.domain = None
         self.recent_files = [fn for fn in self.recent_files

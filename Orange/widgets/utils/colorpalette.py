@@ -63,9 +63,10 @@ class ColorPixmap (QIcon):
 
 # a widget that can be used to select the colors to be used
 class ColorPaletteDlg(basewidget.OWBaseWidget):
-    def __init__(self, parent, caption="Color Palette",
-                 callback=None, modal=True):
-        super().__init__(None, None, caption, modal=modal)
+    model = True
+
+    def __init__(self, parent, caption="Color Palette", callback=None):
+        super().__init__(None, None, caption)
         self.setLayout(QVBoxLayout(self))
         self.layout().setMargin(4)
 
@@ -344,7 +345,7 @@ class ColorPaletteDlg(basewidget.OWBaseWidget):
 
 class ColorPalleteListing(basewidget.OWBaseWidget):
     def __init__(self):
-        super().__init__(None, None, "Color Palette List", modal=1)
+        super().__init__(None, None, "Color Palette List")
         self.setLayout(QVBoxLayout(self))
         self.layout().setMargin(0)
         sa = QScrollArea()
@@ -403,7 +404,7 @@ class ColorPalleteListing(basewidget.OWBaseWidget):
 
 class PaletteEditor(basewidget.OWBaseWidget):
     def __init__(self, parent, rgbColors):
-        super().__init__(None, None, "Palette Editor", modal=1)
+        super().__init__(None, None, "Palette Editor")
         self.setLayout(QVBoxLayout(self))
         self.layout().setMargin(4)
 
@@ -854,7 +855,7 @@ class PaletteSelectorComboBox(QComboBox):
 if __name__== "__main__":
     a = QApplication(sys.argv)
 
-    c = ColorPaletteDlg(None, modal = False)
+    c = ColorPaletteDlg(None)
     c.createContinuousPalette("continuousPalette", "Continuous Palette")
     c.createDiscretePalette("discPalette", "Discrete Palette")
     box = c.createBox("otherColors", "Colors")

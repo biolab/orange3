@@ -13,23 +13,22 @@ from Orange.widgets import gui as OWGUI
 
 
 class OWWidget(basewidget.OWBaseWidget):
+    want_graph = False
+    want_status_bar = False
+    want_main_area = 1
+    no_report = False
+    show_save_graph=1
+    want_state_info_widget=None
 
-    def __init__(self, parent=None, signalManager=None, title="Orange Widget", wantGraph=False, wantStatusBar=False, savePosition=True, wantMainArea=1, noReport=False, showSaveGraph=1, resizingEnabled=1, wantStateInfoWidget=None, **args):
-        """
-        Initialization
-        Parameters:
-            title - The title of the\ widget, including a "&" (for shortcut in about box)
-            wantGraph - displays a save graph button or not
-        """
-
-        super().__init__(parent, signalManager, title, savePosition=savePosition, resizingEnabled=resizingEnabled, **args)
+    def __init__(self, parent=None, signalManager=None, settings=None):
+        super().__init__(parent, signalManager, settings)
 
         self.setLayout(QVBoxLayout())
         self.layout().setMargin(2)
 
         self.topWidgetPart = OWGUI.widgetBox(self, orientation="horizontal", margin=0)
         self.leftWidgetPart = OWGUI.widgetBox(self.topWidgetPart, orientation="vertical", margin=0)
-        if wantMainArea:
+        if self.want_main_area:
             self.leftWidgetPart.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
             self.leftWidgetPart.updateGeometry()
             self.mainArea = OWGUI.widgetBox(self.topWidgetPart, orientation="vertical", sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding), margin=0)
@@ -43,27 +42,25 @@ class OWWidget(basewidget.OWBaseWidget):
         self.buttonBackground = OWGUI.widgetBox(self.leftWidgetPart, orientation="horizontal", margin=4)# if wantMainArea else 1)
         self.buttonBackground.hide()
 
-        if wantGraph and showSaveGraph:
+        if self.want_graph and self.show_save_graph:
             self.buttonBackground.show()
             self.graphButton = OWGUI.button(self.buttonBackground, self, "&Save Graph")
             self.graphButton.setAutoDefault(0)
 
-        """
-        if wantStateInfoWidget:
-            # Widget for error, warnings, info.
-            self.widgetStateInfoBox = OWGUI.widgetBox(self.leftWidgetPart, "Widget state")
-            self.widgetStateInfo = OWGUI.widgetLabel(self.widgetStateInfoBox, "\n")
-            self.widgetStateInfo.setWordWrap(True)
-            self.widgetStateInfo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-            self.widgetStateInfo.setFixedHeight(self.widgetStateInfo.height())
-            self.widgetStateInfoBox.hide()
-
-            self.connect(self, SIGNAL("widgetStateChanged(QString, int, QString)"), self.updateWidgetStateInfo)
-        """
+#        if self.want_state_info_widget:
+#            # Widget for error, warnings, info.
+#            self.widgetStateInfoBox = OWGUI.widgetBox(self.leftWidgetPart, "Widget state")
+#            self.widgetStateInfo = OWGUI.widgetLabel(self.widgetStateInfoBox, "\n")
+#            self.widgetStateInfo.setWordWrap(True)
+#            self.widgetStateInfo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+#            self.widgetStateInfo.setFixedHeight(self.widgetStateInfo.height())
+#            self.widgetStateInfoBox.hide()
+#
+#            self.connect(self, SIGNAL("widgetStateChanged(QString, int, QString)"), self.updateWidgetStateInfo)
 
         self.__reportData = None
 
-        if wantStatusBar:
+        if self.want_status_bar:
             self.widgetStatusArea = QFrame(self)
             self.statusBarIconArea = QFrame(self)
             self.widgetStatusBar = QStatusBar(self)

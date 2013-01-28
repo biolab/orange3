@@ -1,7 +1,9 @@
+import os
 import time
 import copy
 import itertools
-
+import pickle
+from Orange.canvas.utils import environ
 from Orange import data
 
 class Context:
@@ -42,15 +44,143 @@ class SettingsHandler:
     the object with the default value, although it is callable"""
 
     def __init__(self):
+        self.widget_class = None
         self.settings = {}
 
-    def initialize(self, widget):
-        """Sets the widget's attributes whose defaults are given as callables
-           typically a list"""
+    # TODO: this doesn't get called. Qt shuts the application down without
+    # giving it a chance to properly destruct objects?
+#    def __del__(self):
+#        self.write_defaults()
+
+    def get_settings_filename(self):
+        """Return the name of the file with default settings for the widget"""
+        return os.path.join(environ.widget_settings_dir,
+                            self.widget_class._title + ".ini")
+
+    def read_defaults(self):
+        """Read (global) defaults for this widget class from a file.
+        Opens a file and calls :obj:`read_defaults_file`. Derived classes
+        should overload the latter."""
+        filename = self.get_settings_filename()
+        if os.path.exists(filename):
+            settings_file = open(filename, "rb")
+            self.read_defaults_file(settings_file)
+
+    def read_defaults_file(self, settings_file):
+        """Read (global) defaults for this widget class from a file."""
+        default_settings = pickle.load(settings_file)
+        cls = self.widget_class
+        for name, setting in default_settings.items():
+            if name in self.settings:
+                self.settings[name] = setting
+                setattr(cls, name, setting.default)
+
+    def write_defaults(self):
+        """Write (global) defaults for this widget class to a file.
+        Opens a file and calls :obj:`write_defaults_file`. Derived classes
+        should overload the latter."""
+        settings_file = open(self.get_settings_filename(), "wb")
+        self.write_defaults_file(settings_file)
+
+    def write_defaults_file(self, settings_file):
+        """Write defaults for this widget class to a file"""
+        cls = self.widget_class
+        default_settings = {}
         for name, setting in self.settings.items():
-            if callable(setting.default) and not (
+            if (self.settings[name].flags & SettingsHandler.NOT_CALLABLE or
+                    not callable(self.settings[name])):
+                setting.default = getattr(cls, name)
+                default_settings[name] = setting
+        pickle.dump(default_settings, settings_file)
+
+    def initialize(self, widget, data=None):
+        """
+        Initialize the widget's settings.
+
+        Before calling this method, the widget instance does not have its
+        own settings to shadow the class attributes. (E.g. if widget class
+        `MyWidget` has an attribute `point_size`, the class has attribute
+        `MyWidget.point_size`, but there is not 'self.point_size`).
+
+        If the widget was loaded from a schema, the schema provides the data
+        (as a dictionary or bytes). The instance's attributes (e.g.
+        `self.point_size`) are in this case initialized from `data`
+        (e.g. `data['point_size']`).
+
+        If there is no data or the data does not include a particular setting,
+        the method checks whether the default setting (e.g.
+        `MyWidget.point_size`) is callable. In this case, it is treated as a
+        factory and called, unless the setting's flag `NOT_CALLABLE` is set.
+
+        Otherwise, the widget instance gets no specific attribute that would
+        shadow the class attribute.
+
+        Derived classes can add or retrieve additional information in the data,
+        such as local contexts.
+
+        :param widget: the widget whose settings are initialized
+        :type widget: OWBaseWidget
+        :param data: Widget-specific default data the overrides the class
+                    defaults
+        :type data: `dict` or `bytes` that unpickle into a `dict`
+        """
+        if isinstance(data, bytes):
+            data = pickle.loads(data)
+        for name, setting in self.settings.items():
+            if data and name in data:
+                setattr(widget, name, data[name])
+            elif callable(setting.default) and not (
                     setting.flags & SettingsHandler.NOT_CALLABLE):
                 setattr(widget, name, setting.default())
+            # otherwise, keep the class attribute
+
+    def pack_data(self, widget):
+        """
+        Pack the settings for the given widget. This method is used when
+        saving schema, so that when the schema is reloaded the widget is
+        initialized with its proper data and not the class-based defaults.
+        See :obj:SettingsHandler.initialize for detailed explanation of its
+        use.
+
+        Inherited classes add other data, in particular widget-specific
+        local contexts.
+        """
+        data = {}
+        for name, setting in self.settings.items():
+            data[name] = widget.getattr_deep(name)
+        return data
+
+    def update_class_defaults(self, widget):
+        """
+        Writes widget instance's settings to class defaults. Called when the
+        widget is deleted.
+        """
+        cls = self.widget_class
+        for name, setting in self.settings.items():
+            if (self.settings[name].flags & SettingsHandler.NOT_CALLABLE or
+                    not callable(self.settings[name])):
+                setattr(cls, name, widget.getattr_deep(name))
+        # TODO: this is here only since __del__ is not properly called
+        self.write_defaults()
+
+    # TODO this method has misleading name (method 'initialize' does what
+    #      this method's name would indicate. Moreover, the method is never
+    #      called by this class but only by ContextHandlers. Perhaps it should
+    #      be moved there.
+    def settingsToWidget(self, widget):
+        widget.retrieveSpecificSettings()
+
+    # TODO similar to settingsToWidget; update_class_defaults does this for
+    #      context independent settings
+    def settingsFromWidget(self, widget):
+        widget.storeSpecificSettings()
+
+    # TODO would we like this method to store the changed settings back to
+    # class defaults, so the new widgets added to the schema later would have
+    # different defaults? I guess so...
+    def fastSave(self, widget, name, value):
+        """Store the (changed) widget's setting immediatelly to the context."""
+        pass
 
 
 class ContextHandler(SettingsHandler):
@@ -65,12 +195,46 @@ class ContextHandler(SettingsHandler):
         super().__init__()
         self.globalContexts = []
 
-    def initialize(self, widget):
+    def initialize(self, widget, data=None):
         """Initialize the widget: call the inherited initialization and
         add an attribute 'contextSettings' to the widget. This method
         does not open a context."""
-        super().initialize(widget)
-        widget.contextSettings = self.globalContexts
+        super().initialize(widget, data)
+        if data and "contextSettings" in data:
+            widget.contextSettings = data["contextSettings"]
+        else:
+            widget.contextSettings = self.globalContexts
+
+    def read_defaults_file(self, settings_file):
+        """Call the inherited method, then read global context from the
+           pickle."""
+        super().read_defaults_file(settings_file)
+        self.globalContexts = pickle.load(settings_file)
+
+    def write_defaults_file(self, settings_file):
+        """Call the inherited method, then add global context to the pickle."""
+        super().write_defaults_file(settings_file)
+        pickle.dump(self.globalContexts, settings_file)
+
+    def pack_data(self, widget):
+        """Call the inherited method, then add local contexts to the pickle."""
+        data = super().pack_data(widget)
+        data["contextSettings"] = widget.contextSettings
+        return data
+
+    def update_class_defaults(self, widget):
+        """Call the inherited method, then merge the local context into the
+        global contexts. This make sense only when the widget does not use
+        global context (i.e. `widget.contextSettings is not
+        self.globalContexts`); this happens when the widget was initialized by
+        an instance-specific data that was passed to :obj:`initialize`."""
+        super().update_class_defaults(widget)
+        globs = self.globalContexts
+        if widget.contextSettings is not globs:
+            ids = {id(c) for c in globs}
+            globs += (c for c in widget.contextSettings if id(c) not in ids)
+            globs.sort(key=lambda c: -c.time)
+            del globs[self.maxSavedContexts:]
 
     def newContext(self):
         """Create a new context."""
@@ -86,60 +250,62 @@ class ContextHandler(SettingsHandler):
         else:
             self.settingsToWidget(widget)
 
-    def match(self, c, *arg, **argkw):
+    def match(self, context, *arg):
+        """Return the degree to which the stored `context` matches the data
+         passed in additional arguments). A match of 0 zero indicates that
+         the context cannot be used and 2 means a perfect match, so no further
+         search is necessary.
+
+         Derived classes must overload this method."""
         raise SystemError(self.__class__.__name__ + " does not overload match")
 
-    def findOrCreateContext(self, widget, *arg, **argkw):
+    def findOrCreateContext(self, widget, *arg):
+        """Find the best matching context or create a new one if nothing
+        useful is found. The returned context is moved to or added to the top
+        of the context list."""
         bestContext, bestScore = None, 0
-        for i, c in enumerate(widget.contextSettings):
-            score = self.match(c, *arg, **argkw)
+        for i, context in enumerate(widget.contextSettings):
+            score = self.match(context, *arg)
             if score == 2:
                 self.moveContextUp(widget, i)
                 return bestContext, False
             if score > bestScore: # 0 is not OK!
-                bestContext, bestScore = c, score
+                bestContext, bestScore = context, score
         if bestContext:
             # if cloneIfImperfect should be disabled, change this and the
             # addContext below
-            context = self.cloneContext(bestContext)
+            context = self.cloneContext(bestContext, *arg)
         else:
             context = self.newContext()
         self.addContext(widget, context)
         return context, bestContext is None
 
     def moveContextUp(self, widget, index):
+        """Move the context to the top of the context list and set the time
+        stamp to current."""
         setting = widget.contextSettings.pop(index)
         setting.time = time.time()
         widget.contextSettings.insert(0, setting)
 
     def addContext(self, widget, setting):
+        """Add the context to the top of the list."""
         s = widget.contextSettings
         s.insert(0, setting)
         del s[len(s):]
 
-    def cloneContext(self, context):
+    def cloneContext(self, context, *arg):
+        """Construct a copy of the context settings suitable for the context
+        described by additional arguments. The method is called by
+        findOrCreateContext with the same arguments. Any class that overloads
+        :obj:`match` to accept additional arguments must also overload
+        :obj:`cloneContext`."""
         return copy.deepcopy(context)
 
     def closeContext(self, widget):
+        """Close the context by calling :obj:`settingsFromWidget` to write
+        any relevant widget settings to the context."""
         self.settingsFromWidget(widget)
 
-    def fastSave(self, widget, name, value):
-        pass
-
-    def settingsToWidget(self, widget):
-        widget.retrieveSpecificSettings()
-
-    def settingsFromWidget(self, widget):
-        widget.storeSpecificSettings()
-
-    def mergeBack(self, widget):
-        # this should happen if the schema is loaded from file?
-        globs = self.globalContexts
-        if widget.contextSettings is not globs:
-            ids = {id(c) for c in globs}
-            globs += (c for c in widget.contextSettings if id(c) not in ids)
-            globs.sort(key=lambda c: -c.time)
-            del globs[self.maxSavedContexts:]
 
 
 class DomainContextHandler(ContextHandler):
@@ -302,14 +468,14 @@ class DomainContextHandler(ContextHandler):
         context = widget.currentContext
         context.values = {}
         for name, setting in self.settings.items():
-            value = widget.getdeepattr(name)
+            value = widget.getattr_deep(name)
             if not setting.flags & self.LIST:
                 self.saveLow(widget, name, value, setting.flags)
             else:
                 context.values[name] = copy.copy(value) # shallow copy
                 if hasattr(setting, "selected"):
                     context.values[setting.selected] = list(
-                        widget.getdeepattr(setting.selected))
+                        widget.getattr_deep(setting.selected))
 
     def fastSave(self, widget, name, value):
         context = widget.currentContext
@@ -485,7 +651,7 @@ class ClassValuesContextHandler(ContextHandler):
         context = widget.currentContext
         values = context.values = {}
         for name, setting in self.settings.items():
-            value = widget.getdeepattr(name)
+            value = widget.getattr_deep(name)
             values[name] = copy.copy(value)
 
     def fastSave(self, widget, name, value):

@@ -292,6 +292,8 @@ class TableViewWithCopy(QtGui.QTableView):
 
 
 class OWDataTable(widget.OWWidget):
+    _title = "Data Table"
+
     show_distributions = Setting(True)
     dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
@@ -299,8 +301,8 @@ class OWDataTable(widget.OWWidget):
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
-    def __init__(self, parent=None, signalManager = None):
-        super().__init__(parent, signalManager, "Data Table")
+    def __init__(self, parent=None, signalManager=None, settings=None):
+        super().__init__(parent, signalManager, settings)
 
         self.inputs = [("Data", Table, self.dataset, Multiple + Default)]
         self.outputs = [("Selected Data", Table, Default),
