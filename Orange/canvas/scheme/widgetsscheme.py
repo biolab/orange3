@@ -130,20 +130,21 @@ class WidgetsScheme(Scheme):
 
     def close_all_open_widgets(self):
         for widget in self.widget_for_node.values():
+            widget.onDeleteWidget()
             widget.close()
 
     def widget_settings(self):
         """Return a list of dictionaries with widget settings.
         """
-        return [self.widget_for_node[node].getSettings(alsoContexts=False)
-                for node in self.nodes]
+        return [widget.settingsHandler.pack_data(widget) for widget in
+                (self.widget_for_node[node] for node in self.nodes)]
 
     def save_widget_settings(self):
         """Save all widget settings to their global settings file.
         """
         for node in self.nodes:
             widget = self.widget_for_node[node]
-            widget.saveSettings()
+            widget.settingsHandler.update_class_defaults(widget)
 
     def sync_node_properties(self):
         """Sync the widget settings/properties with the SchemeNode.properties.
