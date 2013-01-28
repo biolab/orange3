@@ -86,22 +86,24 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     _title = ""
     _category = None
 
-    def __init__(self, parent=None, signalManager=None, settings=None):
+    def __init__(self, parent=None, signalManager=None, stored_settings=None):
         super().__init__(parent, Qt.Window if self.resizing_enabled else
                                  Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
         # 'currentContext' MUST be the first thing assigned to a widget
-        self.currentContext = {}
+        self.currentContext = settings.Context()
         self.controlledAttributes = ControlledAttributesDict(self)
         self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
         if hasattr(self, "settingsHandler"):
-            self.settingsHandler.initialize(self, settings)
+            self.settingsHandler.initialize(self, stored_settings)
 
         # Bind input signal handlers to instance
+        self.inputs = list(self.inputs)
         for i, input in enumerate(self.inputs):
-            self.inputs[i] = (input[:2] + (getattr(self, input[2]), ) +
-                              input[3:])
+            if isinstance(input[2], str):
+                self.inputs[i] = (input[:2] + (getattr(self, input[2]), ) +
+                                  input[3:])
 
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
