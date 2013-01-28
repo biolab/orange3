@@ -48,7 +48,7 @@ def source_indexes(indexes, view):
     """
     model = view.model()
     if isinstance(model, QtGui.QSortFilterProxyModel):
-        return map(model.mapToSource, indexes)
+        return list(map(model.mapToSource, indexes))
     else:
         return indexes
 
@@ -184,7 +184,7 @@ class VariablesListItemView(QtGui.QListView):
             res = drag.exec_(supported_actions, default_action)
             if res == Qt.MoveAction:
                 selected = self.selectionModel().selectedIndexes()
-                rows = map(QtCore.QModelIndex.row, selected)
+                rows = list(map(QtCore.QModelIndex.row, selected))
                 for s1, s2 in reversed(list(slices(rows))):
                     delslice(self.model(), s1, s2)
 
@@ -442,15 +442,15 @@ class OWSelectAttributes(widget.OWWidget):
         self.data = data
         if data is not None:
             self.openContext(data)
-            all_vars = data.domain.variables + data.domain.getmetas().values()
+            all_vars = data.domain.variables + data.domain.metas
 
             var_sig = lambda attr: (attr.name, attr.varType)
 
-            domain_hints = dict([(var_sig(attr), ("attribute", i)) \
-                            for i, attr in enumerate(data.domain.attributes)])
+            domain_hints = {var_sig(attr): ("attribute", i)
+                for i, attr in enumerate(data.domain.attributes)}
 
-            domain_hints.update(dict([(var_sig(attr), ("meta", i)) \
-                for i, attr in enumerate(data.domain.getmetas().values())]))
+            domain_hints.update({var_sig(attr) : ("meta", i)
+                for i, attr in enumerate(data.domain.metas)})
 
             if data.domain.class_var:
                 domain_hints[var_sig(data.domain.class_var)] = ("class", 0)
@@ -586,9 +586,10 @@ class OWSelectAttributes(widget.OWWidget):
         """
         vars = list(self.available_attrs)
         items = [var.name for var in vars]
-        labels = reduce(list.__add__, [v.attributes.items() for v in vars], [])
+        labels = reduce(list.__add__,
+                        [list(v.attributes.items()) for v in vars], [])
         items.extend(["%s=%s" % item for item in labels])
-        items.extend(reduce(list.__add__, map(list, labels), []))
+        items.extend(reduce(list.__add__, list(map(list, labels)), []))
 
         new = sorted(set(items))
         if new != self.original_completer_items:
@@ -606,7 +607,7 @@ class OWSelectAttributes(widget.OWWidget):
                      for item in self.original_completer_items]
         else:
             items = self.original_completer_items
-        old = map(str, self.completer_model.stringList())
+        old = list(map(str, self.completer_model.stringList()))
 
         if set(old) != set(items):
             self.completer_model.setStringList(items)
