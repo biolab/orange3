@@ -15,7 +15,6 @@ from Orange.widgets import widget, gui, basewidget
 from Orange.widgets.settings import (
     Setting, SettingsHandler, DomainContextHandler)
 from Orange.data.table import Table
-from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
 from Orange.widgets.utils import itemmodels
 
@@ -272,7 +271,8 @@ class CompleterNavigator(QtCore.QObject):
             return False
 
 
-from functools import partial
+from functools import partial, reduce
+
 class OWSelectAttributes(widget.OWWidget):
     _title = "Select Attributes"
     inputs = [("Data", Table, "set_data")]
@@ -298,13 +298,12 @@ class OWSelectAttributes(widget.OWWidget):
         if hasattr(self.filter_edit, "setPlaceholderText"):
             self.filter_edit.setPlaceholderText("Filter")
 
-        self.completer = QtCore.QCompleter()
-        self.completer.setCompletionMode(
-            QtCore.QCompleter.InlineCompletion)
-        self.completer_model = QtCore.QStringListModel()
+        self.completer = QtGui.QCompleter()
+        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
+        self.completer_model = QtGui.QStringListModel()
         self.completer.setModel(self.completer_model)
         self.completer.setModelSorting(
-            QtCore.QCompleter.CaseSensitivelySortedModel)
+            QtGui.QCompleter.CaseSensitivelySortedModel)
 
         self.filter_edit.setCompleter(self.completer)
         self.completer_navigator = CompleterNavigator(self)
@@ -321,48 +320,50 @@ class OWSelectAttributes(widget.OWWidget):
                      self.available_attrs_proxy.set_filter_string)
 
         self.connect(self.available_attrs_view.selectionModel(),
-                     QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
+                     QtCore.SIGNAL(
+                         "selectionChanged(QItemSelection, QItemSelection)"),
                      partial(self.update_interface_state,
                              self.available_attrs_view))
 
-        if USE_COMPLETER:
-            self.connect(self.filter_edit,
-                         QtCore.SIGNAL("textChanged(QString)"),
-                         self.update_completer_prefix)
+        self.connect(self.filter_edit,
+                     QtCore.SIGNAL("textChanged(QString)"),
+                     self.update_completer_prefix)
 
-            self.connect(self.available_attrs,
-                         QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                         self.update_completer_model)
+        self.connect(self.available_attrs,
+                     QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
+                     self.update_completer_model)
 
-            self.connect(self.available_attrs,
-                         SIGNAL("rowsInserted(QModelIndex, int, int)"),
-                         self.update_completer_model)
+        self.connect(self.available_attrs,
+                     QtCore.SIGNAL("rowsInserted(QModelIndex, int, int)"),
+                     self.update_completer_model)
 
-            self.connect(self.available_attrs,
-                         SIGNAL("rowsRemoved(QModelIndex, int, int)"),
-                         self.update_completer_model)
+        self.connect(self.available_attrs,
+                     QtCore.SIGNAL("rowsRemoved(QModelIndex, int, int)"),
+                     self.update_completer_model)
 
         box.layout().addWidget(self.available_attrs_view)
         layout.addWidget(box, 0, 0, 3, 1)
 
-        box = OWGUI.widgetBox(self.controlArea, "Attributes", addToLayout=False)
+        box = gui.widgetBox(self.controlArea, "Attributes", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
         self.used_attrs_view = VariablesListItemView()
         self.used_attrs_view.setModel(self.used_attrs)
         self.connect(self.used_attrs_view.selectionModel(),
-                     SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
+                     QtCore.SIGNAL(
+                         "selectionChanged(QItemSelection, QItemSelection)"),
                      partial(self.update_interface_state,
                              self.used_attrs_view))
 
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
-        box = OWGUI.widgetBox(self.controlArea, "Class", addToLayout=False)
+        box = gui.widgetBox(self.controlArea, "Class", addToLayout=False)
         self.class_attrs = ClassVarListItemModel()
         self.class_attrs_view = ClassVariableItemView()
         self.class_attrs_view.setModel(self.class_attrs)
         self.connect(self.class_attrs_view.selectionModel(),
-                     SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
+                     QtCore.SIGNAL(
+                         "selectionChanged(QItemSelection, QItemSelection)"),
                      partial(self.update_interface_state,
                              self.class_attrs_view))
 
@@ -370,46 +371,48 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
-        box = OWGUI.widgetBox(self.controlArea, "Meta Attributes", addToLayout=False)
+        box = gui.widgetBox(self.controlArea, "Meta Attributes",
+                            addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView()
         self.meta_attrs_view.setModel(self.meta_attrs)
         self.connect(self.meta_attrs_view.selectionModel(),
-                     SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
+                     QtCore.SIGNAL(
+                         "selectionChanged(QItemSelection, QItemSelection)"),
                      partial(self.update_interface_state,
                              self.meta_attrs_view))
-
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
 
-        bbox = OWGUI.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 0, 1, 1, 1)
 
-        self.up_attr_button = OWGUI.button(bbox, self, "Up",
-                    callback = partial(self.move_up, self.used_attrs_view))
-        self.move_attr_button = OWGUI.button(bbox, self, ">",
-                    callback = partial(self.move_selected, self.used_attrs_view))
-        self.down_attr_button = OWGUI.button(bbox, self, "Down",
-                    callback = partial(self.move_down, self.used_attrs_view))
+        self.up_attr_button = gui.button(bbox, self, "Up",
+            callback = partial(self.move_up, self.used_attrs_view))
+        self.move_attr_button = gui.button(bbox, self, ">",
+            callback = partial(self.move_selected, self.used_attrs_view))
+        self.down_attr_button = gui.button(bbox, self, "Down",
+            callback = partial(self.move_down, self.used_attrs_view))
 
-        bbox = OWGUI.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 1, 1, 1, 1)
-        self.move_class_button = OWGUI.button(bbox, self, ">",
-                    callback = partial(self.move_selected,
-                            self.class_attrs_view, exclusive=True))
+        self.move_class_button = gui.button(bbox, self, ">",
+            callback = partial(self.move_selected,
+                               self.class_attrs_view, exclusive=True))
 
-        bbox = OWGUI.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 2, 1, 1, 1)
-        self.up_meta_button = OWGUI.button(bbox, self, "Up",
-                    callback = partial(self.move_up, self.meta_attrs_view))
-        self.move_meta_button = OWGUI.button(bbox, self, ">",
-                    callback = partial(self.move_selected, self.meta_attrs_view))
-        self.down_meta_button = OWGUI.button(bbox, self, "Down",
-                    callback = partial(self.move_down, self.meta_attrs_view))
+        self.up_meta_button = gui.button(bbox, self, "Up",
+            callback = partial(self.move_up, self.meta_attrs_view))
+        self.move_meta_button = gui.button(bbox, self, ">",
+            callback = partial(self.move_selected, self.meta_attrs_view))
+        self.down_meta_button = gui.button(bbox, self, "Down",
+            callback = partial(self.move_down, self.meta_attrs_view))
 
-        bbox = OWGUI.widgetBox(self.controlArea, orientation="horizontal", addToLayout=False, margin=0)
-        applyButton = OWGUI.button(bbox, self, "Apply", callback=self.commit)
-        resetButton = OWGUI.button(bbox, self, "Reset", callback=self.reset)
+        bbox = gui.widgetBox(self.controlArea, orientation="horizontal",
+                             addToLayout=False, margin=0)
+        gui.button(bbox, self, "Apply", callback=self.commit)
+        gui.button(bbox, self, "Reset", callback=self.reset)
 
         layout.addWidget(bbox, 3, 0, 1, 3)
 
@@ -426,19 +429,19 @@ class OWSelectAttributes(widget.OWWidget):
         self.resize(500, 600)
 
         # For automatic widget testing using
-        self._guiElements.extend( \
-                  [(QListView, self.available_attrs_view),
-                   (QListView, self.used_attrs_view),
-                   (QListView, self.class_attrs_view),
-                   (QListView, self.meta_attrs_view),
+        self._guiElements.extend(
+                  [(QtGui.QListView, self.available_attrs_view),
+                   (QtGui.QListView, self.used_attrs_view),
+                   (QtGui.QListView, self.class_attrs_view),
+                   (QtGui.QListView, self.meta_attrs_view),
                   ])
 
     def set_data(self, data=None):
         self.update_domain_role_hints()
-        self.closeContext("")
+        self.closeContext()
         self.data = data
         if data is not None:
-            self.openContext("", data)
+            self.openContext(data)
             all_vars = data.domain.variables + data.domain.getmetas().values()
 
             var_sig = lambda attr: (attr.name, attr.varType)
@@ -452,15 +455,21 @@ class OWSelectAttributes(widget.OWWidget):
             if data.domain.class_var:
                 domain_hints[var_sig(data.domain.class_var)] = ("class", 0)
 
-            domain_hints.update(self.domain_role_hints) # update the hints from context settings
+            # update the hints from context settings
+            domain_hints.update(self.domain_role_hints)
 
-            attrs_for_role = lambda role: [(domain_hints[var_sig(attr)][1], attr) \
-                    for attr in all_vars if domain_hints[var_sig(attr)][0] == role]
+            attrs_for_role = lambda role: [
+                (domain_hints[var_sig(attr)][1], attr)
+                for attr in all_vars if domain_hints[var_sig(attr)][0] == role]
 
-            attributes = [attr for place, attr in sorted(attrs_for_role("attribute"))]
-            classes = [attr for place, attr in sorted(attrs_for_role("class"))]
-            metas = [attr for place, attr in sorted(attrs_for_role("meta"))]
-            available = [attr for place, attr in sorted(attrs_for_role("available"))]
+            attributes = [
+                attr for place, attr in sorted(attrs_for_role("attribute"))]
+            classes = [
+                attr for place, attr in sorted(attrs_for_role("class"))]
+            metas = [
+                attr for place, attr in sorted(attrs_for_role("meta"))]
+            available = [
+                attr for place, attr in sorted(attrs_for_role("available"))]
 
             self.used_attrs[:] = attributes
             self.class_attrs[:] = classes
@@ -480,7 +489,6 @@ class OWSelectAttributes(widget.OWWidget):
         hints_from_model = lambda role, model: \
                 [((attr.name, attr.varType), (role, i)) \
                  for i, attr in enumerate(model)]
-
         hints = dict(hints_from_model("available", self.available_attrs))
         hints.update(hints_from_model("attribute", self.used_attrs))
         hints.update(hints_from_model("class", self.class_attrs))
@@ -492,7 +500,7 @@ class OWSelectAttributes(widget.OWWidget):
         """
         rows = view.selectionModel().selectedRows()
         model = view.model()
-        if isinstance(model, QSortFilterProxyModel):
+        if isinstance(model, QtGui.QSortFilterProxyModel):
             rows = [model.mapToSource(r) for r in rows]
         return [r.row() for r in rows]
 
@@ -503,11 +511,12 @@ class OWSelectAttributes(widget.OWWidget):
         for row, newrow in sorted(zip(rows, newrows), reverse=offset > 0):
             model[row], model[newrow] = model[newrow], model[row]
 
-        selection = QItemSelection()
+        selection = QtGui.QItemSelection()
         for nrow in newrows:
             index = model.index(nrow, 0)
             selection.select(index, index)
-        view.selectionModel().select(selection, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().select(
+            selection, QtGui.QItemSelectionModel.ClearAndSelect)
 
     def move_up(self, view):
         selected = self.selected_rows(view)
@@ -570,7 +579,7 @@ class OWSelectAttributes(widget.OWWidget):
         if move_meta_enabled:
             self.move_meta_button.setText(">" if available_selected else "<")
 
-    def update_completer_model(self, *args):
+    def update_completer_model(self, *_):
         """ This gets called when the model for available attributes changes
         through either drag/drop or the left/right button actions.
 
@@ -593,7 +602,8 @@ class OWSelectAttributes(widget.OWWidget):
         prefix = str(self.completer.completionPrefix())
         if not prefix.endswith(" ") and " " in prefix:
             prefix, _ = prefix.rsplit(" ", 1)
-            items = [prefix + " " + item for item in self.original_completer_items]
+            items = [prefix + " " + item
+                     for item in self.original_completer_items]
         else:
             items = self.original_completer_items
         old = map(str, self.completer_model.stringList())
@@ -608,20 +618,12 @@ class OWSelectAttributes(widget.OWWidget):
             class_var = list(self.class_attrs)
             metas = list(self.meta_attrs)
 
-            domain = Orange.data.Domain(attributes + class_var, bool(class_var))
-            original_metas = dict(map(reversed, self.data.domain.getmetas().items()))
-
-            for meta in metas:
-                if meta in original_metas:
-                    mid = original_metas[meta]
-                else:
-                    mid = Orange.feature.Descriptor.new_meta_id()
-                domain.addmeta(mid, meta)
+            domain = Orange.data.Domain(attributes, class_var, metas)
             newdata = Orange.data.Table(domain, self.data)
             self.output_report = self.prepareDataReport(newdata)
             self.output_domain = domain
             self.send("Data", newdata)
-            self.send("Features", orange.VarList(attributes))
+            self.send("Features", basewidget.AttributeList(attributes))
         else:
             self.output_report = []
             self.send("Data", None)
@@ -631,23 +633,25 @@ class OWSelectAttributes(widget.OWWidget):
         if self.data is not None:
             self.available_attrs[:] = []
             self.used_attrs[:] = self.data.domain.attributes
-            self.class_attrs[:] = [self.data.domain.class_var] if self.data.domain.class_var else []
-            self.meta_attrs[:] = self.data.domain.getmetas().values()
+            self.class_attrs[:] = self.data.domain.class_vars
+            self.meta_attrs[:] = self.data.domain.metas
             self.update_domain_role_hints()
 
     def sendReport(self):
         self.reportData(self.data, "Input data")
         self.reportData(self.output_report, "Output data")
         if self.data:
-            all_vars = self.data.domain.variables + self.data.domain.getmetas().values()
-            used_vars = self.output_domain.variables + self.output_domain.getmetas().values()
+            all_vars = self.data.domain.variables + self.data.domain.metas
+            used_vars = self.output_domain.variables + self.output_domain.metas
             if len(all_vars) != len(used_vars):
                 removed = set(all_vars).difference(set(used_vars))
-                self.reportSettings("", [("Removed", "%i (%s)" % (len(removed), ", ".join(x.name for x in removed)))])
+                self.reportSettings("",
+                    [("Removed", "%i (%s)" %
+                     (len(removed), ", ".join(x.name for x in removed)))])
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = OWDataDomain()
+    app = QtGui.QApplication(sys.argv)
+    w = OWSelectAttributes()
 #    data = Orange.data.Table("rep:dicty-express.tab")
     data = Orange.data.Table("brown-selected.tab")
     w.set_data(data)
