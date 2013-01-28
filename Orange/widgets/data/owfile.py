@@ -1,10 +1,9 @@
 import os, sys
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from Orange.widgets import widget, gui, settings
-from Orange.widgets.settings import Setting, ContextHandler
+from PyQt4 import QtCore
+from PyQt4 import QtGui
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
 from Orange.data.table import Table
-from Orange.data import io
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
 
@@ -77,19 +76,23 @@ class OWFile(widget.OWWidget):
 
         vbox = gui.widgetBox(self.controlArea, "Data File", addSpace=True)
         box = gui.widgetBox(vbox, orientation=0)
-        self.filecombo = QComboBox(box)
+        self.filecombo = QtGui.QComboBox(box)
         self.filecombo.setMinimumWidth(300)
         box.layout().addWidget(self.filecombo)
-        self.connect(self.filecombo, SIGNAL('activated(int)'), self.selectFile)
+        self.connect(self.filecombo, QtCore.SIGNAL('activated(int)'),
+                     self.selectFile)
 
         button = gui.button(box, self, '...', callback=self.browseFile)
-        button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
+        button.setSizePolicy(
+            QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
 
         button = gui.button(box, self, "Reload",
                             callback=self.reload, default=True)
-        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
-        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        button.setIcon(
+            self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
+        button.setSizePolicy(
+            QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
 
         gui.checkBox(vbox, self, "new_variables",
                      "Treat variables from different files as different")
@@ -101,7 +104,7 @@ class OWFile(widget.OWWidget):
         #Set word wrap so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
         self.warnings.setSizePolicy(
-            QSizePolicy.Ignored, QSizePolicy.MinimumExpanding)
+            QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
 
         gui.rubber(self.controlArea)
 
@@ -156,7 +159,7 @@ class OWFile(widget.OWWidget):
                     d = os.path.dirname(d)
                 startfile = os.path.join(os.path.dirname(d), "doc", "datasets")
             if not os.path.exists(startfile):
-                QMessageBox.information(None, "File",
+                QtGui.QMessageBox.information(None, "File",
                     "Cannot find the directory with example data sets")
                 return
         else:
@@ -165,7 +168,7 @@ class OWFile(widget.OWWidget):
             else:
                 startfile = os.path.expanduser("~/")
 
-        filename = QFileDialog.getOpenFileName(
+        filename = QtGui.QFileDialog.getOpenFileName(
             self, 'Open Orange Data File', startfile, self.dlgFormats)
         if not filename:
             return
@@ -258,7 +261,7 @@ class OWFile(widget.OWWidget):
             self.reportData(self.dataReport)
 
 if __name__ == "__main__":
-    a = QApplication(sys.argv)
+    a = QtGui.QApplication(sys.argv)
     ow = OWFile()
     ow.show()
     a.exec_()
