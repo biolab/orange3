@@ -15,7 +15,7 @@ from Orange.widgets import gui as OWGUI
 class OWWidget(basewidget.OWBaseWidget):
     want_graph = False
     want_status_bar = False
-    want_main_area = 1
+    want_main_area = True
     no_report = False
     show_save_graph=1
     want_state_info_widget=None

@@ -52,6 +52,8 @@ class OWFile(widget.OWWidget):
     _title = "File"
     outputs = [("Data", Table)]
 
+    want_main_area = False
+
     recent_files = Setting(lambda: ["(none)"])
     new_variables = Setting(False)
 
