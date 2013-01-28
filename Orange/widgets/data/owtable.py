@@ -645,8 +645,8 @@ class OWDataTable(widget.OWWidget):
             self.info_ex.setText("%s instance%s" % sp(data))
             self.info_attr.setText(desc(data, "X",
                 "%s feature%s" % sp(data.domain.attributes, True)))
-            self.info_meta.setText(desc(data, "metas",
-                "%s meta attribute%s" % sp(data.domain.metas)))
+            self.info_meta.setText("%s meta attribute%s" %
+                                   sp(data.domain.metas))
             if len(data.domain.class_vars) > 1:
                 self.info_class.setText(desc(data, "Y",
                     "%s outcome%s" % sp(data.domain.class_vars)))
