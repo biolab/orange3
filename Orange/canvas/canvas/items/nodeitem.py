@@ -16,6 +16,7 @@ from PyQt4.QtCore import Qt, QPointF, QRectF, QSize, QTimer
 from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import pyqtProperty as Property
 
+from .graphicspathobject import GraphicsPathObject
 from .utils import saturated, radial_gradient
 
 from ...registry import NAMED_COLORS
@@ -244,12 +245,12 @@ class AnchorPoint(QGraphicsObject):
         return QRectF()
 
 
-class NodeAnchorItem(QGraphicsPathItem):
+class NodeAnchorItem(GraphicsPathObject):
     """The left/right widget input/output anchors.
     """
 
     def __init__(self, parent, *args):
-        QGraphicsPathItem.__init__(self, parent, *args)
+        GraphicsPathObject.__init__(self, parent, *args)
         self.setAcceptHoverEvents(True)
         self.setPen(QPen(Qt.NoPen))
         self.normalBrush = QBrush(QColor("#CDD5D9"))
@@ -356,6 +357,7 @@ class NodeAnchorItem(QGraphicsPathItem):
         self.__pointPositions.insert(index, position)
 
         anchor.setParentItem(self)
+
         anchor.setPos(self.__anchorPath.pointAtPercent(position))
         anchor.destroyed.connect(self.__onAnchorDestroyed)
 
@@ -432,15 +434,15 @@ class NodeAnchorItem(QGraphicsPathItem):
         if self.__fullStroke is not None:
             return self.__fullStroke
         else:
-            return QGraphicsPathItem.shape(self)
+            return GraphicsPathObject.shape(self)
 
     def hoverEnterEvent(self, event):
         self.shadow.setEnabled(True)
-        return QGraphicsPathItem.hoverEnterEvent(self, event)
+        return GraphicsPathObject.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
         self.shadow.setEnabled(False)
-        return QGraphicsPathItem.hoverLeaveEvent(self, event)
+        return GraphicsPathObject.hoverLeaveEvent(self, event)
 
     def __updatePositions(self):
         """Update anchor points positions.
