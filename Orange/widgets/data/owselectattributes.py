@@ -12,23 +12,6 @@ from Orange.widgets.utils import itemmodels
 
 import Orange
 
-NAME = "Select Attributes"
-
-DESCRIPTION = "Manual selection of attributes."
-
-ICON = "icons/SelectAttributes.svg"
-
-PRIORITY = 100
-
-AUTHOR = "Ales Erjavec"
-
-AUTHOR_EMAIL = "ales.erjavec(@at@)fri.uni-lj.si"
-
-INPUTS = [("Data", Table, "set data")]
-OUTPUTS = [("Data", Table), ("Features", basewidget.AttributeList)]
-
-WIDGET_CLASS = "OWSelectAttributes"
-
 def slices(indices):
     """ Group the given integer indices into slices
     """
@@ -105,7 +88,7 @@ class VariablesListItemModel(itemmodels.VariableListModel):
         item_data = []
         for index in indexlist:
             var = self[index.row()]
-            descriptors.append((var.name, var.varType))
+            descriptors.append((var.name, var.var_type))
             vars.append(var)
             item_data.append(self.itemData(index))
         mime = QtCore.QMimeData()
@@ -283,7 +266,12 @@ class CompleterNavigator(QtCore.QObject):
 from functools import partial, reduce
 
 class OWSelectAttributes(widget.OWWidget):
-    _title = "Select Attributes"
+    _name = "Select Attributes"
+    _description = "Manual selection of attributes."
+    _icon = "icons/SelectAttributes.svg"
+    _priority = 100
+    _author = "Ales Erjavec"
+    _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
     outputs = [("Data", Table), ("Features", basewidget.AttributeList)]
 
@@ -455,7 +443,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.openContext(data)
             all_vars = data.domain.variables + data.domain.metas
 
-            var_sig = lambda attr: (attr.name, attr.varType)
+            var_sig = lambda attr: (attr.name, attr.var_type)
 
             domain_hints = {var_sig(attr): ("attribute", i)
                 for i, attr in enumerate(data.domain.attributes)}
@@ -498,7 +486,7 @@ class OWSelectAttributes(widget.OWWidget):
         """ Update the domain hints to be stored in the widgets settings.
         """
         hints_from_model = lambda role, model: \
-                [((attr.name, attr.varType), (role, i)) \
+                [((attr.name, attr.var_type), (role, i)) \
                  for i, attr in enumerate(model)]
         hints = dict(hints_from_model("available", self.available_attrs))
         hints.update(hints_from_model("attribute", self.used_attrs))

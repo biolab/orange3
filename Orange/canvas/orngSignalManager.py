@@ -355,20 +355,14 @@ class SignalManager(object):
 
 
     def canConnect(self, widgetFrom, widgetTo, dynamic=True):
-        # TODO: This should be retrieved from orngRegistry.WidgetDescription
-        outsignals = [OutputSignal(*tt) for tt in widgetFrom.outputs]
-        insignals = [InputSignal(*tt) for tt in widgetTo.inputs]
-
-        return any(canConnect(out, in_, dynamic) for out in outsignals for in_ in insignals)
+        return any(canConnect(out, in_, dynamic)
+                   for out in widgetFrom.outputs for in_ in widgetTo.inputs)
 
 
     def proposePossibleLinks(self, widgetFrom, widgetTo, dynamic=True):
         """ Return a ordered list of (OutputSignal, InputSignal, weight) tuples that
         can connect both widgets
         """
-        outSignals = [OutputSignal(*tt) for tt in widgetFrom.outputs]
-        inSignals = [InputSignal(*tt) for tt in widgetTo.inputs]
-
         # Get signals that are Single links and already connected to input widget
         links = self.getLinks(None, widgetTo)
         alreadyConnected = [link.signalNameTo for link in links if link.inputSignal.single]
@@ -384,8 +378,8 @@ class SignalManager(object):
             return weight
 
         possibleLinks = []
-        for outS in outSignals:
-            for inS in inSignals:
+        for outS in widgetFrom.outputs:
+            for inS in widgetTo.inputs:
                 if canConnect(outS, inS, dynamic):
                     possibleLinks.append((outS, inS, weight(outS, inS)))
 
@@ -394,13 +388,13 @@ class SignalManager(object):
 
     def inputSignal(self, widget, name):
         for tt in widget.inputs:
-            if tt[0] == name:
-                return InputSignal(*tt)
+            if tt.name == name:
+                return tt
 
     def outputSignal(self, widget, name):
         for tt in widget.outputs:
-            if tt[0] == name:
-                return OutputSignal(*tt)
+            if tt.name == name:
+                return tt
 
 
     def addLink(self, widgetFrom, widgetTo, signalNameFrom, signalNameTo, enabled):
@@ -411,7 +405,7 @@ class SignalManager(object):
             return 0
         # check if signal names still exist
         found = 0
-        output_names = [t[0] for t in widgetFrom.outputs]
+        output_names = [t.name for t in widgetFrom.outputs]
         found = signalNameFrom in output_names
 
         if not found:
@@ -427,7 +421,7 @@ class SignalManager(object):
             return 0
 
         found = 0
-        input_names = [t[0] for t in widgetTo.inputs]
+        input_names = [t.name for t in widgetTo.inputs]
         found = signalNameTo in input_names
 
         if not found:
@@ -483,6 +477,8 @@ class SignalManager(object):
         """
         order = []
         visited = set()
+        # TODO This does not work in Python 3.0
+        # E.g. TypeError: unorderable types: OWFile() < OWFile()
         queue = sorted([w for w in self.widgets if not self.getLinks(None, w)])
         while queue:
             w = queue.pop(0)

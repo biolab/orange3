@@ -66,7 +66,8 @@ class ColorPaletteDlg(basewidget.OWBaseWidget):
     model = True
 
     def __init__(self, parent, caption="Color Palette", callback=None):
-        super().__init__(None, None, caption)
+        super().__init__(parent)
+        self.setCaption(caption)
         self.setLayout(QVBoxLayout(self))
         self.layout().setMargin(4)
 
@@ -345,7 +346,8 @@ class ColorPaletteDlg(basewidget.OWBaseWidget):
 
 class ColorPalleteListing(basewidget.OWBaseWidget):
     def __init__(self):
-        super().__init__(None, None, "Color Palette List")
+        super().__init__()
+        self.setCaption("Color Palette List")
         self.setLayout(QVBoxLayout(self))
         self.layout().setMargin(0)
         sa = QScrollArea()
@@ -404,7 +406,8 @@ class ColorPalleteListing(basewidget.OWBaseWidget):
 
 class PaletteEditor(basewidget.OWBaseWidget):
     def __init__(self, parent, rgbColors):
-        super().__init__(None, None, "Palette Editor")
+        super().__init__(parent)
+        self.setCaption("Palette Editor")
         self.setLayout(QVBoxLayout(self))
         self.layout().setMargin(4)
 

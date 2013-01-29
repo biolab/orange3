@@ -10,12 +10,9 @@ from functools import reduce
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-
 from Orange.canvas.orngSignalManager import *
 from Orange.canvas.utils import environ
-
 from Orange.widgets import settings, gui
-
 from Orange import data as orange_data
 
 ERROR = 0
@@ -47,17 +44,26 @@ class ExampleList(list):
     pass
 
 
+
 class BaseWidgetClass(type(QDialog)):
     """Meta class for widgets. If the class definition does not have a
        specific settings handler, the meta class provides a default one
        that does not handle contexts. Then it scans for any attributes
        of class settings.Setting: the setting is stored in the handler and
        the value of the attribute is replaced with the default."""
+
     #noinspection PyMethodParameters
     def __new__(mcs, name, bases, dict):
+        from Orange.canvas.registry.description import (
+            input_channel_from_args, output_channel_from_args)
+
         cls = type.__new__(mcs, name, bases, dict)
-        if not cls._title: # not a widget - no settings
+        if not cls._name: # not a widget
             return cls
+
+        cls.inputs = list(map(input_channel_from_args, cls.inputs))
+        cls.outputs = list(map(output_channel_from_args, cls.outputs))
+
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
             hasattr(cls, "settingsFromWidgetCallback")):
@@ -75,16 +81,31 @@ class BaseWidgetClass(type(QDialog)):
 
 
 class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
+    _name = None
+    _id = None
+    _category = None
+    _version = None
+    _description = None
+    _long_description = None
+    _icon = "icons/Unknown.png"
+    _priority = sys.maxsize
+    _author = None
+    _author_email = None
+    _maintainer = None
+    _maintainer_email = None
+    _help = None
+    _help_ref = None
+    _url = None
+    _keywords = []
+    _background = None
+    _replaces = None
+    inputs = []
+    outputs = []
+
     widget_id = 0 # global widget count
 
     save_position = False
     resizing_enabled = True
-
-    inputs = []
-    outputs = []
-
-    _title = ""
-    _category = None
 
     def __init__(self, parent=None, signalManager=None, stored_settings=None):
         super().__init__(parent, Qt.Window if self.resizing_enabled else
@@ -98,13 +119,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         if hasattr(self, "settingsHandler"):
             self.settingsHandler.initialize(self, stored_settings)
 
-        # Bind input signal handlers to instance
-        self.inputs = list(self.inputs)
-        for i, input in enumerate(self.inputs):
-            if isinstance(input[2], str):
-                self.inputs[i] = (input[:2] + (getattr(self, input[2]), ) +
-                                  input[3:])
-
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
         #    self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
@@ -114,7 +128,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
         self.__dict__.update(environ.directories)
 
-        self.setCaption(self._title.replace("&",""))
+        if self._name:
+            self.setCaption(self._name.replace("&",""))
         self.setFocusPolicy(Qt.StrongFocus)
 
         # number of control signals that are currently being processed
@@ -274,15 +289,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
             self.savedWidgetGeometry = str(self.saveGeometry())
 
 
-    # when widget is moved, save new x and y position into widgetXPosition and widgetYPosition. some widgets can put this two
-    # variables into settings and last widget position is restored after restart
-    # Commented out because of Ubuntu (on call to restoreGeometry calls move event saving pos (0, 0)
-#    def moveEvent(self, ev):
-#        QDialog.moveEvent(self, ev)
-#        if self.save_position:
-#            self.widgetXPosition = self.frameGeometry().x()
-#            self.widgetYPosition = self.frameGeometry().y()
-#            self.savedWidgetGeometry = str(self.saveGeometry())
 
     # set widget state to hidden
     def hideEvent(self, ev):
@@ -290,13 +296,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
             self.widgetShown = 0
             self.savedWidgetGeometry = str(self.saveGeometry())
         QDialog.hideEvent(self, ev)
-
-    # override the default show function.
-    # after show() we must call processEvents because show puts some LayoutRequests in queue
-    # and we must process them immediately otherwise the width(), height(), ... of elements in the widget will be wrong
-#    def show(self):
-#        QDialog.show(self)
-#        qApp.processEvents()
 
     # set widget state to shown
     def showEvent(self, ev):
@@ -454,27 +453,22 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     def setOptions(self):
         pass
 
-    # does widget have a signal with name in inputs
+    # TODO: We could also use OrderedDict, with 'name' as a key (and included in the value, too)
     def hasInputName(self, name):
-        for input in self.inputs:
-            if name == input[0]: return 1
-        return 0
+        return any(signal.name == name for signal in self.inputs)
 
-    # does widget have a signal with name in outputs
     def hasOutputName(self, name):
-        for output in self.outputs:
-            if name == output[0]: return 1
-        return 0
+        return any(signal.name == name for signal in self.outputs)
 
-    def getInputType(self, signalName):
-        for input in self.inputs:
-            if input[0] == signalName: return input[1]
-        return None
+    def getInputType(self, name):
+        for signal in self.inputs:
+            if signal.name == name:
+                return signal
 
-    def getOutputType(self, signalName):
-        for output in self.outputs:
-            if output[0] == signalName: return output[1]
-        return None
+    def getOutputType(self, name):
+        for signal in self.outputs:
+            if signal.name == name:
+                return signal
 
     # ########################################################################
     #noinspection PyMethodOverriding
@@ -501,47 +495,45 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
 
     def signalIsOnlySingleConnection(self, signalName):
-        for i in self.inputs:
-            input = InputSignal(*i)
-            if input.name == signalName: return input.single
+        for input in self.inputs:
+            if input.name == signalName:
+                return input.single
 
     def addInputConnection(self, widgetFrom, signalName):
-        for i in range(len(self.inputs)):
-            if self.inputs[i][0] == signalName:
-                handler = self.inputs[i][2]
+        for input in self.inputs:
+            if input.name == signalName:
+                handler = getattr(self, input.handler) # get a bound handler
                 break
+        else:
+            raise ValueError("Widget {} has no signal {}"
+                             .format(self._name, signalName))
 
-        existing = []
-        if signalName in self.linksIn:
-            existing = self.linksIn[signalName]
-            for (dirty, widget, handler, data) in existing:
-                if widget == widgetFrom: return             # no need to add new tuple, since one from the same widget already exists
-        self.linksIn[signalName] = existing + [(0, widgetFrom, handler, [])]    # (dirty, handler, signalData)
-        #if not self.linksIn.has_key(signalName): self.linksIn[signalName] = [(0, widgetFrom, handler, [])]    # (dirty, handler, signalData)
+        links = self.linksIn.setdefault(signalName, [])
+        for _, widget, _, _ in links:
+            if widget == widgetFrom:
+                return # a signal from the same widget already exists
+        links.append((0, widgetFrom, handler, []))
 
     # delete a link from widgetFrom and this widget with name signalName
     def removeInputConnection(self, widgetFrom, signalName):
-        if signalName in self.linksIn:
-            links = self.linksIn[signalName]
-            for i in range(len(links)):
-                if widgetFrom == links[i][1]:
-                    links.remove(links[i])
-                    if not links == []:  # if key is empty, delete key value
-                        del self.linksIn[signalName]
-                    return
+        links = self.linksIn.get(signalName, [])
+        for i, (_, widget, _, _) in enumerate(links):
+            if widgetFrom == widget:
+                del links[i]
+                if not links:  # if key is empty, delete key value
+                    del self.linksIn[signalName]
+                return
 
-    # return widget, that is already connected to this singlelink signal. If this widget exists, the connection will be deleted (since this is only single connection link)
+    # return widget that is already connected to this singlelink signal. If this widget exists, the connection will be deleted (since this is only single connection link)
     def removeExistingSingleLink(self, signal):
-        for i in self.inputs:
-            input = InputSignal(*i)
-            if input.name == signal and not input.single: return None
-
+        for input in self.inputs:
+            if input.name == signal and not input.single:
+                return None
         for signalName in self.linksIn.keys():
             if signalName == signal:
                 widget = self.linksIn[signalName][0][1]
                 del self.linksIn[signalName]
                 return widget
-
         return None
 
 
@@ -559,13 +551,13 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
 
         # we define only a way to handle signals that have defined a handler function
         for signal in self.inputs:        # we go from the first to the last defined input
-            key = signal[0]
+            key = signal.name
             if key in self.linksIn:
                 for i in range(len(self.linksIn[key])):
-                    (dirty, widgetFrom, handler, signalData) = self.linksIn[key][i]
-                    if not (handler and dirty): continue
+                    dirty, widgetFrom, handler, signalData = self.linksIn[key][i]
+                    if not (handler and dirty):
+                        continue
                     newSignal = 1
-
                     qApp.setOverrideCursor(Qt.WaitCursor)
                     try:
                         for (value, id, nameFrom) in signalData:

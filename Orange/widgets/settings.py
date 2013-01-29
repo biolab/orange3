@@ -54,7 +54,7 @@ class SettingsHandler:
     def get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
         return os.path.join(environ.widget_settings_dir,
-                            self.widget_class._title + ".ini")
+                            self.widget_class._name + ".ini")
 
     def read_defaults(self):
         """Read (global) defaults for this widget class from a file.
@@ -375,7 +375,7 @@ class DomainContextHandler(ContextHandler):
             domain = domain.domain
 
         encodedDomain = self.encodeDomain(domain)
-        context, isNew = super().findOrCreateContext(self, widget,
+        context, isNew = super().findOrCreateContext(widget,
                                                      domain, *encodedDomain)
         if len(encodedDomain) == 2:
             context.attributes, context.metas = encodedDomain

@@ -167,7 +167,7 @@ def output_channel_from_args(args):
         raise TypeError
 
 
-class WidgetDescription(object):
+class WidgetDescription:
     """Description of a widget.
 
     Parameters
@@ -225,7 +225,9 @@ class WidgetDescription(object):
     def __init__(self, name, id, category=None, version=None,
                  description=None, long_description=None,
                  qualified_name=None, package=None, project_name=None,
-                 inputs=[], outputs=[],
+                 # TODO is this supposed to be a list or a dict?
+                 # OrderedDict?
+                 inputs={}, outputs={},
                  author=None, author_email=None,
                  maintainer=None, maintainer_email=None,
                  help=None, help_ref=None, url=None, keywords=None,
@@ -270,75 +272,6 @@ class WidgetDescription(object):
         return self.__str__()
 
     @classmethod
-    def from_file(cls, filename, import_name=None):
-        """Widget description from old style (2.5 version) widget
-        descriptions.
-
-        """
-        from Orange.orng.widgetParser import WidgetMetaData
-        from ..orngSignalManager import resolveSignal
-
-        rest, ext = os.path.splitext(filename)
-        if ext in [".pyc", ".pyo"]:
-            filename = filename[:-1]
-
-        contents = open(filename, "rb").read()
-
-        dirname, basename = os.path.split(filename)
-        default_cat = os.path.basename(dirname)
-
-        try:
-            meta = WidgetMetaData(contents, default_cat)
-        except Exception as ex:
-            if "Not an Orange widget module." in str(ex):
-                raise WidgetSpecificationError
-            else:
-                raise
-
-        widget_name, ext = os.path.splitext(basename)
-        if import_name is None:
-            import_name = widget_name
-
-        wmod = __import__(import_name, fromlist=[""])
-
-        qualified_name = "%s.%s" % (import_name, widget_name)
-
-        inputs = eval(meta.inputList)
-        outputs = eval(meta.outputList)
-
-        inputs = map(input_channel_from_args, inputs)
-
-        outputs = map(output_channel_from_args, outputs)
-
-        # Resolve signal type names into concrete type instances
-        inputs = [resolveSignal(input, globals=wmod.__dict__)
-                  for input in inputs]
-        outputs = [resolveSignal(output, globals=wmod.__dict__)
-                  for output in outputs]
-
-        # Convert all signal types back into qualified names.
-        # This is to prevent any possible import problems when cached
-        # descriptions are unpickled (the relevant code using this lists
-        # should be able to handle missing types better).
-        for s in inputs + outputs:
-            s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
-
-        desc = WidgetDescription(
-             name=meta.name,
-             id=qualified_name,
-             category=meta.category,
-             description=meta.description,
-             qualified_name=qualified_name,
-             package=wmod.__package__,
-             keywords=meta.tags,
-             inputs=inputs,
-             outputs=outputs,
-             icon=meta.icon,
-             priority=int(meta.priority)
-            )
-        return desc
-
-    @classmethod
     def from_module(cls, module):
         """Get the widget description from a module.
 
@@ -361,76 +294,48 @@ class WidgetDescription(object):
         else:
             package_name = None
 
-        # Default widget class name unless otherwise specified is the
-        # module name, and default category the package name
-        default_cls_name = module_name
         default_cat_name = package_name if package_name else ""
 
-        widget_cls_name = getattr(module, "WIDGET_CLASS", default_cls_name)
-        try:
-            widget_class = getattr(module, widget_cls_name)
-            name = getattr(module, "NAME")
-        except AttributeError:
-            # The module does not have a widget class implementation or the
-            # widget name.
+        from Orange.widgets.basewidget import BaseWidgetClass
+        for widget_cls_name, widget_class in module.__dict__.items():
+            if (isinstance(widget_class, BaseWidgetClass) and
+                widget_class._name):
+                    break
+        else:
             raise WidgetSpecificationError
 
         qualified_name = "%s.%s" % (module.__name__, widget_class.__name__)
-
-        id = getattr(module, "ID", module_name)
-        inputs = getattr(module, "INPUTS", [])
-        outputs = getattr(module, "OUTPUTS", [])
-        category = getattr(module, "CATEGORY", default_cat_name)
-        version = getattr(module, "VERSION", None)
-        description = getattr(module, "DESCRIPTION", name)
-        long_description = getattr(module, "LONG_DESCRIPTION", None)
-        author = getattr(module, "AUTHOR", None)
-        author_email = getattr(module, "AUTHOR_EMAIL", None)
-        maintainer = getattr(module, "MAINTAINER", None)
-        maintainer_email = getattr(module, "MAINTAINER_EMAIL", None)
-        help = getattr(module, "HELP", None)
-        help_ref = getattr(module, "HELP_REF", None)
-        url = getattr(module, "URL", None)
-
-        icon = getattr(module, "ICON", "icons/Unknown.png")
-        priority = getattr(module, "PRIORITY", sys.maxsize)
-        keywords = getattr(module, "KEYWORDS", None)
-        background = getattr(module, "BACKGROUND", None)
-        replaces = getattr(module, "REPLACES", None)
-
-        inputs = list(map(input_channel_from_args, inputs))
-        outputs = list(map(output_channel_from_args, outputs))
 
         # Convert all signal types into qualified names.
         # This is to prevent any possible import problems when cached
         # descriptions are unpickled (the relevant code using this lists
         # should be able to handle missing types better).
-        for s in inputs + outputs:
+        for s in widget_class.inputs + widget_class.outputs:
             s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
 
-        return WidgetDescription(
-            name=name,
-            id=id,
-            category=category,
-            version=version,
-            description=description,
-            long_description=long_description,
+        return cls(
+            name=widget_class._name,
+            id=widget_class._id or module_name,
+            category=widget_class._category or default_cat_name,
+            version=widget_class._version,
+            description=widget_class._description,
+            long_description=widget_class._long_description,
             qualified_name=qualified_name,
             package=module.__package__,
-            inputs=inputs,
-            outputs=outputs,
-            author=author,
-            author_email=author_email,
-            maintainer=maintainer,
-            maintainer_email=maintainer_email,
-            help=help,
-            help_ref=help_ref,
-            url=url,
-            keywords=keywords,
-            priority=priority,
-            icon=icon,
-            background=background,
-            replaces=replaces)
+            inputs=widget_class.inputs,
+            outputs=widget_class.outputs,
+            author=widget_class._author,
+            author_email=widget_class._author_email,
+            maintainer=widget_class._maintainer,
+            maintainer_email=widget_class._maintainer_email,
+            help=widget_class._help,
+            help_ref=widget_class._help_ref,
+            url=widget_class._url,
+            keywords=widget_class._keywords,
+            priority=widget_class._priority,
+            icon=widget_class._icon,
+            background=widget_class._background,
+            replaces=widget_class._replaces)
 
 
 class CategoryDescription(object):
@@ -523,7 +428,7 @@ class CategoryDescription(object):
         keywords = getattr(package, "KEYWORDS", None)
         widgets = getattr(package, "WIDGETS", None)
         priority = getattr(package, "PRIORITY", sys.maxsize - 1)
-        icon = getattr(package, "ICON", None)
+        icon = getattr(package, "_icon", None)
         background = getattr(package, "BACKGROUND", None)
 
         if priority == sys.maxsize - 1 and name.lower() == "prototypes":

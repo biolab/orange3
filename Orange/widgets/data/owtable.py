@@ -17,29 +17,6 @@ from Orange.widgets.utils import colorpalette, datacaching
 from Orange.widgets.basewidget import Multiple, Default
 from Orange.widgets.gui import *
 
-NAME = "Data Table"
-
-DESCRIPTION = "Shows data in a spreadsheet."
-
-LONG_DESCRIPTION = """Data Table widget takes one or more data sets
-on its input and presents them in a spreadsheet format.
-
-"""
-
-ICON = "icons/Table.svg"
-
-PRIORITY = 100
-
-AUTHOR = "Ales Erjavec"
-
-AUTHOR_EMAIL = "ales.erjavec(@at@)fri.uni-lj.si"
-
-INPUTS = [("Data", Table, "data set", Multiple + Default)]
-
-OUTPUTS = [("Selected Data", Table, Default),
-           ("Other Data", Table)]
-
-WIDGET_CLASS = "OWDataTable"
 
 ##############################################################################
 
@@ -292,7 +269,17 @@ class TableViewWithCopy(QtGui.QTableView):
 
 
 class OWDataTable(widget.OWWidget):
-    _title = "Data Table"
+    _name = "Data Table"
+    _description = "Shows data in a spreadsheet."
+    _long_description = """Data Table takes one or more data sets
+    on its input and shows them in a tabular format."""
+    _icon = "icons/Table.svg"
+    _priority = 100
+    _author = "Ales Erjavec"
+    _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
+    inputs = [("Data", Table, "dataset", Multiple + Default)]
+    outputs = [("Selected Data", Table, Default),
+               ("Other Data", Table)]
 
     show_distributions = Setting(True)
     dist_color_RGB = Setting((220, 220, 220, 255))
@@ -300,10 +287,6 @@ class OWDataTable(widget.OWWidget):
     auto_commit = Setting(False)
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
-
-    inputs = [("Data", Table, "dataset", Multiple + Default)]
-    outputs = [("Selected Data", Table, Default),
-               ("Other Data", Table)]
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
