@@ -130,6 +130,8 @@ class SignalLink(object):
         self.outputSignal = outputSignal
         self.inputSignal = inputSignal
 
+        #TODO inputSignal is sometimes (after updating widget and rereading
+        #it from module instead from a registry?) 'str' instead of 'type'
         if issubclass(outputSignal.type, inputSignal.type):
             self.dynamic = False
         else:
