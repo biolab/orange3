@@ -4,9 +4,7 @@ Widget discovery.
 """
 
 import os
-import sys
 import stat
-import glob
 import logging
 import itertools
 import types
@@ -20,7 +18,6 @@ from .description import (
 )
 
 from . import VERSION_HEX
-import collections
 
 
 log = logging.getLogger(__name__)
@@ -93,6 +90,8 @@ class WidgetDiscovery(object):
             self.cached_descriptions.clear()
             self.cached_descriptions["!VERSION"] = version
 
+
+    # noinspection PyBroadException
     def run(self):
         """Run the widget discovery process.
         """
@@ -140,30 +139,23 @@ class WidgetDiscovery(object):
                 log.error("An exception occurred while processing %r.",
                           entry_point, exc_info=True)
 
-    def process_directory(self, directory):
-        """Process and locate any widgets in directory
-        (old style widget discovery).
-
-        """
-        for filename in glob.glob(os.path.join(directory, "*.py")):
-            self.process_file(filename)
-
     def process_widget_module(self, module, name=None, distribution=None):
         """Process a widget module.
         """
         try:
             desc = self.widget_description(module, widget_name=name,
                                            distribution=distribution)
-        except (WidgetSpecificationError, Exception) as ex:
+        except (WidgetSpecificationError, Exception):
             log.info("Invalid widget specification.", exc_info=True)
             return
 
         self.handle_widget(desc)
 
+
+    # noinspection PyBroadException
     def process_category_package(self, category, name=None, distribution=None):
         """Process a category package.
         """
-        cat_desc = None
         category = asmodule(category)
 
         if hasattr(category, "widget_discovery"):
@@ -181,7 +173,7 @@ class WidgetDiscovery(object):
         else:
             try:
                 cat_desc = CategoryDescription.from_package(category)
-            except (CategorySpecificationError, Exception) as ex:
+            except (CategorySpecificationError, Exception):
                 log.info("Package %r does not describe a category.", category,
                          exc_info=True)
                 cat_desc = default_category_for_module(category)
@@ -195,26 +187,25 @@ class WidgetDiscovery(object):
         self.handle_category(cat_desc)
 
         desc_iter = self.iter_widget_descriptions(
-                        category,
-                        category_name=cat_desc.name,
-                        distribution=distribution
-                        )
+            category, category_name=cat_desc.name, distribution=distribution)
 
         for desc in desc_iter:
             self.handle_widget(desc)
 
-    def process_loader(self, callable):
+
+    # noinspection PyBroadException
+    def process_loader(self, loader):
         """Process a callable loader function.
         """
         try:
-            callable(self)
+            loader(self)
         except Exception:
             log.error("Error calling %r", callable, exc_info=True)
 
-    def process_iter(self, iter):
+    def process_iter(self, iterable):
         """
         """
-        for desc in iter:
+        for desc in iterable:
             if isinstance(desc, CategoryDescription):
                 self.handle_category(desc)
             elif isinstance(desc, WidgetDescription):
@@ -241,6 +232,8 @@ class WidgetDiscovery(object):
         if self.registry:
             self.registry.register_category(desc)
 
+
+    # noinspection PyBroadException
     def iter_widget_descriptions(self, package, category_name=None,
                                  distribution=None):
         """Return an iterator over widget descriptions
@@ -281,15 +274,15 @@ class WidgetDiscovery(object):
 
                     try:
                         desc = self.widget_description(
-                                 module,
-                                 category_name=category_name,
-                                 distribution=distribution
-                                 )
+                            module,
+                            category_name=category_name,
+                            distribution=distribution
+                        )
                     except WidgetSpecificationError:
                         self.cache_log_error(
-                                 source_path, WidgetSpecificationError,
-                                 distribution
-                                 )
+                            source_path, WidgetSpecificationError,
+                            distribution
+                        )
 
                         continue
                     except Exception:
@@ -342,10 +335,9 @@ class WidgetDiscovery(object):
                 exc_type = type(error)
                 exc_val = repr(error.args)
 
-        self.cached_descriptions[mod_path] = \
-                _CacheEntry(mod_path, mod_name, mtime, project_name,
-                            project_version, exc_type, exc_val,
-                            description)
+        self.cached_descriptions[mod_path] = _CacheEntry(
+            mod_path, mod_name, mtime, project_name, project_version,
+            exc_type, exc_val, description)
 
     def cache_get(self, mod_path, distribution=None):
         """Get the cache entry for mod_path.
@@ -397,8 +389,8 @@ class WidgetDiscovery(object):
         mtime = os.stat(mod_path).st_mtime
         if mod_path in self.cached_descriptions:
             entry = self.cached_descriptions[mod_path]
-            return entry.mtime == mtime and \
-                    entry.exc_type == WidgetSpecificationError
+            return (entry.mtime == mtime and
+                    entry.exc_type == WidgetSpecificationError)
         else:
             return False
 
@@ -425,6 +417,7 @@ def fix_pyext(mod_path):
     return mod_path
 
 
+# noinspection PyBroadException
 def widget_descriptions_from_package(package):
     package = asmodule(package)
 
@@ -438,8 +431,6 @@ def widget_descriptions_from_package(package):
         except Exception:
             log.error("Error importing %r.", name, exc_info=True)
             continue
-
-        desc = None
         try:
             desc = WidgetDescription.from_module(module)
             desciptions.append(desc)
@@ -456,7 +447,7 @@ def module_name_split(name):
     if "." in name:
         package_name, module = name.rsplit(".", 1)
     else:
-        package_name, module = "", module
+        package_name, module = "", name
     return package_name, module
 
 
@@ -480,7 +471,7 @@ def module_modified_time(module):
         basename = os.path.basename(module_filename)
         path = pkg_resources.resource_filename(name, basename)
         m_time = os.stat(path)[stat.ST_MTIME]
-    return (module_filename, m_time)
+    return module_filename, m_time
 
 
 def asmodule(module):
