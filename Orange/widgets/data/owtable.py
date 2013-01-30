@@ -1,4 +1,5 @@
 import sys
+import traceback
 from math import isnan
 from functools import reduce
 from PyQt4 import QtCore
@@ -22,12 +23,13 @@ from Orange.widgets.gui import *
 
 def safe_call(func):
     from functools import wraps
+    # noinspection PyBroadException
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as ex:
-            print(func.__name__, "call error", ex, file=sys.stderr)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
     return wrapper
 
 
@@ -175,7 +177,7 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
             self.n_attr_cols <= col < self.n_attr_class_cols
                 and self.Y_density > Storage.DENSE or
             self.n_attr_class_cols < col
-                and self.examples.metas_density > Storage.DENSE)
+                and self.metas_density > Storage.DENSE)
 
     @safe_call
     def headerData(self, section, orientation, role):
@@ -189,8 +191,8 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
         if role == QtCore.Qt.DisplayRole:
             if self.show_attr_labels:
                 return attr.name + "\n".join(
-                     str(attr.attributes.get(label, ""))
-                     for label in self.attr_labels)
+                    str(attr.attributes.get(label, ""))
+                    for label in self.attr_labels)
             else:
                 return attr.name
         if role == QtCore.Qt.ToolTipRole:
