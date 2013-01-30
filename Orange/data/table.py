@@ -264,7 +264,15 @@ class Table(MutableSequence, Storage):
                 return source.Y[row_indices, [x - n_src_attrs for x in
                                               src_cols]]
 
-            a = np.empty((n_rows, len(src_cols)), dtype=source.X.dtype)
+            types = []
+            if any(0 <= x < n_src_attrs for x in src_cols):
+                types.append(source.X.dtype)
+            if any(x < 0 for x in src_cols):
+                types.append(source.metas.dtype)
+            if any(x >= n_src_attrs for x in src_cols):
+                types.append(source.Y.dtype)
+            new_type = np.find_common_type(types, [])
+            a = np.empty((n_rows, len(src_cols)), dtype=new_type)
             for i, col in enumerate(src_cols):
                 if col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
