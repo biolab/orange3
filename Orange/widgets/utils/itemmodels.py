@@ -9,14 +9,16 @@ from contextlib import contextmanager
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.widgets import gui
 
+
 class _store(dict):
     pass
 
+
 def _argsort(seq, cmp=None, key=None, reverse=False):
     if key is not None:
-        items = sorted(enumerate(seq), key=lambda i,v: key(v))
+        items = sorted(enumerate(seq), key=lambda i, v: key(v))
     elif cmp is not None:
-        items = sorted(enumerate(seq), cmp=lambda a,b: cmp(a[1], b[1]))
+        items = sorted(enumerate(seq), cmp=lambda a, b: cmp(a[1], b[1]))
     else:
         items = sorted(enumerate(seq), key=seq.__getitem__)
     if reverse:
@@ -76,7 +78,7 @@ class PyListModel(QAbstractListModel):
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return QVariant(str(section))
+            return str(section)
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self)
@@ -88,11 +90,9 @@ class PyListModel(QAbstractListModel):
         row = index.row()
         if role in [self.list_item_role, Qt.EditRole] \
                 and self._is_index_valid_for(index, self):
-            return QVariant(self[row])
+            return self[row]
         elif self._is_index_valid_for(row, self._other_data):
-            return QVariant(self._other_data[row].get(role, QVariant()))
-        else:
-            return QVariant()
+            return self._other_data[row].get(role, None)
 
     def itemData(self, index):
         map = QAbstractListModel.itemData(self, index)
@@ -100,10 +100,8 @@ class PyListModel(QAbstractListModel):
             items = list(self._other_data[index.row()].items())
         else:
             items = []
-
         for key, value in items:
-            map[key] = QVariant(value)
-
+            map[key] = value
         return map
 
     def parent(self, index=QModelIndex()):
@@ -111,8 +109,7 @@ class PyListModel(QAbstractListModel):
 
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole and self._is_index_valid_for(index, self):
-            obj = value.toPyObject()
-            self[index.row()] = obj # Will emit proper dataChanged signal
+            self[index.row()] = value # Will emit proper dataChanged signal
             return True
         elif self._is_index_valid_for(index, self._other_data):
             self._other_data[index.row()][role] = value
@@ -127,7 +124,7 @@ class PyListModel(QAbstractListModel):
             for role, value in data.items():
                 if role == Qt.EditRole and \
                         self._is_index_valid_for(index, self):
-                    self[index.row()] = value.toPyObject()
+                    self[index.row()] = value
                 elif self._is_index_valid_for(index, self._other_data):
                     self._other_data[index.row()][role] = value
 
@@ -145,7 +142,7 @@ class PyListModel(QAbstractListModel):
         with ``None``
         """
         if not parent.isValid():
-            self.__setslice__(row, row, [None] * count)
+            self[row:row] = [None] * count
             return True
         else:
             return False
@@ -154,7 +151,7 @@ class PyListModel(QAbstractListModel):
         """Remove ``count`` rows starting at ``row``
         """
         if not parent.isValid():
-            self.__delslice__(row, row + count)
+            del self[row:row+count]
             return True
         else:
             return False
@@ -194,9 +191,6 @@ class PyListModel(QAbstractListModel):
     def __getitem__(self, i):
         return self._list[i]
 
-    def __getslice__(self, i, j):
-        return self._list[i:j]
-
     def __add__(self, iterable):
         new_list = PyListModel(list(self._list),
                            self.parent(),
@@ -211,35 +205,28 @@ class PyListModel(QAbstractListModel):
     def __iadd__(self, iterable):
         self.extend(iterable)
 
-    def __delitem__(self, i):
-        self.beginRemoveRows(QModelIndex(), i, i)
-        del self._list[i]
-        del self._other_data[i]
+    def __delitem__(self, s):
+        if isinstance(s, slice):
+            i, j, _ = s.indices(len(self))
+            self.beginRemoveRows(QModelIndex(), i, j - 1)
+        else:
+            self.beginRemoveRows(QModelIndex(), s, s)
+        del self._list[s]
+        del self._other_data[s]
         self.endRemoveRows()
 
-    def __delslice__(self, i, j):
-        max_i = len(self)
-        i = max(0, min(i, max_i))
-        j = max(0, min(j, max_i))
-
-        if j > i and i < max_i:
-            self.beginRemoveRows(QModelIndex(), i, j - 1)
-            del self._list[i:j]
-            del self._other_data[i:j]
-            self.endRemoveRows()
-
-    def __setitem__(self, i, value):
-        self._list[i] = value
-        self.dataChanged.emit(self.index(i), self.index(i))
-
-    def __setslice__(self, i, j, iterable):
-        self.__delslice__(i, j)
-        all = list(iterable)
-        if len(all):
-            self.beginInsertRows(QModelIndex(), i, i + len(all) - 1)
-            self._list[i:i] = all
-            self._other_data[i:i] = [_store() for _ in all]
-            self.endInsertRows()
+    def __setitem__(self, s, value):
+        if isinstance(s, slice):
+            self.beginResetModel()
+            if not isinstance(value, list):
+                value = list(value)
+            self._list[s] = value
+            self._other_data[s] = (_store() for _ in value)
+            self.endResetModel()
+        else:
+            self._list[s] = value
+            self._other_data[s] = _store()
+            self.dataChanged.emit(self.index(s), self.index(s))
 
     def reverse(self):
         self._list.reverse()
@@ -317,15 +304,13 @@ class VariableListModel(PyListModel):
             i = index.row()
             var = self[i]
             if role == Qt.DisplayRole:
-                return QVariant(var.name)
+                return var.name
             elif role == Qt.DecorationRole:
-                return QVariant(gui.getAttributeIcons().get(var.varType, -1))
+                return gui.getAttributeIcons().get(var.var_type, -1)
             elif role == Qt.ToolTipRole:
-                return QVariant(self.variable_tooltip(var))
+                return self.variable_tooltip(var)
             else:
                 return PyListModel.data(self, index, role)
-        else:
-            return QVariant()
 
     def variable_tooltip(self, var):
         if isinstance(var, DiscreteVariable):
@@ -422,7 +407,7 @@ class StringVariableEditor(QLineEdit):
 
 class VariableDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
-        var = index.data(Qt.EditRole).toPyObject()
+        var = index.data(Qt.EditRole)
         if isinstance(var, DiscreteVariable):
             return DiscreteVariableEditor(parent)
         elif isinstance(var, ContinuousVariable):
@@ -432,14 +417,12 @@ class VariableDelegate(QStyledItemDelegate):
 #        return VariableEditor(var, parent)
 
     def setEditorData(self, editor, index):
-        var = index.data(Qt.EditRole).toPyObject()
+        var = index.data(Qt.EditRole)
         editor.variable = var
 
     def setModelData(self, editor, model, index):
-        model.setData(index, QVariant(editor.variable), Qt.EditRole)
+        model.setData(index, editor.variable, Qt.EditRole)
 
-#    def displayText(self, value, locale):
-#        return value.toPyObject().name
 
 class ListSingleSelectionModel(QItemSelectionModel):
     """ Item selection model for list item models with single selection.

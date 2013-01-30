@@ -48,7 +48,7 @@ def delslice(model, start, end):
     """ Delete the start, end slice (rows) from the model.
     """
     if isinstance(model, itemmodels.PyListModel):
-        model.__delslice__(start, end)
+        del model[start:end]
     elif isinstance(model, QtCore.QAbstractItemModel):
         model.removeRows(start, end-start)
     else:
@@ -105,7 +105,7 @@ class VariablesListItemModel(itemmodels.VariableListModel):
             return False
         if row == -1:
             row = len(self)
-        self.__setslice__(row, row, vars)
+        self[row:row] = vars
         for i, data in enumerate(item_data):
             self.setItemData(self.index(row + i), data)
         return True
@@ -619,7 +619,7 @@ class OWSelectAttributes(widget.OWWidget):
             metas = list(self.meta_attrs)
 
             domain = Orange.data.Domain(attributes, class_var, metas)
-            newdata = Orange.data.Table(domain, self.data)
+            newdata = Orange.data.Table.from_table(domain, self.data)
             self.output_report = self.prepareDataReport(newdata)
             self.output_domain = domain
             self.send("Data", newdata)
