@@ -3,8 +3,6 @@ import pickle
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-from functools import wraps, partial
-from collections import defaultdict
 from contextlib import contextmanager
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.widgets import gui
@@ -27,11 +25,11 @@ def _argsort(seq, cmp=None, key=None, reverse=False):
 
 
 @contextmanager
-def signal_blocking(object):
-    blocked = object.signalsBlocked()
-    object.blockSignals(True)
+def signal_blocking(obj):
+    blocked = obj.signalsBlocked()
+    obj.blockSignals(True)
     yield
-    object.blockSignals(blocked)
+    obj.blockSignals(blocked)
 
 
 class PyListModel(QAbstractListModel):
@@ -54,7 +52,7 @@ class PyListModel(QAbstractListModel):
             self.extend(iterable)
 
     def _is_index_valid_for(self, index, list_like):
-        if isinstance(index, QModelIndex) and index.isValid() :
+        if isinstance(index, QModelIndex) and index.isValid():
             row, column = index.row(), index.column()
             return 0 <= row < len(list_like) and not column
         elif isinstance(index, int):
@@ -62,14 +60,16 @@ class PyListModel(QAbstractListModel):
         else:
             return False
 
-    def wrap(self, list):
+    def wrap(self, lst):
         """ Wrap the list with this model. All changes to the model
         are done in place on the passed list
         """
-        self._list = list
-        self._other_data = [_store() for _ in list]
+        self._list = lst
+        self._other_data = [_store() for _ in lst]
         self.reset()
 
+
+    # noinspection PyMethodOverriding
     def index(self, row, column=0, parent=QModelIndex()):
         if self._is_index_valid_for(row, self) and column == 0:
             return QAbstractListModel.createIndex(self, row, column, parent)
@@ -80,6 +80,8 @@ class PyListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             return str(section)
 
+
+    # noinspection PyMethodOverriding
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self)
 
@@ -95,21 +97,21 @@ class PyListModel(QAbstractListModel):
             return self._other_data[row].get(role, None)
 
     def itemData(self, index):
-        map = QAbstractListModel.itemData(self, index)
+        mapping = QAbstractListModel.itemData(self, index)
         if self._is_index_valid_for(index, self._other_data):
             items = list(self._other_data[index.row()].items())
         else:
             items = []
         for key, value in items:
-            map[key] = value
-        return map
+            mapping[key] = value
+        return mapping
 
     def parent(self, index=QModelIndex()):
         return QModelIndex()
 
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole and self._is_index_valid_for(index, self):
-            self[index.row()] = value # Will emit proper dataChanged signal
+            self[index.row()] = value  # Will emit proper dataChanged signal
             return True
         elif self._is_index_valid_for(index, self._other_data):
             self._other_data[index.row()][role] = value
@@ -137,6 +139,8 @@ class PyListModel(QAbstractListModel):
         else:
             return self._flags | Qt.ItemIsDropEnabled
 
+
+    # noinspection PyMethodOverriding
     def insertRows(self, row, count, parent=QModelIndex()):
         """ Insert ``count`` rows at ``row``, the list fill be filled
         with ``None``
@@ -147,11 +151,13 @@ class PyListModel(QAbstractListModel):
         else:
             return False
 
+
+    # noinspection PyMethodOverriding
     def removeRows(self, row, count, parent=QModelIndex()):
         """Remove ``count`` rows starting at ``row``
         """
         if not parent.isValid():
-            del self[row:row+count]
+            del self[row:row + count]
             return True
         else:
             return False
@@ -193,11 +199,11 @@ class PyListModel(QAbstractListModel):
 
     def __add__(self, iterable):
         new_list = PyListModel(list(self._list),
-                           self.parent(),
-                           flags=self._flags,
-                           list_item_role=self.list_item_role,
-                           supportedDropActions=self.supportedDropActions()
-                           )
+                               self.parent(),
+                               flags=self._flags,
+                               list_item_role=self.list_item_role,
+                               supportedDropActions=self.supportedDropActions()
+                               )
         new_list._other_data = list(self._other_data)
         new_list.extend(iterable)
         return new_list
@@ -231,16 +237,16 @@ class PyListModel(QAbstractListModel):
     def reverse(self):
         self._list.reverse()
         self._other_data.reverse()
-        self.dataChanged.emit(self.index(0), self.index(len(self) -1))
+        self.dataChanged.emit(self.index(0), self.index(len(self) - 1))
 
     def sort(self, *args, **kwargs):
         indices = _argsort(self._list, *args, **kwargs)
-        list = [self._list[i] for i in indices]
+        lst = [self._list[i] for i in indices]
         other = [self._other_data[i] for i in indices]
-        for i, new_l, new_o in enumerate(zip(list, other)):
+        for i, new_l, new_o in enumerate(zip(lst, other)):
             self._list[i] = new_l
             self._other_data[i] = new_o
-        self.dataChanged.emit(self.index(0), self.index(len(self) -1))
+        self.dataChanged.emit(self.index(0), self.index(len(self) - 1))
 
     def __repr__(self):
         return "PyListModel(%s)" % repr(self._list)
@@ -285,14 +291,13 @@ class PyListModel(QAbstractListModel):
             return False
 
         if hasattr(mime, "_vars"):
-            vars = mime._vars
+            vars_ = mime._vars
         else:
             desc = str(mime.data(self.MIME_TYPE))
-            vars = pickle.loads(desc)
+            vars_ = pickle.loads(desc)
 
         return QAbstractListModel.dropMimeData(
             self, mime, action, row, column, parent)
-
 
 
 class VariableListModel(PyListModel):
@@ -354,10 +359,12 @@ class VariableListModel(PyListModel):
 
 _html_replace = [("<", "&lt;"), (">", "&gt;")]
 
+
 def safe_text(text):
     for old, new in _html_replace:
         text = text.replace(old, new)
     return text
+
 
 class VariableEditor(QWidget):
     def __init__(self, var, parent):
@@ -376,19 +383,21 @@ class VariableEditor(QWidget):
 
         self.setLayout(layout)
 
-        self.connect(self.type_cb, SIGNAL("currentIndexChanged(int)"), self.edited)
-        self.connect(self.name_le, SIGNAL("editingFinished()"), self.edited)
+        self.type_cb.currentIndexChanged.connect(self.edited)
+        self.name_le.editingFinished.connect(self.edited)
 
-    def edited(self, *args):
+    def edited(self, *_):
         self.emit(SIGNAL("edited()"))
 
-    def setData(self, type, name):
-        self.type_cb.setCurrentIndex(list(self._attr.keys()).index(type))
+    def setData(self, tpe, name):
+        self.type_cb.setCurrentIndex(list(self._attr.keys()).index(tpe))
         self.name_le.setText(name)
+
 
 class DiscreteVariableEditor(VariableEditor):
     def __init__(self, var, parent):
         VariableEditor.__init__(self, var, parent)
+
 
 class ContinuousVariableEditor(QLineEdit):
     def setVariable(self, var):
@@ -405,15 +414,16 @@ class StringVariableEditor(QLineEdit):
     def getVariable(self):
         return StringVariable(self.text())
 
+
 class VariableDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         var = index.data(Qt.EditRole)
         if isinstance(var, DiscreteVariable):
-            return DiscreteVariableEditor(parent)
+            return DiscreteVariableEditor(var, parent)
         elif isinstance(var, ContinuousVariable):
-            return ContinuousVariableEditor(parent)
+            return ContinuousVariableEditor(var, parent)
         elif isinstance(var, StringVariable):
-            return StringVariableEditor(parent)
+            return StringVariableEditor(var, parent)
 #        return VariableEditor(var, parent)
 
     def setEditorData(self, editor, index):
@@ -433,9 +443,9 @@ class ListSingleSelectionModel(QItemSelectionModel):
     """
     def __init__(self, model, parent=None):
         QItemSelectionModel.__init__(self, model, parent)
-        self.connect(self, SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.onSelectionChanged)
+        self.selectionChanged.connect(self.onSelectionChanged)
 
-    def onSelectionChanged(self, new, old):
+    def onSelectionChanged(self, new, _):
         index = list(new.indexes())
         if index:
             index = index.pop()
@@ -459,7 +469,8 @@ class ListSingleSelectionModel(QItemSelectionModel):
 
 
 class ModelActionsWidget(QWidget):
-    def __init__(self, actions=[], parent=None, direction=QBoxLayout.LeftToRight):
+    def __init__(self, actions=None, parent=None,
+                 direction=QBoxLayout.LeftToRight):
         QWidget.__init__(self, parent)
         self.actions = []
         self.buttons = []
@@ -467,8 +478,9 @@ class ModelActionsWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-        for action in actions:
-            self.addAction(action)
+        if actions is not None:
+            for action in actions:
+                self.addAction(action)
         self.setLayout(layout)
 
     def actionButton(self, action):
@@ -488,5 +500,3 @@ class ModelActionsWidget(QWidget):
 
     def addAction(self, action, *args):
         return self.insertAction(-1, action, *args)
-
-
