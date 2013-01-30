@@ -6,6 +6,7 @@ import pickle
 from Orange.canvas.utils import environ
 from Orange import data
 
+
 class Context:
     def __init__(self, **argkw):
         self.time = time.time()
@@ -25,9 +26,8 @@ class Setting:
        The default can be either an (immutable!) object or a callable that is
        used to set the default value.
 
-       When the default is callable that should not be called (which should
-       be uncommon), the call can be prevented by setting the flag
-       NOT_CALLABLE.
+       Callable settings are not saved as default for widgets; however, when
+       a widget is saved within a schema, the data is packed.
     """
     def __init__(self, default, flags=0, **data):
         self.default = default
@@ -40,11 +40,7 @@ class SettingsHandler:
        whose keys are attribute names and values are instances of Setting
     """
 
-    NOT_CALLABLE = 1
-    """Flag telling that the initialization of the widget should not call
-    the object with the default value, although it is callable"""
-
-    CONTEXT = 2
+    CONTEXT = 1
     """A flag that marks an attribute as context-dependent"""
 
     def __init__(self):
@@ -98,8 +94,7 @@ class SettingsHandler:
         cls = self.widget_class
         default_settings = {}
         for name, setting in self.settings.items():
-            if (self.settings[name].flags & SettingsHandler.NOT_CALLABLE or
-                    not callable(self.settings[name])):
+            if not callable(self.settings[name].default):
                 setting.default = getattr(cls, name)
                 default_settings[name] = setting
         pickle.dump(default_settings, settings_file)
@@ -118,13 +113,11 @@ class SettingsHandler:
         `self.point_size`) are in this case initialized from `data`
         (e.g. `data['point_size']`).
 
-        If there is no data or the data does not include a particular setting,
-        the method checks whether the default setting (e.g.
-        `MyWidget.point_size`) is callable. In this case, it is treated as a
-        factory and called, unless the setting's flag `NOT_CALLABLE` is set.
-
-        Otherwise, the widget instance gets no specific attribute that would
-        shadow the class attribute.
+        If there is no data or the data does not include a particular
+        setting, the method checks whether the default setting (e.g.
+        `MyWidget.point_size`) is callable; if it is, it calls it to get the
+         value for the setting. Otherwise, the widget instance gets no
+         specific attribute that would shadow the class attribute.
 
         Derived classes can add or retrieve additional information in the data,
         such as local contexts.
@@ -140,8 +133,7 @@ class SettingsHandler:
         for name, setting in self.settings.items():
             if data and name in data:
                 setattr(widget, name, data[name])
-            elif callable(setting.default) and not (
-                    setting.flags & SettingsHandler.NOT_CALLABLE):
+            elif callable(setting.default):
                 setattr(widget, name, setting.default())
             # otherwise, keep the class attribute
 
@@ -169,8 +161,7 @@ class SettingsHandler:
         cls = self.widget_class
         for name, setting in self.settings.items():
             flags = setting.flags
-            if not flags & self.CONTEXT and (
-                   not callable(setting.default) or flags & self.NOT_CALLABLE):
+            if not flags & self.CONTEXT and not callable(setting.default):
                 setattr(cls, name, widget.getattr_deep(name))
         # this is here only since __del__ is never called
         self.write_defaults()
@@ -278,7 +269,7 @@ class ContextHandler(SettingsHandler):
             if score == 2:
                 self.moveContextUp(widget, i)
                 return bestContext, False
-            if score > bestScore: # 0 is not OK!
+            if score > bestScore:  # 0 is not OK!
                 bestContext, bestScore = context, score
         if bestContext:
             # if cloneIfImperfect should be disabled, change this and the
@@ -320,14 +311,14 @@ class ContextHandler(SettingsHandler):
 class DomainContextHandler(ContextHandler):
     # Flags for Settings
     REQUIRED = 0
-    OPTIONAL = 4
-    REQUIRED_IF_SELECTED = 8
-    NOT_ATTRIBUTE = 16
-    LIST = 32
-    EXCLUDE_ATTRIBUTES = 64
-    INCLUDE_METAS = 128
+    OPTIONAL = 2
+    REQUIRED_IF_SELECTED = 4
+    NOT_ATTRIBUTE = 8
+    LIST = 16
+    EXCLUDE_ATTRIBUTES = 32
+    INCLUDE_METAS = 64
 
-    REQUIREMENT_MASK = 12
+    REQUIREMENT_MASK = 6
 
     # Flags for the handler
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
@@ -354,8 +345,8 @@ class DomainContextHandler(ContextHandler):
         def encode(lst, values):
             if values:
                 return {v.name:
-                            v.values if isinstance(v, data.DiscreteVariable)
-                            else v.var_type
+                        v.values if isinstance(v, data.DiscreteVariable)
+                        else v.var_type
                         for v in lst}
             else:
                 return {v.name: v.var_type for v in lst}
@@ -447,12 +438,11 @@ class DomainContextHandler(ContextHandler):
                     for i, saved in enumerate(value):
                         if (not flags & self.EXCLUDE_ATTRIBUTES and (
                                 saved in context.attributes or
-                                saved in attrItemsSet
-                            ) or
-                            flags & self.INCLUDE_METAS and (
+                                saved in attrItemsSet)
+                            or flags & self.INCLUDE_METAS and (
                                 saved in context.metas or
-                                saved in metaItemsSet
-                            )):
+                                saved in metaItemsSet)
+                            ):
                             if i in oldSelected:
                                 newSelected.append(len(newLabels))
                             newLabels.append(saved)
@@ -467,7 +457,7 @@ class DomainContextHandler(ContextHandler):
         if self.reservoir is not None:
             ll = [a for a in context.orderedDomain if a not in excluded and (
                   self.attributes_in_res and
-                      context.attributes.get(a[0], None) == a[1] or
+                  context.attributes.get(a[0], None) == a[1] or
                   self.metas_in_res and context.metas.get(a[0], None) == a[1])]
             setattr(widget, self.reservoir, ll)
 
@@ -481,7 +471,7 @@ class DomainContextHandler(ContextHandler):
             if not setting.flags & self.LIST:
                 self.saveLow(widget, name, value, setting.flags)
             else:
-                context.values[name] = copy.copy(value) # shallow copy
+                context.values[name] = copy.copy(value)  # shallow copy
                 if hasattr(setting, "selected"):
                     context.values[setting.selected] = list(
                         widget.getattr_deep(setting.selected))
@@ -492,7 +482,7 @@ class DomainContextHandler(ContextHandler):
             for sname, setting in self.settings.items():
                 if name == sname:
                     if setting.flags & self.LIST:
-                        context.values[name] = copy.copy(value) # shallow copy
+                        context.values[name] = copy.copy(value)  # shallow copy
                     else:
                         self.saveLow(widget, name, value, setting.flags)
                     return
@@ -509,7 +499,7 @@ class DomainContextHandler(ContextHandler):
             if valtype == -1:
                 valtype = (flags & self.INCLUDE_METAS and
                            context.attributes.get(value, -1))
-            context.values[name] = value, valtype # -1: not an attribute
+            context.values[name] = value, valtype  # -1: not an attribute
         else:
             context.values[name] = value, -2
 
@@ -600,31 +590,32 @@ class DomainContextHandler(ContextHandler):
                     context.values[sel_name] = selected[:j]
             else:
                 if (value[1] >= 0 and
-                    not self.__varExists(value, flags, attrs, metas)):
-                        del context.values[name]
+                        not self.__varExists(value, flags, attrs, metas)):
+                    del context.values[name]
         context.attributes, context.metas = attrs, metas
         context.orderedDomain = [(attr.name, attr.var_type) for attr in
                                  itertools.chain(domain, domain.metas)]
         return context
 
     def mergeBack(self, widget):
-        globs = self.globalContexts
+        glob = self.globalContexts
         mp = self.maxAttributesToPickle
-        if widget.contextSettings is not globs:
-            ids = {id(c) for c in globs}
-            globs += (c for c in widget.contextSettings if id(c) not in ids and (
-                (c.attributes and len(c.attributes) or 0) +
-                (c.class_vars and len(c.class_vars) or 0) +
-                (c.metas and len(c.metas) or 0)) <= mp)
-            globs.sort(key=lambda c: -c.time)
-            del globs[self.maxSavedContexts:]
+        if widget.contextSettings is not glob:
+            ids = {id(c) for c in glob}
+            glob += (c for c in widget.contextSettings if id(c) not in ids and
+                    ((c.attributes and len(c.attributes) or 0) +
+                     (c.class_vars and len(c.class_vars) or 0) +
+                     (c.metas and len(c.metas) or 0)) <= mp)
+            glob.sort(key=lambda c: -c.time)
+            del glob[self.maxSavedContexts:]
         else:
-            for i in range(len(globs)-1, -1, -1):
-                c = globs[i]
-                if ((c.attributes and len(c.attributes) or 0) +
-                    (c.class_vars and len(c.class_vars) or 0) +
-                    (c.metas and len(c.metas) or 0) >= mp):
-                        del globs[i]
+            for i in range(len(glob) - 1, -1, -1):
+                c = glob[i]
+                n_attrs = ((c.attributes and len(c.attributes) or 0) +
+                           (c.class_vars and len(c.class_vars) or 0) +
+                           (c.metas and len(c.metas) or 0))
+                if n_attrs >= mp:
+                        del glob[i]
 
 
 
@@ -678,14 +669,15 @@ class ClassValuesContextHandler(ContextHandler):
 class PerfectDomainContextHandler(DomainContextHandler):
     def encodeDomain(self, domain):
         if self.matchValues == 2:
-            def encode(vars):
+            def encode(attrs):
                 return tuple(
-                    (v.name, v.values if isinstance(v, data.DiscreteVariable)
-                             else v.var_type)
-                    for v in vars)
+                    (v.name,
+                     v.values if isinstance(v, data.DiscreteVariable)
+                     else v.var_type)
+                    for v in attrs)
         else:
-            def encode(vars):
-                return tuple((v.name, v.var_type) for v in vars)
+            def encode(attrs):
+                return tuple((v.name, v.var_type) for v in attrs)
         return (encode(domain.attributes),
                 encode(domain.class_vars),
                 encode(domain.metas))
@@ -694,7 +686,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
     #noinspection PyMethodOverriding
     def match(self, context, domain, attributes, class_vars, metas):
         return (attributes, class_vars, metas) == (
-                context.attributes, context.class_vars, context.metas) and 2
+            context.attributes, context.class_vars, context.metas) and 2
 
     def saveLow(self, widget, name, value, flags):
         context = widget.currentContext
@@ -702,7 +694,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
             atype = -1
             if not flags & self.EXCLUDE_ATTRIBUTES:
                 for aname, atype in itertools.chain(context.attributes,
-                                                     context.class_vars):
+                                                    context.class_vars):
                     if aname == value:
                         break
             if atype == -1 and flags & self.INCLUDE_METAS:
@@ -718,4 +710,3 @@ class PerfectDomainContextHandler(DomainContextHandler):
     def cloneContext(self, context, _, *__):
         import copy
         return copy.deepcopy(context)
-
