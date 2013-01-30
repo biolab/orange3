@@ -3,13 +3,12 @@ import time
 import copy
 import itertools
 import pickle
-import collections
 from Orange.canvas.utils import environ
 from Orange import data
 
 
 class Setting:
-    """A description of a setting: the default value and flags.
+    """Description of a setting.
        The default can be either an (immutable!) object or a callable that is
        used to set the default value.
 
@@ -325,7 +324,6 @@ class ContextHandler(SettingsHandler):
 
 
 class DomainContextHandler(ContextHandler):
-    # Flags for the handler
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
     def __init__(self, maxAttributesToPickle=100, matchValues=0,
@@ -523,7 +521,6 @@ class DomainContextHandler(ContextHandler):
             return 2
         filled = potentiallyFilled = 0
         for name, setting in self.settings.items():
-            flags = setting.flags
             if not isinstance(setting, ContextSetting):
                 continue
             value = context.values.get(name, None)
