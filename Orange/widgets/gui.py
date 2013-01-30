@@ -554,13 +554,15 @@ def createAttributePixmap(char, color = Qt.black):
 attributeIconDict = None
 
 def getAttributeIcons():
-    import orange
+    from Orange.data import Variable
+    VarTypes = Variable.VarTypes
     global attributeIconDict
     if not attributeIconDict:
-        attributeIconDict = {orange.VarTypes.Continuous: createAttributePixmap("C", QColor(202,0,32)),
-                             orange.VarTypes.Discrete: createAttributePixmap("D", QColor(26,150,65)),
-                             orange.VarTypes.String: createAttributePixmap("S", Qt.black),
-                             -1: createAttributePixmap("?", QColor(128, 128, 128))}
+        attributeIconDict = {
+            VarTypes.Continuous: createAttributePixmap("C", QColor(202,0,32)),
+            VarTypes.Discrete: createAttributePixmap("D", QColor(26,150,65)),
+            VarTypes.String: createAttributePixmap("S", Qt.black),
+            -1: createAttributePixmap("?", QColor(128, 128, 128))}
     return attributeIconDict
 
 
