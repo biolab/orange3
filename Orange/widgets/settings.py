@@ -29,9 +29,9 @@ class Setting:
        Callable settings are not saved as default for widgets; however, when
        a widget is saved within a schema, the data is packed.
     """
-    def __init__(self, default, flags=0, **data):
+    def __init__(self, default, contextual=False, **data):
         self.default = default
-        self.flags = flags
+        self.contextual = contextual
         self.__dict__.update(data)
 
 
@@ -39,9 +39,6 @@ class SettingsHandler:
     """Holds the decription of widget's settings, stored as a dict
        whose keys are attribute names and values are instances of Setting
     """
-
-    CONTEXT = 1
-    """A flag that marks an attribute as context-dependent"""
 
     def __init__(self):
         self.widget_class = None
@@ -160,8 +157,7 @@ class SettingsHandler:
         """
         cls = self.widget_class
         for name, setting in self.settings.items():
-            flags = setting.flags
-            if not flags & self.CONTEXT and not callable(setting.default):
+            if not setting.contextual and not callable(setting.default):
                 setattr(cls, name, widget.getattr_deep(name))
         # this is here only since __del__ is never called
         self.write_defaults()
@@ -335,7 +331,7 @@ class DomainContextHandler(ContextHandler):
         self.hasOrdinaryAttributes = attributes_in_res
         self.hasMetaAttributes = metas_in_res
         for s in self.settings:
-            if s.flags & self.CONTEXT and not s.flags & self.NOT_ATTRIBUTE:
+            if s.contextual and not s.flags & self.NOT_ATTRIBUTE:
                 if not s.flags & self.EXCLUDE_ATTRIBUTES:
                     self.hasOrdinaryAttributes = True
                 if s.flags & self.INCLUDE_METAS:
@@ -518,7 +514,7 @@ class DomainContextHandler(ContextHandler):
         filled = potentiallyFilled = 0
         for name, setting in self.settings.items():
             flags = setting.flags
-            if flags & self.NOT_ATTRIBUTE:
+            if not setting.contextual or flags & self.NOT_ATTRIBUTE:
                 continue
             value = context.values.get(name, None)
             if not value:
