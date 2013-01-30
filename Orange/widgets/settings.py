@@ -62,8 +62,13 @@ class SettingsHandler:
         should overload the latter."""
         filename = self.get_settings_filename()
         if os.path.exists(filename):
-            with open(filename, "rb") as settings_file:
+            settings_file = open(filename, "rb")
+            try:
                 self.read_defaults_file(settings_file)
+            except (EOFError, IOError, pickle.UnpicklingError):
+                pass
+            finally:
+                settings_file.close()
 
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
@@ -78,8 +83,15 @@ class SettingsHandler:
         """Write (global) defaults for this widget class to a file.
         Opens a file and calls :obj:`write_defaults_file`. Derived classes
         should overload the latter."""
-        with open(self.get_settings_filename(), "wb") as settings_file:
+        filename = self.get_settings_filename()
+        settings_file = open(filename, "wb")
+        try:
             self.write_defaults_file(settings_file)
+        except (EOFError, IOError, pickle.PicklingError):
+            settings_file.close()
+            os.remove(filename)
+        else:
+            settings_file.close()
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
