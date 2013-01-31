@@ -39,7 +39,7 @@ class OWFile(widget.OWWidget):
 
     want_main_area = False
 
-    recent_files = Setting(lambda: ["(none)"])
+    recent_files = Setting(["(none)"])
     new_variables = Setting(False)
 
 #    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes() if len(ft)>2 and ft[2]]
