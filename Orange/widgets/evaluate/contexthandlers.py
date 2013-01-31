@@ -10,32 +10,32 @@ class EvaluationResultsContextHandler(settings.ContextHandler):
         return (cnames, cvalues) == (
             context.classifierNames, context.classValues) and 2
 
-    def fastSave(self, widget, name, value):
-        context = widget.currentContext
+    def fast_save(self, widget, name, value):
+        context = widget.current_context
         if name == self.targetAttr:
             context.targetClass = value
         elif name == self.selectedAttr:
             context.selectedClassifiers = list(value)
 
-    def settingsFromWidget(self, widget):
-        super().settingsFromWidget(widget)
-        context = widget.currentContext
+    def settings_from_widget(self, widget):
+        super().settings_from_widget(widget)
+        context = widget.current_context
         context.targetClass = widget.getattr_deep(self.targetAttr)
         context.selectedClassifiers = list(widget.getattr_deep(self.selectedAttr))
 
-    def settingsToWidget(self, widget):
-        super().settingsToWidget(widget)
-        context = widget.currentContext
+    def settings_to_widget(self, widget):
+        super().settings_to_widget(widget)
+        context = widget.current_context
         if context.targetClass is not None:
             setattr(widget, self.targetAttr, context.targetClass)
         if context.selectedClassifiers is not None:
             setattr(widget, self.selectedAttr, context.selectedClassifiers)
 
     #noinspection PyMethodOverriding
-    def findOrCreateContext(self, widget, results):
+    def find_or_create_context(self, widget, results):
         cnames = [c.name for c in results.classifiers]
         cvalues = results.classValues
-        context, isNew = super().findOrCreateContext(
+        context, isNew = super().find_or_create_context(
             widget, results.classifierNames, results.classValues)
         if isNew:
             context.classifierNames = results.classifierNames

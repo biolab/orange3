@@ -111,8 +111,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         super().__init__(parent, Qt.Window if self.resizing_enabled else
                                  Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
-        # 'currentContext' MUST be the first thing assigned to a widget
-        self.currentContext = settings.Context()
+        # 'current_context' MUST be the first thing assigned to a widget
+        self.current_context = settings.Context()
         self.controlledAttributes = ControlledAttributesDict(self)
         self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
@@ -406,17 +406,17 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                             # set controller for all!
 
         if hasattr(self, "settingsHandler"):
-            self.settingsHandler.fastSave(self, name, value)
+            self.settingsHandler.fast_save(self, name, value)
 
 
     def __setattr__(self, name, value):
         return self.setattr_deep(name, value, QDialog)
 
     def openContext(self, *a):
-        self.settingsHandler.openContext(self, *a)
+        self.settingsHandler.open_context(self, *a)
 
     def closeContext(self):
-        self.settingsHandler.closeContext(self)
+        self.settingsHandler.close_context(self)
 
     def retrieveSpecificSettings(self):
         pass
