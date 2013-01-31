@@ -6,6 +6,10 @@ import pickle
 from Orange.canvas.utils import environ
 from Orange import data
 
+__all__ = ["Setting", "SettingsHandler",
+           "ContextSetting", "ContextHandler",
+           "DomainContextHandler", "PerfectDomainContextHandler",
+           "ClassValuesContextHandler"]
 
 class Setting:
     """Description of a setting.
@@ -117,6 +121,9 @@ class SettingsHandler:
                 setattr(widget, name, data[name])
             elif callable(setting.default):
                 setattr(widget, name, setting.default())
+            elif not isinstance(setting.default,
+                                (str, int, bytes, bool, float, tuple)):
+                setattr(widget, name, copy.copy(setting.default))
             # otherwise, keep the class attribute
 
     def pack_data(self, widget):
@@ -473,7 +480,7 @@ class DomainContextHandler(ContextHandler):
         for name, setting in self.settings.items():
             value = widget.getattr_deep(name)
             if not isinstance(value, list):
-                self.saveLow(widget, setting, value)
+                self.saveLow(widget, name, value, setting)
             else:
                 context.values[name] = copy.copy(value)  # shallow copy
                 if hasattr(setting, "selected"):
@@ -488,13 +495,13 @@ class DomainContextHandler(ContextHandler):
                     if not isinstance(value, list):
                         context.values[name] = copy.copy(value)  # shallow copy
                     else:
-                        self.saveLow(widget, setting, value)
+                        self.saveLow(widget, name, value, setting)
                     return
                 if name == getattr(setting, "selected", ""):
                     context.values[setting.selected] = list(value)
                     return
 
-    def saveLow(self, widget, setting, value):
+    def saveLow(self, widget, name, value, setting):
         context = widget.currentContext
         value = copy.copy(value)
         if isinstance(value, str):
@@ -504,16 +511,15 @@ class DomainContextHandler(ContextHandler):
                 valtype = -1 if setting.exclude_meta_attributes else \
                     context.metas.get(value, -1)
             # if it is still -1, it is not an attribute
-            context.values[setting.name] = value, valtype
+            context.values[name] = value, valtype
         else:
-            context.values[setting.name] = value, -2
+            context.values[name] = value, -2
 
     def __varExists(self, setting, value, attributes, metas):
         return (not setting.exclude_attributes and
                 attributes.get(value[0], -1) == value[1] or
                 not setting.exlclude_metas and
                 metas.get(value[0], -1) == value[1])
-
 
     #noinspection PyMethodOverriding
     def match(self, context, domain, attrs, metas):
@@ -690,7 +696,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         return (attributes, class_vars, metas) == (
             context.attributes, context.class_vars, context.metas) and 2
 
-    def saveLow(self, widget, setting, value):
+    def saveLow(self, widget, name, value, setting):
         context = widget.currentContext
         if isinstance(value, str):
             atype = -1
@@ -704,9 +710,9 @@ class PerfectDomainContextHandler(DomainContextHandler):
                                                      context.class_vars):
                     if aname == value:
                         break
-            context.values[setting.name] = value, copy.copy(atype)
+            context.values[name] = value, copy.copy(atype)
         else:
-            context.values[setting.name] = value, -2
+            context.values[name] = value, -2
 
 
     def cloneContext(self, context, _, *__):
