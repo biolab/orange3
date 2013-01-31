@@ -11,13 +11,11 @@ __all__ = ["Setting", "SettingsHandler",
            "DomainContextHandler", "PerfectDomainContextHandler",
            "ClassValuesContextHandler"]
 
+_immutables = (str, int, bytes, bool, float, tuple)
+
+
 class Setting:
     """Description of a setting.
-       The default can be either an (immutable!) object or a callable that is
-       used to set the default value.
-
-       Callable settings are not saved as default for widgets; however, when
-       a widget is saved within a schema, the data is packed.
     """
     def __init__(self, default, **data):
         self.default = default
@@ -80,9 +78,8 @@ class SettingsHandler:
         cls = self.widget_class
         default_settings = {}
         for name, setting in self.settings.items():
-            if not callable(self.settings[name].default):
-                setting.default = getattr(cls, name)
-                default_settings[name] = setting
+            setting.default = getattr(cls, name)
+            default_settings[name] = setting
         pickle.dump(default_settings, settings_file)
 
     def initialize(self, widget, data=None):
@@ -100,10 +97,8 @@ class SettingsHandler:
         (e.g. `data['point_size']`).
 
         If there is no data or the data does not include a particular
-        setting, the method checks whether the default setting (e.g.
-        `MyWidget.point_size`) is callable; if it is, it calls it to get the
-         value for the setting. Otherwise, the widget instance gets no
-         specific attribute that would shadow the class attribute.
+        setting, the class setting is (shallow-)copied to the instance if it
+        is mutable. Immutable settings are kept in the class.
 
         Derived classes can add or retrieve additional information in the data,
         such as local contexts.
@@ -119,12 +114,8 @@ class SettingsHandler:
         for name, setting in self.settings.items():
             if data and name in data:
                 setattr(widget, name, data[name])
-            elif callable(setting.default):
-                setattr(widget, name, setting.default())
-            elif not isinstance(setting.default,
-                                (str, int, bytes, bool, float, tuple)):
+            elif not isinstance(setting.default, _immutables):
                 setattr(widget, name, copy.copy(setting.default))
-            # otherwise, keep the class attribute
 
     def pack_data(self, widget):
         """
@@ -150,7 +141,7 @@ class SettingsHandler:
         cls = self.widget_class
         for name, setting in self.settings.items():
             # I'm not saving settings that I don't understand
-            if type(setting) is Setting and not callable(setting.default):
+            if type(setting) is Setting:
                 setattr(cls, name, widget.getattr_deep(name))
         # this is here only since __del__ is never called
         self.write_defaults()
@@ -532,7 +523,7 @@ class DomainContextHandler(ContextHandler):
             value = context.values.get(name, None)
             if not value:
                 continue
-            if isinstance(list, value):
+            if isinstance(value, list):
                 if setting.required == ContextSetting.REQUIRED:
                     potentiallyFilled += len(value)
                     filled += len(value)
