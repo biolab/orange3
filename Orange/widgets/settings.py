@@ -281,7 +281,7 @@ class ContextHandler(SettingsHandler):
             score = self.match(context, *arg)
             if score == 2:
                 self.moveContextUp(widget, i)
-                return bestContext, False
+                return context, False
             if score > bestScore:  # 0 is not OK!
                 bestContext, bestScore = context, score
         if bestContext:
