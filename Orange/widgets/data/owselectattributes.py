@@ -282,7 +282,7 @@ class OWSelectAttributes(widget.OWWidget):
     want_control_area = False
 
     settingsHandler = DomainContextHandler()
-    domain_role_hints = ContextSetting(dict)
+    domain_role_hints = ContextSetting({})
 
     def __init__(self, parent=None, signalManager=None):
         super().__init__(parent, signalManager)
