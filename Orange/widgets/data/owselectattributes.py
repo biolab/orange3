@@ -1,16 +1,17 @@
 import sys
+from functools import partial, reduce
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 from Orange.widgets import widget, gui, basewidget
-from Orange.widgets.settings import (
-    Setting, SettingsHandler, DomainContextHandler)
+from Orange.widgets.settings import *
 from Orange.data.table import Table
 
 from Orange.widgets.utils import itemmodels
 
 import Orange
+
 
 def slices(indices):
     """ Group the given integer indices into slices
@@ -26,14 +27,16 @@ def slices(indices):
                 first = last = i
         yield first, last + 1
 
+
 def source_model(view):
     """ Return the source model for the Qt Item View if it uses
     the QSortFilterProxyModel.
     """
-    if isinstance(view.model(),  QtGui.QSortFilterProxyModel):
+    if isinstance(view.model(), QtGui.QSortFilterProxyModel):
         return view.model().sourceModel()
     else:
         return view.model()
+
 
 def source_indexes(indexes, view):
     """ Map model indexes through a views QSortFilterProxyModel
@@ -44,13 +47,14 @@ def source_indexes(indexes, view):
     else:
         return indexes
 
+
 def delslice(model, start, end):
     """ Delete the start, end slice (rows) from the model.
     """
     if isinstance(model, itemmodels.PyListModel):
         del model[start:end]
     elif isinstance(model, QtCore.QAbstractItemModel):
-        model.removeRows(start, end-start)
+        model.removeRows(start, end - start)
     else:
         raise TypeError(type(model))
 
@@ -222,8 +226,8 @@ class VariableFilterProxyModel(QtGui.QSortFilterProxyModel):
         self.invalidateFilter()
 
     def filter_accepts_variable(self, var):
-        row_str = var.name + " ".join(("%s=%s" % item) \
-                    for item in var.attributes.items())
+        row_str = var.name + " ".join(("%s=%s" % item)
+                                      for item in var.attributes.items())
         row_str = row_str.lower()
         filters = self._filter_string.split()
 
@@ -263,7 +267,6 @@ class CompleterNavigator(QtCore.QObject):
             return False
 
 
-from functools import partial, reduce
 
 class OWSelectAttributes(widget.OWWidget):
     _name = "Select Attributes"
@@ -279,7 +282,7 @@ class OWSelectAttributes(widget.OWWidget):
     want_control_area = False
 
     settingsHandler = DomainContextHandler()
-    domain_role_hints = Setting(dict, SettingsHandler.CONTEXT)
+    domain_role_hints = ContextSetting(dict)
 
     def __init__(self, parent=None, signalManager=None):
         super().__init__(parent, signalManager)
@@ -387,26 +390,26 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(bbox, 0, 1, 1, 1)
 
         self.up_attr_button = gui.button(bbox, self, "Up",
-            callback = partial(self.move_up, self.used_attrs_view))
+            callback=partial(self.move_up, self.used_attrs_view))
         self.move_attr_button = gui.button(bbox, self, ">",
-            callback = partial(self.move_selected, self.used_attrs_view))
+            callback=partial(self.move_selected, self.used_attrs_view))
         self.down_attr_button = gui.button(bbox, self, "Down",
-            callback = partial(self.move_down, self.used_attrs_view))
+            callback=partial(self.move_down, self.used_attrs_view))
 
         bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 1, 1, 1, 1)
         self.move_class_button = gui.button(bbox, self, ">",
-            callback = partial(self.move_selected,
-                               self.class_attrs_view, exclusive=True))
+            callback=partial(self.move_selected,
+                             self.class_attrs_view, exclusive=True))
 
         bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 2, 1, 1, 1)
         self.up_meta_button = gui.button(bbox, self, "Up",
-            callback = partial(self.move_up, self.meta_attrs_view))
+            callback=partial(self.move_up, self.meta_attrs_view))
         self.move_meta_button = gui.button(bbox, self, ">",
-            callback = partial(self.move_selected, self.meta_attrs_view))
+            callback=partial(self.move_selected, self.meta_attrs_view))
         self.down_meta_button = gui.button(bbox, self, "Down",
-            callback = partial(self.move_down, self.meta_attrs_view))
+            callback=partial(self.move_down, self.meta_attrs_view))
 
         bbox = gui.widgetBox(self.controlArea, orientation="horizontal",
                              addToLayout=False, margin=0)
@@ -429,11 +432,11 @@ class OWSelectAttributes(widget.OWWidget):
 
         # For automatic widget testing using
         self._guiElements.extend(
-                  [(QtGui.QListView, self.available_attrs_view),
-                   (QtGui.QListView, self.used_attrs_view),
-                   (QtGui.QListView, self.class_attrs_view),
-                   (QtGui.QListView, self.meta_attrs_view),
-                  ])
+            [(QtGui.QListView, self.available_attrs_view),
+             (QtGui.QListView, self.used_attrs_view),
+             (QtGui.QListView, self.class_attrs_view),
+             (QtGui.QListView, self.meta_attrs_view),
+             ])
 
     def set_data(self, data=None):
         self.update_domain_role_hints()
@@ -446,10 +449,10 @@ class OWSelectAttributes(widget.OWWidget):
             var_sig = lambda attr: (attr.name, attr.var_type)
 
             domain_hints = {var_sig(attr): ("attribute", i)
-                for i, attr in enumerate(data.domain.attributes)}
+                            for i, attr in enumerate(data.domain.attributes)}
 
-            domain_hints.update({var_sig(attr) : ("meta", i)
-                for i, attr in enumerate(data.domain.metas)})
+            domain_hints.update({var_sig(attr): ("meta", i)
+                                for i, attr in enumerate(data.domain.metas)})
 
             if data.domain.class_var:
                 domain_hints[var_sig(data.domain.class_var)] = ("class", 0)
@@ -485,9 +488,9 @@ class OWSelectAttributes(widget.OWWidget):
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.
         """
-        hints_from_model = lambda role, model: \
-                [((attr.name, attr.var_type), (role, i)) \
-                 for i, attr in enumerate(model)]
+        hints_from_model = lambda role, model: [
+            ((attr.name, attr.var_type), (role, i))
+            for i, attr in enumerate(model)]
         hints = dict(hints_from_model("available", self.available_attrs))
         hints.update(hints_from_model("attribute", self.used_attrs))
         hints.update(hints_from_model("class", self.class_attrs))
@@ -529,7 +532,8 @@ class OWSelectAttributes(widget.OWWidget):
         if self.selected_rows(view):
             self.move_selected_from_to(view, self.available_attrs_view)
         elif self.selected_rows(self.available_attrs_view):
-            self.move_selected_from_to(self.available_attrs_view, view, exclusive)
+            self.move_selected_from_to(self.available_attrs_view, view,
+                                       exclusive)
 
     def move_selected_from_to(self, src, dst, exclusive=False):
         self.move_from_to(src, dst, self.selected_rows(src), exclusive)
