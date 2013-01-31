@@ -317,31 +317,16 @@ class OWSelectAttributes(widget.OWWidget):
         self.available_attrs_view = VariablesListItemView()
         self.available_attrs_view.setModel(self.available_attrs_proxy)
 
-        self.connect(self.filter_edit,
-                     QtCore.SIGNAL("textChanged(QString)"),
-                     self.available_attrs_proxy.set_filter_string)
+        aa = self.available_attrs
+        aa.dataChanged.connect(self.update_completer_model)
+        aa.rowsInserted.connect(self.update_completer_model)
+        aa.rowsRemoved.connect(self.update_completer_model)
 
-        self.connect(self.available_attrs_view.selectionModel(),
-                     QtCore.SIGNAL(
-                         "selectionChanged(QItemSelection, QItemSelection)"),
-                     partial(self.update_interface_state,
-                             self.available_attrs_view))
-
-        self.connect(self.filter_edit,
-                     QtCore.SIGNAL("textChanged(QString)"),
-                     self.update_completer_prefix)
-
-        self.connect(self.available_attrs,
-                     QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                     self.update_completer_model)
-
-        self.connect(self.available_attrs,
-                     QtCore.SIGNAL("rowsInserted(QModelIndex, int, int)"),
-                     self.update_completer_model)
-
-        self.connect(self.available_attrs,
-                     QtCore.SIGNAL("rowsRemoved(QModelIndex, int, int)"),
-                     self.update_completer_model)
+        self.available_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.available_attrs_view))
+        self.filter_edit.textChanged.connect(self.update_completer_prefix)
+        self.filter_edit.textChanged.connect(
+            self.available_attrs_proxy.set_filter_string)
 
         box.layout().addWidget(self.available_attrs_view)
         layout.addWidget(box, 0, 0, 3, 1)
@@ -350,12 +335,8 @@ class OWSelectAttributes(widget.OWWidget):
         self.used_attrs = VariablesListItemModel()
         self.used_attrs_view = VariablesListItemView()
         self.used_attrs_view.setModel(self.used_attrs)
-        self.connect(self.used_attrs_view.selectionModel(),
-                     QtCore.SIGNAL(
-                         "selectionChanged(QItemSelection, QItemSelection)"),
-                     partial(self.update_interface_state,
-                             self.used_attrs_view))
-
+        self.used_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.used_attrs_view))
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
@@ -363,12 +344,8 @@ class OWSelectAttributes(widget.OWWidget):
         self.class_attrs = ClassVarListItemModel()
         self.class_attrs_view = ClassVariableItemView()
         self.class_attrs_view.setModel(self.class_attrs)
-        self.connect(self.class_attrs_view.selectionModel(),
-                     QtCore.SIGNAL(
-                         "selectionChanged(QItemSelection, QItemSelection)"),
-                     partial(self.update_interface_state,
-                             self.class_attrs_view))
-
+        self.class_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.class_attrs_view))
         self.class_attrs_view.setMaximumHeight(24)
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
@@ -378,11 +355,8 @@ class OWSelectAttributes(widget.OWWidget):
         self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView()
         self.meta_attrs_view.setModel(self.meta_attrs)
-        self.connect(self.meta_attrs_view.selectionModel(),
-                     QtCore.SIGNAL(
-                         "selectionChanged(QItemSelection, QItemSelection)"),
-                     partial(self.update_interface_state,
-                             self.meta_attrs_view))
+        self.meta_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.meta_attrs_view))
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
 

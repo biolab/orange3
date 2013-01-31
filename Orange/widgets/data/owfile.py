@@ -66,8 +66,7 @@ class OWFile(widget.OWWidget):
         self.filecombo = QtGui.QComboBox(box)
         self.filecombo.setMinimumWidth(300)
         box.layout().addWidget(self.filecombo)
-        self.connect(self.filecombo, QtCore.SIGNAL('activated(int)'),
-                     self.selectFile)
+        self.filecombo.activated[int].connect(self.selectFile)
 
         button = gui.button(box, self, '...', callback=self.browseFile)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))

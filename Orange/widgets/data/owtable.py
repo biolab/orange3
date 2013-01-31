@@ -344,8 +344,7 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.id2table = {}  # key: widget id, value: table
         self.table2id = {}  # key: table, value: widget id
-        self.connect(self.tabs, QtCore.SIGNAL("currentChanged(QWidget*)"),
-                     self.tabClicked)
+        self.tabs.currentChanged.connect(self.tabClicked)
         self.selectionChangedFlag = False
 
 
@@ -547,9 +546,10 @@ class OWDataTable(widget.OWWidget):
         table.oldSortingOrder = order
 
 
-    def tabClicked(self, qTableInstance):
+    def tabClicked(self, index):
         """Updates the info box when a tab is clicked."""
-        id = self.table2id.get(qTableInstance,None)
+        qTableInstance = self.tabs.widget(index)
+        id = self.table2id.get(qTableInstance, None)
         self.setInfo(self.data.get(id,None))
         self.update_selection()
 
