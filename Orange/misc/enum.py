@@ -1,8 +1,17 @@
 ## Based on PEP-354, copied and adapted from
 ## http://stackoverflow.com/questions/36932/
 
+_enum_registry = {}
+
+
+def enum_value_unpickler(names, value):
+    enum_class = _enum_registry.get(names, None) or Enum(*names)
+    return enum_class[value]
 
 def Enum(*names):
+    if names in _enum_registry:
+        return _enum_registry[names]
+
     class EnumClass:
         __slots__ = names
 
@@ -31,7 +40,7 @@ def Enum(*names):
                 setattr(cls, name, value)
 
     class EnumValue:
-        __slots__ = ('__value')
+        __slots__ = ('__value', )
         Value = property(lambda self: self.__value)
         EnumType = property(lambda self: EnumType)
 
@@ -53,6 +62,9 @@ def Enum(*names):
         def __repr__(self):
             return str(names[self.__value])
 
+        def __reduce__(self):
+            return enum_value_unpickler, (names, self.__value)
+
     constants = [None] * len(names)
     for i, each in enumerate(names):
         val = EnumValue(i)
@@ -60,4 +72,5 @@ def Enum(*names):
         constants[i] = val
     constants = tuple(constants)
     EnumType = EnumClass()
+    _enum_registry[names] = EnumType
     return EnumType
