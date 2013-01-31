@@ -80,7 +80,7 @@ class SettingsHandler:
         for name, setting in self.settings.items():
             setting.default = getattr(cls, name)
             default_settings[name] = setting
-        pickle.dump(default_settings, settings_file)
+        pickle.dump(default_settings, settings_file, -1)
 
     def initialize(self, widget, data=None):
         """
@@ -227,7 +227,7 @@ class ContextHandler(SettingsHandler):
     def write_defaults_file(self, settings_file):
         """Call the inherited method, then add global context to the pickle."""
         super().write_defaults_file(settings_file)
-        pickle.dump(self.globalContexts, settings_file)
+        pickle.dump(self.globalContexts, settings_file, -1)
 
     def pack_data(self, widget):
         """Call the inherited method, then add local contexts to the pickle."""
@@ -521,7 +521,7 @@ class DomainContextHandler(ContextHandler):
             if not isinstance(setting, ContextSetting):
                 continue
             value = context.values.get(name, None)
-            if not value:
+            if value is None:
                 continue
             if isinstance(value, list):
                 if setting.required == ContextSetting.REQUIRED:
