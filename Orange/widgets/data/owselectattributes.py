@@ -4,7 +4,7 @@ from functools import partial, reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
-from Orange.widgets import widget, gui, basewidget
+from Orange.widgets import widget, gui, widget
 from Orange.widgets.settings import *
 from Orange.data.table import Table
 
@@ -276,7 +276,7 @@ class OWSelectAttributes(widget.OWWidget):
     _author = "Ales Erjavec"
     _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
-    outputs = [("Data", Table), ("Features", basewidget.AttributeList)]
+    outputs = [("Data", Table), ("Features", widget.AttributeList)]
 
     want_main_area = False
     want_control_area = False
@@ -601,7 +601,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.output_report = self.prepareDataReport(newdata)
             self.output_domain = domain
             self.send("Data", newdata)
-            self.send("Features", basewidget.AttributeList(attributes))
+            self.send("Features", widget.AttributeList(attributes))
         else:
             self.output_report = []
             self.send("Data", None)

@@ -104,7 +104,7 @@ class SettingsHandler:
         such as local contexts.
 
         :param widget: the widget whose settings are initialized
-        :type widget: OWBaseWidget
+        :type widget: OWWidget
         :param data: Widget-specific default data the overrides the class
                     defaults
         :type data: `dict` or `bytes` that unpickle into a `dict`

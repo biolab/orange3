@@ -18,9 +18,6 @@ from Orange import data as orange_data
 ERROR = 0
 WARNING = 1
 
-TRUE=1
-FALSE=0
-
 class ControlledAttributesDict(dict):
     def __init__(self, master):
         super().__init__()
@@ -34,9 +31,7 @@ class ControlledAttributesDict(dict):
         self.master.setControllers(self.master, key, self.master, "")
 
 
-
-##################
-# this definitions are needed only to define ExampleTable as subclass of ExampleTableWithClass
+# these definitions are needed to define Table as subclass of TableWithClass
 class AttributeList(list):
     pass
 
@@ -45,7 +40,7 @@ class ExampleList(list):
 
 
 
-class BaseWidgetClass(type(QDialog)):
+class WidgetMetaClass(type(QDialog)):
     """Meta class for widgets. If the class definition does not have a
        specific settings handler, the meta class provides a default one
        that does not handle contexts. Then it scans for any attributes
@@ -80,7 +75,11 @@ class BaseWidgetClass(type(QDialog)):
         return cls
 
 
-class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
+class OWWidget(QDialog, metaclass=WidgetMetaClass):
+    # Global widget count
+    widget_id = 0
+
+    # Widget description
     _name = None
     _id = None
     _category = None
@@ -102,7 +101,14 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     inputs = []
     outputs = []
 
-    widget_id = 0 # global widget count
+    # Default widget layout settings
+    want_basic_layout = True
+    want_main_area = True
+    want_control_area = True
+    want_graph = False
+    show_save_graph = True
+    want_status_bar = False
+    no_report = False
 
     save_position = False
     resizing_enabled = True
@@ -116,15 +122,18 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.controlledAttributes = ControlledAttributesDict(self)
         self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
+        self.__reportData = None
+
         if hasattr(self, "settingsHandler"):
             self.settingsHandler.initialize(self, stored_settings)
 
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
-        #    self.settingsList = getattr(self, "settingsList", []) + ["widgetShown", "savedWidgetGeometry"]
+        #    self.settingsList = getattr(self, "settingsList", []) + \
+        #                        ["widgetShown", "savedWidgetGeometry"]
 
-        OWBaseWidget.widget_id += 1
-        self.widget_id = OWBaseWidget.widget_id
+        OWWidget.widget_id += 1
+        self.widget_id = OWWidget.widget_id
 
         self.__dict__.update(environ.directories)
 
@@ -151,24 +160,149 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         self.widgetStateHandler = None
         self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
 
-
         self._private_thread_pools = {}
         self.asyncCalls = []
         self.asyncBlock = False
 
-        self.connect(self, SIGNAL("blockingStateChanged(bool)"), lambda bool :self.signalManager.log.info("Blocking state changed %s %s" % (str(self), str(bool))))
+        if self.want_basic_layout:
+            self.insertLayout()
 
 
-    # uncomment this to see which events occured
-#    def event(self, e):
-#        #eventDict = dict([(0, 'None'), (1, 'Timer'), (2, 'MouseButtonPress'), (3, 'MouseButtonRelease'), (4, 'MouseButtonDblClick'), (5, 'MouseMove'), (6, 'KeyPress'), (7, 'KeyRelease'), (8, 'FocusIn'), (9, 'FocusOut'), (10, 'Enter'), (11, 'Leave'), (12, 'Paint'), (13, 'Move'), (14, 'Resize'), (15, 'Create'), (16, 'Destroy'), (17, 'Show'), (18, 'Hide'), (19, 'Close'), (20, 'Quit'), (21, 'Reparent'), (22, 'ShowMinimized'), (23, 'ShowNormal'), (24, 'WindowActivate'), (25, 'WindowDeactivate'), (26, 'ShowToParent'), (27, 'HideToParent'), (28, 'ShowMaximized'), (30, 'Accel'), (31, 'Wheel'), (32, 'AccelAvailable'), (33, 'CaptionChange'), (34, 'IconChange'), (35, 'ParentFontChange'), (36, 'ApplicationFontChange'), (37, 'ParentPaletteChange'), (38, 'ApplicationPaletteChange'), (40, 'Clipboard'), (42, 'Speech'), (50, 'SockAct'), (51, 'AccelOverride'), (60, 'DragEnter'), (61, 'DragMove'), (62, 'DragLeave'), (63, 'Drop'), (64, 'DragResponse'), (70, 'ChildInserted'), (71, 'ChildRemoved'), (72, 'LayoutHint'), (73, 'ShowWindowRequest'), (80, 'ActivateControl'), (81, 'DeactivateControl'), (1000, 'User')])
-#        eventDict = dict([(0, "None"), (130, "AccessibilityDescription"), (119, "AccessibilityHelp"), (86, "AccessibilityPrepare"), (114, "ActionAdded"), (113, "ActionChanged"), (115, "ActionRemoved"), (99, "ActivationChange"), (121, "ApplicationActivated"), (122, "ApplicationDeactivated"), (36, "ApplicationFontChange"), (37, "ApplicationLayoutDirectionChange"), (38, "ApplicationPaletteChange"), (35, "ApplicationWindowIconChange"), (68, "ChildAdded"), (69, "ChildPolished"), (71, "ChildRemoved"), (40, "Clipboard"), (19, "Close"), (82, "ContextMenu"), (52, "DeferredDelete"), (60, "DragEnter"), (62, "DragLeave"), (61, "DragMove"), (63, "Drop"), (98, "EnabledChange"), (10, "Enter"), (150, "EnterEditFocus"), (124, "EnterWhatsThisMode"), (116, "FileOpen"), (8, "FocusIn"), (9, "FocusOut"), (97, "FontChange"), (159, "GraphicsSceneContextMenu"), (164, "GraphicsSceneDragEnter"), (166, "GraphicsSceneDragLeave"), (165, "GraphicsSceneDragMove"), (167, "GraphicsSceneDrop"), (163, "GraphicsSceneHelp"), (160, "GraphicsSceneHoverEnter"), (162, "GraphicsSceneHoverLeave"), (161, "GraphicsSceneHoverMove"), (158, "GraphicsSceneMouseDoubleClick"), (155, "GraphicsSceneMouseMove"), (156, "GraphicsSceneMousePress"), (157, "GraphicsSceneMouseRelease"), (168, "GraphicsSceneWheel"), (18, "Hide"), (27, "HideToParent"), (127, "HoverEnter"), (128, "HoverLeave"), (129, "HoverMove"), (96, "IconDrag"), (101, "IconTextChange"), (83, "InputMethod"), (6, "KeyPress"), (7, "KeyRelease"), (89, "LanguageChange"), (90, "LayoutDirectionChange"), (76, "LayoutRequest"), (11, "Leave"), (151, "LeaveEditFocus"), (125, "LeaveWhatsThisMode"), (88, "LocaleChange"), (153, "MenubarUpdated"), (43, "MetaCall"), (102, "ModifiedChange"), (4, "MouseButtonDblClick"), (2, "MouseButtonPress"), (3, "MouseButtonRelease"), (5, "MouseMove"), (109, "MouseTrackingChange"), (13, "Move"), (12, "Paint"), (39, "PaletteChange"), (131, "ParentAboutToChange"), (21, "ParentChange"), (75, "Polish"), (74, "PolishRequest"), (123, "QueryWhatsThis"), (14, "Resize"), (117, "Shortcut"), (51, "ShortcutOverride"), (17, "Show"), (26, "ShowToParent"), (50, "SockAct"), (112, "StatusTip"), (100, "StyleChange"), (87, "TabletMove"), (92, "TabletPress"), (93, "TabletRelease"), (171, "TabletEnterProximity"), (172, "TabletLeaveProximity"), (1, "Timer"), (120, "ToolBarChange"), (110, "ToolTip"), (78, "UpdateLater"), (77, "UpdateRequest"), (111, "WhatsThis"), (118, "WhatsThisClicked"), (31, "Wheel"), (132, "WinEventAct"), (24, "WindowActivate"), (103, "WindowBlocked"), (25, "WindowDeactivate"), (34, "WindowIconChange"), (105, "WindowStateChange"), (33, "WindowTitleChange"), (104, "WindowUnblocked"), (126, "ZOrderChange"), (169, "KeyboardLayoutChange"), (170, "DynamicPropertyChange")])
-#        if eventDict.has_key(e.type()):
-#            print str(self.windowTitle()), eventDict[e.type()]
-#        return QDialog.event(self, e)
+    def insertLayout(self):
+        def createPixmapWidget(self, parent, iconName):
+            w = QLabel(parent)
+            parent.layout().addWidget(w)
+            w.setFixedSize(16, 16)
+            w.hide()
+            if os.path.exists(iconName):
+                w.setPixmap(QPixmap(iconName))
+            return w
+
+        self.setLayout(QVBoxLayout())
+        self.layout().setMargin(2)
+
+        self.topWidgetPart = gui.widgetBox(self,
+            orientation="horizontal", margin=0)
+        self.leftWidgetPart = gui.widgetBox(self.topWidgetPart,
+                                            orientation="vertical", margin=0)
+        if self.want_main_area:
+            self.leftWidgetPart.setSizePolicy(
+                QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
+            self.leftWidgetPart.updateGeometry()
+            self.mainArea = gui.widgetBox(self.topWidgetPart,
+                orientation="vertical",
+                sizePolicy=QSizePolicy(QSizePolicy.Expanding,
+                                       QSizePolicy.Expanding),
+                margin=0)
+            self.mainArea.layout().setMargin(4)
+            self.mainArea.updateGeometry()
+
+        if self.want_control_area:
+            self.controlArea = gui.widgetBox(self.leftWidgetPart,
+                orientation="vertical", margin=4)
+
+        if self.want_graph and self.show_save_graph:
+            graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
+                orientation="horizontal", margin=4)
+            self.graphButton = gui.button(graphButtonBackground,
+                self, "&Save Graph")
+            self.graphButton.setAutoDefault(0)
+
+        if self.want_status_bar:
+            self.widgetStatusArea = QFrame(self)
+            self.statusBarIconArea = QFrame(self)
+            self.widgetStatusBar = QStatusBar(self)
+
+            self.layout().addWidget(self.widgetStatusArea)
+
+            self.widgetStatusArea.setLayout(QHBoxLayout(self.widgetStatusArea))
+            self.widgetStatusArea.layout().addWidget(self.statusBarIconArea)
+            self.widgetStatusArea.layout().addWidget(self.widgetStatusBar)
+            self.widgetStatusArea.layout().setMargin(0)
+            self.widgetStatusArea.setFrameShape(QFrame.StyledPanel)
+
+            self.statusBarIconArea.setLayout(QHBoxLayout())
+            self.widgetStatusBar.setSizeGripEnabled(0)
+
+            self.statusBarIconArea.hide()
+
+            self._warningWidget = createPixmapWidget(self.statusBarIconArea,
+                os.path.join(self.widgetDir, "icons/triangle-orange.png"))
+            self._errorWidget = createPixmapWidget(self.statusBarIconArea,
+                os.path.join(self.widgetDir + "icons/triangle-red.png"))
+
+
+    # status bar handler functions
+    def setState(self, stateType, id, text):
+        stateChanged = super().setState(stateType, id, text)
+        if not stateChanged or not hasattr(self, "widgetStatusArea"):
+            return
+
+        iconsShown = 0
+        for state, widget, use in [
+                ("Warning", self._warningWidget, self._owWarning),
+                ("Error", self._errorWidget, self._owError)]:
+            if not widget:
+                continue
+            if use and self.widgetState[state]:
+                widget.setToolTip("\n".join(self.widgetState[state].values()))
+                widget.show()
+                iconsShown = 1
+            else:
+                widget.setToolTip("")
+                widget.hide()
+
+        if iconsShown:
+            self.statusBarIconArea.show()
+        else:
+            self.statusBarIconArea.hide()
+
+        if (stateType == "Warning" and self._owWarning) or \
+           (stateType == "Error" and self._owError):
+            if text:
+                self.setStatusBarText(stateType + ": " + text)
+            else:
+                self.setStatusBarText("")
+        self.updateStatusBarState()
+
+    def updateWidgetStateInfo(self, stateType, id, text):
+        html = self.widgetStateToHtml(self._owInfo, self._owWarning,
+                                      self._owError)
+        if html:
+            self.widgetStateInfoBox.show()
+            self.widgetStateInfo.setText(html)
+            self.widgetStateInfo.setToolTip(html)
+        else:
+            if not self.widgetStateInfoBox.isVisible():
+                dHeight = - self.widgetStateInfoBox.height()
+            else:
+                dHeight = 0
+            self.widgetStateInfoBox.hide()
+            self.widgetStateInfo.setText("")
+            self.widgetStateInfo.setToolTip("")
+            width, height = self.width(), self.height() + dHeight
+            self.resize(width, height)
+
+    def updateStatusBarState(self):
+        if not hasattr(self, "widgetStatusArea"):
+            return
+        if self.widgetState["Warning"] or self.widgetState["Error"]:
+            self.widgetStatusArea.show()
+        else:
+            self.widgetStatusArea.hide()
+
+    def setStatusBarText(self, text, timeout=5000):
+        if hasattr(self, "widgetStatusBar"):
+            self.widgetStatusBar.showMessage(" " + text, timeout)
+
+    # TODO add!
+    def prepareDataReport(self, data):
+        pass
+
 
     def getIconNames(self, iconName):
-        if type(iconName) == list:      # if canvas sent us a prepared list of valid names, just return those
+        # if canvas sent us a prepared list of valid names, just return those
+        if type(iconName) == list:
             return iconName
 
         names = []
@@ -176,7 +310,10 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         for num in [16, 32, 42, 60]:
             names.append("%s_%d%s" % (name, num, ext))
         fullPaths = []
-        for paths in [(self.widgetDir, name), (self.widgetDir, "icons", name), (os.path.dirname(sys.modules[self.__module__].__file__), "icons", name)]:
+        for paths in [(self.widgetDir, name),
+                      (self.widgetDir, "icons", name),
+                      (os.path.dirname(sys.modules[self.__module__].__file__),
+                           "icons", name)]:
             for name in names + [iconName]:
                 fname = os.path.join(*paths)
                 if os.path.exists(fname):
@@ -185,13 +322,13 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                 break
 
         if len(fullPaths) > 1 and fullPaths[-1].endswith(iconName):
-            fullPaths.pop()     # if we have the new icons we can remove the default icon
+            # if we have the new icons we can remove the default icon
+            fullPaths.pop()
         return fullPaths
 
 
     def setWidgetIcon(self, iconName):
         iconNames = self.getIconNames(iconName)
-
         icon = QIcon()
         for name in iconNames:
             pix = QPixmap(name)
@@ -212,14 +349,16 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
             self.error(1234, "A data set with a class attribute is required.")
             return 0
         if wantedVarType and data.domain.classVar.varType != wantedVarType:
-            self.error(1235, "Unable to handle %s class." % (data.domain.classVar.varType == orange_data.Variable.VarTypes.Discrete and "discrete" or "continuous"))
+            self.error(1235, "Unable to handle %s class." %
+                             str(data.domain.class_var.var_type).lower())
             return 0
         if checkMissing and not orange.Preprocessor_dropMissingClasses(data):
             self.error(1236, "Unable to handle data set with no known classes")
             return 0
         return 1
 
-    # call processEvents(), but first remember position and size of widget in case one of the events would be move or resize
+    # call processEvents(), but first remember position and size of widget in
+    # case one of the events would be move or resize
     # call this function if needed in __init__ of the widget
     def safeProcessEvents(self):
         keys = ["widgetShown"]
@@ -230,7 +369,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                 setattr(self, key, val)
 
 
-    # this function is called at the end of the widget's __init__ when the widgets is saving its position and size parameters
+    # this function is called at the end of the widget's __init__ when the
+    # widgets is saving its position and size parameters
     def restoreWidgetPosition(self):
         if self.save_position:
             geometry = getattr(self, "savedWidgetGeometry", None)
@@ -243,43 +383,30 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                 frame, geometry = self.frameGeometry(), self.geometry()
 
                 #Fix the widget size to fit inside the available space
-                width = min(space.width() - (frame.width() - geometry.width()), geometry.width())
-                height = min(space.height() - (frame.height() - geometry.height()), geometry.height())
+                width = space.width() - (frame.width() - geometry.width())
+                width = min(width, geometry.width())
+                height = space.height() - (frame.height() - geometry.height())
+                height = min(height, geometry.height())
                 self.resize(width, height)
 
-                #Move the widget to the center of available space if it is currently outside it
+                #Move the widget to the center of available space if it is
+                # currently outside it
                 if not space.contains(self.frameGeometry()):
                     x = max(0, space.width() / 2 - width / 2)
                     y = max(0, space.height() / 2 - height / 2)
 
                     self.move(x, y)
 
-#            geometry.move(frameOffset) #Make sure the title bar is shown
-#            self.setGeometry(geometry.intersected(space.adjusted(-frameOffset.x(), -frameOffset.y(), 0, 0)))
 
-
-#            if self.isWindow():
-#                frame = self.frameGeometry()
-#                if space.topLeft() != QPoint(0, 0):
-#                    self.move(self.geometry().topLeft() - frame.topLeft())
-#            if getattr(self, "widgetXPosition", None) != None and getattr(self, "widgetYPosition", None) != None:
-##                print self.captionTitle, "restoring position", self.widgetXPosition, self.widgetYPosition, "to", max(self.widgetXPosition, 0), max(self.widgetYPosition, 0)
-#                self.move(max(self.widgetXPosition, space.x()), max(self.widgetYPosition, space.y()))
-#            if getattr(self,"widgetWidth", None) != None and getattr(self,"widgetHeight", None) != None:
-#                self.resize(min(self.widgetWidth, space.width()), min(self.widgetHeight, space.height()))
-#            frame = self.frameGeometry()
-#            area = lambda rect: rect.width() * rect.height()
-#            if area(frame.intersected(space)) < area(frame):
-#                self.move(max(min(space.right() - frame.width(), frame.x()), space.x()),
-#                          max(min(space.height() - frame.height(), frame.y()), space.y()))
-
-    # this is called in canvas when loading a schema. it opens the widgets that were shown when saving the schema
+    # this is called in canvas when loading a schema. it opens the widgets
+    # that were shown when saving the schema
     def restoreWidgetStatus(self):
         if self.save_position and getattr(self, "widgetShown", None):
             self.show()
 
-    # when widget is resized, save new width and height into widgetWidth and widgetHeight. some widgets can put this two
-    # variables into settings and last widget shape is restored after restart
+    # when widget is resized, save new width and height into widgetWidth and
+    # widgetHeight. some widgets can put this two variables into settings and
+    # last widget shape is restored after restart
     def resizeEvent(self, ev):
         QDialog.resizeEvent(self, ev)
         # Don't store geometry if the widget is not visible
@@ -287,7 +414,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         # overwrite the the savedGeometry before then)
         if self.save_position and self.isVisible():
             self.savedWidgetGeometry = str(self.saveGeometry())
-
 
 
     # set widget state to hidden
@@ -302,7 +428,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         QDialog.showEvent(self, ev)
         if self.save_position:
             self.widgetShown = 1
-
         self.restoreWidgetPosition()
 
     def closeEvent(self, ev):
@@ -314,7 +439,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         """ Silently accept the wheel event. This is to ensure combo boxes
         and other controls that have focus don't receive this event unless
         the cursor is over them.
-
         """
         event.accept()
 
@@ -386,8 +510,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                 if getattr(controller, myself, None) != self:
                     del self.__attributeControllers[(controller, myself)]
                     continue
-                controlledAttributes = getattr(controller, "controlledAttributes",
-                                               None)
+                controlledAttributes = getattr(controller,
+                                               "controlledAttributes", None)
                 if not controlledAttributes:
                     continue
                 fullName = myself + "." + name
@@ -402,8 +526,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
                         if controlled[:dlen] == lname:
                             self.setControllers(value, controlled[dlen:],
                                                 controller, fullName)
-                            # no break -- can have a.b.c.d and a.e.f.g; needs to
-                            # set controller for all!
+                            # no break -- can have a.b.c.d and a.e.f.g;
+                            # we need to set controller for all!
 
         if hasattr(self, "settingsHandler"):
             self.settingsHandler.fast_save(self, name, value)
@@ -427,12 +551,12 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     def setControllers(self, obj, controlledName, controller, prefix):
         while obj:
             if prefix:
-#                print "SET CONTROLLERS: %s %s + %s" % (obj.__class__.__name__, prefix, controlledName)
-                if "attributeController" in obj.__dict__:
-                    obj.__dict__["__attributeControllers"][(controller, prefix)] = True
+                od = obj.__dict__
+                # TODO Missing "__"?
+                if "attributeController" in od:
+                    od["__attributeControllers"][(controller, prefix)] = True
                 else:
-                    obj.__dict__["__attributeControllers"] = {(controller, prefix): True}
-
+                    od["__attributeControllers"] = {(controller, prefix): True}
             parts = controlledName.split(".", 1)
             if len(parts) < 2:
                 break
@@ -441,11 +565,11 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
             controlledName = parts[1]
 
 
-
     def onDeleteWidget(self):
         self.settingsHandler.update_class_defaults()
 
-    # this function is only intended for derived classes to send appropriate signals when all settings are loaded
+    # this function is only intended for derived classes to send appropriate
+    # signals when all settings are loaded
     def activateLoadedSettings(self):
         pass
 
@@ -453,7 +577,6 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
     def setOptions(self):
         pass
 
-    # TODO: We could also use OrderedDict, with 'name' as a key (and included in the value, too)
     def hasInputName(self, name):
         return any(signal.name == name for signal in self.inputs)
 
@@ -694,8 +817,8 @@ class OWBaseWidget(QDialog, metaclass=BaseWidgetClass):
         if e.key() in (Qt.Key_Help, Qt.Key_F1):
             self.openWidgetHelp()
 #            e.ignore()
-        elif (int(e.modifiers()), e.key()) in OWBaseWidget.defaultKeyActions:
-            OWBaseWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
+        elif (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
+            OWWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
         else:
             QDialog.keyPressEvent(self, e)
 
@@ -892,7 +1015,7 @@ def blocking(method):
 
 if __name__ == "__main__":
     a=QApplication(sys.argv)
-    oww=OWBaseWidget(adfaf=1)
+    oww=OWWidget(adfaf=1)
     oww.show()
     a.exec_()
     oww.saveSettings()

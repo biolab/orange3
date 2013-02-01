@@ -296,9 +296,9 @@ class WidgetDescription:
 
         default_cat_name = package_name if package_name else ""
 
-        from Orange.widgets.basewidget import BaseWidgetClass
+        from Orange.widgets.widget import WidgetMetaClass
         for widget_cls_name, widget_class in module.__dict__.items():
-            if (isinstance(widget_class, BaseWidgetClass) and
+            if (isinstance(widget_class, WidgetMetaClass) and
                 widget_class._name):
                     break
         else:

@@ -105,7 +105,7 @@ class SchemeEditWidget(QWidget):
         self.__undoStack = QUndoStack(self)
         self.__undoStack.cleanChanged[bool].connect(self.__onCleanChanged)
 
-        # OWBaseWidget properties when set to clean state
+        # OWWidget properties when set to clean state
         self.__cleanSettings = []
 
         self.__editFinishedMapper = QSignalMapper(self)

@@ -15,7 +15,7 @@ from Orange.statistics import basic_stats
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import colorpalette, datacaching
-from Orange.widgets.basewidget import Multiple, Default
+from Orange.widgets.widget import Multiple, Default
 from Orange.widgets.gui import *
 
 

@@ -3,7 +3,7 @@ import sys
 import math
 from PyQt4 import QtCore
 from PyQt4.QtGui import *
-from Orange.widgets import basewidget
+from Orange.widgets import widget
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
 
@@ -62,7 +62,14 @@ class ColorPixmap (QIcon):
 
 
 # a widget that can be used to select the colors to be used
-class ColorPaletteDlg(basewidget.OWBaseWidget):
+class ColorPaletteDlg(widget.OWWidget):
+    want_main_area = False
+    want_control_area = False
+    want_graph = False
+    show_save_graph = False
+    want_status_bar = False
+    no_report = False
+
     model = True
 
     def __init__(self, parent, caption="Color Palette", callback=None):
@@ -344,7 +351,14 @@ class ColorPaletteDlg(basewidget.OWBaseWidget):
         if self.callback: self.callback()
 
 
-class ColorPalleteListing(basewidget.OWBaseWidget):
+class ColorPalleteListing(widget.OWWidget):
+    want_main_area = False
+    want_control_area = False
+    want_graph = False
+    show_save_graph = False
+    want_status_bar = False
+    no_report = False
+
     def __init__(self):
         super().__init__()
         self.setCaption("Color Palette List")
@@ -404,7 +418,14 @@ class ColorPalleteListing(basewidget.OWBaseWidget):
         self.accept()
 
 
-class PaletteEditor(basewidget.OWBaseWidget):
+class PaletteEditor(widget.OWWidget):
+    want_main_area = False
+    want_control_area = False
+    want_graph = False
+    show_save_graph = False
+    want_status_bar = False
+    no_report = False
+
     def __init__(self, parent, rgbColors):
         super().__init__(parent)
         self.setCaption("Palette Editor")
