@@ -593,30 +593,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             if signal.name == name:
                 return signal
 
-    # ########################################################################
-    #noinspection PyMethodOverriding
-    def connect(self, control, signal, method, type=Qt.AutoConnection):
-        wrapper = SignalWrapper(self, method)
-        self.connections[(control, signal)] = wrapper   # save for possible disconnect
-        self.wrappers.append(wrapper)
-        QDialog.connect(control, signal, wrapper, type)
-        #QWidget.connect(control, signal, method)        # ordinary connection useful for dialogs and windows that don't send signals to other widgets
-
-
-    #noinspection PyMethodOverriding
-    def disconnect(self, control, signal, method=None):
-        wrapper = self.connections[(control, signal)]
-        QDialog.disconnect(control, signal, wrapper)
-
-
-    def getConnectionMethod(self, control, signal):
-        if (control, signal) in self.connections:
-            wrapper = self.connections[(control, signal)]
-            return wrapper.method
-        else:
-            return None
-
-
     def signalIsOnlySingleConnection(self, signalName):
         for input in self.inputs:
             if input.name == signalName:
@@ -647,7 +623,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                     del self.linksIn[signalName]
                 return
 
-    # return widget that is already connected to this singlelink signal. If this widget exists, the connection will be deleted (since this is only single connection link)
+    # return widget that is already connected to this singlelink signal.
+    # If this widget exists, the connection will be deleted (since this is
+    # only single connection link)
     def removeExistingSingleLink(self, signal):
         for input in self.inputs:
             if input.name == signal and not input.single:
@@ -662,18 +640,20 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def handleNewSignals(self):
         # this is called after all new signals have been handled
-        # implement this in your widget if you want to process something only after you received multiple signals
+        # implement this in your widget if you want to process something only
+        # after you received multiple signals
         pass
 
-    # signal manager calls this function when all input signals have updated the data
+    # signal manager calls this function when all input signals have updated
+    # the data
     #noinspection PyBroadException
     def processSignals(self):
         if self.processingHandler:
             self.processingHandler(self, 1)    # focus on active widget
         newSignal = 0        # did we get any new signals
 
-        # we define only a way to handle signals that have defined a handler function
-        for signal in self.inputs:        # we go from the first to the last defined input
+        # we define only handling signals that have defined a handler function
+        for signal in self.inputs:  # we go from the first to the last input
             key = signal.name
             if key in self.linksIn:
                 for i in range(len(self.linksIn[key])):
@@ -685,17 +665,25 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                     try:
                         for (value, id, nameFrom) in signalData:
                             if self.signalIsOnlySingleConnection(key):
-                                self.printEvent("ProcessSignals: Calling %s with %s" % (handler, value), eventVerbosity = 2)
+                                self.printEvent(
+                                    "ProcessSignals: Calling %s with %s" %
+                                    (handler, value), eventVerbosity = 2)
                                 handler(value)
                             else:
-                                self.printEvent("ProcessSignals: Calling %s with %s (%s, %s)" % (handler, value, nameFrom, id), eventVerbosity = 2)
+                                self.printEvent(
+                                    "ProcessSignals: Calling %s with %s "
+                                    "(%s, %s)" % (handler, value, nameFrom, id)
+                                    , eventVerbosity = 2)
                                 handler(value, (widgetFrom, nameFrom, id))
                     except:
                         type, val, traceback = sys.exc_info()
-                        sys.excepthook(type, val, traceback)  # we pretend that we handled the exception, so that we don't crash other widgets
+                        # we pretend to have handled the exception, so that we
+                        # don't crash other widgets
+                        sys.excepthook(type, val, traceback)
                     qApp.restoreOverrideCursor()
 
-                    self.linksIn[key][i] = (0, widgetFrom, handler, []) # clear the dirty flag
+                     # clear the dirty flag
+                    self.linksIn[key][i] = (0, widgetFrom, handler, [])
 
         if newSignal == 1:
             self.handleNewSignals()
@@ -709,22 +697,27 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.needProcessing = 0
 
     # set new data from widget widgetFrom for a signal with name signalName
-    def updateNewSignalData(self, widgetFrom, signalName, value, id, signalNameFrom):
+    def updateNewSignalData(self, widgetFrom, signalName, value, id,
+                            signalNameFrom):
         if signalName not in self.linksIn: return
         for i in range(len(self.linksIn[signalName])):
             (dirty, widget, handler, signalData) = self.linksIn[signalName][i]
             if widget == widgetFrom:
                 if self.linksIn[signalName][i][3] == []:
-                    self.linksIn[signalName][i] = (1, widget, handler, [(value, id, signalNameFrom)])
+                    self.linksIn[signalName][i] = \
+                        (1, widget, handler, [(value, id, signalNameFrom)])
                 else:
                     found = 0
                     for j in range(len(self.linksIn[signalName][i][3])):
                         (val, ID, nameFrom) = self.linksIn[signalName][i][3][j]
                         if ID == id and nameFrom == signalNameFrom:
-                            self.linksIn[signalName][i][3][j] = (value, id, signalNameFrom)
+                            self.linksIn[signalName][i][3][j] = \
+                                (value, id, signalNameFrom)
                             found = 1
                     if not found:
-                        self.linksIn[signalName][i] = (1, widget, handler, self.linksIn[signalName][i][3] + [(value, id, signalNameFrom)])
+                        self.linksIn[signalName][i] = \
+                            (1, widget, handler, self.linksIn[signalName][i][3]
+                             + [(value, id, signalNameFrom)])
         self.needProcessing = 1
 
     # ############################################
@@ -757,7 +750,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 text = "%(h)d:%(min)02d:%(sec)02d" % vars()
             else:
                 text = "%(min)d:%(sec)02d" % vars()
-            self.setWindowTitle(self.captionTitle + " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
+            self.setWindowTitle(self.captionTitle +
+                " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")
         if self.progressBarHandler:
@@ -782,7 +776,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.progressBarHandler(self, 101)
         self.processingStateChanged.emit(0)
 
-    # handler must be a function, that receives 2 arguments. First is the widget instance, the second is the value between -1 and 101
+    # handler must accept two arguments: the widget instance and a value
+    # between -1 and 101
     def setProgressBarHandler(self, handler):
         self.progressBarHandler = handler
 
@@ -798,20 +793,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     # if we are in debug mode print the event into the file
     def printEvent(self, text, eventVerbosity = 1):
-        self.signalManager.addEvent(self.captionTitle + ": " + text, eventVerbosity = eventVerbosity)
+        self.signalManager.addEvent(self.captionTitle + ": " + text,
+                                    eventVerbosity = eventVerbosity)
         if self.eventHandler:
             self.eventHandler(self.captionTitle + ": " + text, eventVerbosity)
 
     def openWidgetHelp(self):
         if "widgetInfo" in self.__dict__:  # This widget is on a canvas.
             qApp.canvasDlg.helpWindow.showHelpFor(self.widgetInfo, True)
-
-    def focusInEvent(self, *ev):
-        #print "focus in"
-        #if qApp.canvasDlg.settings["synchronizeHelp"]:  on ubuntu: pops up help window on first widget focus for every widget
-        #    qApp.canvasDlg.helpWindow.showHelpFor(self, True)
-        QDialog.focusInEvent(self, *ev)
-
 
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key_Help, Qt.Key_F1):
@@ -828,7 +817,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def warning(self, id = 0, text = ""):
         self.setState("Warning", id, text)
-        #self.setState("Info", id, text)        # if we want warning just set information
 
     def error(self, id = 0, text = ""):
         self.setState("Error", id, text)
@@ -842,7 +830,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                     changed = 1
         else:
             if type(id) == str:
-                text = id; id = 0       # if we call information(), warning(), or error() function with only one parameter - a string - then set id = 0
+                text = id
+                id = 0
             if not text:
                 if id in self.widgetState[stateType]:
                     self.widgetState[stateType].pop(id)
@@ -854,23 +843,20 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if changed:
             if self.widgetStateHandler:
                 self.widgetStateHandler()
-            elif text: # and stateType != "Info":
+            elif text:
                 self.printEvent(stateType + " - " + text)
 
             if type(id) == list:
                 for i in id:
-                    self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
-                              stateType, i, "")
+                    self.emit(
+                        SIGNAL("widgetStateChanged(QString, int, QString)"),
+                        stateType, i, "")
             else:
                 self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
                           stateType, id, text or "")
-                #qApp.processEvents()
         return changed
 
     widgetStateChanged = pyqtSignal(str, int, str)
-    """Widget state has changed first arg is the state type
-    ('Info', 'Warning' or 'Error') the second is the message id
-    and finally the message string."""
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
         pixmaps = self.getWidgetStateIcons()
@@ -880,15 +866,18 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                     "Error": "canvasIcons:error.png"}
         for show, what in [(info, "Info"), (warning, "Warning"),(error, "Error")]:
             if show and self.widgetState[what]:
-                items.append('<img src="%s" style="float: left;"> %s' % (iconPath[what], "\n".join(self.widgetState[what].values())))
+                items.append('<img src="%s" style="float: left;"> %s' %
+                             (iconPath[what],
+                              "\n".join(self.widgetState[what].values())))
         return "<br>".join(items)
 
     @classmethod
     def getWidgetStateIcons(cls):
         if not hasattr(cls, "_cached__widget_state_icons"):
             iconsDir = os.path.join(environ.canvas_install_dir, "icons")
-            QDir.addSearchPath("canvasIcons",os.path.join(environ.canvas_install_dir,
-                "icons/"))
+            QDir.addSearchPath("canvasIcons",
+                               os.path.join(environ.canvas_install_dir,
+                                            "icons/"))
             info = QPixmap("canvasIcons:information.png")
             warning = QPixmap("canvasIcons:warning.png")
             error = QPixmap("canvasIcons:error.png")
@@ -900,8 +889,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     if sys.platform == "darwin":
         defaultKeyActions = {
-            (Qt.ControlModifier, Qt.Key_M): lambda self: self.showMaximized if self.isMinimized() else self.showMinimized(),
-            (Qt.ControlModifier, Qt.Key_W): lambda self: self.setVisible(not self.isVisible())}
+            (Qt.ControlModifier, Qt.Key_M):
+                lambda self: self.showMaximized
+                             if self.isMinimized() else self.showMinimized(),
+            (Qt.ControlModifier, Qt.Key_W):
+                lambda self: self.setVisible(not self.isVisible())}
 
 
     def scheduleSignalProcessing(self):
