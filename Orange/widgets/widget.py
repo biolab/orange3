@@ -1,8 +1,3 @@
-#
-# OWWidget.py
-# Orange Widget
-# A General Orange Widget, from which all the Orange Widgets are derived
-#
 import sys
 import time
 import os
@@ -13,10 +8,7 @@ from PyQt4.QtGui import *
 from Orange.canvas.orngSignalManager import *
 from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
-from Orange import data as orange_data
 
-ERROR = 0
-WARNING = 1
 
 class ControlledAttributesDict(dict):
     def __init__(self, master):
