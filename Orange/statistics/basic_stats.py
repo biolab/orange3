@@ -1,25 +1,52 @@
-from Orange.data import Variable, ContinuousVariable
+from Orange.data import Variable, Storage
 
-import bottleneck as bn
+def _get_variable(variable, dat):
+    if isinstance(variable, Variable):
+        datvar = getattr(dat, "variable", None)
+        if datvar is not None and datvar is not variable:
+            raise ValueError("variable does not match the variable "
+                             "in the data")
+    elif hasattr(dat, "domain"):
+        variable = dat.domain[variable]
+    elif hasattr(dat, "variable"):
+        variable = dat.variable
+    else:
+        raise ValueError("invalid specification of variable")
+    return variable
 
-
-# TODO: this is all just a quick hack; do it properly -- call data storage etc.
 
 class BasicStats:
-    def __init__(self, variable, data):
-        if (isinstance(variable, Variable) and
-                not isinstance(variable, ContinuousVariable)):
-            raise ValueError("variable '{}' is not continuous".
-                             format(variable.name))
-        col, sparse = data.get_column_view(variable)
-        self.min = bn.nanmin(col)
-        self.max = bn.nanmax(col)
+    def __init__(self, dat=None, variable=None):
+        if isinstance(dat, Storage):
+            self.from_data(dat, variable)
+        elif dat is None:
+            self.min = float("inf")
+            self.max = float("-inf")
+            self.mean = self.var = self.nans = self.non_nans = 0
+        else:
+            self.min, self.max, self.mean, self.var, self.nans, self.non_nans \
+                = dat
 
-# TODO sparse data
-def get_stats(data):
-    return [BasicStats(i, data) for i, var in enumerate(data.domain)
-            if isinstance(var, ContinuousVariable)
-           ] + [
-            BasicStats(-1 - i, data) for i, var in enumerate(data.domain.metas)
-            if isinstance(var, ContinuousVariable)
-           ]
+    def from_data(self, data, variable):
+        variable = _get_variable(variable, data)
+        stats = data._compute_basic_stats([variable])
+        self.min, self.max, self.mean, self.var, self.nans, self.non_nans \
+            = stats[0]
+
+class DomainBasicStats:
+    def __init__(self, data, include_metas=False):
+        self.domain = data.domain
+        self.stats = [BasicStats(s) for s in
+                      data._compute_basic_stats(include_metas=include_metas)]
+
+    def __getitem__(self, index):
+        """
+        Index can be a variable, variable name or an integer. Meta attributes
+        can be specified by negative indices or by indices above len(domain).
+        """
+        if not isinstance(index, int):
+            index = self.domain.index(index)
+        if index < 0:
+            index = len(self.domain) + (-1 - index)
+        return self.stats[index]
+

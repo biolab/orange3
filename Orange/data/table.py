@@ -1083,6 +1083,37 @@ class Table(MutableSequence, Storage):
         return Table.from_table_rows(self, sel)
 
 
+    def _compute_basic_stats(self, columns=None,
+                             include_metas=False, compute_var=False):
+        if compute_var:
+            raise NotImplementedError("computation of variance is "
+                                      "not implemented yet")
+        W = self._W if self.has_weights() else None
+        rr = []
+        if not columns:
+            if self.domain.attributes:
+                rr.append(bn.stats(self._X, W))
+            if self.domain.class_vars:
+                rr.append(bn.stats(self._Y, W))
+            if include_metas and self.domain.metas:
+                rr.append(bn.stats(self.metas, W))
+            stats = np.vstack(tuple(rr))
+        else:
+            columns = [self.domain.index(c) for c in columns]
+            nattrs = len(self.domain.attributes)
+            Xs = any(0 < c < nattrs for c in columns) and bn.stats(self._X, W)
+            Ys = any(c > nattrs for c in columns) and bn.stats(self._Y, W)
+            ms = any(c < 0 for c in columns) and bn.stats(self._metas, W)
+            stats = []
+            for column in columns:
+                if 0 < column < nattrs:
+                    stats.append(Xs[column, :])
+                elif column > nattrs:
+                    stats.append(Ys[column - nattrs, :])
+                else:
+                    stats.append(ms[-1 - column])
+        return stats
+
     def _compute_distributions(self, columns=None):
         def _get_matrix(M, cachedM, col):
             nonlocal single_column
@@ -1091,7 +1122,7 @@ class Table(MutableSequence, Storage):
             if cachedM is None:
                 if single_column:
                     warn(ResourceWarning,
-                         "computing distributions on sparse data"
+                         "computing distributions on sparse data "
                          "for a single column is inefficient")
                 cachedM = sp.csc_matrix(self._X)
             data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col+1]]
@@ -1135,7 +1166,6 @@ class Table(MutableSequence, Storage):
             distributions.append((dist, unknowns))
 
         return distributions
-
 
 
     def _compute_contingency(self, col_vars=None, row_var=None):

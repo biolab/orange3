@@ -44,6 +44,9 @@ class Storage:
     def _filter_values(self, filter):
         raise NotImplementedError
 
+    def _compute_basic_stats(self, columns=None):
+        raise NotImplementedError
+
     def _compute_distributions(self, columns=None):
         raise NotImplementedError
 
