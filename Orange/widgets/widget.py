@@ -856,7 +856,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         iconPath = {"Info": "canvasIcons:information.png",
                     "Warning": "canvasIcons:warning.png",
                     "Error": "canvasIcons:error.png"}
-        for show, what in [(info, "Info"), (warning, "Warning"),(error, "Error")]:
+        for show, what in [(info, "Info"), (warning, "Warning"),
+                           (error, "Error")]:
             if show and self.widgetState[what]:
                 items.append('<img src="%s" style="float: left;"> %s' %
                              (iconPath[what],
@@ -929,32 +930,39 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.emit(SIGNAL("asyncCallsStateChange()"))
 
 
-
-    def asyncCall(self, func, args=(), kwargs={}, name=None, onResult=None, onStarted=None, onFinished=None, onError=None, blocking=True, thread=None, threadPool=None):
+    def asyncCall(self, func, args=(), kwargs={}, name=None,
+                  onResult=None, onStarted=None, onFinished=None, onError=None,
+                  blocking=True, thread=None, threadPool=None):
         """ Return an OWConcurent.AsyncCall object func, args and kwargs
         set and signals connected.
         """
         from functools import partial
         from OWConcurrent import AsyncCall
 
-        asList = lambda slot: slot if isinstance(slot, list) else ([slot] if slot else [])
+        asList = lambda slot: slot if isinstance(slot, list) \
+                              else ([slot] if slot else [])
 
         onResult = asList(onResult)
         onStarted = asList(onStarted) #+ [partial(self.setBlocking, True)]
         onFinished = asList(onFinished) #+ [partial(self.blockSignals, False)]
         onError = asList(onError) or [self.asyncExceptionHandler]
 
-        async = AsyncCall(func, args, kwargs, thread=thread, threadPool=threadPool)
+        async = AsyncCall(func, args, kwargs,
+                          thread=thread, threadPool=threadPool)
         async.name = name if name is not None else ""
 
         for slot in  onResult:
-            async.connect(async, SIGNAL("resultReady(PyQt_PyObject)"), slot, Qt.QueuedConnection)
+            async.connect(async, SIGNAL("resultReady(PyQt_PyObject)"), slot,
+                          Qt.QueuedConnection)
         for slot in onStarted:
-            async.connect(async, SIGNAL("starting()"), slot, Qt.QueuedConnection)
+            async.connect(async, SIGNAL("starting()"), slot,
+                          Qt.QueuedConnection)
         for slot in onFinished:
-            async.connect(async, SIGNAL("finished(QString)"), slot, Qt.QueuedConnection)
+            async.connect(async, SIGNAL("finished(QString)"), slot,
+                          Qt.QueuedConnection)
         for slot in onError:
-            async.connect(async, SIGNAL("unhandledException(PyQt_PyObject)"), slot, Qt.QueuedConnection)
+            async.connect(async, SIGNAL("unhandledException(PyQt_PyObject)"),
+                          slot, Qt.QueuedConnection)
 
         self.addAsyncCall(async, blocking)
 
@@ -966,8 +974,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         """
         ## TODO: make this thread safe
-
-        async.connect(async, SIGNAL("finished(PyQt_PyObject, QString)"), self.asyncFinished)
+        async.connect(async, SIGNAL("finished(PyQt_PyObject, QString)"),
+                      self.asyncFinished)
 
         async.blocking = blocking
 
@@ -995,11 +1003,3 @@ def blocking(method):
             return method(self, *args, **kwargs)
         finally:
             self.setBlocking(old)
-
-
-if __name__ == "__main__":
-    a=QApplication(sys.argv)
-    oww=OWWidget(adfaf=1)
-    oww.show()
-    a.exec_()
-    oww.saveSettings()
