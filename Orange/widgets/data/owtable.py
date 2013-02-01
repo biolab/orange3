@@ -138,9 +138,9 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
                     isinstance(attr, ContinuousVariable) and
                     not isnan(val)):
                 if self.dist is None:
-                    self.dist = datacaching.getCached(
-                        self.examples, basic_stats.get_stats, (self.examples,))
-                dist = self.dist[col if col < self.nvariables else -1 - col]
+                    self.dist = datacaching.getCached(self.examples,
+                        basic_stats.DomainBasicStats, (self.examples, True))
+                dist = self.dist[col]
                 return (val - dist.min) / (dist.max - dist.min or 1)
             elif role == gui.TableValueRole:
                 return val
@@ -593,33 +593,46 @@ class OWDataTable(widget.OWWidget):
             self.setTable(table, data)
             self.progressBarFinished()
 
+    __no_missing = [""] * 3
+
+    def __compute_density(self, data):
+        def desc(part, frm, to):
+            nans = sum(dist[i].nans for i in range(frm, to))
+            non_nans = sum(dist[i].non_nans for i in range(frm, to))
+            tot = nans + non_nans
+            if tot == 0:
+                return ""
+            density = getattr(data, part + "_density")()
+            if density == Storage.DENSE:
+                dp = "%.1f%%" % (100 * nans / tot) if nans > 0 else "no"
+                return " (%s missing values)" % dp
+            s = " (sparse" if density == Storage.SPARSE else " (tags"
+            return s + ", density %.2f %%)" % (100 * non_nans / tot)
+
+        dist = datacaching.getCached(data,
+            basic_stats.DomainBasicStats, (data, True))
+        domain = data.domain
+        descs = [desc(part, frm, to)
+                 for part, frm, to in [
+                     ("X", 0, len(domain.attributes)),
+                     ("Y", len(domain.attributes), len(domain)),
+                     ("metas", len(domain), len(domain) + len(domain.metas))]]
+        if all(not d or d == " (no missing values)" for d in descs):
+            descs = self.__no_missing
+        return descs
+
     def setInfo(self, data):
         """Updates data info.
         """
-        def sp(l, capitalize=False):
+        def sp(l):
             n = len(l)
             if n == 0:
-                if capitalize:
-                    return "No", "s"
-                else:
-                    return "no", "s"
+                return "No", "s"
             elif n == 1:
                 return str(n), ''
             else:
                 return str(n), 's'
 
-        def desc(d, part, s):
-            if not isinstance(d, Table):
-                return ""
-            density = getattr(d, part + "_density")()
-            m = getattr(d, part)
-            dim = m.shape[0] * m.shape[1]
-            if dim == 0:
-                return s
-            if density == Storage.DENSE:
-                return s + " (%.1f%% missing values)" % bn.countnans(m)
-            s += " (sparse" if density == Storage.SPARSE else " (tags"
-            return s + ", density %.2f %%)" % (100 * len(m.data) / dim)
 
         if data is None:
             self.info_ex.setText('No data on input.')
@@ -627,21 +640,31 @@ class OWDataTable(widget.OWWidget):
             self.info_meta.setText('')
             self.info_class.setText('')
         else:
-            self.info_ex.setText("%s instance%s" % sp(data))
-            self.info_attr.setText(desc(data, "X",
-                "%s feature%s" % sp(data.domain.attributes, True)))
+            descriptions = datacaching.getCached(
+                data, self.__compute_density, (data, ))
+            outi = "%s instance%s" % sp(data)
+            if descriptions is self.__no_missing:
+                outi += " (no missing values)"
+            self.info_ex.setText(outi)
+
+            self.info_attr.setText("%s feature%s" %
+                sp(data.domain.attributes) + descriptions[0])
+
             self.info_meta.setText("%s meta attribute%s" %
-                                   sp(data.domain.metas))
-            if len(data.domain.class_vars) > 1:
-                self.info_class.setText(desc(data, "Y",
-                    "%s outcome%s" % sp(data.domain.class_vars)))
-            elif data.domain.class_var is None:
-                self.info_class.setText('No target variable.')
-            elif isinstance(data.domain.class_var, ContinuousVariable):
-                self.info_class.setText('Continuous target variable.')
+                sp(data.domain.metas) + descriptions[2])
+
+            if data.domain.class_vars is None:
+                outc = 'No target variable.'
             else:
-                self.info_class.setText('Discrete class with %s value%s.'
-                                        % sp(data.domain.class_var.values))
+                if len(data.domain.class_vars) > 1:
+                    outc = "%s outcome%s" % sp(data.domain.class_vars)
+                elif isinstance(data.domain.class_var, ContinuousVariable):
+                    outc = 'Continuous target variable'
+                else:
+                    outc = 'Discrete class with %s value%s' % sp(
+                        data.domain.class_var.values)
+                outc += descriptions[1]
+            self.info_class.setText(outc)
 
     def update_selection(self, *_):
         self.send_button.setEnabled(bool(self.get_current_selection())
