@@ -497,7 +497,7 @@ class DomainContextHandler(ContextHandler):
     def save_low(self, widget, name, value, setting):
         context = widget.current_context
         value = copy.copy(value)
-        if isinstance(value, str):
+        if isinstance(setting, ContextSetting) and isinstance(value, str):
             valtype = -1
             if not setting.exclude_attributes:
                 context.attributes.get(value, -1)
