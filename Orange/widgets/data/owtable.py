@@ -14,7 +14,6 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import colorpalette, datacaching
 from Orange.widgets.widget import Multiple, Default
-from Orange.widgets.gui import *
 
 
 ##############################################################################
@@ -132,7 +131,7 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
             domain = self.examples.domain
             if role == QtCore.Qt.DisplayRole:
                 return str(val)
-            elif (role == TableBarItem.BarRole and
+            elif (role == gui.TableBarItem.BarRole and
                     isinstance(attr, ContinuousVariable) and
                     not isnan(val)):
                 if self.dist is None:
