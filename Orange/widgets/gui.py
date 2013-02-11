@@ -1298,7 +1298,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
 
 class ControlledList(list):
     def __init__(self, content, listBox = None):
-        list.__init__(self, content)
+        super().__init__(content)
         self.listBox = listBox
 
     def __reduce__(self):
@@ -1314,50 +1314,44 @@ class ControlledList(list):
             return item
 
     def __setitem__(self, index, item):
-        self.listBox.item(list.__getitem__(self, index)).setSelected(0)
-        item.setSelected(1)
-        list.__setitem__(self, index, item)
+        if isinstance(index, int):
+            self.listBox.item(self[index]).setSelected(0)
+            item.setSelected(1)
+        else:
+            for i in self[index]:
+                self.listBox.item(i).setSelected(0)
+            for i in item:
+                self.listBox.item(i).setSelected(1)
+        super().__setitem__(index, item)
 
     def __delitem__(self, index):
-        self.listBox.item(__getitem__(self, index)).setSelected(0)
-        list.__delitem__(self, index)
-
-    def __setslice__(self, start, end, slice):
-        for i in list.__getslice__(self, start, end):
-            self.listBox.item(i).setSelected(0)
-        for i in slice:
-            self.listBox.item(i).setSelected(1)
-        list.__setslice__(self, start, end, slice)
-
-    def __delslice__(self, start, end):
-        if not start and end==len(self):
-            for i in range(self.listBox.count()):
-                self.listBox.item(i).setSelected(0)
+        if isinstance(index, int):
+            self.listBox.item(self[index]).setSelected(0)
         else:
-            for i in list.__getslice__(self, start, end):
-                self.listBox.item(i).setSelected(0)
-        list.__delslice__(self, start, end)
+            for i in self[index]:
+                self.listBox.item(self[index]).setSelected(0)
+        super().__delitem__(index)
 
     def append(self, item):
-        list.append(self, item)
+        super().append(item)
         item.setSelected(1)
 
-    def extend(self, slice):
-        list.extend(self, slice)
-        for i in slice:
+    def extend(self, items):
+        super().extend(items)
+        for i in items:
             self.listBox.item(i).setSelected(1)
 
     def insert(self, index, item):
         item.setSelected(1)
-        list.insert(self, index, item)
+        super().insert(index, item)
 
     def pop(self, index=-1):
-        self.listBox.item(list.__getitem__(self, index)).setSelected(0)
-        list.pop(self, index)
+        i = super().pop(index)
+        self.listBox.item(i).setSelected(0)
 
     def remove(self, item):
         item.setSelected(0)
-        list.remove(self, item)
+        super().remove(item)
 
 
 def connectControlSignal(control, signal, f):
@@ -1515,7 +1509,8 @@ class CallBackListBox:
     def __call__(self, *args): # triggered by selectionChange()
         if not self.disabled and self.control.ogValue != None:
             clist = getdeepattr(self.widget, self.control.ogValue)
-            list.__delslice__(clist, 0, len(clist))
+             # skip the overloaded method to avoid a cycle
+            list.__delitem__(clist, slice(0, len(clist)))
             control = self.control
             for i in range(control.count()):
                 if control.item(i).isSelected():
