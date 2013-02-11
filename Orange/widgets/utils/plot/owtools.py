@@ -34,11 +34,14 @@ Plot tools (``owtools``)
 
 '''
 
-from PyQt4.QtGui import QGraphicsItem, QGraphicsRectItem, QPolygonF, QGraphicsPolygonItem, QGraphicsEllipseItem, QPen, QBrush
+from PyQt4.QtGui import (QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem,
+    QPolygonF, QGraphicsPolygonItem, QGraphicsEllipseItem, QPen, QBrush,
+    QGraphicsPixmapItem, QGraphicsPathItem, QPainterPath)
 from PyQt4.QtCore import Qt, QRectF, QPointF, QPropertyAnimation
 
 from .owcurve import *
 from .owpalette import OWPalette
+from . import orangeqt
 
 #from Orange.data.preprocess.scaling import get_variable_values_sorted
 #from Orange import orangeom
@@ -354,6 +357,7 @@ class Marker(orangeqt.PlotItem):
     def update_properties(self):
         self._item.setPos(self.graph_transform().map(self._data_point))
 
+'''
 class ProbabilitiesItem(orangeqt.PlotItem):
     """
         Displays class probabilities in the background
@@ -430,6 +434,7 @@ class ProbabilitiesItem(orangeqt.PlotItem):
 
     def data_rect(self):
         return self.rect if self.rect else QRectF()
+'''
 
 #@deprecated_members({
 #        'enableX' : 'set_x_enabled',

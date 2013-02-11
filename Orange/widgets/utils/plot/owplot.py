@@ -24,6 +24,8 @@ from .owlegend import *
 from .owplotgui import OWPlotGUI
 from .owtools import *
 
+from ..colorpalette import ColorPaletteGenerator
+
 from PyQt4.QtGui import (
     QPen, QBrush, QColor,
     QGraphicsView,  QGraphicsScene, QPainter, QTransform, QPolygonF,
