@@ -19,7 +19,7 @@ OrangeUserRole = id_generator(Qt.UserRole)
 enter_icon = None
 
 def getdeepattr(obj, attr, **argkw):
-    if type(obj) == dict:
+    if type(obj) is dict:
         return obj.get(attr)
     try:
         return reduce(lambda o, n: getattr(o, n),  attr.split("."), obj)
@@ -576,7 +576,7 @@ def listBox(widget, master, value = None, labels = None, box = None, tooltip = N
 
     if value != None:
         clist = getdeepattr(master, value)
-        if type(clist) >= ControlledList:
+        if isinstance(clist, ControlledList):
             clist = ControlledList(clist, lb)
             master.__setattr__(value, clist)
 
@@ -737,7 +737,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1, ca
 
 def qwtHSlider(widget, master, value, box=None, label=None, labelWidth=None, minValue=1, maxValue=10, step=0.1, precision=1, callback=None, logarithmic=0, ticks=0, maxWidth=80, tooltip = None, showValueLabel = 1, debuggingEnabled = 1, addSpace=False, orientation=0):
     if not logarithmic:
-        if type(precision) == str:
+        if type(precision) is str:
             format = precision
         elif precision == 0:
             format = " %d"
@@ -787,8 +787,10 @@ def qwtHSlider(widget, master, value, box=None, label=None, labelWidth=None, min
 
 ##    format = "%s%d.%df" % ("%", precision+3, precision)
 #    format = " %s.%df" % ("%", precision)
-    if type(precision) == str:  format = precision
-    else:                       format = " %s.%df" % ("%", precision)
+    if precision is str:
+        format = precision
+    else:
+        format = " %s.%df" % ("%", precision)
 
     if showValueLabel:
         lbl = widgetLabel(hb, format % minValue)
@@ -839,7 +841,8 @@ class OrangeListBox(QListWidget):
             setattr(self.widget, self.ogLabels, attributes)
         else:
             domain = data.domain
-            setattr(self.widget, self.ogLabels, [(domain[a].name, domain[a].varType) for a in attributes])
+            setattr(self.widget, self.ogLabels,
+                    [(domain[a].name, domain[a].var_type) for a in attributes])
 
     def sizeHint(self):
         return self.defaultSizeHint
@@ -964,7 +967,7 @@ class SmallWidgetButton(QPushButton):
                     name = pixmap
                 elif os.path.exists(os.path.join(iconDir, pixmap)):
                     name = os.path.join(iconDir, pixmap)
-            elif type(pixmap) == QPixmap or type(pixmap) == QIcon:
+            elif type(pixmap) is QPixmap or type(pixmap) is QIcon:
                 name = pixmap
             else:
                 name = os.path.join(iconDir, "arrow_down.png")
@@ -1019,7 +1022,7 @@ class SmallWidgetLabel(QLabel):
                     name = pixmap
                 elif os.path.exists(os.path.join(iconDir, pixmap)):
                     name = os.path.join(iconDir, pixmap)
-            elif type(pixmap) == QPixmap or type(pixmap) == QIcon:
+            elif type(pixmap) is QPixmap or type(pixmap) is QIcon:
                 name = pixmap
             else:
                 name = os.path.join(iconDir, "arrow_down.png")
@@ -1305,7 +1308,7 @@ class ControlledList(list):
 
     def item2name(self, item):
         item = self.listBox.labels[item]
-        if type(item) == tuple:
+        if type(item) is tuple:
             return item[1]
         else:
             return item
@@ -1358,7 +1361,7 @@ class ControlledList(list):
 
 
 def connectControlSignal(control, signal, f):
-    if type(signal) == tuple:
+    if type(signal) is tuple:
         control, signal = signal
     QObject.connect(control, SIGNAL(signal), f)
 
@@ -1389,7 +1392,8 @@ class ControlledCallback:
         self.attribute = attribute
         self.f = f
         self.disabled = 0
-        if type(widget) == dict: return     # we can't assign attributes to dict
+        if type(widget) is dict:
+            return     # we can't assign attributes to dict
         if not hasattr(widget, "callbackDeposit"):
             widget.callbackDeposit = []
         widget.callbackDeposit.append(self)
@@ -1400,7 +1404,8 @@ class ControlledCallback:
             return
 
         if self.f:
-            if self.f in [int, float] and (not value or type(value) in [str, str] and value in "+-"):
+            if self.f in [int, float] and (
+                    not value or type(value) is str and value in "+-"):
                 value = self.f(0)
             else:
                 value = self.f(value)
@@ -1409,13 +1414,17 @@ class ControlledCallback:
         if opposite:
             try:
                 opposite.disabled += 1
-                if type(self.widget) == dict: self.widget[self.attribute] = value
-                else:                         setattr(self.widget, self.attribute, value)
+                if type(self.widget) is dict:
+                    self.widget[self.attribute] = value
+                else:
+                    setattr(self.widget, self.attribute, value)
             finally:
                 opposite.disabled -= 1
         else:
-            if type(self.widget) == dict: self.widget[self.attribute] = value
-            else:                         setattr(self.widget, self.attribute, value)
+            if type(self.widget) is dict:
+                self.widget[self.attribute] = value
+            else:
+                setattr(self.widget, self.attribute, value)
 
 
 class ValueCallback(ControlledCallback):
@@ -1642,7 +1651,7 @@ class CallFrontListBoxLabels(ControlledCallFront):
         self.control.clear()
         if value:
             for i in value:
-                if type(i) == tuple:
+                if type(i) is tuple:
                     if isinstance(i[1], int):
                         self.control.addItem(QListWidgetItem(icons.get(i[1], icons[-1]), i[0]))
                     else:
@@ -1693,7 +1702,7 @@ class Disabler:
             disabled = 1
 
         for w in self.widget.disables:
-            if type(w) == tuple:
+            if type(w) is tuple:
                 if isinstance(w[0], int):
                     i = 1
                     if w[0] == -1:
@@ -2196,7 +2205,7 @@ class FloatSlider(QSlider):
             ## However, we do nothing to keep consistency with Qwt
             return
         if step <= 0 or step > (maxValue-minValue):
-            if type(maxValue) == int and type(minValue) == int:
+            if type(maxValue) is int and type(minValue) is int:
                 step = 1
             else:
                 step = float(minValue-maxValue)/100.0
