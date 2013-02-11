@@ -12,7 +12,7 @@ Plot legend (``owlegend``)
 
 """
 
-from PyQt4.QtGui import QGraphicsTextItem, QGraphicsRectItem, QGraphicsObject, QColor, QPen, QLinearGradient
+from PyQt4.QtGui import QGraphicsTextItem, QGraphicsRectItem, QGraphicsObject, QPen, QLinearGradient
 from PyQt4.QtCore import QPointF, QRectF, Qt, QPropertyAnimation, QSizeF
 
 from .owpoint import *
@@ -27,17 +27,17 @@ PointSymbol = 4
 class OWLegendItem(QGraphicsObject):
     """
         Represents a legend item with a title and a point symbol.
-        
+
         :param name: The text to display
         :type name: str
-        
+
         :param point: The point symbol
         :type point: :obj:`.OWPoint`
-        
+
         :param parent: The parent item, passed to QGraphicsItem
         :type parent: :obj:`QGraphicsItem`
-        
-        .. seealso:: :meth:`.OWLegend.add_item`, :meth:`.OWLegend.add_curve`. 
+
+        .. seealso:: :meth:`.OWLegend.add_item`, :meth:`.OWLegend.add_curve`.
     """
     def __init__(self, name, point, parent):
         QGraphicsObject.__init__(self, parent)
@@ -59,16 +59,16 @@ class OWLegendItem(QGraphicsObject):
         self.rect_item.stackBefore(self.text_item)
         if self.point_item:
             self.rect_item.stackBefore(self.point_item)
-        
+
     def boundingRect(self):
         return self._rect
-        
+
     def paint(self, painter, option, widget):
         pass
-    
+
 class OWLegendTitle(QGraphicsObject):
     """
-        A legend item that shows ``text`` with a bold font and no symbol. 
+        A legend item that shows ``text`` with a bold font and no symbol.
     """
     def __init__(self, text, parent):
         QGraphicsObject.__init__(self, parent)
@@ -79,17 +79,17 @@ class OWLegendTitle(QGraphicsObject):
         self.rect_item = QGraphicsRectItem(self.text_item.boundingRect(), self)
         self.rect_item.setPen(QPen(Qt.NoPen))
         self.rect_item.stackBefore(self.text_item)
-        
+
     def boundingRect(self):
         return self.text_item.boundingRect()
-        
+
     def paint(self, painter, option, widget):
         pass
-    
+
 class OWLegendGradient(QGraphicsObject):
-    
+
     gradient_width = 20
-    
+
     def __init__(self, palette, values, parent):
         QGraphicsObject.__init__(self, parent)
         self.parent = parent
@@ -99,21 +99,21 @@ class OWLegendGradient(QGraphicsObject):
         self.label_items = [QGraphicsTextItem(text, self) for text in values]
         for i in self.label_items:
             i.setTextWidth(50)
-            
+
         self.rect = QRectF()
-            
+
         self.gradient_item = QGraphicsRectItem(self)
         self.gradient = QLinearGradient()
         self.gradient.setStops([(v*0.1, self.palette[v*0.1]) for v in range(11) ])
         self.orientation = Qt.Horizontal
         self.set_orientation(Qt.Vertical)
-        
+
     def set_orientation(self, orientation):
         if self.orientation == orientation:
             return
-            
+
         self.orientation = orientation
-        
+
         if self.orientation == Qt.Vertical:
             height = max([item.boundingRect().height() for item in self.label_items])
             total_height = height * max(5, len(self.label_items))
@@ -134,7 +134,7 @@ class OWLegendGradient(QGraphicsObject):
             height = max([item.boundingRect().height() for item in self.label_items])
             total_width = width * max(5, len(self.label_items))
             interval = (total_width - self.label_items[-1].boundingRect().width()) / (len(self.label_items) -1)
-            
+
             self.gradient_item.setRect(0, 0, total_width, self.gradient_width)
             self.gradient.setStart(0, 0)
             self.gradient.setFinalStop(total_width, 0)
@@ -146,29 +146,29 @@ class OWLegendGradient(QGraphicsObject):
                 move_item_xy(item, x, y, self.parent.graph.animate_plot)
                 x += interval
             self.rect = QRectF(0, 0, total_width, self.gradient_width + height)
-  
+
     def boundingRect(self):
         return getattr(self, 'rect', QRectF())
-        
+
     def paint(self, painter, option, widget):
         pass
-        
-        
+
+
 class OWLegend(QGraphicsObject):
     """
-        A legend for :obj:`.OWPlot`. 
-        
-        Its items are arranged into a hierarchy by `category`. This is useful when points differ in more than one attribute. 
+        A legend for :obj:`.OWPlot`.
+
+        Its items are arranged into a hierarchy by `category`. This is useful when points differ in more than one attribute.
         In such a case, there can be one category for point color and one for point shape. Usually the category name
-        will be the name of the attribute, while the item's title will be the value. 
-        
+        will be the name of the attribute, while the item's title will be the value.
+
         Arbitrary categories can be created, for an example see :meth:`.OWPlot.update_axes`, which creates a special category
-        for unused axes. 
+        for unused axes.
         decimals
         .. image:: files/legend-categories.png
-        
-        In the image above, `type` and `milk` are categories with 7 and 2 possible values, respectively. 
-        
+
+        In the image above, `type` and `milk` are categories with 7 and 2 possible values, respectively.
+
     """
     def __init__(self, graph, scene):
         QGraphicsObject.__init__(self)
@@ -181,8 +181,8 @@ class OWLegend(QGraphicsObject):
         self.point_attrs = {}
         self.point_vals = {}
         self.default_values = {
-                               PointColor : Qt.black, 
-                               PointSize : 8, 
+                               PointColor : Qt.black,
+                               PointSize : 8,
                                PointSymbol : OWPoint.Ellipse
                                }
         self.box_rect = QRectF()
@@ -206,14 +206,14 @@ class OWLegend(QGraphicsObject):
                     self.scene().removeItem(i)
         self.items = {}
         self.update_items()
-        
+
 
     def add_curve(self, curve):
         """
             Adds a legend item with the same point symbol and name as ``curve``.
-            
+
             If the curve's name contains the equal sign (=), it is split at that sign. The first part of the curve
-            is a used as the category, and the second part as the value. 
+            is a used as the category, and the second part as the value.
         """
         i = curve.name.find('=')
         if i == -1:
@@ -223,16 +223,16 @@ class OWLegend(QGraphicsObject):
             cat = curve.name[:i]
             name = curve.name[i+1:]
         self.add_item(cat, name, curve.point_item(0, 0, 0))
-        
+
     def add_item(self, category, value, point):
         """
-            Adds an item with title ``value`` and point symbol ``point`` to the specified ``category``. 
+            Adds an item with title ``value`` and point symbol ``point`` to the specified ``category``.
         """
         if category not in self.items:
             self.items[category] = [OWLegendTitle(category, self)]
         self.items[category].append(OWLegendItem(str(value), point, self))
         self.update_items()
-        
+
     def add_color_gradient(self, title, values):
         if len(values) < 2:
             # No point in showing a gradient with less that two values
@@ -242,10 +242,10 @@ class OWLegend(QGraphicsObject):
         item = OWLegendGradient(self.graph.contPalette, [str(v) for v in values], self)
         self.items[title] = [OWLegendTitle(title, self), item]
         self.update_items()
-        
+
     def remove_category(self, category):
         """
-            Removes ``category`` and all items that belong to it. 
+            Removes ``category`` and all items that belong to it.
         """
         if category not in self.items:
             return
@@ -253,14 +253,14 @@ class OWLegend(QGraphicsObject):
             for item in self.items[category]:
                 self.scene().removeItem(item)
         del self.items[category]
-        
+
     def update_items(self):
         """
-            Updates the legend, repositioning the items according to the legend's orientation. 
+            Updates the legend, repositioning the items according to the legend's orientation.
         """
         self.box_rect = QRectF()
         x = y = 0
-        
+
         for lst in self.items.values():
             for item in lst:
                 if hasattr(item, 'text_item'):
@@ -269,7 +269,7 @@ class OWLegend(QGraphicsObject):
                     item.rect_item.setBrush(self.graph.color(OWPalette.Canvas))
                 if hasattr(item, 'set_orientation'):
                     item.set_orientation(self._orientation)
-                    
+
         if self._orientation == Qt.Vertical:
             for lst in self.items.values():
                 for item in lst:
@@ -288,11 +288,11 @@ class OWLegend(QGraphicsObject):
                         y = y + max_h
                     self.box_rect = self.box_rect | item.boundingRect().translated(x, y)
                     move_item_xy(item, x, y, self.graph.animate_plot)
-                    x = x + item.boundingRect().width()                
+                    x = x + item.boundingRect().width()
                 if lst:
                     x = 0
                     y = y + max_h
-        
+
     def mouseMoveEvent(self, event):
         self.graph.notify_legend_moved(event.scenePos())
         if self._floating:
@@ -302,13 +302,13 @@ class OWLegend(QGraphicsObject):
             else:
                 self.setPos(p)
         event.accept()
-            
+
     def mousePressEvent(self, event):
         self.setCursor(Qt.ClosedHandCursor)
         self.mouse_down = True
         self._mouse_down_pos = event.scenePos() - self.pos()
         event.accept()
-        
+
     def mouseReleaseEvent(self, event):
         self.unsetCursor()
         self.mouse_down = False
@@ -317,20 +317,20 @@ class OWLegend(QGraphicsObject):
 
     def boundingRect(self):
         return self.box_rect
-        
+
     def paint(self, painter, option, widget=None):
         pass
-    
+
     def set_orientation(self, orientation):
         """
-            Sets the legend's orientation to ``orientation``. 
+            Sets the legend's orientation to ``orientation``.
         """
         self._orientation = orientation
         self.update_items()
-            
+
     def orientation(self):
         return self._orientation
-            
+
     def set_pos_animated(self, pos):
         if (self.pos() - pos).manhattanLength() < 6 or not self.graph.animate_plot:
             self.setPos(pos)
@@ -343,13 +343,13 @@ class OWLegend(QGraphicsObject):
             self._floating_animation.setEndValue(pos)
             self._floating_animation.setDuration(t)
             self._floating_animation.start(QPropertyAnimation.KeepWhenStopped)
-        
+
     def set_floating(self, floating, pos=None):
         """
-            If floating is ``True``, the legend can be dragged with the mouse. 
-            Otherwise, it's fixed in its position. 
-            
-            If ``pos`` is specified, the legend is moved there. 
+            If floating is ``True``, the legend can be dragged with the mouse.
+            Otherwise, it's fixed in its position.
+
+            If ``pos`` is specified, the legend is moved there.
         """
         if floating == self._floating:
             return
@@ -359,4 +359,4 @@ class OWLegend(QGraphicsObject):
                 self.set_pos_animated(pos - self._mouse_down_pos)
             else:
                 self.set_pos_animated(pos)
-        
+

@@ -23,9 +23,9 @@ from Orange.utils import deprecated_attribute, deprecated_members
 from Orange import orangeqt
 from .owplotgui import OWPlotGUI
 from .owtheme import PlotTheme
-from .owplot import OWPlot
+from .Orange.widgets.utils.plot.owplot import OWPlot
 from .owlegend import OWLegend, OWLegendItem, OWLegendTitle, OWLegendGradient
-from .owopenglrenderer import OWOpenGLRenderer
+from .Orange.widgets.utils.plot.owopenglrenderer import OWOpenGLRenderer
 from .owconstants import ZOOMING, PANNING, ROTATING
 
 from OWColorPalette import ColorPaletteGenerator
