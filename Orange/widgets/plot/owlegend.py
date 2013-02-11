@@ -15,10 +15,10 @@ Plot legend (``owlegend``)
 from PyQt4.QtGui import QGraphicsTextItem, QGraphicsRectItem, QGraphicsObject, QColor, QPen, QLinearGradient
 from PyQt4.QtCore import QPointF, QRectF, Qt, QPropertyAnimation, QSizeF
 
-from owpoint import *
-from owcurve import OWCurve
-from owtools import move_item_xy
-from owpalette import OWPalette
+from .owpoint import *
+from .owcurve import OWCurve
+from .owtools import move_item_xy
+from .owpalette import OWPalette
 
 PointColor = 1
 PointSize = 2
@@ -199,7 +199,7 @@ class OWLegend(QGraphicsObject):
         """
             Removes all items from the legend
         """
-        for lst in self.items.itervalues():
+        for lst in self.items.values():
             for i in lst:
                 i.setParentItem(None)
                 if self.scene():
@@ -261,7 +261,7 @@ class OWLegend(QGraphicsObject):
         self.box_rect = QRectF()
         x = y = 0
         
-        for lst in self.items.itervalues():
+        for lst in self.items.values():
             for item in lst:
                 if hasattr(item, 'text_item'):
                     item.text_item.setDefaultTextColor(self.graph.color(OWPalette.Text))
@@ -271,7 +271,7 @@ class OWLegend(QGraphicsObject):
                     item.set_orientation(self._orientation)
                     
         if self._orientation == Qt.Vertical:
-            for lst in self.items.itervalues():
+            for lst in self.items.values():
                 for item in lst:
                     if self.max_size.height() and y and y + item.boundingRect().height() > self.max_size.height():
                         y = 0
@@ -280,7 +280,7 @@ class OWLegend(QGraphicsObject):
                     move_item_xy(item, x, y, self.graph.animate_plot)
                     y = y + item.boundingRect().height()
         elif self._orientation == Qt.Horizontal:
-            for lst in self.items.itervalues():
+            for lst in self.items.values():
                 max_h = max(item.boundingRect().height() for item in lst)
                 for item in lst:
                     if self.max_size.width() and x and x + item.boundingRect().width() > self.max_size.width():

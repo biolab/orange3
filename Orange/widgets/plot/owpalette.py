@@ -3,7 +3,7 @@ from PyQt4.QtCore import Qt
 
 def create_palette(colors):
     p = QPalette()
-    for role, color in colors.iteritems():
+    for role, color in colors.items():
         p.setColor(role, color)
     return p
 

@@ -16,12 +16,12 @@ ExternalLegend = 4
 
 UNUSED_ATTRIBUTES_STR = 'unused attributes'
 
-from owaxis import *
-from owcurve import *
-from owlegend import *
-from owpalette import *
-from owplotgui import OWPlotGUI
-from owtools import *
+from .owaxis import *
+from .owcurve import *
+from .owlegend import *
+from .owpalette import *
+from .owplotgui import OWPlotGUI
+from .owtools import *
 
 ## Color values copied from orngView.SchemaView for consistency
 SelectionPen = QPen(QBrush(QColor(51, 153, 255, 192)), 1, Qt.SolidLine, Qt.RoundCap)
@@ -72,7 +72,7 @@ name_map = {
     "setShowAxisTitle" : "set_show_axis_title"
 }
 
-@deprecated_members(name_map, wrap_methods=name_map.keys())
+@deprecated_members(name_map, wrap_methods=list(name_map.keys()))
 class OWPlot(orangeqt.Plot): 
     """
     The base class for all plots in Orange. It uses the Qt Graphics View Framework
@@ -364,7 +364,7 @@ class OWPlot(orangeqt.Plot):
         self.alpha_value = 255
         self.show_grid = True
         
-        self.curveSymbols = range(13)
+        self.curveSymbols = list(range(13))
         self.tips = TooltipManager(self)
         self.setMouseTracking(True)
         self.grabGesture(Qt.PinchGesture)
@@ -859,7 +859,7 @@ class OWPlot(orangeqt.Plot):
             Removes all axes from the plot
         '''
         ids = []
-        for id,item in self.axes.iteritems():
+        for id,item in self.axes.items():
             if not user_only or id >= UserAxis:
                 ids.append(id)
                 self.scene().removeItem(item)
@@ -1026,7 +1026,7 @@ class OWPlot(orangeqt.Plot):
         if self.warn_unused_attributes and not zoom_only:
             self._legend.remove_category(UNUSED_ATTRIBUTES_STR)
             
-        for id, item in self.axes.iteritems():
+        for id, item in self.axes.items():
             if item.scale is None and item.labels is None:
                 item.auto_range = self.bounds_for_axis(id)
             
@@ -1441,7 +1441,7 @@ class OWPlot(orangeqt.Plot):
                 r = QRectF(x_min, y_min, x_max-x_min, y_max-y_min)
                 return r
         r = orangeqt.Plot.data_rect_for_axes(self, x_axis, y_axis)
-        for id, axis in self.axes.iteritems():
+        for id, axis in self.axes.items():
             if id not in CartesianAxes and axis.data_line:
                 r |= QRectF(axis.data_line.p1(), axis.data_line.p2())
         ## We leave a 5% margin on each side so the graph doesn't look overcrowded
@@ -1542,7 +1542,7 @@ class OWPlot(orangeqt.Plot):
         if indices and type(indices[0]) == str:
             indices = [self.attributeNameIndex[i] for i in indices]
         if not indices: 
-            indices = range(len(self.dataDomain.attributes))
+            indices = list(range(len(self.dataDomain.attributes)))
         
         # don't show the class value twice
         if example.domain.classVar:
@@ -1716,7 +1716,7 @@ class OWPlot(orangeqt.Plot):
         self.zoom_rect = r
 
     def zoom_to_rect(self, rect):
-        print len(self.zoom_stack)
+        print(len(self.zoom_stack))
         self.ensure_inside(rect, self.graph_area)
 
         # add to zoom_stack if zoom_rect is larger
@@ -1726,7 +1726,7 @@ class OWPlot(orangeqt.Plot):
         self.animate(self, 'zoom_rect', rect, start_val = self.get_zoom_rect())
         
     def zoom_back(self):
-        print len(self.zoom_stack)
+        print(len(self.zoom_stack))
         if self.zoom_stack:
             rect = self.zoom_stack.pop()
             self.animate(self, 'zoom_rect', rect, start_val = self.get_zoom_rect())
@@ -1745,7 +1745,7 @@ class OWPlot(orangeqt.Plot):
         self.zoom(point, scale = 0.5)
         
     def zoom(self, point, scale):
-        print len(self.zoom_stack)
+        print(len(self.zoom_stack))
         t, ok = self._zoom_transform.inverted()
         point = point * t
         r = QRectF(self.zoom_rect)

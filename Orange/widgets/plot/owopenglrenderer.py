@@ -43,7 +43,7 @@ class VertexBuffer:
         # ... Later when drawing:
         buffer.draw(GL_LINES)
         # Possible setup in a vertex shader:
-        # 
+        #
         # attribute vec3 position;
         # attribute float index;
         # ...
@@ -70,7 +70,7 @@ class VertexBuffer:
         :param usage: Specifies the expected usage pattern. The symbolic constant must be GL_STREAM_DRAW,
             GL_STREAM_READ, GL_STREAM_COPY, GL_STATIC_DRAW, GL_STATIC_READ, GL_STATIC_COPY,
             GL_DYNAMIC_DRAW, GL_DYNAMIC_READ, or GL_DYNAMIC_COPY. Default is GL_STATIC_DRAW.
-        :type GLenum 
+        :type GLenum
         '''
 
         self._format_description = format_description
@@ -220,7 +220,7 @@ class OWOpenGLRenderer:
         if not self._shader.link():
             print('Failed to link dummy renderer shader!')
 
-        indices = numpy.array(range(6), dtype=numpy.float32) 
+        indices = numpy.array(range(6), dtype=numpy.float32)
         self._vertex_buffer = VertexBuffer(indices, [(1, GL_FLOAT)])
 
     def set_transform(self, model, view=None, projection=None, viewport=None):
@@ -257,7 +257,7 @@ class OWOpenGLRenderer:
 
     def draw_line(self, position0, position1, color0=QColor(0, 0, 0), color1=QColor(0, 0 ,0), color=None):
         '''
-        Draws a line using current transform. 
+        Draws a line using current transform.
 
         :param position0: Beginning of line.
         :type QVector3D

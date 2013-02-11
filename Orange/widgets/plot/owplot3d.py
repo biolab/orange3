@@ -5,7 +5,7 @@ Plot3D (``owplot3D``)
 #################
 
 .. autoclass:: OrangeWidgets.plot.OWPlot3D
-    
+
 '''
 
 import os
@@ -21,12 +21,12 @@ from OWDlgs import OWChooseImageSizeDlg
 from Orange.utils import deprecated_attribute, deprecated_members
 
 from Orange import orangeqt
-from owplotgui import OWPlotGUI
-from owtheme import PlotTheme
-from owplot import OWPlot
-from owlegend import OWLegend, OWLegendItem, OWLegendTitle, OWLegendGradient
-from owopenglrenderer import OWOpenGLRenderer
-from owconstants import ZOOMING, PANNING, ROTATING
+from .owplotgui import OWPlotGUI
+from .owtheme import PlotTheme
+from .owplot import OWPlot
+from .owlegend import OWLegend, OWLegendItem, OWLegendTitle, OWLegendGradient
+from .owopenglrenderer import OWOpenGLRenderer
+from .owconstants import ZOOMING, PANNING, ROTATING
 
 from OWColorPalette import ColorPaletteGenerator
 
@@ -44,7 +44,7 @@ import numpy
 
 try:
     from itertools import chain
-    from itertools import izip as zip
+
 except:
     pass
 
@@ -158,7 +158,7 @@ name_map = {
     "saveToFile" : "save_to_file",
 }
 
-@deprecated_members(name_map, wrap_methods=name_map.keys())
+@deprecated_members(name_map, wrap_methods=list(name_map.keys()))
 class OWPlot3D(orangeqt.Plot3D):
     '''
     The base class behind 3D plots in Orange. Uses OpenGL as its rendering platform.
@@ -190,7 +190,7 @@ class OWPlot3D(orangeqt.Plot3D):
         .. automethod:: set_features
 
     **Selections**
-        There are four possible selection behaviors used for selecting points in OWPlot3D. 
+        There are four possible selection behaviors used for selecting points in OWPlot3D.
 
         .. data:: AddSelection
 
@@ -370,7 +370,7 @@ class OWPlot3D(orangeqt.Plot3D):
                 os.path.join(os.path.dirname(__file__), 'generator.vs'))
             varyings = (c_char_p * 5)()
             varyings[:] = ['out_position', 'out_offset', 'out_color', 'out_normal', 'out_index']
-            glTransformFeedbackVaryings(self.generating_program.programId(), 5, 
+            glTransformFeedbackVaryings(self.generating_program.programId(), 5,
                 ctypes.cast(varyings, POINTER(POINTER(c_char))), GL_INTERLEAVED_ATTRIBS)
 
             self.generating_program.bindAttributeLocation('index', 0)
@@ -739,8 +739,8 @@ class OWPlot3D(orangeqt.Plot3D):
         attribute), a value specifying how many different symbols are needed to display the data and
         information whether or not positional data is discrete.
 
-        .. note:: This function does not add items to the legend automatically. 
-                  You will have to add them yourself with :meth:`.OWLegend.add_item`. 
+        .. note:: This function does not add items to the legend automatically.
+                  You will have to add them yourself with :meth:`.OWLegend.add_item`.
 
         :param x_index: Index (column) of the x coordinate.
         :type int
@@ -850,17 +850,17 @@ class OWPlot3D(orangeqt.Plot3D):
             self.num_primitives_generated = glGetQueryObjectuiv(qid, GL_QUERY_RESULT)
             glBindVertexArray(0)
             self._feedback_generated = True
-            print('Num generated primitives: ' + str(self.num_primitives_generated))
+            print(('Num generated primitives: ' + str(self.num_primitives_generated)))
 
             self.generating_program.release()
             glActiveTexture(GL_TEXTURE0)
-            print('Generation took ' + str(time.time()-start) + ' seconds')
+            print(('Generation took ' + str(time.time()-start) + ' seconds'))
         else:
             orangeqt.Plot3D.update_data(self, x_index, y_index, z_index,
                 color_index, symbol_index, size_index, label_index,
                 colors, num_symbols_used,
                 x_discrete, y_discrete, z_discrete, self.use_2d_symbols)
-            print('Data processing took ' + str(time.time() - start) + ' seconds')
+            print(('Data processing took ' + str(time.time() - start) + ' seconds'))
 
         self.update()
 
@@ -1014,7 +1014,7 @@ class OWPlot3D(orangeqt.Plot3D):
         :param area: Rectangular area.
         :type QRect
 
-        :param behavior: :data:`AddSelection`, :data:`RemoveSelection`, :data:`ToggleSelection` or :data:`ReplaceSelection` 
+        :param behavior: :data:`AddSelection`, :data:`RemoveSelection`, :data:`ToggleSelection` or :data:`ReplaceSelection`
         :type behavior: int
         '''
         viewport = [0, 0, self.width(), self.height()]
@@ -1042,7 +1042,7 @@ class OWPlot3D(orangeqt.Plot3D):
         '''
         Sets selection behavior.
 
-        :param behavior: :data:`AddSelection`, :data:`RemoveSelection`, :data:`ToggleSelection` or :data:`ReplaceSelection` 
+        :param behavior: :data:`AddSelection`, :data:`RemoveSelection`, :data:`ToggleSelection` or :data:`ReplaceSelection`
         :type behavior: int
         '''
         self.selection_behavior = behavior
@@ -1211,7 +1211,7 @@ class OWPlot3D(orangeqt.Plot3D):
 
     def set_palette(self, p):
         '''
-        Sets the plot palette to ``p``. 
+        Sets the plot palette to ``p``.
 
         :param p: The new color palette
         :type p: :obj:`.QPalette`
