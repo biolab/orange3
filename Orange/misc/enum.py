@@ -39,31 +39,16 @@ def Enum(*names):
             for name, value in zip(names, constants):
                 setattr(cls, name, value)
 
-    class EnumValue:
-        __slots__ = ('__value', )
-        Value = property(lambda self: self.__value)
+    class EnumValue(int):
         EnumType = property(lambda self: EnumType)
 
-        def __init__(self, value):
-            self.__value = value
-
-        def __hash__(self):
-            return hash(self.__value)
-
-        def __lt__(self, other):
-            return self.__value < other.__value
-
-        def __eq__(self, other):
-            return self.__value == other.__value
-
-        def __nonzero__(self):
-            return bool(self.__value)
-
         def __repr__(self):
-            return str(names[self.__value])
+            return str(names[self])
+
+        __str__ = __repr__
 
         def __reduce__(self):
-            return enum_value_unpickler, (names, self.__value)
+            return enum_value_unpickler, (names, int(self))
 
     constants = [None] * len(names)
     for i, each in enumerate(names):
