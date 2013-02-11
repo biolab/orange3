@@ -5,8 +5,6 @@ from functools import reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-import bottleneck as bn
-
 from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data import ContinuousVariable
