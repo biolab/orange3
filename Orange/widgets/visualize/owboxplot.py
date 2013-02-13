@@ -7,6 +7,7 @@ import numpy as np
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+import scipy
 
 from Orange.data import  DiscreteVariable, Table, Domain
 from Orange.statistics import contingency, distribution
@@ -30,6 +31,7 @@ class BoxData:
         self.a_min = dist[0, 0]
         self.a_max = dist[0, -1]
         self.mean = np.sum(dist[0] * dist[1]) / N
+        self.var = np.sum(dist[1] * (dist[0] - self.mean) ** 2) / N
         s = 0
         thresholds = [N/4, N/2, 3*N/4]
         thresh_i = 0
@@ -52,7 +54,8 @@ class BoxData:
 class BoxItem(QtGui.QGraphicsItemGroup):
     pen_light = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0xff)), 2)
     pen_dark = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
-    for pen in (pen_dark, pen_light):
+    pen_dark_wide = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 4)
+    for pen in (pen_dark, pen_light, pen_dark_wide):
         pen.setCosmetic(True)
         pen.setCapStyle(QtCore.Qt.RoundCap)
         pen.setJoinStyle(QtCore.Qt.RoundJoin)
@@ -67,6 +70,9 @@ class BoxItem(QtGui.QGraphicsItemGroup):
         mean_line = Line(-0.7*width, stat.mean, 0.7*width, stat.mean, self)
         for it in (whisker1, whisker2, vert_line, mean_line):
             it.setPen(self.pen_dark)
+        dev = math.sqrt(stat.var)
+        var_line = Line(0, stat.mean - dev, 0,  stat.mean + dev, self)
+        var_line.setPen(self.pen_dark_wide)
 
         box = QtGui.QGraphicsRectItem(-width/2, stat.q25, width,
                                       stat.q75 - stat.q25, self)
@@ -101,6 +107,14 @@ class OWBoxPlot(widget.OWWidget):
 
     _sorting_criteria_attrs = ["", "label", "median", "mean"]
 
+    tick_pen = QtGui.QPen(QtCore.Qt.white, 5)
+    axis_pen = QtGui.QPen(QtCore.Qt.darkGray, 3)
+    for pen in (tick_pen, axis_pen):
+        pen.setCosmetic(True)
+        pen.setJoinStyle(QtCore.Qt.RoundJoin)
+    axis_pen.setCapStyle(QtCore.Qt.RoundCap)
+    tick_pen.setCapStyle(QtCore.Qt.FlatCap)
+
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
 
@@ -121,19 +135,21 @@ class OWBoxPlot(widget.OWWidget):
             'grouping_select', "grouping", box="Grouping",
             selectionMode=QtGui.QListWidget.SingleSelection,
             callback=self.process_change)
+
         self.sorting_combo = gui.comboBox(gb, self,
             'sorting_select', callback=self.sorting_update,
             items=["Show in original order",
                    "Sort by label", "Sort by median", "Sort by mean"])
 
-        b = gui.widgetBox(self.controlArea, "Statistics")
-        gui.doubleSpin(b, self, "sig_threshold", 0.05, 0.5, step=0.05,
-            label="Significance", controlWidth=75,
-            alignment=QtCore.Qt.AlignRight)
+        b = gui.widgetBox(self.controlArea, "Output variables")
         gui.widgetLabel(b, "Test type")
         gui.radioButtonsInBox(gui.indentedBox(b, sep=10), self, "stattest",
             ["Parametric", "Non-parametric"],
-            callback = self.run_selected_test)
+            callback=self.output_data)
+        gui.doubleSpin(b, self, "sig_threshold", 0.05, 0.5, step=0.05,
+            label="Significance",
+            controlWidth=75, alignment=QtCore.Qt.AlignRight,
+            callbackOnReturn=True, callback=self.output_data)
 
         gui.rubber(self.controlArea)
 
@@ -198,7 +214,7 @@ class OWBoxPlot(widget.OWWidget):
         self.compute_boxes()
         self.sorting_combo.setDisabled(len(self.stats) < 2)
         self.draw_selected()
-#        self.run_selected_test()
+        self.show_tests()
 #        self.basic_stat = stat_basic_full_tab(self.ddataset)
 #        self.send("Basic statistic", self.basic_stat)
 
@@ -262,11 +278,11 @@ class OWBoxPlot(widget.OWWidget):
         font = QtGui.QFont()
         font.setPixelSize(12)
         val = first_val
-        gray_pen = QtGui.QPen(QtCore.Qt.lightGray)
         attr = self.attributes[self.attributes_select[0]][0]
         attr_desc = self.ddataset.domain[attr]
         while True:
-            self.boxScene.addLine(-65, val, -60, val, gray_pen)
+            l = self.boxScene.addLine(-63, val, -61, val, self.tick_pen)
+            l.setZValue(100)
             t = self.boxScene.addSimpleText(attr_desc.repr_val(val), font)
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
@@ -275,8 +291,7 @@ class OWBoxPlot(widget.OWWidget):
             if val >= top:
                 break
             val += step
-        top = val
-        self.boxScene.addLine(-60, first_val, -60, top, gray_pen)
+        self.boxScene.addLine(-62, bottom, -62, top, self.axis_pen)
 
         self.box_labels = []
         for stat in self.stats:
@@ -308,210 +323,88 @@ class OWBoxPlot(widget.OWWidget):
             self.graph.append_data(box_label, stat_graph1, y_label)
 
 
-    def run_selected_test(self):
-        group_by = self.grouping_select[0]
-        if not group_by:
+    def show_tests(self):
+        self.warning.hide()
+        if len(self.stats) < 2:
             # TODO remove anything that is printed out
             self.infot1.setText("")
-            return
-        self.warning.hide()
-
-        group_attr = self.grouping[group_by][0]
-        group_ind = dataset.domain.index(group_attr)
-        attr = self.attributes[self.attributes_select[0]][0]
-        attr_ind = dataset.domain.index(attr)
-        self.conts = datacaching.getCached(dataset,
-            contingency.get_contingency,
-            (dataset, attr_ind, group_ind))
-
-        sums = np.sum(dist[1])
-        if len(self.conts) == 2:
-                if number_tab == 2:
-                    a = stat_ttest(filtered[0], filtered[1], str(self.attributes[self.attributes_select[0]][0]))
-                    b = stat_wilc(filtered[0], filtered[1], str(self.attributes[self.attributes_select[0]][0]))
-                    self.infot1.setText("<center>Student's t: %.3f (p=%.3f), Mann-Whitney's U: %.1f (p=%.3f)</center>" % (a[0], a[1], b[0], b[1]))
-
-                elif number_tab > 2:
-                    a = stat_anova(filtered, str(self.attributes[self.attributes_select[0]][0]))
-                    c = stat_kruskal(filtered, str(self.attributes[self.attributes_select[0]][0]))
-                    self.infot1.setText("<center>ANOVA: %.3f (p=%.3f), Kruskal Wallis's U: %.1f (p=%.3f)</center>" % (a[0], a[1], c[0], c[1]))
-
-                elif number_tab < 2:
-                    self.infot1.setText("<center>Not enough data examples.<center>")
-
-                self.draw_selected(self.ddataset)
-
-
+        elif any(s.N < 1 for s in self.stats):
+            self.infot1.setText("At least one group has just one instance")
+        elif len(self.stats) == 2:
+            a = self.stat_ttest()
+            b = self.stat_wilc()
+            self.infot1.setText("<center>Student's t: %.3f (p=%.3f), "
+                                "Mann-Whitney's z: %.1f (p=%.3f)</center>" %
+                                (a + b))
+        else:
+            a = self.stat_ANOVA()
+            b = self.stat_kruskal()
+            self.infot1.setText("<center>ANOVA: %.3f (p=%.3f), "
+                                "Kruskal Wallis's U: %.1f (p=%.3f)</center>" %
+                                (a + b))
+        """
         if self.stattest == 0:
             self.send("Significant data", self.ouput_sig_parametric_data())
         elif self.stattest == 1:
             self.send("Significant data", self.ouput_sig_nonparametric_data())
+        """
 
+    def stat_ttest(self):
+        d1, d2 = self.stats
+        pooled_var = d1.var / d1.N + d2.var / d2.N
+        df = pooled_var**2 / \
+            ((d1.var / d1.N)**2 / (d1.N - 1) + (d2.var / d2.N)**2 / (d2.N - 1))
+        t = (d1.mean - d2.mean) / math.sqrt(pooled_var)
+        # TODO check!!!
+        p = 2 * (1 - scipy.special.stdtr(df, t))
+        return t, p
 
-    def ouput_sig_parametric_data(self):
-        tab = []
+    def stat_wilc(self):
+        d1, d2 = self.stats
+        ni1, ni2 = d1.shape[1], d2.shape[1]
+        i1 = i2 = 0
+        R = 0
+        rank = 0
+        while i1 < ni1 and i2 < ni2:
+            if d1[0, i1] < d2[0, i2]:
+                R += (rank + d1[1, i1] / 2)
+                rank += d1[1, i1]
+                i1 += 1
+            elif d1[0, i1] == d2[0, i2]:
+                br = d1[1, i1] + d2[1, i2]
+                R += (rank + br / 2)
+                rank += br
+                i1 += 1
+                i2 += 1
+            else:
+                rank += d2[1, i2]
+                i2 += 1
+        if i1 < ni1:
+            R = np.sum(d1[1, i1:]) / 2
+        U = R - d1.N * (d1.N + 1) / 2
+        m = d1.N * (d1.N + d2.N + 1) / 2
+        var = d2.N * m / 6
+        z = (U - m) / math.sqrt(var)
+        # TODO check!!!
+        p = 2 * (1 - scipy.special.ndtr(z))
+        return z, p
 
-        for grou in self.grouping[1:]:
-            filtered, depr = self.filtered(self.grouping, [self.grouping.index(grou)])
-            if len(filtered) > 1:
-                if len(self.ddataset.domain[grou[0]].values) == 2:
-                    a = stat_ttest(filtered[0], filtered[1], str(self.attributes[self.attributes_select[0]][0]))
-                    if a[1] < self.sig_threshold:
-                        tab.append(grou[0])
-                elif len(self.ddataset.domain[grou[0]].values) > 2:
-                    a = stat_anova(filtered, str(self.attributes[self.attributes_select[0]][0]))
-                    if a[1] < self.sig_threshold:
-                        tab.append(grou[0])
-        for attr in self.attributes:
-            tab.append(attr[0])
-        return self.ddataset.select(tab)
+    def stat_ANOVA(self):
+        N = sum(stat.N for stat in self.stats)
+        grand_avg = sum(stat.N * stat.mean for stat in self.stats) / N
+        var_between = sum(stat.N * (stat.mean - grand_avg) ** 2
+                          for stat in self.stats)
+        df_between = len(self.stats) - 1
 
-    def ouput_sig_nonparametric_data(self):
-        tab = []
-        for grou in self.grouping[1:]:
-            filtered, depr = self.filtered(self.grouping, [self.grouping.index(grou)])
-            if len(filtered) > 1:
-                if len(self.ddataset.domain[grou[0]].values) == 2:
-                    a = stat_wilc(filtered[0], filtered[1], str(self.attributes[self.attributes_select[0]][0]))
-                    if a[1] < self.sig_threshold:
-                        tab.append(grou[0])
-                elif len(self.ddataset.domain[grou[0]].values) > 2:
-                    a = stat_kruskal(filtered, str(self.attributes[self.attributes_select[0]][0]))
-                    if a[1] < self.sig_threshold:
-                        tab.append(grou[0])
-        for attr in self.attributes:
-            tab.append(attr[0])
-        return self.ddataset.select(tab)
+        var_within = sum(stat.N * stat.var for stat in self.stats)
+        df_within = N - len(self.stats)
+        F = (var_between / df_between) / (var_within / df_within)
+        p = 1 - scipy.special.fdtr(df_between, df_within, F)
+        return F, p
 
-# ***************************************************************************
-# ***************************************************************************
-# Statistics
+    def stat_kruskal(self):
+        return -1, -1
 
-def data_to_npcol(dataset, attrs):
-    """Extracts columns from dataset in numpy format
+    def output_data(self):
+        pass
 
-    Usage::
-      (tab1, tab2) = data_to_npcol(dataset, [selected, i])
-      tab1 = data_to_npcol(dataset, selected)
-
-    :param dataset:  orange dataset
-    :param attrs:    list of attribute strings or positions
-    :return:         list of numpy columns
-    """
-    is_single = False
-    if not isinstance(attrs, list):
-        is_single = True
-        attrs = [attrs]
-
-    domain = Domain([ dataset.domain[a]  for a in attrs ])
-    dataset_sel = Table(domain, dataset)
-
-    f = filter.IsDefined(domain=domain)
-    (dataset_np,) = f(dataset_sel).to_numpy('ac')
-
-    if is_single:
-        return dataset_np.T[0]
-    else:
-        return dataset_np.T
-
-# Basic statistic -------------------------------------------------------------
-
-def stat_basic(np_column):
-    """Returns basic statistics on numpy array
-    :param dataset:  numpy array
-    :return:              (min, max, mean, median, standard deviation, variance)
-    """
-    return [np.amin(np_column), np.amax(np_column), np.mean(np_column), np.median(np_column), np.std(np_column), np.var(np_column)]
-
-def stat_basic_full_tab(dataset):
-    """Runs basic stat on dataset and returns dataset
-    :param dataset: orange dataset
-    :return:        orange dataset
-    """
-    a = np.empty([0,6])
-    for i in xrange(len(dataset.domain)):
-        datacol = data_to_npcol(dataset,i)
-        if datacol != []:
-            statb = stat_basic(datacol)
-            a = np.vstack((a, statb))
-
-    #d = Orange.data.Domain([0])
-    d = Orange.data.Domain([Orange.feature.Continuous('min'), Orange.feature.Continuous('max'), Orange.feature.Continuous('mean'), Orange.feature.Continuous('median'), Orange.feature.Continuous('st. deviation'), Orange.feature.Continuous('variance')])
-    return Orange.data.Table(d, a)
-
-def stat_graph(np_column):
-    """Return data to be sended to boxplot
-    :param np_column:   numpy array
-    :return:            (min, qdown, meadian, qup, max, mean, std)
-    """
-    return [np.amin(np_column), stats.scoreatpercentile(np_column, 25), stats.scoreatpercentile(np_column, 50), stats.scoreatpercentile(np_column, 75), np.amax(np_column), np.mean(np_column), np.std(np_column)]
-
-# TESTS
-# t-test ----------------------------------------------------------------------
-# parametric
-
-def stat_ttest(arr1, arr2, selected):
-    """T-test
-    :param arr1:    orange dataset filtered by discrete attribute A,
-    :param arr1:    orange dataset filtered by discrete attribute A
-    :return:        (U, p)
-    """
-    tab1 = data_to_npcol(arr1, selected)
-    tab2 = data_to_npcol(arr2, selected)
-    if tab1.any() and tab2.any():
-        return stats.ttest_ind(tab1, tab2)
-    else:
-        return(0, 0)
-# Mann Whitney test ---------------------------------------------------------------
-# nonparametric
-
-def stat_wilc(arr1, arr2, selected):
-    """Mann Whitney test
-    :param arr1:    orange dataset filtered by discrete attribute A,
-    :param arr1:    orange dataset filtered by discrete attribute A
-    :return:        (U, p)
-    """
-    tab1 = data_to_npcol(arr1, selected)
-    tab2 = data_to_npcol(arr2, selected)
-    if tab1.any() and tab2.any():
-        return stats.mannwhitneyu(tab1,tab2)
-    else:
-        return(0, 0)
-# ANOVA -----------------------------------------------------------------------
-# parametric
-
-def stat_anova(filtered, selected):
-    """ANOVA
-    :param filtered:    list of orange datasets,
-    :param selected:    name of attribute
-    :return:            (F, p):
-    """
-    tab = [ data_to_npcol(f, selected)  for f in filtered ]
-    return stats.f_oneway(*tab)
-
-# Kruskal Wallis  --------------------------------------------------------------
-# nonparametric
-
-def stat_kruskal(filtered, selected):
-    """Kruskal Wallis
-    :param filtered:    list of orange datasets,
-    :param selected:    name of attribute
-    :return:            (F, p)
-    """
-    tab = [ data_to_npcol(f, selected)  for f in filtered ]
-    return stats.kruskal(*tab)
-
-# ***************************************************************************
-# ***************************************************************************
-
-##############################################################################
-# Test the widget, run from prompt
-
-if __name__=="__main__":
-    appl = QtGui.QApplication([])
-    ow = OWBoxPlot()
-    ow.show()
-    # /home/ami/orange/Orange/doc/datasets
-    dataset = Table('../doc/datasets/heart_disease.tab')
-    ow.data(dataset)
-    appl.exec_()
