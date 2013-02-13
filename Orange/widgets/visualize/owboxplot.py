@@ -16,7 +16,6 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.widgets.utils import datacaching
-from Orange.widgets.widget import Default
 from Orange.widgets.utils.plot import owaxis
 
 #from OWColorPalette import ColorPixmap, ColorPaletteGenerator
@@ -54,22 +53,25 @@ class BoxData:
 class BoxItem(QtGui.QGraphicsItemGroup):
     pen_light = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0xff)), 2)
     pen_dark = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
+    pen_dark_dotted = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
     pen_dark_wide = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 4)
-    for pen in (pen_dark, pen_light, pen_dark_wide):
+    for pen in (pen_dark, pen_light, pen_dark_wide, pen_dark_dotted):
         pen.setCosmetic(True)
         pen.setCapStyle(QtCore.Qt.RoundCap)
         pen.setJoinStyle(QtCore.Qt.RoundJoin)
+    pen_dark_dotted.setStyle(QtCore.Qt.DotLine)
 
     def __init__(self, stat, width=20):
         super().__init__()
         self.stat = stat
         Line = QtGui.QGraphicsLineItem
-        whisker1 = Line(-width/8, stat.a_min, width/8, stat.a_min, self)
-        whisker2 = Line(-width/8, stat.a_max, width/8, stat.a_max, self)
+        whisker1 = Line(-width/16, stat.a_min, width/16, stat.a_min, self)
+        whisker2 = Line(-width/16, stat.a_max, width/16, stat.a_max, self)
         vert_line = Line(0, stat.a_min, 0, stat.a_max, self)
         mean_line = Line(-0.7*width, stat.mean, 0.7*width, stat.mean, self)
-        for it in (whisker1, whisker2, vert_line, mean_line):
+        for it in (whisker1, whisker2, mean_line):
             it.setPen(self.pen_dark)
+        vert_line.setPen(self.pen_dark_dotted)
         dev = math.sqrt(stat.var)
         var_line = Line(0, stat.mean - dev, 0,  stat.mean + dev, self)
         var_line.setPen(self.pen_dark_wide)
@@ -94,9 +96,7 @@ class OWBoxPlot(widget.OWWidget):
     _priority = 100
     _author = "Amela Rakanović, Janez Demšar"
     inputs = [("Data", Table, "data")]
-    outputs = [("Basic statistic", Table, Default),
-               ("Significant columns", Table),
-               ("Selected Data", Table)]
+    outputs = [("Basic statistic", Table)]
 
     settingsHandler = DomainContextHandler()
     sorting_select = Setting(0)
@@ -140,16 +140,6 @@ class OWBoxPlot(widget.OWWidget):
             'sorting_select', callback=self.sorting_update,
             items=["Show in original order",
                    "Sort by label", "Sort by median", "Sort by mean"])
-
-        b = gui.widgetBox(self.controlArea, "Output variables")
-        gui.widgetLabel(b, "Test type")
-        gui.radioButtonsInBox(gui.indentedBox(b, sep=10), self, "stattest",
-            ["Parametric", "Non-parametric"],
-            callback=self.output_data)
-        gui.doubleSpin(b, self, "sig_threshold", 0.05, 0.5, step=0.05,
-            label="Significance",
-            controlWidth=75, alignment=QtCore.Qt.AlignRight,
-            callbackOnReturn=True, callback=self.output_data)
 
         gui.rubber(self.controlArea)
 
@@ -342,12 +332,6 @@ class OWBoxPlot(widget.OWWidget):
             self.infot1.setText("<center>ANOVA: %.3f (p=%.3f), "
                                 "Kruskal Wallis's U: %.1f (p=%.3f)</center>" %
                                 (a + b))
-        """
-        if self.stattest == 0:
-            self.send("Significant data", self.ouput_sig_parametric_data())
-        elif self.stattest == 1:
-            self.send("Significant data", self.ouput_sig_nonparametric_data())
-        """
 
     def stat_ttest(self):
         d1, d2 = self.stats
@@ -404,7 +388,3 @@ class OWBoxPlot(widget.OWWidget):
 
     def stat_kruskal(self):
         return -1, -1
-
-    def output_data(self):
-        pass
-
