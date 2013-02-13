@@ -139,11 +139,11 @@ class WidgetRegistry(object):
 
         name = desc.name
         if not name:
-            log.warning("Creating a default category name.")
+            log.info("Creating a default category name.")
             name = "default"
 
         if any(name == c.name for c in self.categories()):
-            log.warning("A category with %r name already exists" % name)
+            log.info("A category with %r name already exists" % name)
             return
 
         self._insert_category(desc)

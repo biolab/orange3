@@ -41,7 +41,9 @@ class TestRegistry(unittest.TestCase):
         # ValueError adding a description with the same qualified name
         with self.assertRaises(ValueError):
             desc = description.WidgetDescription(
-                name="A name", qualified_name=file_desc.qualified_name
+                name="A name",
+                id=file_desc.id,
+                qualified_name=file_desc.qualified_name
             )
             reg.register_widget(desc)
 

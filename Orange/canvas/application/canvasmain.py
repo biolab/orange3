@@ -17,18 +17,20 @@ from PyQt4.QtGui import (
 )
 
 from PyQt4.QtCore import (
-    Qt, QEvent, QSize, QUrl, QSettings, QTimer, QFile
+    Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray
 )
 
 from PyQt4.QtWebKit import QWebView
 
 from PyQt4.QtCore import pyqtProperty as Property
 
+# Compatibility with PyQt < v4.8.3
+from ..utils.qtcompat import QSettings
 
 from ..gui.dropshadow import DropShadowFrame
 from ..gui.dock import CollapsibleDockWidget
 from ..gui.quickhelp import QuickHelpTipEvent
-from ..gui.utils import message_critical, message_question
+from ..gui.utils import message_critical, message_question, message_warning
 
 from ..help import HelpManager
 
@@ -40,6 +42,7 @@ from .settings import UserSettingsDialog
 from ..document.schemeedit import SchemeEditWidget
 
 from ..scheme import widgetsscheme
+from ..scheme.readwrite import parse_scheme
 
 from . import welcomedialog
 from ..preview import previewdialog, previewmodel
@@ -99,6 +102,64 @@ class FakeToolBar(QToolBar):
         pass
 
 
+class DockableWindow(QDockWidget):
+    def __init__(self, *args, **kwargs):
+        QDockWidget.__init__(self, *args, **kwargs)
+
+        # Fist show after floating
+        self.__firstShow = True
+        # flags to use while floating
+        self.__windowFlags = Qt.Window
+        self.setWindowFlags(self.__windowFlags)
+        self.topLevelChanged.connect(self.__on_topLevelChanged)
+        self.visibilityChanged.connect(self.__on_visbilityChanged)
+
+        self.__closeAction = QAction(self.tr("Close"), self,
+                                     shortcut=QKeySequence.Close,
+                                     triggered=self.close,
+                                     enabled=self.isFloating())
+        self.topLevelChanged.connect(self.__closeAction.setEnabled)
+        self.addAction(self.__closeAction)
+
+    def setFloatingWindowFlags(self, flags):
+        """
+        Set `windowFlags` to use while the widget is floating (undocked).
+        """
+        self.__windowFlags = flags
+        if self.isFloating():
+            self.__fixWindowFlags()
+
+    def floatingWindowFlags(self):
+        """
+        Return the `windowFlags` used when the widget is floating.
+        """
+        return self.__windowFlags
+
+    def __fixWindowFlags(self):
+        if self.isFloating():
+            update_window_flags(self, self.__windowFlags)
+
+    def __on_topLevelChanged(self, floating):
+        if floating:
+            self.__firstShow = True
+            self.__fixWindowFlags()
+
+    def __on_visbilityChanged(self, visible):
+        if visible and self.isFloating() and self.__firstShow:
+            self.__firstShow = False
+            self.__fixWindowFlags()
+
+
+def update_window_flags(widget, flags):
+    currflags = widget.windowFlags()
+    if int(flags) != int(currflags):
+        hidden = widget.isHidden()
+        widget.setWindowFlags(flags)
+        # setting the flags hides the widget
+        if not hidden:
+            widget.show()
+
+
 class CanvasMainWindow(QMainWindow):
     SETTINGS_VERSION = 2
 
@@ -107,9 +168,13 @@ class CanvasMainWindow(QMainWindow):
 
         self.__scheme_margins_enabled = True
         self.__document_title = "untitled"
+        self.__first_show = True
 
         self.widget_registry = None
-        self.last_scheme_dir = None
+
+        self.last_scheme_dir = QDesktopServices.StandardLocation(
+            QDesktopServices.DocumentsLocation
+        )
 
         self.recent_schemes = config.recent_schemes()
 
@@ -144,6 +209,7 @@ class CanvasMainWindow(QMainWindow):
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
         self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
 
+        self.setDockOptions(QMainWindow.AnimatedDocks)
         # Create an empty initial scheme inside a container with fixed
         # margins.
         w = QWidget()
@@ -270,18 +336,21 @@ class CanvasMainWindow(QMainWindow):
             self._on_dock_location_changed
         )
 
-        self.output_dock = QDockWidget(self.tr("Output"),
-                                       objectName="output-dock")
-
+        self.output_dock = DockableWindow(self.tr("Output"), self,
+                                          objectName="output-dock")
         self.output_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
-
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.output_dock)
-        self.output_dock.setFloating(True)
-
+        output_view = OutputView()
+        # Set widget before calling addDockWidget, otherwise the dock
+        # does not resize properly on first undock
+        self.output_dock.setWidget(output_view)
         self.output_dock.hide()
 
-        output_view = OutputView()
-        self.output_dock.setWidget(output_view)
+        self.help_dock = DockableWindow(self.tr("Help"), self,
+                                        objectName="help-dock")
+        self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
+        self.help_view = QWebView()
+        self.help_dock.setWidget(self.help_view)
+        self.help_dock.hide()
 
         self.help_dock = QDockWidget(self.tr("Help"),
                                      objectName="help-dock")
@@ -581,7 +650,7 @@ class CanvasMainWindow(QMainWindow):
             settings.value("canvasdock/expanded", True, type=bool)
         )
 
-        floatable = settings.value("toolbox-dock-floatable", False)
+        floatable = settings.value("toolbox-dock-floatable", False, type=bool)
         if floatable:
             self.dock_widget.setFeatures(self.dock_widget.features() | \
                                          QDockWidget.DockWidgetFloatable)
@@ -594,17 +663,21 @@ class CanvasMainWindow(QMainWindow):
             settings.value("scheme-margins-enabled", True, type=bool)
         )
 
-        self.last_scheme_dir = \
-            settings.value("last-scheme-dir", None)
-
-        if self.last_scheme_dir is not None and \
-                not os.path.exists(self.last_scheme_dir):
-            # if directory no longer exists reset the saved location.
-            self.last_scheme_dir = None
-
-        self.canvas_tool_dock.setQuickHelpVisible(
-            settings.value("quick-help/visible", True, type=bool)
+        default_dir = QDesktopServices.storageLocation(
+            QDesktopServices.DocumentsLocation
         )
+
+# TODO reenable
+#        self.last_scheme_dir = settings.value("last-scheme-dir", default_dir,
+#                                              type=str)
+#
+#        if not os.path.exists(self.last_scheme_dir):
+#            # if directory no longer exists reset the saved location.
+#            self.last_scheme_dir = default_dir
+#
+#        self.canvas_tool_dock.setQuickHelpVisible(
+#            settings.value("quick-help/visible", True, type=bool)
+#        )
 
         self.__update_from_settings()
 
@@ -644,9 +717,10 @@ class CanvasMainWindow(QMainWindow):
 
         # Restore possibly saved widget toolbox tab states
         settings = QSettings()
-        state = settings.value("mainwindow/widgettoolbox/state",
-                                defaultValue=None)
 
+        state = settings.value("mainwindow/widgettoolbox/state",
+                                defaultValue=QByteArray(),
+                                type=QByteArray)
         if state:
             self.widgets_tool_box.restoreState(state)
 
@@ -733,8 +807,8 @@ class CanvasMainWindow(QMainWindow):
         new_scheme = widgetsscheme.WidgetsScheme()
 
         settings = QSettings()
-        show = settings.value("schemeinfo/show-at-new-scheme", True, type=bool)
-
+        show = settings.value("schemeinfo/show-at-new-scheme", True,
+                              type=bool)
         if show:
             status = self.show_scheme_properties_for(
                 new_scheme, self.tr("New Scheme")
@@ -804,17 +878,30 @@ class CanvasMainWindow(QMainWindow):
 
         """
         new_scheme = widgetsscheme.WidgetsScheme()
+        errors = []
         try:
-            new_scheme.load_from(open(filename, "rb"))
+            parse_scheme(new_scheme, open(filename, "rb"),
+                         error_handler=errors.append)
         except Exception:
             message_critical(
                  self.tr("Could not load Orange Scheme file"),
                  title=self.tr("Error"),
-                 informative_text=self.tr("An unexpected error occurred"),
+                 informative_text=self.tr("An unexpected error occurred "
+                                          "while loading %r.") % filename,
                  exc_info=True,
                  parent=self)
             return None
-
+        if errors:
+            message_warning(
+                self.tr("Errors occured while loading the scheme."),
+                title=self.tr("Problem"),
+                informative_text=self.tr(
+                     "There were problems loading some "
+                     "of the widgets/links in the "
+                     "scheme."
+                ),
+                details="\n".join(map(repr, errors))
+            )
         return new_scheme
 
     def reload_last(self):
@@ -1382,8 +1469,14 @@ class CanvasMainWindow(QMainWindow):
         QTimer.singleShot(0, application.closeAllWindows)
 
     def showEvent(self, event):
-        settings = QSettings()
-        settings.beginGroup("mainwindow")
+        if self.__first_show:
+            settings = QSettings()
+            settings.beginGroup("mainwindow")
+
+            # Restore geometry and dock/toolbar state
+            state = settings.value("state", QByteArray(), type=QByteArray)
+            if state:
+                self.restoreState(state, version=self.SETTINGS_VERSION)
 
         # Restore geometry and dock/toolbar state
         state = settings.value("state")
@@ -1409,7 +1502,7 @@ class CanvasMainWindow(QMainWindow):
                                              event.html()))
             elif event.priority() == QuickHelpTipEvent.Temporary:
                 QTimer.singleShot(0, partial(self.dock_help.showHelp,
-                                             event.html(), event.timout()))
+                                             event.html(), event.timeout()))
             elif event.priority() == QuickHelpTipEvent.Permanent:
                 QTimer.singleShot(0, partial(self.dock_help.showPermanentHelp,
                                              event.html()))
@@ -1451,8 +1544,12 @@ class CanvasMainWindow(QMainWindow):
 
         def changeEvent(self, event):
             if event.type() == QEvent.WindowStateChange:
-                # Enable/disable window menu based on minimized state
-                self.window_menu.setEnabled(not self.isMinimized())
+                # Can get 'Qt.WindowNoState' before the widget is fully
+                # initialized
+                if hasattr(self, "window_state"):
+                    # Enable/disable window menu based on minimized state
+                    self.window_menu.setEnabled(not self.isMinimized())
+
             QMainWindow.changeEvent(self, event)
 
     def tr(self, sourceText, disambiguation=None, n=-1):
@@ -1504,8 +1601,48 @@ class CanvasMainWindow(QMainWindow):
         settings.endGroup()
         settings.beginGroup("schemeedit")
         show_channel_names = settings.value("show-channel-names",
-                                            defaultValue=True, type=bool)
+                                            defaultValue=True,
+                                            type=bool)
         self.scheme_widget.setChannelNamesVisible(show_channel_names)
+
+        settings.endGroup()
+
+        settings.beginGroup("output")
+        stay_on_top = settings.value("stay-on-top", defaultValue=True,
+                                     type=bool)
+        if stay_on_top:
+            self.output_dock.setFloatingWindowFlags(Qt.Tool)
+        else:
+            self.output_dock.setFloatingWindowFlags(Qt.Window)
+
+        dockable = settings.value("dockable", defaultValue=True,
+                                  type=bool)
+        if dockable:
+            self.output_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
+        else:
+            self.output_dock.setAllowedAreas(Qt.NoDockWidgetArea)
+
+        settings.endGroup()
+
+        settings.beginGroup("help")
+        stay_on_top = settings.value("stay-on-top", defaultValue=True,
+                                     type=bool)
+
+# TODO reenable
+#        if stay_on_top:
+#            self.help_dock.setFloatingWindowFlags(Qt.Tool)
+#        else:
+#            self.help_dock.setFloatingWindowFlags(Qt.Window)
+#
+#        dockable = settings.value("dockable", defaultValue=False,
+#                                  type=bool)
+#        if dockable:
+#            self.help_dock.setAllowedAreas(Qt.LeftDockWidgetArea | \
+#                                           Qt.RightDockWidgetArea)
+#        else:
+#            self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea,
+#                                           defaultValue=True, type=bool)
+#        self.scheme_widget.setChannelNamesVisible(show_channel_names)
 
 
 def updated_flags(flags, mask, state):

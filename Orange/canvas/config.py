@@ -6,13 +6,19 @@ Orange Canvas Configuration
 import os
 import logging
 import pickle as pickle
+import itertools
 
-log = logging.getLogger(__name__)
+import pkg_resources
 
 from PyQt4.QtGui import QDesktopServices
-from PyQt4.QtCore import QCoreApplication, QSettings
+from PyQt4.QtCore import QCoreApplication
 
 from .utils.settings import Settings, config_slot
+
+# Import QSettings from qtcompat module (compatibility with PyQt < 4.8.3
+from .utils.qtcompat import QSettings
+
+log = logging.getLogger(__name__)
 
 
 def init():
@@ -20,7 +26,7 @@ def init():
     applicationVersion and the default settings format. Will only run once.
 
     .. note:: This should not be run before QApplication has been initialized.
-              Otherwise it can brake Qt's plugin search paths.
+              Otherwise it can break Qt's plugin search paths.
 
     """
     # Set application name, version and org. domain
@@ -190,3 +196,35 @@ def save_recent_scheme_list(scheme_list):
     if os.path.isdir(app_dir):
         with open(recent_filename, "wb") as f:
             pickle.dump(scheme_list, f)
+
+
+WIDGETS_ENTRY = "orange.widgets"
+
+
+# This could also be achieved by declaring the entry point in
+# Orange's setup.py, but that would not guaranty this entry point
+# is the first in a list.
+
+def default_entry_point():
+    """
+    Return a default orange.widgets entry point for loading
+    default Orange Widgets.
+
+    """
+    dist = pkg_resources.get_distribution("Orange")
+    ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.widgets",
+                                  dist=dist)
+    return ep
+
+
+def widgets_entry_points():
+    """
+    Return an `EntryPoint` iterator for all 'orange.widget' entry
+    points plus the default Orange Widgets.
+
+    """
+    ep_iter = pkg_resources.iter_entry_points(WIDGETS_ENTRY)
+    chain = [[default_entry_point()],
+             ep_iter
+             ]
+    return itertools.chain(*chain)

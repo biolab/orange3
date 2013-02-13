@@ -60,7 +60,8 @@ class SchemeNode(QObject):
         for channel in self.input_channels():
             if channel.name == name:
                 return channel
-        raise ValueError("%r not found." % name)
+        raise ValueError("%r is not a valid input channel name for %r." % \
+                         (name, self.description.name))
 
     def output_channel(self, name):
         """Return the output channel matching `name`. Raise an ValueError
@@ -70,11 +71,12 @@ class SchemeNode(QObject):
         for channel in self.output_channels():
             if channel.name == name:
                 return channel
-        raise ValueError("%r not found." % name)
+        raise ValueError("%r is not a valid output channel name for %r." % \
+                         (name, self.description.name))
 
     def __str__(self):
-        return "SchemeNode(description=%s, title=%r, ...)" % \
-                (str(self.description), self.title)
+        return "SchemeNode(description_id=%s, title=%r, ...)" % \
+                (str(self.description.id), self.title)
 
     def __repr__(self):
         return str(self)

@@ -3,11 +3,11 @@ Scheme file preview parser.
 
 """
 import sys
-
 import logging
 
 from xml.sax import make_parser, handler, saxutils, SAXParseException
 
+from ..scheme.readwrite import parse_scheme
 log = logging.getLogger(__name__)
 
 
@@ -77,7 +77,9 @@ def scheme_svg_thumbnail(scheme_file):
     from ..registry import global_registry
 
     scheme = scheme.Scheme()
-    scheme.load_from(scheme_file)
+    errors = []
+    parse_scheme(scheme, scheme_file, error_handler=errors.append)
+
     tmp_scene = scene.CanvasScene()
     tmp_scene.set_registry(global_registry())
     tmp_scene.set_scheme(scheme)
