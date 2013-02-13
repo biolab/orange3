@@ -20,11 +20,12 @@ from .base import WidgetRegistry
 
 from ..resources import icon_loader
 
-from . import NAMED_COLORS
+from . import cache, NAMED_COLORS
 
 
 class QtWidgetDiscovery(QObject, WidgetDiscovery):
-    """Qt interface class for widget discovery.
+    """
+    Qt interface class for widget discovery.
     """
     # Discovery has started
     discovery_start = Signal()
@@ -41,9 +42,9 @@ class QtWidgetDiscovery(QObject, WidgetDiscovery):
         QObject.__init__(self, parent)
         WidgetDiscovery.__init__(self, registry, cached_descriptions)
 
-    def run(self):
+    def run(self, entry_points_iter):
         self.discovery_start.emit()
-        WidgetDiscovery.run(self)
+        WidgetDiscovery.run(self, entry_points_iter)
         self.discovery_finished.emit()
 
     def handle_widget(self, description):
@@ -55,7 +56,8 @@ class QtWidgetDiscovery(QObject, WidgetDiscovery):
 
 
 class QtWidgetRegistry(QObject, WidgetRegistry):
-    """A QObject wrapper for `WidgetRegistry`
+    """
+    A QObject wrapper for `WidgetRegistry`
 
     A QStandardItemModel instance containing the widgets in
     a tree (of depth 2). The items in a model can be quaries using standard
@@ -112,7 +114,8 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
                 cat_item.insertRow(j, widget_item)
 
     def model(self):
-        """Return the widget descriptions in a Qt Item Model instance
+        """
+        Return the widget descriptions in a Qt Item Model instance
         (QStandardItemModel).
 
         .. note:: The model should not be modified outside of the registry.
@@ -132,15 +135,17 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         return cat_item.child(widget_ind)
 
     def action_for_widget(self, widget):
-        """Return the QAction instance for the widget (can
-        be a string or a WidgetDescription instance).
+        """
+        Return the QAction instance for the widget (can be a string or
+        a WidgetDescription instance).
 
         """
         item = self.item_for_widget(widget)
         return item.data(self.WIDGET_ACTION_ROLE)
 
     def create_action_for_item(self, item):
-        """Create a QAction instance for the widget description item.
+        """
+        Create a QAction instance for the widget description item.
         """
         name = item.text()
         tooltip = item.toolTip()
@@ -161,7 +166,8 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         return action
 
     def _insert_category(self, desc):
-        """Override to update the item model and emit the signals.
+        """
+        Override to update the item model and emit the signals.
         """
         priority = desc.priority
         priorities = [c.priority for c, _ in self.registry]
@@ -175,7 +181,8 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         self.category_added.emit(desc.name, desc)
 
     def _insert_widget(self, category, desc):
-        """Override to update the item model and emit the signals.
+        """
+        Override to update the item model and emit the signals.
         """
         assert(isinstance(category, CategoryDescription))
         categories = self.categories()
@@ -194,7 +201,8 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         self.widget_added.emit(category.name, desc.name, desc)
 
     def _cat_desc_to_std_item(self, desc):
-        """Create a QStandardItem for the category description.
+        """
+        Create a QStandardItem for the category description.
         """
         item = QStandardItem()
         item.setText(desc.name)
@@ -225,7 +233,8 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         return item
 
     def _widget_desc_to_std_item(self, desc, category):
-        """Create a QStandardItem for the widget description.
+        """
+        Create a QStandardItem for the widget description.
         """
         item = QStandardItem(desc.name)
         item.setText(desc.name)
@@ -338,12 +347,12 @@ def whats_this_helper(desc):
     return "\n".join(template)
 
 
-def run_discovery(cached=False):
-    """Run the default discovery and return an instance
-    of :class:`QtWidgetRegistry`.
+def run_discovery(entry_points_iter, cached=False):
+    """
+    Run the default discovery and return an instance of
+    :class:`QtWidgetRegistry`.
 
     """
-    from . import cache
     reg_cache = {}
     if cached:
         reg_cache = cache.registry_cache()

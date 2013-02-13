@@ -12,6 +12,7 @@ from PyQt4.QtCore import (
 )
 
 from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import pyqtProperty as Property
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,54 @@ class Annotation(QGraphicsWidget):
         def setGeometry(self, rect):
             QGraphicsWidget.setGeometry(self, rect)
             self.geometryChanged.emit()
+
+
+class GraphicsTextEdit(QGraphicsTextItem):
+    """
+    QGraphicsTextItem subclass defining an additional placeholderText
+    property (text displayed when no text is set).
+
+    """
+    def __init__(self, *args, **kwargs):
+        QGraphicsTextItem.__init__(self, *args, **kwargs)
+
+        self.__placeholderText = ""
+
+    def setPlaceholderText(self, text):
+        """
+        Set the placeholder text. This is shown when the item has no text,
+        i.e when `toPlainText()` returns an empty string.
+
+        """
+        if self.__placeholderText != text:
+            self.__placeholderText = text
+            if not self.toPlainText():
+                self.update()
+
+    def placeholderText(self):
+        """
+        Return the placeholder text.
+        """
+        return str(self.__placeholderText)
+
+    placeholderText_ = Property(str, placeholderText, setPlaceholderText)
+
+    def paint(self, painter, option, widget=None):
+        QGraphicsTextItem.paint(self, painter, option, widget)
+
+        # Draw placeholder text if necessary
+        if not (self.toPlainText() and self.toHtml()) and \
+                self.__placeholderText and \
+                not (self.hasFocus() and \
+                     self.textInteractionFlags() & Qt.TextEditable):
+            brect = self.boundingRect()
+            metrics = painter.fontMetrics()
+            text = metrics.elidedText(self.__placeholderText, Qt.ElideRight,
+                                      brect.width())
+            color = self.defaultTextColor()
+            color.setAlpha(min(color.alpha(), 150))
+            painter.setPen(QPen(color))
+            painter.drawText(brect, Qt.AlignTop | Qt.AlignLeft, text)
 
 
 class TextAnnotation(Annotation):
@@ -55,7 +104,8 @@ class TextAnnotation(Annotation):
         self.__framePathItem = QGraphicsPathItem(self)
         self.__framePathItem.setPen(QPen(Qt.NoPen))
 
-        self.__textItem = QGraphicsTextItem(self)
+        self.__textItem = GraphicsTextEdit(self)
+        self.__textItem.setPlaceholderText(self.tr("Enter text here"))
         self.__textItem.setPos(2, 2)
         self.__textItem.setTextWidth(rect.width() - 4)
         self.__textItem.setTabChangesFocus(True)

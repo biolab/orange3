@@ -95,6 +95,11 @@ class InputSignal(object):
         self.explicit = flags & Explicit
         self.flags = flags
 
+    def __str__(self):
+        fmt = ("{0.__name__}(name={name!r}, type={type!s}, "
+               "handler={handler}, ...)")
+        return fmt.format(type(self), **self.__dict__)
+
 
 def input_channel_from_args(args):
     if isinstance(args, tuple):
@@ -104,7 +109,8 @@ def input_channel_from_args(args):
     elif isinstance(args, InputSignal):
         return args
     else:
-        raise TypeError
+        raise TypeError("tuple, dict or InputSignal expected "
+                        "(got {0!r})".format(type(args)))
 
 
 class OutputSignal(object):
@@ -155,16 +161,22 @@ class OutputSignal(object):
                 "Output signal can not be 'Multiple' and 'Dynamic'."
                 )
 
+    def __str__(self):
+        fmt = ("{0.__name__}(name={name!r}, type={type!s}, "
+               "...)")
+        return fmt.format(type(self), **self.__dict__)
+
 
 def output_channel_from_args(args):
     if isinstance(args, tuple):
         return OutputSignal(*args)
     elif isinstance(args, dict):
         return OutputSignal(**args)
-    elif isinstance(args, InputSignal):
+    elif isinstance(args, OutputSignal):
         return args
     else:
-        raise TypeError
+        raise TypeError("tuple, dict or OutputSignal expected "
+                        "(got {0!r})".format(type(args)))
 
 
 class WidgetDescription:

@@ -39,31 +39,48 @@ from .description import (
 )
 
 from .base import WidgetRegistry, VERSION_HEX
+from . import discovery
 
 log = logging.getLogger(__name__)
 
 
-__GLOBAL_REGISTRY = None
+__GLOBAL_REGISTRY = {}
 
 
-def global_registry():
-    """Return a global WidgetRegistry instance.
+def global_registry(entry_point_group="_default"):
+    """
+    Return a global WidgetRegistry instance for the entry point group.
+    If none exists then it will be created.
+
+    .. note:: This will be deprecated when a proper replacement for it's
+              uses can be found.
+
     """
     global __GLOBAL_REGISTRY
     # TODO: lock
-    if __GLOBAL_REGISTRY is None:
+    if __GLOBAL_REGISTRY.get(entry_point_group) is None:
         log.debug("'global_registry()' - running widget discovery.")
-        from . import discovery
+        if entry_point_group == "_default":
+            from ..config import widgets_entry_points
+            entry_points_iter = widgets_entry_points()
+        else:
+            entry_points_iter = entry_point_group
         reg = WidgetRegistry()
         disc = discovery.WidgetDiscovery(reg)
-        disc.run()
+        disc.run(entry_points_iter)
         log.info("'global_registry()' discovery finished.")
-        __GLOBAL_REGISTRY = reg
+        __GLOBAL_REGISTRY[entry_point_group] = reg
 
-    return __GLOBAL_REGISTRY
+    return __GLOBAL_REGISTRY[entry_point_group]
 
 
-def set_global_registry(registry):
+def set_global_registry(registry, entry_point_group="_default"):
+    """
+    Set the global WidgetRegistry instance for the entry point group.
+
+    .. note:: Overrides previous registry.
+
+    """
     global __GLOBAL_REGISTRY
     log.debug("'set_global_registry()' - setting registry.")
-    __GLOBAL_REGISTRY = registry
+    __GLOBAL_REGISTRY[entry_point_group] = registry

@@ -32,7 +32,8 @@ QWIDGETSIZE_MAX = ((1 << 24) - 1)
 
 
 class EditLinksDialog(QDialog):
-    """A dialog for editing links.
+    """
+    A dialog for editing links.
 
     >>> dlg = EditLinksDialog()
     >>> dlg.setNodes(file_node, test_learners_node)
@@ -150,12 +151,13 @@ _Link = namedtuple(
     "_Link",
     ["output",    # OutputSignal
      "input",     # InputSignal
-     "lineItem",  # QGraphicsLineItem
+     "lineItem",  # QGraphicsLineItem connecting the input to output
      ])
 
 
 class LinksEditWidget(QGraphicsWidget):
-    """A Graphics Widget for editing the links between two nodes.
+    """
+    A Graphics Widget for editing the links between two nodes.
     """
     def __init__(self, *args, **kwargs):
         QGraphicsWidget.__init__(self, *args, **kwargs)
@@ -181,8 +183,8 @@ class LinksEditWidget(QGraphicsWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
     def removeItems(self, items):
-        """Remove child items form the widget and scene.
-
+        """
+        Remove child items form the widget and scene.
         """
         scene = self.scene()
         for item in items:
@@ -191,8 +193,8 @@ class LinksEditWidget(QGraphicsWidget):
                 scene.removeItem(item)
 
     def clear(self):
-        """Clear the editor state (source and sink nodes, channels ...).
-
+        """
+        Clear the editor state (source and sink nodes, channels ...).
         """
         if self.layout().count():
             widget = self.layout().takeAt(0).graphicsItem()
@@ -202,8 +204,11 @@ class LinksEditWidget(QGraphicsWidget):
         self.sink = None
 
     def setNodes(self, source, sink):
-        """Set the source/sink nodes (`SchemeNode` instances)
-        between which to edit the links.
+        """
+        Set the source/sink nodes (:class:`SchemeNode` instances) between
+        which to edit the links.
+
+        .. note:: Call this before `setLinks`.
 
         """
         self.clear()
@@ -214,17 +219,20 @@ class LinksEditWidget(QGraphicsWidget):
         self.__updateState()
 
     def setLinks(self, links):
-        """Set a list of links to display between the source and sink
-        nodes. The `links` is a list of (`OutputSignal`, `InputSignal`)
-        instances where the first element refers to the source node
-        and the second to the sink node.
+        """
+        Set a list of links to display between the source and sink
+        nodes. `links` must be a list of (`OutputSignal`, `InputSignal`)
+        tuples where the first element refers to the source node
+        and the second to the sink node (as set by `setNodes`).
 
         """
+        self.clearLinks()
         for output, input in links:
             self.addLink(output, input)
 
     def links(self):
-        """Return the links between the source and sink node.
+        """
+        Return the links between the source and sink node.
         """
         return [(link.output, link.input) for link in self.__links]
 
@@ -290,6 +298,9 @@ class LinksEditWidget(QGraphicsWidget):
                 startChannel = startItem.channel()
                 endChannel = endItem.channel()
                 possible = False
+
+                # Make sure the drag was from input to output (or reversed) and
+                # not between input -> input or output -> output
                 if type(startChannel) != type(endChannel):
                     if isinstance(startChannel, InputSignal):
                         startChannel, endChannel = endChannel, startChannel
@@ -306,15 +317,27 @@ class LinksEditWidget(QGraphicsWidget):
         QGraphicsWidget.mouseReleaseEvent(self, event)
 
     def addLink(self, output, input):
+        """
+        Add a link between `output` (:class:`OutputSignal`) and `input`
+        (:class:`InputSignal`).
+
+        """
         if not compatible_channels(output, input):
             return
 
+        if output not in self.source.output_channels():
+            raise ValueError("%r is not an output channel of %r" % \
+                             (output, self.source))
+
+        if input not in self.sink.input_channels():
+            raise ValueError("%r is not an input channel of %r" % \
+                             (input, self.sink))
+
         if input.single:
-            # Remove existing link
+            # Remove existing link if it exists.
             for s1, s2, _ in self.__links:
                 if s2 == input:
                     self.removeLink(s1, s2)
-                break
 
         line = QGraphicsLineItem(self)
 
@@ -335,7 +358,8 @@ class LinksEditWidget(QGraphicsWidget):
         self.__links.append(_Link(output, input, line))
 
     def removeLink(self, output, input):
-        """Remove a link between the source and sink channels.
+        """
+        Remove a link between the `output` and `input` channels.
         """
         for link in list(self.__links):
             if link.output == output and link.input == input:
@@ -343,18 +367,19 @@ class LinksEditWidget(QGraphicsWidget):
                 self.__links.remove(link)
                 break
         else:
-            raise ValueError("No such link {!0.name} -> {!1.name}." \
+            raise ValueError("No such link {0.name!r} -> {1.name!r}." \
                              .format(output, input))
 
     def clearLinks(self):
-        """Clear (remove) all the links.
+        """
+        Clear (remove) all the links.
         """
         for output, input, _ in list(self.__links):
             self.removeLink(output, input)
 
     def __updateState(self):
-        """Update the widget with the new source/sink node signal descriptions.
-
+        """
+        Update the widget with the new source/sink node signal descriptions.
         """
         widget = QGraphicsWidget()
         widget.setLayout(QGraphicsGridLayout())
@@ -423,7 +448,8 @@ class LinksEditWidget(QGraphicsWidget):
 
 
 class EditLinksNode(QGraphicsWidget):
-    """A Node with channel anchors.
+    """
+    A Node with channel anchors.
 
     `direction` specifies the layout (default `Qt.LeftToRight` will
     have icon on the left and channels on the right).
@@ -473,7 +499,8 @@ class EditLinksNode(QGraphicsWidget):
             self.setSchemeNode(node)
 
     def setIconSize(self, size):
-        """Set the icon size for the node.
+        """
+        Set the icon size for the node.
         """
         if size != self.__iconSize:
             self.__iconSize = size
@@ -485,7 +512,8 @@ class EditLinksNode(QGraphicsWidget):
         return self.__iconSize
 
     def setIcon(self, icon):
-        """Set the icon to display.
+        """
+        Set the icon to display.
         """
         if icon != self.__icon:
             self.__icon = icon
@@ -496,7 +524,8 @@ class EditLinksNode(QGraphicsWidget):
         return self.__icon
 
     def setSchemeNode(self, node):
-        """Set an instance of `SchemeNode`. The widget will be
+        """
+        Set an instance of `SchemeNode`. The widget will be
         initialized with its icon and channels.
 
         """
@@ -561,8 +590,8 @@ class EditLinksNode(QGraphicsWidget):
             self.__channelAnchors.append(anchor)
 
     def anchor(self, channel):
-        """Return the anchor item for the `channel` name.
-
+        """
+        Return the anchor item for the `channel` name.
         """
         for anchor in self.__channelAnchors:
             if anchor.channel() == channel:
@@ -584,7 +613,8 @@ class EditLinksNode(QGraphicsWidget):
 
 
 class GraphicsItemLayoutItem(QGraphicsLayoutItem):
-    """A graphics layout that handles the position of a general QGraphicsItem
+    """
+    A graphics layout that handles the position of a general QGraphicsItem
     in a QGraphicsLayout. The items boundingRect is used as this items fixed
     sizeHint and the item is positioned at the top left corner of the this
     items geometry.

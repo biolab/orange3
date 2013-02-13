@@ -14,7 +14,7 @@ import pickle
 import pkg_resources
 
 from PyQt4.QtGui import QFont, QColor
-from PyQt4.QtCore import Qt, QRect, QSettings, QDir
+from PyQt4.QtCore import Qt, QRect, QDir
 
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
@@ -25,16 +25,13 @@ from Orange.canvas.gui.splashscreen import SplashScreen, QPixmap
 from Orange.canvas.config import cache_dir
 from Orange.canvas import config
 from Orange.canvas.utils.redirect import redirect_stdout, redirect_stderr
+from Orange.canvas.utils.qtcompat import QSettings
 
 from Orange.canvas.registry import qt
 from Orange.canvas.registry import WidgetRegistry, set_global_registry
 from Orange.canvas.registry import cache
 
 log = logging.getLogger(__name__)
-
-
-def qt_logging_handle(msg_type, message):
-    print(msg_type, message)
 
 
 def running_in_ipython():
@@ -201,7 +198,7 @@ def main(argv=None):
         widget_registry = pickle.load(open(cache_filename, "rb"))
         widget_registry = qt.QtWidgetRegistry(widget_registry)
     else:
-        widget_discovery.run()
+        widget_discovery.run(config.widgets_entry_points())
         # Store cached descriptions
         cache.save_registry_cache(widget_discovery.cached_descriptions)
         pickle.dump(WidgetRegistry(widget_registry),

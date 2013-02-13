@@ -5,7 +5,7 @@ import sys
 import io
 import shutil
 
-from xml.etree.ElementTree import TreeBuilder, Element, ElementTree
+from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
 from xml.dom import minidom
 
 from collections import defaultdict
@@ -16,21 +16,28 @@ from ast import literal_eval
 
 import logging
 
-from . import SchemeNode
-from . import SchemeLink
+from . import SchemeNode, SchemeLink
 from .annotations import SchemeTextAnnotation, SchemeArrowAnnotation
+from .errors import IncompatibleChannelTypeError
 
 from .. import registry
 
 log = logging.getLogger(__name__)
 
 
-def parse_scheme(scheme, stream):
-    """Parse a saved scheme from `stream` and populate a `scheme`
+class UnknownWidgetDefinition(Exception):
+    pass
+
+
+def parse_scheme(scheme, stream, error_handler=None):
+    """
+    Parse a saved scheme from `stream` and populate a `scheme`
     instance (:class:`Scheme`).
+    `error_handler` if given will be called with an exception when
+    a 'recoverable' error occurs. By default the exception is simply
+    raised.
 
     """
-    from xml.etree.ElementTree import parse
     doc = parse(stream)
     scheme_el = doc.getroot()
     version = scheme_el.attrib.get("version", None)
@@ -41,18 +48,27 @@ def parse_scheme(scheme, stream):
         else:
             version = "2.0"
 
+    if error_handler is None:
+        def error_handler(exc):
+            raise exc
+
     if version == "1.0":
-        parse_scheme_v_1_0(doc, scheme)
+        parse_scheme_v_1_0(doc, scheme, error_handler=error_handler)
         return scheme
     else:
-        parse_scheme_v_2_0(doc, scheme)
+        parse_scheme_v_2_0(doc, scheme, error_handler=error_handler)
         return scheme
 
 
 def scheme_node_from_element(node_el, registry):
-    """Create a SchemeNode from an Element instance.
     """
-    widget_desc = registry.widget(node_el.get("qualified_name"))
+    Create a SchemeNode from an `Element` instance.
+    """
+    try:
+        widget_desc = registry.widget(node_el.get("qualified_name"))
+    except KeyError as ex:
+        raise UnknownWidgetDefinition(*ex.args)
+
     title = node_el.get("title")
     pos = node_el.get("position")
 
@@ -62,11 +78,14 @@ def scheme_node_from_element(node_el, registry):
     return SchemeNode(widget_desc, title=title, position=pos)
 
 
-def parse_scheme_v_2_0(etree, scheme, widget_registry=None):
-    """Parse an ElementTree Instance.
+def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None):
+    """
+    Parse an `ElementTree` instance.
     """
     if widget_registry is None:
         widget_registry = registry.global_registry()
+
+    nodes_not_found = []
 
     nodes = []
     links = []
@@ -79,29 +98,51 @@ def parse_scheme_v_2_0(etree, scheme, widget_registry=None):
 
     # Load and create scheme nodes.
     for node_el in etree.findall("nodes/node"):
-        # TODO: handle errors.
         try:
             node = scheme_node_from_element(node_el, widget_registry)
+        except UnknownWidgetDefinition as ex:
+            # description was not found
+            error_handler(ex)
+            node = None
         except Exception:
             raise
 
-        nodes.append(node)
-        id_to_node[node_el.get("id")] = node
+        if node is not None:
+            nodes.append(node)
+            id_to_node[node_el.get("id")] = node
+        else:
+            nodes_not_found.append(node_el.get("id"))
 
     # Load and create scheme links.
     for link_el in etree.findall("links/link"):
-        source = id_to_node[link_el.get("source_node_id")]
-        sink = id_to_node[link_el.get("sink_node_id")]
+        source_id = link_el.get("source_node_id")
+        sink_id = link_el.get("sink_node_id")
+
+        if source_id in nodes_not_found or sink_id in nodes_not_found:
+            continue
+
+        source = id_to_node.get(source_id)
+        sink = id_to_node.get(sink_id)
+
         source_channel = link_el.get("source_channel")
         sink_channel = link_el.get("sink_channel")
         enabled = link_el.get("enabled") == "true"
-        link = SchemeLink(source, source_channel, sink, sink_channel,
-                          enabled=enabled)
-        links.append(link)
+
+        try:
+            link = SchemeLink(source, source_channel, sink, sink_channel,
+                              enabled=enabled)
+        except (ValueError, IncompatibleChannelTypeError) as ex:
+            error_handler(ex)
+        else:
+            links.append(link)
 
     # Load node properties
     for property_el in etree.findall("node_properties/properties"):
         node_id = property_el.attrib.get("node_id")
+
+        if node_id in nodes_not_found:
+            continue
+
         node = id_to_node[node_id]
 
         format = property_el.attrib.get("format", "pickle")
@@ -159,11 +200,14 @@ def parse_scheme_v_2_0(etree, scheme, widget_registry=None):
         scheme.add_annotation(annot)
 
 
-def parse_scheme_v_1_0(etree, scheme, widget_registry=None):
-    """ElementTree Instance of an old .ows scheme format.
+def parse_scheme_v_1_0(etree, scheme, error_handler, widget_registry=None):
+    """
+    ElementTree Instance of an old .ows scheme format.
     """
     if widget_registry is None:
         widget_registry = registry.global_registry()
+
+    widgets_not_found = []
 
     widgets = widget_registry.widgets()
     widgets_by_name = [(d.qualified_name.rsplit(".", 1)[-1], d)
@@ -178,25 +222,40 @@ def parse_scheme_v_1_0(etree, scheme, widget_registry=None):
         name = widget_el.get("widgetName")
         x_pos = widget_el.get("xPos")
         y_pos = widget_el.get("yPos")
-        desc = widgets_by_name[name]
+
+        if name in widgets_by_name:
+            desc = widgets_by_name[name]
+        else:
+            error_handler(UnknownWidgetDefinition(name))
+            widgets_not_found.append(caption)
+            continue
+
         node = SchemeNode(desc, title=caption,
                           position=(int(x_pos), int(y_pos)))
         nodes_by_caption[caption] = node
         nodes.append(node)
-#        scheme.add_node(node)
 
     for channel_el in etree.findall("channels/channel"):
         in_caption = channel_el.get("inWidgetCaption")
         out_caption = channel_el.get("outWidgetCaption")
+
+        if in_caption in widgets_not_found or \
+                out_caption in widgets_not_found:
+            continue
+
         source = nodes_by_caption[out_caption]
         sink = nodes_by_caption[in_caption]
         enabled = channel_el.get("enabled") == "1"
-        signals = eval(channel_el.get("signals"))
+        signals = literal_eval(channel_el.get("signals"))
+
         for source_channel, sink_channel in signals:
-            link = SchemeLink(source, source_channel, sink, sink_channel,
-                              enabled=enabled)
-            links.append(link)
-#            scheme.add_link(link)
+            try:
+                link = SchemeLink(source, source_channel, sink, sink_channel,
+                                  enabled=enabled)
+            except (ValueError, IncompatibleChannelTypeError) as ex:
+                error_handler(ex)
+            else:
+                links.append(link)
 
     settings = etree.find("settings")
     properties = {}

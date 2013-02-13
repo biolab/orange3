@@ -147,23 +147,33 @@ class ControlPointRect(QGraphicsObject):
         self.__pointsLayout()
 
     def controlPoint(self, anchor):
-        """Return the anchor point at anchor position if not set.
+        """
+        Return the anchor point (:class:`ControlPoint`) at anchor position
+        or `None` if an anchor point is not set.
+
         """
         return self.__points.get(anchor)
 
     def setRect(self, rect):
+        """
+        Set the control point rectangle (:class:`QRectF`)
+        """
         if self.__rect != rect:
             self.__rect = QRectF(rect)
             self.__pointsLayout()
             self.prepareGeometryChange()
-            self.rectChanged.emit(rect)
+            self.rectChanged.emit(rect.normalized())
 
     def rect(self):
-        """Return the control rect
+        """
+        Return the control point rectangle.
         """
         # Return the rect normalized. During the control point move the
         # rect can change to an invalid size, but the layout must still
-        # know to which point does an unnormalized rect side belong.
+        # know to which point does an unnormalized rect side belong,
+        # so __rect is left unnormalized.
+        # NOTE: This means all signal emits (rectChanged/Edited) must
+        #       also emit normalized rects
         return self.__rect.normalized()
 
     rect_ = Property(QRectF, fget=rect, fset=setRect, user=True)
@@ -186,7 +196,7 @@ class ControlPointRect(QGraphicsObject):
         return self.__margins
 
     def setConstraints(self, constraints):
-        pass
+        raise NotImplementedError
 
     def isControlActive(self):
         """Return the state of the control. True if the control is
@@ -293,7 +303,7 @@ class ControlPointRect(QGraphicsObject):
         self.blockSignals(False)
 
         if changed:
-            self.rectEdited.emit(rect)
+            self.rectEdited.emit(rect.normalized())
 
     def boundingRect(self):
         return QRectF()

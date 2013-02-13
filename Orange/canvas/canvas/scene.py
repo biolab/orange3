@@ -262,12 +262,17 @@ class CanvasScene(QGraphicsScene):
             pos = QPointF(*node.position)
             item.setPos(pos)
 
+        item.setTitle(node.title)
+        item.setProgress(node.progress)
+        item.setProcessingState(node.processing_state)
+
         self.__item_for_node[node] = item
 
         node.position_changed.connect(self.__on_node_pos_changed)
         node.title_changed.connect(item.setTitle)
         node.progress_changed.connect(item.setProgress)
         node.processing_state_changed.connect(item.setProcessingState)
+
         return self.add_node_item(item)
 
     def new_node_item(self, widget_desc, category_desc=None):
@@ -336,7 +341,7 @@ class CanvasScene(QGraphicsScene):
         self.link_item_added.emit(item)
 
         log.info("Added link %r -> %r to '%s'" % \
-                 (item.sourceItem.title, item.sinkItem.title, self))
+                 (item.sourceItem.title(), item.sinkItem.title(), self))
 
         self.__anchor_layout.invalidateLink(item)
 

@@ -8,7 +8,10 @@ from PyQt4.QtGui import (
     QApplication, QGraphicsRectItem, QPen, QBrush, QColor, QFontMetrics
 )
 
-from PyQt4.QtCore import Qt, QObject, QSizeF, QPointF, QRect, QRectF, QLineF
+from PyQt4.QtCore import (
+    Qt, QObject, QCoreApplication, QSizeF, QPointF, QRect, QRectF, QLineF
+)
+
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from ..registry.qt import QtWidgetRegistry
@@ -16,6 +19,7 @@ from ..registry.description import WidgetDescription
 from .. import scheme
 from ..canvas import items
 from ..canvas.items import controlpoints
+from ..gui.quickhelp import QuickHelpTipEvent
 from . import commands
 
 log = logging.getLogger(__name__)
@@ -236,6 +240,18 @@ class NewLinkAction(UserInteraction):
                 self.sink_item = self.from_item
 
             event.accept()
+
+            helpevent = QuickHelpTipEvent(
+                self.tr("Create a new link"),
+                self.tr('<h3>Create new link</h3>'
+                        '<p>Drag a link to an existing node or release on '
+                        'an empty spot to create a new node.</p>'
+#                        '<a href="help://orange-canvas/create-new-links">'
+#                        'More ...</a>'
+                        )
+            )
+            QCoreApplication.postEvent(self.document, helpevent)
+
             return True
         else:
             # Whoever put us in charge did not know what he was doing.
@@ -362,8 +378,10 @@ class NewLinkAction(UserInteraction):
             item = action.property("item")
             desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             pos = event.scenePos()
-            node = scheme.SchemeNode(desc, position=(pos.x(), pos.y()))
+            node = self.document.newNodeHelper(desc,
+                                               position=(pos.x(), pos.y()))
             return node
+
 
     def connect_existing(self, node):
         """Connect anchor_item to `node`.
@@ -405,10 +423,20 @@ class NewLinkAction(UserInteraction):
                     show_link_dialog = True
 
                 if show_link_dialog:
+                    existing = self.scheme.find_links(source_node=source_node,
+                                                      sink_node=sink_node)
+
+                    if existing:
+                        # EditLinksDialog will populate the view with
+                        # existing links
+                        initial_links = None
+                    else:
+                        initial_links = [(source, sink)]
+
                     links_action = EditNodeLinksAction(
                                     self.document, source_node, sink_node)
                     try:
-                        links_action.edit_links()
+                        links_action.edit_links(initial_links)
                     except Exception:
                         log.error("'EditNodeLinksAction' failed",
                                   exc_info=True)
@@ -460,6 +488,8 @@ class NewLinkAction(UserInteraction):
 
     def end(self):
         self.cleanup()
+        helpevent = QuickHelpTipEvent("", "")
+        QCoreApplication.postEvent(self.document, helpevent)
         UserInteraction.end(self)
 
     def cancel(self, reason=UserInteraction.OtherReason):
@@ -513,7 +543,9 @@ class NewNodeAction(UserInteraction):
             # Get the scene position
             view = self.document.view()
             pos = view.mapToScene(view.mapFromGlobal(pos))
-            node = scheme.SchemeNode(desc, position=(pos.x(), pos.y()))
+
+            node = self.document.newNodeHelper(desc,
+                                               position=(pos.x(), pos.y()))
             self.document.addNode(node)
             return node
 
@@ -647,7 +679,15 @@ class EditNodeLinksAction(UserInteraction):
         self.source_node = source_node
         self.sink_node = sink_node
 
-    def edit_links(self):
+    def edit_links(self, initial_links=None):
+        """
+        Show and execute the `EditLinksDialog`.
+        Optional `initial_links` list can provide the initial
+        `(source, sink)` channel tuples to show in the view, otherwise
+        the dialog is populated with existing links in the scheme
+        (pass an empty list to disable all initial links).
+
+        """
         from ..canvas.editlinksdialog import EditLinksDialog
 
         log.info("Constructing a Link Editor dialog.")
@@ -660,8 +700,11 @@ class EditNodeLinksAction(UserInteraction):
         existing_links = [(link.source_channel, link.sink_channel)
                           for link in links]
 
+        if initial_links is None:
+            initial_links = list(existing_links)
+
         dlg.setNodes(self.source_node, self.sink_node)
-        dlg.setLinks(existing_links)
+        dlg.setLinks(initial_links)
 
         log.info("Executing a Link Editor Dialog.")
         rval = dlg.exec_()
@@ -675,12 +718,29 @@ class EditNodeLinksAction(UserInteraction):
             stack = self.document.undoStack()
             stack.beginMacro("Edit Links")
 
+            # First remove links into a single sink channel,
+            # but only the ones that do not have self.source_node as
+            # a source (they will be removed later from links_to_remove)
+            for _, sink_channel in links_to_add:
+                if sink_channel.single:
+                    existing = self.scheme.find_links(
+                        sink_node=self.sink_node,
+                        sink_channel=sink_channel
+                    )
+
+                    existing = [link for link in existing
+                                if link.source_node is not self.source_node]
+
+                    if existing:
+                        assert len(existing) == 1
+                        self.document.removeLink(existing[0])
+
             for source_channel, sink_channel in links_to_remove:
                 links = self.scheme.find_links(source_node=self.source_node,
                                                source_channel=source_channel,
                                                sink_node=self.sink_node,
                                                sink_channel=sink_channel)
-
+                assert len(links) == 1
                 self.document.removeLink(links[0])
 
             for source_channel, sink_channel in links_to_add:
@@ -688,6 +748,7 @@ class EditNodeLinksAction(UserInteraction):
                                          self.sink_node, sink_channel)
 
                 self.document.addLink(link)
+
             stack.endMacro()
 
 
@@ -707,6 +768,17 @@ class NewArrowAnnotation(UserInteraction):
 
     def start(self):
         self.document.view().setCursor(Qt.CrossCursor)
+
+        helpevent = QuickHelpTipEvent(
+            self.tr("Click and drag to create a new arrow"),
+            self.tr('<h3>New arrow annotation</h3>'
+                    '<p>Click and drag to create a new arrow annotation</p>'
+#                    '<a href="help://orange-canvas/arrow-annotations>'
+#                    'More ...</a>'
+                    )
+        )
+        QCoreApplication.postEvent(self.document, helpevent)
+
         UserInteraction.start(self)
 
     def setColor(self, color):
@@ -766,6 +838,11 @@ class NewArrowAnnotation(UserInteraction):
         self.arrow_item = None
         self.annotation = None
         self.document.view().setCursor(Qt.ArrowCursor)
+
+        # Clear the help tip
+        helpevent = QuickHelpTipEvent("", "")
+        QCoreApplication.postEvent(self.document, helpevent)
+
         UserInteraction.end(self)
 
 
@@ -787,6 +864,18 @@ class NewTextAnnotation(UserInteraction):
 
     def start(self):
         self.document.view().setCursor(Qt.CrossCursor)
+
+        helpevent = QuickHelpTipEvent(
+            self.tr("Click to create a new text annotation"),
+            self.tr('<h3>New text annotation</h3>'
+                    '<p>Click (and drag to resize) on the canvas to create '
+                    'a new text annotation item.</p>'
+#                    '<a href="help://orange-canvas/text-annotations">'
+#                    'More ...</a>'
+                    )
+        )
+        QCoreApplication.postEvent(self.document, helpevent)
+
         UserInteraction.start(self)
 
     def createNewAnnotation(self, rect):
@@ -880,6 +969,11 @@ class NewTextAnnotation(UserInteraction):
         self.annotation_item = None
         self.annotation = None
         self.document.view().setCursor(Qt.ArrowCursor)
+
+        # Clear the help tip
+        helpevent = QuickHelpTipEvent("", "")
+        QCoreApplication.postEvent(self.document, helpevent)
+
         UserInteraction.end(self)
 
 

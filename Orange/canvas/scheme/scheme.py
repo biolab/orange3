@@ -19,7 +19,8 @@ from .annotations import BaseSchemeAnnotation
 from .utils import check_arg, check_type
 
 from .errors import (
-    SchemeCycleError, IncompatibleChannelTypeError
+    SchemeCycleError, IncompatibleChannelTypeError, SinkChannelError,
+    DuplicatedLinkError
 )
 
 from .readwrite import scheme_to_ows_stream, parse_scheme
@@ -163,13 +164,10 @@ class Scheme(QObject):
             self.remove_link(link)
 
     def add_link(self, link):
-        """Add a link to the scheme
+        """
+        Add a link to the scheme.
         """
         check_type(link, SchemeLink)
-        existing = self.find_links(link.source_node, link.source_channel,
-                                   link.sink_node, link.sink_channel)
-        check_arg(not existing,
-                  "Link %r already in the scheme." % link)
 
         self.check_connect(link)
         self.__links.append(link)
@@ -184,7 +182,9 @@ class Scheme(QObject):
 
     def new_link(self, source_node, source_channel,
                  sink_node, sink_channel):
-        """Crate a new SchemeLink and add it to the scheme.
+        """
+        Create a new SchemeLink and add it to the scheme.
+
         Same as:
 
             scheme.add_link(SchemeLink(source_node, source_channel,
@@ -211,23 +211,50 @@ class Scheme(QObject):
         self.link_removed.emit(link)
 
     def check_connect(self, link):
-        """Check if the link can be added to the scheme.
+        """
+        Check if the link can be added to the scheme.
 
         Can raise:
+            - `TypeError` if link is not an instance of :class:`SchemeLink`.
             - `SchemeCycleError` if the link would introduce a cycle
             - `IncompatibleChannelTypeError` if the channel types are not
-                compatible
+               compatible
+            - `SinkChannelError` if a sink channel has a `Single` flag
+               specification and there is already connected.
+            - `DuplicatedLinkError` if a link duplicates an already present
+               link.
 
         """
         check_type(link, SchemeLink)
+
         if self.creates_cycle(link):
             raise SchemeCycleError("Cannot create cycles in the scheme")
 
         if not self.compatible_channels(link):
             raise IncompatibleChannelTypeError(
-                    "Cannot connect %r to %r" \
-                    % (link.source_channel, link.sink_channel)
+                    "Cannot connect %r to %r." \
+                    % (link.source_channel.type, link.sink_channel.type)
                 )
+
+        links = self.find_links(source_node=link.source_node,
+                                source_channel=link.source_channel,
+                                sink_node=link.sink_node,
+                                sink_channel=link.sink_channel)
+
+        if links:
+            raise DuplicatedLinkError(
+                    "A link from %r (%r) -> %r (%r) already exists" \
+                    % (link.source_node.title, link.source_channel.name,
+                       link.sink_node.title, link.sink_channel.name)
+                )
+
+        if link.sink_channel.single:
+            links = self.find_links(sink_node=link.sink_node,
+                                    sink_channel=link.sink_channel)
+            if links:
+                raise SinkChannelError(
+                        "%r is already connected." % link.sink_channel.name
+                    )
 
     def creates_cycle(self, link):
         """Would the `link` if added to the scheme introduce a cycle.

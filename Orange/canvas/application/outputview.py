@@ -6,11 +6,39 @@ import traceback
 from functools import wraps
 from PyQt4.QtGui import (
     QWidget, QPlainTextEdit, QVBoxLayout, QTextCursor, QTextCharFormat,
-    QFont, QFontMetrics
+    QFont, QSizePolicy
 )
 
-from PyQt4.QtCore import Qt, QObject, QEvent, QCoreApplication, QThread
+from PyQt4.QtCore import Qt, QObject, QEvent, QCoreApplication, QThread, QSize
 from PyQt4.QtCore import pyqtSignal as Signal
+
+
+class TerminalView(QPlainTextEdit):
+    def __init__(self, *args, **kwargs):
+        QPlainTextEdit.__init__(self, *args, **kwargs)
+        self.setFrameStyle(QPlainTextEdit.NoFrame)
+        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+
+        font = self.font()
+        if hasattr(QFont, "Monospace"):
+            # Why is this not available on Debian squeeze
+            font.setStyleHint(QFont.Monospace)
+        else:
+            font.setStyleHint(QFont.Courier)
+
+        font.setFamily("Monaco")
+        font.setPointSize(12)
+        self.setFont(font)
+
+    def sizeHint(self):
+        metrics = self.fontMetrics()
+        width = metrics.boundingRect("_" * 81).width()
+        height = metrics.lineSpacing()
+        scroll_width = self.verticalScrollBar().width()
+        size = QSize(width + scroll_width, height * 25)
+        return size
 
 
 class OutputView(QWidget):
@@ -22,20 +50,11 @@ class OutputView(QWidget):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.__text = QPlainTextEdit()
-        self.__text.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        self.__text.setMaximumBlockCount(self.__lines)
-        font = self.__text.font()
-        font.setFamily("Monaco")
-        self.__text.setFont(font)
+        self.__text = TerminalView()
 
         self.__currentCharFormat = self.__text.currentCharFormat()
 
         self.layout().addWidget(self.__text)
-
-        metrics = QFontMetrics(font)
-        width = metrics.boundingRect("X").width()
-        self.resize(width * 80, width * 30)
 
     def setMaximumLines(self, lines):
         """
@@ -235,9 +254,9 @@ def queued_blocking(method):
     """
     @wraps(method)
     def delay_method_call(self, *args, **kwargs):
-        event = QueuedCallEvent(method, args, kwargs)
+        event = QueuedCallEvent(method, (self,) + args, kwargs)
         QCoreApplication.postEvent(self, event)
-        QCoreApplication.flush()
+        QCoreApplication.sendPostedEvents()
         return event.result()
 
     return delay_method_call
@@ -245,7 +264,7 @@ def queued_blocking(method):
 
 class TextStream(QObject):
     stream = Signal(str)
-    flushed = Signal(str)
+    flushed = Signal()
 
     def __init__(self, parent=None):
         QObject.__init__(self, parent)

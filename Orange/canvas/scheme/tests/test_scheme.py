@@ -5,9 +5,11 @@ Tests for Scheme
 from ...gui import test
 from ...registry.tests import small_testing_registry
 
-from .. import Scheme, SchemeNode, SchemeLink, \
-               SchemeTextAnnotation, SchemeArrowAnnotation, \
-               SchemeTopologyError, IncompatibleChannelTypeError
+from .. import (
+    Scheme, SchemeNode, SchemeLink, SchemeTextAnnotation,
+    SchemeArrowAnnotation, SchemeTopologyError, SinkChannelError,
+    DuplicatedLinkError, IncompatibleChannelTypeError
+)
 
 
 class TestScheme(test.QCoreAppTestCase):
@@ -22,7 +24,6 @@ class TestScheme(test.QCoreAppTestCase):
 
         self.assertEqual(scheme.title, "")
         self.assertEqual(scheme.description, "")
-        self.assertEqual(scheme.path, "")
 
         nodes_added = []
         links_added = []
@@ -85,6 +86,17 @@ class TestScheme(test.QCoreAppTestCase):
         # Add a link to a node with no input channels
         self.assertRaises(ValueError, scheme.new_link,
                           w2, "Data", w1, "Data")
+
+        # add back l2 for the folowing checks
+        scheme.add_link(l2)
+
+        # Add a duplicate link
+        self.assertRaises(DuplicatedLinkError, scheme.new_link,
+                          w1, "Data", w3, "Data")
+
+        # Add a link to an already connected sink channel
+        self.assertRaises(SinkChannelError, scheme.new_link,
+                          w2, "Data", w3, "Data")
 
         text_annot = SchemeTextAnnotation((0, 0, 100, 20), "Text")
         scheme.add_annotation(text_annot)
