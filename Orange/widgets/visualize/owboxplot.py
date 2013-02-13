@@ -20,9 +20,36 @@ from Orange.widgets.utils.plot import owaxis
 
 #from OWColorPalette import ColorPixmap, ColorPaletteGenerator
 
-class BoxItem(QtGui.QGraphicsItemGroup):
-    WIDTH = 20
+class BoxData:
+    def __init__(self, dist, label):
+        self.dist = dist
+        self.label = label
+        self.N = N = np.sum(dist[1])
+        if N == 0:
+            return
+        self.a_min = dist[0, 0]
+        self.a_max = dist[0, -1]
+        self.mean = np.sum(dist[0] * dist[1]) / N
+        s = 0
+        thresholds = [N/4, N/2, 3*N/4]
+        thresh_i = 0
+        q = []
+        for i, e in enumerate(dist[1]):
+            s += e
+            if s >= thresholds[thresh_i]:
+                if s == thresholds[thresh_i] and i + 1 < dist.shape[1]:
+                    q.append((dist[0, i] + dist[0, i + 1]) / 2)
+                else:
+                    q.append(dist[0, i])
+                thresh_i += 1
+                if thresh_i == 3:
+                    break
+        while len(q) < 3:
+            q.append(q[-1])
+        self.q25, self.median, self.q75 = q
 
+
+class BoxItem(QtGui.QGraphicsItemGroup):
     pen_light = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0xff)), 2)
     pen_dark = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
     for pen in (pen_dark, pen_light):
@@ -30,36 +57,26 @@ class BoxItem(QtGui.QGraphicsItemGroup):
         pen.setCapStyle(QtCore.Qt.RoundCap)
         pen.setJoinStyle(QtCore.Qt.RoundJoin)
 
-    def __init__(self, index, label, a_min, mean, a_max, q25, q50, q75):
+    def __init__(self, stat, width=20):
         super().__init__()
-        self.index = index
-        self.mean = mean
-        self.median = q50
-        self.label = label
-
+        self.stat = stat
         Line = QtGui.QGraphicsLineItem
-        width = self.WIDTH
-        whisker1 = Line(-width/8, a_min, width/8, a_min, self)
-        whisker2 = Line(-width/8, a_max, width/8, a_max, self)
-        vert_line = Line(0, a_min, 0, a_max, self)
-        mean_line = Line(-0.7*width, mean, 0.7*width, mean, self)
+        whisker1 = Line(-width/8, stat.a_min, width/8, stat.a_min, self)
+        whisker2 = Line(-width/8, stat.a_max, width/8, stat.a_max, self)
+        vert_line = Line(0, stat.a_min, 0, stat.a_max, self)
+        mean_line = Line(-0.7*width, stat.mean, 0.7*width, stat.mean, self)
         for it in (whisker1, whisker2, vert_line, mean_line):
             it.setPen(self.pen_dark)
 
-        box = QtGui.QGraphicsRectItem(-width/2, q25, width, q75 - q25, self)
+        box = QtGui.QGraphicsRectItem(-width/2, stat.q25, width,
+                                      stat.q75 - stat.q25, self)
         box.setBrush(QtGui.QBrush(QtGui.QColor(0x33, 0x88, 0xff, 0xc0)))
         box.setPen(QtGui.QPen(QtCore.Qt.NoPen))
         box.setZValue(100)
 
-        median_line = Line(-width/2, q50, width/2, q50, self)
+        median_line = Line(-width/2, stat.median, width/2, stat.median, self)
         median_line.setPen(self.pen_light)
         median_line.setZValue(200)
-
-        # not inserted into the group in order to avoid scaling
-        self.label_text = t = QtGui.QGraphicsSimpleTextItem(label)
-        t.setY(a_min)
-        t.setFlags(t.flags() |
-                   QtGui.QGraphicsItem.ItemIgnoresTransformations)
 
 
 class OWBoxPlot(widget.OWWidget):
@@ -82,7 +99,7 @@ class OWBoxPlot(widget.OWWidget):
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
 
-    _sorting_criteria_attrs = ["index", "label", "median", "mean"]
+    _sorting_criteria_attrs = ["", "label", "median", "mean"]
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
@@ -173,49 +190,25 @@ class OWBoxPlot(widget.OWWidget):
     def reset_all_data(self):
         self.attr_list_box.clear()
         self.attrCombo.clear()
-        self.graph.clear_data()
+        self.boxScene.clear()
         self.send("Basic statistic", None)
         self.send("Significant data", None)
 
     def process_change(self):
+        self.compute_boxes()
+        self.sorting_combo.setDisabled(len(self.stats) < 2)
         self.draw_selected()
 #        self.run_selected_test()
 #        self.basic_stat = stat_basic_full_tab(self.ddataset)
 #        self.send("Basic statistic", self.basic_stat)
 
-    def draw_selected(self):
+    def compute_boxes(self):
         dataset = self.ddataset
         if dataset is None:
+            self.stats = []
             return
-
-        def compute_box(dist):
-            N = np.sum(dist[1])
-            if N == 0:
-                return None
-            a_min, a_max = dist[0, 0], dist[0, -1]
-            mean = np.sum(dist[0] * dist[1]) / N
-            box_data = [a_min, mean, a_max]
-            s = 0
-            thresholds = [N/4, N/2, 3*N/4]
-            thresh_i = 0
-            for i, e in enumerate(dist[1]):
-                s += e
-                if s >= thresholds[thresh_i]:
-                    if s == thresholds[thresh_i] and i + 1 < dist.shape[1]:
-                        box_data.append((dist[0, i] + dist[0, i + 1]) / 2)
-                    else:
-                        box_data.append(dist[0, i])
-                    thresh_i += 1
-                    if thresh_i == 3:
-                        break
-            while len(box_data) != 6:
-                box_data.append(box_data[-1])
-            return box_data
-
-        self.warning.hide()
         attr = self.attributes[self.attributes_select[0]][0]
         attr_ind = dataset.domain.index(attr)
-        attr_desc = dataset.domain[attr_ind]
         group_by = self.grouping_select[0]
         if group_by:
             group_attr = self.grouping[group_by][0]
@@ -223,37 +216,33 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = datacaching.getCached(dataset,
                 contingency.get_contingency,
                 (dataset, attr_ind, group_ind))
-            boxes = [(value, compute_box(self.conts[i]))
-                for i, value in enumerate(dataset.domain[group_ind].values)]
-
-            # TODO: add another box for the entire data set
-            self.sorting_combo.setDisabled(False)
+            self.stats = [BoxData(cont, value) for cont, value in
+                          zip(self.conts, dataset.domain[group_ind].values)]
         else:
             self.dist = datacaching.getCached(dataset,
                 distribution.get_distribution, (attr_ind, dataset))
-            boxes = [(attr, compute_box(self.dist))]
-            self.sorting_combo.setDisabled(True)
+            self.stats = [BoxData(self.dist, attr)]
+        self.stats = [stat for stat in self.stats if stat.N > 0]
 
+    def draw_selected(self):
         self.boxScene.clear()
-        a_min = min(box[0] for _, box in boxes if box)
-        a_max = max(box[2] for _, box in boxes if box)
-        self.boxes = []
-        for i, (label, box_data) in enumerate(boxes):
-            if box_data:
-                box = BoxItem(i, label, *tuple(box_data))
-                self.boxScene.addItem(box)
-                self.boxScene.addItem(box.label_text)
-                self.boxes.append(box)
-        self.set_positions()
+        if not self.stats:
+            return
 
-        first_val, step = owaxis.OWAxis.compute_scale(a_min, a_max)
-        while a_min < first_val:
+        self.boxes = [BoxItem(stat) for stat in self.stats]
+        for box in self.boxes:
+            self.boxScene.addItem(box)
+
+        bottom = min(stat.a_min for stat in self.stats)
+        top = max(stat.a_max for stat in self.stats)
+        first_val, step = owaxis.OWAxis.compute_scale(bottom, top)
+        while bottom < first_val:
             first_val -= step
-        a_min = first_val
-        no_ticks = math.ceil((a_max - first_val) / step) + 1
-        a_max = max(a_max, first_val + (no_ticks - 1) * step)
+        bottom = first_val
+        no_ticks = math.ceil((top - first_val) / step) + 1
+        top = max(top, first_val + (no_ticks - 1) * step)
 
-        r = QtCore.QRectF(-80, a_min, len(boxes)*60+60, a_max - a_min)
+        r = QtCore.QRectF(-80, bottom, len(self.stats) * 60 + 60, top - bottom)
         self.boxScene.setSceneRect(r)
 
         # This code comes from the implementation of QGraphicsView::fitInView
@@ -263,10 +252,10 @@ class OWBoxPlot(widget.OWWidget):
         d.resetTransform()
         unity = d.matrix().mapRect(QtCore.QRectF(0, 0, 1, 1))
         d.scale(1, 1 / unity.height())
-        viewRect = d.viewport().rect().adjusted(15, 15, -15, -15)
-        yratio = viewRect.height() / (a_max - a_min)
+        viewRect = d.viewport().rect().adjusted(15, 15, -15, -30)
+        yratio = viewRect.height() / (top - bottom)
         d.scale(1, -yratio)
-        d.centerOn((-80 + len(boxes) * 60 + 60) / 2, (a_max - a_min) / 2)
+        d.centerOn((-80 + len(self.stats) * 60 + 60) / 2, (top - bottom) / 2)
 
         # This comes last because we need to position the text to the
         # appropriate transformed coordinates
@@ -274,6 +263,8 @@ class OWBoxPlot(widget.OWWidget):
         font.setPixelSize(12)
         val = first_val
         gray_pen = QtGui.QPen(QtCore.Qt.lightGray)
+        attr = self.attributes[self.attributes_select[0]][0]
+        attr_desc = self.ddataset.domain[attr]
         while True:
             self.boxScene.addLine(-65, val, -60, val, gray_pen)
             t = self.boxScene.addSimpleText(attr_desc.repr_val(val), font)
@@ -281,21 +272,33 @@ class OWBoxPlot(widget.OWWidget):
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
             t.setPos(-70 - r.width(), val + r.height() / 2 / yratio)
-            if val >= a_max:
+            if val >= top:
                 break
             val += step
-        a_max = val
-        self.boxScene.addLine(-60, first_val, -60, a_max, gray_pen)
+        top = val
+        self.boxScene.addLine(-60, first_val, -60, top, gray_pen)
+
+        self.box_labels = []
+        for stat in self.stats:
+            t = self.boxScene.addSimpleText(stat.label)
+            t.setY(stat.a_min - 2 / yratio)
+            t.setFlags(t.flags() |
+                       QtGui.QGraphicsItem.ItemIgnoresTransformations)
+            self.box_labels.append(t)
+
+        self.sorting_update()
 
     def set_positions(self):
-        for i, box in enumerate(self.boxes):
-            box.setX(i * 60)
-            box.label_text.setX(
-                i * 60 - box.label_text.boundingRect().width() / 2)
+        for pos, box_index in enumerate(self.order):
+            self.boxes[box_index].setX(pos * 60)
+            t = self.box_labels[box_index]
+            t.setX(pos * 60 - t.boundingRect().width() / 2)
 
     def sorting_update(self):
-        criterion = self._sorting_criteria_attrs[self.sorting_select]
-        self.boxes.sort(key=operator.attrgetter(criterion))
+        self.order = list(range(len(self.stats)))
+        if self.sorting_select != 0:
+            criterion = self._sorting_criteria_attrs[self.sorting_select]
+            self.order.sort(key=lambda i: getattr(self.stats[i], criterion))
         self.set_positions()
 
     def send_to_graph(self, dataset, attr, box_label, y_label):
@@ -306,29 +309,23 @@ class OWBoxPlot(widget.OWWidget):
 
 
     def run_selected_test(self):
-        return
+        group_by = self.grouping_select[0]
+        if not group_by:
+            # TODO remove anything that is printed out
+            self.infot1.setText("")
+            return
+        self.warning.hide()
 
-        """ Runs selected tests """
+        group_attr = self.grouping[group_by][0]
+        group_ind = dataset.domain.index(group_attr)
+        attr = self.attributes[self.attributes_select[0]][0]
+        attr_ind = dataset.domain.index(attr)
+        self.conts = datacaching.getCached(dataset,
+            contingency.get_contingency,
+            (dataset, attr_ind, group_ind))
 
-        if self.grouping_select and self.attributes_select and self.grouping and self.attributes:
-            self.graph.show()
-            self.graph.removeBoxes()
-            self.no_values.hide()
-
-            slected_grouping_str = self.grouping[self.grouping_select[0]][0]
-
-            if self.grouping_select[0] == 0:
-                self.infot1.setText("<center>No test results<center>")
-                if self.attributes_select:
-
-                    self.sorting_update()
-                    self.draw_selected(self.ddataset)
-
-            elif len(self.ddataset.domain[slected_grouping_str].values) < 20:
-
-                filtered, depr= self.filtered(self.grouping, self.grouping_select)
-                number_tab = len(self.ddataset.domain[slected_grouping_str].values) - len(depr) # # of nondeprecated data
-
+        sums = np.sum(dist[1])
+        if len(self.conts) == 2:
                 if number_tab == 2:
                     a = stat_ttest(filtered[0], filtered[1], str(self.attributes[self.attributes_select[0]][0]))
                     b = stat_wilc(filtered[0], filtered[1], str(self.attributes[self.attributes_select[0]][0]))
@@ -344,21 +341,12 @@ class OWBoxPlot(widget.OWWidget):
 
                 self.draw_selected(self.ddataset)
 
-            else:
-                self.no_values.setText("<center><b>Too many values to be drawn.</b><center>")
-                self.infot1.setText("")
-                self.graph.hide()
-                self.no_values.show()
 
-            if self.stattest == 0:
-                self.send("Significant data", self.ouput_sig_parametric_data())
-            elif self.stattest == 1:
-                self.send("Significant data", self.ouput_sig_nonparametric_data())
+        if self.stattest == 0:
+            self.send("Significant data", self.ouput_sig_parametric_data())
+        elif self.stattest == 1:
+            self.send("Significant data", self.ouput_sig_nonparametric_data())
 
-        else:
-            self.graph.hide()
-            self.graph.clear_data()
-            self.infot1.setText("")
 
     def ouput_sig_parametric_data(self):
         tab = []
