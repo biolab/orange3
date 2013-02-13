@@ -37,8 +37,8 @@ class EditLinksDialog(QDialog):
 
     >>> dlg = EditLinksDialog()
     >>> dlg.setNodes(file_node, test_learners_node)
-    >>> dlg.setLinks([(file_node.output_channel("Data"),
-    ...               (test_learners_node.input_channel("Data")])
+    >>> dlg.setLinks([file_node.output_channel("Data"),
+    ...               test_learners_node.input_channel("Data")])
     >>> if dlg.exec_() == EditLinksDialog.Accpeted:
     ...     new_links = dlg.links()
     ...
