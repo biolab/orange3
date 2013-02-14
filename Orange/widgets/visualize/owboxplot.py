@@ -53,38 +53,38 @@ class BoxData:
 class BoxItem(QtGui.QGraphicsItemGroup):
     pen_light = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0xff)), 2)
     pen_dark = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
-    pen_dark_dotted = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
-    pen_dark_wide = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 4)
+    pen_dark_dotted = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 1)
+    pen_dark_wide = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
     for pen in (pen_dark, pen_light, pen_dark_wide, pen_dark_dotted):
         pen.setCosmetic(True)
         pen.setCapStyle(QtCore.Qt.RoundCap)
         pen.setJoinStyle(QtCore.Qt.RoundJoin)
     pen_dark_dotted.setStyle(QtCore.Qt.DotLine)
 
-    def __init__(self, stat, width=20):
+    def __init__(self, stat, height=20):
         super().__init__()
         self.stat = stat
         Line = QtGui.QGraphicsLineItem
-        whisker1 = Line(-width/16, stat.a_min, width/16, stat.a_min, self)
-        whisker2 = Line(-width/16, stat.a_max, width/16, stat.a_max, self)
-        vert_line = Line(0, stat.a_min, 0, stat.a_max, self)
-        mean_line = Line(-0.7*width, stat.mean, 0.7*width, stat.mean, self)
+        whisker1 = Line(stat.a_min, -height/16, stat.a_min, height/16, self)
+        whisker2 = Line(stat.a_max, -height/16, stat.a_max, height/16, self)
+        vert_line = Line(stat.a_min, 0, stat.a_max, 0, self)
+        mean_line = Line(stat.mean, -0.35*height, stat.mean, 0.35*height, self)
         for it in (whisker1, whisker2, mean_line):
             it.setPen(self.pen_dark)
         vert_line.setPen(self.pen_dark_dotted)
         dev = math.sqrt(stat.var)
-        var_line = Line(0, stat.mean - dev, 0,  stat.mean + dev, self)
+        var_line = Line(stat.mean - dev, 0,  stat.mean + dev, 0, self)
         var_line.setPen(self.pen_dark_wide)
 
-        box = QtGui.QGraphicsRectItem(-width/2, stat.q25, width,
-                                      stat.q75 - stat.q25, self)
+        box = QtGui.QGraphicsRectItem(stat.q25, -height/2,
+                                      stat.q75 - stat.q25, height, self)
         box.setBrush(QtGui.QBrush(QtGui.QColor(0x33, 0x88, 0xff, 0xc0)))
         box.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-        box.setZValue(100)
+        box.setZValue(-200)
 
-        median_line = Line(-width/2, stat.median, width/2, stat.median, self)
+        median_line = Line(stat.median, -height/2, stat.median, height/2, self)
         median_line.setPen(self.pen_light)
-        median_line.setZValue(200)
+        median_line.setZValue(-150)
 
 
 class OWBoxPlot(widget.OWWidget):
@@ -136,9 +136,9 @@ class OWBoxPlot(widget.OWWidget):
             selectionMode=QtGui.QListWidget.SingleSelection,
             callback=self.process_change)
 
-        self.sorting_combo = gui.comboBox(gb, self,
-            'sorting_select', callback=self.sorting_update,
-            items=["Show in original order",
+        self.sorting_combo = gui.radioButtonsInBox(gb, self,
+            'sorting_select', box='Sorting', callback=self.sorting_update,
+            btnLabels=["Original order",
                    "Sort by label", "Sort by median", "Sort by mean"])
 
         gui.rubber(self.controlArea)
@@ -151,9 +151,7 @@ class OWBoxPlot(widget.OWWidget):
                                     QtGui.QPainter.TextAntialiasing |
                                     QtGui.QPainter.SmoothPixmapTransform)
         self.mainArea.layout().addWidget(self.boxView)
-        self.no_values = gui.widgetLabel(self.mainArea,
-            "<center><big><b>Too many values.</b></big></center>")
-        self.no_values.hide()
+        self.posthoc_lines = []
 
         e = gui.widgetBox(self.mainArea, addSpace=False, orientation=0)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
@@ -248,7 +246,7 @@ class OWBoxPlot(widget.OWWidget):
         no_ticks = math.ceil((top - first_val) / step) + 1
         top = max(top, first_val + (no_ticks - 1) * step)
 
-        r = QtCore.QRectF(-80, bottom, len(self.stats) * 60 + 60, top - bottom)
+        r = QtCore.QRectF(bottom, -80, top - bottom, len(self.stats) * 60 + 60)
         self.boxScene.setSceneRect(r)
 
         # This code comes from the implementation of QGraphicsView::fitInView
@@ -257,11 +255,11 @@ class OWBoxPlot(widget.OWWidget):
         d = self.boxView
         d.resetTransform()
         unity = d.matrix().mapRect(QtCore.QRectF(0, 0, 1, 1))
-        d.scale(1, 1 / unity.height())
+        d.scale(1 / unity.width(), 1)
         viewRect = d.viewport().rect().adjusted(15, 15, -15, -30)
-        yratio = viewRect.height() / (top - bottom)
-        d.scale(1, -yratio)
-        d.centerOn((-80 + len(self.stats) * 60 + 60) / 2, (top - bottom) / 2)
+        xratio = viewRect.width() / (top - bottom)
+        d.scale(xratio, 1)
+        d.centerOn((top - bottom) / 2, (-80 + len(self.stats) * 60 + 60) / 2)
 
         # This comes last because we need to position the text to the
         # appropriate transformed coordinates
@@ -271,22 +269,23 @@ class OWBoxPlot(widget.OWWidget):
         attr = self.attributes[self.attributes_select[0]][0]
         attr_desc = self.ddataset.domain[attr]
         while True:
-            l = self.boxScene.addLine(-63, val, -61, val, self.tick_pen)
+            l = self.boxScene.addLine(val, -61, val, -63, self.tick_pen)
             l.setZValue(100)
             t = self.boxScene.addSimpleText(attr_desc.repr_val(val), font)
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
-            t.setPos(-70 - r.width(), val + r.height() / 2 / yratio)
+            t.setPos(val - r.width() / 2 / xratio, -70 - r.height())
             if val >= top:
                 break
             val += step
-        self.boxScene.addLine(-62, bottom, -62, top, self.axis_pen)
+        self.boxScene.addLine(bottom - 4 / xratio, -62, top + 4 / xratio, -62,
+                              self.axis_pen)
 
         self.box_labels = []
         for stat in self.stats:
             t = self.boxScene.addSimpleText(stat.label)
-            t.setY(stat.a_min - 2 / yratio)
+            t.setX(stat.q25)
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
             self.box_labels.append(t)
@@ -295,9 +294,9 @@ class OWBoxPlot(widget.OWWidget):
 
     def set_positions(self):
         for pos, box_index in enumerate(self.order):
-            self.boxes[box_index].setX(pos * 60)
+            self.boxes[box_index].setY(pos * 60)
             t = self.box_labels[box_index]
-            t.setX(pos * 60 - t.boundingRect().width() / 2)
+            t.setY(pos * 60 + 15)
 
     def sorting_update(self):
         self.order = list(range(len(self.stats)))
@@ -305,13 +304,22 @@ class OWBoxPlot(widget.OWWidget):
             criterion = self._sorting_criteria_attrs[self.sorting_select]
             self.order.sort(key=lambda i: getattr(self.stats[i], criterion))
         self.set_positions()
+        self.show_posthoc()
 
-    def send_to_graph(self, dataset, attr, box_label, y_label):
-        if dataset:
-            np_data = data_to_npcol(dataset, dataset.domain.index(attr))
-            stat_graph1 = stat_graph(np_data)
-            self.graph.append_data(box_label, stat_graph1, y_label)
-
+    def show_posthoc(self):
+        while self.posthoc_lines:
+            self.boxScene.removeItem(self.posthoc_lines.pop())
+        if self.sorting_select < 2 or len(self.stats) < 2:
+            return
+        criterion = self._sorting_criteria_attrs[self.sorting_select]
+        post_x = [getattr(self.stats[i], criterion) for i in self.order]
+        off = 12 if criterion == "median" else 18
+        post_pen = QtGui.QPen(QtCore.Qt.lightGray, 2)
+        post_pen.setCosmetic(True)
+        for pos, x in enumerate(post_x):
+            it = self.boxScene.addLine(x, pos * 60 - off, x, -57, post_pen)
+            it.setZValue(-100)
+            self.posthoc_lines.append(it)
 
     def show_tests(self):
         self.warning.hide()
