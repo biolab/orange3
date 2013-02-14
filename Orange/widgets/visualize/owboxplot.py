@@ -21,9 +21,8 @@ from Orange.widgets.utils.plot import owaxis
 #from OWColorPalette import ColorPixmap, ColorPaletteGenerator
 
 class BoxData:
-    def __init__(self, dist, label):
+    def __init__(self, dist):
         self.dist = dist
-        self.label = label
         self.N = N = np.sum(dist[1])
         if N == 0:
             return
@@ -99,14 +98,14 @@ class OWBoxPlot(widget.OWWidget):
     outputs = [("Basic statistic", Table)]
 
     settingsHandler = DomainContextHandler()
-    sorting_select = Setting(0)
+    compare_by = Setting(0)
     grouping_select = ContextSetting([0])
     attributes_select = ContextSetting([0])
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
 
-    _sorting_criteria_attrs = ["", "label", "median", "mean"]
-    _label_positions = ["q25", "q25", "median", "mean"]
+    _sorting_criteria_attrs = ["", "median", "mean"]
+    _label_positions = ["q25", "median", "mean"]
 
     tick_pen = QtGui.QPen(QtCore.Qt.white, 5)
     axis_pen = QtGui.QPen(QtCore.Qt.darkGray, 3)
@@ -138,9 +137,8 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.process_change)
 
         self.sorting_combo = gui.radioButtonsInBox(gb, self,
-            'sorting_select', box='Sorting', callback=self.sorting_update,
-            btnLabels=["Original order",
-                   "Sort by label", "Sort by median", "Sort by mean"])
+            'compare_by', box='Statistics', callback=self.sorting_update,
+            btnLabels=["No comparisons", "Compare medians", "Compare means"])
 
         gui.rubber(self.controlArea)
 
@@ -203,7 +201,7 @@ class OWBoxPlot(widget.OWWidget):
         self.compute_boxes()
         self.sorting_combo.setDisabled(len(self.stats) < 2)
         self.draw_selected()
-        self.show_tests()
+        self.sorting_update()
 #        self.basic_stat = stat_basic_full_tab(self.ddataset)
 #        self.send("Basic statistic", self.basic_stat)
 
@@ -221,12 +219,13 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = datacaching.getCached(dataset,
                 contingency.get_contingency,
                 (dataset, attr_ind, group_ind))
-            self.stats = [BoxData(cont, value) for cont, value in
-                          zip(self.conts, dataset.domain[group_ind].values)]
+            self.stats = [BoxData(cont) for cont in self.conts]
+            self.label_txts = dataset.domain[group_ind].values
         else:
             self.dist = datacaching.getCached(dataset,
                 distribution.get_distribution, (attr_ind, dataset))
-            self.stats = [BoxData(self.dist, attr)]
+            self.stats = [BoxData(self.dist)]
+            self.label_txts = [""]
         self.stats = [stat for stat in self.stats if stat.N > 0]
 
     def draw_selected(self):
@@ -286,14 +285,12 @@ class OWBoxPlot(widget.OWWidget):
                               self.axis_pen)
 
         self.box_labels = []
-        for stat in self.stats:
-            t = self.boxScene.addSimpleText(stat.label)
-            t.setX(stat.q25)
+        for label in self.label_txts:
+            t = self.boxScene.addSimpleText(label)
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
             self.box_labels.append(t)
 
-        self.sorting_update()
 
     def set_positions(self):
         for pos, box_index in enumerate(self.order):
@@ -303,21 +300,21 @@ class OWBoxPlot(widget.OWWidget):
 
     def sorting_update(self):
         self.order = list(range(len(self.stats)))
-        if self.sorting_select != 0:
-            criterion = self._sorting_criteria_attrs[self.sorting_select]
+        if self.compare_by:
+            criterion = self._sorting_criteria_attrs[self.compare_by]
             self.order.sort(key=lambda i: getattr(self.stats[i], criterion))
         self.set_positions()
+        self.compute_tests()
         self.show_posthoc()
 
     def show_posthoc(self):
         while self.posthoc_lines:
             self.boxScene.removeItem(self.posthoc_lines.pop())
         axis_y = len(self.stats) * 60 - 3
-        if self.sorting_select >= 2 and len(self.stats) >= 2:
-            crit_line = self._sorting_criteria_attrs[self.sorting_select]
+        if self.compare_by and len(self.stats) >= 2:
+            crit_line = self._sorting_criteria_attrs[self.compare_by]
         else:
             crit_line = None
-        crit_label = self._label_positions[self.sorting_select]
         post_pen = QtGui.QPen(QtCore.Qt.lightGray, 2)
         post_pen.setCosmetic(True)
         xs = []
@@ -338,7 +335,7 @@ class OWBoxPlot(widget.OWWidget):
                 x = (stat.q75 + stat.q25) / 2
                 t.setX(x - t.boundingRect().width() / 2 / self.xratio)
 
-        if crit_line:
+        if crit_line and len(self.stats) > 2:
             grp_pen = QtGui.QPen(QtCore.Qt.lightGray, 4)
             grp_pen.setCosmetic(True)
             used_to = []
@@ -363,27 +360,28 @@ class OWBoxPlot(widget.OWWidget):
                 self.posthoc_lines.append(it)
                 last_to = to
 
-
-
-    def show_tests(self):
+    def compute_tests(self):
         self.warning.hide()
-        if len(self.stats) < 2:
-            # TODO remove anything that is printed out
-            self.infot1.setText("")
-        elif any(s.N < 1 for s in self.stats):
-            self.infot1.setText("At least one group has just one instance")
+        if not self.compare_by or len(self.stats) < 2:
+            t = ""
+        elif any(s.N <= 1 for s in self.stats):
+            t = "At least one group has just one instance, " \
+                "cannot compute significance"
         elif len(self.stats) == 2:
-            a = self.stat_ttest()
-            b = self.stat_wilc()
-            self.infot1.setText("<center>Student's t: %.3f (p=%.3f), "
-                                "Mann-Whitney's z: %.1f (p=%.3f)</center>" %
-                                (a + b))
+            if self.compare_by == 1:
+                z, self.p = self.stat_wilc()
+                t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
+            else:
+                t, self.p = self.stat_ttest()
+                t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
         else:
-            a = self.stat_ANOVA()
-            b = self.stat_kruskal()
-            self.infot1.setText("<center>ANOVA: %.3f (p=%.3f), "
-                                "Kruskal Wallis's U: %.1f (p=%.3f)</center>" %
-                                (a + b))
+            if self.compare_by == 1:
+                U, self.p = self.stat_kruskal()
+                t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
+            else:
+                F, self.p = self.stat_ANOVA()
+                t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
+        self.infot1.setText("<center>%s</center>" % t)
 
     def stat_ttest(self):
         d1, d2 = self.stats
