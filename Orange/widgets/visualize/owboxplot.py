@@ -106,6 +106,7 @@ class OWBoxPlot(widget.OWWidget):
     sig_threshold = Setting(0.05)
 
     _sorting_criteria_attrs = ["", "label", "median", "mean"]
+    _label_positions = ["q25", "q25", "median", "mean"]
 
     tick_pen = QtGui.QPen(QtCore.Qt.white, 5)
     axis_pen = QtGui.QPen(QtCore.Qt.darkGray, 3)
@@ -246,7 +247,7 @@ class OWBoxPlot(widget.OWWidget):
         no_ticks = math.ceil((top - first_val) / step) + 1
         top = max(top, first_val + (no_ticks - 1) * step)
 
-        r = QtCore.QRectF(bottom, -80, top - bottom, len(self.stats) * 60 + 60)
+        r = QtCore.QRectF(bottom, -10, top - bottom, len(self.stats) * 60 + 20)
         self.boxScene.setSceneRect(r)
 
         # This code comes from the implementation of QGraphicsView::fitInView
@@ -257,7 +258,7 @@ class OWBoxPlot(widget.OWWidget):
         unity = d.matrix().mapRect(QtCore.QRectF(0, 0, 1, 1))
         d.scale(1 / unity.width(), 1)
         viewRect = d.viewport().rect().adjusted(15, 15, -15, -30)
-        xratio = viewRect.width() / (top - bottom)
+        xratio = self.xratio = viewRect.width() / (top - bottom)
         d.scale(xratio, 1)
         d.centerOn((top - bottom) / 2, (-80 + len(self.stats) * 60 + 60) / 2)
 
@@ -268,18 +269,19 @@ class OWBoxPlot(widget.OWWidget):
         val = first_val
         attr = self.attributes[self.attributes_select[0]][0]
         attr_desc = self.ddataset.domain[attr]
+        axis_y = len(self.stats) * 60
         while True:
-            l = self.boxScene.addLine(val, -61, val, -63, self.tick_pen)
+            l = self.boxScene.addLine(val, axis_y - 1, val, axis_y + 1, self.tick_pen)
             l.setZValue(100)
             t = self.boxScene.addSimpleText(attr_desc.repr_val(val), font)
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
-            t.setPos(val - r.width() / 2 / xratio, -70 - r.height())
+            t.setPos(val - r.width() / 2 / xratio, axis_y + 8)
             if val >= top:
                 break
             val += step
-        self.boxScene.addLine(bottom - 4 / xratio, -62, top + 4 / xratio, -62,
+        self.boxScene.addLine(bottom - 4 / xratio, axis_y, top + 4 / xratio, axis_y,
                               self.axis_pen)
 
         self.box_labels = []
@@ -296,7 +298,7 @@ class OWBoxPlot(widget.OWWidget):
         for pos, box_index in enumerate(self.order):
             self.boxes[box_index].setY(pos * 60)
             t = self.box_labels[box_index]
-            t.setY(pos * 60 + 15)
+            t.setY(pos * 60 - 12 - t.boundingRect().height())
 
     def sorting_update(self):
         self.order = list(range(len(self.stats)))
@@ -309,17 +311,30 @@ class OWBoxPlot(widget.OWWidget):
     def show_posthoc(self):
         while self.posthoc_lines:
             self.boxScene.removeItem(self.posthoc_lines.pop())
-        if self.sorting_select < 2 or len(self.stats) < 2:
-            return
-        criterion = self._sorting_criteria_attrs[self.sorting_select]
-        post_x = [getattr(self.stats[i], criterion) for i in self.order]
-        off = 12 if criterion == "median" else 18
+        axis_y = len(self.stats) * 60 - 3
+        if self.sorting_select >= 2 and len(self.stats) >= 2:
+            crit_line = self._sorting_criteria_attrs[self.sorting_select]
+        else:
+            crit_line = None
+        crit_label = self._label_positions[self.sorting_select]
         post_pen = QtGui.QPen(QtCore.Qt.lightGray, 2)
         post_pen.setCosmetic(True)
-        for pos, x in enumerate(post_x):
-            it = self.boxScene.addLine(x, pos * 60 - off, x, -57, post_pen)
-            it.setZValue(-100)
-            self.posthoc_lines.append(it)
+        for pos, box_index in enumerate(self.order):
+            stat = self.stats[box_index]
+            t = self.box_labels[box_index]
+            if crit_line:
+                x = getattr(stat, crit_line)
+                it = self.boxScene.addLine(x, pos * 60 + 12, x, axis_y, post_pen)
+                it.setZValue(-100)
+                self.posthoc_lines.append(it)
+                it = self.boxScene.addLine(x, pos * 60 - 12, x, pos * 60 - 25, post_pen)
+                it.setZValue(-100)
+                self.posthoc_lines.append(it)
+                t.setX(x + 5 / self.xratio)
+            else:
+                x = (stat.q75 + stat.q25) / 2
+                t.setX(x - t.boundingRect().width() / 2 / self.xratio)
+
 
     def show_tests(self):
         self.warning.hide()
