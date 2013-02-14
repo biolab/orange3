@@ -231,6 +231,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def draw_selected(self):
         self.boxScene.clear()
+        self.posthoc_lines = []
         if not self.stats:
             return
 
@@ -319,11 +320,13 @@ class OWBoxPlot(widget.OWWidget):
         crit_label = self._label_positions[self.sorting_select]
         post_pen = QtGui.QPen(QtCore.Qt.lightGray, 2)
         post_pen.setCosmetic(True)
+        xs = []
         for pos, box_index in enumerate(self.order):
             stat = self.stats[box_index]
             t = self.box_labels[box_index]
             if crit_line:
                 x = getattr(stat, crit_line)
+                xs.append(x)
                 it = self.boxScene.addLine(x, pos * 60 + 12, x, axis_y, post_pen)
                 it.setZValue(-100)
                 self.posthoc_lines.append(it)
@@ -334,6 +337,32 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 x = (stat.q75 + stat.q25) / 2
                 t.setX(x - t.boundingRect().width() / 2 / self.xratio)
+
+        if crit_line:
+            grp_pen = QtGui.QPen(QtCore.Qt.lightGray, 4)
+            grp_pen.setCosmetic(True)
+            used_to = []
+            last_to = 0
+            for frm, frm_x in enumerate(xs[:-1]):
+                for to in range(frm+1, len(xs)):
+                    if xs[to] - frm_x > 1.5:
+                        to -= 1
+                        break
+                if last_to == to or frm == to:
+                    continue
+                for rowi, used in enumerate(used_to):
+                    if used < frm:
+                        used_to[rowi] = to
+                        break
+                else:
+                    rowi = len(used_to)
+                    used_to.append(to)
+                y = axis_y - 6 - rowi * 6
+                it = self.boxScene.addLine(frm_x - 2 / self.xratio, y,
+                                           xs[to] + 2 / self.xratio, y, grp_pen)
+                self.posthoc_lines.append(it)
+                last_to = to
+
 
 
     def show_tests(self):
