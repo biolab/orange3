@@ -26,10 +26,10 @@ class BoxData:
         self.N = N = np.sum(dist[1])
         if N == 0:
             return
-        self.a_min = dist[0, 0]
-        self.a_max = dist[0, -1]
-        self.mean = np.sum(dist[0] * dist[1]) / N
-        self.var = np.sum(dist[1] * (dist[0] - self.mean) ** 2) / N
+        self.a_min = float(dist[0, 0])
+        self.a_max = float(dist[0, -1])
+        self.mean = float(np.sum(dist[0] * dist[1]) / N)
+        self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / N)
         s = 0
         thresholds = [N/4, N/2, 3*N/4]
         thresh_i = 0
@@ -38,9 +38,9 @@ class BoxData:
             s += e
             if s >= thresholds[thresh_i]:
                 if s == thresholds[thresh_i] and i + 1 < dist.shape[1]:
-                    q.append((dist[0, i] + dist[0, i + 1]) / 2)
+                    q.append(float((dist[0, i] + dist[0, i + 1]) / 2))
                 else:
-                    q.append(dist[0, i])
+                    q.append(float(dist[0, i]))
                 thresh_i += 1
                 if thresh_i == 3:
                     break
@@ -290,6 +290,36 @@ class OWBoxPlot(widget.OWWidget):
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
             self.box_labels.append(t)
+
+        if len(self.stats) == 1:
+            self.show_data_single()
+
+    def show_data_single(self):
+        def repr_val(val):
+            return "%.*f" % (attr.number_of_decimals + 1, val)
+
+        attr = self.attributes[self.attributes_select[0]][0]
+        attr = self.ddataset.domain[attr]
+        stat = self.stats[0]
+        mm = [stat.mean, stat.median]
+        labs = [self.boxScene.addSimpleText(repr_val(x)) for x in mm]
+        far_apart = abs(mm[0] - mm[1]) >= (sum(t.boundingRect().width() for t in labs) / 2 + 8) / self.xratio
+        for x, label in zip(mm, labs):
+            label.setFlags(label.flags() |
+                           QtGui.QGraphicsItem.ItemIgnoresTransformations)
+            self.boxScene.addLine(x, -12, x, -20)
+            bbox = label.boundingRect()
+            if far_apart:
+                label.setPos(x - bbox.width() / 2 / self.xratio, -22 - bbox.height())
+            else:
+                o = (bbox.width() + 2) / self.xratio
+                if float(x) == float(min(mm)):
+                    self.boxScene.addLine(x, -20, x - o, -20)
+                    x -= o
+                else:
+                    self.boxScene.addLine(x, -20, x + o, -20)
+                    x += 2 / self.xratio
+                label.setPos(x, -22 - bbox.height())
 
 
     def set_positions(self):
