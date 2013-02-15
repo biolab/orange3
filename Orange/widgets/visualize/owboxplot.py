@@ -30,6 +30,7 @@ class BoxData:
         self.a_max = float(dist[0, -1])
         self.mean = float(np.sum(dist[0] * dist[1]) / N)
         self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / N)
+        self.dev = math.sqrt(self.var)
         s = 0
         thresholds = [N/4, N/2, 3*N/4]
         thresh_i = 0
@@ -50,11 +51,11 @@ class BoxData:
 
 
 class BoxItem(QtGui.QGraphicsItemGroup):
-    pen_light = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0xff)), 2)
+    pen_med = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0x00)), 2)
     pen_dark = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
     pen_dark_dotted = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 1)
     pen_dark_wide = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
-    for pen in (pen_dark, pen_light, pen_dark_wide, pen_dark_dotted):
+    for pen in (pen_dark, pen_med, pen_dark_wide, pen_dark_dotted):
         pen.setCosmetic(True)
         pen.setCapStyle(QtCore.Qt.RoundCap)
         pen.setJoinStyle(QtCore.Qt.RoundJoin)
@@ -71,8 +72,7 @@ class BoxItem(QtGui.QGraphicsItemGroup):
         for it in (whisker1, whisker2, mean_line):
             it.setPen(self.pen_dark)
         vert_line.setPen(self.pen_dark_dotted)
-        dev = math.sqrt(stat.var)
-        var_line = Line(stat.mean - dev, 0,  stat.mean + dev, 0, self)
+        var_line = Line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0, self)
         var_line.setPen(self.pen_dark_wide)
 
         box = QtGui.QGraphicsRectItem(stat.q25, -height/2,
@@ -82,7 +82,7 @@ class BoxItem(QtGui.QGraphicsItemGroup):
         box.setZValue(-200)
 
         median_line = Line(stat.median, -height/2, stat.median, height/2, self)
-        median_line.setPen(self.pen_light)
+        median_line.setPen(self.pen_med)
         median_line.setZValue(-150)
 
 
@@ -228,6 +228,15 @@ class OWBoxPlot(widget.OWWidget):
             self.label_txts = [""]
         self.stats = [stat for stat in self.stats if stat.N > 0]
 
+    def addText(self, text, x=None, y=None):
+        t = self.boxScene.addSimpleText(text)
+        t.setFlags(t.flags() | QtGui.QGraphicsItem.ItemIgnoresTransformations)
+        if x is not None:
+            t.setX(x)
+        if y is not None:
+            t.setY(y)
+        return t
+
     def draw_selected(self):
         self.boxScene.clear()
         self.posthoc_lines = []
@@ -237,6 +246,7 @@ class OWBoxPlot(widget.OWWidget):
         self.boxes = [BoxItem(stat) for stat in self.stats]
         for box in self.boxes:
             self.boxScene.addItem(box)
+        self.box_labels = [self.addText(label) for label in self.label_txts]
 
         bottom = min(stat.a_min for stat in self.stats)
         top = max(stat.a_max for stat in self.stats)
@@ -247,7 +257,10 @@ class OWBoxPlot(widget.OWWidget):
         no_ticks = math.ceil((top - first_val) / step) + 1
         top = max(top, first_val + (no_ticks - 1) * step)
 
-        r = QtCore.QRectF(bottom, -10, top - bottom, len(self.stats) * 60 + 20)
+        gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
+        gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
+        r = QtCore.QRectF(gbottom, -30,
+                          gtop - gbottom, len(self.stats) * 60 + 60)
         self.boxScene.setSceneRect(r)
 
         # This code comes from the implementation of QGraphicsView::fitInView
@@ -258,9 +271,9 @@ class OWBoxPlot(widget.OWWidget):
         unity = d.matrix().mapRect(QtCore.QRectF(0, 0, 1, 1))
         d.scale(1 / unity.width(), 1)
         viewRect = d.viewport().rect().adjusted(15, 15, -15, -30)
-        xratio = self.xratio = viewRect.width() / (top - bottom)
+        xratio = self.xratio = viewRect.width() / (gtop - gbottom)
         d.scale(xratio, 1)
-        d.centerOn((top - bottom) / 2, (-80 + len(self.stats) * 60 + 60) / 2)
+        d.centerOn((gtop - gbottom) / 2, (-80 + len(self.stats) * 60 + 60) / 2)
 
         # This comes last because we need to position the text to the
         # appropriate transformed coordinates
@@ -284,13 +297,6 @@ class OWBoxPlot(widget.OWWidget):
         self.boxScene.addLine(bottom - 4 / xratio, axis_y, top + 4 / xratio, axis_y,
                               self.axis_pen)
 
-        self.box_labels = []
-        for label in self.label_txts:
-            t = self.boxScene.addSimpleText(label)
-            t.setFlags(t.flags() |
-                       QtGui.QGraphicsItem.ItemIgnoresTransformations)
-            self.box_labels.append(t)
-
         if len(self.stats) == 1:
             self.show_data_single()
 
@@ -298,28 +304,63 @@ class OWBoxPlot(widget.OWWidget):
         def repr_val(val):
             return "%.*f" % (attr.number_of_decimals + 1, val)
 
+        font = QtGui.QFont()
+        font.setPixelSize(11)
+        def centered_text(x, d, text=None):
+            l = self.boxScene.addLine(x, 12 * d, x, 20 * d)
+            t = self.addText(repr_val(x) if text is None else text)
+            t.setFont(font)
+            bbox = t.boundingRect()
+            t.setPos(x - bbox.width() / 2 / self.xratio,
+                     22 * d - (bbox.height() if d == -1 else 0))
+            return t, l
+
         attr = self.attributes[self.attributes_select[0]][0]
         attr = self.ddataset.domain[attr]
         stat = self.stats[0]
-        mm = [stat.mean, stat.median]
-        labs = [self.boxScene.addSimpleText(repr_val(x)) for x in mm]
-        far_apart = abs(mm[0] - mm[1]) >= (sum(t.boundingRect().width() for t in labs) / 2 + 8) / self.xratio
-        for x, label in zip(mm, labs):
-            label.setFlags(label.flags() |
-                           QtGui.QGraphicsItem.ItemIgnoresTransformations)
-            self.boxScene.addLine(x, -12, x, -20)
-            bbox = label.boundingRect()
-            if far_apart:
-                label.setPos(x - bbox.width() / 2 / self.xratio, -22 - bbox.height())
+
+        centered_text(stat.mean, -1,
+                      "%s \u00b1 %s" % (repr_val(stat.mean),
+                                        repr_val(math.sqrt(stat.var))))
+        med_t, _ = centered_text(stat.median, 1)
+        med_box = med_t.boundingRect()
+
+        t, lne = centered_text(stat.q25, 1)
+        t_box = t.boundingRect()
+        med_left = stat.median - (med_box.width() / 2) / self.xratio
+        if stat.q25 + (t_box.width() / 2 + 5) / self.xratio >= med_left:
+            if stat.q25 + 5 / self.xratio < med_left:
+                t.setX(stat.q25 - (t_box.width() + 5) / self.xratio)
             else:
-                o = (bbox.width() + 2) / self.xratio
-                if float(x) == float(min(mm)):
-                    self.boxScene.addLine(x, -20, x - o, -20)
-                    x -= o
-                else:
-                    self.boxScene.addLine(x, -20, x + o, -20)
-                    x += 2 / self.xratio
-                label.setPos(x, -22 - bbox.height())
+                x = med_left - (t_box.width() + 5) / self.xratio
+                t.setX(x)
+                self.boxScene.removeItem(lne)
+                path = QtGui.QPainterPath()
+                path.lineTo(0, -4)
+                x += t_box.width() / 2 / self.xratio
+                path.lineTo(stat.q25 - x - 2 / self.xratio, -4)
+                path.lineTo(stat.q25 - x - 2 / self.xratio, -8)
+                p = self.boxScene.addPath(path)
+                p.setPos(x, 20)
+
+        t, lne = centered_text(stat.q75, 1)
+        t_box = t.boundingRect()
+        med_right = stat.median + (med_box.width() / 2) / self.xratio
+        if stat.q75 - (t_box.width() / 2 + 5) / self.xratio <= med_right:
+            if stat.q75 - 5 / self.xratio > med_right:
+                t.setX(stat.q75 + (t_box.width() + 5) / self.xratio)
+            else:
+                x = med_right + (t_box.width() + 5) / self.xratio
+                t.setX(x)
+                self.boxScene.removeItem(lne)
+                path = QtGui.QPainterPath()
+                path.lineTo(0, -4)
+                x -= t_box.width() / 2 / self.xratio
+                path.lineTo(- (x - stat.q75 - 2 / self.xratio), -4)
+                path.lineTo(- (x - stat.q75 - 2 / self.xratio), -8)
+                p = self.boxScene.addPath(path)
+                p.setPos(x, 20)
+
 
 
     def set_positions(self):
