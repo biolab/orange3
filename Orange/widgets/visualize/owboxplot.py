@@ -202,6 +202,7 @@ class OWBoxPlot(widget.OWWidget):
         self.sorting_combo.setDisabled(len(self.stats) < 2)
         self.draw_selected()
         self.sorting_update()
+        self.show_data()
 #        self.basic_stat = stat_basic_full_tab(self.ddataset)
 #        self.send("Basic statistic", self.basic_stat)
 
@@ -297,69 +298,74 @@ class OWBoxPlot(widget.OWWidget):
         self.boxScene.addLine(bottom - 4 / xratio, axis_y, top + 4 / xratio, axis_y,
                               self.axis_pen)
 
-        if len(self.stats) == 1:
-            self.show_data_single()
 
-    def show_data_single(self):
+    def show_data(self):
         def repr_val(val):
             return "%.*f" % (attr.number_of_decimals + 1, val)
 
         font = QtGui.QFont()
         font.setPixelSize(11)
+
         def centered_text(x, d, text=None):
-            l = self.boxScene.addLine(x, 12 * d, x, 20 * d)
+            l = self.boxScene.addLine(x, y + 12 * d, x, y + 20 * d)
             t = self.addText(repr_val(x) if text is None else text)
             t.setFont(font)
             bbox = t.boundingRect()
             t.setPos(x - bbox.width() / 2 / self.xratio,
-                     22 * d - (bbox.height() if d == -1 else 0))
+                     y + 22 * d - (bbox.height() if d == -1 else 0))
             return t, l
 
         attr = self.attributes[self.attributes_select[0]][0]
         attr = self.ddataset.domain[attr]
-        stat = self.stats[0]
 
-        centered_text(stat.mean, -1,
-                      "%s \u00b1 %s" % (repr_val(stat.mean),
-                                        repr_val(math.sqrt(stat.var))))
-        med_t, _ = centered_text(stat.median, 1)
-        med_box = med_t.boundingRect()
+        for rowi, box_index in enumerate(self.order):
+            stat = self.stats[box_index]
+            y = rowi * 60
 
-        t, lne = centered_text(stat.q25, 1)
-        t_box = t.boundingRect()
-        med_left = stat.median - (med_box.width() / 2) / self.xratio
-        if stat.q25 + (t_box.width() / 2 + 5) / self.xratio >= med_left:
-            if stat.q25 + 5 / self.xratio < med_left:
-                t.setX(stat.q25 - (t_box.width() + 5) / self.xratio)
-            else:
-                x = med_left - (t_box.width() + 5) / self.xratio
-                t.setX(x)
-                self.boxScene.removeItem(lne)
-                path = QtGui.QPainterPath()
-                path.lineTo(0, -4)
-                x += t_box.width() / 2 / self.xratio
-                path.lineTo(stat.q25 - x - 2 / self.xratio, -4)
-                path.lineTo(stat.q25 - x - 2 / self.xratio, -8)
-                p = self.boxScene.addPath(path)
-                p.setPos(x, 20)
+            t, _ = centered_text(stat.mean, -1)
+            tpm = self.addText(" \u00b1 " + repr_val(math.sqrt(stat.var)))
+            tpm.setFont(font)
+            tpm.setPos(stat.mean + t.boundingRect().width() / 2 / self.xratio,
+                       y - 22 - tpm.boundingRect().height())
 
-        t, lne = centered_text(stat.q75, 1)
-        t_box = t.boundingRect()
-        med_right = stat.median + (med_box.width() / 2) / self.xratio
-        if stat.q75 - (t_box.width() / 2 + 5) / self.xratio <= med_right:
-            if stat.q75 - 5 / self.xratio > med_right:
-                t.setX(stat.q75 + (t_box.width() + 5) / self.xratio)
-            else:
-                x = med_right + (t_box.width() + 5) / self.xratio
-                t.setX(x)
-                self.boxScene.removeItem(lne)
-                path = QtGui.QPainterPath()
-                path.lineTo(0, -4)
-                x -= t_box.width() / 2 / self.xratio
-                path.lineTo(- (x - stat.q75 - 2 / self.xratio), -4)
-                path.lineTo(- (x - stat.q75 - 2 / self.xratio), -8)
-                p = self.boxScene.addPath(path)
-                p.setPos(x, 20)
+            med_t, _ = centered_text(stat.median, 1)
+            med_box = med_t.boundingRect()
+
+            t, lne = centered_text(stat.q25, 1)
+            t_box = t.boundingRect()
+            med_left = stat.median - (med_box.width() / 2) / self.xratio
+            if stat.q25 + (t_box.width() / 2 + 5) / self.xratio >= med_left:
+                if stat.q25 + 2 / self.xratio < med_left:
+                    t.setX(stat.q25 - (t_box.width() + 2) / self.xratio)
+                else:
+                    x = med_left - (t_box.width() + 5) / self.xratio
+                    t.setX(x)
+                    self.boxScene.removeItem(lne)
+                    path = QtGui.QPainterPath()
+                    path.lineTo(0, -4)
+                    x += t_box.width() / 2 / self.xratio
+                    path.lineTo(stat.q25 - x - 2 / self.xratio, -4)
+                    path.lineTo(stat.q25 - x - 2 / self.xratio, -8)
+                    p = self.boxScene.addPath(path)
+                    p.setPos(x, y + 20)
+
+            t, lne = centered_text(stat.q75, 1)
+            t_box = t.boundingRect()
+            med_right = stat.median + (med_box.width() / 2) / self.xratio
+            if stat.q75 - (t_box.width() / 2 + 5) / self.xratio <= med_right:
+                if stat.q75 - 5 / self.xratio > med_right:
+                    t.setX(stat.q75 + (t_box.width() + 5) / self.xratio)
+                else:
+                    x = med_right + (t_box.width() + 5) / self.xratio
+                    t.setX(x)
+                    self.boxScene.removeItem(lne)
+                    path = QtGui.QPainterPath()
+                    path.lineTo(0, -4)
+                    x -= t_box.width() / 2 / self.xratio
+                    path.lineTo(- (x - stat.q75 - 2 / self.xratio), -4)
+                    path.lineTo(- (x - stat.q75 - 2 / self.xratio), -8)
+                    p = self.boxScene.addPath(path)
+                    p.setPos(x, y + 20)
 
 
 
