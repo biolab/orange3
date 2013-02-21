@@ -52,7 +52,7 @@ class TabDelimReader:
 
         for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
             tpe = tpe.strip()
-            flag = flag.split()
+            flag = flag.split("\t")
             if "i" in flag or "ignore" in flag:
                 continue
             if "b" in flag or "basket" in flag:
@@ -80,7 +80,7 @@ class TabDelimReader:
             elif tpe in ["s", "string"]:
                 var = StringVariable.make(name)
             else:
-                var = DiscreteVariable.make(name, tpe.split(), True)
+                var = DiscreteVariable.make(name, tpe.split("\t"), True)
             var.fix_order = (isinstance(var, DiscreteVariable)
                              and not var.values)
 
@@ -124,7 +124,7 @@ class TabDelimReader:
         line_count = 0
         _Xr = None
         for lne in f:
-            values = lne.strip().split()
+            values = lne.strip().split("\t")
             if not values:
                 continue
             if len(values) > self.n_columns:
