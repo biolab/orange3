@@ -378,10 +378,14 @@ class NewLinkAction(UserInteraction):
             item = action.property("item")
             desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             pos = event.scenePos()
+            # a new widget should be placed so that the connection
+            # stays as it was
+            offset = 31 * (-1 if self.direction == self.FROM_SINK else
+                           1 if self.direction == self.FROM_SOURCE else 0)
             node = self.document.newNodeHelper(desc,
-                                               position=(pos.x(), pos.y()))
+                                               position=(pos.x() + offset,
+                                                         pos.y()))
             return node
-
 
     def connect_existing(self, node):
         """Connect anchor_item to `node`.
@@ -883,7 +887,7 @@ class NewTextAnnotation(UserInteraction):
         """
         annot = scheme.SchemeTextAnnotation(rect_to_tuple(rect))
         font = {"family": str(self.font.family()),
-                "size": self.font.pointSize()}
+                "size": self.font.pixelSize()}
         annot.set_font(font)
 
         item = self.scene.add_annotation(annot)

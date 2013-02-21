@@ -15,6 +15,11 @@ CanvasMainWindow {
     background-color: #E9EFF2;
 }
 
+QMainWindow::separator {
+    width: 1px; /* when vertical */
+    height: 1px; /* when horizontal */
+}
+
 
 /* The widget buttons in the dock tool box */
 
@@ -66,15 +71,17 @@ WidgetToolBox QToolButton#toolbox-tab-button:focus {
 
 
 WidgetToolBox ToolGrid {
-    background-color: #E9EFF2;
+    background-color: #F2F2F2;
+    padding-bottom: 8px;
 }
 
 
 WidgetToolBox ToolGrid QToolButton {
     border: none;
-    border-bottom: 2px solid #B5B8B8;
-    border-right: 2px solid #B5B8B8;
+    /* border-bottom: 2px solid #B5B8B8;
+    border-right: 2px solid #B5B8B8; */
     background-color: #F2F2F2;
+    border-radius: 8px;
 }
 
 
@@ -84,6 +91,10 @@ WidgetToolBox ToolGrid QToolButton[last-column] {
 
 WidgetToolBox  ToolGrid QToolButton:focus {
     background-color: palette(window);
+}
+
+WidgetToolBox  ToolGrid QToolButton:hover {
+    background-color: palette(light);
 }
 
 WidgetToolBox  ToolGrid QToolButton:pressed {
@@ -320,6 +331,13 @@ WelcomeDialog QWidget#bottom-bar QCheckBox {
 	color: #333;
 }
 
+/* SchemeEditWidget
+ */
+
+SchemeEditWidget {
+	font-family: "Helvetica";
+	font-size: 12px;
+}
 
 /* Quick Menu 
  */

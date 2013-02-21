@@ -42,6 +42,21 @@ def running_in_ipython():
         return False
 
 
+def fix_win_pythonw_std_stream():
+    """
+    On windows when running without a console (using pythonw.exe) the
+    std[err|out] file descriptors are invalid and start throwing exceptions
+    when their buffer is flushed (`http://bugs.python.org/issue706263`_)
+
+    """
+    if sys.platform == "win32" and \
+            os.path.basename(sys.executable) == "pythonw.exe":
+        if sys.stdout.fileno() < 0:
+            sys.stdout = open(os.devnull, "wb")
+        if sys.stderr.fileno() < 0:
+            sys.stderr = open(os.devnull, "wb")
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
@@ -89,6 +104,8 @@ def main(argv=None):
               logging.DEBUG]
 
     logging.basicConfig(level=levels[options.log_level])
+
+    fix_win_pythonw_std_stream()
 
     log.info("Starting 'Orange Canvas' application.")
 

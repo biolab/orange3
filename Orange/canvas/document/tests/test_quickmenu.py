@@ -1,13 +1,16 @@
+from PyQt4.QtGui import QStringListModel
 from PyQt4.QtCore import QPoint
+
 from ..quickmenu import QuickMenu, SuggestMenuPage, FlattenedTreeItemModel, \
                         ToolTree, QAction
 
 from ...gui.test import QAppTestCase
+from ...registry import global_registry
+from ...registry.qt import QtWidgetRegistry
 
 
 class TestMenu(QAppTestCase):
     def test_menu(self):
-        from PyQt4.QtGui import QStringListModel
         menu = QuickMenu()
 
         def triggered(action):
@@ -33,9 +36,8 @@ class TestMenu(QAppTestCase):
         self.app.exec_()
 
     def test_menu_with_registry(self):
-        from ...registry.qt import run_discovery
+        registry = QtWidgetRegistry(global_registry())
 
-        registry = run_discovery()
         menu = QuickMenu()
         menu.setModel(registry.model())
 
@@ -60,9 +62,7 @@ class TestMenu(QAppTestCase):
             self.assertIs(triggered_action[0], rval)
 
     def test_search(self):
-        from ...registry.qt import run_discovery
-
-        registry = run_discovery()
+        registry = QtWidgetRegistry(global_registry())
 
         menu = SuggestMenuPage()
 
@@ -73,7 +73,6 @@ class TestMenu(QAppTestCase):
         self.app.exec_()
 
     def test_flattened_model(self):
-        from PyQt4.QtGui import QStringListModel
         model = QStringListModel(["0", "1", "2", "3"])
         flat = FlattenedTreeItemModel()
         flat.setSourceModel(model)

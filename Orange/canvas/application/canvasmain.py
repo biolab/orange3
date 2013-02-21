@@ -30,7 +30,8 @@ from ..utils.qtcompat import QSettings
 from ..gui.dropshadow import DropShadowFrame
 from ..gui.dock import CollapsibleDockWidget
 from ..gui.quickhelp import QuickHelpTipEvent
-from ..gui.utils import message_critical, message_question, message_warning
+from ..gui.utils import message_critical, message_question, \
+    message_warning, message_information
 
 from ..help import HelpManager
 
@@ -42,7 +43,7 @@ from .settings import UserSettingsDialog
 from ..document.schemeedit import SchemeEditWidget
 
 from ..scheme import widgetsscheme
-from ..scheme.readwrite import parse_scheme
+from ..scheme.readwrite import parse_scheme, sniff_version
 
 from . import welcomedialog
 from ..preview import previewdialog, previewmodel
@@ -178,6 +179,7 @@ class CanvasMainWindow(QMainWindow):
 
         self.recent_schemes = config.recent_schemes()
 
+        self.open_in_external_browser = False
         self.help = HelpManager(self)
 
         self.setup_actions()
@@ -962,6 +964,23 @@ class CanvasMainWindow(QMainWindow):
         elif selected == QMessageBox.Cancel:
             return QDialog.Rejected
 
+    def check_can_save(self, document, path):
+        """
+        Check if saving the document to `path` would prevent it from
+        being read by the version 1.0 of scheme parser.
+
+        """
+        if path and os.path.exists(path):
+            version = sniff_version(open(path, "rb"))
+            if version == "1.0":
+                message_information(
+                    self.tr("Can not overwrite a version 1.0 ows file. "
+                            "Please save your work to a new file"),
+                    title="Info",
+                    parent=self)
+                return False
+        return True
+
     def save_scheme(self):
         """Save the current scheme. If the scheme does not have an associated
         path then prompt the user to select a scheme file. Return
@@ -972,7 +991,7 @@ class CanvasMainWindow(QMainWindow):
         document = self.current_document()
         curr_scheme = document.scheme()
 
-        if document.path():
+        if document.path() and self.check_can_save(document, document.path()):
             curr_scheme.save_to(open(document.path(), "wb"))
             document.setModified(False)
             self.add_recent_scheme(curr_scheme.title, document.path())
@@ -1008,7 +1027,9 @@ class CanvasMainWindow(QMainWindow):
         )
 
         if filename:
-            filename = str(filename)
+            if not self.check_can_save(document, filename):
+                return QDialog.Rejected
+
             dirname, basename = os.path.split(filename)
             self.last_scheme_dir = dirname
 
@@ -1192,11 +1213,12 @@ class CanvasMainWindow(QMainWindow):
                     icon=canvas_icons("Tutorials.svg")
                     )
 
-        top_row = [self.get_started_action, tutorials_action,
+        bottom_row = [self.get_started_action, tutorials_action,
                    self.documentation_action]
 
+
         self.new_action.triggered.connect(dialog.accept)
-        bottom_row = [new_action, open_action, recent_action]
+        top_row = [new_action, open_action, recent_action]
 
         dialog.addRow(top_row, background="light-grass")
         dialog.addRow(bottom_row, background="light-orange")
@@ -1517,16 +1539,33 @@ class CanvasMainWindow(QMainWindow):
                 try:
                     url = self.help.search(url)
                 except KeyError:
+                    url = None
                     log.info("No help topic found for %r", url)
                     return False
 
             if url:
-                log.info("Setting help to url: %r", url)
-                self.help_view.setUrl(QUrl(url))
-                self.help_dock.show()
-                return True
+                 self.show_help(url)
+            else:
+                message_information(
+                    self.tr("Sorry there is no documentation available for "
+                            "this widget."),
+                    parent=self)
+
+            return True
 
         return QMainWindow.event(self, event)
+
+    def show_help(self, url):
+        """
+        Show `url` in a help window.
+        """
+        log.info("Setting help to url: %r", url)
+        if self.open_in_external_browser:
+            QDesktopServices.openUrl(QUrl(url))
+        else:
+            self.help_view.load(QUrl(url))
+            self.help_dock.show()
+            self.help_dock.raise_()
 
     # Mac OS X
     if sys.platform == "darwin":
@@ -1621,6 +1660,10 @@ class CanvasMainWindow(QMainWindow):
             self.output_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
         else:
             self.output_dock.setAllowedAreas(Qt.NoDockWidgetArea)
+
+        self.open_in_external_browser = \
+            settings.value("open-in-external-browser", defaultValue=False,
+                           type=bool)
 
         settings.endGroup()
 

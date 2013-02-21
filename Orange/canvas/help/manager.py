@@ -240,7 +240,10 @@ def create_intersphinx_provider(entry_point):
         fields = list(map(itemgetter(1), format_iter))
         fields = [_f for _f in set(fields) if _f]
 
-        if "DEVELOP_ROOT" in fields and is_develop_egg(dist):
+        if "DEVELOP_ROOT" in fields:
+            if not is_develop_egg(dist):
+                # skip the location
+                continue
             target = formatter.format(target, DEVELOP_ROOT=dist.location)
 
             if os.path.exists(target) and \
@@ -254,7 +257,8 @@ def create_intersphinx_provider(entry_point):
                 if inventory:
                     inventory = formatter.format(inventory, **replacements)
             except KeyError:
-                log.exception("Error while formating intersphinx url.")
+                log.exception("Error while formating intersphinx mapping "
+                              "'%s', '%s'." % (target, inventory))
                 continue
 
             return IntersphinxHelpProvider(target=target, inventory=inventory)

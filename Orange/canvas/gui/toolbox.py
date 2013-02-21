@@ -354,7 +354,11 @@ class ToolBox(QFrame):
             self.__pages[i] = self.__pages[i]._replace(index=i)
 
         page.button.deleteLater()
-        page.widget.deleteLater()
+
+        # Hide the widget and reparent to self
+        # This follows QToolBox.removeItem
+        page.widget.hide()
+        page.widget.setParent(self)
 
         self.__updatePositions()
         self.__updateSelected()

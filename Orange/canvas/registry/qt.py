@@ -321,8 +321,11 @@ def tooltip_helper(desc):
     return "<hr/>".join(tooltip)
 
 
-def whats_this_helper(desc):
-    """What's this construction helper.
+def whats_this_helper(desc, include_more_link=False):
+    """
+    A `What's this` text construction helper. If `include_more_link` is
+    True then the text will include a `more...` link.
+
     """
     title = desc.name
     help_url = desc.help
@@ -341,7 +344,7 @@ def whats_this_helper(desc):
     if long_description:
         template.append("<p>{0}</p>".format(escape(long_description[:100])))
 
-    if help_url:
+    if help_url and include_more_link:
         template.append("<a href='{0}'>more...</a>".format(escape(help_url)))
 
     return "\n".join(template)

@@ -20,7 +20,7 @@ def sip_getapi(name):
     """
     Get the api version for a name.
     """
-    if sip.SIP_VERSION < 0x40900:
+    if sip.SIP_VERSION > 0x40900:
         return sip.getapi(name)
     elif name in _API_NAMES:
         return 1

@@ -61,6 +61,9 @@ class WidgetToolGrid(ToolGrid):
         """Set a model (`QStandardItemModel`) for the tool grid. The
         widget actions are children of the rootIndex.
 
+        .. warning:: The model should not be deleted before the
+                     `WidgetToolGrid` instance.
+
         """
         if self.__model is not None:
             self.__model.rowsInserted.disconnect(self.__on_rowsInserted)

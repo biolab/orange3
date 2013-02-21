@@ -164,10 +164,8 @@ class AnimatedStackedWidget(QFrame):
         """Remove `widget` from the stack.
         """
         index = self.__widgets.index(widget)
-        item = self.layout().takeAt(index)
-        assert(item.widget() is widget)
+        self.layout().removeWidget(widget)
         self.__widgets.pop(index)
-        widget.deleteLater()
 
     def widget(self, index):
         """Return the widget at `index`

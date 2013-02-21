@@ -133,7 +133,6 @@ class LinkItem(QGraphicsObject):
         self.sinkIndicator.hide()
 
         self.linkTextItem = QGraphicsTextItem(self)
-        self.linkTextItem.setFont(QFont("Helvetica", 11))
 
         self.__sourceName = ""
         self.__sinkName = ""
@@ -239,6 +238,20 @@ class LinkItem(QGraphicsObject):
                 )
 
         self.__updateCurve()
+
+    def setFont(self, font):
+        """
+        Set the channel names font.
+        """
+        if font != self.font():
+            self.linkTextItem.setFont(font)
+            self.__updateText()
+
+    def font(self):
+        """
+        Return the channel names font.
+        """
+        return self.linkTextItem.font()
 
     def setChannelNamesVisible(self, visible):
         self.linkTextItem.setVisible(visible)

@@ -13,7 +13,7 @@ from xml.sax.saxutils import escape
 from PyQt4.QtGui import QGraphicsScene, QPainter, QBrush, QColor, QFont, \
                         QGraphicsItem
 
-from PyQt4.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer
+from PyQt4.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, QEvent
 
 from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import PYQT_VERSION_STR
@@ -227,6 +227,8 @@ class CanvasScene(QGraphicsScene):
 
             item.setPos(pos)
 
+        item.setFont(self.font())
+
         # Set signal mappings
         self.activated_mapper.setPyMapping(item, item)
         item.activated.connect(self.activated_mapper.pyMap)
@@ -336,6 +338,7 @@ class CanvasScene(QGraphicsScene):
         if item.scene() is not self:
             self.addItem(item)
 
+        item.setFont(self.font())
         self.__link_items.append(item)
 
         self.link_item_added.emit(item)
@@ -761,6 +764,19 @@ class CanvasScene(QGraphicsScene):
         if handler:
             handler.start()
 
+    def event(self, event):
+        # TODO: change the base class of Node/LinkItem to QGraphicsWidget.
+        # It already handles font changes.
+        if event.type() == QEvent.FontChange:
+            self.__update_font()
+
+        return QGraphicsScene.event(self, event)
+
+    def __update_font(self):
+        font = self.font()
+        for item in self.__node_items + self.__link_items:
+            item.setFont(font)
+
     def __str__(self):
         return "%s(objectName=%r, ...)" % \
                 (type(self).__name__, str(self.objectName()))
@@ -776,7 +792,7 @@ def font_from_dict(font_dict, font=None):
         font.setFamily(font_dict["family"])
 
     if "size" in font_dict:
-        font.setPointSize(font_dict["size"])
+        font.setPixelSize(font_dict["size"])
 
     return font
 

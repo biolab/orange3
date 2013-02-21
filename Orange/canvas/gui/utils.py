@@ -81,21 +81,31 @@ def is_transparency_supported():
     elif sys.platform == "cygwin":
         return False
     elif sys.platform == "darwin":
-        try:
-            # Test if Qt was build against X11.
-            from PyQt4.QtGui import QX11Info
-            return QX11Info.isCompositingManagerRunning()
-        except ImportError:
-            # Assuming Quartz compositor is running.
+        if has_x11():
+            return is_x11_compositing_enabled()
+        else:
+            # Quartz compositor
             return True
     elif sys.platform.startswith("linux"):
         # TODO: wayland??
         return is_x11_compositing_enabled()
     elif sys.platform.startswith("freebsd"):
         return is_x11_compositing_enabled()
-    elif os.name == "":
-        # Any other system (Win, OSX) is assumed to support it
+    elif has_x11():
+        return is_x11_compositing_enabled()
+    else:
+        return False
+
+
+def has_x11():
+    """
+    Is Qt build against X11 server.
+    """
+    try:
+        from PyQt4.QtGui import QX11Info
         return True
+    except ImportError:
+        return False
 
 
 def is_x11_compositing_enabled():
@@ -117,7 +127,7 @@ def is_dwm_compositing_enabled():
     enabled = ctypes.c_bool()
     try:
         DwmIsCompositionEnabled = ctypes.windll.dwmapi.DwmIsCompositionEnabled
-    except AttributeError:
+    except (AttributeError, WindowsError):
         # dwmapi or DwmIsCompositionEnabled is not present
         return False
 

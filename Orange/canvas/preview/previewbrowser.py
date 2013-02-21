@@ -3,6 +3,8 @@ Preview Browser Widget.
 
 """
 
+from xml.sax.saxutils import escape
+
 from PyQt4.QtGui import (
     QWidget, QLabel, QListView, QAction, QVBoxLayout, QHBoxLayout, QSizePolicy,
     QStyleOption, QStylePainter
@@ -316,13 +318,16 @@ class PreviewBrowser(QWidget):
             if not description:
                 description = "No description."
 
-            name = str(index.data(Qt.DisplayRole))
+            description = escape(description)
+            description = description.replace("\n", "<br/>")
+
+            name = index.data(Qt.DisplayRole)
             if not name:
                 name = "Untitled"
 
-            path = str(index.data(Qt.StatusTipRole))
+            path = index.data(Qt.StatusTipRole)
 
-            svg = str(index.data(previewmodel.ThumbnailSVGRole))
+            svg = index.data(previewmodel.ThumbnailSVGRole)
 
         desc_text = self.__template.format(description=description, name=name)
 

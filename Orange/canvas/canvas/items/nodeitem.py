@@ -280,6 +280,7 @@ class NodeAnchorItem(GraphicsPathObject):
 
         self.__fullStroke = None
         self.__dottedStroke = None
+        self.__shape = None
 
     def parentNodeItem(self):
         """Return a parent `NodeItem` or `None` if this anchor's
@@ -295,8 +296,13 @@ class NodeAnchorItem(GraphicsPathObject):
         # Create a stroke of the path.
         stroke_path = QPainterPathStroker()
         stroke_path.setCapStyle(Qt.RoundCap)
-        stroke_path.setWidth(3)
+
+        # Shape is wider (bigger mouse hit area - should be settable)
+        stroke_path.setWidth(9)
+        self.__shape = stroke_path.createStroke(path)
+
         # The full stroke
+        stroke_path.setWidth(3)
         self.__fullStroke = stroke_path.createStroke(path)
 
         # The dotted stroke (when not connected to anything)
@@ -430,11 +436,16 @@ class NodeAnchorItem(GraphicsPathObject):
         return list(self.__pointPositions)
 
     def shape(self):
-        # Use stroke without the doted line (poor mouse cursor collision)
-        if self.__fullStroke is not None:
-            return self.__fullStroke
+        if self.__shape is not None:
+            return self.__shape
         else:
             return GraphicsPathObject.shape(self)
+
+    def boundingRect(self):
+        if self.__shape is not None:
+            return self.__shape.controlPointRect()
+        else:
+            return GraphicsPathObject.boundingRect(self)
 
     def hoverEnterEvent(self, event):
         self.shadow.setEnabled(True)
@@ -686,8 +697,6 @@ class NodeItem(QGraphicsObject):
         self.captionTextItem = QGraphicsTextItem(self)
         self.captionTextItem.setPlainText("")
         self.captionTextItem.setPos(0, 33)
-        font = QFont("Helvetica", 12)
-        self.captionTextItem.setFont(font)
 
         def iconItem(standard_pixmap):
             item = GraphicsIconItem(self, icon=standard_icon(standard_pixmap),
@@ -762,6 +771,21 @@ class NodeItem(QGraphicsObject):
         return self.__title
 
     title_ = Property(str, fget=title, fset=setTitle)
+
+    def setFont(self, font):
+        """
+        Set the title text font.
+        """
+        if font != self.font():
+            self.prepareGeometryChange()
+            self.captionTextItem.setFont(font)
+            self.__updateTitleText()
+
+    def font(self):
+        """
+        Return the title text font.
+        """
+        return self.captionTextItem.font()
 
     def setProcessingState(self, state):
         """Set the node processing state i.e. the node is processing

@@ -18,11 +18,12 @@ from ...gui import test
 class TestCanvasDockWidget(test.QAppTestCase):
     def test_dock(self):
         reg = global_registry()
-        reg = QtWidgetRegistry(reg)
+        reg = QtWidgetRegistry(reg, parent=self.app)
 
         toolbox = WidgetToolBox()
         toolbox.setObjectName("widgets-toolbox")
         toolbox.setModel(reg.model())
+
         text = QTextEdit()
         splitter = QSplitter()
         splitter.setOrientation(Qt.Vertical)
@@ -45,7 +46,7 @@ class TestCanvasDockWidget(test.QAppTestCase):
 
     def test_canvas_tool_dock(self):
         reg = global_registry()
-        reg = QtWidgetRegistry(reg)
+        reg = QtWidgetRegistry(reg, parent=self.app)
 
         dock = CanvasToolDock()
         dock.toolbox.setModel(reg.model())
@@ -74,13 +75,10 @@ class TestCanvasDockWidget(test.QAppTestCase):
 
     def test_category_toolbar(self):
         reg = global_registry()
-        reg = QtWidgetRegistry(reg)
+        reg = QtWidgetRegistry(reg, parent=self.app)
 
         w = QuickCategoryToolbar()
         w.setModel(reg.model())
         w.show()
-
-        def p(action):
-            print(action.text())
 
         self.app.exec_()

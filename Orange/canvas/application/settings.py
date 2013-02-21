@@ -393,17 +393,22 @@ class UserSettingsDialog(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        cb1 = QCheckBox(self.tr("Stay on top"),
+        cb1 = QCheckBox(self.tr("Open in external browser"),
+                        objectName="open-in-external-browser")
+
+        cb2 = QCheckBox(self.tr("Stay on top"),
                         objectName="help-stay-on-top")
 
-        cb2 = QCheckBox(self.tr("Dockable"),
+        cb3 = QCheckBox(self.tr("Dockable"),
                         objectName="help-dockable")
 
-        self.bind(cb1, "checked", "help/stay-on-top")
-        self.bind(cb2, "checked", "help/dockable")
+        self.bind(cb1, "checked", "help/open-in-external-browser")
+        self.bind(cb2, "checked", "help/stay-on-top")
+        self.bind(cb3, "checked", "help/dockable")
 
         layout.addWidget(cb1)
         layout.addWidget(cb2)
+        layout.addWidget(cb3)
         box.setLayout(layout)
 
         form.addRow(self.tr("Help window"), box)

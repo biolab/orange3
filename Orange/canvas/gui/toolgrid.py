@@ -8,7 +8,7 @@ A Widget containing a grid of clickable actions/buttons.
 from collections import namedtuple, deque
 
 from PyQt4.QtGui import (
-    QWidget, QAction, QToolButton, QGridLayout, QFontMetrics,
+    QFrame, QAction, QToolButton, QGridLayout, QFontMetrics,
     QSizePolicy, QStyleOptionToolButton, QStylePainter, QStyle
 )
 
@@ -108,7 +108,7 @@ class _ToolGridButton(QToolButton):
         p.end()
 
 
-class ToolGrid(QWidget):
+class ToolGrid(QFrame):
     """A widget containing a grid of actions/buttons.
 
     Actions can be added using standard QWidget addAction and insertAction
@@ -120,7 +120,7 @@ class ToolGrid(QWidget):
 
     def __init__(self, parent=None, columns=4, buttonSize=None,
                  iconSize=None, toolButtonStyle=Qt.ToolButtonTextUnderIcon):
-        QWidget.__init__(self, parent)
+        QFrame.__init__(self, parent)
 
         if buttonSize is not None:
             buttonSize = QSize(buttonSize)
@@ -218,7 +218,7 @@ class ToolGrid(QWidget):
 
             before = actions[before]
 
-        return QWidget.insertAction(self, before, action)
+        return QFrame.insertAction(self, before, action)
 
     def setActions(self, actions):
         """Clear the grid and add actions.
@@ -254,7 +254,7 @@ class ToolGrid(QWidget):
         return len(self.__gridSlots)
 
     def actionEvent(self, event):
-        QWidget.actionEvent(self, event)
+        QFrame.actionEvent(self, event)
 
         if event.type() == QEvent.ActionAdded:
             # Note: the action is already in the self.actions() list.
@@ -369,7 +369,7 @@ class ToolGrid(QWidget):
                     event.accept()
                     return True
 
-        return QWidget.eventFilter(self, obj, event)
+        return QFrame.eventFilter(self, obj, event)
 
     def __focusMove(self, focus, key):
         assert(focus is self.focusWidget())
