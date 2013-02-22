@@ -52,17 +52,18 @@ class TabDelimReader:
 
         for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
             tpe = tpe.strip()
-            flag = flag.strip()
+            flag = flag.split()
+            print(name, tpe, flag)
             if "i" in flag or "ignore" in flag:
                 continue
             if "b" in flag or "basket" in flag:
                 self.basket_column = col
                 continue
             is_class = "class" in flag
-            is_meta = "m" in flag or "meta" in flag or\
-                      "s" in tpe or "string" in tpe
-            is_weight = "w" in tpe or "weight" in tpe or\
-                        "w" in flag or "weight" in flag
+            is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
+            is_weight = "w" in flag or "weight" in flag \
+                or tpe in ["w", "weight"]
+
 
             if is_weight:
                 if is_class:
@@ -124,11 +125,12 @@ class TabDelimReader:
         line_count = 0
         _Xr = None
         for lne in f:
-            values = lne.strip().split()
+            values = lne.strip().split("\t")
             if not values:
                 continue
             if len(values) > self.n_columns:
-                raise ValueError("Too many columns in line {}", 4 + line_count)
+                raise ValueError("Too many columns in line {}".
+                                 format(4 + line_count))
             elif len(values) < self.n_columns:
                 values += padding
             if self.attribute_columns:
