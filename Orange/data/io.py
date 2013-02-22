@@ -53,7 +53,6 @@ class TabDelimReader:
         for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
             tpe = tpe.strip()
             flag = flag.split()
-            print(name, tpe, flag)
             if "i" in flag or "ignore" in flag:
                 continue
             if "b" in flag or "basket" in flag:
@@ -63,7 +62,6 @@ class TabDelimReader:
             is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
             is_weight = "w" in flag or "weight" in flag \
                 or tpe in ["w", "weight"]
-
 
             if is_weight:
                 if is_class:
@@ -125,9 +123,10 @@ class TabDelimReader:
         line_count = 0
         _Xr = None
         for lne in f:
-            values = lne.strip().split("\t")
+            values = lne.strip()
             if not values:
                 continue
+            values = values.split("\t")
             if len(values) > self.n_columns:
                 raise ValueError("Too many columns in line {}".
                                  format(4 + line_count))
@@ -136,13 +135,13 @@ class TabDelimReader:
             if self.attribute_columns:
                 _Xr = _X[line_count]
                 for i, (col, reader) in enumerate(self.attribute_columns):
-                    _Xr[i] = reader(values[col])
+                    _Xr[i] = reader(values[col].strip())
             for i, (col, reader) in enumerate(self.classvar_columns):
-                _Y[line_count, i] = reader(values[col])
+                _Y[line_count, i] = reader(values[col].strip())
             if _W is not None:
                 _W[line_count] = float(values[self.weight_column])
             for i, (col, reader) in enumerate(self.meta_columns):
-                _metas[line_count, i] = reader(values[col])
+                _metas[line_count, i] = reader(values[col].strip())
             line_count += 1
         if line_count != len(_X):
             del _Xr, _X, _Y, _W, _metas
