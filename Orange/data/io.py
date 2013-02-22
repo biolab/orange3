@@ -51,7 +51,6 @@ class TabDelimReader:
         self.basket_column = -1
 
         for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
-            print(name, tpe, flag)
             tpe = tpe.strip()
             flag = flag.strip()
             if "i" in flag or "ignore" in flag:
@@ -179,8 +178,6 @@ class TabDelimReader:
         if cls is None:
             cls = Table
         domain = self.read_header(file)
-        print(domain.attributes)
-        print(domain.class_vars)
         nExamples = self.count_lines(file)
         table = cls.from_domain(domain, nExamples, self.weight_column >= 0)
         self.read_data(file, table)
