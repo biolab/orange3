@@ -9,7 +9,7 @@ from PyQt4 import QtGui
 import scipy
 
 from Orange.data import DiscreteVariable, Table, Domain
-from Orange.statistics import contingency, distribution
+from Orange.statistics import contingency, distribution, tests
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
@@ -230,49 +230,6 @@ class OWBoxPlot(widget.OWWidget):
         self.compute_tests()
         self.show_posthoc()
 
-    def show_posthoc(self):
-        def line(y0, y1):
-            it = self.boxScene.addLine(x, y0, x, y1, self._post_line_pen)
-            it.setZValue(-100)
-            self.posthoc_lines.append(it)
-
-        while self.posthoc_lines:
-            self.boxScene.removeItem(self.posthoc_lines.pop())
-        if self.display < 2 or len(self.stats) < 2:
-            return
-        crit_line = self._sorting_criteria_attrs[self.display]
-        xs = []
-        y_up = -len(self.stats) * 60 + 10
-        for pos, box_index in enumerate(self.order):
-            stat = self.stats[box_index]
-            x = getattr(stat, crit_line) * self.scale_x
-            xs.append(x)
-            by = y_up + pos * 60
-            line(by + 12, 3)
-            line(by - 12, by - 25)
-
-        used_to = []
-        last_to = 0
-        for frm, frm_x in enumerate(xs[:-1]):
-            for to in range(frm + 1, len(xs)):
-                if xs[to] - frm_x > 1.5:
-                    to -= 1
-                    break
-            if last_to == to or frm == to:
-                continue
-            for rowi, used in enumerate(used_to):
-                if used < frm:
-                    used_to[rowi] = to
-                    break
-            else:
-                rowi = len(used_to)
-                used_to.append(to)
-            y = - 6 - rowi * 6
-            it = self.boxScene.addLine(frm_x - 2, y, xs[to] + 2, y,
-                                       self._post_grp_pen)
-            self.posthoc_lines.append(it)
-            last_to = to
-
     def compute_box_data(self):
         dataset = self.ddataset
         if dataset is None:
@@ -296,39 +253,59 @@ class OWBoxPlot(widget.OWWidget):
             self.label_txts = [""]
         self.stats = [stat for stat in self.stats if stat.N > 0]
 
+    def compute_tests(self):
+        # The t-test and ANOVA are implemented here since they efficiently use
+        # the widget-specific data in self.stats.
+        # The non-parametric tests can't do this, so we use statistics.tests
+        def stat_ttest():
+            d1, d2 = self.stats
+            pooled_var = d1.var / d1.N + d2.var / d2.N
+            df = pooled_var ** 2 / \
+                ((d1.var / d1.N) ** 2 / (d1.N - 1) +
+                 (d2.var / d2.N) ** 2 / (d2.N - 1))
+            t = abs(d1.mean - d2.mean) / math.sqrt(pooled_var)
+            p = 2 * (1 - scipy.special.stdtr(df, t))
+            return t, p
+
+        # TODO: Check this function
+        def stat_ANOVA():
+            N = sum(stat.N for stat in self.stats)
+            grand_avg = sum(stat.N * stat.mean for stat in self.stats) / N
+            var_between = sum(stat.N * (stat.mean - grand_avg) ** 2
+                              for stat in self.stats)
+            df_between = len(self.stats) - 1
+
+            var_within = sum(stat.N * stat.var for stat in self.stats)
+            df_within = N - len(self.stats)
+            F = (var_between / df_between) / (var_within / df_within)
+            p = 1 - scipy.special.fdtr(df_between, df_within, F)
+            return F, p
+
+        self.warning.hide()
+        if self.display < 2 or len(self.stats) < 2:
+            t = ""
+        elif any(s.N <= 1 for s in self.stats):
+            t = "At least one group has just one instance, " \
+                "cannot compute significance"
+        elif len(self.stats) == 2:
+            if self.display == 2:
+                z, self.p = tests.wilcoxon_rank_sum(
+                    self.stats[0].dist, self.stats[1].dist)
+                t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
+            else:
+                t, self.p = stat_ttest()
+                t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
+        else:
+            if self.display == 2:
+                U, self.p = -1, -1
+                t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
+            else:
+                F, self.p = stat_ANOVA()
+                t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
+        self.infot1.setText("<center>%s</center>" % t)
+
     def attr_label(self, text):
         return QtGui.QGraphicsSimpleTextItem(text)
-
-    def box_group(self, stat, height=20):
-        def line(x0, y0, x1, y1, *args, **kwargs):
-            return QtGui.QGraphicsLineItem(x0 * scale_x, y0, x1 * scale_x, y1,
-                                           *args, **kwargs)
-
-        scale_x = self.scale_x
-        box = QtGui.QGraphicsItemGroup()
-        whisker1 = line(stat.a_min, -1.5, stat.a_min, 1.5, box)
-        whisker2 = line(stat.a_max, -1.5, stat.a_max, 1.5, box)
-        vert_line = line(stat.a_min, 0, stat.a_max, 0, box)
-        mean_line = line(stat.mean, -height / 3, stat.mean, height / 3, box)
-        for it in (whisker1, whisker2, mean_line):
-            it.setPen(self._pen_paramet)
-        vert_line.setPen(self._pen_dotted)
-        var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0, box)
-        var_line.setPen(self._pen_paramet)
-
-        mbox = QtGui.QGraphicsRectItem(stat.q25 * scale_x, -height / 2,
-                                       (stat.q75 - stat.q25) * scale_x, height,
-                                       box)
-        mbox.setBrush(self._box_brush)
-        mbox.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-        mbox.setZValue(-200)
-
-        median_line = line(stat.median, -height / 2,
-                           stat.median, height / 2, box)
-        median_line.setPen(self._pen_median)
-        median_line.setZValue(-150)
-
-        return box
 
     def mean_label(self, stat, attr, val_name):
         label = QtGui.QGraphicsItemGroup()
@@ -339,8 +316,8 @@ class OWBoxPlot(widget.OWWidget):
         w2, h = bbox.width() / 2, bbox.height()
         t.setPos(-w2, -h)
         tpm = QtGui.QGraphicsSimpleTextItem(
-            " \u00b1 " + "%.*f" % (attr.number_of_decimals + 1,
-                                   math.sqrt(stat.var)), label)
+            " \u00b1 " + "%.*f" % (attr.number_of_decimals + 1, stat.dev),
+            label)
         tpm.setFont(self._label_font)
         tpm.setPos(w2, -h)
         if val_name:
@@ -353,6 +330,55 @@ class OWBoxPlot(widget.OWWidget):
         else:
             label.min_x = -w2
         return label
+
+    def draw_axis(self):
+        """Draw the horizontal axis and sets self.scale_x"""
+        bottom = min(stat.a_min for stat in self.stats)
+        top = max(stat.a_max for stat in self.stats)
+
+        first_val, step = owaxis.OWAxis.compute_scale(bottom, top)
+        while bottom < first_val:
+            first_val -= step
+        bottom = first_val
+        no_ticks = math.ceil((top - first_val) / step) + 1
+        top = max(top, first_val + (no_ticks - 1) * step)
+
+        gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
+        gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
+
+        bv = self.boxView
+        viewRect = bv.viewport().rect().adjusted(15, 15, -15, -30)
+        self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+
+        # In principle we should repeat this until convergence since the new
+        # scaling is too conservative. (No chance am I doing this.)
+        mlb = min(stat.mean + mean_lab.min_x / scale_x
+                  for stat, mean_lab in zip(self.stats, self.mean_labels))
+        if mlb < gbottom:
+            gbottom = mlb
+            self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+
+        self.scene_min_x = gbottom * scale_x
+        self.scene_width = (gtop - gbottom) * scale_x
+
+        val = first_val
+        attr = self.attributes[self.attributes_select[0]][0]
+        attr_desc = self.ddataset.domain[attr]
+        while True:
+            l = self.boxScene.addLine(val * scale_x, -1, val * scale_x, 1,
+                                      self._pen_axis_tick)
+            l.setZValue(100)
+            t = self.boxScene.addSimpleText(
+                attr_desc.repr_val(val), self._axis_font)
+            t.setFlags(t.flags() |
+                       QtGui.QGraphicsItem.ItemIgnoresTransformations)
+            r = t.boundingRect()
+            t.setPos(val * scale_x - r.width() / 2, 8)
+            if val >= top:
+                break
+            val += step
+        self.boxScene.addLine(bottom * scale_x - 4, 0,
+                              top * scale_x + 4, 0, self._pen_axis)
 
     def label_group(self, stat, attr, mean_lab):
         def centered_text(val, pos):
@@ -409,132 +435,77 @@ class OWBoxPlot(widget.OWWidget):
 
         return labels
 
-    def draw_axis(self):
-        """Draw the horizontal axis and sets self.scale_x"""
-        bottom = min(stat.a_min for stat in self.stats)
-        top = max(stat.a_max for stat in self.stats)
+    def box_group(self, stat, height=20):
+        def line(x0, y0, x1, y1, *args, **kwargs):
+            return QtGui.QGraphicsLineItem(x0 * scale_x, y0, x1 * scale_x, y1,
+                                           *args, **kwargs)
 
-        first_val, step = owaxis.OWAxis.compute_scale(bottom, top)
-        while bottom < first_val:
-            first_val -= step
-        bottom = first_val
-        no_ticks = math.ceil((top - first_val) / step) + 1
-        top = max(top, first_val + (no_ticks - 1) * step)
+        scale_x = self.scale_x
+        box = QtGui.QGraphicsItemGroup()
+        whisker1 = line(stat.a_min, -1.5, stat.a_min, 1.5, box)
+        whisker2 = line(stat.a_max, -1.5, stat.a_max, 1.5, box)
+        vert_line = line(stat.a_min, 0, stat.a_max, 0, box)
+        mean_line = line(stat.mean, -height / 3, stat.mean, height / 3, box)
+        for it in (whisker1, whisker2, mean_line):
+            it.setPen(self._pen_paramet)
+        vert_line.setPen(self._pen_dotted)
+        var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0, box)
+        var_line.setPen(self._pen_paramet)
 
-        gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
-        gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
+        mbox = QtGui.QGraphicsRectItem(stat.q25 * scale_x, -height / 2,
+                                       (stat.q75 - stat.q25) * scale_x, height,
+                                       box)
+        mbox.setBrush(self._box_brush)
+        mbox.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        mbox.setZValue(-200)
 
-        bv = self.boxView
-        viewRect = bv.viewport().rect().adjusted(15, 15, -15, -30)
-        self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+        median_line = line(stat.median, -height / 2,
+                           stat.median, height / 2, box)
+        median_line.setPen(self._pen_median)
+        median_line.setZValue(-150)
 
-        # In principle we should repeat this until convergence since the new
-        # scaling is too conservative. (No chance am I doing this.)
-        mlb = min(stat.mean + mean_lab.min_x / scale_x
-                  for stat, mean_lab in zip(self.stats, self.mean_labels))
-        if mlb < gbottom:
-            gbottom = mlb
-            self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+        return box
 
-        self.scene_min_x = gbottom * scale_x
-        self.scene_width = (gtop - gbottom) * scale_x
+    def show_posthoc(self):
+        def line(y0, y1):
+            it = self.boxScene.addLine(x, y0, x, y1, self._post_line_pen)
+            it.setZValue(-100)
+            self.posthoc_lines.append(it)
 
-        val = first_val
-        attr = self.attributes[self.attributes_select[0]][0]
-        attr_desc = self.ddataset.domain[attr]
-        while True:
-            l = self.boxScene.addLine(val * scale_x, -1, val * scale_x, 1,
-                                      self._pen_axis_tick)
-            l.setZValue(100)
-            t = self.boxScene.addSimpleText(
-                attr_desc.repr_val(val), self._axis_font)
-            t.setFlags(t.flags() |
-                       QtGui.QGraphicsItem.ItemIgnoresTransformations)
-            r = t.boundingRect()
-            t.setPos(val * scale_x - r.width() / 2, 8)
-            if val >= top:
-                break
-            val += step
-        self.boxScene.addLine(bottom * scale_x - 4, 0,
-                              top * scale_x + 4, 0, self._pen_axis)
-
-    def compute_tests(self):
-        self.warning.hide()
+        while self.posthoc_lines:
+            self.boxScene.removeItem(self.posthoc_lines.pop())
         if self.display < 2 or len(self.stats) < 2:
-            t = ""
-        elif any(s.N <= 1 for s in self.stats):
-            t = "At least one group has just one instance, " \
-                "cannot compute significance"
-        elif len(self.stats) == 2:
-            if self.display == 2:
-                z, self.p = self.stat_wilc()
-                t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
+            return
+        crit_line = self._sorting_criteria_attrs[self.display]
+        xs = []
+        y_up = -len(self.stats) * 60 + 10
+        for pos, box_index in enumerate(self.order):
+            stat = self.stats[box_index]
+            x = getattr(stat, crit_line) * self.scale_x
+            xs.append(x)
+            by = y_up + pos * 60
+            line(by + 12, 3)
+            line(by - 12, by - 25)
+
+        used_to = []
+        last_to = 0
+        for frm, frm_x in enumerate(xs[:-1]):
+            for to in range(frm + 1, len(xs)):
+                if xs[to] - frm_x > 1.5:
+                    to -= 1
+                    break
+            if last_to == to or frm == to:
+                continue
+            for rowi, used in enumerate(used_to):
+                if used < frm:
+                    used_to[rowi] = to
+                    break
             else:
-                t, self.p = self.stat_ttest()
-                t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
-        else:
-            if self.display == 2:
-                U, self.p = self.stat_kruskal()
-                t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
-            else:
-                F, self.p = self.stat_ANOVA()
-                t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
-        self.infot1.setText("<center>%s</center>" % t)
+                rowi = len(used_to)
+                used_to.append(to)
+            y = - 6 - rowi * 6
+            it = self.boxScene.addLine(frm_x - 2, y, xs[to] + 2, y,
+                                       self._post_grp_pen)
+            self.posthoc_lines.append(it)
+            last_to = to
 
-    def stat_ttest(self):
-        d1, d2 = self.stats
-        pooled_var = d1.var / d1.N + d2.var / d2.N
-        df = pooled_var ** 2 / \
-            ((d1.var / d1.N) ** 2 / (d1.N - 1) +
-             (d2.var / d2.N) ** 2 / (d2.N - 1))
-        t = (d1.mean - d2.mean) / math.sqrt(pooled_var)
-        # TODO check!!!
-        p = 2 * (1 - scipy.special.stdtr(df, t))
-        return t, p
-
-    def stat_wilc(self):
-        s1, s2 = self.stats
-        d1, d2 = s1.dist, s2.dist
-        ni1, ni2 = d1.shape[1], d2.shape[1]
-        i1 = i2 = 0
-        R = 0
-        rank = 0
-        while i1 < ni1 and i2 < ni2:
-            if d1[0, i1] < d2[0, i2]:
-                R += (rank + d1[1, i1] / 2)
-                rank += d1[1, i1]
-                i1 += 1
-            elif d1[0, i1] == d2[0, i2]:
-                br = d1[1, i1] + d2[1, i2]
-                R += (rank + br / 2)
-                rank += br
-                i1 += 1
-                i2 += 1
-            else:
-                rank += d2[1, i2]
-                i2 += 1
-        if i1 < ni1:
-            R = np.sum(d1[1, i1:]) / 2
-        U = R - s1.N * (s1.N + 1) / 2
-        m = s1.N * (s1.N + s2.N + 1) / 2
-        var = s2.N * m / 6
-        z = (U - m) / math.sqrt(var)
-        # TODO check!!!
-        p = 2 * (1 - scipy.special.ndtr(z))
-        return z, p
-
-    def stat_ANOVA(self):
-        N = sum(stat.N for stat in self.stats)
-        grand_avg = sum(stat.N * stat.mean for stat in self.stats) / N
-        var_between = sum(stat.N * (stat.mean - grand_avg) ** 2
-                          for stat in self.stats)
-        df_between = len(self.stats) - 1
-
-        var_within = sum(stat.N * stat.var for stat in self.stats)
-        df_within = N - len(self.stats)
-        F = (var_between / df_between) / (var_within / df_within)
-        p = 1 - scipy.special.fdtr(df_between, df_within, F)
-        return F, p
-
-    def stat_kruskal(self):
-        return -1, -1
