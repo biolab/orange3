@@ -180,10 +180,12 @@ class OWBoxPlot(widget.OWWidget):
         attr = self.attributes[self.attributes_select[0]][0]
         attr = self.ddataset.domain[attr]
 
+        self.mean_labels = [self.mean_label(stat, attr, lab)
+                            for stat, lab in zip(self.stats, self.label_txts)]
         self.draw_axis()
         self.boxes = [self.box_group(stat) for stat in self.stats]
-        self.labels = [self.label_group(stat, attr, lab)
-                       for stat, lab in zip(self.stats, self.label_txts)]
+        self.labels = [self.label_group(stat, attr, mean_lab)
+                       for stat, mean_lab in zip(self.stats, self.mean_labels)]
         self.attr_labels = [self.attr_label(lab) for lab in self.label_txts]
         for it in itertools.chain(self.labels, self.boxes, self.attr_labels):
             self.boxScene.addItem(it)
@@ -346,22 +348,41 @@ class OWBoxPlot(widget.OWWidget):
     _label_font.setPixelSize(11)
     _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
 
-    def label_group(self, stat, attr, val_name):
-        def repr_val(val):
-            return "%.*f" % (attr.number_of_decimals + 1, val)
+    def mean_label(self, stat, attr, val_name):
+        label = QtGui.QGraphicsItemGroup()
+        t = QtGui.QGraphicsSimpleTextItem(
+            "%.*f" % (attr.number_of_decimals + 1, stat.mean), label)
+        t.setFont(self._label_font)
+        bbox = t.boundingRect()
+        w2, h = bbox.width() / 2, bbox.height()
+        t.setPos(-w2, -h)
+        tpm = QtGui.QGraphicsSimpleTextItem(
+            " \u00b1 " + "%.*f" % (attr.number_of_decimals + 1,
+                                   math.sqrt(stat.var)), label)
+        tpm.setFont(self._label_font)
+        tpm.setPos(w2, -h)
+        if val_name:
+            vnm = QtGui.QGraphicsSimpleTextItem(val_name + ": ", label)
+            vnm.setFont(self._label_font)
+            vnm.setBrush(self._attr_brush)
+            vb = vnm.boundingRect()
+            label.min_x = -w2 - vb.width()
+            vnm.setPos(label.min_x, -h)
+        else:
+            label.min_x = -w2
+        return label
 
-        def sc(x):
-            return x * scale_x
-
-        def centered_text(x, d, text=None):
-            l = QtGui.QGraphicsLineItem(sc(x), 12 * d, sc(x), 20 * d, labels)
+    def label_group(self, stat, attr, mean_lab):
+        def centered_text(val, pos):
             t = QtGui.QGraphicsSimpleTextItem(
-                repr_val(x) if text is None else text, labels)
+                "%.*f" % (attr.number_of_decimals + 1, val), labels)
             t.setFont(self._label_font)
             bbox = t.boundingRect()
-            t.setPos(sc(x) - bbox.width() / 2,
-                     22 * d - (bbox.height() if d == -1 else 0))
-            return t, l
+            t.setPos(pos - bbox.width() / 2, 22)
+            return t
+
+        def line(x, down=1):
+            QtGui.QGraphicsLineItem(x, 12 * down, x, 20 * down, labels)
 
         def move_label(label, frm, to):
             label.setX(to)
@@ -374,38 +395,35 @@ class OWBoxPlot(widget.OWWidget):
             p.setPos(frm, 12)
             labels.addToGroup(p)
 
-        scale_x = self.scale_x
         labels = QtGui.QGraphicsItemGroup()
-        t, _ = centered_text(stat.mean, -1)
-        tpm = QtGui.QGraphicsSimpleTextItem(
-            " \u00b1 " + repr_val(math.sqrt(stat.var)), labels)
-        tpm.setFont(self._label_font)
-        tpm.setPos(sc(stat.mean) + t.boundingRect().width() / 2,
-                   -22 - tpm.boundingRect().height())
-        if val_name:
-            vnm = QtGui.QGraphicsSimpleTextItem(val_name + ": ", labels)
-            vnm.setFont(self._label_font)
-            vnm.setBrush(self._attr_brush)
-            vb = vnm.boundingRect()
-            vnm.setPos(sc(stat.mean) - t.boundingRect().width() / 2 -
-                       vb.width(), -22 - vb.height())
 
-        med_t, _ = centered_text(stat.median, 1)
-        med_box = med_t.boundingRect()
+        labels.addToGroup(mean_lab)
+        m = stat.mean * self.scale_x
+        mean_lab.setPos(m, -22)
+        line(m, -1)
 
-        t, lne = centered_text(stat.q25, 1)
+        msc = stat.median * self.scale_x
+        med_t = centered_text(stat.median, msc)
+        med_box_width2 = med_t.boundingRect().width()
+        line(msc)
+
+        x = stat.q25 * self.scale_x
+        t = centered_text(stat.q25, x)
         t_box = t.boundingRect()
-        med_left = sc(stat.median) - med_box.width() / 2
-        if sc(stat.q25) + t_box.width() / 2 >= med_left - 10:
-            labels.removeFromGroup(lne)
-            move_label(t, sc(stat.q25), med_left - t_box.width() - 10)
+        med_left = msc - med_box_width2
+        if x + t_box.width() / 2 >= med_left - 5:
+            move_label(t, x, med_left - t_box.width() - 5)
+        else:
+            line(x)
 
-        t, lne = centered_text(stat.q75, 1)
+        x = stat.q75 * self.scale_x
+        t = centered_text(stat.q75, x)
         t_box = t.boundingRect()
-        med_right = sc(stat.median) + med_box.width() / 2
-        if sc(stat.q75) - t_box.width() / 2 <= med_right + 10:
-            labels.removeFromGroup(lne)
-            move_label(t, sc(stat.q75), med_right + 10)
+        med_right = msc + med_box_width2
+        if x - t_box.width() / 2 <= med_right + 5:
+            move_label(t, x, med_right + 5)
+        else:
+            line(x)
 
         return labels
 
@@ -427,6 +445,14 @@ class OWBoxPlot(widget.OWWidget):
         bv = self.boxView
         viewRect = bv.viewport().rect().adjusted(15, 15, -15, -30)
         self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+
+        # In principle we should repeat this until convergence since the new
+        # scaling is too conservative. (No chance am I doing this.)
+        mlb = min(stat.mean + mean_lab.min_x / scale_x
+                  for stat, mean_lab in zip(self.stats, self.mean_labels))
+        if mlb < gbottom:
+            gbottom = mlb
+            self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
 
         self.scene_min_x = gbottom * scale_x
         self.scene_width = (gtop - gbottom) * scale_x
