@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 from ..data import _io
 from ..data.variable import *
 from ..data import Domain
@@ -26,6 +27,8 @@ class FileReader:
 
 
 class TabDelimReader:
+    non_escaped_spaces = re.compile(r"(?<!\\) +")
+
     def read_header(self, f):
         f.seek(0)
         names = f.readline().strip("\n\r").split("\t")
@@ -79,7 +82,9 @@ class TabDelimReader:
             elif tpe in ["s", "string"]:
                 var = StringVariable.make(name)
             else:
-                var = DiscreteVariable.make(name, tpe.split(), True)
+                values = [v.replace("\\ ", " ")
+                          for v in self.non_escaped_spaces.split(tpe)]
+                var = DiscreteVariable.make(name, values, True)
             var.fix_order = (isinstance(var, DiscreteVariable)
                              and not var.values)
 
