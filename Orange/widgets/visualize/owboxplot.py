@@ -8,13 +8,13 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 import scipy
 
-from Orange.data import DiscreteVariable, Table, Domain
+from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
 from Orange.statistics import contingency, distribution, tests
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils import datacaching
+from Orange.widgets.utils import datacaching, colorpalette
 from Orange.widgets.utils.plot import owaxis
 
 
@@ -65,6 +65,9 @@ class OWBoxPlot(widget.OWWidget):
     attributes_select = ContextSetting([0])
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
+    stretched = Setting(True)
+    colorSettings = Setting(None)
+    selectedSchemaIndex = Setting(0)
 
     _sorting_criteria_attrs = ["", "", "median", "mean"]
     _label_positions = ["q25", "median", "mean"]
@@ -103,15 +106,17 @@ class OWBoxPlot(widget.OWWidget):
             "attributes_select", "attributes", box="Variable",
             selectionMode=QtGui.QListWidget.SingleSelection,
             callback=self.attr_changed)
-        gb = gui.widgetBox(self.controlArea, orientation=1)
-        self.attrCombo = gui.listBox(gb, self,
+        self.attrCombo = gui.listBox(self.controlArea, self,
             'grouping_select', "grouping", box="Grouping",
             selectionMode=QtGui.QListWidget.SingleSelection,
             callback=self.attr_changed)
-        self.sorting_combo = gui.radioButtonsInBox(gb, self,
+        self.sorting_combo = gui.radioButtonsInBox(self.controlArea, self,
             'display', box='Display', callback=self.display_changed,
             btnLabels=["Box plots", "Anotated boxes",
                        "Compare medians", "Compare means"])
+        self.stretching_box = gui.checkBox(self.controlArea, self,
+            'stretched', "Stretch bars", box='Display',
+            callback=self.display_changed).box
         gui.rubber(self.controlArea)
 
         gui.widgetBox(self.mainArea, addSpace=True)
@@ -130,9 +135,26 @@ class OWBoxPlot(widget.OWWidget):
         self.warning_info = gui.widgetLabel(self.warning, "")
         self.warning.hide()
 
+        dlg = self.createColorDialog()
+        self.discPalette = dlg.getDiscretePalette("discPalette")
+
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self.layout_changed()
+
+    def setColors(self):
+        dlg = self.createColorDialog()
+        if dlg.exec_():
+            self.colorSettings = dlg.getColorSchemas()
+            self.selectedSchemaIndex = dlg.selectedSchemaIndex
+            self.discPalette = dlg.getDiscretePalette("discPalette")
+            self.display_changed()
+
+    def createColorDialog(self):
+        c = colorpalette.ColorPaletteDlg(self, "Color Palette")
+        c.createDiscretePalette("discPalette", "Discrete Palette")
+        c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
+        return c
 
     def data(self, dataset):
         if dataset is not None and (
@@ -146,16 +168,10 @@ class OWBoxPlot(widget.OWWidget):
         self.attrCombo.clear()
         self.openContext(self.ddataset)
         if dataset:
-            self.attrCombo.addItem("(none)")
-            attributes = []
-            grouping = ["None"]
-            for attr in self.ddataset.domain:
-                if isinstance(attr, DiscreteVariable):
-                    grouping.append((attr.name, attr.var_type))
-                else:
-                    attributes.append((attr.name, attr.var_type))
-            self.attributes = attributes
-            self.grouping = grouping
+            self.attributes = [(a.name, a.var_type) for a in dataset.domain]
+            self.grouping = ["None"] + [(a.name, a.var_type)
+                                        for a in dataset.domain
+                                        if isinstance(a, DiscreteVariable)]
             self.grouping_select = [0]
             self.attributes_select = [0]
             self.attr_changed()
@@ -171,14 +187,25 @@ class OWBoxPlot(widget.OWWidget):
 
     def attr_changed(self):
         self.compute_box_data()
-        self.sorting_combo.setDisabled(len(self.stats) < 2)
+        if self.is_continuous:
+            self.stretching_box.hide()
+            self.sorting_combo.show()
+            self.sorting_combo.setDisabled(len(self.stats) < 2)
+        else:
+            self.stretching_box.show()
+            self.sorting_combo.hide()
         self.layout_changed()
 
-    def layout_changed(self):
+    def clear_scene(self):
         self.boxScene.clear()
         self.posthoc_lines = []
+
+    def layout_changed(self):
+        self.clear_scene()
         if not self.stats:
             return
+        if not self.is_continuous:
+            return self.display_changed_disc()
 
         attr = self.attributes[self.attributes_select[0]][0]
         attr = self.ddataset.domain[attr]
@@ -195,6 +222,9 @@ class OWBoxPlot(widget.OWWidget):
         self.display_changed()
 
     def display_changed(self):
+        if not self.is_continuous:
+            return self.display_changed_disc()
+
         self.order = list(range(len(self.stats)))
         criterion = self._sorting_criteria_attrs[self.display]
         if criterion:
@@ -230,13 +260,39 @@ class OWBoxPlot(widget.OWWidget):
         self.compute_tests()
         self.show_posthoc()
 
+    def display_changed_disc(self):
+        self.clear_scene()
+        self.attr_labels = [self.attr_label(lab) for lab in self.label_txts]
+        self.draw_axis_disc()
+        if self.grouping_select[0]:
+            self.discPalette.setNumberOfColors(len(self.conts[0]))
+            self.boxes = [self.strudel(cont) for cont in self.conts]
+        else:
+            self.discPalette.setNumberOfColors(len(self.dist))
+            self.boxes = [self.strudel(self.dist)]
+
+        for row, box in enumerate(self.boxes):
+            y = (-len(self.boxes) + row) * 40 + 10
+            self.boxScene.addItem(box)
+            box.setPos(0, y)
+            label = self.attr_labels[row]
+            b = label.boundingRect()
+            label.setPos(-b.width() - 10, y - b.height() / 2)
+            self.boxScene.addItem(label)
+        self.boxScene.setSceneRect(-self.label_width - 5,
+                                   -30 - len(self.boxes) * 40,
+                                   self.scene_width, len(self.boxes * 40) + 90)
+        self.boxView.centerOn(self.scene_width / 2,
+                              -30 - len(self.boxes) * 40 / 2 + 45)
+
     def compute_box_data(self):
         dataset = self.ddataset
         if dataset is None:
             self.stats = []
             return
-        attr = self.attributes[self.attributes_select[0]][0]
-        attr_ind = dataset.domain.index(attr)
+        attr_ind = self.attributes_select[0]
+        attr = dataset.domain[attr_ind]
+        self.is_continuous = isinstance(attr, ContinuousVariable)
         group_by = self.grouping_select[0]
         if group_by:
             group_attr = self.grouping[group_by][0]
@@ -244,12 +300,14 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = datacaching.getCached(
                 dataset, contingency.get_contingency,
                 (dataset, attr_ind, group_ind))
-            self.stats = [BoxData(cont) for cont in self.conts]
+            if self.is_continuous:
+                self.stats = [BoxData(cont) for cont in self.conts]
             self.label_txts = dataset.domain[group_ind].values
         else:
             self.dist = datacaching.getCached(
                 dataset, distribution.get_distribution, (attr_ind, dataset))
-            self.stats = [BoxData(self.dist)]
+            if self.is_continuous:
+                self.stats = [BoxData(self.dist)]
             self.label_txts = [""]
         self.stats = [stat for stat in self.stats if stat.N > 0]
 
@@ -380,6 +438,43 @@ class OWBoxPlot(widget.OWWidget):
         self.boxScene.addLine(bottom * scale_x - 4, 0,
                               top * scale_x + 4, 0, self._pen_axis)
 
+    def draw_axis_disc(self):
+        """Draw the horizontal axis and sets self.scale_x for discrete attrs"""
+        if self.stretched:
+            step = steps = 10
+        else:
+            if self.grouping_select[0]:
+                max_box = max(float(np.sum(dist)) for dist in self.conts)
+            else:
+                max_box = float(np.sum(self.dist))
+            if max_box == 0:
+                self.scale_x = 1
+                return
+            _, step = owaxis.OWAxis.compute_scale(0, max_box)
+            step = int(step)
+            steps = int(math.ceil(max_box / step))
+        max_box = step * steps
+
+        bv = self.boxView
+        viewRect = bv.viewport().rect().adjusted(15, 15, -15, -30)
+        self.scene_width = viewRect.width()
+
+        lab_width = max(lab.boundingRect().width() for lab in self.attr_labels)
+        lab_width = max(lab_width, 40)
+        lab_width = min(lab_width, self.scene_width / 3)
+        self.label_width = lab_width
+        self.scale_x = scale_x = (self.scene_width - lab_width - 10) / max_box
+
+        self.boxScene.addLine(0, 0, max_box * scale_x, 0, self._pen_axis)
+        for val in range(0, step * steps + 1, step):
+            l = self.boxScene.addLine(val * scale_x, -1, val * scale_x, 1,
+                                      self._pen_axis_tick)
+            l.setZValue(100)
+            t = self.boxScene.addSimpleText(str(val), self._axis_font)
+            t.setPos(val * scale_x - t.boundingRect().width() / 2, 8)
+        if self.stretched:
+            self.scale_x *= 100
+
     def label_group(self, stat, attr, mean_lab):
         def centered_text(val, pos):
             t = QtGui.QGraphicsSimpleTextItem(
@@ -465,6 +560,26 @@ class OWBoxPlot(widget.OWWidget):
         median_line.setZValue(-150)
 
         return box
+
+    def strudel(self, dist):
+        ss = np.sum(dist)
+        box = QtGui.QGraphicsItemGroup()
+        if ss < 1e-6:
+            QtGui.QGraphicsRectItem(0, -10, 1, 10, box)
+        cum = 0
+        get_color = self.discPalette.getRGB
+        for i, v in enumerate(dist):
+            if v < 1e-6:
+                continue
+            if self.stretched:
+                v /= ss
+            v *= self.scale_x
+            rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
+            rect.setBrush(QtGui.QBrush(QtGui.QColor(*get_color(i))))
+            rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            cum += v
+        return box
+
 
     def show_posthoc(self):
         def line(y0, y1):
