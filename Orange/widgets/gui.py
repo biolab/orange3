@@ -332,6 +332,7 @@ def checkBox(widget, master, value, label, box=None, tooltip=None, callback=None
     else:
         b = widget
     wa = QCheckBox(label, b)
+    wa.box = b
     if addToLayout and b.layout() is not None:
         b.layout().addWidget(wa)
 
