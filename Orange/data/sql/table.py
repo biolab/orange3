@@ -114,6 +114,3 @@ class SqlTable(storage.Storage):
 
     def __len__(self):
         return self.nrows
-
-
-
