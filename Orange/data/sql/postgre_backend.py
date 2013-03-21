@@ -1,3 +1,4 @@
+import math
 import psycopg2
 
 
@@ -16,6 +17,7 @@ class PostgreBackend(object):
         )
         self.table_name = table
         self.table_info = self._get_table_info()
+
 
     def _get_table_info(self):
         cur = self.connection.cursor()
@@ -48,25 +50,41 @@ class PostgreBackend(object):
         cur.execute("SELECT COUNT(*) FROM %s" % self.table_name)
         return cur.fetchone()[0]
 
-    def query(self, fields=None, filter=None, row_filter=None):
-        param_fields = fields
-        if param_fields is not None:
+    def query(self, attributes=None, filters=None, rows=None):
+        if attributes is not None:
             fields = []
-            for field in fields:
-                if field.get_value_from is not None:
-                    transformer = field.get_value_from(None)
-                    if not isinstance(transformer, str):
-                        raise ValueError("cannot use transformers "
-                                         "that do not return strings "
+            for attr in attributes:
+                if attr.get_value_from is not None:
+                    field_src = attr.get_value_from(None)
+                    if not isinstance(field_src, str):
+                        raise ValueError("cannot use ordinary attributes "
                                          "with sql backend")
-                    field_str = '(%s) AS %s' % (transformer, field.name)
+                    field_str = '(%s) AS %s' % (field_src, attr.name)
                 else:
-                    field_str = field.name
+                    field_str = attr.name
                 fields.append(field_str)
             if not fields:
                 raise ValueError("No fields selected.")
         else:
             fields = ["*"]
+
+        if filters is not None:
+            pass
+
+        sql = "SELECT %s FROM %s" % (', '.join(fields), self.table_name)
+        if rows is not None:
+            if isinstance(rows, slice):
+                start = rows.start or 0
+                stop = rows.stop or self.table_info.nrows
+                size = stop - start
+            else:
+                rows = list(rows)
+                start, stop = min(rows), max(rows)
+                size = stop - start + 1
+            sql += " OFFSET %d LIMIT %d" % (start, size)
+        cur = self.connection.cursor()
+        cur.execute(sql)
+        return cur.fetchall()
 
 
 class TableInfo(object):
