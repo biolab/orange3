@@ -103,7 +103,7 @@ class Domain:
         self._variables = self.attributes + self.class_vars
         self._metas = tuple(metas)
         self.class_var =\
-        self.class_vars[0] if len(self.class_vars) == 1 else None
+            self.class_vars[0] if len(self.class_vars) == 1 else None
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 

@@ -5,10 +5,10 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 from urllib import parse
 import numpy as np
 from . import postgre_backend
-from .. import domain, storage, variable, value
+from .. import domain, storage, variable, value, table, instance
 
 
-class SqlTable(storage.Storage):
+class SqlTable(table.Table):
     base = None
     domain = None
     nrows = 0
@@ -72,7 +72,7 @@ class SqlTable(storage.Storage):
     def __getitem__(self, key):
         if isinstance(key, int):
             # one row
-            raise NotImplementedError
+            return SqlRowInstance(self, key)
         if not isinstance(key, tuple):
             # row filter
             key = (key, Ellipsis)
@@ -114,3 +114,71 @@ class SqlTable(storage.Storage):
 
     def __len__(self):
         return self.nrows
+
+    def has_weights(self):
+        return False
+
+    def _compute_basic_stats(self, columns=None,
+                             include_metas=False, compute_var=False):
+        if columns is not None:
+            columns = [self.domain.var_from_domain(col) for col in columns]
+        else:
+            columns = list(self.domain)
+        return self.backend.stats(columns[:4])
+
+    def X_density(self):
+        return self.DENSE
+
+    def Y_density(self):
+        return self.DENSE
+
+    def metas_density(self):
+        return self.DENSE
+
+
+class SqlRowInstance(instance.Instance):
+    def __init__(self, table, row_index):
+        """
+        Construct a data instance representing the given row of the table.
+        """
+        super().__init__(table.domain)
+        self._x = self._values = table.backend.query(rows=[row_index])[0]
+
+        self.row_index = row_index
+        self.table = table
+
+
+    @property
+    def weight(self):
+        if not self.table.has_weights():
+            return 1
+        return self.table._W[self.row_index]
+
+    @staticmethod
+    def sp_values(matrix, row, variables):
+        if sp.issparse(matrix):
+            begptr, endptr = matrix.indptr[row:row + 2]
+            rendptr = min(endptr, begptr + 5)
+            variables = [variables[var]
+                         for var in matrix.indices[begptr:rendptr]]
+            s = ", ".join("{}={}".format(var.name, var.str_val(val))
+                for var, val in zip(variables, matrix.data[begptr:rendptr]))
+            if rendptr != endptr:
+                s += ", ..."
+            return s
+        else:
+            return Instance.str_values(matrix[row], variables)
+
+    def __str__(self):
+        table = self.table
+        domain = table.domain
+        row = self.row_index
+        s = "[" + self.sp_values(table._X, row, domain.attributes)
+        if domain.class_vars:
+            s += " | " + self.sp_values(table._Y, row, domain.class_vars)
+        s += "]"
+        if self._domain.metas:
+            s += " {" + self.sp_values(table._metas, row, domain.metas) + "}"
+        return s
+
+    __repr__ = __str__

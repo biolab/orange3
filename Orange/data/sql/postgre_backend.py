@@ -86,6 +86,58 @@ class PostgreBackend(object):
         cur.execute(sql)
         return cur.fetchall()
 
+    def stats(self, columns=None):
+        if columns is None:
+            columns = self.table_info.field_names
+
+        stats = []
+        for column in columns:
+            if column.var_type == column.VarTypes.Continuous:
+                column = column.get_value_from()
+                stats.append(", ".join((
+                    "MIN(%s)" % column,
+                    "MAX(%s)" % column,
+                    "AVG(%s)" % column,
+                    "STDDEV(%s)" % column,
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 1"
+                    "       ELSE 0"
+                    "END)" % column,
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 0"
+                    "       ELSE 1"
+                    "END)" % column,
+                )))
+            else:
+                column = column.get_value_from()
+                stats.append(", ".join((
+                    "NULL",
+                    "NULL",
+                    "NULL",
+                    "NULL",
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 1"
+                    "       ELSE 0"
+                    "END)" % column,
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 0"
+                    "       ELSE 1"
+                    "END)" % column,
+                )))
+
+        stats_sql = ", ".join(stats)
+        cur = self.connection.cursor()
+        cur.execute("SELECT %s FROM %s" % (stats_sql, self.table_name))
+        results = cur.fetchone()
+        stats = []
+        for i in range(len(columns)):
+            stats.append(results[6*i:6*(i+1)])
+        return stats
+
+
+
+
+
 
 class TableInfo(object):
     def __init__(self, fields, nrows):
