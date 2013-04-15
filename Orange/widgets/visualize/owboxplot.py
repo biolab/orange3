@@ -136,6 +136,9 @@ class OWBoxPlot(widget.OWWidget):
         self.warning_info = gui.widgetLabel(self.warning, "")
         self.warning.hide()
 
+        self.stats = []
+        self.is_continuous = False
+
         dlg = self.createColorDialog()
         self.discPalette = dlg.getDiscretePalette("discPalette")
 

@@ -1,6 +1,6 @@
 import math
 import psycopg2
-
+import numpy as np
 
 class PostgreBackend(object):
     def connect(self,
@@ -86,10 +86,7 @@ class PostgreBackend(object):
         cur.execute(sql)
         return cur.fetchall()
 
-    def stats(self, columns=None):
-        if columns is None:
-            columns = self.table_info.field_names
-
+    def stats(self, columns):
         stats = []
         for column in columns:
             if column.var_type == column.VarTypes.Continuous:
@@ -134,6 +131,21 @@ class PostgreBackend(object):
             stats.append(results[6*i:6*(i+1)])
         return stats
 
+    def distributions(self, columns):
+        dists = []
+        cur = self.connection.cursor()
+        for col in columns:
+            cur.execute("SELECT %(col)s, COUNT(%(col)s) "
+                        "  FROM %(table)s "
+                        "GROUP BY %(col)s "
+                        "ORDER BY %(col)s" %
+                        dict(col=col.get_value_from(), table=self.table_name))
+            dist = np.array(cur.fetchall())
+            if col.var_type == col.VarTypes.Continuous:
+                dists.append((dist.T, []))
+            else:
+                dists.append((dist[:, 1].T, []))
+        return dists
 
 
 

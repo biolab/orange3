@@ -3,6 +3,7 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 
 from urllib import parse
+import functools
 import numpy as np
 from . import postgre_backend
 from .. import domain, storage, variable, value, table, instance
@@ -21,23 +22,33 @@ class SqlTable(table.Table):
             self.base = base
         return self
 
-    def __init__(self, uri, backend=None):
+    def __init__(self, uri=None,
+                 host=None, database=None, user=None, password=None, table=None,
+                 backend=None):
         if self.base:
             return
 
-        parsed_uri = parse.urlparse(uri)
+        assert uri is not None or table is not None
 
-        self.host = parsed_uri.hostname
-        path = parsed_uri.path.strip('/')
-        self.database, self.table_name = path.split('/')
+        if uri is not None:
+            parsed_uri = parse.urlparse(uri)
+            host = parsed_uri.hostname
+            path = parsed_uri.path.strip('/')
+            database, table = path.split('/')
+            user = parsed_uri.username
+            password = parsed_uri.password
+        scheme = 'pgsql'
+        self.host = host
+        self.database = database
+        self.table_name = table
 
-        self._init_backend(parsed_uri.scheme, backend)
+        self._init_backend(scheme, backend)
         self.backend.connect(
             database=self.database,
             table=self.table_name,
             hostname=self.host,
-            username=parsed_uri.username,
-            password=parsed_uri.password,
+            username=user,
+            password=password,
         )
 
         self.nrows = self.backend.table_info.nrows
@@ -69,6 +80,7 @@ class SqlTable(table.Table):
             attributes.append(attr)
         return attributes
 
+    @functools.lru_cache(maxsize=128)
     def __getitem__(self, key):
         if isinstance(key, int):
             # one row
@@ -124,7 +136,14 @@ class SqlTable(table.Table):
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
             columns = list(self.domain)
-        return self.backend.stats(columns[:4])
+        return self.backend.stats(columns)
+
+    def _compute_distributions(self, columns=None):
+        if columns is not None:
+            columns = [self.domain.var_from_domain(col) for col in columns]
+        else:
+            columns = list(self.domain)
+        return self.backend.distributions(columns)
 
     def X_density(self):
         return self.DENSE
