@@ -1,0 +1,90 @@
+Determining if the Q_WS_X11 exist failed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec3160878768/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec3160878768.dir/build.make CMakeFiles/cmTryCompileExec3160878768.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec3160878768.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -I/usr/local/Cellar/qt/4.8.4/include -F/usr/local/Cellar/qt/4.8.4/lib    -o CMakeFiles/cmTryCompileExec3160878768.dir/CheckSymbolExists.cxx.o -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+/Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:8:19: error: use of undeclared identifier 'Q_WS_X11'
+  return ((int*)(&Q_WS_X11))[argc];
+                  ^
+1 error generated.
+make[1]: *** [CMakeFiles/cmTryCompileExec3160878768.dir/CheckSymbolExists.cxx.o] Error 1
+make: *** [cmTryCompileExec3160878768/fast] Error 2
+
+File /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_X11
+  return ((int*)(&Q_WS_X11))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the Q_WS_WIN exist failed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec529299238/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec529299238.dir/build.make CMakeFiles/cmTryCompileExec529299238.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec529299238.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -I/usr/local/Cellar/qt/4.8.4/include -F/usr/local/Cellar/qt/4.8.4/lib    -o CMakeFiles/cmTryCompileExec529299238.dir/CheckSymbolExists.cxx.o -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+/Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:8:19: error: use of undeclared identifier 'Q_WS_WIN'
+  return ((int*)(&Q_WS_WIN))[argc];
+                  ^
+1 error generated.
+make[1]: *** [CMakeFiles/cmTryCompileExec529299238.dir/CheckSymbolExists.cxx.o] Error 1
+make: *** [cmTryCompileExec529299238/fast] Error 2
+
+File /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_WIN
+  return ((int*)(&Q_WS_WIN))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the Q_WS_QWS exist failed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec2593023167/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec2593023167.dir/build.make CMakeFiles/cmTryCompileExec2593023167.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec2593023167.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -I/usr/local/Cellar/qt/4.8.4/include -F/usr/local/Cellar/qt/4.8.4/lib    -o CMakeFiles/cmTryCompileExec2593023167.dir/CheckSymbolExists.cxx.o -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+/Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:8:19: error: use of undeclared identifier 'Q_WS_QWS'
+  return ((int*)(&Q_WS_QWS))[argc];
+                  ^
+1 error generated.
+make[1]: *** [CMakeFiles/cmTryCompileExec2593023167.dir/CheckSymbolExists.cxx.o] Error 1
+make: *** [cmTryCompileExec2593023167/fast] Error 2
+
+File /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_QWS
+  return ((int*)(&Q_WS_QWS))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+

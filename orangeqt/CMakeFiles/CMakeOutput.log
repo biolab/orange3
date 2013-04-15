@@ -1,0 +1,212 @@
+The system is: Darwin - 12.3.0 - i386
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is Clang, found in "/Users/anze/dev/orange/source/orangeqt/CMakeFiles/2.8.10.2/CompilerIdC/a.out"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: /usr/bin/c++ 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+
+The CXX compiler identification is Clang, found in "/Users/anze/dev/orange/source/orangeqt/CMakeFiles/2.8.10.2/CompilerIdCXX/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec1560353266/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec1560353266.dir/build.make CMakeFiles/cmTryCompileExec1560353266.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1560353266.dir/testCCompiler.c.o
+/usr/bin/cc    -o CMakeFiles/cmTryCompileExec1560353266.dir/testCCompiler.c.o   -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTryCompileExec1560353266
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1560353266.dir/link.txt --verbose=1
+/usr/bin/cc      -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTryCompileExec1560353266.dir/testCCompiler.c.o  -o cmTryCompileExec1560353266  
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec1203767954/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec1203767954.dir/build.make CMakeFiles/cmTryCompileExec1203767954.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o
+/usr/bin/cc    -o CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o   -c /usr/local/Cellar/cmake/2.8.10.2/share/cmake/Modules/CMakeCCompilerABI.c
+Linking C executable cmTryCompileExec1203767954
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1203767954.dir/link.txt --verbose=1
+/usr/bin/cc      -Wl,-search_paths_first -Wl,-headerpad_max_install_names -v CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o  -o cmTryCompileExec1203767954   
+Apple LLVM version 4.2 (clang-425.0.27) (based on LLVM 3.2svn)
+Target: x86_64-apple-darwin12.3.0
+Thread model: posix
+ "/usr/bin/ld" -demangle -dynamic -arch x86_64 -macosx_version_min 10.8.0 -o cmTryCompileExec1203767954 -search_paths_first -headerpad_max_install_names CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o -lSystem /usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:/usr/bin/make "cmTryCompileExec1203767954/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTryCompileExec1203767954.dir/build.make CMakeFiles/cmTryCompileExec1203767954.dir/build]
+  ignore line: [/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1]
+  ignore line: [Building C object CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/usr/bin/cc    -o CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o   -c /usr/local/Cellar/cmake/2.8.10.2/share/cmake/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTryCompileExec1203767954]
+  ignore line: [/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1203767954.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/cc      -Wl,-search_paths_first -Wl,-headerpad_max_install_names -v CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o  -o cmTryCompileExec1203767954   ]
+  ignore line: [Apple LLVM version 4.2 (clang-425.0.27) (based on LLVM 3.2svn)]
+  ignore line: [Target: x86_64-apple-darwin12.3.0]
+  ignore line: [Thread model: posix]
+  link line: [ "/usr/bin/ld" -demangle -dynamic -arch x86_64 -macosx_version_min 10.8.0 -o cmTryCompileExec1203767954 -search_paths_first -headerpad_max_install_names CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o -lSystem /usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a]
+    arg [/usr/bin/ld] ==> ignore
+    arg [-demangle] ==> ignore
+    arg [-dynamic] ==> ignore
+    arg [-arch] ==> ignore
+    arg [x86_64] ==> ignore
+    arg [-macosx_version_min] ==> ignore
+    arg [10.8.0] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTryCompileExec1203767954] ==> ignore
+    arg [-search_paths_first] ==> ignore
+    arg [-headerpad_max_install_names] ==> ignore
+    arg [CMakeFiles/cmTryCompileExec1203767954.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-lSystem] ==> lib [System]
+    arg [/usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a] ==> lib [/usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a]
+  remove lib [System]
+  implicit libs: [/usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a]
+  implicit dirs: []
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec3159577656/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec3159577656.dir/build.make CMakeFiles/cmTryCompileExec3159577656.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec3159577656.dir/testCXXCompiler.cxx.o
+/usr/bin/c++     -o CMakeFiles/cmTryCompileExec3159577656.dir/testCXXCompiler.cxx.o -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
+Linking CXX executable cmTryCompileExec3159577656
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3159577656.dir/link.txt --verbose=1
+/usr/bin/c++       -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTryCompileExec3159577656.dir/testCXXCompiler.cxx.o  -o cmTryCompileExec3159577656  
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec4000218439/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec4000218439.dir/build.make CMakeFiles/cmTryCompileExec4000218439.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o
+/usr/bin/c++     -o CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o -c /usr/local/Cellar/cmake/2.8.10.2/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+Linking CXX executable cmTryCompileExec4000218439
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec4000218439.dir/link.txt --verbose=1
+/usr/bin/c++       -Wl,-search_paths_first -Wl,-headerpad_max_install_names -v CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o  -o cmTryCompileExec4000218439   
+Apple LLVM version 4.2 (clang-425.0.27) (based on LLVM 3.2svn)
+Target: x86_64-apple-darwin12.3.0
+Thread model: posix
+ "/usr/bin/ld" -demangle -dynamic -arch x86_64 -macosx_version_min 10.8.0 -o cmTryCompileExec4000218439 -search_paths_first -headerpad_max_install_names CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lSystem /usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a
+
+
+Parsed CXX implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:/usr/bin/make "cmTryCompileExec4000218439/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTryCompileExec4000218439.dir/build.make CMakeFiles/cmTryCompileExec4000218439.dir/build]
+  ignore line: [/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1]
+  ignore line: [Building CXX object CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o]
+  ignore line: [/usr/bin/c++     -o CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o -c /usr/local/Cellar/cmake/2.8.10.2/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [Linking CXX executable cmTryCompileExec4000218439]
+  ignore line: [/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec4000218439.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/c++       -Wl,-search_paths_first -Wl,-headerpad_max_install_names -v CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o  -o cmTryCompileExec4000218439   ]
+  ignore line: [Apple LLVM version 4.2 (clang-425.0.27) (based on LLVM 3.2svn)]
+  ignore line: [Target: x86_64-apple-darwin12.3.0]
+  ignore line: [Thread model: posix]
+  link line: [ "/usr/bin/ld" -demangle -dynamic -arch x86_64 -macosx_version_min 10.8.0 -o cmTryCompileExec4000218439 -search_paths_first -headerpad_max_install_names CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lSystem /usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a]
+    arg [/usr/bin/ld] ==> ignore
+    arg [-demangle] ==> ignore
+    arg [-dynamic] ==> ignore
+    arg [-arch] ==> ignore
+    arg [x86_64] ==> ignore
+    arg [-macosx_version_min] ==> ignore
+    arg [10.8.0] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTryCompileExec4000218439] ==> ignore
+    arg [-search_paths_first] ==> ignore
+    arg [-headerpad_max_install_names] ==> ignore
+    arg [CMakeFiles/cmTryCompileExec4000218439.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+    arg [-lstdc++] ==> lib [stdc++]
+    arg [-lSystem] ==> lib [System]
+    arg [/usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a] ==> lib [/usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a]
+  remove lib [System]
+  implicit libs: [stdc++;/usr/bin/../lib/clang/4.2/lib/darwin/libclang_rt.osx.a]
+  implicit dirs: []
+
+
+Determining if the Q_WS_MAC exist passed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec3452136567/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec3452136567.dir/build.make CMakeFiles/cmTryCompileExec3452136567.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec3452136567.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -I/usr/local/Cellar/qt/4.8.4/include -F/usr/local/Cellar/qt/4.8.4/lib    -o CMakeFiles/cmTryCompileExec3452136567.dir/CheckSymbolExists.cxx.o -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTryCompileExec3452136567
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3452136567.dir/link.txt --verbose=1
+/usr/bin/c++       -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTryCompileExec3452136567.dir/CheckSymbolExists.cxx.o  -o cmTryCompileExec3452136567  
+
+File /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_MAC
+  return ((int*)(&Q_WS_MAC))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the QT_MAC_USE_COCOA exist passed with the following output:
+Change Dir: /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec3350284987/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec3350284987.dir/build.make CMakeFiles/cmTryCompileExec3350284987.dir/build
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_progress_report /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec3350284987.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -I/usr/local/Cellar/qt/4.8.4/include -F/usr/local/Cellar/qt/4.8.4/lib    -o CMakeFiles/cmTryCompileExec3350284987.dir/CheckSymbolExists.cxx.o -c /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTryCompileExec3350284987
+/usr/local/Cellar/cmake/2.8.10.2/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3350284987.dir/link.txt --verbose=1
+/usr/bin/c++       -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/cmTryCompileExec3350284987.dir/CheckSymbolExists.cxx.o  -o cmTryCompileExec3350284987  
+
+File /Users/anze/dev/orange/source/orangeqt/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qconfig.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef QT_MAC_USE_COCOA
+  return ((int*)(&QT_MAC_USE_COCOA))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
