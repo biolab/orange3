@@ -154,21 +154,6 @@ class SqlRowInstance(instance.Instance):
             return 1
         return self.table._W[self.row_index]
 
-    @staticmethod
-    def sp_values(matrix, row, variables):
-        if sp.issparse(matrix):
-            begptr, endptr = matrix.indptr[row:row + 2]
-            rendptr = min(endptr, begptr + 5)
-            variables = [variables[var]
-                         for var in matrix.indices[begptr:rendptr]]
-            s = ", ".join("{}={}".format(var.name, var.str_val(val))
-                for var, val in zip(variables, matrix.data[begptr:rendptr]))
-            if rendptr != endptr:
-                s += ", ..."
-            return s
-        else:
-            return Instance.str_values(matrix[row], variables)
-
     def __str__(self):
         table = self.table
         domain = table.domain
