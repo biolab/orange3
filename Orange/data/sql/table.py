@@ -64,21 +64,23 @@ class SqlTable(table.Table):
                 raise ValueError("Unsupported schema: %s" % scheme)
 
     def _create_domain(self):
-        attributes = self._create_attributes()
-        return domain.Domain(attributes)
+        attributes, metas = self._create_attributes()
+        return domain.Domain(attributes, metas=metas)
 
     def _create_attributes(self):
-        attributes = []
+        attributes, metas = [], []
         for name, type, values in self.backend.table_info.fields:
             if 'double' in type:
                 attr = variable.ContinuousVariable(name=name)
-            elif 'char' in type:
+                attributes.append(attr)
+            elif 'char' in type and values:
                 attr = variable.DiscreteVariable(name=name, values=values)
+                attributes.append(attr)
             else:
                 attr = variable.StringVariable(name=name)
+                metas.append(attr)
             attr.get_value_from = lambda field_name=name: field_name
-            attributes.append(attr)
-        return attributes
+        return attributes, metas
 
     @functools.lru_cache(maxsize=128)
     def __getitem__(self, key):
@@ -136,6 +138,8 @@ class SqlTable(table.Table):
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
             columns = list(self.domain)
+            if include_metas:
+                columns += list(self.domain.metas)
         return self.backend.stats(columns)
 
     def _compute_distributions(self, columns=None):

@@ -42,9 +42,13 @@ class PostgreBackend(object):
             return self._get_distinct_values(field_name, cur)
 
     def _get_distinct_values(self, field_name, cur):
-        cur.execute("SELECT DISTINCT %s FROM %s ORDER BY %s" %
+        cur.execute("SELECT DISTINCT %s FROM %s ORDER BY %s LIMIT 21" %
                     (field_name, self.table_name, field_name))
-        return tuple(x[0] for x in cur.fetchall())
+        values = cur.fetchall()
+        if len(values) > 20:
+            return ()
+        else:
+            return tuple(x[0] for x in values)
 
     def _get_nrows(self, cur):
         cur.execute("SELECT COUNT(*) FROM %s" % self.table_name)
@@ -96,10 +100,12 @@ class PostgreBackend(object):
                     "MAX(%s)" % column,
                     "AVG(%s)" % column,
                     "STDDEV(%s)" % column,
+                    #"0",
                     "SUM(CASE TRUE"
                     "       WHEN %s IS NULL THEN 1"
                     "       ELSE 0"
                     "END)" % column,
+                    #"0",
                     "SUM(CASE TRUE"
                     "       WHEN %s IS NULL THEN 0"
                     "       ELSE 1"
