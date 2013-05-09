@@ -275,7 +275,7 @@ class OWSelectAttributes(widget.OWWidget):
     _priority = 100
     _author = "Ales Erjavec"
     _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
-    inputs = [("Data", Table, "set_dataset_data")]
+    inputs = [("Data", Table, "set_data")]
     outputs = [("Data", Table), ("Features", widget.AttributeList)]
 
     want_main_area = False
