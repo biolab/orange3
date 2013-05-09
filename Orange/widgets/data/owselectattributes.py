@@ -96,7 +96,7 @@ class VariablesListItemModel(itemmodels.VariableListModel):
             vars.append(var)
             item_data.append(self.itemData(index))
         mime = QtCore.QMimeData()
-        mime.set_data(self.MIME_TYPE, QtCore.QByteArray(str(descriptors)))
+        mime.setData(self.MIME_TYPE, QtCore.QByteArray(str(descriptors)))
         mime._vars = vars
         mime._item_data = item_data
         return mime
