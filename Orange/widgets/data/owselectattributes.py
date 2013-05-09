@@ -96,7 +96,7 @@ class VariablesListItemModel(itemmodels.VariableListModel):
             vars.append(var)
             item_data.append(self.itemData(index))
         mime = QtCore.QMimeData()
-        mime.set_data(self.MIME_TYPE, QtCore.QByteArray(str(descriptors)))
+        mime.setData(self.MIME_TYPE, QtCore.QByteArray(str(descriptors)))
         mime._vars = vars
         mime._item_data = item_data
         return mime
@@ -275,7 +275,7 @@ class OWSelectAttributes(widget.OWWidget):
     _priority = 100
     _author = "Ales Erjavec"
     _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
-    inputs = [("Data", Table, "set_data")]
+    inputs = [("Data", Table, "set_dataset_data")]
     outputs = [("Data", Table), ("Features", widget.AttributeList)]
 
     want_main_area = False
