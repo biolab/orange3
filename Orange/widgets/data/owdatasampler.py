@@ -1,3 +1,4 @@
+import random
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
@@ -115,6 +116,7 @@ class OWDataSampler(widget.OWWidget):
         self.fadeSampleSizeTypes()
         self.fadeSamplingTypes()
 
+
     # GUI METHODS
     def fadeSamplingTypes(self):
         if self.randomSamplingRB.isChecked():
@@ -133,9 +135,6 @@ class OWDataSampler(widget.OWWidget):
             self.smplPropIndent.setEnabled(True)
 
 
-
-
-
     # I/O STREAM ROUTINES
     # handles changes of input stream
     def setData(self, dataset):
@@ -146,3 +145,42 @@ class OWDataSampler(widget.OWWidget):
             self.send("Data Sample", None)
             self.send("Remaining Data", None)
             self.data = None
+
+
+# Util methods that really shouldn't be here and should be moved outside of this module
+def makeRandomIndices(number, datasetLength, repetition=False, randomSeed=None):
+    """
+    :param number: number of indices to be selected from the base pool
+    :param datasetLength: size of the base pool
+    :param repetition: repeat indices bool
+    :param randomSeed: random seed for random number generator
+    :return: touple which contains list with selected indices and list with the remainder of the base pool
+    """
+    if randomSeed:
+        random.seed(randomSeed)
+    basePool = range(datasetLength)
+    if repetition:
+        indices = [random.choice(basePool) for _ in range(number)]
+    else:
+        indices = random.sample(basePool, number)
+
+    return (indices, list(set(basePool) - set(indices)))
+
+def makeRandomGroups(numberOfGroups, datasetLength, randomSeed=None):
+    groups = []
+    groupSize = datasetLength//numberOfGroups
+    remainder = [None] * datasetLength
+    for i in range(numberOfGroups-1):
+        group, remainder = makeRandomIndices(groupSize, len(remainder), randomSeed=randomSeed)
+        groups.append(group)
+    if len(groupSize - len(remainder) < 2):
+        groups.append(remainder)
+    else:
+        # append items in last remainder to different groups so we don't get the extraordinarily small group at the end
+        for i, item in enumerate(remainder):
+            groups[i].append(item)
+
+
+    return groups
+
+
