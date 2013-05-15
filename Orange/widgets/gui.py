@@ -219,7 +219,7 @@ def spin(widget, master, value, min, max, step=1,
     if checked:
         return wb, wa
     else:
-        return b
+        return wa
 
 
 class DoubleSpinBoxWFocusOut(QDoubleSpinBox):
