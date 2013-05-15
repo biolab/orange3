@@ -1,0 +1,782 @@
+From 9d04005de0440cb85a1306f057921860316ae71c Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Wed, 15 May 2013 13:08:45 +0200
+Subject: [PATCH 2/4] Compatibility with new orange.
+
+---
+ scripts/canvas_merge_20dUq6/canvas/__init__.py     |   7 +-
+ scripts/canvas_merge_20dUq6/canvas/__main__.py     |  30 +-
+ .../canvas/application/aboutdialog.py              |   4 +-
+ .../canvas_merge_20dUq6/canvas/canvas/layout.py    |   2 +-
+ scripts/canvas_merge_20dUq6/canvas/config.py       |   2 +-
+ .../canvas/document/schemeedit.py                  |   9 +-
+ .../canvas_merge_20dUq6/canvas/preview/scanner.py  |   3 -
+ .../canvas/registry/description.py                 |  84 ++----
+ scripts/canvas_merge_20dUq6/canvas/resources.py    |   2 +-
+ .../canvas/scheme/widgetsscheme.py                 |   9 +-
+ .../canvas_merge_20dUq6/canvas/utils/debugging.py  | 122 ++++++++
+ .../canvas_merge_20dUq6/canvas/utils/environ.py    | 309 +++++++++++++++++++++
+ 12 files changed, 491 insertions(+), 92 deletions(-)
+ create mode 100644 scripts/canvas_merge_20dUq6/canvas/utils/debugging.py
+ create mode 100644 scripts/canvas_merge_20dUq6/canvas/utils/environ.py
+
+diff --git a/scripts/canvas_merge_20dUq6/canvas/__init__.py b/scripts/canvas_merge_20dUq6/canvas/__init__.py
+index 8b13789..741523b 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/__init__.py
++++ b/scripts/canvas_merge_20dUq6/canvas/__init__.py
+@@ -1 +1,6 @@
+-
++# pkg_resources selects a suitable resource loader based on the modules's
++# __loader__ attribute. In python2 it defaults to None, which maps to the
++# default resource loader, but it python3 it does not. As a result,
++# pkg_resources is unable to select a resource loader and load resources.
++# By settings __loader__ to None, we workaround the pkg_resources bug.
++__loader__ = None
+diff --git a/scripts/canvas_merge_20dUq6/canvas/__main__.py b/scripts/canvas_merge_20dUq6/canvas/__main__.py
+index 03c3d8a..52b8a08 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/__main__.py
++++ b/scripts/canvas_merge_20dUq6/canvas/__main__.py
+@@ -16,20 +16,20 @@ import pkg_resources
+ from PyQt4.QtGui import QFont, QColor
+ from PyQt4.QtCore import Qt, QRect, QDir
+ 
+-from Orange import OrangeCanvas
+-from Orange.OrangeCanvas.application.application import CanvasApplication
+-from Orange.OrangeCanvas.application.canvasmain import CanvasMainWindow
+-from Orange.OrangeCanvas.application.outputview import TextStream, ExceptHook
++from Orange import canvas
++from Orange.canvas.application.application import CanvasApplication
++from Orange.canvas.application.canvasmain import CanvasMainWindow
++from Orange.canvas.application.outputview import TextStream, ExceptHook
+ 
+-from Orange.OrangeCanvas.gui.splashscreen import SplashScreen, QPixmap
+-from Orange.OrangeCanvas.config import cache_dir
+-from Orange.OrangeCanvas import config
+-from Orange.OrangeCanvas.utils.redirect import redirect_stdout, redirect_stderr
+-from Orange.OrangeCanvas.utils.qtcompat import QSettings
++from Orange.canvas.gui.splashscreen import SplashScreen, QPixmap
++from Orange.canvas.config import cache_dir
++from Orange.canvas import config
++from Orange.canvas.utils.redirect import redirect_stdout, redirect_stderr
++from Orange.canvas.utils.qtcompat import QSettings
+ 
+-from Orange.OrangeCanvas.registry import qt
+-from Orange.OrangeCanvas.registry import WidgetRegistry, set_global_registry
+-from Orange.OrangeCanvas.registry import cache
++from Orange.canvas.registry import qt
++from Orange.canvas.registry import WidgetRegistry, set_global_registry
++from Orange.canvas.registry import cache
+ 
+ log = logging.getLogger(__name__)
+ 
+@@ -135,7 +135,7 @@ def main(argv=None):
+                 # no extension
+                 stylesheet = os.path.extsep.join([stylesheet, "qss"])
+ 
+-            pkg_name = OrangeCanvas.__name__
++            pkg_name = canvas.__name__
+             resource = "styles/" + stylesheet
+ 
+             if pkg_resources.resource_exists(pkg_name, resource):
+@@ -165,7 +165,7 @@ def main(argv=None):
+         app.setStyleSheet(stylesheet_string)
+ 
+     # Add the default canvas_icons search path
+-    dirpath = os.path.abspath(os.path.dirname(OrangeCanvas.__file__))
++    dirpath = os.path.abspath(os.path.dirname(canvas.__file__))
+     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
+ 
+     canvas_window = CanvasMainWindow()
+@@ -275,7 +275,7 @@ def main(argv=None):
+         sys.excepthook = ExceptHook()
+         sys.excepthook.handledException.connect(output_view.parent().show)
+ 
+-    with (redirect_stdout(stdout), redirect_stderr(stderr)):
++    with redirect_stdout(stdout), redirect_stderr(stderr):
+         log.info("Entering main event loop.")
+         try:
+             status = app.exec_()
+diff --git a/scripts/canvas_merge_20dUq6/canvas/application/aboutdialog.py b/scripts/canvas_merge_20dUq6/canvas/application/aboutdialog.py
+index 475fea1..d1d787c 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/application/aboutdialog.py
++++ b/scripts/canvas_merge_20dUq6/canvas/application/aboutdialog.py
+@@ -10,7 +10,7 @@ from PyQt4.QtCore import Qt
+ 
+ 
+ import Orange
+-from Orange import OrangeCanvas
++from Orange import canvas
+ 
+ ABOUT_TEMPLATE = """\
+ <center>
+@@ -36,7 +36,7 @@ class AboutDialog(QDialog):
+         label = QLabel(self)
+ 
+         filename = pkg_resources.resource_filename(
+-                        OrangeCanvas.__name__,
++                        canvas.__name__,
+                         "icons/orange-splash-screen.png")
+ 
+         label.setPixmap(QPixmap(filename))
+diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py b/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
+index 63f8daf..103c186 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
++++ b/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
+@@ -60,7 +60,7 @@ class AnchorLayout(QGraphicsObject):
+         items = scene.items()
+         links = [item for item in items if isinstance(item, LinkItem)]
+         point_pairs = [(link.sourceAnchor, link.sinkAnchor) for link in links]
+-        point_pairs.extend(map(reversed, point_pairs))
++        point_pairs += [(a, b) for b, a in point_pairs]
+         to_other = dict(point_pairs)
+ 
+         anchors = set(self.__invalidatedAnchors)
+diff --git a/scripts/canvas_merge_20dUq6/canvas/config.py b/scripts/canvas_merge_20dUq6/canvas/config.py
+index 7644147..a313294 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/config.py
++++ b/scripts/canvas_merge_20dUq6/canvas/config.py
+@@ -219,7 +219,7 @@ def default_entry_point():
+ 
+     """
+     dist = pkg_resources.get_distribution("Orange")
+-    ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.OrangeWidgets",
++    ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.widgets",
+                                   dist=dist)
+     return ep
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py b/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
+index 20093e9..73f308f 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
++++ b/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
+@@ -1139,9 +1139,9 @@ class SchemeEditWidget(QWidget):
+             # be selected items in the canvas), so we disable the
+             # remove widget action so the text editing follows standard
+             # 'look and feel'
+-            with (disabled(self.__removeSelectedAction),
+-                  disabled(self.__undoAction),
+-                  disabled(self.__redoAction)):
++            with disabled(self.__removeSelectedAction), \
++                 disabled(self.__undoAction), \
++                 disabled(self.__redoAction):
+                 handler.create_new(QCursor.pos(), searchText)
+ 
+             event.accept()
+@@ -1429,8 +1429,7 @@ class SchemeEditWidget(QWidget):
+                 self.__quickMenuTriggers & SchemeEditWidget.RightClicked:
+             action = interactions.NewNodeAction(self)
+ 
+-            with (disabled(self.__undoAction),
+-                  disabled(self.__redoAction)):
++            with disabled(self.__undoAction), disabled(self.__redoAction):
+                 action.create_new(globalPos)
+             return
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/preview/scanner.py b/scripts/canvas_merge_20dUq6/canvas/preview/scanner.py
+index b1ff6fe..29fc638 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/preview/scanner.py
++++ b/scripts/canvas_merge_20dUq6/canvas/preview/scanner.py
+@@ -101,9 +101,6 @@ def scan_update(item):
+ 
+     path = str(item.path())
+ 
+-    # workaround for bugs.python.org/issue11159
+-    path = path.encode(sys.getfilesystemencoding())
+-
+     try:
+         title, desc, svg = preview_parse(path)
+     except SAXParseException as ex:
+diff --git a/scripts/canvas_merge_20dUq6/canvas/registry/description.py b/scripts/canvas_merge_20dUq6/canvas/registry/description.py
+index 4e452a0..dfc21c1 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/registry/description.py
++++ b/scripts/canvas_merge_20dUq6/canvas/registry/description.py
+@@ -380,76 +380,48 @@ class WidgetDescription(object):
+         else:
+             package_name = None
+ 
+-        # Default widget class name unless otherwise specified is the
+-        # module name, and default category the package name
+-        default_cls_name = module_name
+         default_cat_name = package_name if package_name else ""
+ 
+-        widget_cls_name = getattr(module, "WIDGET_CLASS", default_cls_name)
+-        try:
+-            widget_class = getattr(module, widget_cls_name)
+-            name = getattr(module, "NAME")
+-        except AttributeError:
+-            # The module does not have a widget class implementation or the
+-            # widget name.
++        from Orange.widgets.widget import WidgetMetaClass
++        for widget_cls_name, widget_class in module.__dict__.items():
++            if (isinstance(widget_class, WidgetMetaClass) and
++                widget_class._name):
++                    break
++        else:
+             raise WidgetSpecificationError
+ 
+         qualified_name = "%s.%s" % (module.__name__, widget_class.__name__)
+ 
+-        id = getattr(module, "ID", module_name)
+-        inputs = getattr(module, "INPUTS", [])
+-        outputs = getattr(module, "OUTPUTS", [])
+-        category = getattr(module, "CATEGORY", default_cat_name)
+-        version = getattr(module, "VERSION", None)
+-        description = getattr(module, "DESCRIPTION", name)
+-        long_description = getattr(module, "LONG_DESCRIPTION", None)
+-        author = getattr(module, "AUTHOR", None)
+-        author_email = getattr(module, "AUTHOR_EMAIL", None)
+-        maintainer = getattr(module, "MAINTAINER", None)
+-        maintainer_email = getattr(module, "MAINTAINER_EMAIL", None)
+-        help = getattr(module, "HELP", None)
+-        help_ref = getattr(module, "HELP_REF", None)
+-        url = getattr(module, "URL", None)
+-
+-        icon = getattr(module, "ICON", None)
+-        priority = getattr(module, "PRIORITY", sys.maxsize)
+-        keywords = getattr(module, "KEYWORDS", None)
+-        background = getattr(module, "BACKGROUND", None)
+-        replaces = getattr(module, "REPLACES", None)
+-
+-        inputs = list(map(input_channel_from_args, inputs))
+-        outputs = list(map(output_channel_from_args, outputs))
+-
+         # Convert all signal types into qualified names.
+         # This is to prevent any possible import problems when cached
+         # descriptions are unpickled (the relevant code using this lists
+         # should be able to handle missing types better).
+-        for s in inputs + outputs:
++        for s in widget_class.inputs + widget_class.outputs:
+             s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
+ 
+-        return WidgetDescription(
+-            name=name,
+-            id=id,
+-            category=category,
+-            version=version,
+-            description=description,
+-            long_description=long_description,
++        return cls(
++            name=widget_class._name,
++            id=widget_class._id or module_name,
++            category=widget_class._category or default_cat_name,
++            version=widget_class._version,
++            description=widget_class._description,
++            long_description=widget_class._long_description,
+             qualified_name=qualified_name,
+             package=module.__package__,
+-            inputs=inputs,
+-            outputs=outputs,
+-            author=author,
+-            author_email=author_email,
+-            maintainer=maintainer,
+-            maintainer_email=maintainer_email,
+-            help=help,
+-            help_ref=help_ref,
+-            url=url,
+-            keywords=keywords,
+-            priority=priority,
+-            icon=icon,
+-            background=background,
+-            replaces=replaces)
++            inputs=widget_class.inputs,
++            outputs=widget_class.outputs,
++            author=widget_class._author,
++            author_email=widget_class._author_email,
++            maintainer=widget_class._maintainer,
++            maintainer_email=widget_class._maintainer_email,
++            help=widget_class._help,
++            help_ref=widget_class._help_ref,
++            url=widget_class._url,
++            keywords=widget_class._keywords,
++            priority=widget_class._priority,
++            icon=widget_class._icon,
++            background=widget_class._background,
++            replaces=widget_class._replaces)
+ 
+ 
+ class CategoryDescription(object):
+diff --git a/scripts/canvas_merge_20dUq6/canvas/resources.py b/scripts/canvas_merge_20dUq6/canvas/resources.py
+index e12bdf8..b3f78c6 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/resources.py
++++ b/scripts/canvas_merge_20dUq6/canvas/resources.py
+@@ -49,7 +49,7 @@ dirname = os.path.abspath(os.path.dirname(__file__))
+ 
+ DEFAULT_SEARCH_PATHS = \
+     [("", dirname),
+-     ("", os.path.join(dirname, "../OrangeWidgets"))]
++     ("", os.path.join(dirname, "../widgets"))]
+ 
+ del dirname
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/widgetsscheme.py b/scripts/canvas_merge_20dUq6/canvas/scheme/widgetsscheme.py
+index f661144..c5e1faf 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/scheme/widgetsscheme.py
++++ b/scripts/canvas_merge_20dUq6/canvas/scheme/widgetsscheme.py
+@@ -109,11 +109,6 @@ class WidgetsScheme(Scheme):
+         log.info("Creating %r instance.", klass)
+         widget = klass.__new__(
+             klass,
+-            _owInfo=rc.get("canvas.show-state-info", True),
+-            _owWarning=rc.get("canvas.show-state-warning", True),
+-            _owError=rc.get("canvas.show-state-error", True),
+-            _owShowStatus=rc.get("OWWidget.show-status", True),
+-            _useContexts=rc.get("OWWidget.use-contexts", True),
+             _category=desc.category,
+             _settingsFromSchema=node.properties
+         )
+@@ -153,8 +148,8 @@ class WidgetsScheme(Scheme):
+     def widget_settings(self):
+         """Return a list of dictionaries with widget settings.
+         """
+-        return [self.widget_for_node[node].getSettings(alsoContexts=False)
+-                for node in self.nodes]
++        return [widget.settingsHandler.pack_data(widget) for widget in
++                (self.widget_for_node[node] for node in self.nodes)]
+ 
+     def sync_node_properties(self):
+         """Sync the widget settings/properties with the SchemeNode.properties.
+diff --git a/scripts/canvas_merge_20dUq6/canvas/utils/debugging.py b/scripts/canvas_merge_20dUq6/canvas/utils/debugging.py
+new file mode 100644
+index 0000000..aef6a27
+--- /dev/null
++++ b/scripts/canvas_merge_20dUq6/canvas/utils/debugging.py
+@@ -0,0 +1,122 @@
++# a simple module used in orange to see whether debugging is enabled, where to write the output and how much output do you want to see
++
++orngDebuggingEnabled = 0                            # do we want to enable debugging
++orngDebuggingFileName = "debuggingOutput.txt"       # where do we want to write output to
++orngVerbosity = 1                                   # what's the level of verbosity
++
++import weakref
++
++from collections import defaultdict
++
++import PyQt4.QtGui
++from PyQt4 import QtCore, QtGui
++from PyQt4.QtTest import QTest
++from PyQt4.QtCore import Qt
++
++import random
++class debug(object):
++    elements_list = defaultdict(list)
++    random = random
++
++    @classmethod
++    def registerQItemView(cls, widget, view):
++        cls.elements_list[widget].append(view)
++
++    @classmethod
++    def regiseterQGraphicsView(cls, widget, view):
++        cls.elements_list[widget].append(view)
++
++    @classmethod
++    def registerQwtPlot(cls, widget, graph):
++        cls.elements_list[widget].append(graph)
++
++    @classmethod
++    def register(cls, widget, element):
++        from PyQt4.QtGui import QGraphicsView, QAbstractItemView
++        from OWGraph import OWGraph
++        if isinstance(element, QGraphicsView):
++            cls.regiseterQGraphicsView(widget, element)
++        elif isinstance(element, QAbstractItemView):
++            cls.registerQItemView(widget, element)
++        elif isinstance(element, OWGraph):
++            cls.registerOWGraph(widget, element)
++        else:
++            print("Unhandled type", element)
++
++    @classmethod
++    def scrollAreaInteract(cls, area):
++    #        print "scrollAreaInteract", area
++        from PyQt4.QtTest import QTest
++        geom = area.geometry()
++        randpos = lambda: geom.topLeft() + QtCore.QPoint(geom.width() * random.random(), geom.height() * random.random())
++        QTest.mouseMove(area, randpos(), 2)
++        QTest.mouseClick(area, Qt.LeftButton, pos=randpos(), delay=2)
++        QTest.mouseDClick(area, Qt.LeftButton, pos=randpos(), delay=2)
++        QTest.mousePress(area, Qt.LeftButton, pos=randpos(), delay=2)
++        QTest.mouseRelease(area, Qt.LeftButton, pos=randpos(), delay=2)
++
++    #        area.scrollContentsBy(random.randint(-10, 10), random.randint(-10, 10))
++
++
++    @classmethod
++    def itemViewInteract(cls, view):
++        cls.scrollAreaInteract(view)
++
++    @classmethod
++    def graphicsViewInteract(cls, view):
++        cls.scrollAreaInteract(view)
++
++    @classmethod
++    def graphInteract(cls, view):
++        cls.scrollAreaInteract(view)
++
++    @classmethod
++    def interact(cls, widget):
++        from PyQt4.QtGui import QGraphicsView, QAbstractItemView
++        from OWGraph import OWGraph
++        if isinstance(widget, QGraphicsView):
++            cls.graphicsViewInteract(widget)
++        elif isinstance(widget, QAbstractItemView):
++            cls.itemViewInteract(widget)
++        elif isinstance(widget, OWGraph):
++            cls.graphInteract(widget)
++        else:
++            print("Unhandled widget interaction", widget)
++
++    @classmethod
++    def interactWithOWWidget(cls, widget):
++        views = cls.candidateDebugWidgets(widget)
++        for view in views:
++            if view.isEnabled() and getattr(view, "debuggingEnabled", True):
++                cls.interact(view)
++
++    @classmethod
++    def candidateDebugWidgets(cls, widget):
++        from PyQt4.QtGui import QGraphicsView, QAbstractItemView
++        from OWGraph import QwtPlot
++
++        gviews_list = widget.findChildren(QGraphicsView)
++        iviews_list = widget.findChildren(QAbstractItemView)
++        pviews_list = widget.findChildren(QwtPlot)
++
++        return gviews_list + iviews_list + pviews_list
++
++#    @classmethod
++#    def candidateDebugWidgets(cls, widget, cls_list=None):
++#        if cls_list is None:
++#            from PyQt4.QtGui import QGraphicsView, QAbstractItemView
++#            from OWGraph import QwtPlot
++#            cls_list = [QGraphicsView, QAbstractItemView, QwtPlot]
++#        candidates = []
++#        for child in widget.children():
++#            print [(child, isinstance(child, db_cls)) for db_cls in cls_list]
++#            if any(isinstance(child, db_cls) for db_cls in cls_list):
++#                if getattr(child, "debuggingEnabled", True):
++#                    candidates.append(child)
++#                    candidates.extend(cls.candidateWidgets(child, cls_list))
++#            else:
++#                candidates.extend(cls.candidateWidgets(child, cls_list))
++#        return candidates
++
++
++
+diff --git a/scripts/canvas_merge_20dUq6/canvas/utils/environ.py b/scripts/canvas_merge_20dUq6/canvas/utils/environ.py
+new file mode 100644
+index 0000000..b7bb535
+--- /dev/null
++++ b/scripts/canvas_merge_20dUq6/canvas/utils/environ.py
+@@ -0,0 +1,309 @@
++"""
++==============================================
++Orange environment configuration (``environ``)
++==============================================
++
++This module contains some basic customization options for Orange
++(for now mostly changing directories where orange settings are saved).
++
++How it works
++------------
++
++When this module is imported it will first load and parse a global
++configuration `orangerc.cfg` (located in the root directory of the orange
++installation). Further, it will look for and try to load a user specific
++configuration file located in $(HOME)/.orangerc.cfg or
++`application_dir`/orangerc.cfg where `application_dir` is a variable defined
++in the global configuration file.
++
++.. note:: in the configuration files all OS defined environment variables
++    (e.g $HOME, $USER, ...) are available.
++
++After all the parsing has taken place the select variables defined in the
++configuration will be made available as top level module variables.
++
++Example
++-------
++
++To change the location where settings are saved for Orange Canvas
++on Windows edit the global `orangerc.cfg` file and in the
++`[directories win32]` section change the `application_dir` variable:
++
++    [directories win32]
++
++    application_dir = D:/SharedAppData/orange/
++
++In this way we can hard code the path instead of using the system default
++(defined in the the %APPDATA variable)
++
++Variables
++---------
++
++The following variables are exposed as top level module members
++
++`install_dir`:
++    Directory where Orange is installed.
++
++`canvas_install_dir`:
++    Directory where Orange Canvas is installed.
++
++`widget_install_dir`:
++    Directory where Orange Widgets are installed.
++
++`icons_install_dir`:
++    Directory where icons for widgets are installed.
++
++`doc_install_dir`:
++    Directory with Orange documentation.
++
++`dataset_install_dir`:
++    Directory with example data sets.
++
++`add_ons_dir`:
++    Directory where system-wide add-ons are installed
++
++`add_ons_dir_user`:
++    Directory where user add-ons are installed
++
++`application_dir`:
++    Directory where applications can save their data.
++
++`output_dir`:
++    Directory where Orange saves settings/data.
++
++`default_reports_dir`:
++    Directory where Orange Canvas saves the reports.
++
++`orange_settings_dir`:
++    Directory where Orange settings are saved.
++
++`canvas_settings_dir`:
++    Directory where Orange Canvas settings are saved.
++
++`widget_settings_dir`:
++    Directory where Orange Widgets settings are saved.
++
++`buffer_dir`:
++    Directory where :obj:`Orange.utils.serverfiles` downloads are stored.
++
++`orange_no_deprecated_members`:
++    If True all deprecated members in Orange 2.5 will not be available.
++
++"""
++
++import os, sys
++import configparser
++import pkg_resources
++from pkg_resources import working_set
++
++def _path_fix():
++    """ Fix some common problems with $(PATH) and sys.path
++    """
++    if os.name == "nt":
++        ## Move any miktex paths containing Qt's dll to the end of the %PATH%
++        paths = os.environ["PATH"].split(";")
++        paths.sort(lambda x,y: -1 if "PyQt4" in x else (1 if "miktex" in y and\
++                                                             os.path.exists(os.path.join(y, "QtCore4.dll")) else 0))
++        os.environ["PATH"] = ";".join(paths)
++
++    if sys.platform == "darwin":
++        ## PyQt4 installed from fink is installed in %{FINK_ROOT}lib/qt4-mac/lib/python${PYVERSION}/site-packages"
++        posible_fink_pyqt4_path = os.path.join(sys.prefix,
++                                               "lib/qt4-mac/lib/python" + sys.version[:3] + "/site-packages")
++        if os.path.exists(posible_fink_pyqt4_path):
++            sys.path.append(posible_fink_pyqt4_path)
++
++_path_fix()
++
++def _get_default_env():
++    """ Return a dictionary with default Orange environment."""
++
++    version = "orange"
++    version_display = "Orange 2.6"
++    orange_no_deprecated_members = "False"
++
++    install_dir = os.path.dirname(os.path.abspath(__file__)) # Orange/canvas/utils
++    install_dir = os.path.dirname(install_dir)  # Orange/canvas
++    install_dir = os.path.dirname(install_dir)  # Orange/
++
++    doc_install_dir = os.path.join(install_dir, "doc")
++    dataset_install_dir = os.path.join(install_dir, "doc", "datasets")
++
++    canvas_install_dir = os.path.join(install_dir, "canvas")
++    widget_install_dir = os.path.join(install_dir, "widgets")
++    icons_install_dir = os.path.join(widget_install_dir, "icons")
++    add_ons_dir = os.path.join(install_dir, "add-ons")
++
++    home = os.path.expanduser("~/")
++
++    if sys.platform == "win32":
++        if home[-1] == ":":
++            home += "\\"
++        application_dir = os.environ["APPDATA"]
++        output_dir = os.path.join(application_dir, version)
++        default_reports_dir = os.path.join(home, "My Documents")
++    elif sys.platform == "darwin":
++        application_dir = os.path.join(home, "Library", "Application Support")
++        output_dir = os.path.join(application_dir, version)
++        default_reports_dir = os.path.join(home, "Documents")
++    else:
++        application_dir = home
++        output_dir = os.path.join(home, "." + version)
++
++        documents = os.path.join(home, "Documents")
++        # Need to make sure Documents folder actually exists
++        if os.path.exists(documents) and os.path.isdir(documents):
++            default_reports_dir = documents
++        else:
++            default_reports_dir = home
++
++    add_ons_dir_user = os.path.join(output_dir, "add-ons")
++
++    orange_settings_dir = output_dir
++    canvas_settings_dir = os.path.join(output_dir, "OrangeCanvasQt4")
++    widget_settings_dir = os.path.join(output_dir, "widgetSettingsQt4")
++
++    if sys.platform == "darwin":
++        buffer_dir = os.path.join(home, "Library", "Caches", version)
++    else:
++        buffer_dir = os.path.join(output_dir, "buffer")
++
++    return locals()
++
++_ALL_ENV_OPTIONS = ["version", "version_display", "is_canvas_installed",
++                    "orange_no_deprecated_members"]
++
++_ALL_DIR_OPTIONS = ["install_dir", "canvas_install_dir",
++                    "widget_install_dir", "icons_install_dir",
++                    "doc_install_dir", "dataset_install_dir",
++                    "add_ons_dir", "add_ons_dir_user",
++                    "application_dir", "output_dir", "default_reports_dir",
++                    "orange_settings_dir", "canvas_settings_dir",
++                    "widget_settings_dir", "buffer_dir"]
++
++def get_platform_option(section, option):
++    """ Return the platform specific configuration `option` from `section`.
++    """
++    try:
++        return parser.get(section + " " + sys.platform, option)
++    except Exception:
++        return parser.get(section, option)
++
++#options read from environment variables
++_ENVIRON_OPTIONS = [ "orange_no_deprecated_members" ]
++
++def _configure_env(defaults=None):
++    """ Apply the configuration files on the default environment
++    and return the instance of ConfigParser
++    """
++    if defaults is None:
++        defaults = dict(os.environ)
++        defaults.update(_get_default_env())
++
++    for opt in _ENVIRON_OPTIONS:
++        if opt in os.environ:
++            defaults[opt] = os.environ[opt]
++
++    parser = configparser.ConfigParser(defaults)
++    global_cfg = os.path.join(defaults["install_dir"], "orangerc.cfg")
++    if not parser.read([global_cfg]):
++        pass
++    #        import warnings
++    #        warnings.warn("Could not read global orange configuration file.")
++
++    # In case the global_cfg does not exist or is empty
++    if not parser.has_section("directories"):
++        parser.add_section("directories")
++    if not parser.has_section("Orange"):
++        parser.add_section("Orange")
++
++    platform = sys.platform
++    try:
++        application_dir = parser.get("directories " + platform, "application_dir")
++    except Exception:
++        application_dir = parser.get("directories", "application_dir")
++
++    parser.read([os.path.join(application_dir, "orangerc.cfg"),
++                 os.path.expanduser("~/.orangerc.cfg")])
++
++    return parser
++
++parser = _configure_env()
++
++for dirname in _ALL_DIR_OPTIONS:
++    globals()[dirname] = get_platform_option("directories", dirname)
++
++
++if not os.path.isdir(widget_install_dir) or not os.path.isdir(widget_install_dir):
++    # Canvas and widgets are not installed
++    canvas_install_dir = None
++    widget_install_dir = None
++    canvas_settings_dir = None
++    widget_settings_dir = None
++    is_canvas_installed = False
++else:
++    is_canvas_installed = True
++
++if not os.path.isdir(icons_install_dir):
++    icons_install_dir = ""
++
++version = parser.get("Orange", "version")
++version_display = parser.get("Orange", "version_display")
++orange_no_deprecated_members = parser.getboolean("Orange", "orange_no_deprecated_members")
++version = get_platform_option("Orange", "version")
++
++# Create the directories if missing
++# TODO: This are not needed if using orange without the GUI
++
++_directories_to_create = ["application_dir", "orange_settings_dir",
++                          "buffer_dir", "widget_settings_dir", "canvas_settings_dir"]
++
++for dname in _directories_to_create:
++    dname = globals()[dname]
++    if dname is not None and not os.path.isdir(dname):
++        try:
++            os.makedirs(dname)        # Vista has roaming profiles that will say that this folder does not exist and will then fail to create it, because it exists...
++        except Exception:
++            pass
++
++def samepath(path1, path2):
++    """ Do the paths path1 and path2 point to the same location.
++    """
++    return os.path.normcase(os.path.realpath(os.path.normpath(path1))) ==\
++           os.path.normcase(os.path.realpath(os.path.normpath(path2)))
++
++def add_orange_directories_to_path():
++    """Add orange directory paths to sys.path."""
++
++    paths_to_add = [] #[install_dir]
++
++    if canvas_install_dir is not None:
++        paths_to_add.append(canvas_install_dir)
++
++    # Instead of doing this OrangeWidgets should be a package
++    if widget_install_dir is not None and os.path.isdir(widget_install_dir):
++        paths_to_add.append(widget_install_dir)
++        default_widgets_dirs = [os.path.join(widget_install_dir, x)\
++                                for x in os.listdir(widget_install_dir)\
++                                if os.path.isdir(os.path.join(widget_install_dir, x))]
++        paths_to_add.extend(default_widgets_dirs)
++
++    for path in paths_to_add:
++        if os.path.isdir(path) and not any([samepath(path, x) for x in sys.path]):
++            sys.path.insert(0, path)
++
++#add_orange_directories_to_path()
++directories = dict([(dname, globals()[dname]) for dname in _ALL_DIR_OPTIONS])
++
++def load_eggs(search_path):
++    distributions, errors = working_set.find_plugins(
++        pkg_resources.Environment(search_path)
++    )
++    for distribution in distributions:
++        working_set.add(distribution)
++
++    if errors:
++        import warnings
++        warnings.warn("Error loading eggs: %s" % (errors,))
++
++load_eggs([add_ons_dir_user])
+-- 
+1.8.2.1
+

@@ -1,0 +1,573 @@
+From 85404131df6f93650586df45e389fdffeedc90c7 Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Wed, 15 May 2013 12:50:40 +0200
+Subject: [PATCH 1/4] Revert redundant 2to3.
+
+---
+ scripts/canvas_merge_20dUq6/canvas/__main__.py     |  3 +--
+ .../canvas/application/canvasmain.py               |  2 --
+ .../canvas/application/tests/test_outputview.py    |  4 ++--
+ .../canvas/application/widgettoolbox.py            | 10 ++++----
+ .../canvas/canvas/items/controlpoints.py           |  2 +-
+ .../canvas_merge_20dUq6/canvas/canvas/layout.py    |  8 +++----
+ scripts/canvas_merge_20dUq6/canvas/canvas/scene.py | 16 ++++++-------
+ .../canvas/document/interactions.py                | 12 +++++-----
+ .../canvas/document/schemeedit.py                  | 27 +++++++++++-----------
+ .../canvas_merge_20dUq6/canvas/gui/quickhelp.py    |  2 +-
+ .../canvas/gui/tests/test_toolbox.py               |  2 +-
+ scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py |  2 +-
+ .../canvas/registry/description.py                 |  4 ++--
+ .../canvas/registry/discovery.py                   |  2 +-
+ .../canvas/scheme/annotations.py                   |  8 +++----
+ .../canvas_merge_20dUq6/canvas/scheme/readwrite.py |  4 ++--
+ .../canvas/scheme/signalmanager.py                 |  4 ++--
+ .../canvas/scheme/tests/test_links.py              |  2 +-
+ .../canvas_merge_20dUq6/canvas/utils/__init__.py   |  2 +-
+ .../canvas/utils/propertybindings.py               |  4 ++--
+ 20 files changed, 57 insertions(+), 63 deletions(-)
+
+diff --git a/scripts/canvas_merge_20dUq6/canvas/__main__.py b/scripts/canvas_merge_20dUq6/canvas/__main__.py
+index 41fa4d0..03c3d8a 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/__main__.py
++++ b/scripts/canvas_merge_20dUq6/canvas/__main__.py
+@@ -10,7 +10,6 @@ import re
+ import logging
+ import optparse
+ import pickle
+-from contextlib import nested
+ 
+ import pkg_resources
+ 
+@@ -276,7 +275,7 @@ def main(argv=None):
+         sys.excepthook = ExceptHook()
+         sys.excepthook.handledException.connect(output_view.parent().show)
+ 
+-    with nested(redirect_stdout(stdout), redirect_stderr(stderr)):
++    with (redirect_stdout(stdout), redirect_stderr(stderr)):
+         log.info("Entering main event loop.")
+         try:
+             status = app.exec_()
+diff --git a/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py b/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
+index dd1727b..e6c1694 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
++++ b/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
+@@ -886,7 +886,6 @@ class CanvasMainWindow(QMainWindow):
+         property.
+ 
+         """
+-        filename = str(filename)
+         dirname = os.path.dirname(filename)
+ 
+         self.last_scheme_dir = dirname
+@@ -1062,7 +1061,6 @@ class CanvasMainWindow(QMainWindow):
+         )
+ 
+         if filename:
+-            filename = str(filename)
+             if not self.check_can_save(document, filename):
+                 return QDialog.Rejected
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py b/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py
+index 85759a6..3929a3f 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py
++++ b/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py
+@@ -101,7 +101,7 @@ class TestOutputView(QAppTestCase):
+                                                 fizzbuz))
+ 
+         pool = multiprocessing.pool.ThreadPool(100)
+-        res = pool.map_async(printer, list(range(10000)))
++        res = pool.map_async(printer, range(10000))
+ 
+         self.app.exec_()
+ 
+@@ -133,7 +133,7 @@ class TestOutputView(QAppTestCase):
+                 hook(*sys.exc_info())
+ 
+         pool = multiprocessing.pool.ThreadPool(10)
+-        res = pool.map_async(raise_exception, list(range(100)))
++        res = pool.map_async(raise_exception, range(100))
+ 
+         self.app.exec_()
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py b/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py
+index 9427b4d..ccb59ed 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py
++++ b/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py
+@@ -179,7 +179,7 @@ class WidgetToolGrid(ToolGrid):
+         """
+         item = self.__model.itemForIndex(parent)
+         if item == self.__rootItem:
+-            for i in reversed(list(range(start - 1, end))):
++            for i in reversed(range(start - 1, end)):
+                 action = self.actions()[i]
+                 self.removeAction(action)
+ 
+@@ -264,7 +264,7 @@ class WidgetToolBox(ToolBox):
+         Set the widget icon size (icons in the button grid).
+         """
+         self.__iconSize = size
+-        for widget in  map(self.widget, list(range(self.count()))):
++        for widget in map(self.widget, range(self.count())):
+             widget.setIconSize(size)
+ 
+     def iconSize(self):
+@@ -281,7 +281,7 @@ class WidgetToolBox(ToolBox):
+         Set fixed widget button size.
+         """
+         self.__buttonSize = size
+-        for widget in map(self.widget, list(range(self.count()))):
++        for widget in map(self.widget, range(self.count())):
+             widget.setButtonSize(size)
+ 
+     def buttonSize(self):
+@@ -301,7 +301,7 @@ class WidgetToolBox(ToolBox):
+         """
+         version = 2
+ 
+-        actions = list(map(self.tabAction, list(range(self.count()))))
++        actions = map(self.tabAction, range(self.count()))
+         expanded = [action for action in actions if action.isChecked()]
+         expanded = [action.text() for action in expanded]
+ 
+@@ -327,7 +327,7 @@ class WidgetToolBox(ToolBox):
+             version = stream.readInt()
+             if version == 2:
+                 expanded = stream.readQStringList()
+-                for action in map(self.tabAction, list(range(self.count()))):
++                for action in map(self.tabAction, range(self.count())):
+                     if (action.text() in expanded) != action.isChecked():
+                         action.trigger()
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py b/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py
+index 1c8daad..434a3e5 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py
++++ b/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py
+@@ -234,7 +234,7 @@ class ControlPointRect(QGraphicsObject):
+     def __installFilter(self):
+         # Install filters on the control points.
+         try:
+-            for p in list(self.__points.values()):
++            for p in self.__points.values():
+                 p.installSceneEventFilter(self)
+         except Exception:
+             log.error("Error in ControlPointRect.__installFilter",
+diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py b/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
+index 7c1e71f..63f8daf 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
++++ b/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
+@@ -57,10 +57,10 @@ class AnchorLayout(QGraphicsObject):
+             return
+ 
+         scene = self.scene()
+-        items = list(scene.items())
++        items = scene.items()
+         links = [item for item in items if isinstance(item, LinkItem)]
+         point_pairs = [(link.sourceAnchor, link.sinkAnchor) for link in links]
+-        point_pairs.extend(list(map(reversed, point_pairs)))
++        point_pairs.extend(map(reversed, point_pairs))
+         to_other = dict(point_pairs)
+ 
+         anchors = set(self.__invalidatedAnchors)
+@@ -92,7 +92,7 @@ class AnchorLayout(QGraphicsObject):
+         self.__invalidatedAnchors = []
+ 
+     def invalidate(self):
+-        items = list(self.scene().items())
++        items = self.scene().items()
+         nodes = [item for item in items is isinstance(item, NodeItem)]
+         anchors = reduce(add,
+                          [[node.outputAnchorItem, node.inputAnchorItem]
+@@ -128,7 +128,7 @@ class AnchorLayout(QGraphicsObject):
+         else:
+             raise TypeError(type(anchor))
+ 
+-        self.__invalidatedAnchors.extend(list(map(getter, links)))
++        self.__invalidatedAnchors.extend(map(getter, links))
+ 
+         self.scheduleDelayedActivate()
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py b/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py
+index 1be66c0..aa05a2b 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py
++++ b/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py
+@@ -605,7 +605,7 @@ class CanvasScene(QGraphicsScene):
+ 
+     def annotation_for_item(self, item):
+         rev = dict(reversed(item) \
+-                   for item in list(self.__item_for_annotation.items()))
++                   for item in self.__item_for_annotation.items())
+         return rev[item]
+ 
+     def commit_scheme_node(self, node):
+@@ -650,7 +650,7 @@ class CanvasScene(QGraphicsScene):
+         """
+         Return the `SchemeNode` for the `item`.
+         """
+-        rev = dict([(v, k) for k, v in list(self.__item_for_node.items())])
++        rev = dict([(v, k) for k, v in self.__item_for_node.items()])
+         return rev[item]
+ 
+     def item_for_node(self, node):
+@@ -663,7 +663,7 @@ class CanvasScene(QGraphicsScene):
+         """
+         Return the `SchemeLink for `item` (:class:`LinkItem`).
+         """
+-        rev = dict([(v, k) for k, v in list(self.__item_for_link.items())])
++        rev = dict([(v, k) for k, v in self.__item_for_link.items()])
+         return rev[item]
+ 
+     def item_for_link(self, link):
+@@ -710,10 +710,10 @@ class CanvasScene(QGraphicsScene):
+         Return a list of `node_item`'s (class:`NodeItem`) neighbor nodes.
+         """
+         neighbors = list(map(attrgetter("sourceItem"),
+-                        self.node_input_links(node_item)))
++                             self.node_input_links(node_item)))
+ 
+-        neighbors.extend(list(map(attrgetter("sinkItem"),
+-                             self.node_output_links(node_item))))
++        neighbors.extend(map(attrgetter("sinkItem"),
++                             self.node_output_links(node_item)))
+         return neighbors
+ 
+     def on_widget_state_change(self, widget, state):
+@@ -937,5 +937,5 @@ def grab_svg(scene):
+     scene.render(painter, target_rect, source_rect)
+     painter.end()
+ 
+-    buffer_str = str(svg_buffer.buffer())
+-    return str(buffer_str.decode("utf-8"))
++    buffer_str = bytes(svg_buffer.buffer())
++    return buffer_str.decode("utf-8")
+diff --git a/scripts/canvas_merge_20dUq6/canvas/document/interactions.py b/scripts/canvas_merge_20dUq6/canvas/document/interactions.py
+index 8515644..e021cbe 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/document/interactions.py
++++ b/scripts/canvas_merge_20dUq6/canvas/document/interactions.py
+@@ -1070,8 +1070,8 @@ class NewArrowAnnotation(UserInteraction):
+                 self.annotation = annot
+ 
+             if self.arrow_item is not None:
+-                p1, p2 = list(map(self.arrow_item.mapFromScene,
+-                             (self.down_pos, event.scenePos())))
++                p1, p2 = map(self.arrow_item.mapFromScene,
++                             (self.down_pos, event.scenePos()))
+                 self.arrow_item.setLine(QLineF(p1, p2))
+ 
+             event.accept()
+@@ -1088,7 +1088,7 @@ class NewArrowAnnotation(UserInteraction):
+ 
+                 self.document.addAnnotation(self.annotation)
+ 
+-                p1, p2 = list(map(self.arrow_item.mapFromScene, (p1, p2)))
++                p1, p2 = map(self.arrow_item.mapFromScene, (p1, p2))
+                 self.arrow_item.setLine(QLineF(p1, p2))
+ 
+             self.end()
+@@ -1364,7 +1364,7 @@ class ResizeArrowAnnotation(UserInteraction):
+         line = item.line()
+         self.savedLine = line
+ 
+-        p1, p2 = list(map(item.mapToScene, (line.p1(), line.p2())))
++        p1, p2 = map(item.mapToScene, (line.p1(), line.p2()))
+ 
+         control.setLine(QLineF(p1, p2))
+         control.setFocusProxy(item)
+@@ -1400,7 +1400,7 @@ class ResizeArrowAnnotation(UserInteraction):
+         self.end()
+ 
+     def __on_lineEdited(self, line):
+-        p1, p2 = list(map(self.item.mapFromScene, (line.p1(), line.p2())))
++        p1, p2 = map(self.item.mapFromScene, (line.p1(), line.p2()))
+         self.item.setLine(QLineF(p1, p2))
+ 
+     def __on_lineGeometryChanged(self):
+@@ -1408,7 +1408,7 @@ class ResizeArrowAnnotation(UserInteraction):
+         # item move as a part of a selection group.
+         if not self.control.isControlActive():
+             line = self.item.line()
+-            p1, p2 = list(map(self.item.mapToScene, (line.p1(), line.p2())))
++            p1, p2 = map(self.item.mapToScene, (line.p1(), line.p2()))
+             self.control.setLine(QLineF(p1, p2))
+ 
+     def cancel(self, reason=UserInteraction.OtherReason):
+diff --git a/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py b/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
+index 42c89f1..20093e9 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
++++ b/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
+@@ -12,7 +12,6 @@ import itertools
+ import unicodedata
+ 
+ from operator import attrgetter
+-from contextlib import nested
+ from urllib.parse import urlencode
+ 
+ from PyQt4.QtGui import (
+@@ -813,7 +812,7 @@ class SchemeEditWidget(QWidget):
+         """
+         Select all selectable items in the scheme.
+         """
+-        for item in list(self.__scene.items()):
++        for item in self.__scene.items():
+             if item.flags() & QGraphicsItem.ItemIsSelectable:
+                 item.setSelected(True)
+ 
+@@ -881,7 +880,7 @@ class SchemeEditWidget(QWidget):
+         Return all selected :class:`.SchemeNode` items.
+         """
+         return list(map(self.scene().node_for_item,
+-                   self.scene().selected_node_items()))
++                        self.scene().selected_node_items()))
+ 
+     def selectedAnnotations(self):
+         """
+@@ -943,7 +942,7 @@ class SchemeEditWidget(QWidget):
+                 qname = data.data(
+                     "application/vnv.orange-canvas.registry.qualified-name"
+                 )
+-                desc = self.__registry.widget(str(qname))
++                desc = self.__registry.widget(bytes(qname).decode())
+                 pos = event.scenePos()
+                 self.createNewNode(desc, position=(pos.x(), pos.y()))
+                 return True
+@@ -1050,7 +1049,7 @@ class SchemeEditWidget(QWidget):
+                 self.__scene.mouseReleaseEvent(event)
+                 stack = self.undoStack()
+                 stack.beginMacro(self.tr("Move"))
+-                for scheme_item, (old, new) in list(self.__itemsMoving.items()):
++                for scheme_item, (old, new) in self.__itemsMoving.items():
+                     if isinstance(scheme_item, SchemeNode):
+                         command = commands.MoveNodeCommand(
+                             self.scheme(), scheme_item, old, new
+@@ -1084,8 +1083,8 @@ class SchemeEditWidget(QWidget):
+             # Create a new node using QuickMenu
+             action = interactions.NewNodeAction(self)
+ 
+-            with nested(disabled(self.__undoAction),
+-                        disabled(self.__redoAction)):
++            with (disabled(self.__undoAction),
++                  disabled(self.__redoAction)):
+                 action.create_new(event.screenPos())
+ 
+             event.accept()
+@@ -1140,9 +1139,9 @@ class SchemeEditWidget(QWidget):
+             # be selected items in the canvas), so we disable the
+             # remove widget action so the text editing follows standard
+             # 'look and feel'
+-            with nested(disabled(self.__removeSelectedAction),
+-                        disabled(self.__undoAction),
+-                        disabled(self.__redoAction)):
++            with (disabled(self.__removeSelectedAction),
++                  disabled(self.__undoAction),
++                  disabled(self.__redoAction)):
+                 handler.create_new(QCursor.pos(), searchText)
+ 
+             event.accept()
+@@ -1232,8 +1231,8 @@ class SchemeEditWidget(QWidget):
+     def __onWidgetStateChanged(self, *args):
+         widget = self.sender()
+         self.scheme()
+-        widget_to_node = dict(reversed(item) for item in \
+-                              list(self.__scheme.widget_for_node.items()))
++        widget_to_node = dict((v, k) for k,v in
++                              self.__scheme.widget_for_node.items())
+         node = widget_to_node[widget]
+         item = self.__scene.item_for_node(node)
+ 
+@@ -1430,8 +1429,8 @@ class SchemeEditWidget(QWidget):
+                 self.__quickMenuTriggers & SchemeEditWidget.RightClicked:
+             action = interactions.NewNodeAction(self)
+ 
+-            with nested(disabled(self.__undoAction),
+-                        disabled(self.__redoAction)):
++            with (disabled(self.__undoAction),
++                  disabled(self.__redoAction)):
+                 action.create_new(globalPos)
+             return
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py b/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py
+index 27acd86..60651e5 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py
++++ b/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py
+@@ -80,7 +80,7 @@ class QuickHelp(QTextBrowser):
+ 
+ 
+ class QuickHelpTipEvent(QStatusTipEvent):
+-    Temporary, Normal, Permanent = list(range(1, 4))
++    Temporary, Normal, Permanent = range(1, 4)
+ 
+     def __init__(self, tip, html=None, priority=Normal, timeout=None):
+         QStatusTipEvent.__init__(self, tip)
+diff --git a/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py b/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py
+index 8001d64..ff62384 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py
++++ b/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py
+@@ -24,7 +24,7 @@ class TestToolBox(test.QAppTestCase):
+         i3 = w.addItem(p3, "t3")
+         i4 = w.addItem(p4, "t4")
+ 
+-        self.assertSequenceEqual([i1, i2, i3, i4], list(range(4)))
++        self.assertSequenceEqual([i1, i2, i3, i4], range(4))
+         self.assertEqual(w.count(), 4)
+ 
+         for i, item in enumerate([p1, p2, p3, p4]):
+diff --git a/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py b/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py
+index deb85d9..8af487f 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py
++++ b/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py
+@@ -372,7 +372,7 @@ class ToolGrid(QFrame):
+     def __relayout(self):
+         """Relayout the buttons.
+         """
+-        for i in reversed(list(range(self.layout().count()))):
++        for i in reversed(range(self.layout().count())):
+             self.layout().takeAt(i)
+ 
+         self.__gridSlots = [_ToolGridSlot(slot.button, slot.action,
+diff --git a/scripts/canvas_merge_20dUq6/canvas/registry/description.py b/scripts/canvas_merge_20dUq6/canvas/registry/description.py
+index c74961f..4e452a0 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/registry/description.py
++++ b/scripts/canvas_merge_20dUq6/canvas/registry/description.py
+@@ -323,9 +323,9 @@ class WidgetDescription(object):
+         inputs = eval(meta.inputList)
+         outputs = eval(meta.outputList)
+ 
+-        inputs = list(map(input_channel_from_args, inputs))
++        inputs = map(input_channel_from_args, inputs)
+ 
+-        outputs = list(map(output_channel_from_args, outputs))
++        outputs = map(output_channel_from_args, outputs)
+ 
+         # Resolve signal type names into concrete type instances
+         inputs = [resolveSignal(input, globals=wmod.__dict__)
+diff --git a/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py b/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py
+index bb8b246..dd4a011 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py
++++ b/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py
+@@ -227,7 +227,7 @@ class WidgetDiscovery(object):
+         Process a callable loader function.
+         """
+         try:
+-            isinstance(self, collections.Callable)
++            callable(self)
+         except Exception:
+             log.error("Error calling %r", callable, exc_info=True)
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py b/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py
+index 02a0fca..2c8c2c6 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py
++++ b/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py
+@@ -60,13 +60,13 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
+ 
+     end_pos = Property(tuple, fget=end_pos)
+ 
+-    def set_geometry(self, xxx_todo_changeme):
++    def set_geometry(self, geometry):
+         """
+         Set the geometry of the arrow as a start and end position tuples
+         (e.g. ``set_geometry(((0, 0), (100, 0))``).
+ 
+         """
+-        (start_pos, end_pos) = xxx_todo_changeme
++        (start_pos, end_pos) = geometry
+         self.set_line(start_pos, end_pos)
+ 
+     def geometry(self):
+@@ -117,14 +117,12 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
+         self.__font = {} if font is None else font
+         self.__anchor = anchor
+ 
+-    def set_rect(self, xxx_todo_changeme1):
++    def set_rect(self, rect):
+         """
+         Set the text geometry bounding rectangle (``(x, y, width, height)``
+         tuple).
+ 
+         """
+-        (x, y, w, h) = xxx_todo_changeme1
+-        rect = (x, y, w, h)
+         if self.__rect != rect:
+             self.__rect = rect
+             self.geometry_changed.emit()
+diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py b/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py
+index 5963698..0621627 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py
++++ b/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py
+@@ -288,7 +288,7 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None,
+         elif annot_el.tag == "arrow":
+             start = annot_el.attrib.get("start", "(0, 0)")
+             end = annot_el.attrib.get("end", "(0, 0)")
+-            start, end = list(map(tuple_eval, (start, end)))
++            start, end = map(tuple_eval, (start, end))
+ 
+             color = annot_el.attrib.get("fill", "red")
+             annot = SchemeArrowAnnotation(start, end, color=color)
+@@ -462,7 +462,7 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
+             font = annotation.font
+             attrs.update({"font-family": font.get("family", None),
+                           "font-size": font.get("size", None)})
+-            attrs = [(key, value) for key, value in list(attrs.items()) \
++            attrs = [(key, value) for key, value in attrs.items()
+                      if value is not None]
+             attrs = dict((key, str(value)) for key, value in attrs)
+ 
+diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py b/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py
+index 676b91e..18e3092 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py
++++ b/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py
+@@ -44,10 +44,10 @@ class SignalManager(QObject):
+     (nodes, links) are added to the scheme.
+ 
+     """
+-    Running, Stoped, Paused, Error = list(range(4))
++    Running, Stoped, Paused, Error = range(4)
+     """SignalManger state flags."""
+ 
+-    Waiting, Processing = list(range(2))
++    Waiting, Processing = range(2)
+     """SignalManager runtime state flags."""
+ 
+     stateChanged = Signal(int)
+diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py b/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py
+index d884d62..4510198 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py
++++ b/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py
+@@ -34,4 +34,4 @@ class TestSchemeLink(test.QAppTestCase):
+                        file_node, "$$$[")
+ 
+         with self.assertRaises(IncompatibleChannelTypeError):
+-            SchemeLink(bayes_node, "Learner", discretize_node, "Data")
+\ No newline at end of file
++            SchemeLink(bayes_node, "Learner", discretize_node, "Data")
+diff --git a/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py b/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py
+index f3406e6..2264a74 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py
++++ b/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py
+@@ -1 +1 @@
+-from .qtcompat import sip_getapi, toPyObject
+\ No newline at end of file
++from .qtcompat import sip_getapi, toPyObject
+diff --git a/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py b/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py
+index 205e7a1..c970b90 100644
+--- a/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py
++++ b/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py
+@@ -167,7 +167,7 @@ class PropertyBindingExpr(AbstractBoundProperty):
+     def get(self):
+         locals = dict(self.locals)
+         locals.update(dict((name, source.get())
+-                           for name, source in list(self._sources.items())))
++                           for name, source in self._sources.items()))
+         try:
+             value = eval(self.code, self.globals, locals)
+         except Exception:
+@@ -274,7 +274,7 @@ class BindingManager(QObject):
+     def bindings(self):
+         """Return (target, source) binding tuples.
+         """
+-        return reduce(add, list(self._bindings.items()), [])
++        return reduce(add, self._bindings.items(), [])
+ 
+     def commit(self):
+         self.__update()
+-- 
+1.8.2.1
+
