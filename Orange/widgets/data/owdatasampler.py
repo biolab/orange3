@@ -5,6 +5,7 @@ from Orange.widgets.settings import Setting
 from Orange.data.table import Table
 from sklearn import cross_validation
 
+
 # TODO: Util methods that really shouldn't be here and should be moved outside of this module
 def makeRandomIndices(number, datasetLength, repetition=False, randomSeed=None):
     """
@@ -105,7 +106,7 @@ class OWDataSampler(widget.OWWidget):
         # indent level 2 under sample size
         self.smplSizeIndent = gui.indentedBox(self.rndSmplIndent)
 
-        sampleSizeSpin = gui.spin(self.smplSizeIndent, self, "sampleSizeNumber", 1, 1000000000)
+        self.sampleSizeSpin = gui.spin(self.smplSizeIndent, self, "sampleSizeNumber", 1, 1000000000)
         # back to level 1 indent
 
         sampleProportionsRB = gui.appendRadioButton(sampleTypesBG, self, "sampleSizeType", "Sample proportions:", insertInto=self.rndSmplIndent)
@@ -122,20 +123,20 @@ class OWDataSampler(widget.OWWidget):
         # indent under cross validation
         self.crossValidIndent = gui.indentedBox(samplingTypesBox)
 
-        numberOfFoldsSpin = gui.spin(self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:")
+        numberOfFoldsSpin = gui.spin(self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:", callback=self.updateSelectedFoldSpin)
 
-        selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:")
+        self.selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:")
         # end of indentation
 
         # Sample Data Button
         gui.button(self.controlArea, self, "Sample Data", callback=self.sendData)
 
-        # When everything is loaded we can connect callbacks that affect gui elements
-        #connect(self.randomSamplingRB, QtCore.SIGNAL('buttonClicked (int)'), self.fadeSamplingTypes)
-        #self.randomSamplingRB.clicked.connect(self.fadeSamplingTypes)
-        #self.crossValidationRB.clicked.connect(self.fadeSamplingTypes)
 
     # GUI METHODS
+    def updateSelectedFoldSpin(self):
+        self.selectedFoldSpin.setMaximum(self.numberOfFolds)
+        pass
+
     def fadeSamplingTypes(self):
         if self.samplingType == 0:
             self.rndSmplIndent.setEnabled(True)
@@ -159,6 +160,7 @@ class OWDataSampler(widget.OWWidget):
         if dataset:
             self.dataInfoLabel.setText('%d instances in input data set.' % len(dataset))
             self.data = dataset
+            self.sampleSizeSpin.setMaximum(len(dataset))
             self.sendData()
 
         # if we get no data forward no data
@@ -200,20 +202,13 @@ class OWDataSampler(widget.OWWidget):
 
         # cross validation
         else:
+            if self.selectedFold > self.numberOfFolds:
+                self.selectedFold = self.numberOfFolds
             groups = makeRandomGroups(self.numberOfFolds, dataSize, randomSeed=rndSeed)
-            sampleIndices = groups.pop(self.selectedFold)
+            sampleIndices = groups.pop(self.selectedFold-1)
             remainderIndices = [].extend(groups)
             self.methodInfoLabel.setText('Cross validation, %d groups.' % self.numberOfFolds)
             self.outputInfoLabel.setText('Outputting group number %d.' % self.selectedFold)
 
         self.send("Data Sample", self.data[sampleIndices])
         self.send("Remaining Data", self.data[remainderIndices])
-
-
-
-
-
-
-
-
-

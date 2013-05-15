@@ -195,7 +195,7 @@ class OWFile(widget.OWWidget):
             data = Table(fn)
             self.loaded_file = fn
         except Exception as errValue:
-            if "is being loaded as" in errValue:
+            if "is being loaded as" in str(errValue):
                 try:
                     data = Table(fn)
                     self.loaded_file = fn
