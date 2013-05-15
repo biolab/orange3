@@ -25,22 +25,6 @@ def makeRandomIndices(number, datasetLength, repetition=False, randomSeed=None):
 
     return (indices, list(set(basePool) - set(indices)))
 
-def makeRandomGroups(numberOfGroups, datasetLength, randomSeed=None):
-    groups = []
-    groupSize = datasetLength//numberOfGroups
-    remainder = [None] * datasetLength
-    for i in range(numberOfGroups-1):
-        group, remainder = makeRandomIndices(groupSize, len(remainder), randomSeed=randomSeed)
-        groups.append(group)
-    if (groupSize - len(remainder)) < 2:
-        groups.append(remainder)
-    else:
-        # append items in last remainder to different groups so we don't get the extraordinarily small group at the end
-        for i, item in enumerate(remainder):
-            groups[i].append(item)
-
-    return groups
-
 class OWDataSampler(widget.OWWidget):
     _name = "Data Sampler"
     _description = """
@@ -125,11 +109,14 @@ class OWDataSampler(widget.OWWidget):
 
         numberOfFoldsSpin = gui.spin(self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:", callback=self.updateSelectedFoldSpin)
 
-        self.selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:")
+        self.selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:", callback=self.updateSelectedFoldSpin)
         # end of indentation
 
         # Sample Data Button
         gui.button(self.controlArea, self, "Sample Data", callback=self.sendData)
+
+        self.fadeSamplingTypes()
+        self.fadeSampleSizeTypes()
 
 
     # GUI METHODS
@@ -161,13 +148,13 @@ class OWDataSampler(widget.OWWidget):
             self.dataInfoLabel.setText('%d instances in input data set.' % len(dataset))
             self.data = dataset
             self.sampleSizeSpin.setMaximum(len(dataset))
+            self.dataChanged = True
             self.sendData()
-
         # if we get no data forward no data
         else:
             self.dataInfoLabel.setText('No data on input.')
             self.methodInfoLabel.setText('')
-            self.infoc.setText('')
+            self.outputInfoLabel.setText('')
             self.send("Data Sample", None)
             self.send("Remaining Data", None)
             self.data = None
@@ -200,15 +187,18 @@ class OWDataSampler(widget.OWWidget):
 
             self.outputInfoLabel.setText('Outputting %d instances.' % len(sampleIndices))
 
+
         # cross validation
         else:
-            if self.selectedFold > self.numberOfFolds:
-                self.selectedFold = self.numberOfFolds
-            groups = makeRandomGroups(self.numberOfFolds, dataSize, randomSeed=rndSeed)
-            sampleIndices = groups.pop(self.selectedFold-1)
-            remainderIndices = [].extend(groups)
             self.methodInfoLabel.setText('Cross validation, %d groups.' % self.numberOfFolds)
             self.outputInfoLabel.setText('Outputting group number %d.' % self.selectedFold)
+            if self.stratified:
+                kf = cross_validation.StratifiedKFold(self.data.Y.flatten(), n_folds=self.numberOfFolds)
+            else:
+                kf = cross_validation.KFold(dataSize, n_folds=self.numberOfFolds)
+            self.groups = [(train_index, test_index) for train_index, test_index in kf]
+            remainderIndices, sampleIndices = self.groups[self.selectedFold - 1]
+            print(sampleIndices)
 
         self.send("Data Sample", self.data[sampleIndices])
         self.send("Remaining Data", self.data[remainderIndices])
