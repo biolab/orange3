@@ -23,6 +23,9 @@ _ActionSlot = \
 
 
 class LineEditButton(QToolButton):
+    """
+    A button in the :class:`LineEdit`.
+    """
     def __init__(self, parent=None, flat=True, **kwargs):
         QToolButton.__init__(self, parent, **kwargs)
 
@@ -50,14 +53,21 @@ class LineEditButton(QToolButton):
 
 
 class LineEdit(QLineEdit):
-    """A line edit widget with support for adding actions (buttons) to
+    """
+    A line edit widget with support for adding actions (buttons) to
     the left/right of the edited text
 
     """
+    #: Position flags
     LeftPosition, RightPosition = 1, 2
 
+    #: Emitted when the action is triggered.
     triggered = Signal(QAction)
+
+    #: The left action was triggered.
     leftTriggered = Signal()
+
+    #: The right action was triggered.
     rightTriggered = Signal()
 
     def __init__(self, parent=None, **kwargs):
@@ -65,8 +75,15 @@ class LineEdit(QLineEdit):
         self.__actions = [None, None]
 
     def setAction(self, action, position=LeftPosition):
-        """Set `action` to be displayed at `position`. Existing action
-        if present will be removed.
+        """
+        Set `action` to be displayed at `position`. Existing action
+        (if present) will be removed.
+
+        Parameters
+        ----------
+        action : :class:`QAction`
+        position : int
+            Position where to set the action (default: ``LeftPosition``).
 
         """
 
@@ -89,10 +106,16 @@ class LineEdit(QLineEdit):
 
         slot = _ActionSlot(position, action, button, False)
         self.__actions[position - 1] = slot
+
+        if not self.testAttribute(Qt.WA_Resized):
+            # Need some sensible height to do the layout.
+            self.adjustSize()
+
         self.__layoutActions()
 
     def actionAt(self, position):
-        """Return `action` at `position`.
+        """
+        Return :class:`QAction` at `position`.
         """
         self._checkPosition(position)
         slot = self.__actions[position - 1]
@@ -102,7 +125,8 @@ class LineEdit(QLineEdit):
             return None
 
     def removeActionAt(self, position):
-        """Remove action at position.
+        """
+        Remove the action at position.
         """
         self._checkPosition(position)
 
@@ -115,7 +139,10 @@ class LineEdit(QLineEdit):
         self.__layoutActions()
 
     def button(self, position):
-        """Return the actions button at position.
+        """
+        Return the button (:class:`LineEditButton`) for the action
+        at `position`.
+
         """
         self._checkPosition(position)
         slot = self.__actions[position - 1]

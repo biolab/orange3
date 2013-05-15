@@ -112,7 +112,7 @@ class WelcomeDialog(QDialog):
         bottom_bar.setSizePolicy(QSizePolicy.MinimumExpanding,
                                  QSizePolicy.Maximum)
 
-        check = QCheckBox(self.tr("Dont'show again at startup"), bottom_bar)
+        check = QCheckBox(self.tr("Show at startup"), bottom_bar)
         check.setChecked(False)
 
         self.__showAtStartupCheck = check
@@ -127,11 +127,17 @@ class WelcomeDialog(QDialog):
         self.setFixedSize(620, 390)
 
     def setShowAtStartup(self, show):
-        if self.__showAtStartupCheck.isChecked() != (not show):
-            self.__showAtStartupCheck.setChecked(not show)
+        """
+        Set the 'Show at startup' check box state.
+        """
+        if self.__showAtStartupCheck.isChecked() != show:
+            self.__showAtStartupCheck.setChecked(show)
 
     def showAtStartup(self):
-        return not self.__showAtStartupCheck.isChecked()
+        """
+        Return the 'Show at startup' check box state.
+        """
+        return self.__showAtStartupCheck.isChecked()
 
     def addRow(self, actions, background="light-orange"):
         """Add a row with `actions`.

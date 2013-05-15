@@ -1,15 +1,19 @@
 """
 Scheme save/load routines.
+
 """
 import sys
-import shutil
 
 from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
 
 from collections import defaultdict
+from itertools import chain
 
-import pickle
+import pickle as pickle
+import json
+import pprint
 
+import ast
 from ast import literal_eval
 
 import logging
@@ -27,9 +31,78 @@ class UnknownWidgetDefinition(Exception):
     pass
 
 
+def string_eval(source):
+    """
+    Evaluate a python string literal `source`. Raise ValueError if
+    `source` is not a string literal.
+
+    >>> string_eval("'a string'")
+    a string
+
+    """
+    node = ast.parse(source, "<source>", mode="eval")
+    if not isinstance(node.body, ast.Str):
+        raise ValueError("%r is not a string literal" % source)
+    return node.body.s
+
+
+def tuple_eval(source):
+    """
+    Evaluate a python tuple literal `source` where the elements are
+    constrained to be int, float or string. Raise ValueError if not
+    a tuple literal.
+
+    >>> tuple_eval("(1, 2, "3")")
+    (1, 2, '3')
+
+    """
+    node = ast.parse(source, "<source>", mode="eval")
+
+    if not isinstance(node.body, ast.Tuple):
+        raise ValueError("%r is not a tuple literal" % source)
+
+    if not all(isinstance(el, (ast.Str, ast.Num))
+               for el in node.body.elts):
+        raise ValueError("Can only contain numbers or strings")
+
+    return literal_eval(source)
+
+
+def terminal_eval(source):
+    """
+    Evaluate a python 'constant' (string, number, None, True, False)
+    `source`. Raise ValueError is not a terminal literal.
+
+    >>> terminal_eval("True")
+    True
+
+    """
+    node = ast.parse(source, "<source>", mode="eval")
+
+    try:
+        return _terminal_value(node.body)
+    except ValueError:
+        raise
+        raise ValueError("%r is not a terminal constant" % source)
+
+
+def _terminal_value(node):
+    if isinstance(node, ast.Str):
+        return node.s
+    elif isinstance(node, ast.Num):
+        return node.n
+    elif isinstance(node, ast.Name) and \
+            node.id in ["True", "False", "None"]:
+        return __builtins__[node.id]
+
+    raise ValueError("Not a terminal")
+
+
 def sniff_version(stream):
     """
-    Parse a scheme stream and return the scheme's version string.
+    Parse a scheme stream and return the scheme's serialization
+    version string.
+
     """
     doc = parse(stream)
     scheme_el = doc.getroot()
@@ -43,13 +116,26 @@ def sniff_version(stream):
     return version
 
 
-def parse_scheme(scheme, stream, error_handler=None):
+def parse_scheme(scheme, stream, error_handler=None,
+                 allow_pickle_data=False):
     """
     Parse a saved scheme from `stream` and populate a `scheme`
     instance (:class:`Scheme`).
     `error_handler` if given will be called with an exception when
     a 'recoverable' error occurs. By default the exception is simply
     raised.
+
+    Parameters
+    ----------
+    scheme : :class:`.Scheme`
+        A scheme instance to populate with the contents of `stream`.
+    stream : file-like object
+        A file like object opened for reading.
+    error_hander : function, optional
+        A function to call with an exception instance when a `recoverable`
+        error occurs.
+    allow_picked_data : bool, optional
+        Specifically allow parsing of picked data streams.
 
     """
     doc = parse(stream)
@@ -67,10 +153,12 @@ def parse_scheme(scheme, stream, error_handler=None):
             raise exc
 
     if version == "1.0":
-        parse_scheme_v_1_0(doc, scheme, error_handler=error_handler)
+        parse_scheme_v_1_0(doc, scheme, error_handler=error_handler,
+                           allow_pickle_data=allow_pickle_data)
         return scheme
     else:
-        parse_scheme_v_2_0(doc, scheme, error_handler=error_handler)
+        parse_scheme_v_2_0(doc, scheme, error_handler=error_handler,
+                           allow_pickle_data=allow_pickle_data)
         return scheme
 
 
@@ -87,12 +175,13 @@ def scheme_node_from_element(node_el, registry):
     pos = node_el.get("position")
 
     if pos is not None:
-        pos = literal_eval(pos)
+        pos = tuple_eval(pos)
 
     return SchemeNode(widget_desc, title=title, position=pos)
 
 
-def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None):
+def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None,
+                       allow_pickle_data=False):
     """
     Parse an `ElementTree` instance.
     """
@@ -162,19 +251,20 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None):
         format = property_el.attrib.get("format", "pickle")
 
         if "data" in property_el.attrib:
-            data = literal_eval(property_el.attrib.get("data"))
+            # data string is 'encoded' with 'repr' i.e. unicode and
+            # nonprintable characters are \u or \x escaped.
+            # Could use 'codecs' module?
+            data = string_eval(property_el.attrib.get("data"))
         else:
             data = property_el.text
 
         properties = None
-        try:
-            if format != "pickle":
-                raise ValueError("Cannot handle %r format" % format)
-
-            properties = pickle.loads(data)
-        except Exception:
-            log.error("Could not load properties for %r.", node.title,
-                      exc_info=True)
+        if format != "pickle" or allow_pickle_data:
+            try:
+                properties = loads(data, format)
+            except Exception:
+                log.error("Could not load properties for %r.", node.title,
+                          exc_info=True)
 
         if properties is not None:
             node.properties = properties
@@ -183,7 +273,7 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None):
     for annot_el in etree.findall("annotations/*"):
         if annot_el.tag == "text":
             rect = annot_el.attrib.get("rect", "(0, 0, 20, 20)")
-            rect = literal_eval(rect)
+            rect = tuple_eval(rect)
 
             font_family = annot_el.attrib.get("font-family", "").strip()
             font_size = annot_el.attrib.get("font-size", "").strip()
@@ -192,13 +282,13 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None):
             if font_family:
                 font["family"] = font_family
             if font_size:
-                font["size"] = literal_eval(font_size)
+                font["size"] = int(font_size)
 
             annot = SchemeTextAnnotation(rect, annot_el.text or "", font=font)
         elif annot_el.tag == "arrow":
             start = annot_el.attrib.get("start", "(0, 0)")
             end = annot_el.attrib.get("end", "(0, 0)")
-            start, end = map(literal_eval, (start, end))
+            start, end = map(tuple_eval, (start, end))
 
             color = annot_el.attrib.get("fill", "red")
             annot = SchemeArrowAnnotation(start, end, color=color)
@@ -214,7 +304,8 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None):
         scheme.add_annotation(annot)
 
 
-def parse_scheme_v_1_0(etree, scheme, error_handler, widget_registry=None):
+def parse_scheme_v_1_0(etree, scheme, error_handler, widget_registry=None,
+                       allow_pickle_data=False):
     """
     ElementTree Instance of an old .ows scheme format.
     """
@@ -275,7 +366,7 @@ def parse_scheme_v_1_0(etree, scheme, error_handler, widget_registry=None):
     properties = {}
     if settings is not None:
         data = settings.attrib.get("settingsDictionary", None)
-        if data:
+        if data and allow_pickle_data:
             try:
                 properties = literal_eval(data)
             except Exception:
@@ -304,8 +395,9 @@ def inf_range(start=0, step=1):
         start += step
 
 
-def scheme_to_etree(scheme):
-    """Return an `xml.etree.ElementTree` representation of the `scheme.
+def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
+    """
+    Return an `xml.etree.ElementTree` representation of the `scheme.
     """
     builder = TreeBuilder(element_factory=Element)
     builder.start("scheme", {"version": "2.0",
@@ -408,16 +500,15 @@ def scheme_to_etree(scheme):
         data = None
         if node.properties:
             try:
-                data = pickle.dumps(node.properties)
+                data, format = dumps(node.properties, format=data_format,
+                                     pickle_fallback=pickle_fallback)
             except Exception:
                 log.error("Error serializing properties for node %r",
                           node.title, exc_info=True)
             if data is not None:
                 builder.start("properties",
                               {"node_id": str(node_ids[node]),
-                               "format": "pickle",
-#                               "data": repr(data),
-                               })
+                               "format": format})
                 builder.data(data)
                 builder.end("properties")
 
@@ -428,10 +519,27 @@ def scheme_to_etree(scheme):
     return tree
 
 
-def scheme_to_ows_stream(scheme, stream, pretty=False):
-    """Write scheme to a a stream in Orange Scheme .ows (v 2.0) format.
+def scheme_to_ows_stream(scheme, stream, pretty=False, pickle_fallback=False):
     """
-    tree = scheme_to_etree(scheme)
+    Write scheme to a a stream in Orange Scheme .ows (v 2.0) format.
+
+    Parameters
+    ----------
+    scheme : :class:`.Scheme`
+        A :class:`.Scheme` instance to serialize.
+    stream : file-like object
+        A file-like object opened for writing.
+    pretty : bool, optional
+        If `True` the output xml will be pretty printed (indented).
+    pickle_fallback : bool, optional
+        If `True` allow scheme node properties to be saves using pickle
+        protocol if properties cannot be saved using the default
+        notation.
+
+    """
+    tree = scheme_to_etree(scheme, data_format="literal",
+                           pickle_fallback=pickle_fallback)
+
     if pretty:
         indent(tree.getroot(), 0)
 
@@ -445,7 +553,7 @@ def scheme_to_ows_stream(scheme, stream, pretty=False):
 def indent(element, level=0, indent="\t"):
     """
     Indent an instance of a :class:`Element`. Based on
-    `http://effbot.org/zone/element-lib.htm#prettyprint`_).
+    (http://effbot.org/zone/element-lib.htm#prettyprint).
 
     """
     def empty(text):
@@ -469,3 +577,95 @@ def indent(element, level=0, indent="\t"):
                 element.tail = "\n" + indent * (level + (-1 if last else 0))
 
     return indent_(element, level, True)
+
+
+def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
+    """
+    Serialize `obj` using `format` ('json' or 'literal') and return its
+    string representation and the used serialization format ('literal',
+    'json' or 'pickle').
+
+    If `pickle_fallback` is True and the serialization with `format`
+    fails object's pickle representation will be returned
+
+    """
+    if format == "literal":
+        try:
+            return (literal_dumps(obj, prettyprint=prettyprint, indent=1),
+                    "literal")
+        except (ValueError, TypeError) as ex:
+            if not pickle_fallback:
+                raise
+
+            log.warning("Could not serialize to a literal string",
+                        exc_info=True)
+
+    elif format == "json":
+        try:
+            return (json.dumps(obj, indent=1 if prettyprint else None),
+                    "json")
+        except (ValueError, TypeError):
+            if not pickle_fallback:
+                raise
+
+            log.warning("Could not serialize to a json string",
+                        exc_info=True)
+
+    elif format == "pickle":
+        return pickle.dumps(obj), "pickle"
+
+    else:
+        raise ValueError("Unsupported format %r" % format)
+
+    if pickle_fallback:
+        log.warning("Using pickle fallback")
+        return pickle.dumps(obj), "pickle"
+    else:
+        raise Exception("Something strange happened.")
+
+
+def loads(string, format):
+    if format == "literal":
+        return literal_eval(string)
+    elif format == "json":
+        return json.loads(string)
+    elif format == "pickle":
+        return pickle.loads(string)
+    else:
+        raise ValueError("Unknown format")
+
+
+# This is a subset of PyON serialization.
+def literal_dumps(obj, prettyprint=False, indent=4):
+    """
+    Write obj into a string as a python literal.
+    """
+    memo = {}
+    NoneType = type(None)
+
+    def check(obj):
+        if type(obj) in [int, int, float, bool, NoneType, str, str]:
+            return True
+
+        if id(obj) in memo:
+            raise ValueError("{0} is a recursive structure".format(obj))
+
+        memo[id(obj)] = obj
+
+        if type(obj) in [list, tuple]:
+            return all(map(check, obj))
+        elif type(obj) is dict:
+            return all(map(check, chain(iter(obj.keys()), iter(obj.values()))))
+        else:
+            raise TypeError("{0} can not be serialized as a python "
+                             "literal".format(type(obj)))
+
+    check(obj)
+
+    if prettyprint:
+        return pprint.pformat(obj, indent=indent)
+    else:
+        return repr(obj)
+
+
+literal_loads = literal_eval

@@ -2,7 +2,7 @@ from PyQt4.QtGui import QStringListModel
 from PyQt4.QtCore import QPoint
 
 from ..quickmenu import QuickMenu, SuggestMenuPage, FlattenedTreeItemModel, \
-                        ToolTree, QAction
+                        MenuPage, QAction
 
 from ...gui.test import QAppTestCase
 from ...registry import global_registry
@@ -22,12 +22,12 @@ class TestMenu(QAppTestCase):
         menu.triggered.connect(triggered)
         menu.hovered.connect(hovered)
 
-        items_page = ToolTree()
+        items_page = MenuPage()
         model = QStringListModel(["one", "two", "file not found"])
         items_page.setModel(model)
         menu.addPage("w", items_page)
 
-        page_c = ToolTree()
+        page_c = MenuPage()
         menu.addPage("c", page_c)
 
         menu.popup(QPoint(200, 200))
@@ -70,6 +70,7 @@ class TestMenu(QAppTestCase):
         menu.show()
         menu.setFilterFixedString("la")
         self.singleShot(2500, lambda: menu.setFilterFixedString("ba"))
+        self.singleShot(5000, lambda: menu.setFilterFixedString("ab"))
         self.app.exec_()
 
     def test_flattened_model(self):

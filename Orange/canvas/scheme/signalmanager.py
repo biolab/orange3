@@ -9,9 +9,11 @@ widgets in a scheme.
 """
 
 import logging
+import itertools
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, deque
 from operator import attrgetter, add
+from functools import partial
 
 
 from PyQt4.QtCore import QObject, QCoreApplication, QEvent
@@ -42,10 +44,10 @@ class SignalManager(QObject):
     (nodes, links) are added to the scheme.
 
     """
-    Running, Stoped, Paused, Error = list(range(4))
+    Running, Stoped, Paused, Error = range(4)
     """SignalManger state flags."""
 
-    Waiting, Processing = list(range(2))
+    Waiting, Processing = range(2)
     """SignalManager runtime state flags."""
 
     stateChanged = Signal(int)
@@ -171,7 +173,8 @@ class SignalManager(QObject):
         # references in process_node
         # NOTE: This does not remove output signals this node. In particular
         # the final 'None' values might be left on the queue.
-        log.info("Node %r removed. Removing pending signals.")
+        log.info("Node %r removed. Removing pending signals.",
+                 node.title)
         self.remove_pending_signals(node)
 
         del self._node_outputs[node]
@@ -296,26 +299,8 @@ class SignalManager(QObject):
             raise RuntimeError("Can't process in state %i" % self.__state)
 
         log.info("Processing queued signals")
-        scheme = self.scheme()
 
-        blocking_nodes = set(self.blocking_nodes())
-
-        blocked_nodes = reduce(set.union,
-                               list(map(scheme.downstream_nodes, blocking_nodes)),
-                               set(blocking_nodes))
-
-        pending = set(self.pending_nodes())
-
-        pending_downstream = reduce(set.union,
-                                    list(map(scheme.downstream_nodes, pending)),
-                                    set())
-
-        log.debug("Pending nodes: %s", pending)
-        log.debug("Blocking nodes: %s", blocking_nodes)
-
-        # nodes on the update front (they have no ancestor which is
-        # either scheduled for update or is in blocking state)
-        node_update_front = list(pending - pending_downstream - blocked_nodes)
+        node_update_front = self.node_update_front()
 
         if max_nodes is not None:
             node_update_front = node_update_front[:max_nodes]
@@ -325,6 +310,7 @@ class SignalManager(QObject):
 
         self._set_runtime_state(SignalManager.Processing)
         try:
+            # TODO: What if the update front changes in the loop?
             for node in node_update_front:
                 self.process_node(node)
         finally:
@@ -411,16 +397,47 @@ class SignalManager(QObject):
     def is_blocking(self, node):
         return False
 
+    def node_update_front(self):
+        """
+        Return a list of nodes on the update front, i.e. nodes scheduled for
+        an update that have no ancestor which is either itself scheduled
+        for update or is in a blocking state)
+
+        .. note::
+            The node's ancestors are only computed over enabled links.
+
+        """
+        scheme = self.scheme()
+
+        blocking_nodes = set(self.blocking_nodes())
+
+        dependents = partial(dependent_nodes, scheme)
+
+        blocked_nodes = reduce(set.union,
+                               list(map(dependents, blocking_nodes)),
+                               set(blocking_nodes))
+
+        pending = set(self.pending_nodes())
+
+        pending_downstream = reduce(set.union,
+                                    list(map(dependents, pending)),
+                                    set())
+
+        log.debug("Pending nodes: %s", pending)
+        log.debug("Blocking nodes: %s", blocking_nodes)
+
+        return list(pending - pending_downstream - blocked_nodes)
+
     def event(self, event):
         if event.type() == QEvent.UpdateRequest:
             if not self.__state == SignalManager.Running:
-                log.debug("Received UpdateRequest event while not "
+                log.debug("Received 'UpdateRequest' event while not "
                           "in 'Running' state")
                 event.setAccepted(False)
                 return False
 
             if self.__runtime_state == SignalManager.Processing:
-                log.debug("received UpdateRequest event while in "
+                log.debug("Received 'UpdateRequest' event while in "
                           "'process_queued'")
                 # This happens if someone calls QCoreApplication.processEvents
                 # from the signal handlers.
@@ -428,16 +445,20 @@ class SignalManager(QObject):
                 event.accept()
                 return True
 
-            log.debug("UpdateRequest event, queued signals: %i",
+            log.info("'UpdateRequest' event, queued signals: %i",
                       len(self._input_queue))
             if self._input_queue:
-                self.process_queued()
+                self.process_queued(max_nodes=1)
             event.accept()
 
             if self.__reschedule:
-                log.debug("Rescheduling UpdateRequest event")
+                log.debug("Rescheduling 'UpdateRequest' event")
                 self._update()
                 self.__reschedule = False
+            elif self.node_update_front():
+                log.debug("More nodes are eligible for an update. "
+                          "Scheduling another update.")
+                self._update()
 
             return True
 
@@ -476,6 +497,37 @@ def compress_signals(signals):
             signals.append(signals_grouped[0])
 
     return list(reversed(signals))
+
+
+def dependent_nodes(scheme, node):
+    """
+    Return a list of all nodes (in breadth first order) in `scheme` that
+    are dependent on `node`,
+
+    .. note::
+        This does not include nodes only reachable by disables links.
+
+    """
+    def expand(node):
+        return [link.sink_node
+                for link in scheme.find_links(source_node=node)
+                if link.enabled]
+
+    nodes = list(traverse_bf(node, expand))
+    assert nodes[0] is node
+    # Remove the first item (`node`).
+    return nodes[1:]
+
+
+def traverse_bf(start, expand):
+    queue = deque([start])
+    visited = set()
+    while queue:
+        item = queue.popleft()
+        if item not in visited:
+            yield item
+            visited.add(item)
+            queue.extend(expand(item))
 
 
 def group_by_all(sequence, key=None):

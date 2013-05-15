@@ -6,6 +6,8 @@ from PyQt4.QtCore import pyqtSignal as Signal
 
 
 class QuickHelp(QTextBrowser):
+
+    #: Emitted when the shown text changes.
     textChanged = Signal()
 
     def __init__(self, *args, **kwargs):
@@ -22,7 +24,8 @@ class QuickHelp(QTextBrowser):
         self.anchorClicked.connect(self.__on_anchorClicked)
 
     def showHelp(self, text, timeout=0):
-        """Show help for `timeout` milliseconds. if timeout is 0 then
+        """
+        Show help for `timeout` milliseconds. if timeout is 0 then
         show the text until it is cleared with clearHelp or showHelp is
         called with an empty string.
 
@@ -36,14 +39,16 @@ class QuickHelp(QTextBrowser):
             self.__timer.start(timeout)
 
     def clearHelp(self):
-        """Clear help text previously set with `showHelp`.
+        """
+        Clear help text previously set with `showHelp`.
         """
         self.__timer.stop()
         self.showHelp("")
 
     def showPermanentHelp(self, text):
-        """Set permanent help text. The text may be temporarily
-        overridden by showHelp but will be shown again when that is cleared
+        """
+        Set permanent help text. The text may be temporarily overridden
+        by showHelp but will be shown again when that is cleared.
 
         """
         if self.__permanentText != text:
@@ -52,7 +57,8 @@ class QuickHelp(QTextBrowser):
             self.textChanged.emit()
 
     def currentText(self):
-        """Return the current shown text.
+        """
+        Return the current shown text.
         """
         return self.__text or self.__permanentText
 
@@ -102,7 +108,8 @@ class QuickHelpDetailRequestEvent(QWhatsThisClickedEvent):
 
 
 class StatusTipPromoter(QObject):
-    """Promotes `QStatusTipEvent` to `QuickHelpTipEvent` using whatsThis
+    """
+    Promotes `QStatusTipEvent` to `QuickHelpTipEvent` using ``whatsThis``
     property of the object.
 
     """

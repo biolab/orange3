@@ -102,15 +102,31 @@ WidgetToolBox  ToolGrid QToolButton:pressed {
 }
 
 
+/* QuickCategoryToolbar popup menus */
 
-/*
- *QuickCategoryToolbar _QuickCategoryButton {
- *    qproperty-nativeStyling_: "true";
- *    background-color: palette(button);
- *    border: none;
- *    border-bottom: 1px solid palette(dark);
- *}
- */
+CategoryPopupMenu {
+	background-color: #E9EFF2;
+}
+
+CategoryPopupMenu ToolTree QTreeView::item {
+	height: 25px;
+	border-bottom: 1px solid #e9eff2;
+}
+
+CategoryPopupMenu QTreeView::item:hover {
+	background: qlineargradient(
+		x1: 0, y1: 0, x2: 0, y2: 1,
+		stop: 0 #688EF6,
+		stop: 0.5 #4047f4,
+		stop: 1.0 #2D68F3
+	);
+	color: white;
+}
+
+CategoryPopupMenu QTreeView::item:selected {
+	background-color: blue;
+	color: white;
+}
 
 
 /* Canvas Dock Header */
@@ -299,11 +315,16 @@ PreviewDialog PreviewBrowser * {
 }
 
 PreviewDialog PreviewBrowser TextLabel#path-text {
-	font-size: 12px;
+    font-size: 12px;
 }
 
 PreviewDialog PreviewBrowser QLabel#path-label {
-	font-size: 12px;
+    font-size: 12px;
+}
+
+PreviewDialog DropShadowFrame {
+    qproperty-radius_: 10;
+    qproperty-color_: rgb(0, 0, 0, 100);
 }
 
 /* Welcome Screen Dialog
@@ -353,22 +374,44 @@ QuickMenu QFrame#menu-frame {
 }
 
 QuickMenu ToolTree QTreeView::item {
-    height: 25px;
-    border-top: 1px solid #e9eff2;
-    border-bottom: 1px solid #e9eff2;
+	border-bottom: 1px solid #e9eff2;
 }
 
 QuickMenu QTreeView::item:hover {
-    background-color: lightblue;
-    color: white;
+	background: qlineargradient(
+		x1: 0, y1: 0, x2: 0, y2: 1,
+		stop: 0 #688EF6,
+		stop: 0.5 #4047f4,
+		stop: 1.0 #2D68F3
+	);
+	color: white;
 }
 
 QuickMenu QTreeView::item:selected {
-    background-color: blue;
-    color: white;
+	background-color: blue;
+	color: white;
 }
 
-/* Quick Menu search line edit 
+QuickMenu TabBarWidget QToolButton {
+	height: 25px;
+	border-bottom: 1px solid palette(dark);
+	padding-right: 5px;
+	padding-left: 5px;
+	qproperty-showMenuIndicator_: true;
+}
+
+QuickMenu TabBarWidget QToolButton#search-tab-button {
+	background-color: #9CACB4;
+}
+
+QuickMenu TabBarWidget QToolButton:menu-indicator {
+	image: url(canvas_icons:/arrow-right.svg);
+	subcontrol-position: center right;
+	height: 8px;
+	width: 8px;
+}
+
+/* Quick Menu search line edit
  */
 
 QuickMenu QLineEdit {

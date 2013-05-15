@@ -1,8 +1,5 @@
 """
-Tool Grid Widget.
-================
-
-A Widget containing a grid of clickable actions/buttons.
+A widget containing a grid of clickable actions/buttons.
 
 """
 from collections import namedtuple, deque
@@ -109,12 +106,27 @@ class _ToolGridButton(QToolButton):
 
 
 class ToolGrid(QFrame):
-    """A widget containing a grid of actions/buttons.
+    """
+    A widget containing a grid of actions/buttons.
 
-    Actions can be added using standard QWidget addAction and insertAction
-    methods.
+    Actions can be added using standard :func:`QWidget.addAction(QAction)`
+    and :func:`QWidget.insertAction(int, QAction)` methods.
+
+    Parameters
+    ----------
+    parent : :class:`QWidget`
+        Parent widget.
+    columns : int
+        Number of columns in the grid layout.
+    buttonSize : :class:`QSize`, optional
+        Size of tool buttons in the grid.
+    iconSize : :class:`QSize`, optional
+        Size of icons in the buttons.
+    toolButtonStyle : :class:`Qt.ToolButtonStyle`
+        Tool button style.
 
     """
+
     actionTriggered = Signal(QAction)
     actionHovered = Signal(QAction)
 
@@ -156,7 +168,8 @@ class ToolGrid(QFrame):
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
 
     def setButtonSize(self, size):
-        """Set the button size.
+        """
+        Set the button size.
         """
         if self.__buttonSize != size:
             self.__buttonSize = size
@@ -164,10 +177,14 @@ class ToolGrid(QFrame):
                 slot.button.setFixedSize(size)
 
     def buttonSize(self):
+        """
+        Return the button size.
+        """
         return QSize(self.__buttonSize)
 
     def setIconSize(self, size):
-        """Set the button icon size.
+        """
+        Set the button icon size.
         """
         if self.__iconSize != size:
             self.__iconSize = size
@@ -175,10 +192,14 @@ class ToolGrid(QFrame):
                 slot.button.setIconSize(size)
 
     def iconSize(self):
+        """
+        Return the icon size
+        """
         return QSize(self.__iconSize)
 
     def setToolButtonStyle(self, style):
-        """Set the tool button style.
+        """
+        Set the tool button style.
         """
         if self.__toolButtonStyle != style:
             self.__toolButtonStyle = style
@@ -186,34 +207,50 @@ class ToolGrid(QFrame):
                 slot.button.setToolButtonStyle(style)
 
     def toolButtonStyle(self):
+        """
+        Return the tool button style.
+        """
         return self.__toolButtonStyle
 
     def setColumnCount(self, columns):
-        """Set the number of button/action columns.
+        """
+        Set the number of button/action columns.
         """
         if self.__columns != columns:
             self.__columns = columns
             self.__relayout()
 
     def columns(self):
+        """
+        Return the number of columns in the grid.
+        """
         return self.__columns
 
     def clear(self):
-        """Clear all actions.
+        """
+        Clear all actions/buttons.
         """
         for slot in reversed(list(self.__gridSlots)):
             self.removeAction(slot.action)
         self.__gridSlots = []
 
     def insertAction(self, before, action):
-        """Insert a new action at the position currently occupied
+        """
+        Insert a new action at the position currently occupied
         by `before` (can also be an index).
+
+        Parameters
+        ----------
+        before : :class:`QAction` or int
+            Position where the `action` should be inserted.
+        action : :class:`QAction`
+            Action to insert
 
         """
         if isinstance(before, int):
             actions = list(self.actions())
             if len(actions) == 0 or before >= len(actions):
-                # Insert as the first action of the last action.
+                # Insert as the first action or the last action.
                 return self.addAction(action)
 
             before = actions[before]
@@ -221,7 +258,8 @@ class ToolGrid(QFrame):
         return QFrame.insertAction(self, before, action)
 
     def setActions(self, actions):
-        """Clear the grid and add actions.
+        """
+        Clear the grid and add `actions`.
         """
         self.clear()
 
@@ -229,14 +267,16 @@ class ToolGrid(QFrame):
             self.addAction(action)
 
     def buttonForAction(self, action):
-        """Return the `QToolButton` instance button for `action`.
+        """
+        Return the :class:`QToolButton` instance button for `action`.
         """
         actions = [slot.action for slot in self.__gridSlots]
         index = actions.index(action)
         return self.__gridSlots[index].button
 
     def createButtonForAction(self, action):
-        """Create and return a QToolButton for action.
+        """
+        Create and return a :class:`QToolButton` for action.
         """
         button = _ToolGridButton(self)
         button.setDefaultAction(action)
@@ -251,6 +291,9 @@ class ToolGrid(QFrame):
         return button
 
     def count(self):
+        """
+        Return the number of buttons/actions in the grid.
+        """
         return len(self.__gridSlots)
 
     def actionEvent(self, event):
@@ -348,7 +391,7 @@ class ToolGrid(QFrame):
         return buttons.index(button)
 
     def __onButtonRightClick(self, button):
-        print(button)
+        pass
 
     def __onButtonEnter(self, button):
         action = button.defaultAction()
@@ -396,7 +439,8 @@ class ToolGrid(QFrame):
 
 
 class ToolButtonEventListener(QObject):
-    """An event listener(filter) for QToolButtons.
+    """
+    An event listener(filter) for :class:`QToolButtons`.
     """
     buttonLeftClicked = Signal(QToolButton)
     buttonRightClicked = Signal(QToolButton)

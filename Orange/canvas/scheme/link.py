@@ -14,7 +14,8 @@ from .errors import IncompatibleChannelTypeError
 
 
 def compatible_channels(source_channel, sink_channel):
-    """Do the channels in link have compatible types, i.e. can they be
+    """
+    Do the channels in link have compatible types, i.e. can they be
     connected based on their type.
 
     """
@@ -27,7 +28,8 @@ def compatible_channels(source_channel, sink_channel):
 
 
 def can_connect(source_node, sink_node):
-    """Return True if any output from `source_node` can be connected to
+    """
+    Return True if any output from `source_node` can be connected to
     any input of `sink_node`.
 
     """
@@ -35,7 +37,8 @@ def can_connect(source_node, sink_node):
 
 
 def possible_links(source_node, sink_node):
-    """Return a list of (OutputSignal, InputSignal) tuples, that
+    """
+    Return a list of (OutputSignal, InputSignal) tuples, that
     can connect the two nodes.
 
     """
@@ -48,24 +51,29 @@ def possible_links(source_node, sink_node):
 
 
 class SchemeLink(QObject):
-    """A instantiation of a link between two widget nodes in the scheme.
+    """
+    A instantiation of a link between two :class:`.SchemeNode` instances
+    in a :class:`.Scheme`.
 
     Parameters
     ----------
-    source_node : `SchemeNode`
+    source_node : :class:`.SchemeNode`
         Source node.
-    source_channel : `OutputSignal`
+    source_channel : :class:`OutputSignal`
         The source widget's signal.
-    sink_node : `SchemeNode`
+    sink_node : :class:`.SchemeNode`
         The sink node.
-    sink_channel : `InputSignal`
+    sink_channel : :class:`InputSignal`
         The sink widget's input signal.
     properties : `dict`
         Additional link properties.
 
     """
 
+    #: The link enabled state has changed
     enabled_changed = Signal(bool)
+
+    #: The link dynamic enabled state has changed.
     dynamic_enabled_changed = Signal(bool)
 
     def __init__(self, source_node, source_channel,
@@ -104,39 +112,45 @@ class SchemeLink(QObject):
         self.properties = properties or {}
 
     def source_type(self):
-        """Return the type of the source channel.
+        """
+        Return the type of the source channel.
         """
         return name_lookup(self.source_channel.type)
 
     def sink_type(self):
-        """Return the type of the sink channel.
+        """
+        Return the type of the sink channel.
         """
         return name_lookup(self.sink_channel.type)
 
     def is_dynamic(self):
-        """Is this link dynamic.
+        """
+        Is this link dynamic.
         """
         return self.source_channel.dynamic and \
             issubclass(self.sink_type(), self.source_type()) and \
             not (self.sink_type() is self.source_type())
 
-    def enabled(self):
-        """Is this link enabled.
-        """
-        return self.__enabled
-
     def set_enabled(self, enabled):
-        """Enable/disable the link.
+        """
+        Enable/disable the link.
         """
         if self.__enabled != enabled:
             self.__enabled = enabled
             self.enabled_changed.emit(enabled)
 
+    def enabled(self):
+        """
+        Is this link enabled.
+        """
+        return self.__enabled
+
     enabled = Property(bool, fget=enabled, fset=set_enabled)
 
     def set_dynamic_enabled(self, enabled):
-        """Enable/disable the dynamic link. Has no effect if
-        the link is not dynamic.
+        """
+        Enable/disable the dynamic link. Has no effect if the link
+        is not dynamic.
 
         """
         if self.is_dynamic() and self.__dynamic_enabled != enabled:
@@ -144,26 +158,29 @@ class SchemeLink(QObject):
             self.dynamic_enabled_changed.emit(enabled)
 
     def dynamic_enabled(self):
-        """Is this dynamic link and `dynamic_enabled` set to True
+        """
+        Is this a dynamic link and is `dynamic_enabled` set to `True`
         """
         return self.is_dynamic() and self.__dynamic_enabled
 
     dynamic_enabled = Property(bool, fget=dynamic_enabled,
-                                 fset=set_dynamic_enabled)
+                               fset=set_dynamic_enabled)
 
     def set_tool_tip(self, tool_tip):
-        """Set the link tool tip.
+        """
+        Set the link tool tip.
         """
         if self.__tool_tip != tool_tip:
             self.__tool_tip = tool_tip
 
     def tool_tip(self):
-        """Return the link's tool tip
+        """
+        Link tool tip.
         """
         return self.__tool_tip
 
     tool_tip = Property(str, fget=tool_tip,
-                          fset=set_tool_tip)
+                        fset=set_tool_tip)
 
     def __str__(self):
         return "{0}(({1}, {2}) -> ({3}, {4}))".format(

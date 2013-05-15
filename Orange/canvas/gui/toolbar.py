@@ -1,5 +1,5 @@
 """
-A custom toolbar.
+A custom toolbar with linear uniform size layout.
 
 """
 
@@ -14,11 +14,13 @@ log = logging.getLogger(__name__)
 
 
 class DynamicResizeToolBar(QToolBar):
-    """A QToolBar subclass that dynamically resizes its tool buttons
+    """
+    A :class:`QToolBar` subclass that dynamically resizes its tool buttons
     to fit available space (this is done by setting fixed size on the
     button instances).
 
-    .. note:: the class does not support `QWidgetAction`s, separators, etc.
+    .. note:: the class does not support :class:`QWidgetAction` items,
+              separators, etc.
 
     """
 
@@ -55,7 +57,8 @@ class DynamicResizeToolBar(QToolBar):
         return QSize(width, height)
 
     def __layout(self, size):
-        """Layout the buttons to fit inside size.
+        """
+        Layout the buttons to fit inside size.
         """
         mygeom = self.geometry()
         mygeom.setSize(size)
@@ -82,8 +85,11 @@ class DynamicResizeToolBar(QToolBar):
 
 
 def uniform_layout_helper(items, contents_rect, expanding, spacing):
-    """Set fixed sizes on 'items' so they can be lay out in
-    contents rect anf fil the whole space.
+    """
+    Set fixed sizes on 'items' so they can be laid out in `contents_rect`
+    and fill the whole space. The items are laid out in
+    `expanding_direction` (:class:`Qt.Orientation`) with `spacing`
+    (:class:`int`)
 
     """
     if len(items) == 0:

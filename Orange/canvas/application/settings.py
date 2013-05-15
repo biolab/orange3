@@ -232,6 +232,21 @@ class UserSettingsDialog(QMainWindow):
         form = QFormLayout()
         tab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
+        nodes = QWidget(self, objectName="nodes")
+        nodes.setLayout(QVBoxLayout())
+        nodes.layout().setContentsMargins(0, 0, 0, 0)
+
+        cb_anim = QCheckBox(
+            self.tr("Enable node animations"),
+            objectName="enable-node-animations",
+            toolTip=self.tr("Enable shadow and ping animations for node "
+                            "items in the scheme.")
+        )
+        self.bind(cb_anim, "checked", "schemeedit/enable-node-animations")
+        nodes.layout().addWidget(cb_anim)
+
+        form.addRow(self.tr("Nodes"), nodes)
+
         links = QWidget(self, objectName="links")
         links.setLayout(QVBoxLayout())
         links.layout().setContentsMargins(0, 0, 0, 0)
@@ -243,17 +258,9 @@ class UserSettingsDialog(QMainWindow):
                             "over the links.")
         )
 
-        cb_state = QCheckBox(
-            self.tr("Show link state"),
-            objectName="show-link-state",
-            toolTip=self.tr("Show link state")
-        )
-
         self.bind(cb_show, "checked", "schemeedit/show-channel-names")
-        self.bind(cb_state, "checked", "schemeedit/show-link-state")
 
         links.layout().addWidget(cb_show)
-        links.layout().addWidget(cb_state)
 
         form.addRow(self.tr("Links"), links)
 
@@ -265,8 +272,8 @@ class UserSettingsDialog(QMainWindow):
                         toolTip=self.tr("Open quick menu on a double click "
                                         "on an empty spot in the canvas"))
 
-        cb2 = QCheckBox(self.tr("On left click"),
-                        toolTip=self.tr("Open quick menu on a left click "
+        cb2 = QCheckBox(self.tr("On right click"),
+                        toolTip=self.tr("Open quick menu on a right click "
                                         "on an empty spot in the canvas"))
 
         cb3 = QCheckBox(self.tr("On space key press"),
@@ -278,7 +285,7 @@ class UserSettingsDialog(QMainWindow):
                                         "is hovering over the canvas."))
 
         self.bind(cb1, "checked", "quickmenu/trigger-on-double-click")
-        self.bind(cb2, "checked", "quickmenu/trigger-on-left-click")
+        self.bind(cb2, "checked", "quickmenu/trigger-on-right-click")
         self.bind(cb3, "checked", "quickmenu/trigger-on-space-key")
         self.bind(cb4, "checked", "quickmenu/trigger-on-any-key")
 
@@ -311,17 +318,11 @@ class UserSettingsDialog(QMainWindow):
         toolbox.setLayout(QVBoxLayout())
         toolbox.layout().setContentsMargins(0, 0, 0, 0)
 
-        exclusive = QCheckBox(self.tr("Exclusive"),
-                              toolTip="Only one tab can be opened at a time.")
-
-        floatable = QCheckBox(self.tr("Floatable"),
-                              toolTip="Toolbox can be undocked.")
+        exclusive = QCheckBox(self.tr("Only one tab can be open at a time"))
 
         self.bind(exclusive, "checked", "mainwindow/toolbox-dock-exclusive")
-        self.bind(floatable, "checked", "mainwindow/toolbox-dock-floatable")
 
         toolbox.layout().addWidget(exclusive)
-        toolbox.layout().addWidget(floatable)
 
         form.addRow(self.tr("Tool box"), toolbox)
         tab.setLayout(form)

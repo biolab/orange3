@@ -11,8 +11,10 @@ import logging
 
 from collections import namedtuple, MutableMapping
 
-from PyQt4.QtCore import QObject, QEvent, QCoreApplication, QSettings
+from PyQt4.QtCore import QObject, QEvent, QCoreApplication
+
 from PyQt4.QtCore import pyqtSignal as Signal
+
 pyqtWrapperType = type(QObject)
 
 from . import toPyObject
@@ -163,7 +165,7 @@ class Settings(QObject, MutableMapping, metaclass=QABCMeta):
         typesafe = value_type is not None
 
         if value_type is None:
-            value = toPyObject(self.__store.value(fullkey))
+            value = self.__store.value(fullkey)
         else:
             try:
                 value = self.__store.value(fullkey, type=value_type)

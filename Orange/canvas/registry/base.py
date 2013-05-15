@@ -1,5 +1,7 @@
 """
-WidgetRegistry Base
+===============
+Widget Registry
+===============
 
 """
 
@@ -17,28 +19,37 @@ VERSION_HEX = 0x000102
 
 
 class WidgetRegistry(object):
-    """A container for widget and category descriptions.
-
-    This class is most often used with WidgetDiscovery class but can
-    be used separately.
+    """
+    A container for widget and category descriptions.
 
     >>> reg = WidgetRegistry()
-    >>> file_desc = description.WidgetDescription.from_module(
+    >>> file_desc = WidgetDescription.from_module(
     ...     "Orange.OrangeWidgets.Data.OWFile"
     ... )
     ...
-    >>> reg.register_widget(file_desc)
-    >>> reg.widgets()
+    >>> reg.register_widget(file_desc)  # register the description
+    >>> print reg.widgets()
     [...
+
+    Parameters
+    ----------
+    other : :class:`WidgetRegistry`, optional
+        If supplied the registry is initialized with the contents of `other`.
+
+    See also
+    --------
+    WidgetDiscovery
 
     """
 
     def __init__(self, other=None):
         # A list of (category, widgets_list) tuples ordered by priority.
         self.registry = []
+
         # tuples from 'registry' indexed by name
         self._categories_dict = {}
-        # WidgetDscriptions by qualified name
+
+        # WidgetDecriptions by qualified name
         self._widgets_dict = {}
 
         if other is not None:
@@ -51,27 +62,49 @@ class WidgetRegistry(object):
             self._widgets_dict = dict(other._widgets_dict)
 
     def categories(self):
-        """List all top level widget categories ordered by priority.
+        """
+        Return a list all top level :class:`CategoryDescription` instances
+        ordered by `priority`.
+
         """
         return [c for c, _ in self.registry]
 
     def category(self, name):
-        """Return category with `name`.
+        """
+        Find and return a :class:`CategoryDescription` by its `name`.
 
         .. note:: Categories are identified by `name` attribute in contrast
-            with widgets which are identified by `qualified_name`.
+                  with widgets which are identified by `qualified_name`.
+
+        Parameters
+        ----------
+        name : str
+            Category name
 
         """
         return self._categories_dict[name][0]
 
     def has_category(self, name):
-        """Does the category with `name` exist in this registry.
+        """
+        Return ``True`` if a category with `name` exist in this registry.
+
+        Parameters
+        ----------
+        name : str
+            Category name
+
         """
         return name in self._categories_dict
 
     def widgets(self, category=None):
-        """List all widgets in a `category`. If no category is
-        specified list widgets in all categories.
+        """
+        Return a list of all widgets in the registry. If `category` is
+        specified return only widgets which belong to the category.
+
+        Parameters
+        ----------
+        category : :class:`CategoryDescription` or str, optional
+            Return only descriptions of widgets belonging to the category.
 
         """
         if category is None:
@@ -91,19 +124,30 @@ class WidgetRegistry(object):
         return widgets
 
     def widget(self, qualified_name):
-        """Return widget description for `qualified_name`.
-        Raise KeyError if the description does not exist.
+        """
+        Return a :class:`WidgetDescription` identified by `qualified_name`.
+
+        Raise :class:`KeyError` if the description does not exist.
+
+        Parameters
+        ----------
+        qualified_name : str
+            Widget description qualified name
 
         """
         return self._widgets_dict[qualified_name]
 
     def has_widget(self, qualified_name):
-        """Does the widget with `qualified_name` exist in this registry.
+        """
+        Return ``True`` if the widget with `qualified_name` exists in
+        this registry.
+
         """
         return qualified_name in self._widgets_dict
 
     def register_widget(self, desc):
-        """Register a widget by its description.
+        """
+        Register a :class:`WidgetDescription` instance.
         """
         if not isinstance(desc, description.WidgetDescription):
             raise TypeError("Expected a 'WidgetDescription' got %r." \
@@ -127,10 +171,11 @@ class WidgetRegistry(object):
         self._insert_widget(cat_desc, desc)
 
     def register_category(self, desc):
-        """Register category by its description.
+        """
+        Register a :class:`CategoryDescription` instance.
 
         .. note:: It is always best to register the category
-            before the widgets belonging to it.
+                  before the widgets belonging to it.
 
         """
         if not isinstance(desc, description.CategoryDescription):
@@ -149,7 +194,8 @@ class WidgetRegistry(object):
         self._insert_category(desc)
 
     def _insert_category(self, desc):
-        """Insert category description into 'registry' list
+        """
+        Insert category description into 'registry' list
         """
         priority = desc.priority
         priorities = [c.priority for c, _ in self.registry]
@@ -160,7 +206,8 @@ class WidgetRegistry(object):
         self._categories_dict[desc.name] = item
 
     def _insert_widget(self, category, desc):
-        """Insert widget description `desc` into `category`.
+        """
+        Insert widget description `desc` into `category`.
         """
         assert(isinstance(category, description.CategoryDescription))
         _, widgets = self._categories_dict[category.name]

@@ -49,6 +49,8 @@ class PreviewModel(QStandardItemModel):
         if items is not None:
             self.insertColumn(0, items)
 
+        self.__timer = QTimer(self)
+
     def delayedScanUpdate(self, delay=10):
         """Run a delayed preview item scan update.
         """
@@ -70,11 +72,12 @@ class PreviewModel(QStandardItemModel):
         def process_one():
             try:
                 next(iter_scan)
-                QTimer.singleShot(delay, process_one)
             except StopIteration:
-                pass
+                self.__timer.timeout.disconnect(process_one)
+                self.__timer.stop()
 
-        QTimer.singleShot(delay, process_one)
+        self.__timer.timeout.connect(process_one)
+        self.__timer.start(delay)
 
 
 class PreviewItem(QStandardItem):

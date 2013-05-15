@@ -1,9 +1,15 @@
 """
-===============
-Widget Registry
-===============
+========
+Registry
+========
 
-A registry (and discovery) of available widgets.
+The registry module implements discovery and description of the widgets
+that are available/installed. The :class:`WidgetRegistry` is a repository
+of :class:`WidgetDescription` and :class:`CategoryDescription` instances
+forming a two level widget hierarchy ([category]/[widget]).
+
+The :class:`WidgetDiscovery` can be used to populate the registry.
+
 
 """
 
@@ -33,6 +39,10 @@ NAMED_COLORS = \
      }
 
 
+# default color when the category does not provide it
+DEFAULT_COLOR = "light-yellow"
+
+
 from .description import (
     WidgetDescription, CategoryDescription,
     InputSignal, OutputSignal
@@ -40,6 +50,7 @@ from .description import (
 
 from .base import WidgetRegistry, VERSION_HEX
 from . import discovery
+from .discovery import WidgetDiscovery
 
 log = logging.getLogger(__name__)
 

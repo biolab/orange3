@@ -6,6 +6,7 @@ from ...registry import global_registry
 from .. import Scheme, SchemeNode, SchemeLink, \
                SchemeArrowAnnotation, SchemeTextAnnotation
 
+from .. import readwrite
 from ..readwrite import scheme_to_ows_stream, parse_scheme
 
 
@@ -72,3 +73,42 @@ class TestReadWrite(test.QAppTestCase):
             else:
                 self.assertEqual(annot1.start_pos, annot2.start_pos)
                 self.assertEqual(annot1.end_pos, annot2.end_pos)
+
+    def test_safe_evals(self):
+        s = readwrite.string_eval(r"'\x00\xff'")
+        self.assertEquals(s, chr(0) + chr(255))
+
+        with self.assertRaises(ValueError):
+            readwrite.string_eval("[1, 2]")
+
+        t = readwrite.tuple_eval("(1, 2.0, 'a')")
+        self.assertEqual(t, (1, 2.0, 'a'))
+
+        with self.assertRaises(ValueError):
+            readwrite.tuple_eval("u'string'")
+
+        with self.assertRaises(ValueError):
+            readwrite.tuple_eval("(1, [1, [2, ]])")
+
+        self.assertIs(readwrite.terminal_eval("True"), True)
+        self.assertIs(readwrite.terminal_eval("False"), False)
+        self.assertIs(readwrite.terminal_eval("None"), None)
+
+        self.assertEqual(readwrite.terminal_eval("42"), 42)
+        self.assertEqual(readwrite.terminal_eval("'42'"), '42')
+
+    def test_literal_dump(self):
+        struct = {1: [{(1, 2): ""}],
+                  True: 1.0,
+                  None: None}
+
+        s = readwrite.literal_dumps(struct)
+        self.assertEqual(readwrite.literal_loads(s), struct)
+
+        with self.assertRaises(ValueError):
+            recur = [1]
+            recur.append(recur)
+            readwrite.literal_dumps(recur)
+
+        with self.assertRaises(TypeError):
+            readwrite.literal_dumps(self)

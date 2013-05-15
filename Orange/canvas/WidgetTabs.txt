@@ -1,0 +1,31 @@
+# A list of default widget tabs. These are displayed in the canvas in the same
+# order than here. Other tabs that widgets define as their category follow
+# in alphabetical order.
+#
+
+# Orange tabs
+Data
+Visualize
+Classify
+Regression
+Evaluate
+Unsupervised
+Associate
+Text
+Genomics
+
+
+# RedR tabs; as soon as there is any name conflict with Orange tabs, we'll have ordering problems ...
+R
+R/Data Entry
+R/Data Manipulation
+R/Data Subsetting and Merging
+Plotting
+Stats
+Stats/Parametric
+Stats/Non Parametric
+Stats/Survival
+Bioconductor
+Dose Response
+Finance
+Special

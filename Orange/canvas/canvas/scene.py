@@ -1,5 +1,7 @@
 """
+=====================
 Canvas Graphics Scene
+=====================
 
 """
 
@@ -32,41 +34,44 @@ NodeItemSignalMapper = typed_signal_mapper(items.NodeItem)
 
 
 class CanvasScene(QGraphicsScene):
-    """A Graphics Scene for displaying and editing an Orange Scheme.
+    """
+    A Graphics Scene for displaying an :class:`~.scheme.Scheme` instance.
     """
 
+    #: Signal emitted when a :class:`NodeItem` has been added to the scene.
     node_item_added = Signal(items.NodeItem)
-    """An node item has been added to the scene"""
 
+    #: Signal emitted when a :class:`NodeItem` has been removed from the
+    #: scene.
     node_item_removed = Signal(items.LinkItem)
-    """An node item has been removed from the scene"""
 
-    node_item_position_changed = Signal(items.NodeItem, QPointF)
-    """The position of a node has changed"""
-
-    node_item_double_clicked = Signal(items.NodeItem)
-    """An node item has been double clicked"""
-
-    node_item_activated = Signal(items.NodeItem)
-    """An node item has been activated (clicked)"""
-
-    node_item_hovered = Signal(items.NodeItem)
-    """An node item has been hovered"""
-
+    #: Signal emitted when a new :class:`LinkItem` has been added to the
+    #: scene.
     link_item_added = Signal(items.LinkItem)
-    """A new link item has been added to the scene"""
 
+    #: Signal emitted when a :class:`LinkItem` has been removed.
     link_item_removed = Signal(items.LinkItem)
-    """Link item has been removed"""
 
-    link_item_hovered = Signal(items.LinkItem)
-    """Link item has been hovered"""
-
+    #: Signal emitted when a :class:`Annotation` item has been added.
     annotation_added = Signal(items.annotationitem.Annotation)
-    """Annotation item has been added"""
 
+    #: Signal emitted when a :class:`Annotation` item has been removed.
     annotation_removed = Signal(items.annotationitem.Annotation)
-    """Annotation item has been removed"""
+
+    #: Signal emitted when the position of a :class:`NodeItem` has changed.
+    node_item_position_changed = Signal(items.NodeItem, QPointF)
+
+    #: Signal emitted when an :class:`NodeItem` has been double clicked.
+    node_item_double_clicked = Signal(items.NodeItem)
+
+    #: An node item has been activated (clicked)
+    node_item_activated = Signal(items.NodeItem)
+
+    #: An node item has been hovered
+    node_item_hovered = Signal(items.NodeItem)
+
+    #: Link item has been hovered
+    link_item_hovered = Signal(items.LinkItem)
 
     def __init__(self, *args, **kwargs):
         QGraphicsScene.__init__(self, *args, **kwargs)
@@ -96,6 +101,7 @@ class CanvasScene(QGraphicsScene):
         self.addItem(self.__anchor_layout)
 
         self.__channel_names_visible = True
+        self.__node_animation_enabled = True
 
         self.user_interaction_handler = None
 
@@ -117,28 +123,10 @@ class CanvasScene(QGraphicsScene):
         log.info("'%s' intitialized." % self)
 
     def clear_scene(self):
-        self.scheme = None
-        self.__node_items = []
-        self.__item_for_node = {}
-        self.__link_items = []
-        self.__item_for_link = {}
-        self.__annotation_items = []
-        self.__item_for_annotation = {}
-
-        self.__anchor_layout.deleteLater()
-
-        self.user_interaction_handler = None
-
-        self.clear()
-        log.info("'%s' cleared." % self)
-
-    def set_scheme(self, scheme):
-        """Set the scheme to display and edit. Populates the scene
-        with nodes and links already in the scheme.
-
+        """
+        Clear (reset) the scene.
         """
         if self.scheme is not None:
-            # Clear the old scheme
             self.scheme.node_added.disconnect(self.add_node)
             self.scheme.node_removed.disconnect(self.remove_node)
 
@@ -155,6 +143,49 @@ class CanvasScene(QGraphicsScene):
                 self.on_link_state_change
             )
 
+            # Remove all items to make sure all signals from scheme items
+            # to canvas items are disconnected.
+
+            for annot in self.scheme.annotations:
+                if annot in self.__item_for_annotation:
+                    self.remove_annotation(annot)
+
+            for link in self.scheme.links:
+                if link in self.__item_for_link:
+                    self.remove_link(link)
+
+            for node in self.scheme.nodes:
+                if node in self.__item_for_node:
+                    self.remove_node(node)
+
+        self.scheme = None
+        self.__node_items = []
+        self.__item_for_node = {}
+        self.__link_items = []
+        self.__item_for_link = {}
+        self.__annotation_items = []
+        self.__item_for_annotation = {}
+
+        self.__anchor_layout.deleteLater()
+
+        self.user_interaction_handler = None
+
+        self.clear()
+        log.info("'%s' cleared." % self)
+
+    def set_scheme(self, scheme):
+        """
+        Set the scheme to display. Populates the scene with nodes and links
+        already in the scheme. Any further change to the scheme will be
+        reflected in the scene.
+
+        Parameters
+        ----------
+        scheme : :class:`~.scheme.Scheme`
+
+        """
+        if self.scheme is not None:
+            # Clear the old scheme
             self.clear_scene()
 
         log.info("Setting scheme '%s' on '%s'" % (scheme, self))
@@ -189,12 +220,18 @@ class CanvasScene(QGraphicsScene):
             self.add_annotation(annot)
 
     def set_registry(self, registry):
-        """Set the widget registry.
         """
+        Set the widget registry.
+        """
+        # TODO: Remove/Deprecate. Is used only to get the category/background
+        # color. That should be part of the SchemeNode/WidgetDescription.
         log.info("Setting registry '%s on '%s'." % (registry, self))
         self.registry = registry
 
     def set_anchor_layout(self, layout):
+        """
+        Set an :class:`~.layout.AnchorLayout`
+        """
         if self.__anchor_layout != layout:
             if self.__anchor_layout:
                 self.__anchor_layout.deleteLater()
@@ -203,18 +240,38 @@ class CanvasScene(QGraphicsScene):
             self.__anchor_layout = layout
 
     def anchor_layout(self):
+        """
+        Return the anchor layout instance.
+        """
         return self.__anchor_layout
 
     def set_channel_names_visible(self, visible):
+        """
+        Set the channel names visibility.
+        """
         self.__channel_names_visible = visible
         for link in self.__link_items:
             link.setChannelNamesVisible(visible)
 
     def channel_names_visible(self):
+        """
+        Return the channel names visibility state.
+        """
         return self.__channel_names_visible
 
+    def set_node_animation_enabled(self, enabled):
+        """
+        Set node animation enabled state.
+        """
+        if self.__node_animation_enabled != enabled:
+            self.__node_animation_enabled = enabled
+
+            for node in self.__node_items:
+                node.setAnimationEnabled(enabled)
+
     def add_node_item(self, item):
-        """Add a :class:`NodeItem` instance to the scene.
+        """
+        Add a :class:`.NodeItem` instance to the scene.
         """
         if item in self.__node_items:
             raise ValueError("%r is already in the scene." % item)
@@ -249,9 +306,10 @@ class CanvasScene(QGraphicsScene):
         return item
 
     def add_node(self, node):
-        """Add and return a default constructed `NodeItem` for a
-        `SchemeNode` instance. If the node is already in the scene
-        do nothing and just return its item.
+        """
+        Add and return a default constructed :class:`.NodeItem` for a
+        :class:`SchemeNode` instance `node`. If the `node` is already in
+        the scene do nothing and just return its item.
 
         """
         if node in self.__item_for_node:
@@ -278,7 +336,8 @@ class CanvasScene(QGraphicsScene):
         return self.add_node_item(item)
 
     def new_node_item(self, widget_desc, category_desc=None):
-        """Construct an new `NodeItem` from a `WidgetDescription`.
+        """
+        Construct an new :class:`.NodeItem` from a `WidgetDescription`.
         Optionally also set `CategoryDescription`.
 
         """
@@ -297,10 +356,12 @@ class CanvasScene(QGraphicsScene):
         if category_desc is not None:
             item.setWidgetCategory(category_desc)
 
+        item.setAnimationEnabled(self.__node_animation_enabled)
         return item
 
     def remove_node_item(self, item):
-        """Remove `item` (:class:`NodeItem`) from the scene.
+        """
+        Remove `item` (:class:`.NodeItem`) from the scene.
         """
         self.activated_mapper.removePyMappings(item)
         self.hovered_mapper.removePyMappings(item)
@@ -314,8 +375,10 @@ class CanvasScene(QGraphicsScene):
         log.info("Removed item '%s' from '%s'" % (item, self))
 
     def remove_node(self, node):
-        """Remove the `NodeItem` instance that was previously constructed for
-        a `SchemeNode` node using the `add_node` method.
+        """
+        Remove the :class:`.NodeItem` instance that was previously
+        constructed for a :class:`SchemeNode` `node` using the `add_node`
+        method.
 
         """
         item = self.__item_for_node.pop(node)
@@ -328,12 +391,14 @@ class CanvasScene(QGraphicsScene):
         self.remove_node_item(item)
 
     def node_items(self):
-        """Return all :class:`NodeItem` instances in the scene.
+        """
+        Return all :class:`.NodeItem` instances in the scene.
         """
         return list(self.__node_items)
 
     def add_link_item(self, item):
-        """Add a link (:class:`LinkItem`)to the scene.
+        """
+        Add a link (:class:`.LinkItem`) to the scene.
         """
         if item.scene() is not self:
             self.addItem(item)
@@ -351,9 +416,10 @@ class CanvasScene(QGraphicsScene):
         return item
 
     def add_link(self, scheme_link):
-        """Create and add a `LinkItem` instance for a `SchemeLink`
-        instance. If the link is already in the scene do nothing
-        and just return its `LinkItem`.
+        """
+        Create and add a :class:`.LinkItem` instance for a
+        :class:`SchemeLink` instance. If the link is already in the scene
+        do nothing and just return its :class:`.LinkItem`.
 
         """
         if scheme_link in self.__item_for_link:
@@ -379,7 +445,8 @@ class CanvasScene(QGraphicsScene):
 
     def new_link_item(self, source_item, source_channel,
                       sink_item, sink_channel):
-        """Construct and return a new `LinkItem`
+        """
+        Construct and return a new :class:`.LinkItem`
         """
         item = items.LinkItem()
         item.setSourceItem(source_item)
@@ -407,7 +474,8 @@ class CanvasScene(QGraphicsScene):
         return item
 
     def remove_link_item(self, item):
-        """Remove a link (:class:`LinkItem`) from the scene.
+        """
+        Remove a link (:class:`.LinkItem`) from the scene.
         """
         # Invalidate the anchor layout.
         self.__anchor_layout.invalidateAnchorItem(
@@ -430,23 +498,30 @@ class CanvasScene(QGraphicsScene):
         return item
 
     def remove_link(self, scheme_link):
-        """ Remove a `LinkItem` instance that was previously constructed for
-        a `SchemeLink` node using the `add_link` method.
+        """
+        Remove a :class:`.LinkItem` instance that was previously constructed
+        for a :class:`SchemeLink` instance `link` using the `add_link` method.
 
         """
         item = self.__item_for_link.pop(scheme_link)
         scheme_link.enabled_changed.disconnect(item.setEnabled)
+
+        if scheme_link.is_dynamic():
+            scheme_link.dynamic_enabled_changed.disconnect(
+                item.setDynamicEnabled
+            )
+
         self.remove_link_item(item)
 
     def link_items(self):
-        """Return all :class:`LinkItems` in the scene.
-
+        """
+        Return all :class:`.LinkItem`\s in the scene.
         """
         return list(self.__link_items)
 
     def add_annotation_item(self, annotation):
-        """Add an `Annotation` item to the scene.
-
+        """
+        Add an :class:`.Annotation` item to the scene.
         """
         self.__annotation_items.append(annotation)
         self.addItem(annotation)
@@ -454,7 +529,8 @@ class CanvasScene(QGraphicsScene):
         return annotation
 
     def add_annotation(self, scheme_annot):
-        """Create a new item for :class:`SchemeAnnotation` and add it
+        """
+        Create a new item for :class:`SchemeAnnotation` and add it
         to the scene. If the `scheme_annot` is already in the scene do
         nothing and just return its item.
 
@@ -491,7 +567,8 @@ class CanvasScene(QGraphicsScene):
         return item
 
     def remove_annotation_item(self, annotation):
-        """Remove an `Annotation` item from the scene.
+        """
+        Remove an :class:`.Annotation` instance from the scene.
 
         """
         self.__annotation_items.remove(annotation)
@@ -499,6 +576,11 @@ class CanvasScene(QGraphicsScene):
         self.annotation_removed.emit(annotation)
 
     def remove_annotation(self, scheme_annotation):
+        """
+        Remove an :class:`.Annotation` instance that was previously added
+        using :func:`add_anotation`.
+
+        """
         item = self.__item_for_annotation.pop(scheme_annotation)
 
         scheme_annotation.geometry_changed.disconnect(
@@ -513,8 +595,8 @@ class CanvasScene(QGraphicsScene):
         self.remove_annotation_item(item)
 
     def annotation_items(self):
-        """Return all `Annotation` items in the scene.
-
+        """
+        Return all :class:`.Annotation` items in the scene.
         """
         return self.__annotation_items
 
@@ -527,7 +609,8 @@ class CanvasScene(QGraphicsScene):
         return rev[item]
 
     def commit_scheme_node(self, node):
-        """Commit the `node` into the scheme.
+        """
+        Commit the `node` into the scheme.
         """
         if not self.editable:
             raise Exception("Scheme not editable.")
@@ -540,7 +623,7 @@ class CanvasScene(QGraphicsScene):
         try:
             self.scheme.add_node(node)
         except Exception:
-            log.error("An unexpected error occurred while commiting node '%s'",
+            log.error("An error occurred while committing node '%s'",
                       node, exc_info=True)
             # Cleanup (remove the node item)
             self.remove_node_item(item)
@@ -550,7 +633,8 @@ class CanvasScene(QGraphicsScene):
                  (node, self, self.scheme))
 
     def commit_scheme_link(self, link):
-        """Commit a scheme link.
+        """
+        Commit a scheme link.
         """
         if not self.editable:
             raise Exception("Scheme not editable")
@@ -563,57 +647,67 @@ class CanvasScene(QGraphicsScene):
                  (link, self, self.scheme))
 
     def node_for_item(self, item):
-        """Return the `SchemeNode` for the `item`.
+        """
+        Return the `SchemeNode` for the `item`.
         """
         rev = dict([(v, k) for k, v in self.__item_for_node.items()])
         return rev[item]
 
     def item_for_node(self, node):
-        """Return the :class:`NodeItem` instance for a :class:`SchemeNode`.
+        """
+        Return the :class:`NodeItem` instance for a :class:`SchemeNode`.
         """
         return self.__item_for_node[node]
 
     def link_for_item(self, item):
-        """Return the `SchemeLink for `item` (:class:`LinkItem`).
+        """
+        Return the `SchemeLink for `item` (:class:`LinkItem`).
         """
         rev = dict([(v, k) for k, v in self.__item_for_link.items()])
         return rev[item]
 
     def item_for_link(self, link):
-        """Return the :class:`LinkItem` for a :class:`SchemeLink`
+        """
+        Return the :class:`LinkItem` for a :class:`SchemeLink`
         """
         return self.__item_for_link[link]
 
     def selected_node_items(self):
-        """Return the selected :class:`NodeItem`'s.
+        """
+        Return the selected :class:`NodeItem`'s.
         """
         return [item for item in self.__node_items if item.isSelected()]
 
     def selected_annotation_items(self):
-        """Return the selected :class:`Annotation`'s
+        """
+        Return the selected :class:`Annotation`'s
         """
         return [item for item in self.__annotation_items if item.isSelected()]
 
     def node_links(self, node_item):
-        """Return all links from the `node_item` (:class:`NodeItem`).
+        """
+        Return all links from the `node_item` (:class:`NodeItem`).
         """
         return self.node_output_links(node_item) + \
                self.node_input_links(node_item)
 
     def node_output_links(self, node_item):
-        """Return a list of all output links from `node_item`.
+        """
+        Return a list of all output links from `node_item`.
         """
         return [link for link in self.__link_items
                 if link.sourceItem == node_item]
 
     def node_input_links(self, node_item):
-        """Return a list of all input links for `node_item`.
+        """
+        Return a list of all input links for `node_item`.
         """
         return [link for link in self.__link_items
                 if link.sinkItem == node_item]
 
     def neighbor_nodes(self, node_item):
-        """Return a list of `node_item`'s (class:`NodeItem`) neighbor nodes.
+        """
+        Return a list of `node_item`'s (class:`NodeItem`) neighbor nodes.
         """
         neighbors = list(map(attrgetter("sourceItem"),
                              self.node_input_links(node_item)))
@@ -798,7 +892,13 @@ def font_from_dict(font_dict, font=None):
 
 
 def grab_svg(scene):
-    """Return a SVG rendering of the scene contents.
+    """
+    Return a SVG rendering of the scene contents.
+
+    Parameters
+    ----------
+    scene : :class:`CanvasScene`
+
     """
     from PyQt4.QtSvg import QSvgGenerator
     svg_buffer = QBuffer()

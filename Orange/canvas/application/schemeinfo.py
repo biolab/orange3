@@ -119,17 +119,17 @@ class SchemeInfoDialog(QDialog):
         widget = StyledWidget(self, objectName="auto-show-container")
         check_layout = QHBoxLayout()
         check_layout.setContentsMargins(20, 10, 20, 10)
-        self.__dontShowAtNewSchemeCheck = \
-            QCheckBox(self.tr("Don't show again when I make a New Scheme."),
+        self.__showAtNewSchemeCheck = \
+            QCheckBox(self.tr("Show when I make a New Scheme."),
                       self,
                       objectName="auto-show-check",
                       checked=False,
                       )
 
-        check_layout.addWidget(self.__dontShowAtNewSchemeCheck)
+        check_layout.addWidget(self.__showAtNewSchemeCheck)
         check_layout.addWidget(
-               QLabel(self.tr("You can edit and add Scheme Info later at the "
-                              "bottom of the menu"),
+               QLabel(self.tr("You can also edit Scheme Info later "
+                              "(File -> Scheme Info)."),
                       self,
                       objectName="auto-show-info"),
                alignment=Qt.AlignRight)
@@ -148,15 +148,17 @@ class SchemeInfoDialog(QDialog):
 
         self.setLayout(layout)
 
-    def setDontShowAtNewScheme(self, checked):
-        """Set the 'Dont show at new scheme' check state.
+    def setShowAtNewScheme(self, checked):
         """
-        self.__dontShowAtNewSchemeCheck.setChecked(checked)
+        Set the 'Show at new scheme' check state.
+        """
+        self.__showAtNewSchemeCheck.setChecked(checked)
 
-    def dontShowAtNewScheme(self):
-        """Return the check state of the 'Dont show at new scheme' check box.
+    def showAtNewScheme(self):
         """
-        return self.__dontShowAtNewSchemeCheck.isChecked()
+        Return the check state of the 'Show at new scheme' check box.
+        """
+        return self.__showAtNewSchemeCheck.isChecked()
 
     def setAutoCommit(self, auto):
         if self.__autoCommit != auto:

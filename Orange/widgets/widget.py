@@ -5,9 +5,15 @@ from functools import reduce
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from Orange.canvas.orngSignalManager import *
 from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
+from Orange.canvas.registry.description import (
+    Default, NonDefault, Single, Multiple, Explicit, Dynamic,
+    InputSignal, OutputSignal
+)
+from Orange.canvas.scheme.widgetsscheme import (
+    SignalLink, WidgetsSignalManager, SignalWrapper
+)
 
 
 class ControlledAttributesDict(dict):
@@ -136,7 +142,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         # number of control signals that are currently being processed
         # needed by signalWrapper to know when everything was sent
         self.needProcessing = 0     # used by signalManager
-        self.signalManager = signalManager or globalSignalManager
+        self.signalManager = signalManager # or globalSignalManager
 
         self.wrappers = [] # stored wrappers for widget events
         self.linksIn = {}  # signalName : (dirty, widFrom, handler, signalData)

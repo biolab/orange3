@@ -1,11 +1,23 @@
 """
-User interaction handlers for CanvasScene.
+=========================
+User Interaction Handlers
+=========================
+
+User interaction handlers for a :class:`~.SchemeEditWidget`.
+
+User interactions encapsulate the logic of user interactions with the
+scheme document.
+
+All interactions are subclasses of :class:`UserInteraction`.
+
 
 """
+
 import logging
 
 from PyQt4.QtGui import (
-    QApplication, QGraphicsRectItem, QPen, QBrush, QColor, QFontMetrics
+    QApplication, QGraphicsRectItem, QPen, QBrush, QColor, QFontMetrics,
+    QUndoCommand
 )
 
 from PyQt4.QtCore import (
@@ -14,35 +26,57 @@ from PyQt4.QtCore import (
 
 from PyQt4.QtCore import pyqtSignal as Signal
 
-from ..registry.qt import QtWidgetRegistry
 from ..registry.description import WidgetDescription
+from ..registry.qt import QtWidgetRegistry
 from .. import scheme
 from ..canvas import items
 from ..canvas.items import controlpoints
 from ..gui.quickhelp import QuickHelpTipEvent
 from . import commands
+from .editlinksdialog import EditLinksDialog
+from functools import reduce
 
 log = logging.getLogger(__name__)
 
 
 class UserInteraction(QObject):
-    # cancel reason flags
-    NoReason = 0  # No specified reason
-    UserCancelReason = 1  # User canceled the operation (e.g. pressing ESC)
-    InteractionOverrideReason = 3  # Another interaction was set
-    ErrorReason = 4  # An internal error occurred
+    """
+    Base class for user interaction handlers.
+
+    Parameters
+    ----------
+    document : :class:`~.SchemeEditWidget`
+        An scheme editor instance with which the user is interacting.
+    parent : :class:`QObject`, optional
+        A parent QObject
+    deleteOnEnd : bool, optional
+        Should the UserInteraction be deleted when it finishes (``True``
+        by default).
+
+    """
+    # Cancel reason flags
+
+    #: No specified reason
+    NoReason = 0
+    #: User canceled the operation (e.g. pressing ESC)
+    UserCancelReason = 1
+    #: Another interaction was set
+    InteractionOverrideReason = 3
+    #: An internal error occurred
+    ErrorReason = 4
+    #: Other (unspecified) reason
     OtherReason = 5
 
-    # Emitted when the interaction is set on the scene.
+    #: Emitted when the interaction is set on the scene.
     started = Signal()
 
-    # Emitted when the interaction finishes successfully.
+    #: Emitted when the interaction finishes successfully.
     finished = Signal()
 
-    # Emitted when the interaction ends (canceled or finished)
+    #: Emitted when the interaction ends (canceled or finished)
     ended = Signal()
 
-    # Emitted when the interaction is canceled.
+    #: Emitted when the interaction is canceled.
     canceled = Signal([], [int])
 
     def __init__(self, document, parent=None, deleteOnEnd=True):
@@ -59,19 +93,21 @@ class UserInteraction(QObject):
         self.__cancelReason = self.NoReason
 
     def start(self):
-        """Start the interaction. This is called by the scene when
+        """
+        Start the interaction. This is called by the :class:`CanvasScene` when
         the interaction is installed.
 
-        Must be called from subclass implementations.
+        .. note:: Must be called from subclass implementations.
 
         """
         self.started.emit()
 
     def end(self):
-        """Finish the interaction. Restore any leftover state in
-        this method.
+        """
+        Finish the interaction. Restore any leftover state in this method.
 
-        .. note:: This gets called from the default `cancel` implementation.
+        .. note:: This gets called from the default :func:`cancel`
+                  implementation.
 
         """
         self.__finished = True
@@ -91,7 +127,8 @@ class UserInteraction(QObject):
             self.deleteLater()
 
     def cancel(self, reason=OtherReason):
-        """Cancel the interaction for `reason`.
+        """
+        Cancel the interaction with `reason`.
         """
 
         self.__canceled = True
@@ -100,38 +137,59 @@ class UserInteraction(QObject):
         self.end()
 
     def isFinished(self):
-        """Has the interaction finished.
+        """
+        Is the interaction finished.
         """
         return self.__finished
 
     def isCanceled(self):
-        """Was the interaction canceled.
+        """
+        Was the interaction canceled.
         """
         return self.__canceled
 
     def cancelReason(self):
-        """Return the reason the interaction was canceled.
+        """
+        Return the reason the interaction was canceled.
         """
         return self.__cancelReason
 
     def mousePressEvent(self, event):
+        """
+        Handle a `QGraphicsScene.mousePressEvent`.
+        """
         return False
 
     def mouseMoveEvent(self, event):
+        """
+        Handle a `GraphicsScene.mouseMoveEvent`.
+        """
         return False
 
     def mouseReleaseEvent(self, event):
+        """
+        Handle a `QGraphicsScene.mouseReleaseEvent`.
+        """
         return False
 
     def mouseDoubleClickEvent(self, event):
+        """
+        Handle a `QGraphicsScene.mouseDoubleClickEvent`.
+        """
         return False
 
     def keyPressEvent(self, event):
+        """
+        Handle a `QGraphicsScene.keyPressEvent`
+        """
         if self.cancelOnEsc and event.key() == Qt.Key_Escape:
             self.cancel(self.UserCancelReason)
         return False
 
     def keyReleaseEvent(self, event):
+        """
+        Handle a `QGraphicsScene.keyPressEvent`
+        """
         return False
 
 
@@ -139,8 +197,13 @@ class NoPossibleLinksError(ValueError):
     pass
 
 
+class UserCanceledError(ValueError):
+    pass
+
+
 def reversed_arguments(func):
-    """Return a function with reversed argument order.
+    """
+    Return a function with reversed argument order.
     """
     def wrapped(*args):
         return func(*reversed(args))
@@ -148,7 +211,8 @@ def reversed_arguments(func):
 
 
 class NewLinkAction(UserInteraction):
-    """User drags a new link from an existing node anchor item to create
+    """
+    User drags a new link from an existing `NodeAnchorItem` to create
     a connection between two existing nodes or to a new node if the release
     is over an empty area, in which case a quick menu for new node selection
     is presented to the user.
@@ -165,13 +229,21 @@ class NewLinkAction(UserInteraction):
         self.from_item = None
         self.direction = None
 
+        # An `NodeItem` currently under the mouse as a possible
+        # link drop target.
         self.current_target_item = None
+        # A temporary `LinkItem` used while dragging.
         self.tmp_link_item = None
+        # An temporary `AnchorPoint` inserted into `current_target_item`
         self.tmp_anchor_point = None
+        # An `AnchorPoint` following the mouse cursor
         self.cursor_anchor_point = None
+        # An QUndoCommand
+        self.macro = None
 
     def remove_tmp_anchor(self):
-        """Remove a temp anchor point from the current target item.
+        """
+        Remove a temporary anchor point from the current target item.
         """
         if self.direction == self.FROM_SOURCE:
             self.current_target_item.removeInputAnchor(self.tmp_anchor_point)
@@ -180,7 +252,8 @@ class NewLinkAction(UserInteraction):
         self.tmp_anchor_point = None
 
     def create_tmp_anchor(self, item):
-        """Create a new tmp anchor at the item (`NodeItem`).
+        """
+        Create a new tmp anchor at the `item` (:class:`NodeItem`).
         """
         assert(self.tmp_anchor_point is None)
         if self.direction == self.FROM_SOURCE:
@@ -189,8 +262,9 @@ class NewLinkAction(UserInteraction):
             self.tmp_anchor_point = item.newOutputAnchor()
 
     def can_connect(self, target_item):
-        """Is the connection between `self.from_item` (item where the drag
-        started) and `target_item`.
+        """
+        Is the connection between `self.from_item` (item where the drag
+        started) and `target_item` possible.
 
         """
         node1 = self.scene.node_for_item(self.from_item)
@@ -202,7 +276,8 @@ class NewLinkAction(UserInteraction):
             return bool(self.scheme.propose_links(node2, node1))
 
     def set_link_target_anchor(self, anchor):
-        """Set the temp line target anchor
+        """
+        Set the temp line target anchor.
         """
         if self.direction == self.FROM_SOURCE:
             self.tmp_link_item.setSinkItem(None, anchor)
@@ -210,9 +285,12 @@ class NewLinkAction(UserInteraction):
             self.tmp_link_item.setSourceItem(None, anchor)
 
     def target_node_item_at(self, pos):
-        """Return a suitable NodeItem on which a link can be dropped.
         """
-        # Test for a suitable NodeAnchorItem or NodeItem at pos.
+        Return a suitable :class:`NodeItem` at position `pos` on which
+        a link can be dropped.
+
+        """
+        # Test for a suitable `NodeAnchorItem` or `NodeItem` at pos.
         if self.direction == self.FROM_SOURCE:
             anchor_type = items.SinkAnchorItem
         else:
@@ -317,11 +395,11 @@ class NewLinkAction(UserInteraction):
             item = self.target_node_item_at(event.scenePos())
             node = None
             stack = self.document.undoStack()
-            stack.beginMacro("Add link")
+
+            self.macro = QUndoCommand(self.tr("Add link"))
 
             if item:
-                # If the release was over a widget item
-                # then connect them
+                # If the release was over a node item then connect them
                 node = self.scene.node_for_item(item)
             else:
                 # Release on an empty canvas part
@@ -334,20 +412,32 @@ class NewLinkAction(UserInteraction):
                     node = None
 
                 if node is not None:
-                    self.document.addNode(node)
+                    commands.AddNodeCommand(self.scheme, node,
+                                            parent=self.macro)
 
             if node is not None:
-                self.connect_existing(node)
-            else:
-                self.end()
+                if self.direction == self.FROM_SOURCE:
+                    source_node = self.scene.node_for_item(self.source_item)
+                    sink_node = node
+                else:
+                    source_node = node
+                    sink_node = self.scene.node_for_item(self.sink_item)
+                self.connect_nodes(source_node, sink_node)
 
-            stack.endMacro()
+                if not self.isCanceled() or not self.isFinished() and \
+                        self.macro is not None:
+                    # Push (commit) the add link/node action on the stack.
+                    stack.push(self.macro)
+
+            self.end()
+
         else:
             self.end()
             return False
 
     def create_new(self, event):
-        """Create and return a new node with a QuickWidgetMenu.
+        """
+        Create and return a new node with a `QuickMenu`.
         """
         pos = event.screenPos()
         menu = self.document.quickMenu()
@@ -387,18 +477,13 @@ class NewLinkAction(UserInteraction):
                                                          pos.y()))
             return node
 
-    def connect_existing(self, node):
-        """Connect anchor_item to `node`.
+    def connect_nodes(self, source_node, sink_node):
         """
-        if self.direction == self.FROM_SOURCE:
-            source_item = self.source_item
-            source_node = self.scene.node_for_item(source_item)
-            sink_node = node
-        else:
-            source_node = node
-            sink_item = self.sink_item
-            sink_node = self.scene.node_for_item(sink_item)
+        Connect `source_node` to `sink_node`. If there are more then one
+        equally weighted and non conflicting links possible present a
+        detailed dialog for link editing.
 
+        """
         try:
             possible = self.scheme.propose_links(source_node, sink_node)
 
@@ -409,8 +494,11 @@ class NewLinkAction(UserInteraction):
                 raise NoPossibleLinksError
 
             source, sink, w = possible[0]
-            links_to_add = [(source, sink)]
 
+            # just a list of signal tuples for now, will be converted
+            # to SchemeLinks later
+            links_to_add = [(source, sink)]
+            links_to_remove = []
             show_link_dialog = False
 
             # Ambiguous new link request.
@@ -426,52 +514,55 @@ class NewLinkAction(UserInteraction):
                                                           sink_channel=sink):
                     show_link_dialog = True
 
-                if show_link_dialog:
-                    existing = self.scheme.find_links(source_node=source_node,
-                                                      sink_node=sink_node)
+            if show_link_dialog:
+                existing = self.scheme.find_links(source_node=source_node,
+                                                  sink_node=sink_node)
 
-                    if existing:
-                        # EditLinksDialog will populate the view with
-                        # existing links
-                        initial_links = None
-                    else:
-                        initial_links = [(source, sink)]
+                if existing:
+                    # edit_links will populate the view with existing links
+                    initial_links = None
+                else:
+                    initial_links = [(source, sink)]
 
-                    links_action = EditNodeLinksAction(
-                                    self.document, source_node, sink_node)
-                    try:
-                        links_action.edit_links(initial_links)
-                    except Exception:
-                        log.error("'EditNodeLinksAction' failed",
-                                  exc_info=True)
-                        raise
-                    # EditNodeLinksAction already commits the links on accepted
-                    links_to_add = []
-
-            for source, sink in links_to_add:
-                if sink.single:
-                    # Remove an existing link to the sink channel if present.
-                    existing_link = self.scheme.find_links(
-                        sink_node=sink_node, sink_channel=sink
+                try:
+                    rstatus, links_to_add, links_to_remove = self.edit_links(
+                        source_node, sink_node, initial_links
                     )
+                except Exception:
+                    log.error("Failed to edit the links",
+                              exc_info=True)
+                    raise
+                if rstatus == EditLinksDialog.Rejected:
+                    raise UserCanceledError
+            else:
+                # links_to_add now needs to be a list of actual SchemeLinks
+                links_to_add = [scheme.SchemeLink(
+                                    source_node, source_channel,
+                                    sink_node, sink_channel)
+                                for source_channel, sink_channel
+                                in links_to_add]
 
-                    if existing_link:
-                        self.document.removeLink(existing_link[0])
+                links_to_add, links_to_remove = \
+                    add_links_plan(self.scheme, links_to_add)
 
-                # Check if the new link is a duplicate of an existing link
+            # Remove temp items before creating any new links
+            self.cleanup()
+
+            for link in links_to_remove:
+                commands.RemoveLinkCommand(self.scheme, link,
+                                           parent=self.macro)
+
+            for link in links_to_add:
+                # Check if the new requested link is a duplicate of an
+                # existing link
                 duplicate = self.scheme.find_links(
-                    source_node, source, sink_node, sink
+                    link.source_node, link.source_channel,
+                    link.sink_node, link.sink_channel
                 )
 
-                if duplicate:
-                    # Do nothing.
-                    continue
-
-                # Remove temp items before creating a new link
-                self.cleanup()
-
-                link = scheme.SchemeLink(source_node, source, sink_node, sink)
-                self.document.addLink(link)
+                if not duplicate:
+                    commands.AddLinkCommand(self.scheme, link,
+                                            parent=self.macro)
 
         except scheme.IncompatibleChannelTypeError:
             log.info("Cannot connect: invalid channel types.")
@@ -482,16 +573,56 @@ class NewLinkAction(UserInteraction):
         except NoPossibleLinksError:
             log.info("Cannot connect: no possible links.")
             self.cancel()
+        except UserCanceledError:
+            log.info("User canceled a new link action.")
+            self.cancel(UserInteraction.UserCancelReason)
         except Exception:
             log.error("An error occurred during the creation of a new link.",
                       exc_info=True)
             self.cancel()
 
-        if not self.isFinished():
-            self.end()
+    def edit_links(self, source_node, sink_node, initial_links=None):
+        """
+        Show and execute the `EditLinksDialog`.
+        Optional `initial_links` list can provide a list of initial
+        `(source, sink)` channel tuples to show in the view, otherwise
+        the dialog is populated with existing links in the scheme (passing
+        an empty list will disable all initial links).
+
+        """
+        status, links_to_add, links_to_remove = \
+            edit_links(
+                self.scheme, source_node, sink_node, initial_links,
+                parent=self.document
+            )
+
+        if status == EditLinksDialog.Accepted:
+            links_to_add = [scheme.SchemeLink(
+                                source_node, source_channel,
+                                sink_node, sink_channel)
+                            for source_channel, sink_channel in links_to_add]
+
+            links_to_remove = [self.scheme.find_links(
+                                   source_node, source_channel,
+                                   sink_node, sink_channel)
+                               for source_channel, sink_channel
+                               in links_to_remove]
+
+            links_to_remove = reduce(list.__add__, links_to_remove, [])
+            conflicting = [_f for _f in [conflicting_single_link(self.scheme, link)
+                                  for link in links_to_add] if _f]
+            for link in conflicting:
+                if link not in links_to_remove:
+                    links_to_remove.append(link)
+
+            return status, links_to_add, links_to_remove
+        else:
+            return status, [], []
 
     def end(self):
         self.cleanup()
+        # Remove the help tip set in mousePressEvent
+        self.macro = None
         helpevent = QuickHelpTipEvent("", "")
         QCoreApplication.postEvent(self.document, helpevent)
         UserInteraction.end(self)
@@ -501,7 +632,8 @@ class NewLinkAction(UserInteraction):
         UserInteraction.cancel(self, reason)
 
     def cleanup(self):
-        """Cleanup all temp items in the scene that are left.
+        """
+        Cleanup all temporary items in the scene that are left.
         """
         if self.tmp_link_item:
             self.tmp_link_item.setSinkItem(None)
@@ -521,8 +653,101 @@ class NewLinkAction(UserInteraction):
             self.cursor_anchor_point = None
 
 
+def edit_links(scheme, source_node, sink_node, initial_links=None,
+               parent=None):
+    """
+    Show and execute the `EditLinksDialog`.
+    Optional `initial_links` list can provide a list of initial
+    `(source, sink)` channel tuples to show in the view, otherwise
+    the dialog is populated with existing links in the scheme (passing
+    an empty list will disable all initial links).
+
+    """
+    log.info("Constructing a Link Editor dialog.")
+
+    dlg = EditLinksDialog(parent)
+
+    # all SchemeLinks between the two nodes.
+    links = scheme.find_links(source_node=source_node, sink_node=sink_node)
+    existing_links = [(link.source_channel, link.sink_channel)
+                      for link in links]
+
+    if initial_links is None:
+        initial_links = list(existing_links)
+
+    dlg.setNodes(source_node, sink_node)
+    dlg.setLinks(initial_links)
+
+    log.info("Executing a Link Editor Dialog.")
+    rval = dlg.exec_()
+
+    if rval == EditLinksDialog.Accepted:
+        edited_links = dlg.links()
+
+        # Differences
+        links_to_add = set(edited_links) - set(existing_links)
+        links_to_remove = set(existing_links) - set(edited_links)
+        return rval, list(links_to_add), list(links_to_remove)
+    else:
+        return rval, [], []
+
+
+def add_links_plan(scheme, links, force_replace=False):
+    """
+    Return a plan for adding a list of links to the scheme.
+    """
+    links_to_add = list(links)
+    links_to_remove = [conflicting_single_link(scheme, link)
+                       for link in links]
+    links_to_remove = [_f for _f in links_to_remove if _f]
+
+    if not force_replace:
+        links_to_add, links_to_remove = remove_duplicates(links_to_add,
+                                                          links_to_remove)
+    return links_to_add, links_to_remove
+
+
+def conflicting_single_link(scheme, link):
+    """
+    Find and return an existing link in `scheme` connected to the same
+    input channel as `link` if the channel has the 'single' flag.
+    If no such channel exists (or sink channel is not 'single')
+    return `None`.
+
+    """
+
+    if link.sink_channel.single:
+        existing = scheme.find_links(
+            sink_node=link.sink_node,
+            sink_channel=link.sink_channel
+        )
+
+        if existing:
+            assert len(existing) == 1
+            return existing[0]
+    return None
+
+
+def remove_duplicates(links_to_add, links_to_remove):
+    def link_key(link):
+        return (link.source_node, link.source_channel,
+                link.sink_node, link.sink_channel)
+
+    add_keys = list(map(link_key, links_to_add))
+    remove_keys = list(map(link_key, links_to_remove))
+    duplicate_keys = set(add_keys).intersection(remove_keys)
+
+    def not_duplicate(link):
+        return link_key(link) not in duplicate_keys
+
+    links_to_add = list(filter(not_duplicate, links_to_add))
+    links_to_remove = list(filter(not_duplicate, links_to_remove))
+    return links_to_add, links_to_remove
+
+
 class NewNodeAction(UserInteraction):
-    """Present the user with a quick menu for node selection and
+    """
+    Present the user with a quick menu for node selection and
     create the selected node.
 
     """
@@ -532,15 +757,16 @@ class NewNodeAction(UserInteraction):
             self.create_new(event.screenPos())
             self.end()
 
-    def create_new(self, pos):
-        """Create a new widget with a QuickWidgetMenu at `pos`
-        (in screen coordinates).
+    def create_new(self, pos, search_text=""):
+        """
+        Create a new widget with a `QuickMenu` at `pos` (in screen
+        coordinates).
 
         """
         menu = self.document.quickMenu()
         menu.setFilterFunc(None)
 
-        action = menu.exec_(pos)
+        action = menu.exec_(pos, search_text)
         if action:
             item = action.property("item")
             desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
@@ -555,13 +781,18 @@ class NewNodeAction(UserInteraction):
 
 
 class RectangleSelectionAction(UserInteraction):
-    """Select items in the scene using a Rectangle selection
+    """
+    Select items in the scene using a Rectangle selection
     """
     def __init__(self, document, *args, **kwargs):
         UserInteraction.__init__(self, document, *args, **kwargs)
+        # The initial selection at drag start
         self.initial_selection = None
+        # Selection when last updated in a mouseMoveEvent
         self.last_selection = None
+        # A selection rect (`QRectF`)
         self.selection_rect = None
+        # Keyboard modifiers
         self.modifiers = 0
 
     def mousePressEvent(self, event):
@@ -600,6 +831,7 @@ class RectangleSelectionAction(UserInteraction):
 
     def mouseMoveEvent(self, event):
         if not self.rect_item.scene():
+            # Add the rect item to the scene when the mouse moves.
             self.scene.addItem(self.rect_item)
         self.update_selection(event)
         return True
@@ -615,6 +847,11 @@ class RectangleSelectionAction(UserInteraction):
         return True
 
     def update_selection(self, event):
+        """
+        Update the selection rectangle from a QGraphicsSceneMouseEvent
+        `event` instance.
+
+        """
         if self.initial_selection is None:
             self.initial_selection = set(self.scene.selectedItems())
             self.last_selection = self.initial_selection
@@ -622,9 +859,11 @@ class RectangleSelectionAction(UserInteraction):
         pos = event.scenePos()
         self.selection_rect = QRectF(self.selection_rect.topLeft(), pos)
 
+        # Make sure the rect_item does not cause the scene rect to grow.
         rect = self._bound_selection_rect(self.selection_rect.normalized())
 
-        # Need that constant otherwise the sceneRect will still grow
+        # Need that 0.5 constant otherwise the sceneRect will still
+        # grow (anti-aliasing correction by QGraphicsScene?)
         pw = self.rect_item.pen().width() + 0.5
 
         self.rect_item.setRect(rect.adjusted(pw, pw, -pw, -pw))
@@ -659,9 +898,8 @@ class RectangleSelectionAction(UserInteraction):
         UserInteraction.end(self)
 
     def viewport_rect(self):
-        """Return the bounding rect of the document's viewport on the
-        scene.
-
+        """
+        Return the bounding rect of the document's viewport on the scene.
         """
         view = self.document.view()
         vsize = view.viewport().size()
@@ -669,7 +907,8 @@ class RectangleSelectionAction(UserInteraction):
         return view.mapToScene(viewportrect).boundingRect()
 
     def _bound_selection_rect(self, rect):
-        """Bound the selection `rect` to a sensible size.
+        """
+        Bound the selection `rect` to a sensible size.
         """
         srect = self.scene.sceneRect()
         vrect = self.viewport_rect()
@@ -678,6 +917,20 @@ class RectangleSelectionAction(UserInteraction):
 
 
 class EditNodeLinksAction(UserInteraction):
+    """
+    Edit multiple links between two :class:`SchemeNode` instances using
+    a :class:`EditLinksDialog`
+
+    Parameters
+    ----------
+    document : :class:`SchemeEditWidget`
+        The editor widget.
+    source_node : :class:`SchemeNode`
+        The source (link start) node for the link editor.
+    sink_node : :class:`SchemeNode`
+        The sink (link end) node for the link editor.
+
+    """
     def __init__(self, document, source_node, sink_node, *args, **kwargs):
         UserInteraction.__init__(self, document, *args, **kwargs)
         self.source_node = source_node
@@ -686,18 +939,15 @@ class EditNodeLinksAction(UserInteraction):
     def edit_links(self, initial_links=None):
         """
         Show and execute the `EditLinksDialog`.
-        Optional `initial_links` list can provide the initial
+        Optional `initial_links` list can provide a list of initial
         `(source, sink)` channel tuples to show in the view, otherwise
-        the dialog is populated with existing links in the scheme
-        (pass an empty list to disable all initial links).
+        the dialog is populated with existing links in the scheme (passing
+        an empty list will disable all initial links).
 
         """
-        from ..canvas.editlinksdialog import EditLinksDialog
-
         log.info("Constructing a Link Editor dialog.")
 
-        parent = self.scene.views()[0]
-        dlg = EditLinksDialog(parent)
+        dlg = EditLinksDialog(self.document)
 
         links = self.scheme.find_links(source_node=self.source_node,
                                        sink_node=self.sink_node)
@@ -722,7 +972,7 @@ class EditNodeLinksAction(UserInteraction):
             stack = self.document.undoStack()
             stack.beginMacro("Edit Links")
 
-            # First remove links into a single sink channel,
+            # First remove links into a 'Single' sink channel,
             # but only the ones that do not have self.source_node as
             # a source (they will be removed later from links_to_remove)
             for _, sink_channel in links_to_add:
@@ -757,11 +1007,15 @@ class EditNodeLinksAction(UserInteraction):
 
 
 def point_to_tuple(point):
-    return point.x(), point.y()
+    """
+    Convert a QPointF into a (x, y) tuple.
+    """
+    return (point.x(), point.y())
 
 
 class NewArrowAnnotation(UserInteraction):
-    """Create a new arrow annotation.
+    """
+    Create a new arrow annotation handler.
     """
     def __init__(self, document, *args, **kwargs):
         UserInteraction.__init__(self, document, *args, **kwargs)
@@ -786,6 +1040,9 @@ class NewArrowAnnotation(UserInteraction):
         UserInteraction.start(self)
 
     def setColor(self, color):
+        """
+        Set the color for the new arrow.
+        """
         self.color = color
 
     def mousePressEvent(self, event):
@@ -814,7 +1071,6 @@ class NewArrowAnnotation(UserInteraction):
                 p1, p2 = map(self.arrow_item.mapFromScene,
                              (self.down_pos, event.scenePos()))
                 self.arrow_item.setLine(QLineF(p1, p2))
-                self.arrow_item.adjustGeometry()
 
             event.accept()
             return True
@@ -832,7 +1088,6 @@ class NewArrowAnnotation(UserInteraction):
 
                 p1, p2 = map(self.arrow_item.mapFromScene, (p1, p2))
                 self.arrow_item.setLine(QLineF(p1, p2))
-                self.arrow_item.adjustGeometry()
 
             self.end()
             return True
@@ -851,10 +1106,16 @@ class NewArrowAnnotation(UserInteraction):
 
 
 def rect_to_tuple(rect):
+    """
+    Convert a QRectF into a (x, y, width, height) tuple.
+    """
     return rect.x(), rect.y(), rect.width(), rect.height()
 
 
 class NewTextAnnotation(UserInteraction):
+    """
+    A New Text Annotation interaction handler
+    """
     def __init__(self, document, *args, **kwargs):
         UserInteraction.__init__(self, document, *args, **kwargs)
         self.down_pos = None
@@ -883,7 +1144,8 @@ class NewTextAnnotation(UserInteraction):
         UserInteraction.start(self)
 
     def createNewAnnotation(self, rect):
-        """Create a new TextAnnotation at with `rect` as the geometry.
+        """
+        Create a new TextAnnotation at with `rect` as the geometry.
         """
         annot = scheme.SchemeTextAnnotation(rect_to_tuple(rect))
         font = {"family": str(self.font.family()),
@@ -951,8 +1213,9 @@ class NewTextAnnotation(UserInteraction):
             self.end()
 
     def defaultTextGeometry(self, point):
-        """Return the default text geometry. Used in case the user
-        single clicked in the scene.
+        """
+        Return the default text geometry. Used in case the user single
+        clicked in the scene.
 
         """
         font = self.annotation_item.font()
@@ -982,6 +1245,9 @@ class NewTextAnnotation(UserInteraction):
 
 
 class ResizeTextAnnotation(UserInteraction):
+    """
+    Resize a Text Annotation interaction handler.
+    """
     def __init__(self, document, *args, **kwargs):
         UserInteraction.__init__(self, document, *args, **kwargs)
         self.item = None
@@ -1021,7 +1287,8 @@ class ResizeTextAnnotation(UserInteraction):
         self.control = control
 
     def commit(self):
-        """Commit the current item geometry state to the document.
+        """
+        Commit the current item geometry state to the document.
         """
         rect = self.item.geometry()
         if self.savedRect != rect:
@@ -1067,6 +1334,9 @@ class ResizeTextAnnotation(UserInteraction):
 
 
 class ResizeArrowAnnotation(UserInteraction):
+    """
+    Resize an Arrow Annotation interaction handler.
+    """
     def __init__(self, document, *args, **kwargs):
         UserInteraction.__init__(self, document, *args, **kwargs)
         self.item = None
@@ -1130,7 +1400,6 @@ class ResizeArrowAnnotation(UserInteraction):
     def __on_lineEdited(self, line):
         p1, p2 = map(self.item.mapFromScene, (line.p1(), line.p2()))
         self.item.setLine(QLineF(p1, p2))
-        self.item.adjustGeometry()
 
     def __on_lineGeometryChanged(self):
         # Possible geometry change from out of our control, for instance

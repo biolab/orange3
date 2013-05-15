@@ -1,17 +1,33 @@
 """
-Orange Canvas Splash Screen
+A splash screen widget with support for positioning of the message text.
+
 """
 
 from PyQt4.QtGui import (
     QSplashScreen,  QWidget, QPixmap, QPainter, QTextDocument,
     QTextBlockFormat, QTextCursor, QApplication
 )
-from PyQt4.QtCore import Qt, qVersion
+from PyQt4.QtCore import Qt
 
 from .utils import is_transparency_supported
 
 
 class SplashScreen(QSplashScreen):
+    """
+    Splash screen widget.
+
+    Parameters
+    ----------
+    parent : :class:`QWidget`
+        Parent widget
+
+    pixmap : :class:`QPixmap`
+        Splash window pixmap.
+
+    textRect : :class:`QRect`
+        Bounding rectangle of the shown message on the widget.
+
+    """
     def __init__(self, parent=None, pixmap=None, textRect=None, **kwargs):
         QSplashScreen.__init__(self, parent, **kwargs)
         self.__textRect = textRect
@@ -29,14 +45,16 @@ class SplashScreen(QSplashScreen):
         self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
 
     def setTextRect(self, rect):
-        """Set the rectangle in which to show the message text.
+        """
+        Set the rectangle (:class:`QRect`) in which to show the message text.
         """
         if self.__textRect != rect:
             self.__textRect = rect
             self.update()
 
     def textRect(self):
-        """Return the text rect.
+        """
+        Return the text message rectangle.
         """
         return self.__textRect
 
@@ -46,7 +64,8 @@ class SplashScreen(QSplashScreen):
         self.raise_()
 
     def drawContents(self, painter):
-        """Reimplementation of drawContents to limit the drawing
+        """
+        Reimplementation of drawContents to limit the drawing
         inside `textRext`.
 
         """
@@ -74,6 +93,9 @@ class SplashScreen(QSplashScreen):
             painter.drawText(rect, self.__alignment, self.__message)
 
     def showMessage(self, message, alignment=Qt.AlignLeft, color=Qt.black):
+        """
+        Show the `message` with `color` and `alignment`.
+        """
         # Need to store all this arguments for drawContents (no access
         # methods)
         self.__alignment = alignment
@@ -82,29 +104,29 @@ class SplashScreen(QSplashScreen):
         QSplashScreen.showMessage(self, message, alignment, color)
         QApplication.instance().processEvents()
 
-    if qVersion() < "4.8":
-        # in 4.7 the splash screen does not support transparency
-        def setPixmap(self, pixmap):
-            self.setAttribute(Qt.WA_TranslucentBackground,
-                              pixmap.hasAlpha() and \
-                              is_transparency_supported())
+    # Reimplemented to allow graceful fall back if the windowing system
+    # does not support transparency.
+    def setPixmap(self, pixmap):
+        self.setAttribute(Qt.WA_TranslucentBackground,
+                          pixmap.hasAlpha() and \
+                          is_transparency_supported())
 
-            self.__pixmap = pixmap
+        self.__pixmap = pixmap
 
-            QSplashScreen.setPixmap(self, pixmap)
-            if pixmap.hasAlpha() and not is_transparency_supported():
-                self.setMask(pixmap.createHeuristicMask())
+        QSplashScreen.setPixmap(self, pixmap)
+        if pixmap.hasAlpha() and not is_transparency_supported():
+            self.setMask(pixmap.createHeuristicMask())
 
-        def repaint(self):
-            QWidget.repaint(self)
-            QApplication.flush()
+    def repaint(self):
+        QWidget.repaint(self)
+        QApplication.flush()
 
-        def event(self, event):
-            if event.type() == event.Paint:
-                pixmap = self.__pixmap
-                painter = QPainter(self)
-                if not pixmap.isNull():
-                    painter.drawPixmap(0, 0, pixmap)
-                self.drawContents(painter)
-                return True
-            return QSplashScreen.event(self, event)
+    def event(self, event):
+        if event.type() == event.Paint:
+            pixmap = self.__pixmap
+            painter = QPainter(self)
+            if not pixmap.isNull():
+                painter.drawPixmap(0, 0, pixmap)
+            self.drawContents(painter)
+            return True
+        return QSplashScreen.event(self, event)

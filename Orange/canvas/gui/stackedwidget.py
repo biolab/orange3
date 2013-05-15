@@ -3,7 +3,7 @@
 AnimatedStackedWidget
 =====================
 
-A widget similar to QStackedWidget that supports animated
+A widget similar to :class:`QStackedWidget` supporting animated
 transitions between widgets.
 
 """
@@ -24,13 +24,15 @@ log = logging.getLogger(__name__)
 
 
 def clipMinMax(size, minSize, maxSize):
-    """Clip the size so it is bigger then minSize but smaller than maxSize.
+    """
+    Clip the size so it is bigger then minSize but smaller than maxSize.
     """
     return size.expandedTo(minSize).boundedTo(maxSize)
 
 
 def fixSizePolicy(size, hint, policy):
-    """Fix size so it conforms to the size policy and the given size hint.
+    """
+    Fix size so it conforms to the size policy and the given size hint.
     """
     width, height = hint.width(), hint.height()
     expanding = policy.expandingDirections()
@@ -52,8 +54,9 @@ def fixSizePolicy(size, hint, policy):
 
 
 class StackLayout(QStackedLayout):
-    """A stacked layout with `sizeHint` always the same as that
-    of the current widget.
+    """
+    A stacked layout with ``sizeHint`` always the same as that of the
+    `current` widget.
 
     """
     def __init__(self, parent=None):
@@ -98,14 +101,20 @@ class StackLayout(QStackedLayout):
                 w.setGeometry(geom)
 
     def _onCurrentChanged(self, index):
-        """Current widget changed, invalidate the layout.
+        """
+        Current widget changed, invalidate the layout.
         """
         self.invalidate()
 
 
 class AnimatedStackedWidget(QFrame):
+    # Current widget has changed
     currentChanged = Signal(int)
+
+    # Transition animation has started
     transitionStarted = Signal()
+
+    # Transition animation has finished
     transitionFinished = Signal()
 
     def __init__(self, parent=None, animationEnabled=True):
@@ -135,7 +144,8 @@ class AnimatedStackedWidget(QFrame):
         self.__nextCurrentIndex = -1
 
     def setAnimationEnabled(self, animationEnabled):
-        """Enable/disable transition animations.
+        """
+        Enable/disable transition animations.
         """
         if self.__animationEnabled != animationEnabled:
             self.__animationEnabled = animationEnabled
@@ -144,15 +154,20 @@ class AnimatedStackedWidget(QFrame):
             )
 
     def animationEnabled(self):
+        """
+        Is the transition animation enabled.
+        """
         return self.__animationEnabled
 
     def addWidget(self, widget):
-        """Add the widget to the stack in the last place.
+        """
+        Append the widget to the stack and return its index.
         """
         return self.insertWidget(self.layout().count(), widget)
 
     def insertWidget(self, index, widget):
-        """Insert widget at index.
+        """
+        Insert `widget` into the stack at `index`.
         """
         index = min(index, self.count())
         self.__widgets.insert(index, widget)
@@ -161,35 +176,44 @@ class AnimatedStackedWidget(QFrame):
         return self.layout().insertWidget(index, widget)
 
     def removeWidget(self, widget):
-        """Remove `widget` from the stack.
+        """
+        Remove `widget` from the stack.
+
+        .. note:: The widget is hidden but is not deleted.
+
         """
         index = self.__widgets.index(widget)
         self.layout().removeWidget(widget)
         self.__widgets.pop(index)
 
     def widget(self, index):
-        """Return the widget at `index`
+        """
+        Return the widget at `index`
         """
         return self.__widgets[index]
 
     def indexOf(self, widget):
-        """Return the index of `widget` in the stack.
+        """
+        Return the index of `widget` in the stack.
         """
         return self.__widgets.index(widget)
 
     def count(self):
-        """Return the number of widgets in the stack.
+        """
+        Return the number of widgets in the stack.
         """
         return max(self.layout().count() - 1, 0)
 
     def setCurrentWidget(self, widget):
-        """Set the current shown widget.
+        """
+        Set the current shown widget.
         """
         index = self.__widgets.index(widget)
         self.setCurrentIndex(index)
 
     def setCurrentIndex(self, index):
-        """Set the current shown widget index.
+        """
+        Set the current shown widget index.
         """
         index = max(min(index, self.count() - 1), 0)
         if self.__currentIndex == -1:
@@ -216,6 +240,9 @@ class AnimatedStackedWidget(QFrame):
             self.__transitionStart()
 
     def currentIndex(self):
+        """
+        Return the current shown widget index.
+        """
         return self.__currentIndex
 
     def sizeHint(self):
@@ -225,7 +252,8 @@ class AnimatedStackedWidget(QFrame):
         return hint
 
     def __transitionStart(self):
-        """Start the transition.
+        """
+        Start the transition.
         """
         log.debug("Stack transition start (%s)", str(self.objectName()))
         # Set the fade widget as the current widget
@@ -235,7 +263,8 @@ class AnimatedStackedWidget(QFrame):
         self.transitionStarted.emit()
 
     def __onTransitionFinished(self):
-        """Transition has finished.
+        """
+        Transition has finished.
         """
         log.debug("Stack transition finished (%s)" % str(self.objectName()))
         self.__fadeWidget.blendingFactor_ = 1.0
@@ -251,7 +280,8 @@ class AnimatedStackedWidget(QFrame):
 
 
 class CrossFadePixmapWidget(QWidget):
-    """A widget for cross fading between two pixmaps.
+    """
+    A widget for cross fading between two pixmaps.
     """
     def __init__(self, parent=None, pixmap1=None, pixmap2=None):
         QWidget.__init__(self, parent)
@@ -261,25 +291,29 @@ class CrossFadePixmapWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def setPixmap(self, pixmap):
-        """Set pixmap 1
+        """
+        Set pixmap 1
         """
         self.pixmap1 = pixmap
         self.updateGeometry()
 
     def setPixmap2(self, pixmap):
-        """Set pixmap 2
+        """
+        Set pixmap 2
         """
         self.pixmap2 = pixmap
         self.updateGeometry()
 
     def setBlendingFactor(self, factor):
-        """Set the blending factor between the two pixmaps.
+        """
+        Set the blending factor between the two pixmaps.
         """
         self.__blendingFactor = factor
         self.updateGeometry()
 
     def blendingFactor(self):
-        """Pixmap blending factor between 0.0 and 1.0
+        """
+        Pixmap blending factor between 0.0 and 1.0
         """
         return self.__blendingFactor
 
@@ -287,7 +321,8 @@ class CrossFadePixmapWidget(QWidget):
                                fset=setBlendingFactor)
 
     def sizeHint(self):
-        """Return an interpolated size between pixmap1.size()
+        """
+        Return an interpolated size between pixmap1.size()
         and pixmap2.size()
 
         """
@@ -299,7 +334,8 @@ class CrossFadePixmapWidget(QWidget):
             return QWidget.sizeHint(self)
 
     def paintEvent(self, event):
-        """Paint the interpolated pixmap image.
+        """
+        Paint the interpolated pixmap image.
         """
         p = QPainter(self)
         p.setClipRect(event.rect())

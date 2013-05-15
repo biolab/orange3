@@ -5,7 +5,8 @@ Utility functions.
 
 
 def name_lookup(qualified_name, globals={}):
-    """Return the object referenced by a qualified name (doted name).
+    """
+    Return the object referenced by a qualified name (doted name).
     """
     module_name, class_name = qualified_name.rsplit(".", 1)
     module = __import__(module_name, fromlist=[class_name], globals=globals)
@@ -13,7 +14,8 @@ def name_lookup(qualified_name, globals={}):
 
 
 def qualified_name(qualified_object):
-    """Return a qualifeid name for `qualified_obj` (type or function).
+    """
+    Return a qualified name for `qualified_obj` (type or function).
     """
     return "%s.%s" % (qualified_object.__module__, qualified_object.__name__)
 

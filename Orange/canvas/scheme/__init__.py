@@ -1,7 +1,15 @@
 """
-=====================
-Scheme Workflow Model
-=====================
+======
+Scheme
+======
+
+The scheme package implements and defines the underlying workflow model.
+
+The :class:`.Scheme` class represents the workflow and is composed of a set
+of :class:`.SchemeNode` connected with :class:`.SchemeLink`, defining an
+directed acyclic graph (DAG). Additionally instances of
+:class:`.SchemeArrowAnnotation` or :class:`.SchemeTextAnnotation` can be
+inserted into the scheme.
 
 """
 

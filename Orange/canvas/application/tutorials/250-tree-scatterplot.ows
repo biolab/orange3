@@ -1,0 +1,251 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="In this data analysis we combined inference and visualization of classification tree with a scatterplot. When both the tree browser and the scatterplot are open, selection of any node of the tree would send the related data instances to scatterplot to render them highlighted. With simple combination of widgets we have constructed an interactive classification tree browser." title="Classification Trees" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(98.0, 83.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWFile.OWFile" title="File" version="" />
+		<node id="1" name="Scatter Plot" position="(627.0, 171.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Visualize.OWScatterPlot.OWScatterPlot" title="Scatter Plot" version="" />
+		<node id="2" name="Classification Tree" position="(224.0, 230.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Classify.OWClassificationTree.OWClassificationTree" title="Classification Tree" version="" />
+		<node id="3" name="Classification Tree Graph" position="(406.0, 233.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Classify.OWClassificationTreeGraph.OWClassificationTreeGraph" title="Classification Tree Graph" version="" />
+		<node id="4" name="Attribute Statistics" position="(602.0, 308.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Visualize.OWAttributeStatistics.OWAttributeStatistics" title="Attribute Statistics" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="2" sink_channel="Classification Tree" sink_node_id="3" source_channel="Classification Tree" source_node_id="2" />
+		<link enabled="true" id="3" sink_channel="Data Subset" sink_node_id="1" source_channel="Data" source_node_id="3" />
+		<link enabled="true" id="4" sink_channel="Data" sink_node_id="4" source_channel="Data" source_node_id="3" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(193.0, 11.0, 150.0, 48.0)">We use data on Iris in this example, as it is nicely visualized in scatterplot.</text>
+		<arrow end="(139.0, 60.0)" fill="#C1272D" id="1" start="(191.0, 40.0)" />
+		<arrow end="(391.0, 303.0)" fill="#C1272D" id="2" start="(363.0, 349.0)" />
+		<text font-family="Helvetica" font-size="12" id="3" rect="(301.0, 356.0, 150.0, 48.0)">Double-click on this tree visualizers and select any of the tree nodes.</text>
+		<text font-family="Helvetica" font-size="12" id="4" rect="(472.0, 31.0, 150.0, 60.0)">Any change in selection of the tree node would change the rendering in scatter plot.</text>
+		<arrow end="(428.0, 194.0)" fill="#39B54A" id="5" start="(505.0, 95.0)" />
+		<arrow end="(599.0, 143.0)" fill="#39B54A" id="6" start="(552.0, 90.0)" />
+		<text font-family="Helvetica" font-size="12" id="7" rect="(586.0, 412.0, 150.0, 60.0)">Selected data instances from the tree can be examinted in other widgets as well.</text>
+		<arrow end="(616.0, 367.0)" fill="#C1272D" id="8" start="(636.0, 398.0)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">(dp1
+S'widgetShown'
+p2
+I0
+sS'showAdvanced'
+p3
+I0
+sS'createNewOn'
+p4
+I1
+sS'savedWidgetGeometry'
+p5
+S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\xab\x00\x00\x00\x9d\x00\x00\x02w\x00\x00\x01\xba\x00\x00\x00\xab\x00\x00\x00\xb3\x00\x00\x02w\x00\x00\x01\xba\x00\x00\x00\x00\x00\x00'
+p6
+sS'recentFiles'
+p7
+(lp8
+V/Users/blaz/Documents/dev/nice/Orange/datasets/iris.tab
+p9
+as.</properties>
+		<properties format="pickle" node_id="1">(dp1
+S'autoSendSelection'
+p2
+I1
+sS'toolbarSelection'
+p3
+I0
+sS'graph.pointWidth'
+p4
+I8
+sS'graph.showProbabilities'
+p5
+I0
+sS'graph.showXaxisTitle'
+p6
+I1
+sS'graph.showAxisScale'
+p7
+I1
+sS'showGridlines'
+p8
+I0
+sS'graph.showFilledSymbols'
+p9
+I1
+sS'graph.alphaValue'
+p10
+I255
+sS'graph.sendSelectionOnUpdate'
+p11
+I0
+sS'widgetShown'
+p12
+I0
+sS'graph.useAntialiasing'
+p13
+I1
+sS'graph.jitterContinuous'
+p14
+I0
+sS'graph.showLegend'
+p15
+I1
+sS'graph.showDistributions'
+p16
+NsS'selectedSchemaIndex'
+p17
+I0
+sS'colorSettings'
+p18
+NsS'VizRankLearnerName'
+p19
+NsS'graph.showYLaxisTitle'
+p20
+I1
+sS'savedWidgetGeometry'
+p21
+S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x000\x00\x00\x00\x16\x00\x00\x02\xeb\x00\x00\x02d\x00\x00\x000\x00\x00\x00,\x00\x00\x02\xeb\x00\x00\x02d\x00\x00\x00\x00\x00\x00'
+p22
+sS'graph.jitterSize'
+p23
+I5
+s.</properties>
+		<properties format="pickle" node_id="2">(dp1
+S'bin'
+p2
+I0
+sS'subset'
+p3
+I0
+sS'preNodeMajP'
+p4
+I95
+sS'name'
+p5
+S'Classification Tree'
+p6
+sS'postMaj'
+p7
+I1
+sS'preNodeInst'
+p8
+I01
+sS'postMPruning'
+p9
+I1
+sS'savedWidgetGeometry'
+p10
+S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x01\xfc\x00\x00\x00\\\x00\x00\x03\x94\x00\x00\x03\x04\x00\x00\x01\xfc\x00\x00\x00r\x00\x00\x03\x94\x00\x00\x03\x04\x00\x00\x00\x00\x00\x00'
+p11
+sS'limitDepth'
+p12
+I00
+sS'relK'
+p13
+I5
+sS'postM'
+p14
+F2
+sS'estim'
+p15
+I1
+sS'maxDepth'
+p16
+I100
+sS'relM'
+p17
+I100
+sS'preNodeInstP'
+p18
+I5
+sS'preLeafInstP'
+p19
+I2
+sS'preLeafInst'
+p20
+I1
+sS'widgetShown'
+p21
+I0
+sS'preNodeMaj'
+p22
+I0
+s.</properties>
+		<properties format="pickle" node_id="3">(dp1
+S'MaxTreeDepthB'
+p2
+I0
+sS'ZoomAutoRefresh'
+p3
+I0
+sS'NodeInfo'
+p4
+(lp5
+I0
+aI1
+asS'LimitNodeWidth'
+p6
+I01
+sS'HSpacing'
+p7
+I1
+sS'ToolTipsEnabled'
+p8
+I1
+sS'Zoom'
+p9
+I3
+sS'MaxNodeWidth'
+p10
+I150
+sS'selectedColorSettingsIndex'
+p11
+I0
+sS'widgetShown'
+p12
+I1
+sS'ShowPies'
+p13
+I1
+sS'colorSettings'
+p14
+NsS'MaxTreeDepth'
+p15
+I5
+sS'LineWidthMethod'
+p16
+I2
+sS'TruncateText'
+p17
+I1
+sS'NodeColorMethod'
+p18
+I2
+sS'LineWidth'
+p19
+I15
+sS'AutoArrange'
+p20
+I0
+sS'VSpacing'
+p21
+I1
+sS'savedWidgetGeometry'
+p22
+S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x018\x00\x00\x00L\x00\x00\x05A\x00\x00\x03\x13\x00\x00\x018\x00\x00\x00b\x00\x00\x05A\x00\x00\x03\x13\x00\x00\x00\x00\x00\x00'
+p23
+s.</properties>
+		<properties format="pickle" node_id="4">(dp1
+S'widgetShown'
+p2
+I0
+sS'savedWidgetGeometry'
+p3
+S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x01j\x00\x00\x00y\x00\x00\x04%\x00\x00\x02\xe6\x00\x00\x01j\x00\x00\x00\x8f\x00\x00\x04%\x00\x00\x02\xe6\x00\x00\x00\x00\x00\x00'
+p4
+sS'sorting'
+p5
+I0
+s.</properties>
+	</node_properties>
+</scheme>

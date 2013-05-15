@@ -1,4 +1,8 @@
 """
+===========
+Link Editor
+===========
+
 An Dialog to edit links between two nodes in the scheme.
 
 """
@@ -13,7 +17,7 @@ from PyQt4.QtGui import (
     QGraphicsLineItem, QGraphicsTextItem, QGraphicsLayoutItem,
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
     QGraphicsDropShadowEffect, QSizePolicy, QPalette, QPen,
-    QPainter
+    QPainter, QIcon
 )
 
 from PyQt4.QtCore import (
@@ -27,7 +31,8 @@ from ..registry import InputSignal, OutputSignal
 
 from ..resources import icon_loader
 
-
+# This is a special value defined in Qt4 but does not seem to be exported
+# by PyQt4
 QWIDGETSIZE_MAX = ((1 << 24) - 1)
 
 
@@ -37,8 +42,8 @@ class EditLinksDialog(QDialog):
 
     >>> dlg = EditLinksDialog()
     >>> dlg.setNodes(file_node, test_learners_node)
-    >>> dlg.setLinks([file_node.output_channel("Data"),
-    ...               test_learners_node.input_channel("Data")])
+    >>> dlg.setLinks([(file_node.output_channel("Data"),
+    ...               (test_learners_node.input_channel("Data")])
     >>> if dlg.exec_() == EditLinksDialog.Accpeted:
     ...     new_links = dlg.links()
     ...
@@ -85,23 +90,28 @@ class EditLinksDialog(QDialog):
         self.setSizeGripEnabled(False)
 
     def setNodes(self, source_node, sink_node):
-        """Set the source/sink nodes (`SchemeNode` instances)
+        """
+        Set the source/sink nodes (:class:`.SchemeNode` instances)
         between which to edit the links.
+
+        .. note:: This should be called before :func:`setLinks`.
 
         """
         self.scene.editWidget.setNodes(source_node, sink_node)
 
     def setLinks(self, links):
-        """Set a list of links to display between the source and sink
+        """
+        Set a list of links to display between the source and sink
         nodes. The `links` is a list of (`OutputSignal`, `InputSignal`)
-        instances where the first element refers to the source node
-        and the second to the sink node.
+        tuples where the first element is an output signal of the source
+        node and the second an input signal of the sink node.
 
         """
         self.scene.editWidget.setLinks(links)
 
     def links(self):
-        """Return the links between the source and sink node.
+        """
+        Return the links between the source and sink node.
         """
         return self.scene.editWidget.links()
 
@@ -114,7 +124,8 @@ class EditLinksDialog(QDialog):
 
 def find_item_at(scene, pos, order=Qt.DescendingOrder, type=None,
                  name=None):
-    """Find an object in a :class:`QGraphicsScene` `scene` at `pos`.
+    """
+    Find an object in a :class:`QGraphicsScene` `scene` at `pos`.
     If `type` is not `None` the it must specify  the type of the item.
     I `name` is not `None` it must be a name of the object
     (`QObject.objectName()`).
@@ -135,8 +146,8 @@ def find_item_at(scene, pos, order=Qt.DescendingOrder, type=None,
 
 
 class LinksEditScene(QGraphicsScene):
-    """A :class:`QGraphicsScene` used by the :class:`LinkEditWidget`.
-
+    """
+    A :class:`QGraphicsScene` used by the :class:`LinkEditWidget`.
     """
     def __init__(self, *args, **kwargs):
         QGraphicsScene.__init__(self, *args, **kwargs)
@@ -184,7 +195,7 @@ class LinksEditWidget(QGraphicsWidget):
 
     def removeItems(self, items):
         """
-        Remove child items form the widget and scene.
+        Remove child items from the widget and scene.
         """
         scene = self.scene()
         for item in items:
@@ -208,7 +219,7 @@ class LinksEditWidget(QGraphicsWidget):
         Set the source/sink nodes (:class:`SchemeNode` instances) between
         which to edit the links.
 
-        .. note:: Call this before `setLinks`.
+        .. note:: Call this before :func:`setLinks`.
 
         """
         self.clear()
@@ -449,7 +460,7 @@ class LinksEditWidget(QGraphicsWidget):
 
 class EditLinksNode(QGraphicsWidget):
     """
-    A Node with channel anchors.
+    A Node representation with channel anchors.
 
     `direction` specifies the layout (default `Qt.LeftToRight` will
     have icon on the left and channels on the right).
@@ -503,30 +514,36 @@ class EditLinksNode(QGraphicsWidget):
         Set the icon size for the node.
         """
         if size != self.__iconSize:
-            self.__iconSize = size
+            self.__iconSize = QSize(size)
             if self.__icon:
                 self.__iconItem.setPixmap(self.__icon.pixmap(size))
                 self.__iconLayoutItem.updateGeometry()
 
     def iconSize(self):
-        return self.__iconSize
+        """
+        Return the icon size.
+        """
+        return QSize(self.__iconSize)
 
     def setIcon(self, icon):
         """
         Set the icon to display.
         """
         if icon != self.__icon:
-            self.__icon = icon
+            self.__icon = QIcon(icon)
             self.__iconItem.setPixmap(icon.pixmap(self.iconSize()))
             self.__iconLayoutItem.updateGeometry()
 
     def icon(self):
-        return self.__icon
+        """
+        Return the icon.
+        """
+        return QIcon(self.__icon)
 
     def setSchemeNode(self, node):
         """
-        Set an instance of `SchemeNode`. The widget will be
-        initialized with its icon and channels.
+        Set an instance of `SchemeNode`. The widget will be initialized
+        with its icon and channels.
 
         """
         self.node = node
@@ -652,6 +669,9 @@ class GraphicsItemLayoutItem(QGraphicsLayoutItem):
 
 
 class ChannelAnchor(QGraphicsRectItem):
+    """
+    A rectangular Channel Anchor indicator.
+    """
     def __init__(self, parent=None, channel=None, rect=None, **kwargs):
         QGraphicsRectItem.__init__(self, **kwargs)
         self.setAcceptHoverEvents(True)
@@ -672,14 +692,21 @@ class ChannelAnchor(QGraphicsRectItem):
         self.__shadow.setEnabled(False)
 
     def setChannel(self, channel):
+        """
+        Set the channel description.
+        """
         if channel != self.__channel:
             self.__channel = channel
+
             if hasattr(channel, "description"):
                 self.setToolTip(channel.description)
             # TODO: Should also include name, type, flags, dynamic in the
             #       tool tip as well as add visual clues to the anchor
 
     def channel(self):
+        """
+        Return the channel description.
+        """
         return self.__channel
 
     def hoverEnterEvent(self, event):
@@ -692,8 +719,8 @@ class ChannelAnchor(QGraphicsRectItem):
 
 
 class GraphicsTextWidget(QGraphicsWidget):
-    """A QGraphicsWidget subclass that manages a QGraphicsTextItem
-
+    """
+    A QGraphicsWidget subclass that manages a `QGraphicsTextItem`.
     """
 
     def __init__(self, parent=None, textItem=None):

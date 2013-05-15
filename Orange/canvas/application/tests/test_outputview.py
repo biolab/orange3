@@ -101,7 +101,7 @@ class TestOutputView(QAppTestCase):
                                                 fizzbuz))
 
         pool = multiprocessing.pool.ThreadPool(100)
-        res = pool.map_async(printer, list(range(10000)))
+        res = pool.map_async(printer, range(10000))
 
         self.app.exec_()
 
@@ -133,7 +133,7 @@ class TestOutputView(QAppTestCase):
                 hook(*sys.exc_info())
 
         pool = multiprocessing.pool.ThreadPool(10)
-        res = pool.map_async(raise_exception, list(range(100)))
+        res = pool.map_async(raise_exception, range(100))
 
         self.app.exec_()
 

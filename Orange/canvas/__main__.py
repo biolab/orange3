@@ -169,7 +169,6 @@ def main(argv=None):
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
     canvas_window = CanvasMainWindow()
-    canvas_window.resize(1024, 650)
 
     if not options.force_discovery:
         reg_cache = cache.registry_cache()

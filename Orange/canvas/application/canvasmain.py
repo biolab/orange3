@@ -13,12 +13,14 @@ import pkg_resources
 from PyQt4.QtGui import (
     QMainWindow, QWidget, QAction, QActionGroup, QMenu, QMenuBar, QDialog,
     QFileDialog, QMessageBox, QVBoxLayout, QSizePolicy, QColor, QKeySequence,
-    QIcon, QToolBar, QToolButton, QDockWidget, QDesktopServices, QApplication
+    QIcon, QToolBar, QToolButton, QDockWidget, QDesktopServices, QApplication,
 )
 
 from PyQt4.QtCore import (
     Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray
 )
+
+from PyQt4.QtNetwork import QNetworkDiskCache
 
 from PyQt4.QtWebKit import QWebView
 
@@ -31,15 +33,17 @@ from ..gui.dropshadow import DropShadowFrame
 from ..gui.dock import CollapsibleDockWidget
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_critical, message_question, \
-    message_warning, message_information
+                        message_warning, message_information
 
 from ..help import HelpManager
 
-from .canvastooldock import CanvasToolDock, QuickCategoryToolbar
+from .canvastooldock import CanvasToolDock, QuickCategoryToolbar, \
+                            CategoryPopupMenu, popup_position_from_source
 from .aboutdialog import AboutDialog
 from .schemeinfo import SchemeInfoDialog
 from .outputview import OutputView
 from .settings import UserSettingsDialog
+
 from ..document.schemeedit import SchemeEditWidget
 
 from ..scheme import widgetsscheme
@@ -109,7 +113,7 @@ class DockableWindow(QDockWidget):
 
         # Fist show after floating
         self.__firstShow = True
-        # flags to use while floating
+        # Flags to use while floating
         self.__windowFlags = Qt.Window
         self.setWindowFlags(self.__windowFlags)
         self.topLevelChanged.connect(self.__on_topLevelChanged)
@@ -126,9 +130,10 @@ class DockableWindow(QDockWidget):
         """
         Set `windowFlags` to use while the widget is floating (undocked).
         """
-        self.__windowFlags = flags
-        if self.isFloating():
-            self.__fixWindowFlags()
+        if self.__windowFlags != flags:
+            self.__windowFlags = flags
+            if self.isFloating():
+                self.__fixWindowFlags()
 
     def floatingWindowFlags(self):
         """
@@ -188,8 +193,6 @@ class CanvasMainWindow(QMainWindow):
 
         self.restore()
 
-        self.resize(800, 600)
-
     def setup_ui(self):
         """Setup main canvas ui
         """
@@ -219,7 +222,7 @@ class CanvasMainWindow(QMainWindow):
         w.layout().setContentsMargins(20, 0, 10, 0)
 
         self.scheme_widget = SchemeEditWidget()
-        self.scheme_widget.setScheme(widgetsscheme.WidgetsScheme())
+        self.scheme_widget.setScheme(widgetsscheme.WidgetsScheme(parent=self))
 
         w.layout().addWidget(self.scheme_widget)
 
@@ -332,8 +335,9 @@ class CanvasMainWindow(QMainWindow):
         self.dock_widget.setExpandedWidget(self.canvas_tool_dock)
         self.dock_widget.setCollapsedWidget(dock2)
         self.dock_widget.setExpanded(True)
+        self.dock_widget.expandedChanged.connect(self._on_tool_dock_expanded)
 
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_widget)
         self.dock_widget.dockLocationChanged.connect(
             self._on_dock_location_changed
         )
@@ -351,19 +355,14 @@ class CanvasMainWindow(QMainWindow):
                                         objectName="help-dock")
         self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
         self.help_view = QWebView()
+        manager = self.help_view.page().networkAccessManager()
+        cache = QNetworkDiskCache()
+        cache.setCacheDirectory(
+            os.path.join(config.cache_dir(), "help", "help-view-cache")
+        )
+        manager.setCache(cache)
         self.help_dock.setWidget(self.help_view)
         self.help_dock.hide()
-
-        self.help_dock = QDockWidget(self.tr("Help"),
-                                     objectName="help-dock")
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.help_dock)
-        self.help_dock.setFloating(True)
-        self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
-
-        self.help_dock.hide()
-
-        self.help_view = QWebView()
-        self.help_dock.setWidget(self.help_view)
 
         self.setMinimumSize(600, 500)
 
@@ -485,7 +484,7 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.show_properties_action = \
-            QAction(self.tr("Show Properties"), self,
+            QAction(self.tr("Scheme Info"), self,
                     objectName="show-properties-action",
                     toolTip=self.tr("Show scheme properties."),
                     triggered=self.show_scheme_properties,
@@ -530,6 +529,15 @@ class CanvasMainWindow(QMainWindow):
                     triggered=self.set_signal_freeze,
                     icon=canvas_icons("Pause.svg")
                     )
+
+        self.toggle_tool_dock_expand = \
+            QAction(self.tr("Expand Tool Dock"), self,
+                    objectName="toggle-tool-dock-expand",
+                    checkable=True,
+                    checked=True,
+                    shortcut=QKeySequence(Qt.ControlModifier |
+                                          (Qt.ShiftModifier | Qt.Key_D)),
+                    triggered=self.set_tool_dock_expanded)
 
         # Gets assigned in setup_ui (the action is defined in CanvasToolDock)
         # TODO: This is bad (should be moved here).
@@ -598,12 +606,8 @@ class CanvasMainWindow(QMainWindow):
         self.toolbox_menu_group = \
             QActionGroup(self, objectName="toolbox-menu-group")
 
-        a1 = self.toolbox_menu.addAction(self.tr("Tool Box"))
-        a2 = self.toolbox_menu.addAction(self.tr("Tool List"))
-        self.toolbox_menu_group.addAction(a1)
-        self.toolbox_menu_group.addAction(a2)
+        self.view_menu.addAction(self.toggle_tool_dock_expand)
 
-        self.view_menu.addMenu(self.toolbox_menu)
         self.view_menu.addSeparator()
         self.view_menu.addAction(self.toogle_margins_action)
         menu_bar.addMenu(self.view_menu)
@@ -658,28 +662,27 @@ class CanvasMainWindow(QMainWindow):
                                          QDockWidget.DockWidgetFloatable)
 
         self.widgets_tool_box.setExclusive(
-            settings.value("toolbox-dock-exclusive", False, type=bool)
+            settings.value("toolbox-dock-exclusive", True, type=bool)
         )
 
         self.toogle_margins_action.setChecked(
-            settings.value("scheme-margins-enabled", True, type=bool)
+            settings.value("scheme-margins-enabled", False, type=bool)
         )
 
         default_dir = QDesktopServices.storageLocation(
             QDesktopServices.DocumentsLocation
         )
 
-# TODO reenable
-#        self.last_scheme_dir = settings.value("last-scheme-dir", default_dir,
-#                                              type=str)
-#
-#        if not os.path.exists(self.last_scheme_dir):
-#            # if directory no longer exists reset the saved location.
-#            self.last_scheme_dir = default_dir
-#
-#        self.canvas_tool_dock.setQuickHelpVisible(
-#            settings.value("quick-help/visible", True, type=bool)
-#        )
+        self.last_scheme_dir = settings.value("last-scheme-dir", default_dir,
+                                              type=str)
+
+        if not os.path.exists(self.last_scheme_dir):
+            # if directory no longer exists reset the saved location.
+            self.last_scheme_dir = default_dir
+
+        self.canvas_tool_dock.setQuickHelpVisible(
+            settings.value("quick-help/visible", True, type=bool)
+        )
 
         self.__update_from_settings()
 
@@ -745,21 +748,26 @@ class CanvasMainWindow(QMainWindow):
         """The quick category menu action triggered.
         """
         category = action.text()
-        for i in range(self.widgets_tool_box.count()):
-            cat_act = self.widgets_tool_box.tabAction(i)
-            if cat_act.text() == category:
-                if not cat_act.isChecked():
-                    # Trigger the action to expand the tool grid contained
-                    # within.
-                    cat_act.trigger()
+        if self.use_popover:
+            # Show a popup menu with the widgets in the category
+            popup = CategoryPopupMenu(self.quick_category)
+            reg = self.widget_registry.model()
+            i = index(self.widget_registry.categories(), category,
+                      predicate=lambda name, cat: cat.name == name)
+            if i != -1:
+                popup.setCategoryItem(reg.item(i))
+                button = self.quick_category.buttonForAction(action)
+                pos = popup_position_from_source(popup, button)
+                action = popup.exec_(pos)
+                if action is not None:
+                    self.on_tool_box_widget_activated(action)
 
-            else:
-                if cat_act.isChecked():
-                    # Trigger the action to hide the tool grid contained
-                    # within.
-                    cat_act.trigger()
+        else:
+            for i in range(self.widgets_tool_box.count()):
+                cat_act = self.widgets_tool_box.tabAction(i)
+                cat_act.setChecked(cat_act.text() == category)
 
-        self.dock_widget.expand()
+            self.dock_widget.expand()
 
     def set_scheme_margins_enabled(self, enabled):
         """Enable/disable the margins around the scheme document.
@@ -806,11 +814,12 @@ class CanvasMainWindow(QMainWindow):
             if self.ask_save_changes() == QDialog.Rejected:
                 return QDialog.Rejected
 
-        new_scheme = widgetsscheme.WidgetsScheme()
+        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
 
         settings = QSettings()
         show = settings.value("schemeinfo/show-at-new-scheme", True,
                               type=bool)
+
         if show:
             status = self.show_scheme_properties_for(
                 new_scheme, self.tr("New Scheme")
@@ -860,42 +869,42 @@ class CanvasMainWindow(QMainWindow):
         property.
 
         """
-        filename = str(filename)
         dirname = os.path.dirname(filename)
 
         self.last_scheme_dir = dirname
 
         new_scheme = self.new_scheme_from(filename)
+        if new_scheme is not None:
+            self.set_new_scheme(new_scheme)
 
-        self.set_new_scheme(new_scheme)
+            scheme_doc_widget = self.current_document()
+            scheme_doc_widget.setPath(filename)
 
-        scheme_doc_widget = self.current_document()
-        scheme_doc_widget.setPath(filename)
-
-        self.add_recent_scheme(new_scheme.title, filename)
+            self.add_recent_scheme(new_scheme.title, filename)
 
     def new_scheme_from(self, filename):
         """Create and return a new :class:`widgetsscheme.WidgetsScheme`
-        from a saved `filename`.
+        from a saved `filename`. Return `None` if an error occurs.
 
         """
-        new_scheme = widgetsscheme.WidgetsScheme()
+        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
         errors = []
         try:
             parse_scheme(new_scheme, open(filename, "rb"),
-                         error_handler=errors.append)
+                         error_handler=errors.append,
+                         allow_pickle_data=True)
         except Exception:
             message_critical(
-                 self.tr("Could not load Orange Scheme file"),
+                 self.tr("Could not load an Orange Scheme file"),
                  title=self.tr("Error"),
                  informative_text=self.tr("An unexpected error occurred "
-                                          "while loading %r.") % filename,
+                                          "while loading '%s'.") % filename,
                  exc_info=True,
                  parent=self)
             return None
         if errors:
             message_warning(
-                self.tr("Errors occured while loading the scheme."),
+                self.tr("Errors occurred while loading the scheme."),
                 title=self.tr("Problem"),
                 informative_text=self.tr(
                      "There were problems loading some "
@@ -924,18 +933,24 @@ class CanvasMainWindow(QMainWindow):
         return QDialog.Accepted
 
     def set_new_scheme(self, new_scheme):
-        """Set new_scheme as the current shown scheme.
+        """
+        Set new_scheme as the current shown scheme. The old scheme
+        will be deleted.
+
         """
         scheme_doc = self.current_document()
         old_scheme = scheme_doc.scheme()
 
         manager = new_scheme.signal_manager
         if self.freeze_action.isChecked():
-            manager.freeze().push()
+            manager.pause()
 
         scheme_doc.setScheme(new_scheme)
 
-        old_scheme.save_widget_settings()
+        # Send a close event to the Scheme, it is responsible for
+        # closing/clearing all resources (widgets).
+        QApplication.sendEvent(old_scheme, QEvent(QEvent.Close))
+
         old_scheme.deleteLater()
 
     def ask_save_changes(self):
@@ -992,7 +1007,9 @@ class CanvasMainWindow(QMainWindow):
         curr_scheme = document.scheme()
 
         if document.path() and self.check_can_save(document, document.path()):
-            curr_scheme.save_to(open(document.path(), "wb"))
+            curr_scheme.save_to(open(document.path(), "wb"),
+                                pretty=True, pickle_fallback=True)
+
             document.setModified(False)
             self.add_recent_scheme(curr_scheme.title, document.path())
             return QDialog.Accepted
@@ -1034,7 +1051,8 @@ class CanvasMainWindow(QMainWindow):
             self.last_scheme_dir = dirname
 
             try:
-                curr_scheme.save_to(open(filename, "wb"))
+                curr_scheme.save_to(open(filename, "wb"),
+                                    pretty=True, pickle_fallback=True)
             except Exception:
                 log.error("Error saving %r to %r", curr_scheme, filename,
                           exc_info=True)
@@ -1102,6 +1120,7 @@ class CanvasMainWindow(QMainWindow):
         index = dialog.currentIndex()
 
         dialog.deleteLater()
+        model.deleteLater()
 
         if status == QDialog.Accepted:
             doc = self.current_document()
@@ -1150,8 +1169,8 @@ class CanvasMainWindow(QMainWindow):
             selected = model.item(index)
 
             new_scheme = self.new_scheme_from(str(selected.path()))
-
-            self.set_new_scheme(new_scheme)
+            if new_scheme is not None:
+                self.set_new_scheme(new_scheme)
 
         return status
 
@@ -1214,8 +1233,7 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         bottom_row = [self.get_started_action, tutorials_action,
-                   self.documentation_action]
-
+                      self.documentation_action]
 
         self.new_action.triggered.connect(dialog.accept)
         top_row = [new_action, open_action, recent_action]
@@ -1249,8 +1267,8 @@ class CanvasMainWindow(QMainWindow):
         dialog.setWindowTitle(self.tr("Scheme Info"))
         dialog.setFixedSize(725, 450)
 
-        dialog.setDontShowAtNewScheme(
-            not settings.value(value_key, True, type=bool)
+        dialog.setShowAtNewScheme(
+            settings.value(value_key, True, type=bool)
         )
 
         return dialog
@@ -1277,7 +1295,7 @@ class CanvasMainWindow(QMainWindow):
             stack.endMacro()
 
             # Store the check state.
-            settings.setValue(value_key, not dlg.dontShowAtNewScheme())
+            settings.setValue(value_key, dlg.showAtNewScheme())
         return status
 
     def show_scheme_properties_for(self, scheme, window_title=None):
@@ -1298,7 +1316,7 @@ class CanvasMainWindow(QMainWindow):
         status = dialog.exec_()
         if status == QDialog.Accepted:
             # Store the check state.
-            settings.setValue(value_key, not dialog.dontShowAtNewScheme())
+            settings.setValue(value_key, dialog.showAtNewScheme())
 
         dialog.deleteLater()
 
@@ -1306,10 +1324,11 @@ class CanvasMainWindow(QMainWindow):
 
     def set_signal_freeze(self, freeze):
         scheme = self.current_document().scheme()
+        manager = scheme.signal_manager
         if freeze:
-            scheme.signal_manager.freeze().push()
+            manager.pause()
         else:
-            scheme.signal_manager.freeze().pop()
+            manager.resume()
 
     def remove_selected(self):
         """Remove current scheme selection.
@@ -1319,7 +1338,14 @@ class CanvasMainWindow(QMainWindow):
     def quit(self):
         """Quit the application.
         """
-        self.close()
+        if QApplication.activePopupWidget():
+            # On OSX the actions in the global menu bar are triggered
+            # even if an popup widget is running it's own event loop
+            # (in exec_)
+            log.debug("Ignoring a quit shortcut during an active "
+                      "popup dialog.")
+        else:
+            self.close()
 
     def select_all(self):
         self.current_document().selectAll()
@@ -1440,6 +1466,19 @@ class CanvasMainWindow(QMainWindow):
         """
         self.__update_scheme_margins()
 
+    def set_tool_dock_expanded(self, expanded):
+        """
+        Set the dock widget expanded state.
+        """
+        self.dock_widget.setExpanded(expanded)
+
+    def _on_tool_dock_expanded(self, expanded):
+        """
+        'dock_widget' widget was expanded/collapsed.
+        """
+        if expanded != self.toggle_tool_dock_expand.isChecked():
+            self.toggle_tool_dock_expand.setChecked(expanded)
+
     def createPopupMenu(self):
         # Override the default context menu popup (we don't want the user to
         # be able to hide the tool dock widget).
@@ -1455,12 +1494,14 @@ class CanvasMainWindow(QMainWindow):
                 event.ignore()
                 return
 
-        scheme = document.scheme()
-        scheme.save_widget_settings()
+        old_scheme = document.scheme()
 
         # Set an empty scheme to clear the document
         document.setScheme(widgetsscheme.WidgetsScheme())
-        document.deleteLater()
+
+        QApplication.sendEvent(old_scheme, QEvent(QEvent.Close))
+
+        old_scheme.deleteLater()
 
         config.save_config()
 
@@ -1500,14 +1541,12 @@ class CanvasMainWindow(QMainWindow):
             if state:
                 self.restoreState(state, version=self.SETTINGS_VERSION)
 
-        # Restore geometry and dock/toolbar state
-        state = settings.value("state")
-        if state is not None:
-            self.restoreState(state,
-                              version=self.SETTINGS_VERSION)
-        geom_data = settings.value("geometry")
-        if geom_data is not None:
-            self.restoreGeometry(geom_data)
+            geom_data = settings.value("geometry", QByteArray(),
+                                       type=QByteArray)
+            if geom_data:
+                self.restoreGeometry(geom_data)
+
+            self.__first_show = False
 
         return QMainWindow.showEvent(self, event)
 
@@ -1541,10 +1580,9 @@ class CanvasMainWindow(QMainWindow):
                 except KeyError:
                     url = None
                     log.info("No help topic found for %r", url)
-                    return False
 
             if url:
-                 self.show_help(url)
+                self.show_help(url)
             else:
                 message_information(
                     self.tr("Sorry there is no documentation available for "
@@ -1561,7 +1599,15 @@ class CanvasMainWindow(QMainWindow):
         """
         log.info("Setting help to url: %r", url)
         if self.open_in_external_browser:
-            QDesktopServices.openUrl(QUrl(url))
+            url = QUrl(url)
+            if not QDesktopServices.openUrl(url):
+                # Try fixing some common problems.
+                url = QUrl.fromUserInput(url.toString())
+                # 'fromUserInput' includes possible fragment into the path
+                # (which prevents it to open local files) so we reparse it
+                # again.
+                url = QUrl(url.toString())
+                QDesktopServices.openUrl(url)
         else:
             self.help_view.load(QUrl(url))
             self.help_dock.show()
@@ -1591,6 +1637,13 @@ class CanvasMainWindow(QMainWindow):
 
             QMainWindow.changeEvent(self, event)
 
+    def sizeHint(self):
+        """
+        Reimplemented from QMainWindow.sizeHint
+        """
+        hint = QMainWindow.sizeHint(self)
+        return hint.expandedTo(QSize(1024, 720))
+
     def tr(self, sourceText, disambiguation=None, n=-1):
         """Translate the string.
         """
@@ -1600,7 +1653,8 @@ class CanvasMainWindow(QMainWindow):
         settings = QSettings()
         settings.beginGroup("mainwindow")
         toolbox_floatable = settings.value("toolbox-dock-floatable",
-                                           defaultValue=False, type=bool)
+                                           defaultValue=False,
+                                           type=bool)
 
         features = self.dock_widget.features()
         features = updated_flags(features, QDockWidget.DockWidgetFloatable,
@@ -1608,7 +1662,8 @@ class CanvasMainWindow(QMainWindow):
         self.dock_widget.setFeatures(features)
 
         toolbox_exclusive = settings.value("toolbox-dock-exclusive",
-                                           defaultValue=False, type=bool)
+                                           defaultValue=True,
+                                           type=bool)
         self.widgets_tool_box.setExclusive(toolbox_exclusive)
 
         settings.endGroup()
@@ -1616,22 +1671,26 @@ class CanvasMainWindow(QMainWindow):
 
         triggers = 0
         dbl_click = settings.value("trigger-on-double-click",
-                                   defaultValue=True, type=bool)
+                                   defaultValue=True,
+                                   type=bool)
         if dbl_click:
             triggers |= SchemeEditWidget.DoubleClicked
 
-        left_click = settings.value("trigger-on-left-click",
-                                    defaultValue=False, type=bool)
-        if left_click:
-            triggers |= SchemeEditWidget.Clicked
+        right_click = settings.value("trigger-on-right-click",
+                                    defaultValue=True,
+                                    type=bool)
+        if right_click:
+            triggers |= SchemeEditWidget.RightClicked
 
         space_press = settings.value("trigger-on-space-key",
-                                     defaultValue=True, type=bool)
+                                     defaultValue=True,
+                                     type=bool)
         if space_press:
             triggers |= SchemeEditWidget.SpaceKey
 
         any_press = settings.value("trigger-on-any-key",
-                                   defaultValue=False, type=bool)
+                                   defaultValue=False,
+                                   type=bool)
         if any_press:
             triggers |= SchemeEditWidget.AnyKey
 
@@ -1644,6 +1703,10 @@ class CanvasMainWindow(QMainWindow):
                                             type=bool)
         self.scheme_widget.setChannelNamesVisible(show_channel_names)
 
+        node_animations = settings.value("enable-node-animations",
+                                         defaultValue=False,
+                                         type=bool)
+        self.scheme_widget.setNodeAnimationEnabled(node_animations)
         settings.endGroup()
 
         settings.beginGroup("output")
@@ -1661,31 +1724,31 @@ class CanvasMainWindow(QMainWindow):
         else:
             self.output_dock.setAllowedAreas(Qt.NoDockWidgetArea)
 
-        self.open_in_external_browser = \
-            settings.value("open-in-external-browser", defaultValue=False,
-                           type=bool)
-
         settings.endGroup()
 
         settings.beginGroup("help")
         stay_on_top = settings.value("stay-on-top", defaultValue=True,
                                      type=bool)
+        if stay_on_top:
+            self.help_dock.setFloatingWindowFlags(Qt.Tool)
+        else:
+            self.help_dock.setFloatingWindowFlags(Qt.Window)
 
-# TODO reenable
-#        if stay_on_top:
-#            self.help_dock.setFloatingWindowFlags(Qt.Tool)
-#        else:
-#            self.help_dock.setFloatingWindowFlags(Qt.Window)
-#
-#        dockable = settings.value("dockable", defaultValue=False,
-#                                  type=bool)
-#        if dockable:
-#            self.help_dock.setAllowedAreas(Qt.LeftDockWidgetArea | \
-#                                           Qt.RightDockWidgetArea)
-#        else:
-#            self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea,
-#                                           defaultValue=True, type=bool)
-#        self.scheme_widget.setChannelNamesVisible(show_channel_names)
+        dockable = settings.value("dockable", defaultValue=False,
+                                  type=bool)
+        if dockable:
+            self.help_dock.setAllowedAreas(Qt.LeftDockWidgetArea | \
+                                           Qt.RightDockWidgetArea)
+        else:
+            self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
+
+        self.open_in_external_browser = \
+            settings.value("open-in-external-browser", defaultValue=False,
+                           type=bool)
+
+        self.use_popover = \
+            settings.value("toolbox-dock-use-popover-menu", defaultValue=True,
+                           type=bool)
 
 
 def updated_flags(flags, mask, state):

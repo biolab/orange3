@@ -55,13 +55,13 @@ spec = \
      ("schemeinfo/show-at-new-scheme", bool, True,
       "Show Scheme Properties when creating a new Scheme"),
 
-     ("mainwindow/scheme-margins-enabled", bool, True,
+     ("mainwindow/scheme-margins-enabled", bool, False,
       "Show margins around the scheme view"),
 
      ("mainwindow/show-scheme-shadow", bool, True,
       "Show shadow around the scheme view"),
 
-     ("mainwindow/toolbox-dock-exclusive", bool, False,
+     ("mainwindow/toolbox-dock-exclusive", bool, True,
       "Should the toolbox show only one expanded category at the time"),
 
      ("mainwindow/toolbox-dock-floatable", bool, False,
@@ -69,6 +69,10 @@ spec = \
 
      ("mainwindow/toolbox-dock-movable", bool, True,
       "Is the canvas toolbox movable (between left and right edge)"),
+
+     ("mainwindow/toolbox-dock-use-popover-menu", bool, True,
+      "Use a popover menu to select a widget when clicking on a category "
+      "button"),
 
      ("mainwindow/number-of-recent-schemes", int, 7,
       "Number of recent schemes to keep in history"),
@@ -79,14 +83,17 @@ spec = \
      ("schemeedit/show-link-state", bool, True,
       "Show link state hints."),
 
+     ("schemeedit/enable-node-animations", bool, True,
+      "Enable node animations."),
+
      ("schemeedit/freeze-on-load", bool, False,
       "Freeze signal propagation when loading a scheme."),
 
      ("quickmenu/trigger-on-double-click", bool, True,
       "Show quick menu on double click."),
 
-     ("quickmenu/trigger-on-left-click", bool, False,
-      "Show quick menu on left click."),
+     ("quickmenu/trigger-on-right-click", bool, True,
+      "Show quick menu on right click."),
 
      ("quickmenu/trigger-on-space-key", bool, True,
       "Show quick menu on space key press."),
@@ -149,11 +156,11 @@ def cache_dir():
 
     """
     init()
-    datadir = QDesktopServices.storageLocation(QDesktopServices.DataLocation)
-    datadir = str(datadir)
-    if not os.path.exists(datadir):
-        os.makedirs(datadir)
-    return datadir
+    cachedir = QDesktopServices.storageLocation(QDesktopServices.CacheLocation)
+    cachedir = str(cachedir)
+    if not os.path.exists(cachedir):
+        os.makedirs(cachedir)
+    return cachedir
 
 
 def open_config():

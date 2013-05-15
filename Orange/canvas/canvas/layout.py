@@ -8,8 +8,8 @@ import numpy
 
 import sip
 
-from PyQt4.QtGui import QGraphicsObject
-from PyQt4.QtCore import QRectF, QLineF, QTimer
+from PyQt4.QtGui import QGraphicsObject, QApplication
+from PyQt4.QtCore import QRectF, QLineF, QEvent
 
 from .items import NodeItem, LinkItem, SourceAnchorItem, SinkAnchorItem
 from .items.utils import typed_signal_mapper, invert_permutation_indices, \
@@ -135,11 +135,18 @@ class AnchorLayout(QGraphicsObject):
     def scheduleDelayedActivate(self):
         if self.isEnabled() and not self.__layoutPending:
             self.__layoutPending = True
-            QTimer.singleShot(0, self.__delayedActivate)
+            QApplication.postEvent(self, QEvent(QEvent.LayoutRequest))
 
     def __delayedActivate(self):
         if self.__layoutPending:
             self.activate()
+
+    def event(self, event):
+        if event.type() == QEvent.LayoutRequest:
+            self.activate()
+            return True
+
+        return QGraphicsObject.event(self, event)
 
 
 def angle(point1, point2):

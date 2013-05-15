@@ -1,5 +1,5 @@
 """
-A Frameless window widget
+A frameless window widget
 
 """
 
@@ -11,7 +11,8 @@ from .utils import is_transparency_supported, StyledWidget_paintEvent
 
 
 class FramelessWindow(QWidget):
-    """A Basic frameless window widget with rounded corners (if supported by
+    """
+    A basic frameless window widget with rounded corners (if supported by
     the windowing system).
 
     """
@@ -25,7 +26,8 @@ class FramelessWindow(QWidget):
                           self.__isTransparencySupported)
 
     def setRadius(self, radius):
-        """Set the window rounded border radius.
+        """
+        Set the window rounded border radius.
         """
         if self.__radius != radius:
             self.__radius = radius
@@ -34,12 +36,14 @@ class FramelessWindow(QWidget):
             self.update()
 
     def radius(self):
-        """Return the border radius.
+        """
+        Return the border radius.
         """
         return self.__radius
 
     radius_ = Property(int, fget=radius, fset=setRadius,
-                       designable=True)
+                       designable=True,
+                       doc="Window border radius")
 
     def resizeEvent(self, event):
         QWidget.resizeEvent(self, event)

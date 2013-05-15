@@ -20,7 +20,7 @@ from .base import WidgetRegistry
 
 from ..resources import icon_loader
 
-from . import cache, NAMED_COLORS
+from . import cache, NAMED_COLORS, DEFAULT_COLOR
 
 
 class QtWidgetDiscovery(QObject, WidgetDiscovery):
@@ -218,7 +218,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         if desc.background:
             background = desc.background
         else:
-            background = "light-yellow"
+            background = DEFAULT_COLOR
 
         background = NAMED_COLORS.get(background, background)
 
@@ -248,14 +248,17 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         item.setIcon(icon)
 
         # This should be inherited from the category.
+        background = None
         if desc.background:
-            brush = QBrush(QColor(desc.background))
+            background = desc.background
         elif category.background:
-            brush = QBrush(QColor(category.background))
+            background = category.background
         else:
-            brush = None
+            background = DEFAULT_COLOR
 
-        if brush is not None:
+        if background is not None:
+            background = NAMED_COLORS.get(background, background)
+            brush = QBrush(QColor(background))
             item.setData(brush, self.BACKGROUND_ROLE)
 
         tooltip = tooltip_helper(desc)

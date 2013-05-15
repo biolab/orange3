@@ -2,7 +2,7 @@
 Helper utilities
 
 """
-import os
+
 import sys
 import traceback
 
@@ -12,6 +12,8 @@ from PyQt4.QtGui import (
     QWidget, QMessageBox, QGradient, QLinearGradient, QRadialGradient, QBrush,
     QPainter, QStyleOption, QStyle
 )
+
+from PyQt4.QtCore import QPointF
 
 import sip
 
@@ -174,6 +176,47 @@ def brush_darker(brush, factor):
         brush = QBrush(brush)
         brush.setColor(brush.color().darker(factor))
         return brush
+
+
+def create_gradient(base_color, stop=QPointF(0, 0),
+                    finalStop=QPointF(0, 1)):
+    """
+    Create a default linear gradient using `base_color` .
+
+    """
+    grad = QLinearGradient(stop, finalStop)
+    grad.setStops([(0.0, base_color),
+                   (0.5, base_color),
+                   (0.8, base_color.darker(105)),
+                   (1.0, base_color.darker(110)),
+                   ])
+    grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
+    return grad
+
+
+def create_css_gradient(base_color, stop=QPointF(0, 0),
+                        finalStop=QPointF(0, 1)):
+    """
+    Create a Qt css linear gradient fragment based on the `base_color`.
+    """
+    gradient = create_gradient(base_color, stop, finalStop)
+    return css_gradient(gradient)
+
+
+def css_gradient(gradient):
+    """
+    Given an instance of a `QLinearGradient` return an equivalent qt css
+    gradient fragment.
+
+    """
+    stop, finalStop = gradient.start(), gradient.finalStop()
+    x1, y1, x2, y2 = stop.x(), stop.y(), finalStop.x(), finalStop.y()
+    stops = gradient.stops()
+    stops = "\n".join("    stop: {0:f} {1}".format(stop, color.name())
+                      for stop, color in stops)
+    return ("qlineargradient(\n"
+            "    x1: {x1}, y1: {y1}, x2: {x1}, y2: {y2},\n"
+            "{stops})").format(x1=x1, y1=y1, x2=x2, y2=y2, stops=stops)
 
 
 def message_critical(text, title=None, informative_text=None, details=None,

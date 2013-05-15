@@ -321,13 +321,14 @@ class PreviewBrowser(QWidget):
             description = escape(description)
             description = description.replace("\n", "<br/>")
 
-            name = index.data(Qt.DisplayRole)
+            name = str(index.data(Qt.DisplayRole))
             if not name:
                 name = "Untitled"
 
-            path = index.data(Qt.StatusTipRole)
+            name = escape(name)
+            path = str(index.data(Qt.StatusTipRole))
 
-            svg = index.data(previewmodel.ThumbnailSVGRole)
+            svg = str(index.data(previewmodel.ThumbnailSVGRole))
 
         desc_text = self.__template.format(description=description, name=name)
 

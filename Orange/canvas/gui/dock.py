@@ -3,7 +3,7 @@
 Collapsible Dock Widget
 =======================
 
-A dock widget with a header that can be a collapsed/expanded.
+A dock widget that can be a collapsed/expanded.
 
 """
 
@@ -13,9 +13,9 @@ from PyQt4.QtGui import (
     QDockWidget, QAbstractButton, QSizePolicy, QStyle, QIcon, QTransform
 )
 
-from PyQt4.QtCore import Qt, QTimer, QEvent
+from PyQt4.QtCore import Qt, QEvent
 
-from PyQt4.QtCore import pyqtProperty as Property
+from PyQt4.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
 from .stackedwidget import AnimatedStackedWidget
 from .utils import QWIDGETSIZE_MAX
@@ -24,10 +24,21 @@ log = logging.getLogger(__name__)
 
 
 class CollapsibleDockWidget(QDockWidget):
-    """A Dock widget for which the close action collapses the widget
-    to a smaller size.
+    """
+    This :class:`QDockWidget` subclass overrides the `close` header
+    button to instead collapse to a smaller size. The contents contents
+    to show when in each state can be set using the ``setExpandedWidget``
+    and ``setCollapsedWidget``.
+
+    .. note:: Do  not use the base class ``QDockWidget.setWidget`` method
+              to set the docks contents. Use set[Expanded|Collapsed]Widget
+              instead.
 
     """
+
+    #: Emitted when the dock widget's expanded state changes.
+    expandedChanged = Signal(bool)
+
     def __init__(self, *args, **kwargs):
         QDockWidget.__init__(self, *args, **kwargs)
 
@@ -78,7 +89,8 @@ class CollapsibleDockWidget(QDockWidget):
         self.__closeButton.setIcon(self.__iconLeft)
 
     def setExpanded(self, state):
-        """Set the expanded state.
+        """
+        Set the widgets `expanded` state.
         """
         if self.__expanded != state:
             self.__expanded = state
@@ -90,8 +102,13 @@ class CollapsibleDockWidget(QDockWidget):
                 self.__stack.setCurrentWidget(self.__collapsedWidget)
             self.__fixIcon()
 
+            self.expandedChanged.emit(state)
+
     def expanded(self):
-        """Is the dock widget in expanded state
+        """
+        Is the dock widget in expanded state. If `True` the
+        ``expandedWidget`` will be shown, and ``collapsedWidget`` otherwise.
+
         """
         return self.__expanded
 
@@ -99,11 +116,13 @@ class CollapsibleDockWidget(QDockWidget):
 
     def setWidget(self, w):
         raise NotImplementedError(
-                "Please use the setExpandedWidget/setCollapsedWidget method."
+                "Please use the 'setExpandedWidget'/'setCollapsedWidget' "
+                "methods to set the contents of the dock widget."
               )
 
     def setExpandedWidget(self, widget):
-        """Set the widget with contents to show while expanded.
+        """
+        Set the widget with contents to show while expanded.
         """
         if widget is self.__expandedWidget:
             return
@@ -118,8 +137,17 @@ class CollapsibleDockWidget(QDockWidget):
             self.__stack.setCurrentWidget(widget)
             self.updateGeometry()
 
+    def expandedWidget(self):
+        """
+        Return the widget previously set with ``setExpandedWidget``,
+        or ``None`` if no widget has been set.
+
+        """
+        return self.__expandedWidget
+
     def setCollapsedWidget(self, widget):
-        """Set the widget with contents to show while collapsed.
+        """
+        Set the widget with contents to show while collapsed.
         """
         if widget is self.__collapsedWidget:
             return
@@ -134,16 +162,29 @@ class CollapsibleDockWidget(QDockWidget):
             self.__stack.setCurrentWidget(widget)
             self.updateGeometry()
 
+    def collapsedWidget(self):
+        """
+        Return the widget previously set with ``setCollapsedWidget``,
+        or ``None`` if no widget has been set.
+
+        """
+        return self.__collapsedWidget
+
     def setAnimationEnabled(self, animationEnabled):
-        """Enable/disable the transition animation.
+        """
+        Enable/disable the transition animation.
         """
         self.__stack.setAnimationEnabled(animationEnabled)
 
     def animationEnabled(self):
+        """
+        Is transition animation enabled.
+        """
         return self.__stack.animationEnabled()
 
     def currentWidget(self):
-        """Return the current widget.
+        """
+        Return the current shown widget depending on the `expanded` state.
         """
         if self.__expanded:
             return self.__expandedWidget
@@ -151,12 +192,14 @@ class CollapsibleDockWidget(QDockWidget):
             return self.__collapsedWidget
 
     def expand(self):
-        """Expand the dock (same as `setExpanded(True)`)
+        """
+        Expand the dock (same as ``setExpanded(True)``)
         """
         self.setExpanded(True)
 
     def collapse(self):
-        """Collapse the dock (same as `setExpanded(False)`)
+        """
+        Collapse the dock (same as ``setExpanded(False)``)
         """
         self.setExpanded(False)
 

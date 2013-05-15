@@ -1,12 +1,14 @@
 """
+=========
 Link Item
+=========
 
 """
 
 from PyQt4.QtGui import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
     QGraphicsTextItem, QGraphicsDropShadowEffect, QPen, QBrush, QColor,
-    QPainterPath, QFont, QTransform
+    QPainterPath, QTransform
 )
 
 from PyQt4.QtCore import Qt, QPointF, QEvent
@@ -15,11 +17,14 @@ from .nodeitem import SHADOW_COLOR
 
 
 class LinkCurveItem(QGraphicsPathItem):
-    """Link curve item. The main component of `LinkItem`.
+    """
+    Link curve item. The main component of a :class:`LinkItem`.
     """
     def __init__(self, parent):
         QGraphicsPathItem.__init__(self, parent)
-        assert(isinstance(parent, LinkItem))
+        if not isinstance(parent, LinkItem):
+            raise TypeError("'LinkItem' expected")
+
         self.setAcceptedMouseButtons(Qt.NoButton)
         self.__canvasLink = parent
         self.setAcceptHoverEvents(True)
@@ -38,8 +43,8 @@ class LinkCurveItem(QGraphicsPathItem):
         self.__hover = False
 
     def linkItem(self):
-        """Return the :class:`LinkItem` instance this curve belongs to.
-
+        """
+        Return the :class:`LinkItem` instance this curve belongs to.
         """
         return self.__canvasLink
 
@@ -82,8 +87,9 @@ class LinkCurveItem(QGraphicsPathItem):
 
 
 class LinkAnchorIndicator(QGraphicsEllipseItem):
-    """A visual indicator of the link anchor point at both ends
-    of the `LinkItem`.
+    """
+    A visual indicator of the link anchor point at both ends
+    of the :class:`LinkItem`.
 
     """
     def __init__(self, *args):
@@ -106,11 +112,21 @@ class LinkAnchorIndicator(QGraphicsEllipseItem):
 
 
 class LinkItem(QGraphicsObject):
-    """A Link in the canvas.
+    """
+    A Link item in the canvas that connects two :class:`.NodeItem`\s in the
+    canvas.
+
+    The link curve connects two `Anchor` items (see :func:`setSourceItem`
+    and :func:`setSinkItem`). Once the anchors are set the curve
+    automatically adjusts its end points whenever the anchors move.
+
+    An optional source/sink text item can be displayed above the curve's
+    central point (:func:`setSourceName`, :func:`setSinkName`)
+
     """
 
+    #: Z value of the item
     Z_VALUE = 0
-    """Z value of the item"""
 
     def __init__(self, *args):
         QGraphicsObject.__init__(self, *args)
@@ -143,12 +159,13 @@ class LinkItem(QGraphicsObject):
         self.hover = False
 
     def setSourceItem(self, item, anchor=None):
-        """Set the source `item` (:class:`CanvasNodeItem`). Use `anchor`
-        (:class:`AnchorPoint) as the curve start point (if `None` a new
-        output anchor will be created).
+        """
+        Set the source `item` (:class:`.NodeItem`). Use `anchor`
+        (:class:`.AnchorPoint`) as the curve start point (if ``None`` a new
+        output anchor will be created using ``item.newOutputAnchor()``).
 
-        Setting item to `None` and a valid anchor is a valid operation
-        (for instance while mouse dragging one and of the link).
+        Setting item to ``None`` and a valid anchor is a valid operation
+        (for instance while mouse dragging one end of the link).
 
         """
         if item is not None and anchor is not None:
@@ -192,12 +209,14 @@ class LinkItem(QGraphicsObject):
         self.__updateCurve()
 
     def setSinkItem(self, item, anchor=None):
-        """Set the sink `item` (:class:`CanvasNodeItem`). Use `anchor`
-        (:class:`AnchorPoint) as the curve end point (if `None` a new
-        input anchor will be created).
+        """
+        Set the sink `item` (:class:`.NodeItem`). Use `anchor`
+        (:class:`.AnchorPoint`) as the curve end point (if ``None`` a new
+        input anchor will be created using ``item.newInputAnchor()``).
 
-        Setting item to `None` and a valid anchor is a valid operation
+        Setting item to ``None`` and a valid anchor is a valid operation
         (for instance while mouse dragging one and of the link).
+
         """
         if item is not None and anchor is not None:
             if anchor not in item.inputAnchors():
@@ -241,7 +260,7 @@ class LinkItem(QGraphicsObject):
 
     def setFont(self, font):
         """
-        Set the channel names font.
+        Set the font for the channel names text item.
         """
         if font != self.font():
             self.linkTextItem.setFont(font)
@@ -249,27 +268,42 @@ class LinkItem(QGraphicsObject):
 
     def font(self):
         """
-        Return the channel names font.
+        Return the font for the channel names text.
         """
         return self.linkTextItem.font()
 
     def setChannelNamesVisible(self, visible):
+        """
+        Set the visibility of the channel name text.
+        """
         self.linkTextItem.setVisible(visible)
 
     def setSourceName(self, name):
+        """
+        Set the name of the source (used in channel name text).
+        """
         if self.__sourceName != name:
             self.__sourceName = name
             self.__updateText()
 
     def sourceName(self):
+        """
+        Return the source name.
+        """
         return self.__sourceName
 
     def setSinkName(self, name):
+        """
+        Set the name of the sink (used in channel name text).
+        """
         if self.__sinkName != name:
             self.__sinkName = name
             self.__updateText()
 
     def sinkName(self):
+        """
+        Return the sink name.
+        """
         return self.__sinkName
 
     def _sinkPosChanged(self, *arg):
@@ -291,6 +325,7 @@ class LinkItem(QGraphicsObject):
             path.cubicTo(source_pos + QPointF(60, 0),
                          sink_pos - QPointF(60, 0),
                          sink_pos)
+
             self.curveItem.setPath(path)
             self.sourceIndicator.setPos(source_pos)
             self.sinkIndicator.setPos(sink_pos)
@@ -376,23 +411,48 @@ class LinkItem(QGraphicsObject):
         return self.curveItem.shape()
 
     def setEnabled(self, enabled):
+        """
+        Reimplemented from :class:`QGraphicsObject`
+
+        Set link enabled state. When disabled the link is rendered with a
+        dashed line.
+
+        """
         QGraphicsObject.setEnabled(self, enabled)
 
     def setDynamicEnabled(self, enabled):
+        """
+        Set the link's dynamic enabled state.
+
+        If the link is `dynamic` it will be rendered in red/green color
+        respectively depending on the state of the dynamic enabled state.
+
+        """
         if self.__dynamicEnabled != enabled:
             self.__dynamicEnabled = enabled
             if self.__dynamic:
                 self.__updatePen()
 
     def isDynamicEnabled(self):
+        """
+        Is the link dynamic enabled.
+        """
         return self.__dynamicEnabled
 
     def setDynamic(self, dynamic):
+        """
+        Mark the link as dynamic (i.e. it responds to
+        :func:`setDynamicEnabled`).
+
+        """
         if self.__dynamic != dynamic:
             self.__dynamic = dynamic
             self.__updatePen()
 
     def isDynamic(self):
+        """
+        Is the link dynamic.
+        """
         return self.__dynamic
 
     def __updatePen(self):

@@ -1,5 +1,6 @@
 """
-Widget meta description classes.
+Widget meta description classes
+===============================
 
 """
 
@@ -51,7 +52,8 @@ Dynamic = 64
 
 
 class InputSignal(object):
-    """Description of an input channel.
+    """
+    Description of an input channel.
 
     Parameters
     ----------
@@ -114,7 +116,8 @@ def input_channel_from_args(args):
 
 
 class OutputSignal(object):
-    """Description of an output channel.
+    """
+    Description of an output channel.
 
     Parameters
     ----------
@@ -179,8 +182,9 @@ def output_channel_from_args(args):
                         "(got {0!r})".format(type(args)))
 
 
-class WidgetDescription:
-    """Description of a widget.
+class WidgetDescription(object):
+    """
+    Description of a widget.
 
     Parameters
     ----------
@@ -205,13 +209,13 @@ class WidgetDescription:
         A package name where the widget is implemented.
     project_name : str, optional
         The distribution name that provides the widget.
-    inputs : list of `InputSignal`, optional
+    inputs : list of :class:`InputSignal`, optional
         A list of input channels provided by the widget.
-    outputs : list of `OutputSignal`, optional
+    outputs : list of :class:`OutputSignal`, optional
         A list of output channels provided by the widget.
     help : str, optional
         URL or an Resource template of a detailed widget help page.
-    help_ref: str, optional
+    help_ref : str, optional
         A text reference id that can be used to identify the help
         page, for instance an intersphinx reference.
     author : str, optional
@@ -230,16 +234,14 @@ class WidgetDescription:
         A filename of the widget icon (in relation to the package).
     background : str, optional
         Widget's background color (in the canvas GUI).
-    replaces: list-of-str, optional
+    replaces : list-of-str, optional
         A list of `id`s this widget replaces (optional).
 
     """
     def __init__(self, name, id, category=None, version=None,
                  description=None, long_description=None,
                  qualified_name=None, package=None, project_name=None,
-                 # TODO is this supposed to be a list or a dict?
-                 # OrderedDict?
-                 inputs={}, outputs={},
+                 inputs=[], outputs=[],
                  author=None, author_email=None,
                  maintainer=None, maintainer_email=None,
                  help=None, help_ref=None, url=None, keywords=None,
@@ -284,8 +286,80 @@ class WidgetDescription:
         return self.__str__()
 
     @classmethod
+    def from_file(cls, filename, import_name=None):
+        """
+        Widget description from old style (2.5 version) widget
+        descriptions.
+
+        """
+        from Orange.orng.widgetParser import WidgetMetaData
+        from ..orngSignalManager import resolveSignal
+
+        rest, ext = os.path.splitext(filename)
+        if ext in [".pyc", ".pyo"]:
+            filename = filename[:-1]
+
+        contents = open(filename, "rb").read()
+
+        dirname, basename = os.path.split(filename)
+        default_cat = os.path.basename(dirname)
+
+        try:
+            meta = WidgetMetaData(contents, default_cat)
+        except Exception as ex:
+            if "Not an Orange widget module." in str(ex):
+                raise WidgetSpecificationError
+            else:
+                raise
+
+        widget_name, ext = os.path.splitext(basename)
+        if import_name is None:
+            import_name = widget_name
+
+        wmod = __import__(import_name, fromlist=[""])
+
+        qualified_name = "%s.%s" % (import_name, widget_name)
+
+        inputs = eval(meta.inputList)
+        outputs = eval(meta.outputList)
+
+        inputs = map(input_channel_from_args, inputs)
+
+        outputs = map(output_channel_from_args, outputs)
+
+        # Resolve signal type names into concrete type instances
+        inputs = [resolveSignal(input, globals=wmod.__dict__)
+                  for input in inputs]
+        outputs = [resolveSignal(output, globals=wmod.__dict__)
+                  for output in outputs]
+
+        # Convert all signal types back into qualified names.
+        # This is to prevent any possible import problems when cached
+        # descriptions are unpickled (the relevant code using this lists
+        # should be able to handle missing types better).
+        for s in inputs + outputs:
+            s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
+
+        desc = WidgetDescription(
+             name=meta.name,
+             id=qualified_name,
+             category=meta.category,
+             description=meta.description,
+             qualified_name=qualified_name,
+             package=wmod.__package__,
+             keywords=meta.tags,
+             inputs=inputs,
+             outputs=outputs,
+             icon=meta.icon,
+             priority=int(meta.priority)
+        )
+
+        return desc
+
+    @classmethod
     def from_module(cls, module):
-        """Get the widget description from a module.
+        """
+        Get the widget description from a module.
 
         The module is inspected for global variables (upper case versions of
         `WidgetDescription.__init__` parameters).
@@ -351,28 +425,29 @@ class WidgetDescription:
 
 
 class CategoryDescription(object):
-    """Description of a widget category.
+    """
+    Description of a widget category.
 
     Parameters
     ----------
 
     name : str
         A human readable name.
-    version : str
-        Version string (optional).
-    description : str
-        A short description of the category, suitable for a tool
-        tip (optional).
-    long_description : str
+    version : str, optional
+        Version string.
+    description : str, optional
+        A short description of the category, suitable for a tool tip.
+    long_description : str, optional
         A longer description.
-    qualified_name : str
+    qualified_name : str,
         Qualified name
     project_name : str
         A project name providing the category.
     priority : int
         Priority (order in the GUI).
     icon : str
-        An icon filename
+        An icon filename (a resource name retrievable using `pkg_resources`
+        relative to `qualified_name`).
     background : str
         An background color for widgets in this category.
 
@@ -414,7 +489,8 @@ class CategoryDescription(object):
 
     @classmethod
     def from_package(cls, package):
-        """Get the CategoryDescription from a package.
+        """
+        Get the CategoryDescription from a package.
 
         Parameters
         ----------
@@ -440,7 +516,7 @@ class CategoryDescription(object):
         keywords = getattr(package, "KEYWORDS", None)
         widgets = getattr(package, "WIDGETS", None)
         priority = getattr(package, "PRIORITY", sys.maxsize - 1)
-        icon = getattr(package, "_icon", None)
+        icon = getattr(package, "ICON", None)
         background = getattr(package, "BACKGROUND", None)
 
         if priority == sys.maxsize - 1 and name.lower() == "prototypes":

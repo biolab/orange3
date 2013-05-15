@@ -1,5 +1,10 @@
 """
-A DropShadowWidget
+=================
+Drop Shadow Frame
+=================
+
+A widget providing a drop shadow (gaussian blur effect) around another
+widget.
 
 """
 
@@ -41,8 +46,18 @@ def render_drop_shadow_frame(pixmap, shadow_rect, shadow_color,
 
 
 class DropShadowFrame(QWidget):
-    """A widget drawing a drop shadow effect around the geometry of
-    another widget (similar to QFocusFrame).
+    """
+    A widget drawing a drop shadow effect around the geometry of
+    another widget (works similar to :class:`QFocusFrame`).
+
+    Parameters
+    ----------
+    parent : :class:`QObject`
+        Parent object.
+    color : :class:`QColor`
+        The color of the drop shadow.
+    radius : float
+        Shadow radius.
 
     """
     def __init__(self, parent=None, color=None, radius=5,
@@ -63,22 +78,28 @@ class DropShadowFrame(QWidget):
         self.__updatePixmap()
 
     def setColor(self, color):
-        """Set the color of the shadow.
+        """
+        Set the color of the shadow.
         """
         if not isinstance(color, QColor):
             color = QColor(color)
 
         if self.__color != color:
-            self.__color = color
+            self.__color = QColor(color)
             self.__updatePixmap()
 
     def color(self):
-        return self.__color
+        """
+        Return the color of the drop shadow.
+        """
+        return QColor(self.__color)
 
-    color_ = Property(QColor, fget=color, fset=setColor, designable=True)
+    color_ = Property(QColor, fget=color, fset=setColor, designable=True,
+                      doc="Drop shadow color")
 
     def setRadius(self, radius):
-        """Set the drop shadow blur radius.
+        """
+        Set the drop shadow's blur radius.
         """
         if self.__radius != radius:
             self.__radius = radius
@@ -86,12 +107,17 @@ class DropShadowFrame(QWidget):
             self.__updatePixmap()
 
     def radius(self):
+        """
+        Return the shadow blur radius.
+        """
         return self.__radius
 
-    radius_ = Property(int, fget=radius, fset=setRadius, designable=True)
+    radius_ = Property(int, fget=radius, fset=setRadius, designable=True,
+                       doc="Drop shadow blur radius.")
 
     def setWidget(self, widget):
-        """Set the widget to show the shadow around.
+        """
+        Set the widget around which to show the shadow.
         """
         if self.__widget:
             self.__widget.removeEventFilter(self)
@@ -118,7 +144,8 @@ class DropShadowFrame(QWidget):
             self.setVisible(widget.isVisible())
 
     def widget(self):
-        """Return the widget taht was set by `setWidget`.
+        """
+        Return the widget that was set by `setWidget`.
         """
         return self.__widget
 
@@ -159,8 +186,10 @@ class DropShadowFrame(QWidget):
         return QWidget.eventFilter(self, obj, event)
 
     def __updateGeometry(self):
-        """Update the shadow geometry to fit the widget's changed
+        """
+        Update the shadow geometry to fit the widget's changed
         geometry.
+
         """
         widget = self.__widget
         parent = self.__widgetParent
@@ -184,7 +213,8 @@ class DropShadowFrame(QWidget):
         self.setMask(mask)
 
     def __updatePixmap(self):
-        """Update the cached shadow pixmap.
+        """
+        Update the cached shadow pixmap.
         """
         rect_size = QSize(50, 50)
         left = top = right = bottom = self.radius_
@@ -210,7 +240,8 @@ class DropShadowFrame(QWidget):
         self.update()
 
     def __shadowPixmapFragments(self, pixmap_rect, shadow_rect):
-        """Return a list of 8 QRectF fragments for drawing a shadow.
+        """
+        Return a list of 8 QRectF fragments for drawing a shadow.
         """
         s_left, s_top, s_right, s_bottom = \
             shadow_rect.left(), shadow_rect.top(), \
