@@ -331,7 +331,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     # ##############################################
     def createAttributeIconDict(self):
-        return gui.getAttributeIcons()
+        return gui.constructAttributeIcons()
 
     def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
         self.error([1234, 1235, 1236])

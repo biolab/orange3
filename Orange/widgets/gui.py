@@ -35,7 +35,7 @@ def getEnterIcon():
 
 
 # constructs a box (frame) if not none, and returns the right master widget
-def widgetBox(widget, box=None, orientation='vertical', addSpace=False, sizePolicy = None, margin = -1, spacing = -1, flat = 0, addToLayout = 1):
+def widgetBox(widget, box=None, orientation='vertical', addSpace=False, sizePolicy = None, margin = -1, spacing = -1, flat = 0, addToLayout = 1, stretch=0):
     if box:
         b = QGroupBox(widget)
         if isinstance(box, str): # if you pass 1 for box, there will be a box, but no text
@@ -46,7 +46,7 @@ def widgetBox(widget, box=None, orientation='vertical', addSpace=False, sizePoli
         b = QWidget(widget)
         if margin == -1: margin = 0
     if addToLayout and widget.layout() is not None:
-        widget.layout().addWidget(b)
+        widget.layout().addWidget(b, stretch)
 
     if isinstance(orientation, QLayout):
         b.setLayout(orientation)
@@ -554,7 +554,22 @@ def createAttributePixmap(char, color = Qt.black):
 
 attributeIconDict = None
 
-def getAttributeIcons():
+def attributeIcon(attr):
+    from Orange.data import Variable
+    if attributeIconDict is None:
+        constructAttributeIcons()
+    if isinstance(attr, Variable):
+        return attributeIconDict[attr.var_type]
+    else:
+        return attributeIconDict[attr]
+
+def attributeItem(attr):
+    from Orange.data import Variable
+    if attributeIconDict is None:
+        constructAttributeIcons()
+    return attributeIconDict[attr.var_type], attr.name
+
+def constructAttributeIcons():
     from Orange.data import Variable
     VarTypes = Variable.VarTypes
     global attributeIconDict
