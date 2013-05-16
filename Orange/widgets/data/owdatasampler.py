@@ -59,6 +59,7 @@ class OWDataSampler(widget.OWWidget):
 
         self.data = None
         self.groups = None
+        self.CVSettings = [self.stratified, self.numberOfFolds]
 
         # Information Box
         infoBox = gui.widgetBox(self.controlArea, "Information:", addSpace=True)
@@ -68,15 +69,15 @@ class OWDataSampler(widget.OWWidget):
 
         # Options Box
         optionsBox = gui.widgetBox(self.controlArea, "Options:", addSpace=True)
-        stratifiedCheckBox = gui.checkBox(optionsBox, self, "stratified", "Stratified (if possible)")
-        setRndSeedCheckBox, rndNumberSpin = gui.checkWithSpin(optionsBox, self, "Random Seed:", 1, 32767, "setRandomSeed", "randomSeed")
+        stratifiedCheckBox = gui.checkBox(optionsBox, self, "stratified", "Stratified (if possible)", callback=self.settingsChanged)
+        setRndSeedCheckBox, rndNumberSpin = gui.checkWithSpin(optionsBox, self, "Random Seed:", 1, 32767, "setRandomSeed", "randomSeed", checkCallback=self.settingsChanged, spinCallback=self.settingsChanged)
 
 
         # Box that will hold Sampling Types radio buttons
         samplingTypesBox = gui.widgetBox(self.controlArea, "Sampling types:", addSpace=True)
 
         # Random Sampling
-        samplingTypesBG = gui.radioButtonsInBox(samplingTypesBox, self, "samplingType", [], callback=self.fadeSamplingTypes)
+        samplingTypesBG = gui.radioButtonsInBox(samplingTypesBox, self, "samplingType", [], callback=[self.fadeSamplingTypes, self.settingsChanged])
         randomSamplingRB = gui.appendRadioButton(samplingTypesBG, self, "samplingType", "Random Sampling:", insertInto=samplingTypesBox)
 
         # indent under Random Sampling which also acts as a sample size type radio button group
@@ -84,7 +85,7 @@ class OWDataSampler(widget.OWWidget):
 
         #replicationCheckBox = gui.checkBox(self.rndSmplIndent, self, "withReplication", "with replication")
 
-        sampleTypesBG = gui.radioButtonsInBox(self.rndSmplIndent, self, "sampleSizeType", [], callback=self.fadeSampleSizeTypes)
+        sampleTypesBG = gui.radioButtonsInBox(self.rndSmplIndent, self, "sampleSizeType", [], callback=[self.fadeSampleSizeTypes, self.settingsChanged])
         sampleSizeRB = gui.appendRadioButton(sampleTypesBG, self, "sampleSizeType", "Sample size:", insertInto=self.rndSmplIndent)
 
         # indent level 2 under sample size
@@ -107,22 +108,24 @@ class OWDataSampler(widget.OWWidget):
         # indent under cross validation
         self.crossValidIndent = gui.indentedBox(samplingTypesBox)
 
-        numberOfFoldsSpin = gui.spin(self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:", callback=self.updateSelectedFoldSpin)
+        numberOfFoldsSpin = gui.spin(self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:", callback=[self.updateSelectedFoldSpin, self.settingsChanged])
 
-        self.selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:", callback=self.updateSelectedFoldSpin)
+        self.selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:", callback=[self.updateSelectedFoldSpin, self.settingsChanged])
         # end of indentation
 
         # Sample Data Button
-        gui.button(self.controlArea, self, "Sample Data", callback=self.sendData)
+        self.sampleDataButton = gui.button(self.controlArea, self, "Sample Data", callback=self.sendData)
 
         self.fadeSamplingTypes()
         self.fadeSampleSizeTypes()
 
 
     # GUI METHODS
+    def settingsChanged(self):
+        self.sampleDataButton.setEnabled(True)
+
     def updateSelectedFoldSpin(self):
         self.selectedFoldSpin.setMaximum(self.numberOfFolds)
-        pass
 
     def fadeSamplingTypes(self):
         if self.samplingType == 0:
@@ -194,7 +197,7 @@ class OWDataSampler(widget.OWWidget):
         else:
             self.methodInfoLabel.setText('Cross validation, %d groups.' % self.numberOfFolds)
             self.outputInfoLabel.setText('Outputting group number %d.' % self.selectedFold)
-            if self.dataChanged or not self.groups:
+            if self.dataChanged or not self.groups or not (self.CVSettings == [self.stratified, self.numberOfFolds]):
                 if self.stratified:
                     kf = cross_validation.StratifiedKFold(self.data.Y.flatten(), n_folds=self.numberOfFolds)
                 else:
@@ -202,6 +205,8 @@ class OWDataSampler(widget.OWWidget):
                 self.groups = [(train_index, test_index) for train_index, test_index in kf]
             remainder_indices, sample_indices = self.groups[self.selectedFold - 1]
             self.dataChanged = False
+            self.CVSettings = [self.stratified, self.numberOfFolds]
 
         self.send("Data Sample", self.data[sample_indices])
         self.send("Remaining Data", self.data[remainder_indices])
+        self.sampleDataButton.setEnabled(False)
