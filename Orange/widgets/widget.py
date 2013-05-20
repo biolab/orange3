@@ -562,9 +562,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             prefix += parts[0]
             controlledName = parts[1]
 
-
-    def onDeleteWidget(self):
-        self.settingsHandler.update_class_defaults()
+    def saveSettings(self):
+        self.settingsHandler.update_class_defaults(self)
 
     # this function is only intended for derived classes to send appropriate
     # signals when all settings are loaded
@@ -572,6 +571,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         pass
 
     # reimplemented in other widgets
+    def onDeleteWidget(self):
+        pass
+
     def setOptions(self):
         pass
 
