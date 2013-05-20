@@ -296,11 +296,11 @@ def tooltip_helper(desc):
     tooltip = []
     tooltip.append("<b>{name}</b>".format(name=escape(desc.name)))
 
-    if desc.project_name:
+    if desc.project_name and desc.project_name != "Orange":
         tooltip[0] += " (from {0})".format(desc.project_name)
 
     if desc.description:
-        tooltip.append("<b>Description</b><br/>{0}".format(
+        tooltip.append("{0}".format(
                             escape(desc.description)))
 
     inputs_fmt = "<li>{name} ({class_name})</li>"
@@ -308,18 +308,16 @@ def tooltip_helper(desc):
     if desc.inputs:
         inputs = "".join(inputs_fmt.format(name=inp.name, class_name=inp.type)
                          for inp in desc.inputs)
+        tooltip.append("Inputs:<ul>{0}</ul>".format(inputs))
     else:
-        inputs = "<ul>None</ul>"
-
-    tooltip.append("<b>Inputs</b><ul>{0}</ul>".format(inputs))
+        tooltip.append("No inputs")
 
     if desc.outputs:
         outputs = "".join(inputs_fmt.format(name=out.name, class_name=out.type)
                           for out in desc.outputs)
+        tooltip.append("Outputs:<ul>{0}</ul>".format(outputs))
     else:
-        outputs = "<ul>None</ul>"
-
-    tooltip.append("<b>Outputs</b><ul>{0}</ul>".format(outputs))
+        tooltip.append("No outputs")
 
     return "<hr/>".join(tooltip)
 

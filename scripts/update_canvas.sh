@@ -24,5 +24,5 @@ echo "Please apply the following patches:"
 echo
 echo cd ../Orange 
 for p in ../scripts/patches/*; do
-    echo patch -p3 \< $p
+    echo patch -p2 \< $p
 done

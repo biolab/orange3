@@ -113,18 +113,13 @@ CategoryPopupMenu ToolTree QTreeView::item {
 	border-bottom: 1px solid #e9eff2;
 }
 
-CategoryPopupMenu QTreeView::item:hover {
+CategoryPopupMenu QTreeView::item:selected {
 	background: qlineargradient(
 		x1: 0, y1: 0, x2: 0, y2: 1,
 		stop: 0 #688EF6,
 		stop: 0.5 #4047f4,
 		stop: 1.0 #2D68F3
 	);
-	color: white;
-}
-
-CategoryPopupMenu QTreeView::item:selected {
-	background-color: blue;
 	color: white;
 }
 
@@ -373,22 +368,17 @@ QuickMenu QFrame#menu-frame {
     background-color: #E9EFF2;
 }
 
-QuickMenu ToolTree QTreeView::item {
+QuickMenu QTreeView::item {
 	border-bottom: 1px solid #e9eff2;
 }
 
-QuickMenu QTreeView::item:hover {
+QuickMenu QTreeView::item:selected {
 	background: qlineargradient(
 		x1: 0, y1: 0, x2: 0, y2: 1,
 		stop: 0 #688EF6,
 		stop: 0.5 #4047f4,
 		stop: 1.0 #2D68F3
 	);
-	color: white;
-}
-
-QuickMenu QTreeView::item:selected {
-	background-color: blue;
 	color: white;
 }
 

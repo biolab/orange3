@@ -1,35 +1,35 @@
-From 85404131df6f93650586df45e389fdffeedc90c7 Mon Sep 17 00:00:00 2001
+From a1acbf1f19b3719305cc0042c429b6516a47736b Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
-Date: Wed, 15 May 2013 12:50:40 +0200
+Date: Mon, 20 May 2013 16:31:32 +0200
 Subject: [PATCH 1/4] Revert redundant 2to3.
 
 ---
- scripts/canvas_merge_20dUq6/canvas/__main__.py     |  3 +--
- .../canvas/application/canvasmain.py               |  2 --
- .../canvas/application/tests/test_outputview.py    |  4 ++--
- .../canvas/application/widgettoolbox.py            | 10 ++++----
- .../canvas/canvas/items/controlpoints.py           |  2 +-
- .../canvas_merge_20dUq6/canvas/canvas/layout.py    |  8 +++----
- scripts/canvas_merge_20dUq6/canvas/canvas/scene.py | 16 ++++++-------
- .../canvas/document/interactions.py                | 12 +++++-----
- .../canvas/document/schemeedit.py                  | 27 +++++++++++-----------
- .../canvas_merge_20dUq6/canvas/gui/quickhelp.py    |  2 +-
- .../canvas/gui/tests/test_toolbox.py               |  2 +-
- scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py |  2 +-
- .../canvas/registry/description.py                 |  4 ++--
- .../canvas/registry/discovery.py                   |  2 +-
- .../canvas/scheme/annotations.py                   |  8 +++----
- .../canvas_merge_20dUq6/canvas/scheme/readwrite.py |  4 ++--
- .../canvas/scheme/signalmanager.py                 |  4 ++--
- .../canvas/scheme/tests/test_links.py              |  2 +-
- .../canvas_merge_20dUq6/canvas/utils/__init__.py   |  2 +-
- .../canvas/utils/propertybindings.py               |  4 ++--
+ Orange/canvas/__main__.py                          |  3 +--
+ Orange/canvas/application/canvasmain.py            |  2 --
+ Orange/canvas/application/tests/test_outputview.py |  4 ++--
+ Orange/canvas/application/widgettoolbox.py         | 10 ++++----
+ Orange/canvas/canvas/items/controlpoints.py        |  2 +-
+ Orange/canvas/canvas/layout.py                     |  8 +++----
+ Orange/canvas/canvas/scene.py                      | 16 ++++++-------
+ Orange/canvas/document/interactions.py             | 12 +++++-----
+ Orange/canvas/document/schemeedit.py               | 27 +++++++++++-----------
+ Orange/canvas/gui/quickhelp.py                     |  2 +-
+ Orange/canvas/gui/tests/test_toolbox.py            |  2 +-
+ Orange/canvas/gui/toolgrid.py                      |  2 +-
+ Orange/canvas/registry/description.py              |  4 ++--
+ Orange/canvas/registry/discovery.py                |  2 +-
+ Orange/canvas/scheme/annotations.py                |  8 +++----
+ Orange/canvas/scheme/readwrite.py                  |  4 ++--
+ Orange/canvas/scheme/signalmanager.py              |  4 ++--
+ Orange/canvas/scheme/tests/test_links.py           |  2 +-
+ Orange/canvas/utils/__init__.py                    |  2 +-
+ Orange/canvas/utils/propertybindings.py            |  4 ++--
  20 files changed, 57 insertions(+), 63 deletions(-)
 
-diff --git a/scripts/canvas_merge_20dUq6/canvas/__main__.py b/scripts/canvas_merge_20dUq6/canvas/__main__.py
-index 41fa4d0..03c3d8a 100644
---- a/scripts/canvas_merge_20dUq6/canvas/__main__.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/__main__.py
+diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
+index f101336..4c76493 100644
+--- a/Orange/canvas/__main__.py
++++ b/Orange/canvas/__main__.py
 @@ -10,7 +10,6 @@ import re
  import logging
  import optparse
@@ -38,7 +38,7 @@ index 41fa4d0..03c3d8a 100644
  
  import pkg_resources
  
-@@ -276,7 +275,7 @@ def main(argv=None):
+@@ -283,7 +282,7 @@ def main(argv=None):
          sys.excepthook = ExceptHook()
          sys.excepthook.handledException.connect(output_view.parent().show)
  
@@ -47,11 +47,11 @@ index 41fa4d0..03c3d8a 100644
          log.info("Entering main event loop.")
          try:
              status = app.exec_()
-diff --git a/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py b/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
-index dd1727b..e6c1694 100644
---- a/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
-@@ -886,7 +886,6 @@ class CanvasMainWindow(QMainWindow):
+diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
+index 4c3d285..1619ee2 100644
+--- a/Orange/canvas/application/canvasmain.py
++++ b/Orange/canvas/application/canvasmain.py
+@@ -902,7 +902,6 @@ class CanvasMainWindow(QMainWindow):
          property.
  
          """
@@ -59,7 +59,7 @@ index dd1727b..e6c1694 100644
          dirname = os.path.dirname(filename)
  
          self.last_scheme_dir = dirname
-@@ -1062,7 +1061,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1078,7 +1077,6 @@ class CanvasMainWindow(QMainWindow):
          )
  
          if filename:
@@ -67,10 +67,10 @@ index dd1727b..e6c1694 100644
              if not self.check_can_save(document, filename):
                  return QDialog.Rejected
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py b/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py
+diff --git a/Orange/canvas/application/tests/test_outputview.py b/Orange/canvas/application/tests/test_outputview.py
 index 85759a6..3929a3f 100644
---- a/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/application/tests/test_outputview.py
+--- a/Orange/canvas/application/tests/test_outputview.py
++++ b/Orange/canvas/application/tests/test_outputview.py
 @@ -101,7 +101,7 @@ class TestOutputView(QAppTestCase):
                                                  fizzbuz))
  
@@ -89,10 +89,10 @@ index 85759a6..3929a3f 100644
  
          self.app.exec_()
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py b/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py
+diff --git a/Orange/canvas/application/widgettoolbox.py b/Orange/canvas/application/widgettoolbox.py
 index 9427b4d..ccb59ed 100644
---- a/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/application/widgettoolbox.py
+--- a/Orange/canvas/application/widgettoolbox.py
++++ b/Orange/canvas/application/widgettoolbox.py
 @@ -179,7 +179,7 @@ class WidgetToolGrid(ToolGrid):
          """
          item = self.__model.itemForIndex(parent)
@@ -138,10 +138,10 @@ index 9427b4d..ccb59ed 100644
                      if (action.text() in expanded) != action.isChecked():
                          action.trigger()
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py b/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py
+diff --git a/Orange/canvas/canvas/items/controlpoints.py b/Orange/canvas/canvas/items/controlpoints.py
 index 1c8daad..434a3e5 100644
---- a/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/canvas/items/controlpoints.py
+--- a/Orange/canvas/canvas/items/controlpoints.py
++++ b/Orange/canvas/canvas/items/controlpoints.py
 @@ -234,7 +234,7 @@ class ControlPointRect(QGraphicsObject):
      def __installFilter(self):
          # Install filters on the control points.
@@ -151,10 +151,10 @@ index 1c8daad..434a3e5 100644
                  p.installSceneEventFilter(self)
          except Exception:
              log.error("Error in ControlPointRect.__installFilter",
-diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py b/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
+diff --git a/Orange/canvas/canvas/layout.py b/Orange/canvas/canvas/layout.py
 index 7c1e71f..63f8daf 100644
---- a/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/canvas/layout.py
+--- a/Orange/canvas/canvas/layout.py
++++ b/Orange/canvas/canvas/layout.py
 @@ -57,10 +57,10 @@ class AnchorLayout(QGraphicsObject):
              return
  
@@ -186,10 +186,10 @@ index 7c1e71f..63f8daf 100644
  
          self.scheduleDelayedActivate()
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py b/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py
+diff --git a/Orange/canvas/canvas/scene.py b/Orange/canvas/canvas/scene.py
 index 1be66c0..aa05a2b 100644
---- a/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/canvas/scene.py
+--- a/Orange/canvas/canvas/scene.py
++++ b/Orange/canvas/canvas/scene.py
 @@ -605,7 +605,7 @@ class CanvasScene(QGraphicsScene):
  
      def annotation_for_item(self, item):
@@ -239,10 +239,10 @@ index 1be66c0..aa05a2b 100644
 -    return str(buffer_str.decode("utf-8"))
 +    buffer_str = bytes(svg_buffer.buffer())
 +    return buffer_str.decode("utf-8")
-diff --git a/scripts/canvas_merge_20dUq6/canvas/document/interactions.py b/scripts/canvas_merge_20dUq6/canvas/document/interactions.py
+diff --git a/Orange/canvas/document/interactions.py b/Orange/canvas/document/interactions.py
 index 8515644..e021cbe 100644
---- a/scripts/canvas_merge_20dUq6/canvas/document/interactions.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/document/interactions.py
+--- a/Orange/canvas/document/interactions.py
++++ b/Orange/canvas/document/interactions.py
 @@ -1070,8 +1070,8 @@ class NewArrowAnnotation(UserInteraction):
                  self.annotation = annot
  
@@ -290,10 +290,10 @@ index 8515644..e021cbe 100644
              self.control.setLine(QLineF(p1, p2))
  
      def cancel(self, reason=UserInteraction.OtherReason):
-diff --git a/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py b/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
+diff --git a/Orange/canvas/document/schemeedit.py b/Orange/canvas/document/schemeedit.py
 index 42c89f1..20093e9 100644
---- a/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/document/schemeedit.py
+--- a/Orange/canvas/document/schemeedit.py
++++ b/Orange/canvas/document/schemeedit.py
 @@ -12,7 +12,6 @@ import itertools
  import unicodedata
  
@@ -384,10 +384,10 @@ index 42c89f1..20093e9 100644
                  action.create_new(globalPos)
              return
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py b/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py
+diff --git a/Orange/canvas/gui/quickhelp.py b/Orange/canvas/gui/quickhelp.py
 index 27acd86..60651e5 100644
---- a/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/gui/quickhelp.py
+--- a/Orange/canvas/gui/quickhelp.py
++++ b/Orange/canvas/gui/quickhelp.py
 @@ -80,7 +80,7 @@ class QuickHelp(QTextBrowser):
  
  
@@ -397,10 +397,10 @@ index 27acd86..60651e5 100644
  
      def __init__(self, tip, html=None, priority=Normal, timeout=None):
          QStatusTipEvent.__init__(self, tip)
-diff --git a/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py b/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py
+diff --git a/Orange/canvas/gui/tests/test_toolbox.py b/Orange/canvas/gui/tests/test_toolbox.py
 index 8001d64..ff62384 100644
---- a/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/gui/tests/test_toolbox.py
+--- a/Orange/canvas/gui/tests/test_toolbox.py
++++ b/Orange/canvas/gui/tests/test_toolbox.py
 @@ -24,7 +24,7 @@ class TestToolBox(test.QAppTestCase):
          i3 = w.addItem(p3, "t3")
          i4 = w.addItem(p4, "t4")
@@ -410,10 +410,10 @@ index 8001d64..ff62384 100644
          self.assertEqual(w.count(), 4)
  
          for i, item in enumerate([p1, p2, p3, p4]):
-diff --git a/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py b/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py
+diff --git a/Orange/canvas/gui/toolgrid.py b/Orange/canvas/gui/toolgrid.py
 index deb85d9..8af487f 100644
---- a/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/gui/toolgrid.py
+--- a/Orange/canvas/gui/toolgrid.py
++++ b/Orange/canvas/gui/toolgrid.py
 @@ -372,7 +372,7 @@ class ToolGrid(QFrame):
      def __relayout(self):
          """Relayout the buttons.
@@ -423,10 +423,10 @@ index deb85d9..8af487f 100644
              self.layout().takeAt(i)
  
          self.__gridSlots = [_ToolGridSlot(slot.button, slot.action,
-diff --git a/scripts/canvas_merge_20dUq6/canvas/registry/description.py b/scripts/canvas_merge_20dUq6/canvas/registry/description.py
+diff --git a/Orange/canvas/registry/description.py b/Orange/canvas/registry/description.py
 index c74961f..4e452a0 100644
---- a/scripts/canvas_merge_20dUq6/canvas/registry/description.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/registry/description.py
+--- a/Orange/canvas/registry/description.py
++++ b/Orange/canvas/registry/description.py
 @@ -323,9 +323,9 @@ class WidgetDescription(object):
          inputs = eval(meta.inputList)
          outputs = eval(meta.outputList)
@@ -439,10 +439,10 @@ index c74961f..4e452a0 100644
  
          # Resolve signal type names into concrete type instances
          inputs = [resolveSignal(input, globals=wmod.__dict__)
-diff --git a/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py b/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py
+diff --git a/Orange/canvas/registry/discovery.py b/Orange/canvas/registry/discovery.py
 index bb8b246..dd4a011 100644
---- a/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/registry/discovery.py
+--- a/Orange/canvas/registry/discovery.py
++++ b/Orange/canvas/registry/discovery.py
 @@ -227,7 +227,7 @@ class WidgetDiscovery(object):
          Process a callable loader function.
          """
@@ -452,10 +452,10 @@ index bb8b246..dd4a011 100644
          except Exception:
              log.error("Error calling %r", callable, exc_info=True)
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py b/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py
+diff --git a/Orange/canvas/scheme/annotations.py b/Orange/canvas/scheme/annotations.py
 index 02a0fca..2c8c2c6 100644
---- a/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/scheme/annotations.py
+--- a/Orange/canvas/scheme/annotations.py
++++ b/Orange/canvas/scheme/annotations.py
 @@ -60,13 +60,13 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
  
      end_pos = Property(tuple, fget=end_pos)
@@ -488,10 +488,10 @@ index 02a0fca..2c8c2c6 100644
          if self.__rect != rect:
              self.__rect = rect
              self.geometry_changed.emit()
-diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py b/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py
+diff --git a/Orange/canvas/scheme/readwrite.py b/Orange/canvas/scheme/readwrite.py
 index 5963698..0621627 100644
---- a/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/scheme/readwrite.py
+--- a/Orange/canvas/scheme/readwrite.py
++++ b/Orange/canvas/scheme/readwrite.py
 @@ -288,7 +288,7 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None,
          elif annot_el.tag == "arrow":
              start = annot_el.attrib.get("start", "(0, 0)")
@@ -510,10 +510,10 @@ index 5963698..0621627 100644
                       if value is not None]
              attrs = dict((key, str(value)) for key, value in attrs)
  
-diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py b/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py
+diff --git a/Orange/canvas/scheme/signalmanager.py b/Orange/canvas/scheme/signalmanager.py
 index 676b91e..18e3092 100644
---- a/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/scheme/signalmanager.py
+--- a/Orange/canvas/scheme/signalmanager.py
++++ b/Orange/canvas/scheme/signalmanager.py
 @@ -44,10 +44,10 @@ class SignalManager(QObject):
      (nodes, links) are added to the scheme.
  
@@ -527,10 +527,10 @@ index 676b91e..18e3092 100644
      """SignalManager runtime state flags."""
  
      stateChanged = Signal(int)
-diff --git a/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py b/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py
+diff --git a/Orange/canvas/scheme/tests/test_links.py b/Orange/canvas/scheme/tests/test_links.py
 index d884d62..4510198 100644
---- a/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/scheme/tests/test_links.py
+--- a/Orange/canvas/scheme/tests/test_links.py
++++ b/Orange/canvas/scheme/tests/test_links.py
 @@ -34,4 +34,4 @@ class TestSchemeLink(test.QAppTestCase):
                         file_node, "$$$[")
  
@@ -538,18 +538,18 @@ index d884d62..4510198 100644
 -            SchemeLink(bayes_node, "Learner", discretize_node, "Data")
 \ No newline at end of file
 +            SchemeLink(bayes_node, "Learner", discretize_node, "Data")
-diff --git a/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py b/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py
+diff --git a/Orange/canvas/utils/__init__.py b/Orange/canvas/utils/__init__.py
 index f3406e6..2264a74 100644
---- a/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/utils/__init__.py
+--- a/Orange/canvas/utils/__init__.py
++++ b/Orange/canvas/utils/__init__.py
 @@ -1 +1 @@
 -from .qtcompat import sip_getapi, toPyObject
 \ No newline at end of file
 +from .qtcompat import sip_getapi, toPyObject
-diff --git a/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py b/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py
+diff --git a/Orange/canvas/utils/propertybindings.py b/Orange/canvas/utils/propertybindings.py
 index 205e7a1..c970b90 100644
---- a/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/utils/propertybindings.py
+--- a/Orange/canvas/utils/propertybindings.py
++++ b/Orange/canvas/utils/propertybindings.py
 @@ -167,7 +167,7 @@ class PropertyBindingExpr(AbstractBoundProperty):
      def get(self):
          locals = dict(self.locals)

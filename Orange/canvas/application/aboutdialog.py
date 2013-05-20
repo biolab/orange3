@@ -5,12 +5,10 @@ Orange canvas about dialog
 import sys
 import pkg_resources
 
-from PyQt4.QtGui import QDialog, QDialogButtonBox, QVBoxLayout, QLabel, QPixmap
+from PyQt4.QtGui import QDialog, QDialogButtonBox, QVBoxLayout, QLabel
 from PyQt4.QtCore import Qt
 
-
-import Orange
-from Orange import canvas
+from .. import config
 
 ABOUT_TEMPLATE = """\
 <center>
@@ -35,11 +33,10 @@ class AboutDialog(QDialog):
         layout = QVBoxLayout()
         label = QLabel(self)
 
-        filename = pkg_resources.resource_filename(
-                        canvas.__name__,
-                        "icons/orange-splash-screen.png")
+        pixmap, _ = config.splash_screen()
 
-        label.setPixmap(QPixmap(filename))
+        label.setPixmap(pixmap)
+
         layout.addWidget(label, Qt.AlignCenter)
 
         try:

@@ -416,10 +416,6 @@ class UserSettingsDialog(QMainWindow):
 
         tab.setLayout(form)
 
-        # Widget Category
-        tab = QWidget(self, objectName="widget-category")
-        self.addTab(tab, self.tr("Widget Categories"))
-
     def addTab(self, widget, text, toolTip=None, icon=None):
         if self.__macUnified:
             action = QAction(text, self)

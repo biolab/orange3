@@ -10,8 +10,11 @@ import itertools
 
 import pkg_resources
 
-from PyQt4.QtGui import QDesktopServices
-from PyQt4.QtCore import QCoreApplication
+from PyQt4.QtGui import (
+    QDesktopServices, QPainter, QFont, QFontMetrics, QColor, QPixmap
+)
+
+from PyQt4.QtCore import Qt, QCoreApplication, QPoint, QRect
 
 from .utils.settings import Settings, config_slot
 
@@ -22,17 +25,22 @@ log = logging.getLogger(__name__)
 
 
 def init():
-    """Initialize the QCoreApplication.organizationDomain, applicationName,
+    """
+    Initialize the QCoreApplication.organizationDomain, applicationName,
     applicationVersion and the default settings format. Will only run once.
 
     .. note:: This should not be run before QApplication has been initialized.
               Otherwise it can break Qt's plugin search paths.
 
     """
-    # Set application name, version and org. domain
+    dist = pkg_resources.get_distribution("Orange")
+    version = dist.version
+    # Use only major.minor
+    version = ".".join(version.split(".", 2)[:2])
+
     QCoreApplication.setOrganizationDomain("biolab.si")
     QCoreApplication.setApplicationName("Orange Canvas")
-    QCoreApplication.setApplicationVersion("2.6")
+    QCoreApplication.setApplicationVersion(version)
     QSettings.setDefaultFormat(QSettings.IniFormat)
 
     # Make it a null op.
@@ -74,7 +82,7 @@ spec = \
       "Use a popover menu to select a widget when clicking on a category "
       "button"),
 
-     ("mainwindow/number-of-recent-schemes", int, 7,
+     ("mainwindow/number-of-recent-schemes", int, 15,
       "Number of recent schemes to keep in history"),
 
      ("schemeedit/show-channel-names", bool, True,
@@ -235,3 +243,32 @@ def widgets_entry_points():
              ep_iter
              ]
     return itertools.chain(*chain)
+
+
+def splash_screen():
+    """
+    """
+    pm = QPixmap(
+        pkg_resources.resource_filename(
+            __name__, "icons/orange-splash-screen.png")
+    )
+
+    version = QCoreApplication.applicationVersion()
+    size = 21 if len(version) < 5 else 16
+    font = QFont("Helvetica")
+    font.setPixelSize(size)
+    font.setBold(True)
+    font.setItalic(True)
+    font.setLetterSpacing(QFont.AbsoluteSpacing, 2)
+    metrics = QFontMetrics(font)
+    br = metrics.boundingRect(version).adjusted(-5, 0, 5, 0)
+    br.moveCenter(QPoint(436, 224))
+
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.setRenderHint(QPainter.TextAntialiasing)
+    p.setFont(font)
+    p.setPen(QColor("#231F20"))
+    p.drawText(br, Qt.AlignCenter, version)
+    p.end()
+    return pm, QRect(88, 193, 200, 20)

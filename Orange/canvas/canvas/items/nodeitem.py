@@ -1177,7 +1177,7 @@ TOOLTIP_TEMPLATE = """\
 
 def NodeItem_toolTipHelper(node, links_in=[], links_out=[]):
     """
-    A helper function for constructing a standard tooltop for the node
+    A helper function for constructing a standard tooltip for the node
     in on the canvas.
 
     Parameters:
@@ -1197,15 +1197,18 @@ def NodeItem_toolTipHelper(node, links_in=[], links_out=[]):
     title = title_fmt.format(title=escape(node.title()))
     inputs_list_fmt = "Inputs:<ul>{inputs}</ul><hr/>"
     outputs_list_fmt = "Outputs:<ul>{outputs}</ul>"
-    inputs = outputs = ["None"]
     if desc.inputs:
         inputs = [channel_fmt.format(inp.name) for inp in desc.inputs]
+        inputs = inputs_list_fmt.format(inputs="".join(inputs))
+    else:
+        inputs = "No inputs<hr/>" 
 
     if desc.outputs:
         outputs = [channel_fmt.format(out.name) for out in desc.outputs]
+        outputs = outputs_list_fmt.format(outputs="".join(outputs))
+    else:
+        outputs = "No outputs" 
 
-    inputs = inputs_list_fmt.format(inputs="".join(inputs))
-    outputs = outputs_list_fmt.format(outputs="".join(outputs))
     tooltip = title + inputs + outputs
     style = "ul { margin-top: 1px; margin-bottom: 1px; }"
     return TOOLTIP_TEMPLATE.format(style=style, tooltip=tooltip)

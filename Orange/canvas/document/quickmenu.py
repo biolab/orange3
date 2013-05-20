@@ -20,7 +20,8 @@ from PyQt4.QtGui import (
     QButtonGroup, QStackedWidget, QHBoxLayout, QVBoxLayout, QSizePolicy,
     QStandardItemModel, QSortFilterProxyModel, QStyleOptionToolButton,
     QStylePainter, QStyle, QApplication, QStyledItemDelegate,
-    QStyleOptionViewItemV4, QSizeGrip, QCursor, QPolygon, QRegion, QBrush
+    QStyleOptionViewItemV4, QSizeGrip, QPolygon, QRegion, QItemSelectionModel,
+    QBrush
 )
 
 from PyQt4.QtCore import pyqtSignal as Signal
@@ -78,6 +79,8 @@ class MenuPage(ToolTree):
         self.__icon = icon
 
         self.view().setItemDelegate(_MenuItemDelegate(self.view()))
+        self.view().entered.connect(self.__onEntered)
+        self.view().viewport().setMouseTracking(True)
         # Make sure the initial model is wrapped in a ItemDisableFilter.
         self.setModel(self.model())
 
@@ -164,6 +167,22 @@ class MenuPage(ToolTree):
         else:
             height = 0
         return QSize(width, height)
+
+    def __onEntered(self, index):
+        if not index.isValid():
+            return
+
+        if self.view().state() != QTreeView.NoState:
+            # The item view can emit an 'entered' signal while the model/view
+            # is being changed (rows removed). When this happens, setting the
+            # current item can segfault (in QTreeView::scrollTo).
+            return
+
+        if index.flags() & Qt.ItemIsEnabled:
+            self.view().selectionModel().setCurrentIndex(
+                index,
+                QItemSelectionModel.ClearAndSelect
+            )
 
 
 class ItemDisableFilter(QSortFilterProxyModel):
@@ -785,6 +804,7 @@ TabButton {
     background: %s;
     border: none;
     border-bottom: 1px solid palette(mid);
+    border-right: 1px solid palette(mid);
 }
 
 TabButton:checked {
@@ -792,6 +812,7 @@ TabButton:checked {
     border: none;
     border-top: 1px solid #609ED7;
     border-bottom: 1px solid #609ED7;
+    border-right: 1px solid #609ED7;
 }
 """
 

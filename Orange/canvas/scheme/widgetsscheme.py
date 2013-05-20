@@ -83,8 +83,7 @@ class WidgetsScheme(Scheme):
         del self.node_for_widget[widget]
 
         # Save settings to user global settings.
-        if not widget._settingsFromSchema:
-            widget.saveSettings()
+        widget.saveSettings()
 
         # Notify the widget it will be deleted.
         widget.onDeleteWidget()

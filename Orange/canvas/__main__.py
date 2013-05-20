@@ -14,14 +14,14 @@ import pickle
 import pkg_resources
 
 from PyQt4.QtGui import QFont, QColor
-from PyQt4.QtCore import Qt, QRect, QDir
+from PyQt4.QtCore import Qt, QDir
 
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.application.outputview import TextStream, ExceptHook
 
-from Orange.canvas.gui.splashscreen import SplashScreen, QPixmap
+from Orange.canvas.gui.splashscreen import SplashScreen
 from Orange.canvas.config import cache_dir
 from Orange.canvas import config
 from Orange.canvas.utils.redirect import redirect_stdout, redirect_stderr
@@ -120,6 +120,11 @@ def main(argv=None):
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
 
+    # intercept any QFileOpenEvent requests until the main window is
+    # fully initialized
+    open_requests = []
+    app.fileOpenRequest.connect(open_requests.append)
+
     # Note: config.init must be called after the QApplication constructor
     config.init()
     settings = QSettings()
@@ -191,11 +196,7 @@ def main(argv=None):
         not options.no_splash
 
     if want_splash:
-        pm = QPixmap(pkg_resources.resource_filename(
-                        __name__, "icons/orange-splash-screen.png")
-                     )
-        # Text rectangle in which to fit the message.
-        rect = QRect(88, 193, 200, 20)
+        pm, rect = config.splash_screen()
         splash_screen = SplashScreen(pixmap=pm, textRect=rect)
         splash_screen.setFont(QFont("Helvetica", 12))
         color = QColor("#FFD39F")
@@ -229,7 +230,7 @@ def main(argv=None):
 
     canvas_window.raise_()
 
-    if want_welcome and not args:
+    if want_welcome and not args and not open_requests:
         # Process events to make sure the canvas_window layout has
         # a chance to activate (the welcome dialog is modal and will
         # block the event queue)
@@ -240,6 +241,12 @@ def main(argv=None):
         log.info("Loading a scheme from the command line argument %r",
                  args[0])
         canvas_window.load_scheme(args[0])
+    elif open_requests:
+        log.info("Loading a scheme from an `QFileOpenEvent` for %r",
+                 open_requests[-1])
+        canvas_window.load_scheme(open_requests[-1].toLocalFile())
+
+    app.fileOpenRequest.connect(canvas_window.open_scheme_file)
 
     stdout_redirect = \
         settings.value("output/redirect-stdout", True, type=bool)

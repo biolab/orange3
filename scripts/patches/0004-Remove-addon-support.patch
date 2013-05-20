@@ -1,16 +1,16 @@
-From cfedc89be0cee60a8f6539aaa3130b45b2d85a3e Mon Sep 17 00:00:00 2001
+From 3db3f9b4960658a8420580ae93d96ce1329548b0 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
-Date: Wed, 15 May 2013 14:32:16 +0200
+Date: Mon, 20 May 2013 16:37:52 +0200
 Subject: [PATCH 4/4] Remove addon support.
 
 ---
- .../canvas/application/canvasmain.py               | 40 ----------------------
+ Orange/canvas/application/canvasmain.py | 40 ---------------------------------
  1 file changed, 40 deletions(-)
 
-diff --git a/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py b/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
-index e9cef2d..ee6e89e 100644
---- a/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
-+++ b/scripts/canvas_merge_20dUq6/canvas/application/canvasmain.py
+diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
+index 1544864..e2046e3 100644
+--- a/Orange/canvas/application/canvasmain.py
++++ b/Orange/canvas/application/canvasmain.py
 @@ -10,8 +10,6 @@ from functools import partial
  
  import pkg_resources
@@ -28,7 +28,7 @@ index e9cef2d..ee6e89e 100644
  
  from ..document.schemeedit import SchemeEditWidget
  
-@@ -313,12 +310,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -314,12 +311,6 @@ class CanvasMainWindow(QMainWindow):
                         [self.freeze_action,
                          self.dock_help_action]
  
@@ -41,7 +41,7 @@ index e9cef2d..ee6e89e 100644
          # Tool bar in the collapsed dock state (has the same actions as
          # the tool bar in the CanvasToolDock
          actions_toolbar = QToolBar(orientation=Qt.Vertical)
-@@ -510,13 +501,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -511,13 +502,6 @@ class CanvasMainWindow(QMainWindow):
                      shortcut=QKeySequence.Preferences
                      )
  
@@ -55,7 +55,7 @@ index e9cef2d..ee6e89e 100644
          self.show_output_action = \
              QAction(self.tr("Show Output View"), self,
                      toolTip=self.tr("Show application output."),
-@@ -638,7 +622,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -639,7 +623,6 @@ class CanvasMainWindow(QMainWindow):
  #        self.options_menu.addAction("Attach Python Console")
          self.options_menu.addSeparator()
          self.options_menu.addAction(self.canvas_settings_action)
@@ -63,7 +63,7 @@ index e9cef2d..ee6e89e 100644
  
          # Widget menu
          menu_bar.addMenu(self.widget_menu)
-@@ -1389,29 +1372,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1405,29 +1388,6 @@ class CanvasMainWindow(QMainWindow):
          if status == 0:
              self.__update_from_settings()
  
