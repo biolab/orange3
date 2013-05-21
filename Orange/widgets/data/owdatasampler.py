@@ -1,4 +1,3 @@
-import random
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table
@@ -53,7 +52,6 @@ class OWDataSampler(widget.OWWidget):
     numberOfFolds = Setting(10)             # Setting for the number of folds in cross validation
     selectedFold = Setting(1)               # Setting for the selected fold in cross validation
 
-
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
 
@@ -69,48 +67,65 @@ class OWDataSampler(widget.OWWidget):
 
         # Options Box
         optionsBox = gui.widgetBox(self.controlArea, "Options:", addSpace=True)
-        stratifiedCheckBox = gui.checkBox(optionsBox, self, "stratified", "Stratified (if possible)", callback=self.settingsChanged)
-        setRndSeedCheckBox, rndNumberSpin = gui.checkWithSpin(optionsBox, self, "Random Seed:", 1, 32767, "setRandomSeed", "randomSeed", checkCallback=self.settingsChanged, spinCallback=self.settingsChanged)
-
+        # stratified check box
+        gui.checkBox(optionsBox, self, "stratified", "Stratified (if possible)", callback=self.settingsChanged)
+        # random seed check with spin
+        gui.checkWithSpin(
+            optionsBox, self, "Random Seed:", 1, 32767, "setRandomSeed", "randomSeed",
+            checkCallback=self.settingsChanged, spinCallback=self.settingsChanged)
 
         # Box that will hold Sampling Types radio buttons
         samplingTypesBox = gui.widgetBox(self.controlArea, "Sampling types:", addSpace=True)
 
         # Random Sampling
-        samplingTypesBG = gui.radioButtonsInBox(samplingTypesBox, self, "samplingType", [], callback=[self.fadeSamplingTypes, self.settingsChanged])
-        randomSamplingRB = gui.appendRadioButton(samplingTypesBG, self, "samplingType", "Random Sampling:", insertInto=samplingTypesBox)
+        samplingTypesBG = gui.radioButtonsInBox(
+            samplingTypesBox, self, "samplingType", [], callback=[self.fadeSamplingTypes, self.settingsChanged])
+        # random sampling radio button
+        gui.appendRadioButton(
+            samplingTypesBG, self, "samplingType", "Random Sampling:", insertInto=samplingTypesBox)
 
         # indent under Random Sampling which also acts as a sample size type radio button group
         self.rndSmplIndent = gui.indentedBox(samplingTypesBox)
 
         #replicationCheckBox = gui.checkBox(self.rndSmplIndent, self, "withReplication", "with replication")
 
-        sampleTypesBG = gui.radioButtonsInBox(self.rndSmplIndent, self, "sampleSizeType", [], callback=[self.fadeSampleSizeTypes, self.settingsChanged])
-        sampleSizeRB = gui.appendRadioButton(sampleTypesBG, self, "sampleSizeType", "Sample size:", insertInto=self.rndSmplIndent)
+        sampleTypesBG = gui.radioButtonsInBox(
+            self.rndSmplIndent, self, "sampleSizeType", [], callback=[self.fadeSampleSizeTypes, self.settingsChanged])
+        # sample size radio button
+        gui.appendRadioButton(
+            sampleTypesBG, self, "sampleSizeType", "Sample size:", insertInto=self.rndSmplIndent)
 
         # indent level 2 under sample size
         self.smplSizeIndent = gui.indentedBox(self.rndSmplIndent)
 
         self.sampleSizeSpin = gui.spin(self.smplSizeIndent, self, "sampleSizeNumber", 1, 1000000000)
         # back to level 1 indent
-
-        sampleProportionsRB = gui.appendRadioButton(sampleTypesBG, self, "sampleSizeType", "Sample proportions:", insertInto=self.rndSmplIndent)
+        # sample size type radio button
+        gui.appendRadioButton(
+            sampleTypesBG, self, "sampleSizeType", "Sample proportions:", insertInto=self.rndSmplIndent)
 
         # indent level 2 under sample proportions
         self.smplPropIndent = gui.indentedBox(self.rndSmplIndent)
-
-        sampleProportionsSlider = gui.hSlider(self.smplPropIndent, self, "sampleSizePercentage", minValue=1, maxValue=100, ticks=10, labelFormat="%d%%")
+        # sample proportions slider
+        gui.hSlider(
+            self.smplPropIndent, self, "sampleSizePercentage", minValue=1, maxValue=100, ticks=10, labelFormat="%d%%")
         # end of indentation
 
         # Cross Validation
-        crossValidationRB = gui.appendRadioButton(samplingTypesBG, self, "samplingType", "Cross Validation:", insertInto=samplingTypesBox)
+        # cross validation radio button
+        gui.appendRadioButton(
+            samplingTypesBG, self, "samplingType", "Cross Validation:", insertInto=samplingTypesBox)
 
         # indent under cross validation
         self.crossValidIndent = gui.indentedBox(samplingTypesBox)
+        #number of folds spin
+        gui.spin(
+            self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:",
+            callback=[self.updateSelectedFoldSpin, self.settingsChanged])
 
-        numberOfFoldsSpin = gui.spin(self.crossValidIndent, self, "numberOfFolds", 2, 100, label="Number of folds:", callback=[self.updateSelectedFoldSpin, self.settingsChanged])
-
-        self.selectedFoldSpin = gui.spin(self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:", callback=[self.updateSelectedFoldSpin, self.settingsChanged])
+        self.selectedFoldSpin = gui.spin(
+            self.crossValidIndent, self, "selectedFold", 1, 100, label="Selected fold:",
+            callback=[self.updateSelectedFoldSpin, self.settingsChanged])
         # end of indentation
 
         # Sample Data Button
@@ -119,15 +134,21 @@ class OWDataSampler(widget.OWWidget):
         self.fadeSamplingTypes()
         self.fadeSampleSizeTypes()
 
-
     # GUI METHODS
     def settingsChanged(self):
         self.sampleDataButton.setEnabled(True)
 
     def updateSelectedFoldSpin(self):
+        """
+        Method that we use to set the selected fold maximum so that we can't select a fold that isn't computed.
+        """
         self.selectedFoldSpin.setMaximum(self.numberOfFolds)
 
     def fadeSamplingTypes(self):
+        """
+        Switches between sampling types by fading one out and enabling the other,
+        depends on which radio button is checked.
+        """
         if self.samplingType == 0:
             self.rndSmplIndent.setEnabled(True)
             self.crossValidIndent.setEnabled(False)
@@ -136,13 +157,16 @@ class OWDataSampler(widget.OWWidget):
             self.crossValidIndent.setEnabled(True)
 
     def fadeSampleSizeTypes(self):
+        """
+        Switches between sample size types by fading one out and enabling the other,
+        depends on which radio button is checked.
+        """
         if self.sampleSizeType == 0:
             self.smplSizeIndent.setEnabled(True)
             self.smplPropIndent.setEnabled(False)
         else:
             self.smplSizeIndent.setEnabled(False)
             self.smplPropIndent.setEnabled(True)
-
 
     # I/O STREAM ROUTINES
     # handles changes of input stream
@@ -162,7 +186,6 @@ class OWDataSampler(widget.OWWidget):
             self.send("Remaining Data", None)
             self.data = None
 
-
     # process data and sends it forward
     def sendData(self):
         if not self.data:
@@ -171,7 +194,6 @@ class OWDataSampler(widget.OWWidget):
         rnd_seed = None
         if self.setRandomSeed:
             rnd_seed = self.randomSeed
-
         # random sampling
         if self.samplingType == 0:
             # size by number
@@ -184,27 +206,30 @@ class OWDataSampler(widget.OWWidget):
             self.methodInfoLabel.setText('Random sampling, %d instances.' % n_cases)
 
             if self.stratified:
-                ss = cross_validation.StratifiedShuffleSplit(self.data.Y.flatten(), n_iter=1, test_size=n_cases, random_state=rnd_seed)
+                # n_iter=1 means we compute only 1 split and iterator holds only 1 item
+                ss = cross_validation.StratifiedShuffleSplit(
+                    self.data.Y.flatten(), n_iter=1, test_size=n_cases, random_state=rnd_seed)
             else:
                 ss = cross_validation.ShuffleSplit(data_size, n_iter=1, test_size=n_cases, random_state=rnd_seed)
 
             remainder_indices, sample_indices = [(train_index, test_index) for train_index, test_index in ss][0]
-
             self.outputInfoLabel.setText('Outputting %d instances.' % len(sample_indices))
-
-
         # cross validation
         else:
             self.methodInfoLabel.setText('Cross validation, %d groups.' % self.numberOfFolds)
             self.outputInfoLabel.setText('Outputting group number %d.' % self.selectedFold)
+
             if self.dataChanged or not self.groups or not (self.CVSettings == [self.stratified, self.numberOfFolds]):
                 if self.stratified:
                     kf = cross_validation.StratifiedKFold(self.data.Y.flatten(), n_folds=self.numberOfFolds)
                 else:
                     kf = cross_validation.KFold(data_size, n_folds=self.numberOfFolds)
                 self.groups = [(train_index, test_index) for train_index, test_index in kf]
+
             remainder_indices, sample_indices = self.groups[self.selectedFold - 1]
+
             self.dataChanged = False
+            # remember cross validation settings so we compute only if those settings change
             self.CVSettings = [self.stratified, self.numberOfFolds]
 
         self.send("Data Sample", self.data[sample_indices])
