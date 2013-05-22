@@ -4,6 +4,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import *
 from Orange.data.table import Table
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
+import Orange.data.filter as data_filter
 
 
 class OWSelectData(widget.OWWidget):
@@ -47,8 +48,7 @@ class OWSelectData(widget.OWWidget):
 
         self.old_purge_classes = True
 
-        self.loaded_var_names = []
-        self.loaded_conditions = []
+        self.conditions = []
 
         box = gui.widgetBox(self.controlArea, 'Conditions', stretch=100)
         self.cond_list = QtGui.QTableWidget(box)
@@ -74,13 +74,13 @@ class OWSelectData(widget.OWWidget):
 
         info = gui.widgetBox(self.controlArea, '', orientation="horizontal")
         box_data_in = gui.widgetBox(info, 'Data In')
-        self.dataInExamplesLabel = gui.widgetLabel(box_data_in, " ")
-        self.dataInAttributesLabel = gui.widgetLabel(box_data_in, " ")
+#        self.data_in_rows = gui.widgetLabel(box_data_in, " ")
+        self.data_in_variables = gui.widgetLabel(box_data_in, " ")
         gui.rubber(box_data_in)
 
         box_data_out = gui.widgetBox(info, 'Data Out')
-        self.dataOutExamplesLabel = gui.widgetLabel(box_data_out, " ")
-        self.dataOutAttributesLabel = gui.widgetLabel(box_data_out, " ")
+        self.data_out_rows = gui.widgetLabel(box_data_out, " ")
+#        self.dataOutAttributesLabel = gui.widgetLabel(box_data_out, " ")
         gui.rubber(box_data_out)
 
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
@@ -94,17 +94,11 @@ class OWSelectData(widget.OWWidget):
             callback=self.on_purge_change)
         boxCommit = gui.widgetBox(box, 'Commit')
         gui.checkBox(boxCommit, self, "update_on_change", "Commit on change")
-        gui.button(boxCommit, self, "Commit", self.update_output, default=True)
+        gui.button(boxCommit, self, "Commit", self.output_data, default=True)
 
         self.set_data(None)
         self.resize(600, 400)
 
-
-    class RowControls:
-        def __init__(self, attribute_combo, operator_combo, values_box):
-            self.attribute_combo = attribute_combo
-            self.operator_combo = operator_combo
-            self.values_box = values_box
 
     def add_row(self, attr=None):
         model = self.cond_list.model()
@@ -113,20 +107,18 @@ class OWSelectData(widget.OWWidget):
 
         attr_combo = QtGui.QComboBox()
         attr_combo.row = row
-        attr_combo.setFrame(False)
         attr_combo.setStyleSheet("border: none")
         for var in chain(self.data.domain.variables, self.data.domain.metas):
             attr_combo.addItem(*gui.attributeItem(var))
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
-#        tr = QtGui.QIcon() # fix: trash
- #       tr.clicked.connect(partial(self.remove_condition, row_controls))
-
         self.remove_all_button.setDisabled(False)
         self.set_new_operators(attr_combo, attr is not None)
         attr_combo.currentIndexChanged.connect(
             lambda _: self.set_new_operators(attr_combo, False))
+        self.conditions.append([])
+
 
     def add_all(self):
         if self.cond_list.rowCount():
@@ -141,16 +133,22 @@ class OWSelectData(widget.OWWidget):
         for i in range(len(domain.variables) + len(domain.metas)):
             self.add_row(i)
 
+
     def remove_all(self):
+        self.remove_all_rows()
+        self.output_data_if()
+
+
+    def remove_all_rows(self):
         self.cond_list.clear()
         self.cond_list.setRowCount(0)
         self.remove_all_button.setDisabled(True)
+
 
     def set_new_operators(self, attr_combo, adding_all):
         oper_combo = QtGui.QComboBox()
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
-        oper_combo.setFrame(False)
         oper_combo.setStyleSheet("border: none")
         var = self.data.domain[attr_combo.currentText()]
         oper_combo.addItems(self.operator_names[type(var)])
@@ -165,11 +163,6 @@ class OWSelectData(widget.OWWidget):
         return [child.text() for child in box.children()
                 if isinstance(child, QtGui.QLineEdit)]
 
-    @staticmethod
-    def _kill_lineedit_contents(box):
-        for child in box.children():
-            if isinstance(child, QtGui.QLineEdit):
-                child.setText("")
 
     def set_new_values(self, oper_combo, adding_all):
         def remove_children():
@@ -182,8 +175,12 @@ class OWSelectData(widget.OWWidget):
             if contents:
                 le.setText(contents)
             le.setMaximumWidth(60)
-            le.setStyleSheet("margin-left: 5px")
-            le.editingFinished.connect(self.set_output_if)
+            le.setStyleSheet("""margin-left: 5px;
+                                border: none;
+                                border-bottom: 1px solid black;
+                                """)
+            le.setAlignment(Qt.Qt.AlignRight)
+            le.editingFinished.connect(self.output_data_if)
             return le
 
         def add_numeric(contents):
@@ -197,11 +194,22 @@ class OWSelectData(widget.OWWidget):
         if box and var.var_type == box.var_type:
             lc = self._get_lineedit_contents(box) + lc
         oper = oper_combo.currentIndex()
-        box = gui.widgetBox(self, orientation="horizontal", addToLayout=False)
-        box.var_type = var.var_type
-        self.cond_list.setCellWidget(oper_combo.row, 2, box)
 
-        if oper != oper_combo.count() - 1:
+        if oper == oper_combo.count() - 1:
+            self.cond_list.removeCellWidget(oper_combo.row, 2)
+        elif isinstance(var, DiscreteVariable):
+            combo = QtGui.QComboBox()
+            combo.addItems([""] + var.values)
+            combo.setCurrentIndex(0)
+            combo.setStyleSheet("border: none")
+            combo.var_type = var.var_type
+            self.cond_list.setCellWidget(oper_combo.row, 2, combo)
+            combo.currentIndexChanged.connect(self.output_data_if)
+        else:
+            box = gui.widgetBox(self, orientation="horizontal",
+                                addToLayout=False)
+            box.var_type = var.var_type
+            self.cond_list.setCellWidget(oper_combo.row, 2, box)
             if isinstance(var, ContinuousVariable):
                 add_numeric(lc[0])
                 if oper > 5:
@@ -213,20 +221,16 @@ class OWSelectData(widget.OWWidget):
                 if oper in [6, 7]:
                     gui.widgetLabel(box, " and ")
                     add_textual(lc[1])
-            else:
-                combo = gui.comboBox(box, self, None)
-                combo.currentIndexChanged.connect(self.set_output_if)
-                combo.addItems([""] + var.values)
-                combo.setCurrentIndex(0)
-                combo.setStyleSheet("QComboBox { border: none }")
 
+        self.conditions[oper_combo.row] = [var.name, oper_combo.currentIndex(), ]
         if not adding_all:
-            self.update_output()
+            self.output_data()
+
 
     def set_data(self, data):
         self.closeContext()
         self.data = data
-        self.remove_all()
+        self.remove_all_rows()
         self.add_button.setDisabled(data is None)
         domain = data and data.domain
         self.add_all_button.setDisabled(
@@ -235,38 +239,8 @@ class OWSelectData(widget.OWWidget):
         if not data:
             return
         self.openContext(data)
-
-    def set_output_if(self):
-        if self.update_on_change:
-            self.update_output()
-
-    def update_output(self):
-        return
-        matchingOutput = self.data
-        nonMatchingOutput = None
-        if self.data:
-            hasClass = self.data.domain.class_var is not None
-
-            matchingOutput = filter(self.data, 1)
-            matchingOutput.name = self.data.name
-            nonMatchingOutput = filter(self.data, 1, negate=1)
-            nonMatchingOutput.name = self.data.name
-
-            if self.purge_attributes or self.purge_classes:
-                remover = orange.RemoveUnusedValues(removeOneValued=True)
-
-                newDomain = remover(matchingOutput, 0, True, self.purge_classes)
-                if newDomain != matchingOutput.domain:
-                    matchingOutput = orange.ExampleTable(newDomain, matchingOutput)
-
-                newDomain = remover(nonMatchingOutput, 0, True, self.purge_classes)
-                if newDomain != nonMatchingOutput.domain:
-                    nonmatchingOutput = orange.ExampleTable(newDomain, nonMatchingOutput)
-
-        self.send("Matching Data", matchingOutput)
-        self.send("Unmatched Data", nonMatchingOutput)
-
-        self.updateInfoOut(matchingOutput)
+        self.update_info(data, self.data_in_variables)
+        self.output_data_if()
 
 
     def on_purge_change(self):
@@ -279,47 +253,59 @@ class OWSelectData(widget.OWWidget):
                 self.purgeClassesCB.setEnabled(False)
                 self.old_purge_classes = self.purge_classes
                 self.purge_classes = False
+        self.output_data_if()
 
-        self.set_output_if()
+
+    def output_data_if(self):
+        if self.update_on_change:
+            self.output_data()
 
 
-    def updateInfoIn(self, data):
-        """Updates data in info box.
-        """
-        if data:
-            varList = data.domain.variables.native() + data.domain.getmetas().values()
-            self.dataInAttributesLabel.setText("%s attribute%s" % self.sp(varList))
-            self.dataInExamplesLabel.setText("%s example%s" % self.sp(data))
+    def output_data(self):
+        matching_output = self.data
+        non_matching_output = None
+        if self.data:
+            filters = data_filter.Values()
+            clist = self.cond_list
+            for row in range(clist.rowCount()):
+                var = clist.cellWidget(row, 0).currentText()
+                var = self.data.domain[var]
+
+            hasClass = self.data.domain.class_var is not None
+
+            matching_output = filter(self.data, 1)
+            matching_output.name = self.data.name
+            non_matching_output = filter(self.data, 1, negate=1)
+            non_matching_output.name = self.data.name
+
+            if self.purge_attributes or self.purge_classes:
+                remover = orange.RemoveUnusedValues(removeOneValued=True)
+
+                newDomain = remover(matching_output, 0, True, self.purge_classes)
+                if newDomain != matching_output.domain:
+                    matching_output = orange.ExampleTable(newDomain, matching_output)
+
+                newDomain = remover(non_matching_output, 0, True, self.purge_classes)
+                if newDomain != non_matching_output.domain:
+                    nonmatchingOutput = orange.ExampleTable(newDomain, non_matching_output)
+
+        self.send("Matching Data", matching_output)
+        self.send("Unmatched Data", non_matching_output)
+
+        self.update_info(matching_output,
+                         self.data_out_variables, self.data_out_rows)
+
+
+    def update_info(self, data, lab1):
+        def sp(s, capitalize=True):
+            return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
+
+        if not data:
+            lab1.setText("")
         else:
-            self.dataInExamplesLabel.setText("No examples.")
-            self.dataInAttributesLabel.setText("No attributes.")
+            lab1.setText("%s row%s, %s variable%s" % (sp(len(data)) +
+            sp(len(data.domain.variables) + len(data.domain.metas))))
 
-
-    def updateInfoOut(self, data):
-        """Updates data out info box.
-        """
-        if data:
-            varList = data.domain.variables.native() + data.domain.getmetas().values()
-            self.dataOutAttributesLabel.setText("%s attribute%s" % self.sp(varList))
-            self.dataOutExamplesLabel.setText("%s example%s" % self.sp(data))
-        else:
-            self.dataOutExamplesLabel.setText("No examples.")
-            self.dataOutAttributesLabel.setText("No attributes.")
-
-
-    def sp(self, l, capitalize=True):
-        """Input: list; returns tupple (str(len(l)), "s"/"")
-        """
-        n = len(l)
-        if n == 0:
-            if capitalize:
-                return "No", "s"
-            else:
-                return "no", "s"
-        elif n == 1:
-            return str(n), ''
-        else:
-            return str(n), 's'
 
 
     def sendReport(self):
