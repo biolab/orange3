@@ -1,0 +1,53 @@
+From 22b1a4e408e2096385009b969cee2ac4d302a5d9 Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Thu, 23 May 2013 15:54:22 +0200
+Subject: [PATCH] PyQtv2 - removed calls to toPyObject.
+
+---
+ Orange/canvas/application/canvastooldock.py |  4 ++--
+ Orange/canvas/utils/qtcompat.py             | 14 ++------------
+ 2 files changed, 4 insertions(+), 14 deletions(-)
+
+diff --git a/Orange/canvas/application/canvastooldock.py b/Orange/canvas/application/canvastooldock.py
+index 9ef04af..023ae45 100644
+--- a/Orange/canvas/application/canvastooldock.py
++++ b/Orange/canvas/application/canvastooldock.py
+@@ -426,8 +426,8 @@ class CategoryPopupMenu(FramelessWindow):
+             self.__loop.exit(0)
+ 
+     def __onDragStarted(self, index):
+-        desc = toPyObject(index.data(QtWidgetRegistry.WIDGET_DESC_ROLE))
+-        icon = toPyObject(index.data(Qt.DecorationRole))
++        desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
++        icon = index.data(Qt.DecorationRole)
+ 
+         drag_data = QMimeData()
+         drag_data.setData(
+diff --git a/Orange/canvas/utils/qtcompat.py b/Orange/canvas/utils/qtcompat.py
+index f46e80a..8457202 100644
+--- a/Orange/canvas/utils/qtcompat.py
++++ b/Orange/canvas/utils/qtcompat.py
+@@ -42,18 +42,8 @@ QSETTINGS_HAS_TYPE = PYQT_VERSION >= 0x40803
+ 
+ 
+ def toPyObject(variant):
+-    """
+-    Return `variant` as a python object if it is wrapped in a `QVariant`
+-    instance (using `variant.toPyObject()`). In case the sip API version
+-    for QVariant does not export it just return the object unchanged.
+-
+-    """
+-    if HAS_QVARIANT:
+-        return variant
+-    elif isinstance(variant, QVariant):
+-        return variant.toPyObject()
+-    else:
+-        raise TypeError("Expected a 'QVariant'")
++    """Should not be needed with python 3. Please remove call to toPyObject"""
++    raise NotImplementedError
+ 
+ 
+ if HAS_QVARIANT:
+-- 
+1.8.2.1
+
