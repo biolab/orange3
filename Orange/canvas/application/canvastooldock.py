@@ -426,8 +426,8 @@ class CategoryPopupMenu(FramelessWindow):
             self.__loop.exit(0)
 
     def __onDragStarted(self, index):
-        desc = toPyObject(index.data(QtWidgetRegistry.WIDGET_DESC_ROLE))
-        icon = toPyObject(index.data(Qt.DecorationRole))
+        desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+        icon = index.data(Qt.DecorationRole)
 
         drag_data = QMimeData()
         drag_data.setData(
