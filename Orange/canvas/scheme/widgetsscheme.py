@@ -16,6 +16,7 @@ companion :class:`WidgetsSignalManager` class.
   :bases:
 
 """
+import sys
 import logging
 
 import sip
@@ -81,6 +82,8 @@ class WidgetsScheme(Scheme):
 
         del self.widget_for_node[node]
         del self.node_for_widget[widget]
+
+        widget.close()
 
         # Save settings to user global settings.
         widget.saveSettings()
@@ -186,8 +189,8 @@ class WidgetsScheme(Scheme):
 
             # Notify the widget instances.
             for widget in list(self.widget_for_node.values()):
-                widget.saveSettings()
                 widget.close()
+                widget.saveSettings()
                 widget.onDeleteWidget()
 
             event.accept()
@@ -379,7 +382,9 @@ class WidgetsSignalManager(SignalManager):
             try:
                 handler(*args)
             except Exception:
-                log.exception("Error")
+                sys.excepthook(*sys.exc_info())
+                log.exception("Error calling '%s' of '%s'",
+                              handler.__name__, node.title)
             finally:
                 app.restoreOverrideCursor()
 
@@ -387,7 +392,9 @@ class WidgetsSignalManager(SignalManager):
         try:
             widget.handleNewSignals()
         except Exception:
-            log.exception("Error")
+            sys.excepthook(*sys.exc_info())
+            log.exception("Error calling 'handleNewSignals()' of '%s'",
+                          node.title)
         finally:
             app.restoreOverrideCursor()
 

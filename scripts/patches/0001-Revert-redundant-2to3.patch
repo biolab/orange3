@@ -1,4 +1,4 @@
-From a1acbf1f19b3719305cc0042c429b6516a47736b Mon Sep 17 00:00:00 2001
+From 60c4a835c0c3b0d39fbbe69e35e320596e90bad9 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:31:32 +0200
 Subject: [PATCH 1/4] Revert redundant 2to3.
@@ -27,18 +27,18 @@ Subject: [PATCH 1/4] Revert redundant 2to3.
  20 files changed, 57 insertions(+), 63 deletions(-)
 
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index f101336..4c76493 100644
+index 0920cfc..534fc80 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
-@@ -10,7 +10,6 @@ import re
- import logging
+@@ -11,7 +11,6 @@ import logging
  import optparse
  import pickle
+ import shlex
 -from contextlib import nested
  
  import pkg_resources
  
-@@ -283,7 +282,7 @@ def main(argv=None):
+@@ -297,7 +296,7 @@ def main(argv=None):
          sys.excepthook = ExceptHook()
          sys.excepthook.handledException.connect(output_view.parent().show)
  
@@ -48,7 +48,7 @@ index f101336..4c76493 100644
          try:
              status = app.exec_()
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index 4c3d285..1619ee2 100644
+index 838c54c..96eb731 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
 @@ -902,7 +902,6 @@ class CanvasMainWindow(QMainWindow):
@@ -59,7 +59,7 @@ index 4c3d285..1619ee2 100644
          dirname = os.path.dirname(filename)
  
          self.last_scheme_dir = dirname
-@@ -1078,7 +1077,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1098,7 +1097,6 @@ class CanvasMainWindow(QMainWindow):
          )
  
          if filename:
@@ -187,7 +187,7 @@ index 7c1e71f..63f8daf 100644
          self.scheduleDelayedActivate()
  
 diff --git a/Orange/canvas/canvas/scene.py b/Orange/canvas/canvas/scene.py
-index 1be66c0..aa05a2b 100644
+index 4853a31..448071b 100644
 --- a/Orange/canvas/canvas/scene.py
 +++ b/Orange/canvas/canvas/scene.py
 @@ -605,7 +605,7 @@ class CanvasScene(QGraphicsScene):
@@ -291,7 +291,7 @@ index 8515644..e021cbe 100644
  
      def cancel(self, reason=UserInteraction.OtherReason):
 diff --git a/Orange/canvas/document/schemeedit.py b/Orange/canvas/document/schemeedit.py
-index 42c89f1..20093e9 100644
+index 6794178..25ccb43 100644
 --- a/Orange/canvas/document/schemeedit.py
 +++ b/Orange/canvas/document/schemeedit.py
 @@ -12,7 +12,6 @@ import itertools
@@ -302,7 +302,7 @@ index 42c89f1..20093e9 100644
  from urllib.parse import urlencode
  
  from PyQt4.QtGui import (
-@@ -813,7 +812,7 @@ class SchemeEditWidget(QWidget):
+@@ -814,7 +813,7 @@ class SchemeEditWidget(QWidget):
          """
          Select all selectable items in the scheme.
          """
@@ -311,7 +311,7 @@ index 42c89f1..20093e9 100644
              if item.flags() & QGraphicsItem.ItemIsSelectable:
                  item.setSelected(True)
  
-@@ -881,7 +880,7 @@ class SchemeEditWidget(QWidget):
+@@ -882,7 +881,7 @@ class SchemeEditWidget(QWidget):
          Return all selected :class:`.SchemeNode` items.
          """
          return list(map(self.scene().node_for_item,
@@ -320,16 +320,16 @@ index 42c89f1..20093e9 100644
  
      def selectedAnnotations(self):
          """
-@@ -943,7 +942,7 @@ class SchemeEditWidget(QWidget):
-                 qname = data.data(
+@@ -947,7 +946,7 @@ class SchemeEditWidget(QWidget):
                      "application/vnv.orange-canvas.registry.qualified-name"
                  )
--                desc = self.__registry.widget(str(qname))
-+                desc = self.__registry.widget(bytes(qname).decode())
-                 pos = event.scenePos()
-                 self.createNewNode(desc, position=(pos.x(), pos.y()))
-                 return True
-@@ -1050,7 +1049,7 @@ class SchemeEditWidget(QWidget):
+                 try:
+-                    desc = self.__registry.widget(str(qname))
++                    desc = self.__registry.widget(bytes(qname).decode())
+                 except KeyError:
+                     log.error("Unknown qualified name '%s'", qname)
+                 else:
+@@ -1057,7 +1056,7 @@ class SchemeEditWidget(QWidget):
                  self.__scene.mouseReleaseEvent(event)
                  stack = self.undoStack()
                  stack.beginMacro(self.tr("Move"))
@@ -338,7 +338,7 @@ index 42c89f1..20093e9 100644
                      if isinstance(scheme_item, SchemeNode):
                          command = commands.MoveNodeCommand(
                              self.scheme(), scheme_item, old, new
-@@ -1084,8 +1083,8 @@ class SchemeEditWidget(QWidget):
+@@ -1091,8 +1090,8 @@ class SchemeEditWidget(QWidget):
              # Create a new node using QuickMenu
              action = interactions.NewNodeAction(self)
  
@@ -349,7 +349,7 @@ index 42c89f1..20093e9 100644
                  action.create_new(event.screenPos())
  
              event.accept()
-@@ -1140,9 +1139,9 @@ class SchemeEditWidget(QWidget):
+@@ -1147,9 +1146,9 @@ class SchemeEditWidget(QWidget):
              # be selected items in the canvas), so we disable the
              # remove widget action so the text editing follows standard
              # 'look and feel'
@@ -362,7 +362,7 @@ index 42c89f1..20093e9 100644
                  handler.create_new(QCursor.pos(), searchText)
  
              event.accept()
-@@ -1232,8 +1231,8 @@ class SchemeEditWidget(QWidget):
+@@ -1239,8 +1238,8 @@ class SchemeEditWidget(QWidget):
      def __onWidgetStateChanged(self, *args):
          widget = self.sender()
          self.scheme()
@@ -373,7 +373,7 @@ index 42c89f1..20093e9 100644
          node = widget_to_node[widget]
          item = self.__scene.item_for_node(node)
  
-@@ -1430,8 +1429,8 @@ class SchemeEditWidget(QWidget):
+@@ -1437,8 +1436,8 @@ class SchemeEditWidget(QWidget):
                  self.__quickMenuTriggers & SchemeEditWidget.RightClicked:
              action = interactions.NewNodeAction(self)
  
@@ -569,5 +569,5 @@ index 205e7a1..c970b90 100644
      def commit(self):
          self.__update()
 -- 
-1.8.2.1
+1.8.2.3
 

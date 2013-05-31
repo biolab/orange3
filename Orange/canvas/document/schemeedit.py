@@ -300,7 +300,8 @@ class SchemeEditWidget(QWidget):
                     objectName="help-action",
                     toolTip=self.tr("Show widget help"),
                     triggered=self.__onHelpAction,
-                    shortcut=QKeySequence("F1")
+                    shortcut=QKeySequence("F1"),
+                    enabled=False,
                     )
 
         self.__linkEnableAction = \
@@ -936,15 +937,21 @@ class SchemeEditWidget(QWidget):
                         "application/vnv.orange-canvas.registry.qualified-name"
                         ):
                     event.acceptProposedAction()
+                else:
+                    event.ignore()
                 return True
             elif etype == QEvent.GraphicsSceneDrop:
                 data = event.mimeData()
                 qname = data.data(
                     "application/vnv.orange-canvas.registry.qualified-name"
                 )
-                desc = self.__registry.widget(bytes(qname).decode())
-                pos = event.scenePos()
-                self.createNewNode(desc, position=(pos.x(), pos.y()))
+                try:
+                    desc = self.__registry.widget(bytes(qname).decode())
+                except KeyError:
+                    log.error("Unknown qualified name '%s'", qname)
+                else:
+                    pos = event.scenePos()
+                    self.createNewNode(desc, position=(pos.x(), pos.y()))
                 return True
 
             elif etype == QEvent.GraphicsSceneMousePress:

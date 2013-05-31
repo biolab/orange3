@@ -1,4 +1,4 @@
-From 3db3f9b4960658a8420580ae93d96ce1329548b0 Mon Sep 17 00:00:00 2001
+From 4c6ea75f88ae0db59f3f4e2bbb2f70151be83d42 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:37:52 +0200
 Subject: [PATCH 4/4] Remove addon support.
@@ -8,7 +8,7 @@ Subject: [PATCH 4/4] Remove addon support.
  1 file changed, 40 deletions(-)
 
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index 1544864..e2046e3 100644
+index 254ee6a..88efcb8 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
 @@ -10,8 +10,6 @@ from functools import partial
@@ -63,7 +63,7 @@ index 1544864..e2046e3 100644
  
          # Widget menu
          menu_bar.addMenu(self.widget_menu)
-@@ -1405,29 +1388,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1465,29 +1448,6 @@ class CanvasMainWindow(QMainWindow):
          if status == 0:
              self.__update_from_settings()
  
@@ -94,5 +94,5 @@ index 1544864..e2046e3 100644
          """Show a window with application output.
          """
 -- 
-1.8.2.1
+1.8.2.3
 

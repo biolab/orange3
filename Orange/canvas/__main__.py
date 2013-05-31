@@ -10,6 +10,7 @@ import re
 import logging
 import optparse
 import pickle
+import shlex
 
 import pkg_resources
 
@@ -59,7 +60,7 @@ def fix_win_pythonw_std_stream():
 
 def main(argv=None):
     if argv is None:
-        argv = sys.argv[1:]
+        argv = sys.argv
 
     usage = "usage: %prog [options] [scheme_file]"
     parser = optparse.OptionParser(usage=usage)
@@ -95,7 +96,7 @@ def main(argv=None):
                       help="Additional arguments for QApplication",
                       type="str", default=None)
 
-    (options, args) = parser.parse_args(argv)
+    (options, args) = parser.parse_args(argv[1:])
 
     levels = [logging.CRITICAL,
               logging.ERROR,
@@ -109,21 +110,33 @@ def main(argv=None):
 
     log.info("Starting 'Orange Canvas' application.")
 
-    qt_argv = ["orange-canvas"]
+    qt_argv = argv[:1]
 
     if options.style is not None:
         qt_argv += ["-style", options.style]
 
     if options.qt is not None:
-        qt_argv += options.qt.split()
+        qt_argv += shlex.split(options.qt)
+
+    qt_argv += args
 
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
 
     # intercept any QFileOpenEvent requests until the main window is
-    # fully initialized
+    # fully initialized.
+    # NOTE: The QApplication must have the executable ($0) and filename
+    # arguments passed in argv otherwise the FileOpen events are
+    # triggered for them (this is done by Cocoa, but QApplicaiton filters
+    # them out if passed in argv)
+
     open_requests = []
-    app.fileOpenRequest.connect(open_requests.append)
+
+    def onrequest(url):
+        log.info("Received an file open request %s", url)
+        open_requests.append(url)
+
+    app.fileOpenRequest.connect(onrequest)
 
     # Note: config.init must be called after the QApplication constructor
     config.init()
@@ -223,18 +236,21 @@ def main(argv=None):
     set_global_registry(widget_registry)
     canvas_window.set_widget_registry(widget_registry)
     canvas_window.show()
+    canvas_window.raise_()
 
     want_welcome = \
         settings.value("startup/show-welcome-screen", True, type=bool) \
         and not options.no_welcome
 
-    canvas_window.raise_()
+    # Process events to make sure the canvas_window layout has
+    # a chance to activate (the welcome dialog is modal and will
+    # block the event queue, plus we need a chance to receive open file
+    # signals when running without a splash screen)
+    app.processEvents()
+
+    app.fileOpenRequest.connect(canvas_window.open_scheme_file)
 
     if want_welcome and not args and not open_requests:
-        # Process events to make sure the canvas_window layout has
-        # a chance to activate (the welcome dialog is modal and will
-        # block the event queue)
-        app.processEvents()
         canvas_window.welcome_dialog()
 
     elif args:
@@ -245,8 +261,6 @@ def main(argv=None):
         log.info("Loading a scheme from an `QFileOpenEvent` for %r",
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
-
-    app.fileOpenRequest.connect(canvas_window.open_scheme_file)
 
     stdout_redirect = \
         settings.value("output/redirect-stdout", True, type=bool)
