@@ -3,7 +3,7 @@
 git diff-index --quiet --cached HEAD || git diff-files --quiet || { echo "Please, commit your changes or stash them before updating canvas."; echo "Aborting"; exit 1; }
 
 if [ ! -f tip.tar.gz ]; then
-  wget https://bitbucket.org/biolab/orange/get/tip.tar.gzi
+  wget https://bitbucket.org/biolab/orange/get/tip.tar.gz
 fi
 rm -rf biolab-orange-*
 tar -xzf tip.tar.gz
