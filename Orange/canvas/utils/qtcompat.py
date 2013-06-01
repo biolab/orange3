@@ -42,18 +42,8 @@ QSETTINGS_HAS_TYPE = PYQT_VERSION >= 0x40803
 
 
 def toPyObject(variant):
-    """
-    Return `variant` as a python object if it is wrapped in a `QVariant`
-    instance (using `variant.toPyObject()`). In case the sip API version
-    for QVariant does not export it just return the object unchanged.
-
-    """
-    if HAS_QVARIANT:
-        return variant
-    elif isinstance(variant, QVariant):
-        return variant.toPyObject()
-    else:
-        raise TypeError("Expected a 'QVariant'")
+    """Should not be needed with python 3. Please remove call to toPyObject"""
+    raise NotImplementedError
 
 
 if HAS_QVARIANT:

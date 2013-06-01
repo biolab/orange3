@@ -186,10 +186,7 @@ class WidgetsScheme(Scheme):
 
             # Notify the widget instances.
             for widget in list(self.widget_for_node.values()):
-                if not widget._settingsFromSchema:
-                    # First save global settings if necessary.
-                    widget.saveSettings()
-
+                widget.saveSettings()
                 widget.close()
                 widget.onDeleteWidget()
 

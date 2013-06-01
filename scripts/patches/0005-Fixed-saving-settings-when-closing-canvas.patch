@@ -1,0 +1,28 @@
+From 1da24d1601f27cfdc5eef4603163e64ee1aca934 Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Thu, 23 May 2013 15:46:46 +0200
+Subject: [PATCH] Fixed saving settings when closing canvas.
+
+---
+ Orange/canvas/scheme/widgetsscheme.py | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
+index 36d6609..6223ffc 100644
+--- a/Orange/canvas/scheme/widgetsscheme.py
++++ b/Orange/canvas/scheme/widgetsscheme.py
+@@ -186,10 +186,7 @@ class WidgetsScheme(Scheme):
+ 
+             # Notify the widget instances.
+             for widget in list(self.widget_for_node.values()):
+-                if not widget._settingsFromSchema:
+-                    # First save global settings if necessary.
+-                    widget.saveSettings()
+-
++                widget.saveSettings()
+                 widget.close()
+                 widget.onDeleteWidget()
+ 
+-- 
+1.8.2.1
+
