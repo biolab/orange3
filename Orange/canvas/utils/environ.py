@@ -161,7 +161,7 @@ def _get_default_env():
 
     orange_settings_dir = output_dir
     canvas_settings_dir = os.path.join(output_dir, "OrangeCanvasQt4")
-    widget_settings_dir = os.path.join(output_dir, "widgetSettingsQt4")
+    widget_settings_dir = os.path.join(output_dir, "widgetSettingsOrange3")
 
     if sys.platform == "darwin":
         buffer_dir = os.path.join(home, "Library", "Caches", version)
