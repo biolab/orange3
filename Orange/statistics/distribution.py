@@ -6,7 +6,7 @@ import numpy as np
 from Orange import data
 
 
-def _get_variable(variable, dat, expected_type=None, expected_name=""):
+def _get_variable(dat, variable, expected_type=None, expected_name=""):
     failed = False
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
@@ -31,15 +31,15 @@ def _get_variable(variable, dat, expected_type=None, expected_name=""):
 
 
 class Discrete(np.ndarray):
-    def __new__(cls, variable, dat=None, unknowns=None):
+    def __new__(cls, dat, variable=None, unknowns=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
                 raise TypeError(
                     "incompatible arguments (data storage and 'unknowns'")
-            return cls.from_data(variable, dat)
+            return cls.from_data(dat, variable)
 
         if variable is not None:
-            variable = _get_variable(variable, dat)
+            variable = _get_variable(dat, variable)
             n = len(variable.values)
         else:
             n = len(dat)
@@ -57,8 +57,8 @@ class Discrete(np.ndarray):
 
 
     @classmethod
-    def from_data(cls, variable, data):
-        variable = _get_variable(variable, data)
+    def from_data(cls, data, variable):
+        variable = _get_variable(data, variable)
         try:
             dist, unknowns = data._compute_distributions([variable])[0]
             self = super().__new__(cls, len(dist))
@@ -183,7 +183,7 @@ class Discrete(np.ndarray):
 
 
 class Continuous(np.ndarray):
-    def __new__(cls, variable, dat, unknowns=None):
+    def __new__(cls, dat, variable=None, unknowns=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
                 raise TypeError(
@@ -206,7 +206,7 @@ class Continuous(np.ndarray):
 
     @classmethod
     def from_data(cls, variable, data):
-        variable = _get_variable(variable, data)
+        variable = _get_variable(data, variable)
         try:
             dist, unknowns = data._compute_distributions([variable])[0]
         except NotImplementedError:
@@ -266,19 +266,19 @@ class Continuous(np.ndarray):
 
 def class_distribution(data):
     if data.domain.class_var:
-        return get_distribution(data.domain.class_var, data)
+        return get_distribution(data, data.domain.class_var)
     elif data.domain.class_vars:
         return [get_distribution(cls, data) for cls in data.domain.class_vars]
     else:
         raise ValueError("domain has no class attribute")
 
 
-def get_distribution(variable, dat, unknowns=None):
-    variable = _get_variable(variable, dat)
+def get_distribution(dat, variable, unknowns=None):
+    variable = _get_variable(dat, variable)
     if isinstance(variable, data.DiscreteVariable):
-        return Discrete(variable, dat, unknowns)
+        return Discrete(dat, variable, unknowns)
     elif isinstance(variable, data.ContinuousVariable):
-        return Continuous(variable, dat, unknowns)
+        return Continuous(dat, variable, unknowns)
     else:
         raise TypeError("cannot compute distribution of '%s'" %
                         type(variable).__name__)
@@ -302,9 +302,9 @@ def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
             columns = np.arange(len(vars))
         distributions = []
         for col, (dist, unks) in zip(columns, dist_unks):
-            distributions.append(get_distribution(vars[col], dist, unks))
+            distributions.append(get_distribution(dist, vars[col], unks))
     except NotImplementedError:
         if columns is None:
             columns = np.arange(len(vars))
-        distributions = [get_distribution(i, dat) for i in columns]
+        distributions = [get_distribution(dat, i) for i in columns]
     return distributions

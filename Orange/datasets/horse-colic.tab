@@ -1,0 +1,371 @@
+Surgery	Age	Hospital	RectalTemp	Pulse	RR	TempExtr	PeriphPulse	MucousMembr	CapRefill	Pain	Peristalsis	AbdominalDist	NasogTube	NasogRefl	NasogReflpH	RectExFeces	Abdomen	CellVolume	TotProtein	AbdCentApp	AbdCenTotProt	Outcome	SurgLes	LesTypeSite1	LesTypeSite2	LesTypeSite3	cp_data
+d	d	d	c	c	c	d	d	d	d	d	d	d	d	d	c	d	d	c	c	d	c	d	d	d	d	d	d
+	i	i																				class	i	i	i	i	i
+no	adult	528626	38.5	54	20		normal	bright	>= 3s	mild	absent	none	slight	> 1l	5.9		other	42	6.3			lived	2	3111	0	0	1
+no	adult	527950	37.6	48	36			normal	<3 s		hypomotile							44	6.3	clear	5	lived	2	3111	0	0	1
+yes	adult	535263	37.7	44	28		absent	pale	>= 3s	cont. severe	absent	severe	none	none		decreased	distend. large int.	45	70	serosanguinous	2	lived	1	3205	0	0	2
+yes	adult	534523	37	56	24	cool	normal	pale cyan	>= 3s	severe	absent	moderate	none	none				35	61	serosanguinous	2	euthanized	2	2205	2208	0	2
+no	adult	528926	38	42	12	cool		pale	<3 s	no pain		none					other	37	5.8			lived	2	3111	0	0	2
+yes	adult	534922		60	40	cool		normal	<3 s		absent		significant	> 1l			distend. large int.	42	72			lived	1	3111	0	0	2
+no	adult	527642	38.4	80	60	cool	increased	bright	<3 s	mild	normal	none	slight	> 1l		normal	normal	54	6.9			lived	2	0	0	0	2
+no	adult	5279821	37.8	48	12	warm	normal	bright	<3 s	mild		none	slight			increased		48	7.3	clear		lived	2	0	0	0	1
+	adult	534790	38	65	40		normal	pale cyan	>= 3s	depressed							distend. large int.						1	3111	3205	0	2
+no	adult	5275211	37.9	45	36	cool	reduced	pale	>= 3s	depressed	hypomotile	none	slight	none		decreased		33	5.7	serosanguinous		lived	1	2205	0	0	1
+no	adult	5278332	39	84	12	cool	normal	bright red	<3 s	depressed	absent	slight	none	> 1l	7		distend. small int.	62	5.9	cloudy	2.2	died	1	2208	0	0	1
+no	adult	528959	38.2	60	24	cool	normal	pale	>= 3s	mild	hypomotile	slight	significant	< 1l		absent	distend. small int.	53	7.5	cloudy	1.4	lived	2	1124	0	0	1
+yes	adult	534921		140				pale cyan	>= 3s	cont. severe	absent	severe	none	none			distend. large int.	30	69			died	2	6112	0	0	2
+yes	adult	528999	37.9	120	60	cool	reduced	pale	<3 s	cont. severe	absent	severe	slight	> 1l	7.5	absent	distend. large int.	52	6.6	serosanguinous	1.8	died	1	3205	0	0	1
+no	adult	528067	38	72	36	normal	normal	pale	<3 s	mild		slight	slight	none		decreased	distend. large int.	38	6.8	cloudy	2	lived	2	3124	0	0	1
+no		5291329	38	92	28	normal	normal	bright	<3 s	no pain	hypomotile	slight	significant		7.2			37	6.1	clear	1.1	lived	2	0	0	0	1
+yes	adult	529478	38.3	66	30	warm	reduced	normal	<3 s	depressed	absent	moderate	significant	> 1l	8.5	absent	distend. large int.	37	6			lived	1	5111	0	0	2
+no	adult	529991	37.5	48	24	cool	normal	normal	<3 s	depressed	hypermotile		none	none		decreased	other	43	6	clear	2.8	lived	2	7111	0	0	1
+yes	adult	530033	37.5	88	20	warm	reduced	pale	<3 s	severe	hypomotile	moderate						35	6.4	clear		died	1	2205	0	0	2
+no		5299049		150	60	cold	absent	pale cyan	>= 3s	cont. severe	absent	severe										died	1	1400	0	0	2
+yes	adult	534497	39.7	100	30			dark cyan	>= 3s	severe	absent	moderate	none			absent	distend. large int.	65	75			euthanized	1	3205	0	0	2
+yes	adult	528369	38.3	80		cool	reduced	pale cyan	>= 3s	cont. severe	absent	moderate	slight	none		absent	distend. small int.	45	7.5	cloudy	4.6	lived	1	3209	0	0	1
+no	adult	530107	37.5	40	32	cool	normal	pale	<3 s	mild	normal	moderate	slight	none			distend. large int.	32	6.4	clear	1.1	lived	1	3124	0	0	1
+yes	adult	530239	38.4	84	30	cool	normal	bright red	>= 3s	severe	hypomotile	moderate	slight	< 1l	6.5	absent	distend. small int.	47	7.5	serosanguinous		died	1	6111	0	0	2
+yes	adult	530505	38.1	84	44	cold		pale cyan	>= 3s	cont. severe	hypomotile	none	none	< 1l	5		distend. small int.	60	6.8		5.7	died	1	2209	0	0	1
+no	adult	529567	38.7	52		normal	normal	normal	<3 s	no pain	hypomotile	none				normal	firm feces	4	74			lived	2	0	0	0	2
+no	adult	529597	38.1	44	40	warm	normal	pale	<3 s	mild	hypomotile	none				normal	firm feces	35	6.8			lived	2	0	0	0	2
+no	adult	534429	38.4	52	20	warm	normal	pale	<3 s	no pain	hypomotile	slight	slight	none		decreased	distend. large int.	41	63	clear	1	lived	2	0	0	0	2
+yes	adult	529629	38.2	60		normal		pale	<3 s	depressed	hypermotile	none	none	none		absent	distend. small int.	43	6.2	cloudy	3.9	lived	1	2206	0	0	1
+no	adult	528382	37.7	40	18	normal	normal	normal		mild	normal	none	none	none		decreased	firm feces	36	3.5			lived	2	400	0	0	2
+yes	adult	534898	39.1	60	10		normal	normal		depressed	hypomotile					absent	distend. small int.					lived	1	2113	0	0	2
+no	adult	529615	37.8	48	16	normal	normal	normal	<3 s		hypermotile	none	slight	none		absent	firm feces	43	7.5			lived	2	0	0	0	2
+yes	adult	526090	39	120		cold	reduced	bright red	>= 3s	depressed	absent	moderate	slight	< 1l	8			65	8.2	serosanguinous	4.6	lived	2	5110	0	0	2
+yes	adult	529765	38.2	76		warm	reduced	bright	<3 s	cont. severe	hypomotile	moderate	none	> 1l	6	normal	distend. large int.	35	6.5	cloudy	0.9	lived	1	3205	0	0	1
+no	adult	528310	38.3	88				dark cyan														died	2	2300	0	0	2
+yes	adult	529925	38	80	30	cool	reduced	pale	<3 s						6			48	8.3		4.3	lived	1	2111	0	0	2
+yes	adult	527807				cool	normal	normal	<3 s	depressed	hypomotile	moderate	none	< 1l	6	absent	distend. small int.			cloudy		died	1	2113	0	0	1
+yes	adult	5281441	37.6	40		normal	normal	normal	<3 s	no pain	hypermotile	none				normal	normal			cloudy	2.1	lived	1	31110	0	0	1
+no	adult	530695	37.5	44		normal	normal	normal	<3 s	mild	hypomotile	slight						45	5.8	cloudy	1.4	lived	2	3111	0	0	1
+no	adult	533889	38.2	42	16	normal	normal	pale	<3 s	no pain	hypomotile	none				normal		35	60	clear	1	lived	2	0	0	0	2
+no	adult	533815	38	56	44	cool	reduced	pale			hypermotile	none	slight	none		absent		47	70	cloudy	1	lived	2	0	0	0	2
+no	adult	527664	38.3	45	20	cool	reduced	bright	>= 3s	depressed	absent	none	slight			absent						lived	2	0	0	0	2
+yes	adult	5262542		48	96	normal	normal	pale	<3 s		absent	none	slight	none		normal	distend. small int.	42	8	clear		lived	1	2208	0	0	2
+yes	adult	528268	37.7	55	28	warm	normal	bright	<3 s	depressed	hypomotile	moderate		< 1l	5	absent	distend. large int.					lived	1	3209	0	0	2
+no	adult	528919	36	100	20	cold	reduced	dark cyan	>= 3s	depressed	absent	moderate	none	none		absent	distend. large int.	74	5.7	cloudy	2.5	euthanized	1	3205	0	0	1
+yes	adult	527494	37.1	60	20	warm		pale cyan	<3 s	mild		moderate		> 1l	5	decreased	distend. small int.	64	8.5	cloudy		lived	1	7111	0	0	1
+no	adult	529980	37.1	114	40	cool		pale	>= 3s	depressed	normal	none					firm feces	32		serosanguinous	6.5	lived	2	400	0	0	2
+yes	adult	533954	38.1	72	30	cool	reduced	pale	<3 s	severe	absent	moderate	slight	none		decreased	distend. large int.	37	56	serosanguinous	1	lived	1	4206	0	0	2
+yes	adult	5281092	37	44	12	cool	normal	normal	>= 3s	no pain	hypermotile	none				absent	other	40	6.7	serosanguinous	8	lived	1	2208	0	0	2
+yes	adult	534686	38.6	48	20	cool	normal	normal	<3 s	severe	hypomotile	none				decreased		37	75			lived	1	3111	0	0	2
+yes	adult	534475		82	72	cool	normal	pale cyan	<3 s	depressed	hypomotile	moderate		< 1l		absent	distend. small int.	53	65	serosanguinous	2	euthanized	1	2209	3205	0	2
+yes		5274919	38.2	78	60	cold	absent	dark cyan		mild	hypomotile	moderate				normal		59	5.8	serosanguinous	3.1	died	1	1400	0	0	1
+no	adult	533815	37.8	60	16	normal	normal	pale	<3 s	depressed	hypomotile	slight	none	> 1l		decreased		41	73			euthanized	2	4124	0	0	2
+yes	adult	534156	38.7	34	30	warm		pale	<3 s	depressed	hypomotile							33	69		2	euthanized	1	7113	0	0	2
+yes	adult	514279		36	12	normal	normal	normal	<3 s	no pain	normal	none	none	none		normal	distend. large int.	44				lived	1	31110	0	0	1
+no	adult	528433	38.3	44	60			normal	<3 s									6.4	36			lived	1	0	0	0	2
+no	adult	527465	37.4	54	18	cool		normal	<3 s	mild	absent	moderate	slight	> 1l		absent	distend. large int.	30	7.1	cloudy		lived	1	7111	0	0	1
+yes	adult	534268				cold	reduced		>= 3s	depressed	absent	none						54	76	serosanguinous	2	lived	1	8405	0	0	2
+yes	adult	535337	36.6	48	16	cool	normal	pale	<3 s	severe	hypermotile	none	none	none				27	56			euthanized	1	4206	0	0	2
+yes	adult	534111	38.5	90		normal	normal	pale	<3 s	mild	hypomotile	moderate	slight	< 1l	2	absent	distend. large int.	47	79			lived	1	6112	0	0	2
+yes	adult	530576		75	12	normal	normal	pale cyan	<3 s	cont. severe	hypomotile	moderate		< 1l	5.8			58	8.5	clear		lived	1	2209	0	0	1
+no	adult	529930	38.2	42		cool	normal	normal	<3 s	no pain	hypermotile	slight	slight	none		decreased	other	35	5.9	cloudy		lived	2	3113	0	0	2
+yes		5274919	38.2	78	60	cold	absent	dark cyan		mild	hypomotile	moderate				normal		59	5.8	serosanguinous	3.1	died	1	2205	0	0	1
+no	adult	529695	38.6	60	30	normal	normal	pale	<3 s	severe	normal	slight	none	none				40	6	clear		lived	1	3205	0	0	2
+no	adult	528452	37.8	42	40	normal	normal	normal	<3 s	no pain	hypomotile	none				decreased	firm feces	36	6.2			lived	2	4124	0	0	2
+yes	adult	534783	38	60	12	normal	normal	bright	<3 s	depressed	hypermotile	none	none	none		normal	distend. small int.	44	65	serosanguinous	2	euthanized	1	2209	0	0	2
+no	adult	528926	38	42	12	cool		pale	<3 s	no pain	hypermotile	none					normal	37	5.8			lived	2	3111	0	0	2
+no	adult	530670	37.6	88	36	cool	normal	normal	<3 s	mild	hypomotile	slight	none	< 1l	1.5			44	6			died	1	2112	0	0	2
+no	adult	530101	38.5	66	28	cool	reduced		>= 3s	cont. severe	absent	severe				decreased	distend. large int.	45	8.4			died	2	11300	0	0	2
+yes	adult	534817	39.2	88	20			pale cyan	<3 s	mild	absent	slight				absent	other	50	85	cloudy	2	euthanized	2	2208	0	0	2
+no	adult	530334	38.3	40	24	normal	normal	pale	<3 s	mild	hypomotile	none				normal	normal	33	6.7			lived	2	0	0	0	1
+yes		5290409	39.1	164	84	cold	normal	dark cyan	>= 3s	depressed	absent	severe	none	> 1l	5	decreased		48	7.2	serosanguinous	5.3	died	1	2208	0	0	1
+no	adult	530255	37.3	104	35			dark cyan	>= 3s									74	7.4			died	2	4300	0	0	2
+no	adult	528355				warm	normal	pale	<3 s	depressed	hypomotile	slight	slight	none		decreased	firm feces					lived	2	0	0	0	2
+yes	adult	526802	37.9	48	16	normal	normal	normal	<3 s	mild	hypomotile	moderate	none	none		decreased	distend. large int.	37	7			lived	1	3124	0	0	2
+yes	adult	529607		60		cool			<3 s		absent	slight	slight	none		decreased	distend. small int.	44	8.3			died	1	2208	0	0	2
+no	adult	530051		80	36	cool	absent	pale	<3 s	severe	absent	severe	slight	none		decreased	distend. large int.	38	6.2			euthanized	1	3205	0	0	2
+no		5299629	38.3	90		normal		normal	<3 s	cont. severe	hypomotile	none	slight	none		decreased		40	6.2	clear	2.2	lived	2	0	0	0	1
+yes	adult	528548	38.1	66	12	cool	reduced	bright red	<3 s	mild	hypomotile	none	slight	none	3	increased	distend. large int.	44	6	cloudy	3.6	lived	1	2124	0	0	1
+no	adult	527927	39.1	72	52	warm		bright	<3 s	depressed	hypermotile	slight	none	none		absent	distend. small int.	50	7.8			lived	1	2111	0	0	2
+yes	adult	528031	37.2	42	12	warm	normal	normal	<3 s	mild	hypomotile	moderate	significant	none		absent	distend. large int.		7			lived	2	4124	0	0	2
+no		5291329	38	92	28	normal	normal	bright	<3 s	no pain	hypomotile	slight	significant		7.2	normal	normal	37	6.1	clear		died	2	0	0	0	1
+yes	adult	534917	38.2	76	28	cool	normal	normal	<3 s	mild	absent	none	slight	> 1l		absent	distend. small int.	46	81	clear	2	lived	1	2112	0	0	2
+yes	adult	530233	37.6	96	48	cool	normal	pale cyan	<3 s	cont. severe	hypomotile	moderate	slight	< 1l	4.5	absent		45	6.8			died	1	3207	0	0	2
+yes		5301219		128	36	cool	reduced	pale cyan	>= 3s	severe	absent	moderate	significant			absent	distend. large int.	53	7.8	serosanguinous	4.7	died	2	1400	0	0	1
+no	adult	526639	37.5	48	24																	lived	2	0	0	0	2
+yes	adult	5290481	37.6	64	21	normal	normal	bright	<3 s	depressed	hypomotile	none	none	none		increased	distend. large int.	40	7	clear		lived	1	4205	0	0	1
+no	adult	532110	39.4	110	35	cold	reduced	dark cyan			hypomotile	moderate						55	8.7			lived	2	0	0	0	2
+yes	adult	530157	39.9	72	60	normal	normal	bright red	>= 3s	cont. severe	absent	severe	significant	none		absent	distend. small int.	46	6.1	cloudy		lived	1	2111	0	0	2
+no	adult	529340	38.4	48	16	normal		normal	<3 s	no pain	hypomotile	none	slight	< 1l	5.5	absent	firm feces	49	6.8			lived	2	0	0	0	2
+yes	adult	521681	38.6	42	34	warm	normal	pale cyan		depressed	hypomotile	none				normal		48	7.2			lived	1	3111	0	0	2
+yes		534998	38.3	130	60		reduced		<3 s	depressed	absent							50	70			lived	1	3111	0	0	2
+yes	adult	533692	38.1	60	12	cool	reduced	pale	<3 s		absent	moderate	significant	> 1l	2			51	65			lived	1	3111	0	0	2
+no	adult	529518	37.8	60	42				<3 s													lived	2	0	0	0	2
+yes	adult	530526	38.3	72	30	cold	reduced	pale	>= 3s	mild	hypomotile	moderate	slight	none		decreased	distend. large int.	43	7	cloudy	3.9	lived	1	3111	0	0	1
+yes	adult	528653	37.8	48	12	cool	normal	normal	<3 s		hypomotile	slight	none	none		normal	firm feces	37	5.5	cloudy	1.3	lived	2	4122	0	0	1
+yes	adult	5279442																				died	2	4300	0	0	2
+no	adult	535415	37.7	48		warm	normal	normal	<3 s	no pain	hypermotile	none	none	none				45	76			lived	2	0	0	0	2
+no	adult	529475	37.7	96	30	cool	reduced	pale cyan	>= 3s	cont. severe	absent	severe	significant	> 1l	4	absent	distend. large int.	66	7.5			died	1	4205	0	0	2
+no	adult	530242	37.2	108	12	cool	reduced	pale cyan	>= 3s	depressed	absent	slight		< 1l	6	decreased	firm feces	52	8.2	serosanguinous	7.4	euthanized	1	2207	0	0	1
+yes	adult	529427	37.2	60		warm	normal	normal	<3 s	mild	hypomotile	moderate	slight	none		absent	distend. large int.	43	6.6			lived	1	2209	0	0	2
+yes	adult	529663	38.2	64	28	normal	normal	normal	<3 s	mild	hypermotile					absent	distend. small int.	49	8.6	cloudy	6.6	lived	1	2208	0	0	1
+yes	adult	529796		100	30	cool	reduced	pale cyan	>= 3s	cont. severe	absent	severe	significant	< 1l		absent	distend. small int.	52	6.6			lived	1	1124	0	0	2
+no	adult	528812		104	24	cold	reduced	pale	>= 3s	severe	absent	moderate		< 1l			other	73	8.4			euthanized	1	7111	0	0	2
+no	adult	529493	38.3	112	16		reduced	bright red	>= 3s			none	none	> 1l			distend. large int.	51	6	cloudy	1	euthanized	2	5205	0	0	1
+yes	adult	533847	37.8	72			reduced		<3 s	cont. severe	hypomotile	none		none		normal	normal	56	80	clear	2	lived	1	3111	0	0	2
+no	adult	528996	38.6	52		normal	normal	normal	<3 s	mild	hypomotile	slight	none	none		normal	firm feces	32	6.6	clear	5	lived	2	0	0	0	1
+yes		5277409	39.2	146	96																	died	1	2113	0	0	2
+yes	adult	529498		88		cool	reduced	dark cyan	>= 3s	cont. severe	hypomotile	moderate	none	< 1l		absent	distend. large int.	63	6.5	serosanguinous		died	1	4205	0	0	2
+no		5288249	39	150	72													47	8.5		0.1	lived	1	9400	0	0	1
+no	adult	530301	38	60	12	cool	normal	pale	<3 s	mild	hypomotile	none	none	none		increased	other	47	7			lived	2	3111	0	0	2
+yes	adult	534069		120		cool	absent	pale cyan	<3 s	severe	absent	severe	none	none			distend. large int.	52	67	cloudy	2	euthanized	1	3205	0	0	2
+yes	adult	535407	35.4	140	24	cool	reduced	pale cyan	>= 3s	severe	absent		slight	none			distend. large int.	57	69	serosanguinous	2	euthanized	1	3205	0	0	2
+no	adult	529827		120		cold	reduced	pale cyan	>= 3s	cont. severe	absent	severe	none	none		absent	distend. large int.	60	6.5	serosanguinous		died	1	3205	0	0	2
+yes	adult	529888	37.9	60	15	cool		pale cyan	>= 3s	cont. severe	absent	severe	slight	> 1l		absent	distend. large int.	65	7.5			lived	1	2305	0	0	1
+no	adult	529821	37.5	48	16	normal	normal	normal	<3 s	no pain	hypermotile	none	none	none		normal		37	6.5			lived	2	0	0	0	2
+yes	adult	528890	38.9	80	44	cool	reduced	pale	>= 3s	depressed	hypomotile	moderate	slight	> 1l	7	decreased	normal	54	6.5	serosanguinous		died	1	7111	0	0	2
+no	adult	529642	37.2	84	48	cool	reduced	bright red	>= 3s	severe	hypermotile	slight	none	> 1l		increased	normal	73	5.5	cloudy	4.1	died	2	4300	0	0	1
+no	adult	529766	38.6	46		normal	normal	bright	<3 s	no pain	hypomotile	slight	none	none			other	49	9.1	clear	1.6	lived	2	3111	0	0	1
+yes	adult	527706	37.4	84	36	normal		pale	>= 3s	mild	hypomotile	slight				absent	distend. large int.			serosanguinous		died	1	7209	0	0	1
+no	adult	529483				normal	normal	pale	<3 s	no pain	hypomotile	none				increased	other	43	7.7			lived	2	3111	0	0	2
+no	adult	530544	38.6	40	20				<3 s									41	6.4			lived	2	3111	0	0	1
+no	adult	529461	40.3	114	36	cool	reduced	normal	>= 3s	depressed	hypomotile	moderate	slight	none	7	normal	distend. large int.	57	8.1	serosanguinous	4.5	euthanized	1	7400	0	0	1
+yes		5282839	38.6	160	20	cool		bright red	<3 s	mild	hypomotile	severe	significant			absent		38		cloudy		died	1	7111	0	0	1
+yes	adult	528872																24	6.7			lived	1	3112	0	0	2
+yes	adult	529640		64	36	warm		bright	<3 s	cont. severe	hypomotile	moderate	slight	> 1l				42	7.7			died	1	3209	0	0	2
+yes	adult	528298			20	cold	reduced	pale		cont. severe	absent	moderate	slight			absent	distend. small int.	53	5.9	serosanguinous		died	1	3205	0	0	1
+no	adult	528904		96		cool	reduced	pale	>= 3s	cont. severe	absent	severe	none	> 1l		absent	distend. large int.	60				died	1	4205	0	0	2
+no	adult	530438	37.8	48	32	normal	normal	pale	<3 s	depressed	hypermotile		none	none		absent	distend. large int.	37	6.7			lived	2	2124	0	0	2
+no	adult	527957	38.5	60		warm	increased	normal	<3 s	no pain	normal	slight	slight	none		normal	normal	44	7.7			lived	2	0	0	0	2
+yes	adult	528630	37.8	88	22	warm	normal	bright	<3 s	mild			slight			absent		64	8	clear	6	died	1	3205	0	0	1
+no	adult	534293	38.2	130	16	cold	reduced	pale cyan	>= 3s	depressed	absent	severe	none	none				65	82	cloudy	2	euthanized	2	2209	1400	0	2
+yes	adult	529667	39	64	36	cool	normal	pale cyan	>= 3s	mild	hypomotile	slight	none	> 1l	7	absent	distend. large int.	44	7.5	serosanguinous	5	lived	1	2113	0	0	1
+yes	adult	534885		60	36	cool	normal	pale	<3 s	mild	hypomotile	slight	none	none		decreased	distend. small int.	26	72	cloudy	1	lived	1	2208	0	0	2
+no	adult	534784	37.9	72		normal	normal	bright red	>= 3s	mild	hypomotile	none	none	< 1l	2	decreased	distend. small int.	58	74	clear	2	lived	1	2322	0	0	2
+no	adult	528931	38.4	54	24	normal	normal	normal	<3 s	no pain	hypomotile	none	slight	none		decreased	other	49	7.2	clear		lived	2	3111	0	0	1
+no	adult	529777		52	16	normal		pale	<3 s				slight	< 1l	5.5			55	7.2			lived	2	2124	0	0	2
+no	adult	530276	38	48	12	normal	normal	normal	<3 s	no pain	hypomotile		none	none		decreased	other	42	6.3	cloudy	4.1	lived	2	3111	0	0	1
+no	adult	528214	37	60	20	cool			<3 s	mild		moderate	slight	> 1l	4.5	absent	distend. small int.	43	7.6			euthanized	1	2209	0	0	1
+yes	adult	529424	37.8	48	28	normal	normal	normal	<3 s	no pain	normal	none	slight			normal	normal	46	5.9	cloudy	7	lived	2	0	0	0	1
+yes	adult	5299253	37.7	56																		died	1	2113	0	0	2
+yes	adult	528469	38.1	52	24	normal	normal	bright red	<3 s	severe	hypomotile	none	slight	< 1l	7	normal		54	7.5	cloudy	2.6	died	1	2112	0	0	1
+yes		5292929																37	4.9			died	1	11124	0	0	2
+yes		534092	39.7	100		cool	reduced	bright red	>= 3s	depressed	hypomotile							48	57	cloudy	2	euthanized	1	1400	0	0	2
+yes	adult	534615	37.6	38	20	cool	reduced	normal	<3 s	mild	hypomotile	slight				decreased		37	68			lived	1	3205	0	0	2
+no	adult	534753	38.7	52	20	warm		normal	<3 s	no pain	hypermotile	none	none	none		normal	normal	33	77			lived	2	0	0	0	2
+yes	adult	530693				cool	reduced	pale	3	cont. severe	hypomotile	moderate	significant	> 1l		absent	distend. large int.	46	5.9			died	1	3025	0	0	2
+yes	adult	527463	37.5	96	18	normal	reduced	dark cyan	>= 3s	mild	absent	slight	slight	< 1l	5		distend. small int.	69	8.9	serosanguinous		lived	1	2208	0	0	1
+yes	adult	527518	36.4	98	35	cool	reduced	pale cyan	<3 s	severe	hypomotile	slight				absent	distend. small int.	47	6.4	serosanguinous	3.6	died	1	2205	0	0	1
+yes	adult	534756	37.3	40			reduced	normal	<3 s	depressed	hypomotile	slight	significant	none		decreased	distend. large int.	36		serosanguinous	2	lived	1	3111	0	0	2
+yes		5290759	38.1	100	80	cool	normal	bright	<3 s	mild	absent	none				normal		36	5.7			lived	1	3111	0	0	2
+yes	adult	5279822	38		24	cool	reduced	dark cyan	>= 3s	cont. severe		severe	none	none				68	7.8			died	1	3205	0	0	2
+yes	adult	529849	37.8	60	80	normal	reduced	bright	>= 3s	depressed	hypomotile	moderate		> 1l	5.5	absent		40	4.5	cloudy		lived	1	5206	0	0	1
+no	adult	529304	38	54	30	warm	reduced	pale	3	mild	hypermotile	slight	slight	> 1l			distend. small int.	45	6.2			lived	2	400	0	0	2
+yes	adult	529388		88	40	cool	reduced	pale cyan	>= 3s	cont. severe	absent	moderate	significant			absent	distend. large int.	50	7.7	serosanguinous	1.4	died	1	4205	0	0	1
+no	adult	528006		40	16				<3 s									50	7	cloudy	3.9	euthanized	1	2208	0	0	1
+no	adult	529703	39	64	40	normal	normal	bright red	<3 s	mild	hypomotile	slight	slight	none		decreased	firm feces	42	7.5	cloudy	2.3	lived	2	5000	0	0	1
+no	adult	535381	38.3	42	10	normal	normal	normal	<3 s	no pain	hypermotile	none						38	61			lived	2	0	0	0	2
+no	adult	534197	38	52	16					depressed				< 1l	1	normal	normal	53	86			lived	1	2322	0	0	2
+no	adult	529461	40.3	114	36	cool	reduced	normal	>= 3s	depressed	hypomotile	moderate	slight	none	7	normal	distend. large int.	57	8.1	serosanguinous	4.5	died	1	3205	0	0	1
+no	adult	530251	38.8	50	20	cool	normal	normal	<3 s	no pain	hypermotile	none	slight	none		decreased	normal	42	6.2			lived	2	0	0	0	2
+no	adult	530310				cool	reduced	normal	<3 s	cont. severe	hypomotile	moderate	none	none		absent	distend. large int.	38	6.5			died	1	3205	0	0	2
+no	adult	528729	37.5	48	30	cold	normal	pale	<3 s		normal	none	none	none		normal	normal	48	8.6			lived	2	0	0	0	2
+yes	adult	535158	37.3	48	20		normal	bright	<3 s	mild	hypomotile	moderate	slight	none		decreased	distend. large int.	41	69			lived	1	3205	0	0	2
+no	adult	530319		84	36			pale	<3 s		hypomotile	none	slight	none		decreased	other	44	8.5			lived	1	3111	0	0	2
+yes	adult	534145	38.1	88	32	cool	reduced	pale cyan	<3 s	depressed	hypomotile	moderate		< 1l	1	absent	distend. large int.	55	60			euthanized	2	3205	0	0	2
+no	adult	534135	37.7	44	40	warm	normal	pale	<3 s	no pain	hypomotile	slight	none	none		normal	distend. large int.	41	60			lived	2	0	0	0	2
+no	adult	530002	39.6	108	51	cool	reduced	dark cyan	>= 3s	depressed	absent	moderate	none	> 1l		decreased	distend. large int.	59	8	cloudy	2.6	lived	2	4300	0	0	1
+yes	adult	535364	38.2	40	16	cool	reduced	normal	<3 s	no pain	hypomotile					normal	normal	34	66			lived	2	0	0	0	2
+yes	adult	534899		60	20	cold	reduced	pale cyan	>= 3s	cont. severe	absent			none		absent	distend. large int.					euthanized	1	3205	0	0	2
+no	adult	534938	38.3	40	16	cool		normal	<3 s	depressed								37	57			lived	2	0	0	0	2
+yes		5292489	38	140	68	normal	normal	normal	<3 s	mild	hypomotile	slight				increased	normal	39	5.3			lived	1	7111	0	0	2
+yes	adult	527563	37.8	52	24	normal	reduced	pale	<3 s	severe	absent	none	slight	< 1l	5.7	increased	distend. large int.	48	6.6	clear	3.7	died	1	5400	0	0	2
+yes	adult	530381		70	36	normal		pale	>= 3s	depressed	hypomotile	slight	slight			absent	distend. large int.	36	7.3			lived	1	31110	0	0	2
+yes	adult	528668	38.3	52	96		reduced	pale	<3 s				none	none		normal		43	6.1			lived	1	3209	0	0	1
+no	adult	529764	37.3	50	32	normal	normal	pale	<3 s	no pain	hypomotile	slight				normal		44	7			lived	2	0	0	0	2
+yes	adult	533696	38.7	60	32	cold	reduced	bright	>= 3s	severe	absent	severe				absent	distend. large int.	53	64	serosanguinous	2	euthanized	1	3205	0	0	2
+yes		5297379	38.4	84	40	cool	reduced	bright	<3 s	mild	hypomotile	moderate	none	none				36	6.6	cloudy	2.8	died	1	2205	0	0	1
+yes	adult	527544		70	16	cool	absent	bright red	>= 3s	depressed	hypomotile	slight	slight	none		absent	distend. large int.	60	7.5			died	1	2112	0	0	2
+yes	adult	533736	38.3	40	16	cool			<3 s	no pain	hypomotile	slight						38	58	clear	2	lived	1	3111	7111	0	2
+yes	adult	534963		40		warm	normal	normal	<3 s	no pain	hypomotile	none	none	none			distend. large int.	39	56			lived	1	3111	0	0	2
+yes	adult	527933	36.8	60	28																10	died	1	3205	0	0	1
+yes	adult	532349	38.4	44	24	cool		pale cyan		cont. severe	absent	moderate	slight	none		absent	distend. large int.	50	77			lived	1	3205	0	0	2
+no	adult	533723			40	cool	normal	normal	<3 s	mild	hypomotile	slight						45	70			lived	2	0	0	0	2
+yes	adult	535208	38	44	12	normal	normal	normal	<3 s	mild	hypomotile	moderate	slight	none		absent	distend. large int.	42	65			lived	1	3205	3111	0	2
+no	adult	5290482	39.5			cool	reduced	pale cyan	>= 3s	mild	absent	moderate		< 1l	5.5	absent	distend. large int.		6.7	clear		euthanized	1	4205	0	0	2
+yes	adult	533983	36.5	78	30	normal		normal	<3 s	cont. severe	hypomotile	none		none				34	75	cloudy	1	lived	1	3112	6112	0	2
+no	adult	535166	38.1	56	20	warm	normal	bright	<3 s	no pain	hypomotile	none	none	none				46	70			lived	2	0	0	0	2
+yes	adult	528682	39.4	54	66	normal	normal	bright	<3 s	depressed	hypomotile	slight	none	none		decreased	distend. small int.	39	6	cloudy		lived	1	2206	0	0	1
+yes	adult	534556	38.3	80	40			dark cyan	>= 3s	severe	hypomotile	none		> 1l		normal	distend. small int.	67	10.2	cloudy	1	euthanized	1	2208	0	0	2
+no	adult	534579	38.7	40	28	warm	normal	normal	<3 s	mild	hypermotile	none				normal		39	62	clear	1	lived	2	0	0	0	2
+yes	adult	530360	38.2	64	24	normal	normal	pale	<3 s	severe	absent	moderate	slight	none		absent	distend. small int.	45	7.5	clear	2	died	1	3205	0	0	1
+no	adult	529840	37.6	48	20	cool	normal	pale cyan	<3 s	no pain	hypermotile	moderate	slight	none		normal	normal	37	5.5			euthanized	1	2205	0	0	2
+yes	adult	528461	38	42	68	cold	normal	normal	<3 s	mild	hypomotile	slight	slight	> 1l		absent	distend. small int.	41	7.6			lived	1	2205	0	0	2
+yes	adult	530384	38.7			cool	normal	pale	<3 s	cont. severe	absent	slight						33	6.5	cloudy		lived	1	31110	0	0	2
+yes	adult	5262541	37.4	50	32	cool	reduced		<3 s	severe	absent	none	slight	none		normal		45	7.9	cloudy	1	lived	1	2208	0	0	1
+yes	adult	535330	37.4	84	20			pale	<3 s	depressed	hypomotile	moderate						31	61		1	euthanized	2	2208	0	0	2
+yes	adult	527698	38.4	49				normal	<3 s			none	slight	none				44	7.6			lived	1	2206	0	0	2
+yes	adult	528964	37.8	30	12																	died	1	2113	0	0	2
+no	adult	530670	37.6	88	36	cool	normal	normal	<3 s	mild	hypomotile	slight	none	< 1l	1.5			44	6			died	1	1400	0	0	2
+	adult	534572	38	48	20	cool	normal	pale	<3 s	severe	hypomotile	none	slight	none		decreased	distend. large int.	43	73	cloudy	1		1	3111	0	0	2
+no	adult	530294	37.9	40	24	normal	normal	normal	<3 s	depressed	hypomotile	none					firm feces	40	5.7			lived	1	400	0	0	2
+yes	adult	527524		100		cool		pale cyan	>= 3s	cont. severe	absent		slight			increased		59	6.3			died	1	4205	0	0	2
+yes		5287179	38.1	136	48	cool	reduced	pale	<3 s	cont. severe	hypermotile	moderate	slight	> 1l	4.4	increased		33	4.9	cloudy	2.9	died	1	2205	0	0	1
+yes	adult	530693				cool	reduced	pale	>= 3s	cont. severe	hypomotile	moderate	significant	> 1l		absent	distend. large int.	46	5.9			died	1	3025	0	0	2
+yes	adult	534324	38	48		normal	normal	normal	<3 s	no pain	normal	severe	slight	> 1l		absent	distend. large int.					lived	1	3111	0	0	2
+no	adult	532349	38	56		normal	increased	pale	<3 s	no pain	hypermotile	none	none	none		normal	normal	42	71			lived	2	0	0	0	2
+no	adult	534491	38	60	32	normal	normal		<3 s	mild	hypomotile		none	none				50	7	clear	1	lived	2	0	0	0	2
+yes	adult	529960	38.1	44	9	cool	normal	normal	<3 s	depressed	normal	none	none	none		absent	distend. large int.	31	7.3			lived	2	5124	0	0	2
+no	adult	522979	36	42	30			bright red	<3 s									64	6.8			died	2	1400	0	0	2
+yes	adult	530402		120		cold	reduced	dark cyan	>= 3s	cont. severe	absent	severe				absent	distend. large int.	57	4.5	serosanguinous	3.9	died	1	3205	0	0	1
+yes	adult	529424	37.8	48	28	normal	normal	normal	>= 3s	no pain	normal	none	slight			normal	normal	46	5.9	cloudy	7	lived	2	0	0	0	1
+yes	adult	534519	37.1	84	40	cool	reduced	dark cyan	<3 s	depressed	absent	severe	significant	> 1l	2	absent	distend. large int.	75	81			euthanized	2	1400	0	0	2
+no	adult	535246		80	32	cool	reduced	bright	<3 s	depressed	hypomotile	moderate	slight	none		decreased		50	80			lived	1	0	0	0	2
+yes	adult	534115	38.2	48		normal	reduced	pale	<3 s	mild	absent	severe	none	< 1l	2	absent	distend. large int.	42	71			lived	1	3111	0	0	2
+no	adult	530001	38	44	12	warm	normal	pale	<3 s	mild	absent	moderate	none	> 1l	6.5	normal	distend. small int.	33	6.5			died	1	2209	0	0	2
+yes	adult	529272	38.3	132			reduced	dark cyan	>= 3s	depressed	absent	slight	slight	< 1l	6.2	absent	distend. small int.	57	8		5.2	lived	1	2112	0	0	1
+no	adult	535314	38.7	48	24					no pain	hypermotile		none	none		normal		34	63			lived	2	0	0	0	2
+no	adult	533793	38.9	44	14	cool	normal	normal	<3 s	depressed	hypomotile	slight					other	33	64			lived	2	0	0	0	2
+yes	adult	529399	39.3			cold	reduced	dark cyan	>= 3s	severe	absent	slight	none	< 1l	4	absent	distend. small int.	75		serosanguinous	4.3	died	1	2207	0	0	1
+yes	adult	533836		100		cool	reduced	pale cyan	>= 3s		absent	severe	slight	none	2			68	64	serosanguinous	2	lived	1	2209	0	0	2
+no	adult	528804	38.6	48	20	cool	normal	normal	<3 s	no pain	hypomotile	slight	slight	none		decreased	other	50	7.3	clear		lived	2	3111	0	0	1
+no	adult	535163	38.8	48	40	normal	normal	pale	<3 s	mild	hypomotile	severe	slight				distend. large int.	41	65			lived	1	4124	0	0	2
+no	adult	528247	38	48	20	cool	reduced	pale cyan	<3 s	no pain	absent	slight	slight		5		other	49	8.3	clear		lived	2	400	0	0	1
+no	adult	528996	38.6	52	20	normal	normal	normal	<3 s	mild	hypomotile	slight	none	none		normal	firm feces	36	6.6	clear	5	lived	2	0	0	0	1
+yes	adult	533928	37.8	60	24	normal		pale	>= 3s		absent	severe	slight	< 1l	2		distend. large int.	52	75			euthanized	1	2205	0	0	2
+no	adult	528248	38	42	40	cool	normal	normal	<3 s	mild	hypomotile	none										lived	2	3111	0	0	2
+no	adult	528134			12	normal	normal	bright	<3 s	depressed	hypermotile	slight	significant	none		normal	firm feces	44	7.5	cloudy		lived	2	0	0	0	1
+yes	adult	527916								severe			none	none			distend. large int.	35	58	cloudy	1	lived	1	4205	0	0	2
+yes	adult	530431	38.3	42	24				<3 s									40	8.5			died	1	7113	0	0	2
+no	adult	535176	39.5	60	10	cool			>= 3s	mild	hypomotile	slight	slight	none		decreased		38	56	clear		lived	2	0	0	0	2
+yes	adult	533942	38	66	20	normal	reduced	pale	<3 s	cont. severe	hypomotile	none	none	none		decreased		46	46	serosanguinous	2	euthanized	1	6209	0	0	2
+yes	adult	528523	38.7	76		normal	normal	bright red	>= 3s	mild	hypomotile	slight	slight	> 1l		absent	distend. small int.	50	8			lived	1	2208	0	0	1
+yes	adult	534925	39.4	120	48			bright red	<3 s		hypomotile	moderate	none			absent		56	64	clear	2	euthanized	2	1400	0	0	2
+yes	adult	527916	38.3	40	18	normal	normal	normal	<3 s	mild	hypermotile	none				increased	normal	43	5.9	clear		lived	2	0	0	0	1
+no	adult	528299		44	24	normal	normal	normal	<3 s	mild	hypomotile	none	slight	none			normal		6.3			lived	2	3111	0	0	2
+yes	adult	530254	38.4	104	40	normal	normal	pale	<3 s	depressed	absent	slight	slight	< 1l	6.5		distend. small int.	55	8.5			lived	1	2124	0	0	2
+yes	adult	535085		65	24				>= 3s	cont. severe		severe	significant	none			distend. large int.					euthanized	1	3205	0	0	2
+no	adult	532985	37.5	44	20	normal	normal	pale	<3 s		hypermotile	none				normal		35	7.2			lived	2	0	0	0	2
+no	adult	527677	39	86	16	cool	reduced	bright red		mild	hypomotile	moderate		> 1l				68	5.8	serosanguinous	6	died	1	5400	0	0	1
+yes	adult	535292	38.5	129	48	cool	reduced	pale	<3 s	depressed	absent	moderate	none	< 1l	2			57	66	serosanguinous	2	lived	1	2206	0	0	2
+yes	adult	529729		104		cool	reduced	bright red	>= 3s	depressed	absent	moderate		< 1l		absent	distend. small int.	69	8.6	cloudy	3.4	died	1	2207	0	0	1
+no	adult	518476				cool	absent	dark cyan		severe		severe										died	1	3400	0	0	1
+yes	adult	527929																				lived	1	2208	0	0	2
+yes	adult	535130	38.2	60	30	normal	normal	pale	<3 s	mild	hypomotile	none	slight	none		decreased	other	48	66			lived	1	6112	0	0	2
+yes	adult	523190		68	14			pale cyan	<3 s	severe				none	4.3					cloudy	2.8	died	1	4205	0	0	1
+yes	adult	533968		60	30	cool	reduced	pale cyan	>= 3s	cont. severe	absent	severe	none	none		absent		45	70	serosanguinous	2	lived	1	6111	3111	0	2
+no	adult	528151	38.5	100		cool	reduced	bright red	>= 3s	severe	hypomotile	severe	slight	none		absent	distend. large int.					euthanized	2	1111	0	0	1
+yes	adult	530239	38.4	84	30	cool	normal	bright red	>= 3s	severe	hypomotile	moderate	slight	< 1l	6.5	absent	distend. small int.	47	7.5	serosanguinous		died	1	2300	0	0	2
+no	adult	528305	37.8	48	14			normal	<3 s	mild		slight	none	< 1l	5.3	normal		35	7.5			lived	2	3111	0	0	1
+yes	adult	5279822	38		24	cool	reduced	dark cyan	>= 3s	cont. severe		severe	none	none				68	7.8			died	1	2205	0	0	2
+no	adult	534857	37.8	56	16	normal	normal	bright	<3 s	depressed	hypermotile	none	slight	none		normal		44	68	clear	1	lived	2	0	0	0	2
+no	adult	534053	38.2	68	32	warm	increased	bright	<3 s	no pain	hypermotile	none	significant	none		normal	normal	43	65			lived	2	0	0	0	2
+yes	adult	534833	38.5	120	60	cold	reduced	dark cyan	>= 3s		hypomotile							54				lived	1	5400	0	0	2
+yes	adult	5278331	39.3	64	90	warm	reduced	normal	<3 s		hypomotile	none	none	> 1l				39	6.7			lived	1	21110	0	0	2
+yes	adult	527365	38.4	80	30	cold	reduced	normal	<3 s	mild	hypomotile	moderate	significant	< 1l		absent	distend. large int.	32	6.1	serosanguinous	4.3	lived	1	7209	0	0	1
+yes	adult	533887	38.5	60		normal	normal		<3 s		hypermotile	none						33	53	clear		lived	1	4111	0	0	2
+yes	adult	5299603	38.3	60	16	cool	normal	normal	<3 s	depressed	hypermotile	none	slight	> 1l	3	normal	distend. small int.	30	6	clear	3	lived	1	31110	0	0	2
+yes	adult	528742	37.1	40	8		normal	pale cyan	<3 s	mild	hypomotile	none	none	none		decreased	firm feces	23	6.7	serosanguinous		lived	1	3133	0	0	1
+no		5287279		100	44	warm	normal	normal	<3 s	severe	hypermotile	none				normal		37	4.7			lived	2	7111	0	0	2
+yes	adult	534788	38.2	48	18	normal	normal	normal	<3 s	mild	hypomotile	moderate	none	> 1l		absent		48	74	clear	2	lived	1	5111	0	0	2
+yes	adult	529373		60	48	cool	reduced	pale cyan	>= 3s	severe	hypomotile	severe						58	7.6			died	1	3205	0	0	2
+no	adult	534163	37.9	88	24	normal	normal	bright	<3 s	depressed	normal	none				absent	normal	37	56			lived	2	0	0	0	2
+no	adult	533697	38	44	12	cool	normal	normal			hypermotile	slight				normal		42	64			lived	2	0	0	0	2
+no	adult	529628	38.5	60	20	normal	normal	bright red	>= 3s	depressed	normal	none	slight	none		increased	firm feces	63	7.5	cloudy	2.3	euthanized	2	300	0	0	1
+no	adult	521399	38.5	96	36	cool	reduced		>= 3s	depressed	absent	slight	none	> 1l		absent	distend. large int.	70	8.5			died	1	1400	0	0	1
+no	adult	533885	38.3	60	20	normal	normal	normal	>= 3s	no pain	hypomotile	none				decreased		34	66			lived	2	0	0	0	2
+no	adult	534157	38.5	60	40	cool	normal	bright	<3 s	depressed	hypermotile	slight				decreased	other	49	59			lived	2	0	0	0	2
+yes	adult	528047	37.3	48	12	normal		pale	<3 s	mild	hypermotile	moderate	slight	none		decreased	firm feces	40	6.6	cloudy		lived	1	3205	0	0	1
+yes	adult	528641	38.5	86		normal	normal	pale	<3 s	severe	absent	moderate	slight	none		decreased	distend. large int.	45	7.4	clear	3.4	died	1	3209	0	0	1
+yes	adult	534073	37.5	48	40								none	none			distend. large int.	41	55	serosanguinous	2	euthanized	1	2208	0	0	2
+no	adult	529685	37.2	36	9	normal	normal	normal	<3 s	depressed	hypomotile	none	slight	none		absent	normal	35	5.7			lived	2	31110	0	0	2
+yes	adult	529528	39.2		23	cool	normal	pale	<3 s	severe	absent	slight	slight					36	6.6	clear	3	lived	1	3115	0	0	1
+no	adult	528151	38.5	100		cool	reduced	bright red	>= 3s	severe	hypomotile	severe	slight	none		absent	distend. large int.					euthanized	2	4124	0	0	2
+yes	adult	535137	38.5	96	30	warm	reduced	pale cyan	>= 3s	severe	absent	moderate	slight	none		decreased	distend. large int.	50	65			lived	1	6111	3112	0	2
+yes	adult	530297																45	8.7			died	1	2208	0	0	2
+yes	adult	535338	37.8	88	80	cool	reduced	bright red	>= 3s		hypomotile	moderate	slight	< 1l		absent	distend. large int.	64	89			euthanized	1	3205	0	0	2
+no	adult	534478	37.5	44	10	cool	normal	normal	<3 s	mild	hypermotile	slight	slight			decreased	firm feces	43	51	clear	1	lived	2	0	0	0	2
+yes	adult	530401	37.9	68	20		normal	bright	<3 s	depressed	absent	slight				normal	distend. large int.	45	4	serosanguinous	2.8	died	1	5400	0	0	1
+yes	adult	529893	38	86	24	cold	reduced	pale cyan	<3 s	depressed	absent	severe	none	none		absent	distend. large int.	45	5.5	clear	10.1	died	1	3111	0	0	1
+yes		5294369	38.9	120	30	normal	reduced	bright	>= 3s	mild	hypomotile	moderate	significant	none	3			47	6.3	clear		lived	2	2124	0	0	2
+yes	adult	528183	37.6	45	12	cool	normal	pale	<3 s		normal	slight	slight	none		normal	distend. small int.	39	7	cloudy	1.5	lived	1	2112	0	0	1
+no	adult	529183	38.6	56	32	warm	normal	normal	<3 s	no pain	hypermotile	none	slight			increased		40	7	cloudy	2.1	lived	2	0	0	0	1
+yes	adult	529135	37.8	40	12	normal	normal	normal	<3 s	no pain	normal	none	slight	none		normal	other	38	7			lived	1	3111	0	0	2
+no	adult	528977																				lived	2	0	0	0	2
+yes	adult	5279441	38	76	18				>= 3s									71	11			lived	1	2209	0	0	1
+yes	adult	535240	38.1	40	36	normal	increased	bright	<3 s	depressed	normal											euthanized	1	3112	0	0	2
+yes	adult	529736		52	28	cool	reduced	pale cyan	<3 s	mild	absent	moderate	slight	none		absent	distend. small int.	37	8.1			lived	1	2111	0	0	2
+yes	adult	535029	39.2	88	58	cold	absent		>= 3s	cont. severe	absent									cloudy	2	euthanized	2	3205	0	0	2
+yes	adult	535031	38.5	92	40	cold	reduced		<3 s	depressed	absent	moderate				absent		46	67	cloudy	2	lived	1	2208	0	0	2
+yes	adult	528800		112	13	cold	absent	pale cyan	<3 s	depressed	hypomotile	none	slight	none	4.5	absent	distend. small int.	60	6.3	serosanguinous		lived	1	2205	0	0	1
+yes	adult	528178	37.7	66	12	normal	normal	pale	<3 s	mild	hypomotile	slight	slight			absent	distend. small int.	31.5	6.2	cloudy	1.6	lived	1	2208	0	0	1
+yes	adult	535392	38.8	50	14	normal	normal	normal	<3 s	mild	hypermotile	none	none	none		decreased	distend. large int.	38	58			lived	1	3111	0	0	2
+no	adult	528931	38.4	54	24	normal	normal	normal	<3 s	no pain	hypomotile	none	slight	none		decreased	other	49	7.2	clear	8	lived	2	3111	0	0	1
+yes	adult	528503	39.2	120	20	cold	reduced	bright red	>= 3s	depressed	hypomotile	moderate	none	< 1l			distend. small int.	60	8.8	serosanguinous		died	1	2205	0	0	2
+yes		5289419																45	6.5	cloudy		lived	1	9000	0	0	1
+yes	adult	535196	37.3	90	40	cool		dark cyan	>= 3s	cont. severe	absent	moderate	slight	> 1l		normal	distend. large int.	65	50	serosanguinous	2	euthanized	1	3205	0	0	2
+yes		534597	38.5	120	70						hypermotile		slight			normal		35	54	clear	1	lived	1	4205	3111	2209	2
+yes	adult	534280	38.5	104	40	cool	reduced		<3 s	severe	hypomotile	severe										lived	1	2124	0	0	2
+no	adult	530028	39.5	92	28	cool	reduced	dark cyan	<3 s	cont. severe	absent	none		< 1l		absent		72	6.4		3.6	died	2	3300	0	0	2
+yes	adult	5262543	38.5	30	18													40	7.7			lived	1	2113	0	0	2
+yes	adult	530526	38.3	72	30	cold	reduced	pale	>= 3s	mild	hypomotile	moderate	slight	none		decreased	distend. large int.	43	7	cloudy	3.9	lived	1	3113	0	0	1
+no	adult	528729	37.5	48	30	cold	normal	pale	<3 s		normal	none	none	none		normal	normal	48	8.6			lived	2	400	0	0	2
+yes	adult	528469	38.1	52	24	normal	normal	bright red	<3 s	severe	hypomotile	none	slight	< 1l	7	normal		54	7.5	cloudy	2.6	died	1	2206	0	0	1
+no	adult	528179	38.2	42	26	normal	normal	normal	<3 s	mild	hypermotile	slight				normal		36	6.9			lived	2	3111	0	0	2
+no	adult	533750	37.9	54	42	warm	normal	bright red	<3 s	mild	hypermotile	none		none			other	47	54	serosanguinous	1	lived	2	0	0	0	2
+no	adult	528702	36.1	88		cool	reduced	pale	<3 s	mild	hypomotile	slight	slight	< 1l			distend. small int.	45	7	serosanguinous	4.8	euthanized	1	2209	0	0	1
+yes	adult	534183	38.1	70	22		normal		<3 s	cont. severe	hypomotile						distend. large int.	36	65			euthanized	1	3205	0	0	2
+yes	adult	529160	38	90	30	cold	reduced	pale cyan	>= 3s	cont. severe	absent	severe				absent	distend. large int.	55	6.1			died	1	3205	0	0	2
+yes	adult	529045	38.2	52	16	normal	normal	bright	<3 s	no pain	normal	none	none	none		normal		43	8.1			lived	2	0	0	0	1
+yes	adult	530354		36	32	normal	normal	pale cyan	<3 s	cont. severe	hypomotile	moderate	slight	< 1l	4		distend. small int.	41	5.9			died	1	2205	0	0	2
+yes	adult	5281091	38.4	92	20	normal			>= 3s		hypomotile	moderate				normal						lived	1	2208	0	0	1
+yes		5291409	38.2	124	88	normal	reduced	bright	<3 s	depressed	hypomotile	severe						47	8	clear		lived	1	9400	0	0	1
+no	adult	528904		96		cool	reduced	pale	>= 3s	cont. severe	absent	severe		none		absent	distend. large int.	60				died	1	41110	0	0	2
+yes	adult	530366	37.6	68	32	cool		pale	<3 s	severe	normal	severe	slight	> 1l	6.5	normal	distend. large int.	47	7.2	clear		lived	1	3209	0	0	2
+yes	adult	530170	38.1	88	24	cool	reduced	pale cyan	<3 s	cont. severe	absent	moderate	slight	none		decreased	distend. small int.	41	4.6			died	1	2209	0	0	2
+yes	adult	527709	38	108	60	warm	reduced	pale cyan	<3 s	severe	hypomotile	moderate	slight			decreased	distend. small int.			serosanguinous		lived	1	2205	0	0	2
+no	adult	528169	38.2	48		warm		normal	>= 3s	mild	hypomotile	none	slight	none			other	34	6.6			lived	2	3111	0	0	2
+yes	adult	535043	39.3	100	51	cold	absent	dark cyan	<3 s	depressed	absent	none	none	< 1l	2		distend. small int.	66	13	serosanguinous	2	euthanized	1	2113	0	0	2
+no	adult	527940	36.6	42	18	cool	reduced	bright	<3 s	no pain	absent	none	none	none			distend. large int.	52	7.1			died	1	5111	0	0	2
+yes		5291719	38.8	124	36	cool	normal	bright	<3 s	depressed	hypomotile	severe	none	none		absent	distend. small int.	50	7.6	serosanguinous		died	1	2208	0	0	1
+no	adult	530561		112	24	cool	reduced	pale cyan	>= 3s	cont. severe	absent	slight				absent		40	5.3	serosanguinous	2.6	lived	2	400	0	0	1
+yes	adult	533738		80		cool	reduced	pale	<3 s	severe	absent	severe				absent	distend. large int.	43	70			lived	1	3111	0	0	2
+yes		5294539	38.8	184	84	normal		normal	<3 s	severe	hypermotile	moderate				increased		33	3.3			died	1	7111	0	0	2
+yes	adult	533871	37.5	72		warm	normal	normal	<3 s	depressed	hypermotile	none	none	none		normal		35	65	cloudy	2	euthanized	1	7209	0	0	2
+yes	adult	529812	38.7	96	28	cool	reduced	pale cyan	<3 s		absent			< 1l	7.5			64	9			died	1	2205	0	0	1
+no	adult	534719	37.5	52	12	normal	normal	normal	<3 s	depressed	hypomotile	slight	slight	none		decreased	distend. large int.	36	61	clear	1	lived	2	0	0	0	2
+yes	adult	527734	40.8	72	42	cool	reduced	normal	<3 s	depressed	hypomotile	none	slight	none				54	7.4	serosanguinous		died	1	11400	0	0	1
+no	adult	534933	38	40	25		normal	normal	<3 s	severe	hypomotile	slight	none	none		absent		37	69			lived	2	0	0	0	2
+no	adult	529296	38.4	48	16	warm	normal	normal	<3 s	no pain		slight	slight	none			other	39	6.5			lived	2	3111	0	0	1
+no		5305629	38.6	88	28													35	5.9			lived	2	0	0	0	2
+yes	adult	528743	37.1	75	36			pale	>= 3s	severe	absent	slight	slight	< 1l	5	absent	distend. small int.	48	7.4	serosanguinous	3.2	died	1	12208	0	0	1
+yes	adult	530478	38.3	44	21	cool	normal	bright	<3 s	mild	hypomotile	moderate	slight	none		normal	distend. large int.	44	6.5	cloudy	4.4	lived	1	2209	0	0	1
+no	adult	528590		56	68	cool	normal	normal	<3 s	mild	hypomotile	none	slight	none		normal		40	6			euthanized	1	5206	0	0	2
+no	adult	529865	38.6	68	20	warm	normal	pale	<3 s	mild	hypomotile	slight	none	none		normal	distend. large int.	38	6.5	clear		lived	2	5124	0	0	1
+no	adult	527829	38.3	54	18	cool	normal	bright	<3 s	depressed	hypomotile	slight		< 1l	5.4		distend. small int.	44	7.2	serosanguinous		lived	2	2124	0	0	1
+yes	adult	534403	38.2	42	20			normal	<3 s		hypomotile					decreased		47	60			lived	2	0	0	0	2
+yes	adult	527883	39.3	64	90	warm	reduced	normal	<3 s		hypomotile	none	none	> 1l	6.5	normal	distend. large int.	39	6.7			lived	1	31110	0	0	2
+yes	adult	528570	37.5	60	50	cool	reduced	normal	<3 s	mild	hypomotile	slight	slight	> 1l	3.5	decreased	distend. small int.	35	6.5			died	1	2209	0	0	2
+yes	adult	534626	37.7	80		cool	reduced	dark cyan	<3 s	cont. severe	absent	none	slight	< 1l		decreased	normal	50	55	serosanguinous	2	lived	1	4206	0	0	2
+yes	adult	529796		100	30	cool	reduced	pale cyan	>= 3s	cont. severe	absent	severe	significant	< 1l		absent	distend. small int.	52	6.6			lived	1	2124	0	0	2
+yes	adult	528638	37.7	120	28	cool	reduced	pale	<3 s	cont. severe	hypomotile	moderate	none	none				65	7	serosanguinous		died	1	4205	0	0	1
+yes	adult	534624		76			reduced				absent	severe					distend. large int.					euthanized	1	11124	0	0	2
+yes		5297159	38.8	150	50	normal	reduced	dark cyan	>= 3s	cont. severe	hypomotile	slight	none	none				50	6.2			died	1	4207	0	0	2
+yes	adult	534787	38	36	16	cool	normal	normal	<3 s	severe	normal	slight	significant	< 1l	2	decreased		37	75	cloudy	1	euthanized	2	3111	0	0	2
+no	adult	528620	36.9	50	40	warm	reduced	pale	<3 s	no pain	hypomotile	slight	significant	none	7			37.5	6.5			lived	2	3111	0	0	2
+no	adult	528019	37.8	40	16	normal	normal	normal	<3 s	no pain	hypermotile	none				normal	normal	37	6.8			lived	2	0	0	0	2
+no	adult	529172	38.2	56	40	cold	reduced	normal	<3 s	depressed	absent	moderate	slight	> 1l	7.5			47	7.2	clear	2.5	lived	2	8300	0	0	1
+yes	adult	534644	38.6	48	12			normal		no pain	hypermotile							36	67			lived	2	0	0	0	2
+no	adult	530624	40	78		cool	reduced	bright red	<3 s	depressed	hypomotile	none	none	none		absent	normal	66	6.5			died	1	8400	0	0	1
+yes	adult	527544		70	16	cool	absent	bright red	>= 3s	depressed	hypomotile	slight	slight	none		absent	distend. large int.	60	7.5			died	1	1400	0	0	2
+yes	adult	527758	38.2	72	18													35	6.4			lived	1	3124	0	0	2
+no	adult	530439	38.5	54		normal	normal	normal	<3 s	mild	hypermotile	none	slight	none		normal		40	6.8	cloudy	7	lived	2	0	0	0	1
+yes	adult	5283431	38.5	66	24	normal	normal	normal	<3 s	mild	hypomotile	none	slight	none		absent	distend. large int.	40	6.7	clear		lived	1	31110	0	0	1
+no	adult	5275212	37.8	82	12	cool	normal	normal	>= 3s	severe		moderate	none	< 1l				50	7			euthanized	1	2205	0	0	2
+no		5305129	39.5	84	30				<3 s									28	5			lived	2	0	0	0	2
+yes	adult	529428																				lived	1	2124	0	0	2
+yes	adult	529126	38	50	36		normal	normal	<3 s	mild	normal	slight				decreased		39	6.6	clear	5.3	lived	1	8400	0	0	1
+no	adult	535054	38.6	45	16	warm	normal	bright	<3 s	no pain	hypermotile					normal	normal	43	58			lived	2	0	0	0	2
+yes	adult	528890	38.9	80	44	cool	reduced	pale	<3 s	depressed	hypomotile	moderate	slight	> 1l	7	decreased	normal	54	6.5	serosanguinous		died	1	7111	0	0	2
+yes	adult	530034	37	66	20	normal	reduced	bright	<3 s	severe	hypomotile	moderate	none			normal	distend. large int.	35	6.9	cloudy		died	1	31110	0	0	2
+yes	adult	534004		78	24	cool	reduced	pale	<3 s		hypomotile		slight	none			distend. small int.	43	62		2	euthanized	2	2209	0	0	2
+no	adult	533902	38.5	40	16	normal	normal	normal	<3 s	depressed	hypermotile	none				decreased	other	37	67			lived	2	0	0	0	2
+yes	adult	533886		120	70	cold		pale cyan	>= 3s	depressed	absent						distend. large int.	55	65			euthanized	2	3205	0	0	2
+no	adult	527702	37.2	72	24	cool	increased	pale cyan	>= 3s	severe	hypomotile	moderate	significant	none		absent	distend. small int.	44		serosanguinous	3.3	euthanized	1	2208	0	0	1
+yes	adult	529386	37.5	72	30	cold	reduced	pale cyan	<3 s	severe	absent	moderate	slight	none		decreased	distend. large int.	60	6.8			died	1	3205	0	0	2
+yes	adult	530612	36.5	100	24	cool	reduced	pale	<3 s	mild	hypomotile	moderate	significant	none		absent	distend. small int.	50	6	serosanguinous	3.4	lived	1	2208	0	0	1
+yes	adult	534618	37.2	40	20											absent	normal	36	62	clear	1	euthanized	2	6112	0	0	2

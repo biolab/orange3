@@ -113,8 +113,8 @@ class TabDelimReader:
         return i
 
     def read_data(self, f, table):
-        _X, _Y = table._X, table._Y
-        _W = table._W if table._W.shape[-1] else None
+        X, Y = table.X, table.Y
+        W = table.W if table.W.shape[-1] else None
         f.seek(0)
         f.readline()
         f.readline()
@@ -122,11 +122,11 @@ class TabDelimReader:
         padding = [""] * self.n_columns
         if self.basket_column >= 0:
             # TODO how many columns?!
-            table._Xsparse = sparse.lil_matrix(len(_X), 100)
-        table._metas = _metas = (
-            np.empty((len(_X), len(self.meta_columns)), dtype=object))
+            table._Xsparse = sparse.lil_matrix(len(X), 100)
+        table.metas = metas = (
+            np.empty((len(X), len(self.meta_columns)), dtype=object))
         line_count = 0
-        _Xr = None
+        Xr = None
         for lne in f:
             values = lne.strip()
             if not values:
@@ -138,25 +138,25 @@ class TabDelimReader:
             elif len(values) < self.n_columns:
                 values += padding
             if self.attribute_columns:
-                _Xr = _X[line_count]
+                Xr = X[line_count]
                 for i, (col, reader) in enumerate(self.attribute_columns):
-                    _Xr[i] = reader(values[col].strip())
+                    Xr[i] = reader(values[col].strip())
             for i, (col, reader) in enumerate(self.classvar_columns):
-                _Y[line_count, i] = reader(values[col].strip())
-            if _W is not None:
-                _W[line_count] = float(values[self.weight_column])
+                Y[line_count, i] = reader(values[col].strip())
+            if W is not None:
+                W[line_count] = float(values[self.weight_column])
             for i, (col, reader) in enumerate(self.meta_columns):
-                _metas[line_count, i] = reader(values[col].strip())
+                metas[line_count, i] = reader(values[col].strip())
             line_count += 1
-        if line_count != len(_X):
-            del _Xr, _X, _Y, _W, _metas
-            table._X.resize(line_count, len(table.domain.attributes))
-            table._Y.resize(line_count, len(table.domain.class_vars))
-            if table._W.ndim == 1:
-                table._W.resize(line_count)
+        if line_count != len(X):
+            del Xr, X, Y, W, metas
+            table.X.resize(line_count, len(table.domain.attributes))
+            table.Y.resize(line_count, len(table.domain.class_vars))
+            if table.W.ndim == 1:
+                table.W.resize(line_count)
             else:
-                table._W.resize((line_count, 0))
-            table._metas.resize((line_count, len(self.meta_columns)))
+                table.W.resize((line_count, 0))
+            table.metas.resize((line_count, len(self.meta_columns)))
         table.n_rows = line_count
 
     def reorder_values_array(self, arr, variables):
@@ -172,8 +172,8 @@ class TabDelimReader:
             delattr(var, "fix_order")
 
     def reorder_values(self, table):
-        self.reorder_values_array(table._X, table.domain.attributes)
-        self.reorder_values_array(table._Y, table.domain.class_vars)
+        self.reorder_values_array(table.X, table.domain.attributes)
+        self.reorder_values_array(table.Y, table.domain.class_vars)
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:

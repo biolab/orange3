@@ -3,7 +3,7 @@ import unittest
 from scipy.sparse import csr_matrix, lil_matrix
 from Orange import data
 
-from . import test_table as tabletests
+from Orange.tests import test_table as tabletests
 
 
 class InterfaceTest(tabletests.InterfaceTest):

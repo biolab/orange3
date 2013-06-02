@@ -305,7 +305,7 @@ class OWBoxPlot(widget.OWWidget):
             self.label_txts = dataset.domain[group_ind].values
         else:
             self.dist = datacaching.getCached(
-                dataset, distribution.get_distribution, (attr_ind, dataset))
+                dataset, distribution.get_distribution, (dataset, attr_ind))
             if self.is_continuous:
                 self.stats = [BoxData(self.dist)]
             self.label_txts = [""]
