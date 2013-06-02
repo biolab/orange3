@@ -3,7 +3,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.data.table import Table
+from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
 
@@ -131,8 +131,7 @@ class OWFile(widget.OWWidget):
     def browseFile(self, in_demos=0):
         if in_demos:
             try:
-                import orngConfiguration
-                startfile = orngConfiguration.datasetsPath
+                startfile = get_sample_datasets_dir()
             except AttributeError:
                 startfile = ""
             if not startfile or not os.path.exists(startfile):
