@@ -18,7 +18,13 @@ from Orange.data import (domain as orange_domain,
 from Orange.data.storage import Storage
 from . import _valuecount
 
-dataset_dirs = ['']
+
+def get_sample_datasets_dir():
+    orange_data_table = os.path.dirname(__file__)
+    dataset_dir = os.path.join(orange_data_table, '..', 'datasets')
+    return os.path.realpath(dataset_dir)
+
+dataset_dirs = ['', get_sample_datasets_dir()]
 
 
 class RowInstance(Instance):
