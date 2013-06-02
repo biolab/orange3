@@ -33,15 +33,15 @@ class RowInstance(Instance):
         Construct a data instance representing the given row of the table.
         """
         super().__init__(table.domain)
-        self._x = table._X[row_index]
+        self._x = table.X[row_index]
         if sp.issparse(self._x):
             self.sparse_x = self._x
             self._x = np.asarray(self._x.todense())[0]
-        self._y = table._Y[row_index]
+        self._y = table.Y[row_index]
         if sp.issparse(self._y):
             self.sparse_y = self._y
             self._y = np.asarray(self._y.todense())[0]
-        self._metas = table._metas[row_index]
+        self._metas = table.metas[row_index]
         if sp.issparse(self._metas):
             self.sparse_metas = self._metas
             self._metas = np.asarray(self._metas.todense())[0]
@@ -54,7 +54,7 @@ class RowInstance(Instance):
     def weight(self):
         if not self.table.has_weights():
             return 1
-        return self.table._W[self.row_index]
+        return self.table.W[self.row_index]
 
 
     #noinspection PyMethodOverriding
@@ -62,7 +62,7 @@ class RowInstance(Instance):
     def weight(self, weight):
         if not self.table.has_weights():
             self.table.set_weights()
-        self.table._W[self.row_index] = weight
+        self.table.W[self.row_index] = weight
 
 
     def set_class(self, value):
@@ -71,7 +71,7 @@ class RowInstance(Instance):
             value = self.table.domain.class_var.to_val(value)
         self._values[len(self.table.domain.attributes)] = self._y[0] = value
         if self.sparse_y:
-            self.table._Y[self.row_index, 0] = value
+            self.table.Y[self.row_index, 0] = value
 
 
     def __setitem__(self, key, value):
@@ -87,15 +87,15 @@ class RowInstance(Instance):
             if key < len(self._x):
                 self._values[key] = self._x[key] = value
                 if self.sparse_x:
-                    self.table._X[self.row_index, key] = value
+                    self.table.X[self.row_index, key] = value
             else:
                 self._values[key] = self._y[key - len(self._x)] = value
                 if self.sparse_y:
-                    self.table._Y[self.row_index, key - len(self._x)] = value
+                    self.table.Y[self.row_index, key - len(self._x)] = value
         else:
             self._metas[-1 - key] = value
             if self.sparse_metas:
-                self.table._metas[self.row_index, -1 - key] = value
+                self.table.metas[self.row_index, -1 - key] = value
 
 
     @staticmethod
@@ -118,12 +118,12 @@ class RowInstance(Instance):
         table = self.table
         domain = table.domain
         row = self.row_index
-        s = "[" + self.sp_values(table._X, row, domain.attributes)
+        s = "[" + self.sp_values(table.X, row, domain.attributes)
         if domain.class_vars:
-            s += " | " + self.sp_values(table._Y, row, domain.class_vars)
+            s += " | " + self.sp_values(table.Y, row, domain.class_vars)
         s += "]"
         if self._domain.metas:
-            s += " {" + self.sp_values(table._metas, row, domain.metas) + "}"
+            s += " {" + self.sp_values(table.metas, row, domain.metas) + "}"
         return s
 
     __repr__ = __str__
@@ -136,43 +136,6 @@ class Columns:
 
 
 class Table(MutableSequence, Storage):
-    @property
-    def X(self):
-        """
-        Dependent variables (attributes, features) a 2-d array with
-        dimension `(N, len(domain.attributes))`.
-        """
-        return self._X
-
-
-    @property
-    def Y(self):
-        """
-        Dependent variables (features, targets); a 2-d array with dimension
-        `(N, len(domain.class_vars))`, typically `(N, 1)`."""
-
-        return self._Y
-
-
-    @property
-    def metas(self):
-        """
-        Meta attributes with additional data that is not used in modelling,
-        like instance names or id's. Typically an array of objects of shape
-        `(N, len(domain.metas))`
-        """
-        return self._metas
-
-
-    @property
-    def W(self):
-        """
-        Instance weights; a vector of length N. If the data is not weighted,
-        `W` is, for practical reasons, a 2d array with shape `(N, 0)`.
-        """
-        return self._W
-
-
     @property
     def columns(self):
         """
@@ -226,13 +189,13 @@ class Table(MutableSequence, Storage):
         self = cls.__new__(Table)
         self.domain = domain
         self.n_rows = n_rows
-        self._X = np.zeros((n_rows, len(domain.attributes)))
-        self._Y = np.zeros((n_rows, len(domain.class_vars)))
+        self.X = np.zeros((n_rows, len(domain.attributes)))
+        self.Y = np.zeros((n_rows, len(domain.class_vars)))
         if weights:
-            self._W = np.ones(n_rows)
+            self.W = np.ones(n_rows)
         else:
-            self._W = np.empty((n_rows, 0))
-        self._metas = np.empty((n_rows, len(self.domain.metas)), object)
+            self.W = np.empty((n_rows, 0))
+        self.metas = np.empty((n_rows, len(self.domain.metas)), object)
         return self
 
 
@@ -293,22 +256,22 @@ class Table(MutableSequence, Storage):
             return Table.from_table_rows(source, row_indices)
 
         if isinstance(row_indices, slice):
-            start, stop, stride = row_indices.indices(source._X.shape[0])
+            start, stop, stride = row_indices.indices(source.X.shape[0])
             n_rows = (stop - start) / stride
             if n_rows < 0:
                 n_rows = 0
         elif row_indices is ...:
-            n_rows = len(source._X)
+            n_rows = len(source.X)
         else:
             n_rows = len(row_indices)
 
         self = cls.__new__(Table)
         self.domain = domain
         conversion = domain.get_conversion(source.domain)
-        self._X = get_columns(row_indices, conversion.attributes, n_rows)
-        self._Y = get_columns(row_indices, conversion.class_vars, n_rows)
-        self._metas = get_columns(row_indices, conversion.metas, n_rows)
-        self._W = np.array(source._W[row_indices])
+        self.X = get_columns(row_indices, conversion.attributes, n_rows)
+        self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
+        self.metas = get_columns(row_indices, conversion.metas, n_rows)
+        self.W = np.array(source.W[row_indices])
         return self
 
 
@@ -326,10 +289,10 @@ class Table(MutableSequence, Storage):
         """
         self = cls.__new__(Table)
         self.domain = source.domain
-        self._X = source._X[row_indices]
-        self._Y = source._Y[row_indices]
-        self._metas = source._metas[row_indices]
-        self._W = source._W[row_indices]
+        self.X = source.X[row_indices]
+        self.Y = source.Y[row_indices]
+        self.metas = source.metas[row_indices]
+        self.W = source.W[row_indices]
         return self
 
 
@@ -390,11 +353,11 @@ class Table(MutableSequence, Storage):
 
         self = Table.__new__(Table)
         self.domain = domain
-        self._X = X
-        self._Y = Y
-        self._metas = metas
-        self._W = W
-        self.n_rows = self._X.shape[0]
+        self.X = X
+        self.Y = Y
+        self.metas = metas
+        self.W = W
+        self.n_rows = self.X.shape[0]
         return self
 
 
@@ -441,31 +404,31 @@ class Table(MutableSequence, Storage):
         if isinstance(example, Instance):
             if example.domain == domain:
                 if isinstance(example, RowInstance):
-                    self._X[row] = example._x
-                    self._Y[row] = example._y
+                    self.X[row] = example._x
+                    self.Y[row] = example._y
                 else:
-                    self._X[row] = example._values[:len(domain.attributes)]
-                    self._Y[row] = example._values[len(domain.attributes):]
-                self._metas[row] = example._metas
+                    self.X[row] = example._values[:len(domain.attributes)]
+                    self.Y[row] = example._values[len(domain.attributes):]
+                self.metas[row] = example._metas
                 return
             c = self.domain.get_conversion(example.domain)
-            self._X[row] = [example._values[i] if isinstance(i, int) else
-                            (Unknown if not i else i(example))
-                            for i in c.attributes]
-            self._Y[row] = [example._values[i] if isinstance(i, int) else
-                            (Unknown if not i else i(example))
-                            for i in c.class_vars]
-            self._metas[row] = [example._values[i] if isinstance(i, int) else
-                                (Unknown if not i else i(example))
-                                for i in c.metas]
+            self.X[row] = [example._values[i] if isinstance(i, int) else
+                           (Unknown if not i else i(example))
+                           for i in c.attributes]
+            self.Y[row] = [example._values[i] if isinstance(i, int) else
+                           (Unknown if not i else i(example))
+                           for i in c.class_vars]
+            self.metas[row] = [example._values[i] if isinstance(i, int) else
+                               (Unknown if not i else i(example))
+                               for i in c.metas]
         else:
-            self._X[row] = [var.to_val(val)
-                            for var, val in zip(domain.attributes, example)]
-            self._Y[row] = [var.to_val(val)
-                            for var, val in
-                            zip(domain.class_vars,
-                                example[len(domain.attributes):])]
-            self._metas[row] = Unknown
+            self.X[row] = [var.to_val(val)
+                           for var, val in zip(domain.attributes, example)]
+            self.Y[row] = [var.to_val(val)
+                           for var, val in
+                           zip(domain.class_vars,
+                               example[len(domain.attributes):])]
+            self.metas[row] = Unknown
 
 
     # Helper function for __setitem__ and insert:
@@ -500,31 +463,31 @@ class Table(MutableSequence, Storage):
 
 
     # A helper function for extend and insert
-    # Resize _X, _Y, _metas and _W.
+    # Resize X, Y, metas and W.
     def _resize_all(self, new_length):
-        old_length = self._X.shape[0]
+        old_length = self.X.shape[0]
         if old_length == new_length:
             return
         try:
-            self._X.resize(new_length, self._X.shape[1])
-            self._Y.resize(new_length, self._Y.shape[1])
-            self._metas.resize(new_length, self._metas.shape[1])
-            if self._W.ndim == 2:
-                self._W.resize((new_length, 0))
+            self.X.resize(new_length, self.X.shape[1])
+            self.Y.resize(new_length, self.Y.shape[1])
+            self.metas.resize(new_length, self.metas.shape[1])
+            if self.W.ndim == 2:
+                self.W.resize((new_length, 0))
             else:
-                self._W.resize(new_length)
+                self.W.resize(new_length)
         except Exception:
-            if self._X.shape[0] == new_length:
-                self._X.resize(old_length, self._X.shape[1])
-            if self._Y.shape[0] == new_length:
-                self._Y.resize(old_length, self._Y.shape[1])
-            if self._metas.shape[0] == new_length:
-                self._metas.resize(old_length, self._metas.shape[1])
-            if self._W.shape[0] == new_length:
-                if self._W.ndim == 2:
-                    self._W.resize((old_length, 0))
+            if self.X.shape[0] == new_length:
+                self.X.resize(old_length, self.X.shape[1])
+            if self.Y.shape[0] == new_length:
+                self.Y.resize(old_length, self.Y.shape[1])
+            if self.metas.shape[0] == new_length:
+                self.metas.resize(old_length, self.metas.shape[1])
+            if self.W.shape[0] == new_length:
+                if self.W.ndim == 2:
+                    self.W.resize((old_length, 0))
                 else:
-                    self._W.resize(old_length)
+                    self.W.resize(old_length)
             raise
 
 
@@ -543,14 +506,14 @@ class Table(MutableSequence, Storage):
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
                 if 0 <= col_idx < len(self.domain.attributes):
-                    return Value(var, self._X[row_idx, col_idx])
+                    return Value(var, self.X[row_idx, col_idx])
                 elif col_idx >= len(self.domain.attributes):
                     return Value(
                         var,
-                        self._Y[row_idx,
+                        self.Y[row_idx,
                                 col_idx - len(self.domain.attributes)])
                 elif col_idx < 0:
-                    return Value(var, self._metas[row_idx, -1 - col_idx])
+                    return Value(var, self.metas[row_idx, -1 - col_idx])
             except TypeError:
                 row_idx = [row_idx]
 
@@ -576,7 +539,7 @@ class Table(MutableSequence, Storage):
     def __setitem__(self, key, value):
         if not isinstance(key, tuple):
             if isinstance(value, Real):
-                self._X[key, :] = value
+                self.X[key, :] = value
                 return
             self._set_row(value, key)
             return
@@ -588,7 +551,7 @@ class Table(MutableSequence, Storage):
         # single row
         if isinstance(row_idx, int):
             if isinstance(col_idx, slice):
-                col_idx = range(*slice.indices(col_idx, self._X.shape[1]))
+                col_idx = range(*slice.indices(col_idx, self.X.shape[1]))
             if not isinstance(col_idx, str) and isinstance(col_idx, Iterable):
                 col_idx = list(col_idx)
             if not isinstance(col_idx, str) and isinstance(col_idx, Sized):
@@ -609,28 +572,28 @@ class Table(MutableSequence, Storage):
                 if not isinstance(col_idx, int):
                     col_idx = self.domain.index(col_idx)
                 if col_idx >= 0:
-                    if col_idx < self._X.shape[1]:
-                        self._X[row_idx, col_idx] = value
+                    if col_idx < self.X.shape[1]:
+                        self.X[row_idx, col_idx] = value
                     else:
-                        self._Y[row_idx, col_idx - self._X.shape[1]] = value
+                        self.Y[row_idx, col_idx - self.X.shape[1]] = value
                 else:
-                    self._metas[row_idx, -1 - col_idx] = value
+                    self.metas[row_idx, -1 - col_idx] = value
 
         # multiple rows, multiple columns
         attributes, col_indices = self._compute_col_indices(col_idx)
         if col_indices is ...:
             col_indices = range(len(self.domain))
-        n_attrs = self._X.shape[1]
+        n_attrs = self.X.shape[1]
         if isinstance(value, str):
             if not attributes:
                 attributes = self.domain.attributes
             for var, col in zip(attributes, col_indices):
                 if 0 <= col < n_attrs:
-                    self._X[row_idx, col] = var.to_val(value)
+                    self.X[row_idx, col] = var.to_val(value)
                 elif col >= n_attrs:
-                    self._Y[row_idx, col - n_attrs] = var.to_val(value)
+                    self.Y[row_idx, col - n_attrs] = var.to_val(value)
                 else:
-                    self._metas[row_idx, -1 - col] = var.to_val(value)
+                    self.metas[row_idx, -1 - col] = var.to_val(value)
         else:
             attr_cols = np.fromiter(
                 (col for col in col_indices if 0 <= col < n_attrs), int)
@@ -647,27 +610,27 @@ class Table(MutableSequence, Storage):
                 if len(attr_cols) == 1:
                     # scipy.sparse matrices only allow primitive indices.
                     attr_cols = attr_cols[0]
-                self._X[row_idx, attr_cols] = value
+                self.X[row_idx, attr_cols] = value
             if len(class_cols):
                 if len(class_cols) == 1:
                     # scipy.sparse matrices only allow primitive indices.
                     class_cols = class_cols[0]
-                self._Y[row_idx, class_cols] = value
+                self.Y[row_idx, class_cols] = value
             if len(meta_cols):
-                self._metas[row_idx, meta_cols] = value
+                self.metas[row_idx, meta_cols] = value
 
 
     def __delitem__(self, key):
         if key is ...:
             key = range(len(self))
-        self._X = np.delete(self._X, key, axis=0)
-        self._Y = np.delete(self._Y, key, axis=0)
-        self._metas = np.delete(self._metas, key, axis=0)
-        self._W = np.delete(self._W, key, axis=0)
+        self.X = np.delete(self.X, key, axis=0)
+        self.Y = np.delete(self.Y, key, axis=0)
+        self.metas = np.delete(self.metas, key, axis=0)
+        self.W = np.delete(self.W, key, axis=0)
 
 
     def __len__(self):
-        return self._X.shape[0]
+        return self.X.shape[0]
 
 
     def __str__(self):
@@ -708,19 +671,19 @@ class Table(MutableSequence, Storage):
             raise IndexError("Index out of range")
         self._resize_all(len(self) + 1)
         if row < len(self):
-            self._X[row + 1:] = self._X[row:-1]
-            self._Y[row + 1:] = self._Y[row:-1]
-            self._metas[row + 1:] = self._metas[row:-1]
-            self._W[row + 1:] = self._W[row:-1]
+            self.X[row + 1:] = self.X[row:-1]
+            self.Y[row + 1:] = self.Y[row:-1]
+            self.metas[row + 1:] = self.metas[row:-1]
+            self.W[row + 1:] = self.W[row:-1]
         try:
             self._set_row(instance, row)
-            if self._W.shape[-1]:
-                self._W[row] = 1
+            if self.W.shape[-1]:
+                self.W[row] = 1
         except Exception:
-            self._X[row:-1] = self._X[row + 1:]
-            self._Y[row:-1] = self._Y[row + 1:]
-            self._metas[row:-1] = self._metas[row + 1:]
-            self._W[row:-1] = self._W[row + 1:]
+            self.X[row:-1] = self.X[row + 1:]
+            self.Y[row:-1] = self.Y[row + 1:]
+            self.metas[row:-1] = self.metas[row + 1:]
+            self.W[row:-1] = self.W[row + 1:]
             self._resize_all(len(self) - 1)
             raise
 
@@ -740,14 +703,14 @@ class Table(MutableSequence, Storage):
         try:
             # shortcut
             if isinstance(instances, Table) and instances.domain == self.domain:
-                self._X[old_length:] = instances._X
-                self._Y[old_length:] = instances._Y
-                self._metas[old_length:] = instances._metas
-                if self._W.shape[-1]:
-                    if instances._W.shape[-1]:
-                        self._W[old_length:] = instances._W
+                self.X[old_length:] = instances.X
+                self.Y[old_length:] = instances.Y
+                self.metas[old_length:] = instances.metas
+                if self.W.shape[-1]:
+                    if instances.W.shape[-1]:
+                        self.W[old_length:] = instances.W
                     else:
-                        self._W[old_length:] = 1
+                        self.W[old_length:] = 1
             else:
                 for i, example in enumerate(instances):
                     self[old_length + i] = example
@@ -760,34 +723,34 @@ class Table(MutableSequence, Storage):
         """
         Return `True` if all arrays represent a view referring to another table
         """
-        return ((not self._X.shape[-1] or self._X.base is not None) and
-                (not self._Y.shape[-1] or self._Y.base is not None) and
-                (not self._metas.shape[-1] or self._metas.base is not None) and
-                (not self._weights.shape[-1] or self._W.base is not None))
+        return ((not self.X.shape[-1] or self.X.base is not None) and
+                (not self.Y.shape[-1] or self.Y.base is not None) and
+                (not self.metas.shape[-1] or self.metas.base is not None) and
+                (not self._weights.shape[-1] or self.W.base is not None))
 
 
     def is_copy(self):
         """
         Return `True` if the table owns its data
         """
-        return ((not self._X.shape[-1] or self._X.base is None) and
-                (self._Y.base is None) and
-                (self._metas.base is None) and
-                (self._W.base is None))
+        return ((not self.X.shape[-1] or self.X.base is None) and
+                (self.Y.base is None) and
+                (self.metas.base is None) and
+                (self.W.base is None))
 
 
     def ensure_copy(self):
         """
         Ensure that the table owns its data; copy arrays when necessary
         """
-        if self._X.base is not None:
-            self._X = self._X.copy()
-        if self._Y.base is not None:
-            self._Y = self._Y.copy()
-        if self._metas.base is not None:
-            self._metas = self._metas.copy()
-        if self._W.base is not None:
-            self._W = self._W.copy()
+        if self.X.base is not None:
+            self.X = self.X.copy()
+        if self.Y.base is not None:
+            self.Y = self.Y.copy()
+        if self.metas.base is not None:
+            self.metas = self.metas.copy()
+        if self.W.base is not None:
+            self.W = self.W.copy()
 
 
     @staticmethod
@@ -807,19 +770,19 @@ class Table(MutableSequence, Storage):
 
     def X_density(self):
         if not hasattr(self, "_X_density"):
-            self._X_density = Table.__determine_density(self._X)
+            self._X_density = Table.__determine_density(self.X)
         return self._X_density
 
 
     def Y_density(self):
         if not hasattr(self, "_Y_density"):
-            self._Y_density = Table.__determine_density(self._Y)
+            self._Y_density = Table.__determine_density(self.Y)
         return self._Y_density
 
 
     def metas_density(self):
         if not hasattr(self, "_metas_density"):
-            self._metas_density = Table.__determine_density(self._metas)
+            self._metas_density = Table.__determine_density(self.metas)
         return self._metas_density
 
 
@@ -827,14 +790,14 @@ class Table(MutableSequence, Storage):
         """
         Set weights of data instances; create a vector of weights if necessary.
         """
-        if not self._W.shape[-1]:
-            self._W = np.empty(len(self))
-        self._W[:] = weight
+        if not self.W.shape[-1]:
+            self.W = np.empty(len(self))
+        self.W[:] = weight
 
 
     def has_weights(self):
         """Return `True` if the data instances are weighed. """
-        return self._W.shape[-1] != 0
+        return self.W.shape[-1] != 0
 
 
     def total_weight(self):
@@ -842,14 +805,14 @@ class Table(MutableSequence, Storage):
         Return the total weight of instances in the table, or their number if
         they are unweighted.
         """
-        if self._W.shape[-1]:
-            return sum(self._W)
+        if self.W.shape[-1]:
+            return sum(self.W)
         return len(self)
 
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
-        return bn.anynan(self._X) or bn.anynan(self._Y)
+        return bn.anynan(self.X) or bn.anynan(self.Y)
 
 
     def has_missing_class(self):
@@ -862,22 +825,22 @@ class Table(MutableSequence, Storage):
         # (after pickling and unpickling such arrays, checksum changes)
         # Why, and should we fix it or remove it?
         """Return a checksum over X, Y, metas and W."""
-        cs = zlib.adler32(self._X)
-        cs = zlib.adler32(self._Y, cs)
+        cs = zlib.adler32(self.X)
+        cs = zlib.adler32(self.Y, cs)
         if include_metas:
-            cs = zlib.adler32(self._metas, cs)
-        cs = zlib.adler32(self._W, cs)
+            cs = zlib.adler32(self.metas, cs)
+        cs = zlib.adler32(self.W, cs)
         return cs
 
 
     def shuffle(self):
         """Randomly shuffle the rows of the table."""
-        ind = np.arange(self._X.shape[0])
+        ind = np.arange(self.X.shape[0])
         np.random.shuffle(ind)
-        self._X = self._X[ind]
-        self._Y = self._Y[ind]
-        self._metas = self._metas[ind]
-        self._W = self._W[ind]
+        self.X = self.X[ind]
+        self.Y = self.Y[ind]
+        self.metas = self.metas[ind]
+        self.W = self.W[ind]
 
 
     def get_column_view(self, index):
@@ -899,12 +862,12 @@ class Table(MutableSequence, Storage):
         if not isinstance(index, int):
             index = self.domain.index(index)
         if index >= 0:
-            if index < self._X.shape[1]:
-                return rx(self._X[:, index])
+            if index < self.X.shape[1]:
+                return rx(self.X[:, index])
             else:
-                return rx(self._Y[:, index - self._X.shape[1]])
+                return rx(self.Y[:, index - self.X.shape[1]])
         else:
-            return rx(self._metas[:, -1 - index])
+            return rx(self.metas[:, -1 - index])
 
 
     def _filter_is_defined(self, columns=None, negate=False):
@@ -919,16 +882,16 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
         if columns is None:
-            if sp.issparse(self._X):
-                remove = (self._X.indptr[1:] !=
-                          self._X.indptr[-1:] + self._X.shape[1])
+            if sp.issparse(self.X):
+                remove = (self.X.indptr[1:] !=
+                          self.X.indptr[-1:] + self.X.shape[1])
             else:
-                remove = bn.anynan(self._X, axis=1)
-            if sp.issparse(self._Y):
-                remove = np.logical_or(remove, self._Y.indptr[1:] !=
-                                       self._Y.indptr[-1:] + self._Y.shape[1])
+                remove = bn.anynan(self.X, axis=1)
+            if sp.issparse(self.Y):
+                remove = np.logical_or(remove, self.Y.indptr[1:] !=
+                                       self.Y.indptr[-1:] + self.Y.shape[1])
             else:
-                remove = np.logical_or(remove, bn.anynan(self._Y, axis=1))
+                remove = np.logical_or(remove, bn.anynan(self.Y, axis=1))
         else:
             remove = np.zeros(len(self), dtype=bool)
             for column in columns:
@@ -951,15 +914,15 @@ class Table(MutableSequence, Storage):
         :return: new table
         :rtype: Orange.data.Table
         """
-        if sp.issparse(self._Y):
+        if sp.issparse(self.Y):
             if negate:
-                retain = (self._Y.indptr[1:] !=
-                          self._Y.indptr[-1:] + self._Y.shape[1])
+                retain = (self.Y.indptr[1:] !=
+                          self.Y.indptr[-1:] + self.Y.shape[1])
             else:
-                retain = (self._Y.indptr[1:] ==
-                          self._Y.indptr[-1:] + self._Y.shape[1])
+                retain = (self.Y.indptr[1:] ==
+                          self.Y.indptr[-1:] + self.Y.shape[1])
         else:
-            retain = bn.anynan(self._Y, axis=1)
+            retain = bn.anynan(self.Y, axis=1)
             if not negate:
                retain = np.logical_not(retain)
         return Table.from_table_rows(self, retain)
@@ -1107,22 +1070,22 @@ class Table(MutableSequence, Storage):
         if compute_var:
             raise NotImplementedError("computation of variance is "
                                       "not implemented yet")
-        W = self._W if self.has_weights() else None
+        W = self.W if self.has_weights() else None
         rr = []
         if not columns:
             if self.domain.attributes:
-                rr.append(bn.stats(self._X, W))
+                rr.append(bn.stats(self.X, W))
             if self.domain.class_vars:
-                rr.append(bn.stats(self._Y, W))
+                rr.append(bn.stats(self.Y, W))
             if include_metas and self.domain.metas:
                 rr.append(bn.stats(self.metas, W))
             stats = np.vstack(tuple(rr))
         else:
             columns = [self.domain.index(c) for c in columns]
             nattrs = len(self.domain.attributes)
-            Xs = any(0 < c < nattrs for c in columns) and bn.stats(self._X, W)
-            Ys = any(c > nattrs for c in columns) and bn.stats(self._Y, W)
-            ms = any(c < 0 for c in columns) and bn.stats(self._metas, W)
+            Xs = any(0 < c < nattrs for c in columns) and bn.stats(self.X, W)
+            Ys = any(c > nattrs for c in columns) and bn.stats(self.Y, W)
+            ms = any(c < 0 for c in columns) and bn.stats(self.metas, W)
             stats = []
             for column in columns:
                 if 0 < column < nattrs:
@@ -1137,16 +1100,16 @@ class Table(MutableSequence, Storage):
         def _get_matrix(M, cachedM, col):
             nonlocal single_column
             if not sp.issparse(M):
-                return M[:, col], self._W if self.has_weights() else None, None
+                return M[:, col], self.W if self.has_weights() else None, None
             if cachedM is None:
                 if single_column:
                     warn(ResourceWarning,
                          "computing distributions on sparse data "
                          "for a single column is inefficient")
-                cachedM = sp.csc_matrix(self._X)
+                cachedM = sp.csc_matrix(self.X)
             data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col+1]]
             if self.has_weights():
-                weights = self._W[
+                weights = self.W[
                     cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col+1]]]
             else:
                 weights = None
@@ -1163,10 +1126,10 @@ class Table(MutableSequence, Storage):
         Xcsc = Ycsc = None
         for col in columns:
             var = self.domain[col]
-            if col < self._X.shape[1]:
-                m, W, Xcsc = _get_matrix(self._X, Xcsc, col)
+            if col < self.X.shape[1]:
+                m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
             else:
-                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self._X.shape[1])
+                m, W, Ycsc = _get_matrix(self.Y, Ycsc, col - self.X.shape[1])
             if isinstance(var, DiscreteVariable):
                 dist, unknowns = bn.bincount(m, len(var.values)-1, W)
             elif not len(m):
@@ -1188,7 +1151,7 @@ class Table(MutableSequence, Storage):
 
 
     def _compute_contingency(self, col_vars=None, row_var=None):
-        n_atts = self._X.shape[1]
+        n_atts = self.X.shape[1]
 
         if col_vars is None:
             col_vars = range(len(self.domain.variables))
@@ -1207,13 +1170,13 @@ class Table(MutableSequence, Storage):
         row_indi = self.domain.index(row_var)
         n_rows = len(row_desc.values)
         if 0 <= row_indi < n_atts:
-            row_data = self._X[:, row_indi]
+            row_data = self.X[:, row_indi]
         elif row_indi < 0:
-            row_data = self._metas[:, -1 - row_indi]
+            row_data = self.metas[:, -1 - row_indi]
         else:
-            row_data = self._Y[:, row_indi - n_atts]
+            row_data = self.Y[:, row_indi - n_atts]
 
-        W = self._W if self.has_weights() else None
+        W = self.W if self.has_weights() else None
 
         col_desc = [self.domain[var] for var in col_vars]
         col_indi = [self.domain.index(var) for var in col_vars]
@@ -1234,9 +1197,9 @@ class Table(MutableSequence, Storage):
 
         contingencies = [None] * len(col_desc)
         for arr, f_cond, f_ind in (
-                (self._X, lambda i: 0 <= i < n_atts, lambda i: i),
-                (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
-                (self._metas, lambda i: i < 0, lambda i: -1 - i)):
+                (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
+                (self.Y, lambda i: i >= n_atts, lambda i: i - n_atts),
+                (self.metas, lambda i: i < 0, lambda i: -1 - i)):
 
             arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
 
