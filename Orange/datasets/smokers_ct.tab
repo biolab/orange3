@@ -1,0 +1,196 @@
+Id	Staff group	Smoking category
+string	d	d
+
+_0_0_0	Senior managers	None
+_0_0_1	Senior managers	None
+_0_0_2	Senior managers	None
+_0_0_3	Senior managers	None
+_0_1_0	Senior managers	Light
+_0_1_1	Senior managers	Light
+_0_2_0	Senior managers	Medium
+_0_2_1	Senior managers	Medium
+_0_2_2	Senior managers	Medium
+_0_3_0	Senior managers	Heavy
+_0_3_1	Senior managers	Heavy
+_1_0_0	Junior managers	None
+_1_0_1	Junior managers	None
+_1_0_2	Junior managers	None
+_1_0_3	Junior managers	None
+_1_1_0	Junior managers	Light
+_1_1_1	Junior managers	Light
+_1_1_2	Junior managers	Light
+_1_2_0	Junior managers	Medium
+_1_2_1	Junior managers	Medium
+_1_2_2	Junior managers	Medium
+_1_2_3	Junior managers	Medium
+_1_2_4	Junior managers	Medium
+_1_2_5	Junior managers	Medium
+_1_2_6	Junior managers	Medium
+_1_3_0	Junior managers	Heavy
+_1_3_1	Junior managers	Heavy
+_1_3_2	Junior managers	Heavy
+_1_3_3	Junior managers	Heavy
+_2_0_0	Senior employees	None
+_2_0_1	Senior employees	None
+_2_0_2	Senior employees	None
+_2_0_3	Senior employees	None
+_2_0_4	Senior employees	None
+_2_0_5	Senior employees	None
+_2_0_6	Senior employees	None
+_2_0_7	Senior employees	None
+_2_0_8	Senior employees	None
+_2_0_9	Senior employees	None
+_2_0_10	Senior employees	None
+_2_0_11	Senior employees	None
+_2_0_12	Senior employees	None
+_2_0_13	Senior employees	None
+_2_0_14	Senior employees	None
+_2_0_15	Senior employees	None
+_2_0_16	Senior employees	None
+_2_0_17	Senior employees	None
+_2_0_18	Senior employees	None
+_2_0_19	Senior employees	None
+_2_0_20	Senior employees	None
+_2_0_21	Senior employees	None
+_2_0_22	Senior employees	None
+_2_0_23	Senior employees	None
+_2_0_24	Senior employees	None
+_2_1_0	Senior employees	Light
+_2_1_1	Senior employees	Light
+_2_1_2	Senior employees	Light
+_2_1_3	Senior employees	Light
+_2_1_4	Senior employees	Light
+_2_1_5	Senior employees	Light
+_2_1_6	Senior employees	Light
+_2_1_7	Senior employees	Light
+_2_1_8	Senior employees	Light
+_2_1_9	Senior employees	Light
+_2_2_0	Senior employees	Medium
+_2_2_1	Senior employees	Medium
+_2_2_2	Senior employees	Medium
+_2_2_3	Senior employees	Medium
+_2_2_4	Senior employees	Medium
+_2_2_5	Senior employees	Medium
+_2_2_6	Senior employees	Medium
+_2_2_7	Senior employees	Medium
+_2_2_8	Senior employees	Medium
+_2_2_9	Senior employees	Medium
+_2_2_10	Senior employees	Medium
+_2_2_11	Senior employees	Medium
+_2_3_0	Senior employees	Heavy
+_2_3_1	Senior employees	Heavy
+_2_3_2	Senior employees	Heavy
+_2_3_3	Senior employees	Heavy
+_3_0_0	Junior employees	None
+_3_0_1	Junior employees	None
+_3_0_2	Junior employees	None
+_3_0_3	Junior employees	None
+_3_0_4	Junior employees	None
+_3_0_5	Junior employees	None
+_3_0_6	Junior employees	None
+_3_0_7	Junior employees	None
+_3_0_8	Junior employees	None
+_3_0_9	Junior employees	None
+_3_0_10	Junior employees	None
+_3_0_11	Junior employees	None
+_3_0_12	Junior employees	None
+_3_0_13	Junior employees	None
+_3_0_14	Junior employees	None
+_3_0_15	Junior employees	None
+_3_0_16	Junior employees	None
+_3_0_17	Junior employees	None
+_3_1_0	Junior employees	Light
+_3_1_1	Junior employees	Light
+_3_1_2	Junior employees	Light
+_3_1_3	Junior employees	Light
+_3_1_4	Junior employees	Light
+_3_1_5	Junior employees	Light
+_3_1_6	Junior employees	Light
+_3_1_7	Junior employees	Light
+_3_1_8	Junior employees	Light
+_3_1_9	Junior employees	Light
+_3_1_10	Junior employees	Light
+_3_1_11	Junior employees	Light
+_3_1_12	Junior employees	Light
+_3_1_13	Junior employees	Light
+_3_1_14	Junior employees	Light
+_3_1_15	Junior employees	Light
+_3_1_16	Junior employees	Light
+_3_1_17	Junior employees	Light
+_3_1_18	Junior employees	Light
+_3_1_19	Junior employees	Light
+_3_1_20	Junior employees	Light
+_3_1_21	Junior employees	Light
+_3_1_22	Junior employees	Light
+_3_1_23	Junior employees	Light
+_3_2_0	Junior employees	Medium
+_3_2_1	Junior employees	Medium
+_3_2_2	Junior employees	Medium
+_3_2_3	Junior employees	Medium
+_3_2_4	Junior employees	Medium
+_3_2_5	Junior employees	Medium
+_3_2_6	Junior employees	Medium
+_3_2_7	Junior employees	Medium
+_3_2_8	Junior employees	Medium
+_3_2_9	Junior employees	Medium
+_3_2_10	Junior employees	Medium
+_3_2_11	Junior employees	Medium
+_3_2_12	Junior employees	Medium
+_3_2_13	Junior employees	Medium
+_3_2_14	Junior employees	Medium
+_3_2_15	Junior employees	Medium
+_3_2_16	Junior employees	Medium
+_3_2_17	Junior employees	Medium
+_3_2_18	Junior employees	Medium
+_3_2_19	Junior employees	Medium
+_3_2_20	Junior employees	Medium
+_3_2_21	Junior employees	Medium
+_3_2_22	Junior employees	Medium
+_3_2_23	Junior employees	Medium
+_3_2_24	Junior employees	Medium
+_3_2_25	Junior employees	Medium
+_3_2_26	Junior employees	Medium
+_3_2_27	Junior employees	Medium
+_3_2_28	Junior employees	Medium
+_3_2_29	Junior employees	Medium
+_3_2_30	Junior employees	Medium
+_3_2_31	Junior employees	Medium
+_3_2_32	Junior employees	Medium
+_3_3_0	Junior employees	Heavy
+_3_3_1	Junior employees	Heavy
+_3_3_2	Junior employees	Heavy
+_3_3_3	Junior employees	Heavy
+_3_3_4	Junior employees	Heavy
+_3_3_5	Junior employees	Heavy
+_3_3_6	Junior employees	Heavy
+_3_3_7	Junior employees	Heavy
+_3_3_8	Junior employees	Heavy
+_3_3_9	Junior employees	Heavy
+_3_3_10	Junior employees	Heavy
+_3_3_11	Junior employees	Heavy
+_3_3_12	Junior employees	Heavy
+_4_0_0	Secretaries	None
+_4_0_1	Secretaries	None
+_4_0_2	Secretaries	None
+_4_0_3	Secretaries	None
+_4_0_4	Secretaries	None
+_4_0_5	Secretaries	None
+_4_0_6	Secretaries	None
+_4_0_7	Secretaries	None
+_4_0_8	Secretaries	None
+_4_0_9	Secretaries	None
+_4_1_0	Secretaries	Light
+_4_1_1	Secretaries	Light
+_4_1_2	Secretaries	Light
+_4_1_3	Secretaries	Light
+_4_1_4	Secretaries	Light
+_4_1_5	Secretaries	Light
+_4_2_0	Secretaries	Medium
+_4_2_1	Secretaries	Medium
+_4_2_2	Secretaries	Medium
+_4_2_3	Secretaries	Medium
+_4_2_4	Secretaries	Medium
+_4_2_5	Secretaries	Medium
+_4_2_6	Secretaries	Medium
+_4_3_0	Secretaries	Heavy
+_4_3_1	Secretaries	Heavy

@@ -1,0 +1,306 @@
+age	gender	chest pain	rest SBP	cholesterol	fasting blood sugar > 120	rest ECG	max HR	exerc ind ang	ST by exercise	slope peak exc ST	major vessels colored	thal	diameter narrowing
+c	d	d	c	c	d	normal left\ vent\ hypertrophy ST-T\ abnormal	c	0 1	c	upsloping flat downsloping	c	normal reversable\ defect fixed\ defect	d
+													class
+63	male	typical ang	145	233	1	left vent hypertrophy	150	0	2.3	downsloping	0	fixed defect	0
+67	male	asymptomatic	160	286	0	left vent hypertrophy	108	1	1.5	flat	3	normal	1
+67	male	asymptomatic	120	229	0	left vent hypertrophy	129	1	2.6	flat	2	reversable defect	1
+37	male	non-anginal	130	250	0	normal	187	0	3.5	downsloping	0	normal	0
+41	female	atypical ang	130	204	0	left vent hypertrophy	172	0	1.4	upsloping	0	normal	0
+56	male	atypical ang	120	236	0	normal	178	0	0.8	upsloping	0	normal	0
+62	female	asymptomatic	140	268	0	left vent hypertrophy	160	0	3.6	downsloping	2	normal	1
+57	female	asymptomatic	120	354	0	normal	163	1	0.6	upsloping	0	normal	0
+63	male	asymptomatic	130	254	0	left vent hypertrophy	147	0	1.4	flat	1	reversable defect	1
+53	male	asymptomatic	140	203	1	left vent hypertrophy	155	1	3.1	downsloping	0	reversable defect	1
+57	male	asymptomatic	140	192	0	normal	148	0	0.4	flat	0	fixed defect	0
+56	female	atypical ang	140	294	0	left vent hypertrophy	153	0	1.3	flat	0	normal	0
+56	male	non-anginal	130	256	1	left vent hypertrophy	142	1	0.6	flat	1	fixed defect	1
+44	male	atypical ang	120	263	0	normal	173	0	0	upsloping	0	reversable defect	0
+52	male	non-anginal	172	199	1	normal	162	0	0.5	upsloping	0	reversable defect	0
+57	male	non-anginal	150	168	0	normal	174	0	1.6	upsloping	0	normal	0
+48	male	atypical ang	110	229	0	normal	168	0	1	downsloping	0	reversable defect	1
+54	male	asymptomatic	140	239	0	normal	160	0	1.2	upsloping	0	normal	0
+48	female	non-anginal	130	275	0	normal	139	0	0.2	upsloping	0	normal	0
+49	male	atypical ang	130	266	0	normal	171	0	0.6	upsloping	0	normal	0
+64	male	typical ang	110	211	0	left vent hypertrophy	144	1	1.8	flat	0	normal	0
+58	female	typical ang	150	283	1	left vent hypertrophy	162	0	1	upsloping	0	normal	0
+58	male	atypical ang	120	284	0	left vent hypertrophy	160	0	1.8	flat	0	normal	1
+58	male	non-anginal	132	224	0	left vent hypertrophy	173	0	3.2	upsloping	2	reversable defect	1
+60	male	asymptomatic	130	206	0	left vent hypertrophy	132	1	2.4	flat	2	reversable defect	1
+50	female	non-anginal	120	219	0	normal	158	0	1.6	flat	0	normal	0
+58	female	non-anginal	120	340	0	normal	172	0	0	upsloping	0	normal	0
+66	female	typical ang	150	226	0	normal	114	0	2.6	downsloping	0	normal	0
+43	male	asymptomatic	150	247	0	normal	171	0	1.5	upsloping	0	normal	0
+40	male	asymptomatic	110	167	0	left vent hypertrophy	114	1	2	flat	0	reversable defect	1
+69	female	typical ang	140	239	0	normal	151	0	1.8	upsloping	2	normal	0
+60	male	asymptomatic	117	230	1	normal	160	1	1.4	upsloping	2	reversable defect	1
+64	male	non-anginal	140	335	0	normal	158	0	0	upsloping	0	normal	1
+59	male	asymptomatic	135	234	0	normal	161	0	0.5	flat	0	reversable defect	0
+44	male	non-anginal	130	233	0	normal	179	1	0.4	upsloping	0	normal	0
+42	male	asymptomatic	140	226	0	normal	178	0	0	upsloping	0	normal	0
+43	male	asymptomatic	120	177	0	left vent hypertrophy	120	1	2.5	flat	0	reversable defect	1
+57	male	asymptomatic	150	276	0	left vent hypertrophy	112	1	0.6	flat	1	fixed defect	1
+55	male	asymptomatic	132	353	0	normal	132	1	1.2	flat	1	reversable defect	1
+61	male	non-anginal	150	243	1	normal	137	1	1	flat	0	normal	0
+65	female	asymptomatic	150	225	0	left vent hypertrophy	114	0	1	flat	3	reversable defect	1
+40	male	typical ang	140	199	0	normal	178	1	1.4	upsloping	0	reversable defect	0
+71	female	atypical ang	160	302	0	normal	162	0	0.4	upsloping	2	normal	0
+59	male	non-anginal	150	212	1	normal	157	0	1.6	upsloping	0	normal	0
+61	female	asymptomatic	130	330	0	left vent hypertrophy	169	0	0	upsloping	0	normal	1
+58	male	non-anginal	112	230	0	left vent hypertrophy	165	0	2.5	flat	1	reversable defect	1
+51	male	non-anginal	110	175	0	normal	123	0	0.6	upsloping	0	normal	0
+50	male	asymptomatic	150	243	0	left vent hypertrophy	128	0	2.6	flat	0	reversable defect	1
+65	female	non-anginal	140	417	1	left vent hypertrophy	157	0	0.8	upsloping	1	normal	0
+53	male	non-anginal	130	197	1	left vent hypertrophy	152	0	1.2	downsloping	0	normal	0
+41	female	atypical ang	105	198	0	normal	168	0	0	upsloping	1	normal	0
+65	male	asymptomatic	120	177	0	normal	140	0	0.4	upsloping	0	reversable defect	0
+44	male	asymptomatic	112	290	0	left vent hypertrophy	153	0	0	upsloping	1	normal	1
+44	male	atypical ang	130	219	0	left vent hypertrophy	188	0	0	upsloping	0	normal	0
+60	male	asymptomatic	130	253	0	normal	144	1	1.4	upsloping	1	reversable defect	1
+54	male	asymptomatic	124	266	0	left vent hypertrophy	109	1	2.2	flat	1	reversable defect	1
+50	male	non-anginal	140	233	0	normal	163	0	0.6	flat	1	reversable defect	1
+41	male	asymptomatic	110	172	0	left vent hypertrophy	158	0	0	upsloping	0	reversable defect	1
+54	male	non-anginal	125	273	0	left vent hypertrophy	152	0	0.5	downsloping	1	normal	0
+51	male	typical ang	125	213	0	left vent hypertrophy	125	1	1.4	upsloping	1	normal	0
+51	female	asymptomatic	130	305	0	normal	142	1	1.2	flat	0	reversable defect	1
+46	female	non-anginal	142	177	0	left vent hypertrophy	160	1	1.4	downsloping	0	normal	0
+58	male	asymptomatic	128	216	0	left vent hypertrophy	131	1	2.2	flat	3	reversable defect	1
+54	female	non-anginal	135	304	1	normal	170	0	0	upsloping	0	normal	0
+54	male	asymptomatic	120	188	0	normal	113	0	1.4	flat	1	reversable defect	1
+60	male	asymptomatic	145	282	0	left vent hypertrophy	142	1	2.8	flat	2	reversable defect	1
+60	male	non-anginal	140	185	0	left vent hypertrophy	155	0	3	flat	0	normal	1
+54	male	non-anginal	150	232	0	left vent hypertrophy	165	0	1.6	upsloping	0	reversable defect	0
+59	male	asymptomatic	170	326	0	left vent hypertrophy	140	1	3.4	downsloping	0	reversable defect	1
+46	male	non-anginal	150	231	0	normal	147	0	3.6	flat	0	normal	1
+65	female	non-anginal	155	269	0	normal	148	0	0.8	upsloping	0	normal	0
+67	male	asymptomatic	125	254	1	normal	163	0	0.2	flat	2	reversable defect	1
+62	male	asymptomatic	120	267	0	normal	99	1	1.8	flat	2	reversable defect	1
+65	male	asymptomatic	110	248	0	left vent hypertrophy	158	0	0.6	upsloping	2	fixed defect	1
+44	male	asymptomatic	110	197	0	left vent hypertrophy	177	0	0	upsloping	1	normal	1
+65	female	non-anginal	160	360	0	left vent hypertrophy	151	0	0.8	upsloping	0	normal	0
+60	male	asymptomatic	125	258	0	left vent hypertrophy	141	1	2.8	flat	1	reversable defect	1
+51	female	non-anginal	140	308	0	left vent hypertrophy	142	0	1.5	upsloping	1	normal	0
+48	male	atypical ang	130	245	0	left vent hypertrophy	180	0	0.2	flat	0	normal	0
+58	male	asymptomatic	150	270	0	left vent hypertrophy	111	1	0.8	upsloping	0	reversable defect	1
+45	male	asymptomatic	104	208	0	left vent hypertrophy	148	1	3	flat	0	normal	0
+53	female	asymptomatic	130	264	0	left vent hypertrophy	143	0	0.4	flat	0	normal	0
+39	male	non-anginal	140	321	0	left vent hypertrophy	182	0	0	upsloping	0	normal	0
+68	male	non-anginal	180	274	1	left vent hypertrophy	150	1	1.6	flat	0	reversable defect	1
+52	male	atypical ang	120	325	0	normal	172	0	0.2	upsloping	0	normal	0
+44	male	non-anginal	140	235	0	left vent hypertrophy	180	0	0	upsloping	0	normal	0
+47	male	non-anginal	138	257	0	left vent hypertrophy	156	0	0	upsloping	0	normal	0
+53	female	non-anginal	128	216	0	left vent hypertrophy	115	0	0	upsloping	0	?	0
+53	female	asymptomatic	138	234	0	left vent hypertrophy	160	0	0	upsloping	0	normal	0
+51	female	non-anginal	130	256	0	left vent hypertrophy	149	0	0.5	upsloping	0	normal	0
+66	male	asymptomatic	120	302	0	left vent hypertrophy	151	0	0.4	flat	0	normal	0
+62	female	asymptomatic	160	164	0	left vent hypertrophy	145	0	6.2	downsloping	3	reversable defect	1
+62	male	non-anginal	130	231	0	normal	146	0	1.8	flat	3	reversable defect	0
+44	female	non-anginal	108	141	0	normal	175	0	0.6	flat	0	normal	0
+63	female	non-anginal	135	252	0	left vent hypertrophy	172	0	0	upsloping	0	normal	0
+52	male	asymptomatic	128	255	0	normal	161	1	0	upsloping	1	reversable defect	1
+59	male	asymptomatic	110	239	0	left vent hypertrophy	142	1	1.2	flat	1	reversable defect	1
+60	female	asymptomatic	150	258	0	left vent hypertrophy	157	0	2.6	flat	2	reversable defect	1
+52	male	atypical ang	134	201	0	normal	158	0	0.8	upsloping	1	normal	0
+48	male	asymptomatic	122	222	0	left vent hypertrophy	186	0	0	upsloping	0	normal	0
+45	male	asymptomatic	115	260	0	left vent hypertrophy	185	0	0	upsloping	0	normal	0
+34	male	typical ang	118	182	0	left vent hypertrophy	174	0	0	upsloping	0	normal	0
+57	female	asymptomatic	128	303	0	left vent hypertrophy	159	0	0	upsloping	1	normal	0
+71	female	non-anginal	110	265	1	left vent hypertrophy	130	0	0	upsloping	1	normal	0
+49	male	non-anginal	120	188	0	normal	139	0	2	flat	3	reversable defect	1
+54	male	atypical ang	108	309	0	normal	156	0	0	upsloping	0	reversable defect	0
+59	male	asymptomatic	140	177	0	normal	162	1	0	upsloping	1	reversable defect	1
+57	male	non-anginal	128	229	0	left vent hypertrophy	150	0	0.4	flat	1	reversable defect	1
+61	male	asymptomatic	120	260	0	normal	140	1	3.6	flat	1	reversable defect	1
+39	male	asymptomatic	118	219	0	normal	140	0	1.2	flat	0	reversable defect	1
+61	female	asymptomatic	145	307	0	left vent hypertrophy	146	1	1	flat	0	reversable defect	1
+56	male	asymptomatic	125	249	1	left vent hypertrophy	144	1	1.2	flat	1	normal	1
+52	male	typical ang	118	186	0	left vent hypertrophy	190	0	0	flat	0	fixed defect	0
+43	female	asymptomatic	132	341	1	left vent hypertrophy	136	1	3	flat	0	reversable defect	1
+62	female	non-anginal	130	263	0	normal	97	0	1.2	flat	1	reversable defect	1
+41	male	atypical ang	135	203	0	normal	132	0	0	flat	0	fixed defect	0
+58	male	non-anginal	140	211	1	left vent hypertrophy	165	0	0	upsloping	0	normal	0
+35	female	asymptomatic	138	183	0	normal	182	0	1.4	upsloping	0	normal	0
+63	male	asymptomatic	130	330	1	left vent hypertrophy	132	1	1.8	upsloping	3	reversable defect	1
+65	male	asymptomatic	135	254	0	left vent hypertrophy	127	0	2.8	flat	1	reversable defect	1
+48	male	asymptomatic	130	256	1	left vent hypertrophy	150	1	0	upsloping	2	reversable defect	1
+63	female	asymptomatic	150	407	0	left vent hypertrophy	154	0	4	flat	3	reversable defect	1
+51	male	non-anginal	100	222	0	normal	143	1	1.2	flat	0	normal	0
+55	male	asymptomatic	140	217	0	normal	111	1	5.6	downsloping	0	reversable defect	1
+65	male	typical ang	138	282	1	left vent hypertrophy	174	0	1.4	flat	1	normal	1
+45	female	atypical ang	130	234	0	left vent hypertrophy	175	0	0.6	flat	0	normal	0
+56	female	asymptomatic	200	288	1	left vent hypertrophy	133	1	4	downsloping	2	reversable defect	1
+54	male	asymptomatic	110	239	0	normal	126	1	2.8	flat	1	reversable defect	1
+44	male	atypical ang	120	220	0	normal	170	0	0	upsloping	0	normal	0
+62	female	asymptomatic	124	209	0	normal	163	0	0	upsloping	0	normal	0
+54	male	non-anginal	120	258	0	left vent hypertrophy	147	0	0.4	flat	0	reversable defect	0
+51	male	non-anginal	94	227	0	normal	154	1	0	upsloping	1	reversable defect	0
+29	male	atypical ang	130	204	0	left vent hypertrophy	202	0	0	upsloping	0	normal	0
+51	male	asymptomatic	140	261	0	left vent hypertrophy	186	1	0	upsloping	0	normal	0
+43	female	non-anginal	122	213	0	normal	165	0	0.2	flat	0	normal	0
+55	female	atypical ang	135	250	0	left vent hypertrophy	161	0	1.4	flat	0	normal	0
+70	male	asymptomatic	145	174	0	normal	125	1	2.6	downsloping	0	reversable defect	1
+62	male	atypical ang	120	281	0	left vent hypertrophy	103	0	1.4	flat	1	reversable defect	1
+35	male	asymptomatic	120	198	0	normal	130	1	1.6	flat	0	reversable defect	1
+51	male	non-anginal	125	245	1	left vent hypertrophy	166	0	2.4	flat	0	normal	0
+59	male	atypical ang	140	221	0	normal	164	1	0	upsloping	0	normal	0
+59	male	typical ang	170	288	0	left vent hypertrophy	159	0	0.2	flat	0	reversable defect	1
+52	male	atypical ang	128	205	1	normal	184	0	0	upsloping	0	normal	0
+64	male	non-anginal	125	309	0	normal	131	1	1.8	flat	0	reversable defect	1
+58	male	non-anginal	105	240	0	left vent hypertrophy	154	1	0.6	flat	0	reversable defect	0
+47	male	non-anginal	108	243	0	normal	152	0	0	upsloping	0	normal	1
+57	male	asymptomatic	165	289	1	left vent hypertrophy	124	0	1	flat	3	reversable defect	1
+41	male	non-anginal	112	250	0	normal	179	0	0	upsloping	0	normal	0
+45	male	atypical ang	128	308	0	left vent hypertrophy	170	0	0	upsloping	0	normal	0
+60	female	non-anginal	102	318	0	normal	160	0	0	upsloping	1	normal	0
+52	male	typical ang	152	298	1	normal	178	0	1.2	flat	0	reversable defect	0
+42	female	asymptomatic	102	265	0	left vent hypertrophy	122	0	0.6	flat	0	normal	0
+67	female	non-anginal	115	564	0	left vent hypertrophy	160	0	1.6	flat	0	reversable defect	0
+55	male	asymptomatic	160	289	0	left vent hypertrophy	145	1	0.8	flat	1	reversable defect	1
+64	male	asymptomatic	120	246	0	left vent hypertrophy	96	1	2.2	downsloping	1	normal	1
+70	male	asymptomatic	130	322	0	left vent hypertrophy	109	0	2.4	flat	3	normal	1
+51	male	asymptomatic	140	299	0	normal	173	1	1.6	upsloping	0	reversable defect	1
+58	male	asymptomatic	125	300	0	left vent hypertrophy	171	0	0	upsloping	2	reversable defect	1
+60	male	asymptomatic	140	293	0	left vent hypertrophy	170	0	1.2	flat	2	reversable defect	1
+68	male	non-anginal	118	277	0	normal	151	0	1	upsloping	1	reversable defect	0
+46	male	atypical ang	101	197	1	normal	156	0	0	upsloping	0	reversable defect	0
+77	male	asymptomatic	125	304	0	left vent hypertrophy	162	1	0	upsloping	3	normal	1
+54	female	non-anginal	110	214	0	normal	158	0	1.6	flat	0	normal	0
+58	female	asymptomatic	100	248	0	left vent hypertrophy	122	0	1	flat	0	normal	0
+48	male	non-anginal	124	255	1	normal	175	0	0	upsloping	2	normal	0
+57	male	asymptomatic	132	207	0	normal	168	1	0	upsloping	0	reversable defect	0
+52	male	non-anginal	138	223	0	normal	169	0	0	upsloping	?	normal	0
+54	female	atypical ang	132	288	1	left vent hypertrophy	159	1	0	upsloping	1	normal	0
+35	male	asymptomatic	126	282	0	left vent hypertrophy	156	1	0	upsloping	0	reversable defect	1
+45	female	atypical ang	112	160	0	normal	138	0	0	flat	0	normal	0
+70	male	non-anginal	160	269	0	normal	112	1	2.9	flat	1	reversable defect	1
+53	male	asymptomatic	142	226	0	left vent hypertrophy	111	1	0	upsloping	0	reversable defect	0
+59	female	asymptomatic	174	249	0	normal	143	1	0	flat	0	normal	1
+62	female	asymptomatic	140	394	0	left vent hypertrophy	157	0	1.2	flat	0	normal	0
+64	male	asymptomatic	145	212	0	left vent hypertrophy	132	0	2	flat	2	fixed defect	1
+57	male	asymptomatic	152	274	0	normal	88	1	1.2	flat	1	reversable defect	1
+52	male	asymptomatic	108	233	1	normal	147	0	0.1	upsloping	3	reversable defect	0
+56	male	asymptomatic	132	184	0	left vent hypertrophy	105	1	2.1	flat	1	fixed defect	1
+43	male	non-anginal	130	315	0	normal	162	0	1.9	upsloping	1	normal	0
+53	male	non-anginal	130	246	1	left vent hypertrophy	173	0	0	upsloping	3	normal	0
+48	male	asymptomatic	124	274	0	left vent hypertrophy	166	0	0.5	flat	0	reversable defect	1
+56	female	asymptomatic	134	409	0	left vent hypertrophy	150	1	1.9	flat	2	reversable defect	1
+42	male	typical ang	148	244	0	left vent hypertrophy	178	0	0.8	upsloping	2	normal	0
+59	male	typical ang	178	270	0	left vent hypertrophy	145	0	4.2	downsloping	0	reversable defect	0
+60	female	asymptomatic	158	305	0	left vent hypertrophy	161	0	0	upsloping	0	normal	1
+63	female	atypical ang	140	195	0	normal	179	0	0	upsloping	2	normal	0
+42	male	non-anginal	120	240	1	normal	194	0	0.8	downsloping	0	reversable defect	0
+66	male	atypical ang	160	246	0	normal	120	1	0	flat	3	fixed defect	1
+54	male	atypical ang	192	283	0	left vent hypertrophy	195	0	0	upsloping	1	reversable defect	1
+69	male	non-anginal	140	254	0	left vent hypertrophy	146	0	2	flat	3	reversable defect	1
+50	male	non-anginal	129	196	0	normal	163	0	0	upsloping	0	normal	0
+51	male	asymptomatic	140	298	0	normal	122	1	4.2	flat	3	reversable defect	1
+43	male	asymptomatic	132	247	1	left vent hypertrophy	143	1	0.1	flat	?	reversable defect	1
+62	female	asymptomatic	138	294	1	normal	106	0	1.9	flat	3	normal	1
+68	female	non-anginal	120	211	0	left vent hypertrophy	115	0	1.5	flat	0	normal	0
+67	male	asymptomatic	100	299	0	left vent hypertrophy	125	1	0.9	flat	2	normal	1
+69	male	typical ang	160	234	1	left vent hypertrophy	131	0	0.1	flat	1	normal	0
+45	female	asymptomatic	138	236	0	left vent hypertrophy	152	1	0.2	flat	0	normal	0
+50	female	atypical ang	120	244	0	normal	162	0	1.1	upsloping	0	normal	0
+59	male	typical ang	160	273	0	left vent hypertrophy	125	0	0	upsloping	0	normal	1
+50	female	asymptomatic	110	254	0	left vent hypertrophy	159	0	0	upsloping	0	normal	0
+64	female	asymptomatic	180	325	0	normal	154	1	0	upsloping	0	normal	0
+57	male	non-anginal	150	126	1	normal	173	0	0.2	upsloping	1	reversable defect	0
+64	female	non-anginal	140	313	0	normal	133	0	0.2	upsloping	0	reversable defect	0
+43	male	asymptomatic	110	211	0	normal	161	0	0	upsloping	0	reversable defect	0
+45	male	asymptomatic	142	309	0	left vent hypertrophy	147	1	0	flat	3	reversable defect	1
+58	male	asymptomatic	128	259	0	left vent hypertrophy	130	1	3	flat	2	reversable defect	1
+50	male	asymptomatic	144	200	0	left vent hypertrophy	126	1	0.9	flat	0	reversable defect	1
+55	male	atypical ang	130	262	0	normal	155	0	0	upsloping	0	normal	0
+62	female	asymptomatic	150	244	0	normal	154	1	1.4	flat	0	normal	1
+37	female	non-anginal	120	215	0	normal	170	0	0	upsloping	0	normal	0
+38	male	typical ang	120	231	0	normal	182	1	3.8	flat	0	reversable defect	1
+41	male	non-anginal	130	214	0	left vent hypertrophy	168	0	2	flat	0	normal	0
+66	female	asymptomatic	178	228	1	normal	165	1	1	flat	2	reversable defect	1
+52	male	asymptomatic	112	230	0	normal	160	0	0	upsloping	1	normal	1
+56	male	typical ang	120	193	0	left vent hypertrophy	162	0	1.9	flat	0	reversable defect	0
+46	female	atypical ang	105	204	0	normal	172	0	0	upsloping	0	normal	0
+46	female	asymptomatic	138	243	0	left vent hypertrophy	152	1	0	flat	0	normal	0
+64	female	asymptomatic	130	303	0	normal	122	0	2	flat	2	normal	0
+59	male	asymptomatic	138	271	0	left vent hypertrophy	182	0	0	upsloping	0	normal	0
+41	female	non-anginal	112	268	0	left vent hypertrophy	172	1	0	upsloping	0	normal	0
+54	female	non-anginal	108	267	0	left vent hypertrophy	167	0	0	upsloping	0	normal	0
+39	female	non-anginal	94	199	0	normal	179	0	0	upsloping	0	normal	0
+53	male	asymptomatic	123	282	0	normal	95	1	2	flat	2	reversable defect	1
+63	female	asymptomatic	108	269	0	normal	169	1	1.8	flat	2	normal	1
+34	female	atypical ang	118	210	0	normal	192	0	0.7	upsloping	0	normal	0
+47	male	asymptomatic	112	204	0	normal	143	0	0.1	upsloping	0	normal	0
+67	female	non-anginal	152	277	0	normal	172	0	0	upsloping	1	normal	0
+54	male	asymptomatic	110	206	0	left vent hypertrophy	108	1	0	flat	1	normal	1
+66	male	asymptomatic	112	212	0	left vent hypertrophy	132	1	0.1	upsloping	1	normal	1
+52	female	non-anginal	136	196	0	left vent hypertrophy	169	0	0.1	flat	0	normal	0
+55	female	asymptomatic	180	327	0	ST-T abnormal	117	1	3.4	flat	0	normal	1
+49	male	non-anginal	118	149	0	left vent hypertrophy	126	0	0.8	upsloping	3	normal	1
+74	female	atypical ang	120	269	0	left vent hypertrophy	121	1	0.2	upsloping	1	normal	0
+54	female	non-anginal	160	201	0	normal	163	0	0	upsloping	1	normal	0
+54	male	asymptomatic	122	286	0	left vent hypertrophy	116	1	3.2	flat	2	normal	1
+56	male	asymptomatic	130	283	1	left vent hypertrophy	103	1	1.6	downsloping	0	reversable defect	1
+46	male	asymptomatic	120	249	0	left vent hypertrophy	144	0	0.8	upsloping	0	reversable defect	1
+49	female	atypical ang	134	271	0	normal	162	0	0	flat	0	normal	0
+42	male	atypical ang	120	295	0	normal	162	0	0	upsloping	0	normal	0
+41	male	atypical ang	110	235	0	normal	153	0	0	upsloping	0	normal	0
+41	female	atypical ang	126	306	0	normal	163	0	0	upsloping	0	normal	0
+49	female	asymptomatic	130	269	0	normal	163	0	0	upsloping	0	normal	0
+61	male	typical ang	134	234	0	normal	145	0	2.6	flat	2	normal	1
+60	female	non-anginal	120	178	1	normal	96	0	0	upsloping	0	normal	0
+67	male	asymptomatic	120	237	0	normal	71	0	1	flat	0	normal	1
+58	male	asymptomatic	100	234	0	normal	156	0	0.1	upsloping	1	reversable defect	1
+47	male	asymptomatic	110	275	0	left vent hypertrophy	118	1	1	flat	1	normal	1
+52	male	asymptomatic	125	212	0	normal	168	0	1	upsloping	2	reversable defect	1
+62	male	atypical ang	128	208	1	left vent hypertrophy	140	0	0	upsloping	0	normal	0
+57	male	asymptomatic	110	201	0	normal	126	1	1.5	flat	0	fixed defect	0
+58	male	asymptomatic	146	218	0	normal	105	0	2	flat	1	reversable defect	1
+64	male	asymptomatic	128	263	0	normal	105	1	0.2	flat	1	reversable defect	0
+51	female	non-anginal	120	295	0	left vent hypertrophy	157	0	0.6	upsloping	0	normal	0
+43	male	asymptomatic	115	303	0	normal	181	0	1.2	flat	0	normal	0
+42	female	non-anginal	120	209	0	normal	173	0	0	flat	0	normal	0
+67	female	asymptomatic	106	223	0	normal	142	0	0.3	upsloping	2	normal	0
+76	female	non-anginal	140	197	0	ST-T abnormal	116	0	1.1	flat	0	normal	0
+70	male	atypical ang	156	245	0	left vent hypertrophy	143	0	0	upsloping	0	normal	0
+57	male	atypical ang	124	261	0	normal	141	0	0.3	upsloping	0	reversable defect	1
+44	female	non-anginal	118	242	0	normal	149	0	0.3	flat	1	normal	0
+58	female	atypical ang	136	319	1	left vent hypertrophy	152	0	0	upsloping	2	normal	1
+60	female	typical ang	150	240	0	normal	171	0	0.9	upsloping	0	normal	0
+44	male	non-anginal	120	226	0	normal	169	0	0	upsloping	0	normal	0
+61	male	asymptomatic	138	166	0	left vent hypertrophy	125	1	3.6	flat	1	normal	1
+42	male	asymptomatic	136	315	0	normal	125	1	1.8	flat	0	fixed defect	1
+52	male	asymptomatic	128	204	1	normal	156	1	1	flat	0	?	1
+59	male	non-anginal	126	218	1	normal	134	0	2.2	flat	1	fixed defect	1
+40	male	asymptomatic	152	223	0	normal	181	0	0	upsloping	0	reversable defect	1
+42	male	non-anginal	130	180	0	normal	150	0	0	upsloping	0	normal	0
+61	male	asymptomatic	140	207	0	left vent hypertrophy	138	1	1.9	upsloping	1	reversable defect	1
+66	male	asymptomatic	160	228	0	left vent hypertrophy	138	0	2.3	upsloping	0	fixed defect	0
+46	male	asymptomatic	140	311	0	normal	120	1	1.8	flat	2	reversable defect	1
+71	female	asymptomatic	112	149	0	normal	125	0	1.6	flat	0	normal	0
+59	male	typical ang	134	204	0	normal	162	0	0.8	upsloping	2	normal	1
+64	male	typical ang	170	227	0	left vent hypertrophy	155	0	0.6	flat	0	reversable defect	0
+66	female	non-anginal	146	278	0	left vent hypertrophy	152	0	0	flat	1	normal	0
+39	female	non-anginal	138	220	0	normal	152	0	0	flat	0	normal	0
+57	male	atypical ang	154	232	0	left vent hypertrophy	164	0	0	upsloping	1	normal	1
+58	female	asymptomatic	130	197	0	normal	131	0	0.6	flat	0	normal	0
+57	male	asymptomatic	110	335	0	normal	143	1	3	flat	1	reversable defect	1
+47	male	non-anginal	130	253	0	normal	179	0	0	upsloping	0	normal	0
+55	female	asymptomatic	128	205	0	ST-T abnormal	130	1	2	flat	1	reversable defect	1
+35	male	atypical ang	122	192	0	normal	174	0	0	upsloping	0	normal	0
+61	male	asymptomatic	148	203	0	normal	161	0	0	upsloping	1	reversable defect	1
+58	male	asymptomatic	114	318	0	ST-T abnormal	140	0	4.4	downsloping	3	fixed defect	1
+58	female	asymptomatic	170	225	1	left vent hypertrophy	146	1	2.8	flat	2	fixed defect	1
+58	male	atypical ang	125	220	0	normal	144	0	0.4	flat	?	reversable defect	0
+56	male	atypical ang	130	221	0	left vent hypertrophy	163	0	0	upsloping	0	reversable defect	0
+56	male	atypical ang	120	240	0	normal	169	0	0	downsloping	0	normal	0
+67	male	non-anginal	152	212	0	left vent hypertrophy	150	0	0.8	flat	0	reversable defect	1
+55	female	atypical ang	132	342	0	normal	166	0	1.2	upsloping	0	normal	0
+44	male	asymptomatic	120	169	0	normal	144	1	2.8	downsloping	0	fixed defect	1
+63	male	asymptomatic	140	187	0	left vent hypertrophy	144	1	4	upsloping	2	reversable defect	1
+63	female	asymptomatic	124	197	0	normal	136	1	0	flat	0	normal	1
+41	male	atypical ang	120	157	0	normal	182	0	0	upsloping	0	normal	0
+59	male	asymptomatic	164	176	1	left vent hypertrophy	90	0	1	flat	2	fixed defect	1
+57	female	asymptomatic	140	241	0	normal	123	1	0.2	flat	0	reversable defect	1
+45	male	typical ang	110	264	0	normal	132	0	1.2	flat	0	reversable defect	1
+68	male	asymptomatic	144	193	1	normal	141	0	3.4	flat	2	reversable defect	1
+57	male	asymptomatic	130	131	0	normal	115	1	1.2	flat	1	reversable defect	1
+57	female	atypical ang	130	236	0	left vent hypertrophy	174	0	0	flat	1	normal	1
+38	male	non-anginal	138	175	0	normal	173	0	0	upsloping	?	normal	0
