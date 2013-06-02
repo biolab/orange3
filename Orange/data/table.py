@@ -1008,7 +1008,20 @@ class Table(MutableSequence, Storage):
 
         for f in conditions:
             col = self.get_column_view(f.column)[0]
-            if isinstance(f, data_filter.FilterDiscrete):
+            if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
+                    or isinstance(f, data_filter.FilterContinuous) and \
+                    f.oper == f.IsDefined:
+                if conjunction:
+                    sel *= np.isnan(col)
+                else:
+                    sel += np.isnan(col)
+            elif isinstance(f, data_filter.FilterString) and \
+                    f.oper == f.IsDefined:
+                if conjunction:
+                    sel *= (col != "")
+                else:
+                    sel += (col != "")
+            elif isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
                     s2 = np.zeros(len(self))
                     for val in f.values:

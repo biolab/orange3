@@ -1657,14 +1657,18 @@ class CallFrontListBox(ControlledCallFront):
 
 
 class CallFrontListBoxLabels(ControlledCallFront):
+    if attributeIconDict is None:
+            constructAttributeIcons()
+    unknownType = None
+
     def action(self, value):
-        icons = getAttributeIcons()
+#        icons = getAttributeIcons()
         self.control.clear()
         if value:
             for i in value:
                 if type(i) is tuple:
                     if isinstance(i[1], int):
-                        self.control.addItem(QListWidgetItem(icons.get(i[1], icons[-1]), i[0]))
+                        self.control.addItem(QListWidgetItem(attributeIconDict.get(i[1], self.unknownType), i[0]))
                     else:
                         self.control.addItem( QListWidgetItem(i[0],i[1]) )
                 else:
