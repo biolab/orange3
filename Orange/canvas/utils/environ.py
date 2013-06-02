@@ -95,6 +95,7 @@ import os, sys
 import configparser
 import pkg_resources
 from pkg_resources import working_set
+from functools import cmp_to_key
 
 def _path_fix():
     """ Fix some common problems with $(PATH) and sys.path
@@ -102,8 +103,8 @@ def _path_fix():
     if os.name == "nt":
         ## Move any miktex paths containing Qt's dll to the end of the %PATH%
         paths = os.environ["PATH"].split(";")
-        paths.sort(lambda x,y: -1 if "PyQt4" in x else (1 if "miktex" in y and\
-                                                             os.path.exists(os.path.join(y, "QtCore4.dll")) else 0))
+        paths.sort(key = cmp_to_key(lambda x,y: -1 if "PyQt4" in x else (1 if "miktex" in y and\
+                                                              os.path.exists(os.path.join(y, "QtCore4.dll")) else 0)))
         os.environ["PATH"] = ";".join(paths)
 
     if sys.platform == "darwin":

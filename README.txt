@@ -33,3 +33,6 @@ To install in `development mode`_ run::
     python setup.py develop
    
 .. _development mode: http://packages.python.org/distribute/setuptools.html#development-mode
+
+windows 7 with gcc:
+	c:\Python32\python.exe setup.py build_ext -i --compiler=mingw32
