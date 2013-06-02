@@ -4,6 +4,7 @@ Orange.egg-info/*
 Orange/version.py
 doc/build
 *.so
+*.pyd
 
 # Cython generated files
 __pycache__
