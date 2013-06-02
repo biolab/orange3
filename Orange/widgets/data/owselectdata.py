@@ -49,6 +49,7 @@ class OWSelectData(widget.OWWidget):
         self.old_purge_classes = True
 
         self.conditions = []
+        self.last_output_conditions = None
 
         box = gui.widgetBox(self.controlArea, 'Conditions', stretch=100)
         self.cond_list = QtGui.QTableWidget(box)
@@ -117,7 +118,6 @@ class OWSelectData(widget.OWWidget):
         self.set_new_operators(attr_combo, attr is not None)
         attr_combo.currentIndexChanged.connect(
             lambda _: self.set_new_operators(attr_combo, False))
-        self.conditions.append([])
 
 
     def add_all(self):
@@ -136,7 +136,7 @@ class OWSelectData(widget.OWWidget):
 
     def remove_all(self):
         self.remove_all_rows()
-        self.output_data_if()
+        self.conditions_changed()
 
 
     def remove_all_rows(self):
@@ -160,9 +160,25 @@ class OWSelectData(widget.OWWidget):
 
     @staticmethod
     def _get_lineedit_contents(box):
-        return [child.text() for child in box.children()
+        return [child.text() for child in getattr(box, "controls", [box])
                 if isinstance(child, QtGui.QLineEdit)]
 
+    @staticmethod
+    def _get_value_contents(box):
+        cont = []
+        for child in getattr(box, "controls", [box]):
+            if isinstance(child, QtGui.QLineEdit):
+                cont.append(child.text())
+            elif isinstance(child, QtGui.QComboBox):
+                cont.append(child.currentIndex())
+        return cont
+
+    class QDoubleValidatorEmpty(QtGui.QDoubleValidator):
+        def validate(self, input_, pos):
+            if not input_:
+                return (QtGui.QDoubleValidator.Acceptable, input_, pos)
+            else:
+                return super().validate(input_, pos)
 
     def set_new_values(self, oper_combo, adding_all):
         def remove_children():
@@ -180,12 +196,12 @@ class OWSelectData(widget.OWWidget):
                                 border-bottom: 1px solid black;
                                 """)
             le.setAlignment(Qt.Qt.AlignRight)
-            le.editingFinished.connect(self.output_data_if)
+            le.editingFinished.connect(self.conditions_changed)
             return le
 
         def add_numeric(contents):
             le = add_textual(contents)
-            le.setValidator(QtGui.QDoubleValidator())
+            le.setValidator(OWSelectData.QDoubleValidatorEmpty())
             return le
 
         var = self.data.domain[oper_combo.attr_combo.currentText()]
@@ -204,27 +220,27 @@ class OWSelectData(widget.OWWidget):
             combo.setStyleSheet("border: none")
             combo.var_type = var.var_type
             self.cond_list.setCellWidget(oper_combo.row, 2, combo)
-            combo.currentIndexChanged.connect(self.output_data_if)
+            combo.currentIndexChanged.connect(self.conditions_changed)
         else:
             box = gui.widgetBox(self, orientation="horizontal",
                                 addToLayout=False)
             box.var_type = var.var_type
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
             if isinstance(var, ContinuousVariable):
-                add_numeric(lc[0])
+                box.controls = [add_numeric(lc[0])]
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
-                    add_numeric(lc[1])
+                    box.controls.append(add_numeric(lc[1]))
                 gui.rubber(box)
             elif isinstance(var, StringVariable):
-                add_textual(lc[0])
+                box.controls = [add_textual(lc[0])]
                 if oper in [6, 7]:
                     gui.widgetLabel(box, " and ")
-                    add_textual(lc[1])
-
-        self.conditions[oper_combo.row] = [var.name, oper_combo.currentIndex(), ]
+                    box.controls.append(add_textual(lc[1]))
+            else:
+                box.controls = []
         if not adding_all:
-            self.output_data()
+            self.conditions_changed()
 
 
     def set_data(self, data):
@@ -239,8 +255,10 @@ class OWSelectData(widget.OWWidget):
         if not data:
             return
         self.openContext(data)
+        if not self.conditions and len(domain.variables):
+            self.add_row()
         self.update_info(data, self.data_in_variables)
-        self.output_data_if()
+        self.conditions_changed()
 
 
     def on_purge_change(self):
@@ -253,31 +271,71 @@ class OWSelectData(widget.OWWidget):
                 self.purgeClassesCB.setEnabled(False)
                 self.old_purge_classes = self.purge_classes
                 self.purge_classes = False
-        self.output_data_if()
+        self.conditions_changed()
 
 
-    def output_data_if(self):
-        if self.update_on_change:
-            self.output_data()
+    def conditions_changed(self):
+        try:
+            self.conditions = []
+            self.conditions = [
+                (self.cond_list.cellWidget(row, 0).currentText(),
+                 self.cond_list.cellWidget(row, 1).currentIndex(),
+                 self._get_value_contents(self.cond_list.cellWidget(row, 2)))
+                for row in range(self.cond_list.rowCount())]
+            if self.update_on_change and (
+                    self.last_output_conditions is None or
+                    self.last_output_conditions != self.conditions):
+                self.output_data()
+        except AttributeError:
+            # Attribute error appears if the signal is triggered when the
+            # controls are being constructed
+            pass
 
 
     def output_data(self):
         matching_output = self.data
         non_matching_output = None
         if self.data:
+            domain = self.data.domain
             filters = data_filter.Values()
-            clist = self.cond_list
-            for row in range(clist.rowCount()):
-                var = clist.cellWidget(row, 0).currentText()
-                var = self.data.domain[var]
+            for attr_name, oper, values in self.conditions:
+                attr_index = domain.index(attr_name)
+                attr = domain[attr_index]
+                if isinstance(attr, ContinuousVariable):
+                    if any(not v for v in values):
+                        continue
+                    filter = data_filter.FilterContinuous(
+                        attr_index, oper, *[int(v) for v in values])
+                elif isinstance(attr, StringVariable):
+                    if any(v for v in values):
+                        continue
+                    filter = data_filter.FilterString(
+                        attr_index, oper, *[int(v) for v in values])
+                else:
+                    if oper in [2, 3]:
+                        raise NotImplementedError(
+                            "subset filters for discrete attributes are not "
+                            "implemented yet")
+                    elif oper == 4:
+                        f_values = None
+                    else:
+                        if not values or not values[0]:
+                            continue
+                        if oper == 0:
+                            f_values = {values[0] - 1}
+                        else:
+                            f_values = set(range(len(attr.values)))
+                            f_values.remove(values[0] - 1)
+                    filter = data_filter.FilterDiscrete(attr_index, f_values)
+                filters.conditions.append(filter)
 
-            hasClass = self.data.domain.class_var is not None
-
-            matching_output = filter(self.data, 1)
+            matching_output = filters(self.data)
             matching_output.name = self.data.name
-            non_matching_output = filter(self.data, 1, negate=1)
+            filters.negate = True
+            non_matching_output = filters(self.data)
             non_matching_output.name = self.data.name
 
+            """
             if self.purge_attributes or self.purge_classes:
                 remover = orange.RemoveUnusedValues(removeOneValued=True)
 
@@ -288,12 +346,12 @@ class OWSelectData(widget.OWWidget):
                 newDomain = remover(non_matching_output, 0, True, self.purge_classes)
                 if newDomain != non_matching_output.domain:
                     nonmatchingOutput = orange.ExampleTable(newDomain, non_matching_output)
-
+            """
         self.send("Matching Data", matching_output)
         self.send("Unmatched Data", non_matching_output)
 
-        self.update_info(matching_output,
-                         self.data_out_variables, self.data_out_rows)
+#        self.update_info(matching_output,
+#                         self.data_out_variables, self.data_out_rows)
 
 
     def update_info(self, data, lab1):
