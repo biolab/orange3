@@ -416,6 +416,11 @@ class UserSettingsDialog(QMainWindow):
 
         tab.setLayout(form)
 
+        if self.__macUnified:
+            # Need some sensible size otherwise mac unified toolbar 'takes'
+            # the space that should be used for layout of the contents
+            self.adjustSize()
+
     def addTab(self, widget, text, toolTip=None, icon=None):
         if self.__macUnified:
             action = QAction(text, self)
@@ -474,11 +479,6 @@ class UserSettingsDialog(QMainWindow):
         status = self.__loop.exec_()
         self.__loop = None
         return status
-
-    def showEvent(self, event):
-        sh = self.centralWidget().sizeHint()
-        self.resize(sh)
-        return QMainWindow.showEvent(self, event)
 
     def hideEvent(self, event):
         QMainWindow.hideEvent(self, event)

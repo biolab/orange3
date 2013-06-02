@@ -770,7 +770,7 @@ class CanvasScene(QGraphicsScene):
 
         return items[0] if items else None
 
-    if PYQT_VERSION_STR < "4.9":
+    if list(map(int, PYQT_VERSION_STR.split('.'))) < [4, 9]:
         # For QGraphicsObject subclasses items, itemAt ... return a
         # QGraphicsItem wrapper instance and not the actual class instance.
         def itemAt(self, *args, **kwargs):

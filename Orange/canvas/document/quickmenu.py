@@ -77,10 +77,12 @@ class MenuPage(ToolTree):
 
         self.__title = title
         self.__icon = icon
+        self.__sizeHint = None
 
         self.view().setItemDelegate(_MenuItemDelegate(self.view()))
         self.view().entered.connect(self.__onEntered)
         self.view().viewport().setMouseTracking(True)
+
         # Make sure the initial model is wrapped in a ItemDisableFilter.
         self.setModel(self.model())
 
@@ -137,6 +139,8 @@ class MenuPage(ToolTree):
         proxyModel.setSourceModel(model)
         ToolTree.setModel(self, proxyModel)
 
+        self.__invalidateSizeHint()
+
     def setRootIndex(self, index):
         """
         Reimplemented from :func:`ToolTree.setRootIndex`
@@ -144,6 +148,8 @@ class MenuPage(ToolTree):
         proxyModel = self.view().model()
         mappedIndex = proxyModel.mapFromSource(index)
         ToolTree.setRootIndex(self, mappedIndex)
+
+        self.__invalidateSizeHint()
 
     def rootIndex(self):
         """
@@ -153,20 +159,32 @@ class MenuPage(ToolTree):
         return proxyModel.mapToSource(ToolTree.rootIndex(self))
 
     def sizeHint(self):
-        view = self.view()
-        model = view.model()
+        """
+        Reimplemented from :func:`QWidget.sizeHint`.
+        """
+        if self.__sizeHint is None:
+            view = self.view()
+            model = view.model()
 
-        # This will not work for nested items (tree).
-        count = model.rowCount(view.rootIndex())
+            # This will not work for nested items (tree).
+            count = model.rowCount(view.rootIndex())
 
-        width = view.sizeHintForColumn(0)
+            # 'sizeHintForColumn' is the reason for size hint caching
+            # since it must traverse all items in the column.
+            width = view.sizeHintForColumn(0)
 
-        if count:
-            height = view.sizeHintForRow(0)
-            height = height * count
-        else:
-            height = 0
-        return QSize(width, height)
+            if count:
+                height = view.sizeHintForRow(0)
+                height = height * count
+            else:
+                height = 0
+            self.__sizeHint = QSize(width, height)
+
+        return self.__sizeHint
+
+    def __invalidateSizeHint(self):
+        self.__sizeHint = None
+        self.updateGeometry()
 
     def __onEntered(self, index):
         if not index.isValid():
