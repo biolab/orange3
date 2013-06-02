@@ -1,5 +1,6 @@
 from numbers import Real
 import random
+from math import isnan
 
 from ..misc.enum import Enum
 import numpy as np
@@ -255,7 +256,8 @@ class FilterDiscrete(ValueFilter):
 
     .. attribute:: values
 
-        The list (or a set) of accepted values.
+        The list (or a set) of accepted values. If None, it checks whether
+        the value is defined.
     """
     def __init__(self, column, values):
         super().__init__(column)
@@ -264,7 +266,11 @@ class FilterDiscrete(ValueFilter):
     def __call__(self, inst):
         if inst.domain is not self.last_domain:
             self.cache_position(inst.domain)
-        return inst[self.pos_cache] in self.values
+        value = inst[self.pos_cache]
+        if self.values is None:
+            return not isnan(value)
+        else:
+            return value in self.values
 
 
 class FilterContinuous(ValueFilter):
@@ -288,7 +294,8 @@ class FilterContinuous(ValueFilter):
     .. attribute:: oper
 
         The operator; should be `FilterContinuous.Equal`, `NotEqual`, `Less`,
-        `LessEqual`, `Greater`, `GreaterEqual`, `Between`, or `Outside`.
+        `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside` or
+        `IsDefined`.
     """
     def __init__(self, position, oper, ref=None, max=None, **a):
         super().__init__(position)
@@ -330,14 +337,16 @@ class FilterContinuous(ValueFilter):
             return self.ref <= value <= self.max
         if self.oper == self.Outside:
             return not self.ref <= value <= self.max
+        if self.oper == self.IsDefined:
+            return not isnan(value)
         raise ValueError("invalid operator")
 
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
-    Between = Outside = 0
+    Between = Outside = IsDefined = 0
 
 Enum("Equal", "NotEqual", "Less", "LessEqual", "Greater", "GreaterEqual",
-     "Between", "Outside").pull_up(FilterContinuous)
+     "Between", "Outside", "IsDefined").pull_up(FilterContinuous)
 
 
 class FilterString(ValueFilter):
@@ -362,7 +371,7 @@ class FilterString(ValueFilter):
 
         The operator; should be `FilterContinuous.Equal`, `NotEqual`, `Less`,
         `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside`,
-        `Contains`, `StartsWith` or `EndsWith`.
+        `Contains`, `StartsWith`, `EndsWith` or `IsDefined`.
 
     .. attribute:: case_sensitive
 
@@ -394,6 +403,8 @@ class FilterString(ValueFilter):
         if inst.domain is not self.last_domain:
             self.cache_position(inst.domain)
         value = inst[self.pos_cache]
+        if self.oper == self.IsDefined:
+            return bool(value)
         if self.case_sensitive:
             refval = self.ref
         else:
@@ -426,12 +437,13 @@ class FilterString(ValueFilter):
 
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
-    Between = Outside = Contains = StartsWith = EndsWith = 0
+    Between = Outside = Contains = StartsWith = EndsWith = IsDefined = 0
 
 Enum("Equal", "NotEqual",
      "Less", "LessEqual", "Greater", "GreaterEqual",
      "Between", "Outside",
-     "Contains", "StartsWith", "EndsWith").pull_up(FilterString)
+     "Contains", "StartsWith", "EndsWith",
+     "IsDefined").pull_up(FilterString)
 
 
 class FilterStringList(ValueFilter):
