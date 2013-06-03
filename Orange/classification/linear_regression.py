@@ -65,6 +65,9 @@ if __name__ == '__main__':
     d = Orange.data.Table('housing')
     d.shuffle()
 
+    m = LinearRegressionLearner(lambda_=1.0)
+    print(m(d)(d[0]))
+
 #    # gradient check
 #    m = LinearRegressionLearner(lambda_=1.0)
 #    theta = np.random.randn(d.X.shape[1])
@@ -74,15 +77,15 @@ if __name__ == '__main__':
 #
 #    print(ga)
 #    print(gm)
-
-    for lambda_ in (0.01, 0.03, 0.1, 0.3, 1, 3):
-        m = LinearRegressionLearner(lambda_=lambda_)
-        scores = []
-        for tr_ind, te_ind in KFold(d.X.shape[0]):
-            s = np.mean((m(d[tr_ind])(d[te_ind]) - d[te_ind].Y.ravel())**2)
-            scores.append(s)
-        print('{:5.2f} {}'.format(lambda_, np.mean(scores)))
-
-    m = LinearRegressionLearner(lambda_=0)
-    print('test data', np.mean((m(d)(d) - d.Y.ravel())**2))
-    print('majority', np.mean((np.mean(d.Y.ravel()) - d.Y.ravel())**2))
+#
+#    for lambda_ in (0.01, 0.03, 0.1, 0.3, 1, 3):
+#        m = LinearRegressionLearner(lambda_=lambda_)
+#        scores = []
+#        for tr_ind, te_ind in KFold(d.X.shape[0]):
+#            s = np.mean((m(d[tr_ind])(d[te_ind]) - d[te_ind].Y.ravel())**2)
+#            scores.append(s)
+#        print('{:5.2f} {}'.format(lambda_, np.mean(scores)))
+#
+#    m = LinearRegressionLearner(lambda_=0)
+#    print('test data', np.mean((m(d)(d) - d.Y.ravel())**2))
+#    print('majority', np.mean((np.mean(d.Y.ravel()) - d.Y.ravel())**2))

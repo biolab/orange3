@@ -91,7 +91,7 @@ if __name__ == '__main__':
             pred = np.column_stack([l.predict(X)[:, 1] for l in self.learners])
             return pred / np.sum(pred, axis=1)[:, None]
 
-    d = Orange.data.Table('../tests/iris')
+    d = Orange.data.Table('iris')
     for lambda_ in [0.1, 0.3, 1, 3, 10]:
         lr = LogisticRegressionLearner(lambda_=lambda_, normalize=False)
         m = MulticlassLearnerWrapper(lr)
