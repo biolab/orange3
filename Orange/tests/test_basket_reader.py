@@ -87,6 +87,11 @@ class TestBasketReader(unittest.TestCase):
         np.testing.assert_almost_equal(table.X.todense(),
                                        np.array([[1, 1, 1]]))
 
+    @with_file("""a=4,"x"=1.0,"y"=2.0,b=5\n"x"=1.0""")
+    def test_handles_quote(self, fname):
+        table = BasketReader().read_file(fname)
+        self.assertEqual(len(table.domain.variables), 4)
+
 
 if __name__ == "__main__":
     unittest.main()
