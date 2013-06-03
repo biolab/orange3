@@ -1,8 +1,9 @@
 import numpy as np
-from Orange.statistics import contingency
+from Orange.statistics import contingency, distribution
+from Orange.data.variable import DiscreteVariable
 
 
-class Score:
+class ClassificationScorer:
     def __new__(cls, *args):
         self = super().__new__(cls)
         if args:
@@ -11,8 +12,13 @@ class Score:
             return self
 
     def __call__(self, feature, data):
+        if not data.domain.class_var:
+            raise ValueError("Data with class labels required.")
+        elif not isinstance(data.domain.class_var, DiscreteVariable):
+            raise ValueError("Data with discrete class labels required.")
         cont = contingency.Discrete(data, feature)
-        return self.from_contingency(cont)
+        instances_with_class = np.sum(distribution.Discrete(data, data.domain.class_var))
+        return self.from_contingency(cont, 1. - np.sum(cont.unknowns)/instances_with_class)
 
 
 def _entropy(D):
@@ -29,7 +35,7 @@ def _gini(D):
                * 0.5 * np.sum(D, axis=0) / np.sum(D))
 
 
-class InfoGain(Score):
+class InfoGain(ClassificationScorer):
     """
     Information gain of a feature in class-labeled data set.
 
@@ -38,13 +44,13 @@ class InfoGain(Score):
     :type data: Orange.data.Table
     :return: float
     """
-    def from_contingency(self, cont):
+    def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
         h_residual = _entropy(cont)
-        return h_class - h_residual
+        return (h_class - h_residual) * nan_adjustment
 
 
-class GainRatio(Score):
+class GainRatio(ClassificationScorer):
     """
     Gain ratio score of a feature in class-labeled data set.
 
@@ -53,14 +59,14 @@ class GainRatio(Score):
     :type data: Orange.data.Table
     :return: float
     """
-    def from_contingency(self, cont):
+    def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
         h_residual = _entropy(cont)
         h_attribute = _entropy(np.sum(cont, axis=0))
-        return (h_class - h_residual) / h_attribute
+        return nan_adjustment * (h_class - h_residual) / h_attribute
 
 
-class Gini(Score):
+class Gini(ClassificationScorer):
     """
     Gini score of a feature in class-labeled data set.
 
@@ -69,5 +75,5 @@ class Gini(Score):
     :type data: Orange.data.Table
     :return: float
     """
-    def from_contingency(self, cont):
-        return _gini(np.sum(cont, axis=1)) - _gini(cont)
+    def from_contingency(self, cont, nan_adjustment):
+        return (_gini(np.sum(cont, axis=1)) - _gini(cont)) * nan_adjustment
