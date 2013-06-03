@@ -26,7 +26,8 @@ class DummyMulticlassLearner(classification.Fitter):
 
     def fit(self, X, Y, W):
         rows, class_vars = Y.shape
-        value = Y[np.random.randint(0, rows)]
+        rid = np.random.randint(0, rows)
+        value = [Y[rid,cid] for cid in range(Y.shape[1])]
         used_vals = [np.unique(y) for y in Y.T]
         max_vals = max(len(np.unique(y)) for y in Y.T)
         prob = np.zeros((class_vars, max_vals))

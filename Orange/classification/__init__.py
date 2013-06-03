@@ -2,7 +2,7 @@ import numpy as np
 import bottleneck as bn
 from Orange import data as Orange_data
 from ..data.value import Value
-
+import scipy
 
 class Fitter:
     supports_multiclass = False
@@ -50,6 +50,8 @@ class Model:
         # Call the predictor
         if isinstance(data, np.ndarray):
             prediction = self.predict(np.atleast_2d(data))
+        elif isinstance(data, scipy.sparse.csr.csr_matrix):
+            prediction = self.predict(data)
         elif isinstance(data, Orange_data.Instance):
             if data.domain != self.domain:
                 data = Orange_data.Instance(self.domain, data)
