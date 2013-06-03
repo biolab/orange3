@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
@@ -50,7 +48,8 @@ class LogisticRegressionLearner(classification.Fitter):
         theta, cost, ret = fmin_l_bfgs_b(self.cost_grad, theta, 
             args=(X, Y.ravel()), **self.fmin_args)
 
-        return LogisticRegressionClassifier(theta, self.normalize, self.mean, self.std)
+        return LogisticRegressionClassifier(theta, self.normalize, self.mean,
+            self.std)
 
 class LogisticRegressionClassifier(classification.Model):
     def __init__(self, theta, normalize, mean, std):
@@ -89,13 +88,13 @@ if __name__ == '__main__':
             pred = np.column_stack([l.predict(X)[:,1] for l in self.learners])
             return pred / np.sum(pred, axis=1)[:,None]
 
-    data = Orange.data.Table('../tests/iris')
-    m = MulticlassLearnerWrapper(LogisticRegressionLearner(lambda_=0.3, normalize=False))
+    d = Orange.data.Table('../tests/iris')
     for lambda_ in [0.1, 0.3, 1, 3, 10]:
-        m = MulticlassLearnerWrapper(LogisticRegressionLearner(lambda_=lambda_, normalize=False))
+        m = MulticlassLearnerWrapper(LogisticRegressionLearner(lambda_=lambda_, 
+            normalize=False))
         scores = []
-        for tr_ind, te_ind in StratifiedKFold(data.Y.ravel()):
-            s = np.mean(m(data[tr_ind])(data[te_ind]) == data[te_ind].Y.ravel())
+        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
+            s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
             scores.append(s)
         print('{:4.1f} {}'.format(lambda_, np.mean(scores)))
         
