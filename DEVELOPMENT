@@ -1,8 +1,23 @@
-Seting up your development environment
-======================================
+Development
+===========
+Orange depends on some external packages. Install them with
 
-OSX
----
+pip install numpy
+pip install -r requirements.txt.
+
+To properly setup orange for development run
+
+python setup.py develop.
+
+Documentation in located in doc folder. You can build it with
+
+make html
+
+Built documentation will reside in build/html folder. To view it, just open the index.html.
+
+
+Detailed Walkthrough for OSX
+----------------------------
 You will need the latest version od XCode you can download from the AppStore. When it is installed, go to the Preferences/Downloads and download Command Line Tools.
 The easiest way to setup all the requirements for your virtual environment is using homebrew. You can install it using the following command:
 
@@ -22,7 +37,7 @@ source o3/bin/activate
 
 git clone https://github.com/biolab/orange3.git
 cd orange3
-pip install numpy
+pip install numpy mercurial
 pip install -r requirements.txt
 python setup.py develop
 
