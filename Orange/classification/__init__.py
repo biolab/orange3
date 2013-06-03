@@ -113,11 +113,11 @@ class Model:
                     probs = probs_ext[:, 0, :]
 
         # Return what we need to
-        if ret == Model.Value:
-            if isinstance(data, Orange_data.Instance) and not multitarget:
-                value = Value(self.domain.class_var, value[0])
-            return value
         if ret == Model.Probs:
             return probs
+        if isinstance(data, Orange_data.Instance) and not multitarget:
+            value = Value(self.domain.class_var, value[0])
+        if ret == Model.Value:
+            return value
         else:  # ret == Model.ValueProbs
             return value, probs
