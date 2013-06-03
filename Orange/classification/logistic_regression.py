@@ -4,8 +4,10 @@ from scipy.optimize import fmin_l_bfgs_b
 
 from Orange import classification
 
+
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
+
 
 class LogisticRegressionLearner(classification.Fitter):
     def __init__(self, lambda_, normalize=True, **fmin_args):
@@ -29,27 +31,28 @@ class LogisticRegressionLearner(classification.Fitter):
     def fit(self, X, Y, W):
         if list(np.unique(Y).astype(int)) != [0, 1]:
             raise ValueError('Logistic regression requires a binary class '
-                'variable')
+                             'variable')
 
         if Y.shape[1] > 1:
             raise ValueError('Logistic regression does not support '
-                'multi-label classification')
+                             'multi-label classification')
 
         if np.isnan(np.sum(X)) or np.isnan(np.sum(Y)):
             raise ValueError('Logistic regression does not support '
-                'unknown values')
+                             'unknown values')
 
         self.mean = np.mean(X, axis=0)
         self.std = np.std(X, axis=0)
         if self.normalize:
             X = (X - self.mean) / self.std
-        
+
         theta = np.zeros(X.shape[1])
-        theta, cost, ret = fmin_l_bfgs_b(self.cost_grad, theta, 
-            args=(X, Y.ravel()), **self.fmin_args)
+        theta, cost, ret = fmin_l_bfgs_b(self.cost_grad, theta,
+                                         args=(X, Y.ravel()), **self.fmin_args)
 
         return LogisticRegressionClassifier(theta, self.normalize, self.mean,
-            self.std)
+                                            self.std)
+
 
 class LogisticRegressionClassifier(classification.Model):
     def __init__(self, theta, normalize, mean, std):
@@ -57,7 +60,7 @@ class LogisticRegressionClassifier(classification.Model):
         self.normalize = normalize
         self.mean = mean
         self.std = std
-    
+
     def predict(self, X):
         if self.normalize:
             X = (X - self.mean) / self.std
@@ -85,16 +88,15 @@ if __name__ == '__main__':
             self.learners = learners
 
         def predict(self, X):
-            pred = np.column_stack([l.predict(X)[:,1] for l in self.learners])
-            return pred / np.sum(pred, axis=1)[:,None]
+            pred = np.column_stack([l.predict(X)[:, 1] for l in self.learners])
+            return pred / np.sum(pred, axis=1)[:, None]
 
     d = Orange.data.Table('../tests/iris')
     for lambda_ in [0.1, 0.3, 1, 3, 10]:
-        m = MulticlassLearnerWrapper(LogisticRegressionLearner(lambda_=lambda_, 
-            normalize=False))
+        lr = LogisticRegressionLearner(lambda_=lambda_, normalize=False)
+        m = MulticlassLearnerWrapper(lr)
         scores = []
         for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
             s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
             scores.append(s)
         print('{:4.1f} {}'.format(lambda_, np.mean(scores)))
-        
