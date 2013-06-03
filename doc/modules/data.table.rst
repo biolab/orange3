@@ -1,7 +1,8 @@
 .. currentmodule:: Orange.data
 
-Data Table
-==========
+######################
+Data Table (``table``)
+######################
 
 .. autoclass:: Orange.data.Table
     :members: X, Y, W, metas, columns

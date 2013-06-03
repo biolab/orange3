@@ -1,7 +1,8 @@
 .. currentmodule:: Orange.data
 
-Variable Descriptors
-====================
+###################################
+Variable Descriptors (``variable``)
+###################################
 
 Every variable is associated with a descriptor that stores its name, type
 and other properties, and takes care of conversion of values from textual

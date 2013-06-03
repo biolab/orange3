@@ -1,7 +1,8 @@
 .. currentmodule:: Orange.data
 
-Data instance
-=============
+############################
+Data Instance (``instance``)
+############################
 
 Class :obj:`Instance` represents a data instance. The base class stores its
 own data, and derived classes are used to represent views into various data

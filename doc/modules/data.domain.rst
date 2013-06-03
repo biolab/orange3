@@ -1,7 +1,8 @@
 .. currentmodule:: Orange.data
 
-Domain description
-==================
+#############################
+Domain description (``domain``)
+#############################
 
 .. autoclass:: Orange.data.Domain
     :members:
