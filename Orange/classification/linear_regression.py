@@ -14,8 +14,8 @@ class LinearRegressionLearner(classification.Fitter):
         t = X.dot(theta) - y
 
         cost = t.dot(t)
-        cost += self.lambda_ * theta.dot(theta) / 2
-        cost /= X.shape[0]
+        cost += self.lambda_ * theta.dot(theta)
+        cost /= 2.0 * X.shape[0]
 
         grad = X.T.dot(t)
         grad += self.lambda_ * theta
@@ -51,8 +51,30 @@ if __name__ == '__main__':
     import Orange.data
     from sklearn.cross_validation import KFold
 
+    def numerical_grad(f, params, e=1e-4):
+        grad = np.zeros_like(params)
+        perturb = np.zeros_like(params)
+        for i in range(params.size):
+            perturb[i] = e
+            j1 = f(params - perturb)
+            j2 = f(params + perturb)
+            grad[i] = (j2 - j1) / (2.0 * e)
+            perturb[i] = 0
+        return grad
+
     d = Orange.data.Table('housing')
     d.shuffle()
+
+#    # gradient check
+#    m = LinearRegressionLearner(lambda_=1.0)
+#    theta = np.random.randn(d.X.shape[1])
+#
+#    ga = m.cost_grad(theta, d.X, d.Y.ravel())[1]
+#    gm = numerical_grad(lambda t: m.cost_grad(t, d.X, d.Y.ravel())[0], theta)
+#
+#    print(ga)
+#    print(gm)
+
     for lambda_ in (0.01, 0.03, 0.1, 0.3, 1, 3):
         m = LinearRegressionLearner(lambda_=lambda_)
         scores = []

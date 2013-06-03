@@ -76,6 +76,7 @@ if __name__ == '__main__':
     m = SoftmaxRegressionLearner(lambda_=1.0)
 
 #    # gradient check
+#    m = SoftmaxRegressionLearner(lambda_=1.0)
 #    m.num_classes = 3
 #    Theta = np.random.randn(3 * 4)
 #    y = d.Y.ravel().astype(int)
@@ -83,7 +84,9 @@ if __name__ == '__main__':
 #
 #    ga = m.cost_grad(Theta, d.X, Y, y)[1]
 #    gn = numerical_grad(lambda t: m.cost_grad(t, d.X, Y, y)[0], Theta)
-#    print(np.sum((ga - gn)**2))
+#
+#    print(ga)
+#    print(gn)
 
     for lambda_ in [0.1, 0.3, 1, 3, 10]:
         m = SoftmaxRegressionLearner(lambda_=lambda_)
