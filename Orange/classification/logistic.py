@@ -37,16 +37,18 @@ class LogisticRegressionLearner(classification.Fitter):
             raise ValueError('Logistic regression does not support '
                 'multi-label classification')
 
+        if np.isnan(np.sum(X)) or np.isnan(np.sum(Y)):
+            raise ValueError('Logistic regression does not support '
+                'unknown values')
+
         self.mean = np.mean(X, axis=0)
         self.std = np.std(X, axis=0)
         if self.normalize:
             X = (X - self.mean) / self.std
         
         theta = np.zeros(X.shape[1])
-        theta, cost, ret = fmin_l_bfgs_b(
-            self.cost_grad, theta, args=(X, Y.ravel()), **self.fmin_args)
-        if ret['warnflag'] != 0:
-            logging.info('L-BFGS failed to converge')
+        theta, cost, ret = fmin_l_bfgs_b(self.cost_grad, theta, 
+            args=(X, Y.ravel()), **self.fmin_args)
 
         return LogisticRegressionClassifier(theta, self.normalize, self.mean, self.std)
 
@@ -63,19 +65,37 @@ class LogisticRegressionClassifier(classification.Model):
         prob = sigmoid(X.dot(self.theta))
         return np.column_stack((1 - prob, prob))
 
+
 if __name__ == '__main__':
     import Orange.data
     from sklearn.cross_validation import StratifiedKFold
 
-    data = Orange.data.Table('../tests/iris')
-    X, Y = data.X, data.Y
-    Y[Y == 0.0] = 1.0
-    Y[Y == 2.0] = 0.0
+    class MulticlassLearnerWrapper(classification.Fitter):
+        def __init__(self, learner):
+            self.learner = learner
 
-    m = LogisticRegressionLearner(lambda_=1.0, normalize=False)
-    scores = []
-    for tr_ind, te_ind in StratifiedKFold(Y.ravel()):
-        s = np.mean(m(data[tr_ind])(data[te_ind]) == data[te_ind].Y.ravel())
-        scores.append(s)
-    print(np.mean(scores))
+        def fit(self, X, Y, W):
+            assert Y.shape[1] == 1
+            learners = []
+            for j in range(np.unique(Y).size):
+                learners.append(self.learner.fit(X, (Y == j).astype(float), W))
+            return MulticlassClassifierWrapper(learners)
+
+    class MulticlassClassifierWrapper(classification.Model):
+        def __init__(self, learners):
+            self.learners = learners
+
+        def predict(self, X):
+            pred = np.column_stack([l.predict(X)[:,1] for l in self.learners])
+            return pred / np.sum(pred, axis=1)[:,None]
+
+    data = Orange.data.Table('../tests/iris')
+    m = MulticlassLearnerWrapper(LogisticRegressionLearner(lambda_=0.3, normalize=False))
+    for lambda_ in [0.1, 0.3, 1, 3, 10]:
+        m = MulticlassLearnerWrapper(LogisticRegressionLearner(lambda_=lambda_, normalize=False))
+        scores = []
+        for tr_ind, te_ind in StratifiedKFold(data.Y.ravel()):
+            s = np.mean(m(data[tr_ind])(data[te_ind]) == data[te_ind].Y.ravel())
+            scores.append(s)
+        print('{:4.1f} {}'.format(lambda_, np.mean(scores)))
         
