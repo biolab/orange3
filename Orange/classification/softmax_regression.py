@@ -13,7 +13,8 @@ class SoftmaxRegressionLearner(classification.Fitter):
     def cost_grad(self, Theta_flat, X, Y, y):
         Theta = Theta_flat.reshape((self.num_classes, X.shape[1]))
 
-        P = np.exp(X.dot(Theta.T))
+        M = X.dot(Theta.T)
+        P = np.exp(M - np.max(M, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
 
         cost = -np.sum(np.log(P[range(y.size), y]))
@@ -52,7 +53,8 @@ class SoftmaxRegressionClassifier(classification.Model):
         self.Theta = Theta
 
     def predict(self, X):
-        P = np.exp(X.dot(self.Theta.T))
+        M = X.dot(self.Theta.T)
+        P = np.exp(M - np.max(M, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
         return P
 
@@ -75,18 +77,18 @@ if __name__ == '__main__':
     d = Orange.data.Table('iris')
     m = SoftmaxRegressionLearner(lambda_=1.0)
 
-#    # gradient check
-#    m = SoftmaxRegressionLearner(lambda_=1.0)
-#    m.num_classes = 3
-#    Theta = np.random.randn(3 * 4)
-#    y = d.Y.ravel().astype(int)
-#    Y = np.eye(3)[y]
-#
-#    ga = m.cost_grad(Theta, d.X, Y, y)[1]
-#    gn = numerical_grad(lambda t: m.cost_grad(t, d.X, Y, y)[0], Theta)
-#
-#    print(ga)
-#    print(gn)
+    # gradient check
+    m = SoftmaxRegressionLearner(lambda_=1.0)
+    m.num_classes = 3
+    Theta = np.random.randn(3 * 4)
+    y = d.Y.ravel().astype(int)
+    Y = np.eye(3)[y]
+
+    ga = m.cost_grad(Theta, d.X, Y, y)[1]
+    gn = numerical_grad(lambda t: m.cost_grad(t, d.X, Y, y)[0], Theta)
+
+    print(ga)
+    print(gn)
 
     for lambda_ in [0.1, 0.3, 1, 3, 10]:
         m = SoftmaxRegressionLearner(lambda_=lambda_)
