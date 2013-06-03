@@ -61,6 +61,7 @@ cpdef sparse_prescan_fast(fname):
         if state == QUOTED:
             if c == '"':
                 state = READ
+                continue
 
         if state == READ:
             if c == ",":
