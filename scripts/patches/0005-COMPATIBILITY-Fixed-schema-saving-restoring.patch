@@ -1,0 +1,50 @@
+From dcbdc68694fb755375717f772778a9b126802950 Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Tue, 4 Jun 2013 15:08:30 +0200
+Subject: [PATCH] Fixed schema saving/restoring.
+
+---
+ Orange/canvas/scheme/widgetsscheme.py | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
+index 142c364..5a187f9 100644
+--- a/Orange/canvas/scheme/widgetsscheme.py
++++ b/Orange/canvas/scheme/widgetsscheme.py
+@@ -112,7 +112,6 @@ class WidgetsScheme(Scheme):
+         widget = klass.__new__(
+             klass,
+             _category=desc.category,
+-            _settingsFromSchema=node.properties
+         )
+ 
+         # Add the node/widget mapping s before calling __init__
+@@ -123,7 +122,7 @@ class WidgetsScheme(Scheme):
+         self.widget_for_node[node] = widget
+         self.node_for_widget[widget] = node
+ 
+-        widget.__init__(None, self.signal_manager)
++        widget.__init__(None, self.signal_manager, node.properties)
+         widget.setCaption(node.title)
+         widget.widgetInfo = desc
+ 
+@@ -158,14 +157,14 @@ class WidgetsScheme(Scheme):
+         Return True if there were any changes in the properties (i.e. if the
+         new node.properties differ from the old value) and False otherwise.
+ 
+-        .. note:: this should hopefully be removed in the feature, when the
++        .. note:: this should hopefully be removed in the future, when the
+             widget can notify a changed setting property.
+ 
+         """
+         changed = False
+         for node in self.nodes:
+             widget = self.widget_for_node[node]
+-            settings = widget.getSettings(alsoContexts=False)
++            settings = widget.settingsHandler.pack_data(widget)
+             if settings != node.properties:
+                 node.properties = settings
+                 changed = True
+-- 
+1.8.2.3
+
