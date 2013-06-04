@@ -162,6 +162,8 @@ class Table(MutableSequence, Storage):
                 domain, args = args[0], args[1:]
                 if not args:
                     return cls.from_domain(domain, **kwargs)
+                if isinstance(args[0], Table):
+                    return cls.from_table(domain, args[0])
             else:
                 domain = None
 
@@ -225,25 +227,29 @@ class Table(MutableSequence, Storage):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
             n_src_attrs = len(source.domain.attributes)
-            if all(0 <= x < n_src_attrs for x in src_cols):
+            if all(isinstance(x, int) and 0 <= x < n_src_attrs
+                   for x in src_cols):
                 return source.X[row_indices, src_cols]
-            if all(x < 0 for x in src_cols):
+            if all(isinstance(x, int) and x < 0 for x in src_cols):
                 return source.metas[row_indices, [-1 - x for x in src_cols]]
-            if all(x >= n_src_attrs for x in src_cols):
+            if all(isinstance(x, int) and x >= n_src_attrs for x in src_cols):
                 return source.Y[row_indices, [x - n_src_attrs for x in
                                               src_cols]]
 
             types = []
-            if any(0 <= x < n_src_attrs for x in src_cols):
+            if any(isinstance(x, int) and 0 <= x < n_src_attrs
+                   for x in src_cols):
                 types.append(source.X.dtype)
-            if any(x < 0 for x in src_cols):
+            if any(isinstance(x, int) and x < 0 for x in src_cols):
                 types.append(source.metas.dtype)
-            if any(x >= n_src_attrs for x in src_cols):
+            if any(isinstance(x, int) and x >= n_src_attrs for x in src_cols):
                 types.append(source.Y.dtype)
             new_type = np.find_common_type(types, [])
             a = np.empty((n_rows, len(src_cols)), dtype=new_type)
             for i, col in enumerate(src_cols):
-                if col < 0:
+                if not isinstance(col, int):
+                    a[:, i] = col(source)
+                elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
                 elif col < n_src_attrs:
                     a[:, i] = source.X[row_indices, col]
