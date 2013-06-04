@@ -10,12 +10,18 @@ class Fitter:
     def fit(self, X, Y, W):
         raise TypeError("Descendants of Fitter must overload method fit")
 
+    def fit_storage(self, data):
+        return self.fit(data.X, data.Y, data.W)
+
     def __call__(self, data):
         X, Y, W = data.X, data.Y, data.W if data.has_weights else None
         if np.shape(Y)[1] > 1 and not self.supports_multiclass:
             raise TypeError("fitter doesn't support multiple class variables")
         self.domain = data.domain
-        clf = self.fit(X, Y, W)
+        if type(self).fit is Fitter.fit:
+            clf = self.fit_storage(data)
+        else:
+            clf = self.fit(X, Y, W)
         clf.domain = data.domain
         clf.Y = Y
         clf.supports_multiclass = self.supports_multiclass
