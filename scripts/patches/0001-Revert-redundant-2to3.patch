@@ -1,4 +1,4 @@
-From 60c4a835c0c3b0d39fbbe69e35e320596e90bad9 Mon Sep 17 00:00:00 2001
+From c23dbf7c7bc3ade8a0f9db3b11aaa00914cbd566 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:31:32 +0200
 Subject: [PATCH 1/4] Revert redundant 2to3.
