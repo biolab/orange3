@@ -1657,9 +1657,12 @@ class CallFrontListBox(ControlledCallFront):
 
 
 class CallFrontListBoxLabels(ControlledCallFront):
-    if attributeIconDict is None:
-            constructAttributeIcons()
     unknownType = None
+
+    def __init__(self):
+        super().__init__()
+        if attributeIconDict is None:
+            constructAttributeIcons()
 
     def action(self, value):
 #        icons = getAttributeIcons()
