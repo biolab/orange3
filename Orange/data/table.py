@@ -1139,6 +1139,8 @@ class Table(MutableSequence, Storage):
             else:
                 m, W, Ycsc = _get_matrix(self.Y, Ycsc, col - self.X.shape[1])
             if isinstance(var, DiscreteVariable):
+                if W is not None:
+                    W = W.ravel()
                 dist, unknowns = bn.bincount(m, len(var.values)-1, W)
             elif not len(m):
                 dist, unknowns = np.zeros((2, 0)), 0
