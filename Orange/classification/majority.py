@@ -20,3 +20,6 @@ class ConstantClassifier(classification.Model):
 
     def predict(self, X):
         return tile(self.dist, (len(X), 1))
+
+    def __str__(self):
+        return 'ConstantClassifier {}'.format(self.dist)
