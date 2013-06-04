@@ -11,6 +11,7 @@ Orange Documentation
 
    modules/data
    modules/feature
+   modules/classification
 
 
 

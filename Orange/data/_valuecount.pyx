@@ -8,7 +8,7 @@ from numpy cimport NPY_FLOAT64 as NPY_float64
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def valuecount(np.ndarray[np.float64_t, ndim=2] a):
+def valuecount(np.ndarray[np.float64_t, ndim=2] a not None):
     """
     Count the occurrences of each value.
 
