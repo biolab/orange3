@@ -8,7 +8,8 @@ class Fitter:
     supports_multiclass = False
 
     def fit(self, X, Y, W):
-        raise TypeError("Descendants of Fitter must overload method fit")
+        raise NotImplementedError(
+                "Descendants of Fitter must overload method fit")
 
     def fit_storage(self, data):
         return self.fit(data.X, data.Y, data.W)
