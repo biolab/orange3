@@ -391,6 +391,49 @@ class Table(MutableSequence, Storage):
         self.n_rows = self._X.shape[0]
         return self
 
+    def save(self, filename):
+        """
+        Save a data table to a file. The path can be absolute or relative.
+
+        :param filename: File name
+        :type filename: str
+        """
+        if not (filename.endswith(".tab")):
+            raise IOError("Unknown destination file name extension.")
+
+        assert(filename.endswith(".tab"))
+
+        f = open(filename, "w")
+        domain_vars = self.domain.metas + self.domain.variables
+        # first line
+        f.write("\t".join([str(j.name) for j in domain_vars]))
+        f.write("\n")
+
+        # second line
+        #TODO Basket column.
+        t = {"Continuous":"c", "Discrete":"d", "String":"string", "Basket":"basket"}
+        f.write("\t".join([t[str(j.var_type)] for j in domain_vars]))
+        f.write("\n")
+
+        # third line
+        m = list(self.domain.metas)
+        c = list(self.domain.class_vars)
+        r = []
+        for i in domain_vars:
+            if i in m:
+                r.append("m")
+            elif i in c:
+                r.append("c")
+            else:
+                r.append("")
+        f.write("\t".join(r))
+        f.write("\n")
+
+        # data
+        for i in self:
+            f.write("\t".join([str(i[j]) for j in domain_vars]))
+            f.write("\n")
+        f.close()
 
     @classmethod
     def from_file(cls, filename):

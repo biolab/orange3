@@ -588,7 +588,10 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d_ref.X.shape, (10, 2))
         self.assertEqual(d_ref.Y.shape, (10, 1))
 
-    @unittest.skip("Not implemented yet.")
+    @unittest.skip("We need first to implement basket column.")
+    def test_saveTabBasket(self):
+        pass
+
     def test_saveTab(self):
         d = data.Table("iris")[:3]
         d.save("test-save.tab")
@@ -605,8 +608,8 @@ class TableTestCase(unittest.TestCase):
         d.save("test-save.tab")
         try:
             d2 = data.Table("test-save.tab")
-            self.assertEqual(len(d.domain.attributes), 0)
-            self.assertEqual(d.domain.classVar, dom[0])
+            self.assertEqual(len(d.domain.attributes), 1)
+            self.assertEqual(d.domain.class_var, None)
             for i in range(3):
                 self.assertEqual(d2[i], [i])
         finally:
@@ -619,11 +622,24 @@ class TableTestCase(unittest.TestCase):
         try:
             d2 = data.Table("test-save.tab")
             self.assertEqual(len(d.domain.attributes), 1)
-            self.assertEqual(d.domain[0], dom[0])
             for i in range(3):
                 self.assertEqual(d2[i], [i])
         finally:
             os.remove("test-save.tab")
+
+        d = data.Table("zoo")
+        d.save("test-zoo.tab")
+        dd = data.Table("test-zoo")
+
+        try:
+            self.assertTupleEqual(d.domain.metas, dd.domain.metas, msg="Meta attributes don't match.")
+            self.assertTupleEqual(d.domain.variables, dd.domain.variables, msg="Attributes don't match.")
+
+            for i in range(10):
+                for j in d.domain.variables:
+                    self.assertEqual(d[i][j], dd[i][j])
+        finally:
+            os.remove("test-zoo.tab")
 
     def test_from_numpy(self):
         import random
