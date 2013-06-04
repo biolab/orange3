@@ -8,6 +8,7 @@ import Orange.classification.majority as maj
 import Orange.classification.naive_bayes as nb
 from Orange.data.io import BasketReader
 
+
 class MultiClassTest(unittest.TestCase):
     def test_unsupported(self):
         nrows = 20
@@ -129,8 +130,10 @@ class ExpandProbabilitiesTest(unittest.TestCase):
 class SparseTest(unittest.TestCase):
     def test_sparse_basket(self):
         table = BasketReader().read_file("iris.basket")
-        test = Orange.data.Table.from_table_rows(table,range(0,len(table),2))
-        train = Orange.data.Table.from_table_rows(table,range(1,len(table),2))
+        test = Orange.data.Table.from_table_rows(table,
+                                                 range(0, len(table), 2))
+        train = Orange.data.Table.from_table_rows(table,
+                                                  range(1, len(table), 2))
         learn = dummies.DummyMulticlassLearner()
         clf = learn(train)
         p = clf(test)

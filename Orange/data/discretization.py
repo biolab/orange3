@@ -6,17 +6,24 @@ from Orange.data import ContinuousVariable, Domain
 class DiscretizeTable(object):
     """Discretizes all continuous features in the data.
 
-    :param data: Data to discretize.
+    .. attribute:: method
 
-    :param method: Feature discretization method (usually from
-    :obj:`Orange.feature.discretize`).
+        Feature discretization method (from 
+        :obj:`Orange.feature.discretization`).
+        Default: :class:`Orange.feature.discretization.EqualFreq`
+        with 4 intervals.
 
-    :param clean: If `True`,
-        features discretized to a constant will be removed. Useful only
-        for methods that infer the number of discretization intervals
-        from the data, like :class:`Orange.feature.discretize.Entropy`
-        (default: `True`).
-    :type clean: bool
+    .. attribute:: clean
+        
+        If `True`, features discretized to a constant will
+        be removed. Useful only for methods that infer the
+        number of discretization intervals from the data, like
+        :class:`Orange.feature.discretization.Entropy` (default: `True`).
+
+    .. attribute:: include_class
+    
+        If `True`, discretize class values too (default: `False`).
+        
 
     """
     def __new__(cls, data=None, discretize_class=False,
@@ -30,6 +37,11 @@ class DiscretizeTable(object):
         return self if data is None else self(data)
 
     def __call__(self, data):
+        """
+        Return the discretized data set.
+
+        :param data: Data to discretize.
+        """
         
         domain = data.domain
 

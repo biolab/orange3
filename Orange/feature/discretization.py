@@ -77,6 +77,14 @@ def _discretized_var(data, var, points):
 
 
 class EqualFreq:
+    """ Discretizes the feature by spliting its domain to a fixed number of
+    equal-width intervals. The span of original variable is the difference
+    between the smallest and the largest feature value.
+
+    .. attribute:: n
+
+        Number of discretization intervals (default: 4).
+    """
     def __init__(self, n=4):
         self.n = n
 
@@ -87,6 +95,13 @@ class EqualFreq:
 
 
 class EqualWidth:
+    """ Infers the cut-off points so that the discretization intervals contain
+    approximately equal number of training data instances.
+
+    .. attribute:: n
+
+        Number of discretization intervals (default: 4).
+    """
     def __init__(self, n=4):
         self.n = n
 
