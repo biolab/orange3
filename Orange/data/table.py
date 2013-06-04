@@ -337,6 +337,8 @@ class Table(MutableSequence, Storage):
             metas = np.empty((X.shape[0], 0), object)
         if W is None:
             W = np.empty((X.shape[0], 0))
+        else:
+            W = W.reshape(W.size, 1)
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
