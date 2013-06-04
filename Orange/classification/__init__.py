@@ -89,7 +89,10 @@ class Model:
             else:
                 probs = bn.bincount(np.atleast_2d(value),
                                     len(self.domain.class_var.values))
-            return probs
+            if ret == Model.ValueProbs:
+                return value, probs
+            else:
+                return probs
 
         # Expand probability predictions for class values which are not present
         if ret != self.Value:
