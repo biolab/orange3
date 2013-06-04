@@ -239,7 +239,7 @@ class OWPlot(orangeqt.Plot):
 
             The current selection is replaced with the new one
 
-        .. note:: There are exacly the same functions for point selection and marking.
+        .. note:: There are exactly the same functions for point selection and marking.
                 For simplicity, they are only documented once.
 
         .. method:: select_points(area, behavior)
@@ -328,7 +328,7 @@ class OWPlot(orangeqt.Plot):
     def settings_list(self, graph_name, settings):
         return [graph_name + '.' + setting for setting in settings]
 
-    def __init__(self, parent = None,  name = "None",  show_legend = 1, axes = [xBottom, yLeft], widget = None ):
+    def __init__(self, parent = None,  name = "None",  show_legend = 1, axes = [xBottom, yLeft], widget = None):
         """
             Creates a new graph
 
@@ -1233,7 +1233,7 @@ class OWPlot(orangeqt.Plot):
             orangeqt.Plot.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() and (self._pressed_mouse_pos - event.pos()).manhattanLength() > qApp.startDragDistance():
+        if event.buttons() and (self._pressed_mouse_pos - event.pos()).manhattanLength() > QtGui.QApplication.instance().startDragDistance():
             self.static_click = False
 
         if self.mouseMoveEventHandler and self.mouseMoveEventHandler(event):
