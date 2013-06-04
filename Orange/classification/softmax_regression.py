@@ -6,7 +6,7 @@ from Orange import classification
 
 
 class SoftmaxRegressionLearner(classification.Fitter):
-    def __init__(self, lambda_, normalize=True, **fmin_args):
+    def __init__(self, lambda_=1.0, normalize=True, **fmin_args):
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 
