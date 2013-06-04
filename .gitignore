@@ -5,6 +5,7 @@ Orange/version.py
 doc/build
 *.so
 *.pyd
+*.pyc
 
 # Cython generated files
 __pycache__
