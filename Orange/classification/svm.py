@@ -17,9 +17,9 @@ class SVMLearner(classification.Fitter):
         self.supports_multiclass = True
 
     def fit(self, X, Y, W):
-        clf = SVC(C=self.C, kernel=self.kernel, degree=self.degree, gamma=self.gamma, coef0=self.coef0,
-                  shrinking=self.shrinking, probability=True, tol=self.tol,
-                  cache_size=self.cache_size, max_iter=self.max_iter)
+        clf = SVC(C=self.C, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
+                  coef0=self.coef0, shrinking=self.shrinking, probability=True,
+                  tol=self.tol, cache_size=self.cache_size, max_iter=self.max_iter)
         if W.shape[1]>0:
             return SVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVMClassifier(clf.fit(X, Y.reshape(-1)))
@@ -175,9 +175,9 @@ class OneClassSVMLearner(classification.Fitter):
         self.max_iter = max_iter
 
     def fit(self, X, Y, W):
-        clf = OneClassSVM(kernel=self.kernel, degree=self.degree, gamma=self.gamma, coef0=self.coef0,
-                          tol=self.tol, nu=self.nu, shrinking=self.shrinking, cache_size=self.cache_size,
-                          max_iter=self.max_iter)
+        clf = OneClassSVM(kernel=self.kernel, degree=self.degree, gamma=self.gamma,
+                          coef0=self.coef0, tol=self.tol, nu=self.nu,
+                          shrinking=self.shrinking, cache_size=self.cache_size, max_iter=self.max_iter)
         if W.shape[1]>0:
             return OneClassSVMClassifier(clf.fit(X, W.reshape(-1)))
         return OneClassSVMClassifier(clf.fit(X))
@@ -204,11 +204,10 @@ if __name__ == '__main__':
         cross = Orange.evaluation.CrossValidation(d1, m)
         prediction = cross.KFold(10)
         print(Orange.evaluation.CA(d1, prediction[0]))
-
         clf = m(d1)
         print(clf(d1[0].x, ret=clf.ValueProbs))
 
-    d2 = Orange.data.Table('housing')
+    d2 = Orange.data.Table('iris')
     d2.shuffle()
     n = int(0.7*d2.X.shape[0])
     train, test = d2[:n], d2[n:]
@@ -216,7 +215,7 @@ if __name__ == '__main__':
         m = learner(C=1.0)
         print(m)
         clf = m(train)
-
+        print(1./test.Y.shape[0]*np.sum((clf(test)-test.Y.reshape(-1))**2))
 
 
 
