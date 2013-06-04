@@ -5,6 +5,7 @@ from Orange import data
 import Orange.classification
 import Orange.classification.dummies as dummies
 import Orange.classification.majority as maj
+import Orange.classification.naive_bayes as nb
 from Orange.data.io import BasketReader
 
 class MultiClassTest(unittest.TestCase):
@@ -41,6 +42,15 @@ class MultiClassTest(unittest.TestCase):
 
 
 class ModelTest(unittest.TestCase):
+
+    def test_predict_single_instance(self):
+        table = data.Table("iris")
+        learn = nb.BayesLearner()
+        clf = learn(table)
+        pred = []
+        for row in table:
+            pred.append(clf(row))
+
     def test_value_from_probs(self):
         nrows = 100
         ncols = 5

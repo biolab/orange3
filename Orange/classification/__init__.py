@@ -55,7 +55,7 @@ class Model:
         elif isinstance(data, Orange_data.Instance):
             if data.domain != self.domain:
                 data = Orange_data.Instance(self.domain, data)
-            prediction = self.predict(np.atleast_2d(data._values))
+            prediction = self.predict(np.atleast_2d(data.x))
         elif isinstance(data, Orange_data.Table):
             if data.domain != self.domain:
                 data = Orange_data.Table.from_table(self.domain, data)
