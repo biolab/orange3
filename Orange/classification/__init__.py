@@ -2,7 +2,7 @@ import numpy as np
 import bottleneck as bn
 from Orange import data as Orange_data
 from ..data.value import Value
-
+import scipy
 
 class Fitter:
     supports_multiclass = False
@@ -50,10 +50,12 @@ class Model:
         # Call the predictor
         if isinstance(data, np.ndarray):
             prediction = self.predict(np.atleast_2d(data))
+        elif isinstance(data, scipy.sparse.csr.csr_matrix):
+            prediction = self.predict(data)
         elif isinstance(data, Orange_data.Instance):
             if data.domain != self.domain:
                 data = Orange_data.Instance(self.domain, data)
-            prediction = self.predict(np.atleast_2d(data._values))
+            prediction = self.predict(np.atleast_2d(data.x))
         elif isinstance(data, Orange_data.Table):
             if data.domain != self.domain:
                 data = Orange_data.Table.from_table(self.domain, data)
@@ -111,11 +113,11 @@ class Model:
                     probs = probs_ext[:, 0, :]
 
         # Return what we need to
-        if ret == Model.Value:
-            if isinstance(data, Orange_data.Instance) and not multitarget:
-                value = Value(self.domain.class_var, value[0])
-            return value
         if ret == Model.Probs:
             return probs
+        if isinstance(data, Orange_data.Instance) and not multitarget:
+            value = Value(self.domain.class_var, value[0])
+        if ret == Model.Value:
+            return value
         else:  # ret == Model.ValueProbs
             return value, probs

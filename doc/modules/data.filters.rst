@@ -1,7 +1,8 @@
 .. currentmodule:: Orange.data
 
-Filters
-=======
+#########################
+Data Filters (``filter``)
+#########################
 
 Instances of classes derived from `Filter` are used for filtering the data.
 
