@@ -1150,9 +1150,9 @@ class Table(MutableSequence, Storage):
                     vals = np.vstack((m[ranks], W[ranks]))
                     unknowns = bn.countnans(m, W)
                 else:
-                    m.sort()
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
+                    vals[0, :].sort()
                     unknowns = bn.countnans(m)
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))
