@@ -289,8 +289,8 @@ class OWDataTable(widget.OWWidget):
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
+    def __init__(self):
+        super().__init__()
 
         self.data = {}          # key: id, value: ExampleTable
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)

@@ -51,8 +51,8 @@ class OWDataSampler(widget.OWWidget):
     numberOfFolds = Setting(10)             # Setting for the number of folds in cross validation
     selectedFold = Setting(1)               # Setting for the selected fold in cross validation
 
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
+    def __init__(self):
+        super().__init__()
 
         self.data = None
         self.groups = None

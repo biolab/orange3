@@ -96,9 +96,8 @@ class OWBoxPlot(widget.OWWidget):
     _label_font.setPixelSize(11)
     _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
 
-
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
+    def __init__(self):
+        super().__init__()
         self.grouping = []
         self.attributes = []
         self.stats = []
