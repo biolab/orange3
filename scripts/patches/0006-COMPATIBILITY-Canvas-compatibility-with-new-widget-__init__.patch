@@ -1,0 +1,36 @@
+From 1e99af572e122e8b7e4b4eccea7e961894f2e511 Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Tue, 4 Jun 2013 19:24:48 +0200
+Subject: [PATCH] Canvas compatibility with new widget __init__.
+
+---
+ Orange/canvas/scheme/widgetsscheme.py | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
+index 5a187f9..3ff0a43 100644
+--- a/Orange/canvas/scheme/widgetsscheme.py
++++ b/Orange/canvas/scheme/widgetsscheme.py
+@@ -111,7 +111,9 @@ class WidgetsScheme(Scheme):
+         log.info("Creating %r instance.", klass)
+         widget = klass.__new__(
+             klass,
+-            _category=desc.category,
++            None,
++            signal_manager=self.signal_manager,
++            stored_settings=node.properties
+         )
+ 
+         # Add the node/widget mapping s before calling __init__
+@@ -122,7 +124,7 @@ class WidgetsScheme(Scheme):
+         self.widget_for_node[node] = widget
+         self.node_for_widget[widget] = node
+ 
+-        widget.__init__(None, self.signal_manager, node.properties)
++        widget.__init__()
+         widget.setCaption(node.title)
+         widget.widgetInfo = desc
+ 
+-- 
+1.8.2.3
+

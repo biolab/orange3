@@ -111,7 +111,9 @@ class WidgetsScheme(Scheme):
         log.info("Creating %r instance.", klass)
         widget = klass.__new__(
             klass,
-            _category=desc.category,
+            None,
+            signal_manager=self.signal_manager,
+            stored_settings=node.properties
         )
 
         # Add the node/widget mapping s before calling __init__
@@ -122,7 +124,7 @@ class WidgetsScheme(Scheme):
         self.widget_for_node[node] = widget
         self.node_for_widget[widget] = node
 
-        widget.__init__(None, self.signal_manager, node.properties)
+        widget.__init__()
         widget.setCaption(node.title)
         widget.widgetInfo = desc
 
