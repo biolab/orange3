@@ -337,6 +337,8 @@ class Table(MutableSequence, Storage):
             metas = np.empty((X.shape[0], 0), object)
         if W is None:
             W = np.empty((X.shape[0], 0))
+        else:
+            W = W.reshape(W.size, 1)
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
@@ -366,6 +368,49 @@ class Table(MutableSequence, Storage):
         self.n_rows = self.X.shape[0]
         return self
 
+    def save(self, filename):
+        """
+        Save a data table to a file. The path can be absolute or relative.
+
+        :param filename: File name
+        :type filename: str
+        """
+        if not (filename.endswith(".tab")):
+            raise IOError("Unknown destination file name extension.")
+
+        assert(filename.endswith(".tab"))
+
+        f = open(filename, "w")
+        domain_vars = self.domain.metas + self.domain.variables
+        # first line
+        f.write("\t".join([str(j.name) for j in domain_vars]))
+        f.write("\n")
+
+        # second line
+        #TODO Basket column.
+        t = {"Continuous":"c", "Discrete":"d", "String":"string", "Basket":"basket"}
+        f.write("\t".join([t[str(j.var_type)] for j in domain_vars]))
+        f.write("\n")
+
+        # third line
+        m = list(self.domain.metas)
+        c = list(self.domain.class_vars)
+        r = []
+        for i in domain_vars:
+            if i in m:
+                r.append("m")
+            elif i in c:
+                r.append("c")
+            else:
+                r.append("")
+        f.write("\t".join(r))
+        f.write("\n")
+
+        # data
+        for i in self:
+            f.write("\t".join([str(i[j]) for j in domain_vars]))
+            f.write("\n")
+        f.close()
 
     @classmethod
     def from_file(cls, filename):
@@ -1137,6 +1182,8 @@ class Table(MutableSequence, Storage):
             else:
                 m, W, Ycsc = _get_matrix(self.Y, Ycsc, col - self.X.shape[1])
             if isinstance(var, DiscreteVariable):
+                if W is not None:
+                    W = W.ravel()
                 dist, unknowns = bn.bincount(m, len(var.values)-1, W)
             elif not len(m):
                 dist, unknowns = np.zeros((2, 0)), 0
@@ -1146,9 +1193,9 @@ class Table(MutableSequence, Storage):
                     vals = np.vstack((m[ranks], W[ranks]))
                     unknowns = bn.countnans(m, W)
                 else:
-                    m.sort()
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
+                    vals[0, :].sort()
                     unknowns = bn.countnans(m)
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))
