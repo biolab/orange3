@@ -7,6 +7,7 @@ import numpy as np
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import scipy
+import scipy.special
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
 from Orange.statistics import contingency, distribution, tests
@@ -100,6 +101,7 @@ class OWBoxPlot(widget.OWWidget):
         super().__init__(parent, signalManager, settings)
         self.grouping = []
         self.attributes = []
+        self.stats = []
         self.ddataset = None
 
         self.attr_list_box = gui.listBox(self.controlArea, self,
