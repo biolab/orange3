@@ -1,7 +1,8 @@
 .. currentmodule:: Orange.data
 
-Data model
-==========
+#####################
+Data model (``data``)
+#####################
 
 Orange stores data in :obj:`Orange.data.Storage` classes. (Currently the only
 available storage class is :obj:`Orange.data.Table`, which stores all data in
@@ -49,10 +50,10 @@ represented by whole numbers.
 .. toctree::
     :maxdepth: 2
 
-    table
-    domain
-    variable
-    instance
-    filters
+    data.table
+    data.domain
+    data.variable
+    data.instance
+    data.filters
 
 .. index:: Data

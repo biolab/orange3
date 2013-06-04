@@ -61,6 +61,7 @@ cpdef sparse_prescan_fast(fname):
         if state == QUOTED:
             if c == '"':
                 state = READ
+                continue
 
         if state == READ:
             if c == ",":
@@ -225,6 +226,7 @@ def sparse_read_float(fname):
                             .format(fname, cur_line, col))
                 else:
                     state = END_QUOTED
+                    continue
 
             if state == END_QUOTED:
                 if c == " " or c == "\t":

@@ -5,7 +5,8 @@ from Orange import data
 import Orange.classification
 import Orange.classification.dummies as dummies
 import Orange.classification.majority as maj
-
+import Orange.classification.naive_bayes as nb
+from Orange.data.io import BasketReader
 
 class MultiClassTest(unittest.TestCase):
     def test_unsupported(self):
@@ -41,6 +42,15 @@ class MultiClassTest(unittest.TestCase):
 
 
 class ModelTest(unittest.TestCase):
+
+    def test_predict_single_instance(self):
+        table = data.Table("iris")
+        learn = nb.BayesLearner()
+        clf = learn(table)
+        pred = []
+        for row in table:
+            pred.append(clf(row))
+
     def test_value_from_probs(self):
         nrows = 100
         ncols = 5
@@ -114,3 +124,16 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         z, p = clf(self.x, ret=Orange.classification.Model.ValueProbs)
         self.assertEqual(p.shape, (rows, vars, class_var_domain))
         self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
+
+
+class SparseTest(unittest.TestCase):
+    def test_sparse_basket(self):
+        table = BasketReader().read_file("iris.basket")
+        test = Orange.data.Table.from_table_rows(table,range(0,len(table),2))
+        train = Orange.data.Table.from_table_rows(table,range(1,len(table),2))
+        learn = dummies.DummyMulticlassLearner()
+        clf = learn(train)
+        p = clf(test)
+        self.assertEqual(p.shape, test.Y.shape)
+        p = clf(test.X)
+        self.assertEqual(p.shape, test.Y.shape)

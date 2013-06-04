@@ -1,4 +1,4 @@
-From 4c839a5af72a94bf1f4da8cc43b67fd8931285e4 Mon Sep 17 00:00:00 2001
+From 25eca9d009b90cb8d5c7ee51d5724cf6c2902a09 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:36:08 +0200
 Subject: [PATCH 2/4] Compatibility with new orange.
@@ -12,10 +12,10 @@ Subject: [PATCH 2/4] Compatibility with new orange.
  Orange/canvas/preview/scanner.py      |   3 -
  Orange/canvas/registry/description.py |  84 +++------
  Orange/canvas/resources.py            |   2 +-
- Orange/canvas/scheme/widgetsscheme.py |  12 +-
+ Orange/canvas/scheme/widgetsscheme.py |  18 +-
  Orange/canvas/utils/debugging.py      | 122 ++++++++++++++
  Orange/canvas/utils/environ.py        | 309 ++++++++++++++++++++++++++++++++++
- 11 files changed, 490 insertions(+), 92 deletions(-)
+ 11 files changed, 491 insertions(+), 97 deletions(-)
  create mode 100644 Orange/canvas/utils/debugging.py
  create mode 100644 Orange/canvas/utils/environ.py
 
@@ -32,10 +32,10 @@ index 8b13789..741523b 100644
 +# By settings __loader__ to None, we workaround the pkg_resources bug.
 +__loader__ = None
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index 4c76493..d4e89cc 100644
+index 534fc80..c59d66d 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
-@@ -16,20 +16,20 @@ import pkg_resources
+@@ -17,20 +17,20 @@ import pkg_resources
  from PyQt4.QtGui import QFont, QColor
  from PyQt4.QtCore import Qt, QDir
  
@@ -68,7 +68,7 @@ index 4c76493..d4e89cc 100644
  
  log = logging.getLogger(__name__)
  
-@@ -140,7 +140,7 @@ def main(argv=None):
+@@ -153,7 +153,7 @@ def main(argv=None):
                  # no extension
                  stylesheet = os.path.extsep.join([stylesheet, "qss"])
  
@@ -77,7 +77,7 @@ index 4c76493..d4e89cc 100644
              resource = "styles/" + stylesheet
  
              if pkg_resources.resource_exists(pkg_name, resource):
-@@ -170,7 +170,7 @@ def main(argv=None):
+@@ -183,7 +183,7 @@ def main(argv=None):
          app.setStyleSheet(stylesheet_string)
  
      # Add the default canvas_icons search path
@@ -86,7 +86,7 @@ index 4c76493..d4e89cc 100644
      QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
  
      canvas_window = CanvasMainWindow()
-@@ -282,7 +282,7 @@ def main(argv=None):
+@@ -296,7 +296,7 @@ def main(argv=None):
          sys.excepthook = ExceptHook()
          sys.excepthook.handledException.connect(output_view.parent().show)
  
@@ -122,10 +122,10 @@ index c3edc91..892b304 100644
      return ep
  
 diff --git a/Orange/canvas/document/schemeedit.py b/Orange/canvas/document/schemeedit.py
-index 20093e9..73f308f 100644
+index 25ccb43..a56e3da 100644
 --- a/Orange/canvas/document/schemeedit.py
 +++ b/Orange/canvas/document/schemeedit.py
-@@ -1139,9 +1139,9 @@ class SchemeEditWidget(QWidget):
+@@ -1146,9 +1146,9 @@ class SchemeEditWidget(QWidget):
              # be selected items in the canvas), so we disable the
              # remove widget action so the text editing follows standard
              # 'look and feel'
@@ -138,7 +138,7 @@ index 20093e9..73f308f 100644
                  handler.create_new(QCursor.pos(), searchText)
  
              event.accept()
-@@ -1429,8 +1429,7 @@ class SchemeEditWidget(QWidget):
+@@ -1436,8 +1436,7 @@ class SchemeEditWidget(QWidget):
                  self.__quickMenuTriggers & SchemeEditWidget.RightClicked:
              action = interactions.NewNodeAction(self)
  
@@ -285,11 +285,11 @@ index e12bdf8..b3f78c6 100644
  del dirname
  
 diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
-index f661144..36d6609 100644
+index 9cbcba8..142c364 100644
 --- a/Orange/canvas/scheme/widgetsscheme.py
 +++ b/Orange/canvas/scheme/widgetsscheme.py
-@@ -83,8 +83,7 @@ class WidgetsScheme(Scheme):
-         del self.node_for_widget[widget]
+@@ -86,8 +86,7 @@ class WidgetsScheme(Scheme):
+         widget.close()
  
          # Save settings to user global settings.
 -        if not widget._settingsFromSchema:
@@ -298,7 +298,7 @@ index f661144..36d6609 100644
  
          # Notify the widget it will be deleted.
          widget.onDeleteWidget()
-@@ -109,11 +108,6 @@ class WidgetsScheme(Scheme):
+@@ -112,11 +111,6 @@ class WidgetsScheme(Scheme):
          log.info("Creating %r instance.", klass)
          widget = klass.__new__(
              klass,
@@ -310,7 +310,7 @@ index f661144..36d6609 100644
              _category=desc.category,
              _settingsFromSchema=node.properties
          )
-@@ -153,8 +147,8 @@ class WidgetsScheme(Scheme):
+@@ -156,8 +150,8 @@ class WidgetsScheme(Scheme):
      def widget_settings(self):
          """Return a list of dictionaries with widget settings.
          """
@@ -321,6 +321,19 @@ index f661144..36d6609 100644
  
      def sync_node_properties(self):
          """Sync the widget settings/properties with the SchemeNode.properties.
+@@ -196,11 +190,7 @@ class WidgetsScheme(Scheme):
+             # Notify the widget instances.
+             for widget in list(self.widget_for_node.values()):
+                 widget.close()
+-
+-                if not widget._settingsFromSchema:
+-                    # First save global settings if necessary.
+-                    widget.saveSettings()
+-
++                widget.saveSettings()
+                 widget.onDeleteWidget()
+ 
+             event.accept()
 diff --git a/Orange/canvas/utils/debugging.py b/Orange/canvas/utils/debugging.py
 new file mode 100644
 index 0000000..aef6a27
@@ -765,5 +778,5 @@ index 0000000..b7bb535
 +
 +load_eggs([add_ons_dir_user])
 -- 
-1.8.2.1
+1.8.2.3
 

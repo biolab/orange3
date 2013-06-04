@@ -1,0 +1,107 @@
+from ..misc.enum import Enum
+from Orange.data import DiscreteVariable, ContinuousVariable, Domain
+from Orange.statistics import distribution
+from ..feature.transformation import Identity, Indicator, Indicator_1, Normalizer
+
+class DomainContinuizer:
+    MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
+                                "Ignore", "ReportError", "AsOrdinal",
+                                "AsNormalizedOrdinal")
+
+    def __new__(cls, data=None, zero_based=True, multinomial_treatment=0,
+                normalize_continuous=False, include_class=False):
+        self = super().__new__(cls)
+        self.zero_based = zero_based
+        self.multinomial_treatment = multinomial_treatment
+        self.normalize_continuous = normalize_continuous
+        self.include_class = include_class
+        return self if data is None else self(data)
+
+    def __call__(self, data):
+        MT = DomainContinuizer.MultinomialTreatment
+        treat = self.multinomial_treatment
+        include_class = self.include_class
+        domain = data.domain
+
+        def transform_discrete(var):
+            if treat == MT.Ignore:
+                return []
+            if treat == MT.AsOrdinal:
+                new_var = ContinuousVariable(var.name)
+                new_var.get_value_from = Identity(var)
+                return [new_var]
+            if treat == MT.AsNormalizedOrdinal:
+                new_var = ContinuousVariable(var.name)
+                n_values = max(1, len(var.values))
+                if self.zero_based:
+                    new_var.get_value_from = Normalizer(var, 0, 1 / n_values)
+                else:
+                    new_var.get_value_from = Normalizer(var, (n_values - 1)/ 2,
+                                                        2 / (n_values - 1))
+                return [new_var]
+
+            new_vars = []
+            if treat == MT.NValues:
+                base = -1
+            elif treat == MT.LowestIsBase:
+                base = 0
+            else:
+                base = dists[var_ptr].modus()
+            IndClass = [Indicator_1, Indicator][self.zero_based]
+            for i, val in enumerate(var.values):
+                if i == base:
+                    continue
+                new_var = ContinuousVariable(
+                    "{}={}".format(var.name, val))
+                new_var.get_value_from = IndClass(var, i)
+                new_vars.append(new_var)
+            return new_vars
+
+        def transform_continuous(var):
+            if not self.normalize_continuous:
+                return var
+            new_var = ContinuousVariable(var.name)
+            dma, dmi = dists[var_ptr].max(), dists[var_ptr].min()
+            diff = dma - dmi
+            if diff < 1e-15:
+                diff = 1
+            if self.zero_based:
+                new_var.get_value_from = Normalizer(var, dmi, 1 / diff)
+            else:
+                new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
+                                                    2 / diff)
+            return new_var
+
+        def transform_list(s):
+            nonlocal var_ptr
+            new_vars = []
+            for var in s:
+                if isinstance(var, DiscreteVariable):
+                    new_vars += transform_discrete(var)
+                    if needs_discrete:
+                        var_ptr += 1
+                else:
+                    new_vars.append(transform_continuous(var))
+                    if needs_continuous:
+                        var_ptr += 1
+            return new_vars
+
+        if treat == MT.ReportError and any(
+                isinstance(var, DiscreteVariable) and len(var.values) > 2
+                for var in domain):
+            raise ValueError("data has multinomial attributes")
+        needs_discrete = (treat == MT.FrequentIsBase and
+                          domain.has_discrete_attributes(include_class))
+        needs_continuous = (self.normalize_continuous and
+                            domain.has_continuous_attributes(include_class))
+        if needs_discrete or needs_continuous:
+            dists = distribution.get_distributions(
+                data, not needs_discrete, not needs_continuous)
+        var_ptr = 0
+        new_attrs = transform_list(domain.attributes)
+        if include_class:
+            new_classes = transform_list(domain.class_vars)
+        else:
+            new_classes = domain.class_vars
+        print(new_attrs, new_classes)
+        return Domain(new_attrs, new_classes, domain.metas)
