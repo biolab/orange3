@@ -87,15 +87,18 @@ class Model:
             value = np.argmax(probs, axis=-1)
         if ret != Model.Value and probs is None:
             if multitarget:
-                max_card = max(len(c.values) for c in self.domain.class_vars)
+                max_card = max(len(c.values)-1 for c in self.domain.class_vars)
                 probs = np.zeros(value.shape + (max_card,), float)
                 for i, cvar in enumerate(self.domain.class_vars):
                     probs[i] = bn.bincount(np.atleast_2d(value[:, i]),
                                            max_card)
             else:
                 probs = bn.bincount(np.atleast_2d(value),
-                                    len(self.domain.class_var.values))
-            return probs
+                                    len(self.domain.class_var.values)-1)
+            if ret == Model.ValueProbs:
+                return value, probs
+            else:
+                return probs
 
         # Expand probability predictions for class values which are not present
         if ret != self.Value:
