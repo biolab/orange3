@@ -311,7 +311,7 @@ class VariableListModel(PyListModel):
             if role == Qt.DisplayRole:
                 return var.name
             elif role == Qt.DecorationRole:
-                return gui.getAttributeIcons().get(var.var_type, -1)
+                return gui.attributeIconDict[var]
             elif role == Qt.ToolTipRole:
                 return self.variable_tooltip(var)
             else:
@@ -371,9 +371,8 @@ class VariableEditor(QWidget):
         QWidget.__init__(self, parent)
         self.var = var
         layout = QHBoxLayout()
-        self._attrs = gui.getAttributeIcons()
         self.type_cb = QComboBox(self)
-        for attr, icon in self._attrs.items():
+        for attr, icon in gui.attributeIconDict.items():
             if attr != -1:
                 self.type_cb.addItem(icon, str(attr))
         layout.addWidget(self.type_cb)
