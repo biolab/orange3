@@ -10,14 +10,14 @@ class SoftmaxRegressionLearner(classification.Fitter):
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 
-    def cost_grad(self, Theta_flat, X, Y, y):
+    def cost_grad(self, Theta_flat, X, Y):
         Theta = Theta_flat.reshape((self.num_classes, X.shape[1]))
 
         M = X.dot(Theta.T)
         P = np.exp(M - np.max(M, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
 
-        cost = -np.sum(np.log(P[range(y.size), y]))
+        cost = -np.sum(np.log(P) * Y)
         cost += self.lambda_ * Theta_flat.dot(Theta_flat) / 2.0
         cost /= X.shape[0]
 
@@ -37,12 +37,11 @@ class SoftmaxRegressionLearner(classification.Fitter):
                              'unknown values')
 
         self.num_classes = np.unique(y).size
-        y = y.ravel().astype(int)
-        Y = np.eye(self.num_classes)[y]
+        Y = np.eye(self.num_classes)[y.ravel().astype(int)]
 
         theta = np.zeros(self.num_classes * X.shape[1])
         theta, j, ret = fmin_l_bfgs_b(self.cost_grad, theta,
-                                      args=(X, Y, y), **self.fmin_args)
+                                      args=(X, Y), **self.fmin_args)
         Theta = theta.reshape((self.num_classes, X.shape[1]))
 
         return SoftmaxRegressionClassifier(Theta)
@@ -81,19 +80,18 @@ if __name__ == '__main__':
     m = SoftmaxRegressionLearner(lambda_=1.0)
     m.num_classes = 3
     Theta = np.random.randn(3 * 4)
-    y = d.Y.ravel().astype(int)
-    Y = np.eye(3)[y]
+    Y = np.eye(3)[d.Y.ravel().astype(int)]
 
-    ga = m.cost_grad(Theta, d.X, Y, y)[1]
-    gn = numerical_grad(lambda t: m.cost_grad(t, d.X, Y, y)[0], Theta)
+    ga = m.cost_grad(Theta, d.X, Y)[1]
+    gn = numerical_grad(lambda t: m.cost_grad(t, d.X, Y)[0], Theta)
 
     print(ga)
     print(gn)
 
-    for lambda_ in [0.1, 0.3, 1, 3, 10]:
-        m = SoftmaxRegressionLearner(lambda_=lambda_)
-        scores = []
-        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
-            s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
-            scores.append(s)
-        print('{:4.1f} {}'.format(lambda_, np.mean(scores)))
+#    for lambda_ in [0.1, 0.3, 1, 3, 10]:
+#        m = SoftmaxRegressionLearner(lambda_=lambda_)
+#        scores = []
+#        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
+#            s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
+#            scores.append(s)
+#        print('{:4.1f} {}'.format(lambda_, np.mean(scores)))
