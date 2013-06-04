@@ -203,7 +203,6 @@ class Continuous(np.ndarray):
         self.variable = variable
         return self
 
-
     @classmethod
     def from_data(cls, variable, data):
         variable = _get_variable(data, variable)
@@ -231,15 +230,12 @@ class Continuous(np.ndarray):
         self.variable = variable
         return self
 
-
     def __eq__(self, other):
         return np.array_equal(self, other) and (
             not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
 
-
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
-
 
     def normalize(self):
         t = np.sum(self[1, :])
@@ -249,11 +245,16 @@ class Continuous(np.ndarray):
         elif self.shape[1]:
             self[1, :] = 1 / self.shape[1]
 
-
     def modus(self):
         val = np.argmax(self[1, :])
         return self[0, val]
 
+    # TODO implement __getitem__ that will return a normal array, not Continuous
+    def min(self):
+        return self[0, 0]
+
+    def max(self):
+        return self[0, -1]
 
     def random(self):
         v = random.random() * np.sum(self[1, :])
