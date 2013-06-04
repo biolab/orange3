@@ -508,7 +508,7 @@ class OWDataTable(widget.OWWidget):
                                 QtGui.QStyleOptionHeader.OnlyOneSection
                             painter = QtGui.QStylePainter(btn)
                             painter.drawControl(QtGui.QStyle.CE_Header, opt)
-                            return True     # eat evebt
+                            return True     # eat event
                         return False
                 table.efc = efc()
                 btn.installEventFilter(table.efc)
@@ -704,12 +704,9 @@ if __name__ == "__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-    d5 = Table('../../../jrs2012.basket')
-#    d5 = Table('../../../jrs-small.basket')
-#    d5 = Table('../../tests/iris.tab')
-#    d5 = Table('../../tests/zoo.tab')
+    data = Table("iris")
 
     ow.show()
-    ow.dataset(d5, "adult_sample")
+    ow.dataset(data, data.name)
     a.exec()
     ow.saveSettings()
