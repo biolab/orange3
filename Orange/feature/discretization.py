@@ -64,9 +64,12 @@ def _discretized_var(data, var, points):
     name = "D_" + data.domain[var].name
     var = data.domain[var]
 
-    values = [ "<%f" % points[0] ] \
-        + [ "[%f, %f)" % (p1, p2) for p1,p2 in zip(points, points[1:]) ] \
-        + [ ">=%f" % points[1] ]
+    if len(points) >= 1:
+        values = [ "<%f" % points[0] ] \
+            + [ "[%f, %f)" % (p1, p2) for p1,p2 in zip(points, points[1:]) ] \
+            + [ ">=%f" % points[-1] ]
+    else:
+        values = [ "single value" ]
 
     dvar = Orange.data.variable.DiscreteVariable(name=name, values=values)
     dvar.get_value_from = Discretizer(var, points)
