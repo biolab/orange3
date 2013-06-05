@@ -10,13 +10,15 @@ def sigmoid(x):
 
 
 class MLPLearner(classification.Fitter):
-    def __init__(self, layers, lambda_=1.0, dropout=None, callback=None, 
-                 **fmin_args):
+    def __init__(self, layers, lambda_=1.0, dropout=None, **opt_args):
+        if dropout is None:
+            dropout = [0] * (len(layers) - 1)
+        assert len(dropout) == len(layers) - 1
+        
         self.layers = layers
         self.lambda_ = lambda_
         self.dropout = dropout
-        self.callback = callback
-        self.fmin_args = fmin_args
+        self.opt_args = opt_args
 
     def unfold_params(self, params):
         T, b = [], []
@@ -34,10 +36,18 @@ class MLPLearner(classification.Fitter):
         # forward pass
         a, z = [], []
 
-        a.append(X)
+        dropout_mask = []
+        for i in range(len(T)):
+            if self.dropout is None or self.dropout[0] < 1e-7:
+                dropout_mask.append(1)
+            else:
+                dropout_mask.append(np.random.binomial(1, 1 - self.dropout[0],
+                                   (X.shape[0], self.layers[i])))
+
+        a.append(X * dropout_mask[0])
         for i in range(len(self.layers) - 2):
             z.append(a[i].dot(T[i].T) + b[i])
-            a.append(sigmoid(z[i]))
+            a.append(sigmoid(z[i]) * dropout_mask[i + 1])
 
         # softmax last layer
         z.append(a[-1].dot(T[-1].T) + b[-1])
@@ -58,7 +68,7 @@ class MLPLearner(classification.Fitter):
                 d = a[-1] - Y
             else:
                 d = d.dot(T[-i]) * a[-i - 1] * (1 - a[-i - 1])
-            dT = a[-i - 2].T.dot(d).T + self.lambda_ * T[-i - 1]
+            dT = (a[-i - 2] * dropout_mask[-i - 1]).T.dot(d).T + self.lambda_ * T[-i - 1]
             db = np.sum(d, axis=0)
 
             params.extend([dT.flat, db.flat])
@@ -66,6 +76,47 @@ class MLPLearner(classification.Fitter):
 
         return cost, grad
 
+    def fit_bfgs(self, params, X, Y):
+        params, j, ret = fmin_l_bfgs_b(self.cost_grad, params,
+                                      args=(X, Y), **self.opt_args)
+        return params
+        
+    def fit_sgd(self, params, X, Y, num_epochs=1000, batch_size=100, learning_rate=0.1):
+        # shuffle examples
+        inds = np.random.permutation(X.shape[0])
+        X = X[inds]
+        Y = Y[inds]
+
+        # split training and validation set
+        num_tr = int(X.shape[0] * 0.8)
+
+        X_tr, Y_tr = X[:num_tr], Y[:num_tr]
+        X_va, Y_va = X[num_tr:], Y[num_tr:]
+
+        early_stop = 100
+
+        best_params = None
+        best_cost = np.inf
+
+        for epoch in range(num_epochs):
+            for i in range(0, num_tr, batch_size):
+                cost, grad = self.cost_grad(params, X_tr, Y_tr)
+                params -= learning_rate * grad
+
+            # test on validation set
+            T, b = self.unfold_params(params)
+            P_va = MLPClassifier(T, b, self.dropout).predict(X_va)
+            cost = -np.sum(np.log(P_va + 1e-15) * Y_va)
+
+            if cost < best_cost:
+                best_cost = cost
+                best_params = np.copy(params)
+                early_stop *= 2
+
+            if epoch > early_stop:
+                break
+
+        return params
 
     def fit(self, X, Y, W):
         if np.isnan(np.sum(X)) or np.isnan(np.sum(Y)):
@@ -85,21 +136,25 @@ class MLPLearner(classification.Fitter):
             params.append(np.zeros(l2))
 
         params = np.concatenate(params)
-        params, j, ret = fmin_l_bfgs_b(self.cost_grad, params,
-                                      args=(X, Y), **self.fmin_args)
+
+        #params = self.fit_bfgs(params, X, Y)
+        params = self.fit_sgd(params, X, Y, **self.opt_args)
+
         T, b = self.unfold_params(params)
-        return MLPClassifier(T, b)
+        return MLPClassifier(T, b, self.dropout)
 
 
 class MLPClassifier(classification.Model):
-    def __init__(self, T, b):
+    def __init__(self, T, b, dropout):
         self.T = T
         self.b = b
+        self.dropout = dropout
 
     def predict(self, X):
         a = X
         for i in range(len(self.T) - 1):
-            a = sigmoid(a.dot(self.T[i].T) + self.b[i])
+            d = 1 - self.dropout[i]
+            a = sigmoid(a.dot(self.T[i].T * d) + self.b[i])
         z = a.dot(self.T[-1].T) + self.b[-1]
         P = np.exp(z - np.max(z, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
@@ -110,6 +165,7 @@ if __name__ == '__main__':
     from sklearn.cross_validation import StratifiedKFold
 
     np.random.seed(42)
+
     def numerical_grad(f, params, e=1e-4):
         grad = np.zeros_like(params)
         perturb = np.zeros_like(params)
@@ -124,7 +180,7 @@ if __name__ == '__main__':
     d = Orange.data.Table('iris')
 
 #    # gradient check
-#    m = MLPLearner([4, 20, 20, 3])
+#    m = MLPLearner([4, 20, 20, 3], dropout=[0.0, 0.5, 0.0], lambda_=0.0)
 #    params = np.random.randn(5 * 20 + 21 * 20 + 21 * 3) * 0.1
 #    Y = np.eye(3)[d.Y.ravel().astype(int)]
 #
@@ -133,12 +189,13 @@ if __name__ == '__main__':
 #
 #    print(np.sum((ga - gm)**2))
 
-    for lambda_ in [0.03, 0.1, 0.3, 1, 3, 10]:
-        m = MLPLearner([4, 20, 20, 3], lambda_=lambda_)
+#    m = MLPLearner([4, 20, 3], dropout=[0.0, 0.0], lambda_=1.0)
+#    m(d)
+
+    for lambda_ in [0.03, 0.1, 0.3, 1, 3]:
+        m = MLPLearner([4, 20, 20, 3], lambda_=lambda_, num_epochs=1000, learning_rate=0.1)
         scores = []
         for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
             s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
             scores.append(s)
         print(np.mean(scores), lambda_)
-
-
