@@ -14,6 +14,7 @@ class LinearRegressionLearner(classification.Fitter):
         should:
 
         - Choose a suitable regularization parameter lambda_
+        - Continuize all discrete attributes
         - Consider appending a column of ones to the dataset
         - Transform the dataset so that the columns or on a similar scale
 
