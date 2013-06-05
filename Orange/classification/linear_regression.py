@@ -16,7 +16,7 @@ class LinearRegressionLearner(classification.Fitter):
         - Choose a suitable regularization parameter lambda_
         - Continuize all discrete attributes
         - Consider appending a column of ones to the dataset
-        - Transform the dataset so that the columns or on a similar scale
+        - Transform the dataset so that the columns are on a similar scale
 
         :param lambda_: the regularization parameter. Higher values of lambda_
         force the coefficients to be small.
