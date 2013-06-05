@@ -11,6 +11,24 @@ def sigmoid(x):
 
 class LogisticRegressionLearner(classification.Fitter):
     def __init__(self, lambda_=1.0, **fmin_args):
+        '''L2 regularized logistic regression
+
+        This model uses the L-BFGS algorithm to minimize the cross entropy 
+        cost with L2 regularization. Only binary classification is supported;
+        when dealing with a multiclass classification problem you should
+        build several binary classifiers or use softmax regression.
+        When using this model you should:
+
+        - Choose a suitable regularization parameter lambda_
+        - Continuize all discrete attributes
+        - Consider appending a column of ones to the dataset
+        - Transform the dataset so that the columns are on a similar scale
+
+        :param lambda_: the regularization parameter. Higher values of lambda_
+        force the coefficients to be small.
+        :type lambda_: float
+        '''
+
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 
