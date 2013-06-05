@@ -12,13 +12,22 @@ class DummyLearner(classification.Fitter):
 
 
 class DummyPredictor(classification.Model):
+    ret = classification.Model.ValueProbs
+
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
 
     def predict(self, X):
         rows = X.shape[0]
-        return np.tile(self.value, rows), np.tile(self.prob, (rows, 1))
+        value = np.tile(self.value, rows)
+        probs = np.tile(self.prob, (rows, 1))
+        if self.ret == classification.Model.Value:
+            return value
+        elif self.ret == classification.Model.Value:
+            return probs
+        else:
+            return value, probs
 
 
 class DummyMulticlassLearner(classification.Fitter):
@@ -27,7 +36,7 @@ class DummyMulticlassLearner(classification.Fitter):
     def fit(self, X, Y, W):
         rows, class_vars = Y.shape
         rid = np.random.randint(0, rows)
-        value = [Y[rid,cid] for cid in range(Y.shape[1])]
+        value = [Y[rid, cid] for cid in range(Y.shape[1])]
         used_vals = [np.unique(y) for y in Y.T]
         max_vals = max(len(np.unique(y)) for y in Y.T)
         prob = np.zeros((class_vars, max_vals))
@@ -39,10 +48,19 @@ class DummyMulticlassLearner(classification.Fitter):
 
 
 class DummyMulticlassPredictor(classification.Model):
+    ret = classification.Model.ValueProbs
+
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
 
     def predict(self, X):
         rows = X.shape[0]
-        return np.tile(self.value, (rows, 1)), np.tile(self.prob, (rows, 1, 1))
+        value = np.tile(self.value, (rows, 1))
+        probs = np.tile(self.prob, (rows, 1, 1))
+        if self.ret == classification.Model.Value:
+            return value
+        elif self.ret == classification.Model.Value:
+            return probs
+        else:
+            return value, probs

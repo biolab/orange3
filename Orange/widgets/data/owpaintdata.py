@@ -22,9 +22,7 @@ class OWPaintData(widget.OWWidget):
 
     commit_on_change = Setting(False)
 
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
-
+    def __init__(self):
         self.data = None
         self.undoStack = QtGui.QUndoStack(self)
 

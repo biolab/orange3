@@ -52,10 +52,8 @@ class OWFile(widget.OWWidget):
                ".basket": "Basket file"}
     formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
 
-
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
-
+    def __init__(self):
+        super().__init__()
         self.domain = None
         self.recent_files = [fn for fn in self.recent_files
                              if os.path.exists(fn)]

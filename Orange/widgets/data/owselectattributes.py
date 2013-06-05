@@ -284,9 +284,8 @@ class OWSelectAttributes(widget.OWWidget):
     settingsHandler = DomainContextHandler()
     domain_role_hints = ContextSetting({})
 
-    def __init__(self, parent=None, signalManager=None):
-        super().__init__(parent, signalManager)
-
+    def __init__(self):
+        super().__init__()
         self.controlArea = QtGui.QWidget(self.leftWidgetPart)
         self.layout().addWidget(self.controlArea)
         layout = QtGui.QGridLayout()

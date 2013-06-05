@@ -46,12 +46,13 @@ CLASSIFIERS = (
 
 if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
         'install_egg_info', 'build_sphinx', 'egg_info', 'easy_install',
-        'upload'}.intersection(sys.argv)) > 0:
+        'upload', 'test'}.intersection(sys.argv)) > 0:
     import setuptools
     extra_setuptools_args = dict(
         zip_safe=False,  # the package can run out of an .egg file
         include_package_data=True,
-        )
+        test_suite='Orange.tests.test_suite',
+    )
 else:
     extra_setuptools_args = dict()
 
@@ -127,7 +128,6 @@ INSTALL_REQUIRES = (
 
 from numpy.distutils.core import setup
 
-
 def configuration(parent_package='', top_path=None):
     if os.path.exists('MANIFEST'):
         os.remove('MANIFEST')
@@ -169,7 +169,7 @@ def setup_package():
                   "Orange.testing",
                   "Orange.tests"],
         install_requires=INSTALL_REQUIRES,
-        zip_safe=False,
+        **extra_setuptools_args
     )
 
 if __name__ == '__main__':

@@ -7,6 +7,7 @@ import numpy as np
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import scipy
+import scipy.special
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
 from Orange.statistics import contingency, distribution, tests
@@ -95,11 +96,11 @@ class OWBoxPlot(widget.OWWidget):
     _label_font.setPixelSize(11)
     _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
 
-
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
+    def __init__(self):
+        super().__init__()
         self.grouping = []
         self.attributes = []
+        self.stats = []
         self.ddataset = None
 
         self.attr_list_box = gui.listBox(self.controlArea, self,

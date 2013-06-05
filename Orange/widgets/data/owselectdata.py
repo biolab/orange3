@@ -43,8 +43,8 @@ class OWSelectData(widget.OWWidget):
                          "begins with", "ends with",
                          "is defined"]}
 
-    def __init__(self, parent=None, signalManager=None):
-        super().__init__(parent, signalManager)
+    def __init__(self):
+        super().__init__()
 
         self.old_purge_classes = True
 

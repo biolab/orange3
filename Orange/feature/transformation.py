@@ -12,7 +12,7 @@ class ColumnTransformation(Transformation):
         return self._transform(data.get_column_view(self.attr_index)[0])
 
     def _transform(self, c):
-        notImplemented
+        raise NotImplementedError("ColumnTransformations must implement _transform.")
 
 
 class Identity(ColumnTransformation):

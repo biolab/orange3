@@ -1,4 +1,4 @@
-From 25eca9d009b90cb8d5c7ee51d5724cf6c2902a09 Mon Sep 17 00:00:00 2001
+From 344f97cc16dd9e0037621857e193fb52e5bd81e9 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:36:08 +0200
 Subject: [PATCH 2/4] Compatibility with new orange.
@@ -12,10 +12,10 @@ Subject: [PATCH 2/4] Compatibility with new orange.
  Orange/canvas/preview/scanner.py      |   3 -
  Orange/canvas/registry/description.py |  84 +++------
  Orange/canvas/resources.py            |   2 +-
- Orange/canvas/scheme/widgetsscheme.py |  18 +-
- Orange/canvas/utils/debugging.py      | 122 ++++++++++++++
- Orange/canvas/utils/environ.py        | 309 ++++++++++++++++++++++++++++++++++
- 11 files changed, 491 insertions(+), 97 deletions(-)
+ Orange/canvas/scheme/widgetsscheme.py |  29 ++--
+ Orange/canvas/utils/debugging.py      | 122 +++++++++++++
+ Orange/canvas/utils/environ.py        | 310 ++++++++++++++++++++++++++++++++++
+ 11 files changed, 498 insertions(+), 102 deletions(-)
  create mode 100644 Orange/canvas/utils/debugging.py
  create mode 100644 Orange/canvas/utils/environ.py
 
@@ -285,7 +285,7 @@ index e12bdf8..b3f78c6 100644
  del dirname
  
 diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
-index 9cbcba8..142c364 100644
+index 9cbcba8..3ff0a43 100644
 --- a/Orange/canvas/scheme/widgetsscheme.py
 +++ b/Orange/canvas/scheme/widgetsscheme.py
 @@ -86,8 +86,7 @@ class WidgetsScheme(Scheme):
@@ -298,7 +298,7 @@ index 9cbcba8..142c364 100644
  
          # Notify the widget it will be deleted.
          widget.onDeleteWidget()
-@@ -112,11 +111,6 @@ class WidgetsScheme(Scheme):
+@@ -112,13 +111,9 @@ class WidgetsScheme(Scheme):
          log.info("Creating %r instance.", klass)
          widget = klass.__new__(
              klass,
@@ -307,10 +307,24 @@ index 9cbcba8..142c364 100644
 -            _owError=rc.get("canvas.show-state-error", True),
 -            _owShowStatus=rc.get("OWWidget.show-status", True),
 -            _useContexts=rc.get("OWWidget.use-contexts", True),
-             _category=desc.category,
-             _settingsFromSchema=node.properties
+-            _category=desc.category,
+-            _settingsFromSchema=node.properties
++            None,
++            signal_manager=self.signal_manager,
++            stored_settings=node.properties
          )
-@@ -156,8 +150,8 @@ class WidgetsScheme(Scheme):
+ 
+         # Add the node/widget mapping s before calling __init__
+@@ -129,7 +124,7 @@ class WidgetsScheme(Scheme):
+         self.widget_for_node[node] = widget
+         self.node_for_widget[widget] = node
+ 
+-        widget.__init__(None, self.signal_manager)
++        widget.__init__()
+         widget.setCaption(node.title)
+         widget.widgetInfo = desc
+ 
+@@ -156,22 +151,22 @@ class WidgetsScheme(Scheme):
      def widget_settings(self):
          """Return a list of dictionaries with widget settings.
          """
@@ -321,7 +335,23 @@ index 9cbcba8..142c364 100644
  
      def sync_node_properties(self):
          """Sync the widget settings/properties with the SchemeNode.properties.
-@@ -196,11 +190,7 @@ class WidgetsScheme(Scheme):
+         Return True if there were any changes in the properties (i.e. if the
+         new node.properties differ from the old value) and False otherwise.
+ 
+-        .. note:: this should hopefully be removed in the feature, when the
++        .. note:: this should hopefully be removed in the future, when the
+             widget can notify a changed setting property.
+ 
+         """
+         changed = False
+         for node in self.nodes:
+             widget = self.widget_for_node[node]
+-            settings = widget.getSettings(alsoContexts=False)
++            settings = widget.settingsHandler.pack_data(widget)
+             if settings != node.properties:
+                 node.properties = settings
+                 changed = True
+@@ -196,11 +191,7 @@ class WidgetsScheme(Scheme):
              # Notify the widget instances.
              for widget in list(self.widget_for_node.values()):
                  widget.close()
@@ -464,10 +494,10 @@ index 0000000..aef6a27
 +
 diff --git a/Orange/canvas/utils/environ.py b/Orange/canvas/utils/environ.py
 new file mode 100644
-index 0000000..b7bb535
+index 0000000..69812db
 --- /dev/null
 +++ b/Orange/canvas/utils/environ.py
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,310 @@
 +"""
 +==============================================
 +Orange environment configuration (``environ``)
@@ -565,6 +595,7 @@ index 0000000..b7bb535
 +import configparser
 +import pkg_resources
 +from pkg_resources import working_set
++from functools import cmp_to_key
 +
 +def _path_fix():
 +    """ Fix some common problems with $(PATH) and sys.path
@@ -572,8 +603,8 @@ index 0000000..b7bb535
 +    if os.name == "nt":
 +        ## Move any miktex paths containing Qt's dll to the end of the %PATH%
 +        paths = os.environ["PATH"].split(";")
-+        paths.sort(lambda x,y: -1 if "PyQt4" in x else (1 if "miktex" in y and\
-+                                                             os.path.exists(os.path.join(y, "QtCore4.dll")) else 0))
++        paths.sort(key = cmp_to_key(lambda x,y: -1 if "PyQt4" in x else (1 if "miktex" in y and\
++                                                              os.path.exists(os.path.join(y, "QtCore4.dll")) else 0)))
 +        os.environ["PATH"] = ";".join(paths)
 +
 +    if sys.platform == "darwin":
@@ -631,7 +662,7 @@ index 0000000..b7bb535
 +
 +    orange_settings_dir = output_dir
 +    canvas_settings_dir = os.path.join(output_dir, "OrangeCanvasQt4")
-+    widget_settings_dir = os.path.join(output_dir, "widgetSettingsQt4")
++    widget_settings_dir = os.path.join(output_dir, "widgetSettingsOrange3")
 +
 +    if sys.platform == "darwin":
 +        buffer_dir = os.path.join(home, "Library", "Caches", version)
