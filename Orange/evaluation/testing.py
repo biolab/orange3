@@ -1,8 +1,7 @@
 import numpy as np
 
-
 class Results:
-    def __init__(self, data, nmethods, nrows):
+    def __init__(self, data, nmethods, nrows=None):
         self.data = None
         self.models = None
         nclasses = len(data.domain.class_var.values)
@@ -20,7 +19,7 @@ class Results:
 
 
 class Testing:
-    def __new__(cls, store_data=False, store_models=False):
+    def __new__(cls, data=None, learners=None, **kwargs):
         """
 
         :param store_data:
@@ -28,8 +27,29 @@ class Testing:
         :return:
         """
         self = super().__new__(cls)
-        self.store_data = store_data
-        self.store_classifiers = store_models
+        self.store_data = kwargs.pop('store_data', False)
+        self.store_classifiers = kwargs.pop('store_models', False)
+
+        if data or learners:
+            self = self.__init__(**kwargs)
+            return self(data, learners)
         return self
 
 
+class CrossValidation(Testing):
+    def __init__(self, k=10, **kwargs):
+        self.k = kwargs.pop('k', 10)
+
+    def __call__(self, data, fitters):
+        from sklearn import cross_validation
+        n = len(data)
+        indices = cross_validation.KFold(n, self.k, shuffle=True)
+        results = Results(data, len(fitters))
+
+        for train, test in indices:
+            for i, fitter in enumerate(fitters):
+                model = fitter(data[train])
+                values, probs = model(data[test], model.ValueProbs)
+                results.predictions[i][test, :] = values
+                results.probabilities[i][test, :] = probs
+        return results
