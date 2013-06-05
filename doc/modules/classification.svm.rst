@@ -18,8 +18,8 @@ libraries. It provides several learning algorithms:
     a parameter to control the number of support vectors;
 - :obj:`Orange.classification.svm.SVRLearner`, a general learner for support
     vector regression;
-- :obj:`Orange.classification.svm.NuSVRLearner`, which similar to `NuSVMLearner`
-    for regression;
+- :obj:`Orange.classification.svm.NuSVRLearner`, which is similar to
+    `NuSVMLearner` for regression;
 - :obj:`Orange.classification.svm.OneClassSVMLearner`, unsupervised learner
     useful for novelty and outlier detection.
 
