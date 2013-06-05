@@ -4,7 +4,7 @@ from sklearn.svm import SVC, LinearSVC, NuSVC, SVR, NuSVR, OneClassSVM
 class SVMLearner(classification.Fitter):
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma=0.0,
-                 coef0=0.0, shrinking=True,
+                 coef0=0.0, shrinking=True, probability=False,
                  tol=0.001, cache_size=200, max_iter=-1):
         self.C = C
         self.kernel = kernel
@@ -12,6 +12,7 @@ class SVMLearner(classification.Fitter):
         self.gamma = gamma
         self.coef0 = coef0
         self.shrinking = shrinking
+        self.probability = probability
         self.tol = tol
         self.cache_size = cache_size
         self.max_iter = max_iter
@@ -20,8 +21,8 @@ class SVMLearner(classification.Fitter):
     def fit(self, X, Y, W):
         clf = SVC(C=self.C, kernel=self.kernel, degree=self.degree,
                   gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
-                  probability=True, tol=self.tol, cache_size=self.cache_size,
-                  max_iter=self.max_iter)
+                  probability=self.probability, tol=self.tol,
+                  cache_size=self.cache_size, max_iter=self.max_iter)
         if W.shape[1]>0:
             return SVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVMClassifier(clf.fit(X, Y.reshape(-1)))
@@ -33,8 +34,10 @@ class SVMClassifier(classification.Model):
 
     def predict(self, X):
         value = self.clf.predict(X)
-        prob = self.clf.predict_proba(X)
-        return value, prob
+        if self.clf.probability:
+            prob = self.clf.predict_proba(X)
+            return value, prob
+        return value
 
 
 class LinearSVMLearner(classification.Fitter):
@@ -74,7 +77,7 @@ class LinearSVMClassifier(classification.Model):
 class NuSVMLearner(classification.Fitter):
 
     def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
-                 shrinking=True, tol=0.001, cache_size=200,
+                 shrinking=True, probability=False, tol=0.001, cache_size=200,
                  max_iter=-1):
         self.nu = nu
         self.kernel = kernel
@@ -82,6 +85,7 @@ class NuSVMLearner(classification.Fitter):
         self.gamma = gamma
         self.coef0 = coef0
         self.shrinking = shrinking
+        self.probability = probability
         self.tol = tol
         self.cache_size = cache_size
         self.max_iter = max_iter
@@ -90,7 +94,7 @@ class NuSVMLearner(classification.Fitter):
     def fit(self, X, Y, W):
         clf = NuSVC(nu=self.nu, kernel=self.kernel, degree=self.degree,
                     gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
-                    probability=True, tol=self.tol, cache_size=self.cache_size,
+                    probability=self.probability, tol=self.tol, cache_size=self.cache_size,
                     max_iter=self.max_iter)
         if W.shape[1]>0:
             return NuSVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
@@ -103,8 +107,10 @@ class NuSVMClassifier(classification.Model):
 
     def predict(self, X):
         value = self.clf.predict(X)
-        prob = self.clf.predict_proba(X)
-        return value, prob
+        if self.clf.probability:
+            prob = self.clf.predict_proba(X)
+            return value, prob
+        return value
 
 
 class SVRLearner(classification.Fitter):
