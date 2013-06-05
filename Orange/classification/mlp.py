@@ -14,7 +14,7 @@ class MLPLearner(classification.Fitter):
         if dropout is None:
             dropout = [0] * (len(layers) - 1)
         assert len(dropout) == len(layers) - 1
-        
+
         self.layers = layers
         self.lambda_ = lambda_
         self.dropout = dropout
@@ -62,13 +62,14 @@ class MLPLearner(classification.Fitter):
         cost /= X.shape[0]
 
         # gradient
-        params = [] 
+        params = []
         for i in range(len(self.layers) - 1):
             if i == 0:
                 d = a[-1] - Y
             else:
                 d = d.dot(T[-i]) * a[-i - 1] * (1 - a[-i - 1])
-            dT = (a[-i - 2] * dropout_mask[-i - 1]).T.dot(d).T + self.lambda_ * T[-i - 1]
+            dT = (a[-i - 2] * dropout_mask[-i - 1]).T.dot(d).T + self.lambda_\
+                * T[-i - 1]
             db = np.sum(d, axis=0)
 
             params.extend([dT.flat, db.flat])
@@ -78,10 +79,11 @@ class MLPLearner(classification.Fitter):
 
     def fit_bfgs(self, params, X, Y):
         params, j, ret = fmin_l_bfgs_b(self.cost_grad, params,
-                                      args=(X, Y), **self.opt_args)
+                                       args=(X, Y), **self.opt_args)
         return params
-        
-    def fit_sgd(self, params, X, Y, num_epochs=1000, batch_size=100, learning_rate=0.1):
+
+    def fit_sgd(self, params, X, Y, num_epochs=1000, batch_size=100,
+                learning_rate=0.1):
         # shuffle examples
         inds = np.random.permutation(X.shape[0])
         X = X[inds]
@@ -120,8 +122,7 @@ class MLPLearner(classification.Fitter):
 
     def fit(self, X, Y, W):
         if np.isnan(np.sum(X)) or np.isnan(np.sum(Y)):
-            raise ValueError('Softmax regression does not support '
-                             'unknown values')
+            raise ValueError('MLP does not support unknown values')
 
         if Y.shape[1] == 1:
             num_classes = np.unique(Y).size
@@ -193,7 +194,8 @@ if __name__ == '__main__':
 #    m(d)
 
     for lambda_ in [0.03, 0.1, 0.3, 1, 3]:
-        m = MLPLearner([4, 20, 20, 3], lambda_=lambda_, num_epochs=1000, learning_rate=0.1)
+        m = MLPLearner([4, 20, 20, 3], lambda_=lambda_, num_epochs=1000,
+                       learning_rate=0.1)
         scores = []
         for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
             s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
