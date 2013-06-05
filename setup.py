@@ -165,6 +165,7 @@ def setup_package():
         packages=["Orange",
                   "Orange.classification",
                   "Orange.data",
+                  "Orange.feature",
                   "Orange.misc",
                   "Orange.testing",
                   "Orange.tests"],
