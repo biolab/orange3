@@ -37,6 +37,10 @@ Continuization and normalization (``continuizer``)
     continuizer is immediately applied to the data or domain and the transformed
     domain is returned instead of the continuizer instance.
 
+    By default, the class does not change continuous and class attributes,
+    discrete attributes are replaced with N attributes (``NValues``) with values
+    0 and 1.
+
     .. attribute:: zero_based
 
         Determines the value used as the "low" value of the variable. When
@@ -46,12 +50,12 @@ Continuization and normalization (``continuizer``)
         is ``True``) or -1.0 and 1.0 (``zero_based`` is ``False``). This
         attribute also determines the interval for normalized continuous
         variables (either [-1, 1] or [0, 1]). The
-        following text assumes the default case.
+        following text assumes the default case. (Default: ``False``)
 
     .. attribute:: multinomial_treatment
 
        Decides the treatment of multinomial variables. Let N be the
-       number of the variables's values.
+       number of the variables's values. (Default: ``NValues``)
 
        ``DomainContinuizer.NValues``
 
@@ -95,7 +99,11 @@ Continuization and normalization (``continuizer``)
            except that it omits "RIVER=A", which is the most frequent value.
 
        ``DomainContinuizer.Ignore``
-           Multivalued variables are omitted.
+           Discrete variables are omitted.
+
+       ``DomainContinuizer.IgnoreMulti``
+           Discrete variables with more than two values are omitted; two-valued
+           are treated the same as in LowestIsBase.
 
        ``DomainContinuizer.ReportError``
            Raise an error if there are any multinominal variables in the data.
@@ -111,14 +119,14 @@ Continuization and normalization (``continuizer``)
 
     .. attribute:: normalize_continuous
 
-        If ``False`` (default), continues variables are left unchanged. If
+        If ``False``, continues variables are left unchanged. If
         ``True``, they are replaced with normalized values by subtracting
         the average value and dividing by the deviation. Statistics are
         computed from the data, so constructor must be given data, not just
-        domain.
+        domain. (Default: ``False``)
 
     .. attribute:: transform_class
 
-        If ``True`` (default is ``False``) the class is replaced by continuous
+        If ``True`` the class is replaced by continuous
         attributes or normalized as well. Multiclass problems are thus
-        transformed to multitarget ones.
+        transformed to multitarget ones. (Default: ``False``)

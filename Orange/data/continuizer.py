@@ -14,12 +14,10 @@ class DomainContinuizer:
         return self if data is None else self(data)
 
     def __call__(self, data):
-        treat = self.multinomial_treatment
-        transform_class = self.transform_class
-        domain = data if isinstance(data, Domain) else data.domain
-
         def transform_discrete(var):
-            if treat == self.Ignore or len(var.values) < 2:
+            if (len(var.values) < 2 or
+                    treat == self.Ignore or
+                    treat == self.IgnoreMulti and len(var.values) > 2):
                 return []
             if treat == self.AsOrdinal:
                 new_var = ContinuousVariable(var.name)
@@ -29,7 +27,8 @@ class DomainContinuizer:
                 new_var = ContinuousVariable(var.name)
                 n_values = max(1, len(var.values))
                 if self.zero_based:
-                    new_var.get_value_from = Normalizer(var, 0, 1 / n_values)
+                    new_var.get_value_from = Normalizer(var, 0,
+                                                        1 / (n_values - 1))
                 else:
                     new_var.get_value_from = Normalizer(var, (n_values - 1)/ 2,
                                                         2 / (n_values - 1))
@@ -38,7 +37,7 @@ class DomainContinuizer:
             new_vars = []
             if treat == self.NValues:
                 base = -1
-            elif treat == self.LowestIsBase:
+            elif treat == self.LowestIsBase or treat == self.IgnoreMulti:
                 base = max(var.base_value, 0)
             else:
                 base = dists[var_ptr].modus()
@@ -81,6 +80,9 @@ class DomainContinuizer:
                         var_ptr += 1
             return new_vars
 
+        treat = self.multinomial_treatment
+        transform_class = self.transform_class
+        domain = data if isinstance(data, Domain) else data.domain
         if treat == self.ReportError and any(
                 isinstance(var, DiscreteVariable) and len(var.values) > 2
                 for var in domain):
@@ -102,7 +104,10 @@ class DomainContinuizer:
             new_classes = domain.class_vars
         return Domain(new_attrs, new_classes, domain.metas)
 
+    # To make PyCharm happy
+    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = \
+        ReportError = AsOrdinal = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
-                            "Ignore", "ReportError", "AsOrdinal",
+                            "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
                             "AsNormalizedOrdinal").pull_up(DomainContinuizer)
