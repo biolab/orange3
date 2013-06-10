@@ -225,7 +225,7 @@ class OWDataSampler(widget.OWWidget):
 
             if self.dataChanged or not self.groups or not (self.CVSettings == [self.stratified, self.numberOfFolds]):
                 if self.stratified:
-                    kf = cross_validation.StratifiedKFold(self.data.Y.flatten(), n_folds=self.numberOfFolds)
+                    kf = cross_validation.StratifiedKFold(self.data.Y[:,0], n_folds=self.numberOfFolds)
                 else:
                     kf = cross_validation.KFold(data_size, n_folds=self.numberOfFolds)
                 self.groups = [(train_index, test_index) for train_index, test_index in kf]

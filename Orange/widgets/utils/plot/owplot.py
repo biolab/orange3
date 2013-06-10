@@ -1292,6 +1292,7 @@ class OWPlot(orangeqt.Plot):
             else:
                 orangeqt.Plot.mouseMoveEvent(self, event)
 
+
     def mouseReleaseEvent(self, event):
         self._pressed_mouse_button = Qt.NoButton
 
