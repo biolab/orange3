@@ -21,6 +21,7 @@ from Orange.widgets.widget import Multiple, Default
 def safe_call(func):
     from functools import wraps
     # noinspection PyBroadException
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -32,7 +33,7 @@ def safe_call(func):
 
 #noinspection PyMethodOverriding
 class ExampleTableModel(QtCore.QAbstractItemModel):
-    def __init__(self, data, dist, *args):
+    def __init__(self, data, _, *args):
         def _n_cols(density, attrs):
             if density == Storage.MISSING:
                 return 0
@@ -56,35 +57,33 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
         self.nvariables = len(domain)
         self.dist = None
 
-        self.cls_color = QtGui.QColor(160,160,160)
-        self.meta_color = QtGui.QColor(220,220,200)
+        self.cls_color = QtGui.QColor(160, 160, 160)
+        self.meta_color = QtGui.QColor(220, 220, 200)
         self.sorted_map = range(len(data))
 
-        self.attr_labels = sorted(reduce(set.union,
-            [attr.attributes for attr in self.all_attrs], set()))
+        self.attr_labels = sorted(
+            reduce(set.union, [attr.attributes for attr in self.all_attrs],
+                   set()))
         self._show_attr_labels = False
         self._other_data = {}
-
 
     def get_show_attr_labels(self):
         return self._show_attr_labels
 
-
     def set_show_attr_labels(self, val):
         self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
         self._show_attr_labels = val
-        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)")
-                  , QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
+        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)"),
+                  QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0,0),
+                  self.index(0, 0),
                   self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
 
     show_attr_labels = QtCore.pyqtProperty("bool",
-                                   fget=get_show_attr_labels,
-                                   fset=set_show_attr_labels,
-                                   )
-
+                                           fget=get_show_attr_labels,
+                                           fset=set_show_attr_labels,
+                                           )
 
     @safe_call
     def data(self, index, role):
@@ -96,47 +95,50 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
 
         # check whether we have a sparse columns,
         # handle background color role while you are at it
-        sp_data = vars = density = None
+        sp_data = attributes = None
         if col < self.n_attr_cols:
             if role == QtCore.Qt.BackgroundRole:
                 return
             density = self.X_density
             if density != Storage.DENSE:
-                sp_data, vars = example.sparse_x, self.domain.attributes
+                sp_data, attributes = example.sparse_x, self.domain.attributes
         elif col < self.n_attr_class_cols:
             if role == QtCore.Qt.BackgroundRole:
                 return self.cls_color
             density = self.Y_density
             if density != Storage.DENSE:
-                sp_data, vars = example.sparse_y, self.domain.class_vars
+                sp_data, attributes = example.sparse_y, self.domain.class_vars
         else:
             if role == QtCore.Qt.BackgroundRole:
                 return self.meta_color
             density = self.metas_density
             if density != Storage.DENSE:
-                sp_data, vars = example.sparse_metas, self.domain.class_vars
+                sp_data, attributes = \
+                    example.sparse_metas, self.domain.class_vars
 
         if sp_data is not None:
             if role == QtCore.Qt.DisplayRole:
                 if density == Storage.SPARSE:
                     return ", ".join(
-                        "{}={}".format(vars[i].name, vars[i].repr_val(v))
+                        "{}={}".format(attributes[i].name,
+                                       attributes[i].repr_val(v))
                         for i, v in zip(sp_data.indices, sp_data.data))
                 else:
-                    return ", ".join(vars[i].name for i in sp_data.indices)
+                    return ", ".join(
+                        attributes[i].name for i in sp_data.indices)
 
-        else: #not sparse
+        else:   # not sparse
             attr = self.all_attrs[col]
             val = example[attr]
-            domain = self.examples.domain
             if role == QtCore.Qt.DisplayRole:
                 return str(val)
             elif (role == gui.TableBarItem.BarRole and
                     isinstance(attr, ContinuousVariable) and
                     not isnan(val)):
                 if self.dist is None:
-                    self.dist = datacaching.getCached(self.examples,
-                        basic_stats.DomainBasicStats, (self.examples, True))
+                    self.dist = datacaching.getCached(
+                        self.examples, basic_stats.DomainBasicStats,
+                        (self.examples, True))
                 dist = self.dist[col]
                 return (val - dist.min) / (dist.max - dist.min or 1)
             elif role == gui.TableValueRole:
@@ -169,12 +171,12 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
 
     def is_sparse(self, col):
         return (
-            col < self.n_attr_cols
-                and self.X_density > Storage.DENSE or
+            col < self.n_attr_cols and self.X_density > Storage.DENSE
+            or
             self.n_attr_cols <= col < self.n_attr_class_cols
-                and self.Y_density > Storage.DENSE or
-            self.n_attr_class_cols < col
-                and self.metas_density > Storage.DENSE)
+            and self.Y_density > Storage.DENSE
+            or
+            self.n_attr_class_cols < col and self.metas_density > Storage.DENSE)
 
     @safe_call
     def headerData(self, section, orientation, role):
@@ -209,11 +211,11 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
         values = [(ex[attr], i) for i, ex in enumerate(self.examples)]
         values = sorted(values,
                         key=lambda t: t[0] if not isnan(t[0]) else sys.maxsize,
-                        reverse=(order!=QtCore.Qt.AscendingOrder))
+                        reverse=(order != QtCore.Qt.AscendingOrder))
         self.sorted_map = [v[1] for v in values]
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0,0),
+                  self.index(0, 0),
                   self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
                   )
 
@@ -287,8 +289,8 @@ class OWDataTable(widget.OWWidget):
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
+    def __init__(self):
+        super().__init__()
 
         self.data = {}          # key: id, value: ExampleTable
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
@@ -310,8 +312,9 @@ class OWDataTable(widget.OWWidget):
         gui.separator(self.controlArea)
 
         box = gui.widgetBox(self.controlArea, "Variables")
-        self.c_show_attribute_labels = gui.checkBox(box, self,
-            "show_attribute_labels", 'Show variable labels (if present)',
+        self.c_show_attribute_labels = gui.checkBox(
+            box, self, "show_attribute_labels",
+            "Show variable labels (if present)",
             callback=self.c_show_attribute_labels_clicked)
         self.c_show_attribute_labels.setEnabled(True)
         gui.checkBox(box, self, "show_distributions",
@@ -344,7 +347,6 @@ class OWDataTable(widget.OWWidget):
         self.tabs.currentChanged.connect(self.tabClicked)
         self.selectionChangedFlag = False
 
-
     def create_color_dialog(self):
         c = colorpalette.ColorPaletteDlg(self, "Color Palette")
         c.createDiscretePalette("discPalette", "Discrete Palette")
@@ -354,7 +356,6 @@ class OWDataTable(widget.OWWidget):
         c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
-
     def set_colors(self):
         dlg = self.create_color_dialog()
         if dlg.exec():
@@ -363,21 +364,21 @@ class OWDataTable(widget.OWWidget):
             self.discPalette = dlg.getDiscretePalette("discPalette")
             self.dist_color_RGB = dlg.getColor("Default")
 
-    def dataset(self, data, id=None):
+    def dataset(self, data, tid=None):
         """Generates a new table and adds it to a new tab when new data arrives;
         or hides the table and removes a tab when data==None;
         or replaces the table when new data arrives together with already
         existing id."""
         if data is not None:  # can be an empty table!
-            if id in self.data:
+            if tid in self.data:
                 # remove existing table
-                self.data.pop(id)
-                self.id2table[id].hide()
-                self.tabs.removeTab(self.tabs.indexOf(self.id2table[id]))
-                self.table2id.pop(self.id2table.pop(id))
-            self.data[id] = data
+                self.data.pop(tid)
+                self.id2table[tid].hide()
+                self.tabs.removeTab(self.tabs.indexOf(self.id2table[tid]))
+                self.table2id.pop(self.id2table.pop(tid))
+            self.data[tid] = data
 
-            table = TableViewWithCopy() #QTableView()
+            table = TableViewWithCopy()     # QTableView()
             table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
             table.setSortingEnabled(True)
             table.setHorizontalScrollMode(QtGui.QTableWidget.ScrollPerPixel)
@@ -386,19 +387,20 @@ class OWDataTable(widget.OWWidget):
             table.horizontalHeader().setSortIndicatorShown(False)
 
             option = table.viewOptions()
-            size = table.style().sizeFromContents(QtGui.QStyle.CT_ItemViewItem,
-                option, QtCore.QSize(20, 20), table)
+            size = table.style().sizeFromContents(
+                QtGui.QStyle.CT_ItemViewItem, option,
+                QtCore.QSize(20, 20), table)
 
             table.verticalHeader().setDefaultSectionSize(size.height() + 2)
 
-            self.id2table[id] = table
-            self.table2id[table] = id
+            self.id2table[tid] = table
+            self.table2id[table] = tid
             tab_name = getattr(data, "name", "")
             if tab_name:
                 tab_name += " "
-            tab_name += "(" + str(id[1]) + ")"
-            if id[2] is not None:
-                tab_name += " [" + str(id[2]) + "]"
+            tab_name += "(" + str(tid[1]) + ")"
+            if tid[2] is not None:
+                tab_name += " [" + str(tid[2]) + "]"
             self.tabs.addTab(table, tab_name)
 
             self.progressBarInit()
@@ -408,18 +410,17 @@ class OWDataTable(widget.OWWidget):
             self.setInfo(data)
             self.send_button.setEnabled(not self.auto_commit)
 
-        elif id in self.data:
-            table = self.id2table[id]
-            self.data.pop(id)
+        elif tid in self.data:
+            table = self.id2table[tid]
+            self.data.pop(tid)
             table.hide()
             self.tabs.removeTab(self.tabs.indexOf(table))
-            self.table2id.pop(self.id2table.pop(id))
+            self.table2id.pop(self.id2table.pop(tid))
             self.setInfo(self.data.get(self.table2id.get(
-                self.tabs.currentWidget(),None),None))
+                self.tabs.currentWidget(), None), None))
 
         if not len(self.data):
             self.send_button.setEnabled(False)
-
 
     #TODO Implement
     def sendReport(self):
@@ -431,7 +432,7 @@ class OWDataTable(widget.OWWidget):
         table = self.id2table[id]
         import OWReport
         self.reportRaw(OWReport.reportTable(table))
-"""
+        """
 
     # Writes data into table, adjusts the column width.
     def setTable(self, table, data):
@@ -444,11 +445,12 @@ class OWDataTable(widget.OWWidget):
         datamodel = ExampleTableModel(data, self)
         color_schema = self.discPalette if self.color_by_class else None
         if self.show_distributions:
-            table.setItemDelegate(gui.TableBarItem(self,
-                color=self.dist_color, color_schema=color_schema))
+            table.setItemDelegate(gui.TableBarItem(
+                self, color=self.dist_color, color_schema=color_schema))
         else:
             table.setItemDelegate(QtGui.QStyledItemDelegate(self))
         table.setModel(datamodel)
+
         def p():
             try:
                 table.updateGeometries()
@@ -461,19 +463,17 @@ class OWDataTable(widget.OWWidget):
         self.connect(datamodel, QtCore.SIGNAL("layoutChanged()"),
                      lambda *args: QtCore.QTimer.singleShot(50, p))
 
-        id = self.table2id.get(table, None)
-
         # set the header (attribute names)
         self.draw_attribute_labels(table)
 
         self.connect(table.horizontalHeader(),
                      QtCore.SIGNAL("sectionClicked(int)"), self.sort_by_column)
-        self.connect(table.selectionModel(),
+        self.connect(
+            table.selectionModel(),
             QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
             self.update_selection)
 
         QtGui.qApp.restoreOverrideCursor()
-
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
@@ -485,6 +485,7 @@ class OWDataTable(widget.OWWidget):
         if not hasattr(table, "btn") and not hasattr(table, "btnfailed"):
             try:
                 btn = table.findChild(QtGui.QAbstractButton)
+
                 class efc(QtCore.QObject):
                     def eventFilter(self, o, e):
                         if (isinstance(o, QtGui.QAbstractButton) and
@@ -507,7 +508,7 @@ class OWDataTable(widget.OWWidget):
                                 QtGui.QStyleOptionHeader.OnlyOneSection
                             painter = QtGui.QStylePainter(btn)
                             painter.drawControl(QtGui.QStyle.CE_Header, opt)
-                            return True # eat evebt
+                            return True     # eat event
                         return False
                 table.efc = efc()
                 btn.installEventFilter(table.efc)
@@ -522,13 +523,13 @@ class OWDataTable(widget.OWWidget):
                 opt = QtGui.QStyleOptionHeader()
                 opt.text = btn.text()
                 s = btn.style().sizeFromContents(
-                    QtGui.QStyle.CT_HeaderSection, opt, QtCore.QSize(), btn
-                        ).expandedTo(QtGui.QApplication.globalStrut())
+                    QtGui.QStyle.CT_HeaderSection,
+                    opt, QtCore.QSize(),
+                    btn).expandedTo(QtGui.QApplication.globalStrut())
                 if s.isValid():
                     table.verticalHeader().setMinimumWidth(s.width())
             except Exception:
                 pass
-
 
     def sort_by_column(self, index):
         table = self.tabs.currentWidget()
@@ -542,12 +543,11 @@ class OWDataTable(widget.OWWidget):
         table.oldSortingIndex = index
         table.oldSortingOrder = order
 
-
     def tabClicked(self, index):
         """Updates the info box when a tab is clicked."""
         qTableInstance = self.tabs.widget(index)
-        id = self.table2id.get(qTableInstance, None)
-        self.setInfo(self.data.get(id,None))
+        tid = self.table2id.get(qTableInstance, None)
+        self.setInfo(self.data.get(tid, None))
         self.update_selection()
 
     def draw_attribute_labels(self, table):
@@ -583,8 +583,8 @@ class OWDataTable(widget.OWWidget):
     def reset_sort_clicked(self):
         table = self.tabs.currentWidget()
         if table:
-            id = self.table2id[table]
-            data = self.data[id]
+            tid = self.table2id[table]
+            data = self.data[tid]
             table.horizontalHeader().setSortIndicatorShown(False)
             self.progressBarInit()
             self.setTable(table, data)
@@ -607,19 +607,21 @@ class OWDataTable(widget.OWWidget):
             return s + ", density %.2f %%)" % (100 * non_nans / tot)
 
         dist = datacaching.getCached(data,
-            basic_stats.DomainBasicStats, (data, True))
+                                     basic_stats.DomainBasicStats, (data, True))
         domain = data.domain
-        descs = [desc(part, frm, to)
-                 for part, frm, to in [
-                     ("X", 0, len(domain.attributes)),
-                     ("Y", len(domain.attributes), len(domain)),
-                     ("metas", len(domain), len(domain) + len(domain.metas))]]
-        if all(not d or d == " (no missing values)" for d in descs):
-            descs = self.__no_missing
-        return descs
+        descriptions = [desc(part, frm, to)
+                        for part, frm, to in [
+                            ("X", 0, len(domain.attributes)),
+                            ("Y", len(domain.attributes), len(domain)),
+                            ("metas", len(domain),
+                             len(domain) + len(domain.metas))]]
+        if all(not d or d == " (no missing values)" for d in descriptions):
+            descriptions = self.__no_missing
+        return descriptions
 
     def setInfo(self, data):
-        """Updates data info.
+        """
+        Updates data info.
         """
         def sp(l):
             n = len(l)
@@ -630,7 +632,6 @@ class OWDataTable(widget.OWWidget):
             else:
                 return str(n), 's'
 
-
         if data is None:
             self.info_ex.setText('No data on input.')
             self.info_attr.setText('')
@@ -639,33 +640,33 @@ class OWDataTable(widget.OWWidget):
         else:
             descriptions = datacaching.getCached(
                 data, self.__compute_density, (data, ))
-            outi = "%s instance%s" % sp(data)
+            out_i = "%s instance%s" % sp(data)
             if descriptions is self.__no_missing:
-                outi += " (no missing values)"
-            self.info_ex.setText(outi)
+                out_i += " (no missing values)"
+            self.info_ex.setText(out_i)
 
             self.info_attr.setText("%s feature%s" %
-                sp(data.domain.attributes) + descriptions[0])
+                                   sp(data.domain.attributes) + descriptions[0])
 
             self.info_meta.setText("%s meta attribute%s" %
-                sp(data.domain.metas) + descriptions[2])
+                                   sp(data.domain.metas) + descriptions[2])
 
             if data.domain.class_vars is None:
-                outc = 'No target variable.'
+                out_c = 'No target variable.'
             else:
                 if len(data.domain.class_vars) > 1:
-                    outc = "%s outcome%s" % sp(data.domain.class_vars)
+                    out_c = "%s outcome%s" % sp(data.domain.class_vars)
                 elif isinstance(data.domain.class_var, ContinuousVariable):
-                    outc = 'Continuous target variable'
+                    out_c = 'Continuous target variable'
                 else:
-                    outc = 'Discrete class with %s value%s' % sp(
+                    out_c = 'Discrete class with %s value%s' % sp(
                         data.domain.class_var.values)
-                outc += descriptions[1]
-            self.info_class.setText(outc)
+                out_c += descriptions[1]
+            self.info_class.setText(out_c)
 
     def update_selection(self, *_):
         self.send_button.setEnabled(bool(self.get_current_selection())
-            and not self.auto_commit)
+                                    and not self.auto_commit)
         self.commit_if()
 
     def get_current_selection(self):
@@ -699,16 +700,13 @@ class OWDataTable(widget.OWWidget):
         self.selectionChangedFlag = False
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-#    d5 = Table('../../../jrs-small.basket')
-    d5 = Table('../../../jrs2012.basket')
-#    d5 = Table('../../tests/iris.tab')
-#    d5 = Table('../../tests/zoo.tab')
+    data = Table("iris")
+
     ow.show()
-    ow.dataset(d5,"adult_sample")
+    ow.dataset(data, data.name)
     a.exec()
     ow.saveSettings()

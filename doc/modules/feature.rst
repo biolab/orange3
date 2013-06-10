@@ -8,3 +8,4 @@ Feature (``feature``)
    :maxdepth: 2
 
    feature.scoring
+   feature.discretization

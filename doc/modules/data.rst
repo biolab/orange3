@@ -55,5 +55,7 @@ represented by whole numbers.
     data.variable
     data.instance
     data.filters
+    data.continuizer
+    data.discretization
 
 .. index:: Data

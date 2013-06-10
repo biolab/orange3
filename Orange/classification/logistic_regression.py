@@ -10,10 +10,27 @@ def sigmoid(x):
 
 
 class LogisticRegressionLearner(classification.Fitter):
-    def __init__(self, lambda_=1.0, normalize=True, **fmin_args):
+    def __init__(self, lambda_=1.0, **fmin_args):
+        '''L2 regularized logistic regression
+
+        This model uses the L-BFGS algorithm to minimize the cross entropy 
+        cost with L2 regularization. Only binary classification is supported;
+        when dealing with a multiclass classification problem you should
+        build several binary classifiers or use softmax regression.
+        When using this model you should:
+
+        - Choose a suitable regularization parameter lambda_
+        - Continuize all discrete attributes
+        - Consider appending a column of ones to the dataset (intercept term)
+        - Transform the dataset so that the columns are on a similar scale
+
+        :param lambda_: the regularization parameter. Higher values of lambda_
+        force the coefficients to be small.
+        :type lambda_: float
+        '''
+
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
-        self.normalize = normalize
 
     def cost_grad(self, theta, X, y):
         sx = np.clip(sigmoid(X.dot(theta)), 1e-15, 1 - 1e-15)
@@ -41,29 +58,18 @@ class LogisticRegressionLearner(classification.Fitter):
             raise ValueError('Logistic regression does not support '
                              'unknown values')
 
-        self.mean = np.mean(X, axis=0)
-        self.std = np.std(X, axis=0)
-        if self.normalize:
-            X = (X - self.mean) / self.std
-
         theta = np.zeros(X.shape[1])
         theta, cost, ret = fmin_l_bfgs_b(self.cost_grad, theta,
                                          args=(X, Y.ravel()), **self.fmin_args)
 
-        return LogisticRegressionClassifier(theta, self.normalize, self.mean,
-                                            self.std)
+        return LogisticRegressionClassifier(theta)
 
 
 class LogisticRegressionClassifier(classification.Model):
-    def __init__(self, theta, normalize, mean, std):
+    def __init__(self, theta):
         self.theta = theta
-        self.normalize = normalize
-        self.mean = mean
-        self.std = std
 
     def predict(self, X):
-        if self.normalize:
-            X = (X - self.mean) / self.std
         prob = sigmoid(X.dot(self.theta))
         return np.column_stack((1 - prob, prob))
 
@@ -93,7 +99,7 @@ if __name__ == '__main__':
 
     d = Orange.data.Table('iris')
     for lambda_ in [0.1, 0.3, 1, 3, 10]:
-        lr = LogisticRegressionLearner(lambda_=lambda_, normalize=False)
+        lr = LogisticRegressionLearner(lambda_=lambda_)
         m = MulticlassLearnerWrapper(lr)
         scores = []
         for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):

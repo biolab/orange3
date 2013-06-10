@@ -111,19 +111,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     save_position = False
     resizing_enabled = True
 
-    def __init__(self, parent=None, signalManager=None, stored_settings=None):
-        super().__init__(parent, Qt.Window if self.resizing_enabled else
-                                 Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
+    def __new__(cls, parent, *args, **kwargs):
+        self = super().__new__(cls, None, cls.get_flags())
+        QDialog.__init__(self, None, self.get_flags())
 
         # 'current_context' MUST be the first thing assigned to a widget
         self.current_context = settings.Context()
+        if hasattr(self, "settingsHandler"):
+            stored_settings = kwargs.get('stored_settings', None)
+            self.settingsHandler.initialize(self, stored_settings)
+
+        # number of control signals that are currently being processed
+        # needed by signalWrapper to know when everything was sent
+        self.needProcessing = 0     # used by signalManager
+        self.signalManager = kwargs.get('signal_manager', None)
+
         self.controlledAttributes = ControlledAttributesDict(self)
-        self.parent = parent
         self._guiElements = []      # used for automatic widget debugging
         self.__reportData = None
-
-        if hasattr(self, "settingsHandler"):
-            self.settingsHandler.initialize(self, stored_settings)
 
         # TODO: position used to be saved like this. Reimplement.
         #if save_position:
@@ -133,16 +138,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
 
+        #TODO: kill me
         self.__dict__.update(environ.directories)
 
         if self._name:
             self.setCaption(self._name.replace("&",""))
         self.setFocusPolicy(Qt.StrongFocus)
-
-        # number of control signals that are currently being processed
-        # needed by signalWrapper to know when everything was sent
-        self.needProcessing = 0     # used by signalManager
-        self.signalManager = signalManager # or globalSignalManager
 
         self.wrappers = [] # stored wrappers for widget events
         self.linksIn = {}  # signalName : (dirty, widFrom, handler, signalData)
@@ -165,6 +166,16 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if self.want_basic_layout:
             self.insertLayout()
 
+        return self
+
+    def __init__(self, *args, **kwargs):
+        """QDialog __init__ was already called in __new__,
+        please do not call it here."""
+
+    @classmethod
+    def get_flags(cls):
+        return (Qt.Window if cls.resizing_enabled
+                else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
     def insertLayout(self):
         def createPixmapWidget(self, parent, iconName):
@@ -336,9 +347,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
 
     # ##############################################
-    def createAttributeIconDict(self):
-        return gui.constructAttributeIcons()
-
     def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
         self.error([1234, 1235, 1236])
         if not data:

@@ -552,34 +552,28 @@ def createAttributePixmap(char, color = Qt.black):
     return QIcon(pixmap)
 
 
-attributeIconDict = None
+class AttributeIconDict(dict):
+    def __getitem__(self, key):
+        from Orange.data import Variable
+        if not self:
+            VarTypes = Variable.VarTypes
+            self[VarTypes.Continuous] = \
+                createAttributePixmap("C", QColor(202,0,32))
+            self[VarTypes.Discrete] = \
+                createAttributePixmap("D", QColor(26,150,65))
+            self[VarTypes.String] = createAttributePixmap("S", Qt.black)
+            self[-1] = createAttributePixmap("?", QColor(128, 128, 128))
+        if isinstance(key, Variable):
+            key = key.var_type
+        if not key in self:
+            key = -1
+        return super().__getitem__(key)
 
-def attributeIcon(attr):
-    from Orange.data import Variable
-    if attributeIconDict is None:
-        constructAttributeIcons()
-    if isinstance(attr, Variable):
-        return attributeIconDict[attr.var_type]
-    else:
-        return attributeIconDict[attr]
+attributeIconDict = AttributeIconDict()
+
 
 def attributeItem(attr):
-    from Orange.data import Variable
-    if attributeIconDict is None:
-        constructAttributeIcons()
-    return attributeIconDict[attr.var_type], attr.name
-
-def constructAttributeIcons():
-    from Orange.data import Variable
-    VarTypes = Variable.VarTypes
-    global attributeIconDict
-    if not attributeIconDict:
-        attributeIconDict = {
-            VarTypes.Continuous: createAttributePixmap("C", QColor(202,0,32)),
-            VarTypes.Discrete: createAttributePixmap("D", QColor(26,150,65)),
-            VarTypes.String: createAttributePixmap("S", Qt.black),
-            -1: createAttributePixmap("?", QColor(128, 128, 128))}
-    return attributeIconDict
+    return attributeIconDict[attr], attr.name
 
 
 def listBox(widget, master, value = None, labels = None, box = None, tooltip = None, callback = None, selectionMode = QListWidget.SingleSelection, enableDragDrop = 0, dragDropCallback = None, dataValidityCallback = None, sizeHint = None, debuggingEnabled = 1):
@@ -1657,22 +1651,18 @@ class CallFrontListBox(ControlledCallFront):
 
 
 class CallFrontListBoxLabels(ControlledCallFront):
-    if attributeIconDict is None:
-            constructAttributeIcons()
     unknownType = None
 
     def action(self, value):
-#        icons = getAttributeIcons()
         self.control.clear()
         if value:
             for i in value:
                 if type(i) is tuple:
                     if isinstance(i[1], int):
-                        self.control.addItem(QListWidgetItem(attributeIconDict.get(i[1], self.unknownType), i[0]))
+                        i = QListWidgetItem(attributeIconDict[i[1]], i[0])
                     else:
-                        self.control.addItem( QListWidgetItem(i[0],i[1]) )
-                else:
-                    self.control.addItem(i)
+                        i = QListWidgetItem(i[0], i[1])
+                self.control.addItem(i)
 
 
 class CallFrontLabel:

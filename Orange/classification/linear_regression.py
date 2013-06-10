@@ -4,8 +4,39 @@ from scipy.optimize import fmin_l_bfgs_b
 
 from Orange import classification
 
+
 class LinearRegressionLearner(classification.Fitter):
     def __init__(self, lambda_=1.0, **fmin_args):
+        '''L2 regularized linear regression (a.k.a Ridge regression)
+
+        This model uses the L-BFGS algorithm to minimize the linear least
+        squares penalty with L2 regularization. When using this model you
+        should:
+
+        - Choose a suitable regularization parameter lambda_
+        - Continuize all discrete attributes
+        - Consider appending a column of ones to the dataset (intercept term)
+        - Transform the dataset so that the columns are on a similar scale
+
+        :param lambda_: the regularization parameter. Higher values of lambda_
+        force the coefficients to be small.
+        :type lambda_: float
+
+        Examples
+        --------
+
+            import numpy as np
+            from Orange.data import Table
+            from Orange.classification.linear_regression import LinearRegressionLearner
+
+            data = Table('housing')
+            data.X = (data.X - np.mean(data.X, axis=0)) / np.std(data.X, axis=0) # normalize
+            data.X = np.hstack((data.X, np.ones((data.X.shape[0], 1)))) # append ones
+            m = LinearRegressionLearner(lambda_=1.0)
+            c = m(data) # fit
+            print(c(data)) # predict
+        '''
+
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 
@@ -50,6 +81,8 @@ if __name__ == '__main__':
     import Orange.data
     from sklearn.cross_validation import KFold
 
+    np.random.seed(42)
+
     def numerical_grad(f, params, e=1e-4):
         grad = np.zeros_like(params)
         perturb = np.zeros_like(params)
@@ -62,10 +95,11 @@ if __name__ == '__main__':
         return grad
 
     d = Orange.data.Table('housing')
+    d.X = np.hstack((d.X, np.ones((d.X.shape[0], 1))))
     d.shuffle()
 
-    m = LinearRegressionLearner(lambda_=1.0)
-    print(m(d)(d[0]))
+#    m = LinearRegressionLearner(lambda_=1.0)
+#    print(m(d)(d))
 
 #    # gradient check
 #    m = LinearRegressionLearner(lambda_=1.0)
@@ -74,17 +108,16 @@ if __name__ == '__main__':
 #    ga = m.cost_grad(theta, d.X, d.Y.ravel())[1]
 #    gm = numerical_grad(lambda t: m.cost_grad(t, d.X, d.Y.ravel())[0], theta)
 #
-#    print(ga)
-#    print(gm)
-#
-#    for lambda_ in (0.01, 0.03, 0.1, 0.3, 1, 3):
-#        m = LinearRegressionLearner(lambda_=lambda_)
-#        scores = []
-#        for tr_ind, te_ind in KFold(d.X.shape[0]):
-#            s = np.mean((m(d[tr_ind])(d[te_ind]) - d[te_ind].Y.ravel())**2)
-#            scores.append(s)
-#        print('{:5.2f} {}'.format(lambda_, np.mean(scores)))
-#
-#    m = LinearRegressionLearner(lambda_=0)
-#    print('test data', np.mean((m(d)(d) - d.Y.ravel())**2))
-#    print('majority', np.mean((np.mean(d.Y.ravel()) - d.Y.ravel())**2))
+#    print(np.sum((ga - gm)**2))
+
+    for lambda_ in (0.01, 0.03, 0.1, 0.3, 1, 3):
+        m = LinearRegressionLearner(lambda_=lambda_)
+        scores = []
+        for tr_ind, te_ind in KFold(d.X.shape[0]):
+            s = np.mean((m(d[tr_ind])(d[te_ind]) - d[te_ind].Y.ravel())**2)
+            scores.append(s)
+        print('{:5.2f} {}'.format(lambda_, np.mean(scores)))
+
+    m = LinearRegressionLearner(lambda_=0)
+    print('test data', np.mean((m(d)(d) - d.Y.ravel())**2))
+    print('majority', np.mean((np.mean(d.Y.ravel()) - d.Y.ravel())**2))

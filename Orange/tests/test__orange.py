@@ -42,4 +42,4 @@ class test_valuecount(unittest.TestCase):
         a = np.ones((3, 3))
         self.assertRaises(ValueError, _valuecount.valuecount, a)
 
-        self.assertRaises(ValueError, _valuecount.valuecount, None)
+        self.assertRaises(TypeError, _valuecount.valuecount, None)

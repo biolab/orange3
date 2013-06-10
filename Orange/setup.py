@@ -13,6 +13,7 @@ def configuration(parent_package='', top_path=None):
     config.add_subpackage('classification')
     config.add_subpackage('data')
     config.add_subpackage('evaluation')
+    config.add_subpackage('feature')
     config.add_subpackage('misc')
     config.add_subpackage('statistics')
     config.add_subpackage('testing')

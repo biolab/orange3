@@ -1,4 +1,4 @@
-From 4c6ea75f88ae0db59f3f4e2bbb2f70151be83d42 Mon Sep 17 00:00:00 2001
+From 5924a4bac35db1bfa3a1274f205d96a1ea743dbc Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:37:52 +0200
 Subject: [PATCH 4/4] Remove addon support.
