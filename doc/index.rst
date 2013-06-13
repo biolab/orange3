@@ -12,7 +12,7 @@ Orange Documentation
    modules/data
    modules/feature
    modules/classification
-
+   modules/evaluation
 
 
 Indices and tables

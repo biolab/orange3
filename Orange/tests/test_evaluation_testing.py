@@ -14,8 +14,8 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_10_fold_cross(self):
         results = testing.CrossValidation(k=10)(self.data, self.fitters)
 
-        self.assertEqual(results.predictions.shape, (2, len(self.data)))
-        np.testing.assert_equal(results.predictions, np.ones((2, 100)))
+        self.assertEqual(results.predicted.shape, (2, len(self.data)))
+        np.testing.assert_equal(results.predicted, np.ones((2, 100)))
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())

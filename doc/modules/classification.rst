@@ -8,3 +8,4 @@ Classification (``classification``)
    :maxdepth: 2
 
    classification.majority
+   classification.svm
