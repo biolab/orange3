@@ -36,6 +36,7 @@ class SettingsHandler:
         return os.path.join(environ.widget_settings_dir,
                             self.widget_class._name + ".ini")
 
+    # noinspection PyBroadException
     def read_defaults(self):
         """Read (global) defaults for this widget class from a file.
         Opens a file and calls :obj:`read_defaults_file`. Derived classes
@@ -45,7 +46,7 @@ class SettingsHandler:
             settings_file = open(filename, "rb")
             try:
                 self.read_defaults_file(settings_file)
-            except (EOFError, IOError, pickle.UnpicklingError):
+            except:
                 pass
             finally:
                 settings_file.close()
