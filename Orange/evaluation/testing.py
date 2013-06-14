@@ -137,7 +137,7 @@ class CrossValidation(Testing):
 
         The number of folds.
     """
-    def __init__(self, k=10, **kwargs):
+    def __init__(self, **kwargs):
         self.k = kwargs.pop('k', 10)
 
     def __call__(self, data, fitters):
