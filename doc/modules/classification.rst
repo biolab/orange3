@@ -8,4 +8,5 @@ Classification (``classification``)
    :maxdepth: 2
 
    classification.majority
+   classification.naive_bayes
    classification.svm
