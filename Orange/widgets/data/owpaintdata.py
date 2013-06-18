@@ -5,6 +5,7 @@ import random
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+from PyQt4 import QtSvg
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels
@@ -53,15 +54,18 @@ class DataTool(QtCore.QObject):
     widget.
 
     """
-    cursor = QtCore.Qt.ArrowCursor
+    cursor = None
     editingFinished = QtCore.pyqtSignal()
     radiusDensity = False
 
     def __init__(self, parent):
         QtCore.QObject.__init__(self, parent)
         self.widget = parent
-        self.widget.plot.setCursor(self.cursor)
         self.state = owconstants.NOTHING
+
+    def setCursor(self):
+        if self.cursor is not None:
+            self.widget.plot.setCursor(self.cursor)
 
     def mousePressEvent(self, event):
         return False
@@ -84,14 +88,34 @@ class DataTool(QtCore.QObject):
 
     def onToolSelection(self):
         self.widget.plot.state = self.state
-        self.widget.plot.setCursor(self.cursor)
+        self.setCursor()
         self.widget.radiusSlider.box.setVisible(self.radiusDensity)
         self.widget.densitySlider.box.setVisible(self.radiusDensity)
 
 
 
-class PutInstanceTool(DataTool):
-    cursor = QtCore.Qt.CrossCursor
+class ColorTool(DataTool):
+    def setCursor(self, circle):
+        pixmap = QtGui.QPixmap(24, 24)
+        pixmap.fill(QtCore.Qt.transparent)
+        painter = QtGui.QPainter()
+        painter.begin(pixmap)
+        painter.setRenderHints(painter.Antialiasing)
+        color = self.widget.getColor(self.widget.selectedClassLabelIndex())
+        pen = QtGui.QPen(QtGui.QBrush(color), 1)
+        pen.setWidthF(1.5)
+        painter.setPen(pen)
+        if circle:
+            painter.drawEllipse(2, 2, 20, 20)
+        painter.drawLine(12, 7, 12, 17)
+        painter.drawLine(7, 12, 17, 12)
+        painter.end()
+        self.widget.plot.setCursor(QtGui.QCursor(pixmap))
+
+
+class PutInstanceTool(ColorTool):
+    def setCursor(self):
+        super().setCursor(False)
 
     def mousePressEvent(self, event):
         dataPoint = self.toDataPoint(event.pos())
@@ -101,9 +125,11 @@ class PutInstanceTool(DataTool):
         return True
 
 
-class BrushTool(DataTool):
-    cursor = QtCore.Qt.CrossCursor
+class BrushTool(ColorTool):
     radiusDensity = True
+
+    def setCursor(self):
+        super().setCursor(True)
 
     def mousePressEvent(self, event):
         if event.buttons() & QtCore.Qt.LeftButton:
@@ -141,7 +167,7 @@ class BrushTool(DataTool):
         return points
 
 
-class MagnetTool(BrushTool):
+class MagnetTool(DataTool):
     radiusDensity = True
 
     def mousePressEvent(self, event):
@@ -154,8 +180,13 @@ class MagnetTool(BrushTool):
     def mouseMoveEvent(self, event):
         self.mousePressEvent(event)
 
+    def mouseReleaseEvent(self, event):
+        if event.button() & QtCore.Qt.LeftButton:
+            self.editingFinished.emit()
+        return True
 
-class JitterTool(BrushTool):
+
+class JitterTool(DataTool):
     radiusDensity = True
 
     def mousePressEvent(self, event):
@@ -177,14 +208,21 @@ class SelectTool(DataTool):
         self.widget.plot.activate_selection()
 
     def onToolSelection(self):
+        super().onToolSelection()
         self.widget.plot.activate_selection()
-        self.widget.plot.setCursor(self.cursor)
 
 
 class ZoomTool(DataTool):
+    # Cannot create QIcon before application is initialized
+    cursor = None
+
     def __init__(self, parent):
+        if self.cursor is None:
+            self.cursor = QtGui.QCursor(
+                QtGui.QPixmap(_i("Dlg_zoom.png", "../icons")))
         super(ZoomTool, self).__init__(parent)
         self.state = owconstants.ZOOMING
+
 
 
 class CommandAddData(QtGui.QUndoCommand):
@@ -410,7 +448,7 @@ class ColoredListModel(itemmodels.PyListModel):
         if self._is_index_valid_for(index, self) and \
                 role == QtCore.Qt.DecorationRole:
             rgb = self.plot.discrete_palette.getRGB(index.row())
-            return gui.createAttributePixmap(" ", QtGui.QColor(*rgb))
+            return gui.createAttributePixmap("", QtGui.QColor(*rgb))
         else:
             return super().data(index, role)
 
@@ -494,6 +532,7 @@ class OWPaintData(widget.OWWidget):
             self.classValuesModel.index(0),
             QtGui.QItemSelectionModel.ClearAndSelect)
         listView.setFixedHeight(80)
+        listView.clicked.connect(self.updateCursor)
         namesBox.layout().addWidget(listView)
 
         addClassLabel = QtGui.QAction("+", self)
@@ -531,6 +570,17 @@ class OWPaintData(widget.OWWidget):
                                  QtGui.QSizePolicy.Fixed)
             toolsBox.layout().addWidget(button, i / 3, i % 3)
             self.toolActions.addAction(action)
+
+            if name in ("Jitter", "Magnet"):
+                picture = QtSvg.QSvgRenderer(icon)
+                pixmap = QtGui.QPixmap(24, 24)
+                pixmap.fill(QtCore.Qt.transparent)
+                painter = QtGui.QPainter()
+                painter.begin(pixmap)
+                painter.setRenderHints(painter.Antialiasing)
+                picture.render(painter)
+                painter.end()
+                tool.cursor = QtGui.QCursor(pixmap)
 
         for column in range(3):
             toolsBox.layout().setColumnMinimumWidth(column, 10)
@@ -574,6 +624,13 @@ class OWPaintData(widget.OWWidget):
         # main area GUI
         self.mainArea.layout().addWidget(self.plot)
 
+    def getColor(self, i):
+        rgb = self.plot.discrete_palette.getRGB(i)
+        return QtGui.QColor(*rgb)
+
+    def updateCursor(self):
+        self.currentTool.setCursor()
+
     def initPlot(self):
         self.plot.set_axis_title(owconstants.xBottom, self.data.domain[0].name)
         self.plot.set_axis_title(owconstants.yLeft, self.data.domain[1].name)
@@ -582,11 +639,9 @@ class OWPaintData(widget.OWWidget):
         self.updatePlot()
 
     def updatePlot(self):
-        colorDict = {}
-        for i in range(self.classValuesModel.rowCount()):
-            rgb = self.plot.discrete_palette.getRGB(i)
-            colorDict[i] = QtGui.QColor(*rgb)
-        c_data = [colorDict[int(value)] for value in self.data.Y[:, 0]]
+        colors = [self.getColor(i)
+                  for i in range(self.classValuesModel.rowCount())]
+        c_data = [colors[int(value)] for value in self.data.Y[:, 0]]
         self.plot.set_main_curve_data(
             list(self.data.X[:, 0]), list(self.data.X[:, 1]),
             color_data=c_data, label_data=[], size_data=[5],
