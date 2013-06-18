@@ -111,7 +111,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     save_position = False
     resizing_enabled = True
 
-    def __new__(cls, parent, *args, **kwargs):
+    def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
 
