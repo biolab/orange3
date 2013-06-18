@@ -726,3 +726,11 @@ class OWPaintData(widget.OWWidget):
 
     def sizeHint(self):
         return QtCore.QSize(1200, 800)
+
+
+if __name__ == "__main__":
+    a = QtGui.QApplication([])
+    ow = OWPaintData()
+    ow.show()
+    a.exec_()
+    ow.saveSettings()
