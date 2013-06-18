@@ -4,11 +4,12 @@ import os
 import random
 from functools import partial
 
-from PyQt4 import QtCore
+from PyQt4 import QtCore, Qt
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.plot import owplot, owconstants, owpoint
 from Orange.data.domain import Domain
 from Orange.data.instance import Instance
@@ -472,6 +473,26 @@ class CommandChangeLabelName(QtGui.QUndoCommand):
         self.widget.updatePlot()
 
 
+class ColoredListModel(itemmodels.PyListModel):
+
+    MIME_TYPE = "application/x-Orange-ColoredList"
+
+    def __init__(self, iterable, parent, plot, flags,
+                 list_item_role=QtCore.Qt.DisplayRole,
+                 supportedDropActions=QtCore.Qt.MoveAction):
+        self.plot = plot
+        super().__init__(iterable, parent, flags, list_item_role,
+                         supportedDropActions)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if self._is_index_valid_for(index, self) and \
+                role == QtCore.Qt.DecorationRole:
+            rgb = self.plot.discrete_palette.getRGB(index.row())
+            return gui.createAttributePixmap(" ", QtGui.QColor(*rgb))
+        else:
+            return super().data(index, role)
+
+
 class OWPaintData(widget.OWWidget):
     TOOLS = [("Brush", "Create multiple instances", BrushTool, icon_brush),
              ("Put", "Put individual instances", PutInstanceTool, icon_put),
@@ -504,9 +525,10 @@ class OWPaintData(widget.OWWidget):
         self.undoStack = QtGui.QUndoStack(self)
 
         self.plot = PaintDataPlot(self.mainArea, "Painted Plot", widget=self)
-        self.classValuesModel = itemmodels.PyListModel(
-            ["Class-1", "Class-2"], self, flags=QtCore.Qt.ItemIsSelectable |
-            QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsEditable)
+        self.classValuesModel = ColoredListModel(
+            ["Class-1", "Class-2"], self, self.plot,
+            flags=QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled |
+            QtCore.Qt.ItemIsEditable)
         self.classValuesModel.dataChanged.connect(self.classNameChange)
         self.data = Table(
             Domain([ContinuousVariable(self.attr1),
@@ -616,15 +638,10 @@ class OWPaintData(widget.OWWidget):
         self.updatePlot()
 
     def updatePlot(self):
-        self.plot.legend().clear()
         colorDict = {}
-        for i, value in enumerate(self.data.domain[2].values):
+        for i in range(self.classValuesModel.rowCount()):
             rgb = self.plot.discrete_palette.getRGB(i)
-            color = QtGui.QColor(*rgb)
-            colorDict[i] = color
-            self.plot.legend().add_item(
-                self.data.domain[2].name, value,
-                owpoint.OWPoint(owpoint.OWPoint.Diamond, color, 5))
+            colorDict[i] = QtGui.QColor(*rgb)
         c_data = [colorDict[int(value)] for value in self.data.Y[:, 0]]
         self.plot.set_main_curve_data(
             list(self.data.X[:, 0]), list(self.data.X[:, 1]),
