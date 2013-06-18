@@ -2,35 +2,18 @@ import copy
 import math
 import os
 import random
-from functools import partial
 
-from PyQt4 import QtCore, Qt
+from PyQt4 import QtCore
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.plot import owplot, owconstants, owpoint
 from Orange.data.domain import Domain
 from Orange.data.instance import Instance
 from Orange.data.table import Table
 from Orange.data.variable import DiscreteVariable, ContinuousVariable
 
-path = os.path.abspath(__file__)
-dir_path = os.path.dirname(path)
-icon_magnet = os.path.join(dir_path, "icons/paintdata/magnet.svg")
-icon_jitter = os.path.join(dir_path, "icons/paintdata/jitter.svg")
-icon_brush = os.path.join(dir_path, "icons/paintdata/brush.svg")
-icon_put = os.path.join(dir_path, "icons/paintdata/put.svg")
-icon_select = os.path.join(dir_path,
-                           "icons/paintdata/select-transparent_42px.png")
-#icon_lasso = os.path.join(dir_path,
-#                          "icons/paintdata/lasso-transparent_42px.png")
-icon_zoom = os.path.join(dir_path, "icons/paintdata/Dlg_zoom2.png")
-
-icon_undo = os.path.join(dir_path, "../icons/Dlg_undo.png")
-icon_redo = os.path.join(dir_path, "../icons/Dlg_redo.png")
-icon_clear = os.path.join(dir_path, "../icons/Dlg_clear.png")
 
 class PaintDataPlot(owplot.OWPlot):
     def __init__(self, parent=None, name="None", show_legend=1, axes=None,
@@ -432,14 +415,22 @@ class ColoredListModel(itemmodels.PyListModel):
             return super().data(index, role)
 
 
+
+def _i(name, icon_path="icons/paintdata",
+       widg_path=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(widg_path, icon_path, name)
+
 class OWPaintData(widget.OWWidget):
-    TOOLS = [("Brush", "Create multiple instances", BrushTool, icon_brush),
-             ("Put", "Put individual instances", PutInstanceTool, icon_put),
-             ("Select", "Select and move instances", SelectTool, icon_select),
-             ("Jitter", "Jitter instances", JitterTool, icon_jitter),
-             ("Magnet", "Attract multiple instances", MagnetTool, icon_magnet),
-             ("Zoom", "Zoom", ZoomTool, icon_zoom)
-             ]
+    TOOLS = [
+        ("Brush", "Create multiple instances", BrushTool, _i("brush.svg")),
+        ("Put", "Put individual instances", PutInstanceTool, _i("put.svg")),
+        ("Select", "Select and move instances", SelectTool,
+            _i("select-transparent_42px.png")),
+        ("Jitter", "Jitter instances", JitterTool, _i("jitter.svg")),
+        ("Magnet", "Attract multiple instances", MagnetTool, _i("magnet.svg")),
+        ("Zoom", "Zoom", ZoomTool, _i("Dlg_zoom2.png"))
+    ]
+
     _name = "Paint Data"
     _description = """
     Creates the data by painting on the graph."""
@@ -548,10 +539,12 @@ class OWPaintData(widget.OWWidget):
         smallButtons = gui.widgetBox(buttonBox)
 
 #        undoRedoBox = gui.widgetBox(smallButtons, "", addSpace=True)
+        icon_undo = _i("Dlg_undo.png", "../icons")
         undo = QtGui.QAction(QtGui.QIcon(icon_undo), "", self)
         undo.pyqtConfigure(toolTip="Undo Action (Ctrl+Z)")
         undo.setShortcut("Ctrl+Z")
         undo.triggered.connect(self.undoStack.undo)
+        icon_redo = _i("Dlg_redo.png", "../icons")
         redo = QtGui.QAction(QtGui.QIcon(icon_redo), "", self)
         redo.pyqtConfigure(toolTip="Redo Action (Ctrl+Shift+Z)")
         redo.setShortcut("Ctrl+Shift+Z")
