@@ -2,6 +2,7 @@ import copy
 import math
 import os
 import random
+from functools import partial
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -66,6 +67,8 @@ class DataTool(QtCore.QObject):
 
     """
     cursor = QtCore.Qt.ArrowCursor
+    editingFinished = QtCore.pyqtSignal()
+
     class optionsWidget(QtGui.QFrame):
         """
         An options (parameters) widget for the tool (this will
@@ -95,7 +98,8 @@ class DataTool(QtCore.QObject):
 
     def toDataPoint(self, point):
         """
-        Converts mouse position point to data point as its represented on the graph.
+        Converts mouse position point to data point as its represented on the
+        graph.
         """
         # first we convert it from widget point to scene point
         scenePoint = self.widget.plot.mapToScene(point)
@@ -114,7 +118,7 @@ class PutInstanceTool(DataTool):
         dataPoint = self.toDataPoint(event.pos())
         if event.buttons() & QtCore.Qt.LeftButton:
             self.widget.addDataPoints([dataPoint])
-            self.emit(QtCore.SIGNAL("editingFinished()"))
+            self.editingFinished.emit()
         return True
 
 
@@ -139,11 +143,10 @@ class BrushTool(DataTool):
             layout.addRow("Density", self.densitySlider)
             self.setLayout(layout)
 
-            self.connect(self.radiusSlider, QtCore.SIGNAL("valueChanged(int)"),
-                         lambda value: setattr(self.tool, "brushRadius", value))
-
-            self.connect(self.densitySlider, QtCore.SIGNAL("valueChanged(int)"),
-                         lambda value: setattr(self.tool, "density", value))
+            self.radiusSlider.valueChanged.connect(
+                partial(setattr, self.tool, "brushRadius"))
+            self.densitySlider.valueChanged.connect(
+                partial(setattr, self.tool, "density"))
 
     def mousePressEvent(self, event):
         if event.buttons() & QtCore.Qt.LeftButton:
@@ -165,7 +168,7 @@ class BrushTool(DataTool):
 
     def mouseReleaseEvent(self, event):
         if event.button() & QtCore.Qt.LeftButton:
-            self.emit(QtCore.SIGNAL("editingFinished()"))
+            self.editingFinished.emit()
         return True
 
     def createPoints(self, point):
@@ -220,8 +223,7 @@ class SelectTool(DataTool):
             delete.pyqtConfigure(text="Delete",
                                  toolTip="Delete selected instances")
             delete.setShortcut("Delete")
-            self.connect(delete, QtCore.SIGNAL("clicked()"),
-                         self.tool.deleteSelected)
+            delete.clicked.connect(self.tool.deleteSelected)
             layout.addWidget(label)
             layout.addWidget(label2)
             layout.addWidget(delete)
@@ -237,7 +239,7 @@ class SelectTool(DataTool):
                   for point in self.widget.plot.selected_points()]
         self.widget.delDataPoints(points)
         self.widget.plot.unselect_all_points()
-        self.emit(QtCore.SIGNAL("editingFinished()"))
+        self.editingFinished.emit()
 
     def onToolSelection(self):
         self.widget.plot.activate_selection()
@@ -503,10 +505,7 @@ class OWPaintData(widget.OWWidget):
         self.classValuesModel = itemmodels.PyListModel(
             ["Class-1", "Class-2"], self, flags=QtCore.Qt.ItemIsSelectable |
             QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsEditable)
-        self.connect(
-            self.classValuesModel,
-            QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-            self.classNameChange)
+        self.classValuesModel.dataChanged.connect(self.classNameChange)
         self.attr1 = "x"
         self.attr2 = "y"
         self.data = Table(
@@ -534,11 +533,12 @@ class OWPaintData(widget.OWWidget):
 
         addClassLabel = QtGui.QAction("+", self)
         addClassLabel.pyqtConfigure(toolTip="Add class label")
-        self.connect(addClassLabel, QtCore.SIGNAL("triggered()"), self.addNewClassLabel)
+        addClassLabel.triggered.connect(self.addNewClassLabel)
         self.removeClassLabel = QtGui.QAction("-", self)
         self.removeClassLabel.pyqtConfigure(toolTip="Remove class label")
-        self.connect(self.removeClassLabel, QtCore.SIGNAL("triggered()"), self.removeSelectedClassLabel)
-        actionsWidget = itemmodels.ModelActionsWidget([addClassLabel, self.removeClassLabel], self)
+        self.removeClassLabel.triggered.connect(self.removeSelectedClassLabel)
+        actionsWidget = itemmodels.ModelActionsWidget(
+            [addClassLabel, self.removeClassLabel], self)
         actionsWidget.layout().addStretch(10)
         actionsWidget.layout().setSpacing(1)
         classesBox.layout().addWidget(actionsWidget)
@@ -554,7 +554,9 @@ class OWPaintData(widget.OWWidget):
             action.setToolTip(tooltip)
             action.setCheckable(True)
             action.setIcon(QtGui.QIcon(icon))
-            self.connect(action, QtCore.SIGNAL("triggered()"), lambda tool=tool: self.setCurrentTool(tool))
+            # using the old connect here due to problems with overloading
+            self.connect(action, QtCore.SIGNAL("triggered()"),
+                         lambda tool=tool: self.setCurrentTool(tool))
             button = QtGui.QToolButton()
             button.setDefaultAction(action)
             button.setIconSize(QtCore.QSize(24, 24))
@@ -576,13 +578,13 @@ class OWPaintData(widget.OWWidget):
         undo = QtGui.QAction("Undo", self)
         undo.pyqtConfigure(toolTip="Undo Action (Ctrl+Z)")
         undo.setShortcut("Ctrl+Z")
-        self.connect(undo, QtCore.SIGNAL("triggered()"), self.undoStack.undo)
+        undo.triggered.connect(self.undoStack.undo)
         redo = QtGui.QAction("Redo", self)
         redo.pyqtConfigure(toolTip="Redo Action (Ctrl+Shift+Z)")
         redo.setShortcut("Ctrl+Shift+Z")
-        self.connect(redo, QtCore.SIGNAL("triggered()"), self.undoStack.redo)
-        undoRedoActionsWidget = itemmodels.ModelActionsWidget([undo, redo],
-                                                              self)
+        redo.triggered.connect(self.undoStack.redo)
+        undoRedoActionsWidget = itemmodels.ModelActionsWidget(
+            [undo, redo], self)
         undoRedoActionsWidget.layout().addStretch(10)
         undoRedoActionsWidget.layout().setSpacing(1)
         undoRedoBox.layout().addWidget(undoRedoActionsWidget)
@@ -621,6 +623,7 @@ class OWPaintData(widget.OWWidget):
 
     def addNewClassLabel(self):
         i = 1
+        newlabel = ""  # For PyCharm
         while True:
             newlabel = "Class-%i" % i
             if newlabel not in self.classValuesModel:
@@ -666,8 +669,7 @@ class OWPaintData(widget.OWWidget):
             newtool = tool(self)
             option = newtool.optionsWidget(newtool, self)
             self.optionsLayout.addWidget(option)
-            self.connect(newtool, QtCore.SIGNAL("editingFinished()"),
-                         self.commitIf)
+            newtool.editingFinished.connect(self.commitIf)
             self.toolsStackCache[tool] = (newtool, option)
 
         self.currentTool, self.currentOptionsWidget = tool, option = \
