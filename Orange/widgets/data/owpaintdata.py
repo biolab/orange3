@@ -28,6 +28,9 @@ icon_select = os.path.join(dir_path,
 #                          "icons/paintdata/lasso-transparent_42px.png")
 icon_zoom = os.path.join(dir_path, "icons/paintdata/Dlg_zoom2.png")
 
+icon_undo = os.path.join(dir_path, "../icons/Dlg_undo.png")
+icon_redo = os.path.join(dir_path, "../icons/Dlg_redo.png")
+icon_clear = os.path.join(dir_path, "../icons/Dlg_clear.png")
 
 class PaintDataPlot(owplot.OWPlot):
     def __init__(self, parent=None, name="None", show_legend=1, axes=None,
@@ -69,18 +72,7 @@ class DataTool(QtCore.QObject):
     """
     cursor = QtCore.Qt.ArrowCursor
     editingFinished = QtCore.pyqtSignal()
-
-    class optionsWidget(QtGui.QFrame):
-        """
-        An options (parameters) widget for the tool (this will
-        be put in the "Options" box in the main OWPaintData widget
-        when this tool is selected.
-
-        """
-        def __init__(self, tool, parent=None):
-            QtGui.QFrame.__init__(self, parent)
-            self.tool = tool
-
+    radiusDensity = False
 
     def __init__(self, parent):
         QtCore.QObject.__init__(self, parent)
@@ -110,6 +102,9 @@ class DataTool(QtCore.QObject):
     def onToolSelection(self):
         self.widget.plot.state = self.state
         self.widget.plot.setCursor(self.cursor)
+        self.widget.radiusSlider.box.setVisible(self.radiusDensity)
+        self.widget.densitySlider.box.setVisible(self.radiusDensity)
+
 
 
 class PutInstanceTool(DataTool):
@@ -124,30 +119,8 @@ class PutInstanceTool(DataTool):
 
 
 class BrushTool(DataTool):
-    brushRadius = 70
-    density = 5
     cursor = QtCore.Qt.CrossCursor
-
-    class optionsWidget(QtGui.QFrame):
-        def __init__(self, tool, parent=None):
-            QtGui.QFrame.__init__(self, parent)
-            self.tool = tool
-            layout = QtGui.QFormLayout()
-            self.radiusSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
-            self.radiusSlider.pyqtConfigure(minimum=50, maximum=100,
-                                            value=self.tool.brushRadius)
-            self.densitySlider = QtGui.QSlider(QtCore.Qt.Horizontal)
-            self.densitySlider.pyqtConfigure(minimum=3, maximum=10,
-                                             value=self.tool.density)
-
-            layout.addRow("Radius", self.radiusSlider)
-            layout.addRow("Density", self.densitySlider)
-            self.setLayout(layout)
-
-            self.radiusSlider.valueChanged.connect(
-                partial(setattr, self.tool, "brushRadius"))
-            self.densitySlider.valueChanged.connect(
-                partial(setattr, self.tool, "density"))
+    radiusDensity = True
 
     def mousePressEvent(self, event):
         if event.buttons() & QtCore.Qt.LeftButton:
@@ -159,10 +132,9 @@ class BrushTool(DataTool):
     def mouseMoveEvent(self, event):
         if event.buttons() & QtCore.Qt.LeftButton:
             dataPoint = self.toDataPoint(event.pos())
-            if (abs(dataPoint[0] - self.previousDataPoint[0]) >
-                    self.brushRadius / 2000 or
-                    abs(dataPoint[1] - self.previousDataPoint[1]) >
-                    self.brushRadius / 2000):
+            r2000 = self.widget.brushRadius / 2000
+            if (abs(dataPoint[0] - self.previousDataPoint[0]) > r2000 or
+                    abs(dataPoint[1] - self.previousDataPoint[1]) > r2000):
                 self.widget.addDataPoints(self.createPoints(dataPoint))
                 self.previousDataPoint = dataPoint
         return True
@@ -178,8 +150,8 @@ class BrushTool(DataTool):
         """
         points = []
         x, y = point
-        radius = self.brushRadius / 1000
-        for i in range(self.density):
+        radius = self.widget.brushRadius / 1000
+        for i in range(self.widget.density):
             rndX = random.random() * radius
             rndY = random.random() * radius
             points.append((x + (radius / 2) - rndX, y + (radius / 2) - rndY))
@@ -187,11 +159,13 @@ class BrushTool(DataTool):
 
 
 class MagnetTool(BrushTool):
+    radiusDensity = True
+
     def mousePressEvent(self, event):
-        radius = self.brushRadius
+        radius = self.widget.brushRadius
         if event.buttons() & QtCore.Qt.LeftButton:
             dataPoint = self.toDataPoint(event.pos())
-            self.widget.magnet(dataPoint, self.density, radius)
+            self.widget.magnet(dataPoint, self.widget.density, radius)
         return True
 
     def mouseMoveEvent(self, event):
@@ -199,11 +173,13 @@ class MagnetTool(BrushTool):
 
 
 class JitterTool(BrushTool):
+    radiusDensity = True
+
     def mousePressEvent(self, event):
-        radius = self.brushRadius
+        radius = self.widget.brushRadius
         if event.buttons() & QtCore.Qt.LeftButton:
             dataPoint = self.toDataPoint(event.pos())
-            self.widget.jitter(dataPoint, self.density, radius)
+            self.widget.jitter(dataPoint, self.widget.density, radius)
         return True
 
     def mouseMoveEvent(self, event):
@@ -213,34 +189,9 @@ class JitterTool(BrushTool):
 class SelectTool(DataTool):
     cursor = QtCore.Qt.ArrowCursor
 
-    class optionsWidget(QtGui.QFrame):
-        def __init__(self, tool, parent=None):
-            QtGui.QFrame.__init__(self, parent)
-            self.tool = tool
-            layout = QtGui.QVBoxLayout()
-            label = QtGui.QLabel('Select multiple times.')
-            label2 = QtGui.QLabel('Right click deselect')
-            delete = QtGui.QToolButton(self)
-            delete.pyqtConfigure(text="Delete",
-                                 toolTip="Delete selected instances")
-            delete.setShortcut("Delete")
-            delete.clicked.connect(self.tool.deleteSelected)
-            layout.addWidget(label)
-            layout.addWidget(label2)
-            layout.addWidget(delete)
-            layout.addStretch(10)
-            self.setLayout(layout)
-
     def __init__(self, parent):
         super(SelectTool, self).__init__(parent)
         self.widget.plot.activate_selection()
-
-    def deleteSelected(self):
-        points = [point.coordinates()
-                  for point in self.widget.plot.selected_points()]
-        self.widget.delDataPoints(points)
-        self.widget.plot.unselect_all_points()
-        self.editingFinished.emit()
 
     def onToolSelection(self):
         self.widget.plot.activate_selection()
@@ -248,18 +199,6 @@ class SelectTool(DataTool):
 
 
 class ZoomTool(DataTool):
-    class optionsWidget(QtGui.QFrame):
-        def __init__(self, tool, parent=None):
-            QtGui.QFrame.__init__(self, parent)
-            self.tool = tool
-            layout = QtGui.QVBoxLayout()
-            label = QtGui.QLabel('Left click zoom in.')
-            label2 = QtGui.QLabel('Right click zoom out.')
-            layout.addWidget(label)
-            layout.addWidget(label2)
-            layout.addStretch(10)
-            self.setLayout(layout)
-
     def __init__(self, parent):
         super(ZoomTool, self).__init__(parent)
         self.state = owconstants.ZOOMING
@@ -319,7 +258,7 @@ class CommandMagnet(QtGui.QUndoCommand):
 
     def redo(self):
         x, y = self.point
-        rx, ry = self.radius / 1000, self.radius / 1000
+        rx = ry = self.radius / 1000
         for ex in self.widget.data:
             x1, y1 = float(ex[self.widget.attr1]), float(ex[self.widget.attr2])
             distsq = (x1 - x) ** 2 + (y1 - y) ** 2
@@ -349,7 +288,7 @@ class CommandJitter(QtGui.QUndoCommand):
 
     def redo(self):
         x, y = self.point
-        rx, ry = self.radius / 1000, self.radius / 1000
+        rx = ry = self.radius / 1000
         for ex in self.widget.data:
             x1, y1 = float(ex[self.widget.attr1]), float(ex[self.widget.attr2])
             distsq = (x1 - x) ** 2 + (y1 - y) ** 2
@@ -516,6 +455,8 @@ class OWPaintData(widget.OWWidget):
     commit_on_change = Setting(False)
     attr1 = Setting("x")
     attr2 = Setting("y")
+    brushRadius = Setting(75)
+    density = Setting(7)
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
@@ -576,9 +517,10 @@ class OWPaintData(widget.OWWidget):
         actionsWidget.layout().setSpacing(1)
         namesBox.layout().addWidget(actionsWidget)
 
-        toolsBox = gui.widgetBox(self.controlArea, "Tools",
-                                 orientation=QtGui.QGridLayout(),
-                                 addSpace=True)
+        tBox = gui.widgetBox(self.controlArea, "Tools", addSpace=True)
+        buttonBox = gui.widgetBox(tBox, orientation="horizontal")
+        toolsBox = gui.widgetBox(buttonBox, orientation=QtGui.QGridLayout())
+
         self.toolActions = QtGui.QActionGroup(self)
         self.toolActions.setExclusive(True)
 
@@ -603,30 +545,39 @@ class OWPaintData(widget.OWWidget):
             toolsBox.layout().setColumnMinimumWidth(column, 10)
             toolsBox.layout().setColumnStretch(column, 1)
 
-        self.optionsLayout = QtGui.QStackedLayout()
-        optionsBox = gui.widgetBox(self.controlArea, "Options", addSpace=True,
-                                   orientation=self.optionsLayout)
+        smallButtons = gui.widgetBox(buttonBox)
 
-        undoRedoBox = gui.widgetBox(self.controlArea, "", addSpace=True)
-        undo = QtGui.QAction("Undo", self)
+#        undoRedoBox = gui.widgetBox(smallButtons, "", addSpace=True)
+        undo = QtGui.QAction(QtGui.QIcon(icon_undo), "", self)
         undo.pyqtConfigure(toolTip="Undo Action (Ctrl+Z)")
         undo.setShortcut("Ctrl+Z")
         undo.triggered.connect(self.undoStack.undo)
-        redo = QtGui.QAction("Redo", self)
+        redo = QtGui.QAction(QtGui.QIcon(icon_redo), "", self)
         redo.pyqtConfigure(toolTip="Redo Action (Ctrl+Shift+Z)")
         redo.setShortcut("Ctrl+Shift+Z")
         redo.triggered.connect(self.undoStack.redo)
         undoRedoActionsWidget = itemmodels.ModelActionsWidget(
-            [undo, redo], self)
+            [undo, redo], self, direction=QtGui.QBoxLayout.TopToBottom)
         undoRedoActionsWidget.layout().addStretch(10)
         undoRedoActionsWidget.layout().setSpacing(1)
-        undoRedoBox.layout().addWidget(undoRedoActionsWidget)
+        smallButtons.layout().addWidget(undoRedoActionsWidget)
 
+        gui.separator(tBox)
+        indBox = gui.indentedBox(tBox, sep=8)
+        self.radiusSlider = gui.hSlider(
+            indBox, self, "brushRadius", None, 50, 100,
+            label="Radius", createLabel=None)
+        self.densitySlider = gui.hSlider(
+            indBox, self, "density", None, 3, 10,
+            label="Density", createLabel=None)
+
+        gui.rubber(self.controlArea)
         commitBox = gui.widgetBox(self.controlArea, "Commit")
         gui.checkBox(commitBox, self, "commit_on_change", "Commit on change",
                      tooltip="Send the data on any change.")
         gui.button(commitBox, self, "Commit", callback=self.sendData)
 
+        QtGui.QShortcut("Delete", self).activated.connect(self.deleteSelected)
         # main area GUI
         self.mainArea.layout().addWidget(self.plot)
 
@@ -695,16 +646,12 @@ class OWPaintData(widget.OWWidget):
     def setCurrentTool(self, tool):
         if tool not in self.toolsStackCache:
             newtool = tool(self)
-            option = newtool.optionsWidget(newtool, self)
-            self.optionsLayout.addWidget(option)
             newtool.editingFinished.connect(self.commitIf)
-            self.toolsStackCache[tool] = (newtool, option)
+            self.toolsStackCache[tool] = newtool
 
-        self.currentTool, self.currentOptionsWidget = tool, option = \
-            self.toolsStackCache[tool]
+        self.currentTool = tool = self.toolsStackCache[tool]
         self.plot.tool = tool
         tool.onToolSelection()
-        self.optionsLayout.setCurrentWidget(option)
 
     def addDataPoints(self, points):
         command = CommandAddData(
@@ -717,6 +664,12 @@ class OWPaintData(widget.OWWidget):
         if points:
             command = CommandDelData(self.data, points, self, "Delete Data")
             self.undoStack.push(command)
+
+    def deleteSelected(self):
+        points = [point.coordinates() for point in self.plot.selected_points()]
+        self.delDataPoints(points)
+        self.plot.unselect_all_points()
+        self.commitIf()
 
     def magnet(self, point, density, radius):
         command = CommandMagnet(self.data, point, density, radius, self,
