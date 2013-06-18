@@ -493,6 +493,8 @@ class OWPaintData(widget.OWWidget):
     outputs = [("Data", Table)]
 
     commit_on_change = Setting(False)
+    attr1 = Setting("x")
+    attr2 = Setting("y")
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
@@ -506,8 +508,6 @@ class OWPaintData(widget.OWWidget):
             ["Class-1", "Class-2"], self, flags=QtCore.Qt.ItemIsSelectable |
             QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsEditable)
         self.classValuesModel.dataChanged.connect(self.classNameChange)
-        self.attr1 = "x"
-        self.attr2 = "y"
         self.data = Table(
             Domain([ContinuousVariable(self.attr1),
                     ContinuousVariable(self.attr2)],
@@ -520,7 +520,17 @@ class OWPaintData(widget.OWWidget):
         self.updatePlot()
 
     def initUI(self):
-        classesBox = gui.widgetBox(self.controlArea, "Class Labels")
+        namesBox = gui.widgetBox(self.controlArea, "Names")
+
+        gui.lineEdit(namesBox, self, "attr1", "Variable X ",
+                     controlWidth=80, orientation="horizontal",
+                     enterPlaceholder=True, callback=self.commitIf)
+        gui.lineEdit(namesBox, self, "attr2", "Variable Y ",
+                     controlWidth=80, orientation="horizontal",
+                     enterPlaceholder=True, callback=self.commitIf)
+        gui.separator(namesBox)
+
+        gui.widgetLabel(namesBox, "Class labels")
         self.classValuesView = listView = QtGui.QListView()
         listView.setSelectionMode(QtGui.QListView.SingleSelection)
         listView.setSizePolicy(QtGui.QSizePolicy.Ignored,
@@ -529,7 +539,8 @@ class OWPaintData(widget.OWWidget):
         listView.selectionModel().select(
             self.classValuesModel.index(0),
             QtGui.QItemSelectionModel.ClearAndSelect)
-        classesBox.layout().addWidget(listView)
+        listView.setFixedHeight(80)
+        namesBox.layout().addWidget(listView)
 
         addClassLabel = QtGui.QAction("+", self)
         addClassLabel.pyqtConfigure(toolTip="Add class label")
@@ -541,7 +552,7 @@ class OWPaintData(widget.OWWidget):
             [addClassLabel, self.removeClassLabel], self)
         actionsWidget.layout().addStretch(10)
         actionsWidget.layout().setSpacing(1)
-        classesBox.layout().addWidget(actionsWidget)
+        namesBox.layout().addWidget(actionsWidget)
 
         toolsBox = gui.widgetBox(self.controlArea, "Tools",
                                  orientation=QtGui.QGridLayout(),
