@@ -651,7 +651,7 @@ class OWDataTable(widget.OWWidget):
             self.info_meta.setText("%s meta attribute%s" %
                                    sp(data.domain.metas) + descriptions[2])
 
-            if data.domain.class_vars is None:
+            if not data.domain.class_vars:
                 out_c = 'No target variable.'
             else:
                 if len(data.domain.class_vars) > 1:

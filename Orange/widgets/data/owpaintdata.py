@@ -736,6 +736,10 @@ class OWPaintData(widget.OWWidget):
     def sendData(self):
         data = self.data
         values = set([str(ex.get_class()) for ex in data])
+        if len(values) == 1:
+            # Remove the useless class variable.
+            domain = Domain(data.domain.attributes)
+            data = Table(domain, data)
         self.send("Data", data)
 
     def sizeHint(self):
