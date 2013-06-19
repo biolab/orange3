@@ -95,7 +95,7 @@ class DataTool(QtCore.QObject):
 
 
 class ColorTool(DataTool):
-    def setCursor(self, circle):
+    def setCursor2(self, circle):
         pixmap = QtGui.QPixmap(24, 24)
         pixmap.fill(QtCore.Qt.transparent)
         painter = QtGui.QPainter()
@@ -115,7 +115,7 @@ class ColorTool(DataTool):
 
 class PutInstanceTool(ColorTool):
     def setCursor(self):
-        super().setCursor(False)
+        super().setCursor2(False)
 
     def mousePressEvent(self, event):
         dataPoint = self.toDataPoint(event.pos())
@@ -129,7 +129,7 @@ class BrushTool(ColorTool):
     radiusDensity = True
 
     def setCursor(self):
-        super().setCursor(True)
+        super().setCursor2(True)
 
     def mousePressEvent(self, event):
         if event.buttons() & QtCore.Qt.LeftButton:
@@ -457,6 +457,7 @@ class ColoredListModel(itemmodels.PyListModel):
 def _i(name, icon_path="icons/paintdata",
        widg_path=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(widg_path, icon_path, name)
+
 
 class OWPaintData(widget.OWWidget):
     TOOLS = [
