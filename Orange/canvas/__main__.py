@@ -43,6 +43,10 @@ def running_in_ipython():
         return False
 
 
+if "PYCHARM_HOSTED" in os.environ:
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
 def fix_win_pythonw_std_stream():
     """
     On windows when running without a console (using pythonw.exe) the
