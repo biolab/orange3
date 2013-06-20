@@ -45,6 +45,10 @@ class Storage:
         raise NotImplementedError
 
     def _compute_basic_stats(self, columns=None):
+        """
+        :param columns: columns to calculate stats for. None = all of them
+        :return: tuple(min, max, mean, 0, #nans, #non-nans)
+        """
         raise NotImplementedError
 
     def _compute_distributions(self, columns=None):

@@ -223,7 +223,6 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
 #noinspection PyArgumentList
 class TableViewWithCopy(QtGui.QTableView):
     def dataChanged(self, a, b):
-        self.resizeColumnsToContents()
         super().dataChanged(a, b)
 
     def keyPressEvent(self, event):
