@@ -370,3 +370,46 @@ class Domain:
                      for var in self._metas]
             # Let np.array decide dtype for values
         return np.array(values), np.array(metas, dtype=object)
+
+    def select_columns(self, col_idx):
+        attributes, col_indices = self._compute_col_indices(col_idx)
+        if attributes is not None:
+            n_attrs = len(self.attributes)
+            r_attrs = [attributes[i]
+                       for i, col in enumerate(col_indices)
+                       if 0 <= col < n_attrs]
+            r_classes = [attributes[i]
+                         for i, col in enumerate(col_indices)
+                         if col >= n_attrs]
+            r_metas = [attributes[i]
+                       for i, col in enumerate(col_indices) if col < 0]
+            return Domain(r_attrs, r_classes, r_metas)
+        else:
+            return self
+
+    def _compute_col_indices(self, col_idx):
+        if col_idx is Ellipsis:
+            return None, None
+        if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
+            return ([attr for attr, c in zip(self, col_idx) if c],
+                    np.nonzero(col_idx))
+        elif isinstance(col_idx, slice):
+            s = len(self.variables)
+            start, end, stride = col_idx.indices(s)
+            if col_idx.indices(s) == (0, s, 1):
+                return None, None
+            else:
+                return (self.variables[col_idx],
+                        np.arange(start, end, stride))
+        elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
+            attributes = [self[col] for col in col_idx]
+            if attributes == self.attributes:
+                return None, None
+            return attributes, np.fromiter(
+                (self.index(attr) for attr in attributes), int)
+        elif isinstance(col_idx, int):
+            attr = self[col_idx]
+        else:
+            attr = self[col_idx]
+            col_idx = self.index(attr)
+        return [attr], np.array([col_idx])
