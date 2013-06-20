@@ -207,8 +207,7 @@ class Continuous(np.ndarray):
     def from_data(cls, variable, data):
         variable = _get_variable(data, variable)
         try:
-            tmp = data._compute_distributions([variable])[0]
-            dist, unknowns = tmp
+            dist, unknowns = data._compute_distributions([variable])[0]
         except NotImplementedError:
             col = data[:, variable]
             dtype = col.dtype
