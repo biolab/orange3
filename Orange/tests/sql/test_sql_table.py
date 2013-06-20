@@ -1,5 +1,6 @@
 import unittest
 from mock import MagicMock
+from psycopg2._psycopg import OperationalError
 from Orange.data.sql import table as sql_table
 from Orange import data
 
@@ -25,7 +26,7 @@ class SqlTableMockedTests(unittest.TestCase):
         self.assertEqual(table.table_name, 'table')
 
     def test_raises_value_error_on_invalid_scheme(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(OperationalError):
             sql_table.SqlTable("http://server/database/table")
 
     def test_can_construct_attributes(self):
