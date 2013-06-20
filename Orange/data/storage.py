@@ -1,32 +1,16 @@
 class Storage:
+
     domain = None
 
     MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
 
     def X_density(self):
-        """
-        Indicates whether the attributes are dense (DENSE) or sparse (SPARSE).
-        If they are sparse and all values are 0 or 1, it is marked as
-        SPARSE_BOOL. The Storage class provides a default DENSE.
-        """
         return Storage.DENSE
-
 
     def Y_density(self):
-        """
-        Indicates whether the class attribute(s) are dense (DENSE) or sparse
-        (SPARSE). If they are sparse and all values are 0 or 1, it is marked as
-        SPARSE_BOOL. The Storage class provides a default DENSE.
-        """
         return Storage.DENSE
 
-
     def metas_density(self):
-        """
-        Indicates whether the meta attributes are dense (DENSE) or sparse
-        (SPARSE). If they are sparse and all values are 0 or 1, it is marked as
-        SPARSE_BOOL. The Storage class provides a default DENSE.
-        """
         return Storage.DENSE
 
     def _filter_is_defined(self, columns=None, negate=False):

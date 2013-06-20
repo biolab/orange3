@@ -922,16 +922,6 @@ class Table(MutableSequence, Storage):
 
 
     def _filter_is_defined(self, columns=None, negate=False):
-        """
-            Extract rows without undefined values.
-
-        :param columns: optional list of columns that are checked for unknowns
-        :type columns: sequence of ints, variable names or descriptors
-        :param negate: invert the selection
-        :type negate: bool
-        :return: a new Table
-        :rtype: Orange.data.Table
-        """
         if columns is None:
             if sp.issparse(self.X):
                 remove = (self.X.indptr[1:] !=
@@ -956,15 +946,6 @@ class Table(MutableSequence, Storage):
 
 
     def _filter_has_class(self, negate=False):
-        """
-        Return rows with known class attribute. If there are multiple classes,
-        all must be defined.
-
-        :param negate: invert the selection
-        :type negate: bool
-        :return: new table
-        :rtype: Orange.data.Table
-        """
         if sp.issparse(self.Y):
             if negate:
                 retain = (self.Y.indptr[1:] !=
@@ -984,18 +965,6 @@ class Table(MutableSequence, Storage):
 
 
     def _filter_same_value(self, column, value, negate=False):
-        """
-        Select rows based on a value of the given variable.
-
-        :param column: the column that is checked
-        :type column: int, str or Orange.data.Variable
-        :param value: the value of the variable
-        :type value: int, float or str
-        :param negate: invert the selection
-        :type negate: bool
-        :return: new table
-        :rtype: Orange.data.Table
-        """
         if not isinstance(value, Real):
             value = self.domain[column].to_val(value)
         sel = self.get_column_view(column)[0] == value
@@ -1005,14 +974,6 @@ class Table(MutableSequence, Storage):
 
 
     def _filter_values(self, filter):
-        """
-        Apply a filter to the data.
-
-        :param filter: A filter for selecting the rows
-        :type filter: Orange.data.Filter
-        :return: new table
-        :rtype: Orange.data.Table
-        """
         from Orange.data import filter as data_filter
 
         if isinstance(filter, data_filter.Values):

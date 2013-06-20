@@ -4,9 +4,9 @@
 Data model (``data``)
 #####################
 
-Orange stores data in :obj:`Orange.data.Storage` classes. (Currently the only
-available storage class is :obj:`Orange.data.Table`, which stores all data in
-two-dimensional numpy arrays.) Each row of the data represents a data instance.
+Orange stores data in :obj:`Orange.data.Storage` classes. The most commonly used
+storage is :obj:`Orange.data.Table`, which stores all data in two-dimensional
+numpy arrays. Each row of the data represents a data instance.
 
 Individual data instances are represented as instances of
 :obj:`Orange.data.Instance`. Different storage classes may derive subclasses
@@ -50,6 +50,7 @@ represented by whole numbers.
 .. toctree::
     :maxdepth: 2
 
+    data.storage
     data.table
     data.domain
     data.variable

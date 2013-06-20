@@ -34,7 +34,7 @@ Data Table (``table``)
       selected rows.
 
     - If there are two indices, where the first is an int (a row number) and
-      the second can be interpreted as a columns, e.g. `table[3, 5]` or
+      the second can be interpreted as columns, e.g. `table[3, 5]` or
       `table[3, 'gender']` or `table[3, y]` (where `y` is an instance of
       :obj:`~Orange.data.Variable`), a single value is returned as an instance
       of :obj:`~Orange.data.Value`.
