@@ -1078,8 +1078,8 @@ class Table(MutableSequence, Storage):
 
 
     def _compute_basic_stats(self, columns=None,
-                             include_metas=False, compute_var=False):
-        if compute_var:
+                             include_metas=False, compute_variance=False):
+        if compute_variance:
             raise NotImplementedError("computation of variance is "
                                       "not implemented yet")
         W = self.W if self.has_weights() else None
