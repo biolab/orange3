@@ -226,9 +226,9 @@ class ZoomTool(DataTool):
 
 
 class CommandAddData(QtGui.QUndoCommand):
-    def __init__(self, data, points, classLabel, widget, description):
+    def __init__(self, points, classLabel, widget, description):
         super(CommandAddData, self).__init__(description)
-        self.data = data
+        self.data = widget.data
         self.points = points
         self.row = len(self.data)
         self.classLabel = classLabel
@@ -247,9 +247,9 @@ class CommandAddData(QtGui.QUndoCommand):
 
 
 class CommandDelData(QtGui.QUndoCommand):
-    def __init__(self, data, selectedPoints, widget, description):
+    def __init__(self, selectedPoints, widget, description):
         super(CommandDelData, self).__init__(description)
-        self.data = data
+        self.data = widget.data
         self.points = selectedPoints
         self.widget = widget
         self.oldData = copy.deepcopy(self.data)
@@ -268,14 +268,14 @@ class CommandDelData(QtGui.QUndoCommand):
 
 
 class CommandMagnet(QtGui.QUndoCommand):
-    def __init__(self, data, point, density, radius, widget, description):
+    def __init__(self, point, density, radius, widget, description):
         super(CommandMagnet, self).__init__(description)
-        self.data = data
+        self.data = widget.data
         self.widget = widget
         self.density = density
         self.radius = radius
         self.point = point
-        self.oldData = copy.deepcopy(self.data)
+        self.oldData = copy.deepcopy(self.widget.data)
 
     def redo(self):
         x, y = self.point
@@ -298,9 +298,9 @@ class CommandMagnet(QtGui.QUndoCommand):
 
 
 class CommandJitter(QtGui.QUndoCommand):
-    def __init__(self, data, point, density, radius, widget, description):
+    def __init__(self, point, density, radius, widget, description):
         super(CommandJitter, self).__init__(description)
-        self.data = data
+        self.data = widget.data
         self.widget = widget
         self.density = density
         self.point = point
@@ -328,15 +328,17 @@ class CommandJitter(QtGui.QUndoCommand):
 
 
 class CommandAddClassLabel(QtGui.QUndoCommand):
-    def __init__(self, data, newClassLabel, classValuesModel, widget,
+    def __init__(self, newClassLabel, classValuesModel, widget,
                  description):
         super(CommandAddClassLabel, self).__init__(description)
-        self.data = data
+        self.data = widget.data
         self.newClassLabel = newClassLabel
-        self.oldDomain = data.domain
+        self.oldDomain = widget.data.domain
         self.classValuesModel = classValuesModel
         self.widget = widget
         self.newClassLabel = newClassLabel
+        self.oldData = copy.deepcopy(self.data)
+        #self.oldClassValuesModel = copy.deepcopy(self.classValuesModel)
 
     def redo(self):
         self.classValuesModel.append(self.newClassLabel)
@@ -355,19 +357,22 @@ class CommandAddClassLabel(QtGui.QUndoCommand):
         self.widget.updatePlot()
 
     def undo(self):
-        self.widget.data = self.data
+        self.widget.data = self.oldData
+        #self.widget.classValuesModel = self.oldClassValuesModel
         del self.classValuesModel[-1]
         self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
         self.widget.updatePlot()
 
 
 class CommandRemoveClassLabel(QtGui.QUndoCommand):
-    def __init__(self, data, classValuesModel, index, widget, description):
+    def __init__(self, classValuesModel, index, widget, description):
         super(CommandRemoveClassLabel, self).__init__(description)
-        self.data = data
+        self.data = widget.data
         self.classValuesModel = classValuesModel
         self.index = index
         self.widget = widget
+        self.oldData = copy.deepcopy(self.data)
+        #self.oldClassValuesModel = copy.deepcopy(self.classValuesModel)
 
     def redo(self):
         self.label = self.classValuesModel.pop(self.index)
@@ -391,7 +396,8 @@ class CommandRemoveClassLabel(QtGui.QUndoCommand):
 
     def undo(self):
         self.classValuesModel.insert(self.index, self.label)
-        self.widget.data = self.data
+        self.widget.data = self.oldData
+        #self.widget.classValuesModel = self.oldClassValuesModel
         self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
         self.widget.updatePlot()
 
@@ -657,7 +663,7 @@ class OWPaintData(widget.OWWidget):
             if newlabel not in self.classValuesModel:
                 break
             i += 1
-        command = CommandAddClassLabel(self.data, newlabel,
+        command = CommandAddClassLabel(newlabel,
                                        self.classValuesModel, self,
                                        "Add Label")
         self.undoStack.push(command)
@@ -670,7 +676,7 @@ class OWPaintData(widget.OWWidget):
     def removeSelectedClassLabel(self):
         index = self.selectedClassLabelIndex()
         if index is not None:
-            command = CommandRemoveClassLabel(self.data, self.classValuesModel,
+            command = CommandRemoveClassLabel(self.classValuesModel,
                                               index, self, "Remove Label")
             self.undoStack.push(command)
 
@@ -680,7 +686,7 @@ class OWPaintData(widget.OWWidget):
         self.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
 
     def classNameChange(self, index, _):
-        command = CommandChangeLabelName(self.data, self.classValuesModel,
+        command = CommandChangeLabelName(self.classValuesModel,
                                          index.row(), self, "Label Change")
         self.undoStack.push(command)
 
@@ -704,14 +710,12 @@ class OWPaintData(widget.OWWidget):
 
     def addDataPoints(self, points):
         command = CommandAddData(
-            self.data, points,
-            self.classValuesModel[self.selectedClassLabelIndex()], self,
-            "Add Data")
+            points, self.classValuesModel[self.selectedClassLabelIndex()], self, "Add Data")
         self.undoStack.push(command)
 
     def delDataPoints(self, points):
         if points:
-            command = CommandDelData(self.data, points, self, "Delete Data")
+            command = CommandDelData(points, self, "Delete Data")
             self.undoStack.push(command)
 
     def deleteSelected(self):
@@ -721,13 +725,11 @@ class OWPaintData(widget.OWWidget):
         self.commitIf()
 
     def magnet(self, point, density, radius):
-        command = CommandMagnet(self.data, point, density, radius, self,
-                                "Magnet")
+        command = CommandMagnet(point, density, radius, self, "Magnet")
         self.undoStack.push(command)
 
     def jitter(self, point, density, radius):
-        command = CommandJitter(self.data, point, density, radius, self,
-                                "Jitter")
+        command = CommandJitter(point, density, radius, self, "Jitter")
         self.undoStack.push(command)
 
     def commitIf(self):
