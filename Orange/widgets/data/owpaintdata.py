@@ -354,14 +354,23 @@ class CommandAddClassLabel(QtGui.QUndoCommand):
         newdata.extend(instances)
         self.widget.data = newdata
         self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
+        newindex = self.classValuesModel.index(len(self.classValuesModel) - 1)
+        self.widget.classValuesView.selectionModel().select(
+            newindex, QtGui.QItemSelectionModel.ClearAndSelect)
         self.widget.updatePlot()
+        self.widget.updateCursor()
 
     def undo(self):
         self.widget.data = self.oldData
         #self.widget.classValuesModel = self.oldClassValuesModel
         del self.classValuesModel[-1]
+        index = self.widget.selectedClassLabelIndex()
+        newindex = self.classValuesModel.index(max(0, index - 1))
+        self.widget.classValuesView.selectionModel().select(
+            newindex, QtGui.QItemSelectionModel.ClearAndSelect)
         self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
         self.widget.updatePlot()
+        self.widget.updateCursor()
 
 
 class CommandRemoveClassLabel(QtGui.QUndoCommand):
@@ -393,6 +402,7 @@ class CommandRemoveClassLabel(QtGui.QUndoCommand):
 
         self.widget.data = newdata
         self.widget.updatePlot()
+        self.widget.updateCursor()
 
     def undo(self):
         self.classValuesModel.insert(self.index, self.label)
@@ -400,6 +410,7 @@ class CommandRemoveClassLabel(QtGui.QUndoCommand):
         #self.widget.classValuesModel = self.oldClassValuesModel
         self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
         self.widget.updatePlot()
+        self.widget.updateCursor()
 
 
 class CommandChangeLabelName(QtGui.QUndoCommand):
@@ -628,6 +639,10 @@ class OWPaintData(widget.OWWidget):
         gui.button(commitBox, self, "Commit", callback=self.sendData)
 
         QtGui.QShortcut("Delete", self).activated.connect(self.deleteSelected)
+
+        # enable brush tool
+        self.toolActions.actions()[0].setChecked(True)
+        self.setCurrentTool(self.TOOLS[0][2])
         # main area GUI
         self.mainArea.layout().addWidget(self.plot)
 
@@ -668,10 +683,8 @@ class OWPaintData(widget.OWWidget):
                                        "Add Label")
         self.undoStack.push(command)
 
-        newindex = self.classValuesModel.index(len(self.classValuesModel) - 1)
-        self.classValuesView.selectionModel().select(
-            newindex, QtGui.QItemSelectionModel.ClearAndSelect)
         self.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
+        self.updateCursor()
 
     def removeSelectedClassLabel(self):
         index = self.selectedClassLabelIndex()
