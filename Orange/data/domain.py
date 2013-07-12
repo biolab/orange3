@@ -268,7 +268,7 @@ class Domain:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.pop("known_domains")
+        state.pop("known_domains", None)
         return state
 
 
