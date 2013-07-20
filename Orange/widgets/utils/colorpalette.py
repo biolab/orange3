@@ -176,8 +176,8 @@ class ColorPaletteDlg(widget.OWWidget):
         self.__dict__["disc"+paletteName+"View"].rgbColors = rgbColors
 
         hbox = gui.widgetBox(vbox, orientation = 'horizontal')
-        self.__dict__["disc"+paletteName+"EditButt"] = gui.button(hbox, self, "Edit palette", self.editPalette, tooltip = "Edit the order and colors of the palette", debuggingEnabled = 0, toggleButton = 1)
-        self.__dict__["disc"+paletteName+"LoadButt"] = gui.button(hbox, self, "Load palette", self.loadPalette, tooltip = "Load a predefined color palette", debuggingEnabled = 0, toggleButton = 1)
+        self.__dict__["disc"+paletteName+"EditButt"] = gui.button(hbox, self, "Edit palette", self.editPalette, tooltip = "Edit the order and colors of the palette", toggleButton = 1)
+        self.__dict__["disc"+paletteName+"LoadButt"] = gui.button(hbox, self, "Load palette", self.loadPalette, tooltip = "Load a predefined color palette", toggleButton = 1)
         self.discPaletteNames.append(paletteName)
 
 

@@ -15,10 +15,17 @@ Orange Documentation
    modules/evaluation
 
 
+Development
+===========
+
+.. toctree::
+    :maxdepth: 2
+
+    development/widget
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
