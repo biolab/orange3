@@ -322,8 +322,7 @@ class OWDataTable(widget.OWWidget):
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self.cbShowDistributions)
         gui.button(box, self, "Set colors", self.set_colors,
-                   tooltip="Set the background color and color palette",
-                           debuggingEnabled=0)
+                   tooltip="Set the background color and color palette")
 
         gui.separator(self.controlArea)
         selection_box = gui.widgetBox(self.controlArea, "Selection")

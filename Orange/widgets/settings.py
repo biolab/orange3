@@ -23,7 +23,7 @@ class Setting:
 
 
 class SettingsHandler:
-    """Holds the decription of widget's settings, stored as a dict
+    """Holds the description of widget's settings, stored as a dict
        whose keys are attribute names and values are instances of Setting
     """
 
