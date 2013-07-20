@@ -942,14 +942,17 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
     :rtype: PyQt4.QtGui.QIcon
     """
     pixmap = QtGui.QPixmap(13, 13)
+    pixmap.fill(QtGui.QColor(0, 0, 0, 0))
     painter = QtGui.QPainter()
     painter.begin(pixmap)
+    painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing |
+                           painter.SmoothPixmapTransform)
     painter.setPen(background)
     painter.setBrush(background)
-    print(background.getRgb())
-    painter.drawRect(0, 0, 13, 13)
+    rect = QtCore.QRectF(0, 0, 13, 13)
+    painter.drawRoundedRect(rect, 4, 4)
     painter.setPen(color)
-    painter.drawText(3, 11, char)
+    painter.drawText(2, 11, char)
     painter.end()
     return QtGui.QIcon(pixmap)
 
@@ -959,11 +962,11 @@ class __AttributeIconDict(dict):
         from Orange.data import Variable
         if not self:
             VarTypes = Variable.VarTypes
-            for key, char, col in ((VarTypes.Continuous, "C", (202, 0, 32)),
-                                   (VarTypes.Discrete, "D", (26, 150, 65)),
-                                   (VarTypes.String, "S", (0, 0, 0)),
-                                   (-1, "?", (128, 128, 128))):
-                self[key] = createAttributePixmap(char, QtGui.QColor(*col))
+            for tpe, char, col in ((VarTypes.Continuous, "C", (202, 0, 32)),
+                                  (VarTypes.Discrete, "D", (26, 150, 65)),
+                                  (VarTypes.String, "S", (0, 0, 0)),
+                                  (-1, "?", (128, 128, 128))):
+                self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))
         if isinstance(key, Variable):
             key = key.var_type
         if not key in self:
