@@ -9,7 +9,7 @@ from PyQt4 import QtGui
 import scipy
 import scipy.special
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
+from Orange.data import ContinuousVariable, DiscreteVariable, Table
 from Orange.statistics import contingency, distribution, tests
 
 from Orange.widgets import widget, gui
@@ -103,20 +103,19 @@ class OWBoxPlot(widget.OWWidget):
         self.stats = []
         self.ddataset = None
 
-        self.attr_list_box = gui.listBox(self.controlArea, self,
-            "attributes_select", "attributes", box="Variable",
-            selectionMode=QtGui.QListWidget.SingleSelection,
-            callback=self.attr_changed)
-        self.attrCombo = gui.listBox(self.controlArea, self,
-            'grouping_select', "grouping", box="Grouping",
-            selectionMode=QtGui.QListWidget.SingleSelection,
-            callback=self.attr_changed)
-        self.sorting_combo = gui.radioButtonsInBox(self.controlArea, self,
-            'display', box='Display', callback=self.display_changed,
-            btnLabels=["Box plots", "Anotated boxes",
+        self.attr_list_box = gui.listBox(
+            self.controlArea, self, "attributes_select", "attributes",
+            box="Variable", callback=self.attr_changed)
+        self.attrCombo = gui.listBox(
+            self.controlArea, self, 'grouping_select', "grouping",
+            box="Grouping", callback=self.attr_changed)
+        self.sorting_combo = gui.radioButtonsInBox(
+            self.controlArea, self, 'display', box='Display',
+            callback=self.display_changed,
+            btnLabels=["Box plots", "Annotated boxes",
                        "Compare medians", "Compare means"])
-        self.stretching_box = gui.checkBox(self.controlArea, self,
-            'stretched', "Stretch bars", box='Display',
+        self.stretching_box = gui.checkBox(
+            self.controlArea, self, 'stretched', "Stretch bars", box='Display',
             callback=self.display_changed).box
         gui.rubber(self.controlArea)
 
@@ -138,6 +137,7 @@ class OWBoxPlot(widget.OWWidget):
 
         self.stats = []
         self.is_continuous = False
+        self.set_display_box()
 
         dlg = self.createColorDialog()
         self.discPalette = dlg.getDiscretePalette("discPalette")
@@ -160,6 +160,7 @@ class OWBoxPlot(widget.OWWidget):
         c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
         return c
 
+    # noinspection PyTypeChecker
     def data(self, dataset):
         if dataset is not None and (
                 not len(dataset) or not len(dataset.domain)):
@@ -189,8 +190,7 @@ class OWBoxPlot(widget.OWWidget):
         self.send("Basic statistic", None)
         self.send("Significant data", None)
 
-    def attr_changed(self):
-        self.compute_box_data()
+    def set_display_box(self):
         if self.is_continuous:
             self.stretching_box.hide()
             self.sorting_combo.show()
@@ -199,6 +199,10 @@ class OWBoxPlot(widget.OWWidget):
             self.stretching_box.show()
             self.sorting_combo.hide()
         self.layout_changed()
+
+    def attr_changed(self):
+        self.compute_box_data()
+        self.set_display_box()
 
     def clear_scene(self):
         self.boxScene.clear()
@@ -443,7 +447,9 @@ class OWBoxPlot(widget.OWWidget):
                               top * scale_x + 4, 0, self._pen_axis)
 
     def draw_axis_disc(self):
-        """Draw the horizontal axis and sets self.scale_x for discrete attrs"""
+        """
+        Draw the horizontal axis and sets self.scale_x for discrete attributes
+        """
         if self.stretched:
             step = steps = 10
         else:
@@ -584,7 +590,6 @@ class OWBoxPlot(widget.OWWidget):
             cum += v
         return box
 
-
     def show_posthoc(self):
         def line(y0, y1):
             it = self.boxScene.addLine(x, y0, x, y1, self._post_line_pen)
@@ -627,4 +632,3 @@ class OWBoxPlot(widget.OWWidget):
                                        self._post_grp_pen)
             self.posthoc_lines.append(it)
             last_to = to
-
