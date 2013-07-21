@@ -50,6 +50,29 @@ class BoxData:
 
 
 class OWBoxPlot(widget.OWWidget):
+    """
+    Here's how the widget's functions call each other:
+
+    - `data` is a signal handler fills the list boxes and calls `attr_changed`.
+
+    - `attr_changed` handles changes of attribute or grouping (callbacks for
+    list boxes). It recomputes box data by calling `compute_box_data`, shows
+    the appropriate display box (discrete/continuous) and then calls
+    `layout_changed`
+
+    - `layout_changed` constructs all the elements for the scene (as lists of
+    QGraphicsItemGroup) and calls `display_changed`. It is called when the
+    attribute or grouping is changed (by attr_changed) and on resize event.
+
+    - `display_changed` puts the elements corresponding to the current display
+    settings on the scene. It is called when the elements are reconstructed
+    (layout is changed due to selection of attributes or resize event), or
+    when the user changes display settings or colors.
+
+    For discrete attributes, the flow is a bit simpler: the elements are not
+    constructed in advance (by layout_changed). Instead, layout_changed and
+    display_changed call display_changed_disc that draws everything.
+    """
     _name = "Box plot"
     _description = "Shows box plots"
     _long_description = """Shows box plots, either one for or multiple
@@ -190,6 +213,39 @@ class OWBoxPlot(widget.OWWidget):
         self.send("Basic statistic", None)
         self.send("Significant data", None)
 
+    def attr_changed(self):
+        self.compute_box_data()
+        self.set_display_box()
+        self.layout_changed()
+
+    def compute_box_data(self):
+        dataset = self.ddataset
+        if dataset is None:
+            self.stats = self.dist = self.conts = []
+            return
+        attr_ind = self.attributes_select[0]
+        attr = dataset.domain[attr_ind]
+        self.is_continuous = isinstance(attr, ContinuousVariable)
+        group_by = self.grouping_select[0]
+        if group_by:
+            group_attr = self.grouping[group_by][0]
+            group_ind = dataset.domain.index(group_attr)
+            self.dist = []
+            self.conts = datacaching.getCached(
+                dataset, contingency.get_contingency,
+                (dataset, attr_ind, group_ind))
+            if self.is_continuous:
+                self.stats = [BoxData(cont) for cont in self.conts]
+            self.label_txts = dataset.domain[group_ind].values
+        else:
+            self.dist = datacaching.getCached(
+                dataset, distribution.get_distribution, (dataset, attr_ind))
+            self.conts = []
+            if self.is_continuous:
+                self.stats = [BoxData(self.dist)]
+            self.label_txts = [""]
+        self.stats = [stat for stat in self.stats if stat.N > 0]
+
     def set_display_box(self):
         if self.is_continuous:
             self.stretching_box.hide()
@@ -198,11 +254,6 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.stretching_box.show()
             self.sorting_combo.hide()
-        self.layout_changed()
-
-    def attr_changed(self):
-        self.compute_box_data()
-        self.set_display_box()
 
     def clear_scene(self):
         self.boxScene.clear()
@@ -210,7 +261,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def layout_changed(self):
         self.clear_scene()
-        if not self.stats:
+        if len(self.conts) == len(self.dist) == 0:
             return
         if not self.is_continuous:
             return self.display_changed_disc()
@@ -292,32 +343,6 @@ class OWBoxPlot(widget.OWWidget):
                                    self.scene_width, len(self.boxes * 40) + 90)
         self.boxView.centerOn(self.scene_width / 2,
                               -30 - len(self.boxes) * 40 / 2 + 45)
-
-    def compute_box_data(self):
-        dataset = self.ddataset
-        if dataset is None:
-            self.stats = []
-            return
-        attr_ind = self.attributes_select[0]
-        attr = dataset.domain[attr_ind]
-        self.is_continuous = isinstance(attr, ContinuousVariable)
-        group_by = self.grouping_select[0]
-        if group_by:
-            group_attr = self.grouping[group_by][0]
-            group_ind = dataset.domain.index(group_attr)
-            self.conts = datacaching.getCached(
-                dataset, contingency.get_contingency,
-                (dataset, attr_ind, group_ind))
-            if self.is_continuous:
-                self.stats = [BoxData(cont) for cont in self.conts]
-            self.label_txts = dataset.domain[group_ind].values
-        else:
-            self.dist = datacaching.getCached(
-                dataset, distribution.get_distribution, (dataset, attr_ind))
-            if self.is_continuous:
-                self.stats = [BoxData(self.dist)]
-            self.label_txts = [""]
-        self.stats = [stat for stat in self.stats if stat.N > 0]
 
     def compute_tests(self):
         # The t-test and ANOVA are implemented here since they efficiently use
