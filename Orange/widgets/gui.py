@@ -1307,7 +1307,12 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type editable: bool
     :rtype: PyQt4.QtGui.QComboBox
     """
-    hb = widgetBox(widget, box, orientation, addToLayout=False)
+    if box or label:
+        hb = widgetBox(widget, box, orientation, addToLayout=False)
+        if label is not None:
+            widgetLabel(hb, label)
+    else:
+        hb = widget
     widgetLabel(hb, label, labelWidth)
     combo = QtGui.QComboBox(hb)
     combo.setEditable(editable)
