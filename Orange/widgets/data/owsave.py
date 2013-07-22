@@ -42,7 +42,7 @@ class OWSave(widget.OWWidget):
 
     def dataset(self, data):
         self.data = data
-        self.save.setDisabled(data is None or not self.filename)
+        self.save.setDisabled(data is None)
         self.saveAs.setDisabled(data is None)
 
     def saveFileAs(self):
