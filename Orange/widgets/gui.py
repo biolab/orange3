@@ -1318,7 +1318,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     if value:
         cindex = getdeepattr(master, value)
         if isinstance(cindex, str):
-            if cindex in items:
+            if items and cindex in items:
                 cindex = items.index(getdeepattr(master, value))
             else:
                 cindex = 0

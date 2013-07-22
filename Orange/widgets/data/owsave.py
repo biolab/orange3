@@ -3,9 +3,11 @@ import re, os.path
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.data.io import saveCsv, saveTabDelimited
 from Orange.data.table import Table
+from Orange.widgets import gui, widget
+from Orange.widgets.settings import Setting
+
 
 class OWSave(widget.OWWidget):
     _name = "Save"
@@ -22,19 +24,10 @@ class OWSave(widget.OWWidget):
     recentFiles = Setting([])
     selectedFileName = Setting("None")
 
-    savers = {".txt": orange.saveTxt, ".tab": orange.saveTabDelimited,
-              ".names": orange.saveC45, ".test": orange.saveC45, ".data": orange.saveC45,
-              ".csv": orange.saveCsv
-              }
+    savers = {".tab": saveTabDelimited, ".csv": saveCsv}
 
-    # exclude C50 since it has the same extension and we do not need saving to it anyway
-    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes() if len(ft)>3 and ft[3] and not ft[0]=="C50"]
+    dlgFormats = 'Tab-delimited files (*.tab)\nComma separated (*.csv)\n'
 
-    dlgFormats = 'Tab-delimited files (*.tab)\nHeaderless tab-delimited (*.txt)\nComma separated (*.csv)\nC4.5 files (*.data)\nRetis files (*.rda *.rdo)\n' \
-                 + "\n".join("%s (%s)" % (ft[:2]) for ft in registeredFileTypes) \
-                 + "\nAll files(*.*)"
-
-    savers.update(dict((ft[1][1:].lower(), ft[3]) for ft in registeredFileTypes))
     re_filterExtension = re.compile(r"\(\*(?P<ext>\.[^ )]+)")
 
     def __init__(self,parent=None, signalManager = None, settings=None):
@@ -51,8 +44,8 @@ class OWSave(widget.OWWidget):
         self.filecombo.setMinimumWidth(200)
 #        browse = OWGUI.button(rfbox, self, "...", callback = self.browseFile, width=25)
         button = gui.button(rfbox, self, '...', callback = self.browseFile, disabled=0)
-        button.setIcon(self.style().standardIcon(QtCore.QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(QtCore.QSizePolicy.Maximum, QtCore.QSizePolicy.Fixed)
+        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
+        button.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
 
         fbox = gui.widgetBox(self.controlArea, "Save")
         self.save = gui.button(fbox, self, "Save current data", callback = self.saveFile, default=True)
@@ -110,7 +103,10 @@ class OWSave(widget.OWWidget):
         if self.data is not None:
             combotext = self.filecombo.currentText() # unicode() was here
             if combotext == "(none)":
-                QtGui.QMessageBox.information( None, "Error saving data", "Unable to save data. Select first a file name by clicking the '...' button.", QMessageBox.Ok + QMessageBox.Default)
+                QtGui.QMessageBox.information(
+                    None, "Error saving data",
+                    "Unable to save data. First select a file name by clicking the '...' button.",
+                    QtGui.QMessageBox.Ok + QtGui.QMessageBox.Default)
                 return
             filename = self.recentFiles[self.filecombo.currentIndex()]
             fileExt = os.path.splitext(filename)[1].lower()

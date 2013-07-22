@@ -1,12 +1,14 @@
-import os
-import sys
+import csv
 import re
-from ..data import _io
-from ..data.variable import *
-from ..data import Domain
-from scipy import sparse
-import numpy as np
+import sys
+
 import bottleneck as bn
+import numpy as np
+from scipy import sparse
+
+from ..data import _io
+from ..data import Domain
+from ..data.variable import *
 
 
 class FileReader:
@@ -209,3 +211,23 @@ class BasketReader():
         domain = Domain(attrs, classes, meta_attrs)
         return cls.from_numpy(domain,
                               attrs and X, classes and Y, metas and meta_attrs)
+
+def csvSaver(filename, data, delimiter='\t'):
+    with open(filename, 'w') as csvfile:
+        flags = ['']*len(data.domain)
+        class_var = data.domain.class_var
+        if class_var:
+            flags[data.domain.indices[class_var.name]] = 'class'
+
+        writer = csv.writer(csvfile, delimiter=delimiter)
+        writer.writerow([d.name for d in data.domain]) # write attribute names
+        writer.writerow([str(d.var_type).lower() for d in data.domain]) # write attribute types
+        writer.writerow(flags) # write flags
+        for ex in data: # write examples
+            writer.writerow(ex)
+
+def saveCsv(filename, data):
+    csvSaver(filename, data, ',')
+
+def saveTabDelimited(filename, data):
+    csvSaver(filename, data)
