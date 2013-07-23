@@ -77,7 +77,7 @@ class OWBoxPlot(widget.OWWidget):
     _description = "Shows box plots"
     _long_description = """Shows box plots, either one for or multiple
     box plots for data split by an attribute value."""
-    #_icon = "icons/Boxplot.svg"
+    _icon = "icons/BoxPlot.svg"
     _priority = 100
     _author = "Amela Rakanović, Janez Demšar"
     inputs = [("Data", Table, "data")]
