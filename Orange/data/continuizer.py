@@ -105,8 +105,7 @@ class DomainContinuizer:
         return Domain(new_attrs, new_classes, domain.metas)
 
     # To make PyCharm happy
-    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = \
-        ReportError = AsOrdinal = AsNormalizedOrdinal = 0
+    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
                             "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",

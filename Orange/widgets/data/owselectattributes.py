@@ -4,7 +4,7 @@ from functools import partial, reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
-from Orange.widgets import widget, gui, widget
+from Orange.widgets import gui, widget
 from Orange.widgets.settings import *
 from Orange.data.table import Table
 

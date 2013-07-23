@@ -11,7 +11,7 @@ from Orange.widgets.settings import Setting
 
 class OWSave(widget.OWWidget):
     _name = "Save"
-    _descritpion = "Saves data to a file."
+    _description = "Saves data to a file."
     _icon = "icons/Save.svg"
     _author = "Martin Frlin"
     _category = "Data"
