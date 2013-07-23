@@ -214,15 +214,19 @@ class BasketReader():
 
 def csvSaver(filename, data, delimiter='\t'):
     with open(filename, 'w') as csvfile:
-        flags = ['']*len(data.domain)
-        class_var = data.domain.class_var
-        if class_var:
-            flags[data.domain.indices[class_var.name]] = 'class'
-
         writer = csv.writer(csvfile, delimiter=delimiter)
         writer.writerow([d.name for d in data.domain]) # write attribute names
-        writer.writerow([str(d.var_type).lower() for d in data.domain]) # write attribute types
-        writer.writerow(flags) # write flags
+        if delimiter == '\t':
+            flags = ['']*len(data.domain)
+            class_var = data.domain.class_var
+            metas = data.doman.metas
+            if class_var:
+                flags[data.domain.indices[class_var.name]] = 'class'
+            if metas:
+                for m in metas:
+                    flags[data.domain.indices[m.name]] = 'm'
+            writer.writerow([str(d.var_type).lower() for d in data.domain]) # write attribute types
+            writer.writerow(flags) # write flags
         for ex in data: # write examples
             writer.writerow(ex)
 
