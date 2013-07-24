@@ -17,7 +17,7 @@ class PostgreBckendTests(unittest.TestCase):
         self.assertEqual(self.backend.table_name, 'iris')
         self.assertEqual(
             self.backend.table_info.field_names,
-            ('sepal_length', 'sepal_width', 'petal_length', 'petal_width',
+            ('sepal length', 'sepal width', 'petal length', 'petal width',
              'iris')
         )
         self.assertSequenceEqual(self.backend.table_info.values['iris'],
@@ -26,19 +26,19 @@ class PostgreBckendTests(unittest.TestCase):
         self.assertEqual(self.backend.table_info.nrows, 150)
 
     def test_query_all(self):
-        results = self.backend.query()
+        results = list(self.backend.query())
 
         self.assertEqual(len(results), 150)
 
     def test_query_subset_of_attributes(self):
         attributes = [
-            self._mock_attribute("sepal_length"),
-            self._mock_attribute("sepal_width"),
-            self._mock_attribute("double_width", "2 * sepal_width")
+            self._mock_attribute("sepal length"),
+            self._mock_attribute("sepal width"),
+            self._mock_attribute("double width", '2 * "sepal width"')
         ]
-        results = self.backend.query(
+        results = list(self.backend.query(
             attributes
-        )
+        ))
 
         self.assertSequenceEqual(
             results[:5],
@@ -50,27 +50,27 @@ class PostgreBckendTests(unittest.TestCase):
         )
 
     def test_query_subset_of_rows(self):
-        all_results = self.backend.query()
+        all_results = list(self.backend.query())
 
-        results = self.backend.query(rows=range(10))
+        results = list(self.backend.query(rows=range(10)))
         self.assertEqual(len(results), 10)
         self.assertSequenceEqual(results, all_results[:10])
 
-        results = self.backend.query(rows=range(10))
+        results = list(self.backend.query(rows=range(10)))
         self.assertEqual(len(results), 10)
         self.assertSequenceEqual(results, all_results[:10])
 
-        results = self.backend.query(rows=slice(None, 10))
+        results = list(self.backend.query(rows=slice(None, 10)))
         self.assertEqual(len(results), 10)
         self.assertSequenceEqual(results, all_results[:10])
 
-        results = self.backend.query(rows=slice(10, None))
+        results = list(self.backend.query(rows=slice(10, None)))
         self.assertEqual(len(results), 140)
         self.assertSequenceEqual(results, all_results[10:])
 
     def _mock_attribute(self, attr_name, formula=None):
         if formula is None:
-            formula = attr_name
+            formula = '"%s"' % attr_name
         class attr:
             name = attr_name
 

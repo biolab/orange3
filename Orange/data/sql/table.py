@@ -7,20 +7,17 @@ import functools
 import numpy as np
 from . import postgre_backend
 from .. import domain, storage, variable, value, table, instance
+from Orange.data.sql.filter import IsDefinedSql
 
 
 class SqlTable(table.Table):
     base = None
     domain = None
     nrows = 0
-    row_filter = None
+    row_filters = ()
 
     def __new__(cls, *args, **kwargs):
-        base = kwargs.pop('base', False)
-        self = super().__new__(cls)
-        if base:
-            self.base = base
-        return self
+        return super().__new__(cls)
 
     def __init__(self, uri=None,
                  host=None, database=None, user=None, password=None, table=None,
@@ -79,14 +76,18 @@ class SqlTable(table.Table):
             else:
                 attr = variable.StringVariable(name=name)
                 metas.append(attr)
-            attr.get_value_from = lambda field_name=name: field_name
+            field_name = '"%s"' % name
+            attr.get_value_from = lambda field_name=field_name: field_name
         return attributes, metas
 
-    @functools.lru_cache(maxsize=128)
+    #@functools.lru_cache(maxsize=128)
     def __getitem__(self, key):
         if isinstance(key, int):
             # one row
-            return SqlRowInstance(self, key)
+            return self._create_row_instance(
+                list(self.backend.query(filters=[f.to_sql(self)
+                                                 for f in self.row_filters],
+                                        rows=[key]))[0])
         if not isinstance(key, tuple):
             # row filter
             key = (key, Ellipsis)
@@ -117,17 +118,55 @@ class SqlTable(table.Table):
         # table.limit_rows(row_idx)
         return table
 
+    def __iter__(self):
+        for row in self.backend.query(filters=[f.to_sql(self)
+                                               for f in self.row_filters]):
+            yield self._create_row_instance(row)
+
+    def _create_row_instance(self, row):
+        if getattr(self, 'discrete_variables', None) is None:
+            self.discrete_variables = {
+                var: dict(zip(var.values, range(len(var.values))))
+                for var in self.domain.variables
+                if isinstance(var, variable.DiscreteVariable)
+            }
+        row = list(row)
+        for (idx, value), var in zip(enumerate(row), self.domain.variables):
+            if value is None:
+                row[idx] = float('nan')
+            elif var in self.discrete_variables:
+                row[idx] = self.discrete_variables[var][value]
+        return SqlRowInstance(self, row)
+
     def copy(self):
-        table = SqlTable(base=self)
+        table = SqlTable.__new__(SqlTable)
         table.host = self.host
         table.database = self.database
         table.backend = self.backend
         table.domain = self.domain
-        table.nrows = self.nrows
+        table.nrows = None
+        table.row_filters = self.row_filters
         return table
 
     def __len__(self):
+        if self.nrows is not None:
+            return self.nrows
+        cur = self.backend.connection.cursor()
+        cur.execute("""SELECT COUNT(*) FROM "%s" %s""" % (
+            self.backend.table_name,
+            self._construct_where(),
+        ))
+        self.backend.connection.commit()
+        self.nrows = cur.fetchone()[0]
         return self.nrows
+
+    def _construct_where(self):
+        filters = [f.to_sql(self) for f in self.row_filters]
+        filters = [f for f in filters if f]
+        if filters:
+            return " WHERE %s " % " AND ".join(filters)
+        else:
+            return ""
 
     def has_weights(self):
         return False
@@ -158,33 +197,20 @@ class SqlTable(table.Table):
     def metas_density(self):
         return self.DENSE
 
+    # Filters
+    def _filter_is_defined(self, columns=None, negate=False):
+        t2 = self.copy()
+        t2.row_filters += (IsDefinedSql(columns, negate),)
+        return t2
+
 
 class SqlRowInstance(instance.Instance):
-    def __init__(self, table, row_index):
+    def __init__(self, table, row):
         """
         Construct a data instance representing the given row of the table.
         """
         super().__init__(table.domain)
-        row = list(table.backend.query(rows=[row_index])[0])
-        discrete_variables = {
-            var: dict(zip(var.values, range(len(var.values))))
-            for var in table.domain.variables
-            if isinstance(var, variable.DiscreteVariable)
-        }
-        for (idx, value), var in zip(enumerate(row), table.domain.variables):
-            if value is None:
-                row[idx] = float('nan')
-            elif var in discrete_variables:
-                row[idx] = discrete_variables[var][value]
 
         self._x = self._values = row
 
-        self.row_index = row_index
         self.table = table
-
-
-    @property
-    def weight(self):
-        if not self.table.has_weights():
-            return 1
-        return self.table._W[self.row_index]

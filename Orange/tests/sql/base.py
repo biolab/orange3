@@ -1,5 +1,7 @@
+from collections import defaultdict
 import os
 import unittest
+import uuid
 
 import psycopg2
 
@@ -52,3 +54,55 @@ class PostgresTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         pass
+
+    def create_sql_table(self, data):
+        column_size = self._get_column_types(data)
+        sql_column_types = [
+            'float' if size == 0 else 'varchar(%s)' % size
+            for size in column_size
+        ]
+        table_name = uuid.uuid4()
+        create_table_sql = """
+            CREATE TABLE "%(table_name)s" (
+                %(columns)s
+            )
+        """ % dict(
+            table_name=table_name,
+            columns=",\n".join(
+                'col%d %s' % (i, t)
+                for i, t in enumerate(sql_column_types)
+            )
+        )
+        conn = psycopg2.connect(get_dburi())
+        cur = conn.cursor()
+        cur.execute(create_table_sql)
+        for row in data:
+            values = []
+            for v, t in zip(row, sql_column_types):
+                if v is None:
+                    values.append('NULL')
+                elif t == 0:
+                    values.append(str(v))
+                else:
+                    values.append("'%s'" % v)
+            insert_sql = """
+            INSERT INTO "%(table_name)s" VALUES
+                (%(values)s)
+            """ % dict(
+                table_name=table_name,
+                values=', '.join(values)
+            )
+            cur.execute(insert_sql)
+        conn.commit()
+        conn.close()
+        return get_dburi() + '/' + str(table_name)
+
+    def _get_column_types(self, data):
+        assert len(data) > 0
+        column_size = [0] * len(data[0])
+        for row in data:
+            for i, value in enumerate(row):
+                if isinstance(value, str):
+                    column_size[i] = max(len(value), column_size[i])
+        return column_size
+
