@@ -1,8 +1,9 @@
 import unittest
 from mock import MagicMock
-from psycopg2._psycopg import OperationalError
+from psycopg2 import OperationalError
 from Orange.data.sql import table as sql_table
 from Orange import data
+from Orange.tests.sql.base import PostgresTest
 
 
 class SqlTableMockedTests(unittest.TestCase):
@@ -80,11 +81,16 @@ class SqlTableMockedTests(unittest.TestCase):
         )
 
 
-class SqlTableTests(SqlTableMockedTests):
-    def setUp(self):
-        self.backend = None
-        self.uri = "sql://localhost/test/iris"
+class SqlTableTests(PostgresTest):
+    def test_reads_attributes_from_database(self):
+        table = sql_table.SqlTable("sql://localhost/test/iris")
 
-    @unittest.skip
-    def test_parses_server_in_uri_format(self):
-        raise NotImplementedError
+        # Continuous
+        sepal_length = table[0][0]
+        self.assertAlmostEqual(float(sepal_length), 5.1)
+        self.assertEqual(str(sepal_length), '5.100')
+
+        # Discrete
+        iris = table[0][4]
+        self.assertAlmostEqual(float(iris), 0)
+        self.assertEqual(str(iris), 'Iris-setosa')
