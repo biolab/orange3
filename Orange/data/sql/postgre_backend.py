@@ -2,6 +2,7 @@ import math
 import psycopg2
 import numpy as np
 
+
 class PostgreBackend(object):
     def connect(self,
                 database,
@@ -161,9 +162,6 @@ class PostgreBackend(object):
                 dists.append((dist[:, 1].T, []))
         self.connection.commit()
         return dists
-
-
-
 
 
 class TableInfo(object):

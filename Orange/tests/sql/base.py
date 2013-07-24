@@ -41,10 +41,6 @@ def create_iris(dburi):
     conn.close()
 
 
-def destroy_iris(dburi):
-    pass
-
-
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
