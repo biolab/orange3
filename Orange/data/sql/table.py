@@ -176,17 +176,3 @@ class SqlRowInstance(instance.Instance):
         if not self.table.has_weights():
             return 1
         return self.table._W[self.row_index]
-
-    def __str__(self):
-        table = self.table
-        domain = table.domain
-        row = self.row_index
-        s = "[" + self.sp_values(table._X, row, domain.attributes)
-        if domain.class_vars:
-            s += " | " + self.sp_values(table._Y, row, domain.class_vars)
-        s += "]"
-        if self._domain.metas:
-            s += " {" + self.sp_values(table._metas, row, domain.metas) + "}"
-        return s
-
-    __repr__ = __str__
