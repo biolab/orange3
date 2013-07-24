@@ -172,7 +172,9 @@ class SqlRowInstance(instance.Instance):
             if isinstance(var, variable.DiscreteVariable)
         }
         for (idx, value), var in zip(enumerate(row), table.domain.variables):
-            if var in discrete_variables:
+            if value is None:
+                row[idx] = float('nan')
+            elif var in discrete_variables:
                 row[idx] = discrete_variables[var][value]
 
         self._x = self._values = row
