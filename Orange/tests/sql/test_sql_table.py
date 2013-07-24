@@ -33,7 +33,7 @@ class SqlTableMockedTests(unittest.TestCase):
     def test_can_construct_attributes(self):
         table = sql_table.SqlTable(self.uri, backend=self.backend)
 
-        attributes = table._create_attributes()
+        attributes, metas = table._create_attributes()
 
         self.assertEqual(len(attributes), 5)
         for attr in attributes[:4]:
