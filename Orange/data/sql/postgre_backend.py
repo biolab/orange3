@@ -31,6 +31,7 @@ class PostgreBackend(object):
             SELECT column_name, data_type
               FROM INFORMATION_SCHEMA.COLUMNS
              WHERE table_name = %s;""", (self.table_name,))
+        self.connection.commit()
         return tuple(
             (fname, ftype, self._get_field_values(fname, ftype, cur))
             for fname, ftype in cur.fetchall()
@@ -45,7 +46,9 @@ class PostgreBackend(object):
     def _get_distinct_values(self, field_name, cur):
         cur.execute("""SELECT DISTINCT %s FROM "%s" ORDER BY %s LIMIT 21""" %
                     (field_name, self.table_name, field_name))
+        self.connection.commit()
         values = cur.fetchall()
+
         if len(values) > 20:
             return ()
         else:
@@ -53,6 +56,7 @@ class PostgreBackend(object):
 
     def _get_nrows(self, cur):
         cur.execute("""SELECT COUNT(*) FROM "%s" """ % self.table_name)
+        self.connection.commit()
         return cur.fetchone()[0]
 
     def query(self, attributes=None, filters=None, rows=None):
@@ -89,6 +93,7 @@ class PostgreBackend(object):
             sql += " OFFSET %d LIMIT %d" % (start, size)
         cur = self.connection.cursor()
         cur.execute(sql)
+        self.connection.commit()
         return cur.fetchall()
 
     def stats(self, columns):
@@ -132,6 +137,7 @@ class PostgreBackend(object):
         stats_sql = ", ".join(stats)
         cur = self.connection.cursor()
         cur.execute("""SELECT %s FROM "%s" """ % (stats_sql, self.table_name))
+        self.connection.commit()
         results = cur.fetchone()
         stats = []
         for i in range(len(columns)):
@@ -153,6 +159,7 @@ class PostgreBackend(object):
                 dists.append((dist.T, []))
             else:
                 dists.append((dist[:, 1].T, []))
+        self.connection.commit()
         return dists
 
 
