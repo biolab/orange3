@@ -165,7 +165,17 @@ class SqlRowInstance(instance.Instance):
         Construct a data instance representing the given row of the table.
         """
         super().__init__(table.domain)
-        self._x = self._values = table.backend.query(rows=[row_index])[0]
+        row = list(table.backend.query(rows=[row_index])[0])
+        discrete_variables = {
+            var: dict(zip(var.values, range(len(var.values))))
+            for var in table.domain.variables
+            if isinstance(var, variable.DiscreteVariable)
+        }
+        for (idx, value), var in zip(enumerate(row), table.domain.variables):
+            if var in discrete_variables:
+                row[idx] = discrete_variables[var][value]
+
+        self._x = self._values = row
 
         self.row_index = row_index
         self.table = table
