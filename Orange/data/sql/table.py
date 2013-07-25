@@ -6,8 +6,8 @@ from urllib import parse
 import functools
 import numpy as np
 from . import postgre_backend
-from .. import domain, storage, variable, value, table, instance
-from Orange.data.sql.filter import IsDefinedSql
+from .. import domain, storage, variable, value, table, instance, filter
+from Orange.data.sql import filter as sql_filter
 
 
 class SqlTable(table.Table):
@@ -193,13 +193,47 @@ class SqlTable(table.Table):
         columns = [self.domain.variables[i].to_sql() for i in columns]
 
         t2 = self.copy()
-        t2.row_filters += (IsDefinedSql(columns, negate),)
+        t2.row_filters += (sql_filter.IsDefinedSql(columns, negate),)
         return t2
 
     def _filter_has_class(self, negate=False):
         columns = [c.to_sql() for c in self.domain.class_vars]
         t2 = self.copy()
-        t2.row_filters += (IsDefinedSql(columns, negate),)
+        t2.row_filters += (sql_filter.IsDefinedSql(columns, negate),)
+        return t2
+
+    def _filter_same_value(self, column, value, negate=False):
+        var = self.domain[column]
+        if value is None:
+            pass
+        elif isinstance(var, variable.DiscreteVariable):
+            value = var.to_val(value)
+            value = "'%s'" % var.repr_val(value)
+        else:
+            pass
+        t2 = self.copy()
+        t2.row_filters += \
+            (sql_filter.SameValueSql(var.to_sql(), value, negate),)
+        return t2
+
+    def _filter_values(self, f):
+        conditions = []
+        for cond in f.conditions:
+            if isinstance(cond, filter.FilterDiscrete):
+                var = self.domain[cond.column]
+                if cond.values is None:
+                    values = None
+                else:
+                    values = ["'%s'" % var.repr_val(var.to_val(v))
+                              for v in cond.values]
+                conditions.append(
+                    sql_filter.FilterDiscreteSql(column=var.to_sql(),
+                                                 values=values)
+                )
+        t2 = self.copy()
+        t2.row_filters += (sql_filter.ValuesSql(conditions=conditions,
+                                                conjunction=f.conjunction,
+                                                negate=f.negate),)
         return t2
 
 

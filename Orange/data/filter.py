@@ -138,7 +138,7 @@ class SameValue(Filter):
             return self.negate != (data[self.column] == self.value)
         if isinstance(data, Storage):
             try:
-                data._filter_same_value(self.column, self.value, self.negate)
+                return data._filter_same_value(self.column, self.value, self.negate)
             except NotImplementedError:
                 pass
 
