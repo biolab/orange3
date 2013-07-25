@@ -9,6 +9,8 @@ class IsDefinedSql(filter.IsDefined):
             for i, a in enumerate(data.domain.attributes)
             if self.columns is None or i in columns
         ])
+        if self.negate:
+            sql = 'NOT (%s)' % sql
         return sql
 
 
