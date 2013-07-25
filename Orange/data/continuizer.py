@@ -1,7 +1,8 @@
 from ..misc.enum import Enum
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.statistics import distribution
-from ..feature.transformation import Identity, Indicator, Indicator_1, Normalizer
+from ..feature.transformation import \
+    Identity, Indicator, Indicator_1, Normalizer
 
 class DomainContinuizer:
     def __new__(cls, data=None, zero_based=True, multinomial_treatment=0,
@@ -27,11 +28,11 @@ class DomainContinuizer:
                 new_var = ContinuousVariable(var.name)
                 n_values = max(1, len(var.values))
                 if self.zero_based:
-                    new_var.get_value_from = Normalizer(var, 0,
-                                                        1 / (n_values - 1))
+                    new_var.get_value_from = \
+                        Normalizer(var, 0, 1 / (n_values - 1))
                 else:
-                    new_var.get_value_from = Normalizer(var, (n_values - 1)/ 2,
-                                                        2 / (n_values - 1))
+                    new_var.get_value_from = \
+                        Normalizer(var, (n_values - 1) / 2, 2 / (n_values - 1))
                 return [new_var]
 
             new_vars = []
@@ -54,6 +55,7 @@ class DomainContinuizer:
         def transform_continuous(var):
             if self.normalize_continuous == self.Leave:
                 return var
+
             elif self.normalize_continuous == self.NormalizeBySpan:
                 new_var = ContinuousVariable(var.name)
                 dma, dmi = dists[var_ptr].max(), dists[var_ptr].min()
@@ -115,10 +117,11 @@ class DomainContinuizer:
             new_classes = domain.class_vars
         return Domain(new_attrs, new_classes, domain.metas)
 
-    # To make PyCharm happy
+    # To make PyCharm happy<<<<<<< HEAD
     NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal =\
         Leave = NormalizeBySpan = NormalizeByVariance = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
                             "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
                             "AsNormalizedOrdinal", "Leave", "NormalizeBySpan", "NormalizeByVariance").pull_up(DomainContinuizer)
+
