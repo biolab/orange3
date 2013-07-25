@@ -15,6 +15,9 @@ class IsDefinedFilterTests(PostgresTest):
         self.table_uri = self.create_sql_table(self.data)
         self.table = SqlTable(self.table_uri)
 
+    def tearDown(self):
+        self.table.backend.connection.close()
+
     def test_on_all_columns(self):
         filtered_data = filter.IsDefined()(self.table)
         correct_data = [row for row in self.data if all(row)]
@@ -68,6 +71,9 @@ class HasClassFilterTests(PostgresTest):
         new_table.domain = domain.Domain(variables[:-1], variables[-1:])
         self.table = new_table
 
+    def tearDown(self):
+        self.table.backend.connection.close()
+
     def test_has_class(self):
         filtered_data = filter.HasClass()(self.table)
         correct_data = [row for row in self.data if row[-1]]
@@ -93,6 +99,9 @@ class SameValueFilterTests(PostgresTest):
         ]
         self.table_uri = self.create_sql_table(self.data)
         self.table = SqlTable(self.table_uri)
+
+    def tearDown(self):
+        self.table.backend.connection.close()
 
     def test_on_continuous_attribute(self):
         filtered_data = filter.SameValue(0, 1)(self.table)
