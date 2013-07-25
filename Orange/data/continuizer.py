@@ -1,7 +1,8 @@
 from ..misc.enum import Enum
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.statistics import distribution
-from ..feature.transformation import Identity, Indicator, Indicator_1, Normalizer
+from ..feature.transformation import \
+    Identity, Indicator, Indicator_1, Normalizer
 
 class DomainContinuizer:
     def __new__(cls, data=None, zero_based=True, multinomial_treatment=0,
@@ -27,11 +28,11 @@ class DomainContinuizer:
                 new_var = ContinuousVariable(var.name)
                 n_values = max(1, len(var.values))
                 if self.zero_based:
-                    new_var.get_value_from = Normalizer(var, 0,
-                                                        1 / (n_values - 1))
+                    new_var.get_value_from = \
+                        Normalizer(var, 0, 1 / (n_values - 1))
                 else:
-                    new_var.get_value_from = Normalizer(var, (n_values - 1)/ 2,
-                                                        2 / (n_values - 1))
+                    new_var.get_value_from = \
+                        Normalizer(var, (n_values - 1) / 2, 2 / (n_values - 1))
                 return [new_var]
 
             new_vars = []
@@ -62,8 +63,8 @@ class DomainContinuizer:
             if self.zero_based:
                 new_var.get_value_from = Normalizer(var, dmi, 1 / diff)
             else:
-                new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
-                                                    2 / diff)
+                new_var.get_value_from = \
+                    Normalizer(var, (dma + dmi) / 2, 2 / diff)
             return new_var
 
         def transform_list(s):
@@ -105,8 +106,10 @@ class DomainContinuizer:
         return Domain(new_attrs, new_classes, domain.metas)
 
     # To make PyCharm happy
-    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal = AsNormalizedOrdinal = 0
+    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = \
+        ReportError = AsOrdinal = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
-                            "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
-                            "AsNormalizedOrdinal").pull_up(DomainContinuizer)
+                            "Ignore", "IgnoreMulti", "ReportError",
+                            "AsOrdinal", "AsNormalizedOrdinal"
+                            ).pull_up(DomainContinuizer)
