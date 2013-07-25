@@ -216,6 +216,26 @@ class SqlTable(table.Table):
             (sql_filter.SameValueSql(var.to_sql(), value, negate),)
         return t2
 
+    def _filter_values(self, f):
+        conditions = []
+        for cond in f.conditions:
+            if isinstance(cond, filter.FilterDiscrete):
+                var = self.domain[cond.column]
+                if cond.values is None:
+                    values = None
+                else:
+                    values = ["'%s'" % var.repr_val(var.to_val(v))
+                              for v in cond.values]
+                conditions.append(
+                    sql_filter.FilterDiscreteSql(column=var.to_sql(),
+                                                 values=values)
+                )
+        t2 = self.copy()
+        t2.row_filters += (sql_filter.ValuesSql(conditions=conditions,
+                                                conjunction=f.conjunction,
+                                                negate=f.negate),)
+        return t2
+
 
 class SqlRowInstance(instance.Instance):
     pass

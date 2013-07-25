@@ -21,3 +21,20 @@ class SameValueSql(filter.SameValue):
         if self.negate:
             sql = 'NOT (%s)' % sql
         return sql
+
+
+class ValuesSql(filter.Values):
+    def to_sql(self):
+        aggregator = " AND " if self.conjunction else " OR "
+        sql = aggregator.join(c.to_sql() for c in self.conditions)
+        if self.negate:
+            sql = 'NOT (%s)' % sql
+        return sql
+
+
+class FilterDiscreteSql(filter.FilterDiscrete):
+    def to_sql(self):
+        if self.values is not None:
+            return "%s IN (%s)" % (self.column, ','.join(self.values))
+        else:
+            return "%s IS NOT NULL" % self.column

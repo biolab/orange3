@@ -174,3 +174,52 @@ class SameValueFilterTests(PostgresTest):
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
+
+
+class ValuesFilterTests(PostgresTest):
+    def setUp(self):
+        self.data = [
+            [1, 2, 3, 'a', 'm'],
+            [2, None, 1, 'a', 'f'],
+            [1, 3, 1, 'b', None],
+            [2, 2, 3, 'b', 'f'],
+        ]
+        self.table_uri = self.create_sql_table(self.data)
+        self.table = SqlTable(self.table_uri)
+
+    def tearDown(self):
+        self.table.backend.connection.close()
+
+    def test_values_filter_with_no_conditions(self):
+        filtered_data = filter.Values()(self.table)
+        correct_data = self.data
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_discrete_value_filter(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterDiscrete(3, ['a'])
+        ])(self.table)
+        correct_data = [row for row in self.data if row[3] in ['a']]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_discrete_value_filter_with_multiple_values(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterDiscrete(3, ['a', 'b'])
+        ])(self.table)
+        correct_data = [row for row in self.data if row[3] in ['a', 'b']]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_discrete_value_filter_with_None(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterDiscrete(3, None)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[3] is not None]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
