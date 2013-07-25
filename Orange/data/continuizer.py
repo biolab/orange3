@@ -55,7 +55,6 @@ class DomainContinuizer:
         def transform_continuous(var):
             if self.normalize_continuous == self.Leave:
                 return var
-
             elif self.normalize_continuous == self.NormalizeBySpan:
                 new_var = ContinuousVariable(var.name)
                 dma, dmi = dists[var_ptr].max(), dists[var_ptr].min()
@@ -70,13 +69,9 @@ class DomainContinuizer:
                 return new_var
             elif self.normalize_continuous == self.NormalizeByVariance:
                 new_var = ContinuousVariable(var.name)
-                avg = None
-                variance = None
-                if self.zero_based:
-                    new_var.get_value_from = Normalizer(var, avg, 1 / variance)
-                else:
-                    new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
-                                                    2 / diff)
+                avg = dists[var_ptr].mean()
+                variance = dists[var_ptr].variance()
+                new_var.get_value_from = Normalizer(var, avg, 1 / variance)
                 return new_var
 
         def transform_list(s):
@@ -117,11 +112,12 @@ class DomainContinuizer:
             new_classes = domain.class_vars
         return Domain(new_attrs, new_classes, domain.metas)
 
-    # To make PyCharm happy<<<<<<< HEAD
-    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal =\
+    # To make PyCharm happy
+    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal = \
         Leave = NormalizeBySpan = NormalizeByVariance = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
                             "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
-                            "AsNormalizedOrdinal", "Leave", "NormalizeBySpan", "NormalizeByVariance").pull_up(DomainContinuizer)
+                            "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
+                            "NormalizeByVariance").pull_up(DomainContinuizer)
 
