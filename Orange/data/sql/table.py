@@ -6,8 +6,8 @@ from urllib import parse
 import functools
 import numpy as np
 from . import postgre_backend
-from .. import domain, storage, variable, value, table, instance
-from Orange.data.sql.filter import IsDefinedSql, SameValueSql
+from .. import domain, storage, variable, value, table, instance, filter
+from Orange.data.sql import filter as sql_filter
 
 
 class SqlTable(table.Table):
@@ -193,13 +193,13 @@ class SqlTable(table.Table):
         columns = [self.domain.variables[i].to_sql() for i in columns]
 
         t2 = self.copy()
-        t2.row_filters += (IsDefinedSql(columns, negate),)
+        t2.row_filters += (sql_filter.IsDefinedSql(columns, negate),)
         return t2
 
     def _filter_has_class(self, negate=False):
         columns = [c.to_sql() for c in self.domain.class_vars]
         t2 = self.copy()
-        t2.row_filters += (IsDefinedSql(columns, negate),)
+        t2.row_filters += (sql_filter.IsDefinedSql(columns, negate),)
         return t2
 
     def _filter_same_value(self, column, value, negate=False):
@@ -212,7 +212,8 @@ class SqlTable(table.Table):
         else:
             pass
         t2 = self.copy()
-        t2.row_filters += (SameValueSql(var.to_sql(), value, negate),)
+        t2.row_filters += \
+            (sql_filter.SameValueSql(var.to_sql(), value, negate),)
         return t2
 
 
