@@ -14,4 +14,10 @@ class IsDefinedSql(filter.IsDefined):
 
 class SameValueSql(filter.SameValue):
     def to_sql(self):
-        return "%s = %s" % (self.column, self.value)
+        if self.value is None:
+            sql = '%s IS NULL' % self.column
+        else:
+            sql = "%s = %s" % (self.column, self.value)
+        if self.negate:
+            sql = 'NOT (%s)' % sql
+        return sql

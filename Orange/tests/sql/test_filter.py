@@ -108,6 +108,20 @@ class SameValueFilterTests(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    def test_on_continuous_attribute_with_unknown_value(self):
+        filtered_data = filter.SameValue(1, None)(self.table)
+        correct_data = [row for row in self.data if row[1] is None]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_continuous_attribute_negated(self):
+        filtered_data = filter.SameValue(0, 1, negate=True)(self.table)
+        correct_data = [row for row in self.data if not row[0] == 1]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
     def test_on_discrete_attribute(self):
         filtered_data = filter.SameValue(3, 'a')(self.table)
         correct_data = [row for row in self.data if row[3] == 'a']
@@ -115,9 +129,39 @@ class SameValueFilterTests(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    def test_on_discrete_attribute_with_unknown_value(self):
+        filtered_data = filter.SameValue(4, None)(self.table)
+        correct_data = [row for row in self.data if row[4] is None]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
     def test_on_discrete_attribute_with_unknowns(self):
         filtered_data = filter.SameValue(4, 'm')(self.table)
         correct_data = [row for row in self.data if row[4] == 'm']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_discrete_attribute_negated(self):
+        filtered_data = filter.SameValue(3, 'a', negate=True)(self.table)
+        correct_data = [row for row in self.data if not row[3] == 'a']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_discrete_attribute_value_passed_as_int(self):
+        values = self.table.domain[3].values
+        filtered_data = filter.SameValue(3, 0, negate=True)(self.table)
+        correct_data = [row for row in self.data if not row[3] == values[0]]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_discrete_attribute_value_passed_as_float(self):
+        values = self.table.domain[3].values
+        filtered_data = filter.SameValue(3, 0., negate=True)(self.table)
+        correct_data = [row for row in self.data if not row[3] == values[0]]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)

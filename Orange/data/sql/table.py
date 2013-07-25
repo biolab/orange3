@@ -204,9 +204,13 @@ class SqlTable(table.Table):
 
     def _filter_same_value(self, column, value, negate=False):
         var = self.domain[column]
-        if isinstance(var, variable.DiscreteVariable):
+        if value is None:
+            pass
+        elif isinstance(var, variable.DiscreteVariable):
             value = var.to_val(value)
             value = "'%s'" % var.repr_val(value)
+        else:
+            pass
         t2 = self.copy()
         t2.row_filters += (SameValueSql(var.to_sql(), value, negate),)
         return t2
