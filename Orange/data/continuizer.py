@@ -52,19 +52,30 @@ class DomainContinuizer:
             return new_vars
 
         def transform_continuous(var):
-            if not self.normalize_continuous:
+            if self.normalize_continuous == self.Leave:
                 return var
-            new_var = ContinuousVariable(var.name)
-            dma, dmi = dists[var_ptr].max(), dists[var_ptr].min()
-            diff = dma - dmi
-            if diff < 1e-15:
-                diff = 1
-            if self.zero_based:
-                new_var.get_value_from = Normalizer(var, dmi, 1 / diff)
-            else:
-                new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
+            elif self.normalize_continuous == self.NormalizeBySpan:
+                new_var = ContinuousVariable(var.name)
+                dma, dmi = dists[var_ptr].max(), dists[var_ptr].min()
+                diff = dma - dmi
+                if diff < 1e-15:
+                    diff = 1
+                if self.zero_based:
+                    new_var.get_value_from = Normalizer(var, dmi, 1 / diff)
+                else:
+                    new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
                                                     2 / diff)
-            return new_var
+                return new_var
+            elif self.normalize_continuous == self.NormalizeByVariance:
+                new_var = ContinuousVariable(var.name)
+                avg = None
+                variance = None
+                if self.zero_based:
+                    new_var.get_value_from = Normalizer(var, avg, 1 / variance)
+                else:
+                    new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
+                                                    2 / diff)
+                return new_var
 
         def transform_list(s):
             nonlocal var_ptr
@@ -89,7 +100,7 @@ class DomainContinuizer:
             raise ValueError("data has multinomial attributes")
         needs_discrete = (treat == self.FrequentIsBase and
                           domain.has_discrete_attributes(transform_class))
-        needs_continuous = (self.normalize_continuous and
+        needs_continuous = (not self.normalize_continuous == self.Leave and
                             domain.has_continuous_attributes(transform_class))
         if needs_discrete or needs_continuous:
             if isinstance(data, Domain):
@@ -105,8 +116,9 @@ class DomainContinuizer:
         return Domain(new_attrs, new_classes, domain.metas)
 
     # To make PyCharm happy
-    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal = AsNormalizedOrdinal = 0
+    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal =\
+        Leave = NormalizeBySpan = NormalizeByVariance = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
                             "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
-                            "AsNormalizedOrdinal").pull_up(DomainContinuizer)
+                            "AsNormalizedOrdinal", "Leave", "NormalizeBySpan", "NormalizeByVariance").pull_up(DomainContinuizer)

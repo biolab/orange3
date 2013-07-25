@@ -18,7 +18,7 @@ class OWContinuize(widget.OWWidget):
     _keywords = ["data", "continuize"]
 
     inputs = [("Data", Table, "setData")]
-    outputs = [("Data", Table), ("Preprocessor", "PreprocessedLearner")]
+    outputs = [("Data", Table)]
 
     want_main_area = False
 
@@ -28,8 +28,8 @@ class OWContinuize(widget.OWWidget):
     continuousTreatment = Setting(0)
     autosend = Setting(0)
 
-    #settingsHandler = ClassValuesContextHandler("", ["targetValue"])
-    #contextHandlers = ContextSetting({})
+    settingsHandler = ClassValuesContextHandler()
+    targetValue = ContextSetting("")
 
     multinomialTreats = (("Target or First value as base", DomainContinuizer.LowestIsBase),
                          ("Most frequent value as base", DomainContinuizer.FrequentIsBase),
@@ -39,9 +39,9 @@ class OWContinuize(widget.OWWidget):
                          ("Treat as ordinal", DomainContinuizer.AsOrdinal),
                          ("Divide by number of values", DomainContinuizer.AsNormalizedOrdinal))
 
-    #continuousTreats = (("Leave them as they are", DomainContinuizer.Leave),
-    #                    ("Normalize by span", DomainContinuizer.NormalizeBySpan),
-    #                    ("Normalize by variance", DomainContinuizer.NormalizeByVariance))
+    continuousTreats = (("Leave them as they are", DomainContinuizer.Leave),
+                        ("Normalize by span", DomainContinuizer.NormalizeBySpan),
+                        ("Normalize by variance", DomainContinuizer.NormalizeByVariance))
 
     classTreats = (("Leave it as it is", DomainContinuizer.Ignore),
                    ("Treat as ordinal", DomainContinuizer.AsOrdinal),
@@ -134,7 +134,7 @@ class OWContinuize(widget.OWWidget):
     def constructContinuizer(self):
         conzer = DomainContinuizer()
         conzer.zeroBased = self.zeroBased
-        conzer.continuousTreatment = self.continuousTreatment
+        conzer.continuousTreatment = self.continuousTreats[self.continuousTreatment][1]
         conzer.multinomialTreatment = self.multinomialTreats[self.multinomialTreatment][1]
         conzer.classTreatment = self.classTreats[self.classTreatment][1]
         return conzer
