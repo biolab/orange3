@@ -51,3 +51,33 @@ class IsDefinedFilterTests(PostgresTest):
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
+
+
+class HasClassFilterTests(PostgresTest):
+    def setUp(self):
+        self.data = [
+            [1, 2, 3, None, 'm'],
+            [2, 3, 1, 4, 'f'],
+            [None, None, None, None, None],
+            [7, None, 3, None, 'f'],
+        ]
+        self.table_uri = self.create_sql_table(self.data)
+        table = SqlTable(self.table_uri)
+        variables = table.domain.variables
+        new_table = table.copy()
+        new_table.domain = domain.Domain(variables[:-1], variables[-1:])
+        self.table = new_table
+
+    def test_has_class(self):
+        filtered_data = filter.HasClass()(self.table)
+        correct_data = [row for row in self.data if row[-1]]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_negated(self):
+        filtered_data = filter.HasClass(negate=True)(self.table)
+        correct_data = [row for row in self.data if not row[-1]]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)

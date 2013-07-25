@@ -196,6 +196,11 @@ class SqlTable(table.Table):
         t2.row_filters += (IsDefinedSql(columns, negate),)
         return t2
 
+    def _filter_has_class(self, negate=False):
+        columns = [c.to_sql() for c in self.domain.class_vars]
+        t2 = self.copy()
+        t2.row_filters += (IsDefinedSql(columns, negate),)
+        return t2
 
 
 class SqlRowInstance(instance.Instance):
