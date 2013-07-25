@@ -77,7 +77,7 @@ class SqlTable(table.Table):
                 attr = variable.StringVariable(name=name)
                 metas.append(attr)
             field_name = '"%s"' % name
-            attr.get_value_from = lambda field_name=field_name: field_name
+            attr.to_sql = lambda field_name=field_name: field_name
         return attributes, metas
 
     #@functools.lru_cache(maxsize=128)

@@ -64,14 +64,9 @@ class PostgreBackend(object):
         if attributes is not None:
             fields = []
             for attr in attributes:
-                if attr.get_value_from is not None:
-                    field_src = attr.get_value_from(None)
-                    if not isinstance(field_src, str):
-                        raise ValueError("cannot use ordinary attributes "
-                                         "with sql backend")
-                    field_str = '(%s) AS "%s"' % (field_src, attr.name)
-                else:
-                    field_str = attr.name
+                assert hasattr(attr, 'to_sql'), \
+                    "Cannot use ordinary attributes with sql backend"
+                field_str = '(%s) AS "%s"' % (attr.to_sql(), attr.name)
                 fields.append(field_str)
             if not fields:
                 raise ValueError("No fields selected.")

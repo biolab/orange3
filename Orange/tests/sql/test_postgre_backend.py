@@ -75,7 +75,7 @@ class PostgreBckendTests(unittest.TestCase):
             name = attr_name
 
             @staticmethod
-            def get_value_from(xxx):
+            def to_sql():
                 return formula
         return attr
 
