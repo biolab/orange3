@@ -81,3 +81,43 @@ class HasClassFilterTests(PostgresTest):
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
+
+
+class SameValueFilterTests(PostgresTest):
+    def setUp(self):
+        self.data = [
+            [1, 2, 3, 'a', 'm'],
+            [2, None, 1, 'a', 'f'],
+            [1, 3, 1, 'b', None],
+            [2, 2, 3, 'b', 'f'],
+        ]
+        self.table_uri = self.create_sql_table(self.data)
+        self.table = SqlTable(self.table_uri)
+
+    def test_on_continuous_attribute(self):
+        filtered_data = filter.SameValue(0, 1)(self.table)
+        correct_data = [row for row in self.data if row[0] == 1]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_continuous_attribute_with_unknowns(self):
+        filtered_data = filter.SameValue(1, 2)(self.table)
+        correct_data = [row for row in self.data if row[1] == 2]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_discrete_attribute(self):
+        filtered_data = filter.SameValue(3, 'a')(self.table)
+        correct_data = [row for row in self.data if row[3] == 'a']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_on_discrete_attribute_with_unknowns(self):
+        filtered_data = filter.SameValue(4, 'm')(self.table)
+        correct_data = [row for row in self.data if row[4] == 'm']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)

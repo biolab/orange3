@@ -10,3 +10,8 @@ class IsDefinedSql(filter.IsDefined):
         if self.negate:
             sql = 'NOT (%s)' % sql
         return sql
+
+
+class SameValueSql(filter.SameValue):
+    def to_sql(self):
+        return "%s = %s" % (self.column, self.value)
