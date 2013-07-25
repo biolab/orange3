@@ -84,7 +84,8 @@ class SqlTable(table.Table):
     def __getitem__(self, key):
         if isinstance(key, int):
             # one row
-            return self._create_row_instance(
+            return SqlRowInstance(
+                self.domain,
                 list(self.backend.query(attributes=self.domain.variables,
                                         filters=[f.to_sql()
                                                  for f in self.row_filters],
@@ -123,22 +124,7 @@ class SqlTable(table.Table):
         for row in self.backend.query(attributes=self.domain.variables,
                                       filters=[f.to_sql()
                                                for f in self.row_filters]):
-            yield self._create_row_instance(row)
-
-    def _create_row_instance(self, row):
-        if getattr(self, 'discrete_variables', None) is None:
-            self.discrete_variables = {
-                var: dict(zip(var.values, range(len(var.values))))
-                for var in self.domain.variables
-                if isinstance(var, variable.DiscreteVariable)
-            }
-        row = list(row)
-        for (idx, value), var in zip(enumerate(row), self.domain.variables):
-            if value is None:
-                row[idx] = float('nan')
-            elif var in self.discrete_variables:
-                row[idx] = self.discrete_variables[var][value]
-        return SqlRowInstance(self, row)
+            yield SqlRowInstance(self.domain, row)
 
     def copy(self):
         table = SqlTable.__new__(SqlTable)
@@ -211,13 +197,6 @@ class SqlTable(table.Table):
         return t2
 
 
+
 class SqlRowInstance(instance.Instance):
-    def __init__(self, table, row):
-        """
-        Construct a data instance representing the given row of the table.
-        """
-        super().__init__(table.domain)
-
-        self._x = self._values = row
-
-        self.table = table
+    pass
