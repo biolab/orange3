@@ -202,8 +202,12 @@ class SqlTable(table.Table):
 
     # Filters
     def _filter_is_defined(self, columns=None, negate=False):
+        if columns is None:
+            columns = range(len(self.domain.variables))
+        columns = [self.domain.variables[i].to_sql() for i in columns]
+
         t2 = self.copy()
-        t2.row_filters += (IsDefinedSql(columns, negate, self),)
+        t2.row_filters += (IsDefinedSql(columns, negate),)
         return t2
 
 
