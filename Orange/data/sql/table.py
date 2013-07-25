@@ -85,7 +85,8 @@ class SqlTable(table.Table):
         if isinstance(key, int):
             # one row
             return self._create_row_instance(
-                list(self.backend.query(filters=[f.to_sql(self)
+                list(self.backend.query(attributes=self.domain.variables,
+                                        filters=[f.to_sql()
                                                  for f in self.row_filters],
                                         rows=[key]))[0])
         if not isinstance(key, tuple):
@@ -119,7 +120,8 @@ class SqlTable(table.Table):
         return table
 
     def __iter__(self):
-        for row in self.backend.query(filters=[f.to_sql(self)
+        for row in self.backend.query(attributes=self.domain.variables,
+                                      filters=[f.to_sql()
                                                for f in self.row_filters]):
             yield self._create_row_instance(row)
 
@@ -151,17 +153,18 @@ class SqlTable(table.Table):
     def __len__(self):
         if self.nrows is not None:
             return self.nrows
-        cur = self.backend.connection.cursor()
-        cur.execute("""SELECT COUNT(*) FROM "%s" %s""" % (
+        sql = """SELECT COUNT(*) FROM "%s" %s""" % (
             self.backend.table_name,
             self._construct_where(),
-        ))
+        )
+        cur = self.backend.connection.cursor()
+        cur.execute(sql)
         self.backend.connection.commit()
         self.nrows = cur.fetchone()[0]
         return self.nrows
 
     def _construct_where(self):
-        filters = [f.to_sql(self) for f in self.row_filters]
+        filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
         if filters:
             return " WHERE %s " % " AND ".join(filters)
@@ -200,7 +203,7 @@ class SqlTable(table.Table):
     # Filters
     def _filter_is_defined(self, columns=None, negate=False):
         t2 = self.copy()
-        t2.row_filters += (IsDefinedSql(columns, negate),)
+        t2.row_filters += (IsDefinedSql(columns, negate, self),)
         return t2
 
 

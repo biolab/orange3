@@ -44,4 +44,10 @@ class IsDefinedFilterTests(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    def test_can_inherit_is_defined_filter(self):
+        filtered_data = filter.IsDefined(columns=[1])(self.table)
+        filtered_data = filtered_data[:, 4]
+        correct_data = [[row[4]]for row in self.data if row[1]]
 
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
