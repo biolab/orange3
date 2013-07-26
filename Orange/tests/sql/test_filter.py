@@ -1,4 +1,4 @@
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, SqlRowInstance
 from Orange.data import filter, domain
 
 from Orange.tests.sql.base import PostgresTest
@@ -307,6 +307,412 @@ class ValuesFilterTests(PostgresTest):
             filter.FilterContinuous(1, filter.FilterContinuous.IsDefined)
         ])(self.table)
         correct_data = [row for row in self.data if row[1] is not None]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+
+class FilterStringTest(PostgresTest):
+    def setUp(self):
+        self.data = [
+            [w] for w in "Lorem ipsum dolor sit amet, consectetur adipiscing"
+            "elit. Vestibulum vel dolor nulla. Etiam elit lectus, mollis nec"
+            "mattis sed, pellentesque in turpis. Vivamus non nisi dolor. Etiam"
+            "lacinia dictum purus, in ullamcorper ante vulputate sed. Nullam"
+            "congue blandit elementum. Donec blandit laoreet posuere. Proin"
+            "quis augue eget tortor posuere mollis. Fusce vestibulum bibendum"
+            "neque at convallis. Donec iaculis risus volutpat malesuada"
+            "vehicula. Ut cursus tempor massa vulputate lacinia. Pellentesque"
+            "eu tortor sed diam placerat porttitor et volutpat risus. In"
+            "vulputate rutrum lacus ac sagittis. Suspendisse interdum luctus"
+            "sem auctor commodo.".split(' ')] + [[None], [None]]
+        self.table_uri = self.create_sql_table(self.data)
+        self.table = SqlTable(self.table_uri)
+
+    def tearDown(self):
+        self.table.backend.connection.close()
+
+    def test_filter_string_is_defined(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.IsDefined)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] is not None]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Equal, 'in')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] == 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_equal_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Equal, 'In',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] == 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_equal_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Equal, 'donec',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] == 'Donec']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_not_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.NotEqual, 'in')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] != 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_not_equal_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.NotEqual, 'In',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] != 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_not_equal_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.NotEqual, 'donec',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] != 'Donec']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_less(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Less, 'in')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0] < 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_less_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Less, 'In',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() < 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_less_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Less, 'donec',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() < 'donec']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_less_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.LessEqual, 'in')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0] <= 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_less_equal_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.LessEqual, 'In',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() <= 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_less_equal_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.LessEqual, 'donec',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() <= 'donec']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_greater(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Greater, 'in')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0] > 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_greater_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Greater, 'In',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() > 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_greater_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Greater, 'donec',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() > 'donec']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_greater_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.GreaterEqual, 'in')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0] >= 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_greater_equal_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.GreaterEqual, 'In',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() >= 'in']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_greater_equal_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.GreaterEqual, 'donec',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].lower() >= 'donec']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_between(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Between, 'i', 'o')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and 'i' <= row[0] <= 'o']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_between_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Between, 'I', 'O',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and 'i' < row[0].lower() <= 'o']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_between_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Between, 'i', 'O',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and 'i' <= row[0].lower() <= 'o']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_contains(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Contains, 'et')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and 'et' in row[0]]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_contains_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Contains, 'eT',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and 'et' in row[0].lower()]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_contains_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Contains, 'do',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and 'do' in row[0].lower()]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_outside(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Outside, 'd', 'k')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and not 'd' < row[0] < 'k']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_outside_case_insensitive(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.Outside, 'd', 'k',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and not 'd' < row[0].lower() < 'k']
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_starts_with(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.StartsWith, 'D')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].startswith('D')]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_starts_with_case_insensitive(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.StartsWith, 'D',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None
+                        and row[0].lower().startswith('d')]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_ends_with(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.EndsWith, 's')
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None and row[0].endswith('s')]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_ends_with_case_insensitive(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterString(-1, filter.FilterString.EndsWith, 'S',
+                                case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data
+                        if row[0] is not None
+                        and row[0].lower().endswith('s')]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_list(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterStringList(-1, ['et', 'in'])
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] in ['et', 'in']]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_list_case_insensitive_value(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterStringList(-1, ['Et', 'In'], case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] in ['et', 'in']]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_filter_string_list_case_insensitive_data(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterStringList(-1, ['donec'], case_sensitive=False)
+        ])(self.table)
+        correct_data = [SqlRowInstance(filtered_data.domain, row)
+                        for row in self.data if row[0] in ['Donec']]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)

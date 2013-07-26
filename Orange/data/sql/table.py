@@ -86,7 +86,7 @@ class SqlTable(table.Table):
             # one row
             return SqlRowInstance(
                 self.domain,
-                list(self.backend.query(attributes=self.domain.variables,
+                list(self.backend.query(attributes=self.domain.variables + self.domain.metas,
                                         filters=[f.to_sql()
                                                  for f in self.row_filters],
                                         rows=[key]))[0])
@@ -121,7 +121,7 @@ class SqlTable(table.Table):
         return table
 
     def __iter__(self):
-        for row in self.backend.query(attributes=self.domain.variables,
+        for row in self.backend.query(attributes=self.domain.variables + self.domain.metas,
                                       filters=[f.to_sql()
                                                for f in self.row_filters]):
             yield SqlRowInstance(self.domain, row)
@@ -226,17 +226,30 @@ class SqlTable(table.Table):
                 else:
                     values = ["'%s'" % var.repr_val(var.to_val(v))
                               for v in cond.values]
-                new_condition = \
-                    sql_filter.FilterDiscreteSql(column=var.to_sql(),
-                                                 values=values)
+                new_condition = sql_filter.FilterDiscreteSql(
+                    column=var.to_sql(),
+                    values=values)
             elif isinstance(cond, filter.FilterContinuous):
-                new_condition = \
-                    sql_filter.FilterContinuousSql(position=var.to_sql(),
-                                                   oper=cond.oper,
-                                                   ref=cond.ref,
-                                                   max=cond.max)
+                new_condition = sql_filter.FilterContinuousSql(
+                    position=var.to_sql(),
+                    oper=cond.oper,
+                    ref=cond.ref,
+                    max=cond.max)
+            elif isinstance(cond, filter.FilterString):
+                new_condition = sql_filter.FilterString(
+                    var.to_sql(),
+                    oper=cond.oper,
+                    ref=cond.ref,
+                    max=cond.max,
+                    case_sensitive=cond.case_sensitive,
+                )
+            elif isinstance(cond, filter.FilterStringList):
+                new_condition = sql_filter.FilterStringList(
+                    column=var.to_sql(),
+                    values=cond.values,
+                    case_sensitive=cond.case_sensitive)
             else:
-                raise Exception('Sql does not support filter %s' % type(cond))
+                raise ValueError('Invalid condition %s' % type(cond))
             conditions.append(new_condition)
         t2 = self.copy()
         t2.row_filters += (sql_filter.ValuesSql(conditions=conditions,
@@ -246,4 +259,8 @@ class SqlTable(table.Table):
 
 
 class SqlRowInstance(instance.Instance):
-    pass
+    def __init__(self, domain, data=None):
+        super().__init__(domain, data)
+        nvar = len(domain.variables)
+        if len(data) > nvar:
+            self._metas = data[nvar:]

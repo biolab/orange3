@@ -61,9 +61,65 @@ class FilterContinuousSql(filter.FilterContinuous):
             return "%s >= %s AND %s <= %s" % (self.column, self.ref,
                                               self.column, self.max)
         elif self.oper == self.Outside:
-            return "%s < %s OR %s > %s" % (self.column, self.ref,
+            return "(%s < %s OR %s > %s)" % (self.column, self.ref,
                                            self.column, self.max)
         elif self.oper == self.IsDefined:
             return "%s IS NOT NULL" % self.column
         else:
             raise ValueError("Invalid operator")
+
+
+class FilterString(filter.FilterString):
+    def to_sql(self):
+        if self.oper == self.IsDefined:
+            return "%s IS NOT NULL" % self.column
+        if self.case_sensitive:
+            field = self.column
+            value = self.ref
+        else:
+            field = 'LOWER(%s)' % self.column
+            value = self.ref.lower()
+        if self.oper == self.Equal:
+            return "%s = %s" % (field, quote(value))
+        elif self.oper == self.NotEqual:
+            return "%s <> %s OR %s IS NULL" % (field, quote(value), field)
+        elif self.oper == self.Less:
+            return "%s < %s" % (field, quote(value))
+        elif self.oper == self.LessEqual:
+            return "%s <= %s" % (field, quote(value))
+        elif self.oper == self.Greater:
+            return "%s > %s" % (field, quote(value))
+        elif self.oper == self.GreaterEqual:
+            return "%s >= %s" % (field, quote(value))
+        elif self.oper == self.Between:
+            high = quote(self.max if self.case_sensitive else self.max.lower())
+            return "%s >= %s AND %s <= %s" % (field, quote(value), field, high)
+        elif self.oper == self.Outside:
+            high = quote(self.max if self.case_sensitive else self.max.lower())
+            return "(%s < %s OR %s > %s)" % (field, quote(value), field, high)
+        elif self.oper == self.Contains:
+            return "%s LIKE '%%%s%%'" % (field, value)
+        elif self.oper == self.StartsWith:
+            return "%s LIKE '%s%%'" % (field, value)
+        elif self.oper == self.EndsWith:
+            return "%s LIKE '%%%s'" % (field, value)
+        else:
+            raise ValueError("Invalid operator")
+
+
+class FilterStringList(filter.FilterStringList):
+    def to_sql(self):
+        values = self.values
+        if not self.case_sensitive:
+            values = map(lambda x: x.lower(), values)
+            sql = "LOWER(%s) in (%s)"
+        else:
+            sql = "%s in (%s)"
+        return sql % (self.column, ", ".join(map(quote, values)))
+
+
+def quote(value):
+    if isinstance(value, str):
+        return "'%s'" % value
+    else:
+        return value
