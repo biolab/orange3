@@ -38,3 +38,29 @@ class FilterDiscreteSql(filter.FilterDiscrete):
             return "%s IN (%s)" % (self.column, ','.join(self.values))
         else:
             return "%s IS NOT NULL" % self.column
+
+
+class FilterContinuousSql(filter.FilterContinuous):
+    def to_sql(self):
+        if self.oper == self.Equal:
+            return "%s = %s" % (self.column, self.ref)
+        elif self.oper == self.NotEqual:
+            return "%s <> %s" % (self.column, self.ref)
+        elif self.oper == self.Less:
+            return "%s < %s" % (self.column, self.ref)
+        elif self.oper == self.LessEqual:
+            return "%s <= %s" % (self.column, self.ref)
+        elif self.oper == self.Greater:
+            return "%s > %s" % (self.column, self.ref)
+        elif self.oper == self.GreaterEqual:
+            return "%s >= %s" % (self.column, self.ref)
+        elif self.oper == self.Between:
+            return "%s >= %s AND %s <= %s" % (self.column, self.ref,
+                                              self.column, self.max)
+        elif self.oper == self.Outside:
+            return "%s < %s OR %s > %s" % (self.column, self.ref,
+                                           self.column, self.max)
+        elif self.oper == self.IsDefined:
+            return "%s IS NOT NULL" % self.column
+        else:
+            raise ValueError("Invalid operator")

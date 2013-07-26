@@ -223,3 +223,84 @@ class ValuesFilterTests(PostgresTest):
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.Equal, 1)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[0] == 1]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_not_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.NotEqual, 1)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[0] != 1]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_less(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.Less, 2)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[0] < 2]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_less_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.LessEqual, 2)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[0] <= 2]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_greater(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.Greater, 1)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[0] > 1]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_greater_equal(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.GreaterEqual, 1)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[0] >= 1]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_between(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.Between, 1, 2)
+        ])(self.table)
+        correct_data = [row for row in self.data if 1 <= row[0] <= 2]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_outside(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(0, filter.FilterContinuous.Outside, 2, 3)
+        ])(self.table)
+        correct_data = [row for row in self.data if not 2 <= row[0] <= 3]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)
+
+    def test_continuous_value_filter_isdefined(self):
+        filtered_data = filter.Values(conditions=[
+            filter.FilterContinuous(1, filter.FilterContinuous.IsDefined)
+        ])(self.table)
+        correct_data = [row for row in self.data if row[1] is not None]
+
+        self.assertEqual(len(filtered_data), len(correct_data))
+        self.assertSequenceEqual(filtered_data, correct_data)

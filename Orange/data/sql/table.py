@@ -219,17 +219,25 @@ class SqlTable(table.Table):
     def _filter_values(self, f):
         conditions = []
         for cond in f.conditions:
+            var = self.domain[cond.column]
             if isinstance(cond, filter.FilterDiscrete):
-                var = self.domain[cond.column]
                 if cond.values is None:
                     values = None
                 else:
                     values = ["'%s'" % var.repr_val(var.to_val(v))
                               for v in cond.values]
-                conditions.append(
+                new_condition = \
                     sql_filter.FilterDiscreteSql(column=var.to_sql(),
                                                  values=values)
-                )
+            elif isinstance(cond, filter.FilterContinuous):
+                new_condition = \
+                    sql_filter.FilterContinuousSql(position=var.to_sql(),
+                                                   oper=cond.oper,
+                                                   ref=cond.ref,
+                                                   max=cond.max)
+            else:
+                raise Exception('Sql does not support filter %s' % type(cond))
+            conditions.append(new_condition)
         t2 = self.copy()
         t2.row_filters += (sql_filter.ValuesSql(conditions=conditions,
                                                 conjunction=f.conjunction,
