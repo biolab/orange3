@@ -94,7 +94,7 @@ class SameValueFilterTests(PostgresTest):
         self.data = [
             [1, 2, 3, 'a', 'm'],
             [2, None, 1, 'a', 'f'],
-            [1, 3, 1, 'b', None],
+            [None, 3, 1, 'b', None],
             [2, 2, 3, 'b', 'f'],
         ]
         self.table_uri = self.create_sql_table(self.data)
@@ -181,7 +181,7 @@ class ValuesFilterTests(PostgresTest):
         self.data = [
             [1, 2, 3, 'a', 'm'],
             [2, None, 1, 'a', 'f'],
-            [1, 3, 1, 'b', None],
+            [None, 3, 1, 'b', None],
             [2, 2, 3, 'b', 'f'],
         ]
         self.table_uri = self.create_sql_table(self.data)
@@ -246,7 +246,8 @@ class ValuesFilterTests(PostgresTest):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Less, 2)
         ])(self.table)
-        correct_data = [row for row in self.data if row[0] < 2]
+        correct_data = [row for row in self.data
+                        if row[0] is not None and row[0] < 2]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
@@ -255,7 +256,8 @@ class ValuesFilterTests(PostgresTest):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.LessEqual, 2)
         ])(self.table)
-        correct_data = [row for row in self.data if row[0] <= 2]
+        correct_data = [row for row in self.data
+                        if row[0] is not None and row[0] <= 2]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
@@ -264,7 +266,8 @@ class ValuesFilterTests(PostgresTest):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Greater, 1)
         ])(self.table)
-        correct_data = [row for row in self.data if row[0] > 1]
+        correct_data = [row for row in self.data
+                        if row[0] is not None and row[0] > 1]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
@@ -273,7 +276,8 @@ class ValuesFilterTests(PostgresTest):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.GreaterEqual, 1)
         ])(self.table)
-        correct_data = [row for row in self.data if row[0] >= 1]
+        correct_data = [row for row in self.data
+                        if row[0] is not None and row[0] >= 1]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
@@ -282,7 +286,8 @@ class ValuesFilterTests(PostgresTest):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Between, 1, 2)
         ])(self.table)
-        correct_data = [row for row in self.data if 1 <= row[0] <= 2]
+        correct_data = [row for row in self.data
+                        if row[0] is not None and 1 <= row[0] <= 2]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
@@ -291,7 +296,8 @@ class ValuesFilterTests(PostgresTest):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Outside, 2, 3)
         ])(self.table)
-        correct_data = [row for row in self.data if not 2 <= row[0] <= 3]
+        correct_data = [row for row in self.data
+                        if row[0] is not None and not 2 <= row[0] <= 3]
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)

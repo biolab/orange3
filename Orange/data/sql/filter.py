@@ -19,7 +19,10 @@ class SameValueSql(filter.SameValue):
         else:
             sql = "%s = %s" % (self.column, self.value)
         if self.negate:
-            sql = 'NOT (%s)' % sql
+            if self.value is None:
+                sql = 'NOT (%s)' % sql
+            else:
+                sql = '(NOT (%s) OR %s is NULL)' % (sql, self.column)
         return sql
 
 
@@ -45,7 +48,7 @@ class FilterContinuousSql(filter.FilterContinuous):
         if self.oper == self.Equal:
             return "%s = %s" % (self.column, self.ref)
         elif self.oper == self.NotEqual:
-            return "%s <> %s" % (self.column, self.ref)
+            return "%s <> %s OR %s IS NULL" % (self.column, self.ref, self.column)
         elif self.oper == self.Less:
             return "%s < %s" % (self.column, self.ref)
         elif self.oper == self.LessEqual:
