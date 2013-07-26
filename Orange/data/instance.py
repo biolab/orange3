@@ -142,8 +142,8 @@ class Instance:
                 return False
         for m1, m2 in zip(self._metas, other._metas):
             if not (m1 == m2
-                    or isnan(m1) or m1 is None
-                    or isnan(m2) or m2 is None):
+                    or (isinstance(m1, float) and isnan(m1)) or m1 is None
+                    or (isinstance(m2, float) and isnan(m2)) or m2 is None):
                 return False
         return True
 
