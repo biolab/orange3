@@ -47,3 +47,12 @@ class Normalizer(ColumnTransformation):
     def _transform(self, c):
         return (c - self.offset) * self.factor
 
+
+class Lookup(ColumnTransformation):
+    def __init__(self, variable, lookup_table):
+        super().__init__(variable)
+        self.lookup_table = lookup_table
+
+    def _transform(self, c):
+        return self.lookup_table[c]
+

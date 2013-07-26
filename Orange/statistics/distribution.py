@@ -228,6 +228,7 @@ class Continuous(np.ndarray):
         self[:] = dist
         self.unknowns = unknowns
         self.variable = variable
+        self.data = data
         return self
 
     def __eq__(self, other):
@@ -263,6 +264,14 @@ class Continuous(np.ndarray):
             s += prob
             if s > v:
                 return x
+
+    def mean(self):
+        return np.average(self[0], weights=self[1])
+
+    def variance(self):
+        avg = self.mean()
+        return sum([((x-avg)**2)*w for x, w in zip(self[0], self[1])])/sum(self[1])
+
 
 
 def class_distribution(data):

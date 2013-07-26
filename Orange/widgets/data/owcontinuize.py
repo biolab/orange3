@@ -18,7 +18,7 @@ class OWContinuize(widget.OWWidget):
     _keywords = ["data", "continuize"]
 
     inputs = [("Data", Table, "setData")]
-    outputs = [("Data", Table), ("Preprocessor", "PreprocessedLearner")]
+    outputs = [("Data", Table)]
 
     want_main_area = False
 
@@ -28,8 +28,8 @@ class OWContinuize(widget.OWWidget):
     continuousTreatment = Setting(0)
     autosend = Setting(0)
 
-    #settingsHandler = ClassValuesContextHandler("", ["targetValue"])
-    #contextHandlers = ContextSetting({})
+    settingsHandler = ClassValuesContextHandler()
+    targetValue = ContextSetting("")
 
     multinomialTreats = (("Target or First value as base", DomainContinuizer.LowestIsBase),
                          ("Most frequent value as base", DomainContinuizer.FrequentIsBase),
@@ -39,9 +39,9 @@ class OWContinuize(widget.OWWidget):
                          ("Treat as ordinal", DomainContinuizer.AsOrdinal),
                          ("Divide by number of values", DomainContinuizer.AsNormalizedOrdinal))
 
-    #continuousTreats = (("Leave them as they are", DomainContinuizer.Leave),
-    #                    ("Normalize by span", DomainContinuizer.NormalizeBySpan),
-    #                    ("Normalize by variance", DomainContinuizer.NormalizeByVariance))
+    continuousTreats = (("Leave them as they are", DomainContinuizer.Leave),
+                        ("Normalize by span", DomainContinuizer.NormalizeBySpan),
+                        ("Normalize by variance", DomainContinuizer.NormalizeByVariance))
 
     classTreats = (("Leave it as it is", DomainContinuizer.Ignore),
                    ("Treat as ordinal", DomainContinuizer.AsOrdinal),
@@ -75,8 +75,7 @@ class OWContinuize(widget.OWWidget):
         self.cbTargetValue = gui.comboBox(hbox, self, "targetValue", label="Target Value ", items=[], orientation="horizontal", callback=self.cbTargetSelected)
         def setEnabled(*args):
             self.cbTargetValue.setEnabled(self.classTreatment == 3)
-        #self.connect(self.ctreat.group, SIGNAL("buttonClicked(int)"), setEnabled)
-        self.ctreat.group.clicked.connect(setEnabled)
+        self.ctreat.group.buttonClicked.connect(setEnabled)
         setEnabled()
 
         self.controlArea.layout().addSpacing(4)
@@ -90,7 +89,7 @@ class OWContinuize(widget.OWWidget):
         gui.button(snbox, self, "Send data", callback=self.sendData, default=True)
         gui.checkBox(snbox, self, "autosend", "Send automatically", callback=self.enableAuto)
         self.data = None
-        self.sendPreprocessor()
+        #self.sendPreprocessor()
         self.resize(150,300)
         #self.adjustSize()
 
@@ -104,7 +103,7 @@ class OWContinuize(widget.OWWidget):
         if not data:
             self.data = None
             self.cbTargetValue.clear()
-            self.openContext("", self.data)
+            self.openContext(self.data)
             self.send("Data", None)
         else:
             if not self.data or data.domain.class_var != self.data.domain.class_var:
@@ -117,45 +116,41 @@ class OWContinuize(widget.OWWidget):
                 else:
                     self.ctreat.setDisabled(True)
             self.data = data
-            self.openContext("", self.data)
+            self.openContext(self.data)
             self.sendData()
 
     def sendDataIf(self):
         self.dataChanged = True
         if self.autosend:
-            self.sendPreprocessor()
+            #self.sendPreprocessor()
             self.sendData()
 
     def enableAuto(self):
         if self.dataChanged:
-            self.sendPreprocessor()
+            #self.sendPreprocessor()
             self.sendData()
 
     def constructContinuizer(self):
         conzer = DomainContinuizer()
         conzer.zeroBased = self.zeroBased
-        conzer.continuousTreatment = self.continuousTreatment
+        conzer.continuousTreatment = self.continuousTreats[self.continuousTreatment][1]
         conzer.multinomialTreatment = self.multinomialTreats[self.multinomialTreatment][1]
         conzer.classTreatment = self.classTreats[self.classTreatment][1]
         return conzer
 
-    def sendPreprocessor(self):
-        continuizer = self.constructContinuizer()
-        #TODO
-        #self.send("Preprocessor", PreprocessedLearner(
-         #   lambda data, weightId=0, tc=(self.targetValue if self.classTreatment else -1):
-          #      Table(continuizer(data, weightId, tc)
-           #           if data.domain.class_var and self.data.domain.class_var.var_type == Variable.VarTypes.Discrete
-            #          else continuizer(data, weightId), data)))
+    # def sendPreprocessor(self):
+    #     continuizer = self.constructContinuizer()
+    #     self.send("Preprocessor", PreprocessedLearner(
+    #         lambda data, weightId=0, tc=(self.targetValue if self.classTreatment else -1):
+    #             Table(continuizer(data, weightId, tc)
+    #                 if data.domain.class_var and self.data.domain.class_var.var_type == Variable.VarTypes.Discrete
+    #                 else continuizer(data, weightId), data)))
 
 
     def sendData(self):
         continuizer = self.constructContinuizer()
         if self.data:
-            if self.data.domain.class_var.var_type and self.data.domain.class_var.var_type == Variable.VarTypes.Discrete:
-                domain = continuizer(self.data, 0, self.targetValue if self.classTreatment else -1)
-            else:
-                domain = continuizer(self.data, 0)
+            domain = continuizer(self.data)
             domain.addmetas(self.data.domain.metas)
             self.send("Data", Table(domain, self.data))
         self.dataChanged = False
