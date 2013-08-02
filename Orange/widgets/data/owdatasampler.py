@@ -69,9 +69,10 @@ class OWDataSampler(widget.OWWidget):
         # stratified check box
         gui.checkBox(optionsBox, self, "stratified", "Stratified (if possible)", callback=self.settingsChanged)
         # random seed check with spin
-        gui.checkWithSpin(
-            optionsBox, self, "Random Seed:", 1, 32767, "setRandomSeed", "randomSeed",
-            checkCallback=self.settingsChanged, spinCallback=self.settingsChanged)
+        gui.spin(optionsBox, self, "randomSeed", 1, 1000,
+                 label="Random Seed:", checked="setRandomSeed",
+                 checkCallback=self.settingsChanged,
+                 callback=self.settingsChanged)
 
         # Box that will hold Sampling Types radio buttons
         samplingTypesBox = gui.widgetBox(self.controlArea, "Sampling types", addSpace=True)
@@ -80,10 +81,8 @@ class OWDataSampler(widget.OWWidget):
         samplingTypesBG = gui.radioButtonsInBox(
             samplingTypesBox, self, "samplingType", [], callback=self.settingsChanged)
         # random sampling radio button
-        gui.appendRadioButton(
-            samplingTypesBG, self, "samplingType", "Random Sampling:",
-            insertInto=samplingTypesBox,
-            callback=lambda: self.chooseSampling(0))
+        gui.appendRadioButton(samplingTypesBG, "Random Sampling:",
+                              insertInto=samplingTypesBox)
 
         # indent under Random Sampling which also acts as a sample size type radio button group
         self.rndSmplIndent = gui.indentedBox(samplingTypesBox)
@@ -94,9 +93,8 @@ class OWDataSampler(widget.OWWidget):
             self.rndSmplIndent, self, "sampleSizeType", [],
             callback=[lambda: self.chooseSampling(0), self.settingsChanged])
         # sample size radio button
-        gui.appendRadioButton(
-            sampleTypesBG, self, "sampleSizeType", "Sample size:",
-            insertInto=self.rndSmplIndent)
+        gui.appendRadioButton(sampleTypesBG, "Sample size:",
+                              insertInto=self.rndSmplIndent)
 
         # indent level 2 under sample size
         self.smplSizeIndent = gui.indentedBox(self.rndSmplIndent)
@@ -109,9 +107,8 @@ class OWDataSampler(widget.OWWidget):
 
         # back to level 1 indent
         # sample size type radio button
-        gui.appendRadioButton(
-            sampleTypesBG, self, "sampleSizeType", "Sample proportions:",
-            insertInto=self.rndSmplIndent)
+        gui.appendRadioButton(sampleTypesBG, "Sample proportions:",
+                              insertInto=self.rndSmplIndent)
 
         # indent level 2 under sample proportions
         self.smplPropIndent = gui.indentedBox(self.rndSmplIndent)
@@ -126,9 +123,8 @@ class OWDataSampler(widget.OWWidget):
 
         # Cross Validation
         # cross validation radio button
-        gui.appendRadioButton(
-            samplingTypesBG, self, "samplingType", "Cross Validation:",
-            insertInto=samplingTypesBox)
+        gui.appendRadioButton(samplingTypesBG, "Cross Validation:",
+                              insertInto=samplingTypesBox)
 
         # indent under cross validation
         self.crossValidIndent = gui.indentedBox(samplingTypesBox)
