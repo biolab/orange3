@@ -1093,12 +1093,9 @@ def radioButtonsInBox(widget, master, value, btnLabels, tooltips=None,
     :type orientation: int or str or PyQt4.QtGui.QLayout
     :rtype: PyQt4.QtQui.QButtonGroup
     """
-    if box or label:
-        bg = widgetBox(widget, box, orientation, misc.pop("addToLayout", True))
-        if not label is None:
-            widgetLabel(bg, label)
-    else:
-        bg = widget
+    bg = widgetBox(widget, box, orientation, addToLayout=False)
+    if not label is None:
+        widgetLabel(bg, label)
 
     rb = QtGui.QButtonGroup(bg)
     if bg is not widget:
