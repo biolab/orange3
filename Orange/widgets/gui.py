@@ -462,7 +462,7 @@ class DoubleSpinBoxWFocusOut(QtGui.QDoubleSpinBox):
 
 def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
          labelWidth=None, orientation=None, callback=None,
-         controlWidth=None, callbackOnReturn=False, checked="",
+         controlWidth=None, callbackOnReturn=False, checked=None,
          checkCallback=None, posttext=None, disabled=False,
          alignment=Qt.AlignLeft, keyboardTracking=True,
          decimals=None, spinType=int, **misc):
@@ -545,7 +545,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     bi.setDisabled(disabled)
 
     cbox = None
-    if checked:
+    if checked is not None:
         cbox = checkBox(bi, master, checked, label, labelWidth=labelWidth,
                         callback=checkCallback)
     elif label:
@@ -1066,7 +1066,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
 
 # btnLabels is a list of either char strings or pixmaps
 def radioButtonsInBox(widget, master, value, btnLabels, tooltips=None,
-                      box=None, label="", orientation='vertical',
+                      box=None, label=None, orientation='vertical',
                       callback=None, **misc):
     """
     Construct a button group and add radio buttons, if they are given.
