@@ -212,6 +212,9 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     Construct a box with vertical or horizontal layout, and optionally,
     a border with an optional label.
 
+    If the widget has a frame, the space after the widget is added unless
+    explicitly disabled.
+
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param box: tells whether the widget has a border, and its label
@@ -246,6 +249,8 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     setLayout(b, orientation)
     b.layout().setSpacing(spacing)
     b.layout().setMargin(margin)
+    if not "addSpace" in misc:
+        misc["addSpace"] = bool(box)
     miscellanea(b, None, widget, **misc)
     return b
 
@@ -1064,7 +1069,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
 
 
 # btnLabels is a list of either char strings or pixmaps
-def radioButtonsInBox(widget, master, value, btnLabels, tooltips=None,
+def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
                       box=None, label=None, orientation='vertical',
                       callback=None, **misc):
     """
@@ -1110,6 +1115,8 @@ def radioButtonsInBox(widget, master, value, btnLabels, tooltips=None,
     miscellanea(bg.group, bg, widget, **misc)
     return bg
 
+
+radioButtonsInBox = radioButtons
 
 def appendRadioButton(group, label, insertInto=None,
                       disabled=False, tooltip=None, sizePolicy=None,
