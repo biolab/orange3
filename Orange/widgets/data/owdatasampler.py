@@ -1,3 +1,4 @@
+from PyQt4 import QtCore, QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table
@@ -39,12 +40,9 @@ class OWDataSampler(widget.OWWidget):
 
     want_main_area = False
 
-    # define non contextual settings
     stratified = Setting(False)             # Setting for stratified option
-    setRandomSeed = Setting(False)          # Setting for random seed option
-    randomSeed = Setting(1)                 # Setting for random seed spin
+    randomSeed = Setting("")                # Setting for random seed spin
     samplingType = Setting(0)               # Setting for which RB is enabled at start in sampling types radio button group
-    #withReplication = Setting(False)        # Setting for data replication option in random sampling
     sampleSizeType = Setting(0)             # Setting for which RB is enabled at start in sample size radio button group
     sampleSizeNumber = Setting(1)           # Setting for the number of examples in a sample in random sampling
     sampleSizePercentage = Setting(30)      # Setting for the percentage of examples in a sample in random sampling
@@ -64,22 +62,23 @@ class OWDataSampler(widget.OWWidget):
         self.methodInfoLabel = gui.widgetLabel(infoBox, ' ')
         self.outputInfoLabel = gui.widgetLabel(infoBox, ' ')
 
-        # Options Box
         optionsBox = gui.widgetBox(self.controlArea, "Options", addSpace=True)
-        # stratified check box
-        gui.checkBox(optionsBox, self, "stratified", "Stratified (if possible)", callback=self.settingsChanged)
-        # random seed check with spin
-        gui.spin(optionsBox, self, "randomSeed", 1, 1000,
-                 label="Random Seed:", checked="setRandomSeed",
-                 checkCallback=self.settingsChanged,
-                 callback=self.settingsChanged)
+        self.leRandomSeed = le = gui.lineEdit(
+            optionsBox, self, "randomSeed", "Random seed ", orientation=0,
+            controlWidth=50, validator=QtGui.QIntValidator())
+        sze = le.sizeHint().height()
+        b = gui.toolButton(le.box, self, width=sze, height=sze, callback=self.clearRandomSeed)
+        b.setIcon(b.style().standardIcon(b.style().SP_DialogCancelButton))
+        gui.rubber(le.box)
+        gui.checkBox(optionsBox, self, "stratified",
+                     "Stratified (if possible)")
 
         # Box that will hold Sampling Types radio buttons
         samplingTypesBox = gui.widgetBox(self.controlArea, "Sampling types", addSpace=True)
 
         # Random Sampling
         samplingTypesBG = gui.radioButtonsInBox(
-            samplingTypesBox, self, "samplingType", [], callback=self.settingsChanged)
+            samplingTypesBox, self, "samplingType", [])
         # random sampling radio button
         gui.appendRadioButton(samplingTypesBG, "Random Sampling:",
                               insertInto=samplingTypesBox)
@@ -91,7 +90,7 @@ class OWDataSampler(widget.OWWidget):
 
         sampleTypesBG = gui.radioButtonsInBox(
             self.rndSmplIndent, self, "sampleSizeType", [],
-            callback=[lambda: self.chooseSampling(0), self.settingsChanged])
+            callback=lambda: self.chooseSampling(0))
         # sample size radio button
         gui.appendRadioButton(sampleTypesBG, "Sample size:",
                               insertInto=self.rndSmplIndent)
@@ -132,26 +131,26 @@ class OWDataSampler(widget.OWWidget):
         gui.spin(
             self.crossValidIndent, self, "numberOfFolds", 2, 100,
             label="Number of folds:",
-            callback=[self.updateSelectedFoldSpin, self.settingsChanged,
+            callback=[self.updateSelectedFoldSpin,
                       lambda: self.chooseSampling(1)])
 
         self.selectedFoldSpin = gui.spin(
             self.crossValidIndent, self, "selectedFold", 1, 100,
             label="Selected fold:",
-            callback=[self.updateSelectedFoldSpin, self.settingsChanged,
+            callback=[self.updateSelectedFoldSpin,
                       lambda: self.chooseSampling(1)])
         # end of indentation
 
         # Sample Data Button
-        self.sampleDataButton = gui.button(
-            self.controlArea, self, "Sample Data", callback=self.sendData)
+        gui.button(self.controlArea, self, "Sample Data",
+                   callback=self.sendData)
 
 #        self.fadeSamplingTypes()
 #        self.fadeSampleSizeTypes()
 
     # GUI METHODS
-    def settingsChanged(self):
-        self.sampleDataButton.setEnabled(True)
+    def clearRandomSeed(self):
+        self.leRandomSeed.setText("")
 
     def updateSelectedFoldSpin(self):
         """
@@ -192,8 +191,11 @@ class OWDataSampler(widget.OWWidget):
             return
         data_size = len(self.data)
         rnd_seed = None
-        if self.setRandomSeed:
-            rnd_seed = self.randomSeed
+        if self.randomSeed:
+            try:
+                rnd_seed = int(self.randomSeed)
+            except BaseException:
+                pass
         # random sampling
         if self.samplingType == 0:
             # size by number
@@ -234,4 +236,3 @@ class OWDataSampler(widget.OWWidget):
 
         self.send("Data Sample", self.data[sample_indices])
         self.send("Remaining Data", self.data[remainder_indices])
-        self.sampleDataButton.setEnabled(False)
