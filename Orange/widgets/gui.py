@@ -206,7 +206,7 @@ def rubber(widget):
     widget.layout().addStretch(100)
 
 
-def widgetBox(widget, box=None, orientation='vertical', margin=-1, spacing=4,
+def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
               **misc):
     """
     Construct a box with vertical or horizontal layout, and optionally,
@@ -236,17 +236,16 @@ def widgetBox(widget, box=None, orientation='vertical', margin=-1, spacing=4,
         b = QtGui.QGroupBox(widget)
         if isinstance(box, str):
             b.setTitle(" " + box.strip() + " ")
-        if margin == -1:
+        if margin is None:
             margin = 7
     else:
         b = QtGui.QWidget(widget)
-        if margin == -1:
+        b.setContentsMargins(0, 0, 0, 0)
+        if margin is None:
             margin = 0
     setLayout(b, orientation)
     b.layout().setSpacing(spacing)
-    if margin != -1:
-        b.layout().setMargin(margin)
-
+    b.layout().setMargin(margin)
     miscellanea(b, None, widget, **misc)
     return b
 
@@ -539,7 +538,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         b = widget
         hasHBox = False
     if not hasHBox and (checked or callback and callbackOnReturn or posttext):
-        bi = widgetBox(b, "", 0, addToLayout=(b is not widget))
+        bi = widgetBox(b, orientation=0, addToLayout=False)
     else:
         bi = b
     bi.setDisabled(disabled)
