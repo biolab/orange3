@@ -29,10 +29,13 @@ class Continuizer_Test(unittest.TestCase):
             self.assertEqual(dat2[2], [2,  2, 0, 1, 0, 0, 1, "c"])
 
     def test_continuous(self):
-        self.assertRaises(TypeError, DomainContinuizer,
-                          self.data.domain, normalize_continuous=True)
+        self.assertRaises(TypeError, DomainContinuizer, self.data.domain,
+                          normalize_continuous=DomainContinuizer.NormalizeBySpan
+        )
 
-        dom = DomainContinuizer(self.data, normalize_continuous=True)
+        dom = DomainContinuizer(self.data,
+                          normalize_continuous=DomainContinuizer.NormalizeBySpan
+        )
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in dom.attributes))
         self.assertIs(dom.class_var, self.data.domain.class_var)
@@ -75,8 +78,10 @@ class Continuizer_Test(unittest.TestCase):
         self.assertRaises(TypeError, DomainContinuizer,
                   self.data.domain, normalize_continuous=True)
 
-        dom = DomainContinuizer(self.data, normalize_continuous=True,
-                                transform_class=True, zero_based=False)
+        dom = DomainContinuizer(
+            self.data,
+            normalize_continuous=DomainContinuizer.NormalizeBySpan,
+            transform_class=True, zero_based=False)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in dom))
         self.assertIsNot(dom.class_var, self.data.domain.class_var)

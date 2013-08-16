@@ -6,11 +6,14 @@ from ..feature.transformation import \
 
 class DomainContinuizer:
     def __new__(cls, data=None, zero_based=True, multinomial_treatment=0,
-                normalize_continuous=False, transform_class=False):
+                normalize_continuous=None, transform_class=False):
         self = super().__new__(cls)
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
-        self.normalize_continuous = normalize_continuous
+        if normalize_continuous is None:
+            self.normalize_continuous = self.Leave
+        else:
+            self.normalize_continuous = normalize_continuous
         self.transform_class = transform_class
         return self if data is None else self(data)
 
@@ -83,9 +86,11 @@ class DomainContinuizer:
                     if needs_discrete:
                         var_ptr += 1
                 else:
-                    new_vars.append(transform_continuous(var))
-                    if needs_continuous:
-                        var_ptr += 1
+                    new_var = transform_continuous(var)
+                    if new_var is not None:
+                        new_vars.append(new_var)
+                        if needs_continuous:
+                            var_ptr += 1
             return new_vars
 
         treat = self.multinomial_treatment
