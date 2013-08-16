@@ -9,6 +9,36 @@ def enum_value_unpickler(names, value):
     return enum_class[value]
 
 def Enum(*names):
+    """
+    Constructs a class with named constants. The returned class serves as a
+    namespace, and adds support for getting items and iteration. Values are
+    instances of a class derived from `int` that can be printed out in symbolic
+    form.
+
+    :param names: names of constants
+    :return: class with named constants.
+
+    Typical use is::
+
+        VarTypes = Enum("None", "Discrete", "Continuous", "String")
+
+    in `Orange.data.Variable`, which adds a namespace VarType to type Variable
+    to have constants `Orange.data.Variable.VarTypes.None`,
+    `Orange.data.Variable.VarTypes.Discrete` and so forth.
+
+    The resulting class has also a method `pull_up(self, cls)` that puts the
+    constants into the namespace of the given class `cls`. The following code
+    is used (in module scope) to add named constants to class
+    `FilterContinuous`::
+
+         Enum("Equal", "NotEqual", "Less", "LessEqual",
+              "Greater", "GreaterEqual", "Between", "Outside",
+              "IsDefined").pull_up(FilterContinuous)
+
+    With this, the class `FilterContinuous` has constants
+    `FilterContinuous.Equal`, `FilterContinuous.NotEqual` and so forth, and not
+    `FilterContinuous.SomeNamespaceName.Equal`.
+    """
     if names in _enum_registry:
         return _enum_registry[names]
 
