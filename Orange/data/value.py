@@ -70,7 +70,7 @@ class Value(float):
                 return self
             except:
                 pass
-        self = super().__new__(cls, Unknown)
+        self = super().__new__(cls, -1)
         self.value = value
         self.variable = variable
         return self
