@@ -1,4 +1,4 @@
-from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, Variable, DiscreteVariable, ContinuousVariable
 from Orange.data.continuizer import DomainContinuizer
 from Orange.feature import transformation
 import unittest
@@ -6,6 +6,7 @@ import unittest
 
 class Continuizer_Test(unittest.TestCase):
     def setUp(self):
+        Variable.clear_cache()
         self.data = Table("test4")
 
     def test_default(self):
