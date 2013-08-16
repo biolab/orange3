@@ -54,6 +54,7 @@ represented by whole numbers.
     data.table
     data.domain
     data.variable
+    data.value
     data.instance
     data.filters
     data.continuizer

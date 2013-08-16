@@ -1,13 +1,67 @@
 from numbers import Real
 from math import isnan
 
+#: A constant representing unknown value (NaN). Use this for storing unknowns,
+#: but not for checking for unknowns.
 Unknown = float("nan")
 
 
 class Value(float):
+    """
+    The class representing a value. The class is not used to store values but
+    only to return them in contexts in which we want the value to be accompanied
+    with the descriptor, for instance to print the symbolic value of discrete
+    variables.
+
+    The class is derived from `float`, with an additional attribute `variable`
+    which holds the descriptor of type :obj:Orange.data.Variable. If the value
+    continuous or discrete, it is stored as a float. Other types of values,
+    like strings, are stored in the attribute `value`.
+
+    The class overloads the methods for printing out the value:
+    `variable.repr_val` and `variable.str_val` are used to get a suitable
+    representation of the value.
+
+    Equivalence operator is overloaded as follows:
+
+    - unknown values are equal; if one value is unknown and the other is not,
+      they are different;
+
+    - if the value is compared with the string, the value is converted to a
+      string using `variable.str_val` and the two strings are compared
+
+    - if the value is stored in attribute `value`, it is compared with the
+      given other value
+
+    - otherwise, the inherited comparison operator for `float` is called.
+
+    Finally, value defines a hash, so values can be put in sets and appear as
+    keys in dictionaries.
+
+    .. attribute:: variable (:obj:Orange.data.Variable)
+
+        Descriptor; used for printing out and for comparing with strings
+
+    .. attribute:: value
+
+        Value; the value can be of arbitrary type and is used only for variables
+        that are neither discrete nor continuous. If `value` is `None`, the
+        derived `float` value is used.
+    """
     __slots__ = "variable", "value"
 
     def __new__(cls, variable, value=Unknown):
+        """
+        Construct a new instance of Value with the given descriptor and value.
+        If the argument `value` can be converted to float, it is stored as
+        `float` and the attribute `value` is set to `None`. Otherwise, the
+        inherited float is set to `Unknown` and the value is held by the
+        attribute `value`.
+
+        :param variable: descriptor
+        :type variable: Orange.data.Variable
+        :param value: value
+        """
         if not isinstance(value, str):
             try:
                 self = super().__new__(cls, value)
@@ -16,7 +70,7 @@ class Value(float):
                 return self
             except:
                 pass
-        self = super().__new__(cls, -1)
+        self = super().__new__(cls, Unknown)
         self.value = value
         self.variable = variable
         return self
@@ -55,13 +109,3 @@ class Value(float):
             return super().__hash__(self)
         else:
             return super().__hash__(self) ^ hash(self.value)
-
-"""
-Remove when implemented (or when decided to not reimplement)
-
-from orange import \
-              Distribution, \
-                   ContDistribution, \
-                   DiscDistribution, \
-                   GaussianDistribution, \
-"""
