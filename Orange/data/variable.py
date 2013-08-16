@@ -50,6 +50,8 @@ class Variable:
                       "Incompatible", "NotFound")
     DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
 
+    variable_types = []
+
     def __init__(self, var_type, name="", ordered=False):
         """
         Construct a variable descriptor and store the general properties of
@@ -127,6 +129,10 @@ class Variable:
         self._get_value_lock = threading.Lock()
         self.var_type = getattr(Variable.VarTypes, state["var_type"])
 
+    @classmethod
+    def clear_cache(cls):
+        for tpe in cls.variable_types:
+            tpe.clear_cache()
 
 class DiscreteVariable(Variable):
     """
@@ -322,6 +328,13 @@ class DiscreteVariable(Variable):
             var.base_value = var.values.index(base_rep)
         return var
 
+    @classmethod
+    def clear_cache(cls):
+        """
+        Cleans the list of variables for reuse by :obj:`make`.
+        """
+        cls.all_discrete_vars.clear()
+
     @staticmethod
     def ordered_values(values):
         """
@@ -373,6 +386,13 @@ class ContinuousVariable(Variable):
         """
         existing_var = ContinuousVariable.all_continuous_vars.get(name)
         return existing_var or ContinuousVariable(name)
+
+    @classmethod
+    def clear_cache(cls):
+        """
+        Cleans the list of variables for reuse by :obj:`make`.
+        """
+        cls.all_continuous_vars.clear()
 
     @staticmethod
     def is_primitive():
@@ -458,3 +478,13 @@ class StringVariable(Variable):
         """
         existing_var = StringVariable.all_string_vars.get(name)
         return existing_var or StringVariable(name)
+
+    @classmethod
+    def clear_cache(cls):
+        """
+        Cleans the list of variables for reuse by :obj:`make`.
+        """
+        cls.all_string_vars.clear()
+
+Variable.variable_types += [DiscreteVariable, ContinuousVariable, StringVariable
+    ]
