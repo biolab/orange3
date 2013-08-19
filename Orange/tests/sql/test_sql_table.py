@@ -56,7 +56,7 @@ class SqlTableMockedTests(unittest.TestCase):
 
     def test_responds_to_len(self):
         table = sql_table.SqlTable(self.uri, backend=self.backend)
-
+        table._cached__len__ = 150
         nrows = len(table)
 
         self.assertEqual(nrows, 150)

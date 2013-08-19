@@ -228,7 +228,6 @@ class Continuous(np.ndarray):
         self[:] = dist
         self.unknowns = unknowns
         self.variable = variable
-        self.data = data
         return self
 
     def __eq__(self, other):
