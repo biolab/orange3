@@ -168,7 +168,8 @@ class SqlTable(table.Table):
             columns = list(self.domain)
             if include_metas:
                 columns += list(self.domain.metas)
-        return self.backend.stats(columns)
+        where = self._construct_where()
+        return self.backend.stats(columns, where)
 
     def _compute_distributions(self, columns=None):
         if columns is not None:

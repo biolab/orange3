@@ -96,11 +96,11 @@ class PostgreBackend(object):
                 break
             yield row
 
-    def stats(self, columns):
+    def stats(self, columns, where=""):
         stats = []
         for column in columns:
             if column.var_type == column.VarTypes.Continuous:
-                column = column.get_value_from()
+                column = column.to_sql()
                 stats.append(", ".join((
                     "MIN(%s)" % column,
                     "MAX(%s)" % column,
@@ -118,7 +118,7 @@ class PostgreBackend(object):
                     "END)" % column,
                 )))
             else:
-                column = column.get_value_from()
+                column = column.to_sql()
                 stats.append(", ".join((
                     "NULL",
                     "NULL",
@@ -136,7 +136,9 @@ class PostgreBackend(object):
 
         stats_sql = ", ".join(stats)
         cur = self.connection.cursor()
-        cur.execute("""SELECT %s FROM "%s" """ % (stats_sql, self.table_name))
+        cur.execute("""SELECT %s FROM "%s" %s""" % (stats_sql,
+                                                    self.table_name,
+                                                    where))
         self.connection.commit()
         results = cur.fetchone()
         stats = []
