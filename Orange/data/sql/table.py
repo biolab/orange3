@@ -122,6 +122,14 @@ class SqlTable(table.Table):
 
     #@functools.lru_cache(maxsize=128)
     def __getitem__(self, key):
+        """ Indexing of SqlTable is performed in the following way:
+
+        If a single row is requested, it is fetched from the database and
+        returned as a SqlRowInstance.
+
+        A new SqlTable with appropriate filters is constructed and returned
+        otherwise.
+        """
         if isinstance(key, int):
             # one row
             return SqlRowInstance(
@@ -161,9 +169,12 @@ class SqlTable(table.Table):
         return table
 
     def __iter__(self):
+        """ Iterating through the rows executes the query using a cursor and
+        then yields resulting rows as SqlRowInstances as they are requested.
+        """
         for row in self._query(attributes=self.domain.variables + self.domain.metas,
                                filters=[f.to_sql()
-                                               for f in self.row_filters]):
+                                        for f in self.row_filters]):
             yield SqlRowInstance(self.domain, row)
 
     def _query(self, attributes=None, filters=(), rows=None):
@@ -204,6 +215,7 @@ class SqlTable(table.Table):
             yield row
 
     def copy(self):
+        """Return a copy of the SqlTable"""
         table = SqlTable.__new__(SqlTable)
         table.connection = self.connection
         table.domain = self.domain
@@ -214,6 +226,10 @@ class SqlTable(table.Table):
     _cached__len__ = None
 
     def __len__(self):
+        """
+        Return number of rows in the table. The value is cached so it is
+        computed only the first time the length is requested.
+        """
         if self._cached__len__ is None:
             sql = """SELECT COUNT(*) FROM "%s" %s""" % (
                 self.table_name,
