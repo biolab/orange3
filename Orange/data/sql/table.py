@@ -3,8 +3,10 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 
 from urllib import parse
-from .. import domain, variable, value, table, instance, filter
+import numpy as np
 import psycopg2
+
+from .. import domain, variable, value, table, instance, filter
 from Orange.data.sql import filter as sql_filter
 
 
@@ -243,7 +245,56 @@ class SqlTable(table.Table):
             if include_metas:
                 columns += list(self.domain.metas)
         where = self._construct_where()
-        return self.backend.stats(columns, where)
+        return self._get_stats(columns, where)
+
+    def _get_stats(self, columns, where=""):
+        stats = []
+        for column in columns:
+            if column.var_type == column.VarTypes.Continuous:
+                column = column.to_sql()
+                stats.append(", ".join((
+                    "MIN(%s)" % column,
+                    "MAX(%s)" % column,
+                    "AVG(%s)" % column,
+                    "STDDEV(%s)" % column,
+                    #"0",
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 1"
+                    "       ELSE 0"
+                    "END)" % column,
+                    #"0",
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 0"
+                    "       ELSE 1"
+                    "END)" % column,
+                )))
+            else:
+                column = column.to_sql()
+                stats.append(", ".join((
+                    "NULL",
+                    "NULL",
+                    "NULL",
+                    "NULL",
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 1"
+                    "       ELSE 0"
+                    "END)" % column,
+                    "SUM(CASE TRUE"
+                    "       WHEN %s IS NULL THEN 0"
+                    "       ELSE 1"
+                    "END)" % column,
+                )))
+
+        stats_sql = ", ".join(stats)
+        cur = self.connection.cursor()
+        cur.execute("""SELECT %s FROM "%s" %s""" % (
+            stats_sql, self.table_name, where))
+        self.connection.commit()
+        results = cur.fetchone()
+        stats = []
+        for i in range(len(columns)):
+            stats.append(results[6*i:6*(i+1)])
+        return stats
 
     def _compute_distributions(self, columns=None):
         if columns is not None:
@@ -251,7 +302,28 @@ class SqlTable(table.Table):
         else:
             columns = list(self.domain)
         where = self._construct_where()
-        return self.backend.distributions(columns, where)
+        return self._get_distributions(columns, where)
+
+    def _get_distributions(self, columns, where):
+        dists = []
+        cur = self.connection.cursor()
+        for col in columns:
+            cur.execute("""
+                SELECT %(col)s, COUNT(%(col)s)
+                  FROM "%(table)s"
+                    %(where)s
+              GROUP BY %(col)s
+              ORDER BY %(col)s""" %
+                        dict(col=col.to_sql(),
+                             table=self.table_name,
+                             where=where))
+            dist = np.array(cur.fetchall())
+            if col.var_type == col.VarTypes.Continuous:
+                dists.append((dist.T, []))
+            else:
+                dists.append((dist[:, 1].T, []))
+        self.connection.commit()
+        return dists
 
     def X_density(self):
         return self.DENSE
