@@ -48,6 +48,7 @@ class SqlTable(table.Table):
 
         self.nrows = self.backend.table_info.nrows
         self.domain = self._create_domain()
+        self.name = self.table_name
 
     def _init_backend(self, scheme, backend):
         if backend is not None:
