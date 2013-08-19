@@ -23,7 +23,6 @@ class PostgreBackend(object):
         cur = self.connection.cursor()
         return TableInfo(
             fields=self._get_field_list(cur),
-            nrows=self._get_nrows(cur),
         )
 
     def _get_field_list(self, cur):
@@ -165,9 +164,8 @@ class PostgreBackend(object):
 
 
 class TableInfo(object):
-    def __init__(self, fields, nrows):
+    def __init__(self, fields):
         self.fields = fields
-        self.nrows = nrows
         self.field_names = tuple(name for name, _, _ in fields)
         self.values = {
             name: values

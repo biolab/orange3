@@ -11,7 +11,7 @@ from Orange.data.sql import filter as sql_filter
 class SqlTable(table.Table):
     base = None
     domain = None
-    nrows = 0
+    nrows = None
     row_filters = ()
 
     def __new__(cls, *args, **kwargs):
@@ -46,7 +46,6 @@ class SqlTable(table.Table):
             password=password,
         )
 
-        self.nrows = self.backend.table_info.nrows
         self.domain = self._create_domain()
         self.name = self.table_name
 
@@ -131,7 +130,6 @@ class SqlTable(table.Table):
         table.database = self.database
         table.backend = self.backend
         table.domain = self.domain
-        table.nrows = None
         table.row_filters = self.row_filters
         return table
 
