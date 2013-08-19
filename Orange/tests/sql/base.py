@@ -95,6 +95,7 @@ class PostgresTest(unittest.TestCase):
             cur.execute(insert_sql)
         conn.commit()
         conn.close()
+        self.table_name = str(table_name)
         return get_dburi() + '/' + str(table_name)
 
     def _get_column_types(self, data):
@@ -106,3 +107,9 @@ class PostgresTest(unittest.TestCase):
                     column_size[i] = max(len(value), column_size[i])
         return column_size
 
+    def drop_sql_table(self, table_name):
+        conn = psycopg2.connect(get_dburi())
+        cur = conn.cursor()
+        cur.execute("""DROP TABLE "%s" """ % table_name)
+        conn.commit()
+        conn.close()
