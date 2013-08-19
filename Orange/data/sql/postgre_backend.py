@@ -78,13 +78,14 @@ class PostgreBackend(object):
         if rows is not None:
             if isinstance(rows, slice):
                 start = rows.start or 0
-                stop = rows.stop or self.table_info.nrows
-                size = stop - start
+                if rows.stop is None:
+                    sql += " OFFSET %d" % start
+                else:
+                    sql += " OFFSET %d LIMIT %d" % (start, rows.stop - start)
             else:
                 rows = list(rows)
                 start, stop = min(rows), max(rows)
-                size = stop - start + 1
-            sql += " OFFSET %d LIMIT %d" % (start, size)
+                sql += " OFFSET %d LIMIT %d" % (start, stop - start + 1)
         cur = self.connection.cursor()
         cur.execute(sql)
         self.connection.commit()

@@ -23,7 +23,6 @@ class PostgreBckendTests(unittest.TestCase):
         self.assertSequenceEqual(self.backend.table_info.values['iris'],
                                  ['Iris-setosa', 'Iris-versicolor',
                                   'Iris-virginica'])
-        self.assertEqual(self.backend.table_info.nrows, 150)
 
     def test_query_all(self):
         results = list(self.backend.query())
