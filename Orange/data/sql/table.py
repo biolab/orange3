@@ -11,7 +11,6 @@ from Orange.data.sql import filter as sql_filter
 class SqlTable(table.Table):
     base = None
     domain = None
-    nrows = None
     row_filters = ()
 
     def __new__(cls, *args, **kwargs):
@@ -133,18 +132,19 @@ class SqlTable(table.Table):
         table.row_filters = self.row_filters
         return table
 
+    _cached__len__ = None
+
     def __len__(self):
-        if self.nrows is not None:
-            return self.nrows
-        sql = """SELECT COUNT(*) FROM "%s" %s""" % (
-            self.backend.table_name,
-            self._construct_where(),
-        )
-        cur = self.backend.connection.cursor()
-        cur.execute(sql)
-        self.backend.connection.commit()
-        self.nrows = cur.fetchone()[0]
-        return self.nrows
+        if self._cached__len__ is None:
+            sql = """SELECT COUNT(*) FROM "%s" %s""" % (
+                self.backend.table_name,
+                self._construct_where(),
+            )
+            cur = self.backend.connection.cursor()
+            cur.execute(sql)
+            self.backend.connection.commit()
+            self._cached__len__ = cur.fetchone()[0]
+        return self._cached__len__
 
     def _construct_where(self):
         filters = [f.to_sql() for f in self.row_filters]

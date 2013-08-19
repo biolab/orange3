@@ -54,11 +54,6 @@ class SqlTableMockedTests(unittest.TestCase):
             ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
         )
 
-    def test_sets_nrows(self):
-        table = sql_table.SqlTable(self.uri, backend=self.backend)
-
-        self.assertEqual(table.nrows, 150)
-
     def test_responds_to_len(self):
         table = sql_table.SqlTable(self.uri, backend=self.backend)
 
