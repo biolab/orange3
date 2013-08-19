@@ -154,7 +154,7 @@ class PostgreBackend(object):
                   FROM "%(table)s"
               GROUP BY %(col)s
               ORDER BY %(col)s""" %
-                        dict(col=col.get_value_from(), table=self.table_name))
+                        dict(col=col.to_sql(), table=self.table_name))
             dist = np.array(cur.fetchall())
             if col.var_type == col.VarTypes.Continuous:
                 dists.append((dist.T, []))
