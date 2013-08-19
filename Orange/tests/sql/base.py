@@ -11,7 +11,7 @@ import Orange
 def get_dburi():
     dburi = os.environ.get('ORANGE_TEST_DB_URI')
     if dburi:
-        pass
+        return dburi
     else:
         return "postgres://localhost/test"
 
