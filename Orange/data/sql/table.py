@@ -3,71 +3,82 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 
 from urllib import parse
-from . import postgre_backend
 from .. import domain, variable, value, table, instance, filter
+import psycopg2
 from Orange.data.sql import filter as sql_filter
 
 
 class SqlTable(table.Table):
-    base = None
+    connection = None
+    table_name = None
     domain = None
     row_filters = ()
 
     def __new__(cls, *args, **kwargs):
+        """We do not (yet) need the magic of the Table.__new__, so we call it
+        with no parameters.
+        """
         return super().__new__(cls)
 
-    def __init__(self, uri=None,
-                 host=None, database=None, user=None, password=None, table=None,
-                 backend=None):
-        if self.base:
-            return
+    def __init__(
+            self, uri=None,
+            host=None, database=None, user=None, password=None, schema=None,
+            table=None, **kwargs):
+        """
+        Create a new  proxy for sql table.
 
+        Database connection parameters can be specified either as a string:
+
+            table = SqlTable("user:password@host:port/database/table?schema=dbschema")
+
+        or using a set of keyword arguments:
+
+            table = SqlTable(database="test", table="iris")
+
+        All but the database and table parameters are optional. Any additional
+        parameters will be forwarded to the psycopg2 backend.
+        """
         assert uri is not None or table is not None
 
-        if uri is not None:
-            parsed_uri = parse.urlparse(uri)
-            host = parsed_uri.hostname
-            path = parsed_uri.path.strip('/')
-            database, table = path.split('/')
-            user = parsed_uri.username
-            password = parsed_uri.password
-        scheme = 'pgsql'
-        self.host = host
-        self.database = database
-        self.table_name = table
-
-        self._init_backend(scheme, backend)
-        self.backend.connect(
-            database=self.database,
-            table=self.table_name,
-            hostname=self.host,
-            username=user,
+        connection_args = dict(
+            host=host,
+            user=user,
             password=password,
+            database=database,
+            schema=schema
         )
+        if uri is not None:
+            parameters = self._parse_uri(uri)
+            table = parameters.pop("table")
+            connection_args.update(parameters)
 
+        self.connection = psycopg2.connect(**connection_args)
+        self.table_name = self.name = table
         self.domain = self._create_domain()
         self.name = self.table_name
 
-    def _init_backend(self, scheme, backend):
-        if backend is not None:
-            self.backend = backend
-        else:
-            if scheme in ('sql', 'pgsql'):
-                self.backend = postgre_backend.PostgreBackend()
-            else:
-                raise ValueError("Unsupported schema: %s" % scheme)
+    def _parse_uri(self, uri):
+        parsed_uri = parse.urlparse(uri)
+        path = parsed_uri.path.strip('/')
+        database, table = path.split('/')
+
+        return dict(
+            host=parsed_uri.hostname,
+            port=parsed_uri.port,
+            user=parsed_uri.username,
+            database=database,
+            password=parsed_uri.password,
+            table=table,
+        )
+        # TODO: parse schema
 
     def _create_domain(self):
-        attributes, metas = self._create_attributes()
-        return domain.Domain(attributes, metas=metas)
-
-    def _create_attributes(self):
         attributes, metas = [], []
-        for name, type, values in self.backend.table_info.fields:
-            if 'double' in type:
+        for name, field_type, values in self._get_fields():
+            if 'double' in field_type:
                 attr = variable.ContinuousVariable(name=name)
                 attributes.append(attr)
-            elif 'char' in type and values:
+            elif 'char' in field_type and values:
                 attr = variable.DiscreteVariable(name=name, values=values)
                 attributes.append(attr)
             else:
@@ -75,7 +86,37 @@ class SqlTable(table.Table):
                 metas.append(attr)
             field_name = '"%s"' % name
             attr.to_sql = lambda field_name=field_name: field_name
-        return attributes, metas
+
+        return domain.Domain(attributes, metas=metas)
+
+    def _get_fields(self):
+        cur = self.connection.cursor()
+        cur.execute("""
+            SELECT column_name, data_type
+              FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE table_name = %s;""", (self.table_name,))
+        self.connection.commit()
+
+        for field, field_type in cur.fetchall():
+            yield field, field_type, self._get_field_values(field, field_type)
+
+    def _get_field_values(self, field_name, field_type):
+        if 'double' in field_type:
+            return ()
+        elif 'char' in field_type:
+            return self._get_distinct_values(field_name)
+
+    def _get_distinct_values(self, field_name):
+        cur = self.connection.cursor()
+        cur.execute("""SELECT DISTINCT "%s" FROM "%s" ORDER BY %s LIMIT 21""" %
+                    (field_name, self.table_name, field_name))
+        self.connection.commit()
+        values = cur.fetchall()
+
+        if len(values) > 20:
+            return ()
+        else:
+            return tuple(x[0] for x in values)
 
     #@functools.lru_cache(maxsize=128)
     def __getitem__(self, key):
@@ -83,10 +124,10 @@ class SqlTable(table.Table):
             # one row
             return SqlRowInstance(
                 self.domain,
-                list(self.backend.query(attributes=self.domain.variables + self.domain.metas,
-                                        filters=[f.to_sql()
-                                                 for f in self.row_filters],
-                                        rows=[key]))[0])
+                list(self._query(attributes=self.domain.variables + self.domain.metas,
+                                 filters=[f.to_sql()
+                                          for f in self.row_filters],
+                                 rows=[key]))[0])
         if not isinstance(key, tuple):
             # row filter
             key = (key, Ellipsis)
@@ -118,18 +159,54 @@ class SqlTable(table.Table):
         return table
 
     def __iter__(self):
-        for row in self.backend.query(attributes=self.domain.variables + self.domain.metas,
-                                      filters=[f.to_sql()
+        for row in self._query(attributes=self.domain.variables + self.domain.metas,
+                               filters=[f.to_sql()
                                                for f in self.row_filters]):
             yield SqlRowInstance(self.domain, row)
 
+    def _query(self, attributes=None, filters=(), rows=None):
+        if attributes is not None:
+            fields = []
+            for attr in attributes:
+                assert hasattr(attr, 'to_sql'), \
+                    "Cannot use ordinary attributes with sql backend"
+                field_str = '(%s) AS "%s"' % (attr.to_sql(), attr.name)
+                fields.append(field_str)
+            if not fields:
+                raise ValueError("No fields selected.")
+        else:
+            fields = ["*"]
+
+        sql = """SELECT %s FROM "%s" """ % (', '.join(fields), self.table_name)
+        filters = [f for f in filters if f]
+        if filters:
+            sql += " WHERE %s " % " AND ".join(filters)
+        if rows is not None:
+            if isinstance(rows, slice):
+                start = rows.start or 0
+                if rows.stop is None:
+                    sql += " OFFSET %d" % start
+                else:
+                    sql += " OFFSET %d LIMIT %d" % (start, rows.stop - start)
+            else:
+                rows = list(rows)
+                start, stop = min(rows), max(rows)
+                sql += " OFFSET %d LIMIT %d" % (start, stop - start + 1)
+        cur = self.connection.cursor()
+        cur.execute(sql)
+        self.connection.commit()
+        while True:
+            row = cur.fetchone()
+            if row is None:
+                break
+            yield row
+
     def copy(self):
         table = SqlTable.__new__(SqlTable)
-        table.host = self.host
-        table.database = self.database
-        table.backend = self.backend
+        table.connection = self.connection
         table.domain = self.domain
         table.row_filters = self.row_filters
+        table.table_name = self.table_name
         return table
 
     _cached__len__ = None
@@ -137,12 +214,12 @@ class SqlTable(table.Table):
     def __len__(self):
         if self._cached__len__ is None:
             sql = """SELECT COUNT(*) FROM "%s" %s""" % (
-                self.backend.table_name,
+                self.table_name,
                 self._construct_where(),
             )
-            cur = self.backend.connection.cursor()
+            cur = self.connection.cursor()
             cur.execute(sql)
-            self.backend.connection.commit()
+            self.connection.commit()
             self._cached__len__ = cur.fetchone()[0]
         return self._cached__len__
 
