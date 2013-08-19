@@ -19,7 +19,6 @@ class PostgreBackend(object):
         self.table_name = table
         self.table_info = self._get_table_info()
 
-
     def _get_table_info(self):
         cur = self.connection.cursor()
         return TableInfo(

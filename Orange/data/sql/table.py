@@ -3,10 +3,8 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 
 from urllib import parse
-import functools
-import numpy as np
 from . import postgre_backend
-from .. import domain, storage, variable, value, table, instance, filter
+from .. import domain, variable, value, table, instance, filter
 from Orange.data.sql import filter as sql_filter
 
 
