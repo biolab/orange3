@@ -305,12 +305,12 @@ class OWSelectData(widget.OWWidget):
                     if any(not v for v in values):
                         continue
                     filter = data_filter.FilterContinuous(
-                        attr_index, oper, *[int(v) for v in values])
+                        attr_index, oper, *[float(v) for v in values])
                 elif isinstance(attr, StringVariable):
                     if any(v for v in values):
                         continue
                     filter = data_filter.FilterString(
-                        attr_index, oper, *[int(v) for v in values])
+                        attr_index, oper, *[float(v) for v in values])
                 else:
                     if oper in [2, 3]:
                         raise NotImplementedError(
