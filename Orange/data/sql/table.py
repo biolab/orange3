@@ -173,7 +173,8 @@ class SqlTable(table.Table):
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
             columns = list(self.domain)
-        return self.backend.distributions(columns)
+        where = self._construct_where()
+        return self.backend.distributions(columns, where)
 
     def X_density(self):
         return self.DENSE

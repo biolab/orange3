@@ -144,16 +144,19 @@ class PostgreBackend(object):
             stats.append(results[6*i:6*(i+1)])
         return stats
 
-    def distributions(self, columns):
+    def distributions(self, columns, where):
         dists = []
         cur = self.connection.cursor()
         for col in columns:
             cur.execute("""
                 SELECT %(col)s, COUNT(%(col)s)
                   FROM "%(table)s"
+                    %(where)s
               GROUP BY %(col)s
               ORDER BY %(col)s""" %
-                        dict(col=col.to_sql(), table=self.table_name))
+                        dict(col=col.to_sql(),
+                             table=self.table_name,
+                             where=where))
             dist = np.array(cur.fetchall())
             if col.var_type == col.VarTypes.Continuous:
                 dists.append((dist.T, []))
