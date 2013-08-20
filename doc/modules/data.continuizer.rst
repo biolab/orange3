@@ -119,11 +119,12 @@ Continuization and normalization (``continuizer``)
 
     .. attribute:: normalize_continuous
 
-        If ``False``, continues variables are left unchanged. If
-        ``True``, they are replaced with normalized values by subtracting
-        the average value and dividing by the deviation. Statistics are
-        computed from the data, so constructor must be given data, not just
-        domain. (Default: ``False``)
+        If ``None``, continuous variables are left unchanged. If
+        ``DomainContinuizer.NormalizeBySD``, they are replaced with standardized values by subtracting
+        the average value and dividing by the standard deviation. Attribute ``zero_based`` has no effect on this
+        standardization. If ``DomainContinuizer.NormalizeBySpan``, they are replaced with normalized values by
+        subtracting min value of the data and dividing by span (max - min). Statistics are computed from the data,
+        so constructor must be given data, not just domain. (Default: ``None``)
 
     .. attribute:: transform_class
 
