@@ -200,7 +200,7 @@ class SqlTable(table.Table):
                 offset, stop = min(rows), max(rows)
                 limit = stop - offset + 1
 
-        cur = self._sql_query(fields, filters, offset, limit)
+        cur = self._sql_query(fields, filters, offset=offset, limit=limit)
         while True:
             row = cur.fetchone()
             if row is None:
@@ -269,22 +269,14 @@ class SqlTable(table.Table):
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
             columns = list(self.domain)
-        where = self._construct_where()
-        return self._get_distributions(columns, where)
+        return self._get_distributions(columns)
 
-    def _get_distributions(self, columns, where):
+    def _get_distributions(self, columns):
+        filters = [f.to_sql() for f in self.row_filters]
+        filters = [f for f in filters if f]
         dists = []
-        cur = self.connection.cursor()
         for col in columns:
-            cur.execute("""
-                SELECT %(col)s, COUNT(%(col)s)
-                  FROM "%(table)s"
-                    %(where)s
-              GROUP BY %(col)s
-              ORDER BY %(col)s""" %
-                        dict(col=col.to_sql(),
-                             table=self.table_name,
-                             where=where))
+            cur = self._sql_get_distribution(col.to_sql(), filters)
             dist = np.array(cur.fetchall())
             if col.var_type == col.VarTypes.Continuous:
                 dists.append((dist.T, []))
@@ -374,16 +366,20 @@ class SqlTable(table.Table):
         return t2
 
     # sql queries
-    def _sql_query(self, fields, filters=(), offset=None, limit=None):
+    def _sql_query(self, fields, filters=(),
+                   group_by=None, order_by=None, offset=None, limit=None):
         sql = ["SELECT", ', '.join(fields),
                "FROM", self.quote_identifier(self.table_name)]
         if filters:
             sql.extend(["WHERE", " AND ".join(filters)])
+        if group_by is not None:
+            sql.extend(["GROUP BY", group_by])
+        if order_by is not None:
+            sql.extend(["ORDER BY", order_by])
         if offset is not None:
             sql.extend(["OFFSET", str(offset)])
         if limit is not None:
             sql.extend(["LIMIT", str(limit)])
-
         return self._execute_sql_query(" ".join(sql))
 
     def _sql_count_rows(self, filters):
@@ -417,6 +413,11 @@ class SqlTable(table.Table):
             stats = self.CONTINUOUS_STATS if continuous else self.DISCRETE_STATS
             sql_fields.append(stats % dict(field_name=field_name))
         return self._sql_query(sql_fields, filters)
+
+    def _sql_get_distribution(self, field_name, filters):
+        fields = field_name, "COUNT(%s)" % field_name
+        return self._sql_query(fields, filters,
+                               group_by=field_name, order_by=field_name)
 
     def quote_identifier(self, value):
         return '"%s"' % value
