@@ -308,23 +308,41 @@ class SqlTable(table.Table):
         filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
 
-        all_contingencies = [([], [])]
-        contingencies = all_contingencies[0][0]
-        for column in columns:
+        all_contingencies = [None] * len(columns)
+        for i, column in enumerate(columns):
             column_field = columns[0].to_sql()
             cur = self._sql_compute_contingency(row_field, column_field, filters)
-            last_row_value = None
-            for row_value, column_value, count in cur.fetchall():
-                if row_value != last_row_value:
-                    if contingencies:
-                        contingencies[-1] = np.array(contingencies[-1]).T
-                    contingencies.append(([]))
-                contingencies[-1].append((column_value, count))
-                last_row_value = row_value
-            contingencies[-1] = np.array(contingencies[-1]).T
-            contingencies.append(([], []))
+
+            if column.var_type == column.VarTypes.Continuous:
+                all_contingencies[i] = (self._continuous_contingencies(cur), [])
+            else:
+                row_mapping = {v: i for i, v in enumerate(row.values)}
+                column_mapping = {v: i for i, v in enumerate(column.values)}
+                all_contingencies[i] = (self._discrete_contingencies(
+                    cur, row_mapping, column_mapping), [])
         return all_contingencies
 
+    def _continuous_contingencies(self, cur):
+        conts = []
+        last_row_value = None
+        for row_value, column_value, count in cur.fetchall():
+            if row_value != last_row_value:
+                if conts:
+                    conts[-1] = np.array(conts[-1]).T
+                conts.append(([]))
+            conts[-1].append((column_value, count))
+            last_row_value = row_value
+        conts[-1] = np.array(conts[-1]).T
+        return conts
+
+    def _discrete_contingencies(self, cur, row_mapping, col_mapping):
+        conts = np.zeros((len(row_mapping), len(col_mapping)))
+
+        for row_value, col_value, count in cur.fetchall():
+            row_index = row_mapping[row_value]
+            col_index = col_mapping[col_value]
+            conts[row_index, col_index] = count
+        return conts
 
     def X_density(self):
         return self.DENSE
