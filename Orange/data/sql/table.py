@@ -243,56 +243,24 @@ class SqlTable(table.Table):
             columns = list(self.domain)
             if include_metas:
                 columns += list(self.domain.metas)
-        where = self._construct_where()
-        return self._get_stats(columns, where)
+        return self._get_stats(columns)
 
-    def _get_stats(self, columns, where=""):
-        stats = []
-        for column in columns:
-            if column.var_type == column.VarTypes.Continuous:
-                column = column.to_sql()
-                stats.append(", ".join((
-                    "MIN(%s)" % column,
-                    "MAX(%s)" % column,
-                    "AVG(%s)" % column,
-                    "STDDEV(%s)" % column,
-                    #"0",
-                    "SUM(CASE TRUE"
-                    "       WHEN %s IS NULL THEN 1"
-                    "       ELSE 0"
-                    "END)" % column,
-                    #"0",
-                    "SUM(CASE TRUE"
-                    "       WHEN %s IS NULL THEN 0"
-                    "       ELSE 1"
-                    "END)" % column,
-                )))
-            else:
-                column = column.to_sql()
-                stats.append(", ".join((
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "SUM(CASE TRUE"
-                    "       WHEN %s IS NULL THEN 1"
-                    "       ELSE 0"
-                    "END)" % column,
-                    "SUM(CASE TRUE"
-                    "       WHEN %s IS NULL THEN 0"
-                    "       ELSE 1"
-                    "END)" % column,
-                )))
-
-        stats_sql = ", ".join(stats)
-        cur = self.connection.cursor()
-        cur.execute("""SELECT %s FROM "%s" %s""" % (
-            stats_sql, self.table_name, where))
-        self.connection.commit()
+    def _get_stats(self, columns):
+        columns = [(c.to_sql(), c.var_type == c.VarTypes.Continuous)
+                   for c in columns]
+        filters = [f.to_sql() for f in self.row_filters]
+        filters = [f for f in filters if f]
+        cur = self._sql_get_stats(columns, filters)
         results = cur.fetchone()
         stats = []
-        for i in range(len(columns)):
-            stats.append(results[6*i:6*(i+1)])
+        i = 0
+        for ci, (field_name, continuous) in enumerate(columns):
+            if continuous:
+                stats.append(results[i:i+6])
+                i += 6
+            else:
+                stats.append((None,) * 4 + results[i:i+2])
+                i += 2
         return stats
 
     def _compute_distributions(self, columns=None):
@@ -433,6 +401,21 @@ class SqlTable(table.Table):
                "ORDER BY", field_name,
                "LIMIT 21"]
         return self._execute_sql_query(" ".join(sql))
+
+    DISCRETE_STATS = "SUM(CASE TRUE WHEN %(field_name)s IS NULL THEN 1 " \
+                     "ELSE 0 END), " \
+                     "SUM(CASE TRUE WHEN %(field_name)s IS NULL THEN 0 " \
+                     "ELSE 1 END)"
+    CONTINUOUS_STATS = "MIN(%(field_name)s), MAX(%(field_name)s), " \
+                       "AVG(%(field_name)s), STDDEV(%(field_name)s), " \
+                       + DISCRETE_STATS
+
+    def _sql_get_stats(self, fields, filters):
+        sql_fields = []
+        for field_name, continuous in fields:
+            stats = self.CONTINUOUS_STATS if continuous else self.DISCRETE_STATS
+            sql_fields.append(stats % dict(field_name=field_name))
+        return self._sql_query(sql_fields, filters)
 
     def quote_identifier(self, value):
         return '"%s"' % value
