@@ -41,7 +41,7 @@ class OWContinuize(widget.OWWidget):
 
     continuousTreats = (("Leave them as they are", DomainContinuizer.Leave),
                         ("Normalize by span", DomainContinuizer.NormalizeBySpan),
-                        ("Normalize by variance", DomainContinuizer.NormalizeByVariance))
+                        ("Normalize by standard deviation", DomainContinuizer.NormalizeBySD))
 
     classTreats = (("Leave it as it is", DomainContinuizer.Ignore),
                    ("Treat as ordinal", DomainContinuizer.AsOrdinal),

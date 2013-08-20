@@ -31,17 +31,16 @@ class Continuizer_Test(unittest.TestCase):
 
     def test_continuous(self):
         self.assertRaises(TypeError, DomainContinuizer, self.data.domain,
-                          normalize_continuous=DomainContinuizer.NormalizeBySpan
-        )
+                          normalize_continuous=DomainContinuizer.NormalizeBySpan)
 
         domZB = DomainContinuizer(self.data,
-                          normalize_continuous=DomainContinuizer.NormalizeBySpan,
-                          zero_based=True
-        )
+                                  normalize_continuous=DomainContinuizer.NormalizeBySpan,
+                                  zero_based=True)
+
         dom = DomainContinuizer(self.data,
-                          normalize_continuous=DomainContinuizer.NormalizeBySpan,
-                          zero_based=False
-        )
+                                normalize_continuous=DomainContinuizer.NormalizeBySpan,
+                                zero_based=False)
+
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in domZB.attributes))
         self.assertIs(domZB.class_var, self.data.domain.class_var)
@@ -74,13 +73,12 @@ class Continuizer_Test(unittest.TestCase):
         self.assertEqual(dat3[1], [-1,   0, -1,  1, -1,  1, -1, "b"])
         self.assertEqual(dat3[2], [1,    1, -1,  1, -1, -1,  1, "c"])
 
-    def test_continuous_by_variance(self):
+    def test_continuous_by_standard_deviation(self):
         self.assertRaises(TypeError, DomainContinuizer, self.data.domain,
-                          normalize_continuous=DomainContinuizer.NormalizeByVariance
-        )
+                          normalize_continuous=DomainContinuizer.NormalizeBySD)
 
-        domZB = DomainContinuizer(self.data,normalize_continuous=DomainContinuizer.NormalizeByVariance, zero_based=True)
-        dom = DomainContinuizer(self.data,normalize_continuous=DomainContinuizer.NormalizeByVariance, zero_based=False)
+        domZB = DomainContinuizer(self.data, normalize_continuous=DomainContinuizer.NormalizeBySD, zero_based=True)
+        dom = DomainContinuizer(self.data, normalize_continuous=DomainContinuizer.NormalizeBySD, zero_based=False)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in domZB.attributes))
         self.assertIs(domZB.class_var, self.data.domain.class_var)
@@ -92,18 +90,23 @@ class Continuizer_Test(unittest.TestCase):
         self.assertIsInstance(domZB[2].get_value_from,
                               transformation.Indicator)
 
+        solution = [[ 0,    -1.225,  1, 0, 1, 0, 0, 0],
+                    [-1.225, 0,      0, 1, 0, 1, 0, 1],
+                    [ 1.225, 1.225,  0, 1, 0, 0, 1, 2]]
+        # I'm sorry about that, but checking whole rows with assertEqual doesn't work here
+        # because of the rounding errors I guess
         dat2 = Table(domZB, self.data)
-        #                          c1    c2    d2    d3       cl1
-        self.assertEqual(dat2[0], [ 0,  -0.75, 1, 0, 1, 0, 0, "a"])
-        self.assertEqual(dat2[1], [-1.5, 0,    0, 1, 0, 1, 0, "b"])
-        self.assertEqual(dat2[2], [ 1.5, 0.75, 0, 1, 0, 0, 1, "c"])
+        for rd,rs in zip(dat2, solution):
+            for x,y in zip(rd,rs):
+                self.assertAlmostEqual(x,y, places=3)
+
+        self.assertIsInstance(dom[2].get_value_from,
+                              transformation.Indicator_1)
 
         dat3 = Table(dom, self.data)
         self.assertEqual(list(dat2.X[0,:2]),list(dat3.X[0,:2]))
         self.assertEqual(list(dat2.X[1,:2]),list(dat3.X[1,:2]))
         self.assertEqual(list(dat2.X[2,:2]),list(dat3.X[2,:2]))
-
-
 
     def test_continuous_transform_class(self):
         for inp in (self.data, self.data.domain):
@@ -125,15 +128,15 @@ class Continuizer_Test(unittest.TestCase):
             self.assertEqual(dat2[1], [0,  0, 0, 1, 0, 1, 0, 0, 1, 0])
             self.assertEqual(dat2[2], [2,  2, 0, 1, 0, 0, 1, 0, 0, 1])
 
-
     def test_continuous_transform_class_minus_one(self):
         self.assertRaises(TypeError, DomainContinuizer,
-                  self.data.domain, normalize_continuous=True)
+                        self.data.domain, normalize_continuous=True)
 
         dom = DomainContinuizer(
             self.data,
             normalize_continuous=DomainContinuizer.NormalizeBySpan,
             transform_class=True, zero_based=False)
+        
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in dom))
         self.assertIsNot(dom.class_var, self.data.domain.class_var)
@@ -214,7 +217,6 @@ class Continuizer_Test(unittest.TestCase):
             self.assertEqual(dat2[0], [1, -2, 0, 1, 0, "a"])
             self.assertEqual(dat2[1], [0,  0, 1, 0, 0, "b"])
             self.assertEqual(dat2[2], [2,  2, 1, 0, 1, "c"])
-
 
     def test_multi_ignore(self):
         dom = DomainContinuizer(self.data.domain, multinomial_treatment=

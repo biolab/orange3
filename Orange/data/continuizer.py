@@ -70,11 +70,11 @@ class DomainContinuizer:
                     new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
                                                     2 / diff)
                 return new_var
-            elif self.normalize_continuous == self.NormalizeByVariance:
+            elif self.normalize_continuous == self.NormalizeBySD:
                 new_var = ContinuousVariable(var.name)
                 avg = dists[var_ptr].mean()
-                variance = dists[var_ptr].variance()
-                new_var.get_value_from = Normalizer(var, avg, 1 / variance)
+                sd = dists[var_ptr].standard_deviation()
+                new_var.get_value_from = Normalizer(var, avg, 1 / sd)
                 return new_var
 
         def transform_list(s):
@@ -119,10 +119,10 @@ class DomainContinuizer:
 
     # To make PyCharm happy
     NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal = \
-        Leave = NormalizeBySpan = NormalizeByVariance = AsNormalizedOrdinal = 0
+        Leave = NormalizeBySpan = NormalizeBySD = AsNormalizedOrdinal = 0
 
 MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
                             "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
                             "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
-                            "NormalizeByVariance").pull_up(DomainContinuizer)
+                            "NormalizeBySD").pull_up(DomainContinuizer)
 
