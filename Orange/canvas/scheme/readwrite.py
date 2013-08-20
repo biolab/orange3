@@ -631,7 +631,7 @@ def loads(string, format):
     elif format == "json":
         return json.loads(string)
     elif format == "pickle":
-        return pickle.loads(base64.decodebytes(string))
+        return pickle.loads(base64.decodebytes(string.encode('ascii')))
     else:
         raise ValueError("Unknown format")
 
