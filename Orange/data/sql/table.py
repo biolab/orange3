@@ -104,12 +104,8 @@ class SqlTable(table.Table):
             return self._get_distinct_values(field_name)
 
     def _get_distinct_values(self, field_name):
-        cur = self.connection.cursor()
-        cur.execute("""SELECT DISTINCT "%s" FROM "%s" ORDER BY %s LIMIT 21""" %
-                    (field_name, self.table_name, field_name))
-        self.connection.commit()
+        cur = self._sql_get_distinct_values(field_name)
         values = cur.fetchall()
-
         if len(values) > 20:
             return ()
         else:
@@ -434,6 +430,13 @@ class SqlTable(table.Table):
         sql = ["SELECT column_name, data_type",
                "FROM INFORMATION_SCHEMA.COLUMNS",
                "WHERE table_name =", self.quote_string(self.table_name)]
+        return self._execute_sql_query(" ".join(sql))
+
+    def _sql_get_distinct_values(self, field_name):
+        sql = ["SELECT DISTINCT", self.quote_identifier(field_name),
+               "FROM", self.quote_identifier(self.table_name),
+               "ORDER BY", field_name,
+               "LIMIT 21"]
         return self._execute_sql_query(" ".join(sql))
 
     def quote_identifier(self, value):
