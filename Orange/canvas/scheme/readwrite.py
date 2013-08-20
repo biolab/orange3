@@ -2,6 +2,7 @@
 Scheme save/load routines.
 
 """
+import base64
 import sys
 
 from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
@@ -612,14 +613,14 @@ def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
                         exc_info=True)
 
     elif format == "pickle":
-        return pickle.dumps(obj), "pickle"
+        return base64.encodebytes(pickle.dumps(obj)).decode('ascii'), "pickle"
 
     else:
         raise ValueError("Unsupported format %r" % format)
 
     if pickle_fallback:
         log.warning("Using pickle fallback")
-        return pickle.dumps(obj), "pickle"
+        return base64.encodebytes(pickle.dumps(obj)).decode('ascii'), "pickle"
     else:
         raise Exception("Something strange happened.")
 
@@ -630,7 +631,7 @@ def loads(string, format):
     elif format == "json":
         return json.loads(string)
     elif format == "pickle":
-        return pickle.loads(string)
+        return pickle.loads(base64.decodebytes(string))
     else:
         raise ValueError("Unknown format")
 
