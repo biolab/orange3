@@ -365,6 +365,14 @@ class SqlTable(table.Table):
                                                 negate=f.negate),)
         return t2
 
+    @classmethod
+    def from_table(cls, domain, source, row_indices=...):
+        assert row_indices is ...
+
+        table = source.copy()
+        table.domain = domain
+        return table
+
     # sql queries
     def _sql_query(self, fields, filters=(),
                    group_by=None, order_by=None, offset=None, limit=None):
