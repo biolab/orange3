@@ -1,6 +1,7 @@
 """
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
+import functools
 
 from urllib import parse
 import numpy as np
@@ -114,7 +115,6 @@ class SqlTable(table.Table):
         else:
             return tuple(x[0] for x in values)
 
-    #@functools.lru_cache(maxsize=128)
     def __getitem__(self, key):
         """ Indexing of SqlTable is performed in the following way:
 
@@ -126,12 +126,8 @@ class SqlTable(table.Table):
         """
         if isinstance(key, int):
             # one row
-            return SqlRowInstance(
-                self.domain,
-                list(self._query(attributes=self.domain.variables + self.domain.metas,
-                                 filters=[f.to_sql()
-                                          for f in self.row_filters],
-                                 rows=[key]))[0])
+            return self._fetch_row(key)
+
         if not isinstance(key, tuple):
             # row filter
             key = (key, Ellipsis)
@@ -162,13 +158,22 @@ class SqlTable(table.Table):
         # table.limit_rows(row_idx)
         return table
 
+    @functools.lru_cache(maxsize=128)
+    def _fetch_row(self, row_index):
+        attributes = self.domain.variables + self.domain.metas
+        filters = self.row_filters
+        rows = [row_index]
+        values = self._query(attributes, filters, rows)
+        return SqlRowInstance(self.domain, list(values)[0])
+
     def __iter__(self):
         """ Iterating through the rows executes the query using a cursor and
         then yields resulting rows as SqlRowInstances as they are requested.
         """
-        for row in self._query(attributes=self.domain.variables + self.domain.metas,
-                               filters=[f.to_sql()
-                                        for f in self.row_filters]):
+        attributes = self.domain.variables + self.domain.metas
+        filters = self.row_filters
+
+        for row in self._query(attributes, filters):
             yield SqlRowInstance(self.domain, row)
 
     def _query(self, attributes=None, filters=(), rows=None):
@@ -184,6 +189,7 @@ class SqlTable(table.Table):
         else:
             fields = ["*"]
 
+        filters = [f.to_sql() for f in filters]
         filters = [f for f in filters if f]
 
         offset = limit = None
