@@ -7,7 +7,7 @@ from urllib import parse
 import numpy as np
 import psycopg2
 
-from .. import domain, variable, value, table, instance, filter
+from .. import domain, variable, value, table, instance, filter, DiscreteVariable, ContinuousVariable
 from Orange.data.sql import filter as sql_filter
 
 
@@ -285,6 +285,47 @@ class SqlTable(table.Table):
         self.connection.commit()
         return dists
 
+    def _compute_contingency(self, col_vars=None, row_var=None):
+        if len(col_vars) != 1:
+            raise NotImplementedError("Contingency for multiple columns "
+                                      "has not yet been implemented.")
+        if row_var is None:
+            raise NotImplementedError("Defaults have not been implemented yet")
+
+        row = self.domain[row_var]
+        if not isinstance(row, DiscreteVariable):
+            raise TypeError("Row variable must be discrete")
+
+        columns = [self.domain[var] for var in col_vars]
+
+        if any(not isinstance(var, (ContinuousVariable, DiscreteVariable))
+               for var in columns):
+            raise ValueError("contingency can be computed only for discrete "
+                             "and continuous values")
+
+        row_field = row.to_sql()
+
+        filters = [f.to_sql() for f in self.row_filters]
+        filters = [f for f in filters if f]
+
+        all_contingencies = [([], [])]
+        contingencies = all_contingencies[0][0]
+        for column in columns:
+            column_field = columns[0].to_sql()
+            cur = self._sql_compute_contingency(row_field, column_field, filters)
+            last_row_value = None
+            for row_value, column_value, count in cur.fetchall():
+                if row_value != last_row_value:
+                    if contingencies:
+                        contingencies[-1] = np.array(contingencies[-1]).T
+                    contingencies.append(([]))
+                contingencies[-1].append((column_value, count))
+                last_row_value = row_value
+            contingencies[-1] = np.array(contingencies[-1]).T
+            contingencies.append(([], []))
+        return all_contingencies
+
+
     def X_density(self):
         return self.DENSE
 
@@ -381,9 +422,9 @@ class SqlTable(table.Table):
         if filters:
             sql.extend(["WHERE", " AND ".join(filters)])
         if group_by is not None:
-            sql.extend(["GROUP BY", group_by])
+            sql.extend(["GROUP BY", ", ".join(group_by)])
         if order_by is not None:
-            sql.extend(["ORDER BY", order_by])
+            sql.extend(["ORDER BY", ",".join(order_by)])
         if offset is not None:
             sql.extend(["OFFSET", str(offset)])
         if limit is not None:
@@ -425,7 +466,14 @@ class SqlTable(table.Table):
     def _sql_get_distribution(self, field_name, filters):
         fields = field_name, "COUNT(%s)" % field_name
         return self._sql_query(fields, filters,
-                               group_by=field_name, order_by=field_name)
+                               group_by=[field_name], order_by=[field_name])
+
+    def _sql_compute_contingency(self, row_field, column_field, filters):
+        fields = [row_field, column_field, "COUNT(%s)" % column_field]
+        group_by = [row_field, column_field]
+        order_by = [row_field, column_field]
+        return self._sql_query(fields, filters,
+                               group_by=group_by, order_by=order_by)
 
     def quote_identifier(self, value):
         return '"%s"' % value
