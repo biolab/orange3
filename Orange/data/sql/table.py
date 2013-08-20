@@ -190,24 +190,20 @@ class SqlTable(table.Table):
         else:
             fields = ["*"]
 
-        sql = """SELECT %s FROM "%s" """ % (', '.join(fields), self.table_name)
         filters = [f for f in filters if f]
-        if filters:
-            sql += " WHERE %s " % " AND ".join(filters)
+
+        offset = limit = None
         if rows is not None:
             if isinstance(rows, slice):
-                start = rows.start or 0
-                if rows.stop is None:
-                    sql += " OFFSET %d" % start
-                else:
-                    sql += " OFFSET %d LIMIT %d" % (start, rows.stop - start)
+                offset = rows.start or 0
+                if rows.stop is not None:
+                    limit = rows.stop - offset
             else:
                 rows = list(rows)
-                start, stop = min(rows), max(rows)
-                sql += " OFFSET %d LIMIT %d" % (start, stop - start + 1)
-        cur = self.connection.cursor()
-        cur.execute(sql)
-        self.connection.commit()
+                offset, stop = min(rows), max(rows)
+                limit = stop - offset + 1
+
+        cur = self._sql_query(fields, filters, offset, limit)
         while True:
             row = cur.fetchone()
             if row is None:
@@ -420,6 +416,28 @@ class SqlTable(table.Table):
                                                 conjunction=f.conjunction,
                                                 negate=f.negate),)
         return t2
+
+    # sql queries
+    def _sql_query(self, fields, filters=(), offset=None, limit=None):
+        sql = ["SELECT", ', '.join(fields),
+               "FROM", self.quote_identifier(self.table_name)]
+        if filters:
+            sql.extend(["WHERE", " AND ".join(filters)])
+        if offset is not None:
+            sql.extend(["OFFSET", str(offset)])
+        if limit is not None:
+            sql.extend(["LIMIT", str(limit)])
+
+        return self._execute_sql_query(" ".join(sql))
+
+    def quote_identifier(self, value):
+        return '"%s"' % value
+
+    def _execute_sql_query(self, sql):
+        cur = self.connection.cursor()
+        cur.execute(sql)
+        self.connection.commit()
+        return cur
 
 
 class SqlRowInstance(instance.Instance):
