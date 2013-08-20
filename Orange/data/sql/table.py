@@ -32,7 +32,7 @@ class SqlTable(table.Table):
 
         Database connection parameters can be specified either as a string:
 
-            table = SqlTable("user:password@host:port/database/table?schema=dbschema")
+            table = SqlTable("user:password@host:port/database/table")
 
         or using a set of keyword arguments:
 
