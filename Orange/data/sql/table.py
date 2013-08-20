@@ -54,6 +54,7 @@ class SqlTable(table.Table):
             parameters = self._parse_uri(uri)
             table = parameters.pop("table")
             connection_args.update(parameters)
+        connection_args.update(kwargs)
 
         self.connection = psycopg2.connect(**connection_args)
         self.table_name = self.name = table
