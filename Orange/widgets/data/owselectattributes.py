@@ -1,9 +1,11 @@
+import copy
 import sys
 from functools import partial, reduce
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
+import itertools
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import *
 from Orange.data.table import Table
@@ -267,6 +269,52 @@ class CompleterNavigator(QtCore.QObject):
             return False
 
 
+class SelectAttributesDomainContextHandler(DomainContextHandler):
+    """Select Attributes widget has context settings in a specific format.
+    This context handler modifies match and clone_context to account for that.
+    """
+
+    def match(self, context, domain, attrs, metas):
+        if (attrs, metas) == (context.attributes, context.metas):
+            return 2
+        filled = potentially_filled = 0
+
+        for name, setting in self.settings.items():
+            if not isinstance(setting, ContextSetting):
+                continue
+            value = context.values.get(name, None)
+            if value is None:
+                continue
+            if isinstance(value, dict):
+                for item, category in value.items():
+                    role, role_idx = category
+                    if role != 'available':
+                        potentially_filled += 1
+                        if self._var_exists(setting, item, attrs, metas):
+                            filled += 1
+
+        if not potentially_filled:
+            return 0.1
+        else:
+            return filled / potentially_filled
+
+    def clone_context(self, context, domain, attrs, metas):
+        context = copy.deepcopy(context)
+        for name, setting in self.settings.items():
+            if not isinstance(setting, ContextSetting):
+                continue
+            value = context.values.get(name, None)
+            if value is None:
+                continue
+            if isinstance(value, dict):
+                for item, category in value.items():
+                    if not self._var_exists(setting, value, attrs, metas):
+                        del value[item]
+        context.attributes, context.metas = attrs, metas
+        context.ordered_domain = [(attr.name, attr.var_type) for attr in
+                                  itertools.chain(domain, domain.metas)]
+        return context
+
 
 class OWSelectAttributes(widget.OWWidget):
     _name = "Select Attributes"
@@ -281,7 +329,7 @@ class OWSelectAttributes(widget.OWWidget):
     want_main_area = False
     want_control_area = False
 
-    settingsHandler = DomainContextHandler()
+    settingsHandler = SelectAttributesDomainContextHandler()
     domain_role_hints = ContextSetting({})
 
     def __init__(self):
@@ -625,6 +673,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.reportSettings("",
                     [("Removed", "%i (%s)" %
                      (len(removed), ", ".join(x.name for x in removed)))])
+
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)

@@ -509,11 +509,12 @@ class DomainContextHandler(ContextHandler):
         else:
             context.values[name] = value, -2
 
-    def __var_exists(self, setting, value, attributes, metas):
+    def _var_exists(self, setting, value, attributes, metas):
+        attr_name, attr_type = value
         return (not setting.exclude_attributes and
-                attributes.get(value[0], -1) == value[1] or
-                not setting.exlclude_metas and
-                metas.get(value[0], -1) == value[1])
+                attributes.get(attr_name, -1) == attr_type or
+                not setting.exclude_metas and
+                metas.get(attr_name, -1) == attr_type)
 
     #noinspection PyMethodOverriding
     def match(self, context, domain, attrs, metas):
@@ -531,7 +532,7 @@ class DomainContextHandler(ContextHandler):
                     potentially_filled += len(value)
                     filled += len(value)
                     for item in value:
-                        if not self.__var_exists(setting, item, attrs, metas):
+                        if not self._var_exists(setting, item, attrs, metas):
                             return 0
                 else:
                     selected_required = (
@@ -539,7 +540,7 @@ class DomainContextHandler(ContextHandler):
                     selected = context.values.get(setting.selected, [])
                     potentially_filled += len(selected)
                     for i in selected:
-                        if self.__var_exists(setting, value[i], attrs, metas):
+                        if self._var_exists(setting, value[i], attrs, metas):
                             filled += 1
                         else:
                             if selected_required:
@@ -547,7 +548,7 @@ class DomainContextHandler(ContextHandler):
             else:
                 potentially_filled += 1
                 if value[1] >= 0:
-                    if self.__var_exists(value, setting, attrs, metas):
+                    if self._var_exists(value, setting, attrs, metas):
                         filled += 1
                     else:
                         if setting.required == ContextSetting.REQUIRED:
@@ -578,7 +579,7 @@ class DomainContextHandler(ContextHandler):
                     next_sel = -1
                 i = j = realI = 0
                 while i < len(value):
-                    if self.__var_exists(setting, value[i], attrs, metas):
+                    if self._var_exists(setting, value[i], attrs, metas):
                         if next_sel == realI:
                             selected[j] -= realI - i
                             j += 1
@@ -594,7 +595,7 @@ class DomainContextHandler(ContextHandler):
                     context.values[sel_name] = selected[:j]
             else:
                 if (value[1] >= 0 and
-                        not self.__var_exists(setting, value, attrs, metas)):
+                        not self._var_exists(setting, value, attrs, metas)):
                     del context.values[name]
         context.attributes, context.metas = attrs, metas
         context.ordered_domain = [(attr.name, attr.var_type) for attr in
