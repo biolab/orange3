@@ -1,7 +1,8 @@
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table
+from Orange.data import DiscreteVariable
 from sklearn import cross_validation
 
 
@@ -144,6 +145,10 @@ class OWDataSampler(widget.OWWidget):
             except BaseException:
                 pass
 
+        stratify = self.stratified and \
+            type(self.data) is Table and \
+            isinstance(self.data.domain.class_var, DiscreteVariable)
+
         # random sampling
         if self.samplingType == 0:
             # size by number
@@ -153,7 +158,7 @@ class OWDataSampler(widget.OWWidget):
             else:
                 n_cases = self.sampleSizePercentage * data_size // 100
 
-            if self.stratified:
+            if stratify:
                 # n_iter=1 means we compute a single split and iterator holds
                 # a single item
                 ss = cross_validation.StratifiedShuffleSplit(
@@ -174,10 +179,10 @@ class OWDataSampler(widget.OWWidget):
                                          self.selectedFold)
 
             if self.dataChanged or not self.groups or \
-                    (self.CVSettings != (self.stratified, self.numberOfFolds)):
-                if self.stratified:
+                    (self.CVSettings != (stratify, self.numberOfFolds)):
+                if stratify:
                     kf = cross_validation.StratifiedKFold(
-                        self.data.Y[:,0], n_folds=self.numberOfFolds)
+                        self.data.Y[:, 0], n_folds=self.numberOfFolds)
                 else:
                     kf = cross_validation.KFold(
                         data_size, n_folds=self.numberOfFolds)
@@ -188,7 +193,7 @@ class OWDataSampler(widget.OWWidget):
 
             self.dataChanged = False
             # remember cross validation settings so we recompute only on change
-            self.CVSettings = (self.stratified, self.numberOfFolds)
+            self.CVSettings = (stratify, self.numberOfFolds)
 
         self.send("Data Sample", self.data[sample_indices])
         self.send("Remaining Data", self.data[remainder_indices])
