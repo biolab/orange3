@@ -271,6 +271,9 @@ class Continuous(np.ndarray):
         avg = self.mean()
         return sum([((x-avg)**2)*w for x, w in zip(self[0], self[1])])/sum(self[1])
 
+    def standard_deviation(self):
+        return math.sqrt(self.variance())
+
 
 
 def class_distribution(data):
