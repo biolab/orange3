@@ -92,13 +92,7 @@ class SqlTable(table.Table):
         return domain.Domain(attributes, metas=metas)
 
     def _get_fields(self):
-        cur = self.connection.cursor()
-        cur.execute("""
-            SELECT column_name, data_type
-              FROM INFORMATION_SCHEMA.COLUMNS
-             WHERE table_name = %s;""", (self.table_name,))
-        self.connection.commit()
-
+        cur = self._sql_get_fields()
         for field, field_type in cur.fetchall():
             yield field, field_type, self._get_field_values(field, field_type)
 
@@ -430,8 +424,17 @@ class SqlTable(table.Table):
 
         return self._execute_sql_query(" ".join(sql))
 
+    def _sql_get_fields(self):
+        sql = ["SELECT column_name, data_type",
+               "FROM INFORMATION_SCHEMA.COLUMNS",
+               "WHERE table_name =", self.quote_string(self.table_name)]
+        return self._execute_sql_query(" ".join(sql))
+
     def quote_identifier(self, value):
         return '"%s"' % value
+
+    def quote_string(self, value):
+        return "'%s'" % value
 
     def _execute_sql_query(self, sql):
         cur = self.connection.cursor()
