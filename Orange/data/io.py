@@ -219,7 +219,7 @@ def csvSaver(filename, data, delimiter='\t'):
         if delimiter == '\t':
             flags = ['']*len(data.domain)
             class_var = data.domain.class_var
-            metas = data.doman.metas
+            metas = data.domain.metas
             if class_var:
                 flags[data.domain.indices[class_var.name]] = 'class'
             if metas:
