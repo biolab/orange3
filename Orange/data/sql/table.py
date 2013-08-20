@@ -223,23 +223,14 @@ class SqlTable(table.Table):
         computed only the first time the length is requested.
         """
         if self._cached__len__ is None:
-            sql = """SELECT COUNT(*) FROM "%s" %s""" % (
-                self.table_name,
-                self._construct_where(),
-            )
-            cur = self.connection.cursor()
-            cur.execute(sql)
-            self.connection.commit()
+            cur = self._count_rows()
             self._cached__len__ = cur.fetchone()[0]
         return self._cached__len__
 
-    def _construct_where(self):
+    def _count_rows(self):
         filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
-        if filters:
-            return " WHERE %s " % " AND ".join(filters)
-        else:
-            return ""
+        return self._sql_count_rows(filters)
 
     def has_weights(self):
         return False
@@ -425,6 +416,10 @@ class SqlTable(table.Table):
             sql.extend(["LIMIT", str(limit)])
 
         return self._execute_sql_query(" ".join(sql))
+
+    def _sql_count_rows(self, filters):
+        fields = ["COUNT(*)"]
+        return self._sql_query(fields, filters)
 
     def _sql_get_fields(self):
         sql = ["SELECT column_name, data_type",
