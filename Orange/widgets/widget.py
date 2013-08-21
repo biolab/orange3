@@ -14,6 +14,7 @@ from Orange.canvas.registry.description import (
 from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
+from Orange.widgets.settings import Context
 
 
 class ControlledAttributesDict(dict):
@@ -547,6 +548,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def closeContext(self):
         self.settingsHandler.close_context(self)
+        self.current_context = Context()
 
     def retrieveSpecificSettings(self):
         pass
