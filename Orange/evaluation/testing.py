@@ -48,12 +48,12 @@ class Results:
     # noinspection PyBroadException
     def __init__(self, data, nmethods, nrows=None):
         """
-        Construct an instance with default values: `None` for :obj:data and
-        :obj:models. The number of classes and the data type for :obj:actual
-        and :obj:predicted is determined from the data; if the latter cannot
-        be find, `np.float32` is used. Attributes :obj:actual, :obj:predicted,
-        :obj:probabilities and :obj:row_indices are constructed as empty
-        (uninitialized) arrays of the appropriate size.
+        Construct an instance with default values: `None` for :obj:`data` and
+        :obj:`models`. The number of classes and the data type for
+        :obj:`actual` and :obj:`predicted` is determined from the data; if the
+        latter cannot be find, `np.float32` is used. Attributes :obj:`actual`,
+        :obj:`predicted`, :obj:`probabilities` and :obj:`row_indices` are
+        constructed as empty (uninitialized) arrays of the appropriate size.
 
         :param data: Data or domain; the data is not stored
         :type data: Orange.data.Table or Orange.data.Domain
@@ -84,7 +84,7 @@ class Testing:
     Abstract base class for varius sampling procedures like cross-validation,
     leave one out or bootstrap. Derived classes define a `__call__` operator
     that executes the testing procedure and returns an instance of
-    :obj:Results.
+    :obj:`Results`.
 
     .. attribute:: store_data
 

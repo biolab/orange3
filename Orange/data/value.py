@@ -14,9 +14,9 @@ class Value(float):
     variables.
 
     The class is derived from `float`, with an additional attribute `variable`
-    which holds the descriptor of type :obj:Orange.data.Variable. If the value
-    continuous or discrete, it is stored as a float. Other types of values,
-    like strings, are stored in the attribute `value`.
+    which holds the descriptor of type :obj:`Orange.data.Variable`. If the
+    value continuous or discrete, it is stored as a float. Other types of
+    values, like strings, are stored in the attribute `value`.
 
     The class overloads the methods for printing out the value:
     `variable.repr_val` and `variable.str_val` are used to get a suitable
@@ -38,7 +38,7 @@ class Value(float):
     Finally, value defines a hash, so values can be put in sets and appear as
     keys in dictionaries.
 
-    .. attribute:: variable (:obj:Orange.data.Variable)
+    .. attribute:: variable (:obj:`Orange.data.Variable`)
 
         Descriptor; used for printing out and for comparing with strings
 

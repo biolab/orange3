@@ -156,7 +156,8 @@ class StateButtonContainer(OrientedWidget):
 
 class OWAction(QAction):
     '''
-      A :obj:.QAction with convenience methods for calling a callback or setting an attribute of the plot.
+      A :obj:`QAction` with convenience methods for calling a callback or
+      setting an attribute of the plot.
     '''
     def __init__(self, plot, icon_name=None, attr_name='', attr_value=None, callback=None, parent=None):
         QAction.__init__(self, parent)

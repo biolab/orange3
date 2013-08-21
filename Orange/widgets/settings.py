@@ -123,7 +123,7 @@ class SettingsHandler:
         Pack the settings for the given widget. This method is used when
         saving schema, so that when the schema is reloaded the widget is
         initialized with its proper data and not the class-based defaults.
-        See :obj:SettingsHandler.initialize for detailed explanation of its
+        See :obj:`SettingsHandler.initialize` for detailed explanation of its
         use.
 
         Inherited classes add other data, in particular widget-specific

@@ -175,7 +175,7 @@ class Instance:
 
     def get_class(self):
         """
-        Return the class value as an instance of :obj:Orange.data.Value.
+        Return the class value as an instance of :obj:`Orange.data.Value`.
         Throws an exception if there are multiple classes.
         """
         self._check_single_class()
@@ -185,7 +185,7 @@ class Instance:
     def get_classes(self):
         """
         Return the class value as a list of instances of
-        :obj:Orange.data.Value.
+        :obj:`Orange.data.Value`.
         """
         return (Value(var, value)
             for var, value in zip(self._domain.class_vars, self._y))

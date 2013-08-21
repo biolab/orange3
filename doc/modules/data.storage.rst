@@ -4,7 +4,7 @@
 Data Storage (``storage``)
 ##########################
 
-:obj:Orange.data.storage.Storage is an abstract class representing a data object
+:obj:`Orange.data.storage.Storage` is an abstract class representing a data object
 in which rows represent data instances (examples, in machine learning
 terminology) and columns represent variables (features, attributes, classes,
 targets, meta attributes).
@@ -24,8 +24,8 @@ depends upon the storage type.
 There is no uniform constructor signature: every derived class provides one or
 more specific constructors.
 
-There are currently two derived classes :obj:Orange.data.Table and
-:obj:Orange.data.sql.Table, the former storing the data in-memory, in numpy
+There are currently two derived classes :obj:`Orange.data.Table` and
+:obj:`Orange.data.sql.Table`, the former storing the data in-memory, in numpy
 objects, and the latter in SQL (currently, only PostreSQL is supported).
 
 Derived classes must implement at least the methods for getting rows and the
@@ -33,9 +33,9 @@ number of instances (`__getitem__` and `__len__`). To make storage fast enough
 to be practically useful, it must also reimplement a number of filters,
 preprocessors and aggregators. For instance, method
 `_filter_values(self, filter)` returns a new storage which only contains the
-rows that match the criteria given in the filter. :obj:Orange.data.Table
+rows that match the criteria given in the filter. :obj:`Orange.data.Table`
 implements an efficient method based on numpy indexing, and
-:obj:Orange.data.sql.Table, which "stores" a table as an SQL query, converts
+:obj:`Orange.data.sql.Table`, which "stores" a table as an SQL query, converts
 the filter into a WHERE clause.
 
 .. attribute:: domain (:obj:`Orange.data.Domain`)
@@ -51,7 +51,7 @@ Data access
     Return one or more rows of the data.
 
     - If the index is an int, e.g. `data[7]`; the corresponding row is
-      returned as an instance of :obj:~Orange.data.instance.Instance. Concrete
+      returned as an instance of :obj:`~Orange.data.instance.Instance`. Concrete
       implementations of `Storage` use specific derived classes for instances.
 
     - If the index is a slice or a sequence of ints (e.g. `data[7:10]` or
@@ -90,10 +90,10 @@ Filters
 -------
 
 Storage should define the following methods to optimize the filtering
-operations as allowed by the underlying data structure. :obj:Orange.data.Table
-executes them directly through numpy (or bottleneck or related) methods, while
-:obj:Orange.data.sql.Table appends them to the WHERE clause of the query that
-defines the data.
+operations as allowed by the underlying data structure.
+:obj:`Orange.data.Table` executes them directly through numpy (or bottleneck
+or related) methods, while :obj:`Orange.data.sql.Table` appends them to the
+WHERE clause of the query that defines the data.
 
 These methods should not be called directly but through the classes defined in
 :obj:`Orange.data.filter`. Methods in :obj:`Orange.data.filter` also provide
@@ -107,7 +107,7 @@ the slower fallback functions for the functions not defined in the storage.
     :type columns: sequence of ints, variable names or descriptors
     :param negate: invert the selection
     :type negate: bool
-    :return: a new storage of the same type or :obj:~Orange.data.Table
+    :return: a new storage of the same type or :obj:`~Orange.data.Table`
     :rtype: Orange.data.storage.Storage
 
 
@@ -118,7 +118,7 @@ the slower fallback functions for the functions not defined in the storage.
 
     :param negate: invert the selection
     :type negate: bool
-    :return: a new storage of the same type or :obj:~Orange.data.Table
+    :return: a new storage of the same type or :obj:`~Orange.data.Table`
     :rtype: Orange.data.storage.Storage
 
 
@@ -132,7 +132,7 @@ the slower fallback functions for the functions not defined in the storage.
     :type value: int, float or str
     :param negate: invert the selection
     :type negate: bool
-    :return: a new storage of the same type or :obj:~Orange.data.Table
+    :return: a new storage of the same type or :obj:`~Orange.data.Table`
     :rtype: Orange.data.storage.Storage
 
 
@@ -142,7 +142,7 @@ the slower fallback functions for the functions not defined in the storage.
 
     :param filter: A filter for selecting the rows
     :type filter: Orange.data.Filter
-    :return: a new storage of the same type or :obj:~Orange.data.Table
+    :return: a new storage of the same type or :obj:`~Orange.data.Table`
     :rtype: Orange.data.storage.Storage
 
 
@@ -151,7 +151,7 @@ Aggregators
 
 Similarly to filters, storage classes should provide several methods for fast
 computation of statistics. These methods are not called directly but by modules
-within :obj:Orange.statistics.
+within :obj:`Orange.statistics`.
 
 .. method:: _compute_basic_stats(
     self, columns=None, include_metas=False, compute_variance=False)
@@ -163,7 +163,7 @@ within :obj:Orange.statistics.
     :param columns: a list of columns for which the statistics is computed;
         if `None`, the function computes the data for all variables
     :type columns: list of ints, variable names or descriptors of type
-        :obj:Orange.data.Variable
+        :obj:`Orange.data.Variable`
     :param include_metas: a flag which tells whether to include meta attributes
         (applicable only if `columns` is `None`)
     :type include_metas: bool
@@ -188,7 +188,7 @@ within :obj:Orange.statistics.
     :param columns: a list of columns for which the distributions are computed;
         if `None`, the function runs over all variables
     :type columns: list of ints, variable names or descriptors of type
-        :obj:Orange.data.Variable
+        :obj:`Orange.data.Variable`
     :return: a list of distributions
     :rtype: list of numpy arrays
 
@@ -211,8 +211,8 @@ within :obj:Orange.statistics.
     :param col_vars: variables whose values will correspond to columns of
         contingency matrices
     :type col_vars: list of ints, variable names or descriptors of type
-        :obj:Orange.data.Variable
+        :obj:`Orange.data.Variable`
     :param row_var: a discrete variable whose values will correspond to the
         rows of contingency matrices
-    :type row_var: int, variable name or :obj:Orange.data.DiscreteVariable
+    :type row_var: int, variable name or :obj:`~Orange.data.DiscreteVariable`
 

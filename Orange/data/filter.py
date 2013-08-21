@@ -174,7 +174,7 @@ class SameValue(Filter):
 class Values(Filter):
     """
     Select the data instances based on conjunction or disjunction of filters
-    derived from :obj:ValueFilter that check values of individual features.
+    derived from :obj:`ValueFilter` that check values of individual features.
 
     .. attribute:: conditions
 
