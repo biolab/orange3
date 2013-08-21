@@ -57,6 +57,8 @@ class SqlTable(table.Table):
         connection_args.update(kwargs)
 
         self.connection = psycopg2.connect(**connection_args)
+        self.host = host
+        self.database = database
         self.table_name = self.name = table
         self.domain = self._create_domain()
         self.name = self.table_name
@@ -213,7 +215,9 @@ class SqlTable(table.Table):
         table.connection = self.connection
         table.domain = self.domain
         table.row_filters = self.row_filters
-        table.table_name = self.table_name
+        table.table_name = table.name = self.table_name
+        table.database = self.database
+        table.host = self.host
         return table
 
     _cached__len__ = None
