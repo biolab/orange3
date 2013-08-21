@@ -52,6 +52,7 @@ represented by whole numbers.
 
     data.storage
     data.table
+    data.sql
     data.domain
     data.variable
     data.value

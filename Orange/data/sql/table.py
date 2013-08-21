@@ -7,7 +7,8 @@ from urllib import parse
 import numpy as np
 import psycopg2
 
-from .. import domain, variable, value, table, instance, filter, DiscreteVariable, ContinuousVariable
+from .. import domain, variable, value, table, instance, filter,\
+    DiscreteVariable, ContinuousVariable
 from Orange.data.sql import filter as sql_filter
 
 
@@ -18,9 +19,8 @@ class SqlTable(table.Table):
     row_filters = ()
 
     def __new__(cls, *args, **kwargs):
-        """We do not (yet) need the magic of the Table.__new__, so we call it
-        with no parameters.
-        """
+        # We do not (yet) need the magic of the Table.__new__, so we call it
+        # with no parameters.
         return super().__new__(cls)
 
     def __init__(
@@ -28,7 +28,7 @@ class SqlTable(table.Table):
             host=None, database=None, user=None, password=None, schema=None,
             table=None, **kwargs):
         """
-        Create a new  proxy for sql table.
+        Create a new proxy for sql table.
 
         Database connection parameters can be specified either as a string:
 
@@ -511,6 +511,10 @@ class SqlTable(table.Table):
 
 
 class SqlRowInstance(instance.Instance):
+    """
+    Extends :obj:`Orange.data.Instance` to correctly handle values of meta
+    attributes.
+    """
     def __init__(self, domain, data=None):
         super().__init__(domain, data)
         nvar = len(domain.variables)
