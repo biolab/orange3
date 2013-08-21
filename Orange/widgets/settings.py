@@ -486,7 +486,7 @@ class DomainContextHandler(ContextHandler):
         if context:
             for sname, setting in self.settings.items():
                 if name == sname:
-                    if not isinstance(value, list):
+                    if isinstance(value, list):
                         context.values[name] = copy.copy(value)  # shallow copy
                     else:
                         self.save_low(widget, name, value, setting)
