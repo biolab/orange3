@@ -1,6 +1,7 @@
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
 from Orange.data.table import Table
+from Orange.data.sql.table import SqlTable
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
 
@@ -24,7 +25,8 @@ class OWDataInfo(widget.OWWidget):
         super().__init__()
 
         self.data(None)
-        for box in ("Data Set Size", "Features", "Targets", "Meta Attributes"):
+        for box in ("Data Set Size", "Features", "Targets", "Meta Attributes",
+                    "Location"):
             name = box.lower().replace(" ", "_")
             bo = gui.widgetBox(self.controlArea, box,
                                addSpace=box != "Meta Attributes")
@@ -53,6 +55,7 @@ class OWDataInfo(widget.OWWidget):
         if data is None:
             self.data_set_size = "No data"
             self.features = self.targets = self.meta_attributes = "None"
+            self.location = ""
             self.resize()
             return
 
@@ -68,7 +71,7 @@ class OWDataInfo(widget.OWWidget):
                                          ("Variables", len(domain)))) + sparses
 
         if not domain.attributes:
-            self.features = "No features"
+            self.features = "None"
         else:
             self.features = pack_table((
                 ("Discrete", count_n(domain.attributes, DiscreteVariable)),
@@ -76,7 +79,7 @@ class OWDataInfo(widget.OWWidget):
             )
 
         if not domain.metas:
-            self.meta_attributes = "No meta attributes"
+            self.meta_attributes = "None"
         else:
             self.meta_attributes = pack_table((
                 ("Discrete", count_n(domain.metas, DiscreteVariable)),
@@ -100,6 +103,12 @@ class OWDataInfo(widget.OWWidget):
             else:
                 self.targets = "<p>Multi target data</p>\n" + pack_table(
                     (("Discrete", dis), ("Continuous", con)))
+
+        if isinstance(data, SqlTable):
+            self.location = "Table '%s' in database '%s/%s'" % (
+                data.name, data.host, data.database)
+        else:
+            self.location = "Data is stored in memory"
 
         self.resize()
 
