@@ -1,11 +1,14 @@
 from collections import defaultdict
+import contextlib
 import os
+import string
 import unittest
 import uuid
 
 import psycopg2
 
 import Orange
+from Orange.data.sql import table as sql_table
 
 
 def get_dburi():
@@ -56,6 +59,18 @@ class PostgresTest(unittest.TestCase):
         pass
 
     def create_sql_table(self, data):
+        table_name = self._create_sql_table(data)
+        self.table_name = str(table_name)
+        return get_dburi() + '/' + str(table_name)
+
+    @contextlib.contextmanager
+    def sql_table_from_data(self, data):
+        table_name = self._create_sql_table(data)
+        yield sql_table.SqlTable(get_dburi() + '/' + str(table_name))
+        self.drop_sql_table(table_name)
+
+    def _create_sql_table(self, data):
+        data = list(data)
         column_size = self._get_column_types(data)
         sql_column_types = [
             'float' if size == 0 else 'varchar(%s)' % size
@@ -95,11 +110,11 @@ class PostgresTest(unittest.TestCase):
             cur.execute(insert_sql)
         conn.commit()
         conn.close()
-        self.table_name = str(table_name)
-        return get_dburi() + '/' + str(table_name)
+        return table_name
 
     def _get_column_types(self, data):
-        assert len(data) > 0
+        if not data:
+            return [0] * 3
         column_size = [0] * len(data[0])
         for row in data:
             for i, value in enumerate(row):
@@ -113,3 +128,12 @@ class PostgresTest(unittest.TestCase):
         cur.execute("""DROP TABLE "%s" """ % table_name)
         conn.commit()
         conn.close()
+
+    def float_variable(self, size):
+        return [i*.1 for i in range(size)]
+
+    def discrete_variable(self, size):
+        return ["mf"[i % 2] for i in range(size)]
+
+    def string_variable(self, size):
+        return string.ascii_letters[:size]

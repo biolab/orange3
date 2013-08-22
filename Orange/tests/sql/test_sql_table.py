@@ -1,8 +1,6 @@
 import unittest
-from mock import MagicMock
-from psycopg2 import OperationalError
 from Orange.data.sql import table as sql_table
-from Orange import data
+from Orange.data import filter
 from Orange.tests.sql.base import PostgresTest
 
 
@@ -76,30 +74,48 @@ class SqlTableUnitTests(unittest.TestCase):
 
 
 class SqlTableTests(PostgresTest):
-    def test_reads_attributes_from_database(self):
-        table = sql_table.SqlTable("sql://localhost/test/iris")
+    def test_constructs_correct_attributes(self):
+        data = list(zip(self.float_variable(21),
+                        self.discrete_variable(21),
+                        self.string_variable(21)))
+        with self.sql_table_from_data(data) as table:
+            self.assertEqual(len(table.domain), 2)
+            self.assertEqual(len(table.domain.metas), 1)
 
-        # Continuous
-        sepal_length = table[0][0]
-        self.assertAlmostEqual(float(sepal_length), 5.1)
-        self.assertEqual(str(sepal_length), '5.100')
+            float_attr, discrete_attr = table.domain
+            string_attr, = table.domain.metas
+            VarTypes = float_attr.VarTypes
 
-        # Discrete
-        iris = table[0][4]
-        self.assertAlmostEqual(float(iris), 0)
-        self.assertEqual(str(iris), 'Iris-setosa')
+            self.assertEqual(float_attr.var_type, VarTypes.Continuous)
+            self.assertEqual(float_attr.name, "col0")
+            self.assertEqual(float_attr.to_sql(), '"col0"')
 
-    def test_can_connect_to_database(self):
-        table = sql_table.SqlTable('/test/iris')
-        self.assertEqual(table.table_name, 'iris')
-        self.assertEqual(
-            [attr.name for attr in table.domain],
-            ['sepal length', 'sepal width', 'petal length', 'petal width',
-             'iris']
-        )
-        self.assertSequenceEqual(
-            table.domain['iris'].values,
-            ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'])
+            self.assertEqual(discrete_attr.var_type, VarTypes.Discrete)
+            self.assertEqual(discrete_attr.name, "col1")
+            self.assertEqual(discrete_attr.to_sql(), '"col1"')
+            self.assertEqual(discrete_attr.values, ['f', 'm'])
+
+            self.assertEqual(string_attr.var_type, VarTypes.String)
+            self.assertEqual(string_attr.name, "col2")
+            self.assertEqual(string_attr.to_sql(), '"col2"')
+
+    def test_len(self):
+        with self.sql_table_from_data(zip(self.float_variable(26))) as table:
+            self.assertEqual(len(table), 26)
+
+        with self.sql_table_from_data(zip(self.float_variable(0))) as table:
+            self.assertEqual(len(table), 0)
+
+    def test_len_with_filter(self):
+        with self.sql_table_from_data(zip(self.discrete_variable(26))) as table:
+            self.assertEqual(len(table), 26)
+
+            filtered_table = filter.SameValue(table.domain[0], 'm')(table)
+            self.assertEqual(len(filtered_table), 13)
+
+            table.domain[0].values.append('x')
+            filtered_table = filter.SameValue(table.domain[0], 'x')(table)
+            self.assertEqual(len(filtered_table), 0)
 
     def test_query_all(self):
         table = sql_table.SqlTable('/test/iris')
