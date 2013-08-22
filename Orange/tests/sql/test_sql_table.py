@@ -7,23 +7,72 @@ from Orange.tests.sql.base import PostgresTest
 
 
 class SqlTableUnitTests(unittest.TestCase):
-    def test_parses_server_in_uri_format(self):
-        table = sql_table.SqlTable.__new__(sql_table.SqlTable)
-        parameters = table._parse_uri(
+    def setUp(self):
+        self.table = sql_table.SqlTable.__new__(sql_table.SqlTable)
+
+    def test_parses_connection_uri(self):
+        parameters = self.table._parse_uri(
             "sql://user:password@host:7678/database/table")
 
-        self.assertIn("host", parameters)
-        self.assertEqual(parameters["host"], "host")
-        self.assertIn("user", parameters)
-        self.assertEqual(parameters["user"], "user")
-        self.assertIn("password", parameters)
-        self.assertEqual(parameters["password"], "password")
-        self.assertIn("port", parameters)
-        self.assertEqual(parameters["port"], 7678)
-        self.assertIn("database", parameters)
-        self.assertEqual(parameters["database"], "database")
-        self.assertIn("table", parameters)
-        self.assertEqual(parameters["table"], "table")
+        self.assertDictContainsSubset(dict(
+            host="host",
+            user="user",
+            password="password",
+            port=7678,
+            database="database",
+            table="table"
+        ), parameters)
+
+    def test_parse_minimal_connection_uri(self):
+        parameters = self.table._parse_uri(
+            "sql://host/database/table")
+
+        self.assertDictContainsSubset(
+            dict(host="host", database="database", table="table"),
+            parameters
+        )
+
+    def test_parse_schema(self):
+        parameters = self.table._parse_uri(
+            "sql://host/database/table?schema=schema")
+
+        self.assertDictContainsSubset(
+            dict(database="database",
+                 table="table",
+                 host="host",
+                 schema="schema"),
+            parameters
+        )
+
+    def assertDictContainsSubset(self, subset, dictionary, msg=None):
+        """Checks whether dictionary is a superset of subset.
+
+        This method has been copied from unittest/case.py and undeprecated.
+        """
+        from unittest.case import safe_repr
+        missing = []
+        mismatched = []
+        for key, value in subset.items():
+            if key not in dictionary:
+                missing.append(key)
+            elif value != dictionary[key]:
+                mismatched.append('%s, expected: %s, actual: %s' %
+                                  (safe_repr(key), safe_repr(value),
+                                   safe_repr(dictionary[key])))
+
+        if not (missing or mismatched):
+            return
+
+        standardMsg = ''
+        if missing:
+            standardMsg = 'Missing: %s' % ','.join(safe_repr(m) for m in
+                                                   missing)
+        if mismatched:
+            if standardMsg:
+                standardMsg += '; '
+            standardMsg += 'Mismatched values: %s' % ','.join(mismatched)
+
+        self.fail(self._formatMessage(msg, standardMsg))
 
 
 class SqlTableTests(PostgresTest):

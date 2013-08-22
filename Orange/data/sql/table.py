@@ -66,17 +66,25 @@ class SqlTable(table.Table):
     def _parse_uri(self, uri):
         parsed_uri = parse.urlparse(uri)
         path = parsed_uri.path.strip('/')
-        database, table = path.split('/')
+        database, table = path.split('/', 1)
+        if '?' in table:
+            table, params = table.split('?', 1)
+            params = parse.parse_qs(params)
+            for key, value in params.items():
+                if len(params[key]) == 1:
+                    params[key] = value[0]
+        else:
+            params = {}
 
-        return dict(
+        params.update(dict(
             host=parsed_uri.hostname,
             port=parsed_uri.port,
             user=parsed_uri.username,
             database=database,
             password=parsed_uri.password,
             table=table,
-        )
-        # TODO: parse schema
+        ))
+        return params
 
     def _create_domain(self):
         attributes, metas = [], []
