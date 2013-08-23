@@ -29,14 +29,42 @@ class Storage:
         raise NotImplementedError
 
     def _compute_basic_stats(self, columns=None):
-        """
+        """Compute basic stats for each of the columns.
+
         :param columns: columns to calculate stats for. None = all of them
         :return: tuple(min, max, mean, 0, #nans, #non-nans)
         """
         raise NotImplementedError
 
     def _compute_distributions(self, columns=None):
+        """Compute distribution of values for the given columns.
+
+        :param columns: columns to calculate distributions for
+        :return: a list of distributions. Type of distribution depends on the
+                 type of the column:
+                   - for discrete, distribution is a 1d np.array containing the
+                     occurrence counts for each of the values.
+                   - for continuous, distribution is a 2d np.array with
+                     distinct (ordered) values of the variable in the first row
+                     and their counts in second.
+        """
         raise NotImplementedError
 
     def _compute_contingency(self, col_vars=None, row_var=None):
+        """Compute contingency tables with row_var values in rows and column_var
+         values in columns.
+
+        :param col_vars: variables to compute contingency tables for
+        :param row_var: discrete variable in rows of the contingency tables
+        :return: a list of tuples (contingency_table, unknown), one for each
+                 var in col_vars. Structure of the contingency_table depends
+                 on the type of the column variable:
+                    - for discrete, contingency_table is a 2d numpy array, where
+                      element (i, j) contains count of rows with i-th value
+                      of the row variable and j-th value of the column variable.
+                    - for continuous, contingency is a list of 2d numpy arrays,
+                      one for each value of the row variable. 2d arrays contain
+                       ordered distinct values of the column_variable in first
+                       row and their counts in the second.
+        """
         raise NotImplementedError
