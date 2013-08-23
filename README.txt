@@ -18,7 +18,7 @@ This version of Orange requires Python 3.2 or newer. To build it, run::
     pip install -r requirements.txt
     python setup.py develop
 
-We recommend using a virtual environment.
+inside a virtual environment that uses Python 3.2.
 
 Starting Orange Canvas
 ----------------------
