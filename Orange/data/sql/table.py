@@ -323,7 +323,8 @@ class SqlTable(table.Table):
         all_contingencies = [None] * len(columns)
         for i, column in enumerate(columns):
             column_field = columns[0].to_sql()
-            cur = self._sql_compute_contingency(row_field, column_field, filters)
+            cur = self._sql_compute_contingency(row_field, column_field,
+                                                filters)
 
             if column.var_type == column.VarTypes.Continuous:
                 all_contingencies[i] = (self._continuous_contingencies(cur), [])
