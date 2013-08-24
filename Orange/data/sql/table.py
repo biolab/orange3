@@ -150,6 +150,13 @@ class SqlTable(table.Table):
             except TypeError:
                 pass
 
+        # TODO if row_idx specify multiple rows, one of the following must
+        # happen
+        #  - the new table remembers which rows are selected (implement
+        #     table.limit_rows and whatever else is necessary)
+        #  - return an ordinary (non-SQL) Table
+        #  - raise an exception
+
         # multiple rows OR single row but multiple columns:
         # construct a new table
         table = self.copy()
@@ -202,6 +209,7 @@ class SqlTable(table.Table):
                 offset, stop = min(rows), max(rows)
                 limit = stop - offset + 1
 
+        # TODO: this returns all rows between min(rows) and max(rows): fix!
         cur = self._sql_query(fields, filters, offset=offset, limit=limit)
         while True:
             row = cur.fetchone()
