@@ -6,36 +6,26 @@ visualization, exploration, preprocessing and modeling techniques. It can be
 used through a nice and intuitive user interface or, for more advanced users,
 as a module for Python programming language.
 
+This is an early development version of Orange 3.0. The current stable version
+2.7 is available on http://orange.biolab.si (binaries) and
+https://bitbucket.org/biolab/orange (sources).
+
 Installing
 ----------
 
-To build and install Orange run::
+This version of Orange requires Python 3.2 or newer. To build it, run::
 
     pip install -r requirements.txt
-    python setup.py install
+    python setup.py develop
 
-
-Running Tests
--------------
-To test Orange with included unit tests run::
-
-    python setup.py test
+inside a virtual environment that uses Python 3.2.
 
 Starting Orange Canvas
 ----------------------
 
-Start orange canvas from the command line with::
+Orange Canvas requires PyQt, which is not pip-installable in Python 3. You
+have to download and install it system-wide.
 
-     orange-canvas
+To start orange canvas from the command line, run::
 
-Installation for Developers
----------------------------
-
-To install in `development mode`_ run::
-
-    python setup.py develop
-   
-.. _development mode: http://packages.python.org/distribute/setuptools.html#development-mode
-
-windows 7 with gcc:
-	c:\Python32\python.exe setup.py build_ext -i --compiler=mingw32
+     python3 Orange/canvas/__main__.py

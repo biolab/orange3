@@ -3,38 +3,39 @@ import Orange.feature.discretization
 
 from Orange.data import ContinuousVariable, Domain
 
-class DiscretizeTable(object):
+class DiscretizeTable:
     """Discretizes all continuous features in the data.
 
     .. attribute:: method
 
-        Feature discretization method (from 
-        :obj:`Orange.feature.discretization`).
-        Default: :class:`Orange.feature.discretization.EqualFreq`
-        with 4 intervals.
+        Feature discretization method (instance of
+        :obj:`Orange.feature.discretization.Discretization`). If left `None`,
+        :class:`Orange.feature.discretization.EqualFreq` with 4 intervals is
+        used.
 
     .. attribute:: clean
         
-        If `True`, features discretized to a constant will
-        be removed. Useful only for methods that infer the
-        number of discretization intervals from the data, like
+        If `True`, features discretized into a single interval constant are
+        removed. This is useful for discretizatoin methods that infer the
+        number of intervals from the data, such as
         :class:`Orange.feature.discretization.Entropy` (default: `True`).
 
-    .. attribute:: include_class
+    .. attribute:: discretize_class
     
-        If `True`, discretize class values too (default: `False`).
-        
-
+        Determines whether a target is also discretized if it is continuous.
+        (default: `False`)
     """
-    def __new__(cls, data=None, discretize_class=False,
-                method=Orange.feature.discretization.EqualFreq(n=4), 
-                clean=True, include_class=False):
+    def __new__(cls, data=None,
+                discretize_class=False, method=None, clean=True):
         self = super().__new__(cls)
         self.discretize_class = discretize_class
         self.method = method
         self.clean = clean
-        self.include_class = include_class
-        return self if data is None else self(data)
+        if data is None:
+            return self
+        else:
+            return self(data)
+
 
     def __call__(self, data):
         """
@@ -42,25 +43,27 @@ class DiscretizeTable(object):
 
         :param data: Data to discretize.
         """
-        
-        domain = data.domain
 
         def transform_list(s):
             new_vars = []
             for var in s:
                 if isinstance(var, ContinuousVariable):
-                    nv = self.method(data, var)
+                    nv = method(data, var)
                     if not self.clean or len(nv.values) > 1:
                         new_vars.append(nv)
                 else:
                     new_vars.append(var)
             return new_vars
 
+        if self.method is None:
+            method = Orange.feature.discretization.EqualFreq(n=4)
+        else:
+            method = self.method
+        domain = data.domain
         new_attrs = transform_list(domain.attributes)
-        if self.include_class:
+        if self.discretize_class:
             new_classes = transform_list(domain.class_vars)
         else:
             new_classes = domain.class_vars
-
         nd = Domain(new_attrs, new_classes)
         return Orange.data.Table(nd, data)
