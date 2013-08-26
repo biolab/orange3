@@ -15,6 +15,7 @@ Installing
 
 This version of Orange requires Python 3.2 or newer. To build it, run::
 
+    pip install numpy
     pip install -r requirements.txt
     python setup.py develop
 
@@ -24,8 +25,10 @@ Starting Orange Canvas
 ----------------------
 
 Orange Canvas requires PyQt, which is not pip-installable in Python 3. You
-have to download and install it system-wide.
+have to download and install it system-wide. Make sure that the virtual
+environment for orange is created with --system-site-packages, so it will have
+access to installed PyQt4.
 
 To start orange canvas from the command line, run::
 
-     python3 Orange/canvas/__main__.py
+     python3 -m Orange.canvas
