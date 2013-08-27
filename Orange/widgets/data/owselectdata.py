@@ -101,7 +101,7 @@ class OWSelectData(widget.OWWidget):
         self.resize(600, 400)
 
 
-    def add_row(self, attr=None):
+    def add_row(self, attr=None, condition_type=None, condition_value=None):
         model = self.cond_list.model()
         row = model.rowCount()
         model.insertRow(row)
@@ -115,7 +115,8 @@ class OWSelectData(widget.OWWidget):
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
         self.remove_all_button.setDisabled(False)
-        self.set_new_operators(attr_combo, attr is not None)
+        self.set_new_operators(attr_combo, attr is not None,
+                               condition_type, condition_value)
         attr_combo.currentIndexChanged.connect(
             lambda _: self.set_new_operators(attr_combo, False))
 
@@ -145,15 +146,16 @@ class OWSelectData(widget.OWWidget):
         self.remove_all_button.setDisabled(True)
 
 
-    def set_new_operators(self, attr_combo, adding_all):
+    def set_new_operators(self, attr_combo, adding_all,
+                          selected_index=None, selected_values=None):
         oper_combo = QtGui.QComboBox()
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
         oper_combo.setStyleSheet("border: none")
         var = self.data.domain[attr_combo.currentText()]
         oper_combo.addItems(self.operator_names[type(var)])
-        oper_combo.setCurrentIndex(0)
-        self.set_new_values(oper_combo, adding_all)
+        oper_combo.setCurrentIndex(selected_index or 0)
+        self.set_new_values(oper_combo, adding_all, selected_values)
         self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
         oper_combo.currentIndexChanged.connect(
             lambda _: self.set_new_values(oper_combo, False))
@@ -180,7 +182,7 @@ class OWSelectData(widget.OWWidget):
             else:
                 return super().validate(input_, pos)
 
-    def set_new_values(self, oper_combo, adding_all):
+    def set_new_values(self, oper_combo, adding_all, selected_values=None):
         def remove_children():
             for child in box.children()[1:]:
                 box.layout().removeWidget(child)
@@ -206,7 +208,11 @@ class OWSelectData(widget.OWWidget):
 
         var = self.data.domain[oper_combo.attr_combo.currentText()]
         box = self.cond_list.cellWidget(oper_combo.row, 2)
-        lc = ["", ""]
+        if selected_values is not None:
+            lc = list(selected_values) + ["", ""]
+            lc = [str(x) for x in lc[:2]]
+        else:
+            lc = ["", ""]
         if box and var.var_type == box.var_type:
             lc = self._get_lineedit_contents(box) + lc
         oper = oper_combo.currentIndex()
@@ -216,7 +222,10 @@ class OWSelectData(widget.OWWidget):
         elif isinstance(var, DiscreteVariable):
             combo = QtGui.QComboBox()
             combo.addItems([""] + var.values)
-            combo.setCurrentIndex(0)
+            if lc[0]:
+                combo.setCurrentIndex(int(lc[0]))
+            else:
+                combo.setCurrentIndex(0)
             combo.setStyleSheet("border: none")
             combo.var_type = var.var_type
             self.cond_list.setCellWidget(oper_combo.row, 2, combo)
@@ -258,7 +267,9 @@ class OWSelectData(widget.OWWidget):
         if not self.conditions and len(domain.variables):
             self.add_row()
         self.update_info(data, self.data_in_variables)
-        self.conditions_changed()
+        for attr, cond_type, cond_value in self.conditions:
+            attrs = [a.name for a in domain.variables + domain.metas]
+            self.add_row(attrs.index(attr), cond_type, cond_value)
 
 
     def on_purge_change(self):
@@ -272,7 +283,6 @@ class OWSelectData(widget.OWWidget):
                 self.old_purge_classes = self.purge_classes
                 self.purge_classes = False
         self.conditions_changed()
-
 
     def conditions_changed(self):
         try:
