@@ -77,6 +77,6 @@ Point (``owpoint``)
 from PyQt4.QtGui import QGraphicsPathItem, QPen, QBrush
 from PyQt4.QtCore import Qt, QPointF
 
-from . import orangeqt
+import orangeqt
 
 OWPoint = orangeqt.Point

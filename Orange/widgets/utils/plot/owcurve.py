@@ -134,7 +134,7 @@ Curve (``owcurve``)
 '''
 
 from .owconstants import *
-from . import orangeqt
+import orangeqt
 
 OWPlotItem = orangeqt.PlotItem
 
