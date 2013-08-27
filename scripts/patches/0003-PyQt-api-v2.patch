@@ -1,7 +1,7 @@
-From 31fbe94e13ee2a7dbfc343fa13de29b26fa2793e Mon Sep 17 00:00:00 2001
+From 8dab1a23da1e84964ac9ce3ad1d8e1367239e636 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:37:18 +0200
-Subject: [PATCH 3/4] PyQt api v2.
+Subject: [PATCH 3/6] PyQt api v2.
 
 ---
  Orange/canvas/__main__.py                          |  2 +-
@@ -31,7 +31,7 @@ Subject: [PATCH 3/4] PyQt api v2.
  24 files changed, 77 insertions(+), 92 deletions(-)
 
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index c59d66d..e445f29 100644
+index 68c59aa..33c5a23 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
 @@ -158,7 +158,7 @@ def main(argv=None):
@@ -44,10 +44,10 @@ index c59d66d..e445f29 100644
                  base = pkg_resources.resource_filename(pkg_name, "styles")
  
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index 96eb731..254ee6a 100644
+index c485208..c930fa5 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
-@@ -756,7 +756,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -765,7 +765,7 @@ class CanvasMainWindow(QMainWindow):
      def on_tool_box_widget_activated(self, action):
          """A widget action in the widget toolbox has been activated.
          """
@@ -56,7 +56,7 @@ index 96eb731..254ee6a 100644
          if widget_desc:
              scheme_widget = self.current_document()
              if scheme_widget:
-@@ -1520,7 +1520,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -1547,7 +1547,7 @@ class CanvasMainWindow(QMainWindow):
  
          actions_by_filename = {}
          for action in self.recent_scheme_action_group.actions():
@@ -65,7 +65,7 @@ index 96eb731..254ee6a 100644
              actions_by_filename[path] = action
  
          if filename in actions_by_filename:
-@@ -1562,7 +1562,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -1589,7 +1589,7 @@ class CanvasMainWindow(QMainWindow):
  
          # Exclude permanent actions (Browse Recent, separators, Clear List)
          actions_to_remove = [action for action in actions \
@@ -74,7 +74,7 @@ index 96eb731..254ee6a 100644
  
          for action in actions_to_remove:
              self.recent_menu.removeAction(action)
-@@ -1579,7 +1579,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -1606,7 +1606,7 @@ class CanvasMainWindow(QMainWindow):
              if self.ask_save_changes() == QDialog.Rejected:
                  return
  
@@ -225,10 +225,10 @@ index fb8a906..ea78cfd 100644
          return QGraphicsObject.itemChange(self, change, value)
  
 diff --git a/Orange/canvas/canvas/items/nodeitem.py b/Orange/canvas/canvas/items/nodeitem.py
-index 2cd0e77..89cef41 100644
+index f3ed831..72f00ba 100644
 --- a/Orange/canvas/canvas/items/nodeitem.py
 +++ b/Orange/canvas/canvas/items/nodeitem.py
-@@ -308,7 +308,7 @@ class AnchorPoint(QGraphicsObject):
+@@ -309,7 +309,7 @@ class AnchorPoint(QGraphicsObject):
  
      def itemChange(self, change, value):
          if change == QGraphicsItem.ItemScenePositionHasChanged:
@@ -237,7 +237,7 @@ index 2cd0e77..89cef41 100644
  
          return QGraphicsObject.itemChange(self, change, value)
  
-@@ -1154,7 +1154,7 @@ class NodeItem(QGraphicsObject):
+@@ -1175,7 +1175,7 @@ class NodeItem(QGraphicsObject):
  
      def itemChange(self, change, value):
          if change == QGraphicsItem.ItemSelectedChange:
@@ -332,10 +332,10 @@ index 0142bd2..0f649b2 100644
                  button = self.__pages.tabButton(i)
                  button.setStyleSheet(
 diff --git a/Orange/canvas/document/schemeedit.py b/Orange/canvas/document/schemeedit.py
-index a56e3da..d93a422 100644
+index f5a0368..c4f5bf6 100644
 --- a/Orange/canvas/document/schemeedit.py
 +++ b/Orange/canvas/document/schemeedit.py
-@@ -1360,7 +1360,7 @@ class SchemeEditWidget(QWidget):
+@@ -1339,7 +1339,7 @@ class SchemeEditWidget(QWidget):
          else:
              handler = interactions.NewArrowAnnotation(self)
              checked = self.__arrowColorActionGroup.checkedAction()
@@ -344,7 +344,7 @@ index a56e3da..d93a422 100644
  
              handler.ended.connect(action.toggle)
  
-@@ -1411,7 +1411,7 @@ class SchemeEditWidget(QWidget):
+@@ -1390,7 +1390,7 @@ class SchemeEditWidget(QWidget):
              # Update the preferred color on the interaction handler
              handler = self.__scene.user_interaction_handler
              if isinstance(handler, interactions.NewArrowAnnotation):
@@ -412,7 +412,7 @@ index c39d98a..d9c3ab4 100644
                  return action
              else:
 diff --git a/Orange/canvas/preview/previewbrowser.py b/Orange/canvas/preview/previewbrowser.py
-index 2859bc2..018fabf 100644
+index 6effd26..18dfc9e 100644
 --- a/Orange/canvas/preview/previewbrowser.py
 +++ b/Orange/canvas/preview/previewbrowser.py
 @@ -314,21 +314,21 @@ class PreviewBrowser(QWidget):
@@ -548,7 +548,7 @@ index b3f78c6..e14810a 100644
          if self.is_icon_glob(path):
              icons = self.icon_glob(path)
 diff --git a/Orange/canvas/scheme/annotations.py b/Orange/canvas/scheme/annotations.py
-index 2c8c2c6..c8c9581 100644
+index b944070..734e416 100644
 --- a/Orange/canvas/scheme/annotations.py
 +++ b/Orange/canvas/scheme/annotations.py
 @@ -5,7 +5,7 @@ Scheme Annotations

@@ -21,6 +21,7 @@ from PyQt4.QtCore import pyqtProperty as Property
 from .graphicspathobject import GraphicsPathObject
 from .utils import saturated, radial_gradient
 
+from ...scheme.node import UserMessage
 from ...registry import NAMED_COLORS
 from ...resources import icon_loader
 from .utils import uniform_linear_layout
@@ -978,6 +979,26 @@ class NodeItem(QGraphicsObject):
 
         """
         pass
+
+    def setStateMessage(self, message):
+        """
+        Set a state message to display over the item.
+
+        Parameters
+        ----------
+        message : UserMessage
+            Message to display. `message.severity` is used to determine
+            the icon and `message.contents` is used as a tool tip.
+
+        """
+        # TODO: Group messages by message_id not by severity
+        # and deprecate set[Error|Warning|Error]Message
+        if message.severity == UserMessage.Info:
+            self.setInfoMessage(message.contents)
+        elif message.severity == UserMessage.Warning:
+            self.setWarningMessage(message.contents)
+        elif message.severity == UserMessage.Error:
+            self.setErrorMessage(message.contents)
 
     def setErrorMessage(self, message):
         if self.__error != message:

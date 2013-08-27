@@ -20,7 +20,7 @@ from .node import SchemeNode
 from .link import SchemeLink, compatible_channels
 from .annotations import BaseSchemeAnnotation
 
-from .utils import check_arg, check_type
+from ..utils import check_arg, check_type
 
 from .errors import (
     SchemeCycleError, IncompatibleChannelTypeError, SinkChannelError,
@@ -596,6 +596,15 @@ class Scheme(QObject):
 
         assert(not (self.nodes or self.links or self.annotations))
 
+    def sync_node_properties(self):
+        """
+        Called before saving, allowing a subclass to update/sync.
+
+        The default implementation does nothing.
+
+        """
+        pass
+
     def save_to(self, stream, pretty=True, pickle_fallback=False):
         """
         Save the scheme as an xml formated file to `stream`
@@ -607,6 +616,8 @@ class Scheme(QObject):
         """
         if isinstance(stream, str):
             stream = open(stream, "wb")
+
+        self.sync_node_properties()
 
         scheme_to_ows_stream(self, stream, pretty,
                              pickle_fallback=pickle_fallback)

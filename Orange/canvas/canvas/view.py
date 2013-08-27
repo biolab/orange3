@@ -3,19 +3,21 @@ Canvas Graphics View
 """
 import logging
 
-from PyQt4.QtGui import QGraphicsView, QCursor
-from PyQt4.QtCore import Qt, QRect, QRectF, QTimer
+from PyQt4.QtGui import QGraphicsView, QCursor, QIcon
+from PyQt4.QtCore import Qt, QRect, QSize, QRectF, QPoint, QTimer
 
 log = logging.getLogger(__name__)
 
 
 class CanvasView(QGraphicsView):
-    """Canvas View handles the zooming and panning.
+    """Canvas View handles the zooming.
     """
 
     def __init__(self, *args):
         QGraphicsView.__init__(self, *args)
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        self.__backgroundIcon = QIcon()
 
         self.__autoScroll = False
         self.__autoScrollMargin = 16
@@ -112,3 +114,30 @@ class CanvasView(QGraphicsView):
             self.__stopAutoScroll()
 
         log.debug("Auto scroll advance")
+
+    def setBackgroundIcon(self, icon):
+        if not isinstance(icon, QIcon):
+            raise TypeError("A QIcon expected.")
+
+        if self.__backgroundIcon != icon:
+            self.__backgroundIcon = icon
+            self.viewport().update()
+
+    def backgroundIcon(self):
+        return QIcon(self.__backgroundIcon)
+
+    def drawBackground(self, painter, rect):
+        QGraphicsView.drawBackground(self, painter, rect)
+
+        if not self.__backgroundIcon.isNull():
+            painter.setClipRect(rect)
+            vrect = QRect(QPoint(0, 0), self.viewport().size())
+            vrect = self.mapToScene(vrect).boundingRect()
+
+            pm = self.__backgroundIcon.pixmap(
+                vrect.size().toSize().boundedTo(QSize(200, 200))
+            )
+            pmrect = QRect(QPoint(0, 0), pm.size())
+            pmrect.moveCenter(vrect.center().toPoint())
+            if rect.toRect().intersects(pmrect):
+                painter.drawPixmap(pmrect, pm)

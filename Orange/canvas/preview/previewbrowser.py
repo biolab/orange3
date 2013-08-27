@@ -18,7 +18,7 @@ from PyQt4.QtCore import (
 
 from PyQt4.QtCore import pyqtSignal as Signal
 
-from ..scheme.utils import check_type
+from ..utils import check_type
 from ..gui.dropshadow import DropShadowFrame
 from . import previewmodel
 

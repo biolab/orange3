@@ -169,10 +169,11 @@ class SignalManager(QObject):
         return self.__runtime_state
 
     def on_node_removed(self, node):
-        # remove all pending input signals for node so we don't get stale
-        # references in process_node
-        # NOTE: This does not remove output signals this node. In particular
-        # the final 'None' values might be left on the queue.
+        # remove all pending input signals for node so we don't get
+        # stale references in process_node.
+        # NOTE: This does not remove output signals for this node. In
+        # particular the final 'None' will be delivered to the sink
+        # nodes even after the source node is no longer in the scheme.
         log.info("Node %r removed. Removing pending signals.",
                  node.title)
         self.remove_pending_signals(node)

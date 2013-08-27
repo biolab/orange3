@@ -389,6 +389,14 @@ class CanvasMainWindow(QMainWindow):
                     icon=canvas_icons("Open.svg")
                     )
 
+        self.open_and_freeze_action = \
+            QAction(self.tr("Open and Freeze"), self,
+                    objectName="action-open-and-freeze",
+                    toolTip=self.tr("Open a new scheme and freeze signal "
+                                    "propagation."),
+                    triggered=self.open_and_freeze_scheme
+                    )
+
         self.save_action = \
             QAction(self.tr("Save"), self,
                     objectName="action-save",
@@ -559,6 +567,7 @@ class CanvasMainWindow(QMainWindow):
         file_menu = QMenu(self.tr("&File"), menu_bar)
         file_menu.addAction(self.new_action)
         file_menu.addAction(self.open_action)
+        file_menu.addAction(self.open_and_freeze_action)
         file_menu.addAction(self.reload_last_action)
 
         # File -> Open Recent submenu
@@ -863,6 +872,24 @@ class CanvasMainWindow(QMainWindow):
             return QDialog.Accepted
         else:
             return QDialog.Rejected
+
+    def open_and_freeze_scheme(self):
+        """
+        Open a new scheme and freeze signal propagation. Return
+        QDialog.Rejected if the user canceled the operation and
+        QDialog.Accepted otherwise.
+
+        """
+        frozen = self.freeze_action.isChecked()
+        if not frozen:
+            self.freeze_action.trigger()
+
+        state = self.open_scheme()
+        if state == QDialog.Rejected:
+            # If the action was rejected restore the original frozen state
+            if not frozen:
+                self.freeze_action.trigger()
+        return state
 
     def open_scheme_file(self, filename):
         """

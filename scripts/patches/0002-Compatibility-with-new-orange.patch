@@ -1,7 +1,7 @@
-From 344f97cc16dd9e0037621857e193fb52e5bd81e9 Mon Sep 17 00:00:00 2001
+From 4e81df94b652ccbf8eea3fdde50b3534f79584b3 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:36:08 +0200
-Subject: [PATCH 2/4] Compatibility with new orange.
+Subject: [PATCH 2/6] Compatibility with new orange.
 
 ---
  Orange/canvas/__init__.py             |   7 +-
@@ -12,10 +12,10 @@ Subject: [PATCH 2/4] Compatibility with new orange.
  Orange/canvas/preview/scanner.py      |   3 -
  Orange/canvas/registry/description.py |  84 +++------
  Orange/canvas/resources.py            |   2 +-
- Orange/canvas/scheme/widgetsscheme.py |  29 ++--
+ Orange/canvas/scheme/widgetsscheme.py |  25 +--
  Orange/canvas/utils/debugging.py      | 122 +++++++++++++
  Orange/canvas/utils/environ.py        | 310 ++++++++++++++++++++++++++++++++++
- 11 files changed, 498 insertions(+), 102 deletions(-)
+ 11 files changed, 496 insertions(+), 100 deletions(-)
  create mode 100644 Orange/canvas/utils/debugging.py
  create mode 100644 Orange/canvas/utils/environ.py
 
@@ -32,7 +32,7 @@ index 8b13789..741523b 100644
 +# By settings __loader__ to None, we workaround the pkg_resources bug.
 +__loader__ = None
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index 534fc80..c59d66d 100644
+index e336d8a..68c59aa 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
 @@ -17,20 +17,20 @@ import pkg_resources
@@ -77,8 +77,8 @@ index 534fc80..c59d66d 100644
              resource = "styles/" + stylesheet
  
              if pkg_resources.resource_exists(pkg_name, resource):
-@@ -183,7 +183,7 @@ def main(argv=None):
-         app.setStyleSheet(stylesheet_string)
+@@ -180,7 +180,7 @@ def main(argv=None):
+                 log.info("%r style sheet not found.", stylesheet)
  
      # Add the default canvas_icons search path
 -    dirpath = os.path.abspath(os.path.dirname(OrangeCanvas.__file__))
@@ -122,10 +122,10 @@ index c3edc91..892b304 100644
      return ep
  
 diff --git a/Orange/canvas/document/schemeedit.py b/Orange/canvas/document/schemeedit.py
-index 25ccb43..a56e3da 100644
+index d74d233..f5a0368 100644
 --- a/Orange/canvas/document/schemeedit.py
 +++ b/Orange/canvas/document/schemeedit.py
-@@ -1146,9 +1146,9 @@ class SchemeEditWidget(QWidget):
+@@ -1149,9 +1149,9 @@ class SchemeEditWidget(QWidget):
              # be selected items in the canvas), so we disable the
              # remove widget action so the text editing follows standard
              # 'look and feel'
@@ -138,7 +138,7 @@ index 25ccb43..a56e3da 100644
                  handler.create_new(QCursor.pos(), searchText)
  
              event.accept()
-@@ -1436,8 +1436,7 @@ class SchemeEditWidget(QWidget):
+@@ -1415,8 +1415,7 @@ class SchemeEditWidget(QWidget):
                  self.__quickMenuTriggers & SchemeEditWidget.RightClicked:
              action = interactions.NewNodeAction(self)
  
@@ -285,10 +285,19 @@ index e12bdf8..b3f78c6 100644
  del dirname
  
 diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
-index 9cbcba8..3ff0a43 100644
+index 646f781..d5e38cf 100644
 --- a/Orange/canvas/scheme/widgetsscheme.py
 +++ b/Orange/canvas/scheme/widgetsscheme.py
-@@ -86,8 +86,7 @@ class WidgetsScheme(Scheme):
+@@ -76,7 +76,7 @@ class WidgetsScheme(Scheme):
+         changed = False
+         for node in self.nodes:
+             widget = self.widget_for_node(node)
+-            settings = widget.getSettings(alsoContexts=True)
++            settings = widget.settingsHandler.pack_data(widget)
+             if settings != node.properties:
+                 node.properties = settings
+                 changed = True
+@@ -201,8 +201,7 @@ class WidgetManager(QObject):
          widget.close()
  
          # Save settings to user global settings.
@@ -298,62 +307,35 @@ index 9cbcba8..3ff0a43 100644
  
          # Notify the widget it will be deleted.
          widget.onDeleteWidget()
-@@ -112,13 +111,9 @@ class WidgetsScheme(Scheme):
+@@ -224,13 +223,9 @@ class WidgetManager(QObject):
          log.info("Creating %r instance.", klass)
          widget = klass.__new__(
              klass,
--            _owInfo=rc.get("canvas.show-state-info", True),
--            _owWarning=rc.get("canvas.show-state-warning", True),
--            _owError=rc.get("canvas.show-state-error", True),
--            _owShowStatus=rc.get("OWWidget.show-status", True),
--            _useContexts=rc.get("OWWidget.use-contexts", True),
+-            _owInfo=True,
+-            _owWarning=True,
+-            _owError=True,
+-            _owShowStatus=True,
+-            _useContexts=True,
 -            _category=desc.category,
 -            _settingsFromSchema=node.properties
 +            None,
-+            signal_manager=self.signal_manager,
++            signal_manager=self.signal_manager(),
 +            stored_settings=node.properties
          )
  
-         # Add the node/widget mapping s before calling __init__
-@@ -129,7 +124,7 @@ class WidgetsScheme(Scheme):
-         self.widget_for_node[node] = widget
-         self.node_for_widget[widget] = node
+         # Init the node/widget mapping and state before calling __init__
+@@ -241,7 +236,7 @@ class WidgetManager(QObject):
+         self.__node_for_widget[widget] = node
+         self.__widget_processing_state[widget] = 0
  
--        widget.__init__(None, self.signal_manager)
+-        widget.__init__(None, self.signal_manager())
 +        widget.__init__()
          widget.setCaption(node.title)
          widget.widgetInfo = desc
  
-@@ -156,22 +151,22 @@ class WidgetsScheme(Scheme):
-     def widget_settings(self):
-         """Return a list of dictionaries with widget settings.
-         """
--        return [self.widget_for_node[node].getSettings(alsoContexts=False)
--                for node in self.nodes]
-+        return [widget.settingsHandler.pack_data(widget) for widget in
-+                (self.widget_for_node[node] for node in self.nodes)]
- 
-     def sync_node_properties(self):
-         """Sync the widget settings/properties with the SchemeNode.properties.
-         Return True if there were any changes in the properties (i.e. if the
-         new node.properties differ from the old value) and False otherwise.
- 
--        .. note:: this should hopefully be removed in the feature, when the
-+        .. note:: this should hopefully be removed in the future, when the
-             widget can notify a changed setting property.
- 
-         """
-         changed = False
-         for node in self.nodes:
-             widget = self.widget_for_node[node]
--            settings = widget.getSettings(alsoContexts=False)
-+            settings = widget.settingsHandler.pack_data(widget)
-             if settings != node.properties:
-                 node.properties = settings
-                 changed = True
-@@ -196,11 +191,7 @@ class WidgetsScheme(Scheme):
+@@ -300,11 +295,7 @@ class WidgetManager(QObject):
              # Notify the widget instances.
-             for widget in list(self.widget_for_node.values()):
+             for widget in list(self.__widget_for_node.values()):
                  widget.close()
 -
 -                if not widget._settingsFromSchema:
@@ -364,6 +346,15 @@ index 9cbcba8..3ff0a43 100644
                  widget.onDeleteWidget()
  
              event.accept()
+@@ -486,7 +477,7 @@ class WidgetsSignalManager(SignalManager):
+         # Expand the signal_id with the unique widget id and the
+         # channel name. This is needed for OWBaseWidget's input
+         # handlers (Multiple flag).
+-        signal_id = (widget.widgetId, channelname, signal_id)
++        signal_id = (widget.widget_id, channelname, signal_id)
+ 
+         SignalManager.send(self, node, channel, value, signal_id)
+ 
 diff --git a/Orange/canvas/utils/debugging.py b/Orange/canvas/utils/debugging.py
 new file mode 100644
 index 0000000..aef6a27

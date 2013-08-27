@@ -1,18 +1,18 @@
-From c23dbf7c7bc3ade8a0f9db3b11aaa00914cbd566 Mon Sep 17 00:00:00 2001
+From 0f7d0a9cc4b211805e7f5520fdbf8da7d8945ea9 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:31:32 +0200
-Subject: [PATCH 1/4] Revert redundant 2to3.
+Subject: [PATCH 1/6] Revert redundant 2to3.
 
 ---
  Orange/canvas/__main__.py                          |  3 +--
  Orange/canvas/application/canvasmain.py            |  2 --
  Orange/canvas/application/tests/test_outputview.py |  4 ++--
- Orange/canvas/application/widgettoolbox.py         | 10 ++++----
+ Orange/canvas/application/widgettoolbox.py         | 10 ++++-----
  Orange/canvas/canvas/items/controlpoints.py        |  2 +-
  Orange/canvas/canvas/layout.py                     |  8 +++----
- Orange/canvas/canvas/scene.py                      | 16 ++++++-------
- Orange/canvas/document/interactions.py             | 12 +++++-----
- Orange/canvas/document/schemeedit.py               | 27 +++++++++++-----------
+ Orange/canvas/canvas/scene.py                      | 16 +++++++-------
+ Orange/canvas/document/interactions.py             | 12 +++++------
+ Orange/canvas/document/schemeedit.py               | 25 +++++++++++-----------
  Orange/canvas/gui/quickhelp.py                     |  2 +-
  Orange/canvas/gui/tests/test_toolbox.py            |  2 +-
  Orange/canvas/gui/toolgrid.py                      |  2 +-
@@ -22,12 +22,11 @@ Subject: [PATCH 1/4] Revert redundant 2to3.
  Orange/canvas/scheme/readwrite.py                  |  4 ++--
  Orange/canvas/scheme/signalmanager.py              |  4 ++--
  Orange/canvas/scheme/tests/test_links.py           |  2 +-
- Orange/canvas/utils/__init__.py                    |  2 +-
  Orange/canvas/utils/propertybindings.py            |  4 ++--
- 20 files changed, 57 insertions(+), 63 deletions(-)
+ 19 files changed, 55 insertions(+), 61 deletions(-)
 
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index 0920cfc..534fc80 100644
+index 7555ad4..e336d8a 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
 @@ -11,7 +11,6 @@ import logging
@@ -48,10 +47,10 @@ index 0920cfc..534fc80 100644
          try:
              status = app.exec_()
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index 838c54c..96eb731 100644
+index f9aaf2d..c485208 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
-@@ -902,7 +902,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -929,7 +929,6 @@ class CanvasMainWindow(QMainWindow):
          property.
  
          """
@@ -59,7 +58,7 @@ index 838c54c..96eb731 100644
          dirname = os.path.dirname(filename)
  
          self.last_scheme_dir = dirname
-@@ -1098,7 +1097,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1125,7 +1124,6 @@ class CanvasMainWindow(QMainWindow):
          )
  
          if filename:
@@ -187,10 +186,10 @@ index 7c1e71f..63f8daf 100644
          self.scheduleDelayedActivate()
  
 diff --git a/Orange/canvas/canvas/scene.py b/Orange/canvas/canvas/scene.py
-index 4853a31..448071b 100644
+index d950504..5514a78 100644
 --- a/Orange/canvas/canvas/scene.py
 +++ b/Orange/canvas/canvas/scene.py
-@@ -605,7 +605,7 @@ class CanvasScene(QGraphicsScene):
+@@ -607,7 +607,7 @@ class CanvasScene(QGraphicsScene):
  
      def annotation_for_item(self, item):
          rev = dict(reversed(item) \
@@ -199,7 +198,7 @@ index 4853a31..448071b 100644
          return rev[item]
  
      def commit_scheme_node(self, node):
-@@ -650,7 +650,7 @@ class CanvasScene(QGraphicsScene):
+@@ -652,7 +652,7 @@ class CanvasScene(QGraphicsScene):
          """
          Return the `SchemeNode` for the `item`.
          """
@@ -208,7 +207,7 @@ index 4853a31..448071b 100644
          return rev[item]
  
      def item_for_node(self, node):
-@@ -663,7 +663,7 @@ class CanvasScene(QGraphicsScene):
+@@ -665,7 +665,7 @@ class CanvasScene(QGraphicsScene):
          """
          Return the `SchemeLink for `item` (:class:`LinkItem`).
          """
@@ -217,7 +216,7 @@ index 4853a31..448071b 100644
          return rev[item]
  
      def item_for_link(self, link):
-@@ -710,10 +710,10 @@ class CanvasScene(QGraphicsScene):
+@@ -712,10 +712,10 @@ class CanvasScene(QGraphicsScene):
          Return a list of `node_item`'s (class:`NodeItem`) neighbor nodes.
          """
          neighbors = list(map(attrgetter("sourceItem"),
@@ -231,7 +230,7 @@ index 4853a31..448071b 100644
          return neighbors
  
      def on_widget_state_change(self, widget, state):
-@@ -937,5 +937,5 @@ def grab_svg(scene):
+@@ -939,5 +939,5 @@ def grab_svg(scene):
      scene.render(painter, target_rect, source_rect)
      painter.end()
  
@@ -291,7 +290,7 @@ index 8515644..e021cbe 100644
  
      def cancel(self, reason=UserInteraction.OtherReason):
 diff --git a/Orange/canvas/document/schemeedit.py b/Orange/canvas/document/schemeedit.py
-index 6794178..25ccb43 100644
+index 2133644..d74d233 100644
 --- a/Orange/canvas/document/schemeedit.py
 +++ b/Orange/canvas/document/schemeedit.py
 @@ -12,7 +12,6 @@ import itertools
@@ -302,7 +301,7 @@ index 6794178..25ccb43 100644
  from urllib.parse import urlencode
  
  from PyQt4.QtGui import (
-@@ -814,7 +813,7 @@ class SchemeEditWidget(QWidget):
+@@ -817,7 +816,7 @@ class SchemeEditWidget(QWidget):
          """
          Select all selectable items in the scheme.
          """
@@ -311,7 +310,7 @@ index 6794178..25ccb43 100644
              if item.flags() & QGraphicsItem.ItemIsSelectable:
                  item.setSelected(True)
  
-@@ -882,7 +881,7 @@ class SchemeEditWidget(QWidget):
+@@ -885,14 +884,14 @@ class SchemeEditWidget(QWidget):
          Return all selected :class:`.SchemeNode` items.
          """
          return list(map(self.scene().node_for_item,
@@ -320,7 +319,15 @@ index 6794178..25ccb43 100644
  
      def selectedAnnotations(self):
          """
-@@ -947,7 +946,7 @@ class SchemeEditWidget(QWidget):
+         Return all selected :class:`.BaseSchemeAnnotation` items.
+         """
+         return list(map(self.scene().annotation_for_item,
+-                   self.scene().selected_annotation_items()))
++                        self.scene().selected_annotation_items()))
+ 
+     def openSelected(self):
+         """
+@@ -950,7 +949,7 @@ class SchemeEditWidget(QWidget):
                      "application/vnv.orange-canvas.registry.qualified-name"
                  )
                  try:
@@ -329,7 +336,7 @@ index 6794178..25ccb43 100644
                  except KeyError:
                      log.error("Unknown qualified name '%s'", qname)
                  else:
-@@ -1057,7 +1056,7 @@ class SchemeEditWidget(QWidget):
+@@ -1060,7 +1059,7 @@ class SchemeEditWidget(QWidget):
                  self.__scene.mouseReleaseEvent(event)
                  stack = self.undoStack()
                  stack.beginMacro(self.tr("Move"))
@@ -338,7 +345,7 @@ index 6794178..25ccb43 100644
                      if isinstance(scheme_item, SchemeNode):
                          command = commands.MoveNodeCommand(
                              self.scheme(), scheme_item, old, new
-@@ -1091,8 +1090,8 @@ class SchemeEditWidget(QWidget):
+@@ -1094,8 +1093,8 @@ class SchemeEditWidget(QWidget):
              # Create a new node using QuickMenu
              action = interactions.NewNodeAction(self)
  
@@ -349,7 +356,7 @@ index 6794178..25ccb43 100644
                  action.create_new(event.screenPos())
  
              event.accept()
-@@ -1147,9 +1146,9 @@ class SchemeEditWidget(QWidget):
+@@ -1150,9 +1149,9 @@ class SchemeEditWidget(QWidget):
              # be selected items in the canvas), so we disable the
              # remove widget action so the text editing follows standard
              # 'look and feel'
@@ -362,18 +369,7 @@ index 6794178..25ccb43 100644
                  handler.create_new(QCursor.pos(), searchText)
  
              event.accept()
-@@ -1239,8 +1238,8 @@ class SchemeEditWidget(QWidget):
-     def __onWidgetStateChanged(self, *args):
-         widget = self.sender()
-         self.scheme()
--        widget_to_node = dict(reversed(item) for item in \
--                              list(self.__scheme.widget_for_node.items()))
-+        widget_to_node = dict((v, k) for k,v in
-+                              self.__scheme.widget_for_node.items())
-         node = widget_to_node[widget]
-         item = self.__scene.item_for_node(node)
- 
-@@ -1437,8 +1436,8 @@ class SchemeEditWidget(QWidget):
+@@ -1416,8 +1415,8 @@ class SchemeEditWidget(QWidget):
                  self.__quickMenuTriggers & SchemeEditWidget.RightClicked:
              action = interactions.NewNodeAction(self)
  
@@ -440,7 +436,7 @@ index c74961f..4e452a0 100644
          # Resolve signal type names into concrete type instances
          inputs = [resolveSignal(input, globals=wmod.__dict__)
 diff --git a/Orange/canvas/registry/discovery.py b/Orange/canvas/registry/discovery.py
-index bb8b246..dd4a011 100644
+index 86fd9e1..8e5cd45 100644
 --- a/Orange/canvas/registry/discovery.py
 +++ b/Orange/canvas/registry/discovery.py
 @@ -227,7 +227,7 @@ class WidgetDiscovery(object):
@@ -453,7 +449,7 @@ index bb8b246..dd4a011 100644
              log.error("Error calling %r", callable, exc_info=True)
  
 diff --git a/Orange/canvas/scheme/annotations.py b/Orange/canvas/scheme/annotations.py
-index 02a0fca..2c8c2c6 100644
+index 078caa9..b944070 100644
 --- a/Orange/canvas/scheme/annotations.py
 +++ b/Orange/canvas/scheme/annotations.py
 @@ -60,13 +60,13 @@ class SchemeArrowAnnotation(BaseSchemeAnnotation):
@@ -511,7 +507,7 @@ index 5963698..0621627 100644
              attrs = dict((key, str(value)) for key, value in attrs)
  
 diff --git a/Orange/canvas/scheme/signalmanager.py b/Orange/canvas/scheme/signalmanager.py
-index 676b91e..18e3092 100644
+index f1ad40b..b49871b 100644
 --- a/Orange/canvas/scheme/signalmanager.py
 +++ b/Orange/canvas/scheme/signalmanager.py
 @@ -44,10 +44,10 @@ class SignalManager(QObject):
@@ -538,14 +534,6 @@ index d884d62..4510198 100644
 -            SchemeLink(bayes_node, "Learner", discretize_node, "Data")
 \ No newline at end of file
 +            SchemeLink(bayes_node, "Learner", discretize_node, "Data")
-diff --git a/Orange/canvas/utils/__init__.py b/Orange/canvas/utils/__init__.py
-index f3406e6..2264a74 100644
---- a/Orange/canvas/utils/__init__.py
-+++ b/Orange/canvas/utils/__init__.py
-@@ -1 +1 @@
--from .qtcompat import sip_getapi, toPyObject
-\ No newline at end of file
-+from .qtcompat import sip_getapi, toPyObject
 diff --git a/Orange/canvas/utils/propertybindings.py b/Orange/canvas/utils/propertybindings.py
 index 205e7a1..c970b90 100644
 --- a/Orange/canvas/utils/propertybindings.py
