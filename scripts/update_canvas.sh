@@ -20,9 +20,20 @@ git checkout -b merge-canvas-$rev || exit 1
 git add ../Orange/canvas
 git commit -am "Updated canvas to $rev"
 
-echo "Please apply the following patches:"
+echo "Please apply the patches using:"
 echo
-echo cd ../Orange 
-for p in ../scripts/patches/*; do
-    echo patch -p2 \< $p
-done
+echo "  git am patches/*.patch"
+echo
+echo "Fix any conflicts that arise."
+echo
+echo "When you are done, update the patches using:"
+echo
+echo "  git format-patch -o patches -6"
+echo "  git add patches"
+echo "  git commit"
+echo
+echo "To merge updated canvas to master, run:"
+echo
+echo "  git checkout master"
+echo "  git merge --squash merge-canvas-$rev"
+echo "  git commit"
