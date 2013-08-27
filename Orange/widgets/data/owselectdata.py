@@ -171,7 +171,7 @@ class OWSelectData(widget.OWWidget):
                 cont.append(child.text())
             elif isinstance(child, QtGui.QComboBox):
                 cont.append(child.currentIndex())
-        return cont
+        return tuple(cont)
 
     class QDoubleValidatorEmpty(QtGui.QDoubleValidator):
         def validate(self, input_, pos):
