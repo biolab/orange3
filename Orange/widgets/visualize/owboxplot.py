@@ -194,8 +194,8 @@ class OWBoxPlot(widget.OWWidget):
         self.attributes_select = []
         self.attr_list_box.clear()
         self.attrCombo.clear()
-        self.openContext(self.ddataset)
         if dataset:
+            self.openContext(self.ddataset)
             self.attributes = [(a.name, a.var_type) for a in dataset.domain]
             self.grouping = ["None"] + [(a.name, a.var_type)
                                         for a in dataset.domain
