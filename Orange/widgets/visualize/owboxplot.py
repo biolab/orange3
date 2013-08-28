@@ -158,7 +158,7 @@ class OWBoxPlot(widget.OWWidget):
         self.warning_info = gui.widgetLabel(self.warning, "")
         self.warning.hide()
 
-        self.stats = []
+        self.stats = self.dist = self.conts = []
         self.is_continuous = False
         self.set_display_box()
 
