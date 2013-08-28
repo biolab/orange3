@@ -376,7 +376,6 @@ class DomainContextHandler(ContextHandler):
 
         return attributes, metas
 
-
     #noinspection PyMethodOverriding,PyTupleAssignmentBalance
     def find_or_create_context(self, widget, domain):
         if not domain:
@@ -386,13 +385,10 @@ class DomainContextHandler(ContextHandler):
             domain = domain.domain
 
         encoded_domain = self.encode_domain(domain)
-        context, isNew = super().find_or_create_context(widget,
-                                                     domain, *encoded_domain)
-        if len(encoded_domain) == 2:
-            context.attributes, context.metas = encoded_domain
-        else:
-            context.attributes, context.classVar, context.metas = \
-                encoded_domain
+        context, isNew = \
+            super().find_or_create_context(widget, domain, *encoded_domain)
+
+        context.attributes, context.metas = encoded_domain
 
         if self.has_ordinary_attributes:
             context.ordered_domain = [(v.name, v.var_type) for v in domain]
