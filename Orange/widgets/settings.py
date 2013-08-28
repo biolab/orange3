@@ -660,7 +660,7 @@ class ClassValuesContextHandler(ContextHandler):
 
 ### Requires the same the same attributes in the same order
 ### The class overloads domain encoding and matching.
-### Due to different encoding, it also needs to overload save_low and
+### Due to different encoding, it also needs to overload encode_setting and
 ### clone_context (which is the same as the ContextHandler's)
 ### We could simplify some other methods, but prefer not to replicate the code
 class PerfectDomainContextHandler(DomainContextHandler):
@@ -685,7 +685,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         return (attributes, class_vars, metas) == (
             context.attributes, context.class_vars, context.metas) and 2
 
-    def encode_setting(self, widget, name, value, setting):
+    def encode_setting(self, widget, setting, value):
         context = widget.current_context
         if isinstance(value, str):
             atype = -1
@@ -699,9 +699,9 @@ class PerfectDomainContextHandler(DomainContextHandler):
                                                      context.class_vars):
                     if aname == value:
                         break
-            context.values[name] = value, copy.copy(atype)
+            return value, copy.copy(atype)
         else:
-            context.values[name] = value, -2
+            return super().encode_setting(widget, setting, value)
 
 
     def clone_context(self, context, _, *__):
