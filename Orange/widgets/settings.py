@@ -504,7 +504,7 @@ class DomainContextHandler(ContextHandler):
             return value
 
     def _var_exists(self, setting, value, attributes, metas):
-        if len(value) != 2:
+        if not isinstance(value, tuple) or len(value) != 2:
             return False
 
         attr_name, attr_type = value
