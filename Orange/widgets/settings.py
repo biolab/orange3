@@ -18,6 +18,7 @@ class Setting:
     """Description of a setting.
     """
     def __init__(self, default, **data):
+        self.name = None  # Name gets set in widget's meta class
         self.default = default
         self.__dict__.update(data)
 

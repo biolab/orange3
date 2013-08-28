@@ -68,6 +68,7 @@ class WidgetMetaClass(type(QDialog)):
         cls.settingsHandler.widget_class = cls
         for name, value in cls.__dict__.items():
             if isinstance(value, settings.Setting):
+                value.name = name
                 cls.settingsHandler.settings[name] = value
                 setattr(cls, name, value.default)
         cls.settingsHandler.read_defaults()
