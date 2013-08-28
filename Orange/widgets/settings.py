@@ -673,6 +673,9 @@ class ClassValuesContextHandler(ContextHandler):
             values[name] = copy.copy(value)
 
     def fast_save(self, widget, name, value):
+        if widget.current_context is None:
+            return
+
         if name in self.settings:
             widget.current_context.values[name] = copy.copy(value)
 
