@@ -28,8 +28,14 @@ def sip_getapi(name):
         raise ValueError("unknown API {0!r}".format(name))
 
 
-HAS_QVARIANT = sip_getapi("QVariant") == 1
-HAS_QSTRING = sip_getapi("QString") == 1
+try:
+    HAS_QVARIANT = sip_getapi("QVariant") == 1
+except ValueError:
+    HAS_QVARIANT = False
+try:
+    HAS_QSTRING = sip_getapi("QString") == 1
+except ValueError:
+    HAS_QSTRING = False
 
 if HAS_QVARIANT:
     from PyQt4.QtCore import QVariant
