@@ -467,48 +467,42 @@ class DomainContextHandler(ContextHandler):
                   self.metas_in_res and context.metas.get(a[0], None) == a[1])]
             setattr(widget, self.reservoir, ll)
 
-
     def settings_from_widget(self, widget):
         super().settings_from_widget(widget)
         context = widget.current_context
         context.values = {}
         for name, setting in self.settings.items():
             value = widget.getattr_deep(name)
-            if not isinstance(value, list):
-                self.save_low(widget, name, value, setting)
-            else:
-                context.values[name] = copy.copy(value)  # shallow copy
-                if hasattr(setting, "selected"):
-                    context.values[setting.selected] = list(
-                        widget.getattr_deep(setting.selected))
+            context.values[name] = self.encode_setting(widget, setting, value)
+            if hasattr(setting, "selected"):
+                context.values[setting.selected] = list(
+                    widget.getattr_deep(setting.selected))
 
     def fast_save(self, widget, name, value):
         context = widget.current_context
-        if context:
-            for sname, setting in self.settings.items():
-                if name == sname:
-                    if isinstance(value, list):
-                        context.values[name] = copy.copy(value)  # shallow copy
-                    else:
-                        self.save_low(widget, name, value, setting)
-                    return
+        if not context:
+            return
+
+        if name in self.settings:
+            context.values[name] = \
+                self.encode_setting(widget, self.settings[name], value)
+        else:
+            for setting in self.settings.values():
                 if name == getattr(setting, "selected", ""):
                     context.values[setting.selected] = list(value)
-                    return
 
-    def save_low(self, widget, name, value, setting):
+    def encode_setting(self, widget, setting, value):
         context = widget.current_context
         value = copy.copy(value)
-        if isinstance(setting, ContextSetting) and isinstance(value, str):
-            valtype = -1
-            if not setting.exclude_attributes:
-                context.attributes.get(value, -1)
-            if valtype == -1 and setting.exclude_meta_attributes:
-                valtype = context.metas.get(value, -1)
-            # if it is still -1, it is not an attribute
-            context.values[name] = value, valtype
-        else:
-            context.values[name] = value, -2
+        if isinstance(value, list):
+            return value
+        elif isinstance(setting, ContextSetting) and isinstance(value, str):
+            if not setting.exclude_attributes and value in context.attributes:
+                return value, context.attributes[value]
+            if not setting.exclude_metas and value in context.metas:
+                return value, context.metas[value]
+
+        return value, -2
 
     def _var_exists(self, setting, value, attributes, metas):
         attr_name, attr_type = value
@@ -692,7 +686,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         return (attributes, class_vars, metas) == (
             context.attributes, context.class_vars, context.metas) and 2
 
-    def save_low(self, widget, name, value, setting):
+    def encode_setting(self, widget, name, value, setting):
         context = widget.current_context
         if isinstance(value, str):
             atype = -1
