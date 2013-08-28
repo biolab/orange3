@@ -409,6 +409,9 @@ class DomainContextHandler(ContextHandler):
         super().settings_to_widget(widget)
 
         context = widget.current_context
+        if context is None:
+            return
+
         excluded = set()
 
         is_context_setting = lambda x: isinstance(x, ContextSetting)
