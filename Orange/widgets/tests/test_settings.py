@@ -117,6 +117,44 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
             meta_setting=("dm1", VarTypes.Discrete),
         ))
 
+    def test_settings_to_widget(self):
+        widget = MockWidget()
+        widget.current_context.attributes, widget.current_context.metas = \
+            self.handler.encode_domain(self.domain)
+        self.add_setting(widget, "string_setting", ContextSetting(""))
+        self.add_setting(widget, "continuous_setting", ContextSetting(""))
+        self.add_setting(widget, "discrete_setting", ContextSetting(""))
+        self.add_setting(widget, "list_setting", ContextSetting([]))
+        self.add_setting(widget, "attr_list_setting",
+                         ContextSetting([], selected="selection1"))
+        self.add_setting(widget, "attr_tuple_list_setting",
+                         ContextSetting([], selected="selection2",
+                                        exclude_metas=False))
+        widget.current_context.values = dict(
+            string_setting=("abc", -2),
+            continuous_setting=("cf1", VarTypes.Continuous),
+            discrete_setting=("df1", VarTypes.Discrete),
+            list_setting=[1, 2, 3],
+            attr_list_setting=["df1", "dc1"],
+            selection1=[0],
+            attr_tuple_list_setting=[("dm1", VarTypes.Discrete),
+                                     ("cm1", VarTypes.Continuous)],
+            selection2=[1],
+        )
+
+        self.handler.settings_to_widget(widget)
+
+        self.assertEqual(widget.string_setting, "abc")
+        self.assertEqual(widget.continuous_setting, "cf1")
+        self.assertEqual(widget.discrete_setting, "df1")
+        self.assertEqual(widget.list_setting, [1, 2, 3])
+        self.assertEqual(widget.attr_list_setting, ["df1", "dc1"])
+        self.assertEqual(widget.attr_tuple_list_setting,
+                         [("dm1", VarTypes.Discrete),
+                          ("cm1", VarTypes.Continuous)])
+        self.assertEqual(widget.selection1, [0])
+        self.assertEqual(widget.selection2, [1])
+
     def add_setting(self, widget, name, setting):
         setting.name = name
         setattr(widget, name, setting.default)
@@ -140,6 +178,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
 
 class MockWidget:
     storeSpecificSettings = lambda x: None
+    retrieveSpecificSettings = lambda x: None
     getattr_deep = lambda self, name: getattr(self, name)
 
     def __init__(self):

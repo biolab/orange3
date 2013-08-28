@@ -337,6 +337,8 @@ class DomainContextHandler(ContextHandler):
 
         self.has_ordinary_attributes = attributes_in_res
         self.has_meta_attributes = metas_in_res
+
+        # FIXME: Who was supposed to fill the settings list?
         for setting in self.settings:
             if isinstance(setting, ContextSetting) and \
                     not setting.not_attribute:
@@ -367,12 +369,12 @@ class DomainContextHandler(ContextHandler):
             else:
                 attributes = encode(domain, match == self.MATCH_VALUES_ALL)
         else:
-            attributes = None
+            attributes = {}
 
         if self.has_meta_attributes:
             metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
         else:
-            metas = None
+            metas = {}
 
         return attributes, metas
 
@@ -404,63 +406,53 @@ class DomainContextHandler(ContextHandler):
 
 
     def settings_to_widget(self, widget):
-        def attrSet(attrs):
-            if isinstance(attrs, dict):
-                try:
-                    return set(attrs.items())
-                except TypeError:
-                    return list(attrs.items())
-            elif isinstance(attrs, bool):
-                return {}
-            else:
-                return set()
-
         super().settings_to_widget(widget)
 
         context = widget.current_context
-        attr_items_set = attrSet(context.attributes)
-        meta_items_set = attrSet(context.metas)
         excluded = set()
 
+        is_context_setting = lambda x: isinstance(x, ContextSetting)
         for name, setting in self.settings.items():
-            if (not isinstance(setting, ContextSetting) or
-                    name not in context.values):
+            if not is_context_setting(setting) or name not in context.values:
                 continue
-            # list of tuples (var, type) or a single tuple
-            value = context.values[name]
 
-            if isinstance(value, tuple):
-                # TODO: is setattr supposed to check that we do not assign
-                # values that are optional and do not exist? is context
-                # cloning's filter enough to get rid of such attributes?
-                setattr(widget, name, value[0])
+            value = self.decode_setting(context.values[name])
+            setattr(widget, name, value)
+
+            if isinstance(value, list):
+                excluded |= set(value)
+            else:
                 if setting.not_attribute:
                     excluded.add(value)
-                continue
-            else:
+
+            if hasattr(setting, "selected"):
                 new_labels, new_selected = [], []
-                has_selection = hasattr(setting, "selected")
-                if has_selection:
-                    old_selected = context.values.get(setting.selected, [])
-                    for i, saved in enumerate(value):
-                        if (not setting.exclude_attributes and (
-                                saved in context.attributes or
-                                saved in attr_items_set)
-                            or not setting.exclude_metas and (
-                                saved in context.metas or
-                                saved in meta_items_set)):
-                            if i in old_selected:
-                                new_selected.append(len(new_labels))
-                            new_labels.append(saved)
-            context.values[name] = new_labels
-            setattr(widget, name, value)
-            excluded |= set(value)
-            if has_selection:
+                old_selected = set(context.values.get(setting.selected, []))
+
+                def is_attribute(value):
+                    return (not setting.exclude_attributes
+                            and value in context.attributes)
+
+                def is_meta(value):
+                    return (not setting.exclude_metas
+                            and value in context.metas)
+
+                for i, old_value in enumerate(value):
+                    old_value = self.decode_setting(old_value)
+                    if is_attribute(old_value) or is_meta(old_value):
+                        if i in old_selected:
+                            new_selected.append(len(new_labels))
+                        new_labels.append(old_value)
+
+                context.values[name] = new_labels
                 context.values[setting.selected] = new_selected
                 # first 'name', then 'selected' - this gets signalled to Qt
+                setattr(widget, name, new_labels)  # labels might have changed
                 setattr(widget, setting.selected, new_selected)
 
         if self.reservoir is not None:
+            get_attribute = lambda name: context.attributes.get(name, None)
+            get_meta = lambda name: context.metas.get(name, None)
             ll = [a for a in context.ordered_domain if a not in excluded and (
                   self.attributes_in_res and
                   context.attributes.get(a[0], None) == a[1] or
@@ -504,6 +496,12 @@ class DomainContextHandler(ContextHandler):
 
         return value, -2
 
+    def decode_setting(self, value):
+        if isinstance(value, tuple):
+            return value[0]
+        else:
+            return value
+
     def _var_exists(self, setting, value, attributes, metas):
         attr_name, attr_type = value
         return (not setting.exclude_attributes and
@@ -530,16 +528,17 @@ class DomainContextHandler(ContextHandler):
                         if not self._var_exists(setting, item, attrs, metas):
                             return 0
                 else:
-                    selected_required = (
-                        setting.required == ContextSetting.IF_SELECTED)
-                    selected = context.values.get(setting.selected, [])
-                    potentially_filled += len(selected)
-                    for i in selected:
-                        if self._var_exists(setting, value[i], attrs, metas):
-                            filled += 1
-                        else:
-                            if selected_required:
-                                return 0
+                    if hasattr(setting, "selected"):
+                        selected_required = (
+                            setting.required == ContextSetting.IF_SELECTED)
+                        selected = context.values.get(setting.selected, [])
+                        potentially_filled += len(selected)
+                        for i in selected:
+                            if self._var_exists(setting, value[i], attrs, metas):
+                                filled += 1
+                            else:
+                                if selected_required:
+                                    return 0
             else:
                 potentially_filled += 1
                 if value[1] >= 0:
