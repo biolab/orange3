@@ -345,14 +345,18 @@ class DomainContextHandler(ContextHandler):
                     self.has_meta_attributes = True
 
     def encode_domain(self, domain):
-        def encode(lst, values):
-            if values:
-                return {v.name:
-                        v.values if isinstance(v, data.DiscreteVariable)
-                        else v.var_type
-                        for v in lst}
-            else:
-                return {v.name: v.var_type for v in lst}
+        """
+        domain: Orange.data.domain to encode
+        return: dict mapping attribute name to type or list of values
+                (based on the value of self.match_values attribute)
+        """
+        def encode(attributes, encode_values):
+            if not encode_values:
+                return {v.name: v.var_type for v in attributes}
+
+            is_discrete = lambda x: isinstance(x, data.DiscreteVariable)
+            return {v.name: v.values if is_discrete(v) else v.var_type
+                    for v in attributes}
 
         match = self.match_values
         if self.has_ordinary_attributes:
