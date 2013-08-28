@@ -274,29 +274,19 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
     This context handler modifies match and clone_context to account for that.
     """
 
-    def match(self, context, domain, attrs, metas):
-        if (attrs, metas) == (context.attributes, context.metas):
-            return 2
-        filled = potentially_filled = 0
+    def match_value(self, setting, value, attrs, metas):
+        if setting.name == 'domain_role_hints':
+            value = self.decode_setting(setting, value)
+            matched = available = 0
+            for item, category in value.items():
+                role, role_idx = category
+                if role != 'available':
+                    available += 1
+                    if self._var_exists(setting, item, attrs, metas):
+                        matched += 1
+            return matched, available
+        return super().match_value(setting, value, attrs, metas)
 
-        for name, setting in self.settings.items():
-            if not isinstance(setting, ContextSetting):
-                continue
-            value = context.values.get(name, None)
-            if value is None:
-                continue
-            if isinstance(value, dict):
-                for item, category in value.items():
-                    role, role_idx = category
-                    if role != 'available':
-                        potentially_filled += 1
-                        if self._var_exists(setting, item, attrs, metas):
-                            filled += 1
-
-        if not potentially_filled:
-            return 0.1
-        else:
-            return filled / potentially_filled
 
     def clone_context(self, context, domain, attrs, metas):
         context = copy.deepcopy(context)
