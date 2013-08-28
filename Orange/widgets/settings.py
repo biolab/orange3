@@ -388,7 +388,7 @@ class DomainContextHandler(ContextHandler):
 
         encoded_domain = self.encode_domain(domain)
         context, isNew = \
-            super().find_or_create_context(widget, domain, *encoded_domain)
+            super().find_or_create_context(widget, *encoded_domain)
 
         context.attributes, context.metas = encoded_domain
 
@@ -416,7 +416,7 @@ class DomainContextHandler(ContextHandler):
             if not is_context_setting(setting) or name not in context.values:
                 continue
 
-            value = self.decode_setting(context.values[name])
+            value = self.decode_setting(setting, context.values[name])
             setattr(widget, name, value)
 
             if isinstance(value, list):
@@ -438,7 +438,7 @@ class DomainContextHandler(ContextHandler):
                             and value in context.metas)
 
                 for i, old_value in enumerate(value):
-                    old_value = self.decode_setting(old_value)
+                    old_value = self.decode_setting(setting, old_value)
                     if is_attribute(old_value) or is_meta(old_value):
                         if i in old_selected:
                             new_selected.append(len(new_labels))
@@ -454,9 +454,8 @@ class DomainContextHandler(ContextHandler):
             get_attribute = lambda name: context.attributes.get(name, None)
             get_meta = lambda name: context.metas.get(name, None)
             ll = [a for a in context.ordered_domain if a not in excluded and (
-                  self.attributes_in_res and
-                  context.attributes.get(a[0], None) == a[1] or
-                  self.metas_in_res and context.metas.get(a[0], None) == a[1])]
+                  self.attributes_in_res and get_attribute(a[0]) == a[1] or
+                  self.metas_in_res and get_meta(a[0]) == a[1])]
             setattr(widget, self.reservoir, ll)
 
     def settings_from_widget(self, widget):
@@ -493,16 +492,18 @@ class DomainContextHandler(ContextHandler):
                 return value, context.attributes[value]
             if not setting.exclude_metas and value in context.metas:
                 return value, context.metas[value]
-
         return value, -2
 
-    def decode_setting(self, value):
+    def decode_setting(self, setting, value):
         if isinstance(value, tuple):
             return value[0]
         else:
             return value
 
     def _var_exists(self, setting, value, attributes, metas):
+        if len(value) != 2:
+            return False
+
         attr_name, attr_type = value
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
@@ -510,48 +511,60 @@ class DomainContextHandler(ContextHandler):
                 metas.get(attr_name, -1) == attr_type)
 
     #noinspection PyMethodOverriding
-    def match(self, context, domain, attrs, metas):
+    def match(self, context, attrs, metas):
         if (attrs, metas) == (context.attributes, context.metas):
             return 2
-        filled = potentially_filled = 0
-        for name, setting in self.settings.items():
-            if not isinstance(setting, ContextSetting):
-                continue
-            value = context.values.get(name, None)
-            if value is None:
-                continue
-            if isinstance(value, list):
-                if setting.required == ContextSetting.REQUIRED:
-                    potentially_filled += len(value)
-                    filled += len(value)
-                    for item in value:
-                        if not self._var_exists(setting, item, attrs, metas):
-                            return 0
+
+        matches = []
+        try:
+            for name, setting in self.settings.items():
+                if not isinstance(setting, ContextSetting):
+                    continue
+
+                value = context.values.get(name, None)
+                if value is None:
+                    continue
+                if isinstance(value, list):
+                    matches.append(
+                        self.match_list(setting, value, context, attrs, metas))
                 else:
-                    if hasattr(setting, "selected"):
-                        selected_required = (
-                            setting.required == ContextSetting.IF_SELECTED)
-                        selected = context.values.get(setting.selected, [])
-                        potentially_filled += len(selected)
-                        for i in selected:
-                            if self._var_exists(setting, value[i], attrs, metas):
-                                filled += 1
-                            else:
-                                if selected_required:
-                                    return 0
-            else:
-                potentially_filled += 1
-                if value[1] >= 0:
-                    if self._var_exists(value, setting, attrs, metas):
-                        filled += 1
-                    else:
-                        if setting.required == ContextSetting.REQUIRED:
-                            return 0
-        if not potentially_filled:
+                    matches.append(
+                        self.match_value(setting, value, attrs, metas))
+        except IncompatibleContext:
+            return 0
+
+        matched, available = map(sum, zip(*matches)) if matches else (0, 0)
+        if not available:
             return 0.1
         else:
-            return filled / potentially_filled
+            return matched / available
 
+    def match_list(self, setting, value, context, attrs, metas):
+        matched = 0
+        if hasattr(setting, 'selected'):
+            selected = set(context.values.get(setting.selected, []))
+        else:
+            selected = set()
+
+        for i, item in enumerate(value):
+            if self._var_exists(setting, item, attrs, metas):
+                matched += 1
+            else:
+                if setting.required == ContextSetting.REQUIRED:
+                    raise IncompatibleContext()
+                if setting.IF_SELECTED and i in selected:
+                    raise IncompatibleContext()
+
+        return matched, len(value)
+
+    def match_value(self, setting, value, attrs, metas):
+        if value[1] < 0:
+            return 0, 0
+
+        if self._var_exists(setting, value, attrs, metas):
+            return 1, 1
+        else:
+            raise IncompatibleContext()
 
     #noinspection PyMethodOverriding
     def clone_context(self, context, domain, attrs, metas):
@@ -616,6 +629,9 @@ class DomainContextHandler(ContextHandler):
                 if n_attrs >= mp:
                         del glob[i]
 
+
+class IncompatibleContext(Exception):
+    pass
 
 
 class ClassValuesContextHandler(ContextHandler):

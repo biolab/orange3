@@ -70,7 +70,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         encoded_attributes, encoded_metas = \
             self.handler.encode_domain(self.domain)
 
-        self.assertEqual(encoded_attributes, None)
+        self.assertEqual(encoded_attributes, {})
         self.assertEqual(encoded_metas, {
             'cm1': VarTypes.Continuous,
             'dm1': VarTypes.Discrete,
@@ -88,7 +88,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
             'df2': VarTypes.Discrete,
             'dc1': VarTypes.Discrete,
         })
-        self.assertEqual(encoded_metas, None)
+        self.assertEqual(encoded_metas, {})
 
     def test_settings_from_widget(self):
         widget = MockWidget()
@@ -150,10 +150,69 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         self.assertEqual(widget.list_setting, [1, 2, 3])
         self.assertEqual(widget.attr_list_setting, ["df1", "dc1"])
         self.assertEqual(widget.attr_tuple_list_setting,
-                         [("dm1", VarTypes.Discrete),
-                          ("cm1", VarTypes.Continuous)])
+                         ["dm1", "cm1"])
         self.assertEqual(widget.selection1, [0])
         self.assertEqual(widget.selection2, [1])
+
+    def test_settings_to_widget_filters_selections(self):
+        widget = MockWidget()
+        widget.current_context.attributes, widget.current_context.metas = \
+            self.handler.encode_domain(self.domain)
+        self.add_setting(widget, "attr_list_setting",
+                         ContextSetting([], selected="selection"))
+        widget.current_context.values = dict(
+            string_setting=("abc", -2),
+            continuous_setting=("cf1", VarTypes.Continuous),
+            discrete_setting=("df1", VarTypes.Discrete),
+            list_setting=[1, 2, 3],
+            attr_list_setting=["dm1", "df1", "cm1", "dc1"],
+            selection=[1, 2],
+        )
+
+        self.handler.settings_to_widget(widget)
+
+        self.assertEqual(widget.attr_list_setting, ["df1", "dc1"])
+        self.assertEqual(widget.selection, [0])
+
+    def test_perfect_match_returns_2(self):
+        attrs, metas = self.handler.encode_domain(self.domain)
+        mock_context = Mock(attributes=attrs, metas=metas, values={})
+
+        self.assertEqual(self.handler.match(mock_context, attrs, metas), 2.)
+
+    def test_match_when_nothing_to_match_returns_point_1(self):
+        attrs, metas = self.handler.encode_domain(self.domain)
+        mock_context = Mock(values={})
+
+        self.assertEqual(self.handler.match(mock_context, attrs, metas), 0.1)
+
+    def test_match_if_all_values_match_returns_1(self):
+        attrs, metas = self.handler.encode_domain(self.domain)
+        mock_context = Mock(values={})
+        self.add_setting(mock_context, "setting", ContextSetting(""))
+        self.add_setting(mock_context, "required_setting",
+                         ContextSetting("", required=ContextSetting.REQUIRED))
+        mock_context.values["setting"] = ("df1", VarTypes.Discrete)
+        mock_context.values["required_setting"] = ("df1", VarTypes.Discrete)
+
+        self.assertEqual(self.handler.match(mock_context, attrs, metas), 1.)
+
+    def test_match_if_all_list_values_match_returns_1(self):
+        attrs, metas = self.handler.encode_domain(self.domain)
+        mock_context = Mock(values={})
+        self.add_setting(mock_context, "setting", ContextSetting(""))
+        mock_context.values["setting"] = [("df1", VarTypes.Discrete)]
+
+        self.assertEqual(self.handler.match(mock_context, attrs, metas), 1.)
+
+    def test_match_if_all_required_list_values_match_returns_1(self):
+        attrs, metas = self.handler.encode_domain(self.domain)
+        mock_context = Mock(values={})
+        self.add_setting(mock_context, "required_setting",
+                         ContextSetting("", required=ContextSetting.REQUIRED))
+        mock_context.values["required_setting"] = [("df1", VarTypes.Discrete)]
+
+        self.assertEqual(self.handler.match(mock_context, attrs, metas), 1.)
 
     def add_setting(self, widget, name, setting):
         setting.name = name

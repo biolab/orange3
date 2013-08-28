@@ -269,7 +269,8 @@ class OWSelectData(widget.OWWidget):
         self.update_info(data, self.data_in_variables)
         for attr, cond_type, cond_value in self.conditions:
             attrs = [a.name for a in domain.variables + domain.metas]
-            self.add_row(attrs.index(attr), cond_type, cond_value)
+            if attr in attrs:
+                self.add_row(attrs.index(attr), cond_type, cond_value)
 
 
     def on_purge_change(self):
