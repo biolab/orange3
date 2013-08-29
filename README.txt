@@ -21,6 +21,11 @@ This version of Orange requires Python 3.2 or newer. To build it, run::
 
 inside a virtual environment that uses Python 3.2.
 
+Installation of Scipy and qt-graph-helpers is sometimes challenging because of
+their non-python dependencies that have to be installed manually. Detailed
+guides for some platforms can be found on wiki
+(https://github.com/biolab/orange3/wiki).
+
 Starting Orange Canvas
 ----------------------
 
