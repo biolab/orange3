@@ -146,6 +146,8 @@ def configuration(parent_package='', top_path=None):
 
     config.add_subpackage('Orange')
 
+    config.get_version('Orange/version.py')  # sets config.version
+
     return config
 
 
@@ -154,7 +156,6 @@ def setup_package():
     setup(
         configuration=configuration,
         name=NAME,
-        version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         author=AUTHOR,
