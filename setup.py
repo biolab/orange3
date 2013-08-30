@@ -165,12 +165,16 @@ def setup_package():
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
         packages=["Orange",
+                  "Orange.canvas",
                   "Orange.classification",
                   "Orange.data",
+                  "Orange.evaluation",
                   "Orange.feature",
                   "Orange.misc",
+                  "Orange.statistics",
                   "Orange.testing",
-                  "Orange.tests"],
+                  "Orange.tests",
+                  "Orange.widgets"],
         install_requires=INSTALL_REQUIRES,
         **extra_setuptools_args
     )
