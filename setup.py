@@ -151,6 +151,10 @@ def configuration(parent_package='', top_path=None):
     return config
 
 
+def all_with_extension(path, extensions):
+    return [os.path.join(path, "*.%s" % extension) for extension in extensions]
+
+
 def setup_package():
     write_version_py()
     setup(
@@ -165,6 +169,16 @@ def setup_package():
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
+        package_data={
+            "Orange": all_with_extension(path="datasets", extensions=("tab", "csv", "basket")),
+            "Orange.canvas": ["icons/*.png", "icons/*.svg", "WidgetTabs.txt"],
+            "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
+            "Orange.canvas.application.tutorials": ["*.ows"],
+            "Orange.widgets": ["icons/*.png"],
+            "Orange.widgets.data": ["icons/*.svg", "icons/paintdata/*.png", "icons/paintdata/*.svg"],
+            "Orange.widgets.plot": ["*.fs", "*.gs", "*.vs"],
+            "Orange.widgets.plot.primitives": ["*.obj"],
+        },
         packages=["Orange",
                   "Orange.canvas",
                   "Orange.canvas.application",

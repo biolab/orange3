@@ -9,6 +9,10 @@ recursive-include Orange/canvas/styles *.qss
 recursive-include Orange/canvas *.png *.svg *.ico
 recursive-include Orange/canvas/application/tutorials *.ows
 
-recursive-include Orange/widgets *.png *.svg *.ico
+recursive-include Orange/widgets *.png *.svg
 recursive-include Orange/widgets/utils/plot/primitives *.obj
 recursive-include Orange/widgets/utils/plot *.fs *.vs *.gs
+
+include requirements.txt
+include COPYING
+include LICENSE
