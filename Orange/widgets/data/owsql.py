@@ -17,7 +17,7 @@ class OWSql(widget.OWWidget):
     Load dataset from SQL."""
     _long_description = """
     Sql widget connects to server and opens data from there. """
-    _icon = "icons/File.svg"
+    _icon = "icons/SQLTable.svg"
     _author = "Anze Staric"
     _maintainer_email = "anze.staric@fri.uni-lj.si"
     _priority = 10
