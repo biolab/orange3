@@ -5,10 +5,10 @@ try:
     from .import version
     # Always use short_version here (see PEP 386)
     __version__ = version.short_version
-    __hg_revision__ = version.hg_revision
+    __git_revision__ = version.git_revision
 except ImportError:
     __version__ = "unknown"
-    __hg_revision__ = "unknown"
+    __git_revision__ = "unknown"
 
 ADDONS_ENTRY_POINT = 'orange.addons'
 
