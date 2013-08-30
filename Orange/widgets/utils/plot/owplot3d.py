@@ -333,10 +333,8 @@ class OWPlot3D(orangeqt.Plot3D):
         self.continuous_palette = ColorPaletteGenerator(numberOfColors=-1)
         self.discrete_palette = ColorPaletteGenerator()
 
+        # An :obj:`.OWPlotGUI` object associated with this plot
         self.gui = OWPlotGUI(self)
-	'''
-            An :obj:`.OWPlotGUI` object associated with this plot
-	'''
 
     def legend(self):
         '''
