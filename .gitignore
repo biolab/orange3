@@ -1,11 +1,13 @@
 # Build files
 build
+dist
 Orange.egg-info/*
 Orange/version.py
 doc/build
 *.so
 *.pyd
 *.pyc
+MANIFEST
 
 # Cython generated files
 __pycache__
