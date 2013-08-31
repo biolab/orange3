@@ -7,7 +7,7 @@ import subprocess
 
 NAME = 'Orange'
 
-VERSION = '3.0'
+VERSION = '3.1'
 ISRELEASED = False
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
