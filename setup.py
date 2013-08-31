@@ -8,7 +8,7 @@ import subprocess
 NAME = 'Orange'
 
 VERSION = '3.0'
-ISRELEASED = False
+ISRELEASED = True
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.txt')
