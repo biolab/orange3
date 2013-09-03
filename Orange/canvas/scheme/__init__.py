@@ -22,5 +22,3 @@ from .annotations import (
 )
 
 from .errors import *
-
-from . import utils

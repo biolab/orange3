@@ -9,7 +9,7 @@ from PyQt4.QtCore import QObject
 from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import pyqtProperty as Property
 
-from .utils import check_type
+from ..utils import check_type
 
 
 class BaseSchemeAnnotation(QObject):

@@ -10,6 +10,32 @@ from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import pyqtProperty as Property
 
 
+class UserMessage(object):
+    """
+    A user message that should be displayed in a scheme view.
+
+    Paramaters
+    ----------
+    contents : str
+        Message text.
+    severity : int
+        Message severity.
+    message_id : A hashable object
+        Message id.
+    data : dict
+        A dictionary with optional extra data.
+
+    """
+    #: Severity flags
+    Info, Warning, Error = 1, 2, 3
+
+    def __init__(self, contents, severity=Info, message_id=None, data={}):
+        self.contents = contents
+        self.severity = severity
+        self.message_id = message_id
+        self.data = dict(data)
+
+
 class SchemeNode(QObject):
     """
     A node in a :class:`.Scheme`.
@@ -41,6 +67,7 @@ class SchemeNode(QObject):
         self.__position = position or (0, 0)
         self.__progress = -1
         self.__processing_state = 0
+        self.__state_messages = {}
         self.properties = properties or {}
 
     def input_channels(self):
@@ -165,6 +192,21 @@ class SchemeNode(QObject):
 
     tool_tip = Property(str, fset=set_tool_tip,
                         fget=tool_tip)
+
+    def set_state_message(self, message):
+        """
+        Set a message to be displayed by a scheme view for this node.
+        """
+        if message.message_id in self.__state_messages and \
+                not message.contents:
+            del self.__state_messages[message.message_id]
+
+        self.__state_messages[message.message_id] = message
+
+        self.state_message_changed.emit(message)
+
+    #: The node's state message has changed
+    state_message_changed = Signal(UserMessage)
 
     def __str__(self):
         return "SchemeNode(description_id=%s, title=%r, ...)" % \

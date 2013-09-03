@@ -1,0 +1,52 @@
+From d19056b241febcf7fe6a56b325edca30ff9c62b7 Mon Sep 17 00:00:00 2001
+From: astaric <anze.staric@gmail.com>
+Date: Tue, 20 Aug 2013 13:42:50 +0200
+Subject: [PATCH 6/6] Base64 encode pickled settings when saving schema.
+
+If settings cannot be encoded as text, they are pickled. Pickle returns
+bytes object, which cannot be stored in xml, so we base64 encode it.
+---
+ Orange/canvas/scheme/readwrite.py | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/Orange/canvas/scheme/readwrite.py b/Orange/canvas/scheme/readwrite.py
+index 0621627..3520727 100644
+--- a/Orange/canvas/scheme/readwrite.py
++++ b/Orange/canvas/scheme/readwrite.py
+@@ -2,6 +2,7 @@
+ Scheme save/load routines.
+ 
+ """
++import base64
+ import sys
+ 
+ from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
+@@ -612,14 +613,14 @@ def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
+                         exc_info=True)
+ 
+     elif format == "pickle":
+-        return pickle.dumps(obj), "pickle"
++        return base64.encodebytes(pickle.dumps(obj)).decode('ascii'), "pickle"
+ 
+     else:
+         raise ValueError("Unsupported format %r" % format)
+ 
+     if pickle_fallback:
+         log.warning("Using pickle fallback")
+-        return pickle.dumps(obj), "pickle"
++        return base64.encodebytes(pickle.dumps(obj)).decode('ascii'), "pickle"
+     else:
+         raise Exception("Something strange happened.")
+ 
+@@ -630,7 +631,7 @@ def loads(string, format):
+     elif format == "json":
+         return json.loads(string)
+     elif format == "pickle":
+-        return pickle.loads(string)
++        return pickle.loads(base64.decodebytes(string.encode('ascii')))
+     else:
+         raise ValueError("Unknown format")
+ 
+-- 
+1.8.2.3
+

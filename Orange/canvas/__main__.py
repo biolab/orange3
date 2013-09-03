@@ -183,14 +183,14 @@ def main(argv=None):
             else:
                 log.info("%r style sheet not found.", stylesheet)
 
-    if stylesheet_string is not None:
-        app.setStyleSheet(stylesheet_string)
-
     # Add the default canvas_icons search path
     dirpath = os.path.abspath(os.path.dirname(canvas.__file__))
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
     canvas_window = CanvasMainWindow()
+
+    if stylesheet_string is not None:
+        canvas_window.setStyleSheet(stylesheet_string)
 
     if not options.force_discovery:
         reg_cache = cache.registry_cache()

@@ -332,6 +332,7 @@ class CanvasScene(QGraphicsScene):
         node.title_changed.connect(item.setTitle)
         node.progress_changed.connect(item.setProgress)
         node.processing_state_changed.connect(item.setProcessingState)
+        node.state_message_changed.connect(item.setStateMessage)
 
         return self.add_node_item(item)
 
@@ -387,6 +388,7 @@ class CanvasScene(QGraphicsScene):
         node.title_changed.disconnect(item.setTitle)
         node.progress_changed.disconnect(item.setProgress)
         node.processing_state_changed.disconnect(item.setProcessingState)
+        node.state_message_changed.disconnect(item.setStateMessage)
 
         self.remove_node_item(item)
 
