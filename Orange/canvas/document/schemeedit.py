@@ -18,7 +18,7 @@ from PyQt4.QtGui import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
     QKeySequence, QUndoStack, QGraphicsItem, QGraphicsObject,
     QGraphicsTextItem, QCursor, QFont, QPainter, QPixmap, QColor,
-    QIcon, QWhatsThisClickedEvent
+    QIcon, QWhatsThisClickedEvent, QBrush
 )
 
 from PyQt4.QtCore import (
@@ -30,7 +30,9 @@ from PyQt4.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 from ..registry.qt import whats_this_helper
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
-from ..scheme import scheme, SchemeNode, SchemeLink, BaseSchemeAnnotation
+from ..scheme import (
+    scheme, signalmanager, SchemeNode, SchemeLink, BaseSchemeAnnotation
+)
 from ..canvas.scene import CanvasScene
 from ..canvas.view import CanvasView
 from ..canvas import items
@@ -126,8 +128,8 @@ class SchemeEditWidget(QWidget):
         self.__undoStack = QUndoStack(self)
         self.__undoStack.cleanChanged[bool].connect(self.__onCleanChanged)
 
-        # OWBaseWidget properties when set to clean state
-        self.__cleanSettings = []
+        # scheme node properties when set to a clean state
+        self.__cleanProperties = []
 
         self.__editFinishedMapper = QSignalMapper(self)
         self.__editFinishedMapper.mapped[QObject].connect(
@@ -478,30 +480,31 @@ class SchemeEditWidget(QWidget):
             self.__modified = modified
 
         if not modified:
-            self.__cleanSettings = self.__scheme.widget_settings()
+            self.__cleanProperties = node_properties(self.__scheme)
             self.__undoStack.setClean()
         else:
-            self.__cleanSettings = []
+            self.__cleanProperties = []
 
     modified = Property(bool, fget=isModified, fset=setModified)
 
     def isModifiedStrict(self):
         """
-        Is the document modified. Run a strict check against all node
-        properties as they were at the time when the last call to
-        `setModified(True)` was made.
+        Is the document modified.
+
+        Run a strict check against all node properties as they were
+        at the time when the last call to `setModified(True)` was made.
 
         """
-        settingsChanged = self.__cleanSettings != \
-                          self.__scheme.widget_settings()
+        propertiesChanged = self.__cleanProperties != \
+                            node_properties(self.__scheme)
 
         log.debug("Modified strict check (modified flag: %s, "
                   "undo stack clean: %s, properties: %s)",
                   self.__modified,
                   self.__undoStack.isClean(),
-                  settingsChanged)
+                  propertiesChanged)
 
-        return self.isModified() or settingsChanged
+        return self.isModified() or propertiesChanged
 
     def setQuickMenuTriggers(self, triggers):
         """
@@ -587,9 +590,11 @@ class SchemeEditWidget(QWidget):
         if self.__scheme is not scheme:
             if self.__scheme:
                 self.__scheme.title_changed.disconnect(self.titleChanged)
-                self.__scheme.node_added.disconnect(self.__onNodeAdded)
-                self.__scheme.node_removed.disconnect(self.__onNodeRemoved)
                 self.__scheme.removeEventFilter(self)
+                sm = self.__scheme.findChild(signalmanager.SignalManager)
+                if sm:
+                    sm.stateChanged.disconnect(
+                        self.__signalManagerStateChanged)
 
             self.__scheme = scheme
 
@@ -597,12 +602,13 @@ class SchemeEditWidget(QWidget):
 
             if self.__scheme:
                 self.__scheme.title_changed.connect(self.titleChanged)
-                self.__scheme.node_added.connect(self.__onNodeAdded)
-                self.__scheme.node_removed.connect(self.__onNodeRemoved)
                 self.titleChanged.emit(scheme.title)
-                self.__cleanSettings = scheme.widget_settings()
+                self.__cleanProperties = node_properties(scheme)
+                sm = scheme.findChild(signalmanager.SignalManager)
+                if sm:
+                    sm.stateChanged.connect(self.__signalManagerStateChanged)
             else:
-                self.__cleanSettings = []
+                self.__cleanProperties = []
 
             self.__teardownScene(self.__scene)
             self.__scene.deleteLater()
@@ -617,9 +623,6 @@ class SchemeEditWidget(QWidget):
             self.__scene.set_scheme(scheme)
 
             if self.__scheme:
-                for node in self.__scheme.nodes:
-                    self.__onNodeAdded(node)
-
                 self.__scheme.installEventFilter(self)
 
     def scheme(self):
@@ -888,7 +891,7 @@ class SchemeEditWidget(QWidget):
         Return all selected :class:`.BaseSchemeAnnotation` items.
         """
         return list(map(self.scene().annotation_for_item,
-                   self.scene().selected_annotation_items()))
+                        self.scene().selected_annotation_items()))
 
     def openSelected(self):
         """
@@ -1227,33 +1230,9 @@ class SchemeEditWidget(QWidget):
 
             QCoreApplication.sendEvent(self, ev)
 
-    def __onNodeAdded(self, node):
-        widget = self.__scheme.widget_for_node[node]
-        widget.widgetStateChanged.connect(self.__onWidgetStateChanged)
-
-    def __onNodeRemoved(self, node):
-        widget = self.__scheme.widget_for_node[node]
-        widget.widgetStateChanged.disconnect(self.__onWidgetStateChanged)
-
-    def __onWidgetStateChanged(self, *args):
-        widget = self.sender()
-        self.scheme()
-        widget_to_node = dict((v, k) for k,v in
-                              self.__scheme.widget_for_node.items())
-        node = widget_to_node[widget]
-        item = self.__scene.item_for_node(node)
-
-        info = widget.widgetStateToHtml(True, False, False)
-        warning = widget.widgetStateToHtml(False, True, False)
-        error = widget.widgetStateToHtml(False, False, True)
-
-        item.setInfoMessage(info or None)
-        item.setWarningMessage(warning or None)
-        item.setErrorMessage(error or None)
-
     def __onNodeActivate(self, item):
         node = self.__scene.node_for_item(item)
-        widget = self.scheme().widget_for_node[node]
+        widget = self.scheme().widget_for_node(node)
         widget.show()
         widget.raise_()
 
@@ -1551,6 +1530,14 @@ class SchemeEditWidget(QWidget):
         if self.__scene:
             self.__scene.setFont(font)
 
+    def __signalManagerStateChanged(self, state):
+        if state == signalmanager.SignalManager.Running:
+            self.__view.setBackgroundBrush(QBrush(Qt.NoBrush))
+#            self.__view.setBackgroundIcon(QIcon())
+        elif state == signalmanager.SignalManager.Paused:
+            self.__view.setBackgroundBrush(QBrush(QColor(235, 235, 235)))
+#            self.__view.setBackgroundIcon(QIcon("canvas_icons:Pause.svg"))
+
 
 def geometry_from_annotation_item(item):
     if isinstance(item, items.ArrowAnnotation):
@@ -1590,3 +1577,8 @@ def is_printable(unichar):
     Return True if the unicode character `unichar` is a printable character.
     """
     return unicodedata.category(unichar) not in _control
+
+
+def node_properties(scheme):
+    scheme.sync_node_properties()
+    return [dict(node.properties) for node in scheme.nodes]
