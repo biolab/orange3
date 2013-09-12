@@ -12,11 +12,11 @@ class DummyLearner(classification.Fitter):
 
 
 class DummyPredictor(classification.Model):
-    ret = classification.Model.ValueProbs
-
     def __init__(self, value, prob):
+        super().__init__()
         self.value = value
         self.prob = prob
+        self.ret = classification.Model.ValueProbs
 
     def predict(self, X):
         rows = X.shape[0]
@@ -48,11 +48,11 @@ class DummyMulticlassLearner(classification.Fitter):
 
 
 class DummyMulticlassPredictor(classification.Model):
-    ret = classification.Model.ValueProbs
-
     def __init__(self, value, prob):
+        super().__init__()
         self.value = value
         self.prob = prob
+        self.ret = classification.Model.ValueProbs
 
     def predict(self, X):
         rows = X.shape[0]
