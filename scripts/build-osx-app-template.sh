@@ -95,10 +95,9 @@ PYTHON=$APP/Contents/MacOS/python
 EASY_INSTALL=$APP/Contents/MacOS/easy_install
 PIP=$APP/Contents/MacOS/pip
 
-export MACOSX_DEPLOYMENT_TARGET=10.5
+export MACOSX_DEPLOYMENT_TARGET=10.7
 
-SDK=/Developer/SDKs/MacOSX$MACOSX_DEPLOYMENT_TARGET.sdk
-
+SDK=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX$MACOSX_DEPLOYMENT_TARGET.sdk
 
 function create_template {
 	# Create a minimal .app template with the expected dir structure
