@@ -178,13 +178,13 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         attrs, metas = self.handler.encode_domain(self.domain)
         mock_context = Mock(attributes=attrs, metas=metas, values={})
 
-        self.assertEqual(self.handler.match(mock_context, attrs, metas), 2.)
+        self.assertEqual(self.handler.match(mock_context, None, attrs, metas), 2.)
 
     def test_match_when_nothing_to_match_returns_point_1(self):
         attrs, metas = self.handler.encode_domain(self.domain)
         mock_context = Mock(values={})
 
-        self.assertEqual(self.handler.match(mock_context, attrs, metas), 0.1)
+        self.assertEqual(self.handler.match(mock_context, None, attrs, metas), 0.1)
 
     def test_match_if_all_values_match_returns_1(self):
         attrs, metas = self.handler.encode_domain(self.domain)
@@ -195,7 +195,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         mock_context.values["setting"] = ("df1", VarTypes.Discrete)
         mock_context.values["required_setting"] = ("df1", VarTypes.Discrete)
 
-        self.assertEqual(self.handler.match(mock_context, attrs, metas), 1.)
+        self.assertEqual(self.handler.match(mock_context, None, attrs, metas), 1.)
 
     def test_match_if_all_list_values_match_returns_1(self):
         attrs, metas = self.handler.encode_domain(self.domain)
@@ -203,7 +203,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         self.add_setting(mock_context, "setting", ContextSetting(""))
         mock_context.values["setting"] = [("df1", VarTypes.Discrete)]
 
-        self.assertEqual(self.handler.match(mock_context, attrs, metas), 1.)
+        self.assertEqual(self.handler.match(mock_context, None, attrs, metas), 1.)
 
     def test_match_if_all_required_list_values_match_returns_1(self):
         attrs, metas = self.handler.encode_domain(self.domain)
@@ -212,7 +212,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
                          ContextSetting("", required=ContextSetting.REQUIRED))
         mock_context.values["required_setting"] = [("df1", VarTypes.Discrete)]
 
-        self.assertEqual(self.handler.match(mock_context, attrs, metas), 1.)
+        self.assertEqual(self.handler.match(mock_context, None, attrs, metas), 1.)
 
     def add_setting(self, widget, name, setting):
         setting.name = name

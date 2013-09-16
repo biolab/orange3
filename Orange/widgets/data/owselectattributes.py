@@ -287,7 +287,6 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
             return matched, available
         return super().match_value(setting, value, attrs, metas)
 
-
     def clone_context(self, context, domain, attrs, metas):
         context = copy.deepcopy(context)
         for name, setting in self.settings.items():

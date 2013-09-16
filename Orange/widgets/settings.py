@@ -514,7 +514,7 @@ class DomainContextHandler(ContextHandler):
                 metas.get(attr_name, -1) == attr_type)
 
     #noinspection PyMethodOverriding
-    def match(self, context, attrs, metas):
+    def match(self, context, domain, attrs, metas):
         if (attrs, metas) == (context.attributes, context.metas):
             return 2
 
