@@ -122,7 +122,7 @@ function create_template {
 		FRAMEWORKS_DIR="$BUNDLE_DIR"Frameworks/
 		RESOURCES_DIR="$BUNDLE_DIR"Resources/
 
-		PYVERSION="2.7"
+		PYVERSION="3.3"
 
 		PYTHONEXECUTABLE="$FRAMEWORKS_DIR"Python.framework/Resources/Python.app/Contents/MacOS/Python
 		PYTHONHOME="$FRAMEWORKS_DIR"Python.framework/Versions/"$PYVERSION"/
