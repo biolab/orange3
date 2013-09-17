@@ -99,7 +99,7 @@ echo "Building application in $TEMPLATE"
 PYTHON=$TEMPLATE/Contents/MacOS/python
 PIP=$TEMPLATE/Contents/MacOS/pip
 
-PREFIX=$("$PYTHON" -c'import sys; print sys.prefix')
+PREFIX=$("$PYTHON" -c'import sys; print(sys.prefix)')
 
 echo "Building Orange"
 echo "==============="
