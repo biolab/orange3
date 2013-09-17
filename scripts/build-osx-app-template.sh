@@ -338,6 +338,18 @@ function install_scipy {
 	"$PYTHON" -c"import scipy"
 }
 
+function install_scikit_learn {
+  "$PIP" install scikit-learn==0.13
+
+  "$PYTHON" -c"import sklearn"
+}
+
+function install_psycopg2 {
+  "$PIP" install psycopg2
+
+  "$PYTHON" -c"import psycopg2"
+}
+
 function download_and_extract() {
 	# Usage: download_and_extract http://example/source.tar.gz
 	#
@@ -427,6 +439,10 @@ install_pyqt4
 #install_pyqwt5
 
 install_ipython
+
+install_scikit_learn
+
+install_psycopg2
 
 make_standalone
 

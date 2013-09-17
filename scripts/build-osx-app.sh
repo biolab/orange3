@@ -105,10 +105,6 @@ echo "Installing bottlechest"
 echo "======================"
 "$PIP" install git+https://github.com/biolab/bottlechest@bottlechest#egg=bottlechest
 
-echo "Installing scikit-learn"
-echo "======================="
-"$PIP" install scikit-learn==0.13
-
 echo "Installing orangeqt"
 echo "==================="
 FDIR=$TEMPLATE/Contents/Frameworks
