@@ -101,13 +101,16 @@ PIP=$TEMPLATE/Contents/MacOS/pip
 
 PREFIX=$("$PYTHON" -c'import sys; print(sys.prefix)')
 
-echo "Building Orange"
-echo "==============="
-"$PYTHON" setup.py build
+echo "Installing bottlechest"
+echo "======================"
+"$PIP" install git+https://github.com/biolab/bottlechest@bottlechest#egg=bottlechest
 
-echo "Building orangeqt extension"
-echo "==========================="
+echo "Installing scikit-learn"
+echo "======================="
+"$PIP" install scikit-learn==0.13
 
+echo "Installing orangeqt"
+echo "==================="
 FDIR=$TEMPLATE/Contents/Frameworks
 # to find moc executable in the app bundle
 EXTRA_PATH=$PREFIX/bin:$TEMPLATE/Contents/Resources/Qt4/bin
@@ -119,7 +122,7 @@ EXTRA_LDFLAGS="-F$FDIR -framework QtCore -framework QtGui"
     PATH=$EXTRA_PATH:$PATH
     CXXFLAGS=${EXTRA_CXXFLAGS}${CXXFLAGS:+:$CXXFLAGS}
     LDFLAGS=${EXTRA_LDFLAGS}:${LDFLAGS:+:$LDFLAGS}
-    "$PYTHON" setup.py build_pyqt_ext
+    "$PIP" install qt-graph-helpers
 )
 
 echo "Installing Orange"
@@ -139,7 +142,7 @@ cat <<-'EOF' > "$TEMPLATE"/Contents/MacOS/Orange
 	    shift 1
 	fi
 
-	exec -a "$0" "$DIRNAME"/PythonAppStart -m Orange.OrangeCanvas.main "$@"
+	exec -a "$0" "$DIRNAME"/PythonAppStart -m Orange.canvas "$@"
 EOF
 
 chmod +x "$TEMPLATE"/Contents/MacOS/Orange
