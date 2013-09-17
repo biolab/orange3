@@ -83,7 +83,7 @@ PIP_VER=1.3.1
 DISTRIBUTE_VER=0.6.49
 NUMPY_VER=1.7.1
 SCIPY_VER=0.12.0
-QT_VER=4.7.4
+QT_VER=4.8.5
 SIP_VER=4.15.2
 PYQT_VER=4.10.3
 PYQWT_VER=5.2.0
@@ -226,10 +226,10 @@ function install_qt4 {
 	QT_VER_SHORT=${QT_VER%%\.[0-9]}
 
 	# 4.8.* (4.8 does not compile for x86_64 using 10.5 SDK)
-	#download_and_extract "http://download.qt-project.org/official_releases/qt/$QT_VER_SHORT/$QT_VER/qt-everywhere-opensource-src-$QT_VER.tar.gz"
+	download_and_extract "http://download.qt-project.org/official_releases/qt/$QT_VER_SHORT/$QT_VER/qt-everywhere-opensource-src-$QT_VER.tar.gz"
 
 	# 4.7 or older
-	download_and_extract "http://download.qt-project.org/archive/qt/$QT_VER_SHORT/qt-everywhere-opensource-src-$QT_VER.tar.gz"
+	#download_and_extract "http://download.qt-project.org/archive/qt/$QT_VER_SHORT/qt-everywhere-opensource-src-$QT_VER.tar.gz"
 
 	pushd qt-everywhere-opensource-src-$QT_VER
 
