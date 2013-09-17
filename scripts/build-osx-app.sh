@@ -148,13 +148,6 @@ EOF
 chmod +x "$TEMPLATE"/Contents/MacOS/Orange
 
 
-echo "Installing add ons"
-echo "=================="
-
-"$PIP" install hg+https://bitbucket.org/biolab/orange-bioinformatics
-"$PIP" install hg+https://bitbucket.org/biolab/orange-text
-
-
 if [[ ! $INPLACE ]]; then
     echo "Moving the application to $APP"
     if [[ -e $APP ]]; then
