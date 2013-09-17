@@ -424,7 +424,7 @@ install_sip
 
 install_pyqt4
 
-install_pyqwt5
+#install_pyqwt5
 
 install_ipython
 
