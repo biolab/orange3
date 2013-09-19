@@ -13,7 +13,6 @@ class DummyLearner(classification.Fitter):
 
 class DummyPredictor(classification.Model):
     def __init__(self, value, prob):
-        super().__init__()
         self.value = value
         self.prob = prob
         self.ret = classification.Model.ValueProbs
@@ -49,7 +48,6 @@ class DummyMulticlassLearner(classification.Fitter):
 
 class DummyMulticlassPredictor(classification.Model):
     def __init__(self, value, prob):
-        super().__init__()
         self.value = value
         self.prob = prob
         self.ret = classification.Model.ValueProbs
