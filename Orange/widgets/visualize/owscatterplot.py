@@ -41,17 +41,19 @@ class OWScatterPlot(widget.OWWidget):
 
         disc = feature.discretization.EqualWidth(n=10)
         diris = discretization.DiscretizeTable(iris, method=disc)
-        cont = statistics.contingency.get_contingency(diris, 0, 1)
-        stat = statistics.basic_stats.DomainBasicStats(iris)
-        cx, cy = np.mgrid[stat[0].min:stat[0].max:299j,
-                          stat[1].min:stat[1].max:299j]
+        cont = statistics.contingency.get_contingency(diris, 2, 3)
+        cx, cy = np.mgrid[0:(cont.shape[0]-1):256j, 0:(cont.shape[1]-1):256j]
         coords = np.array([cx, cy])
         image = ndimage.map_coordinates(cont, coords)
-        image *= 255 / np.max(image)
-        print(image)
+        image -= np.min(image)
+        image /= np.max(image)
+        print(np.max(image))
+        image *= 255
+        image = np.dstack((image, ) * 4)
 
-        im255 = image.astype(int)
-        im = QtGui.QImage(im255.flatten(), 100, 300, QtGui.QImage.Format_RGB32)
+        im255 = image.flatten().astype(np.uint8)
+
+        im = QtGui.QImage(im255.data, 256, 256, QtGui.QImage.Format_RGB32)
         pim = QtGui.QPixmap.fromImage(im)
 
         self.scene = QtGui.QGraphicsScene()
