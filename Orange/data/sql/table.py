@@ -51,7 +51,7 @@ class SqlTable(table.Table):
             schema=schema
         )
         if uri is not None:
-            parameters = self._parse_uri(uri)
+            parameters = self.parse_uri(uri)
             table = parameters.pop("table")
             connection_args.update(parameters)
         connection_args.update(kwargs)
@@ -63,18 +63,19 @@ class SqlTable(table.Table):
         self.domain = self._create_domain()
         self.name = self.table_name
 
-    def _parse_uri(self, uri):
+    @staticmethod
+    def parse_uri(uri):
         parsed_uri = parse.urlparse(uri)
-        path = parsed_uri.path.strip('/')
-        database, table = path.split('/', 1)
-        if '?' in table:
-            table, params = table.split('?', 1)
-            params = parse.parse_qs(params)
-            for key, value in params.items():
-                if len(params[key]) == 1:
-                    params[key] = value[0]
+        database = parsed_uri.path.strip('/')
+        if "/" in database:
+            database, table = database.split('/', 1)
         else:
-            params = {}
+            table = ""
+
+        params = parse.parse_qs(parsed_uri.query)
+        for key, value in params.items():
+            if len(params[key]) == 1:
+                params[key] = value[0]
 
         params.update(dict(
             host=parsed_uri.hostname,
@@ -82,8 +83,9 @@ class SqlTable(table.Table):
             user=parsed_uri.username,
             database=database,
             password=parsed_uri.password,
-            table=table,
         ))
+        if table:
+            params['table'] = table
         return params
 
     def _create_domain(self):

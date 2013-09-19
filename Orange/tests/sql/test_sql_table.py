@@ -9,7 +9,7 @@ class SqlTableUnitTests(unittest.TestCase):
         self.table = sql_table.SqlTable.__new__(sql_table.SqlTable)
 
     def test_parses_connection_uri(self):
-        parameters = self.table._parse_uri(
+        parameters = self.table.parse_uri(
             "sql://user:password@host:7678/database/table")
 
         self.assertDictContainsSubset(dict(
@@ -22,7 +22,7 @@ class SqlTableUnitTests(unittest.TestCase):
         ), parameters)
 
     def test_parse_minimal_connection_uri(self):
-        parameters = self.table._parse_uri(
+        parameters = self.table.parse_uri(
             "sql://host/database/table")
 
         self.assertDictContainsSubset(
@@ -31,7 +31,7 @@ class SqlTableUnitTests(unittest.TestCase):
         )
 
     def test_parse_schema(self):
-        parameters = self.table._parse_uri(
+        parameters = self.table.parse_uri(
             "sql://host/database/table?schema=schema")
 
         self.assertDictContainsSubset(
@@ -118,13 +118,13 @@ class SqlTableTests(PostgresTest):
             self.assertEqual(len(filtered_table), 0)
 
     def test_query_all(self):
-        table = sql_table.SqlTable('/test/iris')
+        table = sql_table.SqlTable(self.iris_uri)
         results = list(table)
 
         self.assertEqual(len(results), 150)
 
     def test_query_subset_of_attributes(self):
-        table = sql_table.SqlTable('/test/iris')
+        table = sql_table.SqlTable(self.iris_uri)
         attributes = [
             self._mock_attribute("sepal length"),
             self._mock_attribute("sepal width"),
@@ -144,7 +144,7 @@ class SqlTableTests(PostgresTest):
         )
 
     def test_query_subset_of_rows(self):
-        table = sql_table.SqlTable('/test/iris')
+        table = sql_table.SqlTable(self.iris_uri)
         all_results = list(table._query())
 
         results = list(table._query(rows=range(10)))
