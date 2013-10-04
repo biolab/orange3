@@ -1,3 +1,4 @@
+from collections import defaultdict
 import contextlib
 import os
 import string
@@ -18,10 +19,9 @@ def get_dburi():
         return "postgres://localhost/test"
 
 
-def create_iris():
+def create_iris(dburi):
     iris = Orange.data.Table("iris")
-    connection_params = sql_table.SqlTable.parse_uri(get_dburi())
-    conn = psycopg2.connect(**connection_params)
+    conn = psycopg2.connect(host='localhost', database='test')
     cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS iris")
     cur.execute("""
@@ -44,13 +44,15 @@ def create_iris():
         (%s, %s, %s, %s, '%s')""" % tuple(values))
     conn.commit()
     conn.close()
-    return get_dburi() + '/iris'
 
 
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.iris_uri = create_iris()
+        dburi = get_dburi()
+        create_iris(dburi)
+
+        cls.iris_uri = dburi + '/iris'
 
     @classmethod
     def tearDownClass(cls):
@@ -86,7 +88,7 @@ class PostgresTest(unittest.TestCase):
                 for i, t in enumerate(sql_column_types)
             )
         )
-        conn = psycopg2.connect(**sql_table.SqlTable.parse_uri(get_dburi()))
+        conn = psycopg2.connect(get_dburi())
         cur = conn.cursor()
         cur.execute(create_table_sql)
         for row in data:
@@ -121,7 +123,7 @@ class PostgresTest(unittest.TestCase):
         return column_size
 
     def drop_sql_table(self, table_name):
-        conn = psycopg2.connect(**sql_table.SqlTable.parse_uri(get_dburi()))
+        conn = psycopg2.connect(get_dburi())
         cur = conn.cursor()
         cur.execute("""DROP TABLE "%s" """ % table_name)
         conn.commit()

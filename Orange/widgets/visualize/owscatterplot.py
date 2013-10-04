@@ -39,7 +39,7 @@ class OWScatterPlot(widget.OWWidget):
 
         iris = Table("iris")
 
-        disc = feature.discretization.EqualWidth(n=10)
+        disc = feature.discretization.EqualFreq(n=10)
         diris = discretization.DiscretizeTable(iris, method=disc)
         cont = statistics.contingency.get_contingency(diris, 2, 3)
         cx, cy = np.mgrid[0:(cont.shape[0]-1):256j, 0:(cont.shape[1]-1):256j]

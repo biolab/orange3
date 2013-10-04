@@ -36,6 +36,18 @@ def _discretized_var(data, var, points):
 
     dvar = Orange.data.variable.DiscreteVariable(name=name, values=values)
     dvar.get_value_from = Discretizer(var, points)
+
+    def discretized_attribute():
+        sql = [ 'CASE' ]
+        sql.extend([ 'WHEN "%s" < %f THEN 0' % (var.name, points[0]) ])
+        sql.extend([ 'WHEN "%s" >= %f AND "%s" < %f THEN %d' % (var.name, p1, var.name, p2, i+1) for i, (p1, p2) in enumerate(zip(points, points[1:])) ])
+        sql.extend([ 'WHEN "%s" >= %f THEN %d' % (var.name, points[-1], len(points)) ])
+        sql.extend([ 'END' ])
+
+        return " ".join(sql)
+
+    dvar.to_sql = discretized_attribute
+
     return dvar
 
 

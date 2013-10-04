@@ -66,4 +66,4 @@ class DiscretizeTable:
         else:
             new_classes = domain.class_vars
         nd = Domain(new_attrs, new_classes)
-        return Orange.data.Table(nd, data)
+        return data.from_table(nd, data)
