@@ -522,9 +522,9 @@ class SqlTable(table.Table):
     def quote_string(self, value):
         return "'%s'" % value
 
-    def _execute_sql_query(self, sql):
+    def _execute_sql_query(self, sql, param=None):
         cur = self.connection.cursor()
-        cur.execute(sql)
+        cur.execute(sql, param)
         self.connection.commit()
         return cur
 

@@ -38,11 +38,14 @@ def _discretized_var(data, var, points):
     dvar.get_value_from = Discretizer(var, points)
 
     def discretized_attribute():
-        sql = [ 'CASE' ]
-        sql.extend([ 'WHEN "%s" < %f THEN 0' % (var.name, points[0]) ])
-        sql.extend([ 'WHEN "%s" >= %f AND "%s" < %f THEN %d' % (var.name, p1, var.name, p2, i+1) for i, (p1, p2) in enumerate(zip(points, points[1:])) ])
-        sql.extend([ 'WHEN "%s" >= %f THEN %d' % (var.name, points[-1], len(points)) ])
-        sql.extend([ 'END' ])
+        if len(points) >= 1:
+            sql = [ 'CASE' ]
+            sql.extend([ 'WHEN "%s" < %f THEN 0' % (var.name, points[0]) ])
+            sql.extend([ 'WHEN "%s" >= %f AND "%s" < %f THEN %d' % (var.name, p1, var.name, p2, i+1) for i, (p1, p2) in enumerate(zip(points, points[1:])) ])
+            sql.extend([ 'WHEN "%s" >= %f THEN %d' % (var.name, points[-1], len(points)) ])
+            sql.extend([ 'END' ])
+        else:
+            sql = [ '0' ]
 
         return " ".join(sql)
 
@@ -70,8 +73,19 @@ class EqualFreq(Discretization):
         self.n = n
 
     def __call__(self, data, attribute):
-        d = Orange.statistics.distribution.get_distribution(data, attribute)
-        points = _discretization.split_eq_freq(d, n=self.n)
+        if type(data) == Orange.data.sql.table.SqlTable:
+            filters = [f.to_sql() for f in data.row_filters]
+            filters = [f for f in filters if f]
+
+            sql = "select EqualFreq((%s), (%s), (%s), (%s));"
+            param = (data.table_name, attribute.name, filters if filters else None, self.n)
+            cur = data._execute_sql_query(sql, param)
+
+            res = np.array(cur.fetchall())
+            points = [a for a, in res]
+        else:
+            d = Orange.statistics.distribution.get_distribution(data, attribute)
+            points = _discretization.split_eq_freq(d, n=self.n)
         return _discretized_var(data, attribute, points)
 
 
@@ -87,7 +101,18 @@ class EqualWidth(Discretization):
         self.n = n
 
     def __call__(self, data, attribute):
-        d = Orange.statistics.distribution.get_distribution(data, attribute)
-        points = _split_eq_width(d, n=self.n)
+        if type(data) == Orange.data.sql.table.SqlTable:
+            filters = [f.to_sql() for f in data.row_filters]
+            filters = [f for f in filters if f]
+
+            sql = "select EqualWidth((%s), (%s), (%s), (%s));"
+            param = (data.table_name, attribute.name, filters if filters else None, self.n)
+            cur = data._execute_sql_query(sql, param)
+
+            res = np.array(cur.fetchall())
+            points = [a for a, in res]
+        else:
+            d = Orange.statistics.distribution.get_distribution(data, attribute)
+            points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
 
