@@ -1,3 +1,4 @@
+import os
 import unittest
 import numpy as np
 
@@ -157,7 +158,9 @@ class ExpandProbabilitiesTest(unittest.TestCase):
 
 class SparseTest(unittest.TestCase):
     def test_sparse_basket(self):
-        table = BasketReader().read_file("iris.basket")
+        current_dir = os.path.dirname(__file__)
+        dataset = os.path.join(current_dir, "iris.basket")
+        table = BasketReader().read_file(dataset)
         test = Orange.data.Table.from_table_rows(table,
                                                  range(0, len(table), 2))
         train = Orange.data.Table.from_table_rows(table,
