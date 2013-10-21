@@ -37,7 +37,8 @@ class OWScatterPlot(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        iris = Table("iris")
+        #iris = Table("iris")
+        iris = Orange.data.sql.table.SqlTable(host='localhost', database='test', table='iris')
 
         disc = feature.discretization.EqualFreq(n=10)
         diris = discretization.DiscretizeTable(iris, method=disc)

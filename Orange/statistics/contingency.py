@@ -218,8 +218,6 @@ class Continuous(list):
 
 def get_contingency(dat, col_variable, row_variable=None, unknowns=None):
     variable = _get_variable(col_variable, dat, "col_variable")
-    print('variable')
-    print(variable)
     if isinstance(variable, data.DiscreteVariable):
         return Discrete(dat, col_variable, row_variable, unknowns)
     elif isinstance(variable, data.ContinuousVariable):

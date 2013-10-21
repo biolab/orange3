@@ -1,10 +1,8 @@
 import Orange
 import psycopg2
 
-def create_stored_procedure(uri=None, host=None, user=None, password=None, database=None, schema=None,
+def create_stored_procedures(uri=None, host=None, user=None, password=None, database=None, schema=None,
                             **kwargs):
-    assert uri is not None
-
     connection_args = dict(
         host=host,
         user=user,
@@ -20,89 +18,105 @@ def create_stored_procedure(uri=None, host=None, user=None, password=None, datab
     connection = psycopg2.connect(**connection_args)
     cur = connection.cursor()
     cur.execute("""
-        CREATE OR REPLACE FUNCTION EqualWidth(data text, attribute text, filters text[], n integer)
-          RETURNS SETOF double precision
-        AS $$
-          # get_distribution
-          query = [ 'SELECT "{0}" AS value, COUNT("{0}") FROM "{1}"'.format(attribute, data) ]
-          if filters is not None:
-            query.extend([ 'WHERE {0}'.format(filters[0]) ])
-          query.extend([ 'GROUP BY "{0}" ORDER BY "{0}"'.format(attribute) ])
-          query = " ".join(query)
-          dist = plpy.execute(query)
-
-          if dist.nrows() == 0:
-             return []
-
-          # split_equal_width
-          min = dist[0]["value"]
-          max = dist[-1]["value"]
-          dif = (max-min)/n
-
-          return [ min + (i+1)*dif for i in range(n-1) ]
-        $$ LANGUAGE plpythonu;
+            DROP TYPE IF EXISTS distribution;
+            CREATE TYPE distribution AS (
+              value double precision,
+              count bigint
+            );
     """)
     connection.commit()
 
     cur = connection.cursor()
     cur.execute("""
-        CREATE OR REPLACE FUNCTION EqualFreq(data text, attribute text, filters text[], n integer)
-          RETURNS SETOF double precision
-        AS $$
-          # get_distribution
-          query = [ 'SELECT "{0}" AS value, COUNT("{0}") FROM "{1}"'.format(attribute, data) ]
-          if filters is not None:
-            query.extend([ 'WHERE {0}'.format(filters[0]) ])
-          query.extend([ 'GROUP BY "{0}" ORDER BY "{0}"'.format(attribute) ])
-          query = " ".join(query)
-          dist = plpy.execute(query)
+            CREATE OR REPLACE FUNCTION get_distribution(data text, attribute text, filters text[])
+              RETURNS SETOF distribution
+            AS $$
+              query = [ 'SELECT "{0}" AS value, COUNT("{0}") FROM "{1}"'.format(attribute, data) ]
+              if filters is not None:
+                query.extend([ 'WHERE {0}'.format(filters[0]) ])
+              query.extend([ 'GROUP BY "{0}" ORDER BY "{0}"'.format(attribute) ])
+              query = " ".join(query)
+              dist = plpy.execute(query)
 
-          if dist.nrows() == 0:
-            return []
+              return dist
+            $$ LANGUAGE plpythonu;
+    """)
+    connection.commit()
 
-          # split_equal_freq
-          llen = len(dist)
+    cur = connection.cursor()
+    cur.execute("""
+            CREATE OR REPLACE FUNCTION EqualFreq(data text, attribute text, filters text[], n integer)
+              RETURNS SETOF double precision
+            AS $$
+              plan = plpy.prepare( "SELECT count, value FROM get_distribution($1, $2, $3)", ["text", "text", "text[]"] )
+              dist = plpy.execute( plan, [data, attribute, filters] )
 
-          if n >= llen:
-            return [ (v1["value"]+v2["value"])/2 for v1, v2 in zip(dist[0:], dist[1:]) ]
+              if len(dist) == 0:
+                return []
 
-          counts, values = [], []
-          for d in dist:
-            counts.append(d["count"])
-            values.append(d["value"])
+              llen = len(dist)     # llen = dist.shape[1]
 
-          N = sum(counts)
-          toGo = n
-          inthis = 0
-          prevel = -1
-          inone = N/float(toGo)
-          points = []
+              if n >= llen:
+                return [ (v1["value"]+v2["value"])/2 for v1, v2 in zip(dist[0:], dist[1:]) ]
 
-          for i in range(llen):
-            v = values[i]
-            k = counts[i]
-            if toGo <= 1:
-              break
-            inthis += k
-            if inthis < inone or i == 0:
-              prevel = v
-            else:
-              if i < llen -1 and inthis - inone < k / 2.0:
-                vn = values[i+1]
-                points.append((vn + v)/2.0)
-                N -= inthis
-                inthis = 0
-                prevel = vn
-              else:
-                points.append((prevel + v)/2.0)
-                N -= inthis - k
-                inthis = k
-                prevel = v
-              toGo -= 1
-              if toGo:
-                inone = N/float(toGo)
+              N = sum([ d["count"] for d in dist ])       # N = dist[1].sum()
 
-          return points
-        $$ LANGUAGE plpythonu;
+              toGo = n
+              inthis = 0
+              prevel = -1
+              inone = N/float(toGo)
+              points = []
+
+              for i in range(llen):
+                v = dist[i]["value"]
+                k = dist[i]["count"]
+                if toGo <= 1:
+                  break
+                inthis += k
+                if inthis < inone or i == 0:
+                  prevel = v
+                else:
+                  if i < llen -1 and inthis - inone < k / 2.0:
+                    vn = dist[i+1]["value"]
+                    points.append((vn + v)/2.0)
+                    N -= inthis
+                    inthis = 0
+                    prevel = vn
+                  else:
+                    points.append((prevel + v)/2.0)
+                    N -= inthis - k
+                    inthis = k
+                    prevel = v
+                  toGo -= 1
+                  if toGo:
+                    inone = N/float(toGo)
+
+              return points
+            $$ LANGUAGE plpythonu;
+    """)
+    connection.commit()
+
+    cur = connection.cursor()
+    cur.execute("""
+            CREATE OR REPLACE FUNCTION EqualWidth(data text, attribute text, filters text[], n integer)
+              RETURNS SETOF double precision
+            AS $$
+              # get_distribution
+              query = [ 'SELECT min("{0}") AS min, max("{0}") AS max FROM "{1}"'.format(attribute, data) ]
+              if filters is not None:
+                query.extend([ 'WHERE {0}'.format(filters[0]) ])
+              query = " ".join(query)
+              dist = plpy.execute(query)
+
+              if dist.nrows() != 1 or dist[0]["min"] == None or dist[0]["max"] == None:
+                 return []
+
+              # split_equal_width
+              min = dist[0]["min"]         # min = dist[0][0]
+              max = dist[0]["max"]         # max = dist[0][-1]
+              dif = (max-min)/n
+
+              return [ min + (i+1)*dif for i in range(n-1) ]
+            $$ LANGUAGE plpythonu;
     """)
     connection.commit()

@@ -2,6 +2,7 @@ import numpy as np
 import Orange.statistics.distribution
 
 from Orange.feature.transformation import ColumnTransformation
+from Orange.data.sql.table import SqlTable
 
 from ..feature import _discretization
 
@@ -40,12 +41,12 @@ def _discretized_var(data, var, points):
     def discretized_attribute():
         if len(points) >= 1:
             sql = [ 'CASE' ]
-            sql.extend([ 'WHEN "%s" < %f THEN 0' % (var.name, points[0]) ])
-            sql.extend([ 'WHEN "%s" >= %f AND "%s" < %f THEN %d' % (var.name, p1, var.name, p2, i+1) for i, (p1, p2) in enumerate(zip(points, points[1:])) ])
-            sql.extend([ 'WHEN "%s" >= %f THEN %d' % (var.name, points[-1], len(points)) ])
+            sql.extend([ 'WHEN "%s" < %f THEN \'%s\'' % (var.name, points[0], values[0]) ])
+            sql.extend([ 'WHEN "%s" >= %f AND "%s" < %f THEN \'%s\'' % (var.name, p1, var.name, p2, values[i+1]) for i, (p1, p2) in enumerate(zip(points, points[1:])) ])
+            sql.extend([ 'WHEN "%s" >= %f THEN \'%s\'' % (var.name, points[-1], values[-1]) ])
             sql.extend([ 'END' ])
         else:
-            sql = [ '0' ]
+            sql = [ "'%s'" % values[0] ]
 
         return " ".join(sql)
 
