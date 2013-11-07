@@ -388,7 +388,7 @@ class DomainContextHandler(ContextHandler):
 
         encoded_domain = self.encode_domain(domain)
         context, isNew = \
-            super().find_or_create_context(widget, *encoded_domain)
+            super().find_or_create_context(widget, domain, *encoded_domain)
 
         context.attributes, context.metas = encoded_domain
 
