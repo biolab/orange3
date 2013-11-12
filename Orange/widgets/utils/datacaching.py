@@ -21,7 +21,7 @@ def getCached(data, funct, params=(), kwparams=None):
 def setCached(data, name, value):
     if data is None:
         return
-    info = getattr(data, "__data_cache")
+    info = getattr(data, "__data_cache", None)
     if info is None:
         info = data.info = {}
     info[name] = value
