@@ -153,6 +153,7 @@ def data_dir():
     init()
     datadir = QDesktopServices.storageLocation(QDesktopServices.DataLocation)
     datadir = str(datadir)
+    datadir = os.path.join(datadir, 'Orange3')
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     return datadir
@@ -166,6 +167,7 @@ def cache_dir():
     init()
     cachedir = QDesktopServices.storageLocation(QDesktopServices.CacheLocation)
     cachedir = str(cachedir)
+    cachedir = os.path.join(cachedir, 'Orange3')
     if not os.path.exists(cachedir):
         os.makedirs(cachedir)
     return cachedir

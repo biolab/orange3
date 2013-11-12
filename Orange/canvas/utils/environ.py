@@ -160,9 +160,9 @@ def _get_default_env():
 
     add_ons_dir_user = os.path.join(output_dir, "add-ons")
 
-    orange_settings_dir = output_dir
-    canvas_settings_dir = os.path.join(output_dir, "OrangeCanvasQt4")
-    widget_settings_dir = os.path.join(output_dir, "widgetSettingsOrange3")
+    orange_settings_dir = os.path.join(output_dir, "Orange3Settings")
+    canvas_settings_dir = os.path.join(output_dir, "Orange3CanvasSettings")
+    widget_settings_dir = os.path.join(output_dir, "Orange3WidgetSettings")
 
     if sys.platform == "darwin":
         buffer_dir = os.path.join(home, "Library", "Caches", version)
