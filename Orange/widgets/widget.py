@@ -474,7 +474,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         else:
             self.linksOut[signalName] = {id:value}
 
-        self.signalManager.send(self, signalName, value, id)
+        if self.signalManager is not None:
+            self.signalManager.send(self, signalName, value, id)
 
 
     def getattr_deep(self, attr, default=None):
