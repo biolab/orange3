@@ -1313,10 +1313,9 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     if box or label:
         hb = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
-            widgetLabel(hb, label)
+            widgetLabel(hb, label, labelWidth)
     else:
         hb = widget
-    widgetLabel(hb, label, labelWidth)
     combo = QtGui.QComboBox(hb)
     combo.setEditable(editable)
     combo.box = hb
