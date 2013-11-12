@@ -141,15 +141,15 @@ class OWParallelCoordinatesQt(OWVisWidget):
 
 
     def increaseAxesDistance(self):
-	m, M = self.graph.bounds_for_axis(xBottom)
+        m, M = self.graph.bounds_for_axis(xBottom)
         if (M-m) == 0:
             return      # we have not yet updated the axes (self.graph.updateAxes())
         self.graph.setAxisScale(xBottom, m, M - (M-m)/10., 1)
         self.graph.replot()
 
     def decreaseAxesDistance(self):
-	m, M = self.graph.bounds_for_axis(xBottom)
-	if (M-m) == 0:
+        m, M = self.graph.bounds_for_axis(xBottom)
+        if (M-m) == 0:
             return      # we have not yet updated the axes (self.graph.updateAxes())
 
         self.graph.setAxisScale(xBottom, m, min(len(self.graph.visualizedAttributes)-1, M + (M-m)/10.), 1)

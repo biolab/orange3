@@ -181,21 +181,21 @@ class OWParallelGraph(OWPlot, orngScaleData):
         self.remove_all_axes()
         for i in range(len(attributes)):
             id = UserAxis + i
-	    a = self.add_axis(id, line = QLineF(i, 0, i, 1), arrows = AxisStart | AxisEnd, zoomable = True)
-	    a.always_horizontal_text = True
-	    a.max_text_width = 100
-	    a.title_margin = -10
-	    a.text_margin = 0
-	    a.setZValue(5)
-	    self.set_axis_title(id, self.dataDomain[attributes[i]].name)
-	    self.set_show_axis_title(id, self.showAttrValues)
+            a = self.add_axis(id, line = QLineF(i, 0, i, 1), arrows = AxisStart | AxisEnd, zoomable = True)
+            a.always_horizontal_text = True
+            a.max_text_width = 100
+            a.title_margin = -10
+            a.text_margin = 0
+            a.setZValue(5)
+            self.set_axis_title(id, self.dataDomain[attributes[i]].name)
+            self.set_show_axis_title(id, self.showAttrValues)
             if self.showAttrValues == 1:
                 attr = self.dataDomain[attributes[i]]
                 if attr.varType == orange.VarTypes.Continuous:
-		    self.set_axis_scale(id, self.attrValues[attr.name][0], self.attrValues[attr.name][1])
+                    self.set_axis_scale(id, self.attrValues[attr.name][0], self.attrValues[attr.name][1])
                 elif attr.varType == orange.VarTypes.Discrete:
-		    attrVals = getVariableValuesSorted(self.dataDomain[attributes[i]])
-		    self.set_axis_labels(id, attrVals)
+                    attrVals = getVariableValuesSorted(self.dataDomain[attributes[i]])
+                    self.set_axis_labels(id, attrVals)
 
         # ##############################################
         # show lines that represent standard deviation or quartiles
@@ -506,7 +506,7 @@ class OWParallelGraph(OWPlot, orngScaleData):
 class ParallelCoordinatesCurve(OWCurve):
     def __init__(self, attrCount, yData, color, name = ""):
         OWCurve.__init__(self, tooltip=name)
-	self._item = QGraphicsPathItem(self)
+        self._item = QGraphicsPathItem(self)
         self.fitted = False
         self.set_style(OWCurve.Lines)
 
@@ -517,19 +517,19 @@ class ParallelCoordinatesCurve(OWCurve):
             self.set_pen(QPen(QColor(*color)))
         else:
             self.set_pen(QPen(QColor(color)))
-            
-	self.set_data(list(range(attrCount)) * lineCount, yData)
+
+        self.set_data(list(range(attrCount)) * lineCount, yData)
 
     def update_properties(self):
-	if self.fitted:
-	    path = self.cubicPath()
-	else:
-	    path = QPainterPath()
-	    for x, y in self.data():
-		path.lineTo(x, y)
+        if self.fitted:
+            path = self.cubicPath()
+        else:
+            path = QPainterPath()
+            for x, y in self.data():
+                path.lineTo(x, y)
         self._item.setPath(self.graph_transform().map(path))
         self._item.setPen(self.pen())
-	
+
     def cubicPath(self):
         path = QPainterPath()
         data = self.data()
