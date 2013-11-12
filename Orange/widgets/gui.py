@@ -911,7 +911,7 @@ def button(widget, master, label, callback=None, width=None, height=None,
 
 
 def toolButton(widget, master, label="", callback=None,
-               width=None, height=None):
+               width=None, height=None, tooltip=None):
     """
     Insert a tool button. Calls :obj:`button`
 
@@ -930,7 +930,7 @@ def toolButton(widget, master, label="", callback=None,
     :rtype: PyQt4.QtGui.QToolButton
     """
     return button(widget, master, label, callback, width, height,
-                  buttonType=QtGui.QToolButton)
+                  buttonType=QtGui.QToolButton, tooltip=tooltip)
 
 
 def createAttributePixmap(char, background=Qt.black, color=Qt.white):
