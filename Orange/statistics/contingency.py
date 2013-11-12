@@ -104,7 +104,14 @@ class Discrete(np.ndarray):
 
     def __getitem__(self, index):
         if isinstance(index, str):
-            index = self.row_variable.to_val(index)
+            if len(self.shape) == 2:  # contingency
+                index = self.row_variable.to_val(index)
+                contingency_row = super().__getitem__(index)
+                contingency_row.col_variable = self.col_variable
+                return contingency_row
+            else:  # Contingency row
+                index = self.col_variable.to_val(index)
+
         elif isinstance(index, tuple):
             if isinstance(index[0], str):
                 index = (self.row_variable.to_val(index[0]), index[1])
