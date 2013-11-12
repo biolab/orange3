@@ -858,7 +858,7 @@ class OWPlot(orangeqt.Plot):
         self._transform_cache = {}
         self.axes[axis_id] = a
         if not axis_id in CartesianAxes:
-            self.setShowAxisTitle(axis_id, True)
+            self.set_show_axis_title(axis_id, True)
         return a
 
     def remove_all_axes(self, user_only = True):
