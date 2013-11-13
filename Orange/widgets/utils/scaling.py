@@ -186,11 +186,8 @@ class ScaleData:
             self.original_subset_data = self.no_jittering_scaled_subset_data = self.valid_subset_data_array = np.array(
                 []).reshape([len(self.original_data), 0])
         else:
-            no_jittering_data = full_data.toNumpyMA("ac")[0].T
-            valid_data_array = numpy.array(1 - no_jittering_data.mask,
-                                           numpy.short)  # have to convert to int array, otherwise when we do some operations on this array we get overflow
-            no_jittering_data = numpy.array(MA.filled(no_jittering_data,
-                                                      Orange.core.Illegal_Float))
+            no_jittering_data = np.hstack((full_data.X, full_data.Y)).T
+            valid_data_array = no_jittering_data != np.NaN
             original_data = no_jittering_data.copy()
 
             for index in range(len(data.domain)):
