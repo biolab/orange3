@@ -16,7 +16,22 @@ from Orange.widgets.widget import OWWidget, AttributeList
 from Orange.widgets import gui
 
 
-class OWParallelCoordinatesQt(OWVisWidget):
+class OWParallelCoordinates(OWVisWidget):
+    _name = "Parallel Coordinates"
+    _description = "Shows parallel coordinates"
+    _long_description = """Shows parallel coordinates for multidimensional data with
+        many options."""
+    _icon = "icons/ParallelCoordinates.svg"
+    _priority = 100
+    _author = "Gregor Leban, Anze Staric"
+    inputs = [("Data", Orange.data.Table, 'setData', Default),
+              ("Data Subset", Orange.data.Table, 'setSubsetData'),
+              ("Features", AttributeList, 'setShownAttributes')]
+    outputs = [("Selected Data", Orange.data.Table), ("Other Data", Orange.data.Table),
+               ("Features", AttributeList)]
+
+    settingsHandler = DomainContextHandler()
+
     settingsList = ["graph.jitterSize", "graph.showDistributions",
                     "graph.showAttrValues",
                     "graph.useSplines", "graph.alphaValue", "graph.alphaValue2", "graph.show_legend",
@@ -24,22 +39,18 @@ class OWParallelCoordinatesQt(OWVisWidget):
                     "toolbarSelection", "graph.showStatistics", "colorSettings", "selectedSchemaIndex",
                     "showAllAttributes"]
     jitterSizeNums = [0, 2, 5, 10, 15, 20, 30]
-    contextHandlers = {"": DomainContextHandler("", [
-        ContextField("shownAttributes", DomainContextHandler.RequiredList, selected="selectedShown",
-                     reservoir="hiddenAttributes")])}
+    contextHandlers = {"": DomainContextHandler("")}
+    # FIXME: , [
+    #ContextField("shownAttributes", DomainContextHandler.RequiredList, selected="selectedShown",
+    #             reservoir="hiddenAttributes")])}
 
-    def __init__(self, parent=None, signalManager=None):
-        OWWidget.__init__(self, parent, signalManager, "Parallel Coordinates (Qt)", TRUE)
-
+    def __init__(self):
+        super().__init__()
         #add a graph widget
         self.graph = OWParallelGraph(self, self.mainArea)
         self.mainArea.layout().addWidget(self.graph)
 
         self.showAllAttributes = 0
-
-        self.inputs = [("Data", ExampleTable, self.setData, Default), ("Data Subset", ExampleTable, self.setSubsetData),
-                       ("Features", AttributeList, self.setShownAttributes)]
-        self.outputs = [("Selected Data", ExampleTable), ("Other Data", ExampleTable), ("Features", AttributeList)]
 
         #set default settings
         self.data = None
