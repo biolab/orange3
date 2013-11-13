@@ -14,7 +14,7 @@ from Orange.canvas.registry.description import (
 from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
-from Orange.widgets.settings import Context
+from Orange.widgets.settings import Context, SettingProvider
 
 
 class ControlledAttributesDict(dict):
@@ -66,13 +66,14 @@ class WidgetMetaClass(type(QDialog)):
         if not hasattr(cls, "settingsHandler"):
             cls.settingsHandler = settings.SettingsHandler()
         cls.settingsHandler.widget_class = cls
-        for name in dir(cls):
-            value = getattr(cls, name, None)
-            if isinstance(value, settings.Setting):
-                value.name = name
-                cls.settingsHandler.settings[name] = value
-                setattr(cls, name, value.default)
+
+        setting_provider = SettingProvider(cls)
+        cls.settingsHandler.register_provider(setting_provider)
         cls.settingsHandler.read_defaults()
+
+        for name, provider in setting_provider.providers.items():
+            delattr(cls, name)
+
         return cls
 
 

@@ -23,14 +23,137 @@ class Setting:
         self.__dict__.update(data)
 
 
+class SettingProvider:
+    """Takes care of serializing settings from object to a dict
+    and restoring them to the object."""
+
+    def __init__(self, provider_class):
+        """ Construct a new instance of SettingProvider.
+
+        Traverse provider_class members and store all instances of
+        Setting and SettingProvider.
+        """
+        self.name = None
+        self.provider_class = provider_class
+        self.providers = {}
+        self.settings = {}
+        self.initialization_data = None
+
+        for name in dir(provider_class):
+            value = getattr(provider_class, name, None)
+            if isinstance(value, Setting):
+                value.name = name
+                self.settings[name] = value
+            if isinstance(value, SettingProvider):
+                value.name = name
+                self.providers[name] = value
+
+    def set_defaults(self, data):
+        """Replace settings from class definitions
+        with ones provided in dictionary data."""
+        for name in self.settings:
+            if name in data:
+                self.settings[name] = data[name]
+
+        for name in self.providers:
+            if name in data:
+                self.providers[name].set_defaults(data[name])
+
+    def get_defaults(self):
+        """Return a dict mapping setting names to their instances
+        and setting providers to other such dicts.
+        """
+        settings = dict(self.settings)
+        settings.update({
+            name: provider.get_defaults()
+            for name, provider in self.providers.items()
+        })
+        return settings
+
+    def update_defaults(self, instance):
+        """Update default settings with values from instance."""
+
+        for name, setting in self.settings.items():
+            if hasattr(instance, name):
+                setting.default = getattr(instance, name)
+
+        for name, provider in self.providers.items():
+            if hasattr(instance, name):
+                provider.update_defaults(getattr(instance, name))
+
+    def initialize(self, instance, data=None):
+        """Initialize instance settings.
+
+        Data is a dict mapping setting names to values, which will be
+        set on the instance, if provided.
+
+        If all_settings is True, all settings will be initialized to
+        their default value, otherwise, only settings with a mutable
+        default value will be initialized with a shallow copy of that value.
+        """
+        if data is None and self.initialization_data is not None:
+            data = self.initialization_data
+
+        for name, setting in self.settings.items():
+            if data and name in data:
+                setattr(instance, name, data[name])
+            elif not isinstance(setting.default, _immutables):
+                setattr(instance, name, copy.copy(setting.default))
+            else:
+                setattr(instance, name, setting.default)
+
+        for name, provider in self.providers.items():
+            if data and name in data:
+                if hasattr(instance, name):
+                    provider.intialize(getattr(instance, name))
+                else:
+                    provider.store_initialization_data(data[name])
+
+    def store_initialization_data(self, initialization_data):
+        """Store initialization data for later use.
+
+        Used when settingsHandler is initialized, but member for this provider
+        does not exists yet (because handler.initialize is called in __new__, but
+        member will be created in __init__.
+        """
+        self.initialization_data = initialization_data
+
+    def pack(self, instance):
+        """Pack settings in name: value dict."""
+        packed_settings = {
+            name: getattr(instance, name)
+            for name in self.settings
+            if hasattr(instance, name)
+        }
+        packed_settings.update({
+            name: provider.pack(getattr(instance, name))
+            for name, provider in self.providers.items()
+            if hasattr(instance, name)
+        })
+        return packed_settings
+
+    def get_provider(self, provider_class):
+        """Return provider for provider_class.
+
+        If this provider matches, return it, otherwise pass
+        the call to child providers.
+        """
+        if issubclass(provider_class, self.provider_class):
+            return self
+
+        for subprovider in self.providers.values():
+            provider = subprovider.get_provider(provider_class)
+            if provider:
+                return provider
+
+
 class SettingsHandler:
-    """Holds the description of widget's settings, stored as a dict
-       whose keys are attribute names and values are instances of Setting
-    """
+    """Reads widget setting files and passes them to appropriate providers."""
 
     def __init__(self):
         self.widget_class = None
         self.settings = {}
+        self.default_provider = None
 
     def get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
@@ -55,11 +178,7 @@ class SettingsHandler:
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
         default_settings = pickle.load(settings_file)
-        cls = self.widget_class
-        for name, setting in default_settings.items():
-            if name in self.settings:
-                self.settings[name] = setting
-                setattr(cls, name, setting.default)
+        self.default_provider.update_defaults(default_settings)
 
     def write_defaults(self):
         """Write (global) defaults for this widget class to a file.
@@ -77,11 +196,7 @@ class SettingsHandler:
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
-        cls = self.widget_class
-        default_settings = {}
-        for name, setting in self.settings.items():
-            setting.default = getattr(cls, name)
-            default_settings[name] = setting
+        default_settings = self.default_provider.get_defaults()
         pickle.dump(default_settings, settings_file, -1)
 
     def initialize(self, widget, data=None):
@@ -113,11 +228,7 @@ class SettingsHandler:
         """
         if isinstance(data, bytes):
             data = pickle.loads(data)
-        for name, setting in self.settings.items():
-            if data and name in data:
-                setattr(widget, name, data[name])
-            elif not isinstance(setting.default, _immutables):
-                setattr(widget, name, copy.copy(setting.default))
+        self.default_provider.initialize(widget, data)
 
     def pack_data(self, widget):
         """
@@ -130,35 +241,17 @@ class SettingsHandler:
         Inherited classes add other data, in particular widget-specific
         local contexts.
         """
-        data = {}
-        for name, setting in self.settings.items():
-            data[name] = widget.getattr_deep(name)
-        return data
+        return self.default_provider.pack(widget)
 
     def update_class_defaults(self, widget):
         """
         Writes widget instance's settings to class defaults. Called when the
         widget is deleted.
         """
-        cls = self.widget_class
-        for name, setting in self.settings.items():
-            # I'm not saving settings that I don't understand
-            if type(setting) is Setting:
-                setattr(cls, name, widget.getattr_deep(name))
-        # this is here only since __del__ is never called
+        self.default_provider.update_defaults(widget)
         self.write_defaults()
 
-    # TODO this method has misleading name (method 'initialize' does what
-    #      this method's name would indicate. Moreover, the method is never
-    #      called by this class but only by ContextHandlers. Perhaps it should
-    #      be moved there.
-    def settings_to_widget(self, widget):
-        widget.retrieveSpecificSettings()
 
-    # TODO similar to settings_to_widget; update_class_defaults does this for
-    #      context independent settings
-    def settings_from_widget(self, widget):
-        widget.storeSpecificSettings()
 
     # TODO would we like this method to store the changed settings back to
     # class defaults, so the new widgets added to the schema later would have
@@ -167,7 +260,16 @@ class SettingsHandler:
         """Store the (changed) widget's setting immediatelly to the context."""
         pass
 
+    def register_provider(self, provider):
+        """Register default setting provider with this handler."""
+        assert self.default_provider is None, "This SettingHandler already has a provider"
+        self.default_provider = provider
 
+    def get_provider(self, cls):
+        if not isinstance(cls, type):
+            cls = cls.__class__
+
+        return self.default_provider.get_provider(cls)
 
 class ContextSetting(Setting):
     OPTIONAL = 0
@@ -320,6 +422,16 @@ class ContextHandler(SettingsHandler):
         """Close the context by calling :obj:`settings_from_widget` to write
         any relevant widget settings to the context."""
         self.settings_from_widget(widget)
+
+    # TODO this method has misleading name (method 'initialize' does what
+    #      this method's name would indicate.
+    def settings_to_widget(self, widget):
+        widget.retrieveSpecificSettings()
+
+    # TODO similar to settings_to_widget; update_class_defaults does this for
+    #      context independent settings
+    def settings_from_widget(self, widget):
+        widget.storeSpecificSettings()
 
 
 
