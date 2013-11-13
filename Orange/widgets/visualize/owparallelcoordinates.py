@@ -10,6 +10,7 @@ from Orange.widgets.gui import attributeIconDict
 from Orange.widgets.settings import DomainContextHandler, Setting
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
 from Orange.widgets.utils.plot import xBottom, OWPalette
+from Orange.widgets.utils.scaling import checksum
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
 from Orange.widgets.widget import OWWidget, AttributeList
@@ -189,8 +190,8 @@ class OWParallelCoordinates(OWVisWidget):
     def setData(self, data):
         if data and (len(data) == 0 or len(data.domain) == 0):
             data = None
-        if self.data is not None and data is not None and self.data.checksum() == data.checksum():
-            return # check if the new data set is the same as the old one
+        if checksum(data) == checksum(self.data):
+            return  # check if the new data set is the same as the old one
 
         self.closeContext()
         same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same

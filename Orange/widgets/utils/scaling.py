@@ -8,6 +8,12 @@ from Orange.widgets.tests.test_settings import VarTypes
 from Orange.widgets.utils.datacaching import getCached, setCached
 
 
+def checksum(x):
+    if x is None:
+        return None
+    return x.checksum()
+
+
 def get_variable_values_sorted(variable):
     """
     Return a list of sorted values for given attribute.
@@ -110,7 +116,6 @@ class ScaleData:
 
     def set_data(self, data, subset_data=None, **args):
         if args.get("skipIfSame", 1):
-            checksum = lambda x: None if x is None else x.checksum()
             if checksum(data) == checksum(self.raw_data) and \
                checksum(subset_data) == checksum(self.raw_subset_data):
                 return
