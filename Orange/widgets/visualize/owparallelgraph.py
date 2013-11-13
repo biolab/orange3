@@ -136,8 +136,9 @@ class OWParallelGraph(OWPlot, ScaleData):
                 alpha = self.alphaValue
                 curves = mainCurves
                 self.selectedExamples.append(i)
-                if self.rawData[i].id in subsetIdsToDraw:
-                    subsetIdsToDraw.pop(self.rawData[i].id)
+                #FIXME:
+                #if self.raw_data[i].id in subsetIdsToDraw:
+                #    subsetIdsToDraw.pop(self.raw_data[i].id)
 
             newColor += (alpha,)
 
