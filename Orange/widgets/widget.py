@@ -66,7 +66,8 @@ class WidgetMetaClass(type(QDialog)):
         if not hasattr(cls, "settingsHandler"):
             cls.settingsHandler = settings.SettingsHandler()
         cls.settingsHandler.widget_class = cls
-        for name, value in cls.__dict__.items():
+        for name in dir(cls):
+            value = getattr(cls, name, None)
             if isinstance(value, settings.Setting):
                 value.name = name
                 cls.settingsHandler.settings[name] = value
