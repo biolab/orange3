@@ -11,6 +11,7 @@ from Orange.widgets.settings import DomainContextHandler, Setting
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
 from Orange.widgets.utils.plot import xBottom, OWPalette
 from Orange.widgets.utils.scaling import checksum
+from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
 from Orange.widgets.widget import OWWidget, AttributeList
@@ -82,11 +83,11 @@ class OWParallelCoordinates(OWVisWidget):
         self.createShowHiddenLists(self.GeneralTab, callback=self.updateGraph)
         self.connect(self.shownAttribsLB, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flipAttribute)
 
-        # FIXME: self.zoomSelectToolbar = OWToolbars.ZoomSelectToolbar(self, self.GeneralTab, self.graph, self.autoSendSelection,
-        #                                                      buttons=(1, 2, 0, 7, 8))
-        # self.connect(self.zoomSelectToolbar.buttonSendSelections, SIGNAL("clicked()"), self.sendSelections)
+        self.zoomSelectToolbar = ZoomSelectToolbar(self, self.GeneralTab, self.graph, self.autoSendSelection,
+                                                   buttons=(1, 2, 0, 7, 8))
+        self.connect(self.zoomSelectToolbar.buttonSendSelections, SIGNAL("clicked()"), self.sendSelections)
 
-        #connect controls to appropriate functions
+        # connect controls to appropriate functions
         #self.connect(self.graphButton, SIGNAL("clicked()"), self.graph.saveToFile)
 
         # ####################################
@@ -151,8 +152,8 @@ class OWParallelCoordinates(OWVisWidget):
         self.graph.contPalette = dlg.getContinuousPalette("contPalette")
         self.graph.discPalette = dlg.getDiscretePalette("discPalette")
         self.graph.setCanvasBackground(dlg.getColor("Canvas"))
-        #[self.zoomSelectToolbar.actionZooming, self.zoomSelectToolbar.actionRectangleSelection,
-        # self.zoomSelectToolbar.actionPolygonSelection][self.toolbarSelection](*[])
+        [self.zoomSelectToolbar.actionZooming, self.zoomSelectToolbar.actionRectangleSelection,
+         self.zoomSelectToolbar.actionPolygonSelection][self.toolbarSelection]()
         self.cbShowAllAttributes()
 
         self.resize(900, 700)
@@ -232,8 +233,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.send("Features", attrList)
 
     def selectionChanged(self):
-        #FIXME:
-        #self.zoomSelectToolbar.buttonSendSelections.setEnabled(not self.autoSendSelection)
+        self.zoomSelectToolbar.buttonSendSelections.setEnabled(not self.autoSendSelection)
         if self.autoSendSelection:
             self.sendSelections()
 
