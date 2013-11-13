@@ -7,7 +7,7 @@ from Orange.canvas.registry.description import Default
 import Orange.data
 from Orange.data import Table
 from Orange.widgets.gui import attributeIconDict
-from Orange.widgets.settings import DomainContextHandler
+from Orange.widgets.settings import DomainContextHandler, Setting
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
 from Orange.widgets.utils.plot import xBottom, OWPalette
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
@@ -32,6 +32,8 @@ class OWParallelCoordinates(OWVisWidget):
 
     settingsHandler = DomainContextHandler()
 
+    show_all_attributes = Setting(0)
+
     settingsList = ["graph.jitterSize", "graph.showDistributions",
                     "graph.showAttrValues",
                     "graph.useSplines", "graph.alphaValue", "graph.alphaValue2", "graph.show_legend",
@@ -49,8 +51,6 @@ class OWParallelCoordinates(OWVisWidget):
         #add a graph widget
         self.graph = OWParallelGraph(self, self.mainArea)
         self.mainArea.layout().addWidget(self.graph)
-
-        self.showAllAttributes = 0
 
         #set default settings
         self.data = None

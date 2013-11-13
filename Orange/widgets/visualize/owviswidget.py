@@ -42,7 +42,7 @@ class OWVisWidget(OWWidget):
         self.attrRemoveButton = OWGUI.button(self.addRemoveGroup, self, "", callback=self.removeAttribute,
                                              tooltip="Remove (hide) selected attributes")
         self.attrRemoveButton.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
-        self.showAllCB = OWGUI.checkBox(self.addRemoveGroup, self, "showAllAttributes", "Show all",
+        self.showAllCB = OWGUI.checkBox(self.addRemoveGroup, self, "show_all_attributes", "Show all",
                                         callback=self.cbShowAllAttributes)
 
         self.hiddenAttribsLB = OWGUI.listBox(self.hiddenAttribsGroup, self, "selectedHidden", "hiddenAttributes",
@@ -66,8 +66,8 @@ class OWVisWidget(OWWidget):
         self.buttonUPAttr.setEnabled(self.selectedShown != [] and tightSelection and mini)
         self.buttonDOWNAttr.setEnabled(
             self.selectedShown != [] and tightSelection and maxi < len(self.shownAttributes) - 1)
-        self.attrAddButton.setDisabled(not self.selectedHidden or self.showAllAttributes)
-        self.attrRemoveButton.setDisabled(not self.selectedShown or self.showAllAttributes)
+        self.attrAddButton.setDisabled(not self.selectedHidden or self.show_all_attributes)
+        self.attrRemoveButton.setDisabled(not self.selectedShown or self.show_all_attributes)
         domain = self.getDataDomain()
         if domain and self.hiddenAttributes and domain.class_var and self.hiddenAttributes[0][0] != domain.class_var.name:
             self.showAllCB.setChecked(0)
@@ -107,7 +107,7 @@ class OWVisWidget(OWWidget):
 
 
     def cbShowAllAttributes(self):
-        if self.showAllAttributes:
+        if self.show_all_attributes:
             self.addAttribute(True)
         self.resetAttrManipulation()
 
@@ -167,7 +167,7 @@ class OWVisWidget(OWWidget):
                 hidden = [x for x in [(a.name, a.var_type) for a in domain.attributes] if x not in shown]
             else:
                 shown = [(a.name, a.var_type) for a in domain.attributes]
-                if not self.showAllAttributes:
+                if not self.show_all_attributes:
                     hidden = shown[10:]
                     shown = shown[:10]
 
