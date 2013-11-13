@@ -1,5 +1,9 @@
-import OWGUI
-from OWWidget import *
+import os
+
+from Orange.canvas.utils import environ
+from PyQt4.QtGui import QListWidget, QIcon, QSizePolicy
+from Orange.widgets import gui as OWGUI
+from Orange.widgets.widget import OWWidget
 
 
 class OWVisWidget(OWWidget):
@@ -18,32 +22,32 @@ class OWVisWidget(OWWidget):
         hbox = OWGUI.widgetBox(self.shownAttribsGroup, orientation='horizontal')
         self.shownAttribsLB = OWGUI.listBox(hbox, self, "selectedShown", "shownAttributes",
                                             callback=self.resetAttrManipulation, dragDropCallback=callback,
-                                            enableDragDrop=1, selectionMode=QListWidget.ExtendedSelection)
+                                            enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
         #self.shownAttribsLB.setMaximumWidth(maxWidth)
         vbox = OWGUI.widgetBox(hbox, orientation='vertical')
         self.buttonUPAttr = OWGUI.button(vbox, self, "", callback=self.moveAttrUP,
                                          tooltip="Move selected attributes up")
         self.buttonDOWNAttr = OWGUI.button(vbox, self, "", callback=self.moveAttrDOWN,
                                            tooltip="Move selected attributes down")
-        self.buttonUPAttr.setIcon(QIcon(os.path.join(self.widgetDir, "icons/Dlg_up3.png")))
+        self.buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
         self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         self.buttonUPAttr.setMaximumWidth(30)
-        self.buttonDOWNAttr.setIcon(QIcon(os.path.join(self.widgetDir, "icons/Dlg_down3.png")))
+        self.buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
         self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         self.buttonDOWNAttr.setMaximumWidth(30)
 
         self.attrAddButton = OWGUI.button(self.addRemoveGroup, self, "", callback=self.addAttribute,
                                           tooltip="Add (show) selected attributes")
-        self.attrAddButton.setIcon(QIcon(os.path.join(self.widgetDir, "icons/Dlg_up3.png")))
+        self.attrAddButton.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
         self.attrRemoveButton = OWGUI.button(self.addRemoveGroup, self, "", callback=self.removeAttribute,
                                              tooltip="Remove (hide) selected attributes")
-        self.attrRemoveButton.setIcon(QIcon(os.path.join(self.widgetDir, "icons/Dlg_down3.png")))
+        self.attrRemoveButton.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
         self.showAllCB = OWGUI.checkBox(self.addRemoveGroup, self, "showAllAttributes", "Show all",
                                         callback=self.cbShowAllAttributes)
 
         self.hiddenAttribsLB = OWGUI.listBox(self.hiddenAttribsGroup, self, "selectedHidden", "hiddenAttributes",
                                              callback=self.resetAttrManipulation, dragDropCallback=callback,
-                                             enableDragDrop=1, selectionMode=QListWidget.ExtendedSelection)
+                                             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
         #self.hiddenAttribsLB.setMaximumWidth(maxWidth + 27)
 
 
@@ -65,7 +69,7 @@ class OWVisWidget(OWWidget):
         self.attrAddButton.setDisabled(not self.selectedHidden or self.showAllAttributes)
         self.attrRemoveButton.setDisabled(not self.selectedShown or self.showAllAttributes)
         domain = self.getDataDomain()
-        if domain and self.hiddenAttributes and domain.classVar and self.hiddenAttributes[0][0] != domain.classVar.name:
+        if domain and self.hiddenAttributes and domain.class_var and self.hiddenAttributes[0][0] != domain.class_var.name:
             self.showAllCB.setChecked(0)
 
 
@@ -133,7 +137,7 @@ class OWVisWidget(OWWidget):
             self.graph.clusterClosure = None
 
         newShown = self.shownAttributes[:]
-        self.selectedShown.sort(lambda x, y: -cmp(x, y))
+        self.selectedShown.sort(reverse=True)
         for i in self.selectedShown:
             del newShown[i]
         self.setShownAttributeList(newShown)
@@ -159,16 +163,16 @@ class OWVisWidget(OWWidget):
                 if type(shownAttributes[0]) == tuple:
                     shown = shownAttributes
                 else:
-                    shown = [(domain[a].name, domain[a].varType) for a in shownAttributes]
-                hidden = [x for x in [(a.name, a.varType) for a in domain.attributes] if x not in shown]
+                    shown = [(domain[a].name, domain[a].var_type) for a in shownAttributes]
+                hidden = [x for x in [(a.name, a.var_type) for a in domain.attributes] if x not in shown]
             else:
-                shown = [(a.name, a.varType) for a in domain.attributes]
+                shown = [(a.name, a.var_type) for a in domain.attributes]
                 if not self.showAllAttributes:
                     hidden = shown[10:]
                     shown = shown[:10]
 
-            if domain.classVar and (domain.classVar.name, domain.classVar.varType) not in shown:
-                hidden += [(domain.classVar.name, domain.classVar.varType)]
+            if domain.class_var and (domain.class_var.name, domain.class_var.var_type) not in shown:
+                hidden += [(domain.class_var.name, domain.class_var.var_type)]
 
         self.shownAttributes = shown
         self.hiddenAttributes = hidden
