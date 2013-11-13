@@ -553,11 +553,14 @@ class OWParallelGraph(OWPlot, ScaleData):
     # get selected examples
     # this function must be called after calling self.updateGraph
     def getSelectionsAsExampleTables(self):
-        if not self.haveData:
+        # FIXME:
+        return (None, None)
+
+        if not self.have_data:
             return (None, None)
 
-        selected = self.rawData.getitemsref(self.selectedExamples)
-        unselected = self.rawData.getitemsref(self.unselectedExamples)
+        selected = self.raw_data.getitemsref(self.selectedExamples)
+        unselected = self.raw_data.getitemsref(self.unselectedExamples)
 
         if len(selected) == 0: selected = None
         if len(unselected) == 0: unselected = None
