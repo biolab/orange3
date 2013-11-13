@@ -1,31 +1,30 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
 import os.path
-import OWGUI
 
-dir = os.path.dirname(__file__) + "/icons/"
-dlg_zoom = dir + "Dlg_zoom.png"
-dlg_zoom_selection = dir + "Dlg_zoom_selection.png"
-dlg_pan = dir + "Dlg_pan_hand.png"
-dlg_select = dir + "Dlg_arrow.png"
-dlg_rect = dir + "Dlg_rect.png"
-dlg_poly = dir + "Dlg_poly.png"
-dlg_zoom_extent = dir + "Dlg_zoom_extent.png"
-dlg_undo = dir + "Dlg_undo.png"
-dlg_clear = dir + "Dlg_clear.png"
-dlg_send = dir + "Dlg_send.png"
-dlg_browseRectangle = dir + "Dlg_browseRectangle.png"
-dlg_browseCircle = dir + "Dlg_browseCircle.png"
+from PyQt4.QtCore import SIGNAL, Qt
+from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout, QWidget, QVBoxLayout
 
-dlg_zoom_selection = dir + "Dlg_zoom_selection.png"
-dlg_pan = dir + "Dlg_pan_hand.png"
-dlg_select = dir + "Dlg_arrow.png"
-dlg_zoom_extent = dir + "dlg_zoom_extent.png"
+from Orange.canvas.utils import environ
+from Orange.widgets.gui import widgetBox
 
 
-def createButton(parent, text, action = None, icon = None, toggle = 0):
+icons = os.path.join(environ.widget_install_dir, "icons")
+dlg_zoom = os.path.join(icons, "Dlg_zoom.png")
+dlg_zoom_selection = os.path.join(icons, "Dlg_zoom_selection.png")
+dlg_pan = os.path.join(icons, "Dlg_pan_hand.png")
+dlg_select = os.path.join(icons, "Dlg_arrow.png")
+dlg_rect = os.path.join(icons, "Dlg_rect.png")
+dlg_poly = os.path.join(icons, "Dlg_poly.png")
+dlg_zoom_extent = os.path.join(icons, "Dlg_zoom_extent.png")
+dlg_undo = os.path.join(icons, "Dlg_undo.png")
+dlg_clear = os.path.join(icons, "Dlg_clear.png")
+dlg_send = os.path.join(icons, "Dlg_send.png")
+dlg_browseRectangle = os.path.join(icons, "Dlg_browseRectangle.png")
+dlg_browseCircle = os.path.join(icons, "Dlg_browseCircle.png")
+
+
+def createButton(parent, text, action=None, icon=None, toggle=0):
     btn = QToolButton(parent)
-    btn.setMinimumSize(30,30)
+    btn.setMinimumSize(30, 30)
     if parent.layout() is not None:
         parent.layout().addWidget(btn)
     btn.setCheckable(toggle)
@@ -36,25 +35,34 @@ def createButton(parent, text, action = None, icon = None, toggle = 0):
     btn.setToolTip(text)
     return btn
 
+
 class ZoomSelectToolbar(QGroupBox):
 #                (tooltip, attribute containing the button, callback function, button icon, button cursor, toggle)
-    IconSpace, IconZoom, IconPan, IconSelect, IconRectangle, IconPolygon, IconRemoveLast, IconRemoveAll, IconSendSelection, IconZoomExtent, IconZoomSelection = list(range(11))
+    IconSpace, IconZoom, IconPan, IconSelect, IconRectangle, IconPolygon, \
+    IconRemoveLast, IconRemoveAll, IconSendSelection, IconZoomExtent, \
+    IconZoomSelection = range(11)
 
     DefaultButtons = 1, 4, 5, 0, 6, 7, 8
     SelectButtons = 3, 4, 5, 0, 6, 7, 8
     NavigateButtons = 1, 9, 10, 0, 2
 
-    def __init__(self, widget, parent, graph, autoSend = 0, buttons = (1, 4, 5, 0, 6, 7, 8), name = "Zoom / Select", exclusiveList = "__toolbars"):
+    def __init__(self, widget, parent, graph, autoSend=0, buttons=(1, 4, 5, 0, 6, 7, 8), name="Zoom / Select",
+                 exclusiveList="__toolbars"):
         if not hasattr(ZoomSelectToolbar, "builtinFunctions"):
             ZoomSelectToolbar.builtinFunctions = \
-                 (None,
-                 ("Zooming", "buttonZoom", "activateZooming", QIcon(dlg_zoom), Qt.ArrowCursor, 1),
-                 ("Panning", "buttonPan", "activatePanning", QIcon(dlg_pan), Qt.OpenHandCursor, 1),
-                 ("Selection", "buttonSelect", "activateSelection", QIcon(dlg_select), Qt.CrossCursor, 1),
-                 ("Rectangle selection", "buttonSelectRect", "activateRectangleSelection", QIcon(dlg_rect), Qt.CrossCursor, 1),
-                 ("Polygon selection", "buttonSelectPoly", "activatePolygonSelection", QIcon(dlg_poly), Qt.CrossCursor, 1),
-                 ("Remove last selection", "buttonRemoveLastSelection", "removeLastSelection", QIcon(dlg_undo), None, 0),
-                 ("Remove all selections", "buttonRemoveAllSelections", "removeAllSelections", QIcon(dlg_clear), None, 0),
+                (None,
+                 ("Zooming", "buttonZoom", "activate_zooming", QIcon(dlg_zoom), Qt.ArrowCursor, 1),
+                 ("Panning", "buttonPan", "activate_panning", QIcon(dlg_pan), Qt.OpenHandCursor, 1),
+                 ("Selection", "buttonSelect", "activate_selection", QIcon(dlg_select), Qt.CrossCursor, 1),
+                 ("Rectangle selection", "buttonSelectRect", "activate_rectangle_selection", QIcon(dlg_rect),
+                  Qt.CrossCursor, 1),
+                 ("Polygon selection", "buttonSelectPoly", "activate_polygon_selection", QIcon(dlg_poly), Qt.CrossCursor,
+                  1),
+                 (
+                     "Remove last selection", "buttonRemoveLastSelection", "removeLastSelection", QIcon(dlg_undo), None,
+                     0),
+                 ("Remove all selections", "buttonRemoveAllSelections", "removeAllSelections", QIcon(dlg_clear), None,
+                  0),
                  ("Send selections", "buttonSendSelections", "sendData", QIcon(dlg_send), None, 0),
                  ("Zoom to extent", "buttonZoomExtent", "zoomExtent", QIcon(dlg_zoom_extent), None, 0),
                  ("Zoom selection", "buttonZoomSelection", "zoomSelection", QIcon(dlg_zoom_selection), None, 0)
@@ -76,7 +84,7 @@ class ZoomSelectToolbar(QGroupBox):
             if not f:
                 self.layout().addSpacing(10)
             else:
-                button = createButton(self, f[0], lambda x=b: self.action(x), f[3], toggle = f[5])
+                button = createButton(self, f[0], lambda x=b: self.action(x), f[3], toggle=f[5])
                 setattr(self, f[1], button)
                 if f[1] == "buttonSendSelections":
                     button.setEnabled(not autoSend)
@@ -110,41 +118,58 @@ class ZoomSelectToolbar(QGroupBox):
 
 
     # for backward compatibility with a previous version of this class
-    def actionZooming(self): self.action(0)
-    def actionRectangleSelection(self): self.action(3)
-    def actionPolygonSelection(self): self.action(4)
+    def actionZooming(self):
+        self.action(0)
+
+    def actionRectangleSelection(self):
+        self.action(3)
+
+    def actionPolygonSelection(self):
+        self.action(4)
 
 
 class NavigateSelectToolbar(QWidget):
 #                (tooltip, attribute containing the button, callback function, button icon, button cursor, toggle)
 
-    IconSpace, IconZoom, IconPan, IconSelect, IconRectangle, IconPolygon, IconRemoveLast, IconRemoveAll, IconSendSelection, IconZoomExtent, IconZoomSelection = list(range(11))
+    IconSpace, IconZoom, IconPan, IconSelect, IconRectangle, IconPolygon, IconRemoveLast, IconRemoveAll, IconSendSelection, IconZoomExtent, IconZoomSelection = list(
+        range(11))
 
-    def __init__(self, widget, parent, graph, autoSend = 0, buttons = (1, 4, 5, 0, 6, 7, 8)):
+    def __init__(self, widget, parent, graph, autoSend=0, buttons=(1, 4, 5, 0, 6, 7, 8)):
         if not hasattr(NavigateSelectToolbar, "builtinFunctions"):
             NavigateSelectToolbar.builtinFunctions = (None,
-                 ("Zooming", "buttonZoom", "activateZooming", QIcon(dlg_zoom), Qt.CrossCursor, 1, "navigate"),
-                 ("Panning", "buttonPan", "activatePanning", QIcon(dlg_pan), Qt.OpenHandCursor, 1, "navigate"),
-                 ("Selection", "buttonSelect", "activateSelection", QIcon(dlg_select), Qt.ArrowCursor, 1, "select"),
-                 ("Selection", "buttonSelectRect", "activateRectangleSelection", QIcon(dlg_select), Qt.ArrowCursor, 1, "select"),
-                 ("Polygon selection", "buttonSelectPoly", "activatePolygonSelection", QIcon(dlg_poly), Qt.ArrowCursor, 1, "select"),
-                 ("Remove last selection", "buttonRemoveLastSelection", "removeLastSelection", QIcon(dlg_undo), None, 0, "select"),
-                 ("Remove all selections", "buttonRemoveAllSelections", "removeAllSelections", QIcon(dlg_clear), None, 0, "select"),
-                 ("Send selections", "buttonSendSelections", "sendData", QIcon(dlg_send), None, 0, "select"),
-                 ("Zoom to extent", "buttonZoomExtent", "zoomExtent", QIcon(dlg_zoom_extent), None, 0, "navigate"),
-                 ("Zoom selection", "buttonZoomSelection", "zoomSelection", QIcon(dlg_zoom_selection), None, 0, "navigate")
-                )
+                                                      ("Zooming", "buttonZoom", "activateZooming", QIcon(dlg_zoom),
+                                                       Qt.CrossCursor, 1, "navigate"),
+                                                      ("Panning", "buttonPan", "activatePanning", QIcon(dlg_pan),
+                                                       Qt.OpenHandCursor, 1, "navigate"),
+                                                      ("Selection", "buttonSelect", "activateSelection",
+                                                       QIcon(dlg_select), Qt.ArrowCursor, 1, "select"),
+                                                      ("Selection", "buttonSelectRect", "activateRectangleSelection",
+                                                       QIcon(dlg_select), Qt.ArrowCursor, 1, "select"),
+                                                      ("Polygon selection", "buttonSelectPoly",
+                                                       "activatePolygonSelection", QIcon(dlg_poly), Qt.ArrowCursor, 1,
+                                                       "select"),
+                                                      ("Remove last selection", "buttonRemoveLastSelection",
+                                                       "removeLastSelection", QIcon(dlg_undo), None, 0, "select"),
+                                                      ("Remove all selections", "buttonRemoveAllSelections",
+                                                       "removeAllSelections", QIcon(dlg_clear), None, 0, "select"),
+                                                      ("Send selections", "buttonSendSelections", "sendData",
+                                                       QIcon(dlg_send), None, 0, "select"),
+                                                      ("Zoom to extent", "buttonZoomExtent", "zoomExtent",
+                                                       QIcon(dlg_zoom_extent), None, 0, "navigate"),
+                                                      ("Zoom selection", "buttonZoomSelection", "zoomSelection",
+                                                       QIcon(dlg_zoom_selection), None, 0, "navigate")
+            )
 
         QWidget.__init__(self, parent)
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0,25,0,0)
+        self.layout().setContentsMargins(0, 25, 0, 0)
 
         if parent.layout() is not None:
             parent.layout().addWidget(self)
 
-        self.navigate = OWGUI.widgetBox(self, 0, orientation = "vertical", margin=2)
-        self.select = OWGUI.widgetBox(self, "", orientation = "vertical")
+        self.navigate = widgetBox(self, 0, orientation="vertical", margin=2)
+        self.select = widgetBox(self, "", orientation="vertical")
 
         self.graph = graph # save graph. used to send signals
         self.widget = widget    # we set widget here so that it doesn't affect the value of self.widget.toolbarSelection
@@ -157,7 +182,7 @@ class NavigateSelectToolbar(QWidget):
             elif f[0] == "" or f[1] == "" or f[2] == "":
                 self.navigate.layout().addSpacing(10)
             else:
-                button = createButton(self.navigate, f[0], lambda x=b: self.action(x), f[3], toggle = f[5])
+                button = createButton(self.navigate, f[0], lambda x=b: self.action(x), f[3], toggle=f[5])
                 setattr(self.navigate, f[1], button)
                 if f[1] == "buttonSendSelections":
                     button.setEnabled(not autoSend)
@@ -192,9 +217,12 @@ class NavigateSelectToolbar(QWidget):
             self.graph.setCursor(cursor)
 
 
-
     # for backward compatibility with a previous version of this class
-    def actionZooming(self): self.action(0)
-    def actionRectangleSelection(self): self.action(3)
-    def actionPolygonSelection(self): self.action(4)
+    def actionZooming(self):
+        self.action(0)
 
+    def actionRectangleSelection(self):
+        self.action(3)
+
+    def actionPolygonSelection(self):
+        self.action(4)
