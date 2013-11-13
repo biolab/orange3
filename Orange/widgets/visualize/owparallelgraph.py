@@ -14,6 +14,7 @@ from Orange.canvas.utils import environ
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.statistics.distribution import get_distribution
+from Orange.widgets.settings import SettingProvider, Setting
 from Orange.widgets.tests.test_settings import VarTypes
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft, ZOOMING
@@ -24,20 +25,20 @@ MEANS = 1
 MEDIAN = 2
 
 
-class OWParallelGraph(OWPlot, ScaleData):
-    def __init__(self, parallelDlg, parent=None, name=None):
-        OWPlot.__init__(self, parent, name, axes=[], widget=parallelDlg)
+class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
+    def __init__(self, widget, parent=None, name=None):
+        widget.settingsHandler.get_provider(self).initialize(self)
+        OWPlot.__init__(self, parent, name, axes=[], widget=widget)
         ScaleData.__init__(self)
 
         self.update_antialiasing(False)
 
-        self.parallelDlg = parallelDlg
+        self.parallelDlg = widget
         self.showDistributions = 0
         self.toolRects = []
         self.useSplines = 0
         self.showStatistics = 0
         self.lastSelectedCurve = None
-        self.show_legend = 0
         self.enableGridXB(0)
         self.enableGridYL(0)
         self.domainContingency = None
