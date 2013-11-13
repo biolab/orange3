@@ -144,7 +144,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.__dict__.update(environ.directories)
 
         if self._name:
-            self.setCaption(self._name.replace("&",""))
+            self.setCaption(self._name.replace("&", ""))
         self.setFocusPolicy(Qt.StrongFocus)
 
         self.wrappers = [] # stored wrappers for widget events
