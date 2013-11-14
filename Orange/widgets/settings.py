@@ -104,8 +104,8 @@ class SettingProvider:
 
         for name, provider in self.providers.items():
             if data and name in data:
-                if hasattr(instance, name):
-                    provider.intialize(getattr(instance, name))
+                if hasattr(instance, name) and not isinstance(getattr(instance, name), SettingProvider):
+                    provider.initialize(getattr(instance, name), data[name])
                 else:
                     provider.store_initialization_data(data[name])
 
@@ -266,10 +266,12 @@ class SettingsHandler:
         self.default_provider = provider
 
     def get_provider(self, cls):
+        """Return registered provider responsible for managing the settings of the cls."""
         if not isinstance(cls, type):
             cls = cls.__class__
 
         return self.default_provider.get_provider(cls)
+
 
 class ContextSetting(Setting):
     OPTIONAL = 0

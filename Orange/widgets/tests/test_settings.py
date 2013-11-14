@@ -1,7 +1,7 @@
 import unittest
 from mock import Mock
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
-from Orange.widgets.settings import DomainContextHandler, ContextSetting
+from Orange.widgets.settings import DomainContextHandler, ContextSetting, SettingProvider
 
 VarTypes = ContinuousVariable.VarTypes
 
@@ -10,6 +10,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
     def setUp(self):
         self.handler = DomainContextHandler(attributes_in_res=True,
                                             metas_in_res=True)
+        self.handler.register_provider(SettingProvider(MockWidget))
         self.handler.read_defaults = lambda: None  # Disable reading from disk
         self.domain = self._create_domain()
 
@@ -217,7 +218,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
     def add_setting(self, widget, name, setting):
         setting.name = name
         setattr(widget, name, setting.default)
-        self.handler.settings[name] = setting
+        self.handler.default_provider.settings[name] = setting
 
     def _create_domain(self):
         features = [
