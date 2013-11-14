@@ -9,6 +9,7 @@ Plot (``owplot``)
 '''
 
 from PyQt4 import QtCore, QtGui
+from Orange.widgets.settings import Setting
 
 LeftLegend = 0
 RightLegend = 1
@@ -323,6 +324,13 @@ class OWPlot(orangeqt.Plot):
 
     point_settings = ["point_width", "alpha_value"]
     plot_settings = ["show_legend", "show_grid"]
+
+    alpha_value = Setting(255)
+
+    show_legend = Setting(False)
+    show_grid = Setting(False)
+
+
     appearance_settings = ["antialias_plot", "animate_plot", "animate_points", "disable_animations_threshold", "auto_adjust_performance"]
 
     def settings_list(self, graph_name, settings):
@@ -339,7 +347,6 @@ class OWPlot(orangeqt.Plot):
         orangeqt.Plot.__init__(self, parent)
         self.widget = widget
         self.parent_name = name
-        self.show_legend = show_legend
         self.title_item = None
 
         self.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
@@ -368,7 +375,6 @@ class OWPlot(orangeqt.Plot):
         # OWScatterPlot needs these:
         self.point_width = 5
         self.show_filled_symbols = True
-        self.alpha_value = 255
         self.show_grid = True
 
         self.curveSymbols = list(range(13))
