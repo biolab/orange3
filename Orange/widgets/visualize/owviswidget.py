@@ -3,15 +3,19 @@ import os
 from Orange.canvas.utils import environ
 from PyQt4.QtGui import QListWidget, QIcon, QSizePolicy
 from Orange.widgets import gui as OWGUI
+from Orange.widgets.settings import ContextSetting
 from Orange.widgets.widget import OWWidget
 
 
 class OWVisWidget(OWWidget):
+    shown_attributes = ContextSetting([], required=ContextSetting.REQUIRED,
+                                     selected='selected_shown', reservoir="hiddenAttributes")
+
     def createShowHiddenLists(self, placementTab, callback=None):
         maxWidth = 180
         self.updateCallbackFunction = callback
-        self.shownAttributes = []
-        self.selectedShown = []
+        self.shown_attributes = []
+        self.selected_shown = []
         self.hiddenAttributes = []
         self.selectedHidden = []
 
@@ -20,7 +24,7 @@ class OWVisWidget(OWWidget):
         self.hiddenAttribsGroup = OWGUI.widgetBox(placementTab, " Hidden attributes ")
 
         hbox = OWGUI.widgetBox(self.shownAttribsGroup, orientation='horizontal')
-        self.shownAttribsLB = OWGUI.listBox(hbox, self, "selectedShown", "shownAttributes",
+        self.shownAttribsLB = OWGUI.listBox(hbox, self, "selected_shown", "shown_attributes",
                                             callback=self.resetAttrManipulation, dragDropCallback=callback,
                                             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
         #self.shownAttribsLB.setMaximumWidth(maxWidth)
@@ -60,14 +64,14 @@ class OWVisWidget(OWWidget):
             return None
 
     def resetAttrManipulation(self):
-        if self.selectedShown:
-            mini, maxi = min(self.selectedShown), max(self.selectedShown)
-            tightSelection = maxi - mini == len(self.selectedShown) - 1
-        self.buttonUPAttr.setEnabled(self.selectedShown != [] and tightSelection and mini)
+        if self.selected_shown:
+            mini, maxi = min(self.selected_shown), max(self.selected_shown)
+            tightSelection = maxi - mini == len(self.selected_shown) - 1
+        self.buttonUPAttr.setEnabled(self.selected_shown != [] and tightSelection and mini)
         self.buttonDOWNAttr.setEnabled(
-            self.selectedShown != [] and tightSelection and maxi < len(self.shownAttributes) - 1)
+            self.selected_shown != [] and tightSelection and maxi < len(self.shown_attributes) - 1)
         self.attrAddButton.setDisabled(not self.selectedHidden or self.show_all_attributes)
-        self.attrRemoveButton.setDisabled(not self.selectedShown or self.show_all_attributes)
+        self.attrRemoveButton.setDisabled(not self.selected_shown or self.show_all_attributes)
         domain = self.getDataDomain()
         if domain and self.hiddenAttributes and domain.class_var and self.hiddenAttributes[0][0] != domain.class_var.name:
             self.showAllCB.setChecked(0)
@@ -80,7 +84,7 @@ class OWVisWidget(OWWidget):
             self.graph.potentialsBmp = None
 
         labs = getattr(self, labels)
-        sel = getattr(self, selection)
+        sel = list(getattr(self, selection))
         mini, maxi = min(sel), max(sel) + 1
         if dir == -1:
             setattr(self, labels, labs[:mini - 1] + labs[mini:maxi] + [labs[mini - 1]] + labs[maxi:])
@@ -99,11 +103,11 @@ class OWVisWidget(OWWidget):
 
     # move selected attribute in "Attribute Order" list one place up
     def moveAttrUP(self):
-        self.moveAttrSelection("shownAttributes", "selectedShown", -1)
+        self.moveAttrSelection("shown_attributes", "selected_shown", -1)
 
     # move selected attribute in "Attribute Order" list one place down
     def moveAttrDOWN(self):
-        self.moveAttrSelection("shownAttributes", "selectedShown", 1)
+        self.moveAttrSelection("shown_attributes", "selected_shown", 1)
 
 
     def cbShowAllAttributes(self):
@@ -119,9 +123,9 @@ class OWVisWidget(OWWidget):
         if addAll:
             self.setShownAttributeList()
         else:
-            self.setShownAttributeList(self.shownAttributes + [self.hiddenAttributes[i] for i in self.selectedHidden])
+            self.setShownAttributeList(self.shown_attributes + [self.hiddenAttributes[i] for i in self.selectedHidden])
         self.selectedHidden = []
-        self.selectedShown = []
+        self.selected_shown = []
         self.resetAttrManipulation()
 
         if hasattr(self, "sendShownAttributes"):
@@ -136,9 +140,9 @@ class OWVisWidget(OWWidget):
             self.graph.insideColors = None
             self.graph.clusterClosure = None
 
-        newShown = self.shownAttributes[:]
-        self.selectedShown.sort(reverse=True)
-        for i in self.selectedShown:
+        newShown = self.shown_attributes[:]
+        self.selected_shown.sort(reverse=True)
+        for i in self.selected_shown:
             del newShown[i]
         self.setShownAttributeList(newShown)
 
@@ -150,7 +154,7 @@ class OWVisWidget(OWWidget):
             self.graph.removeAllSelections()
 
     def getShownAttributeList(self):
-        return [a[0] for a in self.shownAttributes]
+        return [a[0] for a in self.shown_attributes]
 
 
     def setShownAttributeList(self, shownAttributes=None):
@@ -174,10 +178,10 @@ class OWVisWidget(OWWidget):
             if domain.class_var and (domain.class_var.name, domain.class_var.var_type) not in shown:
                 hidden += [(domain.class_var.name, domain.class_var.var_type)]
 
-        self.shownAttributes = shown
+        self.shown_attributes = shown
         self.hiddenAttributes = hidden
         self.selectedHidden = []
-        self.selectedShown = []
+        self.selected_shown = []
         self.resetAttrManipulation()
 
         if hasattr(self, "sendShownAttributes"):

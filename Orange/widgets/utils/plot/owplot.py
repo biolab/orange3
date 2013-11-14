@@ -325,6 +325,8 @@ class OWPlot(orangeqt.Plot):
     point_settings = ["point_width", "alpha_value"]
     plot_settings = ["show_legend", "show_grid"]
 
+    alpha_value = Setting(255)
+
     show_legend = Setting(False)
     show_grid = Setting(False)
 
@@ -373,7 +375,6 @@ class OWPlot(orangeqt.Plot):
         # OWScatterPlot needs these:
         self.point_width = 5
         self.show_filled_symbols = True
-        self.alpha_value = 255
         self.show_grid = True
 
         self.curveSymbols = list(range(13))

@@ -4,6 +4,7 @@ import numpy as np
 
 from Orange.data import Table
 from Orange.statistics.basic_stats import DomainBasicStats
+from Orange.widgets.settings import Setting
 from Orange.widgets.tests.test_settings import VarTypes
 from Orange.widgets.utils.datacaching import getCached, setCached
 
@@ -59,6 +60,8 @@ def get_variable_value_indices(variable, sort_values_for_discrete_attrs=1):
 
 
 class ScaleData:
+    jitter_size = Setting(10)
+
     def __init__(self):
         self.raw_data = None           # input data
         self.raw_subset_data = None

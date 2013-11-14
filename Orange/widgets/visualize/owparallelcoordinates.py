@@ -7,7 +7,7 @@ from Orange.canvas.registry.description import Default
 import Orange.data
 from Orange.data import Table
 from Orange.widgets.gui import attributeIconDict
-from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
+from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider, ContextSetting
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
 from Orange.widgets.utils.plot import xBottom, OWPalette
 from Orange.widgets.utils.scaling import checksum
@@ -36,17 +36,10 @@ class OWParallelCoordinates(OWVisWidget):
 
     show_all_attributes = Setting(0)
 
-    settingsList = ["graph.jitterSize", "graph.showDistributions",
-                    "graph.showAttrValues",
-                    "graph.useSplines", "graph.alphaValue", "graph.alphaValue2", "graph.show_legend",
-                    "autoSendSelection",
+    settingsList = ["autoSendSelection",
                     "toolbarSelection", "graph.showStatistics", "colorSettings", "selectedSchemaIndex",
                     "showAllAttributes"]
     jitterSizeNums = [0, 2, 5, 10, 15, 20, 30]
-    contextHandlers = {"": DomainContextHandler("")}
-    # FIXME: , [
-    #ContextField("shownAttributes", DomainContextHandler.RequiredList, selected="selectedShown",
-    #             reservoir="hiddenAttributes")])}
 
     graph = SettingProvider(OWParallelGraph)
 
@@ -70,11 +63,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.colorSettings = None
         self.selectedSchemaIndex = 0
 
-        self.graph.jitterSize = 10
-        self.graph.showDistributions = 1
         self.graph.showStatistics = 0
-        self.graph.showAttrValues = 1
-        self.graph.useSplines = 0
 
         #GUI
         self.tabs = gui.tabWidget(self.controlArea)
@@ -94,20 +83,20 @@ class OWParallelCoordinates(OWVisWidget):
         # ####################################
         # SETTINGS functionality
         box = gui.widgetBox(self.SettingsTab, "Transparency")
-        gui.hSlider(box, self, 'graph.alphaValue', label="Examples: ", minValue=0, maxValue=255, step=10,
+        gui.hSlider(box, self, 'graph.alpha_value', label="Examples: ", minValue=0, maxValue=255, step=10,
                     callback=self.updateGraph, tooltip="Alpha value used for drawing example lines")
-        gui.hSlider(box, self, 'graph.alphaValue2', label="Rest:     ", minValue=0, maxValue=255, step=10,
+        gui.hSlider(box, self, 'graph.alpha_value_2', label="Rest:     ", minValue=0, maxValue=255, step=10,
                     callback=self.updateGraph, tooltip="Alpha value used to draw statistics, example subsets, ...")
 
         box = gui.widgetBox(self.SettingsTab, "Jittering Options")
-        gui.comboBox(box, self, "graph.jitterSize", label='Jittering size (% of size):  ', orientation='horizontal',
+        gui.comboBox(box, self, "graph.jitter_size", label='Jittering size (% of size):  ', orientation='horizontal',
                      callback=self.setJitteringSize, items=self.jitterSizeNums, sendSelectedValue=True, valueType=float)
 
         # visual settings
         box = gui.widgetBox(self.SettingsTab, "Visual Settings")
 
-        gui.checkBox(box, self, 'graph.showAttrValues', 'Show attribute values', callback=self.updateGraph)
-        gui.checkBox(box, self, 'graph.useSplines', 'Show splines', callback=self.updateGraph,
+        gui.checkBox(box, self, 'graph.show_attr_values', 'Show attribute values', callback=self.updateGraph)
+        gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.updateGraph,
                      tooltip="Show lines using splines")
 
         self.graph.gui.show_legend_check_box(box)
@@ -131,7 +120,7 @@ class OWParallelCoordinates(OWVisWidget):
                      items=["No labels", "Correlations", "VizRank"], callback=self.updateGraph,
                      tooltip="The information do you wish to view on top in the middle of coordinate axes",
                      sendSelectedValue=True, valueType=str)
-        gui.checkBox(box, self, 'graph.showDistributions', 'Show distributions', callback=self.updateGraph,
+        gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.updateGraph,
                      tooltip="Show bars with distribution of class values (only for discrete attributes)")
 
         box = gui.widgetBox(self.SettingsTab, "Colors", orientation="horizontal")
@@ -211,19 +200,17 @@ class OWParallelCoordinates(OWVisWidget):
 
 
     # attribute selection signal - list of attributes to show
-    def setShownAttributes(self, attributeSelectionList):
-        self.attributeSelectionList = attributeSelectionList
+    def setShownAttributes(self, shown_attributes):
+        self.shown_attributes = shown_attributes
 
 
     # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
     def handleNewSignals(self):
         self.graph.setData(self.data, self.subsetData)
-        if self.attributeSelectionList and 0 not in [attr in self.graph.attributeNameIndex for attr in
-                                                     self.attributeSelectionList]:
-            self.setShownAttributeList(self.attributeSelectionList)
+        if self.shown_attributes:
+            self.setShownAttributeList(self.shown_attributes)
         else:
             self.setShownAttributeList()
-        self.attributeSelectionList = None
         self.updateGraph()
         self.sendSelections()
 
@@ -290,3 +277,5 @@ if __name__ == "__main__":
     ow.handleNewSignals()
 
     a.exec_()
+
+    ow.settingsHandler.update_class_defaults(ow)

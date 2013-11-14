@@ -26,6 +26,12 @@ MEDIAN = 2
 
 
 class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
+    show_distributions = Setting(False)
+    show_attr_values = Setting(True)
+    use_splines = Setting(False)
+    alpha_value = Setting(150)
+    alpha_value_2 = Setting(150)
+
     def __init__(self, widget, parent=None, name=None):
         widget.settingsHandler.get_provider(self).initialize(self)
         OWPlot.__init__(self, parent, name, axes=[], widget=widget)
@@ -34,16 +40,12 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         self.update_antialiasing(False)
 
         self.parallelDlg = widget
-        self.showDistributions = 0
         self.toolRects = []
-        self.useSplines = 0
         self.showStatistics = 0
         self.lastSelectedCurve = None
         self.enableGridXB(0)
         self.enableGridYL(0)
         self.domainContingency = None
-        self.alphaValue = 150
-        self.alphaValue2 = 150
         self.autoUpdateAxes = 1
         self.oldLegendKeys = []
         self.selectionConditions = {}
@@ -125,16 +127,16 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             # if we have selected some conditions and the example does not match it we show it as a subset data
             if 0 in [self.selectionConditions[name][0] <= data[index] <= self.selectionConditions[name][1]
                      for (name, index) in list(conditions.items())]:
-                alpha = self.alphaValue2
+                alpha = self.alpha_value_2
                 curves = subCurves
                 self.unselectedExamples.append(i)
             # if we have subset data then use alpha2 for main data and alpha for subset data
             elif self.have_subset_data and self.raw_data[i].id not in subsetIdsToDraw:
-                alpha = self.alphaValue2
+                alpha = self.alpha_value_2
                 curves = subCurves
                 self.unselectedExamples.append(i)
             else:
-                alpha = self.alphaValue
+                alpha = self.alpha_value
                 curves = mainCurves
                 self.selectedExamples.append(i)
                 #FIXME:
@@ -165,10 +167,10 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
                 if 0 in [self.selectionConditions[name][0] <= data[index] <= self.selectionConditions[name][1]
                          for (name, index) in list(conditions.items())]:
-                    newColor += (self.alphaValue2,)
+                    newColor += (self.alpha_value_2,)
                     curves = subCurves
                 else:
-                    newColor += (self.alphaValue,)
+                    newColor += (self.alpha_value,)
                     curves = mainCurves
 
                 if newColor not in curves:
@@ -180,7 +182,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         keys.sort()     # otherwise the order of curves change when we slide the alpha slider
         for key in keys:
             curve = ParallelCoordinatesCurve(len(attributes), mainCurves[key], key)
-            curve.fitted = self.useSplines
+            curve.fitted = self.use_splines
             curve.attach(self)
 
         # add sub curves
@@ -188,12 +190,12 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         keys.sort()     # otherwise the order of curves change when we slide the alpha slider
         for key in keys:
             curve = ParallelCoordinatesCurve(len(attributes), subCurves[key], key)
-            curve.fitted = self.useSplines
+            curve.fitted = self.use_splines
             curve.attach(self)
 
         # ############################################
         # do we want to show distributions with discrete attributes
-        if self.showDistributions and self.data_has_discrete_class and self.have_data:
+        if self.show_distributions and self.data_has_discrete_class and self.have_data:
             self.showDistributionValues(validData, indices)
 
         self.draw_axes(attributes)
@@ -251,7 +253,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     if data[i][c] == (): continue
                     x = i - 0.03 * (len(data[i]) - 1) / 2.0 + c * 0.03
                     col = QColor(self.discPalette[c])
-                    col.setAlpha(self.alphaValue2)
+                    col.setAlpha(self.alpha_value_2)
                     self.addCurve("", col, col, 3, OWCurve.Lines, OWPoint.NoSymbol, xData=[x, x, x],
                                   yData=[data[i][c][0], data[i][c][1], data[i][c][2]], lineWidth=4)
                     self.addCurve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
@@ -278,13 +280,13 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     else:
                         if len(xs) > 1:
                             col = QColor(self.discPalette[c])
-                            col.setAlpha(self.alphaValue2)
+                            col.setAlpha(self.alpha_value_2)
                             self.addCurve("", col, col, 1, OWCurve.Lines,
                                           OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
                         xs = []
                         ys = []
                 col = QColor(self.discPalette[c])
-                col.setAlpha(self.alphaValue2)
+                col.setAlpha(self.alpha_value_2)
                 self.addCurve("", col, col, 1, OWCurve.Lines,
                               OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
 
@@ -325,8 +327,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             a.text_margin = 0
             a.setZValue(5)
             self.set_axis_title(id, self.data_domain[attributes[i]].name)
-            self.set_show_axis_title(id, self.showAttrValues)
-            if self.showAttrValues == 1:
+            self.set_show_axis_title(id, self.show_attr_values)
+            if self.show_attr_values == 1:
                 attr = self.data_domain[attributes[i]]
                 if attr.var_type == VarTypes.Continuous:
                     self.set_axis_scale(id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
@@ -384,7 +386,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     clsVal = classValueSorted[i]
 
                     newColor = QColor(self.discPalette[i])
-                    newColor.setAlpha(self.alphaValue)
+                    newColor.setAlpha(self.alpha_value)
 
                     width = float(attrValCont[clsVal] * 0.5) / float(maxVal)
                     interval = 1.0 / float(2 * attrLen)
