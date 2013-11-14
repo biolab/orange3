@@ -334,8 +334,8 @@ class WidgetDiscovery(object):
         desc = None
         try:
             desc = WidgetDescription.from_module(module)
-        except WidgetSpecificationError:
-            exc_info = sys.exc_info()
+        except WidgetSpecificationError as ex:
+            exc_info = ex
 
         if desc is None:
             # Is it an old style widget file.
