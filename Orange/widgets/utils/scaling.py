@@ -78,7 +78,6 @@ class ScaleData:
         self.have_data = False
         self.have_subset_data = False
 
-        self.jitter_size = 10
         self.jitter_continuous = 0
         self.jitter_seed = 0
 
