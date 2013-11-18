@@ -263,36 +263,21 @@ class SettingsHandler:
         default_settings = self.default_provider.get_defaults()
         pickle.dump(default_settings, settings_file, -1)
 
-    def initialize(self, widget, data=None):
+    def initialize(self, instance, data=None):
         """
         Initialize the widget's settings.
 
-        Before calling this method, the widget instance does not have its
-        own settings to shadow the class attributes. (E.g. if widget class
-        `MyWidget` has an attribute `point_size`, the class has attribute
-        `MyWidget.point_size`, but there is not 'self.point_size`).
+        Replace all instance settings with their default values.
 
-        If the widget was loaded from a schema, the schema provides the data
-        (as a dictionary or bytes). The instance's attributes (e.g.
-        `self.point_size`) are in this case initialized from `data`
-        (e.g. `data['point_size']`).
-
-        If there is no data or the data does not include a particular
-        setting, the class setting is (shallow-)copied to the instance if it
-        is mutable. Immutable settings are kept in the class.
-
-        Derived classes can add or retrieve additional information in the data,
-        such as local contexts.
-
-        :param widget: the widget whose settings are initialized
-        :type widget: OWWidget
-        :param data: Widget-specific default data the overrides the class
-                    defaults
+        :param instance: the instance whose settings will be initialized
+        :param data: dict of values that will be used instead of defaults.
         :type data: `dict` or `bytes` that unpickle into a `dict`
         """
+        provider = self.default_provider.get_provider(instance.__class__)
+
         if isinstance(data, bytes):
             data = pickle.loads(data)
-        self.default_provider.initialize(widget, data)
+        provider.initialize(instance, data)
 
     def pack_data(self, widget):
         """
@@ -385,15 +370,15 @@ class ContextHandler(SettingsHandler):
         self.global_contexts = []
         self.known_settings = []
 
-    def initialize(self, widget, data=None):
+    def initialize(self, instance, data=None):
         """Initialize the widget: call the inherited initialization and
         add an attribute 'context_settings' to the widget. This method
         does not open a context."""
-        super().initialize(widget, data)
+        super().initialize(instance, data)
         if data and "context_settings" in data:
-            widget.context_settings = data["context_settings"]
+            instance.context_settings = data["context_settings"]
         else:
-            widget.context_settings = self.global_contexts
+            instance.context_settings = self.global_contexts
 
     def read_defaults_file(self, settings_file):
         """Call the inherited method, then read global context from the
