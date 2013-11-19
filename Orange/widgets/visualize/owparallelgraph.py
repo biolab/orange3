@@ -573,41 +573,52 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 # ####################################################################
 # a curve that is able to draw several series of lines
 class ParallelCoordinatesCurve(OWCurve):
-    def __init__(self, attrCount, yData, color, name=""):
+    def __init__(self, n_attributes, y_values, color, name=""):
         OWCurve.__init__(self, tooltip=name)
         self._item = QGraphicsPathItem(self)
         self.fitted = False
         self.set_style(OWCurve.Lines)
 
-        lineCount = int(len(yData) / attrCount)
-        self.attrCount = attrCount
+        line_count = int(len(y_values) / n_attributes)
+        self.n_attributes = n_attributes
 
         if type(color) == tuple:
             self.set_pen(QPen(QColor(*color)))
         else:
             self.set_pen(QPen(QColor(color)))
 
-        self.set_data(list(range(attrCount)) * lineCount, yData)
+        x_values = list(range(n_attributes)) * line_count
+        self.set_data(x_values, y_values)
 
     def update_properties(self):
         if self.fitted:
-            path = self.cubicPath()
+            path = self.cubic_path()
         else:
-            path = QPainterPath()
-            for x, y in self.data():
-                path.lineTo(x, y)
+            path = self.normal_path()
         self._item.setPath(self.graph_transform().map(path))
         self._item.setPen(self.pen())
 
-    def cubicPath(self):
+    def cubic_path(self):
         path = QPainterPath()
         data = self.data()
-        for i in range(int(len(data) / self.attrCount)):
-            segment = data[i * self.attrCount: (i + 1) * self.attrCount]
+        for i in range(int(len(data) / self.n_attributes)):
+            segment = data[i * self.n_attributes: (i + 1) * self.n_attributes]
             for i, p in enumerate(segment[:-1]):
                 x1, y1 = p
                 x2, y2 = segment[i + 1]
                 path.moveTo(x1, y1)
                 path.cubicTo(QPointF(x1 + 0.5, y1),
                              QPointF(x2 - 0.5, y2), QPointF(x2, y2))
+        return path
+
+    def normal_path(self):
+        path = QPainterPath()
+        data = self.data()
+        for i in range(int(len(data) / self.n_attributes)):
+            segment = data[i * self.n_attributes: (i + 1) * self.n_attributes]
+            for i, p in enumerate(segment[:-1]):
+                x1, y1 = p
+                x2, y2 = segment[i + 1]
+                path.moveTo(x1, y1)
+                path.lineTo(x2, y2)
         return path
