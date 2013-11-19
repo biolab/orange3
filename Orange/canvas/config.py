@@ -150,10 +150,11 @@ def data_dir():
     does not yet exists then create it.
 
     """
+    import Orange
     init()
     datadir = QDesktopServices.storageLocation(QDesktopServices.DataLocation)
     datadir = str(datadir)
-    datadir = os.path.join(datadir, 'Orange3')
+    datadir = os.path.join(datadir, Orange.__version__)
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     return datadir
@@ -164,10 +165,11 @@ def cache_dir():
     does not yet exists then create it.
 
     """
+    import Orange
     init()
     cachedir = QDesktopServices.storageLocation(QDesktopServices.CacheLocation)
     cachedir = str(cachedir)
-    cachedir = os.path.join(cachedir, 'Orange3')
+    cachedir = os.path.join(cachedir, Orange.__version__)
     if not os.path.exists(cachedir):
         os.makedirs(cachedir)
     return cachedir

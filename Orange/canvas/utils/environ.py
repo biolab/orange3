@@ -77,9 +77,6 @@ The following variables are exposed as top level module members
 `orange_settings_dir`:
     Directory where Orange settings are saved.
 
-`canvas_settings_dir`:
-    Directory where Orange Canvas settings are saved.
-
 `widget_settings_dir`:
     Directory where Orange Widgets settings are saved.
 
@@ -91,36 +88,21 @@ The following variables are exposed as top level module members
 
 """
 
+
+from .. import config
 import os, sys
 import configparser
 import pkg_resources
 from pkg_resources import working_set
-from functools import cmp_to_key
 
-def _path_fix():
-    """ Fix some common problems with $(PATH) and sys.path
-    """
-    if os.name == "nt":
-        ## Move any miktex paths containing Qt's dll to the end of the %PATH%
-        paths = os.environ["PATH"].split(";")
-        paths.sort(key = cmp_to_key(lambda x,y: -1 if "PyQt4" in x else (1 if "miktex" in y and\
-                                                              os.path.exists(os.path.join(y, "QtCore4.dll")) else 0)))
-        os.environ["PATH"] = ";".join(paths)
+import Orange
 
-    if sys.platform == "darwin":
-        ## PyQt4 installed from fink is installed in %{FINK_ROOT}lib/qt4-mac/lib/python${PYVERSION}/site-packages"
-        posible_fink_pyqt4_path = os.path.join(sys.prefix,
-                                               "lib/qt4-mac/lib/python" + sys.version[:3] + "/site-packages")
-        if os.path.exists(posible_fink_pyqt4_path):
-            sys.path.append(posible_fink_pyqt4_path)
-
-_path_fix()
 
 def _get_default_env():
     """ Return a dictionary with default Orange environment."""
 
-    version = "orange"
-    version_display = "Orange 2.6"
+    version = Orange.__version__
+    version_display = "Orange %s" % version
     orange_no_deprecated_members = "False"
 
     install_dir = os.path.dirname(os.path.abspath(__file__)) # Orange/canvas/utils
@@ -137,20 +119,14 @@ def _get_default_env():
 
     home = os.path.expanduser("~/")
 
+    application_dir = config.data_dir()
+    output_dir = application_dir
+
     if sys.platform == "win32":
         if home[-1] == ":":
             home += "\\"
-        application_dir = os.environ["APPDATA"]
-        output_dir = os.path.join(application_dir, version)
         default_reports_dir = os.path.join(home, "My Documents")
-    elif sys.platform == "darwin":
-        application_dir = os.path.join(home, "Library", "Application Support")
-        output_dir = os.path.join(application_dir, version)
-        default_reports_dir = os.path.join(home, "Documents")
     else:
-        application_dir = home
-        output_dir = os.path.join(home, "." + version)
-
         documents = os.path.join(home, "Documents")
         # Need to make sure Documents folder actually exists
         if os.path.exists(documents) and os.path.isdir(documents):
@@ -160,14 +136,10 @@ def _get_default_env():
 
     add_ons_dir_user = os.path.join(output_dir, "add-ons")
 
-    orange_settings_dir = os.path.join(output_dir, "Orange3Settings")
-    canvas_settings_dir = os.path.join(output_dir, "Orange3CanvasSettings")
-    widget_settings_dir = os.path.join(output_dir, "Orange3WidgetSettings")
+    orange_settings_dir = output_dir
+    widget_settings_dir = os.path.join(output_dir, "widgets")
 
-    if sys.platform == "darwin":
-        buffer_dir = os.path.join(home, "Library", "Caches", version)
-    else:
-        buffer_dir = os.path.join(output_dir, "buffer")
+    buffer_dir = config.cache_dir()
 
     return locals()
 
@@ -179,7 +151,7 @@ _ALL_DIR_OPTIONS = ["install_dir", "canvas_install_dir",
                     "doc_install_dir", "dataset_install_dir",
                     "add_ons_dir", "add_ons_dir_user",
                     "application_dir", "output_dir", "default_reports_dir",
-                    "orange_settings_dir", "canvas_settings_dir",
+                    "orange_settings_dir",
                     "widget_settings_dir", "buffer_dir"]
 
 def get_platform_option(section, option):
@@ -239,7 +211,6 @@ if not os.path.isdir(widget_install_dir) or not os.path.isdir(widget_install_dir
     # Canvas and widgets are not installed
     canvas_install_dir = None
     widget_install_dir = None
-    canvas_settings_dir = None
     widget_settings_dir = None
     is_canvas_installed = False
 else:
@@ -257,7 +228,7 @@ version = get_platform_option("Orange", "version")
 # TODO: This are not needed if using orange without the GUI
 
 _directories_to_create = ["application_dir", "orange_settings_dir",
-                          "buffer_dir", "widget_settings_dir", "canvas_settings_dir"]
+                          "buffer_dir", "widget_settings_dir"]
 
 for dname in _directories_to_create:
     dname = globals()[dname]
