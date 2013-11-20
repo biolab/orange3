@@ -49,8 +49,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         self.autoUpdateAxes = 1
         self.oldLegendKeys = []
         self.selectionConditions = {}
-        self.visualizedAttributes = []
-        self.visualizedMidLabels = []
+        self.visualized_attributes = []
+        self.visualized_mid_labels = []
         self.selectedExamples = []
         self.unselectedExamples = []
         self.bottomPixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/upgreenarrow.png"))
@@ -63,13 +63,13 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
     # update shown data. Set attributes, coloring by className ....
     def updateData(self, attributes, midLabels=None, updateAxisScale=1):
-        if attributes != self.visualizedAttributes:
+        if attributes != self.visualized_attributes:
             self.selectionConditions = {}       # reset selections
 
         self.clear()
 
-        self.visualizedAttributes = []
-        self.visualizedMidLabels = []
+        self.visualized_attributes = []
+        self.visualized_mid_labels = []
         self.selectedExamples = []
         self.unselectedExamples = []
 
@@ -78,18 +78,16 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         if len(attributes) < 2:
             return
 
-        self.visualizedAttributes = attributes
-        self.visualizedMidLabels = midLabels
+        self.visualized_attributes = attributes
+        self.visualized_mid_labels = midLabels
         for name in list(
                 self.selectionConditions.keys()):        # keep only conditions that are related to the currently visualized attributes
-            if name not in self.visualizedAttributes:
+            if name not in self.visualized_attributes:
                 self.selectionConditions.pop(name)
 
         # set the limits for panning
         self.xPanningInfo = (1, 0, len(attributes) - 1)
-        self.yPanningInfo = (
-            0, 0,
-            0)   # we don't enable panning in y direction so it doesn't matter what values we put in for the limits
+        self.yPanningInfo = (0, 0, 0)
 
         length = len(attributes)
         indices = [self.attribute_name_index[label] for label in attributes]
@@ -154,8 +152,10 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             validSubsetData = self.getValidSubsetList(indices)
 
             for i in range(len(self.rawSubsetData)):
-                if not validSubsetData[i]: continue
-                if self.rawSubsetData[i].id not in subsetIdsToDraw: continue
+                if not validSubsetData[i]:
+                    continue
+                if self.rawSubsetData[i].id not in subsetIdsToDraw:
+                    continue
 
                 data = [self.scaledSubsetData[index][i] for index in indices]
                 if not self.data_domain.class_var or self.rawSubsetData[i].getclass().isSpecial():
@@ -178,16 +178,14 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                 curves[newColor].extend(data)
 
         # add main curves
-        keys = list(mainCurves.keys())
-        keys.sort()     # otherwise the order of curves change when we slide the alpha slider
+        keys = sorted(mainCurves.keys())
         for key in keys:
             curve = ParallelCoordinatesCurve(len(attributes), mainCurves[key], key)
             curve.fitted = self.use_splines
             curve.attach(self)
 
         # add sub curves
-        keys = list(subCurves.keys())
-        keys.sort()     # otherwise the order of curves change when we slide the alpha slider
+        keys = sorted(subCurves.keys())
         for key in keys:
             curve = ParallelCoordinatesCurve(len(attributes), subCurves[key], key)
             curve.fitted = self.use_splines
@@ -218,10 +216,11 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                         dev = array.std()
                         data.append([(m - dev, m, m + dev)])
                     elif self.showStatistics == MEDIAN:
-                        sorted = np.sort(array)
-                        if len(sorted) > 0:
-                            data.append([(sorted[int(len(sorted) / 4.0)], sorted[int(len(sorted) / 2.0)],
-                                          sorted[int(len(sorted) * 0.75)])])
+                        sorted_array = np.sort(array)
+                        if len(sorted_array) > 0:
+                            data.append([(sorted_array[int(len(sorted_array) / 4.0)],
+                                          sorted_array[int(len(sorted_array) / 2.0)],
+                                          sorted_array[int(len(sorted_array) * 0.75)])])
                         else:
                             data.append([(0, 0, 0)])
                 else:
@@ -242,9 +241,9 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                             dev = arr_c.std()
                             curr.append((m - dev, m, m + dev))
                         elif self.showStatistics == MEDIAN:
-                            sorted = np.sort(arr_c)
-                            curr.append((sorted[int(len(arr_c) / 4.0)], sorted[int(len(arr_c) / 2.0)],
-                                         sorted[int(len(arr_c) * 0.75)]))
+                            sorted_array = np.sort(arr_c)
+                            curr.append((sorted_array[int(len(arr_c) / 4.0)], sorted_array[int(len(arr_c) / 2.0)],
+                                         sorted_array[int(len(arr_c) * 0.75)]))
                     data.append(curr)
 
             # draw vertical lines
@@ -414,7 +413,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             xFloat = self.inv_transform(xBottom, canvasPos.x())
             contact, (index, pos) = self.testArrowContact(int(round(xFloat)), canvasPos.x(), canvasPos.y())
             if contact:
-                attr = self.data_domain[self.visualizedAttributes[index]]
+                attr = self.data_domain[self.visualized_attributes[index]]
                 if attr.var_type == VarTypes.Continuous:
                     condition = self.selectionConditions.get(attr.name, [0, 1])
                     val = self.attr_values[attr.name][0] + condition[pos] * (
@@ -448,16 +447,16 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     def testArrowContact(self, indices, x, y):
         if type(indices) != list: indices = [indices]
         for index in indices:
-            if index >= len(self.visualizedAttributes) or index < 0: continue
+            if index >= len(self.visualized_attributes) or index < 0: continue
             intX = self.transform(xBottom, index)
             bottom = self.transform(yLeft,
-                                    self.selectionConditions.get(self.visualizedAttributes[index], [0, 1])[0])
+                                    self.selectionConditions.get(self.visualized_attributes[index], [0, 1])[0])
             bottomRect = QRect(intX - self.bottomPixmap.width() / 2, bottom, self.bottomPixmap.width(),
                                self.bottomPixmap.height())
             if bottomRect.contains(QPoint(x, y)):
                 return 1, (index, 0)
             top = self.transform(yLeft,
-                                 self.selectionConditions.get(self.visualizedAttributes[index], [0, 1])[1])
+                                 self.selectionConditions.get(self.visualized_attributes[index], [0, 1])[1])
             topRect = QRect(intX - self.topPixmap.width() / 2, top - self.topPixmap.height(), self.topPixmap.width(),
                             self.topPixmap.height())
             if topRect.contains(QPoint(x, y)):
@@ -480,11 +479,11 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             canvasPos = self.mapToScene(e.pos())
             yFloat = min(1, max(0, self.inv_transform(yLeft, canvasPos.y())))
             index, pos = self.pressedArrow
-            attr = self.data_domain[self.visualizedAttributes[index]]
+            attr = self.data_domain[self.visualized_attributes[index]]
             oldCondition = self.selectionConditions.get(attr.name, [0, 1])
             oldCondition[pos] = yFloat
             self.selectionConditions[attr.name] = oldCondition
-            self.updateData(self.visualizedAttributes, self.visualizedMidLabels, updateAxisScale=0)
+            self.updateData(self.visualized_attributes, self.visualized_mid_labels, updateAxisScale=0)
 
             if attr.var_type == VarTypes.Continuous:
                 val = self.attr_values[attr.name][0] + oldCondition[pos] * (
@@ -536,7 +535,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
     def removeAllSelections(self, send=1):
         self.selectionConditions = {}
-        self.updateData(self.visualizedAttributes, self.visualizedMidLabels, updateAxisScale=0)
+        self.updateData(self.visualized_attributes, self.visualized_mid_labels, updateAxisScale=0)
         if send and self.autoSendSelectionCallback:
             self.autoSendSelectionCallback() # do we want to send new selection
 
@@ -545,9 +544,9 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         OWPlot.drawCanvas(self, painter)
         for i in range(
                 int(max(0, math.floor(self.axisScaleDiv(xBottom).interval().minValue()))),
-                int(min(len(self.visualizedAttributes),
+                int(min(len(self.visualized_attributes),
                         math.ceil(self.axisScaleDiv(xBottom).interval().maxValue()) + 1))):
-            bottom, top = self.selectionConditions.get(self.visualizedAttributes[i], (0, 1))
+            bottom, top = self.selectionConditions.get(self.visualized_attributes[i], (0, 1))
             painter.drawPixmap(self.transform(xBottom, i) - self.bottomPixmap.width() / 2,
                                self.transform(yLeft, bottom), self.bottomPixmap)
             painter.drawPixmap(self.transform(xBottom, i) - self.topPixmap.width() / 2,
