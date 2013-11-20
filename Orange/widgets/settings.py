@@ -242,7 +242,7 @@ class SettingsHandler:
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
         default_settings = pickle.load(settings_file)
-        self.default_provider.update_defaults(default_settings)
+        self.default_provider.set_defaults(default_settings)
 
     def write_defaults(self):
         """Write (global) defaults for this widget class to a file.
