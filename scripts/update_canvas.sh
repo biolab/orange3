@@ -17,8 +17,8 @@ rm -rf ../Orange/canvas
 mv canvas ../Orange/
 rm -rf biolab-orange-*
 git checkout -b merge-canvas-$rev || exit 1
-git add ../Orange/canvas
-git commit -am "Updated canvas to $rev"
+git add --all ../Orange/canvas
+git commit -am "Update canvas to $rev"
 
 echo "Please apply the patches using:"
 echo
@@ -28,8 +28,8 @@ echo "Fix any conflicts that arise."
 echo
 echo "When you are done, update the patches using:"
 echo
-echo "  git format-patch -o patches -6"
-echo "  git add patches"
+echo "  git format-patch -o patches -7"
+echo "  git add --all patches"
 echo "  git commit"
 echo
 echo "To merge updated canvas to master, run:"
