@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 class UserDefaultsPropertyBinding(AbstractBoundProperty):
     """
     A Property binding for a setting in a
-    :class:`Orange.OrangeCanvas.utility.settings.Settings` instance.
+    :class:`Orange.canvas.utility.settings.Settings` instance.
 
     """
     def __init__(self, obj, propertyName, parent=None):

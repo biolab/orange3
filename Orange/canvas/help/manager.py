@@ -6,6 +6,9 @@ import os
 import string
 import itertools
 import logging
+import email
+
+from distutils.version import StrictVersion
 
 from operator import itemgetter
 
@@ -178,43 +181,52 @@ def trim(string):
     return  "\n".join(trim_leading_lines(trim_trailing_lines(lines)))
 
 
-def parse_pkg_info(contents):
-    lines = contents.expandtabs().splitlines()
-    parsed = {}
-    current_block = None
-    for line in lines:
-        if line.startswith(" "):
-            parsed[current_block].append(line)
-        elif line.strip():
-            current_block, block_contents = line.split(": ", 1)
-            if current_block == "Classifier":
-                if current_block not in parsed:
-                    parsed[current_block] = [trim(block_contents)]
-                else:
-                    parsed[current_block].append(trim(block_contents))
-            else:
-                parsed[current_block] = [block_contents]
-
-    for key, val in list(parsed.items()):
-        if key != "Classifier":
-            parsed[key] = trim("\n".join(val))
-
-    return parsed
+# Fields allowing multiple use (from PEP-0345)
+MULTIPLE_KEYS = ["Platform", "Supported-Platform", "Classifier",
+                 "Requires-Dist", "Provides-Dist", "Obsoletes-Dist",
+                 "Project-URL"]
 
 
-def get_pkg_info_entry(dist, name):
+def parse_meta(contents):
+    message = email.message_from_string(contents)
+    meta = {}
+    for key in set(message.keys()):
+        if key in MULTIPLE_KEYS:
+            meta[key] = message.get_all(key)
+        else:
+            meta[key] = message.get(key)
+
+    version = StrictVersion(meta["Metadata-Version"])
+
+    if version >= StrictVersion("1.3") and "Description" not in meta:
+        desc = message.get_payload()
+        if desc:
+            meta["Description"] = desc
+    return meta
+
+
+def get_meta_entry(dist, name):
     """
     Get the contents of the named entry from the distributions PKG-INFO file
     """
-    pkg_info = parse_pkg_info(dist.get_metadata("PKG-INFO"))
-    return pkg_info[name]
+    meta = get_dist_meta(dist)
+    return meta.get(name)
 
 
 def get_dist_url(dist):
     """
     Return the 'url' of the distribution (as passed to setup function)
     """
-    return get_pkg_info_entry(dist, "Home-page")
+    return get_meta_entry(dist, "Home-page")
+
+
+def get_dist_meta(dist):
+    if dist.has_metadata("PKG-INFO"):
+        # egg-info
+        contents = dist.get_metadata("PKG-INFO")
+    elif dist.has_metadata("METADATA"):
+        contents = dist.get_metadata("METADATA")
+    return parse_meta(contents)
 
 
 def create_intersphinx_provider(entry_point):

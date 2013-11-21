@@ -1,7 +1,7 @@
-From d19056b241febcf7fe6a56b325edca30ff9c62b7 Mon Sep 17 00:00:00 2001
+From ade8069507386096e4a2907ac1100a6576a70b15 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Tue, 20 Aug 2013 13:42:50 +0200
-Subject: [PATCH 6/6] Base64 encode pickled settings when saving schema.
+Subject: [PATCH 6/7] Base64 encode pickled settings when saving schema.
 
 If settings cannot be encoded as text, they are pickled. Pickle returns
 bytes object, which cannot be stored in xml, so we base64 encode it.
@@ -10,7 +10,7 @@ bytes object, which cannot be stored in xml, so we base64 encode it.
  1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/Orange/canvas/scheme/readwrite.py b/Orange/canvas/scheme/readwrite.py
-index 0621627..3520727 100644
+index 6327dee..8bd9167 100644
 --- a/Orange/canvas/scheme/readwrite.py
 +++ b/Orange/canvas/scheme/readwrite.py
 @@ -2,6 +2,7 @@
@@ -19,9 +19,9 @@ index 0621627..3520727 100644
  """
 +import base64
  import sys
+ import warnings
  
- from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
-@@ -612,14 +613,14 @@ def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
+@@ -930,14 +931,14 @@ def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
                          exc_info=True)
  
      elif format == "pickle":
@@ -38,7 +38,7 @@ index 0621627..3520727 100644
      else:
          raise Exception("Something strange happened.")
  
-@@ -630,7 +631,7 @@ def loads(string, format):
+@@ -948,7 +949,7 @@ def loads(string, format):
      elif format == "json":
          return json.loads(string)
      elif format == "pickle":
@@ -48,5 +48,5 @@ index 0621627..3520727 100644
          raise ValueError("Unknown format")
  
 -- 
-1.8.2.3
+1.8.4.3
 

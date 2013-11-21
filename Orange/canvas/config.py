@@ -4,6 +4,7 @@ Orange Canvas Configuration
 """
 
 import os
+import sys
 import logging
 import pickle as pickle
 import itertools
@@ -173,6 +174,22 @@ def cache_dir():
     if not os.path.exists(cachedir):
         os.makedirs(cachedir)
     return cachedir
+
+
+def log_dir():
+    """
+    Return the application log directory.
+    """
+    init()
+    if sys.platform == "darwin":
+        name = str(QCoreApplication.applicationName())
+        logdir = os.path.join(os.path.expanduser("~/Library/Logs"), name)
+    else:
+        logdir = data_dir()
+
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+    return logdir
 
 
 def open_config():

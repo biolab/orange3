@@ -7,7 +7,7 @@ import logging
 
 from xml.sax import make_parser, handler, saxutils, SAXParseException
 
-from ..scheme.readwrite import parse_scheme
+from ..scheme.readwrite import scheme_load
 log = logging.getLogger(__name__)
 
 
@@ -78,7 +78,7 @@ def scheme_svg_thumbnail(scheme_file):
 
     scheme = scheme.Scheme()
     errors = []
-    parse_scheme(scheme, scheme_file, error_handler=errors.append)
+    scheme_load(scheme, scheme_file, error_handler=errors.append)
 
     tmp_scene = scene.CanvasScene()
     tmp_scene.set_registry(global_registry())
