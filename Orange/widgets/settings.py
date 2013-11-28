@@ -222,7 +222,7 @@ class SettingsHandler:
     def get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
         return os.path.join(environ.widget_settings_dir,
-                            self.widget_class._name + ".ini")
+                            self.widget_class.name + ".ini")
 
     # noinspection PyBroadException
     def read_defaults(self):

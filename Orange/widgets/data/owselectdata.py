@@ -8,14 +8,14 @@ import Orange.data.filter as data_filter
 
 
 class OWSelectData(widget.OWWidget):
-    _name = "Select Data"
-    _id = "Orange.widgets.data.file"
-    _description = "Selection of data based on values of variables"
-    _icon = "icons/SelectData.svg"
-    _priority = 100
-    _category = "Data"
-    _author = "Peter Juvan, Janez Demšar"
-    _author_email = "janez.demsar(@at@)fri.uni-lj.si"
+    name = "Select Data"
+    id = "Orange.widgets.data.file"
+    description = "Selection of data based on values of variables"
+    icon = "icons/SelectData.svg"
+    priority = 100
+    category = "Data"
+    author = "Peter Juvan, Janez Demšar"
+    author_email = "janez.demsar(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
     outputs = [("Matching Data", Table), ("Unmatched Data", Table)]
 

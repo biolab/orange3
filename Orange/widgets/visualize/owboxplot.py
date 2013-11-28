@@ -73,13 +73,13 @@ class OWBoxPlot(widget.OWWidget):
     constructed in advance (by layout_changed). Instead, layout_changed and
     display_changed call display_changed_disc that draws everything.
     """
-    _name = "Box plot"
-    _description = "Shows box plots"
-    _long_description = """Shows box plots, either one for or multiple
+    name = "Box plot"
+    description = "Shows box plots"
+    long_description = """Shows box plots, either one for or multiple
     box plots for data split by an attribute value."""
-    _icon = "icons/BoxPlot.svg"
-    _priority = 100
-    _author = "Amela Rakanović, Janez Demšar"
+    icon = "icons/BoxPlot.svg"
+    priority = 100
+    author = "Amela Rakanović, Janez Demšar"
     inputs = [("Data", Table, "data")]
     outputs = [("Basic statistic", Table)]
 

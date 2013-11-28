@@ -11,18 +11,18 @@ from Orange.data.sql.table import SqlTable
 
 
 class OWSql(widget.OWWidget):
-    _name = "SQL Table"
-    _id = "orange.widgets.data.sql"
-    _description = """
+    name = "SQL Table"
+    id = "orange.widgets.data.sql"
+    description = """
     Load dataset from SQL."""
-    _long_description = """
+    long_description = """
     Sql widget connects to server and opens data from there. """
-    _icon = "icons/SQLTable.svg"
-    _author = "Anze Staric"
-    _maintainer_email = "anze.staric@fri.uni-lj.si"
-    _priority = 10
-    _category = "Data"
-    _keywords = ["data", "file", "load", "read"]
+    icon = "icons/SQLTable.svg"
+    author = "Anze Staric"
+    maintainer_email = "anze.staric@fri.uni-lj.si"
+    priority = 10
+    category = "Data"
+    keywords = ["data", "file", "load", "read"]
     outputs = [{"name": "Data",
                 "type": Table,
                 "doc": "Attribute-valued data set read from the input file."}]
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     import os
     a = QtGui.QApplication(sys.argv)
     settings = os.path.join(widget.environ.widget_settings_dir,
-                          OWSql._name + ".ini")
+                          OWSql.name + ".ini")
     ow = OWSql()
     ow.show()
     a.exec_()

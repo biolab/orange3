@@ -19,13 +19,13 @@ from Orange.widgets import gui
 
 
 class OWParallelCoordinates(OWVisWidget):
-    _name = "Parallel Coordinates"
-    _description = "Shows parallel coordinates"
-    _long_description = """Shows parallel coordinates for multidimensional data with
+    name = "Parallel Coordinates"
+    description = "Shows parallel coordinates"
+    long_description = """Shows parallel coordinates for multidimensional data with
         many options."""
-    _icon = "icons/ParallelCoordinates.svg"
-    _priority = 100
-    _author = "Gregor Leban, Anze Staric"
+    icon = "icons/ParallelCoordinates.svg"
+    priority = 100
+    author = "Gregor Leban, Anze Staric"
     inputs = [("Data", Orange.data.Table, 'setData', Default),
               ("Data Subset", Orange.data.Table, 'setSubsetData'),
               ("Features", AttributeList, 'setShownAttributes')]

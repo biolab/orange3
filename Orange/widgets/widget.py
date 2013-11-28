@@ -52,7 +52,7 @@ class WidgetMetaClass(type(QDialog)):
             input_channel_from_args, output_channel_from_args)
 
         cls = type.__new__(mcs, name, bases, dict)
-        if not cls._name: # not a widget
+        if not cls.name: # not a widget
             return cls
 
         cls.inputs = list(map(input_channel_from_args, cls.inputs))
@@ -82,24 +82,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     widget_id = 0
 
     # Widget description
-    _name = None
-    _id = None
-    _category = None
-    _version = None
-    _description = None
-    _long_description = None
-    _icon = "icons/Unknown.png"
-    _priority = sys.maxsize
-    _author = None
-    _author_email = None
-    _maintainer = None
-    _maintainer_email = None
-    _help = None
-    _help_ref = None
-    _url = None
-    _keywords = []
-    _background = None
-    _replaces = None
+    name = None
+    id = None
+    category = None
+    version = None
+    description = None
+    long_description = None
+    icon = "icons/Unknown.png"
+    priority = sys.maxsize
+    author = None
+    author_email = None
+    maintainer = None
+    maintainer_email = None
+    help = None
+    help_ref = None
+    url = None
+    keywords = []
+    background = None
+    replaces = None
     inputs = []
     outputs = []
 
@@ -145,8 +145,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         #TODO: kill me
         self.__dict__.update(environ.directories)
 
-        if self._name:
-            self.setCaption(self._name.replace("&", ""))
+        if self.name:
+            self.setCaption(self.name.replace("&", ""))
         self.setFocusPolicy(Qt.StrongFocus)
 
         self.wrappers = [] # stored wrappers for widget events
@@ -620,7 +620,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 break
         else:
             raise ValueError("Widget {} has no signal {}"
-                             .format(self._name, signalName))
+                             .format(self.name, signalName))
 
         links = self.linksIn.setdefault(signalName, [])
         for _, widget, _, _ in links:

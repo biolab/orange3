@@ -10,12 +10,12 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, Setting
 
 class OWContinuize(widget.OWWidget):
-    _name = "Continuize"
-    _description = "Turns discrete attributes into continuous and, optionally, normalizes the continuous values."
-    _icon = "icons/Continuize.svg"
-    _author = "Martin Frlin"
-    _category = "Data"
-    _keywords = ["data", "continuize"]
+    name = "Continuize"
+    description = "Turns discrete attributes into continuous and, optionally, normalizes the continuous values."
+    icon = "icons/Continuize.svg"
+    author = "Martin Frlin"
+    category = "Data"
+    keywords = ["data", "continuize"]
 
     inputs = [("Data", Table, "setData")]
     outputs = [("Data", Table)]

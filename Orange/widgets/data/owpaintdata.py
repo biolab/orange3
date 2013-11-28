@@ -487,16 +487,16 @@ class OWPaintData(widget.OWWidget):
         ("Zoom", "Zoom", ZoomTool, _i("Dlg_zoom2.png"))
     ]
 
-    _name = "Paint Data"
-    _description = """
+    name = "Paint Data"
+    description = """
     Creates the data by painting on the graph."""
-    _long_description = """
+    long_description = """
     """
-    _icon = "icons/PaintData.svg"
-    _author = "Martin Frlin"
-    _priority = 10
-    _category = "Data"
-    _keywords = ["data", "paint", "create"]
+    icon = "icons/PaintData.svg"
+    author = "Martin Frlin"
+    priority = 10
+    category = "Data"
+    keywords = ["data", "paint", "create"]
     outputs = [("Data", Table)]
 
     commit_on_change = Setting(False)

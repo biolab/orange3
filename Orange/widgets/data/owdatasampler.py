@@ -29,14 +29,14 @@ from sklearn import cross_validation
 #     return (indices, list(set(basePool) - set(indices)))
 
 class OWDataSampler(widget.OWWidget):
-    _name = "Data Sampler"
-    _description = "Selects a subset of instances from the data set."
-    _long_description = ""
-    _icon = "icons/DataSampler.svg"
-    _author = "Martin Frlin"
-    _priority = 100
-    _category = "Data"
-    _keywords = ["data", "sample"]
+    name = "Data Sampler"
+    description = "Selects a subset of instances from the data set."
+    long_description = ""
+    icon = "icons/DataSampler.svg"
+    author = "Martin Frlin"
+    priority = 100
+    category = "Data"
+    keywords = ["data", "sample"]
     inputs = [("Data", Table, "setData")]
     outputs = [("Data Sample", Table), ("Remaining Data", Table)]
 

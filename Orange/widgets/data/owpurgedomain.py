@@ -7,12 +7,12 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 
 class OWPurgeDomain(widget.OWWidget):
-    _name = "Purge Domain"
-    _description = "Removes redundant values and attributes, sorts values."
-    _icon = "icons/PurgeDomain.svg"
-    _author = "Martin Frlin"
-    _category = "Data"
-    _keywords = ["data", "purge", "domain"]
+    name = "Purge Domain"
+    description = "Removes redundant values and attributes, sorts values."
+    icon = "icons/PurgeDomain.svg"
+    author = "Martin Frlin"
+    category = "Data"
+    keywords = ["data", "purge", "domain"]
 
     inputs = [("Data", Table, "setData")]
     outputs = [("Data", Table)]
