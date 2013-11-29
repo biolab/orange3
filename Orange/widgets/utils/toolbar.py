@@ -1,12 +1,25 @@
 import os.path
 
 from PyQt4.QtCore import SIGNAL, Qt
-from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout, QWidget, QVBoxLayout
+from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout
 
 from Orange.canvas.utils import environ
-from Orange.widgets.gui import widgetBox
 from Orange.widgets.settings import Setting
 
+SPACE = 0
+ZOOM = 1
+PAN = 2
+SELECT = 3
+RECTANGLE = 4
+POLYGON = 5
+REMOVE_LAST = 6
+REMOVE_ALL = 7
+SEND_SELECTION = 8
+ZOOM_EXTENT = 9
+ZOOM_SELECTION = 10
+
+# attr name used to store toolbars on a widget
+TOOLBARS_STORE = "__toolbars"
 
 icons = os.path.join(environ.widget_install_dir, "icons")
 dlg_zoom = os.path.join(icons, "Dlg_zoom.png")
@@ -23,214 +36,124 @@ dlg_browseRectangle = os.path.join(icons, "Dlg_browseRectangle.png")
 dlg_browseCircle = os.path.join(icons, "Dlg_browseCircle.png")
 
 
-def createButton(parent, text, action=None, icon=None, toggle=0):
-    btn = QToolButton(parent)
-    btn.setMinimumSize(30, 30)
-    if parent.layout() is not None:
-        parent.layout().addWidget(btn)
-    btn.setCheckable(toggle)
-    if action:
-        parent.connect(btn, SIGNAL("clicked()"), action)
-    if icon:
-        btn.setIcon(icon)
-    btn.setToolTip(text)
-    return btn
+class ToolbarButton:
+    def __init__(self, text, attr_name, ext_attr_name,
+                 icon=None, cursor=None, selectable=False):
+        self.text = text
+        self.attr_name = attr_name
+        self.ext_attr_name = ext_attr_name
+        self.icon = icon
+        self.cursor = cursor
+        self.selectable = selectable
 
 
 class ZoomSelectToolbar(QGroupBox):
-#                (tooltip, attribute containing the button, callback function, button icon, button cursor, toggle)
-    IconSpace, IconZoom, IconPan, IconSelect, IconRectangle, IconPolygon, \
-    IconRemoveLast, IconRemoveAll, IconSendSelection, IconZoomExtent, \
-    IconZoomSelection = range(11)
+    DefaultButtons = ZOOM, RECTANGLE, POLYGON, SPACE, REMOVE_LAST, REMOVE_ALL, SEND_SELECTION
+    SelectButtons = SELECT, RECTANGLE, POLYGON, SPACE, REMOVE_LAST, REMOVE_ALL, SEND_SELECTION
+    NavigateButtons = ZOOM, ZOOM_EXTENT, ZOOM_SELECTION, SPACE, PAN
 
-    DefaultButtons = 1, 4, 5, 0, 6, 7, 8
-    SelectButtons = 3, 4, 5, 0, 6, 7, 8
-    NavigateButtons = 1, 9, 10, 0, 2
-
-    selected_mode = Setting(0)
-
-    _builtin_functions = None
+    selected_button = Setting(0)
 
     @property
     def builtin_functions(self):
         if ZoomSelectToolbar._builtin_functions is None:
             ZoomSelectToolbar._builtin_functions = (
                 None,
-                ("Zooming", "buttonZoom", "activate_zooming",
-                 QIcon(dlg_zoom), Qt.ArrowCursor, 1),
-                ("Panning", "buttonPan", "activate_panning",
-                 QIcon(dlg_pan), Qt.OpenHandCursor, 1),
-                ("Selection", "buttonSelect", "activate_selection",
-                 QIcon(dlg_select), Qt.CrossCursor, 1),
-                ("Rectangle selection", "buttonSelectRect", "activate_rectangle_selection",
-                 QIcon(dlg_rect), Qt.CrossCursor, 1),
-                ("Polygon selection", "buttonSelectPoly", "activate_polygon_selection",
-                 QIcon(dlg_poly), Qt.CrossCursor, 1),
-                ("Remove last selection", "buttonRemoveLastSelection", "removeLastSelection",
-                 QIcon(dlg_undo), None, 0),
-                ("Remove all selections", "buttonRemoveAllSelections", "removeAllSelections",
-                 QIcon(dlg_clear), None, 0),
-                ("Send selections", "buttonSendSelections", "sendData",
-                 QIcon(dlg_send), None, 0),
-                ("Zoom to extent", "buttonZoomExtent", "zoomExtent",
-                 QIcon(dlg_zoom_extent), None, 0),
-                ("Zoom selection", "buttonZoomSelection", "zoomSelection",
-                 QIcon(dlg_zoom_selection), None, 0)
+                ToolbarButton("Zooming", "buttonZoom", "activate_zooming",
+                              QIcon(dlg_zoom), Qt.ArrowCursor, True),
+                ToolbarButton("Panning", "buttonPan", "activate_panning",
+                              QIcon(dlg_pan), Qt.OpenHandCursor, True),
+                ToolbarButton("Selection", "buttonSelect", "activate_selection",
+                              QIcon(dlg_select), Qt.CrossCursor, True),
+                ToolbarButton("Rectangle selection", "buttonSelectRect", "activate_rectangle_selection",
+                              QIcon(dlg_rect), Qt.CrossCursor, True),
+                ToolbarButton("Polygon selection", "buttonSelectPoly", "activate_polygon_selection",
+                              QIcon(dlg_poly), Qt.CrossCursor, True),
+                ToolbarButton("Remove last selection", "buttonRemoveLastSelection", "removeLastSelection",
+                              QIcon(dlg_undo)),
+                ToolbarButton("Remove all selections", "buttonRemoveAllSelections", "removeAllSelections",
+                              QIcon(dlg_clear)),
+                ToolbarButton("Send selections", "buttonSendSelections", "sendData",
+                              QIcon(dlg_send)),
+                ToolbarButton("Zoom to extent", "buttonZoomExtent", "zoomExtent",
+                              QIcon(dlg_zoom_extent)),
+                ToolbarButton("Zoom selection", "buttonZoomSelection", "zoomSelection",
+                              QIcon(dlg_zoom_selection))
             )
         return ZoomSelectToolbar._builtin_functions
+    _builtin_functions = None
 
-    def __init__(self, widget, parent, graph, autoSend=0, buttons=(1, 4, 5, 0, 6, 7, 8), name="Zoom / Select",
-                 exclusiveList="__toolbars"):
+    def __init__(self, widget, parent, graph, auto_send=False, buttons=DefaultButtons, name="Zoom / Select"):
         widget.settingsHandler.initialize(self)
         QGroupBox.__init__(self, name, parent)
 
+        self.widget_toolbars = self.register_toolbar(widget)
+
+        self.widget = widget
+        self.graph = graph
+        self.auto_send = auto_send
+
+        self.setup_toolbar(parent)
+        self.buttons = self.add_buttons(buttons)
+
+        self.action(self.selected_button)
+
+    def register_toolbar(self, widget):
+        if hasattr(widget, TOOLBARS_STORE):
+            getattr(widget, TOOLBARS_STORE).append(self)
+        else:
+            setattr(widget, TOOLBARS_STORE, [self])
+        return getattr(widget, TOOLBARS_STORE)
+
+    def setup_toolbar(self, parent):
         self.setLayout(QHBoxLayout())
         self.layout().setMargin(6)
         self.layout().setSpacing(4)
         if parent.layout() is not None:
             parent.layout().addWidget(self)
 
-        self.graph = graph  # save graph. used to send signals
-        self.exclusiveList = exclusiveList
-
-        self.widget = None
-        self.functions = [type(f) == int and self.builtin_functions[f] or f for f in buttons]
-        for b, f in enumerate(self.functions):
-            if not f:
-                self.layout().addSpacing(10)
+    def add_buttons(self, buttons):
+        buttons = [self.builtin_functions[f] if isinstance(f, int) else f for f in buttons]
+        for i, button in enumerate(buttons):
+            if not button:
+                self.add_spacing()
             else:
-                button = createButton(self, f[0], lambda x=b: self.action(x), f[3], toggle=f[5])
-                setattr(self, f[1], button)
-                if f[1] == "buttonSendSelections":
-                    button.setEnabled(not autoSend)
+                self.add_button(button, action=lambda x=i: self.action(x))
+        return buttons
 
-        if not hasattr(widget, exclusiveList):
-            setattr(widget, exclusiveList, [self])
-        else:
-            getattr(widget, exclusiveList).append(self)
+    def add_spacing(self):
+        self.layout().addSpacing(10)
 
-        self.widget = widget    # we set widget here so that it doesn't affect the value of self.widget.toolbarSelection
-        self.action(self.selected_mode)
+    def add_button(self, button: ToolbarButton, action=None):
+        btn = QToolButton(self)
+        btn.setMinimumSize(30, 30)
+        if self.layout() is not None:
+            self.layout().addWidget(btn)
+        btn.setCheckable(button.selectable)
+        if action:
+            self.connect(btn, SIGNAL("clicked()"), action)
+        if button.icon:
+            btn.setIcon(button.icon)
+        btn.setToolTip(button.text)
 
-    def action(self, b):
-        f = self.functions[b]
-        if not f:
+        setattr(self, button.attr_name, btn)
+        if button.attr_name == "buttonSendSelections":
+            btn.setEnabled(not self.auto_send)
+
+        return btn
+
+    def action(self, button_idx):
+        button = self.buttons[button_idx]
+        if not isinstance(button, ToolbarButton):
             return
 
-        if f[5]:
-            self.selected_mode = b
-            for tbar in getattr(self.widget, self.exclusiveList):
-                for fi, ff in enumerate(tbar.functions):
-                    if ff and ff[5]:
-                        getattr(tbar, ff[1]).setChecked(self == tbar and fi == b)
-        getattr(self.graph, f[2])()
+        if button.selectable:
+            self.selected_button = button_idx
+            for toolbar in self.widget_toolbars:
+                for ti, tbutton in enumerate(toolbar.buttons):
+                    if isinstance(tbutton, ToolbarButton) and tbutton.selectable:
+                        getattr(toolbar, tbutton.attr_name).setChecked(self == toolbar and ti == button_idx)
+        getattr(self.graph, button.ext_attr_name)()
 
-        cursor = f[4]
-        if not cursor is None:
-            self.graph.setCursor(cursor)
-
-
-class NavigateSelectToolbar(QWidget):
-#                (tooltip, attribute containing the button, callback function, button icon, button cursor, toggle)
-
-    IconSpace, IconZoom, IconPan, IconSelect, IconRectangle, IconPolygon, IconRemoveLast, \
-    IconRemoveAll, IconSendSelection, IconZoomExtent, IconZoomSelection = range(11)
-
-    _builtin_functions = None
-
-    @property
-    def builtin_functions(self):
-        if NavigateSelectToolbar._builtin_functions is None:
-            NavigateSelectToolbar._builtin_functions = (
-                None,
-                ("Zooming", "buttonZoom", "activateZooming", QIcon(dlg_zoom),
-                 Qt.CrossCursor, 1, "navigate"),
-                ("Panning", "buttonPan", "activatePanning", QIcon(dlg_pan),
-                 Qt.OpenHandCursor, 1, "navigate"),
-                ("Selection", "buttonSelect", "activateSelection",
-                 QIcon(dlg_select), Qt.ArrowCursor, 1, "select"),
-                ("Selection", "buttonSelectRect", "activateRectangleSelection",
-                 QIcon(dlg_select), Qt.ArrowCursor, 1, "select"),
-                ("Polygon selection", "buttonSelectPoly", "activatePolygonSelection",
-                 QIcon(dlg_poly), Qt.ArrowCursor, 1,
-                 "select"),
-                ("Remove last selection", "buttonRemoveLastSelection", "removeLastSelection",
-                 QIcon(dlg_undo), None, 0, "select"),
-                ("Remove all selections", "buttonRemoveAllSelections", "removeAllSelections",
-                 QIcon(dlg_clear), None, 0, "select"),
-                ("Send selections", "buttonSendSelections", "sendData",
-                 QIcon(dlg_send), None, 0, "select"),
-                ("Zoom to extent", "buttonZoomExtent", "zoomExtent",
-                 QIcon(dlg_zoom_extent), None, 0, "navigate"),
-                ("Zoom selection", "buttonZoomSelection", "zoomSelection",
-                 QIcon(dlg_zoom_selection), None, 0, "navigate")
-            )
-        return NavigateSelectToolbar._builtin_functions
-
-    def __init__(self, widget, parent, graph, autoSend=0, buttons=(1, 4, 5, 0, 6, 7, 8)):
-        QWidget.__init__(self, parent)
-        self.setLayout(QVBoxLayout())
-        self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0, 25, 0, 0)
-
-        if parent.layout() is not None:
-            parent.layout().addWidget(self)
-
-        self.navigate = widgetBox(self, 0, orientation="vertical", margin=2)
-        self.select = widgetBox(self, "", orientation="vertical")
-
-        self.graph = graph # save graph. used to send signals
-        self.widget = widget    # we set widget here so that it doesn't affect the value of self.widget.toolbarSelection
-
-        self.functions = [type(f) == int and self.builtin_functions[f] or f for f in buttons]
-        for b, f in enumerate(self.functions):
-            if not f:
-                #self.layout().addSpacing(10)
-                pass
-            elif f[0] == "" or f[1] == "" or f[2] == "":
-                self.navigate.layout().addSpacing(10)
-            else:
-                button = createButton(self.navigate, f[0], lambda x=b: self.action(x), f[3], toggle=f[5])
-                setattr(self.navigate, f[1], button)
-                if f[1] == "buttonSendSelections":
-                    button.setEnabled(not autoSend)
-
-        if hasattr(self.widget, "toolbarSelection"):
-            self.action(self.widget.toolbarSelection)
-        else:
-            self.action(0)
-
-    def action(self, b):
-        f = self.functions[b]
-        if not f:
-            return
-
-        if f[5]:
-            if hasattr(self.widget, "toolbarSelection"):
-                self.widget.toolbarSelection = b
-            for fi, ff in enumerate(self.functions):
-                if ff and ff[5]:
-                    #if ff[6] == "navigate":
-                    getattr(self.navigate, ff[1]).setChecked(fi == b)
-                    #if ff[6] == "select":
-                    #    getattr(self.select, ff[1]).setChecked(fi == b)
-
-        try:
-            getattr(self.graph, f[2])()
-        except:
-            getattr(self.widget, f[2])()
-
-        cursor = f[4]
-        if not cursor is None:
-            self.graph.setCursor(cursor)
-
-
-    # for backward compatibility with a previous version of this class
-    def actionZooming(self):
-        self.action(0)
-
-    def actionRectangleSelection(self):
-        self.action(3)
-
-    def actionPolygonSelection(self):
-        self.action(4)
+        if button.cursor is not None:
+            self.graph.setCursor(button.cursor)
