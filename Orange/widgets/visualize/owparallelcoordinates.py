@@ -56,20 +56,16 @@ class OWParallelCoordinates(OWVisWidget):
         self.graph = OWParallelGraph(self, self.mainArea)
         self.mainArea.layout().addWidget(self.graph)
 
-        #set default settings
         self.data = None
-        self.subsetData = None
-        self.attrDiscOrder = "Unordered"
-        self.attrContOrder = "Unordered"
-        self.projections = None
-        self.correlationDict = {}
-        self.middleLabels = "Correlations"
-        self.attributeSelectionList = None
+        self.subset_data = None
+        self.discrete_attribute_order = "Unordered"
+        self.continuous_attribute_order = "Unordered"
+        self.middle_labels = "Correlations"
 
         self.create_control_panel()
         self.color_picker = self.create_color_picker_dialog()
-        self.graph.contPalette = self.color_picker.getContinuousPalette(CONTINUOUS_PALETTE)
-        self.graph.discPalette = self.color_picker.getDiscretePalette(DISCRETE_PALETTE)
+        self.graph.continuous_palette = self.color_picker.getContinuousPalette(CONTINUOUS_PALETTE)
+        self.graph.discrete_palette = self.color_picker.getDiscretePalette(DISCRETE_PALETTE)
         self.graph.setCanvasBackground(self.color_picker.getColor(CANVAS_COLOR))
 
         self.toggle_show_all_attributes()
@@ -146,7 +142,7 @@ class OWParallelCoordinates(OWVisWidget):
         gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ", orientation="horizontal", labelWidth=90,
                      items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.update_graph,
                      sendSelectedValue=False, valueType=int)
-        gui.comboBox(box, self, "middleLabels", label="Middle labels: ", orientation="horizontal", labelWidth=90,
+        gui.comboBox(box, self, "middle_labels", label="Middle labels: ", orientation="horizontal", labelWidth=90,
                      items=["No labels", "Correlations", "VizRank"], callback=self.update_graph,
                      tooltip="The information do you wish to view on top in the middle of coordinate axes",
                      sendSelectedValue=True, valueType=str)
@@ -165,7 +161,7 @@ class OWParallelCoordinates(OWVisWidget):
                      tooltip="Send selected data whenever a selection area is added or removed")
         gui.checkBox(box, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas',
                      tooltip="Send selected data when a user moves or resizes an existing selection area")
-        self.graph.autoSendSelectionCallback = self.selectionChanged
+        self.graph.auto_send_selection_callback = self.selectionChanged
 
     def flip_attribute(self, item):
         if self.graph.flip_attribute(str(item.text())):
@@ -175,7 +171,7 @@ class OWParallelCoordinates(OWVisWidget):
             self.information(0, "Didn't flip the attribute. To flip a continuous "
                                 "attribute uncheck 'Global value scaling' checkbox.")
 
-    def update_graph(self, *args):
+    def update_graph(self):
         self.graph.updateData(self.shown_attributes)
 
     def increase_axes_distance(self):
@@ -199,30 +195,30 @@ class OWParallelCoordinates(OWVisWidget):
         if data and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if checksum(data) == checksum(self.data):
-            return # check if the new data set is the same as the old one
+            return  # check if the new data set is the same as the old one
 
         self.closeContext()
         same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
-        self.projections = None
-        self.correlationDict = {}
         self.data = data
+
         if not same_domain:
-            self.set_shown_attributes(self.attributeSelectionList)
+            self.shown_attributes = self.shown_attributes
+
         self.openContext(self.data)
+
         self.reset_attr_manipulation()
 
-    def set_subset_data(self, subData):
-        self.subsetData = subData
-
-    new_shown_attributes = None
+    def set_subset_data(self, subset_data):
+        self.subset_data = subset_data
 
     # attribute selection signal - list of attributes to show
     def set_shown_attributes(self, shown_attributes):
         self.new_shown_attributes = shown_attributes
+    new_shown_attributes = None
 
     # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
     def handleNewSignals(self):
-        self.graph.setData(self.data, self.subsetData)
+        self.graph.setData(self.data, self.subset_data)
         if self.new_shown_attributes:
             self.shown_attributes = self.new_shown_attributes
             self.new_shown_attributes = None
@@ -259,8 +255,8 @@ class OWParallelCoordinates(OWVisWidget):
         if dlg.exec_():
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
-            self.graph.contPalette = dlg.getContinuousPalette(CONTINUOUS_PALETTE)
-            self.graph.discPalette = dlg.getDiscretePalette(DISCRETE_PALETTE)
+            self.graph.continuous_palette = dlg.getContinuousPalette(CONTINUOUS_PALETTE)
+            self.graph.discrete_palette = dlg.getDiscretePalette(DISCRETE_PALETTE)
             self.graph.setCanvasBackground(dlg.getColor(CANVAS_COLOR))
             self.update_graph()
 

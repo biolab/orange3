@@ -491,8 +491,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
                 strVal = attr.name + "= %%.%df" % (attr.numberOfDecimals) % (val)
                 QToolTip.showText(e.globalPos(), strVal)
-            if self.sendSelectionOnUpdate and self.autoSendSelectionCallback:
-                self.autoSendSelectionCallback()
+            if self.sendSelectionOnUpdate and self.auto_send_selection_callback:
+                self.auto_send_selection_callback()
 
         else:
             OWPlot.mouseMoveEvent(self, e)
@@ -500,8 +500,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     def mouseReleaseEvent(self, e):
         if hasattr(self, "pressedArrow"):
             del self.pressedArrow
-            if self.autoSendSelectionCallback and not (self.sendSelectionOnUpdate and self.autoSendSelectionCallback):
-                self.autoSendSelectionCallback() # send the new selection
+            if self.auto_send_selection_callback and not (self.sendSelectionOnUpdate and self.auto_send_selection_callback):
+                self.auto_send_selection_callback() # send the new selection
         else:
             OWPlot.mouseReleaseEvent(self, e)
 
@@ -537,8 +537,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     def removeAllSelections(self, send=1):
         self.selectionConditions = {}
         self.updateData(self.visualized_attributes, self.visualized_mid_labels, updateAxisScale=0)
-        if send and self.autoSendSelectionCallback:
-            self.autoSendSelectionCallback() # do we want to send new selection
+        if send and self.auto_send_selection_callback:
+            self.auto_send_selection_callback() # do we want to send new selection
 
     # draw the curves and the selection conditions
     def drawCanvas(self, painter):
@@ -569,7 +569,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         if len(unselected) == 0: unselected = None
         return (selected, unselected)
 
-    def autoSendSelectionCallback(self):
+    def auto_send_selection_callback(self):
         pass
 
 

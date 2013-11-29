@@ -47,7 +47,6 @@ class OWVisWidget(OWWidget):
         self._hidden_attributes = hidden
         self.selected_hidden = []
         self.selected_shown = []
-        self.reset_attr_manipulation()
 
         self.trigger_attributes_changed()
 
@@ -114,12 +113,13 @@ class OWVisWidget(OWWidget):
         if self.selected_shown:
             mini, maxi = min(self.selected_shown), max(self.selected_shown)
             tight_selection = maxi - mini == len(self.selected_shown) - 1
-            valid_selection = mini > 0 and maxi < len(self._shown_attributes)
+            move_up_enabled = bool(self.selected_shown and tight_selection and mini > 0)
+            move_down_enabled = bool(self.selected_shown and tight_selection and maxi < len(self._shown_attributes) - 1)
         else:
-            tight_selection = valid_selection = False
+            move_up_enabled = move_down_enabled = False
 
-        self.move_attribute_up_button.setEnabled(bool(self.selected_shown and tight_selection and valid_selection))
-        self.move_attribute_down_button.setEnabled(bool(self.selected_shown and tight_selection and valid_selection))
+        self.move_attribute_up_button.setEnabled(move_up_enabled)
+        self.move_attribute_down_button.setEnabled(move_down_enabled)
         self.add_attribute_button.setDisabled(not self.selected_hidden or self.show_all_attributes)
         self.remove_attribute_button.setDisabled(not self.selected_shown or self.show_all_attributes)
         domain = self.get_data_domain()
@@ -149,14 +149,13 @@ class OWVisWidget(OWWidget):
             self._shown_attributes = attr[:mini] + [attr[maxi]] + attr[mini:maxi] + attr[maxi + 1:]
         self.selected_shown = [x + direction for x in self.selected_shown]
 
-        self.reset_attr_manipulation()
-
         self.trigger_attributes_changed()
 
     def toggle_show_all_attributes(self):
         if self.show_all_attributes:
             self.show_attribute(True)
-        self.reset_attr_manipulation()
+        else:
+            self.reset_attr_manipulation()
 
     def show_attribute(self, add_all=False):
         if add_all:
@@ -166,7 +165,6 @@ class OWVisWidget(OWWidget):
                 self._shown_attributes + [self._hidden_attributes[i] for i in self.selected_hidden]
         self.selected_hidden = []
         self.selected_shown = []
-        self.reset_attr_manipulation()
 
         self.trigger_attributes_changed()
 
@@ -185,6 +183,8 @@ class OWVisWidget(OWWidget):
             # We ignore those requests, a separate event will be triggered
             # manually when everything is initialized.
             return
+
+        self.reset_attr_manipulation()
         self.attributes_changed()
 
     def closeContext(self):
