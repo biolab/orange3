@@ -715,6 +715,8 @@ class DomainContextHandler(ContextHandler):
         matches = []
 
         def count_matches(setting, data, instance):
+            if not isinstance(setting, ContextSetting):
+                return
             value = data.get(setting.name, None)
 
             if isinstance(value, list):
