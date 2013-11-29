@@ -105,16 +105,12 @@ class ScaleData:
             full_data.extend(subset_data)
             return full_data
 
-    mergeDataSets = merge_data_sets
-
     def rescale_data(self):
         """
         Force the existing data to be rescaled due to changes like
         jitter_continuous, jitter_size, ...
         """
         self.set_data(self.raw_data, self.raw_subset_data, skipIfSame=0)
-
-    rescaleData = rescale_data
 
     def set_data(self, data, subset_data=None, **args):
         if args.get("skipIfSame", 1):
@@ -281,8 +277,6 @@ class ScaleData:
         self.scaled_data = scaled_data[:, :len_data]
         self.scaled_subset_data = scaled_data[:, len_data:]
 
-    setData = set_data
-
     def scale_example_value(self, instance, index):
         """
         Scale instance's value at index index to a range between 0 and 1 with
@@ -300,15 +294,11 @@ class ScaleData:
                 diff = 1          # if all values are the same then prevent division by zero
             return (instance[index] - self.domain_data_stat[index].min) / diff
 
-    scaleExampleValue = scale_example_value
-
     def get_attribute_label(self, attr_name):
         if self.attribute_flip_info.get(attr_name, 0) and \
                         self.data_domain[attr_name].var_type == VarTypes.Continuous:
             return "-" + attr_name
         return attr_name
-
-    getAttributeLabel = get_attribute_label
 
     def flip_attribute(self, attr_name):
         if attr_name not in self.attribute_names:
@@ -327,15 +317,11 @@ class ScaleData:
         self.no_jittering_scaled_subset_data[index] = 1 - self.no_jittering_scaled_subset_data[index]
         return 1
 
-    flipAttribute = flip_attribute
-
     def get_min_max_val(self, attr):
         if type(attr) == int:
             attr = self.attribute_names[attr]
         diff = self.attr_values[attr][1] - self.attr_values[attr][0]
         return diff or 1.0
-
-    getMinMaxVal = get_min_max_val
 
     def get_valid_list(self, indices, also_class_if_exists=1):
         """
@@ -352,8 +338,6 @@ class ScaleData:
         arr = np.add.reduce(selected_array)
         return np.equal(arr, len(inds))
 
-    getValidList = get_valid_list
-
     def get_valid_subset_list(self, indices, also_class_if_exists=1):
         """
         Get array of 0 and 1 of len = len(self.raw_subset_data). if there is a
@@ -368,8 +352,6 @@ class ScaleData:
         arr = np.add.reduce(selected_array)
         return np.equal(arr, len(inds))
 
-    getValidSubsetList = get_valid_subset_list
-
     def get_valid_indices(self, indices):
         """
         Get array with numbers that represent the instance indices that have a
@@ -378,8 +360,6 @@ class ScaleData:
         valid_list = self.get_valid_list(indices)
         return np.nonzero(valid_list)[0]
 
-    getValidIndices = get_valid_indices
-
     def get_valid_subset_indices(self, indices):
         """
         Get array with numbers that represent the instance indices that have a
@@ -387,8 +367,6 @@ class ScaleData:
         """
         valid_list = self.get_valid_subset_list(indices)
         return np.nonzero(valid_list)[0]
-
-    getValidSubsetIndices = get_valid_subset_indices
 
     def rnd_correction(self, max):
         """

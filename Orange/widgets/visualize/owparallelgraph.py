@@ -60,7 +60,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
     def setData(self, data, subsetData=None, **args):
         OWPlot.setData(self, data)
-        ScaleData.setData(self, data, subsetData, **args)
+        ScaleData.set_data(self, data, subsetData, **args)
         self.domainContingency = None
 
     # update shown data. Set attributes, coloring by className ....
@@ -105,8 +105,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         # draw the data
         # ############################################
         subsetIdsToDraw = self.have_subset_data and dict(
-            [(self.rawSubsetData[i].id, 1) for i in self.getValidSubsetIndices(indices)]) or {}
-        validData = self.getValidList(indices)
+            [(self.rawSubsetData[i].id, 1) for i in self.get_valid_subset_indices(indices)]) or {}
+        validData = self.get_valid_list(indices)
         mainCurves = {}
         subCurves = {}
         conditions = dict([(name, attributes.index(name)) for name in list(self.selectionConditions.keys())])
@@ -151,7 +151,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
         # if we have a data subset that contains examples that don't exist in the original dataset we show them here
         if subsetIdsToDraw != {}:
-            validSubsetData = self.getValidSubsetList(indices)
+            validSubsetData = self.get_valid_subset_list(indices)
 
             for i in range(len(self.rawSubsetData)):
                 if not validSubsetData[i]:

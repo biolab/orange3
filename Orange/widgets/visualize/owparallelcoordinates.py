@@ -1,6 +1,6 @@
 import sys
 
-from PyQt4.QtCore import SIGNAL, QSize
+from PyQt4.QtCore import SIGNAL
 from PyQt4.QtGui import QApplication
 
 from Orange.canvas.registry.description import Default
@@ -14,7 +14,7 @@ from Orange.widgets.utils.scaling import checksum
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
-from Orange.widgets.widget import OWWidget, AttributeList
+from Orange.widgets.widget import AttributeList
 from Orange.widgets import gui
 
 
@@ -31,9 +31,9 @@ class OWParallelCoordinates(OWVisWidget):
     icon = "icons/ParallelCoordinates.svg"
     priority = 100
     author = "Gregor Leban, Anze Staric"
-    inputs = [("Data", Orange.data.Table, 'setData', Default),
-              ("Data Subset", Orange.data.Table, 'setSubsetData'),
-              ("Features", AttributeList, 'setShownAttributes')]
+    inputs = [("Data", Orange.data.Table, 'set_data', Default),
+              ("Data Subset", Orange.data.Table, 'set_subset_data'),
+              ("Features", AttributeList, 'set_shown_attributes')]
     outputs = [("Selected Data", Orange.data.Table), ("Other Data", Orange.data.Table),
                ("Features", AttributeList)]
 
@@ -82,7 +82,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.general_tab = gui.createTabPage(self.control_tabs, "Main")
         self.settings_tab = gui.createTabPage(self.control_tabs, "Settings")
 
-        self.add_attribute_selection_area(self.general_tab, callback=self.updateGraph)
+        self.add_attribute_selection_area(self.general_tab, callback=self.update_graph)
         self.add_zoom_select_toolbar(self.general_tab)
 
         self.add_transparency_settings(self.settings_tab)
@@ -98,7 +98,7 @@ class OWParallelCoordinates(OWVisWidget):
 
     def add_attribute_selection_area(self, parent, callback=None):
         super().add_attribute_selection_area(parent, callback)
-        self.connect(self.shown_attributes_listbox, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flipAttribute)
+        self.connect(self.shown_attributes_listbox, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flip_attribute)
 
     #noinspection PyAttributeOutsideInit
     def add_zoom_select_toolbar(self, parent):
@@ -110,10 +110,10 @@ class OWParallelCoordinates(OWVisWidget):
     def add_transparency_settings(self, parent):
         box = gui.widgetBox(parent, "Transparency")
         gui.hSlider(box, self, 'graph.alpha_value', label="Examples: ",
-                    minValue=0, maxValue=255, step=10, callback=self.updateGraph,
+                    minValue=0, maxValue=255, step=10, callback=self.update_graph,
                     tooltip="Alpha value used for drawing example lines")
         gui.hSlider(box, self, 'graph.alpha_value_2', label="Rest:     ",
-                    minValue=0, maxValue=255, step=10, callback=self.updateGraph,
+                    minValue=0, maxValue=255, step=10, callback=self.update_graph,
                     tooltip="Alpha value used to draw statistics, example subsets, ...")
 
     def add_jittering_settings(self, parent):
@@ -124,8 +124,8 @@ class OWParallelCoordinates(OWVisWidget):
 
     def add_visual_settings(self, parent):
         box = gui.widgetBox(parent, "Visual Settings")
-        gui.checkBox(box, self, 'graph.show_attr_values', 'Show attribute values', callback=self.updateGraph)
-        gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.updateGraph,
+        gui.checkBox(box, self, 'graph.show_attr_values', 'Show attribute values', callback=self.update_graph)
+        gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.update_graph,
                      tooltip="Show lines using splines")
         self.graph.gui.show_legend_check_box(box)
 
@@ -133,29 +133,29 @@ class OWParallelCoordinates(OWVisWidget):
         box = gui.widgetBox(parent, "Axis Distance")
         resize_columns_box = gui.widgetBox(box, 0, "horizontal", 0)
         gui.label(resize_columns_box, self, "Increase/decrease distance: ")
-        gui.toolButton(resize_columns_box, self, "+", callback=self.increaseAxesDistance,
+        gui.toolButton(resize_columns_box, self, "+", callback=self.increase_axes_distance,
                        tooltip="Increase the distance between the axes", width=30, height=20)
-        gui.toolButton(resize_columns_box, self, "-", callback=self.decreaseAxesDistance,
+        gui.toolButton(resize_columns_box, self, "-", callback=self.decrease_axes_distance,
                        tooltip="Decrease the distance between the axes", width=30, height=20)
         gui.rubber(resize_columns_box)
         gui.checkBox(box, self, "graph.autoUpdateAxes", "Auto scale X axis",
-                     tooltip="Auto scale X axis to show all visualized attributes", callback=self.updateGraph)
+                     tooltip="Auto scale X axis to show all visualized attributes", callback=self.update_graph)
 
     def add_annotation_settings(self, parent):
         box = gui.widgetBox(parent, "Statistical Information")
         gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ", orientation="horizontal", labelWidth=90,
-                     items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.updateGraph,
+                     items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.update_graph,
                      sendSelectedValue=False, valueType=int)
         gui.comboBox(box, self, "middleLabels", label="Middle labels: ", orientation="horizontal", labelWidth=90,
-                     items=["No labels", "Correlations", "VizRank"], callback=self.updateGraph,
+                     items=["No labels", "Correlations", "VizRank"], callback=self.update_graph,
                      tooltip="The information do you wish to view on top in the middle of coordinate axes",
                      sendSelectedValue=True, valueType=str)
-        gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.updateGraph,
+        gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.update_graph,
                      tooltip="Show bars with distribution of class values (only for discrete attributes)")
 
     def add_color_settings(self, parent):
         box = gui.widgetBox(parent, "Colors", orientation="horizontal")
-        gui.button(box, self, "Set colors", self.setColors,
+        gui.button(box, self, "Set colors", self.select_colors,
                    tooltip="Set the canvas background color and color palette for coloring continuous variables")
 
     def add_selection_settings(self, parent):
@@ -167,27 +167,26 @@ class OWParallelCoordinates(OWVisWidget):
                      tooltip="Send selected data when a user moves or resizes an existing selection area")
         self.graph.autoSendSelectionCallback = self.selectionChanged
 
-    def flipAttribute(self, item):
-        if self.graph.flipAttribute(str(item.text())):
-            self.updateGraph()
+    def flip_attribute(self, item):
+        if self.graph.flip_attribute(str(item.text())):
+            self.update_graph()
             self.information(0)
         else:
             self.information(0, "Didn't flip the attribute. To flip a continuous "
                                 "attribute uncheck 'Global value scaling' checkbox.")
 
-    def updateGraph(self, *args):
-        attrs = self.getShownAttributeList()
-        self.graph.updateData(attrs)
+    def update_graph(self, *args):
+        attributes = self.getShownAttributeList()
+        self.graph.updateData(attributes)
 
-
-    def increaseAxesDistance(self):
+    def increase_axes_distance(self):
         m, M = self.graph.bounds_for_axis(xBottom)
         if (M - m) == 0:
             return # we have not yet updated the axes (self.graph.updateAxes())
         self.graph.setAxisScale(xBottom, m, M - (M - m) / 10., 1)
         self.graph.replot()
 
-    def decreaseAxesDistance(self):
+    def decrease_axes_distance(self):
         m, M = self.graph.bounds_for_axis(xBottom)
         if (M - m) == 0:
             return # we have not yet updated the axes (self.graph.updateAxes())
@@ -197,7 +196,7 @@ class OWParallelCoordinates(OWVisWidget):
 
     # ------------- SIGNALS --------------------------
     # receive new data and update all fields
-    def setData(self, data):
+    def set_data(self, data):
         if data and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if checksum(data) == checksum(self.data):
@@ -214,12 +213,12 @@ class OWParallelCoordinates(OWVisWidget):
         self.resetAttrManipulation()
 
 
-    def setSubsetData(self, subData):
+    def set_subset_data(self, subData):
         self.subsetData = subData
 
 
     # attribute selection signal - list of attributes to show
-    def setShownAttributes(self, shown_attributes):
+    def set_shown_attributes(self, shown_attributes):
         self.shown_attributes = shown_attributes
 
 
@@ -230,7 +229,7 @@ class OWParallelCoordinates(OWVisWidget):
             self.setShownAttributeList(self.shown_attributes)
         else:
             self.setShownAttributeList()
-        self.updateGraph()
+        self.update_graph()
         self.sendSelections()
 
 
@@ -250,21 +249,20 @@ class OWParallelCoordinates(OWVisWidget):
         self.send("Selected Data", selected)
         self.send("Other Data", unselected)
 
-
     # jittering options
     def setJitteringSize(self):
-        self.graph.rescaleData()
-        self.updateGraph()
+        self.graph.rescale_data()
+        self.update_graph()
 
-    def setColors(self):
-        dlg = self.create_color_picker_dialog()
+    def select_colors(self):
+        dlg = self.color_picker
         if dlg.exec_():
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.graph.contPalette = dlg.getContinuousPalette(CONTINUOUS_PALETTE)
             self.graph.discPalette = dlg.getDiscretePalette(DISCRETE_PALETTE)
             self.graph.setCanvasBackground(dlg.getColor(CANVAS_COLOR))
-            self.updateGraph()
+            self.update_graph()
 
     def create_color_picker_dialog(self):
         c = ColorPaletteDlg(self, "Color Palette")
@@ -275,16 +273,6 @@ class OWParallelCoordinates(OWVisWidget):
         c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
-    def saveSettings(self):
-        OWWidget.saveSettings(self)
-
-    def closeEvent(self, ce):
-        OWWidget.closeEvent(self, ce)
-
-    def sendReport(self):
-        self.reportImage(self.graph.saveToFileDirect, QSize(500, 500))
-
-
 #test widget appearance
 if __name__ == "__main__":
     a = QApplication(sys.argv)
@@ -292,7 +280,7 @@ if __name__ == "__main__":
     ow.show()
     ow.graph.discPalette = ColorPaletteGenerator(rgbColors=[(127, 201, 127), (190, 174, 212), (253, 192, 134)])
     data = Orange.data.Table("iris")
-    ow.setData(data)
+    ow.set_data(data)
     ow.handleNewSignals()
 
     a.exec_()

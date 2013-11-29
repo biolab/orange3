@@ -279,7 +279,7 @@ class PyListModel(QAbstractListModel):
         items = [self[i.row()] for i in indexlist]
         mime = QAbstractListModel.mimeData(self, indexlist)
         data = pickle.dumps(vars)
-        mime.setData(self.MIME_TYPE, QByteArray(data))
+        mime.set_data(self.MIME_TYPE, QByteArray(data))
         mime._items = items
         return mime
 
@@ -430,7 +430,7 @@ class VariableDelegate(QStyledItemDelegate):
         editor.variable = var
 
     def setModelData(self, editor, model, index):
-        model.setData(index, editor.variable, Qt.EditRole)
+        model.set_data(index, editor.variable, Qt.EditRole)
 
 
 class ListSingleSelectionModel(QItemSelectionModel):
