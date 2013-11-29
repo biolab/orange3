@@ -7,15 +7,20 @@ from Orange.canvas.registry.description import Default
 import Orange.data
 from Orange.data import Table
 from Orange.widgets.gui import attributeIconDict
-from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider, ContextSetting
+from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
 from Orange.widgets.utils.plot import xBottom, OWPalette
 from Orange.widgets.utils.scaling import checksum
-from Orange.widgets.utils.toolbar import ZoomSelectToolbar
+from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
 from Orange.widgets.widget import OWWidget, AttributeList
 from Orange.widgets import gui
+
+
+CONTINUOUS_PALETTE = "contPalette"
+DISCRETE_PALETTE = "discPalette"
+CANVAS_COLOR = "Canvas"
 
 
 class OWParallelCoordinates(OWVisWidget):
@@ -34,14 +39,16 @@ class OWParallelCoordinates(OWVisWidget):
 
     settingsHandler = DomainContextHandler()
 
-    show_all_attributes = Setting(0)
+    show_all_attributes = Setting(default=False)
+    auto_send_selection = Setting(default=True)
 
-    settingsList = ["autoSendSelection",
-                    "toolbarSelection", "graph.showStatistics", "colorSettings", "selectedSchemaIndex",
-                    "showAllAttributes"]
+    color_settings = Setting(default=None)
+    selected_schema_index = Setting(default=0)
+
     jitterSizeNums = [0, 2, 5, 10, 15, 20, 30]
 
     graph = SettingProvider(OWParallelGraph)
+    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
     def __init__(self):
         super().__init__()
@@ -52,68 +59,91 @@ class OWParallelCoordinates(OWVisWidget):
         #set default settings
         self.data = None
         self.subsetData = None
-        self.autoSendSelection = 1
         self.attrDiscOrder = "Unordered"
         self.attrContOrder = "Unordered"
         self.projections = None
         self.correlationDict = {}
         self.middleLabels = "Correlations"
         self.attributeSelectionList = None
-        self.toolbarSelection = 0
-        self.colorSettings = None
-        self.selectedSchemaIndex = 0
 
-        self.graph.showStatistics = 0
+        self.create_control_panel()
+        self.color_picker = self.create_color_picker_dialog()
+        self.graph.contPalette = self.color_picker.getContinuousPalette(CONTINUOUS_PALETTE)
+        self.graph.discPalette = self.color_picker.getDiscretePalette(DISCRETE_PALETTE)
+        self.graph.setCanvasBackground(self.color_picker.getColor(CANVAS_COLOR))
 
-        #GUI
-        self.tabs = gui.tabWidget(self.controlArea)
-        self.GeneralTab = gui.createTabPage(self.tabs, "Main")
-        self.SettingsTab = gui.createTabPage(self.tabs, "Settings")
+        self.cbShowAllAttributes()
 
-        self.createShowHiddenLists(self.GeneralTab, callback=self.updateGraph)
-        self.connect(self.shownAttribsLB, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flipAttribute)
+        self.resize(900, 700)
 
-        self.zoomSelectToolbar = ZoomSelectToolbar(self, self.GeneralTab, self.graph, self.autoSendSelection,
-                                                   buttons=(1, 2, 0, 7, 8))
-        self.connect(self.zoomSelectToolbar.buttonSendSelections, SIGNAL("clicked()"), self.sendSelections)
+    #noinspection PyAttributeOutsideInit
+    def create_control_panel(self):
+        self.control_tabs = gui.tabWidget(self.controlArea)
+        self.general_tab = gui.createTabPage(self.control_tabs, "Main")
+        self.settings_tab = gui.createTabPage(self.control_tabs, "Settings")
 
-        # connect controls to appropriate functions
-        #self.connect(self.graphButton, SIGNAL("clicked()"), self.graph.saveToFile)
+        self.add_attribute_selection_area(self.general_tab, callback=self.updateGraph)
+        self.add_zoom_select_toolbar(self.general_tab)
 
-        # ####################################
-        # SETTINGS functionality
-        box = gui.widgetBox(self.SettingsTab, "Transparency")
-        gui.hSlider(box, self, 'graph.alpha_value', label="Examples: ", minValue=0, maxValue=255, step=10,
-                    callback=self.updateGraph, tooltip="Alpha value used for drawing example lines")
-        gui.hSlider(box, self, 'graph.alpha_value_2', label="Rest:     ", minValue=0, maxValue=255, step=10,
-                    callback=self.updateGraph, tooltip="Alpha value used to draw statistics, example subsets, ...")
+        self.add_transparency_settings(self.settings_tab)
+        self.add_jittering_settings(self.settings_tab)
+        self.add_visual_settings(self.settings_tab)
+        self.add_axis_settings(self.settings_tab)
+        self.add_annotation_settings(self.settings_tab)
+        self.add_color_settings(self.settings_tab)
+        self.add_selection_settings(self.settings_tab)
 
-        box = gui.widgetBox(self.SettingsTab, "Jittering Options")
-        gui.comboBox(box, self, "graph.jitter_size", label='Jittering size (% of size):  ', orientation='horizontal',
-                     callback=self.setJitteringSize, items=self.jitterSizeNums, sendSelectedValue=True, valueType=float)
+        self.settings_tab.layout().addStretch(100)
+        self.icons = attributeIconDict
 
-        # visual settings
-        box = gui.widgetBox(self.SettingsTab, "Visual Settings")
+    def add_attribute_selection_area(self, parent, callback=None):
+        super().add_attribute_selection_area(parent, callback)
+        self.connect(self.shown_attributes_listbox, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flipAttribute)
 
+    #noinspection PyAttributeOutsideInit
+    def add_zoom_select_toolbar(self, parent):
+        buttons = (ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION)
+        self.zoom_select_toolbar = ZoomSelectToolbar(self, parent, self.graph, self.auto_send_selection,
+                                                     buttons=buttons)
+        self.connect(self.zoom_select_toolbar.buttonSendSelections, SIGNAL("clicked()"), self.sendSelections)
+
+    def add_transparency_settings(self, parent):
+        box = gui.widgetBox(parent, "Transparency")
+        gui.hSlider(box, self, 'graph.alpha_value', label="Examples: ",
+                    minValue=0, maxValue=255, step=10, callback=self.updateGraph,
+                    tooltip="Alpha value used for drawing example lines")
+        gui.hSlider(box, self, 'graph.alpha_value_2', label="Rest:     ",
+                    minValue=0, maxValue=255, step=10, callback=self.updateGraph,
+                    tooltip="Alpha value used to draw statistics, example subsets, ...")
+
+    def add_jittering_settings(self, parent):
+        box = gui.widgetBox(parent, "Jittering Options")
+        gui.comboBox(box, self, "graph.jitter_size", label='Jittering size (% of size):  ',
+                     orientation='horizontal', callback=self.setJitteringSize,
+                     items=self.jitterSizeNums, sendSelectedValue=True, valueType=float)
+
+    def add_visual_settings(self, parent):
+        box = gui.widgetBox(parent, "Visual Settings")
         gui.checkBox(box, self, 'graph.show_attr_values', 'Show attribute values', callback=self.updateGraph)
         gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.updateGraph,
                      tooltip="Show lines using splines")
-
         self.graph.gui.show_legend_check_box(box)
 
-        box = gui.widgetBox(self.SettingsTab, "Axis Distance")
-        resizeColsBox = gui.widgetBox(box, 0, "horizontal", 0)
-        gui.label(resizeColsBox, self, "Increase/decrease distance: ")
-        gui.toolButton(resizeColsBox, self, "+", callback=self.increaseAxesDistance,
+    def add_axis_settings(self, parent):
+        box = gui.widgetBox(parent, "Axis Distance")
+        resize_columns_box = gui.widgetBox(box, 0, "horizontal", 0)
+        gui.label(resize_columns_box, self, "Increase/decrease distance: ")
+        gui.toolButton(resize_columns_box, self, "+", callback=self.increaseAxesDistance,
                        tooltip="Increase the distance between the axes", width=30, height=20)
-        gui.toolButton(resizeColsBox, self, "-", callback=self.decreaseAxesDistance,
+        gui.toolButton(resize_columns_box, self, "-", callback=self.decreaseAxesDistance,
                        tooltip="Decrease the distance between the axes", width=30, height=20)
-        gui.rubber(resizeColsBox)
+        gui.rubber(resize_columns_box)
         gui.checkBox(box, self, "graph.autoUpdateAxes", "Auto scale X axis",
                      tooltip="Auto scale X axis to show all visualized attributes", callback=self.updateGraph)
 
-        box = gui.widgetBox(self.SettingsTab, "Statistical Information")
-        gui.comboBox(box, self, "graph.showStatistics", label="Statistics: ", orientation="horizontal", labelWidth=90,
+    def add_annotation_settings(self, parent):
+        box = gui.widgetBox(parent, "Statistical Information")
+        gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ", orientation="horizontal", labelWidth=90,
                      items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.updateGraph,
                      sendSelectedValue=False, valueType=int)
         gui.comboBox(box, self, "middleLabels", label="Middle labels: ", orientation="horizontal", labelWidth=90,
@@ -123,30 +153,19 @@ class OWParallelCoordinates(OWVisWidget):
         gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.updateGraph,
                      tooltip="Show bars with distribution of class values (only for discrete attributes)")
 
-        box = gui.widgetBox(self.SettingsTab, "Colors", orientation="horizontal")
+    def add_color_settings(self, parent):
+        box = gui.widgetBox(parent, "Colors", orientation="horizontal")
         gui.button(box, self, "Set colors", self.setColors,
                    tooltip="Set the canvas background color and color palette for coloring continuous variables")
 
-        box = gui.widgetBox(self.SettingsTab, "Auto Send Selected Data When...")
-        gui.checkBox(box, self, 'autoSendSelection', 'Adding/Removing selection areas',
+    def add_selection_settings(self, parent):
+        box = gui.widgetBox(parent, "Auto Send Selected Data When...")
+        gui.checkBox(box, self, 'auto_send_selection', 'Adding/Removing selection areas',
                      callback=self.selectionChanged,
                      tooltip="Send selected data whenever a selection area is added or removed")
         gui.checkBox(box, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas',
                      tooltip="Send selected data when a user moves or resizes an existing selection area")
         self.graph.autoSendSelectionCallback = self.selectionChanged
-
-        self.SettingsTab.layout().addStretch(100)
-        self.icons = attributeIconDict
-
-        dlg = self.createColorDialog()
-        self.graph.contPalette = dlg.getContinuousPalette("contPalette")
-        self.graph.discPalette = dlg.getDiscretePalette("discPalette")
-        self.graph.setCanvasBackground(dlg.getColor("Canvas"))
-        [self.zoomSelectToolbar.actionZooming, self.zoomSelectToolbar.actionRectangleSelection,
-         self.zoomSelectToolbar.actionPolygonSelection][self.toolbarSelection]()
-        self.cbShowAllAttributes()
-
-        self.resize(900, 700)
 
     def flipAttribute(self, item):
         if self.graph.flipAttribute(str(item.text())):
@@ -182,7 +201,7 @@ class OWParallelCoordinates(OWVisWidget):
         if data and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if checksum(data) == checksum(self.data):
-            return  # check if the new data set is the same as the old one
+            return # check if the new data set is the same as the old one
 
         self.closeContext()
         same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
@@ -221,8 +240,8 @@ class OWParallelCoordinates(OWVisWidget):
         self.send("Features", attrList)
 
     def selectionChanged(self):
-        self.zoomSelectToolbar.buttonSendSelections.setEnabled(not self.autoSendSelection)
-        if self.autoSendSelection:
+        self.zoom_select_toolbar.buttonSendSelections.setEnabled(not self.auto_send_selection)
+        if self.auto_send_selection:
             self.sendSelections()
 
     # send signals with selected and unselected examples as two datasets
@@ -238,22 +257,22 @@ class OWParallelCoordinates(OWVisWidget):
         self.updateGraph()
 
     def setColors(self):
-        dlg = self.createColorDialog()
+        dlg = self.create_color_picker_dialog()
         if dlg.exec_():
-            self.colorSettings = dlg.getColorSchemas()
-            self.selectedSchemaIndex = dlg.selectedSchemaIndex
-            self.graph.contPalette = dlg.getContinuousPalette("contPalette")
-            self.graph.discPalette = dlg.getDiscretePalette("discPalette")
-            self.graph.setCanvasBackground(dlg.getColor("Canvas"))
+            self.color_settings = dlg.getColorSchemas()
+            self.selected_schema_index = dlg.selectedSchemaIndex
+            self.graph.contPalette = dlg.getContinuousPalette(CONTINUOUS_PALETTE)
+            self.graph.discPalette = dlg.getDiscretePalette(DISCRETE_PALETTE)
+            self.graph.setCanvasBackground(dlg.getColor(CANVAS_COLOR))
             self.updateGraph()
 
-    def createColorDialog(self):
+    def create_color_picker_dialog(self):
         c = ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        c.createContinuousPalette("contPalette", "Continuous Palette")
+        c.createDiscretePalette(DISCRETE_PALETTE, "Discrete Palette")
+        c.createContinuousPalette(CONTINUOUS_PALETTE, "Continuous Palette")
         box = c.createBox("otherColors", "Other Colors")
-        c.createColorButton(box, "Canvas", "Canvas color", self.graph.color(OWPalette.Canvas))
-        c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
+        c.createColorButton(box, CANVAS_COLOR, "Canvas color", self.graph.color(OWPalette.Canvas))
+        c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
     def saveSettings(self):

@@ -11,7 +11,7 @@ class OWVisWidget(OWWidget):
     shown_attributes = ContextSetting([], required=ContextSetting.REQUIRED,
                                      selected='selected_shown', reservoir="hiddenAttributes")
 
-    def createShowHiddenLists(self, placementTab, callback=None):
+    def add_attribute_selection_area(self, parent, callback=None):
         maxWidth = 180
         self.updateCallbackFunction = callback
         self.shown_attributes = []
@@ -19,12 +19,12 @@ class OWVisWidget(OWWidget):
         self.hiddenAttributes = []
         self.selectedHidden = []
 
-        self.shownAttribsGroup = OWGUI.widgetBox(placementTab, " Shown attributes ")
-        self.addRemoveGroup = OWGUI.widgetBox(placementTab, 1, orientation="horizontal")
-        self.hiddenAttribsGroup = OWGUI.widgetBox(placementTab, " Hidden attributes ")
+        self.shownAttribsGroup = OWGUI.widgetBox(parent, " Shown attributes ")
+        self.addRemoveGroup = OWGUI.widgetBox(parent, 1, orientation="horizontal")
+        self.hiddenAttribsGroup = OWGUI.widgetBox(parent, " Hidden attributes ")
 
         hbox = OWGUI.widgetBox(self.shownAttribsGroup, orientation='horizontal')
-        self.shownAttribsLB = OWGUI.listBox(hbox, self, "selected_shown", "shown_attributes",
+        self.shown_attributes_listbox = OWGUI.listBox(hbox, self, "selected_shown", "shown_attributes",
                                             callback=self.resetAttrManipulation, dragDropCallback=callback,
                                             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
         #self.shownAttribsLB.setMaximumWidth(maxWidth)

@@ -28,12 +28,14 @@ MEDIAN = 2
 class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     show_distributions = Setting(False)
     show_attr_values = Setting(True)
+    show_statistics = Setting(default=False)
+
     use_splines = Setting(False)
     alpha_value = Setting(150)
     alpha_value_2 = Setting(150)
 
     def __init__(self, widget, parent=None, name=None):
-        widget.settingsHandler.get_provider(self).initialize(self)
+        widget.settingsHandler.initialize(self)
         OWPlot.__init__(self, parent, name, axes=[], widget=widget)
         ScaleData.__init__(self)
 
@@ -41,7 +43,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
         self.parallelDlg = widget
         self.toolRects = []
-        self.showStatistics = 0
+        self.show_statistics = 0
         self.lastSelectedCurve = None
         self.enableGridXB(0)
         self.enableGridYL(0)
@@ -201,7 +203,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         # ##############################################
         # show lines that represent standard deviation or quartiles
         # ##############################################
-        if self.showStatistics and self.have_data:
+        if self.show_statistics and self.have_data:
             data = []
             for i in range(length):
                 if self.data_domain[indices[i]].var_type != VarTypes.Continuous:
@@ -211,11 +213,11 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                                     self.scaledData[indices[i]])  # remove missing values
 
                 if not self.data_has_class or self.data_has_continuous_class:    # no class
-                    if self.showStatistics == MEANS:
+                    if self.show_statistics == MEANS:
                         m = array.mean()
                         dev = array.std()
                         data.append([(m - dev, m, m + dev)])
-                    elif self.showStatistics == MEDIAN:
+                    elif self.show_statistics == MEDIAN:
                         sorted_array = np.sort(array)
                         if len(sorted_array) > 0:
                             data.append([(sorted_array[int(len(sorted_array) / 4.0)],
@@ -236,11 +238,11 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                         if len(arr_c) == 0:
                             curr.append((0, 0, 0))
                             continue
-                        if self.showStatistics == MEANS:
+                        if self.show_statistics == MEANS:
                             m = arr_c.mean()
                             dev = arr_c.std()
                             curr.append((m - dev, m, m + dev))
-                        elif self.showStatistics == MEDIAN:
+                        elif self.show_statistics == MEDIAN:
                             sorted_array = np.sort(arr_c)
                             curr.append((sorted_array[int(len(arr_c) / 4.0)], sorted_array[int(len(arr_c) / 2.0)],
                                          sorted_array[int(len(arr_c) * 0.75)]))
