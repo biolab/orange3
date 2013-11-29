@@ -1,121 +1,138 @@
 import os
 
-from Orange.canvas.utils import environ
 from PyQt4.QtGui import QListWidget, QIcon, QSizePolicy
-from Orange.widgets import gui as OWGUI
+
+from Orange.canvas.utils import environ
+from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.widget import OWWidget
+
+ICON_UP = os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")
+ICON_DOWN = os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")
 
 
 class OWVisWidget(OWWidget):
     shown_attributes = ContextSetting([], required=ContextSetting.REQUIRED,
-                                     selected='selected_shown', reservoir="hiddenAttributes")
+                                          selected='selected_shown', reservoir="hidden_attributes")
+    # Setting above will override these fields
+    selected_shown = ()
+    hidden_attributes = ()
+    selected_hidden = ()
 
+    #noinspection PyAttributeOutsideInit
     def add_attribute_selection_area(self, parent, callback=None):
-        maxWidth = 180
-        self.updateCallbackFunction = callback
-        self.shown_attributes = []
         self.selected_shown = []
-        self.hiddenAttributes = []
-        self.selectedHidden = []
+        self.shown_attributes = []
+        self.hidden_attributes = []
+        self.selected_hidden = []
+        self.on_update_callback = callback
 
-        self.shownAttribsGroup = OWGUI.widgetBox(parent, " Shown attributes ")
-        self.addRemoveGroup = OWGUI.widgetBox(parent, 1, orientation="horizontal")
-        self.hiddenAttribsGroup = OWGUI.widgetBox(parent, " Hidden attributes ")
+        self.add_shown_attributes(parent)
+        self.add_control_buttons(parent)
+        self.add_hidden_attributes(parent)
 
-        hbox = OWGUI.widgetBox(self.shownAttribsGroup, orientation='horizontal')
-        self.shown_attributes_listbox = OWGUI.listBox(hbox, self, "selected_shown", "shown_attributes",
-                                            callback=self.resetAttrManipulation, dragDropCallback=callback,
-                                            enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
-        #self.shownAttribsLB.setMaximumWidth(maxWidth)
-        vbox = OWGUI.widgetBox(hbox, orientation='vertical')
-        self.buttonUPAttr = OWGUI.button(vbox, self, "", callback=self.moveAttrUP,
-                                         tooltip="Move selected attributes up")
-        self.buttonDOWNAttr = OWGUI.button(vbox, self, "", callback=self.moveAttrDOWN,
-                                           tooltip="Move selected attributes down")
-        self.buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
-        self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.buttonUPAttr.setMaximumWidth(30)
-        self.buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
-        self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.buttonDOWNAttr.setMaximumWidth(30)
+    #noinspection PyAttributeOutsideInit
+    def add_shown_attributes(self, parent):
+        self.shown_attributes_area = gui.widgetBox(parent, " Shown attributes ")
+        box = gui.widgetBox(self.shown_attributes_area, orientation='horizontal')
+        self.shown_attributes_listbox = gui.listBox(
+            box, self, "selected_shown", "shown_attributes",
+            callback=self.reset_attr_manipulation, dragDropCallback=self.attributes_changed,
+            enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
+        controls_box = gui.widgetBox(box, orientation='vertical')
+        self.move_attribute_up_button = gui.button(controls_box, self, "", callback=self.move_selection_up,
+                                                   tooltip="Move selected attributes up")
+        self.move_attribute_up_button.setIcon(QIcon(ICON_UP))
+        self.move_attribute_up_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+        self.move_attribute_up_button.setMaximumWidth(30)
 
-        self.attrAddButton = OWGUI.button(self.addRemoveGroup, self, "", callback=self.addAttribute,
-                                          tooltip="Add (show) selected attributes")
-        self.attrAddButton.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
-        self.attrRemoveButton = OWGUI.button(self.addRemoveGroup, self, "", callback=self.removeAttribute,
-                                             tooltip="Remove (hide) selected attributes")
-        self.attrRemoveButton.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
-        self.showAllCB = OWGUI.checkBox(self.addRemoveGroup, self, "show_all_attributes", "Show all",
-                                        callback=self.cbShowAllAttributes)
+        self.move_attribute_down_button = gui.button(controls_box, self, "", callback=self.move_selection_down,
+                                                     tooltip="Move selected attributes down")
+        self.move_attribute_down_button.setIcon(QIcon(ICON_DOWN))
+        self.move_attribute_down_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+        self.move_attribute_down_button.setMaximumWidth(30)
 
-        self.hiddenAttribsLB = OWGUI.listBox(self.hiddenAttribsGroup, self, "selectedHidden", "hiddenAttributes",
-                                             callback=self.resetAttrManipulation, dragDropCallback=callback,
-                                             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
-        #self.hiddenAttribsLB.setMaximumWidth(maxWidth + 27)
+    #noinspection PyAttributeOutsideInit
+    def add_control_buttons(self, parent):
+        self.add_remove_tools_area = gui.widgetBox(parent, 1, orientation="horizontal")
+        self.add_attribute_button = gui.button(self.add_remove_tools_area, self, "", callback=self.add_attribute,
+                                               tooltip="Add (show) selected attributes")
+        self.add_attribute_button.setIcon(QIcon(ICON_UP))
+        self.remove_attribute_button = gui.button(self.add_remove_tools_area, self, "",
+                                                  callback=self.remove_attribute,
+                                                  tooltip="Remove (hide) selected attributes")
+        self.remove_attribute_button.setIcon(QIcon(ICON_DOWN))
+        self.show_all_attributes_checkbox = gui.checkBox(self.add_remove_tools_area, self, "show_all_attributes",
+                                                         "Show all", callback=self.toggle_show_all_attributes)
 
+    #noinspection PyAttributeOutsideInit
+    def add_hidden_attributes(self, parent):
+        self.hidden_attributes_area = gui.widgetBox(parent, " Hidden attributes ")
+        self.hidden_attributes_listbox = gui.listBox(self.hidden_attributes_area, self, "selected_hidden",
+                                                     "hidden_attributes", callback=self.reset_attr_manipulation,
+                                                     dragDropCallback=self.attributes_changed, enableDragDrop=True,
+                                                     selectionMode=QListWidget.ExtendedSelection)
 
-    def getDataDomain(self):
-    #        if hasattr(self, "graph") and hasattr(self.graph, "dataDomain"):
-    #            return self.graph.dataDomain
+    def reset_attr_manipulation(self):
+        if self.selected_shown:
+            mini, maxi = min(self.selected_shown), max(self.selected_shown)
+            tight_selection = maxi - mini == len(self.selected_shown) - 1
+            valid_selection = mini > 0 and maxi < len(self.shown_attributes)
+        else:
+            tight_selection = valid_selection = False
+
+        self.move_attribute_up_button.setEnabled(bool(self.selected_shown and tight_selection and valid_selection))
+        self.move_attribute_down_button.setEnabled(bool(self.selected_shown and tight_selection and valid_selection))
+        self.add_attribute_button.setDisabled(not self.selected_hidden or self.show_all_attributes)
+        self.remove_attribute_button.setDisabled(not self.selected_shown or self.show_all_attributes)
+        domain = self.get_data_domain()
+        if domain and self.hidden_attributes and domain.class_var \
+                and self.hidden_attributes[0][0] != domain.class_var.name:
+            self.show_all_attributes_checkbox.setChecked(False)
+
+    def get_data_domain(self):
         if hasattr(self, "data") and self.data:
             return self.data.domain
         else:
             return None
 
-    def resetAttrManipulation(self):
-        if self.selected_shown:
-            mini, maxi = min(self.selected_shown), max(self.selected_shown)
-            tightSelection = maxi - mini == len(self.selected_shown) - 1
-        self.buttonUPAttr.setEnabled(self.selected_shown != [] and tightSelection and mini)
-        self.buttonDOWNAttr.setEnabled(
-            self.selected_shown != [] and tightSelection and maxi < len(self.shown_attributes) - 1)
-        self.attrAddButton.setDisabled(not self.selectedHidden or self.show_all_attributes)
-        self.attrRemoveButton.setDisabled(not self.selected_shown or self.show_all_attributes)
-        domain = self.getDataDomain()
-        if domain and self.hiddenAttributes and domain.class_var and self.hiddenAttributes[0][0] != domain.class_var.name:
-            self.showAllCB.setChecked(0)
+    def move_selection_up(self):
+        self.move_selected_attributes(-1)
 
+    def move_selection_down(self):
+        self.move_selected_attributes(1)
 
-    def moveAttrSelection(self, labels, selection, dir):
+    def move_selected_attributes(self, dir):
         if hasattr(self, "graph"):
             self.graph.insideColors = None
             self.graph.clusterClosure = None
             self.graph.potentialsBmp = None
 
-        labs = getattr(self, labels)
-        sel = list(getattr(self, selection))
+        attrs = self.shown_attributes
+        sel = self.selected_shown
         mini, maxi = min(sel), max(sel) + 1
         if dir == -1:
-            setattr(self, labels, labs[:mini - 1] + labs[mini:maxi] + [labs[mini - 1]] + labs[maxi:])
+            self.shown_attributes = attrs[:mini - 1] + attrs[mini:maxi] + [attrs[mini - 1]] + attrs[maxi:]
         else:
-            setattr(self, labels, labs[:mini] + [labs[maxi]] + labs[mini:maxi] + labs[maxi + 1:])
-        setattr(self, selection, [x + dir for x in sel])
+            self.shown_attributes = attrs[:mini] + [attrs[maxi]] + attrs[mini:maxi] + attrs[maxi + 1:]
+        self.selected_shown = [x + dir for x in sel]
 
-        self.resetAttrManipulation()
-        if hasattr(self, "sendShownAttributes"):
-            self.sendShownAttributes()
+        self.reset_attr_manipulation()
+
+        self.attributes_changed()
+
         self.graph.potentialsBmp = None
-        if self.updateCallbackFunction:
-            self.updateCallbackFunction()
+        if self.on_update_callback:
+            self.on_update_callback()
         if hasattr(self, "graph"):
             self.graph.removeAllSelections()
 
-    # move selected attribute in "Attribute Order" list one place up
-    def moveAttrUP(self):
-        self.moveAttrSelection("shown_attributes", "selected_shown", -1)
-
-    # move selected attribute in "Attribute Order" list one place down
-    def moveAttrDOWN(self):
-        self.moveAttrSelection("shown_attributes", "selected_shown", 1)
-
-
-    def cbShowAllAttributes(self):
+    def toggle_show_all_attributes(self):
         if self.show_all_attributes:
-            self.addAttribute(True)
-        self.resetAttrManipulation()
+            self.add_attribute(True)
+        self.reset_attr_manipulation()
 
-    def addAttribute(self, addAll=False):
+    def add_attribute(self, addAll=False):
         if hasattr(self, "graph"):
             self.graph.insideColors = None
             self.graph.clusterClosure = None
@@ -123,33 +140,32 @@ class OWVisWidget(OWWidget):
         if addAll:
             self.setShownAttributeList()
         else:
-            self.setShownAttributeList(self.shown_attributes + [self.hiddenAttributes[i] for i in self.selectedHidden])
-        self.selectedHidden = []
+            self.setShownAttributeList(
+                self.shown_attributes + [self.hidden_attributes[i] for i in self.selected_hidden])
+        self.selected_hidden = []
         self.selected_shown = []
-        self.resetAttrManipulation()
+        self.reset_attr_manipulation()
 
-        if hasattr(self, "sendShownAttributes"):
-            self.sendShownAttributes()
-        if self.updateCallbackFunction:
-            self.updateCallbackFunction()
+        self.attributes_changed()
+
         if hasattr(self, "graph"):
             self.graph.removeAllSelections()
 
-    def removeAttribute(self):
+    def remove_attribute(self):
         if hasattr(self, "graph"):
             self.graph.insideColors = None
             self.graph.clusterClosure = None
 
-        newShown = self.shown_attributes[:]
+        new_shown = self.shown_attributes[:]
         self.selected_shown.sort(reverse=True)
         for i in self.selected_shown:
-            del newShown[i]
-        self.setShownAttributeList(newShown)
+            del new_shown[i]
+        self.setShownAttributeList(new_shown)
 
-        if hasattr(self, "sendShownAttributes"):
-            self.sendShownAttributes()
-        if self.updateCallbackFunction:
-            self.updateCallbackFunction()
+        self.attributes_changed()
+
+        if self.on_update_callback:
+            self.on_update_callback()
         if hasattr(self, "graph"):
             self.graph.removeAllSelections()
 
@@ -161,7 +177,7 @@ class OWVisWidget(OWWidget):
         shown = []
         hidden = []
 
-        domain = self.getDataDomain()
+        domain = self.get_data_domain()
         if domain:
             if shownAttributes:
                 if type(shownAttributes[0]) == tuple:
@@ -179,11 +195,13 @@ class OWVisWidget(OWWidget):
                 hidden += [(domain.class_var.name, domain.class_var.var_type)]
 
         self.shown_attributes = shown
-        self.hiddenAttributes = hidden
-        self.selectedHidden = []
+        self.hidden_attributes = hidden
+        self.selected_hidden = []
         self.selected_shown = []
-        self.resetAttrManipulation()
+        self.reset_attr_manipulation()
 
-        if hasattr(self, "sendShownAttributes"):
-            self.sendShownAttributes()
+        self.send_shown_attributes()
 
+    # "Events"
+    def attributes_changed(self):
+        pass

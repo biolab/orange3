@@ -82,8 +82,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
         self.visualized_attributes = attributes
         self.visualized_mid_labels = midLabels
-        for name in list(
-                self.selectionConditions.keys()):        # keep only conditions that are related to the currently visualized attributes
+        for name in self.selectionConditions.keys():
+            # keep only conditions that are related to the currently visualized attributes
             if name not in self.visualized_attributes:
                 self.selectionConditions.pop(name)
 
@@ -94,7 +94,6 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         length = len(attributes)
         indices = [self.attribute_name_index[label] for label in attributes]
 
-        xs = list(range(length))
         dataSize = len(self.scaled_data[0])
 
         if self.data_has_discrete_class:
@@ -532,7 +531,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         elif self.parallelDlg:
             x1 = int(self.inv_transform(xBottom, e.x()))
             axis = self.axisScaleDraw(xBottom)
-            self.parallelDlg.sendShownAttributes([str(axis.label(x1)), str(axis.label(x1 + 1))])
+            self.parallelDlg.send_shown_attributes([str(axis.label(x1)), str(axis.label(x1 + 1))])
         return 0
 
     def removeAllSelections(self, send=1):

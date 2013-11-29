@@ -72,7 +72,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.graph.discPalette = self.color_picker.getDiscretePalette(DISCRETE_PALETTE)
         self.graph.setCanvasBackground(self.color_picker.getColor(CANVAS_COLOR))
 
-        self.cbShowAllAttributes()
+        self.toggle_show_all_attributes()
 
         self.resize(900, 700)
 
@@ -210,7 +210,7 @@ class OWParallelCoordinates(OWVisWidget):
         if not same_domain:
             self.setShownAttributeList(self.attributeSelectionList)
         self.openContext(self.data)
-        self.resetAttrManipulation()
+        self.reset_attr_manipulation()
 
 
     def set_subset_data(self, subData):
@@ -232,8 +232,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.update_graph()
         self.sendSelections()
 
-
-    def sendShownAttributes(self, attrList=None):
+    def send_shown_attributes(self, attrList=None):
         if attrList == None:
             attrList = self.getShownAttributeList()
         self.send("Features", attrList)
@@ -272,6 +271,10 @@ class OWParallelCoordinates(OWVisWidget):
         c.createColorButton(box, CANVAS_COLOR, "Canvas color", self.graph.color(OWPalette.Canvas))
         c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
+
+    def attributes_changed(self):
+        self.update_graph()
+        self.send_shown_attributes()
 
 #test widget appearance
 if __name__ == "__main__":
