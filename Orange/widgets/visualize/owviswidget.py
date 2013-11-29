@@ -159,10 +159,10 @@ class OWVisWidget(OWWidget):
 
     def show_attribute(self, add_all=False):
         if add_all:
-            self.set_shown_attributes()
+            self.shown_attributes = None
         else:
-            self.set_shown_attributes(
-                self._shown_attributes + [self._hidden_attributes[i] for i in self.selected_hidden])
+            self.shown_attributes = \
+                self._shown_attributes + [self._hidden_attributes[i] for i in self.selected_hidden]
         self.selected_hidden = []
         self.selected_shown = []
         self.reset_attr_manipulation()
@@ -174,7 +174,7 @@ class OWVisWidget(OWWidget):
         self.selected_shown.sort(reverse=True)
         for i in self.selected_shown:
             del new_shown[i]
-        self.set_shown_attributes(new_shown)
+        self.shown_attributes = new_shown
 
         self.trigger_attributes_changed()
 
