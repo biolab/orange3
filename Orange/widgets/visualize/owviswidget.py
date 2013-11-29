@@ -12,8 +12,8 @@ ICON_DOWN = os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")
 
 
 class OWVisWidget(OWWidget):
-    _shown_attributes = ContextSetting([], required=ContextSetting.REQUIRED,
-                                           selected='selected_shown', reservoir="_hidden_attributes")
+    _shown_attributes = ContextSetting(default=[], required=ContextSetting.REQUIRED,
+                                       selected='selected_shown', reservoir="_hidden_attributes")
     # Setting above will override these fields
     _hidden_attributes = ()
     selected_shown = ()
@@ -123,9 +123,10 @@ class OWVisWidget(OWWidget):
         self.add_attribute_button.setDisabled(not self.selected_hidden or self.show_all_attributes)
         self.remove_attribute_button.setDisabled(not self.selected_shown or self.show_all_attributes)
         domain = self.get_data_domain()
-        if domain and self._hidden_attributes and domain.class_var \
-                and self._hidden_attributes[0][0] != domain.class_var.name:
-            self.show_all_attributes_checkbox.setChecked(False)
+
+        if domain and self._hidden_attributes and domain.class_var:
+            if self._hidden_attributes[0][0] != domain.class_var.name:
+                self.show_all_attributes_checkbox.setChecked(False)
 
     def get_data_domain(self):
         if hasattr(self, "data") and self.data:
@@ -139,14 +140,14 @@ class OWVisWidget(OWWidget):
     def move_selection_down(self):
         self.move_selected_attributes(1)
 
-    def move_selected_attributes(self, dir):
-        attrs = self._shown_attributes
+    def move_selected_attributes(self, direction):
+        attr = self._shown_attributes
         mini, maxi = min(self.selected_shown), max(self.selected_shown) + 1
-        if dir == -1:
-            self._shown_attributes = attrs[:mini - 1] + attrs[mini:maxi] + [attrs[mini - 1]] + attrs[maxi:]
+        if direction == -1:
+            self._shown_attributes = attr[:mini - 1] + attr[mini:maxi] + [attr[mini - 1]] + attr[maxi:]
         else:
-            self._shown_attributes = attrs[:mini] + [attrs[maxi]] + attrs[mini:maxi] + attrs[maxi + 1:]
-        self.selected_shown = [x + dir for x in self.selected_shown]
+            self._shown_attributes = attr[:mini] + [attr[maxi]] + attr[mini:maxi] + attr[maxi + 1:]
+        self.selected_shown = [x + direction for x in self.selected_shown]
 
         self.reset_attr_manipulation()
 
