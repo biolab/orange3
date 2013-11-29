@@ -1488,20 +1488,20 @@ class OrangeListBox(QtGui.QListWidget):
 
             if self.ogLabels is not None and self.ogValue is not None:
                 allSourceItems = \
-                    getdeepattr(source.widget, source.ogLabels, [])
+                    getdeepattr(source.master, source.ogLabels, [])
                 selectedItems =\
                     [allSourceItems[i] for i in selectedItemIndices]
                 allDestItems = getdeepattr(self.master, self.ogLabels, [])
                 if source is not self:
                     # TODO: optimize this code. use the fact that
                     # selectedItemIndices is a sorted list
-                    setattr(source.widget, source.ogLabels,
+                    setattr(source.master, source.ogLabels,
                             [item for item in allSourceItems
                              if item not in selectedItems])
                     setattr(self.master, self.ogLabels,
                             allDestItems[:index] + selectedItems +
                             allDestItems[index:])
-                    setattr(source.widget, source.ogValue, [])
+                    setattr(source.master, source.ogValue, [])
                 else:
                     items = [item for item in allSourceItems
                              if item not in selectedItems]
