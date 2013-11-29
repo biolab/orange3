@@ -569,6 +569,9 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         if len(unselected) == 0: unselected = None
         return (selected, unselected)
 
+    def autoSendSelectionCallback(self):
+        pass
+
 
 # ####################################################################
 # a curve that is able to draw several series of lines

@@ -105,8 +105,8 @@ class OWVisWidget(OWWidget):
         self.hidden_attributes_area = gui.widgetBox(parent, " Hidden attributes ")
         self.hidden_attributes_listbox = gui.listBox(self.hidden_attributes_area, self, "selected_hidden",
                                                      "_hidden_attributes", callback=self.reset_attr_manipulation,
-                                                     dragDropCallback=self.trigger_attributes_changed, enableDragDrop=True,
-                                                     selectionMode=QListWidget.ExtendedSelection)
+                                                     dragDropCallback=self.trigger_attributes_changed,
+                                                     enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
 
     def reset_attr_manipulation(self):
         if not self.__attribute_selection_area_initialized:
@@ -140,11 +140,6 @@ class OWVisWidget(OWWidget):
         self.move_selected_attributes(1)
 
     def move_selected_attributes(self, dir):
-        if hasattr(self, "graph"):
-            self.graph.insideColors = None
-            self.graph.clusterClosure = None
-            self.graph.potentialsBmp = None
-
         attrs = self._shown_attributes
         mini, maxi = min(self.selected_shown), max(self.selected_shown) + 1
         if dir == -1:
@@ -157,23 +152,13 @@ class OWVisWidget(OWWidget):
 
         self.trigger_attributes_changed()
 
-        self.graph.potentialsBmp = None
-        if self.on_update_callback:
-            self.on_update_callback()
-        if hasattr(self, "graph"):
-            self.graph.removeAllSelections()
-
     def toggle_show_all_attributes(self):
         if self.show_all_attributes:
             self.show_attribute(True)
         self.reset_attr_manipulation()
 
-    def show_attribute(self, addAll=False):
-        if hasattr(self, "graph"):
-            self.graph.insideColors = None
-            self.graph.clusterClosure = None
-
-        if addAll:
+    def show_attribute(self, add_all=False):
+        if add_all:
             self.set_shown_attributes()
         else:
             self.set_shown_attributes(
@@ -184,14 +169,7 @@ class OWVisWidget(OWWidget):
 
         self.trigger_attributes_changed()
 
-        if hasattr(self, "graph"):
-            self.graph.removeAllSelections()
-
     def hide_attribute(self):
-        if hasattr(self, "graph"):
-            self.graph.insideColors = None
-            self.graph.clusterClosure = None
-
         new_shown = self._shown_attributes[:]
         self.selected_shown.sort(reverse=True)
         for i in self.selected_shown:
@@ -199,11 +177,6 @@ class OWVisWidget(OWWidget):
         self.set_shown_attributes(new_shown)
 
         self.trigger_attributes_changed()
-
-        if self.on_update_callback:
-            self.on_update_callback()
-        if hasattr(self, "graph"):
-            self.graph.removeAllSelections()
 
     def trigger_attributes_changed(self):
         if not self.__attribute_selection_area_initialized:
@@ -217,7 +190,6 @@ class OWVisWidget(OWWidget):
         super().closeContext()
 
         self.shown_attributes = None
-
 
     # "Events"
     def attributes_changed(self):

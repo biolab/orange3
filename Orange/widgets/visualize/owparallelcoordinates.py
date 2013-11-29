@@ -233,10 +233,10 @@ class OWParallelCoordinates(OWVisWidget):
         self.update_graph()
         self.sendSelections()
 
-    def send_shown_attributes(self, attrList=None):
-        if attrList == None:
-            attrList = self.shown_attributes
-        self.send("Features", attrList)
+    def send_shown_attributes(self, attributes=None):
+        if attributes is None:
+            attributes = self.shown_attributes
+        self.send("Features", attributes)
 
     def selectionChanged(self):
         self.zoom_select_toolbar.buttonSendSelections.setEnabled(not self.auto_send_selection)
@@ -274,8 +274,11 @@ class OWParallelCoordinates(OWVisWidget):
         return c
 
     def attributes_changed(self):
+        self.graph.removeAllSelections()
         self.update_graph()
+
         self.send_shown_attributes()
+
 
 #test widget appearance
 if __name__ == "__main__":
