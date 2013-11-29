@@ -12,32 +12,67 @@ ICON_DOWN = os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")
 
 
 class OWVisWidget(OWWidget):
-    shown_attributes = ContextSetting([], required=ContextSetting.REQUIRED,
-                                          selected='selected_shown', reservoir="hidden_attributes")
+    _shown_attributes = ContextSetting([], required=ContextSetting.REQUIRED,
+                                           selected='selected_shown', reservoir="_hidden_attributes")
     # Setting above will override these fields
+    _hidden_attributes = ()
     selected_shown = ()
-    hidden_attributes = ()
     selected_hidden = ()
 
-    #noinspection PyAttributeOutsideInit
-    def add_attribute_selection_area(self, parent, callback=None):
-        self.selected_shown = []
-        self.shown_attributes = []
-        self.hidden_attributes = []
-        self.selected_hidden = []
-        self.on_update_callback = callback
+    @property
+    def shown_attributes(self):
+        return [a[0] for a in self._shown_attributes]
 
+    @shown_attributes.setter
+    def shown_attributes(self, value):
+        shown = []
+        hidden = []
+
+        domain = self.get_data_domain()
+        attr_info = lambda a: (a.name, a.var_type)
+        if domain:
+            if value:
+                shown = value if isinstance(value[0], tuple) else [attr_info(domain[a]) for a in value]
+                hidden = [x for x in [attr_info(domain[a]) for a in domain.attributes] if x not in shown]
+            else:
+                shown = [attr_info(a) for a in domain.attributes]
+                if not self.show_all_attributes:
+                    hidden = shown[10:]
+                    shown = shown[:10]
+
+            if domain.class_var and attr_info(domain.class_var) not in shown:
+                hidden += [attr_info(domain.class_var)]
+
+        self._shown_attributes = shown
+        self._hidden_attributes = hidden
+        self.selected_hidden = []
+        self.selected_shown = []
+        self.reset_attr_manipulation()
+
+        self.trigger_attributes_changed()
+
+    @property
+    def hidden_attributes(self):
+        return [a[0] for a in self._hidden_attributes]
+
+    __attribute_selection_area_initialized = False
+
+    #noinspection PyAttributeOutsideInit
+    def add_attribute_selection_area(self, parent):
         self.add_shown_attributes(parent)
         self.add_control_buttons(parent)
         self.add_hidden_attributes(parent)
+        self.__attribute_selection_area_initialized = True
+
+        self.trigger_attributes_changed()
 
     #noinspection PyAttributeOutsideInit
     def add_shown_attributes(self, parent):
         self.shown_attributes_area = gui.widgetBox(parent, " Shown attributes ")
         box = gui.widgetBox(self.shown_attributes_area, orientation='horizontal')
         self.shown_attributes_listbox = gui.listBox(
-            box, self, "selected_shown", "shown_attributes",
-            callback=self.reset_attr_manipulation, dragDropCallback=self.attributes_changed,
+            box, self, "selected_shown", "_shown_attributes",
+            callback=self.reset_attr_manipulation, dragDropCallback=self.trigger_attributes_changed,
             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
         controls_box = gui.widgetBox(box, orientation='vertical')
         self.move_attribute_up_button = gui.button(controls_box, self, "", callback=self.move_selection_up,
@@ -55,11 +90,11 @@ class OWVisWidget(OWWidget):
     #noinspection PyAttributeOutsideInit
     def add_control_buttons(self, parent):
         self.add_remove_tools_area = gui.widgetBox(parent, 1, orientation="horizontal")
-        self.add_attribute_button = gui.button(self.add_remove_tools_area, self, "", callback=self.add_attribute,
+        self.add_attribute_button = gui.button(self.add_remove_tools_area, self, "", callback=self.show_attribute,
                                                tooltip="Add (show) selected attributes")
         self.add_attribute_button.setIcon(QIcon(ICON_UP))
         self.remove_attribute_button = gui.button(self.add_remove_tools_area, self, "",
-                                                  callback=self.remove_attribute,
+                                                  callback=self.hide_attribute,
                                                   tooltip="Remove (hide) selected attributes")
         self.remove_attribute_button.setIcon(QIcon(ICON_DOWN))
         self.show_all_attributes_checkbox = gui.checkBox(self.add_remove_tools_area, self, "show_all_attributes",
@@ -69,15 +104,17 @@ class OWVisWidget(OWWidget):
     def add_hidden_attributes(self, parent):
         self.hidden_attributes_area = gui.widgetBox(parent, " Hidden attributes ")
         self.hidden_attributes_listbox = gui.listBox(self.hidden_attributes_area, self, "selected_hidden",
-                                                     "hidden_attributes", callback=self.reset_attr_manipulation,
-                                                     dragDropCallback=self.attributes_changed, enableDragDrop=True,
+                                                     "_hidden_attributes", callback=self.reset_attr_manipulation,
+                                                     dragDropCallback=self.trigger_attributes_changed, enableDragDrop=True,
                                                      selectionMode=QListWidget.ExtendedSelection)
 
     def reset_attr_manipulation(self):
+        if not self.__attribute_selection_area_initialized:
+            return
         if self.selected_shown:
             mini, maxi = min(self.selected_shown), max(self.selected_shown)
             tight_selection = maxi - mini == len(self.selected_shown) - 1
-            valid_selection = mini > 0 and maxi < len(self.shown_attributes)
+            valid_selection = mini > 0 and maxi < len(self._shown_attributes)
         else:
             tight_selection = valid_selection = False
 
@@ -86,8 +123,8 @@ class OWVisWidget(OWWidget):
         self.add_attribute_button.setDisabled(not self.selected_hidden or self.show_all_attributes)
         self.remove_attribute_button.setDisabled(not self.selected_shown or self.show_all_attributes)
         domain = self.get_data_domain()
-        if domain and self.hidden_attributes and domain.class_var \
-                and self.hidden_attributes[0][0] != domain.class_var.name:
+        if domain and self._hidden_attributes and domain.class_var \
+                and self._hidden_attributes[0][0] != domain.class_var.name:
             self.show_all_attributes_checkbox.setChecked(False)
 
     def get_data_domain(self):
@@ -108,18 +145,17 @@ class OWVisWidget(OWWidget):
             self.graph.clusterClosure = None
             self.graph.potentialsBmp = None
 
-        attrs = self.shown_attributes
-        sel = self.selected_shown
-        mini, maxi = min(sel), max(sel) + 1
+        attrs = self._shown_attributes
+        mini, maxi = min(self.selected_shown), max(self.selected_shown) + 1
         if dir == -1:
-            self.shown_attributes = attrs[:mini - 1] + attrs[mini:maxi] + [attrs[mini - 1]] + attrs[maxi:]
+            self._shown_attributes = attrs[:mini - 1] + attrs[mini:maxi] + [attrs[mini - 1]] + attrs[maxi:]
         else:
-            self.shown_attributes = attrs[:mini] + [attrs[maxi]] + attrs[mini:maxi] + attrs[maxi + 1:]
-        self.selected_shown = [x + dir for x in sel]
+            self._shown_attributes = attrs[:mini] + [attrs[maxi]] + attrs[mini:maxi] + attrs[maxi + 1:]
+        self.selected_shown = [x + dir for x in self.selected_shown]
 
         self.reset_attr_manipulation()
 
-        self.attributes_changed()
+        self.trigger_attributes_changed()
 
         self.graph.potentialsBmp = None
         if self.on_update_callback:
@@ -129,78 +165,59 @@ class OWVisWidget(OWWidget):
 
     def toggle_show_all_attributes(self):
         if self.show_all_attributes:
-            self.add_attribute(True)
+            self.show_attribute(True)
         self.reset_attr_manipulation()
 
-    def add_attribute(self, addAll=False):
+    def show_attribute(self, addAll=False):
         if hasattr(self, "graph"):
             self.graph.insideColors = None
             self.graph.clusterClosure = None
 
         if addAll:
-            self.setShownAttributeList()
+            self.set_shown_attributes()
         else:
-            self.setShownAttributeList(
-                self.shown_attributes + [self.hidden_attributes[i] for i in self.selected_hidden])
+            self.set_shown_attributes(
+                self._shown_attributes + [self._hidden_attributes[i] for i in self.selected_hidden])
         self.selected_hidden = []
         self.selected_shown = []
         self.reset_attr_manipulation()
 
-        self.attributes_changed()
+        self.trigger_attributes_changed()
 
         if hasattr(self, "graph"):
             self.graph.removeAllSelections()
 
-    def remove_attribute(self):
+    def hide_attribute(self):
         if hasattr(self, "graph"):
             self.graph.insideColors = None
             self.graph.clusterClosure = None
 
-        new_shown = self.shown_attributes[:]
+        new_shown = self._shown_attributes[:]
         self.selected_shown.sort(reverse=True)
         for i in self.selected_shown:
             del new_shown[i]
-        self.setShownAttributeList(new_shown)
+        self.set_shown_attributes(new_shown)
 
-        self.attributes_changed()
+        self.trigger_attributes_changed()
 
         if self.on_update_callback:
             self.on_update_callback()
         if hasattr(self, "graph"):
             self.graph.removeAllSelections()
 
-    def getShownAttributeList(self):
-        return [a[0] for a in self.shown_attributes]
+    def trigger_attributes_changed(self):
+        if not self.__attribute_selection_area_initialized:
+            # Some components trigger this event during the initialization.
+            # We ignore those requests, a separate event will be triggered
+            # manually when everything is initialized.
+            return
+        self.attributes_changed()
 
+    def closeContext(self):
+        super().closeContext()
 
-    def setShownAttributeList(self, shownAttributes=None):
-        shown = []
-        hidden = []
+        self.shown_attributes = None
 
-        domain = self.get_data_domain()
-        if domain:
-            if shownAttributes:
-                if type(shownAttributes[0]) == tuple:
-                    shown = shownAttributes
-                else:
-                    shown = [(domain[a].name, domain[a].var_type) for a in shownAttributes]
-                hidden = [x for x in [(a.name, a.var_type) for a in domain.attributes] if x not in shown]
-            else:
-                shown = [(a.name, a.var_type) for a in domain.attributes]
-                if not self.show_all_attributes:
-                    hidden = shown[10:]
-                    shown = shown[:10]
-
-            if domain.class_var and (domain.class_var.name, domain.class_var.var_type) not in shown:
-                hidden += [(domain.class_var.name, domain.class_var.var_type)]
-
-        self.shown_attributes = shown
-        self.hidden_attributes = hidden
-        self.selected_hidden = []
-        self.selected_shown = []
-        self.reset_attr_manipulation()
-
-        self.send_shown_attributes()
 
     # "Events"
     def attributes_changed(self):

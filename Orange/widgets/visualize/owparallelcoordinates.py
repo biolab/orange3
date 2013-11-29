@@ -82,7 +82,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.general_tab = gui.createTabPage(self.control_tabs, "Main")
         self.settings_tab = gui.createTabPage(self.control_tabs, "Settings")
 
-        self.add_attribute_selection_area(self.general_tab, callback=self.update_graph)
+        self.add_attribute_selection_area(self.general_tab)
         self.add_zoom_select_toolbar(self.general_tab)
 
         self.add_transparency_settings(self.settings_tab)
@@ -96,8 +96,8 @@ class OWParallelCoordinates(OWVisWidget):
         self.settings_tab.layout().addStretch(100)
         self.icons = attributeIconDict
 
-    def add_attribute_selection_area(self, parent, callback=None):
-        super().add_attribute_selection_area(parent, callback)
+    def add_attribute_selection_area(self, parent):
+        super().add_attribute_selection_area(parent)
         self.connect(self.shown_attributes_listbox, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flip_attribute)
 
     #noinspection PyAttributeOutsideInit
@@ -176,8 +176,7 @@ class OWParallelCoordinates(OWVisWidget):
                                 "attribute uncheck 'Global value scaling' checkbox.")
 
     def update_graph(self, *args):
-        attributes = self.getShownAttributeList()
-        self.graph.updateData(attributes)
+        self.graph.updateData(self.shown_attributes)
 
     def increase_axes_distance(self):
         m, M = self.graph.bounds_for_axis(xBottom)
@@ -208,33 +207,35 @@ class OWParallelCoordinates(OWVisWidget):
         self.correlationDict = {}
         self.data = data
         if not same_domain:
-            self.setShownAttributeList(self.attributeSelectionList)
+            self.set_shown_attributes(self.attributeSelectionList)
         self.openContext(self.data)
         self.reset_attr_manipulation()
-
 
     def set_subset_data(self, subData):
         self.subsetData = subData
 
+    new_shown_attributes = None
 
     # attribute selection signal - list of attributes to show
     def set_shown_attributes(self, shown_attributes):
-        self.shown_attributes = shown_attributes
-
+        self.new_shown_attributes = shown_attributes
 
     # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
     def handleNewSignals(self):
         self.graph.setData(self.data, self.subsetData)
-        if self.shown_attributes:
-            self.setShownAttributeList(self.shown_attributes)
+        if self.new_shown_attributes:
+            self.shown_attributes = self.new_shown_attributes
+            self.new_shown_attributes = None
         else:
-            self.setShownAttributeList()
+            self.shown_attributes = self._shown_attributes
+            # trust open context to take care of this?
+            # self.shown_attributes = None
         self.update_graph()
         self.sendSelections()
 
     def send_shown_attributes(self, attrList=None):
         if attrList == None:
-            attrList = self.getShownAttributeList()
+            attrList = self.shown_attributes
         self.send("Features", attrList)
 
     def selectionChanged(self):
