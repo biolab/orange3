@@ -218,7 +218,7 @@ class OWParallelCoordinates(OWVisWidget):
 
     # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
     def handleNewSignals(self):
-        self.graph.setData(self.data, self.subset_data)
+        self.graph.set_data(self.data, self.subset_data)
         if self.new_shown_attributes:
             self.shown_attributes = self.new_shown_attributes
             self.new_shown_attributes = None
