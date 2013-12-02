@@ -41,170 +41,165 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
         self.update_antialiasing(False)
 
-        self.parallelDlg = widget
-        self.toolRects = []
-        self.show_statistics = 0
-        self.lastSelectedCurve = None
+        self.widget = widget
+        self.last_selected_curve = None
         self.enableGridXB(0)
         self.enableGridYL(0)
-        self.domainContingency = None
-        self.autoUpdateAxes = 1
-        self.oldLegendKeys = []
-        self.selectionConditions = {}
-        self.visualized_attributes = []
+        self.domain_contingency = None
+        self.auto_update_axes = 1
+        self.old_legend_keys = []
+        self.selection_conditions = {}
+        self.attributes = []
         self.visualized_mid_labels = []
-        self.selectedExamples = []
-        self.unselectedExamples = []
-        self.bottomPixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/upgreenarrow.png"))
-        self.topPixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/downgreenarrow.png"))
+        self.attribute_indices = []
+        self.valid_data = []
 
-    def setData(self, data, subsetData=None, **args):
+        self.selected_examples = []
+        self.unselected_examples = []
+        self.bottom_pixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/upgreenarrow.png"))
+        self.top_pixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/downgreenarrow.png"))
+
+    def setData(self, data, subset_data=None, **args):
         OWPlot.setData(self, data)
-        ScaleData.set_data(self, data, subsetData, **args)
-        self.domainContingency = None
+        ScaleData.set_data(self, data, subset_data, **args)
+        self.domain_contingency = None
 
     # update shown data. Set attributes, coloring by className ....
-    def updateData(self, attributes, midLabels=None, updateAxisScale=1):
-        if attributes != self.visualized_attributes:
-            self.selectionConditions = {}       # reset selections
+    def update_data(self, attributes, mid_labels=None, update_axis_scale=1):
+        old_selection_conditions = self.selection_conditions
 
         self.clear()
-
-        self.visualized_attributes = []
-        self.visualized_mid_labels = []
-        self.selectedExamples = []
-        self.unselectedExamples = []
 
         if not (self.have_data or self.have_subset_data):
             return
         if len(attributes) < 2:
             return
 
-        self.visualized_attributes = attributes
-        self.visualized_mid_labels = midLabels
-        for name in self.selectionConditions.keys():
-            # keep only conditions that are related to the currently visualized attributes
-            if name not in self.visualized_attributes:
-                self.selectionConditions.pop(name)
+        self.attributes = attributes
+        self.attribute_indices = [self.attribute_name_index[name] for name in self.attributes]
+        self.valid_data = self.get_valid_list(self.attribute_indices)
+
+        self.visualized_mid_labels = mid_labels
+        self.add_relevant_selections(old_selection_conditions)
 
         # set the limits for panning
-        self.xPanningInfo = (1, 0, len(attributes) - 1)
-        self.yPanningInfo = (0, 0, 0)
-
-        length = len(attributes)
-        indices = [self.attribute_name_index[label] for label in attributes]
-
-        dataSize = len(self.scaled_data[0])
+        n_attr = len(attributes)
 
         if self.data_has_discrete_class:
             self.discPalette.setNumberOfColors(len(self.data_domain.class_var.values))
 
+        self.draw_curves()
+        self.draw_distributions(self.attribute_indices, self.valid_data)
+        self.draw_axes(attributes)
+        self.draw_statistics(self.attribute_indices, n_attr)
+        self.draw_mid_labels(mid_labels)
+        self.draw_legend()
 
-        # ############################################
-        # draw the data
-        # ############################################
-        subsetIdsToDraw = self.have_subset_data and dict(
-            [(self.rawSubsetData[i].id, 1) for i in self.get_valid_subset_indices(indices)]) or {}
-        validData = self.get_valid_list(indices)
-        mainCurves = {}
-        subCurves = {}
-        conditions = dict([(name, attributes.index(name)) for name in list(self.selectionConditions.keys())])
+        self.replot()
 
-        for i in range(dataSize):
-            if not validData[i]:
+    def add_relevant_selections(self, old_selection_conditions):
+        """Keep only conditions related to the currently visualized attributes"""
+        for name, value in old_selection_conditions.items():
+            if name in self.attributes:
+                self.selection_conditions[name] = value
+
+    def draw_axes(self, attributes):
+        self.remove_all_axes()
+        for i in range(len(attributes)):
+            axis_id = UserAxis + i
+            a = self.add_axis(axis_id, line=QLineF(i, 0, i, 1), arrows=AxisStart | AxisEnd, zoomable=True)
+            a.always_horizontal_text = True
+            a.max_text_width = 100
+            a.title_margin = -10
+            a.text_margin = 0
+            a.setZValue(5)
+            self.set_axis_title(axis_id, self.data_domain[attributes[i]].name)
+            self.set_show_axis_title(axis_id, self.show_attr_values)
+            if self.show_attr_values == 1:
+                attr = self.data_domain[attributes[i]]
+                if attr.var_type == VarTypes.Continuous:
+                    self.set_axis_scale(axis_id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
+                elif attr.var_type == VarTypes.Discrete:
+                    attribute_values = get_variable_values_sorted(self.data_domain[attributes[i]])
+                    self.set_axis_labels(axis_id, attribute_values)
+
+    def draw_curves(self):
+        n_attr = len(self.attributes)
+        conditions = dict([(name, self.attributes.index(name))
+                           for name in self.selection_conditions.keys()])
+        main_curves = {}
+        sub_curves = {}
+        for i in range(len(self.scaled_data[0])):
+            if not self.valid_data[i]:
                 continue
 
             if not self.data_has_class:
-                newColor = (0, 0, 0)
+                color = (0, 0, 0)
             elif self.data_has_continuous_class:
-                newColor = self.contPalette.getRGB(self.noJitteringScaledData[self.data_class_index][i])
+                color = self.contPalette.getRGB(self.noJitteringScaledData[self.data_class_index][i])
             else:
-                newColor = self.discPalette.getRGB(self.original_data[self.data_class_index][i])
+                color = self.discPalette.getRGB(self.original_data[self.data_class_index][i])
 
-            data = [self.scaled_data[index][i] for index in indices]
+            data = [self.scaled_data[index][i] for index in self.attribute_indices]
 
             # if we have selected some conditions and the example does not match it we show it as a subset data
-            if 0 in [self.selectionConditions[name][0] <= data[index] <= self.selectionConditions[name][1]
+            if 0 in [self.selection_conditions[name][0] <= data[index] <= self.selection_conditions[name][1]
                      for (name, index) in list(conditions.items())]:
                 alpha = self.alpha_value_2
-                curves = subCurves
-                self.unselectedExamples.append(i)
-            # if we have subset data then use alpha2 for main data and alpha for subset data
-            elif self.have_subset_data and self.raw_data[i].id not in subsetIdsToDraw:
-                alpha = self.alpha_value_2
-                curves = subCurves
-                self.unselectedExamples.append(i)
+                curves = sub_curves
+                self.unselected_examples.append(i)
             else:
                 alpha = self.alpha_value
-                curves = mainCurves
-                self.selectedExamples.append(i)
-                #FIXME:
-                #if self.raw_data[i].id in subsetIdsToDraw:
-                #    subsetIdsToDraw.pop(self.raw_data[i].id)
+                curves = main_curves
+                self.selected_examples.append(i)
 
-            newColor += (alpha,)
+            color += (alpha,)
 
-            if newColor not in curves:
-                curves[newColor] = []
-            curves[newColor].extend(data)
-
-        # if we have a data subset that contains examples that don't exist in the original dataset we show them here
-        if subsetIdsToDraw != {}:
-            validSubsetData = self.get_valid_subset_list(indices)
-
-            for i in range(len(self.rawSubsetData)):
-                if not validSubsetData[i]:
-                    continue
-                if self.rawSubsetData[i].id not in subsetIdsToDraw:
-                    continue
-
-                data = [self.scaledSubsetData[index][i] for index in indices]
-                if not self.data_domain.class_var or self.rawSubsetData[i].getclass().isSpecial():
-                    newColor = (0, 0, 0)
-                elif self.data_has_continuous_class:
-                    newColor = self.contPalette.getRGB(self.noJitteringScaledSubsetData[self.dataClassIndex][i])
-                else:
-                    newColor = self.discPalette.getRGB(self.originalSubsetData[self.dataClassIndex][i])
-
-                if 0 in [self.selectionConditions[name][0] <= data[index] <= self.selectionConditions[name][1]
-                         for (name, index) in list(conditions.items())]:
-                    newColor += (self.alpha_value_2,)
-                    curves = subCurves
-                else:
-                    newColor += (self.alpha_value,)
-                    curves = mainCurves
-
-                if newColor not in curves:
-                    curves[newColor] = []
-                curves[newColor].extend(data)
+            if color not in curves:
+                curves[color] = []
+            curves[color].extend(data)
 
         # add main curves
-        keys = sorted(mainCurves.keys())
+        keys = sorted(main_curves.keys())
         for key in keys:
-            curve = ParallelCoordinatesCurve(len(attributes), mainCurves[key], key)
+            curve = ParallelCoordinatesCurve(n_attr, main_curves[key], key)
             curve.fitted = self.use_splines
             curve.attach(self)
 
         # add sub curves
-        keys = sorted(subCurves.keys())
+        keys = sorted(sub_curves.keys())
         for key in keys:
-            curve = ParallelCoordinatesCurve(len(attributes), subCurves[key], key)
+            curve = ParallelCoordinatesCurve(n_attr, sub_curves[key], key)
             curve.fitted = self.use_splines
             curve.attach(self)
 
-        # ############################################
-        # do we want to show distributions with discrete attributes
-        if self.show_distributions and self.data_has_discrete_class and self.have_data:
-            self.showDistributionValues(validData, indices)
+    def draw_legend(self):
+        if self.data_has_class:
+            if self.data_domain.class_var.var_type == VarTypes.Discrete:
+                self.legend().clear()
+                varValues = get_variable_values_sorted(self.data_domain.class_var)
+                for ind in range(len(varValues)):
+                    self.legend().add_item(self.data_domain.class_var.name, varValues[ind],
+                                           OWPoint(OWPoint.Rect, self.discPalette[ind], self.point_width))
+            else:
+                values = self.attr_values[self.data_domain.class_var.name]
+                decimals = self.data_domain.class_var.numberOfDecimals
+                self.legend().add_color_gradient(self.data_domain.class_var.name,
+                                                 ["%%.%df" % decimals % v for v in values])
+        else:
+            self.legend().clear()
+            self.old_legend_keys = []
 
-        self.draw_axes(attributes)
+    def draw_mid_labels(self, mid_labels):
+        if mid_labels:
+            for j in range(len(mid_labels)):
+                self.addMarker(mid_labels[j], j + 0.5, 1.0, alignment=Qt.AlignCenter | Qt.AlignTop)
 
-        # ##############################################
-        # show lines that represent standard deviation or quartiles
-        # ##############################################
+    def draw_statistics(self, indices, n_attr):
+        """Draw lines that represent standard deviation or quartiles"""
         if self.show_statistics and self.have_data:
             data = []
-            for i in range(length):
+            for i in range(n_attr):
                 if self.data_domain[indices[i]].var_type != VarTypes.Continuous:
                     data.append([()])
                     continue  # only for continuous attributes
@@ -290,63 +285,22 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                 self.addCurve("", col, col, 1, OWCurve.Lines,
                               OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
 
-
-        # ##################################################
-        # show labels in the middle of the axis
-        if midLabels:
-            for j in range(len(midLabels)):
-                self.addMarker(midLabels[j], j + 0.5, 1.0, alignment=Qt.AlignCenter | Qt.AlignTop)
-
-        # show the legend
-        if self.data_has_class:
-            if self.data_domain.class_var.var_type == VarTypes.Discrete:
-                self.legend().clear()
-                varValues = get_variable_values_sorted(self.data_domain.class_var)
-                for ind in range(len(varValues)):
-                    self.legend().add_item(self.data_domain.class_var.name, varValues[ind],
-                                           OWPoint(OWPoint.Rect, self.discPalette[ind], self.point_width))
-            else:
-                values = self.attr_values[self.data_domain.class_var.name]
-                decimals = self.data_domain.class_var.numberOfDecimals
-                self.legend().add_color_gradient(self.data_domain.class_var.name,
-                                                 ["%%.%df" % decimals % v for v in values])
-        else:
-            self.legend().clear()
-            self.oldLegendKeys = []
-
-        self.replot()
-
-    def draw_axes(self, attributes):
-        self.remove_all_axes()
-        for i in range(len(attributes)):
-            id = UserAxis + i
-            a = self.add_axis(id, line=QLineF(i, 0, i, 1), arrows=AxisStart | AxisEnd, zoomable=True)
-            a.always_horizontal_text = True
-            a.max_text_width = 100
-            a.title_margin = -10
-            a.text_margin = 0
-            a.setZValue(5)
-            self.set_axis_title(id, self.data_domain[attributes[i]].name)
-            self.set_show_axis_title(id, self.show_attr_values)
-            if self.show_attr_values == 1:
-                attr = self.data_domain[attributes[i]]
-                if attr.var_type == VarTypes.Continuous:
-                    self.set_axis_scale(id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
-                elif attr.var_type == VarTypes.Discrete:
-                    attrVals = get_variable_values_sorted(self.data_domain[attributes[i]])
-                    self.set_axis_labels(id, attrVals)
+    def draw_distributions(self, indices, valid_data):
+        """Draw distributions with discrete attributes"""
+        if self.show_distributions and self.data_has_discrete_class and self.have_data:
+            self.showDistributionValues(valid_data, indices)
 
     # ##########################################
     # SHOW DISTRIBUTION BAR GRAPH
-    def showDistributionValues(self, validData, indices):
+    def showDistributionValues(self, valid_data, indices):
         # create color table
         clsCount = len(self.data_domain.class_var.values)
         #if clsCount < 1: clsCount = 1.0
 
         # we create a hash table of possible class values (happens only if we have a discrete class)
         classValueSorted = get_variable_values_sorted(self.data_domain.class_var)
-        if self.domainContingency == None:
-            self.domainContingency = get_contingencies(self.raw_data)
+        if self.domain_contingency == None:
+            self.domain_contingency = get_contingencies(self.raw_data)
 
         maxVal = 1
         for attr in indices:
@@ -356,7 +310,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                 maxVal = max(maxVal, max(get_distribution(self.raw_data, attr)))
             else:
                 maxVal = max(maxVal,
-                             max([max(val or [1]) for val in list(self.domainContingency[attr].values())] or [1]))
+                             max([max(val or [1]) for val in list(self.domain_contingency[attr].values())] or [1]))
 
         for graphAttrIndex, index in enumerate(indices):
             attr = self.data_domain[index]
@@ -365,7 +319,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             if self.data_domain[index] == self.data_domain.class_var:
                 contingency = get_contingency(self.raw_data, self.data_domain[index], self.data_domain[index])
             else:
-                contingency = self.domainContingency[index]
+                contingency = self.domain_contingency[index]
 
             attrLen = len(attr.values)
 
@@ -414,9 +368,9 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             xFloat = self.inv_transform(xBottom, canvasPos.x())
             contact, (index, pos) = self.testArrowContact(int(round(xFloat)), canvasPos.x(), canvasPos.y())
             if contact:
-                attr = self.data_domain[self.visualized_attributes[index]]
+                attr = self.data_domain[self.attributes[index]]
                 if attr.var_type == VarTypes.Continuous:
-                    condition = self.selectionConditions.get(attr.name, [0, 1])
+                    condition = self.selection_conditions.get(attr.name, [0, 1])
                     val = self.attr_values[attr.name][0] + condition[pos] * (
                         self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
                     strVal = attr.name + "= %%.%df" % (attr.numberOfDecimals) % (val)
@@ -448,18 +402,18 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     def testArrowContact(self, indices, x, y):
         if type(indices) != list: indices = [indices]
         for index in indices:
-            if index >= len(self.visualized_attributes) or index < 0: continue
+            if index >= len(self.attributes) or index < 0: continue
             intX = self.transform(xBottom, index)
             bottom = self.transform(yLeft,
-                                    self.selectionConditions.get(self.visualized_attributes[index], [0, 1])[0])
-            bottomRect = QRect(intX - self.bottomPixmap.width() / 2, bottom, self.bottomPixmap.width(),
-                               self.bottomPixmap.height())
+                                    self.selection_conditions.get(self.attributes[index], [0, 1])[0])
+            bottomRect = QRect(intX - self.bottom_pixmap.width() / 2, bottom, self.bottom_pixmap.width(),
+                               self.bottom_pixmap.height())
             if bottomRect.contains(QPoint(x, y)):
                 return 1, (index, 0)
             top = self.transform(yLeft,
-                                 self.selectionConditions.get(self.visualized_attributes[index], [0, 1])[1])
-            topRect = QRect(intX - self.topPixmap.width() / 2, top - self.topPixmap.height(), self.topPixmap.width(),
-                            self.topPixmap.height())
+                                 self.selection_conditions.get(self.attributes[index], [0, 1])[1])
+            topRect = QRect(intX - self.top_pixmap.width() / 2, top - self.top_pixmap.height(), self.top_pixmap.width(),
+                            self.top_pixmap.height())
             if topRect.contains(QPoint(x, y)):
                 return 1, (index, 1)
         return 0, (0, 0)
@@ -480,11 +434,11 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             canvasPos = self.mapToScene(e.pos())
             yFloat = min(1, max(0, self.inv_transform(yLeft, canvasPos.y())))
             index, pos = self.pressedArrow
-            attr = self.data_domain[self.visualized_attributes[index]]
-            oldCondition = self.selectionConditions.get(attr.name, [0, 1])
+            attr = self.data_domain[self.attributes[index]]
+            oldCondition = self.selection_conditions.get(attr.name, [0, 1])
             oldCondition[pos] = yFloat
-            self.selectionConditions[attr.name] = oldCondition
-            self.updateData(self.visualized_attributes, self.visualized_mid_labels, updateAxisScale=0)
+            self.selection_conditions[attr.name] = oldCondition
+            self.update_data(self.attributes, self.visualized_mid_labels, update_axis_scale=0)
 
             if attr.var_type == VarTypes.Continuous:
                 val = self.attr_values[attr.name][0] + oldCondition[pos] * (
@@ -528,49 +482,40 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             return 1
 
         # if the user clicked between two lines send a list with the names of the two attributes
-        elif self.parallelDlg:
+        elif self.widget:
             x1 = int(self.inv_transform(xBottom, e.x()))
             axis = self.axisScaleDraw(xBottom)
-            self.parallelDlg.send_shown_attributes([str(axis.label(x1)), str(axis.label(x1 + 1))])
+            self.widget.send_shown_attributes([str(axis.label(x1)), str(axis.label(x1 + 1))])
         return 0
 
     def removeAllSelections(self, send=1):
-        self.selectionConditions = {}
-        self.updateData(self.visualized_attributes, self.visualized_mid_labels, updateAxisScale=0)
-        if send and self.auto_send_selection_callback:
-            self.auto_send_selection_callback() # do we want to send new selection
+        self.selection_conditions = {}
+        self.update_data(self.attributes, self.visualized_mid_labels, update_axis_scale=0)
 
     # draw the curves and the selection conditions
     def drawCanvas(self, painter):
         OWPlot.drawCanvas(self, painter)
         for i in range(
                 int(max(0, math.floor(self.axisScaleDiv(xBottom).interval().minValue()))),
-                int(min(len(self.visualized_attributes),
+                int(min(len(self.attributes),
                         math.ceil(self.axisScaleDiv(xBottom).interval().maxValue()) + 1))):
-            bottom, top = self.selectionConditions.get(self.visualized_attributes[i], (0, 1))
-            painter.drawPixmap(self.transform(xBottom, i) - self.bottomPixmap.width() / 2,
-                               self.transform(yLeft, bottom), self.bottomPixmap)
-            painter.drawPixmap(self.transform(xBottom, i) - self.topPixmap.width() / 2,
-                               self.transform(yLeft, top) - self.topPixmap.height(), self.topPixmap)
-
-    # get selected examples
-    # this function must be called after calling self.updateGraph
-    def getSelectionsAsExampleTables(self):
-        # FIXME:
-        return (None, None)
-
-        if not self.have_data:
-            return (None, None)
-
-        selected = self.raw_data.getitemsref(self.selectedExamples)
-        unselected = self.raw_data.getitemsref(self.unselectedExamples)
-
-        if len(selected) == 0: selected = None
-        if len(unselected) == 0: unselected = None
-        return (selected, unselected)
+            bottom, top = self.selection_conditions.get(self.attributes[i], (0, 1))
+            painter.drawPixmap(self.transform(xBottom, i) - self.bottom_pixmap.width() / 2,
+                               self.transform(yLeft, bottom), self.bottom_pixmap)
+            painter.drawPixmap(self.transform(xBottom, i) - self.top_pixmap.width() / 2,
+                               self.transform(yLeft, top) - self.top_pixmap.height(), self.top_pixmap)
 
     def auto_send_selection_callback(self):
         pass
+
+    def clear(self):
+        super().clear()
+
+        self.attributes = []
+        self.visualized_mid_labels = []
+        self.selected_examples = []
+        self.unselected_examples = []
+        self.selection_conditions = {}
 
 
 # ####################################################################

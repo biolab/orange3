@@ -134,7 +134,7 @@ class OWParallelCoordinates(OWVisWidget):
         gui.toolButton(resize_columns_box, self, "-", callback=self.decrease_axes_distance,
                        tooltip="Decrease the distance between the axes", width=30, height=20)
         gui.rubber(resize_columns_box)
-        gui.checkBox(box, self, "graph.autoUpdateAxes", "Auto scale X axis",
+        gui.checkBox(box, self, "graph.auto_update_axes", "Auto scale X axis",
                      tooltip="Auto scale X axis to show all visualized attributes", callback=self.update_graph)
 
     def add_annotation_settings(self, parent):
@@ -172,7 +172,7 @@ class OWParallelCoordinates(OWVisWidget):
                                 "attribute uncheck 'Global value scaling' checkbox.")
 
     def update_graph(self):
-        self.graph.updateData(self.shown_attributes)
+        self.graph.update_data(self.shown_attributes)
 
     def increase_axes_distance(self):
         m, M = self.graph.bounds_for_axis(xBottom)
@@ -186,7 +186,7 @@ class OWParallelCoordinates(OWVisWidget):
         if (M - m) == 0:
             return # we have not yet updated the axes (self.graph.updateAxes())
 
-        self.graph.setAxisScale(xBottom, m, min(len(self.graph.visualized_attributes) - 1, M + (M - m) / 10.), 1)
+        self.graph.setAxisScale(xBottom, m, min(len(self.graph.attributes) - 1, M + (M - m) / 10.), 1)
         self.graph.replot()
 
     # ------------- SIGNALS --------------------------
@@ -241,9 +241,7 @@ class OWParallelCoordinates(OWVisWidget):
 
     # send signals with selected and unselected examples as two datasets
     def sendSelections(self):
-        (selected, unselected) = self.graph.getSelectionsAsExampleTables()
-        self.send("Selected Data", selected)
-        self.send("Other Data", unselected)
+        return
 
     # jittering options
     def setJitteringSize(self):
