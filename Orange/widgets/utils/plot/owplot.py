@@ -899,10 +899,10 @@ class OWPlot(orangeqt.Plot):
         pass
 
     def clear(self):
-        '''
+        """
             Clears the plot, removing all curves, markers and tooltips.
             Axes and the grid are not removed
-        '''
+        """
         for i in self.plot_items():
             if i is not self.grid_curve:
                 self.remove_item(i)
@@ -916,9 +916,9 @@ class OWPlot(orangeqt.Plot):
         self.update_grid()
 
     def clear_markers(self):
-        '''
+        """
             Removes all markers added with :meth:`add_marker` from the plot
-        '''
+        """
         for item,x,y,x_axis,y_axis in self._marker_items:
             item.detach()
         self._marker_items = []
