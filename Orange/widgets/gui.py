@@ -1435,20 +1435,21 @@ class OrangeListBox(QtGui.QListWidget):
         ev.setDropAction(Qt.MoveAction)
         super().dropEvent(ev)
 
-        self.update_master()
+        items = self.update_master()
         if ev.source() is not self:
-            ev.source().update_master()
+            ev.source().update_master(exclude=items)
 
         if self.drop_callback:
             self.drop_callback()
 
-    def update_master(self):
+    def update_master(self, exclude=()):
+        control_list = [self.item(i).data(Qt.UserRole) for i in range(self.count()) if self.item(i).data(Qt.UserRole) not in exclude]
         if self.ogLabels:
             master_list = getattr(self.master, self.ogLabels)
-            master_list[:] = []
-            for i in range(self.count()):
-                item = self.item(i)
-                master_list.append(item.data(Qt.UserRole))
+
+            if master_list != control_list:
+                master_list[:] = control_list
+        return control_list
 
     def updateGeometries(self):
         # A workaround for a bug in Qt
