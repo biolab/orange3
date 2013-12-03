@@ -1730,7 +1730,6 @@ class OWPlot(orangeqt.Plot):
         self.zoom_rect = r
 
     def zoom_to_rect(self, rect):
-        print(len(self.zoom_stack))
         self.ensure_inside(rect, self.graph_area)
 
         # add to zoom_stack if zoom_rect is larger
@@ -1740,7 +1739,6 @@ class OWPlot(orangeqt.Plot):
         self.animate(self, 'zoom_rect', rect, start_val = self.get_zoom_rect())
 
     def zoom_back(self):
-        print(len(self.zoom_stack))
         if self.zoom_stack:
             rect = self.zoom_stack.pop()
             self.animate(self, 'zoom_rect', rect, start_val = self.get_zoom_rect())
