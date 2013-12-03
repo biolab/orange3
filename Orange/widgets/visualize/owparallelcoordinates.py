@@ -79,12 +79,10 @@ class OWParallelCoordinates(OWVisWidget):
         self.add_attribute_selection_area(self.general_tab)
         self.add_zoom_select_toolbar(self.general_tab)
 
-        self.add_transparency_settings(self.settings_tab)
         self.add_visual_settings(self.settings_tab)
         self.add_axis_settings(self.settings_tab)
         self.add_annotation_settings(self.settings_tab)
         self.add_color_settings(self.settings_tab)
-        self.add_selection_settings(self.settings_tab)
 
         self.settings_tab.layout().addStretch(100)
         self.icons = attributeIconDict
@@ -99,15 +97,6 @@ class OWParallelCoordinates(OWVisWidget):
         self.zoom_select_toolbar = ZoomSelectToolbar(self, parent, self.graph, self.auto_send_selection,
                                                      buttons=buttons)
         self.connect(self.zoom_select_toolbar.buttonSendSelections, SIGNAL("clicked()"), self.sendSelections)
-
-    def add_transparency_settings(self, parent):
-        box = gui.widgetBox(parent, "Transparency")
-        gui.hSlider(box, self, 'graph.alpha_value', label="Examples: ",
-                    minValue=0, maxValue=255, step=10, callback=self.update_graph,
-                    tooltip="Alpha value used for drawing example lines")
-        gui.hSlider(box, self, 'graph.alpha_value_2', label="Rest:     ",
-                    minValue=0, maxValue=255, step=10, callback=self.update_graph,
-                    tooltip="Alpha value used to draw statistics, example subsets, ...")
 
     def add_visual_settings(self, parent):
         box = gui.widgetBox(parent, "Visual Settings")
@@ -133,10 +122,6 @@ class OWParallelCoordinates(OWVisWidget):
         gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ", orientation="horizontal", labelWidth=90,
                      items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.update_graph,
                      sendSelectedValue=False, valueType=int)
-        gui.comboBox(box, self, "middle_labels", label="Middle labels: ", orientation="horizontal", labelWidth=90,
-                     items=["No labels", "Correlations", "VizRank"], callback=self.update_graph,
-                     tooltip="The information do you wish to view on top in the middle of coordinate axes",
-                     sendSelectedValue=True, valueType=str)
         gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.update_graph,
                      tooltip="Show bars with distribution of class values (only for discrete attributes)")
 
@@ -144,15 +129,6 @@ class OWParallelCoordinates(OWVisWidget):
         box = gui.widgetBox(parent, "Colors", orientation="horizontal")
         gui.button(box, self, "Set colors", self.select_colors,
                    tooltip="Set the canvas background color and color palette for coloring continuous variables")
-
-    def add_selection_settings(self, parent):
-        box = gui.widgetBox(parent, "Auto Send Selected Data When...")
-        gui.checkBox(box, self, 'auto_send_selection', 'Adding/Removing selection areas',
-                     callback=self.selectionChanged,
-                     tooltip="Send selected data whenever a selection area is added or removed")
-        gui.checkBox(box, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas',
-                     tooltip="Send selected data when a user moves or resizes an existing selection area")
-        self.graph.auto_send_selection_callback = self.selectionChanged
 
     def flip_attribute(self, item):
         if self.graph.flip_attribute(str(item.text())):
