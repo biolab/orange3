@@ -68,8 +68,6 @@ class OWParallelCoordinates(OWVisWidget):
         self.graph.discrete_palette = self.color_picker.getDiscretePalette(DISCRETE_PALETTE)
         self.graph.setCanvasBackground(self.color_picker.getColor(CANVAS_COLOR))
 
-        self.toggle_show_all_attributes()
-
         self.resize(900, 700)
 
     #noinspection PyAttributeOutsideInit
@@ -82,7 +80,6 @@ class OWParallelCoordinates(OWVisWidget):
         self.add_zoom_select_toolbar(self.general_tab)
 
         self.add_transparency_settings(self.settings_tab)
-        self.add_jittering_settings(self.settings_tab)
         self.add_visual_settings(self.settings_tab)
         self.add_axis_settings(self.settings_tab)
         self.add_annotation_settings(self.settings_tab)
@@ -111,12 +108,6 @@ class OWParallelCoordinates(OWVisWidget):
         gui.hSlider(box, self, 'graph.alpha_value_2', label="Rest:     ",
                     minValue=0, maxValue=255, step=10, callback=self.update_graph,
                     tooltip="Alpha value used to draw statistics, example subsets, ...")
-
-    def add_jittering_settings(self, parent):
-        box = gui.widgetBox(parent, "Jittering Options")
-        gui.comboBox(box, self, "graph.jitter_size", label='Jittering size (% of size):  ',
-                     orientation='horizontal', callback=self.setJitteringSize,
-                     items=self.jitterSizeNums, sendSelectedValue=True, valueType=float)
 
     def add_visual_settings(self, parent):
         box = gui.widgetBox(parent, "Visual Settings")
@@ -205,8 +196,6 @@ class OWParallelCoordinates(OWVisWidget):
             self.shown_attributes = self.shown_attributes
 
         self.openContext(self.data)
-
-        self.reset_attr_manipulation()
 
     def set_subset_data(self, subset_data):
         self.subset_data = subset_data

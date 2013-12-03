@@ -59,7 +59,6 @@ class OWVisWidget(OWWidget):
     #noinspection PyAttributeOutsideInit
     def add_attribute_selection_area(self, parent):
         self.add_shown_attributes(parent)
-        self.add_control_buttons(parent)
         self.add_hidden_attributes(parent)
         self.__attribute_selection_area_initialized = True
 
@@ -68,114 +67,24 @@ class OWVisWidget(OWWidget):
     #noinspection PyAttributeOutsideInit
     def add_shown_attributes(self, parent):
         self.shown_attributes_area = gui.widgetBox(parent, " Shown attributes ")
-        box = gui.widgetBox(self.shown_attributes_area, orientation='horizontal')
         self.shown_attributes_listbox = gui.listBox(
-            box, self, "selected_shown", "_shown_attributes",
-            callback=self.reset_attr_manipulation, dragDropCallback=self.trigger_attributes_changed,
+            self.shown_attributes_area, self, "selected_shown", "_shown_attributes",
+            dragDropCallback=self.trigger_attributes_changed,
             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
-        controls_box = gui.widgetBox(box, orientation='vertical')
-        self.move_attribute_up_button = gui.button(controls_box, self, "", callback=self.move_selection_up,
-                                                   tooltip="Move selected attributes up")
-        self.move_attribute_up_button.setIcon(QIcon(ICON_UP))
-        self.move_attribute_up_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.move_attribute_up_button.setMaximumWidth(30)
-
-        self.move_attribute_down_button = gui.button(controls_box, self, "", callback=self.move_selection_down,
-                                                     tooltip="Move selected attributes down")
-        self.move_attribute_down_button.setIcon(QIcon(ICON_DOWN))
-        self.move_attribute_down_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.move_attribute_down_button.setMaximumWidth(30)
-
-    #noinspection PyAttributeOutsideInit
-    def add_control_buttons(self, parent):
-        self.add_remove_tools_area = gui.widgetBox(parent, 1, orientation="horizontal")
-        self.add_attribute_button = gui.button(self.add_remove_tools_area, self, "", callback=self.show_attribute,
-                                               tooltip="Add (show) selected attributes")
-        self.add_attribute_button.setIcon(QIcon(ICON_UP))
-        self.remove_attribute_button = gui.button(self.add_remove_tools_area, self, "",
-                                                  callback=self.hide_attribute,
-                                                  tooltip="Remove (hide) selected attributes")
-        self.remove_attribute_button.setIcon(QIcon(ICON_DOWN))
-        self.show_all_attributes_checkbox = gui.checkBox(self.add_remove_tools_area, self, "show_all_attributes",
-                                                         "Show all", callback=self.toggle_show_all_attributes)
 
     #noinspection PyAttributeOutsideInit
     def add_hidden_attributes(self, parent):
         self.hidden_attributes_area = gui.widgetBox(parent, " Hidden attributes ")
         self.hidden_attributes_listbox = gui.listBox(self.hidden_attributes_area, self, "selected_hidden",
-                                                     "_hidden_attributes", callback=self.reset_attr_manipulation,
+                                                     "_hidden_attributes",
                                                      dragDropCallback=self.trigger_attributes_changed,
                                                      enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
-
-    def reset_attr_manipulation(self):
-        if not self.__attribute_selection_area_initialized:
-            return
-        if self.selected_shown:
-            mini, maxi = min(self.selected_shown), max(self.selected_shown)
-            tight_selection = maxi - mini == len(self.selected_shown) - 1
-            move_up_enabled = bool(self.selected_shown and tight_selection and mini > 0)
-            move_down_enabled = bool(self.selected_shown and tight_selection and maxi < len(self._shown_attributes) - 1)
-        else:
-            move_up_enabled = move_down_enabled = False
-
-        self.move_attribute_up_button.setEnabled(move_up_enabled)
-        self.move_attribute_down_button.setEnabled(move_down_enabled)
-        self.add_attribute_button.setDisabled(not self.selected_hidden or self.show_all_attributes)
-        self.remove_attribute_button.setDisabled(not self.selected_shown or self.show_all_attributes)
-        domain = self.get_data_domain()
-
-        if domain and self._hidden_attributes and domain.class_var:
-            if self._hidden_attributes[0][0] != domain.class_var.name:
-                self.show_all_attributes_checkbox.setChecked(False)
 
     def get_data_domain(self):
         if hasattr(self, "data") and self.data:
             return self.data.domain
         else:
             return None
-
-    def move_selection_up(self):
-        self.move_selected_attributes(-1)
-
-    def move_selection_down(self):
-        self.move_selected_attributes(1)
-
-    def move_selected_attributes(self, direction):
-        attr = self._shown_attributes
-        mini, maxi = min(self.selected_shown), max(self.selected_shown) + 1
-        if direction == -1:
-            self._shown_attributes = attr[:mini - 1] + attr[mini:maxi] + [attr[mini - 1]] + attr[maxi:]
-        else:
-            self._shown_attributes = attr[:mini] + [attr[maxi]] + attr[mini:maxi] + attr[maxi + 1:]
-        self.selected_shown = [x + direction for x in self.selected_shown]
-
-        self.trigger_attributes_changed()
-
-    def toggle_show_all_attributes(self):
-        if self.show_all_attributes:
-            self.show_attribute(True)
-        else:
-            self.reset_attr_manipulation()
-
-    def show_attribute(self, add_all=False):
-        if add_all:
-            self.shown_attributes = None
-        else:
-            self.shown_attributes = \
-                self._shown_attributes + [self._hidden_attributes[i] for i in self.selected_hidden]
-        self.selected_hidden = []
-        self.selected_shown = []
-
-        self.trigger_attributes_changed()
-
-    def hide_attribute(self):
-        new_shown = self._shown_attributes[:]
-        self.selected_shown.sort(reverse=True)
-        for i in self.selected_shown:
-            del new_shown[i]
-        self.shown_attributes = new_shown
-
-        self.trigger_attributes_changed()
 
     def trigger_attributes_changed(self):
         if not self.__attribute_selection_area_initialized:
@@ -184,7 +93,6 @@ class OWVisWidget(OWWidget):
             # manually when everything is initialized.
             return
 
-        self.reset_attr_manipulation()
         self.attributes_changed()
 
     def closeContext(self):

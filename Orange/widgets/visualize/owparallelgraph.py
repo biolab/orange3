@@ -20,11 +20,16 @@ from Orange.data import Variable
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft, ZOOMING
 from Orange.widgets.utils.scaling import get_variable_value_indices, get_variable_values_sorted, ScaleData
+
 VarTypes = Variable.VarTypes
 
 NO_STATISTICS = 0
 MEANS = 1
 MEDIAN = 2
+
+VISIBLE = 196
+TRANSPARENT = 64
+HIDDEN = 0
 
 
 class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
@@ -75,6 +80,13 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             return
         if len(attributes) < 2:
             return
+
+        if self.show_statistics:
+            self.alpha_value = TRANSPARENT
+            self.alpha_value_2 = VISIBLE
+        else:
+            self.alpha_value = VISIBLE
+            self.alpha_value_2 = TRANSPARENT
 
         self.attributes = attributes
         self.attribute_indices = [self.attribute_name_index[name] for name in self.attributes]
@@ -196,16 +208,17 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                 if self.data_domain[self.attribute_indices[i]].var_type != VarTypes.Continuous:
                     data.append([()])
                     continue  # only for continuous attributes
-                array = np.compress(np.equal(self.validDataArray[self.attribute_indices[i]], 1),
-                                    self.scaledData[self.attribute_indices[i]])  # remove missing values
 
                 if not self.data_has_class or self.data_has_continuous_class:    # no class
+                    attr_values = self.no_jittering_scaled_data[i]
+                    attr_values = attr_values[~np.isnan(attr_values)]
+
                     if self.show_statistics == MEANS:
-                        m = array.mean()
-                        dev = array.std()
+                        m = attr_values.mean()
+                        dev = attr_values.std()
                         data.append([(m - dev, m, m + dev)])
                     elif self.show_statistics == MEDIAN:
-                        sorted_array = np.sort(array)
+                        sorted_array = np.sort(attr_values)
                         if len(sorted_array) > 0:
                             data.append([(sorted_array[int(len(sorted_array) / 4.0)],
                                           sorted_array[int(len(sorted_array) / 2.0)],
@@ -215,24 +228,22 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                 else:
                     curr = []
                     class_values = get_variable_values_sorted(self.data_domain.class_var)
-                    class_value_indices = get_variable_value_indices(self.data_domain.class_var)
                     for c in range(len(class_values)):
-                        scaled_val = ((class_value_indices[class_values[c]] * 2) + 1) / (2 * len(class_value_indices))
-                        non_missing_values = np.compress(np.equal(self.validDataArray[self.attribute_indices[i]], 1),
-                                                         self.noJitteringScaledData[self.dataClassIndex])
-                        # remove missing values
-                        arr_c = np.compress(np.equal(non_missing_values, scaled_val), array)
-                        if len(arr_c) == 0:
+                        attr_values = self.scaled_data[i, self.original_data[self.data_class_index] == c]
+                        attr_values = attr_values[~np.isnan(attr_values)]
+
+                        if len(attr_values) == 0:
                             curr.append((0, 0, 0))
                             continue
                         if self.show_statistics == MEANS:
-                            m = arr_c.mean()
-                            dev = arr_c.std()
+                            m = attr_values.mean()
+                            dev = attr_values.std()
                             curr.append((m - dev, m, m + dev))
                         elif self.show_statistics == MEDIAN:
-                            sorted_array = np.sort(arr_c)
-                            curr.append((sorted_array[int(len(arr_c) / 4.0)], sorted_array[int(len(arr_c) / 2.0)],
-                                         sorted_array[int(len(arr_c) * 0.75)]))
+                            sorted_array = np.sort(attr_values)
+                            curr.append((sorted_array[int(len(attr_values) / 4.0)],
+                                         sorted_array[int(len(attr_values) / 2.0)],
+                                         sorted_array[int(len(attr_values) * 0.75)]))
                     data.append(curr)
 
             # draw vertical lines
@@ -243,14 +254,14 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     x = i - 0.03 * (len(data[i]) - 1) / 2.0 + c * 0.03
                     col = QColor(self.discPalette[c])
                     col.setAlpha(self.alpha_value_2)
-                    self.addCurve("", col, col, 3, OWCurve.Lines, OWPoint.NoSymbol, xData=[x, x, x],
-                                  yData=[data[i][c][0], data[i][c][1], data[i][c][2]], lineWidth=4)
-                    self.addCurve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
-                                  yData=[data[i][c][0], data[i][c][0]], lineWidth=4)
-                    self.addCurve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
-                                  yData=[data[i][c][1], data[i][c][1]], lineWidth=4)
-                    self.addCurve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
-                                  yData=[data[i][c][2], data[i][c][2]], lineWidth=4)
+                    self.add_curve("", col, col, 3, OWCurve.Lines, OWPoint.NoSymbol, xData=[x, x, x],
+                                   yData=[data[i][c][0], data[i][c][1], data[i][c][2]], lineWidth=4)
+                    self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
+                                   yData=[data[i][c][0], data[i][c][0]], lineWidth=4)
+                    self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
+                                   yData=[data[i][c][1], data[i][c][1]], lineWidth=4)
+                    self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
+                                   yData=[data[i][c][2], data[i][c][2]], lineWidth=4)
 
             # draw lines with mean/median values
             if not self.data_has_class or self.data_has_continuous_class:
@@ -275,8 +286,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                         ys = []
                 col = QColor(self.discPalette[c])
                 col.setAlpha(self.alpha_value_2)
-                self.addCurve("", col, col, 1, OWCurve.Lines,
-                              OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
+                self.add_curve("", col, col, 1, OWCurve.Lines,
+                               OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
 
     def draw_distributions(self):
         """Draw distributions with discrete attributes"""
@@ -397,8 +408,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             top = self.transform(yLeft,
                                  self.selection_conditions.get(self.attributes[index], [0, 1])[1])
             top_rect = QRect(int_x - self.top_pixmap.width() / 2, top - self.top_pixmap.height(),
-                            self.top_pixmap.width(),
-                            self.top_pixmap.height())
+                             self.top_pixmap.width(),
+                             self.top_pixmap.height())
             if top_rect.contains(QPoint(x, y)):
                 return 1, (index, 1)
         return 0, (0, 0)
