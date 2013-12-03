@@ -7,6 +7,7 @@ from PyQt4.QtCore import Qt
 
 # TODO: can we avoid the valueType by keeping the type the same?
 #       E.g. value = type(value)(x)
+from PyQt4.QtGui import QAbstractItemView
 
 YesNo = NoYes = ("No", "Yes")
 _enter_icon = None
@@ -1406,150 +1407,48 @@ class OrangeListBox(QtGui.QListWidget):
         """
         self.master = master
         super().__init__(*args)
-        self.enableDragDrop = enableDragDrop
-        self.dragDropCallback = dragDropCallback
-        self.dataValidityCallback = dataValidityCallback
-        self.shownAttributes = None
+        self.drop_callback = dragDropCallback
+        self.valid_data_callback = dataValidityCallback
         if not sizeHint:
-            self.defaultSizeHint = QtCore.QSize(150, 100)
+            self.size_hint = QtCore.QSize(150, 100)
         else:
-            self.defaultSizeHint = sizeHint
+            self.size_hint = sizeHint
         if enableDragDrop:
-            self.setDragEnabled(1)
-            self.setAcceptDrops(1)
-            self.setDropIndicatorShown(1)
-            self.dragStartPosition = 0
-
-    # TODO This method is not called from any place in this module nor from any
-    # of currently ported widgets. Moreover, it seems it doesn't work at all:
-    # it referred to some (global?!) variable shownAttributes. I changed it to
-    # self.shownAttributes, set it to None in the constructor and added a quick
-    # fix to setAttributes. This doesn't break anything, but maybe fixes an
-    # error that never occurred in a function that should be removed.
-    def setAttributes(self, data, attributes):
-        if self.shownAttributes and isinstance(self.shownAttributes[0], tuple):
-            setattr(self.master, self.ogLabels, attributes)
-        else:
-            domain = data.domain
-            setattr(self.master, self.ogLabels,
-                    [(domain[a].name, domain[a].var_type) for a in attributes])
+            self.setDragEnabled(True)
+            self.setAcceptDrops(True)
+            self.setDropIndicatorShown(True)
 
     def sizeHint(self):
-        return self.defaultSizeHint
-
-    def startDrag(self, supportedActions):
-        if not self.enableDragDrop:
-            return
-        drag = QtGui.QDrag(self)
-        mime = QtCore.QMimeData()
-        if not self.ogValue:
-            selectedItems = [i for i in range(self.count())
-                             if self.item(i).isSelected()]
-        else:
-            selectedItems = getdeepattr(self.master, self.ogValue, default=[])
-        mime.setText(str(selectedItems))
-        mime.source = self
-        drag.setMimeData(mime)
-        drag.start(Qt.MoveAction)
+        return self.size_hint
 
     def dragEnterEvent(self, ev):
-        if not self.enableDragDrop:
-            return
-        if self.dataValidityCallback:
-            return self.dataValidityCallback(ev)
-        if ev.mimeData().hasText():
-            ev.accept()
-        else:
-            ev.ignore()
-
-    def dragMoveEvent(self, ev):
-        if not self.enableDragDrop:
-            return
-        if self.dataValidityCallback:
-            return self.dataValidityCallback(ev)
-        if ev.mimeData().hasText():
+        super().dragEnterEvent(ev)
+        if self.valid_data_callback:
+            self.valid_data_callback(ev)
+        elif isinstance(ev.source(), OrangeListBox):
             ev.setDropAction(Qt.MoveAction)
             ev.accept()
         else:
             ev.ignore()
 
     def dropEvent(self, ev):
-        if not self.enableDragDrop:
-            return
-        if ev.mimeData().hasText():
-            item = self.itemAt(ev.pos())
-            if item:
-                index = self.indexFromItem(item).row()
-            else:
-                index = self.count()
+        ev.setDropAction(Qt.MoveAction)
+        super().dropEvent(ev)
 
-            source = ev.mimeData().source
-            selectedItemIndices = eval(ev.mimeData().text())
+        self.update_master()
+        if ev.source() is not self:
+            ev.source().update_master()
 
-            if self.ogLabels is not None and self.ogValue is not None:
-                allSourceItems = \
-                    getdeepattr(source.master, source.ogLabels, [])
-                selectedItems =\
-                    [allSourceItems[i] for i in selectedItemIndices]
-                allDestItems = getdeepattr(self.master, self.ogLabels, [])
-                if source is not self:
-                    # TODO: optimize this code. use the fact that
-                    # selectedItemIndices is a sorted list
-                    setattr(source.master, source.ogLabels,
-                            [item for item in allSourceItems
-                             if item not in selectedItems])
-                    setattr(self.master, self.ogLabels,
-                            allDestItems[:index] + selectedItems +
-                            allDestItems[index:])
-                    setattr(source.master, source.ogValue, [])
-                else:
-                    items = [item for item in allSourceItems
-                             if item not in selectedItems]
-                    if index < len(allDestItems):
-                        # if we are dropping items on a selected item, we have
-                        # to select some previous unselected item as the drop
-                        # target
-                        while index > 0 and index in getdeepattr(
-                                self.master, self.ogValue, []):
-                            index -= 1
-                        destItem = allDestItems[index]
-                        index = items.index(destItem)
-                    else:
-                        index = max(0, index - len(selectedItems))
-                    setattr(self.master, self.ogLabels,
-                            items[:index] + selectedItems + items[index:])
-                setattr(self.master, self.ogValue,
-                        list(range(index, index + len(selectedItems))))
+        if self.drop_callback:
+            self.drop_callback()
 
-            else:  # if we don't have variables ogValue and ogLabel
-                if source is not self:
-                    self.insertItems(source.selectedItems())
-                    for index in selectedItemIndices[::-1]:
-                        source.takeItem(index)
-                else:
-                    if index < self.count():
-                        # if we are dropping items on a selected item, we have
-                        # to select some previous unselected item as the drop
-                        # target
-                        while index > 0 and self.item(index).isSelected():
-                            index -= 1
-                    items = [source.item(i) for i in selectedItemIndices]
-                    for ind in selectedItemIndices[::-1]:
-                        source.takeItem(ind)
-                        if ind <= index:
-                            index -= 1
-                    for item in items[::-1]:
-                        self.insertItem(index, item)
-                    self.clearSelection()
-                    for i in range(index, index + len(items)):
-                        self.item(i).setSelected(1)
-
-            if self.dragDropCallback:
-                self.dragDropCallback()
-            ev.setDropAction(Qt.MoveAction)
-            ev.accept()
-        else:
-            ev.ignore()
+    def update_master(self):
+        if self.ogLabels:
+            master_list = getattr(self.master, self.ogLabels)
+            master_list[:] = []
+            for i in range(self.count()):
+                item = self.item(i)
+                master_list.append(item.data(Qt.UserRole))
 
     def updateGeometries(self):
         # A workaround for a bug in Qt
@@ -2245,17 +2144,21 @@ class CallFrontListBox(ControlledCallFront):
 class CallFrontListBoxLabels(ControlledCallFront):
     unknownType = None
 
-    def action(self, value):
+    def action(self, values):
         self.control.clear()
-        if value:
-            for i in value:
-                if isinstance(i, tuple):
-                    if isinstance(i[1], int):
-                        i = QtGui.QListWidgetItem(attributeIconDict[i[1]],
-                                                  i[0])
+        if values:
+            for value in values:
+                if isinstance(value, tuple):
+                    text, icon = value
+                    if isinstance(icon, int):
+                        item = QtGui.QListWidgetItem(attributeIconDict[icon], text)
                     else:
-                        i = QtGui.QListWidgetItem(i[0], i[1])
-                self.control.addItem(i)
+                        item = QtGui.QListWidgetItem(icon, text)
+                else:
+                    item = QtGui.QListWidgetItem(value)
+
+                item.setData(Qt.UserRole, value)
+                self.control.addItem(item)
 
 
 class CallFrontLabel:
