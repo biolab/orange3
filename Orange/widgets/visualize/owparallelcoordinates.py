@@ -80,7 +80,6 @@ class OWParallelCoordinates(OWVisWidget):
         self.add_zoom_select_toolbar(self.general_tab)
 
         self.add_visual_settings(self.settings_tab)
-        self.add_axis_settings(self.settings_tab)
         self.add_annotation_settings(self.settings_tab)
         self.add_color_settings(self.settings_tab)
 
@@ -104,18 +103,6 @@ class OWParallelCoordinates(OWVisWidget):
         gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.update_graph,
                      tooltip="Show lines using splines")
         self.graph.gui.show_legend_check_box(box)
-
-    def add_axis_settings(self, parent):
-        box = gui.widgetBox(parent, "Axis Distance")
-        resize_columns_box = gui.widgetBox(box, 0, "horizontal", 0)
-        gui.label(resize_columns_box, self, "Increase/decrease distance: ")
-        gui.toolButton(resize_columns_box, self, "+", callback=self.increase_axes_distance,
-                       tooltip="Increase the distance between the axes", width=30, height=20)
-        gui.toolButton(resize_columns_box, self, "-", callback=self.decrease_axes_distance,
-                       tooltip="Decrease the distance between the axes", width=30, height=20)
-        gui.rubber(resize_columns_box)
-        gui.checkBox(box, self, "graph.auto_update_axes", "Auto scale X axis",
-                     tooltip="Auto scale X axis to show all visualized attributes", callback=self.update_graph)
 
     def add_annotation_settings(self, parent):
         box = gui.widgetBox(parent, "Statistical Information")
