@@ -452,33 +452,10 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         else:
             OWPlot.mouseReleaseEvent(self, e)
 
-    def staticMouseClick(self, e):
-        if e.button() == Qt.LeftButton and self.state == ZOOMING:
-            if self.tempSelectionCurve: self.tempSelectionCurve.detach()
-            self.tempSelectionCurve = None
-            canvasPos = self.mapToScene(e.pos())
-            x = self.inv_transform(xBottom, canvasPos.x())
-            y = self.inv_transform(yLeft, canvasPos.y())
-            diffX = (self.axisScaleDiv(xBottom).interval().maxValue() - self.axisScaleDiv(
-                xBottom).interval().minValue()) / 2.
-
-            xmin = x - (diffX / 2.) * (x - self.axisScaleDiv(xBottom).interval().minValue()) / diffX
-            xmax = x + (diffX / 2.) * (self.axisScaleDiv(xBottom).interval().maxValue() - x) / diffX
-            ymin = self.axisScaleDiv(yLeft).interval().maxValue()
-            ymax = self.axisScaleDiv(yLeft).interval().minValue()
-
-            self.zoomStack.append((
-                self.axisScaleDiv(xBottom).interval().minValue(), self.axisScaleDiv(xBottom).interval().maxValue(),
-                self.axisScaleDiv(yLeft).interval().minValue(), self.axisScaleDiv(yLeft).interval().maxValue()))
-            self.setNewZoom(xmin, xmax, ymax, ymin)
-            return 1
-
-        # if the user clicked between two lines send a list with the names of the two attributes
-        elif self.widget:
-            x1 = int(self.inv_transform(xBottom, e.x()))
-            axis = self.axisScaleDraw(xBottom)
-            self.widget.send_shown_attributes([str(axis.label(x1)), str(axis.label(x1 + 1))])
-        return 0
+    def zoom_to_rect(self, r):
+        r.setTop(self.graph_area.top())
+        r.setBottom(self.graph_area.bottom())
+        super().zoom_to_rect(r)
 
     def removeAllSelections(self, send=1):
         self.selection_conditions = {}
