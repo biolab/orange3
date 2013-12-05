@@ -247,7 +247,7 @@ class OWAxis(QGraphicsItem):
             else:
                 w = min(item.boundingRect().width(),
                         QLineF(self.map_to_graph(pos - hs), self.map_to_graph(pos + hs)).length())
-                label_pos = tick_pos + n_p * self.text_margin - l_p * w / 2
+                label_pos = tick_pos + n_p * self.text_margin + l_p * item.boundingRect().height() / 2
                 item.setTextWidth(w)
 
             if not self.always_horizontal_text:
