@@ -238,4 +238,4 @@ if __name__ == "__main__":
 
     a.exec_()
 
-    ow.settingsHandler.update_class_defaults(ow)
+    ow.saveSettings()
