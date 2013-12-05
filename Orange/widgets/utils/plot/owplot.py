@@ -652,7 +652,7 @@ class OWPlot(orangeqt.Plot):
         elif axis_id in self.data_range:
             del self.data_range[axis_id]
 
-    def set_axis_labels(self, axis_id, labels):
+    def set_axis_labels(self, axis_id, labels, values=None):
         '''
             Sets the labels of axis ``axis_id`` to ``labels``. This is used for axes displaying a discrete data type.
 
@@ -667,7 +667,7 @@ class OWPlot(orangeqt.Plot):
         if axis_id in self._bounds_cache:
             del self._bounds_cache[axis_id]
         self._transform_cache = {}
-        self.axes[axis_id].set_labels(labels)
+        self.axes[axis_id].set_labels(labels, values)
 
     def set_axis_scale(self, axis_id, min, max, step_size=0):
         '''

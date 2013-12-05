@@ -47,7 +47,8 @@ from .owpalette import OWPalette
 class OWAxis(QGraphicsItem):
     Role = OWPalette.Axis
 
-    def __init__(self, id, title='', title_above=False, title_location=AxisMiddle, line=None, arrows=0, plot=None):
+    def __init__(self, id, title='', title_above=False, title_location=AxisMiddle,
+                 line=None, arrows=0, plot=None, bounds=None):
         QGraphicsItem.__init__(self)
         self.setFlag(QGraphicsItem.ItemHasNoContents)
         self.setZValue(AxisZValue)
@@ -81,6 +82,7 @@ class OWAxis(QGraphicsItem):
         self._ticks = []
         self.zoom_transform = QTransform()
         self.labels = None
+        self.values = None
         self.auto_range = None
         self.auto_scale = True
 
@@ -108,7 +110,8 @@ class OWAxis(QGraphicsItem):
         self._ticks = []
         major, medium, minor = self.tick_length
         if self.labels is not None and not self.auto_scale:
-            for i, text in enumerate(self.labels):
+            values = self.values or range(len(self.labels))
+            for i, text in zip(values, self.labels):
                 self._ticks.append((i, text, medium, 1))
         else:
             if self.scale and not self.auto_scale:
@@ -293,8 +296,9 @@ class OWAxis(QGraphicsItem):
         self.show_title = b
         self.update()
 
-    def set_labels(self, labels):
+    def set_labels(self, labels, values):
         self.labels = labels
+        self.values = values
         self.graph_line = None
         self.auto_scale = False
         self.update_ticks()

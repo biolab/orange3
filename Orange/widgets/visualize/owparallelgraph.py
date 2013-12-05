@@ -125,13 +125,16 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
             a.setZValue(5)
             self.set_axis_title(axis_id, self.data_domain[self.attributes[i]].name)
             self.set_show_axis_title(axis_id, self.show_attr_values)
-            if self.show_attr_values == 1:
+            if self.show_attr_values:
                 attr = self.data_domain[self.attributes[i]]
                 if attr.var_type == VarTypes.Continuous:
                     self.set_axis_scale(axis_id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
                 elif attr.var_type == VarTypes.Discrete:
                     attribute_values = get_variable_values_sorted(self.data_domain[self.attributes[i]])
-                    self.set_axis_labels(axis_id, attribute_values)
+                    attr_len = len(attribute_values)
+                    values = [float(1.0 + 2.0 * j) / float(2 * attr_len) for j in range(len(attribute_values))]
+                    a.set_bounds((0, 1))
+                    self.set_axis_labels(axis_id, labels=attribute_values, values=values)
 
     def draw_curves(self):
         conditions = {name: self.attributes.index(name) for name in self.selection_conditions.keys()}
