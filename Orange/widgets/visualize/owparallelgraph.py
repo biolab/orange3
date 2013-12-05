@@ -18,8 +18,8 @@ from Orange.statistics.distribution import get_distribution
 from Orange.widgets.settings import SettingProvider, Setting
 from Orange.data import Variable
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
-    xBottom, yLeft, ZOOMING
-from Orange.widgets.utils.scaling import get_variable_value_indices, get_variable_values_sorted, ScaleData
+    xBottom, yLeft
+from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleData
 
 VarTypes = Variable.VarTypes
 
@@ -52,7 +52,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         self.last_selected_curve = None
         self.enableGridXB(0)
         self.enableGridYL(0)
-        self.domain_contingency = None
+        self.domain_contingencies = None
         self.auto_update_axes = 1
         self.old_legend_keys = []
         self.selection_conditions = {}
@@ -69,7 +69,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     def set_data(self, data, subset_data=None, **args):
         OWPlot.setData(self, data)
         ScaleData.set_data(self, data, subset_data, **args)
-        self.domain_contingency = None
+        self.domain_contingencies = None
 
     def update_data(self, attributes, mid_labels=None):
         old_selection_conditions = self.selection_conditions
@@ -291,66 +291,55 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
     def draw_distributions(self):
         """Draw distributions with discrete attributes"""
-        if not (self.show_distributions and self.data_has_discrete_class and self.have_data):
+        if not (self.show_distributions and self.have_data and self.data_has_discrete_class):
             return
         class_count = len(self.data_domain.class_var.values)
+        class_ = self.data_domain.class_var
 
         # we create a hash table of possible class values (happens only if we have a discrete class)
+        if self.domain_contingencies is None:
+            self.domain_contingencies = dict(
+                zip([attr for attr in self.data_domain if attr.var_type == VarTypes.Discrete],
+                    get_contingencies(self.raw_data, skipContinuous=True)))
+            self.domain_contingencies[class_] = get_contingency(self.raw_data, class_, class_)
+
+        max_count = max([contingency.max() for contingency in self.domain_contingencies.values()] or [1])
         sorted_class_values = get_variable_values_sorted(self.data_domain.class_var)
-        if self.domain_contingency is None:
-            self.domain_contingency = get_contingencies(self.raw_data)
 
-        max_val = 1
-        for attr in self.attribute_indices:
-            if self.data_domain[attr].var_type != VarTypes.Discrete:
-                continue
-            if self.data_domain[attr] == self.data_domain.class_var:
-                max_val = max(max_val, max(get_distribution(self.raw_data, attr)))
-            else:
-                max_val = max(max_val,
-                              max([max(val or [1]) for val in list(self.domain_contingency[attr].values())] or [1]))
-
-        for graphAttrIndex, index in enumerate(self.attribute_indices):
-            attr = self.data_domain[index]
+        for axis_idx, attr_idx in enumerate(self.attribute_indices):
+            attr = self.data_domain[attr_idx]
             if attr.var_type != VarTypes.Discrete:
                 continue
-            if self.data_domain[index] == self.data_domain.class_var:
-                contingency = get_contingency(self.raw_data, self.data_domain[index], self.data_domain[index])
-            else:
-                contingency = self.domain_contingency[index]
 
+            contingency = self.domain_contingencies[attr]
             attr_len = len(attr.values)
 
             # we create a hash table of variable values and their indices
-            sorted_variable_values = get_variable_values_sorted(self.data_domain[index])
+            sorted_variable_values = get_variable_values_sorted(attr)
 
             # create bar curve
             for j in range(attr_len):
                 attribute_value = sorted_variable_values[j]
-                try:
-                    continuous_attribute_value = contingency[attribute_value]
-                except IndexError as ex:
-                    print(ex, attribute_value, contingency, file=sys.stderr)
-                    continue
+                value_count = contingency[:, attribute_value]
 
                 for i in range(class_count):
                     class_value = sorted_class_values[i]
 
-                    color = QColor(self.discPalette[i])
+                    color = QColor(self.discrete_palette[i])
                     color.setAlpha(self.alpha_value)
 
-                    width = float(continuous_attribute_value[class_value] * 0.5) / float(max_val)
+                    width = float(value_count[class_value] * 0.5) / float(max_count)
                     y_off = float(1.0 + 2.0 * j) / float(2 * attr_len)
                     height = 0.7 / float(class_count * attr_len)
 
                     y_low_bottom = y_off + float(class_count * height) / 2.0 - i * height
                     curve = PolygonCurve(QPen(color),
                                          QBrush(color),
-                                         xData=[graphAttrIndex, graphAttrIndex + width,
-                                                graphAttrIndex + width, graphAttrIndex],
+                                         xData=[axis_idx, axis_idx + width,
+                                                axis_idx + width, axis_idx],
                                          yData=[y_low_bottom, y_low_bottom, y_low_bottom - height,
                                                 y_low_bottom - height],
-                                         tooltip=self.data_domain[index].name)
+                                         tooltip=attr.name)
                     curve.attach(self)
 
     # handle tooltip events
@@ -361,7 +350,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
             canvas_position = self.mapToScene(ev.pos())
             x_float = self.inv_transform(xBottom, canvas_position.x())
-            contact, (index, pos) = self.testArrowContact(int(round(x_float)), canvas_position.x(), canvas_position.y())
+            contact, (index, pos) = self.testArrowContact(int(round(x_float)), canvas_position.x(),
+                                                          canvas_position.y())
             if contact:
                 attr = self.data_domain[self.attributes[index]]
                 if attr.var_type == VarTypes.Continuous:
