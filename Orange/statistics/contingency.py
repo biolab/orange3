@@ -1,4 +1,3 @@
-import zlib
 import math
 import numpy as np
 from Orange import data
@@ -110,15 +109,22 @@ class Discrete(np.ndarray):
                 contingency_row.col_variable = self.col_variable
                 return contingency_row
             else:  # Contingency row
-                index = self.col_variable.to_val(index)
+                column = self.strides == self.base.strides[:1]
+                if column:
+                    index = self.row_variable.to_val(index)
+                else:
+                    index = self.col_variable.to_val(index)
 
         elif isinstance(index, tuple):
             if isinstance(index[0], str):
                 index = (self.row_variable.to_val(index[0]), index[1])
             if isinstance(index[1], str):
                 index = (index[0], self.col_variable.to_val(index[1]))
-        return super().__getitem__(index)
-
+        result = super().__getitem__(index)
+        if result.strides:
+            result.col_variable = self.col_variable
+            result.row_variable = self.row_variable
+        return result
 
     def __setitem__(self, index, value):
         if isinstance(index, str):
@@ -141,7 +147,7 @@ class Discrete(np.ndarray):
 
 class Continuous(list):
     def __init__(self, dat=None, col_variable=None, row_variable=None,
-                unknowns=None):
+                 unknowns=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
                 raise TypeError(
