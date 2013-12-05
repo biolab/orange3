@@ -96,7 +96,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         self.add_relevant_selections(old_selection_conditions)
 
         if self.data_has_discrete_class:
-            self.discPalette.setNumberOfColors(len(self.data_domain.class_var.values))
+            self.discrete_palette.setNumberOfColors(len(self.data_domain.class_var.values))
 
         self.draw_curves()
         self.draw_distributions()
@@ -164,9 +164,9 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     def select_color(self, row_index):
         if self.data_has_class:
             if self.data_has_continuous_class:
-                return self.contPalette.getRGB(self.no_jittering_scaled_data[self.data_class_index][row_index])
+                return self.continuous_palette.getRGB(self.no_jittering_scaled_data[self.data_class_index][row_index])
             else:
-                return self.discPalette.getRGB(self.original_data[self.data_class_index][row_index])
+                return self.discrete_palette.getRGB(self.original_data[self.data_class_index][row_index])
         else:
             return 0, 0, 0
 
@@ -184,7 +184,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                 values = get_variable_values_sorted(self.data_domain.class_var)
                 for i, value in enumerate(values):
                     self.legend().add_item(self.data_domain.class_var.name, value,
-                                           OWPoint(OWPoint.Rect, self.discPalette[i], self.point_width))
+                                           OWPoint(OWPoint.Rect, self.discrete_palette[i], self.point_width))
             else:
                 values = self.attr_values[self.data_domain.class_var.name]
                 decimals = self.data_domain.class_var.numberOfDecimals
@@ -252,7 +252,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     if data[i][c] == ():
                         continue
                     x = i - 0.03 * (len(data[i]) - 1) / 2.0 + c * 0.03
-                    col = QColor(self.discPalette[c])
+                    col = QColor(self.discrete_palette[c])
                     col.setAlpha(self.alpha_value_2)
                     self.add_curve("", col, col, 3, OWCurve.Lines, OWPoint.NoSymbol, xData=[x, x, x],
                                    yData=[data[i][c][0], data[i][c][1], data[i][c][2]], lineWidth=4)
@@ -278,13 +278,13 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                         xs.append(i + diff)
                     else:
                         if len(xs) > 1:
-                            col = QColor(self.discPalette[c])
+                            col = QColor(self.discrete_palette[c])
                             col.setAlpha(self.alpha_value_2)
-                            self.addCurve("", col, col, 1, OWCurve.Lines,
-                                          OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
+                            self.add_curve("", col, col, 1, OWCurve.Lines,
+                                           OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
                         xs = []
                         ys = []
-                col = QColor(self.discPalette[c])
+                col = QColor(self.discrete_palette[c])
                 col.setAlpha(self.alpha_value_2)
                 self.add_curve("", col, col, 1, OWCurve.Lines,
                                OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
