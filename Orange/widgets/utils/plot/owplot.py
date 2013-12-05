@@ -851,11 +851,12 @@ class OWPlot(orangeqt.Plot):
     def plot_data(self, xData, yData, colors, labels, shapes, sizes):
         pass
 
-    def add_axis(self, axis_id, title = '', title_above = False, title_location = AxisMiddle, line = None, arrows = 0, zoomable = False):
+    def add_axis(self, axis_id, title='', title_above=False, title_location=AxisMiddle,
+                 line=None, arrows=0, zoomable=False, bounds=None):
         '''
             Creates an :obj:`OrangeWidgets.plot.OWAxis` with the specified ``axis_id`` and ``title``.
         '''
-        a = OWAxis(axis_id, title, title_above, title_location, line, arrows, self)
+        a = OWAxis(axis_id, title, title_above, title_location, line, arrows, self, bounds=bounds)
         self.scene().addItem(a)
         a.zoomable = zoomable
         a.update_callback = self.replot

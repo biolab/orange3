@@ -83,6 +83,7 @@ class OWAxis(QGraphicsItem):
         self.zoom_transform = QTransform()
         self.labels = None
         self.values = None
+        self._bounds = bounds
         self.auto_range = None
         self.auto_scale = True
 
@@ -347,6 +348,8 @@ class OWAxis(QGraphicsItem):
         return self._ticks
 
     def bounds(self):
+        if self._bounds:
+            return self._bounds
         if self.labels:
             return -0.2, len(self.labels) - 0.8
         elif self.scale:
@@ -356,6 +359,9 @@ class OWAxis(QGraphicsItem):
             return self.auto_range
         else:
             return 0, 1
+
+    def set_bounds(self, value):
+        self._bounds = value
 
     def should_be_expanded(self):
         self.update_ticks()

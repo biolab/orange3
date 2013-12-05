@@ -117,7 +117,8 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         self.remove_all_axes()
         for i in range(len(self.attributes)):
             axis_id = UserAxis + i
-            a = self.add_axis(axis_id, line=QLineF(i, 0, i, 1), arrows=AxisStart | AxisEnd, zoomable=True)
+            a = self.add_axis(axis_id, line=QLineF(i, 0, i, 1), arrows=AxisStart | AxisEnd,
+                              zoomable=True)
             a.always_horizontal_text = True
             a.max_text_width = 100
             a.title_margin = -10
