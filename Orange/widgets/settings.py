@@ -23,6 +23,11 @@ class Setting:
         self.default = default
         self.__dict__.update(data)
 
+    def __str__(self):
+        return "%s \"%s\"" % (self.__class__.name, self.name)
+
+    __repr__ = __str__
+
 
 class SettingProvider:
     """A hierarchical structure keeping track of settings belonging to
