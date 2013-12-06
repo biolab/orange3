@@ -16,6 +16,7 @@ from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
 from Orange.widgets.settings import SettingProvider
+from Orange.widgets.utils.concurrent import AsyncCall
 
 
 class ControlledAttributesDict(dict):
@@ -955,15 +956,13 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         """ Return an OWConcurent.AsyncCall object func, args and kwargs
         set and signals connected.
         """
-        from functools import partial
-        from OWConcurrent import AsyncCall
 
         asList = lambda slot: slot if isinstance(slot, list) \
             else ([slot] if slot else [])
 
         onResult = asList(onResult)
-        onStarted = asList(onStarted) #+ [partial(self.setBlocking, True)]
-        onFinished = asList(onFinished) #+ [partial(self.blockSignals, False)]
+        onStarted = asList(onStarted)
+        onFinished = asList(onFinished)
         onError = asList(onError) or [self.asyncExceptionHandler]
 
         async = AsyncCall(func, args, kwargs,
@@ -971,17 +970,13 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         async.name = name if name is not None else ""
 
         for slot in onResult:
-            async.connect(async, SIGNAL("resultReady(PyQt_PyObject)"), slot,
-                          Qt.QueuedConnection)
+            async.resultReady.connect(slot, Qt.QueuedConnection)
         for slot in onStarted:
-            async.connect(async, SIGNAL("starting()"), slot,
-                          Qt.QueuedConnection)
+            async.starting.connect(slot, Qt.QueuedConnection)
         for slot in onFinished:
-            async.connect(async, SIGNAL("finished(QString)"), slot,
-                          Qt.QueuedConnection)
+            async.finished.connect(slot, Qt.QueuedConnection)
         for slot in onError:
-            async.connect(async, SIGNAL("unhandledException(PyQt_PyObject)"),
-                          slot, Qt.QueuedConnection)
+            async.unhandledException.connect(slot, Qt.QueuedConnection)
 
         self.addAsyncCall(async, blocking)
 
@@ -993,8 +988,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         """
         ## TODO: make this thread safe
-        async.connect(async, SIGNAL("finished(PyQt_PyObject, QString)"),
-                      self.asyncFinished)
+        async.finished.connect(self.asyncFinished())
 
         async.blocking = blocking
 
