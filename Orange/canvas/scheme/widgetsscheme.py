@@ -24,7 +24,7 @@ from PyQt4.QtGui import (
     QShortcut, QKeySequence, QWhatsThisClickedEvent, QWidget
 )
 
-from PyQt4.QtCore import Qt, QObject, QCoreApplication, QEvent, SIGNAL
+from PyQt4.QtCore import Qt, QObject, QCoreApplication, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
@@ -265,9 +265,7 @@ class WidgetManager(QObject):
         widget.processingStateChanged.connect(
             self.__on_processing_state_changed
         )
-        self.connect(widget,
-                     SIGNAL("blockingStateChanged(bool)"),
-                     self.__on_blocking_state_changed)
+        widget.blockingStateChanged.connect(self.__on_blocking_state_changed)
 
         if widget.isBlocking():
             # A widget can already enter blocking state in __init__

@@ -1,6 +1,5 @@
 import sys
 
-from PyQt4.QtCore import SIGNAL
 from PyQt4.QtGui import QApplication
 
 from Orange.canvas.registry.description import Default
@@ -88,14 +87,14 @@ class OWParallelCoordinates(OWVisWidget):
 
     def add_attribute_selection_area(self, parent):
         super().add_attribute_selection_area(parent)
-        self.connect(self.shown_attributes_listbox, SIGNAL('itemDoubleClicked(QListWidgetItem*)'), self.flip_attribute)
+        self.shown_attributes_listbox.itemDoubleClicked.connect(self.flip_attribute)
 
     #noinspection PyAttributeOutsideInit
     def add_zoom_select_toolbar(self, parent):
         buttons = (ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION)
         self.zoom_select_toolbar = ZoomSelectToolbar(self, parent, self.graph, self.auto_send_selection,
                                                      buttons=buttons)
-        self.connect(self.zoom_select_toolbar.buttonSendSelections, SIGNAL("clicked()"), self.sendSelections)
+        self.zoom_select_toolbar.buttonSendSelections.clicked.connect(self.sendSelections)
 
     def add_visual_settings(self, parent):
         box = gui.widgetBox(parent, "Visual Settings")
