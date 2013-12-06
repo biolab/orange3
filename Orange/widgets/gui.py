@@ -1448,7 +1448,7 @@ class OrangeListBox(QtGui.QListWidget):
             master_list = getattr(self.master, self.ogLabels)
 
             if master_list != control_list:
-                master_list[:] = control_list
+                setattr(self.master, self.ogLabels, control_list)
         return control_list
 
     def updateGeometries(self):
