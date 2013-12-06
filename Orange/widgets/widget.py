@@ -2,9 +2,10 @@ import sys
 import time
 import os
 from functools import reduce
+from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty, SIGNAL, QDir
+from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
+    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
 from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
 from Orange.canvas.registry.description import (
@@ -34,9 +35,9 @@ class ControlledAttributesDict(dict):
 class AttributeList(list):
     pass
 
+
 class ExampleList(list):
     pass
-
 
 
 class WidgetMetaClass(type(QDialog)):
@@ -114,6 +115,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     save_position = False
     resizing_enabled = True
+
+    widgetStateChanged = Signal(str, int, str)
+    blockingStateChanged = Signal(bool)
+    asyncCallsStateChange = Signal()
+    progressBarValueChanged = Signal(float)
+    processingStateChanged = Signal(int)
 
     def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
@@ -732,17 +739,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                     if not found:
                         self.linksIn[signalName][i] = \
                             (1, widget, handler, self.linksIn[signalName][i][3]
-                             + [(value, id, signalNameFrom)])
+                                                 + [(value, id, signalNameFrom)])
         self.needProcessing = 1
 
     # ############################################
     # PROGRESS BAR FUNCTIONS
-
-    progressBarValueChanged = pyqtSignal(float)
-    """Progress bar value has changed"""
-
-    processingStateChanged = pyqtSignal(int)
-    """Processing state has changed"""
 
     def progressBarInit(self):
         self.progressBarValue = 0
@@ -863,15 +864,10 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
             if type(id) == list:
                 for i in id:
-                    self.emit(
-                        SIGNAL("widgetStateChanged(QString, int, QString)"),
-                        stateType, i, "")
+                    self.widgetStateChanged.emit(stateType, i, "")
             else:
-                self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
-                          stateType, id, text or "")
+                self.widgetStateChanged.emit(stateType, id, text or "")
         return changed
-
-    widgetStateChanged = pyqtSignal(str, int, str)
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
         pixmaps = self.getWidgetStateIcons()
@@ -921,7 +917,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         the signal manager
         """
         self.asyncBlock = state
-        self.emit(SIGNAL("blockingStateChanged(bool)"), self.asyncBlock)
+        self.blockingStateChanged.emit(self.asyncBlock)
         if not self.isBlocking():
             self.scheduleSignalProcessing()
 
@@ -946,11 +942,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         if async.blocking and not self.isBlocking():
             # if we are responsible for unblocking
-            self.emit(SIGNAL("blockingStateChanged(bool)"), False)
+            self.blockingStateChanged.emit(False)
             self.scheduleSignalProcessing()
 
         async.disconnect(async, SIGNAL("finished(PyQt_PyObject, QString)"), self.asyncFinished)
-        self.emit(SIGNAL("asyncCallsStateChange()"))
+        self.asyncCallsStateChange.emit()
 
 
     def asyncCall(self, func, args=(), kwargs={}, name=None,
@@ -1007,17 +1003,18 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             state = any(a.blocking for a in self.asyncCalls)
             self.asyncCalls.append(async)
             if not state:
-                self.emit(SIGNAL("blockingStateChanged(bool)"), True)
+                self.blockingStateChanged.emit(True)
         else:
             self.asyncCalls.append(async)
 
-        self.emit(SIGNAL("asyncCallsStateChange()"))
+        self.asyncCallsStateChange.emit()
 
 
 def blocking(method):
     """ Return method that sets blocking flag while executing
     """
     from functools import wraps
+
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         old = self._blocking
