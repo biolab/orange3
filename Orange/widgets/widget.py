@@ -15,7 +15,7 @@ from Orange.canvas.registry.description import (
 from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
-from Orange.widgets.settings import Context, SettingProvider
+from Orange.widgets.settings import SettingProvider
 
 
 class ControlledAttributesDict(dict):
@@ -61,7 +61,7 @@ class WidgetMetaClass(type(QDialog)):
 
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
-            hasattr(cls, "settingsFromWidgetCallback")):
+                hasattr(cls, "settingsFromWidgetCallback")):
             raise SystemError("Reimplement settingsToWidgetCallback and "
                               "settingsFromWidgetCallback")
         if not hasattr(cls, "settingsHandler"):
@@ -160,7 +160,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.linksIn = {}  # signalName : (dirty, widFrom, handler, signalData)
         self.linksOut = {} # signalName: (signalData, id)
         self.connections = {} # keys are (control, signal) and values are
-                              # wrapper instances. Used in connect/disconnect
+        # wrapper instances. Used in connect/disconnect
         self.progressBarHandler = None  # handler for progress bar events
         self.processingHandler = None   # handler for processing events
         self.eventHandler = None
@@ -168,7 +168,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.startTime = time.time()    # used in progressbar
 
         self.widgetStateHandler = None
-        self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
+        self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
 
         self._private_thread_pools = {}
         self.asyncCalls = []
@@ -202,7 +202,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.layout().setMargin(2)
 
         self.topWidgetPart = gui.widgetBox(self,
-            orientation="horizontal", margin=0)
+                                           orientation="horizontal", margin=0)
         self.leftWidgetPart = gui.widgetBox(self.topWidgetPart,
                                             orientation="vertical", margin=0)
         if self.want_main_area:
@@ -210,22 +210,22 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
             self.leftWidgetPart.updateGeometry()
             self.mainArea = gui.widgetBox(self.topWidgetPart,
-                orientation="vertical",
-                sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-                                       QSizePolicy.Expanding),
-                margin=0)
+                                          orientation="vertical",
+                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
+                                                                 QSizePolicy.Expanding),
+                                          margin=0)
             self.mainArea.layout().setMargin(4)
             self.mainArea.updateGeometry()
 
         if self.want_control_area:
             self.controlArea = gui.widgetBox(self.leftWidgetPart,
-                orientation="vertical", margin=4)
+                                             orientation="vertical", margin=4)
 
         if self.want_graph and self.show_save_graph:
             graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
-                orientation="horizontal", margin=4)
+                                                  orientation="horizontal", margin=4)
             self.graphButton = gui.button(graphButtonBackground,
-                self, "&Save Graph")
+                                          self, "&Save Graph")
             self.graphButton.setAutoDefault(0)
 
         if self.want_status_bar:
@@ -247,9 +247,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.statusBarIconArea.hide()
 
             self._warningWidget = createPixmapWidget(self.statusBarIconArea,
-                os.path.join(self.widgetDir, "icons/triangle-orange.png"))
+                                                     os.path.join(self.widgetDir, "icons/triangle-orange.png"))
             self._errorWidget = createPixmapWidget(self.statusBarIconArea,
-                os.path.join(self.widgetDir + "icons/triangle-red.png"))
+                                                   os.path.join(self.widgetDir + "icons/triangle-red.png"))
 
 
     # status bar handler functions
@@ -259,9 +259,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             return
 
         iconsShown = 0
-        for state, widget, use in [
-                ("Warning", self._warningWidget, self._owWarning),
-                ("Error", self._errorWidget, self._owError)]:
+        warnings = [("Warning", self._warningWidget, self._owWarning),
+                    ("Error", self._errorWidget, self._owError)]
+        for state, widget, use in warnings:
             if not widget:
                 continue
             if use and self.widgetState[state]:
@@ -278,7 +278,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.statusBarIconArea.hide()
 
         if (stateType == "Warning" and self._owWarning) or \
-           (stateType == "Error" and self._owError):
+                (stateType == "Error" and self._owError):
             if text:
                 self.setStatusBarText(stateType + ": " + text)
             else:
@@ -330,10 +330,10 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         for num in [16, 32, 42, 60]:
             names.append("%s_%d%s" % (name, num, ext))
         fullPaths = []
+        module_dir = os.path.dirname(sys.modules[self.__module__].__file__)
         for paths in [(self.widgetDir, name),
                       (self.widgetDir, "icons", name),
-                      (os.path.dirname(sys.modules[self.__module__].__file__),
-                           "icons", name)]:
+                      (module_dir, "icons", name)]:
             for name in names + [iconName]:
                 fname = os.path.join(*paths)
                 if os.path.exists(fname):
@@ -474,14 +474,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.activateWindow()
 
 
-    def send(self, signalName, value, id = None):
+    def send(self, signalName, value, id=None):
         if not self.hasOutputName(signalName):
             print("Internal error: signal '%s' is not a valid signal name for"
                   "widget '%s'." % (signalName, self.captionTitle))
         if signalName in self.linksOut:
             self.linksOut[signalName][id] = value
         else:
-            self.linksOut[signalName] = {id:value}
+            self.linksOut[signalName] = {id: value}
 
         if self.signalManager is not None:
             self.signalManager.send(self, signalName, value, id)
@@ -501,14 +501,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def setattr_deep(self, name, value, grandparent):
         names = name.split(".")
         lastname = names.pop()
-        obj = reduce(lambda o, n: getattr(o, n, None),  names, self)
+        obj = reduce(lambda o, n: getattr(o, n, None), names, self)
         if obj is None:
             raise AttributeError("Cannot set '{}' to {} ".format(name, value))
 
         if (hasattr(grandparent, "__setattr__") and
                 isinstance(obj, grandparent)):
             # JD: super().__setattr__ wouldn't work here?
-            grandparent.__setattr__(obj, lastname,  value)
+            grandparent.__setattr__(obj, lastname, value)
         else:
             setattr(obj, lastname, value)
             # TODO: Puzzled. setattr calls obj.__setattr__. If obj is self,
@@ -626,8 +626,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 handler = getattr(self, input.handler) # get a bound handler
                 break
         else:
-            raise ValueError("Widget {} has no signal {}"
-                             .format(self.name, signalName))
+            raise ValueError("Widget {} has no signal {}".format(self.name,
+                                                                 signalName))
 
         links = self.linksIn.setdefault(signalName, [])
         for _, widget, _, _ in links:
@@ -689,13 +689,13 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                             if self.signalIsOnlySingleConnection(key):
                                 self.printEvent(
                                     "ProcessSignals: Calling %s with %s" %
-                                    (handler, value), eventVerbosity = 2)
+                                    (handler, value), eventVerbosity=2)
                                 handler(value)
                             else:
                                 self.printEvent(
                                     "ProcessSignals: Calling %s with %s "
                                     "(%s, %s)" % (handler, value, nameFrom, id)
-                                    , eventVerbosity = 2)
+                                    , eventVerbosity=2)
                                 handler(value, (widgetFrom, nameFrom, id))
                     except:
                         type, val, traceback = sys.exc_info()
@@ -704,7 +704,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                         sys.excepthook(type, val, traceback)
                     qApp.restoreOverrideCursor()
 
-                     # clear the dirty flag
+                    # clear the dirty flag
                     self.linksIn[key][i] = (0, widgetFrom, handler, [])
 
         if newSignal == 1:
@@ -767,7 +767,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             else:
                 text = "%(min)d:%(sec)02d" % vars()
             self.setWindowTitle(self.captionTitle +
-                " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
+                                " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")
         if self.progressBarHandler:
@@ -808,9 +808,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
 
     # if we are in debug mode print the event into the file
-    def printEvent(self, text, eventVerbosity = 1):
+    def printEvent(self, text, eventVerbosity=1):
         self.signalManager.addEvent(self.captionTitle + ": " + text,
-                                    eventVerbosity = eventVerbosity)
+                                    eventVerbosity=eventVerbosity)
         if self.eventHandler:
             self.eventHandler(self.captionTitle + ": " + text, eventVerbosity)
 
@@ -821,20 +821,20 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key_Help, Qt.Key_F1):
             self.openWidgetHelp()
-#            e.ignore()
+        #    e.ignore()
         elif (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
             OWWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
         else:
             QDialog.keyPressEvent(self, e)
 
-    def information(self, id = 0, text = None):
+    def information(self, id=0, text=None):
         self.setState("Info", id, text)
         #self.setState("Warning", id, text)
 
-    def warning(self, id = 0, text = ""):
+    def warning(self, id=0, text=""):
         self.setState("Warning", id, text)
 
-    def error(self, id = 0, text = ""):
+    def error(self, id=0, text=""):
         self.setState("Error", id, text)
 
     def setState(self, stateType, id, text):
@@ -894,7 +894,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             warning = QPixmap("canvasIcons:warning.png")
             error = QPixmap("canvasIcons:error.png")
             cls._cached__widget_state_icons = \
-                    {"Info": info, "Warning": warning, "Error": error}
+                {"Info": info, "Warning": warning, "Error": error}
         return cls._cached__widget_state_icons
 
     defaultKeyActions = {}
@@ -903,7 +903,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         defaultKeyActions = {
             (Qt.ControlModifier, Qt.Key_M):
                 lambda self: self.showMaximized
-                             if self.isMinimized() else self.showMinimized(),
+                if self.isMinimized() else self.showMinimized(),
             (Qt.ControlModifier, Qt.Key_W):
                 lambda self: self.setVisible(not self.isVisible())}
 
@@ -959,7 +959,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         from OWConcurrent import AsyncCall
 
         asList = lambda slot: slot if isinstance(slot, list) \
-                              else ([slot] if slot else [])
+            else ([slot] if slot else [])
 
         onResult = asList(onResult)
         onStarted = asList(onStarted) #+ [partial(self.setBlocking, True)]
@@ -970,7 +970,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                           thread=thread, threadPool=threadPool)
         async.name = name if name is not None else ""
 
-        for slot in  onResult:
+        for slot in onResult:
             async.connect(async, SIGNAL("resultReady(PyQt_PyObject)"), slot,
                           Qt.QueuedConnection)
         for slot in onStarted:
