@@ -46,7 +46,7 @@ class Results:
     """
 
     # noinspection PyBroadException
-    def __init__(self, data, nmethods, nrows=None):
+    def __init__(self, data=None, nmethods=0, nrows=None):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`. The number of classes and the data type for
@@ -64,20 +64,31 @@ class Results:
         """
         self.data = None
         self.models = None
-        domain = data if isinstance(data, Domain) else data.domain
-        nclasses = len(domain.class_var.values)
-        if nrows is None:
-            nrows = len(data)
-        try:
-            dtype = data.Y.dtype
-        except:
-            dtype = np.float32
-        self.actual = np.empty(nrows, dtype=dtype)
-        self.predicted = np.empty((nmethods, nrows), dtype=dtype)
-        self.probabilities = np.empty((nmethods, nrows, nclasses),
-                                      dtype=np.float32)
-        self.row_indices = np.empty(nrows, dtype=np.int32)
+        self.folds = None
+        if self.data:
+            domain = data if isinstance(data, Domain) else data.domain
+            nclasses = len(domain.class_var.values)
+            if nrows is None:
+                nrows = len(data)
+            try:
+                dtype = data.Y.dtype
+            except:
+                dtype = np.float32
+            self.actual = np.empty(nrows, dtype=dtype)
+            self.predicted = np.empty((nmethods, nrows), dtype=dtype)
+            self.probabilities = np.empty((nmethods, nrows, nclasses),
+                                          dtype=np.float32)
+            self.row_indices = np.empty(nrows, dtype=np.int32)
 
+
+    def get_fold(self, fold):
+        results = Results()
+        results.data = self.data
+        results.models = self.models
+        results.actual = self.actual[self.folds[fold]]
+        results.predicted = self.predicted[self.folds[fold]]
+        results.probabilities = self.probabilities[self.folds[fold]]
+        results.row_indices = self.row_indices[self.folds[fold]]
 
 class Testing:
     """
@@ -146,10 +157,19 @@ class CrossValidation(Testing):
         indices = cross_validation.KFold(n, self.k, shuffle=True)
         results = Results(data, len(fitters))
 
+        results.folds = []
+        ptr = 0
         for train, test in indices:
+            train_data, test_data = data[train], data[test]
+            fold_slice = slice(ptr, ptr + len(test))
+            results.folds.append(fold_slice)
+            results.row_indices[fold_slice] = test
             for i, fitter in enumerate(fitters):
-                model = fitter(data[train])
-                values, probs = model(data[test], model.ValueProbs)
-                results.predicted[i][test, :] = values
-                results.probabilities[i][test, :] = probs
+                model = fitter(train_data)
+                values, probs = model(test_data, model.ValueProbs)
+                results.actual[i][fold_slice, :] = train.Y
+                results.predicted[i][fold_slice, :] = values
+                results.probabilities[i][fold_slice, :] = probs
+            ptr += len(test)
         return results
+
