@@ -8,7 +8,6 @@ import logging
 
 from .. import config
 from ..utils.settings import SettingChangedEvent
-from ..utils import toPyObject
 
 from ..utils.propertybindings import (
     AbstractBoundProperty, PropertyBinding, BindingManager
