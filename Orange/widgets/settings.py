@@ -399,21 +399,22 @@ class ContextHandler(SettingsHandler):
             globs.sort(key=lambda c: -c.time)
             del globs[self.MAX_SAVED_CONTEXTS:]
 
-    def new_context(self):
+    @staticmethod
+    def new_context():
         """Create a new context."""
         return Context()
 
-    def open_context(self, widget, *arg, **argkw):
+    def open_context(self, widget, *args, **kwargs):
         """Open a context by finding one and setting the widget data or
         creating one and fill with the data from the widget."""
-        widget.current_context, isNew = \
-            self.find_or_create_context(widget, *arg, **argkw)
-        if isNew:
+        widget.current_context, is_new = \
+            self.find_or_create_context(widget, *args, **kwargs)
+        if is_new:
             self.settings_from_widget(widget)
         else:
             self.settings_to_widget(widget)
 
-    def match(self, context, *arg):
+    def match(self, context, *args, **kwargs):
         """Return the degree to which the stored `context` matches the data
          passed in additional arguments). A match of 0 zero indicates that
          the context cannot be used and 2 means a perfect match, so no further
@@ -422,13 +423,13 @@ class ContextHandler(SettingsHandler):
          Derived classes must overload this method."""
         raise SystemError(self.__class__.__name__ + " does not overload match")
 
-    def find_or_create_context(self, widget, *arg):
+    def find_or_create_context(self, widget, *args, **kwargs):
         """Find the best matching context or create a new one if nothing
         useful is found. The returned context is moved to or added to the top
         of the context list."""
         best_context, best_score = None, 0
         for i, context in enumerate(widget.context_settings):
-            score = self.match(context, *arg)
+            score = self.match(context, *args, **kwargs)
             if score == 2:
                 self.move_context_up(widget, i)
                 return context, False
@@ -437,20 +438,22 @@ class ContextHandler(SettingsHandler):
         if best_context:
             # if cloneIfImperfect should be disabled, change this and the
             # add_context below
-            context = self.clone_context(best_context, *arg)
+            context = self.clone_context(best_context, *args)
         else:
             context = self.new_context()
         self.add_context(widget, context)
         return context, best_context is None
 
-    def move_context_up(self, widget, index):
+    @staticmethod
+    def move_context_up(widget, index):
         """Move the context to the top of the context list and set the time
         stamp to current."""
         setting = widget.context_settings.pop(index)
         setting.time = time.time()
         widget.context_settings.insert(0, setting)
 
-    def add_context(self, widget, setting):
+    @staticmethod
+    def add_context(widget, setting):
         """Add the context to the top of the list."""
         s = widget.context_settings
         s.insert(0, setting)
@@ -487,9 +490,9 @@ class ContextHandler(SettingsHandler):
         for setting in provider.settings.values():
             self.analyze_setting(prefix, setting)
 
-        for name, subprovider in provider.providers.items():
+        for name, sub_provider in provider.providers.items():
             new_prefix = '%s%s.' % (prefix, name) if prefix else '%s.' % name
-            self.analyze_settings(subprovider, new_prefix)
+            self.analyze_settings(sub_provider, new_prefix)
 
     def analyze_setting(self, prefix, setting):
         self.known_settings[prefix + setting.name] = setting
@@ -530,6 +533,7 @@ class DomainContextHandler(ContextHandler):
                 (based on the value of self.match_values attribute)
         """
 
+        # noinspection PyShadowingNames
         def encode(attributes, encode_values):
             if not encode_values:
                 return {v.name: v.var_type for v in attributes}
@@ -564,7 +568,7 @@ class DomainContextHandler(ContextHandler):
             domain = domain.domain
 
         encoded_domain = self.encode_domain(domain)
-        context, isNew = \
+        context, is_new = \
             super().find_or_create_context(widget, domain, *encoded_domain)
 
         context.attributes, context.metas = encoded_domain
@@ -576,10 +580,10 @@ class DomainContextHandler(ContextHandler):
         if self.has_meta_attributes:
             context.ordered_domain += [(v.name, v.var_type)
                                        for v in domain.metas]
-        if isNew:
+        if is_new:
             context.values = {}
             context.no_copy = ["ordered_domain"]
-        return context, isNew
+        return context, is_new
 
     def settings_to_widget(self, widget):
         super().settings_to_widget(widget)
@@ -609,10 +613,12 @@ class DomainContextHandler(ContextHandler):
                 new_labels, new_selected = [], []
                 old_selected = set(data.get(setting.selected, []))
 
+                # noinspection PyShadowingNames
                 def is_attribute(value):
                     return (not setting.exclude_attributes
                             and value in context.attributes)
 
+                # noinspection PyShadowingNames
                 def is_meta(value):
                     return (not setting.exclude_metas
                             and value in context.metas)
@@ -679,13 +685,15 @@ class DomainContextHandler(ContextHandler):
                 return value, context.metas[value]
         return value, -2
 
-    def decode_setting(self, setting, value):
+    @staticmethod
+    def decode_setting(setting, value):
         if isinstance(value, tuple):
             return value[0]
         else:
             return value
 
-    def _var_exists(self, setting, value, attributes, metas):
+    @staticmethod
+    def _var_exists(setting, value, attributes, metas):
         if not isinstance(value, tuple) or len(value) != 2:
             return False
 
