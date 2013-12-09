@@ -179,24 +179,6 @@ class SettingProvider:
             if provider:
                 return provider
 
-    def get_setting(self, name):
-        """Return setting for name
-
-        name: setting name specified as "a.b.c" or ("a", "b", "c")
-        """
-        # TODO: should we only use tuple syntax?
-        if not isinstance(name, tuple):
-            name = name.split(".")
-
-        name, rest = name[:1], name[1:]
-
-        if rest:
-            if name in self.providers:
-                return self.providers[name].get_setting(rest)
-        else:
-            if name in self.settings:
-                return self.settings[name]
-
     def for_each_setting(self, data=None, instance=None, on_setting=None):
         """Execute on_setting for each setting in this and child providers.
 
