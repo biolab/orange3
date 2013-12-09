@@ -197,14 +197,8 @@ class SettingProvider:
             if name in self.settings:
                 return self.settings[name]
 
-    def all_settings(self, filter_type=Setting):
-        """Yield all settings descending from filter_type managed by this provider."""
-        yield from (setting for setting in self.settings.values() if isinstance(setting, filter_type))
-
-        for provider in self.providers.values():
-            yield from provider.all_settings(filter_type=filter_type)
-
     def for_each_setting(self, data=None, instance=None, on_setting=None):
+        """Execute on_setting for each setting ih this and child providers."""
         data = data if data is not None else {}
         select_data = lambda x: data.get(x.name, {})
         select_instance = lambda x: getattr(instance, x.name, None)
