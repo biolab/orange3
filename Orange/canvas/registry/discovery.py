@@ -335,22 +335,15 @@ class WidgetDiscovery(object):
         try:
             desc = WidgetDescription.from_module(module)
         except WidgetSpecificationError:
-            exc_info = sys.exc_info()
-
-        if desc is None:
-            # Is it an old style widget file.
             try:
                 desc = WidgetDescription.from_file(
                     module.__file__, import_name=module.__name__
-                    )
-            except WidgetSpecificationError:
-                pass
+                )
             except Exception:
                 pass
 
-        if desc is None:
-            # Raise the original exception.
-            raise exc_info
+            if desc is None:
+                raise
 
         if widget_name is not None:
             desc.name = widget_name
