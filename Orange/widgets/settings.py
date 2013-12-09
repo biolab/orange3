@@ -367,7 +367,7 @@ class ContextHandler(SettingsHandler):
     def __init__(self):
         super().__init__()
         self.global_contexts = []
-        self.known_settings = []
+        self.known_settings = {}
 
     def initialize(self, instance, data=None):
         """Initialize the widget: call the inherited initialization and
