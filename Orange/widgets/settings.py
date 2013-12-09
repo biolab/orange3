@@ -198,7 +198,12 @@ class SettingProvider:
                 return self.settings[name]
 
     def for_each_setting(self, data=None, instance=None, on_setting=None):
-        """Execute on_setting for each setting ih this and child providers."""
+        """Execute on_setting for each setting in this and child providers.
+
+        data: dictionary with setting values
+        instance: instance matching setting_provider
+        on_setting: function(setting, data, instance)
+        """
         data = data if data is not None else {}
         select_data = lambda x: data.get(x.name, {})
         select_instance = lambda x: getattr(instance, x.name, None)
