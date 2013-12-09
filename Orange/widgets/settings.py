@@ -24,7 +24,7 @@ class Setting:
         self.__dict__.update(data)
 
     def __str__(self):
-        return "%s \"%s\"" % (self.__class__.name, self.name)
+        return "%s \"%s\"" % (self.__class__.__name__, self.name)
 
     __repr__ = __str__
 
@@ -134,6 +134,7 @@ class SettingProvider:
                 yield (name, value) pairs that will be added to the packed_settings.
         """
         if packer is None:
+            # noinspection PyShadowingNames
             def packer(setting, instance):
                 if hasattr(instance, setting.name):
                     yield setting.name, getattr(instance, setting.name)
@@ -159,6 +160,7 @@ class SettingProvider:
                   set setting value to the instance.
         """
         if unpack is None:
+            # noinspection PyShadowingNames
             def unpack(setting, data, instance):
                 if setting.name in data and instance is not None:
                     setattr(instance, setting.name, data[setting.name])
