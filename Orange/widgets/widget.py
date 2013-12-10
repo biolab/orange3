@@ -15,7 +15,7 @@ from Orange.canvas.registry.description import (
 from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
-from Orange.widgets.gui import ControlledAttributesDict
+from Orange.widgets.gui import ControlledAttributesDict, notify_controllers
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.concurrent import AsyncCall
 
@@ -499,61 +499,10 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         else:
             setattr(obj, field_name, value)
 
-        self.notify_controllers(obj, name, value)
+        notify_controllers(obj, name, value)
 
         if hasattr(self, SETTINGS_HANDLER):
             self.settingsHandler.fast_save(self, name, value)
-
-    def notify_controllers(self, obj, name, value):
-        if self.do_calbacks(name, value, controller=obj):
-            return
-
-        attribute_controllers = getattr(obj, gui.ATTRIBUTE_CONTROLLERS, ())
-        for controller, prefix in attribute_controllers:
-            if getattr(controller, prefix, None) != obj:
-                del attribute_controllers[(controller, prefix)]
-                continue
-
-            full_name = prefix + "." + name
-            if self.do_calbacks(full_name, value, controller=controller):
-                continue
-
-            self.setup_controllers(controller, full_name, value)
-
-    @staticmethod
-    def do_calbacks(name, value, controller):
-        controlled_attributes = getattr(controller, gui.CONTROLLED_ATTRIBUTES, {})
-        if name in controlled_attributes:
-            for callback in controlled_attributes[name]:
-                callback(value)
-            return True
-
-    def setup_controllers(self, controller, name, value):
-        controlled_attributes = getattr(controller, gui.CONTROLLED_ATTRIBUTES, {})
-        prefix = name + "."
-        prefix_length = len(prefix)
-        for controlled in controlled_attributes:
-            if controlled[:prefix_length] == prefix:
-                self.set_controllers(value, controlled[prefix_length:],
-                                     controller, name)
-                # no break -- can have a.b.c.d and a.e.f.g;
-                # we need to set controller for all!
-
-    @staticmethod
-    def set_controllers(obj, controlled_name, controller, prefix):
-        while obj:
-            if prefix:
-                if hasattr(obj, gui.ATTRIBUTE_CONTROLLERS):
-                    getattr(obj, gui.ATTRIBUTE_CONTROLLERS)[(controller, prefix)] = True
-                else:
-                    setattr(obj, gui.ATTRIBUTE_CONTROLLERS, {(controller, prefix): True})
-            parts = controlled_name.split(".", 1)
-            if len(parts) < 2:
-                break
-            obj = getattr(obj, parts[0], None)
-            prefix += parts[0]
-            controlled_name = parts[1]
-
 
     def openContext(self, *a):
         self.settingsHandler.open_context(self, *a)

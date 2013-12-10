@@ -52,6 +52,58 @@ class ControlledAttributesDict(dict):
         self.master.set_controllers(self.master, key, self.master, "")
 
 
+def notify_controllers(obj, name, value):
+    if do_callbacks(name, value, controller=obj):
+        return
+
+    attribute_controllers = getattr(obj, ATTRIBUTE_CONTROLLERS, ())
+    for controller, prefix in attribute_controllers:
+        if getattr(controller, prefix, None) != obj:
+            del attribute_controllers[(controller, prefix)]
+            continue
+
+        full_name = prefix + "." + name
+        if do_callbacks(full_name, value, controller=controller):
+            continue
+
+        setup_controllers(controller, full_name, value)
+
+
+def do_callbacks(name, value, controller):
+    controlled_attributes = getattr(controller, CONTROLLED_ATTRIBUTES, {})
+    if name in controlled_attributes:
+        for callback in controlled_attributes[name]:
+            callback(value)
+        return True
+
+
+def setup_controllers(controller, name, value):
+    controlled_attributes = getattr(controller, CONTROLLED_ATTRIBUTES, {})
+    prefix = name + "."
+    prefix_length = len(prefix)
+    for controlled in controlled_attributes:
+        if controlled[:prefix_length] == prefix:
+            set_controllers(value, controlled[prefix_length:],
+                            controller, name)
+            # no break -- can have a.b.c.d and a.e.f.g;
+            # we need to set controller for all!
+
+
+def set_controllers(obj, controlled_name, controller, prefix):
+    while obj:
+        if prefix:
+            if hasattr(obj, ATTRIBUTE_CONTROLLERS):
+                getattr(obj, ATTRIBUTE_CONTROLLERS)[(controller, prefix)] = True
+            else:
+                setattr(obj, ATTRIBUTE_CONTROLLERS, {(controller, prefix): True})
+        parts = controlled_name.split(".", 1)
+        if len(parts) < 2:
+            break
+        obj = getattr(obj, parts[0], None)
+        prefix += parts[0]
+        controlled_name = parts[1]
+
+
 def miscellanea(control, box, parent,
                 addToLayout=True, stretch=0, sizePolicy=None, addSpace=False,
                 disabled=False, tooltip=None):
