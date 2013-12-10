@@ -15,24 +15,12 @@ from Orange.canvas.registry.description import (
 from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
+from Orange.widgets.gui import ControlledAttributesDict
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.concurrent import AsyncCall
 
 
 SETTINGS_HANDLER = 'settingsHandler'
-
-
-class ControlledAttributesDict(dict):
-    def __init__(self, master):
-        super().__init__()
-        self.master = master
-
-    def __setitem__(self, key, value):
-        if key not in self:
-            dict.__setitem__(self, key, [value])
-        else:
-            dict.__getitem__(self, key).append(value)
-        self.master.set_controllers(self.master, key, self.master, "")
 
 
 # these definitions are needed to define Table as subclass of TableWithClass

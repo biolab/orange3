@@ -39,6 +39,19 @@ def getdeepattr(obj, attr, *arg, **kwarg):
         raise AttributeError("'%s' has no attribute '%s'" % (obj, attr))
 
 
+class ControlledAttributesDict(dict):
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+    def __setitem__(self, key, value):
+        if key not in self:
+            dict.__setitem__(self, key, [value])
+        else:
+            dict.__getitem__(self, key).append(value)
+        self.master.set_controllers(self.master, key, self.master, "")
+
+
 def miscellanea(control, box, parent,
                 addToLayout=True, stretch=0, sizePolicy=None, addSpace=False,
                 disabled=False, tooltip=None):
