@@ -490,21 +490,16 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if self.signalManager is not None:
             self.signalManager.send(self, signalName, value, id)
 
-
-    def getattr_deep(self, attr, default=None):
-        try:
-            return reduce(lambda o, n: getattr(o, n, None),
-                          attr.split("."), self)
-        except AttributeError:
-            if default is not None:
-                return default
-            raise AttributeError(
-                "'{}' has no attribute '{}'".format(self, attr))
-
     def __setattr__(self, name, value):
-        return self.setattr_deep(name, value, QDialog)
+        """Set value to members of this instance or any of its members.
 
-    def setattr_deep(self, name, value, grandparent):
+        If member is used in a gui control, notify the control about the change.
+
+        name: name of the member, dot is used for nesting ("graph.point.size").
+        value: value to set to the member.
+
+        """
+
         names = name.rsplit(".")
         field_name = names.pop()
         obj = reduce(lambda o, n: getattr(o, n, None), names, self)

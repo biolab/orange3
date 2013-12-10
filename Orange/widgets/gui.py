@@ -1665,7 +1665,7 @@ class collapsableWidgetBox(QtGui.QGroupBox):
             self.callback()
 
     def updateControls(self):
-        val = self.master.getattr_deep(self.value)
+        val = getdeepattr(self.master, self.value)
         width = self.width()
         self.setChecked(val)
         self.setFlat(not val)

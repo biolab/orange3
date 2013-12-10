@@ -1,4 +1,6 @@
 from Orange.widgets import settings
+from Orange.widgets.gui import getdeepattr
+
 
 class EvaluationResultsContextHandler(settings.ContextHandler):
     def __init__(self, targetAttr, selectedAttr):
@@ -20,8 +22,8 @@ class EvaluationResultsContextHandler(settings.ContextHandler):
     def settings_from_widget(self, widget):
         super().settings_from_widget(widget)
         context = widget.current_context
-        context.targetClass = widget.getattr_deep(self.targetAttr)
-        context.selectedClassifiers = list(widget.getattr_deep(self.selectedAttr))
+        context.targetClass = getdeepattr(widget, self.targetAttr)
+        context.selectedClassifiers = list(getdeepattr(self.selectedAttr))
 
     def settings_to_widget(self, widget):
         super().settings_to_widget(widget)
