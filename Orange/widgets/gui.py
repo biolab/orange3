@@ -1057,7 +1057,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
 
     if value is not None:
         clist = getdeepattr(master, value)
-        if isinstance(clist, ControlledList):
+        if not isinstance(clist, ControlledList):
             clist = ControlledList(clist, lb)
             master.__setattr__(value, clist)
     if labels is not None:
