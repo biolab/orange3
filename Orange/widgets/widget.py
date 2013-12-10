@@ -511,18 +511,18 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         else:
             setattr(obj, field_name, value)
 
-        self.notify_controllers(name, value)
+        self.notify_controllers(obj, name, value)
 
         if hasattr(self, SETTINGS_HANDLER):
             self.settingsHandler.fast_save(self, name, value)
 
-    def notify_controllers(self, name, value):
-        if self.do_calbacks(name, value, controller=self):
+    def notify_controllers(self, obj, name, value):
+        if self.do_calbacks(name, value, controller=obj):
             return
 
-        attribute_controllers = getattr(self, gui.ATTRIBUTE_CONTROLLERS, ())
+        attribute_controllers = getattr(obj, gui.ATTRIBUTE_CONTROLLERS, ())
         for controller, prefix in attribute_controllers:
-            if getattr(controller, prefix, None) != self:
+            if getattr(controller, prefix, None) != obj:
                 del attribute_controllers[(controller, prefix)]
                 continue
 
