@@ -1,7 +1,7 @@
+from functools import reduce
 import sys
 import time
 import os
-from functools import reduce
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty, SIGNAL, QDir
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget
@@ -19,6 +19,9 @@ from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.concurrent import AsyncCall
 
 
+SETTINGS_HANDLER = 'settingsHandler'
+
+
 class ControlledAttributesDict(dict):
     def __init__(self, master):
         super().__init__()
@@ -29,7 +32,7 @@ class ControlledAttributesDict(dict):
             dict.__setitem__(self, key, [value])
         else:
             dict.__getitem__(self, key).append(value)
-        self.master.setControllers(self.master, key, self.master, "")
+        self.master.set_controllers(self.master, key, self.master, "")
 
 
 # these definitions are needed to define Table as subclass of TableWithClass
@@ -65,7 +68,7 @@ class WidgetMetaClass(type(QDialog)):
                 hasattr(cls, "settingsFromWidgetCallback")):
             raise SystemError("Reimplement settingsToWidgetCallback and "
                               "settingsFromWidgetCallback")
-        if not hasattr(cls, "settingsHandler"):
+        if not hasattr(cls, SETTINGS_HANDLER):
             cls.settingsHandler = settings.SettingsHandler()
         cls.settingsHandler.widget_class = cls
 
@@ -129,7 +132,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         # 'current_context' MUST be the first thing assigned to a widget
         self.current_context = settings.Context()
-        if hasattr(self, "settingsHandler"):
+        if hasattr(self, SETTINGS_HANDLER):
             stored_settings = kwargs.get('stored_settings', None)
             self.settingsHandler.initialize(self, stored_settings)
 
@@ -138,7 +141,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.needProcessing = 0     # used by signalManager
         self.signalManager = kwargs.get('signal_manager', None)
 
-        self.controlledAttributes = ControlledAttributesDict(self)
+        setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self._guiElements = []      # used for automatic widget debugging
         self.__reportData = None
 
@@ -498,62 +501,76 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             raise AttributeError(
                 "'{}' has no attribute '{}'".format(self, attr))
 
+    def __setattr__(self, name, value):
+        return self.setattr_deep(name, value, QDialog)
 
     def setattr_deep(self, name, value, grandparent):
-        names = name.split(".")
-        lastname = names.pop()
+        names = name.rsplit(".")
+        field_name = names.pop()
         obj = reduce(lambda o, n: getattr(o, n, None), names, self)
         if obj is None:
             raise AttributeError("Cannot set '{}' to {} ".format(name, value))
 
-        if (hasattr(grandparent, "__setattr__") and
-                isinstance(obj, grandparent)):
-            # JD: super().__setattr__ wouldn't work here?
-            grandparent.__setattr__(obj, lastname, value)
+        if obj is self:
+            super().__setattr__(field_name, value)
         else:
-            setattr(obj, lastname, value)
-            # TODO: Puzzled. setattr calls obj.__setattr__. If obj is self,
-            # then self.__setattr__ again calls setattr_deep so all the code
-            # below here gets executed twice, doesn't it?!
-            # Should we add a 'if self is obj: return' here?
+            setattr(obj, field_name, value)
 
-        controlledAttributes = getattr(self, "controlledAttributes", None)
-        controlCallback = (controlledAttributes and
-                           controlledAttributes.get(name, None))
-        if controlCallback:
-            for callback in controlCallback:
-                callback(value)
-        # controlled things (checkboxes...) never have __attributeControllers
-        elif hasattr(self, "__attributeControllers"):
-            for controller, myself in self.__attributeControllers.keys():
-                if getattr(controller, myself, None) != self:
-                    del self.__attributeControllers[(controller, myself)]
-                    continue
-                controlledAttributes = getattr(controller,
-                                               "controlledAttributes", None)
-                if not controlledAttributes:
-                    continue
-                fullName = myself + "." + name
-                controlCallback = controlledAttributes.get(fullName, None)
-                if controlCallback:
-                    for callback in controlCallback:
-                        callback(value)
-                else:
-                    lname = fullName + "."
-                    dlen = len(lname)
-                    for controlled in controlledAttributes.keys():
-                        if controlled[:dlen] == lname:
-                            self.setControllers(value, controlled[dlen:],
-                                                controller, fullName)
-                            # no break -- can have a.b.c.d and a.e.f.g;
-                            # we need to set controller for all!
+        self.notify_controllers(name, value)
 
-        if hasattr(self, "settingsHandler"):
+        if hasattr(self, SETTINGS_HANDLER):
             self.settingsHandler.fast_save(self, name, value)
 
+    def notify_controllers(self, name, value):
+        if self.do_calbacks(name, value, controller=self):
+            return
 
-    def __setattr__(self, name, value):
-        return self.setattr_deep(name, value, QDialog)
+        attribute_controllers = getattr(self, gui.ATTRIBUTE_CONTROLLERS, ())
+        for controller, prefix in attribute_controllers:
+            if getattr(controller, prefix, None) != self:
+                del attribute_controllers[(controller, prefix)]
+                continue
+
+            full_name = prefix + "." + name
+            if self.do_calbacks(full_name, value, controller=controller):
+                continue
+
+            self.setup_controllers(controller, full_name, value)
+
+    @staticmethod
+    def do_calbacks(name, value, controller):
+        controlled_attributes = getattr(controller, gui.CONTROLLED_ATTRIBUTES, {})
+        if name in controlled_attributes:
+            for callback in controlled_attributes[name]:
+                callback(value)
+            return True
+
+    def setup_controllers(self, controller, name, value):
+        controlled_attributes = getattr(controller, gui.CONTROLLED_ATTRIBUTES, {})
+        prefix = name + "."
+        prefix_length = len(prefix)
+        for controlled in controlled_attributes:
+            if controlled[:prefix_length] == prefix:
+                self.set_controllers(value, controlled[prefix_length:],
+                                     controller, name)
+                # no break -- can have a.b.c.d and a.e.f.g;
+                # we need to set controller for all!
+
+    @staticmethod
+    def set_controllers(obj, controlled_name, controller, prefix):
+        while obj:
+            if prefix:
+                if hasattr(obj, gui.ATTRIBUTE_CONTROLLERS):
+                    getattr(obj, gui.ATTRIBUTE_CONTROLLERS)[(controller, prefix)] = True
+                else:
+                    setattr(obj, gui.ATTRIBUTE_CONTROLLERS, {(controller, prefix): True})
+            parts = controlled_name.split(".", 1)
+            if len(parts) < 2:
+                break
+            obj = getattr(obj, parts[0], None)
+            prefix += parts[0]
+            controlled_name = parts[1]
+
 
     def openContext(self, *a):
         self.settingsHandler.open_context(self, *a)
@@ -568,22 +585,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def storeSpecificSettings(self):
         pass
-
-    def setControllers(self, obj, controlledName, controller, prefix):
-        while obj:
-            if prefix:
-                od = obj.__dict__
-                # TODO Missing "__"?
-                if "attributeController" in od:
-                    od["__attributeControllers"][(controller, prefix)] = True
-                else:
-                    od["__attributeControllers"] = {(controller, prefix): True}
-            parts = controlledName.split(".", 1)
-            if len(parts) < 2:
-                break
-            obj = getattr(obj, parts[0], None)
-            prefix += parts[0]
-            controlledName = parts[1]
 
     def saveSettings(self):
         self.settingsHandler.update_class_defaults(self)

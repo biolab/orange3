@@ -5,6 +5,10 @@ from functools import reduce
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 
+
+CONTROLLED_ATTRIBUTES = "controlledAttributes"
+ATTRIBUTE_CONTROLLERS = "__attributeControllers"
+
 # TODO: can we avoid the valueType by keeping the type the same?
 #       E.g. value = type(value)(x)
 from PyQt4.QtGui import QAbstractItemView
@@ -330,7 +334,7 @@ def label(widget, master, label, labelWidth=None, *misc):
     lbl = QtGui.QLabel("", widget)
     reprint = CallFrontLabel(lbl, label, master)
     for mo in __re_label.finditer(label):
-        master.controlledAttributes[mo.group("value")] = reprint
+        getattr(master, CONTROLLED_ATTRIBUTES)[mo.group("value")] = reprint
     reprint()
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
@@ -1058,8 +1062,8 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
             master.__setattr__(value, clist)
     if labels is not None:
         setattr(master, labels, getdeepattr(master, labels))
-        if hasattr(master, "controlledAttributes"):
-            master.controlledAttributes[labels] = CallFrontListBoxLabels(lb)
+        if hasattr(master, CONTROLLED_ATTRIBUTES):
+            getattr(master, CONTROLLED_ATTRIBUTES)[labels] = CallFrontListBoxLabels(lb)
     if value is not None:
         setattr(master, value, getdeepattr(master, value))
     connectControl(lb, master, value, callback, "itemSelectionChanged()",
@@ -1852,8 +1856,8 @@ def connectControl(control, master, value, f, signal,
         if signal:
             connectControlSignal(control, signal, cback)
         cback.opposite = cfront
-        if value and cfront and hasattr(master, "controlledAttributes"):
-            master.controlledAttributes[value] = cfront
+        if value and cfront and hasattr(master, CONTROLLED_ATTRIBUTES):
+            getattr(master, CONTROLLED_ATTRIBUTES)[value] = cfront
 
     cfunc = cfunc or f and FunctionCallback(master, f)
     if cfunc:
