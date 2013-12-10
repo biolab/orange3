@@ -15,7 +15,7 @@ from Orange.canvas.registry.description import (
 from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
-from Orange.widgets.gui import ControlledAttributesDict, notify_controllers
+from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.concurrent import AsyncCall
 
@@ -499,7 +499,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         else:
             setattr(obj, field_name, value)
 
-        notify_controllers(obj, name, value)
+        notify_changed(obj, field_name, value)
 
         if hasattr(self, SETTINGS_HANDLER):
             self.settingsHandler.fast_save(self, name, value)

@@ -49,44 +49,34 @@ class ControlledAttributesDict(dict):
             dict.__setitem__(self, key, [value])
         else:
             dict.__getitem__(self, key).append(value)
-        self.master.set_controllers(self.master, key, self.master, "")
+        set_controllers(self.master, key, self.master, "")
+
+callbacks = lambda obj: getattr(obj, CONTROLLED_ATTRIBUTES, {})
+subcontrollers = lambda obj: getattr(obj, ATTRIBUTE_CONTROLLERS, ())
 
 
-def notify_controllers(obj, name, value):
-    if do_callbacks(name, value, controller=obj):
+def notify_changed(obj, name, value):
+    if name in callbacks(obj):
+        for callback in callbacks(obj)[name]:
+            callback(value)
         return
 
-    attribute_controllers = getattr(obj, ATTRIBUTE_CONTROLLERS, ())
-    for controller, prefix in attribute_controllers:
+    for controller, prefix in subcontrollers(obj):
         if getattr(controller, prefix, None) != obj:
-            del attribute_controllers[(controller, prefix)]
+            del subcontrollers(obj)[(controller, prefix)]
             continue
 
         full_name = prefix + "." + name
-        if do_callbacks(full_name, value, controller=controller):
+        if full_name in callbacks(controller):
+            for callback in callbacks(controller)[full_name]:
+                callback(value)
             continue
 
-        setup_controllers(controller, full_name, value)
-
-
-def do_callbacks(name, value, controller):
-    controlled_attributes = getattr(controller, CONTROLLED_ATTRIBUTES, {})
-    if name in controlled_attributes:
-        for callback in controlled_attributes[name]:
-            callback(value)
-        return True
-
-
-def setup_controllers(controller, name, value):
-    controlled_attributes = getattr(controller, CONTROLLED_ATTRIBUTES, {})
-    prefix = name + "."
-    prefix_length = len(prefix)
-    for controlled in controlled_attributes:
-        if controlled[:prefix_length] == prefix:
-            set_controllers(value, controlled[prefix_length:],
-                            controller, name)
-            # no break -- can have a.b.c.d and a.e.f.g;
-            # we need to set controller for all!
+        prefix = full_name + "."
+        prefix_length = len(prefix)
+        for controlled in callbacks(controller):
+            if controlled[:prefix_length] == prefix:
+                set_controllers(value, controlled[prefix_length:], controller, full_name)
 
 
 def set_controllers(obj, controlled_name, controller, prefix):
@@ -99,9 +89,10 @@ def set_controllers(obj, controlled_name, controller, prefix):
         parts = controlled_name.split(".", 1)
         if len(parts) < 2:
             break
-        obj = getattr(obj, parts[0], None)
-        prefix += parts[0]
-        controlled_name = parts[1]
+        new_prefix, controlled_name = parts
+        obj = getattr(obj, new_prefix, None)
+        # FIXME: do we need to separate prefix parts with "."
+        prefix += new_prefix
 
 
 def miscellanea(control, box, parent,
