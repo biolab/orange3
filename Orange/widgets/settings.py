@@ -222,6 +222,7 @@ class SettingsHandler:
 
         setting_handler = copy.copy(template)
         setting_handler.bind(widget_class)
+        return setting_handler
 
     def get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
