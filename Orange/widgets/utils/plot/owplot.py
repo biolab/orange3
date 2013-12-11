@@ -9,6 +9,7 @@ Plot (``owplot``)
 '''
 
 from PyQt4 import QtCore, QtGui
+from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 
 LeftLegend = 0
@@ -81,7 +82,7 @@ name_map = {
 }
 
 #@deprecated_members(name_map, wrap_methods=list(name_map.keys()))
-class OWPlot(orangeqt.Plot):
+class OWPlot(orangeqt.Plot, OWComponent):
     """
     The base class for all plots in Orange. It uses the Qt Graphics View Framework
     to draw elements on a graph.
@@ -345,6 +346,7 @@ class OWPlot(orangeqt.Plot):
             and add custom axes with :meth:`add_axis` or :meth:`add_custom_axis`
         """
         orangeqt.Plot.__init__(self, parent)
+        OWComponent.__init__(self, widget)
         self.widget = widget
         self.parent_name = name
         self.title_item = None

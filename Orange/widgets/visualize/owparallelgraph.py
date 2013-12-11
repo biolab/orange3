@@ -42,7 +42,6 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
     alpha_value_2 = Setting(150)
 
     def __init__(self, widget, parent=None, name=None):
-        widget.settingsHandler.initialize(self)
         OWPlot.__init__(self, parent, name, axes=[], widget=widget)
         ScaleData.__init__(self)
 
