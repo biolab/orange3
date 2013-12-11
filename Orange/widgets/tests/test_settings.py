@@ -10,7 +10,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
     def setUp(self):
         self.handler = DomainContextHandler(attributes_in_res=True,
                                             metas_in_res=True)
-        self.handler.register_provider(SettingProvider(MockWidget))
+        self.handler.bind(MockWidget)
         self.handler.read_defaults = lambda: None  # Disable reading from disk
         self.domain = self._create_domain()
 
@@ -237,6 +237,8 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
 
 
 class MockWidget:
+    name = "MockWidget"
+
     storeSpecificSettings = lambda x: None
     retrieveSpecificSettings = lambda x: None
     getattr_deep = lambda self, name: getattr(self, name)

@@ -204,8 +204,24 @@ class SettingsHandler:
     """Reads widget setting files and passes them to appropriate providers."""
 
     def __init__(self):
+        """Create a setting handler template.
+
+        Used in class definition. Bound instance will be created
+        when SettingsHandler.create is called.
+        """
         self.widget_class = None
         self.default_provider = None
+
+    @staticmethod
+    def create(widget_class, template=None):
+        """Create a new settings handler based on the template and bind it to
+        widget_class."""
+
+        if template is None:
+            template = SettingsHandler()
+
+        setting_handler = copy.copy(template)
+        setting_handler.bind(widget_class)
 
     def get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
@@ -316,17 +332,11 @@ class SettingsHandler:
             data = data.setdefault(prefix, {})
         data[name] = value
 
-    @staticmethod
-    def create(widget_class, template=None):
-        """Create a new settings handler based on the template."""
-
-        if template is None:
-            template = SettingsHandler()
-
-        setting_handler = copy.copy(template)
-        setting_handler.widget_class = widget_class
-        setting_handler.default_provider = SettingProvider(widget_class)
-        setting_handler.read_defaults()
+    def bind(self, widget_class):
+        """Bind settings handler instance to widget_class."""
+        self.widget_class = widget_class
+        self.default_provider = SettingProvider(widget_class)
+        self.read_defaults()
 
 
 class ContextSetting(Setting):
@@ -495,9 +505,9 @@ class ContextHandler(SettingsHandler):
     def settings_from_widget(self, widget):
         widget.storeSpecificSettings()
 
-    def register_provider(self, provider):
-        super().register_provider(provider)
-        self.analyze_settings(provider, "")
+    def bind(self, widget_class):
+        super().bind(widget_class)
+        self.analyze_settings(self.default_provider, "")
 
     def analyze_settings(self, provider, prefix):
         for setting in provider.settings.values():
