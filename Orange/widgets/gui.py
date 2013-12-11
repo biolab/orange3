@@ -4,14 +4,9 @@ import re
 from functools import reduce
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
-
-
-CONTROLLED_ATTRIBUTES = "controlledAttributes"
-ATTRIBUTE_CONTROLLERS = "__attributeControllers"
-
-# TODO: can we avoid the valueType by keeping the type the same?
-#       E.g. value = type(value)(x)
 from PyQt4.QtGui import QAbstractItemView
+
+from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, SETTINGS_HANDLER
 
 YesNo = NoYes = ("No", "Yes")
 _enter_icon = None
@@ -52,7 +47,7 @@ class ControlledAttributesDict(dict):
         set_controllers(self.master, key, self.master, "")
 
 callbacks = lambda obj: getattr(obj, CONTROLLED_ATTRIBUTES, {})
-subcontrollers = lambda obj: getattr(obj, ATTRIBUTE_CONTROLLERS, ())
+subcontrollers = lambda obj: getattr(obj, ATTRIBUTE_CONTROLLERS, {})
 
 
 def notify_changed(obj, name, value):
@@ -61,8 +56,8 @@ def notify_changed(obj, name, value):
             callback(value)
         return
 
-    for controller, prefix in subcontrollers(obj):
-        if getattr(controller, prefix, None) != obj:
+    for controller, prefix in list(subcontrollers(obj)):
+        if getdeepattr(controller, prefix, None) != obj:
             del subcontrollers(obj)[(controller, prefix)]
             continue
 
@@ -91,8 +86,19 @@ def set_controllers(obj, controlled_name, controller, prefix):
             break
         new_prefix, controlled_name = parts
         obj = getattr(obj, new_prefix, None)
-        # FIXME: do we need to separate prefix parts with "."
+        if prefix:
+            prefix += '.'
         prefix += new_prefix
+
+
+class OWComponent:
+    def __init__(self, widget):
+        if hasattr(widget, SETTINGS_HANDLER):
+            getattr(widget, SETTINGS_HANDLER).initialize(self)
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        notify_changed(self, key, value)
 
 
 def miscellanea(control, box, parent,

@@ -20,10 +20,13 @@ from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.concurrent import AsyncCall
 
 
-SETTINGS_HANDLER = 'settingsHandler'
+
 
 
 # these definitions are needed to define Table as subclass of TableWithClass
+from Orange.widgets.utils.constants import SETTINGS_HANDLER
+
+
 class AttributeList(list):
     pass
 

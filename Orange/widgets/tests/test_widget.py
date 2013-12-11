@@ -1,10 +1,10 @@
 from unittest import TestCase
 from PyQt4.QtGui import QApplication
-from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
+from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, OWComponent
 from Orange.widgets.widget import OWWidget
 
 
-class Dummy:
+class DummyComponent(OWComponent):
     b = None
 
 
@@ -13,7 +13,7 @@ class MyWidget(OWWidget):
         super().__init__()
 
         self.field = 42
-        self.non_widget = Dummy()
+        self.component = DummyComponent(self)
         if depth:
             self.widget = MyWidget(depth=depth-1)
         else:
@@ -35,8 +35,8 @@ class WidgetTestCase(TestCase):
         setattr(widget, 'field', 1)
         self.assertEqual(widget.field, 1)
 
-        setattr(widget, 'non_widget.b', 2)
-        self.assertEqual(widget.non_widget.b, 2)
+        setattr(widget, 'component.b', 2)
+        self.assertEqual(widget.component.b, 2)
 
         setattr(widget, 'widget.field', 3)
         self.assertEqual(widget.widget.field, 3)
@@ -51,26 +51,28 @@ class WidgetTestCase(TestCase):
             setattr(widget, 'unknown_field2.field', 6)
 
     def test_notify_controller_on_attribute_change(self):
-        widget = MyWidget()
+        widget = MyWidget(depth=3)
         delattr(widget.widget, CONTROLLED_ATTRIBUTES)
+        delattr(widget.widget.widget, CONTROLLED_ATTRIBUTES)
+        delattr(widget.widget.widget.widget, CONTROLLED_ATTRIBUTES)
         calls = []
 
         def callback(*args, **kwargs):
             calls.append((args, kwargs))
 
         getattr(widget, CONTROLLED_ATTRIBUTES)['field'] = callback
-        getattr(widget, CONTROLLED_ATTRIBUTES)['non_widget.b'] = callback
+        getattr(widget, CONTROLLED_ATTRIBUTES)['component.b'] = callback
         getattr(widget, CONTROLLED_ATTRIBUTES)['widget.field'] = callback
+        getattr(widget, CONTROLLED_ATTRIBUTES)['widget.widget.component.b'] = callback
+        getattr(widget, CONTROLLED_ATTRIBUTES)['widget.widget.widget.field'] = callback
 
         widget.field = 5
-        #widget.non_widget.b = 5
+        widget.component.b = 5
         widget.widget.field = 5
+        widget.widget.widget.component.b = 5
+        widget.widget.widget.widget.field = 5
 
-        setattr(widget, 'field', 7)
-        setattr(widget, 'non_widget.b', 7)
-        setattr(widget, 'widget.field', 7)
-
-        self.assertEqual(len(calls), 6)
+        self.assertEqual(len(calls), 5)
 
 
 
