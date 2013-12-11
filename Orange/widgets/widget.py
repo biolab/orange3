@@ -41,8 +41,6 @@ class WidgetMetaClass(type(QDialog)):
                               "settingsFromWidgetCallback")
 
         cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
-        for name, provider in cls.settingsHandler.default_provider.providers.items():
-            delattr(cls, name)
 
         return cls
 
