@@ -1,5 +1,5 @@
 from Orange.widgets import settings
-from Orange.widgets.gui import getdeepattr
+from Orange.widgets.utils import getdeepattr
 
 
 class EvaluationResultsContextHandler(settings.ContextHandler):

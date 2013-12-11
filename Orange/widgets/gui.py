@@ -1,10 +1,9 @@
 import math
 import os
 import re
-from functools import reduce
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QAbstractItemView
+from Orange.widgets.utils import getdeepattr
 
 from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, SETTINGS_HANDLER
 
@@ -19,19 +18,6 @@ def id_generator(id_):
         yield id_
 
 OrangeUserRole = id_generator(Qt.UserRole)
-
-
-def getdeepattr(obj, attr, *arg, **kwarg):
-    if isinstance(obj, dict):
-        return obj.get(attr)
-    try:
-        return reduce(lambda o, n: getattr(o, n), attr.split("."), obj)
-    except:
-        if arg:
-            return arg[0]
-        if kwarg:
-            return kwarg["default"]
-        raise AttributeError("'%s' has no attribute '%s'" % (obj, attr))
 
 
 class ControlledAttributesDict(dict):
