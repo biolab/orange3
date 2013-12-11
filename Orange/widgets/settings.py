@@ -262,6 +262,12 @@ class SettingsHandler:
         :type data: `dict` or `bytes` that unpickle into a `dict`
         """
         provider = self.default_provider.get_provider(instance.__class__)
+        if provider is None:
+            import warnings
+            message = "%s has not been declared as setting provider in %s. " \
+                      "Its settings will not be loaded." % (instance.__class__, self.widget_class)
+            warnings.warn(message)
+            return
 
         if isinstance(data, bytes):
             data = pickle.loads(data)
