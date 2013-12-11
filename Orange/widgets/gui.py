@@ -1110,6 +1110,8 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
             master.__setattr__(value, clist)
     if labels is not None:
         setattr(master, labels, getdeepattr(master, labels))
+        if hasattr(master, CONTROLLED_ATTRIBUTES):
+            getattr(master, CONTROLLED_ATTRIBUTES)[labels] = CallFrontListBoxLabels(lb)
     if value is not None:
         setattr(master, value, getdeepattr(master, value))
     connectControl(lb, master, value, callback, "itemSelectionChanged()",
