@@ -301,11 +301,6 @@ class SettingsHandler:
         """Store the (changed) widget's setting immediatelly to the context."""
         pass
 
-    def register_provider(self, provider):
-        """Register default setting provider with this handler."""
-        assert self.default_provider is None, "This SettingHandler already has a provider"
-        self.default_provider = provider
-
     def get_provider(self, cls):
         """Return registered provider responsible for managing the settings of the cls."""
         if not isinstance(cls, type):
@@ -320,6 +315,18 @@ class SettingsHandler:
         for prefix in prefixes:
             data = data.setdefault(prefix, {})
         data[name] = value
+
+    @staticmethod
+    def create(widget_class, template=None):
+        """Create a new settings handler based on the template."""
+
+        if template is None:
+            template = SettingsHandler()
+
+        setting_handler = copy.copy(template)
+        setting_handler.widget_class = widget_class
+        setting_handler.default_provider = SettingProvider(widget_class)
+        setting_handler.read_defaults()
 
 
 class ContextSetting(Setting):

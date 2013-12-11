@@ -16,7 +16,7 @@ from Orange.canvas.scheme.widgetsscheme import (
     SignalLink, WidgetsSignalManager, SignalWrapper
 )
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
-from Orange.widgets.settings import SettingProvider
+from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils.concurrent import AsyncCall
 
 
@@ -59,15 +59,9 @@ class WidgetMetaClass(type(QDialog)):
                 hasattr(cls, "settingsFromWidgetCallback")):
             raise SystemError("Reimplement settingsToWidgetCallback and "
                               "settingsFromWidgetCallback")
-        if not hasattr(cls, SETTINGS_HANDLER):
-            cls.settingsHandler = settings.SettingsHandler()
-        cls.settingsHandler.widget_class = cls
 
-        setting_provider = SettingProvider(cls)
-        cls.settingsHandler.register_provider(setting_provider)
-        cls.settingsHandler.read_defaults()
-
-        for name, provider in setting_provider.providers.items():
+        cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
+        for name, provider in cls.settingsHandler.default_provider.providers.items():
             delattr(cls, name)
 
         return cls
@@ -117,13 +111,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     progressBarValueChanged = Signal(float)
     processingStateChanged = Signal(int)
 
+    settingsHandler = None
+
     def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
 
         # 'current_context' MUST be the first thing assigned to a widget
         self.current_context = settings.Context()
-        if hasattr(self, SETTINGS_HANDLER):
+        if self.settingsHandler:
             stored_settings = kwargs.get('stored_settings', None)
             self.settingsHandler.initialize(self, stored_settings)
 
@@ -504,7 +500,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         notify_changed(obj, field_name, value)
 
-        if hasattr(self, SETTINGS_HANDLER):
+        if self.settingsHandler:
             self.settingsHandler.fast_save(self, name, value)
 
     def openContext(self, *a):

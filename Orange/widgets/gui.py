@@ -5,7 +5,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 from Orange.widgets.utils import getdeepattr
 
-from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, SETTINGS_HANDLER
+from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 
 YesNo = NoYes = ("No", "Yes")
 _enter_icon = None
@@ -79,8 +79,8 @@ def set_controllers(obj, controlled_name, controller, prefix):
 
 class OWComponent:
     def __init__(self, widget):
-        if hasattr(widget, SETTINGS_HANDLER):
-            getattr(widget, SETTINGS_HANDLER).initialize(self)
+        if widget.settingsHandler:
+            widget.settingsHandler.initialize(self)
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
