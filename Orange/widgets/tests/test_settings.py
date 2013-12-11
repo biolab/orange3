@@ -1,7 +1,7 @@
 import unittest
 from mock import Mock
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
-from Orange.widgets.settings import DomainContextHandler, ContextSetting, SettingProvider
+from Orange.widgets.settings import DomainContextHandler, ContextSetting
 
 VarTypes = ContinuousVariable.VarTypes
 
@@ -160,20 +160,20 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         widget.current_context.attributes, widget.current_context.metas = \
             self.handler.encode_domain(self.domain)
         self.add_setting(widget, "attr_list_setting",
-                         ContextSetting([], selected="selection"))
+                         ContextSetting([], selected="selection1"))
         widget.current_context.values = dict(
             string_setting=("abc", -2),
             continuous_setting=("cf1", VarTypes.Continuous),
             discrete_setting=("df1", VarTypes.Discrete),
             list_setting=[1, 2, 3],
             attr_list_setting=["dm1", "df1", "cm1", "dc1"],
-            selection=[1, 2],
+            selection1=[1, 2],
         )
 
         self.handler.settings_to_widget(widget)
 
         self.assertEqual(widget.attr_list_setting, ["df1", "dc1"])
-        self.assertEqual(widget.selection, [0])
+        self.assertEqual(widget.selection1, [0])
 
     def test_perfect_match_returns_2(self):
         attrs, metas = self.handler.encode_domain(self.domain)
@@ -220,7 +220,8 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         setattr(widget, name, setting.default)
         self.handler.default_provider.settings[name] = setting
 
-    def _create_domain(self):
+    @staticmethod
+    def _create_domain():
         features = [
             ContinuousVariable(name="cf1"),
             DiscreteVariable(name="df1", values=["a", "b", "c"]),
@@ -241,7 +242,15 @@ class MockWidget:
 
     storeSpecificSettings = lambda x: None
     retrieveSpecificSettings = lambda x: None
-    getattr_deep = lambda self, name: getattr(self, name)
+
+    string_setting = None
+    continuous_setting = None
+    discrete_setting = None
+    list_setting = None
+    attr_list_setting = None
+    attr_tuple_list_setting = None
+    selection1 = None
+    selection2 = None
 
     def __init__(self):
         self.current_context = Mock()
