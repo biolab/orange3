@@ -49,6 +49,8 @@ class OWParallelCoordinates(OWVisWidget):
     graph = SettingProvider(OWParallelGraph)
     zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
+    __ignore_updates = True
+
     def __init__(self):
         super().__init__()
         #add a graph widget
@@ -68,6 +70,8 @@ class OWParallelCoordinates(OWVisWidget):
         self.graph.setCanvasBackground(self.color_picker.getColor(CANVAS_COLOR))
 
         self.resize(900, 700)
+
+        self.__ignore_updates = False
 
     #noinspection PyAttributeOutsideInit
     def create_control_panel(self):
@@ -150,14 +154,16 @@ class OWParallelCoordinates(OWVisWidget):
         if checksum(data) == checksum(self.data):
             return  # check if the new data set is the same as the old one
 
+        self.__ignore_updates = True
         self.closeContext()
         same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
         self.data = data
 
         if not same_domain:
-            self.shown_attributes = self.shown_attributes
+            self.shown_attributes = None
 
         self.openContext(self.data)
+        self.__ignore_updates = False
 
     def set_subset_data(self, subset_data):
         self.subset_data = subset_data
@@ -169,6 +175,7 @@ class OWParallelCoordinates(OWVisWidget):
 
     # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
     def handleNewSignals(self):
+        self.__ignore_updates = True
         self.graph.set_data(self.data, self.subset_data)
         if self.new_shown_attributes:
             self.shown_attributes = self.new_shown_attributes
@@ -179,6 +186,7 @@ class OWParallelCoordinates(OWVisWidget):
             # self.shown_attributes = None
         self.update_graph()
         self.sendSelections()
+        self.__ignore_updates = False
 
     def send_shown_attributes(self, attributes=None):
         if attributes is None:
@@ -219,10 +227,11 @@ class OWParallelCoordinates(OWVisWidget):
         return c
 
     def attributes_changed(self):
-        self.graph.removeAllSelections()
-        self.update_graph()
+        if not self.__ignore_updates:
+            self.graph.removeAllSelections()
+            self.update_graph()
 
-        self.send_shown_attributes()
+            self.send_shown_attributes()
 
 
 #test widget appearance

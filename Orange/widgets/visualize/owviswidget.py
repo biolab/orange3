@@ -98,6 +98,7 @@ class OWVisWidget(OWWidget):
     def closeContext(self):
         super().closeContext()
 
+        self.data = None
         self.shown_attributes = None
 
     # "Events"
