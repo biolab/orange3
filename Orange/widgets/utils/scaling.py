@@ -12,7 +12,10 @@ from Orange.widgets.utils.datacaching import getCached, setCached
 def checksum(x):
     if x is None:
         return None
-    return x.checksum()
+    try:
+        return x.checksum()
+    except:
+        return float('nan')
 
 
 def get_variable_values_sorted(variable):
