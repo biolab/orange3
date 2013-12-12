@@ -207,13 +207,13 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
         if self.show_statistics and self.have_data:
             n_attr = len(self.attributes)
             data = []
-            for i in range(n_attr):
-                if self.data_domain[self.attribute_indices[i]].var_type != VarTypes.Continuous:
+            for attr_idx in self.attribute_indices:
+                if self.data_domain[attr_idx].var_type != VarTypes.Continuous:
                     data.append([()])
                     continue  # only for continuous attributes
 
                 if not self.data_has_class or self.data_has_continuous_class:    # no class
-                    attr_values = self.no_jittering_scaled_data[i]
+                    attr_values = self.no_jittering_scaled_data[attr_idx]
                     attr_values = attr_values[~np.isnan(attr_values)]
 
                     if self.show_statistics == MEANS:
@@ -232,7 +232,7 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
                     curr = []
                     class_values = get_variable_values_sorted(self.data_domain.class_var)
                     for c in range(len(class_values)):
-                        attr_values = self.scaled_data[i, self.original_data[self.data_class_index] == c]
+                        attr_values = self.scaled_data[attr_idx, self.original_data[self.data_class_index] == c]
                         attr_values = attr_values[~np.isnan(attr_values)]
 
                         if len(attr_values) == 0:
