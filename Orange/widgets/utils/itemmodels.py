@@ -467,6 +467,16 @@ class ListSingleSelectionModel(QItemSelectionModel):
         return QItemSelectionModel.select(self, index, flags)
 
 
+def select_row(view, row):
+    """
+    Select a `row` in an item view.
+    """
+    selmodel = view.selectionModel()
+    selmodel.select(view.model().index(row, 0),
+                    QItemSelectionModel.ClearAndSelect |
+                    QItemSelectionModel.Rows)
+
+
 class ModelActionsWidget(QWidget):
     def __init__(self, actions=None, parent=None,
                  direction=QBoxLayout.LeftToRight):
