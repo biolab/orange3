@@ -1074,6 +1074,9 @@ class Table(MutableSequence, Storage):
                     sel += col
             else:
                 raise TypeError("Invalid filter")
+
+        if filter.negate:
+            sel = ~sel
         return Table.from_table_rows(self, sel)
 
 
