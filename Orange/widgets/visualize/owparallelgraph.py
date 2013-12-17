@@ -175,9 +175,14 @@ class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
 
     def _draw_curves(self, selected_curves):
         n_attr = len(self.attributes)
-        for color in sorted(selected_curves.keys()):
-            curve = ParallelCoordinatesCurve(n_attr, selected_curves[color], color)
-            curve.fitted = self.use_splines
+        for color, y_values in sorted(selected_curves.items()):
+            n_rows = int(len(y_values) / n_attr)
+            x_values = list(range(n_attr)) * n_rows
+            curve = OWCurve()
+            curve.set_style(OWCurve.Lines)
+            curve.set_color(QColor(*color))
+            curve.set_segment_length(n_attr)
+            curve.set_data(x_values, y_values)
             curve.attach(self)
 
     def draw_legend(self):

@@ -2,7 +2,7 @@ numpy>=1.6.2
 scipy>=0.11.0
 -e git+https://github.com/biolab/bottlechest@bottlechest#egg=bottleneck-dev
 scikit-learn==0.13
-qt-graph-helpers
+qt-graph-helpers>=0.1.2
 nose==1.2.1
 mock>=1.0.1
 Jinja2==2.6
