@@ -10,6 +10,9 @@ import re
 import copy
 import unicodedata
 import functools
+import builtins
+import math
+import random
 from collections import namedtuple, Counter
 
 
@@ -457,7 +460,6 @@ class OWFeatureConstructor(widget.OWWidget):
         self.featuremodel = DescriptorModel()
 
         self.featuremodel.wrap(self.descriptors)
-
         self.featureview = QtGui.QListView(
             minimumWidth=200,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
@@ -566,7 +568,6 @@ class OWFeatureConstructor(widget.OWWidget):
         self.featuremodel[:] = list(self.descriptors)
 
     def setData(self, data=None):
-        self.featuremodel.wrap(self.descriptors)
         self.closeContext()
 
         self.featuremodel.wrap([])
@@ -742,9 +743,11 @@ def bind_variable(descriptor, env):
         return (descriptor, lambda _: float("nan"))
 
     exp_ast = ast.parse(descriptor.expression, mode="eval")
-    freev = freevars(exp_ast, [])
+    freev = unique(freevars(exp_ast, []))
     variables = {sanitized_name(v.name): v for v in env}
-    source_vars = [(name, variables[name]) for name in freev]
+    source_vars = [(name, variables[name]) for name in freev
+                   if name in variables]
+
     return (descriptor, FeatureFunc(exp_ast, source_vars))
 
 
@@ -770,12 +773,43 @@ def make_lambda(expression, args):
     lambda_ = ast.copy_location(lambda_, expression.body)
     exp = ast.Expression(body=lambda_, lineno=1, col_offset=0)
     ast.dump(exp)
-    return eval(compile(exp, "<lambda>", "eval"))
+    return eval(compile(exp, "<lambda>", "eval"), __GLOBALS)
+
+
+__ALLOWED = [
+    "Ellipsis", "False", "None", "True", "abs", "all", "any", "acsii",
+    "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
+    "divmod", "enumerate", "filter", "float", "format", "frozenset",
+    "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
+    "list", "map", "max", "memoryview", "min", "next", "object",
+    "oct", "ord", "pow", "range", "repr", "reversed", "round",
+    "set", "slice", "sorted", "str", "sum", "tuple", "type",
+    "zip"
+]
+
+__GLOBALS = {name: getattr(builtins, name) for name in __ALLOWED
+             if hasattr(builtins, name)}
+
+
+__GLOBALS.update({name: getattr(math, name) for name in dir(math)
+                  if not name.startswith("_")})
+
+__GLOBALS.update({
+    "normalvariate": random.normalvariate,
+    "gauss": random.gauss,
+    "expovariate": random.expovariate,
+    "gammavariate": random.gammavariate,
+    "betavariate": random.betavariate,
+    "lognormvariate": random.lognormvariate,
+    "paretovariate": random.paretovariate,
+    "vonmisesvariate": random.vonmisesvariate,
+    "weibullvariate": random.weibullvariate,
+    "triangular": random.triangular,
+    "uniform": random.uniform}
+)
 
 
 class FeatureFunc(object):
-    __BUILTINS__ = [""]
-
     def __init__(self, expression, args):
         self.expression = expression
         self.args = args
@@ -787,6 +821,16 @@ class FeatureFunc(object):
         else:
             args = [instance[var] for _, var in self.args]
             return self.func(*args)
+
+
+def unique(seq):
+    seen = set()
+    unique_el = []
+    for el in seq:
+        if el not in seen:
+            unique_el.append(el)
+            seen.add(el)
+    return unique_el
 
 
 if __name__ == "__main__":
