@@ -673,9 +673,10 @@ def freevars(exp, env):
     elif etype == ast.BinOp:
         return freevars(exp.left, env) + freevars(exp.right, env)
     elif etype == ast.UnaryOp:
-        return freevars(exp.operand)
+        return freevars(exp.operand, env)
     elif etype == ast.IfExp:
-        return freevars(exp.test, env) + freevars(exp.body) + freevars(exp.orelse),
+        return (freevars(exp.test, env) + freevars(exp.body, env) +
+                freevars(exp.orelse, env))
     elif etype == ast.Dict:
         return sum((freevars(v, env) for v in exp.values), [])
     elif etype == ast.Set:
@@ -698,9 +699,9 @@ def freevars(exp, env):
 #     elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
         return []
     elif etype == ast.Attribute:
-        return freevars(exp.value)
+        return freevars(exp.value, env)
     elif etype == ast.Subscript:
-        return freevars(exp.value) + freevars(exp.slice),
+        return freevars(exp.value, env) + freevars(exp.slice, env),
     elif etype == ast.Name:
         return [exp.id] if exp.id not in env else []
     elif etype == ast.List:
@@ -708,13 +709,13 @@ def freevars(exp, env):
     elif etype == ast.Tuple:
         return sum((freevars(e, env) for e in exp.elts), [])
     elif etype == ast.Slice:
-        return sum((freevars(v, env)
+        return sum((freevars(e, env)
                     for e in filter(None, [exp.lower, exp.upper, exp.step])),
                    [])
     elif etype == ast.ExtSlice:
         return sum((freevars(e, env) for e in exp.dims), [])
     elif etype == ast.Index:
-        return freevars(exp.value)
+        return freevars(exp.value, env)
     else:
         raise ValueError(exp)
 
