@@ -1,8 +1,11 @@
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
 from Orange.data.table import Table
-from Orange.data.sql.table import SqlTable
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
+try:
+    from Orange.data.sql.table import SqlTable
+except ImportError:
+    SqlTable = None
 
 
 class OWDataInfo(widget.OWWidget):
@@ -104,7 +107,7 @@ class OWDataInfo(widget.OWWidget):
                 self.targets = "<p>Multi target data</p>\n" + pack_table(
                     (("Discrete", dis), ("Continuous", con)))
 
-        if isinstance(data, SqlTable):
+        if SqlTable is not None and isinstance(data, SqlTable):
             self.location = "Table '%s' in database '%s/%s'" % (
                 data.name, data.host, data.database)
         else:
