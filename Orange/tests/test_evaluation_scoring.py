@@ -5,6 +5,7 @@ from Orange.data import Table
 from Orange.evaluation import testing, scoring
 from Orange.classification import naive_bayes, majority
 
+
 class ScoringTest(unittest.TestCase):
     def test_CA(self):
         res = testing.Results(nmethods=2, nrows=100)

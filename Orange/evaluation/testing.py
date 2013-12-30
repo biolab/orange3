@@ -237,3 +237,23 @@ class LeaveOneOut(Testing):
                 results.predicted[i][test_idx] = values
                 results.probabilities[i][test_idx, :] = probs
         return results
+
+
+class TestOnTrainingData(Testing):
+    """Trains and test on the same data
+    """
+    def __call__(self, data, fitters):
+        results = Results(data, len(fitters), store_data=self.store_data)
+        results.row_indices = np.arange(len(data))
+        if self.store_models:
+            models = []
+            results.models = [models]
+        results.actual = data.Y.flatten()
+        for i, fitter in enumerate(fitters):
+            model = fitter(data)
+            if self.store_models:
+                models.append(model)
+            values, probs = model(data, model.ValueProbs)
+            results.predicted[i] = values
+            results.probabilities[i] = probs
+        return results
