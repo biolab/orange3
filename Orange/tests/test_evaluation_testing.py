@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from Orange import data
+from Orange.data import Table
 from Orange.evaluation.testing import CrossValidation, LeaveOneOut
 from Orange.classification import naive_bayes, majority
 
@@ -18,7 +18,7 @@ class CrossValidationTestCase(unittest.TestCase):
         x = np.random.random_integers(1, 3, (nrows, ncols))
         col = np.random.randint(ncols)
         y = x[:nrows, col].reshape(nrows, 1)
-        return data.Table(x, y)
+        return Table(x, y)
 
     def test_results(self):
         nrows, ncols = 1000, 10
@@ -108,17 +108,28 @@ class CrossValidationTestCase(unittest.TestCase):
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
     def test_10_fold_probs(self):
-        self.data = data.Table('iris')[30:130]
-        self.fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
+        data = Table('iris')[30:130]
+        fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
 
-        results = CrossValidation(k=10)(self.data, self.fitters)
+        results = CrossValidation(k=10)(data, fitters)
 
-        self.assertEqual(results.predicted.shape, (2, len(self.data)))
+        self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
 
+    def test_miss_majority(self):
+        x = np.zeros((50, 3))
+        y = x[:, -1]
+        x[49] = 1
+        data = Table(x, y)
+        res = CrossValidation(data, [majority.MajorityFitter()])
+        np.testing.assert_equal(res.predicted[0][:49], 0)
+
+        x[49] = 0
+        res = CrossValidation(data, [majority.MajorityFitter()])
+        np.testing.assert_equal(res.predicted[0][:49], 0)
 
 
 class LeaveOneOutTestCase(unittest.TestCase):
@@ -127,7 +138,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
         x = np.random.random_integers(1, 3, (nrows, ncols))
         col = np.random.randint(ncols)
         y = x[:nrows, col].reshape(nrows, 1)
-        return data.Table(x, y)
+        return Table(x, y)
 
     def test_results(self):
         nrows, ncols = 50, 10
@@ -201,14 +212,32 @@ class LeaveOneOutTestCase(unittest.TestCase):
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
     def test_probs(self):
-        self.data = data.Table('iris')[30:130]
-        self.fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
+        data = Table('iris')[30:130]
+        fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
 
-        results = LeaveOneOut(k=10)(self.data, self.fitters)
+        results = LeaveOneOut(k=10)(data, fitters)
 
-        self.assertEqual(results.predicted.shape, (2, len(self.data)))
+        self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
 
+    def test_miss_majority(self):
+        x = np.zeros((50, 3))
+        y = x[:, -1]
+        x[49] = 1
+        data = Table(x, y)
+        res = LeaveOneOut(data, [majority.MajorityFitter()])
+        np.testing.assert_equal(res.predicted[0][:49], 0)
+
+        x[49] = 0
+        res = LeaveOneOut(data, [majority.MajorityFitter()])
+        np.testing.assert_equal(res.predicted[0][:49], 0)
+
+        x[25:] = 1
+        y = x[:, -1]
+        data = Table(x, y)
+        res = LeaveOneOut(data, [majority.MajorityFitter()])
+        np.testing.assert_equal(res.predicted[0],
+                                1 - data.Y[res.row_indices].flatten())
