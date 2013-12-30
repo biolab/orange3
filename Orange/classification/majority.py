@@ -4,7 +4,7 @@ from Orange import classification
 from Orange.statistics import distribution
 
 
-class MajorityLearner(classification.Fitter):
+class MajorityFitter(classification.Fitter):
     def fit_storage(self, data):
         dist = distribution.get_distribution(data, data.domain.class_var)
         N = dist.sum()
