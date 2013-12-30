@@ -51,14 +51,23 @@ class Results:
     """
 
     # noinspection PyBroadException
-    def __init__(self, data=None, nmethods=0, nrows=None, store_data=False):
+    # noinspection PyNoneFunctionAssignment
+    def __init__(self, data=None, nmethods=0, nrows=None, nclasses=None,
+                 store_data=False):
         """
         Construct an instance with default values: `None` for :obj:`data` and
-        :obj:`models`. The number of classes and the data type for
+        :obj:`models`.
+
+        If the number of rows and/or the number of classes is not given, it is
+        inferred from :obj:`data`, if provided. The data type for
         :obj:`actual` and :obj:`predicted` is determined from the data; if the
-        latter cannot be find, `np.float32` is used. Attributes :obj:`actual`,
-        :obj:`predicted`, :obj:`probabilities` and :obj:`row_indices` are
-        constructed as empty (uninitialized) arrays of the appropriate size.
+        latter cannot be find, `np.float32` is used.
+
+        Attribute :obj:`actual` and :obj:`row_indices` are constructed as empty
+        (uninitialized) arrays of the appropriate size, if the number of rows
+        is known. Attribute :obj:`predicted` is constructed if the number of
+        rows and of methods is given; :obj:`probabilities` also requires
+        knowing the number of classes.
 
         :param data: Data or domain; the data is not stored
         :type data: Orange.data.Table or Orange.data.Domain
@@ -70,21 +79,25 @@ class Results:
         self.data = data if store_data else None
         self.models = None
         self.folds = None
+        dtype = np.float32
         if data:
             domain = data if isinstance(data, Domain) else data.domain
-            nclasses = len(domain.class_var.values)
+            if nclasses is None:
+                nclasses = len(domain.class_var.values)
             if nrows is None:
                 nrows = len(data)
             try:
                 dtype = data.Y.dtype
             except:
-                dtype = np.float32
+                pass
+        if nrows is not None:
             self.actual = np.empty(nrows, dtype=dtype)
-            self.predicted = np.empty((nmethods, nrows), dtype=dtype)
-            self.probabilities = np.empty((nmethods, nrows, nclasses),
-                                          dtype=np.float32)
             self.row_indices = np.empty(nrows, dtype=np.int32)
-
+            if nmethods is not None:
+                self.predicted = np.empty((nmethods, nrows), dtype=dtype)
+                if nclasses is not None:
+                    self.probabilities = \
+                        np.empty((nmethods, nrows, nclasses), dtype=np.float32)
 
     def get_fold(self, fold):
         results = Results()
