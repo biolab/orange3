@@ -1,4 +1,4 @@
-from Orange.data import Domain
+from Orange.data import Domain, Table
 import numpy as np
 
 
@@ -191,4 +191,49 @@ class CrossValidation(Testing):
                 results.predicted[i][fold_slice] = values
                 results.probabilities[i][fold_slice, :] = probs
             ptr += len(test)
+        return results
+
+
+class LeaveOneOut(Testing):
+    """Leave-one-out testing
+    """
+    def __call__(self, data, fitters):
+        results = Results(data, len(fitters), store_data=self.store_data)
+
+        domain = data.domain
+        X = data.X.copy()
+        Y = data.Y.copy()
+        metas = data.metas.copy()
+
+        teX, trX = X[:1], X[1:]
+        teY, trY = Y[:1], Y[1:]
+        te_metas, tr_metas = metas[:1], metas[1:]
+        if data.has_weights():
+            W = data.W.copy()
+            teW, trW = W[:1], W[1:]
+        else:
+            W = teW = trW = None
+
+        results.row_indices = np.arange(len(data))
+        if self.store_models:
+            results.models = []
+        results.actual = Y.flatten()
+        for test_idx in results.row_indices:
+            X[[0, test_idx]] = X[[test_idx, 0]]
+            Y[[0, test_idx]] = Y[[test_idx, 0]]
+            metas[[0, test_idx]] = metas[[test_idx, 0]]
+            if W:
+                W[[0, test_idx]] = W[[test_idx, 0]]
+            test_data = Table.from_numpy(domain, teX, teY, te_metas, teW)
+            train_data = Table.from_numpy(domain, trX, trY, tr_metas, trW)
+            if self.store_models:
+                fold_models = []
+                results.models.append(fold_models)
+            for i, fitter in enumerate(fitters):
+                model = fitter(train_data)
+                if self.store_models:
+                    fold_models.append(model)
+                values, probs = model(test_data, model.ValueProbs)
+                results.predicted[i][test_idx] = values
+                results.probabilities[i][test_idx, :] = probs
         return results
