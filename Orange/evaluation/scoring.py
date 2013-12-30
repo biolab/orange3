@@ -10,7 +10,7 @@ class Score:
     def __new__(cls, results=None, **kwargs):
         self = super().__new__(cls)
         if results is not None:
-            self = self.__init__(**kwargs)
+            self.__init__(**kwargs)
             return self(results)
         else:
             return self
@@ -44,9 +44,9 @@ class Score:
     @staticmethod
     def from_predicted(results, score_function):
         return np.fromiter(
-            (score_function(actual, predicted)
-             for actual, predicted in zip(results.actual, results.predicted)),
-            dtype=np.float64, count=len(results))
+            (score_function(results.actual, predicted)
+             for predicted in results.predicted),
+            dtype=np.float64, count=len(results.predicted))
 
 class CA(Score):
     def compute_score(self, results):
