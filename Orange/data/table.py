@@ -324,6 +324,8 @@ class Table(MutableSequence, Storage):
         """
         X, Y, metas, W = validation.check_arrays(X, Y, metas, W)
 
+        if Y is not None and Y.ndim == 1:
+            Y = Y.reshape(Y.shape[0], 1)
         if domain is None:
             domain = orange_domain.Domain.from_numpy(X, Y, metas)
 
