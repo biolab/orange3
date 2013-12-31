@@ -7,7 +7,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4 import QtSvg
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.plot import owplot, owconstants, owpoint
 from Orange.data.domain import Domain
@@ -19,6 +19,7 @@ from Orange.data.variable import DiscreteVariable, ContinuousVariable
 class PaintDataPlot(owplot.OWPlot):
     def __init__(self, parent=None, name="None", show_legend=1, axes=None,
                  widget=None):
+
         super().__init__(parent, name, show_legend,
                          axes or [owconstants.xBottom, owconstants.yLeft],
                          widget)
@@ -504,6 +505,8 @@ class OWPaintData(widget.OWWidget):
     attr2 = Setting("y")
     brushRadius = Setting(75)
     density = Setting(7)
+
+    plot = SettingProvider(PaintDataPlot)
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)
