@@ -2614,30 +2614,24 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
 
     def get_font(self, option, index):
         font = index.data(Qt.FontRole)
-        return QtGui.QFont(font) if font.isValid() else option.font
+        if not isinstance(font, QtGui.QFont):
+            font = option.font
+        return font
 
     def get_text_align(self, _, index):
         align = index.data(Qt.TextAlignmentRole)
-        if align.isValid():
-            align = align.toInt()
-        else:
+        if not isinstance(align, int):
             align = Qt.AlignLeft | Qt.AlignVCenter
+
         return align
 
     def get_bar_ratio(self, _, index):
-        bar_ratio = index.data(BarRatioRole)
-        # TODO: does this work? bar_ratio is not QVariant but already a float
-        ratio, have_ratio = bar_ratio.toDouble()
-        return ratio, have_ratio
+        ratio = index.data(BarRatioRole)
+        return ratio, isinstance(ratio, float)
 
     def get_bar_brush(self, _, index):
         bar_brush = index.data(BarBrushRole)
-        if bar_brush.isValid():
-            if not isinstance(bar_brush, (QtGui.QColor, QtGui.QBrush)):
-                bar_brush = None
-        else:
-            bar_brush = None
-        if bar_brush is None:
+        if not isinstance(bar_brush, (QtGui.QColor, QtGui.QBrush)):
             bar_brush = self.color
         return QtGui.QBrush(bar_brush)
 
