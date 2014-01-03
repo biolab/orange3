@@ -12,7 +12,6 @@ from Orange.canvas.registry import description as widget_description
 from Orange.canvas.scheme import widgetsscheme as widget_scheme
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
-from Orange.widgets.utils.concurrent import AsyncCall
 
 
 class WidgetMetaClass(type(QDialog)):
@@ -130,18 +129,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.linksOut = {} # signalName: (signalData, id)
         self.connections = {} # keys are (control, signal) and values are
         # wrapper instances. Used in connect/disconnect
-        self.progressBarHandler = None  # handler for progress bar events
-        self.processingHandler = None   # handler for processing events
-        self.eventHandler = None
         self.callbackDeposit = []
         self.startTime = time.time()    # used in progressbar
 
-        self.widgetStateHandler = None
         self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
 
-        self._private_thread_pools = {}
-        self.asyncCalls = []
-        self.asyncBlock = False
+        self.__blocking = False
 
         if self.want_basic_layout:
             self.insertLayout()
@@ -442,16 +435,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.raise_()
         self.activateWindow()
 
-
     def send(self, signalName, value, id=None):
-        if not self.hasOutputName(signalName):
-            print("Internal error: signal '%s' is not a valid signal name for"
-                  "widget '%s'." % (signalName, self.captionTitle))
-        if signalName in self.linksOut:
-            self.linksOut[signalName][id] = value
-        else:
-            self.linksOut[signalName] = {id: value}
-
         if self.signalManager is not None:
             self.signalManager.send(self, signalName, value, id)
 
@@ -510,148 +494,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def setOptions(self):
         pass
 
-    def hasInputName(self, name):
-        return any(signal.name == name for signal in self.inputs)
-
-    def hasOutputName(self, name):
-        return any(signal.name == name for signal in self.outputs)
-
-    def getInputType(self, name):
-        for signal in self.inputs:
-            if signal.name == name:
-                return signal
-
-    def getOutputType(self, name):
-        for signal in self.outputs:
-            if signal.name == name:
-                return signal
-
-    def signalIsOnlySingleConnection(self, signalName):
-        for input in self.inputs:
-            if input.name == signalName:
-                return input.single
-
-    def addInputConnection(self, widgetFrom, signalName):
-        for input in self.inputs:
-            if input.name == signalName:
-                handler = getattr(self, input.handler) # get a bound handler
-                break
-        else:
-            raise ValueError("Widget {} has no signal {}".format(self.name,
-                                                                 signalName))
-
-        links = self.linksIn.setdefault(signalName, [])
-        for _, widget, _, _ in links:
-            if widget == widgetFrom:
-                return # a signal from the same widget already exists
-        links.append((0, widgetFrom, handler, []))
-
-    # delete a link from widgetFrom and this widget with name signalName
-    def removeInputConnection(self, widgetFrom, signalName):
-        links = self.linksIn.get(signalName, [])
-        for i, (_, widget, _, _) in enumerate(links):
-            if widgetFrom == widget:
-                del links[i]
-                if not links:  # if key is empty, delete key value
-                    del self.linksIn[signalName]
-                return
-
-    # return widget that is already connected to this singlelink signal.
-    # If this widget exists, the connection will be deleted (since this is
-    # only single connection link)
-    def removeExistingSingleLink(self, signal):
-        for input in self.inputs:
-            if input.name == signal and not input.single:
-                return None
-        for signalName in self.linksIn.keys():
-            if signalName == signal:
-                widget = self.linksIn[signalName][0][1]
-                del self.linksIn[signalName]
-                return widget
-        return None
-
-
     def handleNewSignals(self):
         # this is called after all new signals have been handled
         # implement this in your widget if you want to process something only
         # after you received multiple signals
         pass
-
-    # signal manager calls this function when all input signals have updated
-    # the data
-    #noinspection PyBroadException
-    def processSignals(self):
-        if self.processingHandler:
-            self.processingHandler(self, 1)    # focus on active widget
-        newSignal = 0        # did we get any new signals
-
-        # we define only handling signals that have defined a handler function
-        for signal in self.inputs:  # we go from the first to the last input
-            key = signal.name
-            if key in self.linksIn:
-                for i in range(len(self.linksIn[key])):
-                    dirty, widgetFrom, handler, signalData = self.linksIn[key][i]
-                    if not (handler and dirty):
-                        continue
-                    newSignal = 1
-                    qApp.setOverrideCursor(Qt.WaitCursor)
-                    try:
-                        for (value, id, nameFrom) in signalData:
-                            if self.signalIsOnlySingleConnection(key):
-                                self.printEvent(
-                                    "ProcessSignals: Calling %s with %s" %
-                                    (handler, value), eventVerbosity=2)
-                                handler(value)
-                            else:
-                                self.printEvent(
-                                    "ProcessSignals: Calling %s with %s "
-                                    "(%s, %s)" % (handler, value, nameFrom, id)
-                                    , eventVerbosity=2)
-                                handler(value, (widgetFrom, nameFrom, id))
-                    except:
-                        type, val, traceback = sys.exc_info()
-                        # we pretend to have handled the exception, so that we
-                        # don't crash other widgets
-                        sys.excepthook(type, val, traceback)
-                    qApp.restoreOverrideCursor()
-
-                    # clear the dirty flag
-                    self.linksIn[key][i] = (0, widgetFrom, handler, [])
-
-        if newSignal == 1:
-            self.handleNewSignals()
-
-        while self.isBlocking():
-            self.thread().msleep(50)
-            qApp.processEvents()
-
-        if self.processingHandler:
-            self.processingHandler(self, 0)    # remove focus from this widget
-        self.needProcessing = 0
-
-    # set new data from widget widgetFrom for a signal with name signalName
-    def updateNewSignalData(self, widgetFrom, signalName, value, id,
-                            signalNameFrom):
-        if signalName not in self.linksIn: return
-        for i in range(len(self.linksIn[signalName])):
-            (dirty, widget, handler, signalData) = self.linksIn[signalName][i]
-            if widget == widgetFrom:
-                if self.linksIn[signalName][i][3] == []:
-                    self.linksIn[signalName][i] = \
-                        (1, widget, handler, [(value, id, signalNameFrom)])
-                else:
-                    found = 0
-                    for j in range(len(self.linksIn[signalName][i][3])):
-                        (val, ID, nameFrom) = self.linksIn[signalName][i][3][j]
-                        if ID == id and nameFrom == signalNameFrom:
-                            self.linksIn[signalName][i][3][j] = \
-                                (value, id, signalNameFrom)
-                            found = 1
-                    if not found:
-                        self.linksIn[signalName][i] = \
-                            (1, widget, handler, self.linksIn[signalName][i][3]
-                                                 + [(value, id, signalNameFrom)])
-        self.needProcessing = 1
 
     # ############################################
     # PROGRESS BAR FUNCTIONS
@@ -660,8 +507,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.progressBarValue = 0
         self.startTime = time.time()
         self.setWindowTitle(self.captionTitle + " (0% complete)")
-        if self.progressBarHandler:
-            self.progressBarHandler(self, 0)
         self.processingStateChanged.emit(1)
 
     def progressBarSet(self, value):
@@ -681,8 +526,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                                 " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")
-        if self.progressBarHandler:
-            self.progressBarHandler(self, value)
 
         self.progressBarValueChanged.emit(value)
 
@@ -699,31 +542,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def progressBarFinished(self):
         self.setWindowTitle(self.captionTitle)
-        if self.progressBarHandler:
-            self.progressBarHandler(self, 101)
         self.processingStateChanged.emit(0)
-
-    # handler must accept two arguments: the widget instance and a value
-    # between -1 and 101
-    def setProgressBarHandler(self, handler):
-        self.progressBarHandler = handler
-
-    def setProcessingHandler(self, handler):
-        self.processingHandler = handler
-
-    def setEventHandler(self, handler):
-        self.eventHandler = handler
-
-    def setWidgetStateHandler(self, handler):
-        self.widgetStateHandler = handler
-
-
-    # if we are in debug mode print the event into the file
-    def printEvent(self, text, eventVerbosity=1):
-        self.signalManager.addEvent(self.captionTitle + ": " + text,
-                                    eventVerbosity=eventVerbosity)
-        if self.eventHandler:
-            self.eventHandler(self.captionTitle + ": " + text, eventVerbosity)
 
     def openWidgetHelp(self):
         if "widgetInfo" in self.__dict__:  # This widget is on a canvas.
@@ -768,11 +587,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 changed = 1
 
         if changed:
-            if self.widgetStateHandler:
-                self.widgetStateHandler()
-            elif text:
-                self.printEvent(stateType + " - " + text)
-
             if type(id) == list:
                 for i in id:
                     self.widgetStateChanged.emit(stateType, i, "")
@@ -818,100 +632,19 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             (Qt.ControlModifier, Qt.Key_W):
                 lambda self: self.setVisible(not self.isVisible())}
 
-
-    def scheduleSignalProcessing(self):
-        self.signalManager.scheduleSignalProcessing(self)
-
     def setBlocking(self, state=True):
         """ Set blocking flag for this widget. While this flag is set this
         widget and all its descendants will not receive any new signals from
         the signal manager
         """
-        self.asyncBlock = state
-        self.blockingStateChanged.emit(self.asyncBlock)
-        if not self.isBlocking():
-            self.scheduleSignalProcessing()
-
+        if self.__blocking != state:
+            self.__blocking = state
+            self.blockingStateChanged.emit(state)
 
     def isBlocking(self):
-        """ Is this widget blocking signal processing. Widget is blocking if
-        asyncBlock value is True or any AsyncCall objects in asyncCalls list
-        has blocking flag set
+        """ Is this widget blocking signal processing.
         """
-        return self.asyncBlock or any(a.blocking for a in self.asyncCalls)
-
-    def asyncExceptionHandler(self, exception):
-        (etype, value, tb) = exception
-        sys.excepthook(etype, value, tb)
-
-    def asyncFinished(self, async, _):
-        """ Remove async from asyncCalls, update blocking state
-        """
-
-        index = self.asyncCalls.index(async)
-        async = self.asyncCalls.pop(index)
-
-        if async.blocking and not self.isBlocking():
-            # if we are responsible for unblocking
-            self.blockingStateChanged.emit(False)
-            self.scheduleSignalProcessing()
-
-        async.disconnect(async, SIGNAL("finished(PyQt_PyObject, QString)"), self.asyncFinished)
-        self.asyncCallsStateChange.emit()
-
-
-    def asyncCall(self, func, args=(), kwargs={}, name=None,
-                  onResult=None, onStarted=None, onFinished=None, onError=None,
-                  blocking=True, thread=None, threadPool=None):
-        """ Return an OWConcurent.AsyncCall object func, args and kwargs
-        set and signals connected.
-        """
-
-        asList = lambda slot: slot if isinstance(slot, list) \
-            else ([slot] if slot else [])
-
-        onResult = asList(onResult)
-        onStarted = asList(onStarted)
-        onFinished = asList(onFinished)
-        onError = asList(onError) or [self.asyncExceptionHandler]
-
-        async = AsyncCall(func, args, kwargs,
-                          thread=thread, threadPool=threadPool)
-        async.name = name if name is not None else ""
-
-        for slot in onResult:
-            async.resultReady.connect(slot, Qt.QueuedConnection)
-        for slot in onStarted:
-            async.starting.connect(slot, Qt.QueuedConnection)
-        for slot in onFinished:
-            async.finished.connect(slot, Qt.QueuedConnection)
-        for slot in onError:
-            async.unhandledException.connect(slot, Qt.QueuedConnection)
-
-        self.addAsyncCall(async, blocking)
-
-        return async
-
-    def addAsyncCall(self, async, blocking=True):
-        """ Add AsyncCall object to asyncCalls list (will be removed
-        once it finishes processing).
-
-        """
-        ## TODO: make this thread safe
-        async.finished.connect(self.asyncFinished())
-
-        async.blocking = blocking
-
-        if blocking:
-            # if we are responsible for blocking
-            state = any(a.blocking for a in self.asyncCalls)
-            self.asyncCalls.append(async)
-            if not state:
-                self.blockingStateChanged.emit(True)
-        else:
-            self.asyncCalls.append(async)
-
-        self.asyncCallsStateChange.emit()
+        return self.__blocking
 
 
 def blocking(method):

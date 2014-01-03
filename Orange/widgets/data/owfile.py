@@ -186,8 +186,6 @@ class OWFile(widget.OWWidget):
 
         data = None
         try:
-            if self.processingHandler:
-                self.processingHandler(self, 1)    # focus on active widget
             # TODO handle self.new_variables
             data = Table(fn)
             self.loaded_file = fn
@@ -202,9 +200,6 @@ class OWFile(widget.OWWidget):
                     self.infoa.setText('Data was not loaded due to an error.')
                     self.infob.setText('Error:')
                     self.warnings.setText(errValue)
-        finally:
-            if self.processingHandler:
-                self.processingHandler(self, 0)    # remove focus from this widget
 
         if data is None:
             self.dataReport = None

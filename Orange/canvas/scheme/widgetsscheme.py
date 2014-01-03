@@ -519,9 +519,6 @@ class WidgetsSignalManager(SignalManager):
                          widget)
             return
 
-        if widget.processingHandler:
-            widget.processingHandler(widget, 1)
-
         app = QCoreApplication.instance()
 
         for signal in signals:
@@ -568,9 +565,6 @@ class WidgetsSignalManager(SignalManager):
                           node.title)
         finally:
             app.restoreOverrideCursor()
-
-        if widget.processingHandler:
-            widget.processingHandler(widget, 0)
 
     def scheduleSignalProcessing(self, widget=None):
         """
