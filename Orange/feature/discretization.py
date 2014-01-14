@@ -12,6 +12,10 @@ def _split_eq_width(dist, n):
     dif = (max-min)/n
     return [ min + (i+1)*dif for i in range(n-1) ]
 
+def _split_eq_width_fixed(min, max, n):
+    dif = (max-min)/n
+    return [ min + (i+1)*dif for i in range(n-1) ]
+
 
 class Discretizer(ColumnTransformation):
     """ Interval discretizer. The lower limits
@@ -101,19 +105,23 @@ class EqualWidth(Discretization):
     def __init__(self, n=4):
         self.n = n
 
-    def __call__(self, data, attribute):
-        if type(data) == Orange.data.sql.table.SqlTable:
-            filters = [f.to_sql() for f in data.row_filters]
-            filters = [f for f in filters if f]
-
-            sql = "select EqualWidth((%s), (%s), (%s), (%s));"
-            param = (data.table_name, attribute.name, filters if filters else None, self.n)
-            cur = data._execute_sql_query(sql, param)
-
-            res = np.array(cur.fetchall())
-            points = [a for a, in res]
+    def __call__(self, data, attribute, fixed=None):
+        if fixed:
+            min, max = fixed[attribute.name]
+            points = _split_eq_width_fixed(min, max, n=self.n)
         else:
-            d = Orange.statistics.distribution.get_distribution(data, attribute)
-            points = _split_eq_width(d, n=self.n)
+            if type(data) == Orange.data.sql.table.SqlTable:
+                filters = [f.to_sql() for f in data.row_filters]
+                filters = [f for f in filters if f]
+
+                sql = "select EqualWidth((%s), (%s), (%s), (%s));"
+                param = (data.table_name, attribute.name, filters if filters else None, self.n)
+                cur = data._execute_sql_query(sql, param)
+
+                res = np.array(cur.fetchall())
+                points = [a for a, in res]
+            else:
+                d = Orange.statistics.distribution.get_distribution(data, attribute)
+                points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
 
