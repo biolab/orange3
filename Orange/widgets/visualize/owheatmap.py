@@ -174,9 +174,15 @@ class OWHeatmap(widget.OWWidget):
                 dataset.domain.class_vars = tuple(classvars)
                 dataset.domain.class_var = classvars[0] if len(classvars) > 0 else None
 
+                if not dataset.domain.class_var and "glass" in dataset.name:
+                    glass = Orange.data.Table("Glass")
+                    dataset.domain = glass.domain
+                    dataset._create_domain()
+
             self.dataset = dataset
 
             self.clearControls()
+            self.plot.clear()
 
             for attr in dataset.domain.attributes:
                 self.comboBoxAttributesX.addItem(self.icons[attr.var_type], attr.name)
@@ -188,10 +194,10 @@ class OWHeatmap(widget.OWWidget):
             self.classvar_select = 0
 
             for (index, value) in enumerate(dataset.domain.class_vars[self.classvar_select].values):
-                setattr(self, 'check_%s' % value, True)
-                self.checkBoxesColorsShownAttributeList.append('check_%s' % value)
-                self.checkBoxesColorsShown.append(gui.checkBox(self.checkBoxesColorsShownBox, self, value='check_%s' % value,
-                                                               label=value, callback=self.attrChanged))
+                setattr(self, 'check_%s' % str(value), True)
+                self.checkBoxesColorsShownAttributeList.append('check_%s' % str(value))
+                self.checkBoxesColorsShown.append(gui.checkBox(self.checkBoxesColorsShownBox, self, value='check_%s' % str(value),
+                                                               label=str(value), callback=self.attrChanged))
                 self.checkBoxesColorsShown[index].setStyleSheet('QCheckBox {color: rgb(%i, %i, %i)}' % (self.color_array[index][0],
                                                                                                         self.color_array[index][1],
                                                                                                         self.color_array[index][2]))
@@ -219,7 +225,10 @@ class OWHeatmap(widget.OWWidget):
             self.checkedindices.append(getattr(self, self.checkBoxesColorsShownAttributeList[i]))
 
         if self.check_commit_on_change or callDisplay:
+            tstart = datetime.now()
             self.displayChanged()
+            tend = datetime.now()
+            print(tend - tstart)
 
     def displayChanged(self):
         d = Orange.statistics.distribution.get_distribution(self.dataset, self.dataset.domain.attributes[self.X_attributes_select])
@@ -238,7 +247,6 @@ class OWHeatmap(widget.OWWidget):
         self.interval_height = int(self.image_height / self.contingencies.shape[1])
         self.image_width = self.interval_width * self.contingencies.shape[2]
         self.image_height = self.interval_height * self.contingencies.shape[1]
-        self.plot.clear()
         self.initPlot()
         QtCore.QCoreApplication.processEvents()
         # compute main rect
@@ -246,6 +254,9 @@ class OWHeatmap(widget.OWWidget):
         rect[0, 0] = QtCore.QRectF(0, 0, self.image_width, self.image_height)
 
         contingencies_valmax = self.updateImage(self.contingencies, rect[0, 0], None)
+
+        self.progress = gui.ProgressBar(self, 3240)
+        self.countHeappush = 0
 
         self.h = []
         self.updated_fields = []
@@ -258,6 +269,7 @@ class OWHeatmap(widget.OWWidget):
                             self.dataset, self.disc_dataset.domain,
                             int(self.n_discretization_intervals/2),
                             valmax_array=contingencies_valmax)
+        self.progress.finish()
 
     def sharpenHeatMap(self, rect, contingencies, dataset, domain, n_discretization_intervals, valmax_array, valmax_scalar=None):
         grid = self.computeGrid(contingencies, frameRect=rect)
@@ -274,6 +286,7 @@ class OWHeatmap(widget.OWWidget):
             for col in range(chi_squares_lr.shape[1]):
                 heapq.heappush(self.h, (-chi_squares_lr[row, col], self.count, row, col, rects[row, col], dataset, domain, valmax_scalar if valmax_scalar != None else valmax_array[row, col]))
                 heapq.heappush(self.h, (-chi_squares_lr[row, col], self.count, row, col+1, rects[row, col+1], dataset, domain, valmax_scalar if valmax_scalar != None else valmax_array[row, col+1]))
+                self.countHeappush += 2
 
         self.count += 1
 
@@ -281,16 +294,19 @@ class OWHeatmap(widget.OWWidget):
             for col in range(chi_squares_ud.shape[1]):
                 heapq.heappush(self.h, (-chi_squares_ud[row, col], self.count, row, col, rects[row, col], dataset, domain, valmax_scalar if valmax_scalar != None else valmax_array[row, col]))
                 heapq.heappush(self.h, (-chi_squares_ud[row, col], self.count, row+1, col, rects[row+1, col], dataset, domain, valmax_scalar if valmax_scalar != None else valmax_array[row+1, col]))
+                self.countHeappush += 2
 
         self.count += 1
+        self.progress.iter = self.countHeappush
 
         while self.h:
+            self.progress.advance(1)
             chi, count, r, c, rct, ds, dom, vm = heapq.heappop(self.h)
             if (rct, r, c) not in self.updated_fields:
                 sub_contingencies, subdataset, subdomain = self.computeSubContingencies(ds, dom,
                                                                                         c, r,
                                                                                         n_discretization_intervals)
-                if sub_contingencies.max():
+                if sub_contingencies.max(): # == if sub_contingencies not empty
                     self.updateImage(sub_contingencies, rct, vm)
                     self.updated_fields.append((rct, r, c))
                     self.sharpenHeatMap(rct, sub_contingencies, subdataset, subdomain, n_discretization_intervals, None, valmax_scalar=vm)
