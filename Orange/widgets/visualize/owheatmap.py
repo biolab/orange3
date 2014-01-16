@@ -18,6 +18,15 @@ from datetime import datetime
 
 
 class HeatMapCurve(owcurve.OWCurve):
+    """
+    Holds a single image that is displayed on HeatMapPlot. Image is updated with smaller images to show more detail.
+
+    Method paint() paints the whole image (self.image) at once (when needed). Property self.plot().heatmap_rect is used
+    to move the image to its right location (inside the axes). This property is set in HeatMapPlot.set_graph_rect().
+
+    Method updateImage() is called from OWHeatmap.updateImage(). The parameter image is painted inside parameter rect onto
+    the whole image (self.image). The image is flipped in direction up-down and the y value of rect has to be converted.
+    """
     def __init__(self, image, image_rect, heatmap_height, xData=[], yData=[], x_axis_key=owconstants.xBottom, y_axis_key=owconstants.yLeft, tooltip=None):
         super().__init__(xData, yData, x_axis_key, y_axis_key, tooltip)
 
@@ -54,6 +63,12 @@ class HeatMapCurve(owcurve.OWCurve):
 
 
 class HeatMapPlot(owplot.OWPlot):
+    """
+    HeatMapPlot shows a single HeatMapCurve.
+
+    Method set_graph_rect() has to be overriden to obtain the self.heatmap_rect and to set self.graph_area, which sets
+    the plot to correct size.
+    """
     def __init__(self, parent=None, name="None", show_legend=1, axes=None,
                  widget=None, width=0, height=0):
         super().__init__(parent, name, show_legend,
@@ -100,10 +115,17 @@ class HeatMapPlot(owplot.OWPlot):
             super().mouseReleaseEvent(event)
 
 class OWHeatmap(widget.OWWidget):
+    """
+    OWHeatmap draws a heatmap from data.
+
+    Data is first drawn with less precision (big rects) and gets updated to more detail (smaller rects).
+    This takes some time, so the heatmap gets updated, when more detail is calculated.
+    """
     _name = "Heat map"
     _description = "Draws a heat map."
     #_long_description = """Shows itself to see if added correctly."""
     # _icon = "../icons/Dlg_zoom.png"
+    _author = "Jure Bergant"
     _priority = 100
 
     inputs = [("Data", Table, "data")]
@@ -272,12 +294,16 @@ class OWHeatmap(widget.OWWidget):
         self.progress.finish()
 
     def sharpenHeatMap(self, rect, contingencies, dataset, domain, n_discretization_intervals, valmax_array, valmax_scalar=None):
+        """
+        Called recursively to draw the image in more detail.
+
+        Image is divided into smaller rects. The chi squares of all neighbours is calculated, then the rect with highest
+        chi square value is drawn first. When the rect becomes to small to draw it in more detail, the recursion stops.
+        """
         grid = self.computeGrid(contingencies, frameRect=rect)
         rects = self.computeRects(grid)
         if rects[0, 0].width() < n_discretization_intervals: # stop when rects become too small
             return
-
-        # self.drawRects(rects, self.pim)
 
         estimates = self.getEstimates(contingencies)
         chi_squares_lr, chi_squares_ud = self.computeChiSquares(contingencies, estimates)
@@ -314,6 +340,9 @@ class OWHeatmap(widget.OWWidget):
                     self.updated_fields.append((rct, r, c))
 
     def updateImage(self, contingencies, rect, sup_valmax):
+        """
+        Makes an image of size rect from contingencies. The image is used to update a rect inside the heatmap.
+        """
         interval_width = int(rect.width() / contingencies.shape[2])
         interval_height = int(rect.height() / contingencies.shape[1])
         image_width = interval_width * contingencies.shape[2]
@@ -460,15 +489,6 @@ class OWHeatmap(widget.OWWidget):
             grid[1, i] = frameRect.y() + self.heights[:i+1].sum()
         return grid
 
-    def drawGrid(self, grid, pim):
-        painter = QtGui.QPainter(pim)
-        painter.setPen(QtCore.Qt.black)
-        for i in range(grid.shape[1]-1):
-            painter.drawLine(grid[0, i], 0, grid[0, i], grid[0, -1])
-            painter.drawLine(0, grid[1, i], grid[1, -1], grid[1, i])
-        self.scene.addPixmap(pim)
-        QtCore.QCoreApplication.processEvents()
-
     def computeRects(self, grid):
         rects = np.empty((grid[1].shape[0], grid[0].shape[0]), dtype=QtCore.QRectF)
         for row in range(grid[1].shape[0]):
@@ -477,17 +497,6 @@ class OWHeatmap(widget.OWWidget):
                                                 grid[1, row] - self.heights[row],
                                                 self.widths[col], self.heights[row])
         return rects
-
-    def drawRects(self, rects, pim):
-        painter = QtGui.QPainter(self.pim)
-        painter.setPen(QtCore.Qt.black)
-        for row in range(rects[1].shape[0]):
-            for col in range(rects[0].shape[0]):
-                painter.drawRect(rects[row, col])
-                # painter.drawText(rects[row, col].x(), rects[row, col].y() + rects[row, col].height()/2,
-                #                  "[%s, %s]" % (col, row))
-        self.scene.addPixmap(pim)
-        QtCore.QCoreApplication.processEvents()
 
     def initPlot(self):
         self.plot.set_axis_title(owconstants.xBottom, self.dataset.domain.attributes[self.X_attributes_select].name)
