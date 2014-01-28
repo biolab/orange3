@@ -3,13 +3,13 @@
 #
 # Example:
 #
-#     $ build-osx-app.sh $HOME/Applications/Orange.app
+#     $ build-osx-app.sh $HOME/Applications/Orange3.app
 #
 
 function print_usage() {
-    echo 'build-osx-app.sh [-i] [--template] Orange.app
+    echo 'build-osx-app.sh [-i] [--template] Orange3.app
 
-Build an Orange Canvas OSX application bundle (Orange.app).
+Build an Orange Canvas OSX application bundle (Orange3.app).
 
 NOTE: this script should be run from the source root directory.
 
@@ -50,7 +50,7 @@ done
 shopt -s extglob failglob
 
 
-APP=${1:-dist/Orange.app}
+APP=${1:-dist/Orange3.app}
 
 if [[ $INPLACE ]]; then
     if [[ $TEMPLATE_URL ]]; then
@@ -66,7 +66,7 @@ if [[ $INPLACE ]]; then
     fi
 fi
 
-TEMPLATE_URL=${TEMPLATE_URL:-"http://orange.biolab.si/download/bundle-templates/Orange.app.tar.gz"}
+TEMPLATE_URL=${TEMPLATE_URL:-"http://orange.biolab.si/download/bundle-templates/Orange3.app-template.tar.gz"}
 
 SCHEMA_REGEX='^(https?|ftp|local)://.*'
 
@@ -100,6 +100,7 @@ PYTHON=$TEMPLATE/Contents/MacOS/python
 PIP=$TEMPLATE/Contents/MacOS/pip
 
 PREFIX=$("$PYTHON" -c'import sys; print(sys.prefix)')
+SITE_PACKAGES=$("$PYTHON" -c'import sysconfig as sc; print(sc.get_path("platlib"))')
 
 echo "Installing bottlechest"
 echo "======================"
@@ -113,6 +114,12 @@ EXTRA_PATH=$PREFIX/bin:$TEMPLATE/Contents/Resources/Qt4/bin
 # for the compiler to find Qt's headers and frameworks
 EXTRA_CXXFLAGS="-F$FDIR -I$FDIR/QtCore.framework/Headers -I$FDIR/QtGui.framework/Headers"
 EXTRA_LDFLAGS="-F$FDIR -framework QtCore -framework QtGui"
+
+echo "Fixing sip/pyqt configuration"
+
+sed -i.bak "s@/.*\.app/@$TEMPLATE/@g" "${SITE_PACKAGES}"/PyQt4/pyqtconfig.py
+sed -i.bak "s@/.*\.app/@$TEMPLATE/@g" "${SITE_PACKAGES}"/sipconfig.py
+
 
 (
     PATH=$EXTRA_PATH:$PATH
@@ -149,6 +156,6 @@ if [[ ! $INPLACE ]]; then
     if [[ -e $APP ]]; then
         rm -rf "$APP"
     fi
-
+	mkdir -p $(dirname "$APP")
     mv "$TEMPLATE" "$APP"
 fi
