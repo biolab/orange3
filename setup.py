@@ -44,6 +44,13 @@ CLASSIFIERS = (
     'Intended Audience :: Developers',
 )
 
+INSTALL_REQUIRES = (
+    'setuptools',
+    'numpy',
+    'scipy',
+    'bottleneck'
+)
+
 if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
         'install_egg_info', 'build_sphinx', 'egg_info', 'easy_install',
         'upload', 'test'}.intersection(sys.argv)) > 0:
@@ -52,6 +59,7 @@ if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
         zip_safe=False,  # the package can run out of an .egg file
         include_package_data=True,
         test_suite='Orange.tests.test_suite',
+        install_requires=INSTALL_REQUIRES
     )
 else:
     extra_setuptools_args = dict()
@@ -121,13 +129,6 @@ if not release:
     finally:
         a.close()
 
-INSTALL_REQUIRES = (
-    'setuptools',
-    'numpy',
-    'scipy',
-    'bottleneck'
-)
-
 from numpy.distutils.core import setup
 
 def configuration(parent_package='', top_path=None):
@@ -160,6 +161,7 @@ def setup_package():
     setup(
         configuration=configuration,
         name=NAME,
+        version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         author=AUTHOR,
@@ -207,7 +209,6 @@ def setup_package():
                   "Orange.widgets.utils.plot",
                   "Orange.widgets.utils.plot.primitives",
                   "Orange.widgets.visualize"],
-        install_requires=INSTALL_REQUIRES,
         **extra_setuptools_args
     )
 
