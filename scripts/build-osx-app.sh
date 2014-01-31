@@ -76,7 +76,7 @@ if [[ ! $INPLACE ]]; then
     echo "Retrieving a template from $TEMPLATE_URL"
     # check for a url schema
     if [[ $TEMPLATE_URL =~ $SCHEMA_REGEX ]]; then
-        curl --fail --silent "$TEMPLATE_URL" | tar -xf -C "$BUILD_DIR"
+        curl --fail --silent "$TEMPLATE_URL" | tar -x -C "$BUILD_DIR"
         TEMPLATE=( $BUILD_DIR/*.app )
 
     elif [[ -d $TEMPLATE_URL ]]; then
