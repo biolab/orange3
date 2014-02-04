@@ -47,6 +47,18 @@ if "PYCHARM_HOSTED" in os.environ:
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+
+def fix_osx_10_9_private_font():
+    """Temporary fix for QTBUG-32789."""
+    from PyQt4.QtCore import QSysInfo
+    if sys.platform == "darwin":
+        try:
+            if QSysInfo.MacintoshVersion > QSysInfo.MV_10_8:
+                QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
+        except AttributeError:
+            pass
+
+
 def fix_win_pythonw_std_stream():
     """
     On windows when running without a console (using pythonw.exe) the
@@ -111,6 +123,9 @@ def main(argv=None):
     logging.basicConfig(level=levels[options.log_level])
 
     fix_win_pythonw_std_stream()
+
+    # Try to fix fonts on OSX Mavericks
+    fix_osx_10_9_private_font()
 
     log.info("Starting 'Orange Canvas' application.")
 
