@@ -178,6 +178,7 @@ def setup_package():
             "Orange.canvas.application.tutorials": ["*.ows"],
             "Orange.widgets": ["icons/*.png"],
             "Orange.widgets.data": ["icons/*.svg", "icons/paintdata/*.png", "icons/paintdata/*.svg"],
+            "Orange.widgets.visualize": ["icons/*.svg"],
             "Orange.widgets.plot": ["*.fs", "*.gs", "*.vs"],
             "Orange.widgets.plot.primitives": ["*.obj"],
         },
