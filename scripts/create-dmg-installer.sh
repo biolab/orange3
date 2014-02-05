@@ -9,7 +9,7 @@ Create an disk image installer (.dmg) for Orange OSX application.
 
 Options:
 
-    -a --app PATH      Path to a build Orange3.app to include in the disk.
+    -a --app PATH      Path to a build Orange3.app to include in the disk image.
                        (default dist/Orange3.app)
     -k --keep-temp     Keep the temporary files after creating the final image.
     -h --help          Print this help
@@ -25,7 +25,7 @@ APP="dist/Orange3.app"
 
 KEEP_TEMP=0
 
-while test ${1:0:1} = "-"; do
+while [[ ${1:0:1} = "-" ]]; do
     case $1 in
         -a|--app)
             APP=$2
@@ -48,6 +48,12 @@ while test ${1:0:1} = "-"; do
 done
 
 DMG=$1
+
+if [[ ! $DMG ]]; then
+    echo "No output bundle dmg specified."
+    print_usage
+    exit 1
+fi
 
 if [[ ! -d $APP ]]; then
     echo "$APP path does not exits or is not a directory."

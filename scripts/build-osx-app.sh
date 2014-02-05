@@ -49,6 +49,11 @@ done
 # extended glob expansion / fail on filename expansion
 shopt -s extglob failglob
 
+if [[ ! -f setup.py ]]; then
+    echo "This script must be run from the source root directory!"
+    print_usage
+    exit 1
+fi
 
 APP=${1:-dist/Orange3.app}
 
