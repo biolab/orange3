@@ -161,7 +161,6 @@ def setup_package():
     setup(
         configuration=configuration,
         name=NAME,
-        version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         author=AUTHOR,
