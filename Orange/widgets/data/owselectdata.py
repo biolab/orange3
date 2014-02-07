@@ -63,6 +63,7 @@ class OWSelectData(widget.OWWidget):
         self.cond_list.resizeColumnToContents(0)
         self.cond_list.horizontalHeader().setResizeMode(
             QtGui.QHeaderView.Stretch)
+        self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
 
         box2 = gui.widgetBox(box, orientation="horizontal")
         self.add_button = gui.button(box2, self, "Add condition",
@@ -108,7 +109,6 @@ class OWSelectData(widget.OWWidget):
 
         attr_combo = QtGui.QComboBox()
         attr_combo.row = row
-        attr_combo.setStyleSheet("border: none")
         for var in chain(self.data.domain.variables, self.data.domain.metas):
             attr_combo.addItem(*gui.attributeItem(var))
         attr_combo.setCurrentIndex(attr or 0)
@@ -120,6 +120,7 @@ class OWSelectData(widget.OWWidget):
         attr_combo.currentIndexChanged.connect(
             lambda _: self.set_new_operators(attr_combo, False))
 
+        self.cond_list.resizeRowToContents(row)
 
     def add_all(self):
         if self.cond_list.rowCount():
@@ -151,7 +152,6 @@ class OWSelectData(widget.OWWidget):
         oper_combo = QtGui.QComboBox()
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
-        oper_combo.setStyleSheet("border: none")
         var = self.data.domain[attr_combo.currentText()]
         oper_combo.addItems(self.operator_names[type(var)])
         oper_combo.setCurrentIndex(selected_index or 0)
@@ -193,10 +193,6 @@ class OWSelectData(widget.OWWidget):
             if contents:
                 le.setText(contents)
             le.setMaximumWidth(60)
-            le.setStyleSheet("""margin-left: 5px;
-                                border: none;
-                                border-bottom: 1px solid black;
-                                """)
             le.setAlignment(Qt.Qt.AlignRight)
             le.editingFinished.connect(self.conditions_changed)
             return le
@@ -226,7 +222,6 @@ class OWSelectData(widget.OWWidget):
                 combo.setCurrentIndex(int(lc[0]))
             else:
                 combo.setCurrentIndex(0)
-            combo.setStyleSheet("border: none")
             combo.var_type = var.var_type
             self.cond_list.setCellWidget(oper_combo.row, 2, combo)
             combo.currentIndexChanged.connect(self.conditions_changed)
@@ -392,3 +387,14 @@ class OWSelectData(widget.OWWidget):
         self.reportSection("Conditions")
         self.reportRaw(OWReport.reportTable(self.cond_list))
 #        self.reportTable("Conditions", self.criteriaTable)
+
+
+def test():
+    app = QtGui.QApplication([])
+    w = OWSelectData()
+    w.set_data(Table("iris"))
+    w.show()
+    app.exec_()
+
+if __name__ == "__main__":
+    test()
