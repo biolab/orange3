@@ -316,7 +316,7 @@ class OWSelectData(widget.OWWidget):
                     if any(v for v in values):
                         continue
                     filter = data_filter.FilterString(
-                        attr_index, oper, *[float(v) for v in values])
+                        attr_index, oper, *[str(v) for v in values])
                 else:
                     if oper in [2, 3]:
                         raise NotImplementedError(
