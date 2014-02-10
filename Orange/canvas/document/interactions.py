@@ -457,6 +457,8 @@ class NewLinkAction(UserInteraction):
             desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             if isinstance(desc, WidgetDescription):
                 return is_compatible(from_desc, desc)
+            else:
+                return False
 
         menu.setFilterFunc(filter)
         try:
