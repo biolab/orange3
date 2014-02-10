@@ -3,8 +3,10 @@ import time
 import copy
 import itertools
 import pickle
+
 from Orange.canvas.utils import environ
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
+
 
 __all__ = ["Setting", "SettingsHandler",
            "ContextSetting", "ContextHandler",
@@ -281,10 +283,12 @@ class SettingsHandler:
         provider = self.default_provider.get_provider(instance.__class__)
         if provider is None:
             import warnings
+
             message = "%s has not been declared as setting provider in %s. " \
-                      "Its settings will not be loaded." % (instance.__class__, self.widget_class)
+                      "Settings will not be saved/loaded properly. Defaults will be used instead." \
+                      % (instance.__class__, self.widget_class)
             warnings.warn(message)
-            return
+            provider = SettingProvider(instance.__class__)
 
         if isinstance(data, bytes):
             data = pickle.loads(data)
@@ -315,7 +319,7 @@ class SettingsHandler:
     # class defaults, so the new widgets added to the schema later would have
     # different defaults? I guess so...
     def fast_save(self, widget, name, value):
-        """Store the (changed) widget's setting immediatelly to the context."""
+        """Store the (changed) widget's setting immediately to the context."""
         pass
 
     def get_provider(self, cls):

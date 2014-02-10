@@ -1,7 +1,8 @@
 import unittest
+import warnings
 from mock import Mock
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
-from Orange.widgets.settings import DomainContextHandler, ContextSetting
+from Orange.widgets.settings import DomainContextHandler, ContextSetting, Setting, SettingsHandler
 
 VarTypes = ContinuousVariable.VarTypes
 
@@ -256,8 +257,30 @@ class MockWidget:
         self.current_context = Mock()
 
 
-class SettingProviderTestCase(unittest.TestCase):
-    pass
+class UndeclaredComponent:
+    int_setting = Setting(42)
+
+
+class WidgetWithNoProviderDeclared:
+    name = "WidgetWithNoProviderDeclared"
+
+    def __init__(self):
+        super().__init__()
+
+        self.undeclared_component = UndeclaredComponent()
+
+
+class SettingHandlerTestCase(unittest.TestCase):
+    def test_initialize_not_declared_provider(self):
+        widget = WidgetWithNoProviderDeclared()
+        settingsHandler = SettingsHandler.create(WidgetWithNoProviderDeclared)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            settingsHandler.initialize(widget)
+            settingsHandler.initialize(widget.undeclared_component)
+
+        self.assertIsInstance(widget.undeclared_component.int_setting, int)
 
 
 if __name__ == '__main__':
