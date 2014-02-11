@@ -1,11 +1,11 @@
 __author__ = 'jurre'
+import pyqtgraph as pg
 import Orange
 from Orange import feature, statistics
 from Orange.data import discretization, Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
 from Orange.widgets import widget, gui
-from Orange.widgets.utils.plot import owplot, owconstants, owaxis, owcurve
 
 from PyQt4 import QtGui, QtCore
 
@@ -17,113 +17,62 @@ import heapq
 from datetime import datetime
 
 
-class HeatMapCurve(owcurve.OWCurve):
-    """
-    Holds a single image that is displayed on HeatMapPlot. Image is updated with smaller images to show more detail.
+class Heatmap(pg.ImageItem):
+    def __init__(self, image=None):
+        if image is not None:
+            self.image = image
+        else:
+            self.image = np.zeros((500, 500))
 
-    Method paint() paints the whole image (self.image) at once (when needed). Property self.plot().heatmap_rect is used
-    to move the image to its right location (inside the axes). This property is set in HeatMapPlot.set_graph_rect().
+        pg.ImageItem.__init__(self, self.image)
 
-    Method updateImage() is called from OWHeatmap.updateImage(). The parameter image is painted inside parameter rect onto
-    the whole image (self.image). The image is flipped in direction up-down and the y value of rect has to be converted.
-    """
-    def __init__(self, image, image_rect, heatmap_height, xData=[], yData=[], x_axis_key=owconstants.xBottom, y_axis_key=owconstants.yLeft, tooltip=None):
-        super().__init__(xData, yData, x_axis_key, y_axis_key, tooltip)
+    def getImage_(self):
+        return self.image
 
-        # flip the image up-down (y becomes -y)
-        self.t = QtGui.QTransform().scale(1, -1)
-        self.image = image.transformed(self.t)
-
-        self.heatmap_height = heatmap_height
-        self.image_rect = image_rect
-
-        self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
-
-
-    def updateImage(self, rect, image):
-        image = image.transformed(self.t)
-        image_rect = QtCore.QRectF(rect.x(), self.heatmap_height - rect.y() - rect.height(), rect.width(), rect.height())
-        painter = QtGui.QPainter(self.image)
-        painter.drawImage(image_rect, image)
+    def setImage_(self, image):
+        self.image = image
+        self.render()
         self.update()
 
-    def paint(self, painter, options, widget):
-        painter.setRenderHints(QtGui.QPainter.Antialiasing |
-                                    QtGui.QPainter.TextAntialiasing |
-                                    QtGui.QPainter.SmoothPixmapTransform)
-
-        # move the rect of image, so that it is drawn inside axes
-        rect = QtCore.QRectF(self.image_rect.x() + self.plot().heatmap_rect.x() + 1,
-                             self.image_rect.y() + self.plot().heatmap_rect.y() + 1,
-                             self.image_rect.width(), self.image_rect.height())
-        painter.drawImage(rect, self.image)
-
-    def boundingRect(self, *args, **kwargs):
-        return self.image_rect
-
-
-class HeatMapPlot(owplot.OWPlot):
-    """
-    HeatMapPlot shows a single HeatMapCurve.
-
-    Method set_graph_rect() has to be overriden to obtain the self.heatmap_rect and to set self.graph_area, which sets
-    the plot to correct size.
-    """
-    def __init__(self, parent=None, name="None", show_legend=1, axes=None,
-                 widget=None, width=0, height=0):
-        super().__init__(parent, name, show_legend,
-                         axes or [owconstants.xBottom, owconstants.yLeft],
-                         widget)
-        self.state = owconstants.NOTHING
-        self.graph_margin = 20
-        self.y_axis_extra_margin = -10
-        self.animate_plot = False
-        self.animate_points = False
-        self.show_grid = False
-        self.tool = None
-
-        # default values, call set_graph_size() to set
-        self.heatmap_width = width if width else 512
-        self.heatmap_height = height if height else 512
-
-    def setGraphSize(self, width, height):
-        self.heatmap_width = width
-        self.heatmap_height = height
-
-    def set_graph_rect(self, rect):
-        self.heatmap_rect = rect
-        rect = QtCore.QRectF(rect.x(), rect.y(), self.heatmap_width, self.heatmap_height)
-        self.graph_area = rect
-        super().set_graph_rect(rect)
-
-    def mousePressEvent(self, event):
-        if self.state == owconstants.NOTHING and self.tool:
-            self.tool.mousePressEvent(event)
+    def updateImage_(self, image, image_rect):
+        if image_rect.x() + image.shape[1] > self.image.shape[1]:
+            image_width = self.image.shape[1] - int(image_rect.x())
         else:
-            super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self.state == owconstants.NOTHING and self.tool:
-            self.tool.mouseMoveEvent(event)
+            image_width = image.shape[1]
+        if image_rect.y() + image.shape[0] > self.image.shape[0]:
+            image_height = self.image.shape[0] - int(image_rect.y())
         else:
-            super().mouseMoveEvent(event)
+            image_height = image.shape[0]
 
-    def mouseReleaseEvent(self, event):
-        if self.state == owconstants.NOTHING and self.tool:
-            self.tool.mouseReleaseEvent(event)
-        else:
-            super().mouseReleaseEvent(event)
+        if image_width <= 0 or image_height <= 0:
+            # this is the case where user selected a part of region that is outside of X and Y values
+            return
+
+        self.image[image_rect.x() : image_rect.x()+image_width, image_rect.y() : image_rect.y()+image_height] = image[:image_width, :image_height]
+
+        self.render()
+        self.update()
+
+    def drawRect(self, rect):
+        self.image[rect.x()                        , rect.y() : rect.y()+rect.height()] = 0
+        self.image[rect.x()+rect.width()-1         , rect.y() : rect.y()+rect.height()] = 0
+        self.image[rect.x() : rect.x()+rect.width(), rect.y()] = 0
+        self.image[rect.x() : rect.x()+rect.width(), rect.y()+rect.height()-1] = 0
+
+    def mapRectFromView_(self):
+        vb = self.getViewBox()
+        return self.mapRectFromView(vb.viewRect())
 
 class OWHeatmap(widget.OWWidget):
     """
-    OWHeatmap draws a heatmap from data.
+    OWHeatmap draws a heatmap.
 
     Data is first drawn with less precision (big rects) and gets updated to more detail (smaller rects).
     This takes some time, so the heatmap gets updated, when more detail is calculated.
     """
     _name = "Heat map"
     _description = "Draws a heat map."
-    #_long_description = """Shows itself to see if added correctly."""
+    #_long_description = """Long description"""
     # _icon = "../icons/Dlg_zoom.png"
     _author = "Jure Bergant"
     _priority = 100
@@ -131,11 +80,12 @@ class OWHeatmap(widget.OWWidget):
     inputs = [("Data", Table, "data")]
     outputs = [("Sampled data", Table)]
 
-    X_attributes_select = 0
-    Y_attributes_select = 1
+    X_attributes_select = 2
+    Y_attributes_select = 3
     classvar_select = 0
+    check_use_cache = 1
     n_discretization_intervals = 10
-    check_commit_on_change = 0
+    radio_mouse_behaviour = 0
     color_array = np.array([[  0,   0, 255],   # blue
                             [  0, 255,   0],   # green
                             [255,   0,   0],   # red
@@ -145,6 +95,8 @@ class OWHeatmap(widget.OWWidget):
                             [128,  10, 203],   # violet
                             [255, 107,   0],   # orange
                             [223, 224, 249]])  # lavender
+    default_image_width = 500
+    default_image_height = 500
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(self, parent, signalManager, settings, "Heat map")
@@ -165,22 +117,29 @@ class OWHeatmap(widget.OWWidget):
         self.checkBoxesColorsShown = []
         self.checkBoxesColorsShownAttributeList = []
 
-        self.lineEditDiscretizationIntervals = gui.lineEdit(self.controlArea, self, value='n_discretization_intervals',
-                                                            box='Number of discretization intervals',
-                                                            orientation='horizontal', valueType=int,
-                                                            callback=self.attrChanged, enterPlaceholder=True)
-        self.commitBox = gui.widgetBox(self.controlArea, box='Commit')
-        self.checkBoxCommit = gui.checkBox(self.commitBox, self, value='check_commit_on_change',
-                                           label='Commit on change')
-        self.buttonCommit = gui.button(self.commitBox, self, label='Commit', callback=self.buttonCommit)
+        self.mouseBehaviourBox = gui.radioButtons(self.controlArea, self, value='radio_mouse_behaviour',
+                                                  btnLabels=('Drag', 'Select'),
+                                                  box='Mouse left button behaviour', callback=self.mouseBehaviourChanged)
+
+        self.displayBox = gui.widgetBox(self.controlArea, box='Display')
+        self.checkBoxUseCache = gui.checkBox(self.displayBox, self, label='Use cache', value='check_use_cache')
+        self.buttonDisplay = gui.button(self.displayBox, self, label='Display heatmap', callback=self.buttonDisplayClick)
         gui.rubber(self.controlArea)
 
-        self.image_width = self.image_height = 512
-        self.plot = HeatMapPlot(self.mainArea, "Heatmap plot", widget=self, width=self.image_width, height=self.image_height)
-        self.mainArea.layout().addWidget(self.plot)
+        self.image_width = self.image_height = self.default_image_width
 
-        self.mainArea.setMinimumWidth(self.image_width + self.plot.graph_margin + self.plot.axis_margin + self.plot.title_margin + self.plot.y_axis_extra_margin)
-        self.mainArea.setMinimumHeight(self.image_height + self.plot.graph_margin + self.plot.axis_margin + self.plot.title_margin + self.plot.y_axis_extra_margin)
+        self.hmi = None
+        self.plot = pg.PlotWidget()
+        self.plot.setBackground((255, 255, 255))
+        pg.setConfigOption('foreground', (0, 0, 0))
+        self.mainArea.layout().addWidget(self.plot)
+        self.mainArea.setMinimumWidth(self.image_width+100)
+        self.mainArea.setMinimumHeight(self.image_height+100)
+
+        self.sharpeningRegion = False # flag is set when sharpening a region, not the whole heatmap
+        self.regionSharpened = False  # flag is set when first region has been sharpened
+
+        self.cachedHeatmaps = {}
 
         np.set_printoptions(precision=2)
 
@@ -204,15 +163,14 @@ class OWHeatmap(widget.OWWidget):
             self.dataset = dataset
 
             self.clearControls()
-            self.plot.clear()
 
             for attr in dataset.domain.attributes:
                 self.comboBoxAttributesX.addItem(self.icons[attr.var_type], attr.name)
                 self.comboBoxAttributesY.addItem(self.icons[attr.var_type], attr.name)
             for var in dataset.domain.class_vars:
                 self.comboBoxClassvars.addItem(self.icons[var.var_type], var.name)
-            self.X_attributes_select = 0
-            self.Y_attributes_select = 1
+            self.X_attributes_select = 2
+            self.Y_attributes_select = 3
             self.classvar_select = 0
 
             for (index, value) in enumerate(dataset.domain.class_vars[self.classvar_select].values):
@@ -232,10 +190,19 @@ class OWHeatmap(widget.OWWidget):
             self.send("Sampled data", None)
         self.attrChanged()
 
-    def buttonCommit(self):
+    def mouseBehaviourChanged(self):
+        if self.radio_mouse_behaviour == 0:
+            self.hmi.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+        else:
+            self.hmi.getViewBox().setMouseMode(pg.ViewBox.RectMode)
+
+    def buttonDisplayClick(self):
         self.attrChanged(True)
 
-    def attrChanged(self, callDisplay=False):
+    def attrChanged(self, callSharpen=False):
+        if not callSharpen:
+            self.regionSharpened = False
+
         if self.dataset == None:
             return
 
@@ -246,63 +213,141 @@ class OWHeatmap(widget.OWWidget):
         for i in range(len(self.checkBoxesColorsShownAttributeList)):
             self.checkedindices.append(getattr(self, self.checkBoxesColorsShownAttributeList[i]))
 
-        if self.check_commit_on_change or callDisplay:
-            tstart = datetime.now()
-            self.displayChanged()
-            tend = datetime.now()
-            print(tend - tstart)
+        tstart = datetime.now()
+        self.changeDisplay(callSharpen)
+        tend = datetime.now()
+        print(tend - tstart)
 
-    def displayChanged(self):
-        d = Orange.statistics.distribution.get_distribution(self.dataset, self.dataset.domain.attributes[self.X_attributes_select])
-        self.X_min = d[0, 0]
-        self.X_max = d[0, -1]
-        d = Orange.statistics.distribution.get_distribution(self.dataset, self.dataset.domain.attributes[self.Y_attributes_select])
-        self.Y_min = d[0, 0]
-        self.Y_max = d[0, -1]
+    def addToCache(self):
+        ind = ''.join([str(i) for i in self.checkedindices])
+        self.cachedHeatmaps[(self.dataset.name, self.X_attributes_select, self.Y_attributes_select, ind)] = self.hmi.getImage_()
 
-        disc = feature.discretization.EqualWidth(n=self.n_discretization_intervals)
-        self.disc_dataset = discretization.DiscretizeTable(self.dataset, method=disc)
-        self.contingencies = self.computeContingencies(self.disc_dataset)
+    def getCachedImage(self):
+        ind = ''.join([str(i) for i in self.checkedindices])
+        if (self.dataset.name, self.X_attributes_select, self.Y_attributes_select, ind) in self.cachedHeatmaps:
+            image = self.cachedHeatmaps[(self.dataset.name, self.X_attributes_select, self.Y_attributes_select, ind)]
+            return image
+        return None
 
-        # calculate new image width, with interval width as integer
-        self.interval_width = int(self.image_width / self.contingencies.shape[2])
-        self.interval_height = int(self.image_height / self.contingencies.shape[1])
-        self.image_width = self.interval_width * self.contingencies.shape[2]
-        self.image_height = self.interval_height * self.contingencies.shape[1]
-        self.initPlot()
-        QtCore.QCoreApplication.processEvents()
+    def changeDisplay(self, callSharpen=False):
+        if self.check_use_cache:
+            image = self.getCachedImage()
+            if image is not None:
+                self.hmi.setImage_(image)
+                return
+
+        self.progress = gui.ProgressBar(self, 100) # iterations are set to arbitrary number, since it will soon get updated
+        self.progress.advance(1)    # advance right away, so that user can see something is happening
+        self.countHeappush = 0
+
+        if not self.regionSharpened:
+            d = Orange.statistics.distribution.get_distribution(self.dataset, self.dataset.domain.attributes[self.X_attributes_select])
+            self.X_min = d[0, 0]
+            self.X_max = d[0, -1]
+            d = Orange.statistics.distribution.get_distribution(self.dataset, self.dataset.domain.attributes[self.Y_attributes_select])
+            self.Y_min = d[0, 0]
+            self.Y_max = d[0, -1]
+
+            self.plot.clear()
+            self.plot.getAxis('bottom').setLabel(self.dataset.domain.attributes[self.X_attributes_select].name)
+            self.plot.getAxis('left').setLabel(self.dataset.domain.attributes[self.Y_attributes_select].name)
+
+            disc = feature.discretization.EqualWidth(n=self.n_discretization_intervals)
+            self.disc_dataset = discretization.DiscretizeTable(self.dataset, method=disc)
+            self.contingencies = self.computeContingencies(self.disc_dataset)
+
+            # calculate new image width, with interval width as integer
+            self.interval_width = int(self.image_width / self.contingencies.shape[2])
+            self.interval_height = int(self.image_height / self.contingencies.shape[1])
+            self.image_width = self.interval_width * self.contingencies.shape[2]
+            self.image_height = self.interval_height * self.contingencies.shape[1]
         # compute main rect
         rect = np.empty((1, 1), dtype=QtCore.QRectF)
         rect[0, 0] = QtCore.QRectF(0, 0, self.image_width, self.image_height)
 
-        contingencies_valmax = self.updateImage(self.contingencies, rect[0, 0], None)
+        if not self.regionSharpened:
+            # if the image is not updated when region is sharpened, otherwise some error occurs
+            self.contingencies_valmax = self.updateImage(self.contingencies, rect[0, 0], None)
 
-        self.progress = gui.ProgressBar(self, 3240)
-        self.countHeappush = 0
+        if callSharpen:
+            vr = self.plot.viewRect()
 
-        self.h = []
-        self.updated_fields = []
-        self.count = 0
-        self.disc_dataset.domain.X_min = self.X_min
-        self.disc_dataset.domain.X_max = self.X_max
-        self.disc_dataset.domain.Y_min = self.Y_min
-        self.disc_dataset.domain.Y_max = self.Y_max
-        self.sharpenHeatMap(rect[0, 0], self.contingencies,
-                            self.dataset, self.disc_dataset.domain,
-                            int(self.n_discretization_intervals/2),
-                            valmax_array=contingencies_valmax)
+            if vr.x() < self.X_min:
+                vr.setLeft(self.X_min)
+            if vr.x() + vr.width() > self.X_max:
+                vr.setRight(self.X_max)
+            if vr.y() < self.Y_min:
+                vr.setTop(self.Y_min)
+            if vr.y() + vr.height() > self.Y_max:
+                vr.setBottom(self.Y_max)
+
+            if self.hmi is not None:
+                pr = self.hmi.mapRectFromView_()
+
+            self.h = []
+            self.updated_fields = []
+            self.count = 0
+            self.disc_dataset.domain.X_min = self.X_min
+            self.disc_dataset.domain.X_max = self.X_max
+            self.disc_dataset.domain.Y_min = self.Y_min
+            self.disc_dataset.domain.Y_max = self.Y_max
+
+            if rect[0, 0].width() > pr.width() and rect[0, 0].height() > pr.height():
+                self.sharpeningRegion = True
+                self.sharpenHeatMapRegion(rect[0, 0], pr, self.contingencies,
+                                          self.dataset, self.disc_dataset.domain,
+                                          int(self.n_discretization_intervals/2),
+                                          valmax_array=self.contingencies_valmax)
+                self.sharpeningRegion = False
+                self.regionSharpened = True
+            else:
+                contingencies = self.contingencies
+                self.sharpenHeatMap(rect[0, 0], contingencies,
+                                    self.dataset, self.disc_dataset.domain,
+                                    int(self.n_discretization_intervals/2),
+                                    valmax_array=self.contingencies_valmax)
+                self.addToCache()
         self.progress.finish()
+
+    def sharpenHeatMapRegion(self, wholerect, pixelrect, contingencies, dataset, domain, n_discretization_intervals, valmax_array):
+        """
+        This function is called when user selects only a region of heatmap.
+        """
+        grid = self.computeGrid(contingencies, frameRect=wholerect)
+        rects = self.computeRects(grid)
+
+        rects_in_region = []
+        for row in range(rects.shape[0]):
+            for col in range(rects.shape[1]):
+                if rects[row, col].intersects(pixelrect):
+                    rects_in_region.append((rects[row, col], row, col))
+        self.progress.iter = len(rects_in_region) * 100
+
+        for (rect, row, col) in rects_in_region:
+            sub_contingencies, subdataset, subdomain = self.computeSubContingencies(dataset, domain,
+                                                                                    n_discretization_intervals,
+                                                                                    col, row)
+            if sub_contingencies.max():
+                self.sharpenHeatMap(rect, sub_contingencies, subdataset, subdomain, n_discretization_intervals, valmax_array=None, valmax_scalar=valmax_array[row, col])
 
     def sharpenHeatMap(self, rect, contingencies, dataset, domain, n_discretization_intervals, valmax_array, valmax_scalar=None):
         """
         Called recursively to draw the image in more detail.
 
-        Image is divided into smaller rects. The chi squares of all neighbours is calculated, then the rect with highest
+        Image is divided into smaller rects. The chi squares of all neighbours are calculated, then the rect with highest
         chi square value is drawn first. When the rect becomes to small to draw it in more detail, the recursion stops.
+
+        rect: the region which is to be sharpened
+        contingencies: contingencies for region in rect
+        dataset: dataset for region in rect
+        domain: domain for region in rect
+        n_discretization_intervals: this is the number of discretization intervalas for the next time the contingencies are calcuted
+        valmax_array: valmax values for rect - calculated from contingencies parameter
+        valmax_scalar: used when the valmax value is just one
         """
         grid = self.computeGrid(contingencies, frameRect=rect)
         rects = self.computeRects(grid)
-        if rects[0, 0].width() < n_discretization_intervals: # stop when rects become too small
+        if rects[0, 0].width() < contingencies.shape[2]: # stop when rects become too small
             return
 
         estimates = self.getEstimates(contingencies)
@@ -323,21 +368,29 @@ class OWHeatmap(widget.OWWidget):
                 self.countHeappush += 2
 
         self.count += 1
-        self.progress.iter = self.countHeappush
+        if not self.sharpeningRegion:
+            self.progress.iter = self.countHeappush
 
         while self.h:
             self.progress.advance(1)
             chi, count, r, c, rct, ds, dom, vm = heapq.heappop(self.h)
             if (rct, r, c) not in self.updated_fields:
-                sub_contingencies, subdataset, subdomain = self.computeSubContingencies(ds, dom,
-                                                                                        c, r,
-                                                                                        n_discretization_intervals)
-                if sub_contingencies.max(): # == if sub_contingencies not empty
-                    self.updateImage(sub_contingencies, rct, vm)
-                    self.updated_fields.append((rct, r, c))
-                    self.sharpenHeatMap(rct, sub_contingencies, subdataset, subdomain, n_discretization_intervals, None, valmax_scalar=vm)
+                if rct.width() // n_discretization_intervals < n_discretization_intervals:
+                    n_discretization_intervals = int(rct.width())
+                if n_discretization_intervals > 1:
+                    sub_contingencies, subdataset, subdomain = self.computeSubContingencies(ds, dom,
+                                                                                            n_discretization_intervals,
+                                                                                            c, r)
+                    if sub_contingencies.max(): # == if sub_contingencies not empty
+                        self.updateImage(sub_contingencies, rct, vm)
+                        self.updated_fields.append((rct, r, c))
+                        self.sharpenHeatMap(rct, sub_contingencies, subdataset, subdomain, n_discretization_intervals, None, valmax_scalar=vm)
+                    else:
+                        if self.sharpeningRegion:
+                            self.updateImage(sub_contingencies, rct, vm)
+                        self.updated_fields.append((rct, r, c))
                 else:
-                    self.updated_fields.append((rct, r, c))
+                     return
 
     def updateImage(self, contingencies, rect, sup_valmax):
         """
@@ -345,8 +398,6 @@ class OWHeatmap(widget.OWWidget):
         """
         interval_width = int(rect.width() / contingencies.shape[2])
         interval_height = int(rect.height() / contingencies.shape[1])
-        image_width = interval_width * contingencies.shape[2]
-        image_height = interval_height * contingencies.shape[1]
 
         contingencies -= np.min(contingencies)
         contingencies /= np.max(contingencies)
@@ -364,27 +415,25 @@ class OWHeatmap(widget.OWWidget):
         if sup_valmax:
             colors += ((255-colors) * (1-sup_valmax))
 
-        # when creating the image, blue and red are swapped; the color order is:
-        # image = np.dstack(("blue", "green", "red", "whatever"))
-        image = np.dstack((colors[:, :, 2],
-                           colors[:, :, 1],
-                           colors[:, :, 0],
-                           np.zeros((image_width, image_height))))
-        im255 = image.flatten().astype(np.uint8)
-        im = QtGui.QImage(im255.data, image_width, image_height, QtGui.QImage.Format_RGB32)
-
         if rect.width() == self.image_width and rect.height() == self.image_height:
-            self.hm_curve = HeatMapCurve(im, rect, self.image_height)
-            self.plot.add_custom_curve(self.hm_curve)
+            self.hmi = Heatmap(colors)
+            self.plot.addItem(self.hmi)
+            self.hmi.setRect(QtCore.QRectF(self.X_min, self.Y_min, self.X_max-self.X_min, self.Y_max-self.Y_min))
         else:
-            self.hm_curve.updateImage(rect, im)
-
-        QtCore.QCoreApplication.processEvents() # slows everything down
+            self.hmi.updateImage_(colors, rect)
 
         return contingencies_valmax
 
-    def computeSubContingencies(self, dataset, domain, x_index, y_index, n_discretization_intervals):
-        X_min, X_max, Y_min, Y_max = self.getValuesLimits(domain, x_index, y_index)
+    def computeSubContingencies(self, dataset, domain, n_discretization_intervals, x_index, y_index, rect=None):
+        # if rect is given, the values are extracted from rect
+        # otherwise, the values are computed from domain
+        if rect:
+            X_min = rect.x()
+            X_max = rect.x() + rect.width()
+            Y_min = rect.y()
+            Y_max = rect.y() + rect.height()
+        else:
+            X_min, X_max, Y_min, Y_max = self.getValuesLimits(domain, x_index, y_index)
 
         filt = Orange.data.filter.Values()
         filt.domain = dataset.domain
@@ -433,7 +482,7 @@ class OWHeatmap(widget.OWWidget):
             cont = statistics.contingency.get_contingency(
                             filt_data, self.X_attributes_select, self.Y_attributes_select)
             if self.checkedindices[index]:
-                contingencies.append(cont)
+                contingencies.append(cont.T)
             else:
                 contingencies.append(np.zeros(cont.shape))
         return np.array(contingencies)
@@ -497,21 +546,6 @@ class OWHeatmap(widget.OWWidget):
                                                 grid[1, row] - self.heights[row],
                                                 self.widths[col], self.heights[row])
         return rects
-
-    def initPlot(self):
-        self.plot.set_axis_title(owconstants.xBottom, self.dataset.domain.attributes[self.X_attributes_select].name)
-        self.plot.set_axis_title(owconstants.yLeft, self.dataset.domain.attributes[self.Y_attributes_select].name)
-        self.plot.set_show_axis_title(owconstants.xBottom, True)
-        self.plot.set_show_axis_title(owconstants.yLeft, True)
-        self.plot.set_axis_scale(owconstants.xBottom, self.X_min, self.X_max)
-        self.plot.set_axis_scale(owconstants.yLeft, self.Y_min, self.Y_max)
-
-        self.plot.setGraphSize(self.image_width, self.image_height)
-
-        self.mainArea.setMinimumWidth(self.image_width + self.plot.graph_margin + self.plot.axis_margin + self.plot.title_margin + self.plot.y_axis_extra_margin)
-        self.mainArea.setMinimumHeight(self.image_height + self.plot.graph_margin + self.plot.axis_margin + self.plot.title_margin + self.plot.y_axis_extra_margin)
-
-        self.plot.update()
 
     def getEstimates(self, observes):
         estimates = []
@@ -581,8 +615,14 @@ class OWHeatmap(widget.OWWidget):
                 attr = self.checkBoxesColorsShownAttributeList.pop()
                 delattr(self, attr)
 
-        self.X_attributes_select = 0
-        self.Y_attributes_select = 1
+        self.X_attributes_select = 2
+        self.Y_attributes_select = 3
         self.classvar_select = 0
         self.n_discretization_intervals = 10
-        self.image_width = self.image_height = 512
+        self.radio_mouse_behaviour = 0
+        self.image_width = self.image_height = self.default_image_width
+
+        self.plot.clear()
+        self.regionSharpened = False
+        self.sharpeningRegion = False
+        # self.hmi = None
