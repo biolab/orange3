@@ -265,7 +265,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
     def add_setting(self, widget, name, setting):
         setting.name = name
         setattr(widget, name, setting.default)
-        self.handler.default_provider.settings[name] = setting
+        self.handler.provider.settings[name] = setting
 
     def match(self, context):
         attrs, metas = self.handler.encode_domain(domain)
