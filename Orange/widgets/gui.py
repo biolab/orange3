@@ -558,10 +558,10 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :param callbackOnReturn: if `True`, the spin box has an associated icon
         that must be clicked to confirm the value (default: False)
     :type callbackOnReturn: bool
-    :param checked: if non-empty, a check box is put in front of the spin box;
+    :param checked: if not None, a check box is put in front of the spin box;
         when unchecked, the spin box is disabled. Argument `checked` gives the
         name of the master's attribute given whose value is synchronized with
-        the check box's state (default: "").
+        the check box's state (default: None).
     :type checked: str
     :param checkCallback: a callback function that is called when the check
         box's state is changed
@@ -657,7 +657,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
 # noinspection PyTypeChecker
 def doubleSpin(widget, master, value, minv, maxv, step=1, box=None, label=None,
                labelWidth=None, orientation=None, callback=None,
-               controlWidth=None, callbackOnReturn=False, checked="",
+               controlWidth=None, callbackOnReturn=False, checked=None,
                checkCallback=None, posttext=None,
                alignment=Qt.AlignLeft, keyboardTracking=True,
                decimals=None, **misc):
