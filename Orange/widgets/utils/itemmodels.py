@@ -32,6 +32,15 @@ def signal_blocking(obj):
     obj.blockSignals(blocked)
 
 
+def _as_contiguous_range(start, stop, step):
+    if step == -1:
+        # Equivalent range with positive step
+        start, stop = stop + 1, start + 1
+    elif not (step == 1 or step is None):
+        raise IndexError("Non-contiguous range.")
+    return start, stop, step
+
+
 class PyListModel(QAbstractListModel):
     """ A model for displaying python list like objects in Qt item view classes
     """
@@ -213,8 +222,9 @@ class PyListModel(QAbstractListModel):
 
     def __delitem__(self, s):
         if isinstance(s, slice):
-            i, j, _ = s.indices(len(self))
-            self.beginRemoveRows(QModelIndex(), i, j - 1)
+            start, stop, step = s.indices(len(self))
+            start, stop, step = _as_contiguous_range(start, stop, step)
+            self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
             self.beginRemoveRows(QModelIndex(), s, s)
         del self._list[s]
@@ -223,12 +233,16 @@ class PyListModel(QAbstractListModel):
 
     def __setitem__(self, s, value):
         if isinstance(s, slice):
-            self.beginResetModel()
+            start, stop, step = s.indices(len(self))
+            start, stop, step = _as_contiguous_range(start, stop, step)
+            self.__delitem__(slice(start, stop, step))
+
             if not isinstance(value, list):
                 value = list(value)
+            self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
             self._list[s] = value
             self._other_data[s] = (_store() for _ in value)
-            self.endResetModel()
+            self.endInsertRows()
         else:
             self._list[s] = value
             self._other_data[s] = _store()
