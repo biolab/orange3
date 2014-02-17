@@ -63,39 +63,6 @@ class SettingProvider:
                 value.name = name
                 self.providers[name] = value
 
-    def set_defaults(self, data):
-        """Replace settings from class definitions
-        with ones provided in dictionary data."""
-        for name in self.settings:
-            if name in data:
-                self.settings[name] = data[name]
-
-        for name in self.providers:
-            if name in data:
-                self.providers[name].set_defaults(data[name])
-
-    def get_defaults(self):
-        """Return a dict mapping setting names to default Setting instances
-        and provider names to such dicts.
-        """
-        settings = dict(self.settings)
-        settings.update({
-            name: provider.get_defaults()
-            for name, provider in self.providers.items()
-        })
-        return settings
-
-    def update_defaults(self, instance):
-        """Update default values of settings with values from instance."""
-
-        for name, setting in self.settings.items():
-            if hasattr(instance, name):
-                setting.default = getattr(instance, name)
-
-        for name, provider in self.providers.items():
-            if hasattr(instance, name):
-                provider.update_defaults(getattr(instance, name))
-
     def initialize(self, instance, data=None):
         """Initialize instance settings to their default values.
 
@@ -211,6 +178,7 @@ class SettingsHandler:
         self.widget_class = None
         self.provider = None
         """:type: SettingProvider"""
+        self.defaults = {}
 
     @staticmethod
     def create(widget_class, template=None):
@@ -246,8 +214,9 @@ class SettingsHandler:
 
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
-        default_settings = pickle.load(settings_file)
-        self.provider.set_defaults(default_settings)
+        defaults = pickle.load(settings_file)
+        if isinstance(defaults, dict):
+            self.defaults = defaults
 
     def write_defaults(self):
         """Write (global) defaults for this widget class to a file.
@@ -265,8 +234,7 @@ class SettingsHandler:
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
-        default_settings = self.provider.get_defaults()
-        pickle.dump(default_settings, settings_file, -1)
+        pickle.dump(self.defaults, settings_file, -1)
 
     def initialize(self, instance, data=None):
         """
@@ -288,7 +256,9 @@ class SettingsHandler:
             warnings.warn(message)
             provider = SettingProvider(instance.__class__)
 
-        if isinstance(data, bytes):
+        if data is None:
+            data = self.defaults
+        elif isinstance(data, bytes):
             data = pickle.loads(data)
         provider.initialize(instance, data)
 
@@ -310,7 +280,7 @@ class SettingsHandler:
         Writes widget instance's settings to class defaults. Called when the
         widget is deleted.
         """
-        self.provider.update_defaults(widget)
+        self.defaults = self.provider.pack(widget)
         self.write_defaults()
 
     # TODO would we like this method to store the changed settings back to

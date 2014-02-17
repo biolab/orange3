@@ -1,3 +1,5 @@
+from io import BytesIO
+import pickle
 import unittest
 import warnings
 
@@ -285,17 +287,53 @@ class WidgetWithNoProviderDeclared:
         self.undeclared_component = UndeclaredComponent()
 
 
+class DummySettingsHandler(SettingsHandler):
+    def __init__(self):
+        super().__init__()
+        self.saved_defaults = {}
+
+    def read_defaults(self):
+        settings_file = BytesIO(pickle.dumps(self.saved_defaults))
+        self.read_defaults_file(settings_file)
+
+    def write_defaults(self):
+        settings_file = BytesIO()
+        self.write_defaults_file(settings_file)
+        settings_file.seek(0)
+        self.saved_defaults = pickle.load(settings_file)
+
+
 class SettingHandlerTestCase(unittest.TestCase):
     def test_initialize_not_declared_provider(self):
         widget = WidgetWithNoProviderDeclared()
-        settingsHandler = SettingsHandler.create(WidgetWithNoProviderDeclared)
+        handler = SettingsHandler.create(WidgetWithNoProviderDeclared)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            settingsHandler.initialize(widget)
-            settingsHandler.initialize(widget.undeclared_component)
+            handler.initialize(widget)
+            handler.initialize(widget.undeclared_component)
 
         self.assertIsInstance(widget.undeclared_component.int_setting, int)
+
+    def test_reading_defaults(self):
+        handler = DummySettingsHandler()
+        handler.saved_defaults = {"string_setting": "12345"}
+        handler.bind(MockWidget)
+
+        widget = MockWidget()
+        handler.initialize(widget)
+        self.assertEqual(widget.string_setting, "12345")
+
+    def test_writing_defaults(self):
+        handler = DummySettingsHandler()
+        handler.bind(MockWidget)
+
+        widget = MockWidget()
+        handler.initialize(widget)
+        widget.string_setting = "12345"
+        handler.update_class_defaults(widget)
+        print(handler.saved_defaults)
+        self.assertEqual(handler.saved_defaults["string_setting"], "12345")
 
 
 if __name__ == '__main__':

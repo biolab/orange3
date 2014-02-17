@@ -89,6 +89,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     processingStateChanged = Signal(int)
 
     settingsHandler = None
+    """:type: SettingsHandler"""
 
     def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
