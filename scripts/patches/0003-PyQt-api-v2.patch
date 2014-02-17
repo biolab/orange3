@@ -1,7 +1,7 @@
-From 8dab1a23da1e84964ac9ce3ad1d8e1367239e636 Mon Sep 17 00:00:00 2001
+From 098fd05aae3bf1cc2a32b5a442b3aae24e475b5f Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:37:18 +0200
-Subject: [PATCH 3/6] PyQt api v2.
+Subject: [PATCH 3/7] PyQt api v2.
 
 ---
  Orange/canvas/__main__.py                          |  2 +-
@@ -31,10 +31,10 @@ Subject: [PATCH 3/6] PyQt api v2.
  24 files changed, 77 insertions(+), 92 deletions(-)
 
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index 68c59aa..33c5a23 100644
+index 5cc6f29..c062082 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
-@@ -158,7 +158,7 @@ def main(argv=None):
+@@ -178,7 +178,7 @@ def main(argv=None):
  
              if pkg_resources.resource_exists(pkg_name, resource):
                  stylesheet_string = \
@@ -44,10 +44,10 @@ index 68c59aa..33c5a23 100644
                  base = pkg_resources.resource_filename(pkg_name, "styles")
  
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index c485208..c930fa5 100644
+index e83eb9c..8ee3365 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
-@@ -765,7 +765,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -775,7 +775,7 @@ class CanvasMainWindow(QMainWindow):
      def on_tool_box_widget_activated(self, action):
          """A widget action in the widget toolbox has been activated.
          """
@@ -56,7 +56,7 @@ index c485208..c930fa5 100644
          if widget_desc:
              scheme_widget = self.current_document()
              if scheme_widget:
-@@ -1547,7 +1547,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -1562,7 +1562,7 @@ class CanvasMainWindow(QMainWindow):
  
          actions_by_filename = {}
          for action in self.recent_scheme_action_group.actions():
@@ -65,7 +65,7 @@ index c485208..c930fa5 100644
              actions_by_filename[path] = action
  
          if filename in actions_by_filename:
-@@ -1589,7 +1589,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -1604,7 +1604,7 @@ class CanvasMainWindow(QMainWindow):
  
          # Exclude permanent actions (Browse Recent, separators, Clear List)
          actions_to_remove = [action for action in actions \
@@ -74,7 +74,7 @@ index c485208..c930fa5 100644
  
          for action in actions_to_remove:
              self.recent_menu.removeAction(action)
-@@ -1606,7 +1606,7 @@ class CanvasMainWindow(QMainWindow):
+@@ -1621,7 +1621,7 @@ class CanvasMainWindow(QMainWindow):
              if self.ask_save_changes() == QDialog.Rejected:
                  return
  
@@ -115,7 +115,7 @@ index 1139dcd..023ae45 100644
          drag_data = QMimeData()
          drag_data.setData(
 diff --git a/Orange/canvas/application/settings.py b/Orange/canvas/application/settings.py
-index 7c45699..6725564 100644
+index 840fa22..877ed53 100644
 --- a/Orange/canvas/application/settings.py
 +++ b/Orange/canvas/application/settings.py
 @@ -134,7 +134,6 @@ class UserSettingsModel(QAbstractItemModel):
@@ -225,7 +225,7 @@ index fb8a906..ea78cfd 100644
          return QGraphicsObject.itemChange(self, change, value)
  
 diff --git a/Orange/canvas/canvas/items/nodeitem.py b/Orange/canvas/canvas/items/nodeitem.py
-index f3ed831..72f00ba 100644
+index a611aa0..fd4788a 100644
 --- a/Orange/canvas/canvas/items/nodeitem.py
 +++ b/Orange/canvas/canvas/items/nodeitem.py
 @@ -309,7 +309,7 @@ class AnchorPoint(QGraphicsObject):
@@ -258,7 +258,7 @@ index e021cbe..c3e7ac6 100644
  from ..registry.qt import QtWidgetRegistry
  from .. import scheme
  from ..canvas import items
-@@ -454,11 +455,8 @@ class NewLinkAction(UserInteraction):
+@@ -454,8 +455,7 @@ class NewLinkAction(UserInteraction):
  
          def filter(index):
              desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
@@ -266,12 +266,9 @@ index e021cbe..c3e7ac6 100644
 -                desc = desc.toPyObject()
 +            if isinstance(desc, WidgetDescription):
                  return is_compatible(from_desc, desc)
--            else:
--                return False
- 
-         menu.setFilterFunc(filter)
-         try:
-@@ -467,8 +465,8 @@ class NewLinkAction(UserInteraction):
+             else:
+                 return False
+@@ -467,8 +467,8 @@ class NewLinkAction(UserInteraction):
              menu.setFilterFunc(None)
  
          if action:
@@ -282,7 +279,7 @@ index e021cbe..c3e7ac6 100644
              pos = event.scenePos()
              # a new widget should be placed so that the connection
              # stays as it was
-@@ -770,8 +768,8 @@ class NewNodeAction(UserInteraction):
+@@ -770,8 +770,8 @@ class NewNodeAction(UserInteraction):
  
          action = menu.exec_(pos, search_text)
          if action:
@@ -481,7 +478,7 @@ index f266b71..97dfb43 100644
      def setPath(self, path):
          """Set the path data of the item.
 diff --git a/Orange/canvas/registry/qt.py b/Orange/canvas/registry/qt.py
-index ba7bb85..9f93a76 100644
+index c71faac..a5850ab 100644
 --- a/Orange/canvas/registry/qt.py
 +++ b/Orange/canvas/registry/qt.py
 @@ -141,7 +141,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
@@ -687,5 +684,5 @@ index c9f347e..e942bf7 100644
      def test_prop(self):
          w = QWidget()
 -- 
-1.8.2.3
+1.8.4.3
 

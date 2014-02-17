@@ -78,15 +78,15 @@ BUNDLE_LITE=$SCRIPT_DIR_NAME/bundle-lite/Orange.app
 
 # Versions of included 3rd party software
 
-PYTHON_VER=3.3.2
-PIP_VER=1.3.1
-DISTRIBUTE_VER=0.6.49
+PYTHON_VER=3.3.3
+PIP_VER=1.5.2
+SETUPTOOLS_VER=2.1
 NUMPY_VER=1.7.1
 SCIPY_VER=0.12.0
 QT_VER=4.8.5
 SIP_VER=4.15.2
 PYQT_VER=4.10.3
-PYQWT_VER=5.2.0
+#PYQWT_VER=5.2.0
 
 # Number of make jobs
 MAKE_JOBS=${MAKE_JOBS:-$(sysctl -n hw.physicalcpu)}
@@ -95,9 +95,9 @@ PYTHON=$APP/Contents/MacOS/python
 EASY_INSTALL=$APP/Contents/MacOS/easy_install
 PIP=$APP/Contents/MacOS/pip
 
-export MACOSX_DEPLOYMENT_TARGET=10.7
+export MACOSX_DEPLOYMENT_TARGET=10.6
 
-SDK=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX$MACOSX_DEPLOYMENT_TARGET.sdk
+SDK=/Developer/SDKs/MacOSX$MACOSX_DEPLOYMENT_TARGET.sdk
 
 function create_template {
 	# Create a minimal .app template with the expected dir structure
@@ -131,6 +131,7 @@ function create_template {
 
 		export PYTHONEXECUTABLE
 		export PYTHONHOME
+		export PYTHONNOUSERSITE=1
 
 		export DYLD_FRAMEWORK_PATH
 
@@ -203,10 +204,10 @@ function install_pip() {
 	popd
 }
 
-function install_distribute() {
-	download_and_extract "https://pypi.python.org/packages/source/d/distribute/distribute-$DISTRIBUTE_VER.tar.gz"
+function install_setuptools() {
+	download_and_extract "https://pypi.python.org/packages/source/s/setuptools/setuptools-$SETUPTOOLS_VER.tar.gz"
 
-	pushd distribute-$DISTRIBUTE_VER
+	pushd setuptools-$SETUPTOOLS_VER
 
 	"$PYTHON" setup.py install
 	create_shell_start_script easy_install
@@ -422,7 +423,7 @@ create_template
 
 install_python
 
-install_distribute
+install_setuptools
 
 install_pip
 

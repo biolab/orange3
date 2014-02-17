@@ -306,12 +306,12 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
 
 
 class OWSelectAttributes(widget.OWWidget):
-    _name = "Select Attributes"
-    _description = "Manual selection of attributes."
-    _icon = "icons/SelectAttributes.svg"
-    _priority = 100
-    _author = "Ales Erjavec"
-    _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
+    name = "Select Attributes"
+    description = "Manual selection of attributes."
+    icon = "icons/SelectAttributes.svg"
+    priority = 100
+    author = "Ales Erjavec"
+    author_email = "ales.erjavec(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
     outputs = [("Data", Table), ("Features", widget.AttributeList)]
 

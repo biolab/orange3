@@ -269,14 +269,14 @@ class TableViewWithCopy(QtGui.QTableView):
 
 
 class OWDataTable(widget.OWWidget):
-    _name = "Data Table"
-    _description = "Shows data in a spreadsheet."
-    _long_description = """Data Table takes one or more data sets
+    name = "Data Table"
+    description = "Shows data in a spreadsheet."
+    long_description = """Data Table takes one or more data sets
     on its input and shows them in a tabular format."""
-    _icon = "icons/Table.svg"
-    _priority = 100
-    _author = "Ales Erjavec"
-    _author_email = "ales.erjavec(@at@)fri.uni-lj.si"
+    icon = "icons/Table.svg"
+    priority = 100
+    author = "Ales Erjavec"
+    author_email = "ales.erjavec(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "dataset", Multiple + Default)]
     outputs = [("Selected Data", Table, Default),
                ("Other Data", Table)]

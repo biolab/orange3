@@ -17,7 +17,7 @@ from ..test import QAppTestCase
 class TestSplashScreen(QAppTestCase):
     def test_splashscreen(self):
         splash = pkg_resources.resource_filename(
-                     "Orange.OrangeCanvas",
+                     "Orange.canvas",
                      "icons/orange-splash-screen.png"
                  )
 

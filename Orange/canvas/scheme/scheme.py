@@ -27,7 +27,7 @@ from .errors import (
     DuplicatedLinkError
 )
 
-from .readwrite import scheme_to_ows_stream, parse_scheme
+from . import readwrite
 
 from ..registry import WidgetDescription, InputSignal, OutputSignal
 
@@ -619,8 +619,8 @@ class Scheme(QObject):
 
         self.sync_node_properties()
 
-        scheme_to_ows_stream(self, stream, pretty,
-                             pickle_fallback=pickle_fallback)
+        readwrite.scheme_to_ows_stream(self, stream, pretty,
+                                       pickle_fallback=pickle_fallback)
 
     def load_from(self, stream):
         """
@@ -632,5 +632,5 @@ class Scheme(QObject):
 
         if isinstance(stream, str):
             stream = open(stream, "rb")
-
-        parse_scheme(self, stream)
+        readwrite.scheme_load(self, stream)
+#         parse_scheme(self, stream)

@@ -10,12 +10,12 @@ from Orange.widgets.settings import Setting
 
 
 class OWSave(widget.OWWidget):
-    _name = "Save"
-    _description = "Saves data to a file."
-    _icon = "icons/Save.svg"
-    _author = "Martin Frlin"
-    _category = "Data"
-    _keywords = ["data", "save"]
+    name = "Save"
+    description = "Saves data to a file."
+    icon = "icons/Save.svg"
+    author = "Martin Frlin"
+    category = "Data"
+    keywords = ["data", "save"]
 
     inputs = [("Data", Table, "dataset")]
 

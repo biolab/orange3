@@ -1,22 +1,25 @@
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
 from Orange.data.table import Table
-from Orange.data.sql.table import SqlTable
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
+try:
+    from Orange.data.sql.table import SqlTable
+except ImportError:
+    SqlTable = None
 
 
 class OWDataInfo(widget.OWWidget):
-    _name = "Data Info"
-    _id = "orange.widgets.data.info"
-    _description = "Shows basic information about the data"
-    _long_description = """Shows the number of data instances and number of
+    name = "Data Info"
+    id = "orange.widgets.data.info"
+    description = "Shows basic information about the data"
+    long_description = """Shows the number of data instances and number of
     variables of different types and kinds."""
-    _icon = "icons/DataInfo.svg"
-    _author = "Aleš Erjavec, Janez Demsar"
-    _maintainer_email = "ales.erjavec(@at@)fri.uni-lj.si"
-    _priority = 80
-    _category = "Data"
-    _keywords = ["data", "info"]
+    icon = "icons/DataInfo.svg"
+    author = "Aleš Erjavec, Janez Demsar"
+    maintainer_email = "ales.erjavec(@at@)fri.uni-lj.si"
+    priority = 80
+    category = "Data"
+    keywords = ["data", "info"]
     inputs = [("Data", Table, "data")]
 
     want_main_area = False
@@ -104,7 +107,7 @@ class OWDataInfo(widget.OWWidget):
                 self.targets = "<p>Multi target data</p>\n" + pack_table(
                     (("Discrete", dis), ("Continuous", con)))
 
-        if isinstance(data, SqlTable):
+        if SqlTable is not None and isinstance(data, SqlTable):
             self.location = "Table '%s' in database '%s/%s'" % (
                 data.name, data.host, data.database)
         else:

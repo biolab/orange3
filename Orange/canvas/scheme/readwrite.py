@@ -4,11 +4,12 @@ Scheme save/load routines.
 """
 import base64
 import sys
+import warnings
 
 from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
 
-from collections import defaultdict
-from itertools import chain
+from collections import defaultdict, namedtuple
+from itertools import chain, count
 
 import pickle as pickle
 import json
@@ -23,7 +24,7 @@ from . import SchemeNode, SchemeLink
 from .annotations import SchemeTextAnnotation, SchemeArrowAnnotation
 from .errors import IncompatibleChannelTypeError
 
-from .. import registry
+from ..registry import global_registry
 
 log = logging.getLogger(__name__)
 
@@ -139,6 +140,9 @@ def parse_scheme(scheme, stream, error_handler=None,
         Specifically allow parsing of picked data streams.
 
     """
+    warnings.warn("Use 'scheme_load' instead", DeprecationWarning,
+                  stacklevel=2)
+
     doc = parse(stream)
     scheme_el = doc.getroot()
     version = scheme_el.attrib.get("version", None)
@@ -187,7 +191,7 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None,
     Parse an `ElementTree` instance.
     """
     if widget_registry is None:
-        widget_registry = registry.global_registry()
+        widget_registry = global_registry()
 
     nodes_not_found = []
 
@@ -311,7 +315,7 @@ def parse_scheme_v_1_0(etree, scheme, error_handler, widget_registry=None,
     ElementTree Instance of an old .ows scheme format.
     """
     if widget_registry is None:
-        widget_registry = registry.global_registry()
+        widget_registry = global_registry()
 
     widgets_not_found = []
 
@@ -386,6 +390,320 @@ def parse_scheme_v_1_0(etree, scheme, error_handler, widget_registry=None,
 
     for link in links:
         scheme.add_link(link)
+
+
+# Intermediate scheme representation
+_scheme = namedtuple(
+    "_scheme",
+    ["title", "version", "description", "nodes", "links", "annotations"])
+
+_node = namedtuple(
+    "_node",
+    ["id", "title", "name", "position", "project_name", "qualified_name",
+     "version", "data"])
+
+_data = namedtuple(
+    "_data",
+    ["format", "data"])
+
+_link = namedtuple(
+    "_link",
+    ["id", "source_node_id", "sink_node_id", "source_channel", "sink_channel",
+     "enabled"])
+
+_annotation = namedtuple(
+    "_annotation",
+    ["id", "type", "params"])
+
+_text_params = namedtuple(
+    "_text_params",
+    ["geometry", "text", "font"])
+
+_arrow_params = namedtuple(
+    "_arrow_params",
+    ["geometry", "color"])
+
+
+def parse_ows_etree_v_2_0(tree):
+    scheme = tree.getroot()
+    nodes, links, annotations = [], [], []
+
+    # First collect all properties
+    properties = {}
+    for property in tree.findall("node_properties/properties"):
+        node_id = property.get("node_id")
+        format = property.get("format")
+        if "data" in property.attrib:
+            data = property.get("data")
+        else:
+            data = property.text
+        properties[node_id] = _data(format, data)
+
+    # Collect all nodes
+    for node in tree.findall("nodes/node"):
+        node_id = node.get("id")
+        node = _node(
+            id=node_id,
+            title=node.get("title"),
+            name=node.get("name"),
+            position=tuple_eval(node.get("position")),
+            project_name=node.get("project_name"),
+            qualified_name=node.get("qualified_name"),
+            version=node.get("version", ""),
+            data=properties.get(node_id, None)
+        )
+        nodes.append(node)
+
+    for link in tree.findall("links/link"):
+        params = _link(
+            id=link.get("id"),
+            source_node_id=link.get("source_node_id"),
+            sink_node_id=link.get("sink_node_id"),
+            source_channel=link.get("source_channel"),
+            sink_channel=link.get("sink_channel"),
+            enabled=link.get("enabled") == "true",
+        )
+        links.append(params)
+
+    for annot in tree.findall("annotations/*"):
+        if annot.tag == "text":
+            rect = tuple_eval(annot.get("rect", "(0.0, 0.0, 20.0, 20.0)"))
+
+            font_family = annot.get("font-family", "").strip()
+            font_size = annot.get("font-size", "").strip()
+
+            font = {}
+            if font_family:
+                font["family"] = font_family
+            if font_size:
+                font["size"] = int(font_size)
+
+            annotation = _annotation(
+                id=annot.get("id"),
+                type="text",
+                params=_text_params(rect, annot.text or "", font),
+            )
+        elif annot.tag == "arrow":
+            start = tuple_eval(annot.get("start", "(0, 0)"))
+            end = tuple_eval(annot.get("end", "(0, 0)"))
+            color = annot.get("fill", "red")
+            annotation = _annotation(
+                id=annot.get("id"),
+                type="arrow",
+                params=_arrow_params((start, end), color)
+            )
+        annotations.append(annotation)
+
+    return _scheme(
+        version=scheme.get("version"),
+        title=scheme.get("title", ""),
+        description=scheme.get("description"),
+        nodes=nodes,
+        links=links,
+        annotations=annotations
+    )
+
+
+def parse_ows_etree_v_1_0(tree):
+    nodes, links = [], []
+    id_gen = count()
+
+    settings = tree.find("settings")
+    properties = {}
+    if settings is not None:
+        data = settings.get("settingsDictionary", None)
+        if data:
+            try:
+                properties = literal_eval(data)
+            except Exception:
+                log.error("Could not decode properties data.",
+                          exc_info=True)
+
+    for widget in tree.findall("widgets/widget"):
+        title = widget.get("caption")
+        data = properties.get(title, None)
+        node = _node(
+            id=next(id_gen),
+            title=widget.get("caption"),
+            name=None,
+            position=(float(widget.get("xPos")),
+                      float(widget.get("yPos"))),
+            project_name=None,
+            qualified_name=widget.get("widgetName"),
+            version="",
+            data=_data("pickle", data)
+        )
+        nodes.append(node)
+
+    nodes_by_title = dict((node.title, node) for node in nodes)
+
+    for channel in tree.findall("channels/channel"):
+        in_title = channel.get("inWidgetCaption")
+        out_title = channel.get("outWidgetCaption")
+
+        source = nodes_by_title[out_title]
+        sink = nodes_by_title[in_title]
+        enabled = channel.get("enabled") == "1"
+        # repr list of (source_name, sink_name) tuples.
+        signals = literal_eval(channel.get("signals"))
+
+        for source_channel, sink_channel in signals:
+            links.append(
+                _link(id=next(id_gen),
+                      source_node_id=source.id,
+                      sink_node_id=sink.id,
+                      source_channel=source_channel,
+                      sink_channel=sink_channel,
+                      enabled=enabled)
+            )
+    return _scheme(title="", description="", version="1.0",
+                   nodes=nodes, links=links, annotations=[])
+
+
+def parse_ows_stream(stream):
+    doc = parse(stream)
+    scheme_el = doc.getroot()
+    version = scheme_el.get("version", None)
+    if version is None:
+        # Fallback: check for "widgets" tag.
+        if scheme_el.find("widgets") is not None:
+            version = "1.0"
+        else:
+            log.warning("<scheme> tag does not have a 'version' attribute")
+            version = "2.0"
+
+    if version == "1.0":
+        return parse_ows_etree_v_1_0(doc)
+    elif version == "2.0":
+        return parse_ows_etree_v_2_0(doc)
+    else:
+        raise ValueError()
+
+
+def resolve_1_0(scheme_desc, registry):
+    widgets = registry.widgets()
+    widgets_by_name = dict((d.qualified_name.rsplit(".", 1)[-1], d)
+                           for d in widgets)
+    nodes = scheme_desc.nodes
+    for i, node in list(enumerate(nodes)):
+        # 1.0's qualified name is the class name only, need to replace it
+        # with the full qualified import name
+        qname = node.qualified_name
+        if qname in widgets_by_name:
+            desc = widgets_by_name[qname]
+            nodes[i] = node._replace(qualified_name=desc.qualified_name,
+                                     project_name=desc.project_name)
+
+    return scheme_desc._replace(nodes=nodes)
+
+
+def resolve_replaced(scheme_desc, registry):
+    widgets = registry.widgets()
+    replacements = {}
+    for desc in widgets:
+        if desc.replaces:
+            for repl_qname in desc.replaces:
+                replacements[repl_qname] = desc.qualified_name
+
+    nodes = scheme_desc.nodes
+    for i, node in list(enumerate(nodes)):
+        if not registry.has_widget(node.qualified_name) and \
+                node.qualified_name in replacements:
+            qname = replacements[node.qualified_name]
+            desc = registry.widget(qname)
+            nodes[i] = node._replace(qualified_name=desc.qualified_name,
+                                     project_name=desc.project_name)
+
+    return scheme_desc._replace(nodes=nodes)
+
+
+def scheme_load(scheme, stream, registry=None, error_handler=None):
+    desc = parse_ows_stream(stream)
+
+    if registry is None:
+        registry = global_registry()
+
+    if error_handler is None:
+        def error_handler(exc):
+            raise exc
+
+    if desc.version == "1.0":
+        desc = resolve_1_0(desc, registry)
+
+    desc = resolve_replaced(desc, registry)
+    nodes_not_found = []
+    nodes = []
+    nodes_by_id = {}
+    links = []
+    annotations = []
+
+    scheme.title = desc.title
+    scheme.description = desc.description
+
+    for node_d in desc.nodes:
+        try:
+            w_desc = registry.widget(node_d.qualified_name)
+        except KeyError as ex:
+            error_handler(UnknownWidgetDefinition(*ex.args))
+            nodes_not_found.append(node_d.id)
+        else:
+            node = SchemeNode(
+                w_desc, title=node_d.title, position=node_d.position)
+            data = node_d.data
+
+            if data:
+                try:
+                    properties = loads(data.data, data.format)
+                except Exception:
+                    log.error("Could not load properties for %r.", node.title,
+                              exc_info=True)
+                else:
+                    node.properties = properties
+
+            nodes.append(node)
+            nodes_by_id[node_d.id] = node
+
+    for link_d in desc.links:
+        source_id = link_d.source_node_id
+        sink_id = link_d.sink_node_id
+
+        if source_id in nodes_not_found or sink_id in nodes_not_found:
+            continue
+
+        source = nodes_by_id[source_id]
+        sink = nodes_by_id[sink_id]
+        try:
+            link = SchemeLink(source, link_d.source_channel,
+                              sink, link_d.sink_channel,
+                              enabled=link_d.enabled)
+        except (ValueError, IncompatibleChannelTypeError) as ex:
+            error_handler(ex)
+        else:
+            links.append(link)
+
+    for annot_d in desc.annotations:
+        params = annot_d.params
+        if annot_d.type == "text":
+            annot = SchemeTextAnnotation(params.geometry, params.text,
+                                         params.font)
+        elif annot_d.type == "arrow":
+            start, end = params.geometry
+            annot = SchemeArrowAnnotation(start, end, params.color)
+
+        else:
+            log.warning("Ignoring unknown annotation type: %r", annot_d.type)
+        annotations.append(annot)
+
+    for node in nodes:
+        scheme.add_node(node)
+
+    for link in links:
+        scheme.add_link(link)
+
+    for annot in annotations:
+        scheme.add_annotation(annot)
+
+    return scheme
 
 
 def inf_range(start=0, step=1):

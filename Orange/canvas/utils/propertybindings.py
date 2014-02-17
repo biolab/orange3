@@ -15,7 +15,6 @@ from PyQt4.QtCore import QObject, QEvent
 
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-from .qtcompat import toPyObject
 from functools import reduce
 
 

@@ -1,42 +1,17 @@
+from functools import reduce
 import sys
 import time
 import os
-from functools import reduce
+from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty, SIGNAL, QDir
+from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
+    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
 from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
-from Orange.canvas.registry.description import (
-    Default, NonDefault, Single, Multiple, Explicit, Dynamic,
-    InputSignal, OutputSignal
-)
-from Orange.canvas.scheme.widgetsscheme import (
-    SignalLink, WidgetsSignalManager, SignalWrapper
-)
-from Orange.widgets.settings import Context
-
-
-class ControlledAttributesDict(dict):
-    def __init__(self, master):
-        super().__init__()
-        self.master = master
-
-    def __setitem__(self, key, value):
-        if key not in self:
-            dict.__setitem__(self, key, [value])
-        else:
-            dict.__getitem__(self, key).append(value)
-        self.master.setControllers(self.master, key, self.master, "")
-
-
-# these definitions are needed to define Table as subclass of TableWithClass
-class AttributeList(list):
-    pass
-
-class ExampleList(list):
-    pass
-
+from Orange.canvas.registry import description as widget_description
+from Orange.canvas.scheme import widgetsscheme as widget_scheme
+from Orange.widgets.gui import ControlledAttributesDict, notify_changed
+from Orange.widgets.settings import SettingsHandler
 
 
 class WidgetMetaClass(type(QDialog)):
@@ -52,7 +27,7 @@ class WidgetMetaClass(type(QDialog)):
             input_channel_from_args, output_channel_from_args)
 
         cls = type.__new__(mcs, name, bases, dict)
-        if not cls._name: # not a widget
+        if not cls.name: # not a widget
             return cls
 
         cls.inputs = list(map(input_channel_from_args, cls.inputs))
@@ -60,18 +35,12 @@ class WidgetMetaClass(type(QDialog)):
 
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
-            hasattr(cls, "settingsFromWidgetCallback")):
+                hasattr(cls, "settingsFromWidgetCallback")):
             raise SystemError("Reimplement settingsToWidgetCallback and "
                               "settingsFromWidgetCallback")
-        if not hasattr(cls, "settingsHandler"):
-            cls.settingsHandler = settings.SettingsHandler()
-        cls.settingsHandler.widget_class = cls
-        for name, value in cls.__dict__.items():
-            if isinstance(value, settings.Setting):
-                value.name = name
-                cls.settingsHandler.settings[name] = value
-                setattr(cls, name, value.default)
-        cls.settingsHandler.read_defaults()
+
+        cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
+
         return cls
 
 
@@ -80,24 +49,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     widget_id = 0
 
     # Widget description
-    _name = None
-    _id = None
-    _category = None
-    _version = None
-    _description = None
-    _long_description = None
-    _icon = "icons/Unknown.png"
-    _priority = sys.maxsize
-    _author = None
-    _author_email = None
-    _maintainer = None
-    _maintainer_email = None
-    _help = None
-    _help_ref = None
-    _url = None
-    _keywords = []
-    _background = None
-    _replaces = None
+    name = None
+    id = None
+    category = None
+    version = None
+    description = None
+    long_description = None
+    icon = "icons/Unknown.png"
+    priority = sys.maxsize
+    author = None
+    author_email = None
+    maintainer = None
+    maintainer_email = None
+    help = None
+    help_ref = None
+    url = None
+    keywords = []
+    background = None
+    replaces = None
     inputs = []
     outputs = []
 
@@ -113,13 +82,21 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     save_position = False
     resizing_enabled = True
 
+    widgetStateChanged = Signal(str, int, str)
+    blockingStateChanged = Signal(bool)
+    asyncCallsStateChange = Signal()
+    progressBarValueChanged = Signal(float)
+    processingStateChanged = Signal(int)
+
+    settingsHandler = None
+
     def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
 
         # 'current_context' MUST be the first thing assigned to a widget
         self.current_context = settings.Context()
-        if hasattr(self, "settingsHandler"):
+        if self.settingsHandler:
             stored_settings = kwargs.get('stored_settings', None)
             self.settingsHandler.initialize(self, stored_settings)
 
@@ -128,7 +105,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.needProcessing = 0     # used by signalManager
         self.signalManager = kwargs.get('signal_manager', None)
 
-        self.controlledAttributes = ControlledAttributesDict(self)
+        setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self._guiElements = []      # used for automatic widget debugging
         self.__reportData = None
 
@@ -143,27 +120,21 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         #TODO: kill me
         self.__dict__.update(environ.directories)
 
-        if self._name:
-            self.setCaption(self._name.replace("&",""))
+        if self.name:
+            self.setCaption(self.name.replace("&", ""))
         self.setFocusPolicy(Qt.StrongFocus)
 
         self.wrappers = [] # stored wrappers for widget events
         self.linksIn = {}  # signalName : (dirty, widFrom, handler, signalData)
         self.linksOut = {} # signalName: (signalData, id)
         self.connections = {} # keys are (control, signal) and values are
-                              # wrapper instances. Used in connect/disconnect
-        self.progressBarHandler = None  # handler for progress bar events
-        self.processingHandler = None   # handler for processing events
-        self.eventHandler = None
+        # wrapper instances. Used in connect/disconnect
         self.callbackDeposit = []
         self.startTime = time.time()    # used in progressbar
 
-        self.widgetStateHandler = None
-        self.widgetState = {"Info":{}, "Warning":{}, "Error":{}}
+        self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
 
-        self._private_thread_pools = {}
-        self.asyncCalls = []
-        self.asyncBlock = False
+        self.__blocking = False
 
         if self.want_basic_layout:
             self.insertLayout()
@@ -193,7 +164,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.layout().setMargin(2)
 
         self.topWidgetPart = gui.widgetBox(self,
-            orientation="horizontal", margin=0)
+                                           orientation="horizontal", margin=0)
         self.leftWidgetPart = gui.widgetBox(self.topWidgetPart,
                                             orientation="vertical", margin=0)
         if self.want_main_area:
@@ -201,22 +172,22 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
             self.leftWidgetPart.updateGeometry()
             self.mainArea = gui.widgetBox(self.topWidgetPart,
-                orientation="vertical",
-                sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-                                       QSizePolicy.Expanding),
-                margin=0)
+                                          orientation="vertical",
+                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
+                                                                 QSizePolicy.Expanding),
+                                          margin=0)
             self.mainArea.layout().setMargin(4)
             self.mainArea.updateGeometry()
 
         if self.want_control_area:
             self.controlArea = gui.widgetBox(self.leftWidgetPart,
-                orientation="vertical", margin=4)
+                                             orientation="vertical", margin=4)
 
         if self.want_graph and self.show_save_graph:
             graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
-                orientation="horizontal", margin=4)
+                                                  orientation="horizontal", margin=4)
             self.graphButton = gui.button(graphButtonBackground,
-                self, "&Save Graph")
+                                          self, "&Save Graph")
             self.graphButton.setAutoDefault(0)
 
         if self.want_status_bar:
@@ -238,9 +209,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.statusBarIconArea.hide()
 
             self._warningWidget = createPixmapWidget(self.statusBarIconArea,
-                os.path.join(self.widgetDir, "icons/triangle-orange.png"))
+                                                     os.path.join(self.widgetDir, "icons/triangle-orange.png"))
             self._errorWidget = createPixmapWidget(self.statusBarIconArea,
-                os.path.join(self.widgetDir + "icons/triangle-red.png"))
+                                                   os.path.join(self.widgetDir + "icons/triangle-red.png"))
 
 
     # status bar handler functions
@@ -250,9 +221,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             return
 
         iconsShown = 0
-        for state, widget, use in [
-                ("Warning", self._warningWidget, self._owWarning),
-                ("Error", self._errorWidget, self._owError)]:
+        warnings = [("Warning", self._warningWidget, self._owWarning),
+                    ("Error", self._errorWidget, self._owError)]
+        for state, widget, use in warnings:
             if not widget:
                 continue
             if use and self.widgetState[state]:
@@ -269,7 +240,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.statusBarIconArea.hide()
 
         if (stateType == "Warning" and self._owWarning) or \
-           (stateType == "Error" and self._owError):
+                (stateType == "Error" and self._owError):
             if text:
                 self.setStatusBarText(stateType + ": " + text)
             else:
@@ -321,10 +292,10 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         for num in [16, 32, 42, 60]:
             names.append("%s_%d%s" % (name, num, ext))
         fullPaths = []
+        module_dir = os.path.dirname(sys.modules[self.__module__].__file__)
         for paths in [(self.widgetDir, name),
                       (self.widgetDir, "icons", name),
-                      (os.path.dirname(sys.modules[self.__module__].__file__),
-                           "icons", name)]:
+                      (module_dir, "icons", name)]:
             for name in names + [iconName]:
                 fname = os.path.join(*paths)
                 if os.path.exists(fname):
@@ -464,85 +435,35 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.raise_()
         self.activateWindow()
 
+    def send(self, signalName, value, id=None):
+        if self.signalManager is not None:
+            self.signalManager.send(self, signalName, value, id)
 
-    def send(self, signalName, value, id = None):
-        if not self.hasOutputName(signalName):
-            print("Internal error: signal '%s' is not a valid signal name for"
-                  "widget '%s'." % (signalName, self.captionTitle))
-        if signalName in self.linksOut:
-            self.linksOut[signalName][id] = value
-        else:
-            self.linksOut[signalName] = {id:value}
+    def __setattr__(self, name, value):
+        """Set value to members of this instance or any of its members.
 
-        self.signalManager.send(self, signalName, value, id)
+        If member is used in a gui control, notify the control about the change.
 
+        name: name of the member, dot is used for nesting ("graph.point.size").
+        value: value to set to the member.
 
-    def getattr_deep(self, attr, default=None):
-        try:
-            return reduce(lambda o, n: getattr(o, n, None),
-                          attr.split("."), self)
-        except AttributeError:
-            if default is not None:
-                return default
-            raise AttributeError(
-                "'{}' has no attribute '{}'".format(self, attr))
+        """
 
-
-    def setattr_deep(self, name, value, grandparent):
-        names = name.split(".")
-        lastname = names.pop()
-        obj = reduce(lambda o, n: getattr(o, n, None),  names, self)
+        names = name.rsplit(".")
+        field_name = names.pop()
+        obj = reduce(lambda o, n: getattr(o, n, None), names, self)
         if obj is None:
             raise AttributeError("Cannot set '{}' to {} ".format(name, value))
 
-        if (hasattr(grandparent, "__setattr__") and
-                isinstance(obj, grandparent)):
-            # JD: super().__setattr__ wouldn't work here?
-            grandparent.__setattr__(obj, lastname,  value)
+        if obj is self:
+            super().__setattr__(field_name, value)
         else:
-            setattr(obj, lastname, value)
-            # TODO: Puzzled. setattr calls obj.__setattr__. If obj is self,
-            # then self.__setattr__ again calls setattr_deep so all the code
-            # below here gets executed twice, doesn't it?!
-            # Should we add a 'if self is obj: return' here?
+            setattr(obj, field_name, value)
 
-        controlledAttributes = getattr(self, "controlledAttributes", None)
-        controlCallback = (controlledAttributes and
-                           controlledAttributes.get(name, None))
-        if controlCallback:
-            for callback in controlCallback:
-                callback(value)
-        # controlled things (checkboxes...) never have __attributeControllers
-        elif hasattr(self, "__attributeControllers"):
-            for controller, myself in self.__attributeControllers.keys():
-                if getattr(controller, myself, None) != self:
-                    del self.__attributeControllers[(controller, myself)]
-                    continue
-                controlledAttributes = getattr(controller,
-                                               "controlledAttributes", None)
-                if not controlledAttributes:
-                    continue
-                fullName = myself + "." + name
-                controlCallback = controlledAttributes.get(fullName, None)
-                if controlCallback:
-                    for callback in controlCallback:
-                        callback(value)
-                else:
-                    lname = fullName + "."
-                    dlen = len(lname)
-                    for controlled in controlledAttributes.keys():
-                        if controlled[:dlen] == lname:
-                            self.setControllers(value, controlled[dlen:],
-                                                controller, fullName)
-                            # no break -- can have a.b.c.d and a.e.f.g;
-                            # we need to set controller for all!
+        notify_changed(obj, field_name, value)
 
-        if hasattr(self, "settingsHandler"):
+        if self.settingsHandler:
             self.settingsHandler.fast_save(self, name, value)
-
-
-    def __setattr__(self, name, value):
-        return self.setattr_deep(name, value, QDialog)
 
     def openContext(self, *a):
         self.settingsHandler.open_context(self, *a)
@@ -557,22 +478,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def storeSpecificSettings(self):
         pass
-
-    def setControllers(self, obj, controlledName, controller, prefix):
-        while obj:
-            if prefix:
-                od = obj.__dict__
-                # TODO Missing "__"?
-                if "attributeController" in od:
-                    od["__attributeControllers"][(controller, prefix)] = True
-                else:
-                    od["__attributeControllers"] = {(controller, prefix): True}
-            parts = controlledName.split(".", 1)
-            if len(parts) < 2:
-                break
-            obj = getattr(obj, parts[0], None)
-            prefix += parts[0]
-            controlledName = parts[1]
 
     def saveSettings(self):
         self.settingsHandler.update_class_defaults(self)
@@ -589,164 +494,19 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def setOptions(self):
         pass
 
-    def hasInputName(self, name):
-        return any(signal.name == name for signal in self.inputs)
-
-    def hasOutputName(self, name):
-        return any(signal.name == name for signal in self.outputs)
-
-    def getInputType(self, name):
-        for signal in self.inputs:
-            if signal.name == name:
-                return signal
-
-    def getOutputType(self, name):
-        for signal in self.outputs:
-            if signal.name == name:
-                return signal
-
-    def signalIsOnlySingleConnection(self, signalName):
-        for input in self.inputs:
-            if input.name == signalName:
-                return input.single
-
-    def addInputConnection(self, widgetFrom, signalName):
-        for input in self.inputs:
-            if input.name == signalName:
-                handler = getattr(self, input.handler) # get a bound handler
-                break
-        else:
-            raise ValueError("Widget {} has no signal {}"
-                             .format(self._name, signalName))
-
-        links = self.linksIn.setdefault(signalName, [])
-        for _, widget, _, _ in links:
-            if widget == widgetFrom:
-                return # a signal from the same widget already exists
-        links.append((0, widgetFrom, handler, []))
-
-    # delete a link from widgetFrom and this widget with name signalName
-    def removeInputConnection(self, widgetFrom, signalName):
-        links = self.linksIn.get(signalName, [])
-        for i, (_, widget, _, _) in enumerate(links):
-            if widgetFrom == widget:
-                del links[i]
-                if not links:  # if key is empty, delete key value
-                    del self.linksIn[signalName]
-                return
-
-    # return widget that is already connected to this singlelink signal.
-    # If this widget exists, the connection will be deleted (since this is
-    # only single connection link)
-    def removeExistingSingleLink(self, signal):
-        for input in self.inputs:
-            if input.name == signal and not input.single:
-                return None
-        for signalName in self.linksIn.keys():
-            if signalName == signal:
-                widget = self.linksIn[signalName][0][1]
-                del self.linksIn[signalName]
-                return widget
-        return None
-
-
     def handleNewSignals(self):
         # this is called after all new signals have been handled
         # implement this in your widget if you want to process something only
         # after you received multiple signals
         pass
 
-    # signal manager calls this function when all input signals have updated
-    # the data
-    #noinspection PyBroadException
-    def processSignals(self):
-        if self.processingHandler:
-            self.processingHandler(self, 1)    # focus on active widget
-        newSignal = 0        # did we get any new signals
-
-        # we define only handling signals that have defined a handler function
-        for signal in self.inputs:  # we go from the first to the last input
-            key = signal.name
-            if key in self.linksIn:
-                for i in range(len(self.linksIn[key])):
-                    dirty, widgetFrom, handler, signalData = self.linksIn[key][i]
-                    if not (handler and dirty):
-                        continue
-                    newSignal = 1
-                    qApp.setOverrideCursor(Qt.WaitCursor)
-                    try:
-                        for (value, id, nameFrom) in signalData:
-                            if self.signalIsOnlySingleConnection(key):
-                                self.printEvent(
-                                    "ProcessSignals: Calling %s with %s" %
-                                    (handler, value), eventVerbosity = 2)
-                                handler(value)
-                            else:
-                                self.printEvent(
-                                    "ProcessSignals: Calling %s with %s "
-                                    "(%s, %s)" % (handler, value, nameFrom, id)
-                                    , eventVerbosity = 2)
-                                handler(value, (widgetFrom, nameFrom, id))
-                    except:
-                        type, val, traceback = sys.exc_info()
-                        # we pretend to have handled the exception, so that we
-                        # don't crash other widgets
-                        sys.excepthook(type, val, traceback)
-                    qApp.restoreOverrideCursor()
-
-                     # clear the dirty flag
-                    self.linksIn[key][i] = (0, widgetFrom, handler, [])
-
-        if newSignal == 1:
-            self.handleNewSignals()
-
-        while self.isBlocking():
-            self.thread().msleep(50)
-            qApp.processEvents()
-
-        if self.processingHandler:
-            self.processingHandler(self, 0)    # remove focus from this widget
-        self.needProcessing = 0
-
-    # set new data from widget widgetFrom for a signal with name signalName
-    def updateNewSignalData(self, widgetFrom, signalName, value, id,
-                            signalNameFrom):
-        if signalName not in self.linksIn: return
-        for i in range(len(self.linksIn[signalName])):
-            (dirty, widget, handler, signalData) = self.linksIn[signalName][i]
-            if widget == widgetFrom:
-                if self.linksIn[signalName][i][3] == []:
-                    self.linksIn[signalName][i] = \
-                        (1, widget, handler, [(value, id, signalNameFrom)])
-                else:
-                    found = 0
-                    for j in range(len(self.linksIn[signalName][i][3])):
-                        (val, ID, nameFrom) = self.linksIn[signalName][i][3][j]
-                        if ID == id and nameFrom == signalNameFrom:
-                            self.linksIn[signalName][i][3][j] = \
-                                (value, id, signalNameFrom)
-                            found = 1
-                    if not found:
-                        self.linksIn[signalName][i] = \
-                            (1, widget, handler, self.linksIn[signalName][i][3]
-                             + [(value, id, signalNameFrom)])
-        self.needProcessing = 1
-
     # ############################################
     # PROGRESS BAR FUNCTIONS
-
-    progressBarValueChanged = pyqtSignal(float)
-    """Progress bar value has changed"""
-
-    processingStateChanged = pyqtSignal(int)
-    """Processing state has changed"""
 
     def progressBarInit(self):
         self.progressBarValue = 0
         self.startTime = time.time()
         self.setWindowTitle(self.captionTitle + " (0% complete)")
-        if self.progressBarHandler:
-            self.progressBarHandler(self, 0)
         self.processingStateChanged.emit(1)
 
     def progressBarSet(self, value):
@@ -763,11 +523,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             else:
                 text = "%(min)d:%(sec)02d" % vars()
             self.setWindowTitle(self.captionTitle +
-                " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
+                                " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")
-        if self.progressBarHandler:
-            self.progressBarHandler(self, value)
 
         self.progressBarValueChanged.emit(value)
 
@@ -784,31 +542,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def progressBarFinished(self):
         self.setWindowTitle(self.captionTitle)
-        if self.progressBarHandler:
-            self.progressBarHandler(self, 101)
         self.processingStateChanged.emit(0)
-
-    # handler must accept two arguments: the widget instance and a value
-    # between -1 and 101
-    def setProgressBarHandler(self, handler):
-        self.progressBarHandler = handler
-
-    def setProcessingHandler(self, handler):
-        self.processingHandler = handler
-
-    def setEventHandler(self, handler):
-        self.eventHandler = handler
-
-    def setWidgetStateHandler(self, handler):
-        self.widgetStateHandler = handler
-
-
-    # if we are in debug mode print the event into the file
-    def printEvent(self, text, eventVerbosity = 1):
-        self.signalManager.addEvent(self.captionTitle + ": " + text,
-                                    eventVerbosity = eventVerbosity)
-        if self.eventHandler:
-            self.eventHandler(self.captionTitle + ": " + text, eventVerbosity)
 
     def openWidgetHelp(self):
         if "widgetInfo" in self.__dict__:  # This widget is on a canvas.
@@ -817,20 +551,20 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key_Help, Qt.Key_F1):
             self.openWidgetHelp()
-#            e.ignore()
+        #    e.ignore()
         elif (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
             OWWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
         else:
             QDialog.keyPressEvent(self, e)
 
-    def information(self, id = 0, text = None):
+    def information(self, id=0, text=None):
         self.setState("Info", id, text)
         #self.setState("Warning", id, text)
 
-    def warning(self, id = 0, text = ""):
+    def warning(self, id=0, text=""):
         self.setState("Warning", id, text)
 
-    def error(self, id = 0, text = ""):
+    def error(self, id=0, text=""):
         self.setState("Error", id, text)
 
     def setState(self, stateType, id, text):
@@ -853,22 +587,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 changed = 1
 
         if changed:
-            if self.widgetStateHandler:
-                self.widgetStateHandler()
-            elif text:
-                self.printEvent(stateType + " - " + text)
-
             if type(id) == list:
                 for i in id:
-                    self.emit(
-                        SIGNAL("widgetStateChanged(QString, int, QString)"),
-                        stateType, i, "")
+                    self.widgetStateChanged.emit(stateType, i, "")
             else:
-                self.emit(SIGNAL("widgetStateChanged(QString, int, QString)"),
-                          stateType, id, text or "")
+                self.widgetStateChanged.emit(stateType, id, text or "")
         return changed
-
-    widgetStateChanged = pyqtSignal(str, int, str)
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
         pixmaps = self.getWidgetStateIcons()
@@ -895,7 +619,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             warning = QPixmap("canvasIcons:warning.png")
             error = QPixmap("canvasIcons:error.png")
             cls._cached__widget_state_icons = \
-                    {"Info": info, "Warning": warning, "Error": error}
+                {"Info": info, "Warning": warning, "Error": error}
         return cls._cached__widget_state_icons
 
     defaultKeyActions = {}
@@ -904,117 +628,30 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         defaultKeyActions = {
             (Qt.ControlModifier, Qt.Key_M):
                 lambda self: self.showMaximized
-                             if self.isMinimized() else self.showMinimized(),
+                if self.isMinimized() else self.showMinimized(),
             (Qt.ControlModifier, Qt.Key_W):
                 lambda self: self.setVisible(not self.isVisible())}
-
-
-    def scheduleSignalProcessing(self):
-        self.signalManager.scheduleSignalProcessing(self)
 
     def setBlocking(self, state=True):
         """ Set blocking flag for this widget. While this flag is set this
         widget and all its descendants will not receive any new signals from
         the signal manager
         """
-        self.asyncBlock = state
-        self.emit(SIGNAL("blockingStateChanged(bool)"), self.asyncBlock)
-        if not self.isBlocking():
-            self.scheduleSignalProcessing()
-
+        if self.__blocking != state:
+            self.__blocking = state
+            self.blockingStateChanged.emit(state)
 
     def isBlocking(self):
-        """ Is this widget blocking signal processing. Widget is blocking if
-        asyncBlock value is True or any AsyncCall objects in asyncCalls list
-        has blocking flag set
+        """ Is this widget blocking signal processing.
         """
-        return self.asyncBlock or any(a.blocking for a in self.asyncCalls)
-
-    def asyncExceptionHandler(self, exception):
-        (etype, value, tb) = exception
-        sys.excepthook(etype, value, tb)
-
-    def asyncFinished(self, async, _):
-        """ Remove async from asyncCalls, update blocking state
-        """
-
-        index = self.asyncCalls.index(async)
-        async = self.asyncCalls.pop(index)
-
-        if async.blocking and not self.isBlocking():
-            # if we are responsible for unblocking
-            self.emit(SIGNAL("blockingStateChanged(bool)"), False)
-            self.scheduleSignalProcessing()
-
-        async.disconnect(async, SIGNAL("finished(PyQt_PyObject, QString)"), self.asyncFinished)
-        self.emit(SIGNAL("asyncCallsStateChange()"))
-
-
-    def asyncCall(self, func, args=(), kwargs={}, name=None,
-                  onResult=None, onStarted=None, onFinished=None, onError=None,
-                  blocking=True, thread=None, threadPool=None):
-        """ Return an OWConcurent.AsyncCall object func, args and kwargs
-        set and signals connected.
-        """
-        from functools import partial
-        from OWConcurrent import AsyncCall
-
-        asList = lambda slot: slot if isinstance(slot, list) \
-                              else ([slot] if slot else [])
-
-        onResult = asList(onResult)
-        onStarted = asList(onStarted) #+ [partial(self.setBlocking, True)]
-        onFinished = asList(onFinished) #+ [partial(self.blockSignals, False)]
-        onError = asList(onError) or [self.asyncExceptionHandler]
-
-        async = AsyncCall(func, args, kwargs,
-                          thread=thread, threadPool=threadPool)
-        async.name = name if name is not None else ""
-
-        for slot in  onResult:
-            async.connect(async, SIGNAL("resultReady(PyQt_PyObject)"), slot,
-                          Qt.QueuedConnection)
-        for slot in onStarted:
-            async.connect(async, SIGNAL("starting()"), slot,
-                          Qt.QueuedConnection)
-        for slot in onFinished:
-            async.connect(async, SIGNAL("finished(QString)"), slot,
-                          Qt.QueuedConnection)
-        for slot in onError:
-            async.connect(async, SIGNAL("unhandledException(PyQt_PyObject)"),
-                          slot, Qt.QueuedConnection)
-
-        self.addAsyncCall(async, blocking)
-
-        return async
-
-    def addAsyncCall(self, async, blocking=True):
-        """ Add AsyncCall object to asyncCalls list (will be removed
-        once it finishes processing).
-
-        """
-        ## TODO: make this thread safe
-        async.connect(async, SIGNAL("finished(PyQt_PyObject, QString)"),
-                      self.asyncFinished)
-
-        async.blocking = blocking
-
-        if blocking:
-            # if we are responsible for blocking
-            state = any(a.blocking for a in self.asyncCalls)
-            self.asyncCalls.append(async)
-            if not state:
-                self.emit(SIGNAL("blockingStateChanged(bool)"), True)
-        else:
-            self.asyncCalls.append(async)
-
-        self.emit(SIGNAL("asyncCallsStateChange()"))
+        return self.__blocking
 
 
 def blocking(method):
     """ Return method that sets blocking flag while executing
     """
     from functools import wraps
+
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         old = self._blocking
@@ -1023,3 +660,27 @@ def blocking(method):
             return method(self, *args, **kwargs)
         finally:
             self.setBlocking(old)
+
+
+# Pull signal constants from canvas to widget namespace
+Default = widget_description.Default
+NonDefault = widget_description.NonDefault
+Single = widget_description.Single
+Multiple = widget_description.Multiple
+Explicit = widget_description.Explicit
+Dynamic = widget_description.Dynamic
+InputSignal = widget_description.InputSignal
+OutputSignal = widget_description.OutputSignal
+
+SignalLink = widget_scheme.SignalLink
+WidgetsSignalManager = widget_scheme.WidgetsSignalManager
+SignalWrapper = widget_scheme.SignalWrapper
+
+
+# Definitions needed to define Table as subclass of TableWithClass
+class AttributeList(list):
+    pass
+
+
+class ExampleList(list):
+    pass

@@ -1,7 +1,7 @@
-From d9ed96e42ef52b510058fa875fd44af5d21cce6b Mon Sep 17 00:00:00 2001
+From 6d165b11c02ca12bcb806ad7094818ffa3bbd712 Mon Sep 17 00:00:00 2001
 From: janezd <janez.demsar@fri.uni-lj.si>
 Date: Wed, 19 Jun 2013 12:00:13 +0200
-Subject: [PATCH 5/6] Close on CTRL+C when running as "single instance".
+Subject: [PATCH 5/7] Close on CTRL+C when running as "single instance".
 
 Needed for PyCharm's single instance mode.
 ---
@@ -9,7 +9,7 @@ Needed for PyCharm's single instance mode.
  1 file changed, 4 insertions(+)
 
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index 33c5a23..6a1c981 100644
+index c062082..d74aebd 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
 @@ -43,6 +43,10 @@ def running_in_ipython():
@@ -24,5 +24,5 @@ index 33c5a23..6a1c981 100644
      """
      On windows when running without a console (using pythonw.exe) the
 -- 
-1.8.2.3
+1.8.4.3
 

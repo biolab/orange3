@@ -17,8 +17,6 @@ from PyQt4.QtCore import pyqtSignal as Signal
 
 pyqtWrapperType = type(QObject)
 
-from . import toPyObject
-
 # Import QSettings from qtcompat module (compatibility with PyQt < 4.8.3
 from .qtcompat import QSettings
 

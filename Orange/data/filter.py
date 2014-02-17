@@ -341,6 +341,29 @@ class FilterContinuous(ValueFilter):
             return not isnan(value)
         raise ValueError("invalid operator")
 
+    def __str__(self):
+        if self.oper == self.Equal:
+            return "feature_%s == %s" % (self.column, self.ref)
+        if self.oper == self.NotEqual:
+            return "feature_%s != %s" % (self.column, self.ref)
+        if self.oper == self.Less:
+            return "feature_%s < %s" % (self.column, self.ref)
+        if self.oper == self.LessEqual:
+            return "feature_%s <= %s" % (self.column, self.ref)
+        if self.oper == self.Greater:
+            return "feature_%s > %s" % (self.column, self.ref)
+        if self.oper == self.GreaterEqual:
+            return "feature_%s >= %s" % (self.column, self.ref)
+        if self.oper == self.Between:
+            return "feature_%s <= %s <= %s" % (self.column, self.ref, self.max)
+        if self.oper == self.Outside:
+            return "NOT %s <= feature_%s <= %s" % (self.column, self.ref, self.max)
+        if self.oper == self.IsDefined:
+            return "feature_%s IS DEFINED" % self.column
+
+    __repr__ = __str__
+
+
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
     Between = Outside = IsDefined = 0

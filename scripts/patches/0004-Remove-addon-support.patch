@@ -1,14 +1,14 @@
-From 03f6a8a703f8641aa64b4046e181421bfb79a1e6 Mon Sep 17 00:00:00 2001
+From c26cc0eaf204d66b0047720e27e7a0e5b731afcf Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:37:52 +0200
-Subject: [PATCH 4/6] Remove addon support.
+Subject: [PATCH 4/7] Remove addon support.
 
 ---
  Orange/canvas/application/canvasmain.py | 40 ---------------------------------
  1 file changed, 40 deletions(-)
 
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index c930fa5..a059c17 100644
+index 8ee3365..e3e6eab 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
 @@ -10,8 +10,6 @@ from functools import partial
@@ -28,7 +28,7 @@ index c930fa5..a059c17 100644
  
  from ..document.schemeedit import SchemeEditWidget
  
-@@ -314,12 +311,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -318,12 +315,6 @@ class CanvasMainWindow(QMainWindow):
                         [self.freeze_action,
                          self.dock_help_action]
  
@@ -41,7 +41,7 @@ index c930fa5..a059c17 100644
          # Tool bar in the collapsed dock state (has the same actions as
          # the tool bar in the CanvasToolDock
          actions_toolbar = QToolBar(orientation=Qt.Vertical)
-@@ -519,13 +510,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -523,13 +514,6 @@ class CanvasMainWindow(QMainWindow):
                      shortcut=QKeySequence.Preferences
                      )
  
@@ -55,7 +55,7 @@ index c930fa5..a059c17 100644
          self.show_output_action = \
              QAction(self.tr("Show Output View"), self,
                      toolTip=self.tr("Show application output."),
-@@ -648,7 +632,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -658,7 +642,6 @@ class CanvasMainWindow(QMainWindow):
  #        self.options_menu.addAction("Attach Python Console")
          self.options_menu.addSeparator()
          self.options_menu.addAction(self.canvas_settings_action)
@@ -63,7 +63,7 @@ index c930fa5..a059c17 100644
  
          # Widget menu
          menu_bar.addMenu(self.widget_menu)
-@@ -1492,29 +1475,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1502,29 +1485,6 @@ class CanvasMainWindow(QMainWindow):
          if status == 0:
              self.__update_from_settings()
  
@@ -94,5 +94,5 @@ index c930fa5..a059c17 100644
          """Show a window with application output.
          """
 -- 
-1.8.2.3
+1.8.4.3
 

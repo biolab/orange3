@@ -17,22 +17,22 @@ def addOrigin(examples, filename):
             var.attributes["origin"] = dirname
 
 class OWFile(widget.OWWidget):
-    _name = "File"
-    _id = "orange.widgets.data.file"
-    _description = """
+    name = "File"
+    id = "orange.widgets.data.file"
+    description = """
     Read a data table from a supported file format on the the file system and
     send it to the the output."""
-    _long_description = """
+    long_description = """
     The common start of a schema, which reads the data from a file. The widget
     maintains a history of most recently used data files. For convenience, the
     history also includes a directory with the sample data sets that come with
     Orange."""
-    _icon = "icons/File.svg"
-    _author = "Janez Demsar"
-    _maintainer_email = "janez.demsar(@at@)fri.uni-lj.si"
-    _priority = 10
-    _category = "Data"
-    _keywords = ["data", "file", "load", "read"]
+    icon = "icons/File.svg"
+    author = "Janez Demsar"
+    maintainer_email = "janez.demsar(@at@)fri.uni-lj.si"
+    priority = 10
+    category = "Data"
+    keywords = ["data", "file", "load", "read"]
     outputs = [{"name": "Data",
                 "type": Table,
                 "doc": "Attribute-valued data set read from the input file."}]
@@ -186,8 +186,6 @@ class OWFile(widget.OWWidget):
 
         data = None
         try:
-            if self.processingHandler:
-                self.processingHandler(self, 1)    # focus on active widget
             # TODO handle self.new_variables
             data = Table(fn)
             self.loaded_file = fn
@@ -202,9 +200,6 @@ class OWFile(widget.OWWidget):
                     self.infoa.setText('Data was not loaded due to an error.')
                     self.infob.setText('Error:')
                     self.warnings.setText(errValue)
-        finally:
-            if self.processingHandler:
-                self.processingHandler(self, 0)    # remove focus from this widget
 
         if data is None:
             self.dataReport = None

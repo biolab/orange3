@@ -1,21 +1,24 @@
-From 4e81df94b652ccbf8eea3fdde50b3534f79584b3 Mon Sep 17 00:00:00 2001
+From 41217df269063b15f65227a4f7ab9b0e2e0f8ad7 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:36:08 +0200
-Subject: [PATCH 2/6] Compatibility with new orange.
+Subject: [PATCH 2/7] Compatibility with new orange.
 
 ---
- Orange/canvas/__init__.py             |   7 +-
- Orange/canvas/__main__.py             |  30 ++--
- Orange/canvas/canvas/layout.py        |   2 +-
- Orange/canvas/config.py               |   2 +-
- Orange/canvas/document/schemeedit.py  |   9 +-
- Orange/canvas/preview/scanner.py      |   3 -
- Orange/canvas/registry/description.py |  84 +++------
- Orange/canvas/resources.py            |   2 +-
- Orange/canvas/scheme/widgetsscheme.py |  25 +--
- Orange/canvas/utils/debugging.py      | 122 +++++++++++++
- Orange/canvas/utils/environ.py        | 310 ++++++++++++++++++++++++++++++++++
- 11 files changed, 496 insertions(+), 100 deletions(-)
+ Orange/canvas/__init__.py                          |   7 +-
+ Orange/canvas/__main__.py                          |  32 +--
+ Orange/canvas/application/settings.py              |   2 +-
+ Orange/canvas/canvas/layout.py                     |   2 +-
+ Orange/canvas/config.py                            |   2 +-
+ Orange/canvas/document/schemeedit.py               |   9 +-
+ Orange/canvas/gui/tests/test_splashscreen.py       |   2 +-
+ Orange/canvas/preview/scanner.py                   |   3 -
+ Orange/canvas/preview/tests/test_previewbrowser.py |   4 +-
+ Orange/canvas/registry/description.py              |  84 ++----
+ Orange/canvas/resources.py                         |   2 +-
+ Orange/canvas/scheme/widgetsscheme.py              |  25 +-
+ Orange/canvas/utils/debugging.py                   | 122 ++++++++
+ Orange/canvas/utils/environ.py                     | 310 +++++++++++++++++++++
+ 14 files changed, 501 insertions(+), 105 deletions(-)
  create mode 100644 Orange/canvas/utils/debugging.py
  create mode 100644 Orange/canvas/utils/environ.py
 
@@ -32,7 +35,7 @@ index 8b13789..741523b 100644
 +# By settings __loader__ to None, we workaround the pkg_resources bug.
 +__loader__ = None
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index e336d8a..68c59aa 100644
+index 7eda15d..5cc6f29 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
 @@ -17,20 +17,20 @@ import pkg_resources
@@ -68,7 +71,16 @@ index e336d8a..68c59aa 100644
  
  log = logging.getLogger(__name__)
  
-@@ -153,7 +153,7 @@ def main(argv=None):
+@@ -111,7 +111,7 @@ def main(argv=None):
+     # File handler should always be at least INFO level so we need
+     # the application root level to be at least at INFO.
+     root_level = min(levels[options.log_level], logging.INFO)
+-    rootlogger = logging.getLogger(OrangeCanvas.__name__)
++    rootlogger = logging.getLogger(canvas.__name__)
+     rootlogger.setLevel(root_level)
+ 
+     # Standard output stream handler at the requested level
+@@ -173,7 +173,7 @@ def main(argv=None):
                  # no extension
                  stylesheet = os.path.extsep.join([stylesheet, "qss"])
  
@@ -77,7 +89,7 @@ index e336d8a..68c59aa 100644
              resource = "styles/" + stylesheet
  
              if pkg_resources.resource_exists(pkg_name, resource):
-@@ -180,7 +180,7 @@ def main(argv=None):
+@@ -200,7 +200,7 @@ def main(argv=None):
                  log.info("%r style sheet not found.", stylesheet)
  
      # Add the default canvas_icons search path
@@ -86,7 +98,7 @@ index e336d8a..68c59aa 100644
      QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
  
      canvas_window = CanvasMainWindow()
-@@ -296,7 +296,7 @@ def main(argv=None):
+@@ -316,7 +316,7 @@ def main(argv=None):
          sys.excepthook = ExceptHook()
          sys.excepthook.handledException.connect(output_view.parent().show)
  
@@ -95,6 +107,19 @@ index e336d8a..68c59aa 100644
          log.info("Entering main event loop.")
          try:
              status = app.exec_()
+diff --git a/Orange/canvas/application/settings.py b/Orange/canvas/application/settings.py
+index 7c45699..840fa22 100644
+--- a/Orange/canvas/application/settings.py
++++ b/Orange/canvas/application/settings.py
+@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
+ class UserDefaultsPropertyBinding(AbstractBoundProperty):
+     """
+     A Property binding for a setting in a
+-    :class:`Orange.OrangeCanvas.utility.settings.Settings` instance.
++    :class:`Orange.canvas.utility.settings.Settings` instance.
+ 
+     """
+     def __init__(self, obj, propertyName, parent=None):
 diff --git a/Orange/canvas/canvas/layout.py b/Orange/canvas/canvas/layout.py
 index 63f8daf..103c186 100644
 --- a/Orange/canvas/canvas/layout.py
@@ -109,10 +134,10 @@ index 63f8daf..103c186 100644
  
          anchors = set(self.__invalidatedAnchors)
 diff --git a/Orange/canvas/config.py b/Orange/canvas/config.py
-index c3edc91..892b304 100644
+index de38de5..df43de2 100644
 --- a/Orange/canvas/config.py
 +++ b/Orange/canvas/config.py
-@@ -227,7 +227,7 @@ def default_entry_point():
+@@ -244,7 +244,7 @@ def default_entry_point():
  
      """
      dist = pkg_resources.get_distribution("Orange")
@@ -148,8 +173,21 @@ index d74d233..f5a0368 100644
                  action.create_new(globalPos)
              return
  
+diff --git a/Orange/canvas/gui/tests/test_splashscreen.py b/Orange/canvas/gui/tests/test_splashscreen.py
+index 6d17385..c37b071 100644
+--- a/Orange/canvas/gui/tests/test_splashscreen.py
++++ b/Orange/canvas/gui/tests/test_splashscreen.py
+@@ -17,7 +17,7 @@ from ..test import QAppTestCase
+ class TestSplashScreen(QAppTestCase):
+     def test_splashscreen(self):
+         splash = pkg_resources.resource_filename(
+-                     "Orange.OrangeCanvas",
++                     "Orange.canvas",
+                      "icons/orange-splash-screen.png"
+                  )
+ 
 diff --git a/Orange/canvas/preview/scanner.py b/Orange/canvas/preview/scanner.py
-index b1ff6fe..29fc638 100644
+index 85d9263..b8e9006 100644
 --- a/Orange/canvas/preview/scanner.py
 +++ b/Orange/canvas/preview/scanner.py
 @@ -101,9 +101,6 @@ def scan_update(item):
@@ -162,8 +200,25 @@ index b1ff6fe..29fc638 100644
      try:
          title, desc, svg = preview_parse(path)
      except SAXParseException as ex:
+diff --git a/Orange/canvas/preview/tests/test_previewbrowser.py b/Orange/canvas/preview/tests/test_previewbrowser.py
+index 1e209ad..442fa22 100644
+--- a/Orange/canvas/preview/tests/test_previewbrowser.py
++++ b/Orange/canvas/preview/tests/test_previewbrowser.py
+@@ -10,10 +10,10 @@ from ..previewmodel import PreviewItem, PreviewModel
+ 
+ import pkg_resources
+ 
+-svg1 = pkg_resources.resource_string("Orange.OrangeCanvas",
++svg1 = pkg_resources.resource_string("Orange.canvas",
+                                      "icons/default-category.svg")
+ 
+-svg2 = pkg_resources.resource_string("Orange.OrangeCanvas",
++svg2 = pkg_resources.resource_string("Orange.canvas",
+                                      "icons/default-widget.svg")
+ 
+ 
 diff --git a/Orange/canvas/registry/description.py b/Orange/canvas/registry/description.py
-index 4e452a0..dfc21c1 100644
+index 882f10c..dc9f939 100644
 --- a/Orange/canvas/registry/description.py
 +++ b/Orange/canvas/registry/description.py
 @@ -380,76 +380,48 @@ class WidgetDescription(object):
@@ -190,7 +245,7 @@ index 4e452a0..dfc21c1 100644
 +        else:
              raise WidgetSpecificationError
  
-         qualified_name = "%s.%s" % (module.__name__, widget_class.__name__)
+         qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
  
 -        id = getattr(module, "ID", module_name)
 -        inputs = getattr(module, "INPUTS", [])
@@ -285,7 +340,7 @@ index e12bdf8..b3f78c6 100644
  del dirname
  
 diff --git a/Orange/canvas/scheme/widgetsscheme.py b/Orange/canvas/scheme/widgetsscheme.py
-index 646f781..d5e38cf 100644
+index a61abf5..8f4cc1c 100644
 --- a/Orange/canvas/scheme/widgetsscheme.py
 +++ b/Orange/canvas/scheme/widgetsscheme.py
 @@ -76,7 +76,7 @@ class WidgetsScheme(Scheme):
@@ -297,7 +352,7 @@ index 646f781..d5e38cf 100644
              if settings != node.properties:
                  node.properties = settings
                  changed = True
-@@ -201,8 +201,7 @@ class WidgetManager(QObject):
+@@ -207,8 +207,7 @@ class WidgetManager(QObject):
          widget.close()
  
          # Save settings to user global settings.
@@ -307,7 +362,7 @@ index 646f781..d5e38cf 100644
  
          # Notify the widget it will be deleted.
          widget.onDeleteWidget()
-@@ -224,13 +223,9 @@ class WidgetManager(QObject):
+@@ -230,13 +229,9 @@ class WidgetManager(QObject):
          log.info("Creating %r instance.", klass)
          widget = klass.__new__(
              klass,
@@ -324,7 +379,7 @@ index 646f781..d5e38cf 100644
          )
  
          # Init the node/widget mapping and state before calling __init__
-@@ -241,7 +236,7 @@ class WidgetManager(QObject):
+@@ -247,7 +242,7 @@ class WidgetManager(QObject):
          self.__node_for_widget[widget] = node
          self.__widget_processing_state[widget] = 0
  
@@ -333,7 +388,7 @@ index 646f781..d5e38cf 100644
          widget.setCaption(node.title)
          widget.widgetInfo = desc
  
-@@ -300,11 +295,7 @@ class WidgetManager(QObject):
+@@ -310,11 +305,7 @@ class WidgetManager(QObject):
              # Notify the widget instances.
              for widget in list(self.__widget_for_node.values()):
                  widget.close()
@@ -346,7 +401,7 @@ index 646f781..d5e38cf 100644
                  widget.onDeleteWidget()
  
              event.accept()
-@@ -486,7 +477,7 @@ class WidgetsSignalManager(SignalManager):
+@@ -496,7 +487,7 @@ class WidgetsSignalManager(SignalManager):
          # Expand the signal_id with the unique widget id and the
          # channel name. This is needed for OWBaseWidget's input
          # handlers (Multiple flag).
@@ -800,5 +855,5 @@ index 0000000..69812db
 +
 +load_eggs([add_ons_dir_user])
 -- 
-1.8.2.3
+1.8.4.3
 

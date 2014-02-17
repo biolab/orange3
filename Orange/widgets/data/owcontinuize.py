@@ -10,12 +10,12 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, Setting
 
 class OWContinuize(widget.OWWidget):
-    _name = "Continuize"
-    _description = "Turns discrete attributes into continuous and, optionally, normalizes the continuous values."
-    _icon = "icons/Continuize.svg"
-    _author = "Martin Frlin"
-    _category = "Data"
-    _keywords = ["data", "continuize"]
+    name = "Continuize"
+    description = "Turns discrete attributes into continuous and, optionally, normalizes the continuous values."
+    icon = "icons/Continuize.svg"
+    author = "Martin Frlin"
+    category = "Data"
+    keywords = ["data", "continuize"]
 
     inputs = [("Data", Table, "setData")]
     outputs = [("Data", Table)]
@@ -28,7 +28,7 @@ class OWContinuize(widget.OWWidget):
     continuousTreatment = Setting(0)
     autosend = Setting(0)
 
-    settingsHandler = ClassValuesContextHandler()
+    #settingsHandler = ClassValuesContextHandler()
     targetValue = ContextSetting("")
 
     multinomialTreats = (("Target or First value as base", DomainContinuizer.LowestIsBase),
@@ -51,7 +51,7 @@ class OWContinuize(widget.OWWidget):
     valueRanges = ["from -1 to 1", "from 0 to 1"]
 
     def __init__(self,parent=None, signalManager = None, name = "Continuizer"):
-        widget.OWWidget.__init__(self, parent, signalManager, name, wantMainArea = 0)
+        widget.OWWidget.__init__(self, parent, signalManager, name)
 
         self.targetValue = 0
         self.autosend = 0
@@ -174,9 +174,7 @@ if __name__ == "__main__":
     import sys
     a = QtGui.QApplication(sys.argv)
     ow = OWContinuize()
-    #data = orange.ExampleTable("d:\\ai\\orange\\test\\iris")
-#    data = orange.ExampleTable(r"E:\Development\Orange Datasets\UCI\iris.tab")
-    data = Table("../../doc/datasets/iris.tab")
+    data = Table("iris")
     ow.setData(data)
     ow.show()
     a.exec_()

@@ -35,18 +35,20 @@
 
 from math import *
 
-from PyQt4.QtGui import QGraphicsItem, QGraphicsLineItem, QGraphicsTextItem, QPainterPath, QGraphicsPathItem, QGraphicsScene, QTransform, QGraphicsRectItem, QPen, QFontMetrics
+from PyQt4.QtGui import QGraphicsItem, QGraphicsLineItem, QGraphicsTextItem, QPainterPath, QGraphicsPathItem, \
+    QTransform, QGraphicsRectItem, QPen, QFontMetrics
 from PyQt4.QtCore import QLineF, QPointF, QRectF, Qt
 
 from .owconstants import *
 from .owtools import resize_plot_item_list
 from .owpalette import OWPalette
 
-class OWAxis(QGraphicsItem):
 
+class OWAxis(QGraphicsItem):
     Role = OWPalette.Axis
 
-    def __init__(self, id, title = '', title_above = False, title_location = AxisMiddle, line = None, arrows = 0, plot = None):
+    def __init__(self, id, title='', title_above=False, title_location=AxisMiddle,
+                 line=None, arrows=0, plot=None, bounds=None):
         QGraphicsItem.__init__(self)
         self.setFlag(QGraphicsItem.ItemHasNoContents)
         self.setZValue(AxisZValue)
@@ -80,6 +82,8 @@ class OWAxis(QGraphicsItem):
         self._ticks = []
         self.zoom_transform = QTransform()
         self.labels = None
+        self.values = None
+        self._bounds = bounds
         self.auto_range = None
         self.auto_scale = True
 
@@ -91,7 +95,7 @@ class OWAxis(QGraphicsItem):
 
     @staticmethod
     def compute_scale(min, max):
-        magnitude = int(3*log10(abs(max-min)) + 1)
+        magnitude = int(3 * log10(abs(max - min)) + 1)
         if magnitude % 3 == 0:
             first_place = 1
         elif magnitude % 3 == 1:
@@ -100,22 +104,23 @@ class OWAxis(QGraphicsItem):
             first_place = 5
         magnitude = magnitude // 3 - 1
         step = first_place * pow(10, magnitude)
-        first_val = ceil(min/step) * step
+        first_val = ceil(min / step) * step
         return first_val, step
 
     def update_ticks(self):
         self._ticks = []
         major, medium, minor = self.tick_length
         if self.labels is not None and not self.auto_scale:
-            for i, text in enumerate(self.labels):
-                self._ticks.append( ( i, text, medium, 1 ) )
+            values = self.values or range(len(self.labels))
+            for i, text in zip(values, self.labels):
+                self._ticks.append((i, text, medium, 1))
         else:
             if self.scale and not self.auto_scale:
                 min, max, step = self.scale
             elif self.auto_range:
                 min, max = self.auto_range
                 if min is not None and max is not None:
-                    step = (max - min)/10
+                    step = (max - min) / 10
                 else:
                     return
             else:
@@ -126,15 +131,14 @@ class OWAxis(QGraphicsItem):
 
             val, step = self.compute_scale(min, max)
             while val <= max:
-                self._ticks.append( ( val, "%.4g" % val, medium, step ) )
+                self._ticks.append((val, "%.4g" % val, medium, step))
                 val += step
 
     def update_graph(self):
         if self.update_callback:
             self.update_callback()
 
-
-    def update(self, zoom_only = False):
+    def update(self, zoom_only=False):
         self.update_ticks()
         line_color = self.plot.color(OWPalette.Axis)
         text_color = self.plot.color(OWPalette.Text)
@@ -167,10 +171,10 @@ class OWAxis(QGraphicsItem):
             offset = 10
 
         if self.title_above:
-            title_pos = title_pos + (v.p2() - v.p1())*(offset + QFontMetrics(self.title_item.font()).height())
+            title_pos += (v.p2() - v.p1()) * (offset + QFontMetrics(self.title_item.font()).height())
         else:
-            title_pos = title_pos - (v.p2() - v.p1())*offset
-        ## TODO: Move it according to self.label_pos
+            title_pos -= (v.p2() - v.p1()) * offset
+            ## TODO: Move it according to self.label_pos
         self.title_item.setVisible(self.show_title)
         self.title_item.setRotation(-self.graph_line.angle())
         c = self.title_item.mapToParent(self.title_item.boundingRect().center())
@@ -208,7 +212,7 @@ class OWAxis(QGraphicsItem):
         resize_plot_item_list(self.label_bg_items, n, QGraphicsRectItem, self)
         resize_plot_item_list(self.tick_items, n, QGraphicsLineItem, self)
 
-        test_rect = QRectF(self.graph_line.p1(),  self.graph_line.p2()).normalized()
+        test_rect = QRectF(self.graph_line.p1(), self.graph_line.p2()).normalized()
         test_rect.adjust(-1, -1, 1, 1)
 
         n_v = self.graph_line.normalVector().unitVector()
@@ -221,7 +225,7 @@ class OWAxis(QGraphicsItem):
         for i in range(n):
             pos, text, size, step = self._ticks[i]
             hs = 0.5 * step
-            tick_pos = self.map_to_graph( pos )
+            tick_pos = self.map_to_graph(pos)
             if not test_rect.contains(tick_pos):
                 self.tick_items[i].setVisible(False)
                 self.label_items[i].setVisible(False)
@@ -230,7 +234,7 @@ class OWAxis(QGraphicsItem):
             item.setVisible(True)
             if not zoom_only:
                 if self.id in XAxes or getattr(self, 'is_horizontal', False):
-                    item.setHtml( '<center>' + Qt.escape(text.strip()) + '</center>')
+                    item.setHtml('<center>' + Qt.escape(text.strip()) + '</center>')
                 else:
                     item.setHtml(Qt.escape(text.strip()))
 
@@ -240,13 +244,14 @@ class OWAxis(QGraphicsItem):
                 w = min(item.boundingRect().width(), self.max_text_width)
                 item.setTextWidth(w)
                 if self.title_above:
-                    label_pos = tick_pos + n_p * (w + self.text_margin) + l_p * item.boundingRect().height()/2
+                    label_pos = tick_pos + n_p * (w + self.text_margin) + l_p * item.boundingRect().height() / 2
                 else:
-                    label_pos = tick_pos + n_p * self.text_margin + l_p * item.boundingRect().height()/2
+                    label_pos = tick_pos + n_p * self.text_margin + l_p * item.boundingRect().height() / 2
                 text_angle = -90 if self.title_above else 90
             else:
-                w = min(item.boundingRect().width(), QLineF(self.map_to_graph(pos - hs), self.map_to_graph(pos + hs) ).length())
-                label_pos = tick_pos + n_p * self.text_margin - l_p * w/2
+                w = min(item.boundingRect().width(),
+                        QLineF(self.map_to_graph(pos - hs), self.map_to_graph(pos + hs)).length())
+                label_pos = tick_pos + n_p * self.text_margin + l_p * item.boundingRect().height() / 2
                 item.setTextWidth(w)
 
             if not self.always_horizontal_text:
@@ -269,12 +274,12 @@ class OWAxis(QGraphicsItem):
             tick_line.setLength(size)
             if self.title_above:
                 tick_line.setAngle(tick_line.angle() + 180)
-            item.setLine( tick_line )
+            item.setLine(tick_line)
             item.setPen(line_color)
             item.setPos(self.map_to_graph(pos))
 
     @staticmethod
-    def make_title(label, unit = None):
+    def make_title(label, unit=None):
         lab = '<i>' + label + '</i>'
         if unit:
             lab = lab + ' [' + unit + ']'
@@ -292,8 +297,9 @@ class OWAxis(QGraphicsItem):
         self.show_title = b
         self.update()
 
-    def set_labels(self, labels):
+    def set_labels(self, labels, values):
         self.labels = labels
+        self.values = values
         self.graph_line = None
         self.auto_scale = False
         self.update_ticks()
@@ -314,7 +320,7 @@ class OWAxis(QGraphicsItem):
         min, max = self.plot.bounds_for_axis(self.id)
         if min == max:
             return QPointF()
-        line_point = self.graph_line.pointAt( (x-min)/(max-min) )
+        line_point = self.graph_line.pointAt((x - min) / (max - min))
         end_point = line_point * self.zoom_transform
         return self.projection(end_point, self.graph_line)
 
@@ -328,7 +334,7 @@ class OWAxis(QGraphicsItem):
 
     def continuous_labels(self):
         min, max, step = self.scale
-        magnitude = log10(abs(max-min))
+        magnitude = log10(abs(max - min))
 
     def paint(self, painter, option, widget):
         pass
@@ -342,8 +348,10 @@ class OWAxis(QGraphicsItem):
         return self._ticks
 
     def bounds(self):
+        if self._bounds:
+            return self._bounds
         if self.labels:
-            return -0.2, len(self.labels) -0.8
+            return -0.2, len(self.labels) - 0.8
         elif self.scale:
             min, max, _step = self.scale
             return min, max
@@ -352,7 +360,11 @@ class OWAxis(QGraphicsItem):
         else:
             return 0, 1
 
+    def set_bounds(self, value):
+        self._bounds = value
+
     def should_be_expanded(self):
         self.update_ticks()
-        return self.id in YAxes or self.always_horizontal_text or sum(len(t[1]) for t in self._ticks) * 12 > self.plot.width()
+        return self.id in YAxes or self.always_horizontal_text or sum(
+            len(t[1]) for t in self._ticks) * 12 > self.plot.width()
 

@@ -10,10 +10,10 @@ from ..previewmodel import PreviewItem, PreviewModel
 
 import pkg_resources
 
-svg1 = pkg_resources.resource_string("Orange.OrangeCanvas",
+svg1 = pkg_resources.resource_string("Orange.canvas",
                                      "icons/default-category.svg")
 
-svg2 = pkg_resources.resource_string("Orange.OrangeCanvas",
+svg2 = pkg_resources.resource_string("Orange.canvas",
                                      "icons/default-widget.svg")
 
 

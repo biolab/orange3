@@ -25,7 +25,6 @@ from ..document.quickmenu import create_css_gradient
 from .widgettoolbox import WidgetToolBox, iter_item
 
 from ..registry.qt import QtWidgetRegistry
-from ..utils.qtcompat import toPyObject
 
 
 class SplitterResizer(QObject):

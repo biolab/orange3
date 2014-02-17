@@ -1,7 +1,7 @@
-From 0f7d0a9cc4b211805e7f5520fdbf8da7d8945ea9 Mon Sep 17 00:00:00 2001
+From 36cd3096234ecf56c5031ba045c308748f13f1f5 Mon Sep 17 00:00:00 2001
 From: astaric <anze.staric@gmail.com>
 Date: Mon, 20 May 2013 16:31:32 +0200
-Subject: [PATCH 1/6] Revert redundant 2to3.
+Subject: [PATCH 1/7] Revert redundant 2to3.
 
 ---
  Orange/canvas/__main__.py                          |  3 +--
@@ -26,7 +26,7 @@ Subject: [PATCH 1/6] Revert redundant 2to3.
  19 files changed, 55 insertions(+), 61 deletions(-)
 
 diff --git a/Orange/canvas/__main__.py b/Orange/canvas/__main__.py
-index 7555ad4..e336d8a 100644
+index 329f494..7eda15d 100644
 --- a/Orange/canvas/__main__.py
 +++ b/Orange/canvas/__main__.py
 @@ -11,7 +11,6 @@ import logging
@@ -37,7 +37,7 @@ index 7555ad4..e336d8a 100644
  
  import pkg_resources
  
-@@ -297,7 +296,7 @@ def main(argv=None):
+@@ -317,7 +316,7 @@ def main(argv=None):
          sys.excepthook = ExceptHook()
          sys.excepthook.handledException.connect(output_view.parent().show)
  
@@ -47,10 +47,10 @@ index 7555ad4..e336d8a 100644
          try:
              status = app.exec_()
 diff --git a/Orange/canvas/application/canvasmain.py b/Orange/canvas/application/canvasmain.py
-index f9aaf2d..c485208 100644
+index f7a81db..e83eb9c 100644
 --- a/Orange/canvas/application/canvasmain.py
 +++ b/Orange/canvas/application/canvasmain.py
-@@ -929,7 +929,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -939,7 +939,6 @@ class CanvasMainWindow(QMainWindow):
          property.
  
          """
@@ -58,7 +58,7 @@ index f9aaf2d..c485208 100644
          dirname = os.path.dirname(filename)
  
          self.last_scheme_dir = dirname
-@@ -1125,7 +1124,6 @@ class CanvasMainWindow(QMainWindow):
+@@ -1135,7 +1134,6 @@ class CanvasMainWindow(QMainWindow):
          )
  
          if filename:
@@ -420,7 +420,7 @@ index deb85d9..8af487f 100644
  
          self.__gridSlots = [_ToolGridSlot(slot.button, slot.action,
 diff --git a/Orange/canvas/registry/description.py b/Orange/canvas/registry/description.py
-index c74961f..4e452a0 100644
+index d59c0a0..882f10c 100644
 --- a/Orange/canvas/registry/description.py
 +++ b/Orange/canvas/registry/description.py
 @@ -323,9 +323,9 @@ class WidgetDescription(object):
@@ -485,10 +485,10 @@ index 078caa9..b944070 100644
              self.__rect = rect
              self.geometry_changed.emit()
 diff --git a/Orange/canvas/scheme/readwrite.py b/Orange/canvas/scheme/readwrite.py
-index 5963698..0621627 100644
+index 07316e7..6327dee 100644
 --- a/Orange/canvas/scheme/readwrite.py
 +++ b/Orange/canvas/scheme/readwrite.py
-@@ -288,7 +288,7 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None,
+@@ -292,7 +292,7 @@ def parse_scheme_v_2_0(etree, scheme, error_handler, widget_registry=None,
          elif annot_el.tag == "arrow":
              start = annot_el.attrib.get("start", "(0, 0)")
              end = annot_el.attrib.get("end", "(0, 0)")
@@ -497,7 +497,7 @@ index 5963698..0621627 100644
  
              color = annot_el.attrib.get("fill", "red")
              annot = SchemeArrowAnnotation(start, end, color=color)
-@@ -462,7 +462,7 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
+@@ -780,7 +780,7 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
              font = annotation.font
              attrs.update({"font-family": font.get("family", None),
                            "font-size": font.get("size", None)})
@@ -557,5 +557,5 @@ index 205e7a1..c970b90 100644
      def commit(self):
          self.__update()
 -- 
-1.8.2.3
+1.8.4.3
 

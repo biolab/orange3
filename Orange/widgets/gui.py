@@ -1,12 +1,11 @@
 import math
 import os
 import re
-from functools import reduce
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
+from Orange.widgets.utils import getdeepattr
 
-# TODO: can we avoid the valueType by keeping the type the same?
-#       E.g. value = type(value)(x)
+from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 
 YesNo = NoYes = ("No", "Yes")
 _enter_icon = None
@@ -21,17 +20,71 @@ def id_generator(id_):
 OrangeUserRole = id_generator(Qt.UserRole)
 
 
-def getdeepattr(obj, attr, *arg, **kwarg):
-    if isinstance(obj, dict):
-        return obj.get(attr)
-    try:
-        return reduce(lambda o, n: getattr(o, n), attr.split("."), obj)
-    except:
-        if arg:
-            return arg[0]
-        if kwarg:
-            return kwarg["default"]
-        raise AttributeError("'%s' has no attribute '%s'" % (obj, attr))
+class ControlledAttributesDict(dict):
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+    def __setitem__(self, key, value):
+        if key not in self:
+            dict.__setitem__(self, key, [value])
+        else:
+            dict.__getitem__(self, key).append(value)
+        set_controllers(self.master, key, self.master, "")
+
+callbacks = lambda obj: getattr(obj, CONTROLLED_ATTRIBUTES, {})
+subcontrollers = lambda obj: getattr(obj, ATTRIBUTE_CONTROLLERS, {})
+
+
+def notify_changed(obj, name, value):
+    if name in callbacks(obj):
+        for callback in callbacks(obj)[name]:
+            callback(value)
+        return
+
+    for controller, prefix in list(subcontrollers(obj)):
+        if getdeepattr(controller, prefix, None) != obj:
+            del subcontrollers(obj)[(controller, prefix)]
+            continue
+
+        full_name = prefix + "." + name
+        if full_name in callbacks(controller):
+            for callback in callbacks(controller)[full_name]:
+                callback(value)
+            continue
+
+        prefix = full_name + "."
+        prefix_length = len(prefix)
+        for controlled in callbacks(controller):
+            if controlled[:prefix_length] == prefix:
+                set_controllers(value, controlled[prefix_length:], controller, full_name)
+
+
+def set_controllers(obj, controlled_name, controller, prefix):
+    while obj:
+        if prefix:
+            if hasattr(obj, ATTRIBUTE_CONTROLLERS):
+                getattr(obj, ATTRIBUTE_CONTROLLERS)[(controller, prefix)] = True
+            else:
+                setattr(obj, ATTRIBUTE_CONTROLLERS, {(controller, prefix): True})
+        parts = controlled_name.split(".", 1)
+        if len(parts) < 2:
+            break
+        new_prefix, controlled_name = parts
+        obj = getattr(obj, new_prefix, None)
+        if prefix:
+            prefix += '.'
+        prefix += new_prefix
+
+
+class OWComponent:
+    def __init__(self, widget):
+        if widget.settingsHandler:
+            widget.settingsHandler.initialize(self)
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        notify_changed(self, key, value)
 
 
 def miscellanea(control, box, parent,
@@ -329,7 +382,7 @@ def label(widget, master, label, labelWidth=None, *misc):
     lbl = QtGui.QLabel("", widget)
     reprint = CallFrontLabel(lbl, label, master)
     for mo in __re_label.finditer(label):
-        master.controlledAttributes[mo.group("value")] = reprint
+        getattr(master, CONTROLLED_ATTRIBUTES)[mo.group("value")] = reprint
     reprint()
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
@@ -505,10 +558,10 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :param callbackOnReturn: if `True`, the spin box has an associated icon
         that must be clicked to confirm the value (default: False)
     :type callbackOnReturn: bool
-    :param checked: if non-empty, a check box is put in front of the spin box;
+    :param checked: if not None, a check box is put in front of the spin box;
         when unchecked, the spin box is disabled. Argument `checked` gives the
         name of the master's attribute given whose value is synchronized with
-        the check box's state (default: "").
+        the check box's state (default: None).
     :type checked: str
     :param checkCallback: a callback function that is called when the check
         box's state is changed
@@ -604,7 +657,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
 # noinspection PyTypeChecker
 def doubleSpin(widget, master, value, minv, maxv, step=1, box=None, label=None,
                labelWidth=None, orientation=None, callback=None,
-               controlWidth=None, callbackOnReturn=False, checked="",
+               controlWidth=None, callbackOnReturn=False, checked=None,
                checkCallback=None, posttext=None,
                alignment=Qt.AlignLeft, keyboardTracking=True,
                decimals=None, **misc):
@@ -911,7 +964,7 @@ def button(widget, master, label, callback=None, width=None, height=None,
 
 
 def toolButton(widget, master, label="", callback=None,
-               width=None, height=None):
+               width=None, height=None, tooltip=None):
     """
     Insert a tool button. Calls :obj:`button`
 
@@ -930,7 +983,7 @@ def toolButton(widget, master, label="", callback=None,
     :rtype: PyQt4.QtGui.QToolButton
     """
     return button(widget, master, label, callback, width, height,
-                  buttonType=QtGui.QToolButton)
+                  buttonType=QtGui.QToolButton, tooltip=tooltip)
 
 
 def createAttributePixmap(char, background=Qt.black, color=Qt.white):
@@ -1052,13 +1105,13 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
 
     if value is not None:
         clist = getdeepattr(master, value)
-        if isinstance(clist, ControlledList):
+        if not isinstance(clist, ControlledList):
             clist = ControlledList(clist, lb)
             master.__setattr__(value, clist)
     if labels is not None:
         setattr(master, labels, getdeepattr(master, labels))
-        if hasattr(master, "controlledAttributes"):
-            master.controlledAttributes[labels] = CallFrontListBoxLabels(lb)
+        if hasattr(master, CONTROLLED_ATTRIBUTES):
+            getattr(master, CONTROLLED_ATTRIBUTES)[labels] = CallFrontListBoxLabels(lb)
     if value is not None:
         setattr(master, value, getdeepattr(master, value))
     connectControl(lb, master, value, callback, "itemSelectionChanged()",
@@ -1406,150 +1459,49 @@ class OrangeListBox(QtGui.QListWidget):
         """
         self.master = master
         super().__init__(*args)
-        self.enableDragDrop = enableDragDrop
-        self.dragDropCallback = dragDropCallback
-        self.dataValidityCallback = dataValidityCallback
-        self.shownAttributes = None
+        self.drop_callback = dragDropCallback
+        self.valid_data_callback = dataValidityCallback
         if not sizeHint:
-            self.defaultSizeHint = QtCore.QSize(150, 100)
+            self.size_hint = QtCore.QSize(150, 100)
         else:
-            self.defaultSizeHint = sizeHint
+            self.size_hint = sizeHint
         if enableDragDrop:
-            self.setDragEnabled(1)
-            self.setAcceptDrops(1)
-            self.setDropIndicatorShown(1)
-            self.dragStartPosition = 0
-
-    # TODO This method is not called from any place in this module nor from any
-    # of currently ported widgets. Moreover, it seems it doesn't work at all:
-    # it referred to some (global?!) variable shownAttributes. I changed it to
-    # self.shownAttributes, set it to None in the constructor and added a quick
-    # fix to setAttributes. This doesn't break anything, but maybe fixes an
-    # error that never occurred in a function that should be removed.
-    def setAttributes(self, data, attributes):
-        if self.shownAttributes and isinstance(self.shownAttributes[0], tuple):
-            setattr(self.master, self.ogLabels, attributes)
-        else:
-            domain = data.domain
-            setattr(self.master, self.ogLabels,
-                    [(domain[a].name, domain[a].var_type) for a in attributes])
+            self.setDragEnabled(True)
+            self.setAcceptDrops(True)
+            self.setDropIndicatorShown(True)
 
     def sizeHint(self):
-        return self.defaultSizeHint
-
-    def startDrag(self, supportedActions):
-        if not self.enableDragDrop:
-            return
-        drag = QtGui.QDrag(self)
-        mime = QtCore.QMimeData()
-        if not self.ogValue:
-            selectedItems = [i for i in range(self.count())
-                             if self.item(i).isSelected()]
-        else:
-            selectedItems = getdeepattr(self.master, self.ogValue, default=[])
-        mime.setText(str(selectedItems))
-        mime.source = self
-        drag.setMimeData(mime)
-        drag.start(Qt.MoveAction)
+        return self.size_hint
 
     def dragEnterEvent(self, ev):
-        if not self.enableDragDrop:
-            return
-        if self.dataValidityCallback:
-            return self.dataValidityCallback(ev)
-        if ev.mimeData().hasText():
-            ev.accept()
-        else:
-            ev.ignore()
-
-    def dragMoveEvent(self, ev):
-        if not self.enableDragDrop:
-            return
-        if self.dataValidityCallback:
-            return self.dataValidityCallback(ev)
-        if ev.mimeData().hasText():
+        super().dragEnterEvent(ev)
+        if self.valid_data_callback:
+            self.valid_data_callback(ev)
+        elif isinstance(ev.source(), OrangeListBox):
             ev.setDropAction(Qt.MoveAction)
             ev.accept()
         else:
             ev.ignore()
 
     def dropEvent(self, ev):
-        if not self.enableDragDrop:
-            return
-        if ev.mimeData().hasText():
-            item = self.itemAt(ev.pos())
-            if item:
-                index = self.indexFromItem(item).row()
-            else:
-                index = self.count()
+        ev.setDropAction(Qt.MoveAction)
+        super().dropEvent(ev)
 
-            source = ev.mimeData().source
-            selectedItemIndices = eval(ev.mimeData().text())
+        items = self.update_master()
+        if ev.source() is not self:
+            ev.source().update_master(exclude=items)
 
-            if self.ogLabels is not None and self.ogValue is not None:
-                allSourceItems = \
-                    getdeepattr(source.widget, source.ogLabels, [])
-                selectedItems =\
-                    [allSourceItems[i] for i in selectedItemIndices]
-                allDestItems = getdeepattr(self.master, self.ogLabels, [])
-                if source is not self:
-                    # TODO: optimize this code. use the fact that
-                    # selectedItemIndices is a sorted list
-                    setattr(source.widget, source.ogLabels,
-                            [item for item in allSourceItems
-                             if item not in selectedItems])
-                    setattr(self.master, self.ogLabels,
-                            allDestItems[:index] + selectedItems +
-                            allDestItems[index:])
-                    setattr(source.widget, source.ogValue, [])
-                else:
-                    items = [item for item in allSourceItems
-                             if item not in selectedItems]
-                    if index < len(allDestItems):
-                        # if we are dropping items on a selected item, we have
-                        # to select some previous unselected item as the drop
-                        # target
-                        while index > 0 and index in getdeepattr(
-                                self.master, self.ogValue, []):
-                            index -= 1
-                        destItem = allDestItems[index]
-                        index = items.index(destItem)
-                    else:
-                        index = max(0, index - len(selectedItems))
-                    setattr(self.master, self.ogLabels,
-                            items[:index] + selectedItems + items[index:])
-                setattr(self.master, self.ogValue,
-                        list(range(index, index + len(selectedItems))))
+        if self.drop_callback:
+            self.drop_callback()
 
-            else:  # if we don't have variables ogValue and ogLabel
-                if source is not self:
-                    self.insertItems(source.selectedItems())
-                    for index in selectedItemIndices[::-1]:
-                        source.takeItem(index)
-                else:
-                    if index < self.count():
-                        # if we are dropping items on a selected item, we have
-                        # to select some previous unselected item as the drop
-                        # target
-                        while index > 0 and self.item(index).isSelected():
-                            index -= 1
-                    items = [source.item(i) for i in selectedItemIndices]
-                    for ind in selectedItemIndices[::-1]:
-                        source.takeItem(ind)
-                        if ind <= index:
-                            index -= 1
-                    for item in items[::-1]:
-                        self.insertItem(index, item)
-                    self.clearSelection()
-                    for i in range(index, index + len(items)):
-                        self.item(i).setSelected(1)
+    def update_master(self, exclude=()):
+        control_list = [self.item(i).data(Qt.UserRole) for i in range(self.count()) if self.item(i).data(Qt.UserRole) not in exclude]
+        if self.ogLabels:
+            master_list = getattr(self.master, self.ogLabels)
 
-            if self.dragDropCallback:
-                self.dragDropCallback()
-            ev.setDropAction(Qt.MoveAction)
-            ev.accept()
-        else:
-            ev.ignore()
+            if master_list != control_list:
+                setattr(self.master, self.ogLabels, control_list)
+        return control_list
 
     def updateGeometries(self):
         # A workaround for a bug in Qt
@@ -1763,7 +1715,7 @@ class collapsableWidgetBox(QtGui.QGroupBox):
             self.callback()
 
     def updateControls(self):
-        val = self.master.getattr_deep(self.value)
+        val = getdeepattr(self.master, self.value)
         width = self.width()
         self.setChecked(val)
         self.setFlat(not val)
@@ -1952,8 +1904,8 @@ def connectControl(control, master, value, f, signal,
         if signal:
             connectControlSignal(control, signal, cback)
         cback.opposite = cfront
-        if value and cfront and hasattr(master, "controlledAttributes"):
-            master.controlledAttributes[value] = cfront
+        if value and cfront and hasattr(master, CONTROLLED_ATTRIBUTES):
+            getattr(master, CONTROLLED_ATTRIBUTES)[value] = cfront
 
     cfunc = cfunc or f and FunctionCallback(master, f)
     if cfunc:
@@ -2245,17 +2197,21 @@ class CallFrontListBox(ControlledCallFront):
 class CallFrontListBoxLabels(ControlledCallFront):
     unknownType = None
 
-    def action(self, value):
+    def action(self, values):
         self.control.clear()
-        if value:
-            for i in value:
-                if isinstance(i, tuple):
-                    if isinstance(i[1], int):
-                        i = QtGui.QListWidgetItem(attributeIconDict[i[1]],
-                                                  i[0])
+        if values:
+            for value in values:
+                if isinstance(value, tuple):
+                    text, icon = value
+                    if isinstance(icon, int):
+                        item = QtGui.QListWidgetItem(attributeIconDict[icon], text)
                     else:
-                        i = QtGui.QListWidgetItem(i[0], i[1])
-                self.control.addItem(i)
+                        item = QtGui.QListWidgetItem(icon, text)
+                else:
+                    item = QtGui.QListWidgetItem(value)
+
+                item.setData(Qt.UserRole, value)
+                self.control.addItem(item)
 
 
 class CallFrontLabel:
@@ -2658,30 +2614,24 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
 
     def get_font(self, option, index):
         font = index.data(Qt.FontRole)
-        return QtGui.QFont(font) if font.isValid() else option.font
+        if not isinstance(font, QtGui.QFont):
+            font = option.font
+        return font
 
     def get_text_align(self, _, index):
         align = index.data(Qt.TextAlignmentRole)
-        if align.isValid():
-            align = align.toInt()
-        else:
+        if not isinstance(align, int):
             align = Qt.AlignLeft | Qt.AlignVCenter
+
         return align
 
     def get_bar_ratio(self, _, index):
-        bar_ratio = index.data(BarRatioRole)
-        # TODO: does this work? bar_ratio is not QVariant but already a float
-        ratio, have_ratio = bar_ratio.toDouble()
-        return ratio, have_ratio
+        ratio = index.data(BarRatioRole)
+        return ratio, isinstance(ratio, float)
 
     def get_bar_brush(self, _, index):
         bar_brush = index.data(BarBrushRole)
-        if bar_brush.isValid():
-            if not isinstance(bar_brush, (QtGui.QColor, QtGui.QBrush)):
-                bar_brush = None
-        else:
-            bar_brush = None
-        if bar_brush is None:
+        if not isinstance(bar_brush, (QtGui.QColor, QtGui.QBrush)):
             bar_brush = self.color
         return QtGui.QBrush(bar_brush)
 

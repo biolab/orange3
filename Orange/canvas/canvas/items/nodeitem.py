@@ -373,7 +373,7 @@ class NodeAnchorItem(GraphicsPathObject):
         stroke_path.setCapStyle(Qt.RoundCap)
 
         # Shape is wider (bigger mouse hit area - should be settable)
-        stroke_path.setWidth(9)
+        stroke_path.setWidth(12)
         self.__shape = stroke_path.createStroke(path)
 
         # The full stroke

@@ -7,7 +7,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4 import QtSvg
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.plot import owplot, owconstants, owpoint
 from Orange.data.domain import Domain
@@ -19,6 +19,7 @@ from Orange.data.variable import DiscreteVariable, ContinuousVariable
 class PaintDataPlot(owplot.OWPlot):
     def __init__(self, parent=None, name="None", show_legend=1, axes=None,
                  widget=None):
+
         super().__init__(parent, name, show_legend,
                          axes or [owconstants.xBottom, owconstants.yLeft],
                          widget)
@@ -487,16 +488,16 @@ class OWPaintData(widget.OWWidget):
         ("Zoom", "Zoom", ZoomTool, _i("Dlg_zoom2.png"))
     ]
 
-    _name = "Paint Data"
-    _description = """
+    name = "Paint Data"
+    description = """
     Creates the data by painting on the graph."""
-    _long_description = """
+    long_description = """
     """
-    _icon = "icons/PaintData.svg"
-    _author = "Martin Frlin"
-    _priority = 10
-    _category = "Data"
-    _keywords = ["data", "paint", "create"]
+    icon = "icons/PaintData.svg"
+    author = "Martin Frlin"
+    priority = 10
+    category = "Data"
+    keywords = ["data", "paint", "create"]
     outputs = [("Data", Table)]
 
     commit_on_change = Setting(False)
@@ -504,6 +505,8 @@ class OWPaintData(widget.OWWidget):
     attr2 = Setting("y")
     brushRadius = Setting(75)
     density = Setting(7)
+
+    plot = SettingProvider(PaintDataPlot)
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(parent, signalManager, settings)

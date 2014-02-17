@@ -9,6 +9,8 @@ Plot (``owplot``)
 '''
 
 from PyQt4 import QtCore, QtGui
+from Orange.widgets.gui import OWComponent
+from Orange.widgets.settings import Setting
 
 LeftLegend = 0
 RightLegend = 1
@@ -80,7 +82,7 @@ name_map = {
 }
 
 #@deprecated_members(name_map, wrap_methods=list(name_map.keys()))
-class OWPlot(orangeqt.Plot):
+class OWPlot(orangeqt.Plot, OWComponent):
     """
     The base class for all plots in Orange. It uses the Qt Graphics View Framework
     to draw elements on a graph.
@@ -323,6 +325,13 @@ class OWPlot(orangeqt.Plot):
 
     point_settings = ["point_width", "alpha_value"]
     plot_settings = ["show_legend", "show_grid"]
+
+    alpha_value = Setting(255)
+
+    show_legend = Setting(False)
+    show_grid = Setting(False)
+
+
     appearance_settings = ["antialias_plot", "animate_plot", "animate_points", "disable_animations_threshold", "auto_adjust_performance"]
 
     def settings_list(self, graph_name, settings):
@@ -337,9 +346,9 @@ class OWPlot(orangeqt.Plot):
             and add custom axes with :meth:`add_axis` or :meth:`add_custom_axis`
         """
         orangeqt.Plot.__init__(self, parent)
+        OWComponent.__init__(self, widget)
         self.widget = widget
         self.parent_name = name
-        self.show_legend = show_legend
         self.title_item = None
 
         self.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
@@ -368,7 +377,6 @@ class OWPlot(orangeqt.Plot):
         # OWScatterPlot needs these:
         self.point_width = 5
         self.show_filled_symbols = True
-        self.alpha_value = 255
         self.show_grid = True
 
         self.curveSymbols = list(range(13))
@@ -646,7 +654,7 @@ class OWPlot(orangeqt.Plot):
         elif axis_id in self.data_range:
             del self.data_range[axis_id]
 
-    def set_axis_labels(self, axis_id, labels):
+    def set_axis_labels(self, axis_id, labels, values=None):
         '''
             Sets the labels of axis ``axis_id`` to ``labels``. This is used for axes displaying a discrete data type.
 
@@ -661,7 +669,7 @@ class OWPlot(orangeqt.Plot):
         if axis_id in self._bounds_cache:
             del self._bounds_cache[axis_id]
         self._transform_cache = {}
-        self.axes[axis_id].set_labels(labels)
+        self.axes[axis_id].set_labels(labels, values)
 
     def set_axis_scale(self, axis_id, min, max, step_size=0):
         '''
@@ -845,11 +853,12 @@ class OWPlot(orangeqt.Plot):
     def plot_data(self, xData, yData, colors, labels, shapes, sizes):
         pass
 
-    def add_axis(self, axis_id, title = '', title_above = False, title_location = AxisMiddle, line = None, arrows = 0, zoomable = False):
+    def add_axis(self, axis_id, title='', title_above=False, title_location=AxisMiddle,
+                 line=None, arrows=0, zoomable=False, bounds=None):
         '''
             Creates an :obj:`OrangeWidgets.plot.OWAxis` with the specified ``axis_id`` and ``title``.
         '''
-        a = OWAxis(axis_id, title, title_above, title_location, line, arrows, self)
+        a = OWAxis(axis_id, title, title_above, title_location, line, arrows, self, bounds=bounds)
         self.scene().addItem(a)
         a.zoomable = zoomable
         a.update_callback = self.replot
@@ -858,7 +867,7 @@ class OWPlot(orangeqt.Plot):
         self._transform_cache = {}
         self.axes[axis_id] = a
         if not axis_id in CartesianAxes:
-            self.setShowAxisTitle(axis_id, True)
+            self.set_show_axis_title(axis_id, True)
         return a
 
     def remove_all_axes(self, user_only = True):
@@ -893,10 +902,10 @@ class OWPlot(orangeqt.Plot):
         pass
 
     def clear(self):
-        '''
+        """
             Clears the plot, removing all curves, markers and tooltips.
             Axes and the grid are not removed
-        '''
+        """
         for i in self.plot_items():
             if i is not self.grid_curve:
                 self.remove_item(i)
@@ -910,9 +919,9 @@ class OWPlot(orangeqt.Plot):
         self.update_grid()
 
     def clear_markers(self):
-        '''
+        """
             Removes all markers added with :meth:`add_marker` from the plot
-        '''
+        """
         for item,x,y,x_axis,y_axis in self._marker_items:
             item.detach()
         self._marker_items = []
@@ -1724,7 +1733,6 @@ class OWPlot(orangeqt.Plot):
         self.zoom_rect = r
 
     def zoom_to_rect(self, rect):
-        print(len(self.zoom_stack))
         self.ensure_inside(rect, self.graph_area)
 
         # add to zoom_stack if zoom_rect is larger
@@ -1734,7 +1742,6 @@ class OWPlot(orangeqt.Plot):
         self.animate(self, 'zoom_rect', rect, start_val = self.get_zoom_rect())
 
     def zoom_back(self):
-        print(len(self.zoom_stack))
         if self.zoom_stack:
             rect = self.zoom_stack.pop()
             self.animate(self, 'zoom_rect', rect, start_val = self.get_zoom_rect())

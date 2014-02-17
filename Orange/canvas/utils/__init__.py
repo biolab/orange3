@@ -1,4 +1,3 @@
-from .qtcompat import sip_getapi, toPyObject
 from functools import reduce
 
 

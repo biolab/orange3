@@ -8,7 +8,6 @@ import logging
 
 from .. import config
 from ..utils.settings import SettingChangedEvent
-from ..utils import toPyObject
 
 from ..utils.propertybindings import (
     AbstractBoundProperty, PropertyBinding, BindingManager
@@ -30,7 +29,7 @@ log = logging.getLogger(__name__)
 class UserDefaultsPropertyBinding(AbstractBoundProperty):
     """
     A Property binding for a setting in a
-    :class:`Orange.OrangeCanvas.utility.settings.Settings` instance.
+    :class:`Orange.canvas.utility.settings.Settings` instance.
 
     """
     def __init__(self, obj, propertyName, parent=None):
