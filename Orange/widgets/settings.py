@@ -76,10 +76,10 @@ class SettingProvider:
         for name, setting in self.settings.items():
             if data and name in data:
                 setattr(instance, name, data[name])
-            elif not isinstance(setting.default, _immutables):
-                setattr(instance, name, copy.copy(setting.default))
-            else:
+            elif isinstance(setting.default, _immutables):
                 setattr(instance, name, setting.default)
+            else:
+                setattr(instance, name, copy.copy(setting.default))
 
         for name, provider in self.providers.items():
             if data and name in data:
@@ -91,14 +91,14 @@ class SettingProvider:
     def store_initialization_data(self, initialization_data):
         """Store initialization data for later use.
 
-        Used when settingsHandler is initialized, but member for this provider
+        Used when settings handler is initialized, but member for this provider
         does not exists yet (because handler.initialize is called in __new__, but
         member will be created in __init__.
         """
         self.initialization_data = initialization_data
 
     def pack(self, instance, packer=None):
-        """Pack settings in name: value dict.
+        """Pack instance settings in name: value dict.
 
         packer: optional packing function
                 it will be called with setting and instance parameters and should
@@ -215,8 +215,11 @@ class SettingsHandler:
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
         defaults = pickle.load(settings_file)
-        if isinstance(defaults, dict):
-            self.defaults = defaults
+        self.defaults = {
+            key: value
+            for key, value in defaults
+            if not isinstance(value, Setting)
+        }
 
     def write_defaults(self):
         """Write (global) defaults for this widget class to a file.
@@ -238,7 +241,7 @@ class SettingsHandler:
 
     def initialize(self, instance, data=None):
         """
-        Initialize the widget's settings.
+        Initialize widget's settings.
 
         Replace all instance settings with their default values.
 
@@ -289,13 +292,6 @@ class SettingsHandler:
     def fast_save(self, widget, name, value):
         """Store the (changed) widget's setting immediately to the context."""
         pass
-
-    def get_provider(self, cls):
-        """Return registered provider responsible for managing the settings of the cls."""
-        if not isinstance(cls, type):
-            cls = cls.__class__
-
-        return self.provider.get_provider(cls)
 
     @staticmethod
     def update_packed_data(data, name, value):
