@@ -648,7 +648,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return self.__blocking
 
     def resetSettings(self):
-        self.settingsHandler.initialize(self)
+        self.settingsHandler.reset_settings(self)
 
 
 def blocking(method):

@@ -307,6 +307,11 @@ class SettingsHandler:
         self.provider = SettingProvider(widget_class)
         self.read_defaults()
 
+    def reset_settings(self, instance):
+        for setting, data, instance in self.provider.traverse_settings(instance=instance):
+            if type(setting) == Setting:
+                setattr(instance, setting.name, setting.default)
+
 
 class ContextSetting(Setting):
     OPTIONAL = 0
