@@ -647,6 +647,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         """
         return self.__blocking
 
+    def resetSettings(self):
+        self.settingsHandler.initialize(self)
+
 
 def blocking(method):
     """ Return method that sets blocking flag while executing
