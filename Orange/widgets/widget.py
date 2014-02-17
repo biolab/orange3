@@ -481,7 +481,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         pass
 
     def saveSettings(self):
-        self.settingsHandler.update_class_defaults(self)
+        self.settingsHandler.update_defaults(self)
 
     # this function is only intended for derived classes to send appropriate
     # signals when all settings are loaded

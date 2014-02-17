@@ -275,7 +275,7 @@ class SettingsHandler:
         """
         return self.provider.pack(widget)
 
-    def update_class_defaults(self, widget):
+    def update_defaults(self, widget):
         """
         Writes widget instance's settings to class defaults. Called when the
         widget is deleted.
@@ -381,13 +381,13 @@ class ContextHandler(SettingsHandler):
         data["context_settings"] = widget.context_settings
         return data
 
-    def update_class_defaults(self, widget):
+    def update_defaults(self, widget):
         """Call the inherited method, then merge the local context into the
         global contexts. This make sense only when the widget does not use
         global context (i.e. `widget.context_settings is not
         self.global_contexts`); this happens when the widget was initialized by
         an instance-specific data that was passed to :obj:`initialize`."""
-        super().update_class_defaults(widget)
+        super().update_defaults(widget)
         globs = self.global_contexts
         if widget.context_settings is not globs:
             ids = {id(c) for c in globs}

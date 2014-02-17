@@ -331,7 +331,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         widget = MockWidget()
         handler.initialize(widget)
         widget.string_setting = "12345"
-        handler.update_class_defaults(widget)
+        handler.update_defaults(widget)
         print(handler.saved_defaults)
         self.assertEqual(handler.saved_defaults["string_setting"], "12345")
 
