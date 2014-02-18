@@ -21,7 +21,7 @@ class OWLogisticRegression(widget.OWWidget):
 
     learner_name = settings.Setting("Logistic Regression")
 
-    penalty_type = 1
+    penalty_type = settings.Setting(1)
     dual = settings.Setting(False)
     C = settings.Setting(1.0)
     tol = settings.Setting(0.0001)
@@ -37,16 +37,20 @@ class OWLogisticRegression(widget.OWWidget):
         gui.lineEdit(box, self, "learner_name")
 
         box = gui.widgetBox(self.controlArea, self.tr("Regularization"))
+        form = QtGui.QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
 
-        pbox = gui.widgetBox(box, "Penalty type")
-        pbox.setFlat(True)
-        gui.radioButtonsInBox(
-            pbox, self, "penalty_type", btnLabels=("L1", "L2"),
+        box.layout().addLayout(form)
+
+        buttonbox = gui.radioButtonsInBox(
+            box, self, "penalty_type", btnLabels=("L1", "L2"),
             orientation="horizontal"
         )
+        form.addRow(self.tr("Penalty type:"), buttonbox)
 
-        gui.doubleSpin(box, self, "C", 0.0, 1024.0, step=0.0001,
-                       label="Reg (C)")
+        spin = gui.doubleSpin(box, self, "C", 0.0, 1024.0, step=0.0001)
+
+        form.addRow("Reg (C):", spin)
 
         box = gui.widgetBox(self.controlArea, "Numerical Tolerance")
         gui.doubleSpin(box, self, "tol", 1e-7, 1e-3, 5e-7)
@@ -88,3 +92,11 @@ class OWLogisticRegression(widget.OWWidget):
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+
+
+if __name__ == "__main__":
+    app = QtGui.QApplication([])
+    w = OWLogisticRegression()
+    w.set_data(Orange.data.Table("zoo"))
+    w.show()
+    app.exec_()
