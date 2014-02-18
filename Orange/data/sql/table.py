@@ -485,7 +485,7 @@ class SqlTable(table.Table):
     def _sql_get_distinct_values(self, field_name):
         sql = ["SELECT DISTINCT", self.quote_identifier(field_name),
                "FROM", self.quote_identifier(self.table_name),
-               "ORDER BY", field_name,
+               "ORDER BY", self.quote_identifier(field_name),
                "LIMIT 21"]
         return self._execute_sql_query(" ".join(sql))
 
