@@ -3,6 +3,7 @@ import time
 import copy
 import itertools
 import pickle
+import warnings
 
 from Orange.canvas.utils import environ
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
@@ -207,8 +208,9 @@ class SettingsHandler:
             settings_file = open(filename, "rb")
             try:
                 self.read_defaults_file(settings_file)
-            except:
-                pass
+            except Exception as e:
+                warnings.warn("Could not read defaults for widget %s.\n" % self.widget_class +
+                              "The following error occurred:\n\n%s" % e)
             finally:
                 settings_file.close()
 
@@ -217,7 +219,7 @@ class SettingsHandler:
         defaults = pickle.load(settings_file)
         self.defaults = {
             key: value
-            for key, value in defaults
+            for key, value in defaults.items()
             if not isinstance(value, Setting)
         }
 
