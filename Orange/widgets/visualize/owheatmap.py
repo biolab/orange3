@@ -70,12 +70,12 @@ class OWHeatmap(widget.OWWidget):
     Data is first drawn with less precision (big rects) and gets updated to more detail (smaller rects).
     This takes some time, so the heatmap gets updated, when more detail is calculated.
     """
-    _name = "Heat map"
-    _description = "Draws a heat map."
-    #_long_description = """Long description"""
+    name = "Heat map"
+    description = "Draws a heat map."
+    # _long_description = """Long description"""
     # _icon = "../icons/Dlg_zoom.png"
-    _author = "Jure Bergant"
-    _priority = 100
+    author = "Jure Bergant"
+    priority = 100
 
     inputs = [("Data", Table, "data")]
     outputs = [("Sampled data", Table)]
@@ -626,3 +626,12 @@ class OWHeatmap(widget.OWWidget):
         self.regionSharpened = False
         self.sharpeningRegion = False
         # self.hmi = None
+
+
+if __name__ == "__main__":
+    a = QtGui.QApplication([])
+    w = OWHeatmap()
+    w.show()
+    d = Orange.data.Table('iris')
+    w.data(d)
+    a.exec_()
