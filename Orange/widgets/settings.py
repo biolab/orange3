@@ -3,6 +3,7 @@ import time
 import copy
 import itertools
 import pickle
+import warnings
 
 from Orange.canvas.utils import environ
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
@@ -207,8 +208,9 @@ class SettingsHandler:
             settings_file = open(filename, "rb")
             try:
                 self.read_defaults_file(settings_file)
-            except:
-                pass
+            except Exception as e:
+                warnings.warn("Could not read defaults for widget %s.\n" % self.widget_class +
+                              "The following error occurred:\n\n%s" % e)
             finally:
                 settings_file.close()
 
@@ -217,7 +219,7 @@ class SettingsHandler:
         defaults = pickle.load(settings_file)
         self.defaults = {
             key: value
-            for key, value in defaults
+            for key, value in defaults.items()
             if not isinstance(value, Setting)
         }
 
@@ -249,6 +251,17 @@ class SettingsHandler:
         :param data: dict of values that will be used instead of defaults.
         :type data: `dict` or `bytes` that unpickle into a `dict`
         """
+        provider = self._select_provider(instance)
+
+        if isinstance(data, bytes):
+            data = pickle.loads(data)
+
+        if provider is self.provider:
+            data = self._add_defaults(data)
+
+        provider.initialize(instance, data)
+
+    def _select_provider(self, instance):
         provider = self.provider.get_provider(instance.__class__)
         if provider is None:
             import warnings
@@ -258,12 +271,15 @@ class SettingsHandler:
                       % (instance.__class__, self.widget_class)
             warnings.warn(message)
             provider = SettingProvider(instance.__class__)
+        return provider
 
+    def _add_defaults(self, data):
         if data is None:
-            data = self.defaults
-        elif isinstance(data, bytes):
-            data = pickle.loads(data)
-        provider.initialize(instance, data)
+            return self.defaults
+
+        new_data = self.defaults.copy()
+        new_data.update(data)
+        return new_data
 
     def pack_data(self, widget):
         """

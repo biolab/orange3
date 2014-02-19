@@ -32,7 +32,7 @@ TRANSPARENT = 64
 HIDDEN = 0
 
 
-class OWParallelGraph(OWPlot, ScaleData, SettingProvider):
+class OWParallelGraph(OWPlot, ScaleData):
     show_distributions = Setting(False)
     show_attr_values = Setting(True)
     show_statistics = Setting(default=False)
