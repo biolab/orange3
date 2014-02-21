@@ -1977,8 +1977,7 @@ class ValueCallbackCombo(ValueCallback):
 
     def __call__(self, value):
         value = str(value)
-        return ValueCallback(self,
-                             self.control2attributeDict.get(value, value))
+        return super().__call__(self.control2attributeDict.get(value, value))
 
 
 class ValueCallbackLineEdit(ControlledCallback):
