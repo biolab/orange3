@@ -3,8 +3,11 @@ import time
 import copy
 import itertools
 import pickle
+import warnings
+
 from Orange.canvas.utils import environ
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
+
 
 __all__ = ["Setting", "SettingsHandler",
            "ContextSetting", "ContextHandler",
@@ -47,7 +50,9 @@ class SettingProvider:
         self.name = None
         self.provider_class = provider_class
         self.providers = {}
+        """:type: dict[str, SettingProvider]"""
         self.settings = {}
+        """:type: dict[str, Setting]"""
         self.initialization_data = None
 
         for name in dir(provider_class):
@@ -58,39 +63,6 @@ class SettingProvider:
             if isinstance(value, SettingProvider):
                 value.name = name
                 self.providers[name] = value
-
-    def set_defaults(self, data):
-        """Replace settings from class definitions
-        with ones provided in dictionary data."""
-        for name in self.settings:
-            if name in data:
-                self.settings[name] = data[name]
-
-        for name in self.providers:
-            if name in data:
-                self.providers[name].set_defaults(data[name])
-
-    def get_defaults(self):
-        """Return a dict mapping setting names to default Setting instances
-        and provider names to such dicts.
-        """
-        settings = dict(self.settings)
-        settings.update({
-            name: provider.get_defaults()
-            for name, provider in self.providers.items()
-        })
-        return settings
-
-    def update_defaults(self, instance):
-        """Update default values of settings with values from instance."""
-
-        for name, setting in self.settings.items():
-            if hasattr(instance, name):
-                setting.default = getattr(instance, name)
-
-        for name, provider in self.providers.items():
-            if hasattr(instance, name):
-                provider.update_defaults(getattr(instance, name))
 
     def initialize(self, instance, data=None):
         """Initialize instance settings to their default values.
@@ -105,10 +77,10 @@ class SettingProvider:
         for name, setting in self.settings.items():
             if data and name in data:
                 setattr(instance, name, data[name])
-            elif not isinstance(setting.default, _immutables):
-                setattr(instance, name, copy.copy(setting.default))
-            else:
+            elif isinstance(setting.default, _immutables):
                 setattr(instance, name, setting.default)
+            else:
+                setattr(instance, name, copy.copy(setting.default))
 
         for name, provider in self.providers.items():
             if data and name in data:
@@ -120,14 +92,14 @@ class SettingProvider:
     def store_initialization_data(self, initialization_data):
         """Store initialization data for later use.
 
-        Used when settingsHandler is initialized, but member for this provider
+        Used when settings handler is initialized, but member for this provider
         does not exists yet (because handler.initialize is called in __new__, but
         member will be created in __init__.
         """
         self.initialization_data = initialization_data
 
     def pack(self, instance, packer=None):
-        """Pack settings in name: value dict.
+        """Pack instance settings in name: value dict.
 
         packer: optional packing function
                 it will be called with setting and instance parameters and should
@@ -150,22 +122,15 @@ class SettingProvider:
         })
         return packed_settings
 
-    def unpack(self, instance, data, unpack=None):
+    def unpack(self, instance, data):
         """Restore settings from data to the instance.
 
         instance: instance to restore settings to
         data: dictionary containing packed data
-        unpacker: optional unpacking function
-                  it will be called with setting, instance and data parameters and should
-                  set setting value to the instance.
         """
-        if unpack is None:
-            # noinspection PyShadowingNames
-            def unpack(setting, data, instance):
-                if setting.name in data and instance is not None:
-                    setattr(instance, setting.name, data[setting.name])
-
-        self.for_each_setting(data, instance, on_setting=unpack)
+        for setting, data, instance in self.traverse_settings(data, instance):
+            if setting.name in data and instance is not None:
+                setattr(instance, setting.name, data[setting.name])
 
     def get_provider(self, provider_class):
         """Return provider for provider_class.
@@ -181,23 +146,25 @@ class SettingProvider:
             if provider:
                 return provider
 
-    def for_each_setting(self, data=None, instance=None, on_setting=None):
-        """Execute on_setting for each setting in this and child providers.
+    def traverse_settings(self, data=None, instance=None):
+        """Generator of tuples (setting, data, instance) for each setting
+        in this and child providers..
 
-        data: dictionary with setting values
-        instance: instance matching setting_provider
-        on_setting: function(setting, data, instance)
+        :param data: dictionary with setting values
+        :type data: dict
+        :param instance: instance matching setting_provider
         """
         data = data if data is not None else {}
         select_data = lambda x: data.get(x.name, {})
         select_instance = lambda x: getattr(instance, x.name, None)
 
         for setting in self.settings.values():
-            if on_setting:
-                on_setting(setting, data, instance)
+            yield setting, data, instance
 
         for provider in self.providers.values():
-            provider.for_each_setting(select_data(provider), select_instance(provider), on_setting)
+            for setting, component_data, component_instance in \
+                    provider.traverse_settings(select_data(provider), select_instance(provider)):
+                yield setting, component_data, component_instance
 
 
 class SettingsHandler:
@@ -210,7 +177,9 @@ class SettingsHandler:
         when SettingsHandler.create is called.
         """
         self.widget_class = None
-        self.default_provider = None
+        self.provider = None
+        """:type: SettingProvider"""
+        self.defaults = {}
 
     @staticmethod
     def create(widget_class, template=None):
@@ -239,15 +208,20 @@ class SettingsHandler:
             settings_file = open(filename, "rb")
             try:
                 self.read_defaults_file(settings_file)
-            except:
-                pass
+            except Exception as e:
+                warnings.warn("Could not read defaults for widget %s.\n" % self.widget_class +
+                              "The following error occurred:\n\n%s" % e)
             finally:
                 settings_file.close()
 
     def read_defaults_file(self, settings_file):
         """Read (global) defaults for this widget class from a file."""
-        default_settings = pickle.load(settings_file)
-        self.default_provider.set_defaults(default_settings)
+        defaults = pickle.load(settings_file)
+        self.defaults = {
+            key: value
+            for key, value in defaults.items()
+            if not isinstance(value, Setting)
+        }
 
     def write_defaults(self):
         """Write (global) defaults for this widget class to a file.
@@ -265,12 +239,11 @@ class SettingsHandler:
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
-        default_settings = self.default_provider.get_defaults()
-        pickle.dump(default_settings, settings_file, -1)
+        pickle.dump(self.defaults, settings_file, -1)
 
     def initialize(self, instance, data=None):
         """
-        Initialize the widget's settings.
+        Initialize widget's settings.
 
         Replace all instance settings with their default values.
 
@@ -278,17 +251,35 @@ class SettingsHandler:
         :param data: dict of values that will be used instead of defaults.
         :type data: `dict` or `bytes` that unpickle into a `dict`
         """
-        provider = self.default_provider.get_provider(instance.__class__)
-        if provider is None:
-            import warnings
-            message = "%s has not been declared as setting provider in %s. " \
-                      "Its settings will not be loaded." % (instance.__class__, self.widget_class)
-            warnings.warn(message)
-            return
+        provider = self._select_provider(instance)
 
         if isinstance(data, bytes):
             data = pickle.loads(data)
+
+        if provider is self.provider:
+            data = self._add_defaults(data)
+
         provider.initialize(instance, data)
+
+    def _select_provider(self, instance):
+        provider = self.provider.get_provider(instance.__class__)
+        if provider is None:
+            import warnings
+
+            message = "%s has not been declared as setting provider in %s. " \
+                      "Settings will not be saved/loaded properly. Defaults will be used instead." \
+                      % (instance.__class__, self.widget_class)
+            warnings.warn(message)
+            provider = SettingProvider(instance.__class__)
+        return provider
+
+    def _add_defaults(self, data):
+        if data is None:
+            return self.defaults
+
+        new_data = self.defaults.copy()
+        new_data.update(data)
+        return new_data
 
     def pack_data(self, widget):
         """
@@ -301,29 +292,22 @@ class SettingsHandler:
         Inherited classes add other data, in particular widget-specific
         local contexts.
         """
-        return self.default_provider.pack(widget)
+        return self.provider.pack(widget)
 
-    def update_class_defaults(self, widget):
+    def update_defaults(self, widget):
         """
         Writes widget instance's settings to class defaults. Called when the
         widget is deleted.
         """
-        self.default_provider.update_defaults(widget)
+        self.defaults = self.provider.pack(widget)
         self.write_defaults()
 
     # TODO would we like this method to store the changed settings back to
     # class defaults, so the new widgets added to the schema later would have
     # different defaults? I guess so...
     def fast_save(self, widget, name, value):
-        """Store the (changed) widget's setting immediatelly to the context."""
+        """Store the (changed) widget's setting immediately to the context."""
         pass
-
-    def get_provider(self, cls):
-        """Return registered provider responsible for managing the settings of the cls."""
-        if not isinstance(cls, type):
-            cls = cls.__class__
-
-        return self.default_provider.get_provider(cls)
 
     @staticmethod
     def update_packed_data(data, name, value):
@@ -336,8 +320,13 @@ class SettingsHandler:
     def bind(self, widget_class):
         """Bind settings handler instance to widget_class."""
         self.widget_class = widget_class
-        self.default_provider = SettingProvider(widget_class)
+        self.provider = SettingProvider(widget_class)
         self.read_defaults()
+
+    def reset_settings(self, instance):
+        for setting, data, instance in self.provider.traverse_settings(instance=instance):
+            if type(setting) == Setting:
+                setattr(instance, setting.name, setting.default)
 
 
 class ContextSetting(Setting):
@@ -409,13 +398,13 @@ class ContextHandler(SettingsHandler):
         data["context_settings"] = widget.context_settings
         return data
 
-    def update_class_defaults(self, widget):
+    def update_defaults(self, widget):
         """Call the inherited method, then merge the local context into the
         global contexts. This make sense only when the widget does not use
         global context (i.e. `widget.context_settings is not
         self.global_contexts`); this happens when the widget was initialized by
         an instance-specific data that was passed to :obj:`initialize`."""
-        super().update_class_defaults(widget)
+        super().update_defaults(widget)
         globs = self.global_contexts
         if widget.context_settings is not globs:
             ids = {id(c) for c in globs}
@@ -508,7 +497,7 @@ class ContextHandler(SettingsHandler):
 
     def bind(self, widget_class):
         super().bind(widget_class)
-        self.analyze_settings(self.default_provider, "")
+        self.analyze_settings(self.provider, "")
 
     def analyze_settings(self, provider, prefix):
         for setting in provider.settings.values():
@@ -618,11 +607,10 @@ class DomainContextHandler(ContextHandler):
 
         excluded = set()
 
-        def unpack(setting, data, instance):
-            nonlocal excluded
-
+        for setting, data, instance in \
+                self.provider.traverse_settings(data=context.values, instance=widget):
             if not isinstance(setting, ContextSetting) or setting.name not in data:
-                return
+                continue
 
             value = self.decode_setting(setting, data[setting.name])
             setattr(instance, setting.name, value)
@@ -660,8 +648,6 @@ class DomainContextHandler(ContextHandler):
                 setattr(instance, setting.name, new_labels)  # labels might have changed
                 setattr(instance, setting.selected, new_selected)
 
-        self.default_provider.unpack(widget, context.values, unpack=unpack)
-
         if self.reservoir is not None:
             get_attribute = lambda name: context.attributes.get(name, None)
             get_meta = lambda name: context.metas.get(name, None)
@@ -681,7 +667,7 @@ class DomainContextHandler(ContextHandler):
             if hasattr(setting, "selected"):
                 yield setting.selected, list(getattr(instance, setting.selected))
 
-        context.values = self.default_provider.pack(widget, packer=packer)
+        context.values = self.provider.pack(widget, packer=packer)
 
     def fast_save(self, widget, name, value):
         context = widget.current_context
@@ -733,21 +719,19 @@ class DomainContextHandler(ContextHandler):
             return 2
 
         matches = []
-
-        def count_matches(setting, data, instance):
-            if not isinstance(setting, ContextSetting):
-                return
-            value = data.get(setting.name, None)
-
-            if isinstance(value, list):
-                matches.append(
-                    self.match_list(setting, value, context, attrs, metas))
-            elif value is not None:
-                matches.append(
-                    self.match_value(setting, value, attrs, metas))
-
         try:
-            self.default_provider.for_each_setting(context.values, on_setting=count_matches)
+            for setting, data, instance in \
+                    self.provider.traverse_settings(data=context.values):
+                if not isinstance(setting, ContextSetting):
+                    continue
+                value = data.get(setting.name, None)
+
+                if isinstance(value, list):
+                    matches.append(
+                        self.match_list(setting, value, context, attrs, metas))
+                elif value is not None:
+                    matches.append(
+                        self.match_value(setting, value, attrs, metas))
         except IncompatibleContext:
             return 0
 
@@ -788,9 +772,9 @@ class DomainContextHandler(ContextHandler):
     def clone_context(self, context, domain, attrs, metas):
         context = copy.deepcopy(context)
 
-        def clone_setting(setting, data, instance):
+        for setting, data, instance in self.provider.traverse_settings(data=context.values):
             if not isinstance(setting, ContextSetting):
-                return
+                continue
 
             value = data.get(setting.name, None)
             if isinstance(value, list):
@@ -823,7 +807,6 @@ class DomainContextHandler(ContextHandler):
                         not self._var_exists(setting, value, attrs, metas)):
                     del data[setting.name]
 
-        self.default_provider.for_each_setting(context.values, on_setting=clone_setting)
         context.attributes, context.metas = attrs, metas
         context.ordered_domain = [(attr.name, attr.var_type) for attr in
                                   itertools.chain(domain, domain.metas)]
@@ -878,7 +861,7 @@ class ClassValuesContextHandler(ContextHandler):
     def settings_to_widget(self, widget):
         super().settings_to_widget(widget)
         context = widget.current_context
-        self.default_provider.unpack(widget, context.values)
+        self.provider.unpack(widget, context.values)
 
     def settings_from_widget(self, widget):
         super().settings_from_widget(widget)
@@ -887,7 +870,7 @@ class ClassValuesContextHandler(ContextHandler):
         def packer(setting, instance):
             yield setting.name, copy.copy(getattr(instance, setting.name))
 
-        context.values = self.default_provider.pack(widget, packer=packer)
+        context.values = self.provider.pack(widget, packer=packer)
 
     def fast_save(self, widget, name, value):
         if widget.current_context is None:

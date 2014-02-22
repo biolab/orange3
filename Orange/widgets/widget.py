@@ -89,6 +89,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     processingStateChanged = Signal(int)
 
     settingsHandler = None
+    """:type: SettingsHandler"""
 
     def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
@@ -480,7 +481,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         pass
 
     def saveSettings(self):
-        self.settingsHandler.update_class_defaults(self)
+        self.settingsHandler.update_defaults(self)
 
     # this function is only intended for derived classes to send appropriate
     # signals when all settings are loaded
@@ -645,6 +646,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         """ Is this widget blocking signal processing.
         """
         return self.__blocking
+
+    def resetSettings(self):
+        self.settingsHandler.reset_settings(self)
 
 
 def blocking(method):

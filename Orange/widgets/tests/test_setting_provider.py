@@ -18,6 +18,7 @@ def initialize_settings(instance):
     if provider:
         provider.initialize(instance)
 default_provider = None
+""":type: SettingProvider"""
 
 
 class BaseGraph:
@@ -96,66 +97,6 @@ class SettingProviderTestCase(unittest.TestCase):
             },
             SHOW_ZOOM_TOOLBAR: True,
             SHOW_GRAPH: True,
-        })
-
-    def test_sets_defaults(self):
-        default_provider.set_defaults({
-            SHOW_ZOOM_TOOLBAR: Setting(False),
-            SHOW_GRAPH: Setting(False),
-            GRAPH: {
-                SHOW_LABELS: Setting(False),
-                SHOW_X_AXIS: Setting(False),
-            },
-            ZOOM_TOOLBAR: {
-                ALLOW_ZOOMING: Setting(False),
-            }
-        })
-
-        self.assertDefaultSettingsEqual(default_provider, {
-            GRAPH: {
-                SHOW_LABELS: False,
-                SHOW_X_AXIS: False,
-                SHOW_Y_AXIS: True,
-            },
-            ZOOM_TOOLBAR: {
-                ALLOW_ZOOMING: False,
-            },
-            SHOW_ZOOM_TOOLBAR: False,
-            SHOW_GRAPH: False,
-        })
-
-    def test_gets_defaults(self):
-        default_provider.settings[SHOW_GRAPH].default = False
-        default_provider.providers[GRAPH].settings[SHOW_LABELS].default = False
-
-        defaults = default_provider.get_defaults()
-
-        self.assertEqual(defaults[SHOW_GRAPH].default, False)
-        self.assertEqual(defaults[SHOW_ZOOM_TOOLBAR].default, True)
-        self.assertEqual(defaults[GRAPH][SHOW_LABELS].default, False)
-        self.assertEqual(defaults[GRAPH][SHOW_X_AXIS].default, True)
-        self.assertEqual(defaults[GRAPH][SHOW_Y_AXIS].default, True)
-        self.assertEqual(defaults[ZOOM_TOOLBAR][ALLOW_ZOOMING].default, True)
-
-    def test_updates_defaults(self):
-        widget = Widget()
-
-        widget.show_graph = False
-        widget.graph.show_y_axis = False
-
-        default_provider.update_defaults(widget)
-
-        self.assertDefaultSettingsEqual(default_provider, {
-            GRAPH: {
-                SHOW_LABELS: True,
-                SHOW_X_AXIS: True,
-                SHOW_Y_AXIS: False,
-            },
-            ZOOM_TOOLBAR: {
-                ALLOW_ZOOMING: True,
-            },
-            SHOW_ZOOM_TOOLBAR: True,
-            SHOW_GRAPH: False,
         })
 
     def test_initialize_sets_defaults(self):
@@ -244,37 +185,32 @@ class SettingProviderTestCase(unittest.TestCase):
         self.assertEqual(widget.graph.show_y_axis, False)
         self.assertEqual(widget.zoom_toolbar.allow_zooming, True)
 
-    def test_for_each_settings_works_without_instance_or_data(self):
+    def test_all_settings_works_without_instance_or_data(self):
         settings = set()
 
-        def on_setting(setting, data, instance):
+        for setting, data, instance in default_provider.traverse_settings():
             settings.add(setting.name)
 
-        default_provider.for_each_setting(on_setting=on_setting)
         self.assertEqual(settings, {
             SHOW_ZOOM_TOOLBAR, SHOW_GRAPH,
             SHOW_LABELS, SHOW_X_AXIS, SHOW_Y_AXIS,
             ALLOW_ZOOMING})
 
-    def test_for_each_setting_selects_correct_data(self):
+    def test_all_settings_selects_correct_data(self):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4, SHOW_Y_AXIS: 5}
         zoom_data = {ALLOW_ZOOMING: 6}
-        data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2,
+        all_data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2,
                 GRAPH: graph_data, ZOOM_TOOLBAR: zoom_data}
 
-        def on_setting(setting, data, instance):
+        for setting, data, instance in default_provider.traverse_settings(all_data):
             settings[setting.name] = data
-
-        default_provider.for_each_setting(
-            data=data,
-            on_setting=on_setting)
 
         self.assertEqual(
             settings,
             {
-                SHOW_GRAPH: data,
-                SHOW_ZOOM_TOOLBAR: data,
+                SHOW_GRAPH: all_data,
+                SHOW_ZOOM_TOOLBAR: all_data,
                 SHOW_LABELS: graph_data,
                 SHOW_X_AXIS: graph_data,
                 SHOW_Y_AXIS: graph_data,
@@ -282,23 +218,19 @@ class SettingProviderTestCase(unittest.TestCase):
             }
         )
 
-    def test_for_each_setting_with_partial_data(self):
+    def test_all_settings_with_partial_data(self):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4}
-        data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2, GRAPH: graph_data}
+        all_data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2, GRAPH: graph_data}
 
-        def on_setting(setting, data, instance):
+        for setting, data, instance in default_provider.traverse_settings(all_data):
             settings[setting.name] = data
-
-        default_provider.for_each_setting(
-            data=data,
-            on_setting=on_setting)
 
         self.assertEqual(
             settings,
             {
-                SHOW_GRAPH: data,
-                SHOW_ZOOM_TOOLBAR: data,
+                SHOW_GRAPH: all_data,
+                SHOW_ZOOM_TOOLBAR: all_data,
                 SHOW_LABELS: graph_data,
                 SHOW_X_AXIS: graph_data,
                 SHOW_Y_AXIS: graph_data,
@@ -306,19 +238,14 @@ class SettingProviderTestCase(unittest.TestCase):
             }
         )
 
-    def test_for_each_setting_selects_correct_instance(self):
+    def test_all_settings_selects_correct_instance(self):
         settings = {}
         widget = Widget()
 
-        def on_setting(setting, data, instance):
+        for setting, data, instance in default_provider.traverse_settings(instance=widget):
             settings[setting.name] = instance
 
-        default_provider.for_each_setting(
-            instance=widget,
-            on_setting=on_setting)
-
         self.assertEqual(
-            settings,
             {
                 SHOW_GRAPH: widget,
                 SHOW_ZOOM_TOOLBAR: widget,
@@ -326,20 +253,17 @@ class SettingProviderTestCase(unittest.TestCase):
                 SHOW_X_AXIS: widget.graph,
                 SHOW_Y_AXIS: widget.graph,
                 ALLOW_ZOOMING: widget.zoom_toolbar,
-            }
+            },
+            settings
         )
 
-    def test_for_each_setting_with_partial_instance(self):
+    def test_all_settings_with_partial_instance(self):
         settings = {}
         widget = Widget()
         widget.graph = None
 
-        def on_setting(setting, data, instance):
+        for setting, data, instance in default_provider.traverse_settings(instance=widget):
             settings[setting.name] = instance
-
-        default_provider.for_each_setting(
-            instance=widget,
-            on_setting=on_setting)
 
         self.assertEqual(
             settings,

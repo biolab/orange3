@@ -258,7 +258,7 @@ index e021cbe..c3e7ac6 100644
  from ..registry.qt import QtWidgetRegistry
  from .. import scheme
  from ..canvas import items
-@@ -454,11 +455,8 @@ class NewLinkAction(UserInteraction):
+@@ -454,8 +455,7 @@ class NewLinkAction(UserInteraction):
  
          def filter(index):
              desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
@@ -266,12 +266,9 @@ index e021cbe..c3e7ac6 100644
 -                desc = desc.toPyObject()
 +            if isinstance(desc, WidgetDescription):
                  return is_compatible(from_desc, desc)
--            else:
--                return False
- 
-         menu.setFilterFunc(filter)
-         try:
-@@ -467,8 +465,8 @@ class NewLinkAction(UserInteraction):
+             else:
+                 return False
+@@ -467,8 +467,8 @@ class NewLinkAction(UserInteraction):
              menu.setFilterFunc(None)
  
          if action:
@@ -282,7 +279,7 @@ index e021cbe..c3e7ac6 100644
              pos = event.scenePos()
              # a new widget should be placed so that the connection
              # stays as it was
-@@ -770,8 +768,8 @@ class NewNodeAction(UserInteraction):
+@@ -770,8 +770,8 @@ class NewNodeAction(UserInteraction):
  
          action = menu.exec_(pos, search_text)
          if action:
