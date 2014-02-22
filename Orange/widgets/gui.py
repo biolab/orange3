@@ -356,7 +356,8 @@ def widgetLabel(widget, label="", labelWidth=None, **misc):
 
 
 
-def label(widget, master, label, labelWidth=None, *misc):
+def label(widget, master, label, labelWidth=None, box=None,
+          orientation="vertical", *misc):
     """
     Construct a label that contains references to the master widget's
     attributes; when their values change, the label is updated.
@@ -379,14 +380,19 @@ def label(widget, master, label, labelWidth=None, *misc):
     :return: label
     :rtype: PyQt4.QtGui.QLabel
     """
-    lbl = QtGui.QLabel("", widget)
+    if box:
+        b = widgetBox(widget, box, orientation=None, addToLayout=False)
+    else:
+        b = widget
+
+    lbl = QtGui.QLabel("", b)
     reprint = CallFrontLabel(lbl, label, master)
     for mo in __re_label.finditer(label):
         getattr(master, CONTROLLED_ATTRIBUTES)[mo.group("value")] = reprint
     reprint()
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
-    miscellanea(lbl, None, widget, *misc)
+    miscellanea(lbl, b, widget, *misc)
     return lbl
 
 
