@@ -16,3 +16,6 @@ def getdeepattr(obj, attr, *arg, **kwarg):
         if kwarg:
             return kwarg["default"]
         raise AttributeError("'%s' has no attribute '%s'" % (obj, attr))
+
+def getHtmlCompatibleString(strVal):
+    return strVal.replace("<=", "&#8804;").replace(">=","&#8805;").replace("<", "&#60;").replace(">","&#62;").replace("=\\=", "&#8800;")

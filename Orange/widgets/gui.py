@@ -1696,7 +1696,7 @@ class Searcher:
 class collapsableWidgetBox(QtGui.QGroupBox):
     def __init__(self, widget, box="", master=None, value="",
                  orientation="vertical", callback=None):
-        super().__init__(self, widget)
+        super().__init__(widget)
         self.setFlat(1)
         setLayout(self, orientation)
         if widget.layout() is not None:

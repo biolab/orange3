@@ -1,3 +1,5 @@
+from PyQt4.QtGui import QApplication
+
 __author__ = 'jurre'
 import pyqtgraph as pg
 import Orange
@@ -72,8 +74,8 @@ class OWHeatmap(widget.OWWidget):
     """
     name = "Heat map"
     description = "Draws a heat map."
-    # _long_description = """Long description"""
-    # _icon = "../icons/Dlg_zoom.png"
+    # long_description = """Long description"""
+    # icon = "../icons/Dlg_zoom.png"
     author = "Jure Bergant"
     priority = 100
 
