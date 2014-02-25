@@ -26,7 +26,7 @@ class DiscretizeTable:
         (default: `False`)
     """
     def __new__(cls, data=None,
-                discretize_class=False, method=None, clean=True):
+                discretize_class=False, method=None, clean=True, fixed=None):
         self = super().__new__(cls)
         self.discretize_class = discretize_class
         self.method = method
@@ -34,21 +34,24 @@ class DiscretizeTable:
         if data is None:
             return self
         else:
-            return self(data)
+            return self(data, fixed)
 
 
-    def __call__(self, data):
+    def __call__(self, data, fixed=None):
         """
         Return the discretized data set.
 
         :param data: Data to discretize.
         """
 
-        def transform_list(s):
+        def transform_list(s, fixed=None):
             new_vars = []
             for var in s:
                 if isinstance(var, ContinuousVariable):
-                    nv = method(data, var)
+                    if fixed and var.name in fixed.keys():
+                        nv = method(data, var, fixed)
+                    else:
+                        nv = method(data, var)
                     if not self.clean or len(nv.values) > 1:
                         new_vars.append(nv)
                 else:
@@ -60,10 +63,10 @@ class DiscretizeTable:
         else:
             method = self.method
         domain = data.domain
-        new_attrs = transform_list(domain.attributes)
+        new_attrs = transform_list(domain.attributes, fixed)
         if self.discretize_class:
             new_classes = transform_list(domain.class_vars)
         else:
             new_classes = domain.class_vars
         nd = Domain(new_attrs, new_classes)
-        return Orange.data.Table(nd, data)
+        return data.from_table(nd, data)
