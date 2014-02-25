@@ -98,6 +98,8 @@ class OWMosaicDisplay(OWWidget):
     <priority>4100</priority>
     """
     name = "Mosaic Display"
+    inputs = [("Data", Table, "setData", Default), ("Data Subset", Table, "setSubsetData")]
+    outputs = [("Selected Data", Table), ("Learner", Fitter)]
 
     settingsList = ["horizontalDistribution", "showAprioriDistributionLines", "showAprioriDistributionBoxes",
                     "horizontalDistribution", "useBoxes", "interiorColoring", "boxSize", "colorSettings",
@@ -120,9 +122,6 @@ class OWMosaicDisplay(OWWidget):
         self.unprocessedSubsetData = None
         self.subsetData = None
         self.names = []  # class values
-
-        self.inputs = [("Data", Table, self.setData, Default), ("Data Subset", Table, self.setSubsetData)]
-        self.outputs = [("Selected Data", Table), ("Learner", Fitter)]
 
         #load settings
         self.colorSettings = None
