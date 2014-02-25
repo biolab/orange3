@@ -1,3 +1,5 @@
+from PyQt4.QtGui import QApplication
+
 __author__ = 'jurre'
 import pyqtgraph as pg
 import Orange
@@ -70,12 +72,12 @@ class OWHeatmap(widget.OWWidget):
     Data is first drawn with less precision (big rects) and gets updated to more detail (smaller rects).
     This takes some time, so the heatmap gets updated, when more detail is calculated.
     """
-    _name = "Heat map"
-    _description = "Draws a heat map."
+    name = "Heat map"
+    description = "Draws a heat map."
     #_long_description = """Long description"""
     # _icon = "../icons/Dlg_zoom.png"
-    _author = "Jure Bergant"
-    _priority = 100
+    author = "Jure Bergant"
+    priority = 100
 
     inputs = [("Data", Table, "data")]
     outputs = [("Sampled data", Table)]
@@ -626,3 +628,19 @@ class OWHeatmap(widget.OWWidget):
         self.regionSharpened = False
         self.sharpeningRegion = False
         # self.hmi = None
+
+
+#test widget appearance
+if __name__ == "__main__":
+    a = QApplication(sys.argv)
+    ow = OWHeatmap()
+    ow.show()
+    #    data = orange.ExampleTable(r"e:\Development\Orange Datasets\UCI\zoo.tab")
+    data = Table("iris.tab")
+    ow.setData(data)
+    ow.handleNewSignals()
+    #    for d in ["zoo.tab", "iris.tab", "zoo.tab"]:
+    #        data = orange.ExampleTable(r"e:\Development\Orange Datasets\UCI\\" + d)
+    #        ow.setData(data)
+    #        ow.handleNewSignals()
+    a.exec_()
