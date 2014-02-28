@@ -4,10 +4,12 @@ from cmath import sqrt
 from functools import reduce
 import os
 from PyQt4.QtCore import QPoint, Qt, QRectF, SIGNAL
+from datetime import datetime
 import numpy
 import sys
 from Orange.classification import Fitter
 from Orange.data import Table, Variable, filter
+from Orange.data.sql.table import SqlTable
 from Orange.statistics.contingency import get_contingency
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets.settings import DomainContextHandler
@@ -33,6 +35,9 @@ RIGHT = 3
 
 VarTypes = Variable.VarTypes
 
+class ZeroDict(dict):
+    def __getitem__(self, key):
+        return dict.get(self, key, 0)
 
 class SelectionRectangle(QGraphicsRectItem):
     pass
@@ -187,7 +192,7 @@ class OWMosaicDisplay(OWWidget):
                               tooltip="Change the order of attribute values")
             butt.setFixedSize(26, 24)
             butt.setCheckable(1)
-            butt.setIcon(QIcon("icons/Dlg_sort.png"))
+            butt.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_sort.png")))
 
             setattr(self, "sort" + str(i), butt)
             setattr(self, "attr" + str(i) + "Combo", combo)
@@ -349,6 +354,10 @@ class OWMosaicDisplay(OWWidget):
         self.information([0, 1, 2])
 
         # self.data = self.optimizationDlg.setData(data, self.removeUnusedValues)
+        # "popravi" sql tabelo
+        if data and type(data) == SqlTable and data.name == 'zoo':
+            data.domain.class_var = data.domain.attributes[16]
+
         self.data = data
 
         if self.data:
@@ -468,8 +477,14 @@ class OWMosaicDisplay(OWWidget):
             return
 
         selectList = attrList
-        if data.domain.class_var:
+        if type(data) == SqlTable and data.domain.class_var:
+            cv = data.domain.class_var # shranim class_var, ker se v naslednji vrstici zbrise (v primeru da je SqlTable)
             data = data[:, attrList + [data.domain.class_var]]
+            data.domain.class_var = cv
+        elif data.domain.class_var:
+            cv = data.domain.class_var # shranim class_var, ker se v naslednji vrstici zbrise (v primeru da si izbral atribut, ki je class_var)
+            data = data[:, attrList + [data.domain.class_var]]
+            data.domain.class_var = cv
         else:
             data = data[:, attrList]
         # TODO: preveri kaj je stem
@@ -519,6 +534,7 @@ class OWMosaicDisplay(OWWidget):
             self.attributeValuesDict = self.manualAttributeValuesDict
 
         # compute distributions
+
         self.conditionalDict = self.getConditionalDistributions(data, attrList)
         self.conditionalDict[""] = len(data)
         self.conditionalSubsetDict = None
@@ -539,42 +555,78 @@ class OWMosaicDisplay(OWWidget):
 
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
     def getConditionalDistributions(self, data, attrs):
-        def counter(s):
-            t = [0 for i in range(0, len(s))]
-            while True:
-                yield t
-                for i in range(len(s)):
-                    t[i] = (t[i] + 1) % s[i]
-                    if t[i]:
+        if type(data) == SqlTable:
+            tstart = datetime.now()
+            d = {}
+            for i in range(0, len(attrs) + 1):
+                attr = []
+                for j in range(0, i+1):
+                    if j == len(attrs):
+                        attr.append(data.domain.class_var.name)
+                    else:
+                        attr.append(attrs[j])
+
+                sql = []
+                sql.append("SELECT")
+                sql.append(", ".join(attr))
+                sql.append(", COUNT(%s)" % attr[0])
+                sql.append("FROM %s" % data.name)
+                sql.append("GROUP BY")
+                sql.append(", ".join(attr))
+
+                cur = data._execute_sql_query(" ".join(sql))
+                res = cur.fetchall()
+                for r in res:
+                    d['-'.join(r[:-1])] = r[-1]
+
+            tend = datetime.now()
+            print(tend - tstart)
+            with open('groupby.times.txt', 'a') as out:
+                out.write('SqlTable - %s - %s\n' % (attrs, tend-tstart))
+            return ZeroDict(d)
+        else:
+            tstart = datetime.now()
+            def counter(s):
+                t = [0 for i in range(0, len(s))]
+                while True:
+                    yield t
+                    for i in range(len(s)):
+                        t[i] = (t[i] + 1) % s[i]
+                        if t[i]:
+                            break
+                    else:
                         break
-                else:
-                    break
 
-        dict = {}
-        for i in range(0, len(attrs) + 1):
-            attr = []
-            for j in range(0, i+1):
-                if j == len(attrs):
-                    attr.append(data.domain.class_var)
-                else:
-                    attr.append([a for a in data.domain.attributes if a.name == attrs[j]][0])
+            dict = {}
+            for i in range(0, len(attrs) + 1):
+                attr = []
+                for j in range(0, i+1):
+                    if j == len(attrs):
+                        attr.append(data.domain.class_var)
+                    else:
+                        if data.domain.class_var.name == attrs[j]:
+                            attr.append(data.domain.class_var)
+                        else:
+                            ind = data.domain.index(attrs[j])
+                            a = data.domain.attributes[ind]
+                            attr.append(a)
 
-            s = [len(a.values) for a in attr]
-            for indices in counter(s):
-                vals = []
-                filt = filter.Values()
-                filt.domain = data.domain
-                for k in range(len(indices)):
-                    vals.append(attr[k].values[indices[k]])
-                    # if k == len(attrs):
-                    #     fd = filter.FilterString(position=attr[k], oper=filter.FilterString.Equal, ref=attr[k].values[indices[k]])
-                    # else:
-                    fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[indices[k]]])
-                    filt.conditions.append(fd)
-                filtdata = filt(data)
-                dict['-'.join(vals)] = len(filtdata)
-
-        return dict
+                s = [len(a.values) for a in attr]
+                for indices in counter(s):
+                    vals = []
+                    filt = filter.Values()
+                    filt.domain = data.domain
+                    for k in range(len(indices)):
+                        vals.append(attr[k].values[indices[k]])
+                        fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[indices[k]]])
+                        filt.conditions.append(fd)
+                    filtdata = filt(data)
+                    dict['-'.join(vals)] = len(filtdata)
+            tend = datetime.now()
+            print(tend - tstart)
+            with open('groupby.times.txt', 'a') as out:
+                out.write('Table    - %s - %s\n' % (attrs, tend-tstart))
+            return dict
 
 
 
@@ -586,11 +638,11 @@ class OWMosaicDisplay(OWWidget):
                  attrVals="", **args):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
-        # if self.conditionalDict[attrVals] == 0:
-        #     self.addRect(x0, x1, y0, y1, "", usedAttrs, usedVals, attrVals=attrVals)
-        #     self.DrawText(side, attrList[0], (x0, x1), (y0, y1), totalAttrs, usedAttrs, usedVals,
-        #                   attrVals)  # store coordinates for later drawing of labels
-        #     return
+        if self.conditionalDict[attrVals] == 0:
+            self.addRect(x0, x1, y0, y1, "", usedAttrs, usedVals, attrVals=attrVals)
+            self.DrawText(side, attrList[0], (x0, x1), (y0, y1), totalAttrs, usedAttrs, usedVals,
+                          attrVals)  # store coordinates for later drawing of labels
+            return
 
         attr = attrList[0]
         edge = len(attrList) * self.cellspace  # how much smaller rectangles do we draw
@@ -1089,10 +1141,10 @@ class SortAttributeValuesDlg(OWWidget):
                                        tooltip="Move selected attribute values up")
         self.buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
                                          tooltip="Move selected attribute values down")
-        self.buttonUPAttr.setIcon(QIcon("icons/Dlg_up3.png"))
+        self.buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
         self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         self.buttonUPAttr.setFixedWidth(40)
-        self.buttonDOWNAttr.setIcon(QIcon("icons/Dlg_down3.png"))
+        self.buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
         self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         self.buttonDOWNAttr.setFixedWidth(40)
 
