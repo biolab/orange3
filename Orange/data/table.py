@@ -247,7 +247,9 @@ class Table(MutableSequence, Storage):
             new_type = np.find_common_type(types, [])
             a = np.empty((n_rows, len(src_cols)), dtype=new_type)
             for i, col in enumerate(src_cols):
-                if not isinstance(col, int):
+                if col is None:
+                    a[:, i] = Unknown
+                elif not isinstance(col, int):
                     a[:, i] = col(source)
                 elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
