@@ -658,7 +658,9 @@ class Table(MutableSequence, Storage):
                 (-1 - col for col in col_indices if col < col), int)
             if value is None:
                 value = Unknown
-            if not isinstance(value, Real) and (attr_cols or class_cols):
+
+            if not isinstance(value, Real) and \
+                    (len(attr_cols) or len(class_cols)):
                 raise TypeError(
                     "Ordinary attributes can only have primitive values")
             if len(attr_cols):
