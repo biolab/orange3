@@ -336,10 +336,12 @@ class OWSelectData(widget.OWWidget):
                 filters.conditions.append(filter)
 
             matching_output = filters(self.data)
-            matching_output.name = self.data.name
             filters.negate = True
             non_matching_output = filters(self.data)
-            non_matching_output.name = self.data.name
+
+            if hasattr(self.data, "name"):
+                matching_output.name = self.data.name
+                non_matching_output.name = self.data.name
 
             """
             if self.purge_attributes or self.purge_classes:
