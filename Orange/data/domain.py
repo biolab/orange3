@@ -76,17 +76,12 @@ class Domain:
         elif isinstance(class_vars, Iterable):
             class_vars = list(class_vars)
 
+        if not isinstance(attributes, list):
+            attributes = list(attributes)
         metas = list(metas) if metas else []
 
         # Replace str's and int's with descriptors if 'source' is given;
         # complain otherwise
-        if source:
-            if not isinstance(attributes, list):
-                attributes = list(attributes)
-            if metas and not isinstance(metas, list):
-                metas = list(metas)
-        if metas is None:
-            metas = []
         for lst in (attributes, class_vars, metas):
             for i, var in enumerate(lst):
                 if not isinstance(var, Variable):
