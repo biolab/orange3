@@ -9,7 +9,9 @@ import numpy
 import sys
 from Orange.classification import Fitter
 from Orange.data import Table, Variable, filter
+from Orange.data.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
+from Orange.feature.discretization import EqualWidth
 from Orange.statistics.contingency import get_contingency
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets.settings import DomainContextHandler
@@ -354,11 +356,18 @@ class OWMosaicDisplay(OWWidget):
         self.information([0, 1, 2])
 
         # self.data = self.optimizationDlg.setData(data, self.removeUnusedValues)
+        # zgornja vrstica je diskretizirala tabelo in odstranila unused values
+
         # "popravi" sql tabelo
         if data and type(data) == SqlTable and data.name == 'zoo':
             data.domain.class_var = data.domain.attributes[16]
+        if data and type(data) == SqlTable and data.name == 'adult':
+            data.domain.class_var = data.domain.attributes[data.domain.index('y')]
 
-        self.data = data
+        # diskretiziraj - prej se je to naredilo v optimizationDlg.setData()
+        disc = EqualWidth()
+        self.data = DiscretizeTable(data, method=disc)
+        self.data.name = data.name  # v DiscretizeTable se izgubi name
 
         if self.data:
             if any(attr.var_type == VarTypes.Continuous for attr in self.data.domain):
@@ -483,8 +492,10 @@ class OWMosaicDisplay(OWWidget):
             data.domain.class_var = cv
         elif data.domain.class_var:
             cv = data.domain.class_var # shranim class_var, ker se v naslednji vrstici zbrise (v primeru da si izbral atribut, ki je class_var)
+            name = data.name
             data = data[:, attrList + [data.domain.class_var]]
             data.domain.class_var = cv
+            data.name = name
         else:
             data = data[:, attrList]
         # TODO: preveri kaj je stem
@@ -557,14 +568,17 @@ class OWMosaicDisplay(OWWidget):
     def getConditionalDistributions(self, data, attrs):
         if type(data) == SqlTable:
             tstart = datetime.now()
-            d = {}
+            dict = {}
             for i in range(0, len(attrs) + 1):
                 attr = []
                 for j in range(0, i+1):
                     if j == len(attrs):
                         attr.append(data.domain.class_var.name)
                     else:
-                        attr.append(attrs[j])
+                        if '-' in attrs[j]:
+                            attr.append('"%s"' % attrs[j])
+                        else:
+                            attr.append(attrs[j])
 
                 sql = []
                 sql.append("SELECT")
@@ -577,13 +591,13 @@ class OWMosaicDisplay(OWWidget):
                 cur = data._execute_sql_query(" ".join(sql))
                 res = cur.fetchall()
                 for r in res:
-                    d['-'.join(r[:-1])] = r[-1]
+                    dict['-'.join(r[:-1])] = r[-1]
 
             tend = datetime.now()
             print(tend - tstart)
             with open('groupby.times.txt', 'a') as out:
-                out.write('SqlTable - %s - %s\n' % (attrs, tend-tstart))
-            return ZeroDict(d)
+                out.write('SqlTable - (%s) - %s - %s\n' % (data.name, tend-tstart, attrs))
+            return ZeroDict(dict)
         else:
             tstart = datetime.now()
             def counter(s):
@@ -625,7 +639,7 @@ class OWMosaicDisplay(OWWidget):
             tend = datetime.now()
             print(tend - tstart)
             with open('groupby.times.txt', 'a') as out:
-                out.write('Table    - %s - %s\n' % (attrs, tend-tstart))
+                out.write('Table    - (%s) - %s - %s\n' % (data.name, tend-tstart, attrs))
             return dict
 
 
