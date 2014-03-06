@@ -74,8 +74,8 @@ class OWHeatmap(widget.OWWidget):
     """
     name = "Heat map"
     description = "Draws a heat map."
-    #_long_description = """Long description"""
-    # _icon = "../icons/Dlg_zoom.png"
+    # long_description = """Long description"""
+    # icon = "../icons/Dlg_zoom.png"
     author = "Jure Bergant"
     priority = 100
 
@@ -630,17 +630,10 @@ class OWHeatmap(widget.OWWidget):
         # self.hmi = None
 
 
-#test widget appearance
 if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWHeatmap()
-    ow.show()
-    #    data = orange.ExampleTable(r"e:\Development\Orange Datasets\UCI\zoo.tab")
-    data = Table("iris.tab")
-    ow.setData(data)
-    ow.handleNewSignals()
-    #    for d in ["zoo.tab", "iris.tab", "zoo.tab"]:
-    #        data = orange.ExampleTable(r"e:\Development\Orange Datasets\UCI\\" + d)
-    #        ow.setData(data)
-    #        ow.handleNewSignals()
+    a = QtGui.QApplication([])
+    w = OWHeatmap()
+    w.show()
+    d = Orange.data.Table('iris')
+    w.data(d)
     a.exec_()

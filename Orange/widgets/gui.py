@@ -79,6 +79,8 @@ def set_controllers(obj, controlled_name, controller, prefix):
 
 class OWComponent:
     def __init__(self, widget):
+        setattr(self, CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
+
         if widget.settingsHandler:
             widget.settingsHandler.initialize(self)
 

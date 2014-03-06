@@ -138,5 +138,4 @@ if __name__ == "__main__":
     ow = OWSql()
     ow.show()
     a.exec_()
-    ow.settingsHandler.update_class_defaults(ow)
-    ow.settingsHandler.write_defaults()
+    ow.saveSettings()

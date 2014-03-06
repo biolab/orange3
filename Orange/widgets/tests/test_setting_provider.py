@@ -99,66 +99,6 @@ class SettingProviderTestCase(unittest.TestCase):
             SHOW_GRAPH: True,
         })
 
-    def test_sets_defaults(self):
-        default_provider.set_defaults({
-            SHOW_ZOOM_TOOLBAR: Setting(False),
-            SHOW_GRAPH: Setting(False),
-            GRAPH: {
-                SHOW_LABELS: Setting(False),
-                SHOW_X_AXIS: Setting(False),
-            },
-            ZOOM_TOOLBAR: {
-                ALLOW_ZOOMING: Setting(False),
-            }
-        })
-
-        self.assertDefaultSettingsEqual(default_provider, {
-            GRAPH: {
-                SHOW_LABELS: False,
-                SHOW_X_AXIS: False,
-                SHOW_Y_AXIS: True,
-            },
-            ZOOM_TOOLBAR: {
-                ALLOW_ZOOMING: False,
-            },
-            SHOW_ZOOM_TOOLBAR: False,
-            SHOW_GRAPH: False,
-        })
-
-    def test_gets_defaults(self):
-        default_provider.settings[SHOW_GRAPH].default = False
-        default_provider.providers[GRAPH].settings[SHOW_LABELS].default = False
-
-        defaults = default_provider.get_defaults()
-
-        self.assertEqual(defaults[SHOW_GRAPH].default, False)
-        self.assertEqual(defaults[SHOW_ZOOM_TOOLBAR].default, True)
-        self.assertEqual(defaults[GRAPH][SHOW_LABELS].default, False)
-        self.assertEqual(defaults[GRAPH][SHOW_X_AXIS].default, True)
-        self.assertEqual(defaults[GRAPH][SHOW_Y_AXIS].default, True)
-        self.assertEqual(defaults[ZOOM_TOOLBAR][ALLOW_ZOOMING].default, True)
-
-    def test_updates_defaults(self):
-        widget = Widget()
-
-        widget.show_graph = False
-        widget.graph.show_y_axis = False
-
-        default_provider.update_defaults(widget)
-
-        self.assertDefaultSettingsEqual(default_provider, {
-            GRAPH: {
-                SHOW_LABELS: True,
-                SHOW_X_AXIS: True,
-                SHOW_Y_AXIS: False,
-            },
-            ZOOM_TOOLBAR: {
-                ALLOW_ZOOMING: True,
-            },
-            SHOW_ZOOM_TOOLBAR: True,
-            SHOW_GRAPH: False,
-        })
-
     def test_initialize_sets_defaults(self):
         widget = Widget()
 

@@ -1,45 +1,11 @@
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 
-from sklearn import linear_model as lm
 
 import Orange.data
-import Orange.classification
+from Orange.classification import logistic_regression as lr
+
 from Orange.widgets import widget, settings, gui
-
-
-class LRLearner(Orange.classification.Fitter):
-    def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
-                 intercept=True, intercept_scaling=1.0):
-        self.penalty = penalty
-        self.dual = dual
-        self.tol = tol
-        self.C = C
-        self.intercept = intercept
-        self.intercept_scaling = intercept_scaling
-
-    def fit(self, X, Y, W):
-        lr = lm.LogisticRegression(
-            penalty=self.penalty,
-            dual=self.dual,
-            tol=self.tol,
-            C=self.C,
-            fit_intercept=self.intercept,
-            intercept_scaling=self.intercept_scaling
-        )
-        clsf = lr.fit(X, Y.ravel())
-
-        return LRClassifier(clsf)
-
-
-class LRClassifier(Orange.classification.Model):
-    def __init__(self, skl_model):
-        self._model = skl_model
-
-    def predict(self, X):
-        value = self._model.predict(X)
-        prob = self._model.predict_proba(X)
-        return value, prob
 
 
 class OWLogisticRegression(widget.OWWidget):
@@ -48,18 +14,18 @@ class OWLogisticRegression(widget.OWWidget):
     icon = "icons/LogisticRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Learner", LRLearner),
-               ("Classifier", LRClassifier)]
+    outputs = [("Learner", lr.LogisticRegressionLearner),
+               ("Classifier", lr.LogisticRegressionClassifier)]
 
     want_main_area = False
 
     learner_name = settings.Setting("Logistic Regression")
 
-    penalty_type = 1
+    penalty_type = settings.Setting(1)
     dual = settings.Setting(False)
     C = settings.Setting(1.0)
     tol = settings.Setting(0.0001)
-    intercept = True
+    fit_intercept = True
     intercept_scaling = 1.0
 
     def __init__(self, parent=None):
@@ -71,16 +37,20 @@ class OWLogisticRegression(widget.OWWidget):
         gui.lineEdit(box, self, "learner_name")
 
         box = gui.widgetBox(self.controlArea, self.tr("Regularization"))
+        form = QtGui.QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
 
-        pbox = gui.widgetBox(box, "Penalty type")
-        pbox.setFlat(True)
-        gui.radioButtonsInBox(
-            pbox, self, "penalty_type", btnLabels=("L1", "L2"),
+        box.layout().addLayout(form)
+
+        buttonbox = gui.radioButtonsInBox(
+            box, self, "penalty_type", btnLabels=("L1", "L2"),
             orientation="horizontal"
         )
+        form.addRow(self.tr("Penalty type:"), buttonbox)
 
-        gui.doubleSpin(box, self, "C", 0.0, 1024.0, step=0.0001,
-                       label="Reg (C)")
+        spin = gui.doubleSpin(box, self, "C", 0.0, 1024.0, step=0.0001)
+
+        form.addRow("Reg (C):", spin)
 
         box = gui.widgetBox(self.controlArea, "Numerical Tolerance")
         gui.doubleSpin(box, self, "tol", 1e-7, 1e-3, 5e-7)
@@ -107,13 +77,14 @@ class OWLogisticRegression(widget.OWWidget):
 
     def apply(self):
         penalty = ["l1", "l2"][self.penalty_type]
-        learner = LRLearner(
+        learner = lr.LogisticRegressionLearner(
             penalty=penalty,
             dual=self.dual,
             tol=self.tol,
             C=self.C,
-            intercept=self.intercept,
-            intercept_scaling=self.intercept_scaling)
+            fit_intercept=self.fit_intercept,
+            intercept_scaling=self.intercept_scaling
+        )
         classifier = None
 
         if self.data is not None:
@@ -121,3 +92,11 @@ class OWLogisticRegression(widget.OWWidget):
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+
+
+if __name__ == "__main__":
+    app = QtGui.QApplication([])
+    w = OWLogisticRegression()
+    w.set_data(Orange.data.Table("zoo"))
+    w.show()
+    app.exec_()

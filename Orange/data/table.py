@@ -247,7 +247,9 @@ class Table(MutableSequence, Storage):
             new_type = np.find_common_type(types, [])
             a = np.empty((n_rows, len(src_cols)), dtype=new_type)
             for i, col in enumerate(src_cols):
-                if not isinstance(col, int):
+                if col is None:
+                    a[:, i] = Unknown
+                elif not isinstance(col, int):
                     a[:, i] = col(source)
                 elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
@@ -322,7 +324,7 @@ class Table(MutableSequence, Storage):
         :type W: np.array
         :return:
         """
-        X, Y, metas, W = validation.check_arrays(X, Y, metas, W)
+        X, Y, metas, W = _check_arrays(X, Y, metas, W)
 
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
@@ -656,7 +658,9 @@ class Table(MutableSequence, Storage):
                 (-1 - col for col in col_indices if col < col), int)
             if value is None:
                 value = Unknown
-            if not isinstance(value, Real) and (attr_cols or class_cols):
+
+            if not isinstance(value, Real) and \
+                    (len(attr_cols) or len(class_cols)):
                 raise TypeError(
                     "Ordinary attributes can only have primitive values")
             if len(attr_cols):
@@ -1270,3 +1274,44 @@ class Table(MutableSequence, Storage):
                         contingencies[col_i][1][clsi] = nans
                     fr = to
         return contingencies
+
+
+def _check_arrays(*arrays):
+    checked = []
+    if not len(arrays):
+        return checked
+
+    def ninstances(array):
+        if hasattr(array, "shape"):
+            return array.shape[0]
+        else:
+            return len(array)
+
+    shape_1 = ninstances(arrays[0])
+
+    for array in arrays:
+        if array is None:
+            checked.append(array)
+            continue
+
+        if ninstances(array) != shape_1:
+            raise ValueError("Leading dimension mismatch (%d != %d)"
+                             % (len(array), shape_1))
+
+        if sp.issparse(array):
+            array.data = np.asarray(array.data)
+            has_inf = _check_inf(array.data)
+        else:
+            array = np.asarray(array)
+            has_inf = _check_inf(array)
+
+        if has_inf:
+            raise ValueError("Array contains infinity.")
+        checked.append(array)
+
+    return checked
+
+
+def _check_inf(array):
+    return array.dtype.char in np.typecodes['AllFloat'] and \
+            np.isinf(array.data).any()

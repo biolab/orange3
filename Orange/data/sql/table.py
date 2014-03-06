@@ -160,12 +160,14 @@ class SqlTable(table.Table):
             except TypeError:
                 pass
 
-        # TODO if row_idx specify multiple rows, one of the following must
-        # happen
-        #  - the new table remembers which rows are selected (implement
-        #     table.limit_rows and whatever else is necessary)
-        #  - return an ordinary (non-SQL) Table
-        #  - raise an exception
+        else:
+            # TODO if row_idx specify multiple rows, one of the following must
+            # happen
+            #  - the new table remembers which rows are selected (implement
+            #     table.limit_rows and whatever else is necessary)
+            #  - return an ordinary (non-SQL) Table
+            #  - raise an exception
+            raise NotImplementedError("Row indices must be integers.")
 
         # multiple rows OR single row but multiple columns:
         # construct a new table

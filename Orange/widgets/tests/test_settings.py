@@ -1,10 +1,12 @@
+from io import BytesIO
+import pickle
 import unittest
 import warnings
 
 from mock import Mock
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
-from Orange.widgets.settings import DomainContextHandler, ContextSetting, Setting, SettingsHandler
+from Orange.widgets.settings import DomainContextHandler, ContextSetting, Setting, SettingsHandler, SettingProvider
 
 
 CONTINOUS_ATTR = "cf1"
@@ -119,6 +121,10 @@ class DomainEncodingTests(unittest.TestCase):
         self.assertEqual(encoded_metas, {})
 
 
+class MockComponent():
+    setting = Setting("")
+
+
 class MockWidget:
     name = "MockWidget"
 
@@ -143,8 +149,12 @@ class MockWidget:
 
     required_setting = ContextSetting("", required=ContextSetting.REQUIRED)
 
+    subprovider = SettingProvider(MockComponent)
+
     def __init__(self):
         self.current_context = Mock()
+
+        self.subprovider = MockComponent()
 
 
 class DomainContextSettingsHandlerTests(unittest.TestCase):
@@ -285,17 +295,75 @@ class WidgetWithNoProviderDeclared:
         self.undeclared_component = UndeclaredComponent()
 
 
+class DummySettingsHandler(SettingsHandler):
+    def __init__(self):
+        super().__init__()
+        self.saved_defaults = {}
+
+    def read_defaults(self):
+        settings_file = BytesIO(pickle.dumps(self.saved_defaults))
+        self.read_defaults_file(settings_file)
+
+    def write_defaults(self):
+        settings_file = BytesIO()
+        self.write_defaults_file(settings_file)
+        settings_file.seek(0)
+        self.saved_defaults = pickle.load(settings_file)
+
+
 class SettingHandlerTestCase(unittest.TestCase):
-    def test_initialize_not_declared_provider(self):
+    def test_initialization_of_not_declared_provider(self):
         widget = WidgetWithNoProviderDeclared()
-        settingsHandler = SettingsHandler.create(WidgetWithNoProviderDeclared)
+        handler = SettingsHandler.create(WidgetWithNoProviderDeclared)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            settingsHandler.initialize(widget)
-            settingsHandler.initialize(widget.undeclared_component)
+            handler.initialize(widget)
+            handler.initialize(widget.undeclared_component)
 
         self.assertIsInstance(widget.undeclared_component.int_setting, int)
+
+    def test_initialization_of_child_provider_with_default_data(self):
+        handler = self.handler_with_defaults({'subprovider': {'setting': "12345"}})
+
+        widget = MockWidget()
+        handler.initialize(widget)
+
+        self.assertEqual(widget.subprovider.setting, "12345")
+
+    def test_delayed_initialization_of_child_provider_with_default_data(self):
+        handler = self.handler_with_defaults({'subprovider': {'setting': "12345"}})
+
+        widget = MockWidget.__new__(MockWidget)
+        handler.initialize(widget)
+        widget.subprovider = MockComponent()
+        handler.initialize(widget.subprovider)
+
+        self.assertEqual(widget.subprovider.setting, "12345")
+
+    def test_reading_defaults(self):
+        handler = self.handler_with_defaults({"string_setting": "12345"})
+
+        widget = MockWidget()
+        handler.initialize(widget)
+        self.assertEqual(widget.string_setting, "12345")
+
+    def test_writing_defaults(self):
+        handler = self.handler_with_defaults({})
+
+        widget = MockWidget()
+        handler.initialize(widget)
+        widget.string_setting = "12345"
+        handler.update_defaults(widget)
+        handler.write_defaults()
+        print(handler.saved_defaults)
+        self.assertEqual(handler.saved_defaults["string_setting"], "12345")
+
+    def handler_with_defaults(self, defaults):
+        handler = DummySettingsHandler()
+        handler.saved_defaults = defaults
+        handler.bind(MockWidget)
+        return handler
 
 
 if __name__ == '__main__':
