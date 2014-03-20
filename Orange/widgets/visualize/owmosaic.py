@@ -16,6 +16,7 @@ from Orange.statistics.contingency import get_contingency
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
 
 from PyQt4.QtGui import QGraphicsRectItem, QGraphicsView, QColor, QGraphicsScene, QPainter, QIcon, QDialog, QPen, \
@@ -36,6 +37,12 @@ TOP = 2
 RIGHT = 3
 
 VarTypes = Variable.VarTypes
+
+# using function with same name from owtools.py
+# def get_variable_values_sorted(param):
+#     if hasattr(param, "values"):
+#         return param.values
+#     return []
 
 class ZeroDict(dict):
     def __getitem__(self, key):
@@ -90,11 +97,6 @@ class MosaicSceneView(QGraphicsView):
             self.scene().removeItem(self.tempRect)
             self.tempRect = None
 
-
-def getVariableValuesSorted(param):
-    if hasattr(param, "values"):
-        return param.values
-    return []
 
 class OWMosaicDisplay(OWWidget):
     """
@@ -300,7 +302,7 @@ class OWMosaicDisplay(OWWidget):
 
         if self.data and attr != "" and attr != "(None)":
             dlg = SortAttributeValuesDlg(attr,
-                                         self.manualAttributeValuesDict.get(attr, None) or getVariableValuesSorted(
+                                         self.manualAttributeValuesDict.get(attr, None) or get_variable_values_sorted(
                                              self.data.domain[attr]))
             if dlg.exec_() == QDialog.Accepted:
                 self.manualAttributeValuesDict[attr] = [str(dlg.attributeList.item(i).text()) for i in
@@ -660,7 +662,7 @@ class OWMosaicDisplay(OWWidget):
 
         attr = attrList[0]
         edge = len(attrList) * self.cellspace  # how much smaller rectangles do we draw
-        values = self.attributeValuesDict.get(attr, None) or getVariableValuesSorted(self.data.domain[attr])
+        values = self.attributeValuesDict.get(attr, None) or get_variable_values_sorted(self.data.domain[attr])
         if side % 2: values = values[::-1]  # reverse names if necessary
 
         if side % 2 == 0:  # we are drawing on the x axis
@@ -681,7 +683,7 @@ class OWMosaicDisplay(OWWidget):
         # otherwise, if the last cell, nearest to the labels of the fourth attribute, is empty, we wouldn't be able to position the labels
         valRange = list(range(len(values)))
         if len(attrList + usedAttrs) == 4 and len(usedAttrs) == 2:
-            attr1Values = self.attributeValuesDict.get(usedAttrs[0], None) or getVariableValuesSorted(
+            attr1Values = self.attributeValuesDict.get(usedAttrs[0], None) or get_variable_values_sorted(
                 self.data.domain[usedAttrs[0]])
             if usedVals[0] == attr1Values[-1]:
                 valRange = valRange[::-1]
@@ -727,7 +729,7 @@ class OWMosaicDisplay(OWWidget):
 
         # the text on the right will be drawn when we are processing visualization of the last value of the first attribute
         if side == RIGHT:
-            attr1Values = self.attributeValuesDict.get(usedAttrs[0], None) or getVariableValuesSorted(
+            attr1Values = self.attributeValuesDict.get(usedAttrs[0], None) or get_variable_values_sorted(
                 self.data.domain[usedAttrs[0]])
             if usedVals[0] != attr1Values[-1]:
                 return
@@ -741,7 +743,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.drawnSides[side] = 1
 
-        values = self.attributeValuesDict.get(attr, None) or getVariableValuesSorted(self.data.domain[attr])
+        values = self.attributeValuesDict.get(attr, None) or get_variable_values_sorted(self.data.domain[attr])
         if side % 2:  values = values[::-1]
 
         width = x1 - x0 - (side % 2 == 0) * self.cellspace * (totalAttrs - side) * (len(values) - 1)
@@ -809,7 +811,7 @@ class OWMosaicDisplay(OWWidget):
             for vals in self.activeRule[1]:
                 if usedVals == [vals[self.activeRule[0].index(a)] for a in usedAttrs]:
                     values = list(
-                        self.attributeValuesDict.get(self.data.domain.classVar.name, [])) or getVariableValuesSorted(
+                        self.attributeValuesDict.get(self.data.domain.classVar.name, [])) or get_variable_values_sorted(
                         self.data.domain.classVar)
                     counts = [self.conditionalDict[attrVals + "-" + val] for val in values]
                     d = 2
@@ -863,7 +865,7 @@ class OWMosaicDisplay(OWWidget):
         # we do have a discrete class
         else:
             clsValues = list(
-                self.attributeValuesDict.get(self.data.domain.class_var.name, [])) or getVariableValuesSorted(
+                self.attributeValuesDict.get(self.data.domain.class_var.name, [])) or get_variable_values_sorted(
                 self.data.domain.class_var)
             aprioriDist = get_distribution(self.data, self.data.domain.class_var.name)
             total = 0
@@ -989,7 +991,7 @@ class OWMosaicDisplay(OWWidget):
 
         if any(aprioriDist):
             clsValues = list(
-                self.attributeValuesDict.get(self.data.domain.class_var.name, [])) or getVariableValuesSorted(
+                self.attributeValuesDict.get(self.data.domain.class_var.name, [])) or get_variable_values_sorted(
                 self.data.domain.class_var)
             actual = [self.conditionalDict[attrVals + "-" + clsValues[i]] for i in range(len(aprioriDist))]
             if sum(actual) > 0:
@@ -1021,7 +1023,7 @@ class OWMosaicDisplay(OWWidget):
             names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8", "Residuals:"]
             colors = self.redColors[::-1] + self.blueColors[1:]
         else:
-            names = (list(self.attributeValuesDict.get(data.domain.class_var.name, [])) or getVariableValuesSorted(
+            names = (list(self.attributeValuesDict.get(data.domain.class_var.name, [])) or get_variable_values_sorted(
                 data.domain.class_var)) + [data.domain.class_var.name + ":"]
             colors = [self.colorPalette[i] for i in range(len(data.domain.class_var.values))]
 
