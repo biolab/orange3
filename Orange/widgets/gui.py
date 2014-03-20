@@ -1576,8 +1576,8 @@ class SmallWidgetLabel(QtGui.QLabel):
                 name = pixmap
             name = name or os.path.join(iconDir, "arrow_down.png")
             self.setPixmap(QtGui.QPixmap(name))
-        setLayout(self.widget, orientation)
         self.autohideWidget = self.widget = AutoHideWidget(None, Qt.Popup)
+        setLayout(self.widget, orientation)
         if box:
             self.widget = widgetBox(self.widget, box, orientation)
         self.autohideWidget.hide()
