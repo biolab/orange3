@@ -212,7 +212,7 @@ class OWScatterPlotGraphQt(OWPlot, ScaleScatterPlotData):
             showFilled = 0
         else:
             marked_data = []
-        # self.set_main_curve_data(xData, yData, colorData, labelData, sizeData, shapeData, marked_data, validData)
+        self.set_main_curve_data(xData, yData, colorData, labelData, sizeData, shapeData, marked_data, validData)
 
         '''
             Create legend items in any case
