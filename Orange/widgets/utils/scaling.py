@@ -1,6 +1,8 @@
+from datetime import time
 import sys
 import random
 import numpy as np
+import Orange
 
 from Orange.data import Table
 from Orange.statistics.basic_stats import DomainBasicStats
@@ -376,3 +378,270 @@ class ScaleData:
         Return a number from -max to max.
         """
         return (random.random() - 0.5) * 2 * max
+
+
+class ScaleScatterPlotData(ScaleData):
+    def get_original_data(self, indices):
+        data = self.original_data.take(indices, axis = 0)
+        for i, ind in enumerate(indices):
+            [minVal, maxVal] = self.attr_values[self.data_domain[ind].name]
+            if self.data_domain[ind].varType == Orange.data.Variable.VarTypes.Discrete:
+                data[i] += (self.jitter_size/50.0)*(np.random.random(len(self.raw_data)) - 0.5)
+            elif self.data_domain[ind].varType == Orange.data.Variable.VarTypes.Continuous and self.jitter_continuous:
+                data[i] += (self.jitter_size/(50.0*(maxVal-minVal or 1)))*(np.random.random(len(self.raw_data)) - 0.5)
+        return data
+
+    getOriginalData = get_original_data
+
+    def get_original_subset_data(self, indices):
+        data = self.original_subset_data.take(indices, axis = 0)
+        for i, ind in enumerate(indices):
+            [minVal, maxVal] = self.attr_values[self.raw_subset_data.domain[ind].name]
+            if self.data_domain[ind].varType == Orange.core.VarTypes.Discrete:
+                data[i] += (self.jitter_size/(50.0*max(1, maxVal)))*(np.random.random(len(self.raw_subset_data)) - 0.5)
+            elif self.data_domain[ind].varType == Orange.core.VarTypes.Continuous and self.jitter_continuous:
+                data[i] += (self.jitter_size/(50.0*(maxVal-minVal or 1)))*(np.random.random(len(self.raw_subset_data)) - 0.5)
+        return data
+
+    getOriginalSubsetData = get_original_subset_data
+
+    # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
+    def get_xy_data_positions(self, xattr, yattr):
+        """
+        Create x-y projection of attributes in attrlist.
+
+        """
+        xattr_index, yattr_index = self.attribute_name_index[xattr], self.attribute_name_index[yattr]
+
+        xdata = self.scaled_data[xattr_index].copy()
+        ydata = self.scaled_data[yattr_index].copy()
+
+        if self.data_domain[xattr_index].var_type == Orange.data.Variable.VarTypes.Discrete: xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
+        else:  xdata = xdata * (self.attr_values[xattr][1] - self.attr_values[xattr][0]) + float(self.attr_values[xattr][0])
+
+        if self.data_domain[yattr_index].var_type == Orange.data.Variable.VarTypes.Discrete: ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
+        else:  ydata = ydata * (self.attr_values[yattr][1] - self.attr_values[yattr][0]) + float(self.attr_values[yattr][0])
+        return (xdata, ydata)
+
+    getXYDataPositions = get_xy_data_positions
+
+    # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
+    def get_xy_subset_data_positions(self, xattr, yattr):
+        """
+        Create x-y projection of attributes in attr_list.
+
+        """
+        xattr_index, yattr_index = self.attribute_name_index[xattr], self.attribute_name_index[yattr]
+
+        xdata = self.scaled_subset_data[xattr_index].copy()
+        ydata = self.scaled_subset_data[yattr_index].copy()
+
+        if self.data_domain[xattr_index].varType == Orange.core.VarTypes.Discrete: xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
+        else:  xdata = xdata * (self.attr_values[xattr][1] - self.attr_values[xattr][0]) + float(self.attr_values[xattr][0])
+
+        if self.data_domain[yattr_index].varType == Orange.core.VarTypes.Discrete: ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
+        else:  ydata = ydata * (self.attr_values[yattr][1] - self.attr_values[yattr][0]) + float(self.attr_values[yattr][0])
+        return (xdata, ydata)
+
+    getXYSubsetDataPositions = get_xy_subset_data_positions
+
+    # @deprecated_keywords({"attrIndices": "attr_indices",
+    #                       "settingsDict": "settings_dict"})
+    def get_projected_point_position(self, attr_indices, values, **settings_dict):
+        """
+        For attributes in attr_indices and values of these attributes in values
+        compute point positions this function has more sense in radviz and
+        polyviz methods. settings_dict has to be because radviz and polyviz have
+        this parameter.
+        """
+        return values
+
+    getProjectedPointPosition = get_projected_point_position
+
+    # @deprecated_keywords({"attrIndices": "attr_indices",
+    #                       "settingsDict": "settings_dict"})
+    def create_projection_as_example_table(self, attr_indices, **settings_dict):
+        """
+        Create the projection of attribute indices given in attr_indices and
+        create an example table with it.
+
+        """
+        if self.data_has_class:
+            domain = settings_dict.get("domain") or \
+                     Orange.data.Domain([Orange.feature.Continuous(self.data_domain[attr_indices[0]].name),
+                                         Orange.feature.Continuous(self.data_domain[attr_indices[1]].name),
+                                         Orange.feature.Discrete(self.data_domain.class_var.name,
+                                                                       values = get_variable_values_sorted(self.data_domain.class_var))])
+        else:
+            domain = settings_dict.get("domain") or \
+                     Orange.data.Domain([Orange.feature.Continuous(self.data_domain[attr_indices[0]].name),
+                                         Orange.feature.Continuous(self.data_domain[attr_indices[1]].name)])
+
+        data = self.create_projection_as_numeric_array(attr_indices,
+                                                       **settings_dict)
+        if data != None:
+            return Orange.data.Table(domain, data)
+        else:
+            return Orange.data.Table(domain)
+
+    createProjectionAsExampleTable = create_projection_as_example_table
+
+    # @deprecated_keywords({"attrIndices": "attr_indices",
+    #                       "settingsDict": "settings_dict"})
+    def create_projection_as_example_table_3D(self, attr_indices, **settings_dict):
+        """
+        Create the projection of attribute indices given in attr_indices and
+        create an example table with it.
+
+        """
+        if self.data_has_class:
+            domain = settings_dict.get("domain") or \
+                     Orange.data.Domain([Orange.feature.Continuous(self.data_domain[attr_indices[0]].name),
+                                         Orange.feature.Continuous(self.data_domain[attr_indices[1]].name),
+                                         Orange.feature.Continuous(self.data_domain[attr_indices[2]].name),
+                                         Orange.feature.Discrete(self.data_domain.class_var.name,
+                                                                       values = get_variable_values_sorted(self.data_domain.class_var))])
+        else:
+            domain = settings_dict.get("domain") or \
+                     Orange.data.Domain([Orange.feature.Continuous(self.data_domain[attr_indices[0]].name),
+                                         Orange.feature.Continuous(self.data_domain[attr_indices[1]].name),
+                                         Orange.feature.Continuous(self.data_domain[attr_indices[2]].name)])
+
+        data = self.create_projection_as_numeric_array_3D(attr_indices,
+                                                          **settings_dict)
+        if data != None:
+            return Orange.data.Table(domain, data)
+        else:
+            return Orange.data.Table(domain)
+
+    createProjectionAsExampleTable3D = create_projection_as_example_table_3D
+
+    # @deprecated_keywords({"attrIndices": "attr_indices",
+    #                       "settingsDict": "settings_dict",
+    #                       "validData": "valid_data",
+    #                       "classList": "class_list",
+    #                       "jutterSize": "jitter_size"})
+    def create_projection_as_numeric_array(self, attr_indices, **settings_dict):
+        valid_data = settings_dict.get("valid_data")
+        class_list = settings_dict.get("class_list")
+        jitter_size = settings_dict.get("jitter_size", 0.0)
+
+        if valid_data == None:
+            valid_data = self.get_valid_list(attr_indices)
+        if sum(valid_data) == 0:
+            return None
+
+        if class_list == None and self.data_has_class:
+            class_list = self.original_data[self.data_class_index]
+
+        xarray = self.no_jittering_scaled_data[attr_indices[0]]
+        yarray = self.no_jittering_scaled_data[attr_indices[1]]
+        if jitter_size > 0.0:
+            xarray += (np.random.random(len(xarray))-0.5)*jitter_size
+            yarray += (np.random.random(len(yarray))-0.5)*jitter_size
+        if class_list != None:
+            data = np.compress(valid_data, np.array((xarray, yarray, class_list)), axis = 1)
+        else:
+            data = np.compress(valid_data, np.array((xarray, yarray)), axis = 1)
+        data = np.transpose(data)
+        return data
+
+    createProjectionAsNumericArray = create_projection_as_numeric_array
+
+    # @deprecated_keywords({"attrIndices": "attr_indices",
+    #                       "settingsDict": "settings_dict",
+    #                       "validData": "valid_data",
+    #                       "classList": "class_list",
+    #                       "jutterSize": "jitter_size"})
+    def create_projection_as_numeric_array_3D(self, attr_indices, **settings_dict):
+        valid_data = settings_dict.get("valid_data")
+        class_list = settings_dict.get("class_list")
+        jitter_size = settings_dict.get("jitter_size", 0.0)
+
+        if valid_data == None:
+            valid_data = self.get_valid_list(attr_indices)
+        if sum(valid_data) == 0:
+            return None
+
+        if class_list == None and self.data_has_class:
+            class_list = self.original_data[self.data_class_index]
+
+        xarray = self.no_jittering_scaled_data[attr_indices[0]]
+        yarray = self.no_jittering_scaled_data[attr_indices[1]]
+        zarray = self.no_jittering_scaled_data[attr_indices[2]]
+        if jitter_size > 0.0:
+            xarray += (np.random.random(len(xarray))-0.5)*jitter_size
+            yarray += (np.random.random(len(yarray))-0.5)*jitter_size
+            zarray += (np.random.random(len(zarray))-0.5)*jitter_size
+        if class_list != None:
+            data = np.compress(valid_data, np.array((xarray, yarray, zarray, class_list)), axis = 1)
+        else:
+            data = np.compress(valid_data, np.array((xarray, yarray, zarray)), axis = 1)
+        data = np.transpose(data)
+        return data
+
+    createProjectionAsNumericArray3D = create_projection_as_numeric_array_3D
+
+    # @deprecated_keywords({"attributeNameOrder": "attribute_name_order",
+    #                       "addResultFunct": "add_result_funct"})
+    def get_optimal_clusters(self, attribute_name_order, add_result_funct):
+        if not self.data_has_class or self.data_has_continuous_class:
+            return
+
+        jitter_size = 0.001 * self.clusterOptimization.jitterDataBeforeTriangulation
+        domain = Orange.data.Domain([Orange.feature.Continuous("xVar"),
+                                     Orange.feature.Continuous("yVar"),
+                                    self.data_domain.class_var])
+
+        # init again, in case that the attribute ordering took too much time
+        self.scatterWidget.progressBarInit()
+        start_time = time.time()
+        count = len(attribute_name_order)*(len(attribute_name_order)-1)/2
+        test_index = 0
+
+        for i in range(len(attribute_name_order)):
+            for j in range(i):
+                try:
+                    attr1 = self.attribute_name_index[attribute_name_order[j]]
+                    attr2 = self.attribute_name_index[attribute_name_order[i]]
+                    test_index += 1
+                    if self.clusterOptimization.isOptimizationCanceled():
+                        secs = time.time() - start_time
+                        self.clusterOptimization.setStatusBarText("Evaluation stopped (evaluated %d projections in %d min, %d sec)"
+                                                                  % (test_index, secs/60, secs%60))
+                        self.scatterWidget.progressBarFinished()
+                        return
+
+                    data = self.create_projection_as_example_table([attr1, attr2],
+                                                                   domain = domain,
+                                                                   jitter_size = jitter_size)
+                    graph, valuedict, closuredict, polygon_vertices_dict, enlarged_closure_dict, other_dict = self.clusterOptimization.evaluateClusters(data)
+
+                    all_value = 0.0
+                    classes_dict = {}
+                    for key in valuedict.keys():
+                        add_result_funct(valuedict[key], closuredict[key],
+                                         polygon_vertices_dict[key],
+                                         [attribute_name_order[i],
+                                          attribute_name_order[j]],
+                                          int(graph.objects[polygon_vertices_dict[key][0]].getclass()),
+                                          enlarged_closure_dict[key], other_dict[key])
+                        classes_dict[key] = int(graph.objects[polygon_vertices_dict[key][0]].getclass())
+                        all_value += valuedict[key]
+                    add_result_funct(all_value, closuredict, polygon_vertices_dict,
+                                     [attribute_name_order[i], attribute_name_order[j]],
+                                     classes_dict, enlarged_closure_dict, other_dict)     # add all the clusters
+
+                    self.clusterOptimization.setStatusBarText("Evaluated %d projections..."
+                                                              % (test_index))
+                    self.scatterWidget.progressBarSet(100.0*test_index/float(count))
+                    del data, graph, valuedict, closuredict, polygon_vertices_dict, enlarged_closure_dict, other_dict, classes_dict
+                except:
+                    type, val, traceback = sys.exc_info()
+                    sys.excepthook(type, val, traceback)  # print the exception
+
+        secs = time.time() - start_time
+        self.clusterOptimization.setStatusBarText("Finished evaluation (evaluated %d projections in %d min, %d sec)" % (test_index, secs/60, secs%60))
+        self.scatterWidget.progressBarFinished()
+
+    getOptimalClusters = get_optimal_clusters
