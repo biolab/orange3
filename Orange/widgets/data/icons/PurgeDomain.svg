@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+		 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
+	<path d="M6,6v36h36v-36h-36zm34,16v18h-32v-26h32v8z" fill="#333"/>
+	<path d="M30,14h-1v8h-10v-8h-1v8h-10v-8,26-8h10v8h1v-8h10v8h1v-8h10v-1h-10v-8h10v-1h-10v-8zm-12,17h-10v-8h10v8zm11,0h-10v-8h10v8z" fill="#666"/>
+	<rect height="8" width="10" y="32" x="8" fill="#FFF"/>
+	<rect height="8" width="10" y="23" x="8" fill="#FFF"/>
+	<rect height="8" width="10" y="14" x="8" fill="#FFF"/>
+	<rect height="25.974" width="10" y="14" x="19" fill="#FFF"/>
+	<rect height="8" width="0" y="32" x="40" fill="#FFF"/>
+	<rect height="8" width="10" y="32" x="30" fill="#FFF"/>
+	<rect height="8" width="0" y="23" x="40" fill="#FFF"/>
+	<rect height="8" width="10" y="23" x="30" fill="#FFF"/>
+	<rect height="8" width="0" y="14" x="40" fill="#FFF"/>
+	<rect height="8" width="10" y="14" x="30" fill="#FFF"/>
+<g fill="#666" transform="matrix(1.0046929,0,0,1.0036098,-0.13609315,-0.09746724)"><path d="M19,19.2,24,14,19,14z"/><path d="M19,24.4,29,14,29,19.2,19,29.6z"/><path d="M19,34.8,29,24.4,29,29.6,19,40z"/><path d="m24,40,5-5.2,0,5.2z"/></g></svg>
