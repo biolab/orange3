@@ -352,6 +352,11 @@ def remove_unused_values(var, data):
     translation_table = numpy.array([numpy.NaN] * len(var.values))
     translation_table[unique] = range(len(new_var.values))
 
+    if 0 >= var.base_value < len(var.values):
+        base = translation_table[var.base_value]
+        if numpy.isfinite(base):
+            new_var.base_value = int(base)
+
     new_var.get_value_from = Lookup(var, translation_table)
     return new_var
 
