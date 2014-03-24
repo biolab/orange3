@@ -320,3 +320,29 @@ def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
             columns = np.arange(len(vars))
         distributions = [get_distribution(dat, i) for i in columns]
     return distributions
+
+
+def get_distributions_for_columns(data, columns):
+    """
+    Compute the distributions for columns.
+
+    :param Orange.data.Table data:
+    :param list columns:
+        List of column indices into the `data.domain` (indices can be
+        :class:`int` or instances of `Orange.data.Variable`)
+
+    """
+    domain = data.domain
+    # Normailze the columns to int indices
+    columns = [col if isinstance(col, int) else domain.index(col)
+               for col in columns]
+    try:
+        # Try the optimized code path (query the table|storage directly).
+        dist_unks = data._compute_distributions(columns)
+    except NotImplementedError:
+        # Use default slow(er) implementation.
+        return [get_distribution(data, i) for i in columns]
+    else:
+        # dist_unkn is a list of (values, unknowns)
+        return [get_distribution(dist, domain[col], unknown)
+                for col, (dist, unknown) in zip(columns, dist_unks)]
