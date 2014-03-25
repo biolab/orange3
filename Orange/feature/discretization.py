@@ -86,8 +86,7 @@ class EqualFreq(Discretization):
             param = (data.table_name, attribute.name, filters if filters else None, self.n)
             cur = data._execute_sql_query(sql, param)
 
-            res = np.array(cur.fetchall())
-            points = [a for a, in res]
+            points = [a for a, in cur.fetchall()]
         else:
             d = Orange.statistics.distribution.get_distribution(data, attribute)
             points = _discretization.split_eq_freq(d, n=self.n)
@@ -118,8 +117,7 @@ class EqualWidth(Discretization):
                 param = (data.table_name, attribute.name, filters if filters else None, self.n)
                 cur = data._execute_sql_query(sql, param)
 
-                res = np.array(cur.fetchall())
-                points = [a for a, in res]
+                points = [a for a, in cur.fetchall()]
             else:
                 d = Orange.statistics.distribution.get_distribution(data, attribute)
                 points = _split_eq_width(d, n=self.n)
