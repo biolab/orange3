@@ -4,8 +4,20 @@ from Orange.statistics import distribution
 from ..feature.transformation import \
     Identity, Indicator, Indicator_1, Normalizer
 
+
 class DomainContinuizer:
-    def __new__(cls, data=None, zero_based=True, multinomial_treatment=0,
+    MultinomialTreatment = Enum(
+        "NValues", "LowestIsBase", "FrequentIsBase",
+        "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
+        "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
+        "NormalizeBySD"
+    )
+
+    (NValues, LowestIsBase, FrequentIsBase, Ignore, IgnoreMulti,
+     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave,
+     NormalizeBySpan, NormalizeBySD) = MultinomialTreatment
+
+    def __new__(cls, data=None, zero_based=True, multinomial_treatment=NValues,
                 normalize_continuous=None, transform_class=False):
         self = super().__new__(cls)
         self.zero_based = zero_based
@@ -15,6 +27,7 @@ class DomainContinuizer:
         else:
             self.normalize_continuous = normalize_continuous
         self.transform_class = transform_class
+
         return self if data is None else self(data)
 
     def __call__(self, data):
@@ -95,6 +108,7 @@ class DomainContinuizer:
 
         treat = self.multinomial_treatment
         transform_class = self.transform_class
+
         domain = data if isinstance(data, Domain) else data.domain
         if treat == self.ReportError and any(
                 isinstance(var, DiscreteVariable) and len(var.values) > 2
@@ -117,12 +131,4 @@ class DomainContinuizer:
             new_classes = domain.class_vars
         return Domain(new_attrs, new_classes, domain.metas)
 
-    # To make PyCharm happy
-    NValues = LowestIsBase = FrequentIsBase = Ignore = IgnoreMulti = ReportError = AsOrdinal = \
-        Leave = NormalizeBySpan = NormalizeBySD = AsNormalizedOrdinal = 0
-
-MultinomialTreatment = Enum("NValues", "LowestIsBase", "FrequentIsBase",
-                            "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
-                            "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
-                            "NormalizeBySD").pull_up(DomainContinuizer)
-
+MultinomialTreatment = DomainContinuizer.MultinomialTreatment

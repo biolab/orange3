@@ -21,29 +21,27 @@ def get_dburi():
 def create_iris():
     iris = Orange.data.Table("iris")
     connection_params = sql_table.SqlTable.parse_uri(get_dburi())
-    conn = psycopg2.connect(**connection_params)
-    cur = conn.cursor()
-    cur.execute("DROP TABLE IF EXISTS iris")
-    cur.execute("""
-        CREATE TABLE iris (
-            "sepal length" float,
-            "sepal width" float,
-            "petal length" float,
-            "petal width" float,
-            "iris" varchar(15)
-        )
-    """)
-    for row in iris:
-        values = []
-        for i, val in enumerate(row):
-            if i != 4:
-                values.append(str(val))
-            else:
-                values.append(iris.domain.class_var.values[int(val)])
-        cur.execute("""INSERT INTO iris VALUES
-        (%s, %s, %s, %s, '%s')""" % tuple(values))
-    conn.commit()
-    conn.close()
+    with psycopg2.connect(**connection_params) as conn:
+        cur = conn.cursor()
+        cur.execute("DROP TABLE IF EXISTS iris")
+        cur.execute("""
+            CREATE TABLE iris (
+                "sepal length" float,
+                "sepal width" float,
+                "petal length" float,
+                "petal width" float,
+                "iris" varchar(15)
+            )
+        """)
+        for row in iris:
+            values = []
+            for i, val in enumerate(row):
+                if i != 4:
+                    values.append(str(val))
+                else:
+                    values.append(iris.domain.class_var.values[int(val)])
+            cur.execute("""INSERT INTO iris VALUES
+            (%s, %s, %s, %s, '%s')""" % tuple(values))
     return get_dburi() + '/iris'
 
 

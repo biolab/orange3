@@ -160,12 +160,14 @@ class SqlTable(table.Table):
             except TypeError:
                 pass
 
-        # TODO if row_idx specify multiple rows, one of the following must
-        # happen
-        #  - the new table remembers which rows are selected (implement
-        #     table.limit_rows and whatever else is necessary)
-        #  - return an ordinary (non-SQL) Table
-        #  - raise an exception
+        else:
+            # TODO if row_idx specify multiple rows, one of the following must
+            # happen
+            #  - the new table remembers which rows are selected (implement
+            #     table.limit_rows and whatever else is necessary)
+            #  - return an ordinary (non-SQL) Table
+            #  - raise an exception
+            raise NotImplementedError("Row indices must be integers.")
 
         # multiple rows OR single row but multiple columns:
         # construct a new table
@@ -485,7 +487,7 @@ class SqlTable(table.Table):
     def _sql_get_distinct_values(self, field_name):
         sql = ["SELECT DISTINCT", self.quote_identifier(field_name),
                "FROM", self.quote_identifier(self.table_name),
-               "ORDER BY", field_name,
+               "ORDER BY", self.quote_identifier(field_name),
                "LIMIT 21"]
         return self._execute_sql_query(" ".join(sql))
 
@@ -522,9 +524,9 @@ class SqlTable(table.Table):
     def quote_string(self, value):
         return "'%s'" % value
 
-    def _execute_sql_query(self, sql):
+    def _execute_sql_query(self, sql, param=None):
         cur = self.connection.cursor()
-        cur.execute(sql)
+        cur.execute(sql, param)
         self.connection.commit()
         return cur
 
