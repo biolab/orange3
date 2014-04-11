@@ -946,7 +946,7 @@ class Table(MutableSequence, Storage):
                 if sparse:
                     remove = np.logical_or(remove, col == 0)
                 else:
-                    remove = np.logical_or(remove, bn.anynan(col))
+                    remove = np.logical_or(remove, bn.anynan([col], axis=0))
         retain = remove if negate else np.logical_not(remove)
         return Table.from_table_rows(self, retain)
 
