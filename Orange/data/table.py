@@ -946,7 +946,7 @@ class Table(MutableSequence, Storage):
                 if sparse:
                     remove = np.logical_or(remove, col == 0)
                 else:
-                    remove = np.logical_or(remove, bn.anynan(col))
+                    remove = np.logical_or(remove, bn.anynan([col], axis=0))
         retain = remove if negate else np.logical_not(remove)
         return Table.from_table_rows(self, retain)
 
@@ -1104,14 +1104,14 @@ class Table(MutableSequence, Storage):
         else:
             columns = [self.domain.index(c) for c in columns]
             nattrs = len(self.domain.attributes)
-            Xs = any(0 < c < nattrs for c in columns) and bn.stats(self.X, W)
-            Ys = any(c > nattrs for c in columns) and bn.stats(self.Y, W)
+            Xs = any(0 <= c < nattrs for c in columns) and bn.stats(self.X, W)
+            Ys = any(c >= nattrs for c in columns) and bn.stats(self.Y, W)
             ms = any(c < 0 for c in columns) and bn.stats(self.metas, W)
             stats = []
             for column in columns:
-                if 0 < column < nattrs:
+                if 0 <= column < nattrs:
                     stats.append(Xs[column, :])
-                elif column > nattrs:
+                elif column >= nattrs:
                     stats.append(Ys[column - nattrs, :])
                 else:
                     stats.append(ms[-1 - column])
