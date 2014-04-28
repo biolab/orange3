@@ -45,6 +45,7 @@ VarTypes = Variable.VarTypes
 #     return []
 
 class ZeroDict(dict):
+    """Just a dict, which return 0 if key not found."""
     def __getitem__(self, key):
         return dict.get(self, key, 0)
 
@@ -360,16 +361,40 @@ class OWMosaicDisplay(OWWidget):
         # self.data = self.optimizationDlg.setData(data, self.removeUnusedValues)
         # zgornja vrstica je diskretizirala tabelo in odstranila unused values
 
+
+
+
+        ##TODO: spodnje vrstice so developer-only
         # "popravi" sql tabelo
+        if data and type(data) == SqlTable and data.name == 'iris':
+            data.domain.class_var = data.domain.attributes[4]
         if data and type(data) == SqlTable and data.name == 'zoo':
             data.domain.class_var = data.domain.attributes[16]
         if data and type(data) == SqlTable and data.name == 'adult':
             data.domain.class_var = data.domain.attributes[data.domain.index('y')]
 
+
+
         # diskretiziraj - prej se je to naredilo v optimizationDlg.setData()
         disc = EqualWidth()
         self.data = DiscretizeTable(data, method=disc)
         self.data.name = data.name  # v DiscretizeTable se izgubi name
+
+
+
+
+        ##TODO: spodnje vrstice so developer-only
+        # med DiscretizeTable se izgubijo tele informacije
+        if self.data and type(self.data) == SqlTable and self.data.name == 'iris':
+            self.data.domain.class_var = self.data.domain.attributes[4]
+        if self.data and type(self.data) == SqlTable and self.data.name == 'zoo':
+            self.data.domain.class_var = self.data.domain.attributes[16]
+        if self.data and type(self.data) == SqlTable and self.data.name == 'adult':
+            self.data.domain.class_var = self.data.domain.attributes[self.data.domain.index('y')]
+
+
+
+
 
         if self.data:
             if any(attr.var_type == VarTypes.Continuous for attr in self.data.domain):
@@ -568,17 +593,25 @@ class OWMosaicDisplay(OWWidget):
 
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
     def getConditionalDistributions(self, data, attrs):
-        if type(data) == SqlTable:
+        if False and type(data) == SqlTable:
+            ## TODO: tale if za sqlTable je čist brezvezen, ker se itak naredi v poizvedba v sql/u
+            ##        ne vem točno kaj sem hotel doseči s tem, verjetno je bila optimizacija
+                        še enkrat premisli, preden ven vržeš
+            ##TODO: problem se pojavi, ko so bili atributi diskretizirani (npr. iris)
+            ##      takrat se spodnji select tvori z D_attribute_name, ki seveda ne obstajajo v sql tabeli
             tstart = datetime.now()
             dict = {}
             for i in range(0, len(attrs) + 1):
                 attr = []
                 for j in range(0, i+1):
                     if j == len(attrs):
-                        attr.append(data.domain.class_var.name)
+                        # attr.append(data.domain.class_var.name)
+                        attr.append(self.data.domain.class_var.name) ## TODO: hm, tale self sem dodal tako na hitro
                     else:
                         if '-' in attrs[j]:
-                            attr.append('"%s"' % attrs[j])
+                            attr.append("'%s'" % attrs[j])
+                        # a = attrs[j].replace('D_', '') if attrs[j].startswith('D_') else attrs[j]
+                        # attr.append('"%s"' % a)
                         else:
                             attr.append(attrs[j])
 
@@ -588,11 +621,13 @@ class OWMosaicDisplay(OWWidget):
                 sql.append(", COUNT(%s)" % attr[0])
                 sql.append("FROM %s" % data.name)
                 sql.append("GROUP BY")
+                # sql.append(", ".join(['"%s"' % a.replace("'", "") for a in attr]))
                 sql.append(", ".join(attr))
 
                 cur = data._execute_sql_query(" ".join(sql))
                 res = cur.fetchall()
-                for r in res:
+                for r in list(res):
+                    # lr = [str(e) for e in list(r)]
                     dict['-'.join(r[:-1])] = r[-1]
 
             tend = datetime.now()
