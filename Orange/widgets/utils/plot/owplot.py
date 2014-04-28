@@ -600,26 +600,26 @@ class OWPlot(orangeqt.Plot, OWComponent):
     def setShowXaxisTitle(self, b = -1):
         if b == -1 and hasattr(self, 'showXaxisTitle'):
             b = self.showXaxisTitle
-        self.setShowAxisTitle(xBottom, b)
+        self.set_show_axis_title(xBottom, b)
 
     def setXaxisTitle(self, title):
-        self.setAxisTitle(xBottom, title)
+        self.set_axis_title(xBottom, title)
 
     def setShowYLaxisTitle(self, b = -1):
         if b == -1 and hasattr(self, 'showYLaxisTitle'):
             b = self.showYLaxisTitle
-        self.setShowAxisTitle(yLeft, b)
+        self.set_show_axis_title(yLeft, b)
 
     def setYLaxisTitle(self, title):
-        self.setAxisTitle(yLeft, title)
+        self.set_axis_title(yLeft, title)
 
     def setShowYRaxisTitle(self, b = -1):
         if b == -1 and hasattr(self, 'showYRaxisTitle'):
             b = self.showYRaxisTitle
-        self.setShowAxisTitle(yRight, b)
+        self.set_show_axis_title(yRight, b)
 
     def setYRaxisTitle(self, title):
-        self.setAxisTitle(yRight, title)
+        self.set_axis_title(yRight, title)
 
     def enableGridXB(self, b):
         self.grid_curve.set_x_enabled(b)

@@ -1,482 +1,694 @@
-# -*- coding: utf-8 -*-
-
-import math
-import itertools
-import numpy as np
-
-from PyQt4 import QtCore, QtGui
-import scipy
-from scipy import ndimage
-from scipy.ndimage.morphology import black_tophat
-import scipy.special
+# Copied from OWScatterPlotQt.py
+#
+# Show data using scatterplot
+#
 
 
+###########################################################################################
+##### WIDGET : Scatterplot visualization
+###########################################################################################
+from PyQt4.QtCore import SIGNAL, QSize
+import sys
+from PyQt4.QtGui import QApplication
+import numpy
 import Orange
-from Orange import feature, statistics
-from Orange.data import discretization, Table
-from Orange.statistics import basic_stats
-from Orange.statistics import contingency, distribution, tests
-
-from Orange.widgets import widget, gui
-from Orange.widgets.settings import (Setting, DomainContextHandler,
-                                     ContextSetting)
-from Orange.widgets.utils import datacaching, colorpalette
-from Orange.widgets.utils.plot import owaxis
+from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
+from Orange.data.sql.table import SqlTable
+from Orange.widgets.settings import DomainContextHandler
+from Orange.widgets.utils.colorpalette import ColorPaletteDlg
+from Orange.widgets.utils.plot import OWPlot, OWPalette, OWPlotGUI
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraphQt, OWScatterPlotGraphQt_test
+from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.widgets import gui
 
 
-class OWScatterPlot(widget.OWWidget):
-    _name = "Scatter plot"
-    _description = "Shows a scatter plot, or a heatmap for big data"
-    _long_description = """"""
-    _icon = "icons/ScatterPlot.svg"
-    _priority = 100
-    _author = "Janez Demšar"
-    inputs = [("Data", Table, "data")]
+VarTypes = Variable.VarTypes
+
+
+TEST_TYPE_SINGLE = 0
+TEST_TYPE_MLC = 1
+TEST_TYPE_MULTITARGET = 2
+
+
+class TestedExample:
+    """
+    TestedExample stores predictions of different classifiers for a
+    single testing data instance.
+
+    .. attribute:: classes
+
+        A list of predictions of type Value, one for each classifier.
+
+    .. attribute:: probabilities
+
+        A list of probabilities of classes, one for each classifier.
+
+    .. attribute:: iteration_number
+
+        Iteration number (e.g. fold) in which the TestedExample was
+        created/tested.
+
+    .. attribute actual_class
+
+        The correct class of the example
+
+    .. attribute weight
+
+        Instance's weight; 1.0 if data was not weighted
+    """
+
+    # @deprecated_keywords({"iterationNumber": "iteration_number",
+    #                       "actualClass": "actual_class"})
+    def __init__(self, iteration_number=None, actual_class=None, n=0, weight=1.0):
+        """
+        :param iteration_number: The iteration number of TestedExample.
+        :param actual_class: The actual class of TestedExample.
+        :param n: The number of learners.
+        :param weight: The weight of the TestedExample.
+        """
+        self.classes = [None]*n
+        self.probabilities = [None]*n
+        self.iteration_number = iteration_number
+        self.actual_class= actual_class
+        self.weight = weight
+
+    def add_result(self, aclass, aprob):
+        """Append a new result (class and probability prediction by a single classifier) to the classes and probabilities field."""
+
+        if isinstance(aclass, (list, tuple)):
+            self.classes.append(aclass)
+            self.probabilities.append(aprob)
+        elif type(aclass.value)==float:
+            self.classes.append(float(aclass))
+            self.probabilities.append(aprob)
+        else:
+            self.classes.append(int(aclass))
+            self.probabilities.append(aprob)
+
+    def set_result(self, i, aclass, aprob):
+        """Set the result of the i-th classifier to the given values."""
+        if isinstance(aclass, (list, tuple)):
+            self.classes[i] = aclass
+            self.probabilities[i] = aprob
+        elif type(aclass.value)==float:
+            self.classes[i] = float(aclass)
+            self.probabilities[i] = aprob
+        else:
+            self.classes[i] = int(aclass)
+            self.probabilities[i] = aprob
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+def mt_vals(vals):
+    """
+    Substitution for the unpicklable lambda function for multi-target classifiers.
+    """
+    return [val if val.is_DK() else int(val) if val.variable.var_type == Orange.feature.Type.Discrete
+                                            else float(val) for val in vals]
+
+class ExperimentResults(object):
+    """
+    ``ExperimentResults`` stores results of one or more repetitions of
+    some test (cross validation, repeated sampling...) under the same
+    circumstances. Instances of this class are constructed by sampling
+    and testing functions from module :obj:`Orange.evaluation.testing`
+    and used by methods in module :obj:`Orange.evaluation.scoring`.
+
+    .. attribute:: results
+
+        A list of instances of :obj:`TestedExample`, one for each
+        example in the dataset.
+
+    .. attribute:: number_of_iterations
+
+        Number of iterations. This can be the number of folds (in
+        cross validation) or the number of repetitions of some
+        test. :obj:`TestedExample`'s attribute ``iteration_number``
+        should be in range ``[0, number_of_iterations-1]``.
+
+    .. attribute:: number_of_learners
+
+        Number of learners. Lengths of lists classes and probabilities
+        in each :obj:`TestedExample` should equal
+        ``number_of_learners``.
+
+    .. attribute:: classifier_names
+
+        Stores the names of the classifiers.
+
+    .. attribute:: classifiers
+
+        A list of classifiers, one element for each iteration of
+        sampling and learning (eg. fold). Each element is a list of
+        classifiers, one for each learner. For instance,
+        ``classifiers[2][4]`` refers to the 3rd repetition, 5th
+        learning algorithm.
+
+        Note that functions from :obj:`~Orange.evaluation.testing`
+        only store classifiers it enabled by setting
+        ``storeClassifiers`` to ``1``.
+
+    ..
+        .. attribute:: loaded
+
+            If the experimental method supports caching and there are no
+            obstacles for caching (such as unknown random seeds), this is a
+            list of boolean values. Each element corresponds to a classifier
+            and tells whether the experimental results for that classifier
+            were computed or loaded from the cache.
+
+    .. attribute:: base_class
+
+       The reference class for measures like AUC.
+
+    .. attribute:: class_values
+
+        The list of class values.
+
+    .. attribute:: weights
+
+        A flag telling whether the results are weighted. If ``False``,
+        weights are still present in :obj:`TestedExample`, but they
+        are all ``1.0``. Clear this flag, if your experimental
+        procedure ran on weighted testing examples but you would like
+        to ignore the weights in statistics.
+    """
+    # @deprecated_keywords({"classifierNames": "classifier_names",
+    #                       "classValues": "class_values",
+    #                       "baseClass": "base_class",
+    #                       "numberOfIterations": "number_of_iterations",
+    #                       "numberOfLearners": "number_of_learners"})
+    def __init__(self, iterations, classifier_names, class_values=None, weights=None, base_class=-1, domain=None, test_type=TEST_TYPE_SINGLE, labels=None, **argkw):
+        self.class_values = class_values
+        self.classifier_names = classifier_names
+        self.number_of_iterations = iterations
+        self.number_of_learners = len(classifier_names)
+        self.results = []
+        self.classifiers = []
+        self.loaded = None
+        self.base_class = base_class
+        self.weights = weights
+        self.test_type = test_type
+        self.labels = labels
+
+        if domain is not None:
+            self.base_class = self.class_values = None
+            if test_type == TEST_TYPE_SINGLE:
+                if domain.class_var.var_type == Orange.feature.Type.Discrete:
+                    self.class_values = list(domain.class_var.values)
+                    self.base_class = domain.class_var.base_value
+                    self.converter = int
+                else:
+                    self.converter = float
+            elif test_type in (TEST_TYPE_MLC, TEST_TYPE_MULTITARGET):
+                self.class_values = [list(cv.values) if cv.var_type == cv.Discrete else None for cv in domain.class_vars]
+                self.labels = [var.name for var in domain.class_vars]
+                self.converter = mt_vals
+
+
+        self.__dict__.update(argkw)
+
+    def load_from_files(self, learners, filename):
+        raise NotImplementedError("This feature is no longer supported.")
+
+    def save_to_files(self, learners, filename):
+        raise NotImplementedError("This feature is no longer supported. Pickle whole class instead.")
+
+    def create_tested_example(self, fold, example):
+        actual = example.getclass() if self.test_type == TEST_TYPE_SINGLE \
+                                  else example.get_classes()
+        return TestedExample(fold,
+                             self.converter(actual),
+                             self.number_of_learners,
+                             example.getweight(self.weights))
+
+    def remove(self, index):
+        """remove one learner from evaluation results"""
+        for r in self.results:
+            del r.classes[index]
+            del r.probabilities[index]
+        del self.classifier_names[index]
+        self.number_of_learners -= 1
+
+    def add(self, results, index, replace=-1):
+        """add evaluation results (for one learner)"""
+        if len(self.results)!=len(results.results):
+            raise SystemError("mismatch in number of test cases")
+        if self.number_of_iterations!=results.number_of_iterations:
+            raise SystemError("mismatch in number of iterations (%d<>%d)" % \
+                  (self.number_of_iterations, results.number_of_iterations))
+        if len(self.classifiers) and len(results.classifiers)==0:
+            raise SystemError("no classifiers in results")
+
+        if replace < 0 or replace >= self.number_of_learners: # results for new learner
+            self.classifier_names.append(results.classifier_names[index])
+            self.number_of_learners += 1
+            for i,r in enumerate(self.results):
+                r.classes.append(results.results[i].classes[index])
+                r.probabilities.append(results.results[i].probabilities[index])
+            if len(self.classifiers):
+                for i in range(self.number_of_iterations):
+                    self.classifiers[i].append(results.classifiers[i][index])
+        else: # replace results of existing learner
+            self.classifier_names[replace] = results.classifier_names[index]
+            for i,r in enumerate(self.results):
+                r.classes[replace] = results.results[i].classes[index]
+                r.probabilities[replace] = results.results[i].probabilities[index]
+            if len(self.classifiers):
+                for i in range(self.number_of_iterations):
+                    self.classifiers[replace] = results.classifiers[i][index]
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+# ExperimentResults = deprecated_members({"classValues": "class_values",
+#                                         "classifierNames": "classifier_names",
+#                                         "baseClass": "base_class",
+#                                         "numberOfIterations": "number_of_iterations",
+#                                         "numberOfLearners": "number_of_learners"
+# })(ExperimentResults)
+
+
+class OWScatterPlotQt(OWWidget):
+    """
+    <name>Scatterplot (Qt)</name>
+    <description>Scatterplot visualization.</description>
+    <contact>Gregor Leban (gregor.leban@fri.uni-lj.si)</contact>
+    <icon>icons/ScatterPlot.svg</icon>
+    <priority>130</priority>
+    """
+    name = 'Scatterplot'
+    description = 'Scatterplot visualization'
+
+    inputs =  [("Data", Table, "setData", Default), ("Data Subset", Table, "setSubsetData"), ("Features", AttributeList, "setShownAttributes"), ("Evaluation Results", ExperimentResults, "setTestResults")]#, ("VizRank Learner", Learner, "setVizRankLearner")]
+    outputs = [("Selected Data", Table), ("Other Data", Table)]
+
+    settingsList = ["graph." + s for s in OWPlot.point_settings + OWPlot.appearance_settings] + [
+                    "graph.showXaxisTitle", "graph.showYLaxisTitle", "showGridlines",
+                    "graph.showLegend", "graph.jitterSize", "graph.jitterContinuous", "graph.showFilledSymbols", "graph.showProbabilities",
+                    "graph.showDistributions", "autoSendSelection", "toolbarSelection", "graph.sendSelectionOnUpdate",
+                    "colorSettings", "selectedSchemaIndex", "VizRankLearnerName"]
+    jitterSizeNums = [0.0, 0.1, 0.5,  1,  2 , 3,  4 , 5 , 7 ,  10,   15,   20 ,  30 ,  40 ,  50]
 
     settingsHandler = DomainContextHandler()
+    # contextHandlers = {"": DomainContextHandler("", ["attrX", "attrY",
+    #                                                  (["attrColor", "attrShape", "attrSize"], DomainContextHandler.Optional),
+    #                                                  ("attrLabel", DomainContextHandler.Optional + DomainContextHandler.IncludeMetaAttributes)])}
 
-    def __init__(self):
-        super().__init__()
-
-        def insert_rows_cols_zeros(table, rowoffset = 1, coloffset = 1):
-            if rowoffset not in [0, 1] or coloffset not in [0, 1]:
-                return table
-
-            res = table.copy()
-            for row in range(table.shape[0]):
-                res = np.insert(res, row+row+rowoffset, values=0, axis=0)
-            for col in range(table.shape[1]):
-                res = np.insert(res, col+col+coloffset, values=0, axis=1)
-
-            return res
-
-        def fill_neighbours(tables):
-            # works for three arrays == three colors
-            # arrays must have every other row and cols set to zeros
-            table_count = len(tables)
-            for row in range(0, tables[0].shape[0]-1, 2):
-                for col in range(0, tables[0].shape[1]-1, 2):
-                    if tables[0][row, col] != 0:
-                        if tables[1][row, col+1] == 0 and tables[2][row+1, col] == 0:
-                            # B0 --> BB
-                            # 00     BB
-                            tables[0][row, col+1] = tables[0][row, col]
-                            tables[0][row+1, col] = tables[0][row, col]
-                            tables[0][row+1, col+1] = tables[0][row, col]
-                        elif tables[1][row, col+1] != 0 and tables[2][row+1, col] == 0:
-                            # BG --> BG
-                            # 00     BG
-                            tables[0][row+1, col] = tables[0][row, col]
-                            tables[1][row+1, col+1] = tables[1][row, col+1]
-                        elif tables[1][row, col+1] == 0 and tables[2][row+1, col] != 0:
-                            # B0 --> BB
-                            # R0     RR
-                            tables[0][row, col+1] = tables[0][row, col]
-                            tables[2][row+1, col+1] = tables[2][row+1, col]
-                    elif tables[1][row, col+1] != 0:
-                        if tables[0][row, col] == 0 and tables[2][row+1, col] == 0:
-                            # 0G --> GG
-                            # 00     GG
-                            tables[1][row, col] = tables[1][row, col+1]
-                            tables[1][row+1, col] = tables[1][row, col+1]
-                            tables[1][row+1, col+1] = tables[1][row, col+1]
-                        elif tables[0][row, col] != 0 and tables[2][row+1, col] == 0:
-                            # BG --> BG
-                            # 00     BG
-                            tables[0][row+1, col] = tables[0][row, col]
-                            tables[1][row+1, col+1] = tables[1][row, col+1]
-                        elif tables[0][row, col] == 0 and tables[2][row+1, col] != 0:
-                            # 0G --> GG
-                            # R0     RR
-                            tables[1][row, col] = tables[1][row, col+1]
-                            tables[2][row+1, col+1] = tables[2][row+1, col]
-                    elif tables[2][row+1, col] != 0:
-                        if tables[0][row, col] == 0 and tables[1][row, col+1] == 0:
-                            # 00 --> RR
-                            # R0     RR
-                            tables[2][row, col] = tables[2][row+1, col]
-                            tables[2][row, col+1] = tables[2][row+1, col]
-                            tables[2][row+1, col+1] = tables[2][row+1, col]
-                        elif tables[0][row, col] != 0 and tables[1][row, col+1] == 0:
-                            # B0 --> BB
-                            # R0     RR
-                            tables[0][col+1, row] = tables[0][col, row]
-                            tables[2][row+1, col+1] = tables[2][row+1, col]
-                        elif tables[0][row, col] == 0 and tables[1][row, col+1] != 0:
-                            # duplicate elif
-                            # 0G --> GG
-                            # R0     RR
-                            tables[1][row, col] = tables[1][row, col+1]
-                            tables[2][row+1, col+1] = tables[2][row+1, col]
+    def __init__(self, parent=None, signalManager = None):
+        OWWidget.__init__(self, parent, signalManager, "Scatterplot (Qt)", True)
 
 
 
-        def combine_into_one(tables):
-            # can combine min 2 tables or max 4 tables
-            table_count = len(tables)
-            if table_count < 2 or table_count > 4:
-                return []
 
-            # can combine only tables of same shape
-            shape = tables[0].shape
-            for arr in tables:
-                if arr.shape != shape:
-                    return []
 
-            combined_table = np.zeros(tables[0].shape)
-            for row in range(0, shape[0] - 1, 2):
-                for col in range(0, shape[1] - 1, 2):
-                    combined_table[row, col] = tables[0][row, col]
-                    combined_table[row, col+1] = tables[1][row, col+1]
-                    if table_count > 2:
-                        combined_table[row+1, col] = tables[2][row+1, col]
-                    if table_count > 3:
-                        combined_table[row+1, col+1] = tables[3][row+1, col+1]
+        ##TODO tukaj mas testni graf!
+        self.graph = OWScatterPlotGraphQt_test(self, self.mainArea, "ScatterPlotQt_test")
 
-            return combined_table
+        #add a graph widget
+        ##TODO pazi
+        # self.mainArea.layout().addWidget(self.graph.pgPlotWidget)             # tale je zaresni
+        self.mainArea.layout().addWidget(self.graph.glw)     # tale je testni
 
-        def max_contingency_diff_shape(contingencies):
-            new_contingencies = []
-            # check number of contingencies
-            cont_count = len(contingencies)
-            if cont_count == 0:
-                return new_contingencies
-            if cont_count == 1:
-                return new_contingencies
 
-            # contingencies must be of same shape
-            new_contingencies = reshape_to_max(contingencies)
+        ## TODO spodaj je se en POZOR, kjer nastavis palette
 
-            # set all values to 0, except if max
-            for row in range(0, new_contingencies[0].shape[0]):
-                for col in range(0, new_contingencies[0].shape[1]):
-                    max_value = 0
-                    # get max value
-                    for cont in new_contingencies:
-                        if cont[row, col] > max_value:
-                            max_value = cont[row, col]
-                    # set value to 0, if not max
-                    # assign_anyway = False
-                    for cont in new_contingencies:
-                        # what if two values are equal (max)
-                        if cont[row, col] != max_value:# or assign_anyway:
-                            cont[row, col] = 0
-                        # else:
-                        #     assign_anyway = True
 
-            return new_contingencies
 
-        def max_contingency_same_shape(contingencies):
-            # check number of contingencies
-            cont_count = len(contingencies)
-            if cont_count == 0:
-                return
-            if cont_count == 1:
-                return
 
-            # contingencies must be of same shape
-            shape = contingencies[0].shape
+        # self.vizrank = OWVizRank(self, self.signalManager, self.graph, orngVizRank.SCATTERPLOT, "ScatterPlotQt")
+        # self.optimizationDlg = self.vizrank
 
-            # set all values to 0, except if max
-            for row in range(0, shape[0]):
-                for col in range(0, shape[1]):
-                    max_value = 0
-                    # get max value
-                    for cont in contingencies:
-                        if cont[row, col] > max_value:
-                            max_value = cont[row, col]
-                    # set value to 0, if not max
-                    # assign_anyway = False
-                    for cont in contingencies:
-                        # what if two values are equal (max)
-                        if cont[row, col] != max_value:# or assign_anyway:
-                            cont[row, col] = 0
-                        # else:
-                        #     assign_anyway = True
+        # local variables
+        self.showGridlines = 1
+        self.autoSendSelection = 1
+        self.toolbarSelection = 0
+        self.classificationResults = None
+        self.outlierValues = None
+        self.colorSettings = None
+        self.selectedSchemaIndex = 0
+        self.graph.sendSelectionOnUpdate = 0
+        self.attributeSelectionList = None
 
+        self.data = None
+        self.subsetData = None
+
+        #load settings
+        # self.loadSettings()
+        self.graph.setShowXaxisTitle()
+        self.graph.setShowYLaxisTitle()
+
+
+
+
+
+
+
+        # self.connect(self.graphButton, SIGNAL("clicked()"), self.graph.saveToFile)
+
+        box1 = gui.widgetBox(self.controlArea, "Axis Variables")
+        #x attribute
+        self.attrX = ""
+        self.attrXCombo = gui.comboBox(box1, self, "attrX", label="X-Axis:", labelWidth=50, orientation="horizontal", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
+        # y attribute
+        self.attrY = ""
+        self.attrYCombo = gui.comboBox(box1, self, "attrY", label="Y-Axis:", labelWidth=50, orientation="horizontal", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
+
+        box2 = gui.widgetBox(self.controlArea, "Point Properties")
+        self.attrColor = ""
+        self.attrColorCombo = gui.comboBox(box2, self, "attrColor", label="Color:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same color)")
+        # labelling
+        self.attrLabel = ""
+        self.attrLabelCombo = gui.comboBox(box2, self, "attrLabel", label="Label:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, emptyString = "(No labels)")
+        # shaping
+        self.attrShape = ""
+        self.attrShapeCombo = gui.comboBox(box2, self, "attrShape", label="Shape:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same shape)")
+        # sizing
+        self.attrSize = ""
+        self.attrSizeCombo = gui.comboBox(box2, self, "attrSize", label="Size:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same size)")
+
+        g = self.graph.gui
+
+        box3 = g.point_properties_box(self.controlArea)
+        # self.jitterSizeCombo = gui.comboBox(box3, self, "graph.jitter_size", label = 'Jittering size (% of size):'+'  ', orientation = "horizontal", callback = self.resetGraphData, items = self.jitterSizeNums, sendSelectedValue = 1, valueType = float)
+        ## TODO: jitter size slider ima samo interger values -> ali lahko slajda po self.jitterSizeNums
+        gui.hSlider(box3, self, value='graph.jitter_size', label='Jittering (%): ', minValue=1, maxValue=10, callback=self.resetGraphData)
+
+        gui.checkBox(gui.indentedBox(box3), self, 'graph.jitter_continuous', 'Jitter continuous values', callback = self.resetGraphData, tooltip = "Does jittering apply also on continuous attributes?")
+        gui.button(box3, self, "Set Colors", self.setColors, tooltip = "Set the canvas background color, grid color and color palette for coloring continuous variables")
+
+        box4 = gui.widgetBox(self.controlArea, "Plot Properties")
+        g.add_widgets([g.ShowLegend, g.ShowGridLines], box4)
+        # gui.comboBox(box4, self, "graph.tooltipKind", items = ["Don't Show Tooltips", "Show Visible Attributes", "Show All Attributes"], callback = self.updateGraph)
+        gui.checkBox(box4, self, value='graph.tooltipShowsAllAttributes', label='Show all attributes in tooltip')
+
+        box5 = gui.widgetBox(self.controlArea, "Auto Send Selected Data When...")
+        gui.checkBox(box5, self, 'autoSendSelection', 'Adding/Removing selection areas', callback = self.selectionChanged, tooltip = "Send selected data whenever a selection area is added or removed")
+        gui.checkBox(box5, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas', tooltip = "Send selected data when a user moves or resizes an existing selection area")
+        self.graph.selection_changed.connect(self.selectionChanged)
+
+        # zooming / selection
+        self.zoomSelectToolbar = g.zoom_select_toolbar(self.controlArea, buttons = g.default_zoom_select_buttons + [g.Spacing, g.ShufflePoints])
+        self.connect(self.zoomSelectToolbar.buttons[g.SendSelection], SIGNAL("clicked()"), self.sendSelections)
+        self.connect(self.zoomSelectToolbar.buttons[g.Zoom], SIGNAL("clicked()",), self.graph.zoomButtonClicked)
+        self.connect(self.zoomSelectToolbar.buttons[g.Pan], SIGNAL("clicked()",), self.graph.panButtonClicked)
+        self.connect(self.zoomSelectToolbar.buttons[g.Select], SIGNAL("clicked()",), self.graph.selectButtonClicked)
+        
+        self.controlArea.layout().addStretch(100)
+        self.icons = gui.attributeIconDict
+
+        self.debugSettings = ["attrX", "attrY", "attrColor", "attrLabel", "attrShape", "attrSize"]
+        # self.wdChildDialogs = [self.vizrank]        # used when running widget debugging
+
+        dlg = self.createColorDialog()
+        self.graph.contPalette = dlg.getContinuousPalette("contPalette")
+        self.graph.discPalette = dlg.getDiscretePalette("discPalette")
+
+
+        ##TODO POZOR!
+        # p = self.graph.pgPlotWidget.palette()
+        p = self.graph.glw.palette()
+
+
+
+        p.setColor(OWPalette.Canvas, dlg.getColor("Canvas"))
+        p.setColor(OWPalette.Grid, dlg.getColor("Grid"))
+        self.graph.set_palette(p)
+
+        self.graph.enableGridXB(self.showGridlines)
+        self.graph.enableGridYL(self.showGridlines)
+
+        # self.graph.resize(700, 550)
+        self.mainArea.setMinimumWidth(700)
+        self.mainArea.setMinimumHeight(550)
+        ## TODO tole je zdej minimum size --> najdi drug nacin za resize
+
+
+    # def settingsFromWidgetCallback(self, handler, context):
+    #     context.selectionPolygons = []
+    #     for curve in self.graph.selectionCurveList:
+    #         xs = [curve.x(i) for i in range(curve.dataSize())]
+    #         ys = [curve.y(i) for i in range(curve.dataSize())]
+    #         context.selectionPolygons.append((xs, ys))
+
+    # def settingsToWidgetCallback(self, handler, context):
+    #     selections = getattr(context, "selectionPolygons", [])
+    #     for (xs, ys) in selections:
+    #         c = SelectionCurve("")
+    #         c.setData(xs,ys)
+    #         c.attach(self.graph)
+    #         self.graph.selectionCurveList.append(c)
+
+    # ##############################################################################################################################################################
+    # SCATTERPLOT SIGNALS
+    # ##############################################################################################################################################################
+
+    def resetGraphData(self):
+        self.graph.rescale_data()
+        self.majorUpdateGraph()
+
+    # receive new data and update all fields
+    def setData(self, data):
+        if data is not None and (len(data) == 0 or len(data.domain) == 0):
+            data = None
+        if self.data and data and self.data.checksum() == data.checksum():
+            return    # check if the new data set is the same as the old one
+
+        self.closeContext()
+        sameDomain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
+        self.data = data
+
+        # "popravi" sql tabelo
+        if type(self.data) is SqlTable:
+            if self.data.name == 'iris':
+                attrs = [attr for attr in self.data.domain.attributes if type(attr) is ContinuousVariable]
+                class_vars = [attr for attr in self.data.domain.attributes if type(attr) is DiscreteVariable]
+                self.data.domain.class_vars = class_vars
+                self.data.domain.class_var = class_vars[0]
+                self.data.domain.attributes = attrs
+                self.data.X = numpy.zeros((len(self.data), len(self.data.domain.attributes)))
+                self.data.Y = numpy.zeros((len(self.data), len(self.data.domain.class_vars)))
+                for (i, row) in enumerate(data):
+                    self.data.X[i] = [row[attr] for attr in self.data.domain.attributes]
+                    self.data.Y[i] = row[self.data.domain.class_var]
+
+
+        # self.vizrank.clearResults()
+        if not sameDomain:
+            self.initAttrValues()
+        self.graph.insideColors = None
+        self.classificationResults = None
+        self.outlierValues = None
+        self.openContext(self.data)
+
+    # set an example table with a data subset subset of the data. if called by a visual classifier, the update parameter will be 0
+    def setSubsetData(self, subsetData):
+        self.subsetData = subsetData
+        # self.vizrank.clearArguments()
+
+    # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
+    def handleNewSignals(self):
+        self.graph.setData(self.data, self.subsetData)
+        # self.vizrank.resetDialog()
+        if self.attributeSelectionList and 0 not in [self.graph.attribute_name_index.has_key(attr) for attr in self.attributeSelectionList]:
+            self.attrX = self.attributeSelectionList[0]
+            self.attrY = self.attributeSelectionList[1]
+        self.attributeSelectionList = None
+        self.updateGraph()
+        self.sendSelections()
+
+
+    # receive information about which attributes we want to show on x and y axis
+    def setShownAttributes(self, list):
+        if list and len(list[:2]) == 2:
+            self.attributeSelectionList = list[:2]
+        else:
+            self.attributeSelectionList = None
+
+
+    # visualize the results of the classification
+    def setTestResults(self, results):
+        self.classificationResults = None
+        if isinstance(results, ExperimentResults) and len(results.results) > 0 and len(results.results[0].probabilities) > 0:
+            self.classificationResults = [results.results[i].probabilities[0][results.results[i].actualClass] for i in range(len(results.results))]
+            self.classificationResults = (self.classificationResults, "Probability of correct classification = %.2f%%")
+
+
+    # set the learning method to be used in VizRank
+    def setVizRankLearner(self, learner):
+        self.vizrank.externalLearner = learner
+
+    # send signals with selected and unselected examples as two datasets
+    def sendSelections(self):
+        (selected, unselected) = self.graph.getSelectionsAsExampleTables([self.attrX, self.attrY])
+        self.send("Selected Data", selected)
+        self.send("Other Data", unselected)
+        print('\nselected data:\n', selected)
+        print('unselected data:\n', unselected)
+
+
+    # ##############################################################################################################################################################
+    # CALLBACKS FROM VIZRANK DIALOG
+    # ##############################################################################################################################################################
+
+    def showSelectedAttributes(self):
+        val = self.vizrank.getSelectedProjection()
+        if not val: return
+        if self.data.domain.class_var:
+            self.attrColor = self.data.domain.class_var.name
+        self.majorUpdateGraph(val[3])
+
+    # ##############################################################################################################################################################
+    # ATTRIBUTE SELECTION
+    # ##############################################################################################################################################################
+
+    def getShownAttributeList(self):
+        return [self.attrX, self.attrY]
+
+    def initAttrValues(self):
+        self.attrXCombo.clear()
+        self.attrYCombo.clear()
+        self.attrColorCombo.clear()
+        self.attrLabelCombo.clear()
+        self.attrShapeCombo.clear()
+        self.attrSizeCombo.clear()
+
+        if not self.data: return
+
+        self.attrColorCombo.addItem("(Same color)")
+        self.attrLabelCombo.addItem("(No labels)")
+        self.attrShapeCombo.addItem("(Same shape)")
+        self.attrSizeCombo.addItem("(Same size)")
+
+        #labels are usually chosen from meta variables, put them on top
+        for metavar in self.data.domain._metas:
+            self.attrLabelCombo.addItem(self.icons[metavar.var_type], metavar.name)
+
+        contList = []
+        discList = []
+        for attr in self.data.domain:
+            if attr.var_type in [VarTypes.Discrete, VarTypes.Continuous]:
+                self.attrXCombo.addItem(self.icons[attr.var_type], attr.name)
+                self.attrYCombo.addItem(self.icons[attr.var_type], attr.name)
+                self.attrColorCombo.addItem(self.icons[attr.var_type], attr.name)
+                self.attrSizeCombo.addItem(self.icons[attr.var_type], attr.name)
+            if attr.var_type == VarTypes.Discrete:
+                self.attrShapeCombo.addItem(self.icons[attr.var_type], attr.name)
+            self.attrLabelCombo.addItem(self.icons[attr.var_type], attr.name)
+
+        self.attrX = str(self.attrXCombo.itemText(0))
+        if self.attrYCombo.count() > 1: self.attrY = str(self.attrYCombo.itemText(1))
+        else:                           self.attrY = str(self.attrYCombo.itemText(0))
+
+        if self.data.domain.class_var and self.data.domain.class_var.var_type in [VarTypes.Discrete, VarTypes.Continuous]:
+            self.attrColor = self.data.domain.class_var.name
+        else:
+            self.attrColor = ""
+        self.attrShape = ""
+        self.attrSize= ""
+        self.attrLabel = ""
+
+    def majorUpdateGraph(self, attrList = None, insideColors = None, **args):
+        self.graph.clear_selection()
+        self.updateGraph(attrList, insideColors, **args)
+
+    def updateGraph(self, attrList = None, insideColors = None, **args):
+        self.graph.zoomStack = []
+        if not self.graph.have_data:
             return
 
-        def reshape_to_max(tables):
-            new_tables = []
-            max_shape = tables[0].shape
-            for cont in tables:
-                if cont.shape > max_shape:
-                    max_shape = cont.shape
-            for cont in tables:
-                if cont.shape != max_shape:
-                    z = np.zeros(max_shape)
-                    z[0:cont.shape[0], 0:cont.shape[1]] = cont
-                    new_tables.append(z.copy())
-                else:
-                    new_tables.append(cont)
-            return new_tables
+        if attrList and len(attrList) == 2:
+            self.attrX = attrList[0]
+            self.attrY = attrList[1]
+
+        # if self.graph.dataHasDiscreteClass and (self.vizrank.showKNNCorrectButton.isChecked() or self.vizrank.showKNNWrongButton.isChecked()):
+        #     kNNExampleAccuracy, probabilities = self.vizrank.kNNClassifyData(self.graph.createProjectionAsExampleTable([self.graph.attributeNameIndex[self.attrX], self.graph.attributeNameIndex[self.attrY]]))
+        #     if self.vizrank.showKNNCorrectButton.isChecked(): kNNExampleAccuracy = ([1.0 - val for val in kNNExampleAccuracy], "Probability of wrong classification = %.2f%%")
+        #     else: kNNExampleAccuracy = (kNNExampleAccuracy, "Probability of correct classification = %.2f%%")
+        # else:
+        kNNExampleAccuracy = None
+
+        self.graph.insideColors = insideColors or self.classificationResults or kNNExampleAccuracy or self.outlierValues
+        self.graph.updateData(self.attrX, self.attrY, self.attrColor, self.attrShape, self.attrSize, self.attrLabel)
 
 
-        def set_values(table, value):
-            for row in range(0, table.shape[0]):
-                for col in range(0, table.shape[1]):
-                    table[row, col] = value
+    # ##############################################################################################################################################################
+    # SCATTERPLOT SETTINGS
+    # ##############################################################################################################################################################
+    def saveSettings(self):
+        OWWidget.saveSettings(self)
+        # self.vizrank.saveSettings()
 
-        def set_values_list(tables, value):
-            for table in tables:
-                for row in range(0, table.shape[0]):
-                    for col in range(0, table.shape[1]):
-                        table[row, col] = value
+    #update status on progress bar - gets called by OWScatterplotGraph
+    def updateProgress(self, current, total):
+        self.progressBar.setTotalSteps(total)
+        self.progressBar.setProgress(current)
+        
+    def setShowGridlines(self):
+        self.graph.enableGridXB(self.showGridlines)
+        self.graph.enableGridYL(self.showGridlines)
 
-        #iris = Table("iris")
-        iris = Orange.data.sql.table.SqlTable(host='localhost', database='test', table='iris')
+    def selectionChanged(self):
+        self.zoomSelectToolbar.buttons[OWPlotGUI.SendSelection].setEnabled(not self.autoSendSelection)
+        if self.autoSendSelection:
+            self.sendSelections()
 
-        disc = feature.discretization.EqualFreq(n=10)
-        diris = discretization.DiscretizeTable(iris, method=disc)
-        # cont = np.flipud(statistics.contingency.get_contingency(diris, 2, 3))
+    def setColors(self):
+        dlg = self.createColorDialog()
+        if dlg.exec_():
+            self.colorSettings = dlg.getColorSchemas()
+            self.selectedSchemaIndex = dlg.selectedSchemaIndex
+            self.graph.contPalette = dlg.getContinuousPalette("contPalette")
+            self.graph.discPalette = dlg.getDiscretePalette("discPalette")
+            self.graph.setCanvasBackground(dlg.getColor("Canvas"))
+            self.graph.setGridColor(dlg.getColor("Grid"))
+            self.updateGraph()
 
-        filt = Orange.data.filter.Values()
-        irisclass = iris.domain['iris']
-        filt.domain = iris.domain
-        fd = Orange.data.filter.FilterDiscrete(
-                column = iris.domain.attributes.index(irisclass),
-                values = ["Iris-setosa"])
-        filt.conditions.append(fd)
-        iris_setosa = filt(iris)
-        # diris_setosa = filt(diris)
+    def createColorDialog(self):
+        c = ColorPaletteDlg(self, "Color Palette")
+        c.createDiscretePalette("discPalette", "Discrete Palette")
+        c.createContinuousPalette("contPalette", "Continuous Palette")
+        box = c.createBox("otherColors", "Other Colors")
+        c.createColorButton(box, "Canvas", "Canvas color", self.graph.color(OWPalette.Canvas))
+        box.layout().addSpacing(5)
+        c.createColorButton(box, "Grid", "Grid color", self.graph.color(OWPalette.Grid))
+        box.layout().addSpacing(5)
+        c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
+        return c
 
-
-        filt = Orange.data.filter.Values()
-        irisclass = iris.domain['iris']
-        filt.domain = iris.domain
-        fd = Orange.data.filter.FilterDiscrete(
-                column = iris.domain.attributes.index(irisclass),
-                values = ["Iris-versicolor"])
-        filt.conditions.append(fd)
-        iris_versicolor = filt(iris)
-        # diris_versicolor = filt(diris)
-
-        filt = Orange.data.filter.Values()
-        irisclass = iris.domain['iris']
-        filt.domain = iris.domain
-        fd = Orange.data.filter.FilterDiscrete(
-                column = iris.domain.attributes.index(irisclass),
-                values = ["Iris-virginica"])
-        filt.conditions.append(fd)
-        iris_virginica = filt(iris)
-        # diris_virginica = filt(diris)
-
-        disc = feature.discretization.EqualFreq(n=10)
-        diris_setosa = discretization.DiscretizeTable(iris_setosa, method=disc)
-        diris_versicolor = discretization.DiscretizeTable(iris_versicolor, method=disc)
-        diris_virginica = discretization.DiscretizeTable(iris_virginica, method=disc)
-
-        cont_setosa = np.flipud(statistics.contingency.get_contingency(diris_setosa, 2, 3))
-        cont_versicolor = np.flipud(statistics.contingency.get_contingency(diris_versicolor, 2, 3))
-        cont_virginica = np.flipud(statistics.contingency.get_contingency(diris_virginica, 2, 3))
-        cont_zeros = np.zeros(cont_setosa.shape)
-
-        print("*" * 40)
-        print("cont_setosa: " + str(cont_setosa.shape))
-        print(cont_setosa)
-        print("cont_versicolor: " + str(cont_versicolor.shape))
-        print(cont_versicolor)
-        print("cont_virginica: " + str(cont_virginica.shape))
-        print(cont_virginica)
-
-        cont_setosa, cont_versicolor, cont_virginica = reshape_to_max([cont_setosa, cont_versicolor, cont_virginica])
-        max_contingency_same_shape([cont_setosa, cont_versicolor, cont_virginica])
-
-        cont_setosa = insert_rows_cols_zeros(cont_setosa)
-        cont_versicolor = insert_rows_cols_zeros(cont_versicolor, coloffset=0)
-        cont_virginica = insert_rows_cols_zeros(cont_virginica, rowoffset=0)
-        cont_zeros = np.zeros(cont_setosa.shape)
-        #
-        fill_neighbours([cont_setosa, cont_versicolor, cont_virginica])
-
-        # cont = combine_into_one([cont_setosa_z, cont_versicolor_z, cont_virginica_z])
-
-        # set_values_list([cont_setosa, cont_versicolor, cont_virginica], 0.)
-        # cont_setosa, cont_versicolor, cont_virginica = max_contingency_diff_shape([cont_setosa, cont_versicolor, cont_virginica])
-        # max_contingency_diff_shape([cont_setosa, cont_versicolor, cont_virginica])
-        # max_contingency_same_shape([cont_setosa, cont_versicolor, cont_virginica])
-
-        print("cont_setosa: " + str(cont_setosa.shape))
-        print(cont_setosa)
-        print("cont_versicolor: " + str(cont_versicolor.shape))
-        print(cont_versicolor)
-        print("cont_virginica: " + str(cont_virginica.shape))
-        print(cont_virginica)
-        print("*" * 40)
-
-        # print(cont_setosa.shape)
-        # print(cont_setosa)
-        # print(cont_setosa_z)
-        #
-        # print(cont_versicolor.shape)
-        # print(cont_versicolor)
-        # print(cont_versicolor_z)
-        #
-        # print(cont_virginica.shape)
-        # print(cont_virginica)
-        # print(cont_virginica_z)
+    def closeEvent(self, ce):
+        # self.vizrank.close()
+        OWWidget.closeEvent(self, ce)
 
 
-        # cont1 = insert_rows_cols_zeros(cont)
-        # cont2 = insert_rows_cols_zeros(cont, coloffset=0)
-        # cont3 = insert_rows_cols_zeros(cont, rowoffset=0)
-        # cont = combine_into_one([cont1, cont2, cont3])
+    def sendReport(self):
+        self.startReport("%s [%s - %s]" % (self.windowTitle(), self.attrX, self.attrY))
+        self.reportSettings("Visualized attributes",
+                            [("X", self.attrX),
+                             ("Y", self.attrY),
+                             self.attrColor and ("Color", self.attrColor),
+                             self.attrLabel and ("Label", self.attrLabel),
+                             self.attrShape and ("Shape", self.attrShape),
+                             self.attrSize and ("Size", self.attrSize)])
+        self.reportSettings("Settings",
+                            [("Symbol size", self.graph.pointWidth),
+                             ("Transparency", self.graph.alphaValue),
+                             ("Jittering", self.graph.jitter_size),
+                             ("Jitter continuous attributes", gui.YesNo[self.graph.jitter_continuous])])
+        self.reportSection("Graph")
+        self.reportImage(self.graph.saveToFileDirect, QSize(400, 400))
 
-        # blue = np.array([1.] * 100)
-        # blue = blue.reshape((10, 10))
-        # green = np.array([1.] * 100)
-        # green = green.reshape((10, 10))
-        # red = np.array([1.] * 100)
-        # red = red.reshape((10, 10))
-        # black = np.array([0] * 100)
-        # black = black.reshape((10, 10))
-        # print("blue: " + str(blue.shape))
-        # print(blue)
-        # print("green: " + str(green.shape))
-        # print(green)
-        # print("red: " + str(red.shape))
-        # print(red)
-        # blue = insert_rows_cols_zeros(blue)
-        # green = insert_rows_cols_zeros(green, coloffset=0)
-        # red = insert_rows_cols_zeros(red, rowoffset=0)
-        # black = insert_rows_cols_zeros(black, rowoffset=0, coloffset=0)
-        # cont = combine_into_one([blue, green, red])
-
-
-        # cx, cy = np.mgrid[0:(cont.shape[0]-1):256j, 0:(cont.shape[1]-1):256j]
-        # coords = np.array([cx, cy])
-        # image = ndimage.map_coordinates(cont, coords)
-        # image -= np.min(image)
-        # image /= np.max(image)
-        # print(np.max(image))
-        # image *= 255
-        # print("cont: " + str(cont.shape))
-        # print(cont)
-
-        # cx, cy = np.mgrid[0:(blue.shape[0]-1):256j, 0:(blue.shape[1]-1):256j]
-        # coords = np.array([cx, cy])
-        # blue_image = ndimage.map_coordinates(blue, coords)
-        # blue_image -= np.min(blue_image)
-        # blue_image /= np.max(blue_image)
-        # print(np.max(blue_image))
-        # blue_image *= 255
-        # print("blue: " + str(blue.shape))
-        # print(blue)
-        # print("blue coords: " + str(coords.shape))
-        # print(coords)
-        # print("blueimage: " +str(blue_image.shape))
-        # print(blue_image)
-        #
-        #
-        # cx, cy = np.mgrid[0:(green.shape[0]-1):256j, 0:(green.shape[1]-1):256j]
-        # coords = np.array([cx, cy])
-        # green_image = ndimage.map_coordinates(green, coords)
-        # green_image -= np.min(green_image)
-        # green_image /= np.max(green_image)
-        # print(np.max(green_image))
-        # green_image *= 255
-        #
-        # cx, cy = np.mgrid[0:(red.shape[0]-1):256j, 0:(red.shape[1]-1):256j]
-        # coords = np.array([cx, cy])
-        # red_image = ndimage.map_coordinates(red, coords)
-        # red_image -= np.min(red_image)
-        # red_image /= np.max(red_image)
-        # print(np.max(red_image))
-        # red_image *= 255
-        # print("red: " + str(red.shape))
-        # print(red)
-        #
-        # cx, cy = np.mgrid[0:(black.shape[0]-1):256j, 0:(black.shape[1]-1):256j]
-        # coords = np.array([cx, cy])
-        # black_image = ndimage.map_coordinates(black, coords)
-        # black_image -= np.min(black_image)
-        # black_image /= np.max(black_image)
-        # print(np.max(black_image))
-        # black_image *= 255
-        # print("black: " + str(black.shape))
-        # print(black)
-
-        cx, cy = np.mgrid[0:(cont_setosa.shape[0]-1):256j, 0:(cont_setosa.shape[1]-1):256j]
-        coords = np.array([cx, cy])
-        setosa_image = ndimage.map_coordinates(cont_setosa, coords)
-        setosa_image -= np.min(setosa_image)
-        setosa_image /= np.max(setosa_image)
-        print(np.max(setosa_image))
-        setosa_image *= 255
-        # print("cont_setosa: " + str(cont_setosa.shape))
-        # print(cont_setosa)
-        # print("cont_setosa coords: " + str(coords.shape))
-        # print(coords)
-        # print("setosa_image: " +str(setosa_image.shape))
-        # print(setosa_image)
-
-        cx, cy = np.mgrid[0:(cont_versicolor.shape[0]-1):256j, 0:(cont_versicolor.shape[1]-1):256j]
-        coords = np.array([cx, cy])
-        versicolor_image = ndimage.map_coordinates(cont_versicolor, coords)
-        versicolor_image -= np.min(versicolor_image)
-        versicolor_image /= np.max(versicolor_image)
-        print(np.max(versicolor_image))
-        versicolor_image *= 255
-        # print("cont_versicolor: " + str(cont_versicolor.shape))
-        # print(cont_versicolor)
-        # print("cont_versicolor coords: " + str(coords.shape))
-        # print(coords)
-        # print("versicolor_image: " +str(versicolor_image.shape))
-        # print(versicolor_image)
-        #
-        cx, cy = np.mgrid[0:(cont_virginica.shape[0]-1):256j, 0:(cont_virginica.shape[1]-1):256j]
-        coords = np.array([cx, cy])
-        virginica_image = ndimage.map_coordinates(cont_virginica, coords)
-        virginica_image -= np.min(virginica_image)
-        virginica_image /= np.max(virginica_image)
-        print(np.max(virginica_image))
-        virginica_image *= 255
-        # print("cont_virginica: " + str(cont_virginica.shape))
-        # print(cont_virginica)
-        # print("cont_virginica coords: " + str(coords.shape))
-        # print(coords)
-        # print("virginica_image: " + str(virginica_image.shape))
-        # print(virginica_image)
-
-        cx, cy = np.mgrid[0:(cont_zeros.shape[0]-1):256j, 0:(cont_zeros.shape[1]-1):256j]
-        coords = np.array([cx, cy])
-        zeros_image = ndimage.map_coordinates(cont_zeros, coords)
-        zeros_image -= np.min(zeros_image)
-        zeros_image /= np.max(zeros_image)
-        print(np.max(zeros_image))
-        zeros_image *= 255
-
-        # cx, cy = np.mgrid[0:(black.shape[0]-1):256j, 0:(black.shape[1]-1):256j]
-        # coords = np.array([cx, cy])
-        # blackimage = ndimage.map_coordinates(black, coords)
-        # blackimage -= np.min(blackimage)
-        # blackimage /= np.max(blackimage)
-        # print(np.max(blackimage))
-        # blackimage *= 255
-
-        # setosa - blue, versicolor - green, virginica - red
-        # image = np.dstack((setosa_image, zeros_image, zeros_image, zeros_image))
-        # image = np.dstack((zeros_image, versicolor_image, zeros_image, zeros_image))
-        # image = np.dstack((zeros_image, zeros_image, virginica_image, zeros_image))
-        image = np.dstack((setosa_image, versicolor_image, virginica_image, zeros_image))
-        # image = np.dstack((blue_image, green_image, red_image, black_image))
-        # image = np.dstack((image, image, image, image ))
-
-        im255 = image.flatten().astype(np.uint8)
-
-        im = QtGui.QImage(im255.data, 256, 256, QtGui.QImage.Format_RGB32)
-        pim = QtGui.QPixmap.fromImage(im)
-
-        self.scene = QtGui.QGraphicsScene()
-        self.view = QtGui.QGraphicsView(self.scene)
-        self.view.setRenderHints(QtGui.QPainter.Antialiasing |
-                                    QtGui.QPainter.TextAntialiasing |
-                                    QtGui.QPainter.SmoothPixmapTransform)
-        self.mainArea.layout().addWidget(self.view)
-        self.scene.addPixmap(pim)
-
-if __name__ == "__main__":
-    a = QtGui.QApplication([])
-    w = OWScatterPlot()
-    w.show()
+#test widget appearance
+if __name__=="__main__":
+    a=QApplication(sys.argv)
+    ow=OWScatterPlotQt()
+    ow.show()
+    data = Orange.data.Table(r"iris.tab")
+    ow.setData(data)
+    #ow.setData(orange.ExampleTable("wine.tab"))
+    ow.handleNewSignals()
     a.exec_()
+    #save settings
+    ow.saveSettings()

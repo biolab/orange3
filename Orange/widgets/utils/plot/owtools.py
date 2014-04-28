@@ -36,12 +36,15 @@ Plot tools (``owtools``)
 
 from PyQt4.QtGui import (QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem,
     QPolygonF, QGraphicsPolygonItem, QGraphicsEllipseItem, QPen, QBrush,
-    QGraphicsPixmapItem, QGraphicsPathItem, QPainterPath)
-from PyQt4.QtCore import Qt, QRectF, QPointF, QPropertyAnimation
+    QGraphicsPixmapItem, QGraphicsPathItem, QPainterPath, qRgb, QImage, QPixmap)
+from PyQt4.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, qVersion
+from Orange.widgets.utils.colorpalette import ColorPaletteDlg
+from Orange.widgets.utils.scaling import get_variable_values_sorted
 
 from .owcurve import *
 from .owpalette import OWPalette
 import orangeqt
+import Orange
 
 #from Orange.data.preprocess.scaling import get_variable_values_sorted
 #from Orange import orangeom
@@ -357,7 +360,7 @@ class Marker(orangeqt.PlotItem):
     def update_properties(self):
         self._item.setPos(self.graph_transform().map(self._data_point))
 
-'''
+
 class ProbabilitiesItem(orangeqt.PlotItem):
     """
         Displays class probabilities in the background
@@ -411,7 +414,7 @@ class ProbabilitiesItem(orangeqt.PlotItem):
         ox = p.x()
         oy = -p.y()
 
-        if self.classifier.classVar.varType == orange.VarTypes.Continuous:
+        if self.classifier.classVar.varType == Orange.VarTypes.Continuous:
             imagebmp = orangeom.potentialsBitmap(self.classifier, rx, ry, ox, oy, self.granularity, self.scale)
             palette = [qRgb(255.*i/255., 255.*i/255., 255-(255.*i/255.)) for i in range(255)] + [qRgb(255, 255, 255)]
         else:
@@ -427,14 +430,14 @@ class ProbabilitiesItem(orangeqt.PlotItem):
             palette.extend([qRgb(255, 255, 255) for i in range(256-len(palette))])
 
         self.potentialsImage = QImage(imagebmp, rx, ry, QImage.Format_Indexed8)
-        self.potentialsImage.setColorTable(ColorPalette.signedPalette(palette) if qVersion() < "4.5" else palette)
+        self.potentialsImage.setColorTable(ColorPaletteDlg.signedPalette(palette) if qVersion() < "4.5" else palette)
         self.potentialsImage.setNumColors(256)
         self.pixmap_item.setPixmap(QPixmap.fromImage(self.potentialsImage))
         self.pixmap_item.setPos(self.graph_transform().map(self.rect.bottomLeft()))
 
     def data_rect(self):
         return self.rect if self.rect else QRectF()
-'''
+
 
 #@deprecated_members({
 #        'enableX' : 'set_x_enabled',
