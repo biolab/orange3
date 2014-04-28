@@ -4,6 +4,9 @@ import numpy
 cimport numpy as np
 import cython
 
+cdef extern from "numpy/npy_math.h":
+    bint npy_isnan(double x)
+
 from numpy cimport NPY_FLOAT64 as NPY_float64
 
 @cython.boundscheck(False)
@@ -31,8 +34,12 @@ def valuecount(np.ndarray[np.float64_t, ndim=2] a not None):
     cdef Py_ssize_t N = dim[1]
 
     cdef Py_ssize_t src
+
+    if N == 0 or npy_isnan(a[0, 0]):
+        return a[:, :0]
+
     for src in range(1, N):
-        if a[0, src] == a[0, src-1]:
+        if a[0, src] == a[0, src - 1] or npy_isnan(a[0, src]):
             break
     else:
         return a

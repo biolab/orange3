@@ -160,7 +160,7 @@ class SqlTable(table.Table):
             except TypeError:
                 pass
 
-        else:
+        elif not (row_idx is Ellipsis or row_idx == slice(None)):
             # TODO if row_idx specify multiple rows, one of the following must
             # happen
             #  - the new table remembers which rows are selected (implement

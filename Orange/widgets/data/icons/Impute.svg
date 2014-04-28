@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
+<g>
+	<path fill="#333333" d="M6,6v36h36V6H6z M40,18v1v10v1v10H30h-1H19h-1H8V30v-1V19v-1V8h10h1h10h1h10V18z"/>
+	<rect x="32" y="21" fill="#666666" width="6" height="6"/>
+	<rect x="10" y="10" fill="#666666" width="6" height="6"/>
+	<rect x="21" y="32" fill="#666666" width="6" height="6"/>
+	<path fill="#666666" d="M30,8h-1v10H19V8h-1v10H8v1h10v10H8v1h10v10h1V30h10v10h1V30h10v-1H30V19h10v-1H30V8z M29,29H19V19h10V29z"
+		/>
+	<rect x="19" y="8" fill="#FFFFFF" width="10" height="10"/>
+	<path fill="#B2B2B2" d="M19,30v10h10V30H19z M27,38h-6v-6h6V38z"/>
+	<path fill="#B2B2B2" d="M30,29h10V19H30V29z M32,21h6v6h-6V21z"/>
+	<path fill="#B2B2B2" d="M18,8H8v10h10V8z M16,16h-6v-6h6V16z"/>
+	<rect x="30" y="8" fill="#FFFFFF" width="10" height="10"/>
+	<rect x="8" y="19" fill="#FFFFFF" width="10" height="10"/>
+	<rect x="19" y="19" fill="#FFFFFF" width="10" height="10"/>
+	<rect x="8" y="30" fill="#FFFFFF" width="10" height="10"/>
+	<rect x="30" y="30" fill="#FFFFFF" width="10" height="10"/>
+</g>
+</svg>
