@@ -937,11 +937,11 @@ class OWScatterPlotGraphQt_test(OWWidget, ScaleScatterPlotData):
         ScaleScatterPlotData.__init__(self)
 
         # create ViewBox to hold the legends
+        self.default_legend_width = 140
         self.add_legend_viewbox()
         self.show_legend = True
         self._legend = None
         self._gradient_legend = None
-        self.default_legend_width = 100
 
         self.jitter_continuous = 0
         self.jitter_size = 5
@@ -1510,7 +1510,7 @@ class OWScatterPlotGraphQt_test(OWWidget, ScaleScatterPlotData):
 
     def add_legend_viewbox(self):
         self.lvb = self.glw.addViewBox()
-        self.lvb.setMaximumWidth(100) #TODO: dinamično določi širino glede na vsebino
+        self.lvb.setMaximumWidth(self.default_legend_width) #TODO: dinamično določi širino glede na vsebino
 
     def remove_legend_viewbox(self):
         self.glw.removeItem(self.lvb)
