@@ -17,7 +17,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.utils.plot import OWPlot, OWPalette, OWPlotGUI
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraphQt
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraphQt, OWScatterPlotGraphQt_test
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 from Orange.widgets import gui
 
@@ -290,7 +290,7 @@ class OWScatterPlotQt(OWWidget):
                     "graph.showLegend", "graph.jitterSize", "graph.jitterContinuous", "graph.showFilledSymbols", "graph.showProbabilities",
                     "graph.showDistributions", "autoSendSelection", "toolbarSelection", "graph.sendSelectionOnUpdate",
                     "colorSettings", "selectedSchemaIndex", "VizRankLearnerName"]
-    jitterSizeNums = [0.0, 0.1,   0.5,  1,  2 , 3,  4 , 5 , 7 ,  10,   15,   20 ,  30 ,  40 ,  50 ]
+    jitterSizeNums = [0.0, 0.1, 0.5,  1,  2 , 3,  4 , 5 , 7 ,  10,   15,   20 ,  30 ,  40 ,  50]
 
     settingsHandler = DomainContextHandler()
     # contextHandlers = {"": DomainContextHandler("", ["attrX", "attrY",
@@ -300,12 +300,29 @@ class OWScatterPlotQt(OWWidget):
     def __init__(self, parent=None, signalManager = None):
         OWWidget.__init__(self, parent, signalManager, "Scatterplot (Qt)", True)
 
-        self.graph = OWScatterPlotGraphQt(self, self.mainArea, "ScatterPlotQt")
+
+
+
+
+        ##TODO tukaj mas testni graf!
+        self.graph = OWScatterPlotGraphQt_test(self, self.mainArea, "ScatterPlotQt_test")
+
+        #add a graph widget
+        ##TODO pazi
+        # self.mainArea.layout().addWidget(self.graph.pgPlotWidget)             # tale je zaresni
+        self.mainArea.layout().addWidget(self.graph.glw)     # tale je testni
+
+
+        ## TODO spodaj je se en POZOR, kjer nastavis palette
+
+
+
+
         # self.vizrank = OWVizRank(self, self.signalManager, self.graph, orngVizRank.SCATTERPLOT, "ScatterPlotQt")
         # self.optimizationDlg = self.vizrank
 
         # local variables
-        self.showGridlines = 0
+        self.showGridlines = 1
         self.autoSendSelection = 1
         self.toolbarSelection = 0
         self.classificationResults = None
@@ -323,103 +340,63 @@ class OWScatterPlotQt(OWWidget):
         self.graph.setShowXaxisTitle()
         self.graph.setShowYLaxisTitle()
 
-        #GUI
-        self.tabs = gui.tabWidget(self.controlArea)
-        self.GeneralTab = gui.createTabPage(self.tabs, "Main")
-        self.SettingsTab = gui.createTabPage(self.tabs, "Settings", canScroll = True)
 
-        #add a graph widget
-        self.mainArea.layout().addWidget(self.graph)
+
+
+
+
+
         # self.connect(self.graphButton, SIGNAL("clicked()"), self.graph.saveToFile)
 
+        box1 = gui.widgetBox(self.controlArea, "Axis Variables")
         #x attribute
         self.attrX = ""
-        self.attrXCombo = gui.comboBox(self.GeneralTab, self, "attrX", "X-axis Attribute", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
-
+        self.attrXCombo = gui.comboBox(box1, self, "attrX", label="X-Axis:", labelWidth=50, orientation="horizontal", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
         # y attribute
         self.attrY = ""
-        self.attrYCombo = gui.comboBox(self.GeneralTab, self, "attrY", "Y-axis Attribute", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
+        self.attrYCombo = gui.comboBox(box1, self, "attrY", label="Y-Axis:", labelWidth=50, orientation="horizontal", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
 
-        # coloring
+        box2 = gui.widgetBox(self.controlArea, "Point Properties")
         self.attrColor = ""
-        box = gui.widgetBox(self.GeneralTab, "Point Color")
-        self.attrColorCombo = gui.comboBox(box, self, "attrColor", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same color)")
-
-        box = gui.widgetBox(self.GeneralTab, "Additional Point Properties")
+        self.attrColorCombo = gui.comboBox(box2, self, "attrColor", label="Color:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same color)")
         # labelling
         self.attrLabel = ""
-        self.attrLabelCombo = gui.comboBox(box, self, "attrLabel", label = "Point label:", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, emptyString = "(No labels)")
-        #, indent = 10)
-
+        self.attrLabelCombo = gui.comboBox(box2, self, "attrLabel", label="Label:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, emptyString = "(No labels)")
         # shaping
         self.attrShape = ""
-        self.attrShapeCombo = gui.comboBox(box, self, "attrShape", label = "Point shape:", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same shape)")
-        #, indent = 10)
-
+        self.attrShapeCombo = gui.comboBox(box2, self, "attrShape", label="Shape:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same shape)")
         # sizing
         self.attrSize = ""
-        self.attrSizeCombo = gui.comboBox(box, self, "attrSize", label = "Point size:", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same size)")
-        #, indent = 10)
-
-        self.optimizationButtons = gui.widgetBox(self.GeneralTab, "Optimization dialogs", orientation = "horizontal")
-        # gui.button(self.optimizationButtons, self, "VizRank", callback = self.vizrank.reshow, tooltip = "Opens VizRank dialog, where you can search for interesting projections with different subsets of attributes", debuggingEnabled = 0)
+        self.attrSizeCombo = gui.comboBox(box2, self, "attrSize", label="Size:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same size)")
 
         g = self.graph.gui
 
-        # zooming / selection
-        self.zoomSelectToolbar = g.zoom_select_toolbar(self.GeneralTab, buttons = g.default_zoom_select_buttons + [g.Spacing, g.ShufflePoints])
-        self.connect(self.zoomSelectToolbar.buttons[g.SendSelection], SIGNAL("clicked()"), self.sendSelections)
+        box3 = g.point_properties_box(self.controlArea)
+        # self.jitterSizeCombo = gui.comboBox(box3, self, "graph.jitter_size", label = 'Jittering size (% of size):'+'  ', orientation = "horizontal", callback = self.resetGraphData, items = self.jitterSizeNums, sendSelectedValue = 1, valueType = float)
+        ## TODO: jitter size slider ima samo interger values -> ali lahko slajda po self.jitterSizeNums
+        gui.hSlider(box3, self, value='graph.jitter_size', label='Jittering (%): ', minValue=1, maxValue=10, callback=self.resetGraphData)
 
-        # ####################################
-        # SETTINGS TAB
-        # point width
-        g.point_properties_box(self.SettingsTab)
+        gui.checkBox(gui.indentedBox(box3), self, 'graph.jitter_continuous', 'Jitter continuous values', callback = self.resetGraphData, tooltip = "Does jittering apply also on continuous attributes?")
+        gui.button(box3, self, "Set Colors", self.setColors, tooltip = "Set the canvas background color, grid color and color palette for coloring continuous variables")
 
-        # #####
-        # jittering options
-        box2 = gui.widgetBox(self.SettingsTab, "Jittering Options")
-        self.jitterSizeCombo = gui.comboBox(box2, self, "graph.jitterSize", label = 'Jittering size (% of size)'+'  ', orientation = "horizontal", callback = self.resetGraphData, items = self.jitterSizeNums, sendSelectedValue = 1, valueType = float)
-        gui.checkBox(box2, self, 'graph.jitterContinuous', 'Jitter continuous attributes', callback = self.resetGraphData, tooltip = "Does jittering apply also on continuous attributes?")
+        box4 = gui.widgetBox(self.controlArea, "Plot Properties")
+        g.add_widgets([g.ShowLegend, g.ShowGridLines], box4)
+        # gui.comboBox(box4, self, "graph.tooltipKind", items = ["Don't Show Tooltips", "Show Visible Attributes", "Show All Attributes"], callback = self.updateGraph)
+        gui.checkBox(box4, self, value='graph.tooltipShowsAllAttributes', label='Show all attributes in tooltip')
 
-        # general graph settings
-        box4 = gui.widgetBox(self.SettingsTab, "General Graph Settings")
-        gui.checkBox(box4, self, 'graph.showXaxisTitle', 'X axis title', callback = self.graph.setShowXaxisTitle)
-        gui.checkBox(box4, self, 'graph.showYLaxisTitle', 'Y axis title', callback = self.graph.setShowYLaxisTitle)
-        
-        g.add_widgets([g.ShowLegend, g.ShowFilledSymbols, g.ShowGridLines], box4)
-        
-        box5 = gui.widgetBox(box4, orientation = "horizontal")
-        gui.checkBox(box5, self, 'graph.showProbabilities', 'Show probabilities'+'  ', callback = self.updateGraph, tooltip = "Show a background image with class probabilities")
-        smallWidget = gui.SmallWidgetLabel(box5, pixmap = 1, box = "Advanced settings", tooltip = "Show advanced settings")
-        #OWGUI.rubber(box5)
-
-        box6 = gui.widgetBox(smallWidget.widget, orientation = "horizontal")
-        box7 = gui.widgetBox(smallWidget.widget, orientation = "horizontal")
-
-        gui.widgetLabel(box6, "Granularity:"+"  ")
-        gui.hSlider(box6, self, 'graph.squareGranularity', minValue=1, maxValue=10, step=1, callback = self.updateGraph)
-
-        gui.checkBox(box7, self, 'graph.spaceBetweenCells', 'Show space between cells', callback = self.updateGraph)
-
-        self.colorButtonsBox = gui.widgetBox(self.SettingsTab, "Colors", orientation = "horizontal")
-        gui.button(self.colorButtonsBox, self, "Set Colors", self.setColors, tooltip = "Set the canvas background color, grid color and color palette for coloring continuous variables")
-        #, debuggingEnabled = 0)
-
-        box5 = gui.widgetBox(self.SettingsTab, "Tooltips Settings")
-        gui.comboBox(box5, self, "graph.tooltipKind", items = ["Don't Show Tooltips", "Show Visible Attributes", "Show All Attributes"], callback = self.updateGraph)
-
-        box = gui.widgetBox(self.SettingsTab, "Auto Send Selected Data When...")
-        gui.checkBox(box, self, 'autoSendSelection', 'Adding/Removing selection areas', callback = self.selectionChanged, tooltip = "Send selected data whenever a selection area is added or removed")
-        gui.checkBox(box, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas', tooltip = "Send selected data when a user moves or resizes an existing selection area")
+        box5 = gui.widgetBox(self.controlArea, "Auto Send Selected Data When...")
+        gui.checkBox(box5, self, 'autoSendSelection', 'Adding/Removing selection areas', callback = self.selectionChanged, tooltip = "Send selected data whenever a selection area is added or removed")
+        gui.checkBox(box5, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas', tooltip = "Send selected data when a user moves or resizes an existing selection area")
         self.graph.selection_changed.connect(self.selectionChanged)
-        
-        self.EffectsTab = gui.createTabPage(self.tabs, "Appearance")
-        g.effects_box(self.EffectsTab)
-        # g.theme_combo_box(self.EffectsTab)
 
-        self.GeneralTab.layout().addStretch(100)
-        self.SettingsTab.layout().addStretch(100)
-        self.EffectsTab.layout().addStretch(100)
+        # zooming / selection
+        self.zoomSelectToolbar = g.zoom_select_toolbar(self.controlArea, buttons = g.default_zoom_select_buttons + [g.Spacing, g.ShufflePoints])
+        self.connect(self.zoomSelectToolbar.buttons[g.SendSelection], SIGNAL("clicked()"), self.sendSelections)
+        self.connect(self.zoomSelectToolbar.buttons[g.Zoom], SIGNAL("clicked()",), self.graph.zoomButtonClicked)
+        self.connect(self.zoomSelectToolbar.buttons[g.Pan], SIGNAL("clicked()",), self.graph.panButtonClicked)
+        self.connect(self.zoomSelectToolbar.buttons[g.Select], SIGNAL("clicked()",), self.graph.selectButtonClicked)
+        
+        self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
         self.debugSettings = ["attrX", "attrY", "attrColor", "attrLabel", "attrShape", "attrSize"]
@@ -428,8 +405,14 @@ class OWScatterPlotQt(OWWidget):
         dlg = self.createColorDialog()
         self.graph.contPalette = dlg.getContinuousPalette("contPalette")
         self.graph.discPalette = dlg.getDiscretePalette("discPalette")
-        
-        p = self.graph.palette()
+
+
+        ##TODO POZOR!
+        # p = self.graph.pgPlotWidget.palette()
+        p = self.graph.glw.palette()
+
+
+
         p.setColor(OWPalette.Canvas, dlg.getColor("Canvas"))
         p.setColor(OWPalette.Grid, dlg.getColor("Grid"))
         self.graph.set_palette(p)
@@ -437,11 +420,10 @@ class OWScatterPlotQt(OWWidget):
         self.graph.enableGridXB(self.showGridlines)
         self.graph.enableGridYL(self.showGridlines)
 
-        self.SettingsTab.resize(self.SettingsTab.sizeHint())
-
         # self.graph.resize(700, 550)
         self.mainArea.setMinimumWidth(700)
         self.mainArea.setMinimumHeight(550)
+        ## TODO tole je zdej minimum size --> najdi drug nacin za resize
 
 
     # def settingsFromWidgetCallback(self, handler, context):
@@ -464,7 +446,7 @@ class OWScatterPlotQt(OWWidget):
     # ##############################################################################################################################################################
 
     def resetGraphData(self):
-        self.graph.rescaleData()
+        self.graph.rescale_data()
         self.majorUpdateGraph()
 
     # receive new data and update all fields
@@ -541,8 +523,10 @@ class OWScatterPlotQt(OWWidget):
     # send signals with selected and unselected examples as two datasets
     def sendSelections(self):
         (selected, unselected) = self.graph.getSelectionsAsExampleTables([self.attrX, self.attrY])
-        self.send("Selected Data",selected)
-        self.send("Other Data",unselected)
+        self.send("Selected Data", selected)
+        self.send("Other Data", unselected)
+        print('\nselected data:\n', selected)
+        print('unselected data:\n', unselected)
 
 
     # ##############################################################################################################################################################
@@ -607,7 +591,7 @@ class OWScatterPlotQt(OWWidget):
         self.attrLabel = ""
 
     def majorUpdateGraph(self, attrList = None, insideColors = None, **args):
-        self.graph.removeAllSelections()
+        self.graph.clear_selection()
         self.updateGraph(attrList, insideColors, **args)
 
     def updateGraph(self, attrList = None, insideColors = None, **args):
@@ -691,8 +675,8 @@ class OWScatterPlotQt(OWWidget):
         self.reportSettings("Settings",
                             [("Symbol size", self.graph.pointWidth),
                              ("Transparency", self.graph.alphaValue),
-                             ("Jittering", self.graph.jitterSize),
-                             ("Jitter continuous attributes", gui.YesNo[self.graph.jitterContinuous])])
+                             ("Jittering", self.graph.jitter_size),
+                             ("Jitter continuous attributes", gui.YesNo[self.graph.jitter_continuous])])
         self.reportSection("Graph")
         self.reportImage(self.graph.saveToFileDirect, QSize(400, 400))
 
