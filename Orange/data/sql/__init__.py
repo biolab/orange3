@@ -27,6 +27,9 @@ def create_stored_procedures(uri=None, host=None, user=None, password=None, data
     connection.commit()
 
     cur = connection.cursor()
+    cur.execute("CREATE LANGUAGE plpythonu;")
+    connection.commit()
+
     cur.execute("""
             CREATE OR REPLACE FUNCTION get_distribution(data text, attribute text, filters text[])
               RETURNS SETOF distribution
