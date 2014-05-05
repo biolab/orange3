@@ -1093,8 +1093,7 @@ class SchemeEditWidget(QWidget):
             # Create a new node using QuickMenu
             action = interactions.NewNodeAction(self)
 
-            with (disabled(self.__undoAction),
-                  disabled(self.__redoAction)):
+            with disabled(self.__undoAction), disabled(self.__redoAction):
                 action.create_new(event.screenPos())
 
             event.accept()
