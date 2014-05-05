@@ -14,7 +14,7 @@ ABOUT_TEMPLATE = """\
 <center>
 <h4>Orange</h4>
 <p>Version: {version}</p>
-<p>(hg revision: {hg_revision})</p>
+<p>(git revision: {git_revision})</p>
 </center>
 
 """
@@ -41,14 +41,14 @@ class AboutDialog(QDialog):
 
         try:
             from Orange.version import version
-            from Orange.version import hg_revision
+            from Orange.version import git_revision
         except ImportError:
             dist = pkg_resources.get_distribution("Orange")
             version = dist.version
-            hg_revision = "Unknown"
+            git_revision = "Unknown"
 
         text = ABOUT_TEMPLATE.format(version=version,
-                                     hg_revision=hg_revision)
+                git_revision=git_revision[:7])
         # TODO: Also list all known add-on versions.
         text_label = QLabel(text)
         layout.addWidget(text_label, Qt.AlignCenter)
