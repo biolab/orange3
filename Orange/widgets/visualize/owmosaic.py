@@ -592,28 +592,27 @@ class OWMosaicDisplay(OWWidget):
             # self.canvas.update()
 
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
+    ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
-        if False and type(data) == SqlTable:
-            ## TODO: tale if za sqlTable je čist brezvezen, ker se itak naredi v poizvedba v sql/u
-            ##        ne vem točno kaj sem hotel doseči s tem, verjetno je bila optimizacija
-                        še enkrat premisli, preden ven vržeš
-            ##TODO: problem se pojavi, ko so bili atributi diskretizirani (npr. iris)
-            ##      takrat se spodnji select tvori z D_attribute_name, ki seveda ne obstajajo v sql tabeli
-            tstart = datetime.now()
-            dict = {}
-            for i in range(0, len(attrs) + 1):
+        if type(data) == SqlTable:
+            dict = ZeroDict() # ZeroDict is like ordinary dict, except it returns 0 if key not found
+
+            # get instances of attributes instead of strings, because of to_sql()
+            var_attrs = []
+            for a in attrs:
+                for va in data.domain.attributes:
+                    if va.name == a:
+                        var_attrs.append(va)
+                        break
+
+            # make all possible pairs of attributes + class_var
+            for i in range(0, len(var_attrs) + 1):
                 attr = []
                 for j in range(0, i+1):
-                    if j == len(attrs):
-                        # attr.append(data.domain.class_var.name)
-                        attr.append(self.data.domain.class_var.name) ## TODO: hm, tale self sem dodal tako na hitro
+                    if j == len(var_attrs):
+                        attr.append(data.domain.class_var.name) ## TODO: hm, tale self sem dodal tako na hitro
                     else:
-                        if '-' in attrs[j]:
-                            attr.append("'%s'" % attrs[j])
-                        # a = attrs[j].replace('D_', '') if attrs[j].startswith('D_') else attrs[j]
-                        # attr.append('"%s"' % a)
-                        else:
-                            attr.append(attrs[j])
+                        attr.append(var_attrs[j].to_sql())
 
                 sql = []
                 sql.append("SELECT")
@@ -621,22 +620,14 @@ class OWMosaicDisplay(OWWidget):
                 sql.append(", COUNT(%s)" % attr[0])
                 sql.append("FROM %s" % data.name)
                 sql.append("GROUP BY")
-                # sql.append(", ".join(['"%s"' % a.replace("'", "") for a in attr]))
                 sql.append(", ".join(attr))
 
                 cur = data._execute_sql_query(" ".join(sql))
                 res = cur.fetchall()
                 for r in list(res):
-                    # lr = [str(e) for e in list(r)]
                     dict['-'.join(r[:-1])] = r[-1]
-
-            tend = datetime.now()
-            print(tend - tstart)
-            with open('groupby.times.txt', 'a') as out:
-                out.write('SqlTable - (%s) - %s - %s\n' % (data.name, tend-tstart, attrs))
-            return ZeroDict(dict)
         else:
-            tstart = datetime.now()
+            dict = {}
             def counter(s):
                 t = [0 for i in range(0, len(s))]
                 while True:
@@ -648,7 +639,6 @@ class OWMosaicDisplay(OWWidget):
                     else:
                         break
 
-            dict = {}
             for i in range(0, len(attrs) + 1):
                 attr = []
                 for j in range(0, i+1):
@@ -673,12 +663,7 @@ class OWMosaicDisplay(OWWidget):
                         filt.conditions.append(fd)
                     filtdata = filt(data)
                     dict['-'.join(vals)] = len(filtdata)
-            tend = datetime.now()
-            print(tend - tstart)
-            with open('groupby.times.txt', 'a') as out:
-                out.write('Table    - (%s) - %s - %s\n' % (data.name, tend-tstart, attrs))
-            return dict
-
+        return dict
 
 
     # ############################################################################
