@@ -41,6 +41,7 @@ class LinkCurveItem(QGraphicsPathItem):
         self.shadow.setEnabled(False)
 
         self.__hover = False
+        self.__enabled = True
 
     def linkItem(self):
         """
@@ -52,6 +53,14 @@ class LinkCurveItem(QGraphicsPathItem):
         self.__hover = state
         self.__update()
 
+    def setLinkEnabled(self, state):
+        self.prepareGeometryChange()
+        self.__enabled = state
+        self.__update()
+
+    def isLinkEnabled(self):
+        return self.__enabled
+
     def setCurvePenSet(self, pen, hoverPen):
         if pen is not None:
             self.normalPen = pen
@@ -59,19 +68,12 @@ class LinkCurveItem(QGraphicsPathItem):
             self.hoverPen = hoverPen
         self.__update()
 
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemEnabledHasChanged:
-            # Update the pen style
-            self.__update()
-
-        return QGraphicsPathItem.itemChange(self, change, value)
-
     def __update(self):
         shadow_enabled = self.__hover
         if self.shadow.isEnabled() != shadow_enabled:
             self.shadow.setEnabled(shadow_enabled)
 
-        link_enabled = self.isEnabled()
+        link_enabled = self.__enabled
         if link_enabled:
             pen_style = Qt.SolidLine
         else:
@@ -418,7 +420,12 @@ class LinkItem(QGraphicsObject):
         dashed line.
 
         """
-        QGraphicsObject.setEnabled(self, enabled)
+        # This getter/setter pair override a property from the base class.
+        # They should be renamed to e.g. setLinkEnabled/linkEnabled
+        self.curveItem.setLinkEnabled(enabled)
+
+    def isEnabled(self):
+        return self.curveItem.isLinkEnabled()
 
     def setDynamicEnabled(self, enabled):
         """
