@@ -2,7 +2,7 @@ import numpy
 
 import sip
 
-from PyQt4.QtGui import QColor, QRadialGradient
+from PyQt4.QtGui import QColor, QRadialGradient, QPainterPathStroker
 from PyQt4.QtCore import QObject, QSignalMapper
 from PyQt4.QtCore import pyqtSignal as Signal
 
@@ -131,3 +131,15 @@ def invert_permutation_indices(indices):
     for i, index in enumerate(indices):
         inverted[index] = i
     return inverted
+
+
+def stroke_path(path, pen):
+    """Create a QPainterPath stroke from the `path` drawn with `pen`.
+    """
+    stroker = QPainterPathStroker()
+    stroker.setCapStyle(pen.capStyle())
+    stroker.setJoinStyle(pen.joinStyle())
+    stroker.setMiterLimit(pen.miterLimit())
+    stroker.setWidth(max(pen.widthF(), 1e-9))
+
+    return stroker.createStroke(path)

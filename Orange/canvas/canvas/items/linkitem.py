@@ -14,6 +14,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt, QPointF, QEvent
 
 from .nodeitem import SHADOW_COLOR
+from .utils import stroke_path
 
 
 class LinkCurveItem(QGraphicsPathItem):
@@ -42,6 +43,7 @@ class LinkCurveItem(QGraphicsPathItem):
 
         self.__hover = False
         self.__enabled = True
+        self.__shape = None
 
     def linkItem(self):
         """
@@ -50,11 +52,14 @@ class LinkCurveItem(QGraphicsPathItem):
         return self.__canvasLink
 
     def setHoverState(self, state):
+        self.prepareGeometryChange()
+        self.__shape = None
         self.__hover = state
         self.__update()
 
     def setLinkEnabled(self, state):
         self.prepareGeometryChange()
+        self.__shape = None
         self.__enabled = state
         self.__update()
 
@@ -62,11 +67,26 @@ class LinkCurveItem(QGraphicsPathItem):
         return self.__enabled
 
     def setCurvePenSet(self, pen, hoverPen):
+        self.prepareGeometryChange()
         if pen is not None:
             self.normalPen = pen
         if hoverPen is not None:
             self.hoverPen = hoverPen
+        self.__shape = None
         self.__update()
+
+    def shape(self):
+        if self.__shape is None:
+            path = self.path()
+            pen = QPen(self.pen())
+            pen.setWidthF(max(pen.widthF(), 7.0))
+            pen.setStyle(Qt.SolidLine)
+            self.__shape = stroke_path(path, pen)
+        return self.__shape
+
+    def setPath(self, path):
+        self.__shape = None
+        QGraphicsPathItem.setPath(self, path)
 
     def __update(self):
         shadow_enabled = self.__hover
