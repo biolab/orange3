@@ -243,8 +243,6 @@ class CanvasMainWindow(QMainWindow):
         self.scheme_widget.titleChanged.connect(self.set_document_title)
         self.scheme_widget.modificationChanged.connect(self.setWindowModified)
 
-        self.setWindowIcon(canvas_icons("Get Started.svg"))
-
         # QMainWindow's Dock widget
         self.dock_widget = CollapsibleDockWidget(objectName="main-area-dock")
         self.dock_widget.setFeatures(QDockWidget.DockWidgetMovable | \

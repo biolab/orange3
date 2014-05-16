@@ -223,6 +223,7 @@ def main(argv=None):
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
     canvas_window = CanvasMainWindow()
+    canvas_window.setWindowIcon(config.application_icon())
 
     if stylesheet_string is not None:
         canvas_window.setStyleSheet(stylesheet_string)
