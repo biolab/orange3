@@ -101,9 +101,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             stored_settings = kwargs.get('stored_settings', None)
             self.settingsHandler.initialize(self, stored_settings)
 
-        # number of control signals that are currently being processed
-        # needed by signalWrapper to know when everything was sent
-        self.needProcessing = 0     # used by signalManager
         self.signalManager = kwargs.get('signal_manager', None)
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
@@ -118,24 +115,18 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
 
-        #TODO: kill me
-        self.__dict__.update(environ.directories)
-
         if self.name:
-            self.setCaption(self.name.replace("&", ""))
+            self.setCaption(self.name)
+
         self.setFocusPolicy(Qt.StrongFocus)
 
-        self.wrappers = [] # stored wrappers for widget events
-        self.linksIn = {}  # signalName : (dirty, widFrom, handler, signalData)
-        self.linksOut = {} # signalName: (signalData, id)
-        self.connections = {} # keys are (control, signal) and values are
-        # wrapper instances. Used in connect/disconnect
-        self.callbackDeposit = []
         self.startTime = time.time()    # used in progressbar
 
         self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
 
         self.__blocking = False
+        # flag indicating if the widget's position was already restored
+        self.__was_restored = False
 
         if self.want_basic_layout:
             self.insertLayout()
@@ -209,11 +200,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
             self.statusBarIconArea.hide()
 
-            self._warningWidget = createPixmapWidget(self.statusBarIconArea,
-                                                     os.path.join(self.widgetDir, "icons/triangle-orange.png"))
-            self._errorWidget = createPixmapWidget(self.statusBarIconArea,
-                                                   os.path.join(self.widgetDir + "icons/triangle-red.png"))
-
+            self._warningWidget = createPixmapWidget(
+                self.statusBarIconArea,
+                os.path.join(environ.widget_install_dir,
+                             "icons/triangle-orange.png"))
+            self._errorWidget = createPixmapWidget(
+                self.statusBarIconArea,
+                os.path.join(environ.widget_install_dir,
+                             "icons/triangle-red.png"))
 
     # status bar handler functions
     def setState(self, stateType, id, text):
@@ -283,43 +277,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         pass
 
 
-    def getIconNames(self, iconName):
-        # if canvas sent us a prepared list of valid names, just return those
-        if type(iconName) == list:
-            return iconName
-
-        names = []
-        name, ext = os.path.splitext(iconName)
-        for num in [16, 32, 42, 60]:
-            names.append("%s_%d%s" % (name, num, ext))
-        fullPaths = []
-        module_dir = os.path.dirname(sys.modules[self.__module__].__file__)
-        for paths in [(self.widgetDir, name),
-                      (self.widgetDir, "icons", name),
-                      (module_dir, "icons", name)]:
-            for name in names + [iconName]:
-                fname = os.path.join(*paths)
-                if os.path.exists(fname):
-                    fullPaths.append(fname)
-            if fullPaths != []:
-                break
-
-        if len(fullPaths) > 1 and fullPaths[-1].endswith(iconName):
-            # if we have the new icons we can remove the default icon
-            fullPaths.pop()
-        return fullPaths
-
-
-    def setWidgetIcon(self, iconName):
-        iconNames = self.getIconNames(iconName)
-        icon = QIcon()
-        for name in iconNames:
-            pix = QPixmap(name)
-            icon.addPixmap(pix)
-
-        self.setWindowIcon(icon)
-
-
     # ##############################################
     def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
         self.error([1234, 1235, 1236])
@@ -337,20 +294,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             return 0
         return 1
 
-    # call processEvents(), but first remember position and size of widget in
-    # case one of the events would be move or resize
-    # call this function if needed in __init__ of the widget
-    def safeProcessEvents(self):
-        keys = ["widgetShown"]
-        vals = [(key, getattr(self, key, None)) for key in keys]
-        qApp.processEvents()
-        for (key, val) in vals:
-            if val != None:
-                setattr(self, key, val)
-
-
-    # this function is called at the end of the widget's __init__ when the
-    # widgets is saving its position and size parameters
     def restoreWidgetPosition(self):
         if self.save_position:
             geometry = getattr(self, "savedWidgetGeometry", None)
@@ -377,13 +320,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
                     self.move(x, y)
 
-
-    # this is called in canvas when loading a schema. it opens the widgets
-    # that were shown when saving the schema
-    def restoreWidgetStatus(self):
-        if self.save_position and getattr(self, "widgetShown", None):
-            self.show()
-
     # when widget is resized, save new width and height into widgetWidth and
     # widgetHeight. some widgets can put this two variables into settings and
     # last widget shape is restored after restart
@@ -395,11 +331,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if self.save_position and self.isVisible():
             self.savedWidgetGeometry = str(self.saveGeometry())
 
-
     # set widget state to hidden
     def hideEvent(self, ev):
         if self.save_position:
-            self.widgetShown = 0
             self.savedWidgetGeometry = str(self.saveGeometry())
         QDialog.hideEvent(self, ev)
 
@@ -407,8 +341,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def showEvent(self, ev):
         QDialog.showEvent(self, ev)
         if self.save_position:
-            self.widgetShown = 1
-        self.restoreWidgetPosition()
+            if not self.__was_restored:
+                self.__was_restored = True
+                self.restoreWidgetPosition()
 
     def closeEvent(self, ev):
         if self.save_position:
@@ -423,12 +358,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         event.accept()
 
     def setCaption(self, caption):
-        if self.parent != None and isinstance(self.parent, QTabWidget):
-            self.parent.setTabText(self.parent.indexOf(self), caption)
-        else:
-            # we have to save caption title in case progressbar will change it
-            self.captionTitle = str(caption)
-            self.setWindowTitle(caption)
+        # we have to save caption title in case progressbar will change it
+        self.captionTitle = str(caption)
+        self.setWindowTitle(caption)
 
     # put this widget on top of all windows
     def reshow(self):
@@ -492,9 +424,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def onDeleteWidget(self):
         pass
 
-    def setOptions(self):
-        pass
-
     def handleNewSignals(self):
         # this is called after all new signals have been handled
         # implement this in your widget if you want to process something only
@@ -545,22 +474,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.setWindowTitle(self.captionTitle)
         self.processingStateChanged.emit(0)
 
-    def openWidgetHelp(self):
-        if "widgetInfo" in self.__dict__:  # This widget is on a canvas.
-            qApp.canvasDlg.helpWindow.showHelpFor(self.widgetInfo, True)
-
     def keyPressEvent(self, e):
-        if e.key() in (Qt.Key_Help, Qt.Key_F1):
-            self.openWidgetHelp()
-        #    e.ignore()
-        elif (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
+        if (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
             OWWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
         else:
             QDialog.keyPressEvent(self, e)
 
     def information(self, id=0, text=None):
         self.setState("Info", id, text)
-        #self.setState("Warning", id, text)
 
     def warning(self, id=0, text=""):
         self.setState("Warning", id, text)
@@ -681,7 +602,6 @@ WidgetsSignalManager = widget_scheme.WidgetsSignalManager
 SignalWrapper = widget_scheme.SignalWrapper
 
 
-# Definitions needed to define Table as subclass of TableWithClass
 class AttributeList(list):
     pass
 
