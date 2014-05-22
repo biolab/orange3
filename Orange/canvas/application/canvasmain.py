@@ -7,6 +7,7 @@ import sys
 import logging
 import operator
 from functools import partial
+from io import BytesIO
 
 import pkg_resources
 
@@ -1139,9 +1140,26 @@ class CanvasMainWindow(QMainWindow):
         dirname, basename = os.path.split(filename)
         self.last_scheme_dir = dirname
         title = scheme.title or "untitled"
+
+        # First write the scheme to a buffer so we don't truncate an
+        # existing scheme file if `scheme.save_to` raises an error.
+        buffer = BytesIO()
         try:
-            scheme.save_to(open(filename, "wb"),
-                           pretty=True, pickle_fallback=True)
+            scheme.save_to(buffer, pretty=True, pickle_fallback=True)
+        except Exception:
+            log.error("Error saving %r to %r", scheme, filename, exc_info=True)
+            message_critical(
+                self.tr('An error occurred while trying to save scheme '
+                        '"%s" to "%s"') % (title, basename),
+                title=self.tr("Error saving %s") % basename,
+                exc_info=True,
+                parent=self
+            )
+            return False
+
+        try:
+            with open(filename, "wb") as f:
+                f.write(buffer.getvalue())
             return True
         except (IOError, OSError) as ex:
             log.error("%s saving '%s'", type(ex).__name__, filename,
