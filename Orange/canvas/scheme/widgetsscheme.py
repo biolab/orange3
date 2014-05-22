@@ -193,8 +193,12 @@ class WidgetManager(QObject):
         widget = self.widget_for_node(node)
 
         self.__widgets.remove(widget)
+
         del self.__widget_for_node[node]
         del self.__node_for_widget[widget]
+
+        node.title_changed.disconnect(widget.setCaption)
+        widget.progressBarValueChanged.disconnect(node.set_progress)
 
         self.widget_for_node_removed.emit(node, widget)
 
