@@ -282,6 +282,7 @@ class WidgetManager(QObject):
             # It can also start processing (initialization of resources, ...)
             self.__widget_processing_state[widget] |= self.ProcessingUpdate
             node.set_processing_state(1)
+            node.set_progress(widget.progressBarValue)
 
         # Install a help shortcut on the widget
         help_shortcut = QShortcut(QKeySequence("F1"), widget)
