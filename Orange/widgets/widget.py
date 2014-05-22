@@ -2,6 +2,8 @@ from functools import reduce
 import sys
 import time
 import os
+import warnings
+
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty, SIGNAL, QDir
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget
@@ -127,6 +129,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.__blocking = False
         # flag indicating if the widget's position was already restored
         self.__was_restored = False
+
+        self.__progressBarValue = -1
+        self.__progressState = 0
 
         if self.want_basic_layout:
             self.insertLayout()
@@ -434,14 +439,27 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # PROGRESS BAR FUNCTIONS
 
     def progressBarInit(self):
-        self.progressBarValue = 0
         self.startTime = time.time()
         self.setWindowTitle(self.captionTitle + " (0% complete)")
-        self.processingStateChanged.emit(1)
+
+        if self.__progressState != 1:
+            self.__progressState = 1
+            self.processingStateChanged.emit(1)
+
+        self.progressBarValue = 0
 
     def progressBarSet(self, value):
+        old = self.__progressBarValue
+        self.__progressBarValue = value
+
         if value > 0:
-            self.__progressBarValue = value
+            if self.__progressState != 1:
+                warnings.warn("progressBarSet() called without a "
+                              "preceding progressBarInit()",
+                              stacklevel=2)
+                self.__progressState = 1
+                self.processingStateChanged.emit(1)
+
             usedTime = max(1, time.time() - self.startTime)
             totalTime = (100.0 * usedTime) / float(value)
             remainingTime = max(0, totalTime - usedTime)
@@ -459,6 +477,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         self.progressBarValueChanged.emit(value)
 
+        if old != value:
+            self.progressBarValueChanged.emit(value)
+
         qApp.processEvents()
 
     def progressBarValue(self):
@@ -467,12 +488,16 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     progressBarValue = pyqtProperty(float, fset=progressBarSet,
                                     fget=progressBarValue)
 
+    processingState = pyqtProperty(int, fget=lambda self: self.__progressState)
+
     def progressBarAdvance(self, value):
         self.progressBarSet(self.progressBarValue + value)
 
     def progressBarFinished(self):
         self.setWindowTitle(self.captionTitle)
-        self.processingStateChanged.emit(0)
+        if self.__progressState != 0:
+            self.__progressState = 0
+            self.processingStateChanged.emit(0)
 
     def keyPressEvent(self, e):
         if (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
