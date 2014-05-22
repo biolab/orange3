@@ -278,6 +278,11 @@ class WidgetManager(QObject):
             # A widget can already enter blocking state in __init__
             self.__widget_processing_state[widget] |= self.BlockingUpdate
 
+        if widget.processingState != 0:
+            # It can also start processing (initialization of resources, ...)
+            self.__widget_processing_state[widget] |= self.ProcessingUpdate
+            node.set_processing_state(1)
+
         # Install a help shortcut on the widget
         help_shortcut = QShortcut(QKeySequence("F1"), widget)
         help_shortcut.activated.connect(self.__on_help_request)
