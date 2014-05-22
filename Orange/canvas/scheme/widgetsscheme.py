@@ -224,6 +224,7 @@ class WidgetManager(QObject):
             self.__delay_delete.add(widget)
         else:
             widget.deleteLater()
+            del self.__widget_processing_state[widget]
 
     def create_widget_instance(self, node):
         """
