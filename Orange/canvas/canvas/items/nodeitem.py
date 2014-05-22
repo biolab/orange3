@@ -1022,7 +1022,7 @@ class NodeItem(QGraphicsObject):
         """
         Set the node work progress state (number between 0 and 100).
         """
-        if progress is None or progress < 0:
+        if progress is None or progress < 0 or not self.__processingState:
             progress = -1
 
         progress = max(min(progress, 100), -1)
