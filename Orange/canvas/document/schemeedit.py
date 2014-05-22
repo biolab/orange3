@@ -1234,6 +1234,7 @@ class SchemeEditWidget(QWidget):
         widget = self.scheme().widget_for_node(node)
         widget.show()
         widget.raise_()
+        widget.activateWindow()
 
     def __onNodePositionChanged(self, item, pos):
         node = self.__scene.node_for_item(item)
