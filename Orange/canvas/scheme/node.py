@@ -193,6 +193,9 @@ class SchemeNode(QObject):
     tool_tip = Property(str, fset=set_tool_tip,
                         fget=tool_tip)
 
+    #: The node's state message has changed
+    state_message_changed = Signal(UserMessage)
+
     def set_state_message(self, message):
         """
         Set a message to be displayed by a scheme view for this node.
@@ -202,11 +205,13 @@ class SchemeNode(QObject):
             del self.__state_messages[message.message_id]
 
         self.__state_messages[message.message_id] = message
-
         self.state_message_changed.emit(message)
 
-    #: The node's state message has changed
-    state_message_changed = Signal(UserMessage)
+    def state_messages(self):
+        """
+        Return a list of all state messages.
+        """
+        return self.__state_messages.values()
 
     def __str__(self):
         return "SchemeNode(description_id=%s, title=%r, ...)" % \

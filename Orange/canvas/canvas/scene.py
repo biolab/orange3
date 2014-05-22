@@ -325,6 +325,8 @@ class CanvasScene(QGraphicsScene):
         item.setTitle(node.title)
         item.setProgress(node.progress)
         item.setProcessingState(node.processing_state)
+        for message in node.state_messages():
+            item.setStateMessage(message)
 
         self.__item_for_node[node] = item
 

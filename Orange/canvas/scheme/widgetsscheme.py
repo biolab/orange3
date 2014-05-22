@@ -184,6 +184,8 @@ class WidgetManager(QObject):
         self.__widget_for_node[node] = widget
         self.__node_for_widget[widget] = node
 
+        self.__initialize_widget_state(node, widget)
+
         self.widget_for_node_added.emit(node, widget)
 
     def remove_widget_for_node(self, node):
@@ -332,6 +334,17 @@ class WidgetManager(QObject):
             event = QWhatsThisClickedEvent(url)
             QCoreApplication.sendEvent(self.scheme(), event)
 
+    def __initialize_widget_state(self, node, widget):
+        """
+        Initialize the tracked info/warning/error message state.
+        """
+        for message_type, state in widget.widgetState.items():
+            for message_id, message_value in state.items():
+                message = user_message_from_state(
+                    widget, message_type, message_id, message_value)
+
+                node.set_state_message(message)
+
     def __on_widget_state_changed(self, message_type, message_id,
                                   message_value):
         """
@@ -349,25 +362,9 @@ class WidgetManager(QObject):
         except KeyError:
             pass
         else:
-            message_type = str(message_type)
-            if message_type == "Info":
-                contents = widget.widgetStateToHtml(True, False, False)
-                level = UserMessage.Info
-            elif message_type == "Warning":
-                contents = widget.widgetStateToHtml(False, True, False)
-                level = UserMessage.Warning
-            elif message_type == "Error":
-                contents = widget.widgetStateToHtml(False, False, True)
-                level = UserMessage.Error
-            else:
-                raise ValueError("Invalid message_type: %r" % message_type)
+            message = user_message_from_state(
+                widget, str(message_type), message_id, message_value)
 
-            if not contents:
-                contents = None
-
-            message = UserMessage(contents, severity=level,
-                                  message_id=message_type,
-                                  data={"content-type": "text/html"})
             node.set_state_message(message)
 
     def __on_processing_state_changed(self, state):
@@ -446,6 +443,29 @@ class WidgetManager(QObject):
             self.__delay_delete.remove(widget)
             widget.deleteLater()
             del self.__widget_processing_state[widget]
+
+
+def user_message_from_state(widget, message_type, message_id, message_value):
+    message_type = str(message_type)
+    if message_type == "Info":
+        contents = widget.widgetStateToHtml(True, False, False)
+        level = UserMessage.Info
+    elif message_type == "Warning":
+        contents = widget.widgetStateToHtml(False, True, False)
+        level = UserMessage.Warning
+    elif message_type == "Error":
+        contents = widget.widgetStateToHtml(False, False, True)
+        level = UserMessage.Error
+    else:
+        raise ValueError("Invalid message_type: %r" % message_type)
+
+    if not contents:
+        contents = None
+
+    message = UserMessage(contents, severity=level,
+                          message_id=message_type,
+                          data={"content-type": "text/html"})
+    return message
 
 
 class WidgetsSignalManager(SignalManager):
