@@ -181,7 +181,6 @@ class NodeBodyItem(GraphicsPathObject):
             # Prevent the default bounding rect selection indicator.
             option.state = option.state ^ QStyle.State_Selected
         GraphicsPathObject.paint(self, painter, option, widget)
-
         if self.__progress >= 0:
             # Draw the progress meter over the shape.
             # Set the clip to shape so the meter does not overflow the shape.
@@ -191,7 +190,7 @@ class NodeBodyItem(GraphicsPathObject):
             painter.save()
             painter.setPen(pen)
             painter.setRenderHints(QPainter.Antialiasing)
-            span = int(self.__progress * 57.60)
+            span = max(1, int(self.__progress * 57.60))
             painter.drawArc(self.__shapeRect, 90 * 16, -span)
             painter.restore()
 
@@ -1178,7 +1177,7 @@ class NodeItem(QGraphicsObject):
         Update the title text item.
         """
         title_safe = escape(self.title())
-        if self.progress() > 0:
+        if self.progress() >= 0:
             text = '<div align="center">%s<br/>%i%%</div>' % \
                    (title_safe, int(self.progress()))
         else:
