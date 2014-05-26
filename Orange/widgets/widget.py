@@ -132,6 +132,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         self.__progressBarValue = -1
         self.__progressState = 0
+        self.__statusMessage = ""
 
         if self.want_basic_layout:
             self.insertLayout()
@@ -498,6 +499,17 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if self.__progressState != 0:
             self.__progressState = 0
             self.processingStateChanged.emit(0)
+
+    #: Widget's status message has changed.
+    statusMessageChanged = Signal(str)
+
+    def setStatusMessage(self, text):
+        if self.__statusMessage != text:
+            self.__statusMessage = text
+            self.statusMessageChanged.emit(text)
+
+    def statusMessage(self):
+        return self.__statusMessage
 
     def keyPressEvent(self, e):
         if (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:

@@ -4,6 +4,7 @@ Node Item
 =========
 
 """
+import string
 
 from xml.sax.saxutils import escape
 
@@ -807,6 +808,7 @@ class NodeItem(QGraphicsObject):
         self.__title = ""
         self.__processingState = 0
         self.__progress = -1
+        self.__statusMessage = ""
 
         self.__error = None
         self.__warning = None
@@ -1039,14 +1041,19 @@ class NodeItem(QGraphicsObject):
     progress_ = Property(float, fget=progress, fset=setProgress,
                          doc="Node progress state.")
 
-    def setProgressMessage(self, message):
+    def setStatusMessage(self, message):
         """
-        Set the node work progress message.
+        Set the node status message text.
 
-        .. note:: Not yet implemented
+        This text is displayed below the node's title.
 
         """
-        pass
+        if self.__statusMessage != message:
+            self.__statusMessage = message
+            self.__updateTitleText()
+
+    def statusMessage(self):
+        return self.__statusMessage
 
     def setStateMessage(self, message):
         """
@@ -1176,13 +1183,34 @@ class NodeItem(QGraphicsObject):
         """
         Update the title text item.
         """
-        title_safe = escape(self.title())
-        if self.progress() >= 0:
-            text = '<div align="center">%s<br/>%i%%</div>' % \
-                   (title_safe, int(self.progress()))
-        else:
-            text = '<div align="center">%s</div>' % \
-                   (title_safe)
+        text = ['<div align="center">%s' % escape(self.title())]
+
+        status_text = []
+
+        progress_included = False
+        if self.__statusMessage:
+            msg = escape(self.__statusMessage)
+            format_fields = dict(parse_format_fields(msg))
+            if "progress" in format_fields and len(format_fields) == 1:
+                # Insert progress into the status text format string.
+                spec, _ = format_fields["progress"]
+                if spec != None:
+                    progress_included = True
+                    progress_str = "{0:.0f}%".format(self.progress())
+                    status_text.append(msg.format(progress=progress_str))
+            else:
+                status_text.append(msg)
+
+        if self.progress() >= 0 and not progress_included:
+            status_text.append("%i%%" % int(self.progress()))
+
+        if status_text:
+            text += ["<br/>",
+                     '<span style="font-style: italic">',
+                     "<br/>".join(status_text),
+                     "</span>"]
+        text += ["</div>"]
+        text = "".join(text)
 
         # The NodeItems boundingRect could change.
         self.prepareGeometryChange()
@@ -1196,10 +1224,12 @@ class NodeItem(QGraphicsObject):
         Update message items (position, visibility and tool tips).
         """
         items = [self.errorItem, self.warningItem, self.infoItem]
+
         messages = [self.__error, self.__warning, self.__info]
         for message, item in zip(messages, items):
             item.setVisible(bool(message))
             item.setToolTip(message or "")
+
         shown = [item for item in items if item.isVisible()]
         count = len(shown)
         if count:
@@ -1302,3 +1332,11 @@ def NodeItem_toolTipHelper(node, links_in=[], links_out=[]):
     tooltip = title + inputs + outputs
     style = "ul { margin-top: 1px; margin-bottom: 1px; }"
     return TOOLTIP_TEMPLATE.format(style=style, tooltip=tooltip)
+
+
+def parse_format_fields(format_str):
+    formatter = string.Formatter()
+    format_fields = [(field, (spec, conv))
+                     for _, field, spec, conv in formatter.parse(format_str)
+                     if field is not None]
+    return format_fields

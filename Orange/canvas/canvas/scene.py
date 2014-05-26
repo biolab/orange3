@@ -329,6 +329,8 @@ class CanvasScene(QGraphicsScene):
         for message in node.state_messages():
             item.setStateMessage(message)
 
+        item.setStatusMessage(node.status_message())
+
         self.__item_for_node[node] = item
 
         node.position_changed.connect(self.__on_node_pos_changed)
@@ -336,6 +338,7 @@ class CanvasScene(QGraphicsScene):
         node.progress_changed.connect(item.setProgress)
         node.processing_state_changed.connect(item.setProcessingState)
         node.state_message_changed.connect(item.setStateMessage)
+        node.status_message_changed.connect(item.setStatusMessage)
 
         return self.add_node_item(item)
 

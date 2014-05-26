@@ -264,6 +264,10 @@ class WidgetManager(QObject):
         # Widget's info/warning/error messages.
         widget.widgetStateChanged.connect(self.__on_widget_state_changed)
 
+        # Widget's statusTip
+        node.set_status_message(widget.statusMessage())
+        widget.statusMessageChanged.connect(node.set_status_message)
+
         # Widget's progress bar value state.
         widget.progressBarValueChanged.connect(node.set_progress)
 

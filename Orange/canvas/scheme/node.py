@@ -67,6 +67,7 @@ class SchemeNode(QObject):
         self.__position = position or (0, 0)
         self.__progress = -1
         self.__processing_state = 0
+        self.__status_message = ""
         self.__state_messages = {}
         self.properties = properties or {}
 
@@ -192,6 +193,17 @@ class SchemeNode(QObject):
 
     tool_tip = Property(str, fset=set_tool_tip,
                         fget=tool_tip)
+
+    #: The node's status tip has changes
+    status_message_changed = Signal(str)
+
+    def set_status_message(self, text):
+        if self.__status_message != text:
+            self.__status_message = text
+            self.status_message_changed.emit(text)
+
+    def status_message(self):
+        return self.__status_message
 
     #: The node's state message has changed
     state_message_changed = Signal(UserMessage)
