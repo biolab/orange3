@@ -4,6 +4,7 @@ Link Item
 =========
 
 """
+import math
 
 from PyQt4.QtGui import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
@@ -341,11 +342,19 @@ class LinkItem(QGraphicsObject):
             sink_pos = self.sinkAnchor.anchorScenePos()
             source_pos = self.curveItem.mapFromScene(source_pos)
             sink_pos = self.curveItem.mapFromScene(sink_pos)
-            # TODO: get the orthogonal angle to the anchors path.
+
+            # Adaptive offset for the curve control points to avoid a
+            # cusp when the two points have the same y coordinate
+            # and are close together
+            delta = source_pos - sink_pos
+            dist = math.sqrt(delta.x() ** 2 + delta.y() ** 2)
+            cp_offset = min(dist / 2.0, 60.0)
+
+            # TODO: make the curve tangent orthogonal to the anchors path.
             path = QPainterPath()
             path.moveTo(source_pos)
-            path.cubicTo(source_pos + QPointF(60, 0),
-                         sink_pos - QPointF(60, 0),
+            path.cubicTo(source_pos + QPointF(cp_offset, 0),
+                         sink_pos - QPointF(cp_offset, 0),
                          sink_pos)
 
             self.curveItem.setPath(path)
