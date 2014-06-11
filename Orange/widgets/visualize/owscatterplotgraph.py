@@ -1042,8 +1042,10 @@ class OWScatterPlotGraphQt_test(OWWidget, ScaleScatterPlotData):
                                                                                self.raw_data[index][self.shownXAttribute],
                                                                                self.shownYAttribute,
                                                                                self.raw_data[index][self.shownYAttribute]))
-                    text.append('\nClass:\n   %s = %s' % (self.data_domain.class_var.name,
-                                                          self.raw_data[index][self.raw_data.domain.class_var]))
+                    if self.data_domain.class_var:
+                        text.append('\nClass:\n   %s = %s' % (
+                            self.data_domain.class_var.name,
+                            self.raw_data[index][self.raw_data.domain.class_var]))
                 if len(points) > 1 and i < len(points) - 1:
                     text.append('\n------------------\n')
             self.tooltip.setText(''.join(text), color=self.tooltipTextColor)
