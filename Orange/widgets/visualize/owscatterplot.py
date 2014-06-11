@@ -462,7 +462,7 @@ class OWScatterPlotQt(OWWidget):
 
         # "popravi" sql tabelo
         if type(self.data) is SqlTable:
-            if self.data.name == 'iris':
+            if self.data.name == 'iris' or self.data.name[:4] == 'wine':  # TODO: NE delaj tega!
                 attrs = [attr for attr in self.data.domain.attributes if type(attr) is ContinuousVariable]
                 class_vars = [attr for attr in self.data.domain.attributes if type(attr) is DiscreteVariable]
                 self.data.domain.class_vars = class_vars
