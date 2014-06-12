@@ -378,8 +378,6 @@ class OWMosaicDisplay(OWWidget):
         # diskretiziraj - prej se je to naredilo v optimizationDlg.setData()
         disc = EqualWidth()
         self.data = DiscretizeTable(data, method=disc)
-        self.data.name = data.name  # v DiscretizeTable se izgubi name
-
 
 
 

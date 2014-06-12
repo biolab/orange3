@@ -280,6 +280,7 @@ class Table(MutableSequence, Storage):
         self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
         self.metas = get_columns(row_indices, conversion.metas, n_rows)
         self.W = np.array(source.W[row_indices])
+        self.name = getattr(source, 'name', '')
         return self
 
 
@@ -301,6 +302,7 @@ class Table(MutableSequence, Storage):
         self.Y = source.Y[row_indices]
         self.metas = source.metas[row_indices]
         self.W = source.W[row_indices]
+        self.name = getattr(source, 'name', '')
         return self
 
 
