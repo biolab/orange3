@@ -607,7 +607,6 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         bi = widgetBox(b, orientation=0, addToLayout=False)
     else:
         bi = b
-    bi.setDisabled(disabled)
 
     cbox = None
     if checked is not None:
@@ -622,6 +621,11 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     sbox = bi.control = \
         (SpinBoxWFocusOut, DoubleSpinBoxWFocusOut)[isDouble](minv, maxv,
                                                              step, bi)
+    if bi is not widget:
+        bi.setDisabled(disabled)
+    else:
+        sbox.setDisabled(disabled)
+
     if decimals is not None:
         sbox.setDecimals(decimals)
     sbox.setAlignment(alignment)
