@@ -681,19 +681,29 @@ class OWDataTable(widget.OWWidget):
             self.selectionChangedFlag = True
 
     def commit(self):
+        selected_data = other_data = None
         table = self.tabs.currentWidget()
         if table and table.model():
             model = table.model()
-            selected = self.get_current_selection()
-            selection = [1 if i in selected else 0
-                         for i in range(len(model.examples))]
-            data = model.examples.select(selection)
-            self.send("Selected Data", data if len(data) > 0 else None)
-            data = model.examples.select(selection, 0)
-            self.send("Other Data", data if len(data) > 0 else None)
-        else:
-            self.send("Selected Data", None)
-            self.send("Other Data", None)
+            selection = self.get_current_selection()
+
+            # Avoid a copy if all/none rows are selected.
+            if not selection:
+                selected_data = None
+                other_data = model.examples
+            elif len(selection) == len(model.examples):
+                selected_data = model.examples
+                other_data = None
+            else:
+                selected_data = model.examples[selection]
+                selection = set(selection)
+
+                other = [i for i in range(len(model.examples))
+                         if i not in selection]
+                other_data = model.examples[other]
+
+        self.send("Selected Data", selected_data)
+        self.send("Other Data", other_data)
 
         self.selectionChangedFlag = False
 
