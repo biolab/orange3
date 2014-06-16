@@ -1,3 +1,4 @@
+sqlparse
 numpy>=1.6.2
 scipy>=0.11.0
 -e git+https://github.com/biolab/bottlechest@bottlechest#egg=bottleneck-dev
