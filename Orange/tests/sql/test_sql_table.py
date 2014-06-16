@@ -1,7 +1,8 @@
 import unittest
 
 from Orange.data.sql import table as sql_table
-from Orange.data import filter
+from Orange.data import filter, DiscreteVariable, \
+    StringVariable
 from Orange.data.sql.parser import SqlParser
 from Orange.tests.sql.base import PostgresTest, get_dburi
 
@@ -167,20 +168,32 @@ class SqlTableTests(PostgresTest):
         self.assertEqual(len(results), 140)
         self.assertSequenceEqual(results, all_results[10:])
 
+    def test_type_hints(self):
+        table = sql_table.SqlTable(self.iris_uri)
+        self.assertEqual(len(table.domain), 5)
+        self.assertEqual(len(table.domain.metas), 0)
+        table = sql_table.SqlTable(self.iris_uri,
+                                   type_hints={"iris": StringVariable()})
+        self.assertEqual(len(table.domain), 4)
+        self.assertEqual(len(table.domain.metas), 1)
+
     def test_joins(self):
-        table = sql_table.SqlTable.from_sql(get_dburi(), sql="""
-           SELECT a."sepal length",
-                  b. "petal length",
-                  CASE WHEN b."petal length" < 3 THEN '<'
-                       ELSE '>'
-                   END as "qualitative petal length"
-             FROM iris a
-       INNER JOIN iris b ON a."sepal width" = b."sepal width"
-            WHERE a."petal width" < 1
-         ORDER BY a."petal width" ASC""")
+        table = sql_table.SqlTable.from_sql(
+            get_dburi(),
+            sql="""SELECT a."sepal length",
+                          b. "petal length",
+                          CASE WHEN b."petal length" < 3 THEN '<'
+                               ELSE '>'
+                           END AS "qualitative petal length"
+                     FROM iris a
+               INNER JOIN iris b ON a."sepal width" = b."sepal width"
+                    WHERE a."petal width" < 1
+                 ORDER BY a."petal width" ASC""",
+            type_hints={
+                "qualitative petal length": DiscreteVariable(
+                    values=['<', '>'])})
         self.assertEqual(len(table), 498)
-        self.assertEqual(list(table[497]), [4.9, 5.1])
-        self.assertEqual(table[497]["qualitative petal length"], ">")
+        self.assertEqual(list(table[497]), [4.9, 5.1, 1.])
 
     def _mock_attribute(self, attr_name, formula=None):
         if formula is None:

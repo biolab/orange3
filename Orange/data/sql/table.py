@@ -28,7 +28,7 @@ class SqlTable(table.Table):
     def __init__(
             self, uri=None,
             host=None, database=None, user=None, password=None, schema=None,
-            table=None, **kwargs):
+            table=None, type_hints=None, **kwargs):
         """
         Create a new proxy for sql table.
 
@@ -64,19 +64,22 @@ class SqlTable(table.Table):
 
         if table is not None:
             self.table_name = self.quote_identifier(table)
-            self.domain = self.domain_from_table()
+            self.domain = self.domain_from_fields(
+                self._get_fields(table),
+                type_hints=type_hints)
             self.name = table
 
     @classmethod
     def from_sql(
             cls, uri=None,
             host=None, database=None, user=None, password=None, schema=None,
-            sql=None, **kwargs):
+            sql=None, type_hints=None, **kwargs):
         table = cls(uri, host, database, user, password, schema, **kwargs)
         p = SqlParser(sql)
         table.table_name = p.from_
         table.domain = table.domain_from_fields(
-            p.fields_with_types(table.connection))
+            p.fields_with_types(table.connection),
+            type_hints=type_hints)
         if p.where:
             table.row_filters = (CustomFilterSql(p.where), )
 
@@ -107,27 +110,31 @@ class SqlTable(table.Table):
             params['table'] = table
         return params
 
-    def domain_from_table(self):
-        return self.domain_from_fields(self._get_fields())
-
-    def domain_from_fields(self, fields):
+    def domain_from_fields(self, fields, type_hints=None):
         """:fields: tuple(field_name, field_type, field_expression, values)"""
+        type_hints = type_hints or {}
         attributes, metas = [], []
         for name, field_type, field_expr, values in fields:
-            if 'double' in field_type:
-                attr = variable.ContinuousVariable(name=name)
-                attributes.append(attr)
-            elif 'char' in field_type and values:
-                attr = variable.DiscreteVariable(name=name, values=values)
+            if name in type_hints:
+                attr = type_hints[name]
+                attr.name = name
+            else:
+                if 'double' in field_type:
+                    attr = variable.ContinuousVariable(name=name)
+                elif 'char' in field_type and values:
+                    attr = variable.DiscreteVariable(name=name, values=values)
+                else:
+                    attr = variable.StringVariable(name=name)
+
+            if not isinstance(attr, variable.StringVariable):
                 attributes.append(attr)
             else:
-                attr = variable.StringVariable(name=name)
                 metas.append(attr)
             attr.to_sql = lambda field_expr=field_expr: field_expr
         return domain.Domain(attributes, metas=metas)
 
-    def _get_fields(self):
-        cur = self._sql_get_fields()
+    def _get_fields(self, table_name):
+        cur = self._sql_get_fields(table_name)
         for field, field_type in cur.fetchall():
             yield (field, field_type,
                    self.quote_identifier(field),
@@ -502,8 +509,8 @@ class SqlTable(table.Table):
         fields = ["COUNT(*)"]
         return self._sql_query(fields, filters)
 
-    def _sql_get_fields(self):
-        table_name = self.unquote_identifier(self.table_name)
+    def _sql_get_fields(self, table_name):
+        table_name = self.unquote_identifier(table_name)
         sql = ["SELECT column_name, data_type",
                "FROM INFORMATION_SCHEMA.COLUMNS",
                "WHERE table_name =", self.quote_string(table_name)]
