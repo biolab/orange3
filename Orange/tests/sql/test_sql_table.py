@@ -166,10 +166,47 @@ class SqlTableTests(PostgresTest):
     def _mock_attribute(self, attr_name, formula=None):
         if formula is None:
             formula = '"%s"' % attr_name
+
         class attr:
             name = attr_name
 
             @staticmethod
             def to_sql():
                 return formula
+
         return attr
+
+    def test_get_attributes_from_sql_parse(self):
+        sql = [
+            "SELECT",
+                "a.test AS a_test,",
+                "CASE WHEN a.n = 1 THEN 1",
+                     "WHEN a.n = 2 THEN 2",
+                     "ELSE 0",
+                "END AS c,",
+                "b.test,",
+                "c.\"another test\"",
+            "FROM",
+            '"table" a',
+            'INNER JOIN "table" b ON a.x = b.x',
+            'INNER JOIN "table" c ON b.x = c.x',
+            'WHERE',
+            '1 = 1',
+            'GROUP BY',
+            'a.group',
+            'HAVING',
+            'a.haver = 1',
+            'LIMIT',
+            '1'
+        ]
+
+        p = SqlParser(" ".join(sql))
+        self.assertEqual(
+            p.from_.replace(" ", ""),
+            "".join(sql[9:12]).replace(" ", ""))
+        self.assertEqual(
+            p.where.replace(" ", ""),
+            "".join(sql[13:14]).replace(" ", ""))
+        self.assertEqual(
+            p.sql_without_limit.replace(" ", ""),
+            "".join(sql[:18]).replace(" ", ""))
