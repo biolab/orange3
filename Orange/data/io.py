@@ -193,6 +193,46 @@ class TabDelimReader:
         return table
 
 
+class TxtReader:
+    MISSING_VALUES = frozenset({"", "NA", "?"})
+
+    @staticmethod
+    def read_header(file, delimiter=None):
+        first_line = file.readline()
+        file.seek(0)
+        if delimiter is None:
+            for delimiter in "\t,; ":
+                if delimiter in first_line:
+                    break
+            else:
+                delimiter = None
+        if delimiter == " ":
+            delimiter = None
+        atoms = first_line.split(delimiter)
+        try:
+            [float(atom) for atom in set(atoms) - TxtReader.MISSING_VALUES]
+            header_lines = 0
+            names = ["Var{:04}".format(i + 1) for i in range(len(atoms))]
+        except ValueError:
+            names = [atom.strip() for atom in atoms]
+            header_lines = 1
+        domain = Domain([ContinuousVariable.make(name) for name in names])
+        return domain, header_lines, delimiter
+
+    def read_file(self, filename, cls=None):
+        from ..data import Table
+        if cls is None:
+            cls = Table
+        with open(filename, "rt") as file:
+            domain, header_lines, delimiter = self.read_header(file)
+        with open(filename, "rb") as file:
+            arr = np.genfromtxt(file, delimiter=delimiter,
+                                skip_header=header_lines,
+                                missing_values=self.MISSING_VALUES)
+        table = cls.from_numpy(domain, arr)
+        return table
+
+
 class BasketReader():
     def read_file(self, filename, cls=None):
         if cls is None:
