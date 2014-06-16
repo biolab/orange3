@@ -45,10 +45,12 @@ class OWFile(widget.OWWidget):
 #    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes() if len(ft)>2 and ft[2]]
     registered_file_types = []
     dlgFormats = (
-        "Tab-delimited files (*.tab *.txt)\nBasket files (*.basket)\n" +
+        "Tab-delimited files (*.tab)\n"
+        "Text file (*.txt)\n"
+        "Basket files (*.basket)\n" +
         "".join("{0} ({1})\n".format(*ft) for ft in registered_file_types) +
         "All files(*.*)")
-    formats = {".tab": "Tab-delimited file", ".txt": "Tab-delimited file",
+    formats = {".tab": "Tab-delimited file", ".txt": "Text file",
                ".basket": "Basket file"}
     formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
 
