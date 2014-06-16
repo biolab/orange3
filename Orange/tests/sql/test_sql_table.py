@@ -1,8 +1,9 @@
 import unittest
+
 from Orange.data.sql import table as sql_table
 from Orange.data import filter
 from Orange.data.sql.parser import SqlParser
-from Orange.tests.sql.base import PostgresTest
+from Orange.tests.sql.base import PostgresTest, get_dburi
 
 
 class SqlTableUnitTests(unittest.TestCase):
@@ -49,6 +50,7 @@ class SqlTableUnitTests(unittest.TestCase):
         This method has been copied from unittest/case.py and undeprecated.
         """
         from unittest.case import safe_repr
+
         missing = []
         mismatched = []
         for key, value in subset.items():
@@ -108,7 +110,8 @@ class SqlTableTests(PostgresTest):
             self.assertEqual(len(table), 0)
 
     def test_len_with_filter(self):
-        with self.sql_table_from_data(zip(self.discrete_variable(26))) as table:
+        with self.sql_table_from_data(
+                zip(self.discrete_variable(26))) as table:
             self.assertEqual(len(table), 26)
 
             filtered_table = filter.SameValue(table.domain[0], 'm')(table)
@@ -163,6 +166,21 @@ class SqlTableTests(PostgresTest):
         results = list(table._query(rows=slice(10, None)))
         self.assertEqual(len(results), 140)
         self.assertSequenceEqual(results, all_results[10:])
+
+    def test_joins(self):
+        table = sql_table.SqlTable.from_sql(get_dburi(), sql="""
+           SELECT a."sepal length",
+                  b. "petal length",
+                  CASE WHEN b."petal length" < 3 THEN '<'
+                       ELSE '>'
+                   END as "qualitative petal length"
+             FROM iris a
+       INNER JOIN iris b ON a."sepal width" = b."sepal width"
+            WHERE a."petal width" < 1
+         ORDER BY a."petal width" ASC""")
+        self.assertEqual(len(table), 498)
+        self.assertEqual(list(table[497]), [4.9, 5.1])
+        self.assertEqual(table[497]["qualitative petal length"], ">")
 
     def _mock_attribute(self, attr_name, formula=None):
         if formula is None:

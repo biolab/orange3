@@ -10,6 +10,8 @@ import psycopg2
 from .. import domain, variable, value, table, instance, filter,\
     DiscreteVariable, ContinuousVariable
 from Orange.data.sql import filter as sql_filter
+from Orange.data.sql.filter import CustomFilterSql
+from Orange.data.sql.parser import SqlParser
 
 
 class SqlTable(table.Table):
@@ -41,7 +43,7 @@ class SqlTable(table.Table):
         All but the database and table parameters are optional. Any additional
         parameters will be forwarded to the psycopg2 backend.
         """
-        assert uri is not None or table is not None
+        assert uri is not None or database is not None
 
         connection_args = dict(
             host=host,
@@ -52,16 +54,33 @@ class SqlTable(table.Table):
         )
         if uri is not None:
             parameters = self.parse_uri(uri)
-            table = parameters.pop("table")
+            table = parameters.pop("table", None)
             connection_args.update(parameters)
         connection_args.update(kwargs)
 
         self.connection = psycopg2.connect(**connection_args)
         self.host = host
         self.database = database
-        self.table_name = self.quote_identifier(table)
-        self.domain = self._create_domain()
-        self.name = table
+
+        if table is not None:
+            self.table_name = self.quote_identifier(table)
+            self.domain = self.domain_from_table()
+            self.name = table
+
+    @classmethod
+    def from_sql(
+            cls, uri=None,
+            host=None, database=None, user=None, password=None, schema=None,
+            sql=None, **kwargs):
+        table = cls(uri, host, database, user, password, schema, **kwargs)
+        p = SqlParser(sql)
+        table.table_name = p.from_
+        table.domain = table.domain_from_fields(
+            p.fields_with_types(table.connection))
+        if p.where:
+            table.row_filters = (CustomFilterSql(p.where), )
+
+        return table
 
     @staticmethod
     def parse_uri(uri):
@@ -88,9 +107,13 @@ class SqlTable(table.Table):
             params['table'] = table
         return params
 
-    def _create_domain(self):
+    def domain_from_table(self):
+        return self.domain_from_fields(self._get_fields())
+
+    def domain_from_fields(self, fields):
+        """:fields: tuple(field_name, field_type, field_expression, values)"""
         attributes, metas = [], []
-        for name, field_type, values in self._get_fields():
+        for name, field_type, field_expr, values in fields:
             if 'double' in field_type:
                 attr = variable.ContinuousVariable(name=name)
                 attributes.append(attr)
@@ -100,15 +123,15 @@ class SqlTable(table.Table):
             else:
                 attr = variable.StringVariable(name=name)
                 metas.append(attr)
-            field_name = '"%s"' % name
-            attr.to_sql = lambda field_name=field_name: field_name
-
+            attr.to_sql = lambda field_expr=field_expr: field_expr
         return domain.Domain(attributes, metas=metas)
 
     def _get_fields(self):
         cur = self._sql_get_fields()
         for field, field_type in cur.fetchall():
-            yield field, field_type, self._get_field_values(field, field_type)
+            yield (field, field_type,
+                   self.quote_identifier(field),
+                   self._get_field_values(field, field_type))
 
     def _get_field_values(self, field_name, field_type):
         if 'double' in field_type:

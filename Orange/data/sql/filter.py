@@ -123,3 +123,15 @@ def quote(value):
         return "'%s'" % value
     else:
         return value
+
+
+class CustomFilterSql(filter.Filter):
+    def __init__(self, where_sql, negate=False):
+        super().__init__(negate=negate)
+        self.sql = where_sql
+
+    def to_sql(self):
+        if not self.negate:
+            return "(" + self.sql + ")"
+        else:
+            return "NOT (" + self.sql + ")"

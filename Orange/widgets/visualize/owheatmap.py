@@ -164,7 +164,7 @@ class OWHeatmap(widget.OWWidget):
                 if not dataset.domain.class_var and "glass" in dataset.name:
                     glass = Orange.data.Table("Glass")
                     dataset.domain = glass.domain
-                    dataset._create_domain()
+                    dataset.domain_from_table()
 
 
 
