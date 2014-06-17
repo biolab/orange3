@@ -1,8 +1,10 @@
 import unittest
 
+import numpy as np
+
 from Orange.data.sql import table as sql_table
 from Orange.data import filter, DiscreteVariable, \
-    StringVariable
+    StringVariable, Table
 from Orange.data.sql.parser import SqlParser
 from Orange.tests.sql.base import PostgresTest, get_dburi
 
@@ -251,3 +253,36 @@ class SqlTableTests(PostgresTest):
     def test_raises_on_unsupported_keywords(self):
         with self.assertRaises(ValueError):
             SqlParser("SELECT * FROM table FOR UPDATE")
+
+    def test_universal_table(self):
+        uri, table_name = self.construct_universal_table()
+
+        table = sql_table.SqlTable.from_sql(uri, sql="""
+            SELECT
+                v1.col2 as v1,
+                v2.col2 as v2,
+                v3.col2 as v3,
+                v4.col2 as v4,
+                v5.col2 as v5
+              FROM %(table_name)s v1
+        INNER JOIN %(table_name)s v2 ON v2.col0 = v1.col0 AND v2.col1 = 2
+        INNER JOIN %(table_name)s v3 ON v3.col0 = v2.col0 AND v3.col1 = 3
+        INNER JOIN %(table_name)s v4 ON v4.col0 = v1.col0 AND v4.col1 = 4
+        INNER JOIN %(table_name)s v5 ON v5.col0 = v1.col0 AND v5.col1 = 5
+             WHERE v1.col1 = 1
+          ORDER BY v1.col0
+        """ % dict(table_name='"%s"' % table_name))
+        for i in range(0, 5):
+            print(table[i])
+
+        self.drop_sql_table(table_name)
+
+
+    def construct_universal_table(self):
+        values = []
+        for r in range(1, 6):
+            for c in range(1, 6):
+                values.extend((r, c, r * c))
+        table = Table(np.array(values).reshape((-1, 3)))
+        uri = self.create_sql_table(table)
+        return uri.rsplit('/', 1)

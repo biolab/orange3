@@ -7,7 +7,7 @@ class SqlParser:
     before_from_keywords = ['SELECT']
     from_keywords = ['FROM',
                      'INNER JOIN', 'CROSS JOIN', 'LEFT OUTER JOIN',
-                     'RIGHT OUTER JOIN', 'FULL OUTER JOIN', "ON"]
+                     'RIGHT OUTER JOIN', 'FULL OUTER JOIN', "ON", "AND", "OR"]
     after_from_keywords = ['WHERE', 'GROUP', "BY",
                            'HAVING', 'ORDER', 'UNION', 'LIMIT', "OFFSET"]
     all_supported_keywords = \
