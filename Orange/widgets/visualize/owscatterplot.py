@@ -460,20 +460,15 @@ class OWScatterPlotQt(OWWidget):
         sameDomain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
         self.data = data
 
-        # "popravi" sql tabelo
+        # Temporary hack for SqlTables, which don't have X and Y
+        # TODO: adapt scatter plot to work on SqlTables (avoid use of X and Y)
         if type(self.data) is SqlTable:
-            if self.data.name == 'iris' or self.data.name[:4] == 'wine':  # TODO: NE delaj tega!
-                attrs = [attr for attr in self.data.domain.attributes if type(attr) is ContinuousVariable]
-                class_vars = [attr for attr in self.data.domain.attributes if type(attr) is DiscreteVariable]
-                self.data.domain.class_vars = class_vars
-                self.data.domain.class_var = class_vars[0]
-                self.data.domain.attributes = attrs
-                self.data.X = numpy.zeros((len(self.data), len(self.data.domain.attributes)))
-                self.data.Y = numpy.zeros((len(self.data), len(self.data.domain.class_vars)))
-                for (i, row) in enumerate(data):
-                    self.data.X[i] = [row[attr] for attr in self.data.domain.attributes]
-                    self.data.Y[i] = row[self.data.domain.class_var]
-
+            self.data.X = numpy.zeros((len(self.data), len(self.data.domain.attributes)))
+            self.data.Y = numpy.zeros((len(self.data), len(self.data.domain.class_vars)))
+            for (i, row) in enumerate(data):
+                self.data.X[i] = [row[attr] for attr in self.data.domain.attributes]
+                if self.data.domain.class_vars:
+                    self.data.Y[i] = [row[cv] for cv in self.data.domain.class_vars]
 
         # self.vizrank.clearResults()
         if not sameDomain:
