@@ -361,47 +361,36 @@ class OWMosaicDisplay(OWWidget):
         # self.data = self.optimizationDlg.setData(data, self.removeUnusedValues)
         # zgornja vrstica je diskretizirala tabelo in odstranila unused values
 
+        if not self.data:
+            return
 
-        ##TODO: spodnje vrstice so developer-only
-        # "popravi" sql tabelo
-        if data and type(data) == SqlTable and data.name == 'iris':
-            data.domain.class_var = data.domain.attributes[4]
-        if data and type(data) == SqlTable and data.name == 'zoo':
-            data.domain.class_var = data.domain.attributes[16]
-        if data and type(data) == SqlTable and data.name == 'adult':
-            data.domain.class_var = data.domain.attributes[data.domain.index('y')]
+        if not self.data.domain.class_var:
+            self.warning(0, "Data does not have a class variable.")
+            return
 
+        if any(attr.var_type == VarTypes.Continuous for attr in self.data.domain):
+            self.information(0, "Continuous attributes were discretized.")
+            # previously done in optimizationDlg.setData()
+            self.data = DiscretizeTable(data, method=EqualFreq())
 
-        ##TODO: spodnje vrstice so developer-only
-        # med DiscretizeTable se izgubijo tele informacije
-        if self.data and type(self.data) == SqlTable and self.data.name == 'iris':
-            self.data.domain.class_var = self.data.domain.attributes[4]
-        if self.data and type(self.data) == SqlTable and self.data.name == 'zoo':
-            self.data.domain.class_var = self.data.domain.attributes[16]
-        if self.data and type(self.data) == SqlTable and self.data.name == 'adult':
-            self.data.domain.class_var = self.data.domain.attributes[self.data.domain.index('y')]
+        """ TODO: check
+        if data.has_missing_class():
+            self.information(1, "Examples with missing classes were removed.")
+        if self.removeUnusedValues and len(data) != len(self.data):
+            self.information(2, "Unused attribute values were removed.")
+        """
 
-
-        if self.data:
-            if any(attr.var_type == VarTypes.Continuous for attr in self.data.domain):
-                self.information(0, "Continuous attributes were discretized.")
-                # previously done in optimizationDlg.setData()
-                self.data = DiscretizeTable(data, method=EqualFreq())
-            if data.domain.class_var: #and data.hasMissingClasses():
-                self.information(1, "Examples with missing classes were removed.")
-            #            if self.removeUnusedValues and len(data) != len(self.data):
-            #                self.information(2, "Unused attribute values were removed.")
-
-            if self.data.domain.class_var and self.data.domain.class_var.var_type == VarTypes.Discrete:
-                self.interiorColoring = CLASS_DISTRIBUTION
-                self.colorPalette.setNumberOfColors(len(self.data.domain.class_var.values))
-            else:
-                self.interiorColoring = PEARSON
+        if self.data.domain.class_var.var_type == VarTypes.Discrete:
+            self.interiorColoring = CLASS_DISTRIBUTION
+            self.colorPalette.setNumberOfColors(len(self.data.domain.class_var.values))
+        else:
+            self.interiorColoring = PEARSON
 
         self.initCombos(self.data)
         self.openContext(self.data)
 
-        if data and self.unprocessedSubsetData:  # if we first received subset data we now have to call setSubsetData to process it
+        # if we first received subset data we now have to call setSubsetData to process it
+        if self.unprocessedSubsetData:  
             self.setSubsetData(self.unprocessedSubsetData)
             self.unprocessedSubsetData = None
 
