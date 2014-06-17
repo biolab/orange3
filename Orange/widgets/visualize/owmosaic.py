@@ -11,7 +11,7 @@ from Orange.classification import Fitter
 from Orange.data import Table, Variable, filter
 from Orange.data.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
-from Orange.feature.discretization import EqualWidth
+from Orange.feature.discretization import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets.settings import DomainContextHandler
@@ -352,7 +352,7 @@ class OWMosaicDisplay(OWWidget):
     # # DATA signal - receive new data and update all fields
     def setData(self, data):
         self.closeContext()
-        self.data = None
+        self.data = data
         self.bestPlacements = None
         self.manualAttributeValuesDict = {}
         self.attributeValuesDict = {}
@@ -360,8 +360,6 @@ class OWMosaicDisplay(OWWidget):
 
         # self.data = self.optimizationDlg.setData(data, self.removeUnusedValues)
         # zgornja vrstica je diskretizirala tabelo in odstranila unused values
-
-
 
 
         ##TODO: spodnje vrstice so developer-only
@@ -374,13 +372,6 @@ class OWMosaicDisplay(OWWidget):
             data.domain.class_var = data.domain.attributes[data.domain.index('y')]
 
 
-
-        # diskretiziraj - prej se je to naredilo v optimizationDlg.setData()
-        disc = EqualWidth()
-        self.data = DiscretizeTable(data, method=disc)
-
-
-
         ##TODO: spodnje vrstice so developer-only
         # med DiscretizeTable se izgubijo tele informacije
         if self.data and type(self.data) == SqlTable and self.data.name == 'iris':
@@ -391,12 +382,11 @@ class OWMosaicDisplay(OWWidget):
             self.data.domain.class_var = self.data.domain.attributes[self.data.domain.index('y')]
 
 
-
-
-
         if self.data:
             if any(attr.var_type == VarTypes.Continuous for attr in self.data.domain):
-                self.information(0, "Continuous attributes were discretized using entropy discretization.")
+                self.information(0, "Continuous attributes were discretized.")
+                # previously done in optimizationDlg.setData()
+                self.data = DiscretizeTable(data, method=EqualFreq())
             if data.domain.class_var: #and data.hasMissingClasses():
                 self.information(1, "Examples with missing classes were removed.")
             #            if self.removeUnusedValues and len(data) != len(self.data):
