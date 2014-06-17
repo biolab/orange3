@@ -4,12 +4,19 @@ import sqlparse.tokens as Tokens
 
 
 class SqlParser:
-    supported_keywords = ['SELECT', 'FROM', 'WHERE', 'GROUP',
-                          'HAVING', 'ORDER', 'UNION', 'LIMIT']
+    before_from_keywords = ['SELECT']
+    from_keywords = ['FROM',
+                     'INNER JOIN', 'CROSS JOIN', 'LEFT OUTER JOIN',
+                     'RIGHT OUTER JOIN', 'FULL OUTER JOIN', "ON"]
+    after_from_keywords = ['WHERE', 'GROUP', "BY",
+                           'HAVING', 'ORDER', 'UNION', 'LIMIT', "OFFSET"]
+    all_supported_keywords = \
+        before_from_keywords + from_keywords + after_from_keywords
 
     def __init__(self, sql):
         self.tokens = sqlparse.parse(sql)[0].tokens
-        self.keywords = get_offsets(self.tokens, self.supported_keywords)
+        self.keywords = find_keywords(self.tokens,
+                                      self.all_supported_keywords)
 
     @property
     def fields(self):
@@ -23,7 +30,7 @@ class SqlParser:
     @staticmethod
     def parse_columns(tokens):
         for token in tokens:
-            offsets = get_offsets(token.tokens, ["AS"])
+            offsets = find_keywords(token.tokens, ["AS"])
             if "AS" in offsets:
                 yield (
                     extract(token.tokens[:offsets["AS"]]).value,
@@ -52,7 +59,7 @@ class SqlParser:
     @property
     def from_(self):
         end_from = min(self.keywords.get(kw, len(self.tokens))
-                       for kw in self.supported_keywords[2:])
+                       for kw in self.after_from_keywords)
 
         return extract(self.tokens[self.keywords['FROM'] + 1:end_from]).value
 
@@ -70,13 +77,13 @@ class SqlParser:
             return extract(self.tokens).value
 
 
-def get_offsets(tokens, keywords):
+def find_keywords(tokens, supported_keywords):
     keyword_offset = {}
     for idx, token in enumerate(tokens):
-        if isinstance(token, Where) and "WHERE" in keywords:
+        if isinstance(token, Where) and "WHERE" in supported_keywords:
             keyword_offset["WHERE"] = idx
-        if token.match(Tokens.Keyword, keywords) or \
-                token.match(Tokens.DML, keywords):
+        if token.match(Tokens.Keyword, supported_keywords) or \
+                token.match(Tokens.DML, supported_keywords):
             keyword_offset[token.value.upper()] = idx
     return keyword_offset
 
