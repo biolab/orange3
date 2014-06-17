@@ -1,5 +1,5 @@
 import sqlparse
-from sqlparse.sql import IdentifierList, TokenList, Where
+from sqlparse.sql import IdentifierList, TokenList, Where, Identifier
 import sqlparse.tokens as Tokens
 
 
@@ -15,6 +15,8 @@ class SqlParser:
     def fields(self):
         for token in self.tokens[
                      self.keywords['SELECT'] + 1:self.keywords['FROM']]:
+            if isinstance(token, Identifier):
+                return list(self.parse_columns([token]))
             if isinstance(token, IdentifierList):
                 return list(self.parse_columns(token.get_identifiers()))
 

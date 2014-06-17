@@ -1,6 +1,7 @@
 import unittest
 from Orange.data.sql import table as sql_table
 from Orange.data import filter
+from Orange.data.sql.parser import SqlParser
 from Orange.tests.sql.base import PostgresTest
 
 
