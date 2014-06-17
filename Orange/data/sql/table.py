@@ -59,9 +59,9 @@ class SqlTable(table.Table):
         self.connection = psycopg2.connect(**connection_args)
         self.host = host
         self.database = database
-        self.table_name = self.name = table
+        self.table_name = self.quote_identifier(table)
         self.domain = self._create_domain()
-        self.name = self.table_name
+        self.name = table
 
     @staticmethod
     def parse_uri(uri):
@@ -235,7 +235,8 @@ class SqlTable(table.Table):
         table.connection = self.connection
         table.domain = self.domain
         table.row_filters = self.row_filters
-        table.table_name = table.name = self.table_name
+        table.table_name = self.table_name
+        table.name = self.name
         table.database = self.database
         table.host = self.host
         return table
@@ -461,7 +462,7 @@ class SqlTable(table.Table):
     def _sql_query(self, fields, filters=(),
                    group_by=None, order_by=None, offset=None, limit=None):
         sql = ["SELECT", ', '.join(fields),
-               "FROM", self.quote_identifier(self.table_name)]
+               "FROM", self.table_name]
         if filters:
             sql.extend(["WHERE", " AND ".join(filters)])
         if group_by is not None:
@@ -479,14 +480,15 @@ class SqlTable(table.Table):
         return self._sql_query(fields, filters)
 
     def _sql_get_fields(self):
+        table_name = self.unquote_identifier(self.table_name)
         sql = ["SELECT column_name, data_type",
                "FROM INFORMATION_SCHEMA.COLUMNS",
-               "WHERE table_name =", self.quote_string(self.table_name)]
+               "WHERE table_name =", self.quote_string(table_name)]
         return self._execute_sql_query(" ".join(sql))
 
     def _sql_get_distinct_values(self, field_name):
         sql = ["SELECT DISTINCT", self.quote_identifier(field_name),
-               "FROM", self.quote_identifier(self.table_name),
+               "FROM", self.table_name,
                "ORDER BY", self.quote_identifier(field_name),
                "LIMIT 21"]
         return self._execute_sql_query(" ".join(sql))
@@ -520,6 +522,12 @@ class SqlTable(table.Table):
 
     def quote_identifier(self, value):
         return '"%s"' % value
+
+    def unquote_identifier(self, value):
+        if value.startswith('"'):
+            return value[1:len(value)-1]
+        else:
+            return value
 
     def quote_string(self, value):
         return "'%s'" % value
