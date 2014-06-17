@@ -211,17 +211,20 @@ class SqlTableTests(PostgresTest):
     def test_get_attributes_from_sql_parse(self):
         sql = [
             "SELECT",
-                "a.test AS a_test,",
-                "CASE WHEN a.n = 1 THEN 1",
-                     "WHEN a.n = 2 THEN 2",
-                     "ELSE 0",
-                "END AS c,",
-                "b.test,",
-                "c.\"another test\"",
+            "a.test AS a_test,",
+            "CASE WHEN a.n = 1 THEN 1",
+            "WHEN a.n = 2 THEN 2",
+            "ELSE 0",
+            "END AS c,",
+            "b.test,",
+            "c.\"another test\"",
             "FROM",
             '"table" a',
             'INNER JOIN "table" b ON a.x = b.x',
-            'INNER JOIN "table" c ON b.x = c.x',
+            'CROSS JOIN "table" c ON b.x = c.x',
+            'LEFT OUTER JOIN "table" d on c.x = d.x',
+            'RIGHT OUTER JOIN "table" e on d.x = e.x',
+            'FULL OUTER JOIN "table" f on f.x = e.x',
             'WHERE',
             '1 = 1',
             'GROUP BY',
@@ -229,16 +232,22 @@ class SqlTableTests(PostgresTest):
             'HAVING',
             'a.haver = 1',
             'LIMIT',
-            '1'
+            '1',
+            'OFFSET',
+            '1',
         ]
 
         p = SqlParser(" ".join(sql))
         self.assertEqual(
             p.from_.replace(" ", ""),
-            "".join(sql[9:12]).replace(" ", ""))
+            "".join(sql[9:15]).replace(" ", ""))
         self.assertEqual(
             p.where.replace(" ", ""),
-            "".join(sql[13:14]).replace(" ", ""))
+            "".join(sql[16:17]).replace(" ", ""))
         self.assertEqual(
             p.sql_without_limit.replace(" ", ""),
-            "".join(sql[:18]).replace(" ", ""))
+            "".join(sql[:21]).replace(" ", ""))
+
+    def test_raises_on_unsupported_keywords(self):
+        with self.assertRaises(ValueError):
+            SqlParser("SELECT * FROM table FOR UPDATE")

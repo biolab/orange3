@@ -16,7 +16,8 @@ class SqlParser:
     def __init__(self, sql):
         self.tokens = sqlparse.parse(sql)[0].tokens
         self.keywords = find_keywords(self.tokens,
-                                      self.all_supported_keywords)
+                                      self.all_supported_keywords,
+                                      True)
 
     @property
     def fields(self):
@@ -77,9 +78,14 @@ class SqlParser:
             return extract(self.tokens).value
 
 
-def find_keywords(tokens, supported_keywords):
+def find_keywords(tokens, supported_keywords, raise_if_unknown=False):
     keyword_offset = {}
     for idx, token in enumerate(tokens):
+        if raise_if_unknown and \
+                        token.ttype == Tokens.Keyword and \
+                        token.value.upper() not in supported_keywords:
+            raise ValueError("Unsupported keyword %s" % token.value.upper())
+
         if isinstance(token, Where) and "WHERE" in supported_keywords:
             keyword_offset["WHERE"] = idx
         if token.match(Tokens.Keyword, supported_keywords) or \
