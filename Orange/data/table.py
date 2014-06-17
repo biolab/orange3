@@ -445,7 +445,7 @@ class Table(MutableSequence, Storage):
             raise IOError('File "{}" was not found.'.format(filename))
         if ext == ".tab":
             data = io.TabDelimReader().read_file(absolute_filename, cls)
-        if ext == ".txt":
+        elif ext == ".txt":
             data = io.TxtReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
             data = io.BasketReader().read_file(absolute_filename, cls)
