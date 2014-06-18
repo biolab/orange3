@@ -18,8 +18,9 @@ def _split_eq_width_fixed(min, max, n):
 
 
 class Discretizer(ColumnTransformation):
-    """ Interval discretizer. The lower limits
-    are inclusive, the upper exclusive. """
+    """Interval discretizer.
+    The lower limits are inclusive, the upper exclusive.
+    """
     def __init__(self, variable, points):
         super().__init__(variable)
         self.points = points
@@ -33,40 +34,29 @@ def _discretized_var(data, var, points):
     var = data.domain[var]
 
     if len(points) >= 1:
-        values = [ "<%f" % points[0] ] \
-            + [ "[%f, %f)" % (p1, p2) for p1,p2 in zip(points, points[1:]) ] \
-            + [ ">=%f" % points[-1] ]
+        values = ["<%f" % points[0]] \
+            + ["[%f, %f)" % (p1, p2) for p1, p2 in zip(points, points[1:])] \
+            + [">=%f" % points[-1]]
+        def discretized_attribute():
+            return 'bin(%s, ARRAY%s)' % (var.to_sql(), str(points))
     else:
-        values = [ "single value" ]
+        values = ["single_value"]
+        def discretized_attribute():
+            return "'%s'" % values[0]
 
     dvar = Orange.data.variable.DiscreteVariable(name=name, values=values)
     dvar.get_value_from = Discretizer(var, points)
-
-    def discretized_attribute():
-        if len(points) >= 1:
-            sql = [ 'CASE' ]
-            sql.extend([ 'WHEN "%s" < %f THEN \'%s\'' % (var.name, points[0], values[0]) ])
-            sql.extend([ 'WHEN "%s" >= %f AND "%s" < %f THEN \'%s\'' % (var.name, p1, var.name, p2, values[i+1]) for i, (p1, p2) in enumerate(zip(points, points[1:])) ])
-            sql.extend([ 'WHEN "%s" >= %f THEN \'%s\'' % (var.name, points[-1], values[-1]) ])
-            sql.extend([ 'END' ])
-        else:
-            sql = [ "'%s'" % values[0] ]
-
-        return " ".join(sql)
-
     dvar.to_sql = discretized_attribute
-
     return dvar
 
 
 class Discretization:
-    """Base class for discretization classes.
-    """
+    """Base class for discretization classes."""
     pass
 
 
 class EqualFreq(Discretization):
-    """ Discretizes the feature by spliting its domain to a fixed number of
+    """Discretizes the feature by spliting its domain to a fixed number of
     equal-width intervals. The span of original variable is the difference
     between the smallest and the largest feature value.
 
@@ -81,12 +71,10 @@ class EqualFreq(Discretization):
         if type(data) == Orange.data.sql.table.SqlTable:
             filters = [f.to_sql() for f in data.row_filters]
             filters = [f for f in filters if f]
-
-            sql = "select EqualFreq((%s), (%s), (%s), (%s));"
-            param = (data.table_name, attribute.name, filters if filters else None, self.n)
-            cur = data._execute_sql_query(sql, param)
-
-            points = [a for a, in cur.fetchall()]
+            att = attribute.to_sql()
+            quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
+            cur = data._sql_query(['quantile(%s, ARRAY%s)' % (att, str(quantiles))], filters)
+            points = cur.fetchone()[0]
         else:
             d = Orange.statistics.distribution.get_distribution(data, attribute)
             points = _discretization.split_eq_freq(d, n=self.n)
@@ -94,7 +82,7 @@ class EqualFreq(Discretization):
 
 
 class EqualWidth(Discretization):
-    """ Infers the cut-off points so that the discretization intervals contain
+    """Infers the cut-off points so that the discretization intervals contain
     approximately equal number of training data instances.
 
     .. attribute:: n
@@ -112,13 +100,13 @@ class EqualWidth(Discretization):
             if type(data) == Orange.data.sql.table.SqlTable:
                 filters = [f.to_sql() for f in data.row_filters]
                 filters = [f for f in filters if f]
-
-                sql = "select EqualWidth((%s), (%s), (%s), (%s));"
-                param = (data.table_name, attribute.name, filters if filters else None, self.n)
-                cur = data._execute_sql_query(sql, param)
-
-                points = [a for a, in cur.fetchall()]
+                att = attribute.to_sql()
+                cur = data._sql_query(['min(%s)' % att, 'max(%s)' % att], filters)
+                min, max = cur.fetchone()
+                dif = (max - min) / self.n
+                points = [min + (i + 1) * dif for i in range(self.n - 1)]
             else:
+                # TODO: why is the whole distribution computed instead of just min/max
                 d = Orange.statistics.distribution.get_distribution(data, attribute)
                 points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
