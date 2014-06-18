@@ -286,3 +286,23 @@ class SqlTableTests(PostgresTest):
         table = Table(np.array(values).reshape((-1, 3)))
         uri = self.create_sql_table(table)
         return uri.rsplit('/', 1)
+
+    def test_class_var_type_hints(self):
+        iris = sql_table.SqlTable(self.iris_uri, type_hints=dict(
+            iris=DiscreteVariable(
+                values=['Iris-setosa', 'Iris-virginica', 'Iris-versicolor']),
+            __class_vars__=['iris']
+        ))
+
+        self.assertEqual(len(iris.domain.class_vars), 1)
+        self.assertEqual(iris.domain.class_vars[0].name, 'iris')
+
+    def test_metas_type_hints(self):
+        iris = sql_table.SqlTable(self.iris_uri, type_hints=dict(
+            iris=DiscreteVariable(
+                values=['Iris-setosa', 'Iris-virginica', 'Iris-versicolor']),
+            __metas__=['iris']
+        ))
+
+        self.assertEqual(len(iris.domain.metas), 1)
+        self.assertEqual(iris.domain.metas[0].name, 'iris')

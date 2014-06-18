@@ -42,6 +42,14 @@ class SqlTable(table.Table):
 
         All but the database and table parameters are optional. Any additional
         parameters will be forwarded to the psycopg2 backend.
+
+        Variable types will be inferred based on the column types
+        (double -> ContinuousVariable, everything else -> StringVariable). You
+        can tell SqlTable to use different variables by passing a dict mapping
+        column names to Variable instances as type_hints parameter.
+
+        Class vars and metas can be specified as a list of column names in
+        __class_vars__ and __metas__ keys in type_hints dict.
         """
         assert uri is not None or database is not None
 
@@ -113,7 +121,10 @@ class SqlTable(table.Table):
     def domain_from_fields(self, fields, type_hints=None):
         """:fields: tuple(field_name, field_type, field_expression, values)"""
         type_hints = type_hints or {}
-        attributes, metas = [], []
+        attributes, class_vars, metas = [], [], []
+        suggested_metas = type_hints.pop('__metas__', [])
+        suggested_class_vars = type_hints.pop('__class_vars__', [])
+
         for name, field_type, field_expr, values in fields:
             if name in type_hints:
                 attr = type_hints[name]
@@ -126,12 +137,16 @@ class SqlTable(table.Table):
                 else:
                     attr = variable.StringVariable(name=name)
 
-            if not isinstance(attr, variable.StringVariable):
-                attributes.append(attr)
-            else:
+            if isinstance(attr, variable.StringVariable) or \
+                            attr.name in suggested_metas:
                 metas.append(attr)
+            elif attr.name in suggested_class_vars:
+                class_vars.append(attr)
+            else:
+                attributes.append(attr)
+
             attr.to_sql = lambda field_expr=field_expr: field_expr
-        return domain.Domain(attributes, metas=metas)
+        return domain.Domain(attributes, class_vars, metas=metas)
 
     def _get_fields(self, table_name):
         cur = self._sql_get_fields(table_name)
