@@ -315,3 +315,16 @@ class SqlTableTests(PostgresTest):
         ))
 
         self.assertTrue(any(v.name == 'my iris' for v in iris.domain))
+
+    def test_select_all(self):
+        iris = sql_table.SqlTable.from_sql(
+            self.iris_uri,
+            sql='SELECT * FROM iris',
+            type_hints=dict(
+                iris=DiscreteVariable(
+                    values=['Iris-setosa', 'Iris-virginica',
+                            'Iris-versicolor']),
+                __class_vars__=['iris']
+            ))
+
+        self.assertEqual(len(iris.domain), 5)

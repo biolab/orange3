@@ -51,9 +51,14 @@ class SqlParser:
                     "  FROM INFORMATION_SCHEMA.COLUMNS"
                     " WHERE table_name = 'xxx'")
 
-        for (field_name, field_type), (field_expr, field_alias) \
-                in zip(cur.fetchall(), self.fields):
-            yield (field_name, field_type, field_expr, ())
+        if self.fields is None:
+            for field_name, field_type in cur.fetchall():
+                yield (field_name, field_type, '"%s"' % field_name, ())
+        else:
+            for (field_name, field_type), (field_expr, field_alias) \
+                    in zip(cur.fetchall(), self.fields):
+                print(field_name, field_type, field_expr)
+                yield (field_name, field_type, field_expr, ())
         cur.execute("DROP TABLE xxx")
         conn.commit()
 
