@@ -82,6 +82,28 @@ class SqlTable(table.Table):
             cls, uri=None,
             host=None, database=None, user=None, password=None, schema=None,
             sql=None, type_hints=None, **kwargs):
+        """
+        Create a new proxy for sql select.
+
+        Database connection parameters can be specified either as a string:
+
+            table = SqlTable("user:password@host:port/database/table")
+
+        or using a set of keyword arguments:
+
+            table = SqlTable(database="test", sql="SELECT iris FROM iris")
+
+        All but the database and the sql parameters are optional. Any
+        additional parameters will be forwarded to the psycopg2 backend.
+
+        Variable types will be inferred based on the column types
+        (double -> ContinuousVariable, everything else -> StringVariable). You
+        can tell SqlTable to use different variables by passing a dict mapping
+        column names to Variable instances as type_hints parameter.
+
+        Class vars and metas can be specified as a list of column names in
+        __class_vars__ and __metas__ keys in type_hints dict.
+        """
         table = cls(uri, host, database, user, password, schema, **kwargs)
         p = SqlParser(sql)
         table.table_name = p.from_
