@@ -126,28 +126,34 @@ class SqlTable(table.Table):
         suggested_class_vars = type_hints.pop('__class_vars__', [])
 
         for name, field_type, field_expr, values in fields:
-            if name in type_hints:
-                attr = type_hints[name]
-                if not attr.name:
-                    attr.name = name
-            else:
-                if 'double' in field_type:
-                    attr = variable.ContinuousVariable(name=name)
-                elif 'char' in field_type and values:
-                    attr = variable.DiscreteVariable(name=name, values=values)
-                else:
-                    attr = variable.StringVariable(name=name)
+            var = self.var_from_field(name, field_type, field_expr, values,
+                                      type_hints)
 
-            if isinstance(attr, variable.StringVariable) or \
-                            attr.name in suggested_metas:
-                metas.append(attr)
-            elif attr.name in suggested_class_vars:
-                class_vars.append(attr)
+            if var.name in suggested_metas or \
+                    isinstance(var, variable.StringVariable):
+                metas.append(var)
+            elif var.name in suggested_class_vars:
+                class_vars.append(var)
             else:
-                attributes.append(attr)
+                attributes.append(var)
 
-            attr.to_sql = lambda field_expr=field_expr: field_expr
         return domain.Domain(attributes, class_vars, metas=metas)
+
+    @staticmethod
+    def var_from_field(name, field_type, field_expr, values, type_hints):
+        if name in type_hints:
+            var = type_hints[name]
+            if not var.name:
+                var.name = name
+        else:
+            if 'double' in field_type:
+                var = variable.ContinuousVariable(name=name)
+            elif 'char' in field_type and values:
+                var = variable.DiscreteVariable(name=name, values=values)
+            else:
+                var = variable.StringVariable(name=name)
+        var.to_sql = lambda: field_expr
+        return var
 
     def _get_fields(self, table_name):
         cur = self._sql_get_fields(table_name)
