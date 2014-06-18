@@ -306,3 +306,12 @@ class SqlTableTests(PostgresTest):
 
         self.assertEqual(len(iris.domain.metas), 1)
         self.assertEqual(iris.domain.metas[0].name, 'iris')
+
+    def test_type_hints_name_override(self):
+        iris = sql_table.SqlTable(self.iris_uri, type_hints=dict(
+            iris=DiscreteVariable(
+                'my iris',
+                values=['Iris-setosa', 'Iris-virginica', 'Iris-versicolor'])
+        ))
+
+        self.assertTrue(any(v.name == 'my iris' for v in iris.domain))

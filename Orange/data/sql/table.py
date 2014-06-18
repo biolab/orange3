@@ -128,7 +128,8 @@ class SqlTable(table.Table):
         for name, field_type, field_expr, values in fields:
             if name in type_hints:
                 attr = type_hints[name]
-                attr.name = name
+                if not attr.name:
+                    attr.name = name
             else:
                 if 'double' in field_type:
                     attr = variable.ContinuousVariable(name=name)
