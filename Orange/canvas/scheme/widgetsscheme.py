@@ -292,6 +292,11 @@ class WidgetManager(QObject):
         help_shortcut = QShortcut(QKeySequence("F1"), widget)
         help_shortcut.activated.connect(self.__on_help_request)
 
+        # Up shortcut (activate/open parent)
+        up_shortcut = QShortcut(
+            QKeySequence(Qt.ControlModifier + Qt.Key_Up), widget)
+        up_shortcut.activated.connect(self.__on_activate_parent)
+
         return widget
 
     def node_processing_state(self, node):
@@ -344,6 +349,13 @@ class WidgetManager(QObject):
             url = "help://search?id={0}".format(node.description.id)
             event = QWhatsThisClickedEvent(url)
             QCoreApplication.sendEvent(self.scheme(), event)
+
+    def __on_activate_parent(self):
+        """
+        Activate parent shortcut was pressed.
+        """
+        event = ActivateParentEvent()
+        QCoreApplication.sendEvent(self.scheme(), event)
 
     def __initialize_widget_state(self, node, widget):
         """
@@ -808,3 +820,10 @@ class SignalWrapper(object):
         else:
             # Might be running stand alone without a manager.
             self.method(*args)
+
+
+class ActivateParentEvent(QEvent):
+    ActivateParent = QEvent.registerEventType()
+
+    def __init__(self):
+        QEvent.__init__(self, self.ActivateParent)
