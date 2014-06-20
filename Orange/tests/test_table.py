@@ -198,11 +198,11 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[2, "e"], "4ex")
             self.assertEqual(d[-1, "e"], "was last")
 
-            with self.assertRaises(ValueError):
+            with self.assertRaises(IndexError):
                 del d[100]
             self.assertEqual(len(d), initlen - 5)
 
-            with self.assertRaises(ValueError):
+            with self.assertRaises(IndexError):
                 del d[-100]
             self.assertEqual(len(d), initlen - 5)
 
