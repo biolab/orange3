@@ -1,31 +1,29 @@
-# OWMosaicDisplay.py
-#
-from cmath import sqrt
-from functools import reduce
 import os
-from PyQt4.QtCore import QPoint, Qt, QRectF, SIGNAL
-from datetime import datetime
-import numpy
 import sys
+from math import sqrt
+from functools import reduce
+
+import numpy
+from PyQt4.QtCore import QPoint, Qt, QRectF
+from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
+                         QGraphicsScene, QPainter, QIcon, QDialog, QPen,
+                         QVBoxLayout, QListWidget, QSizePolicy, QApplication,
+                         QGraphicsTextItem, QBrush, QGraphicsLineItem,
+                         QGraphicsEllipseItem)
+
+from Orange.canvas.utils import environ
 from Orange.classification import Fitter
 from Orange.data import Table, Variable, filter
 from Orange.data.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
 from Orange.feature.discretization import EqualFreq
-from Orange.statistics.contingency import get_contingency
 from Orange.statistics.distribution import get_distribution
+from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.utils.colorpalette import ColorPaletteDlg, defaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
-
-from PyQt4.QtGui import QGraphicsRectItem, QGraphicsView, QColor, QGraphicsScene, QPainter, QIcon, QDialog, QPen, \
-    QVBoxLayout, QListWidget, QSizePolicy, QApplication, QGraphicsTextItem, QBrush, QGraphicsLineItem, \
-    QGraphicsEllipseItem
-from Orange.widgets import gui
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg, defaultRGBColors
-from Orange.canvas.utils import environ
-
 
 
 PEARSON = 0

@@ -2,8 +2,8 @@
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
-
 from urllib import parse
+
 import numpy as np
 import psycopg2
 

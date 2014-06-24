@@ -1,21 +1,20 @@
-# OWSieveDiagram.py
-#
-
-###########################################################################################
-##### WIDGET :
-###########################################################################################
-import random
-from PyQt4.QtCore import SIGNAL, Qt
 from math import sqrt, floor, ceil
+import random
 import sys
+
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
+                         QDialog, QApplication)
+
 import Orange
-from Orange.statistics.contingency import get_contingency
-from Orange.widgets.utils import getHtmlCompatibleString
-from Orange.widgets.visualize.owmosaic import OWCanvasText, OWCanvasRectangle, OWCanvasEllipse, OWCanvasLine
-from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QColor, QPen, QBrush, QDialog, QApplication
 from Orange.data import Table, Variable
-from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
+from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
+                                               OWCanvasEllipse, OWCanvasLine)
+from Orange.widgets.widget import OWWidget, Default, AttributeList
+
 
 VarTypes = Variable.VarTypes
 

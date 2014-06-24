@@ -1,22 +1,18 @@
-from PyQt4.QtGui import QApplication
-
 __author__ = 'jurre'
+
+import heapq
+import re
+
+import numpy as np
 import pyqtgraph as pg
+from PyQt4 import QtGui, QtCore
+
 import Orange
 from Orange import feature, statistics
 from Orange.data import discretization, Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
 from Orange.widgets import widget, gui
-
-from PyQt4 import QtGui, QtCore
-
-import numpy as np
-
-import re
-import heapq
-
-from datetime import datetime
 
 
 class Heatmap(pg.ImageItem):
@@ -212,21 +208,14 @@ class OWHeatmap(widget.OWWidget):
     def attrChanged(self, callSharpen=False):
         if not callSharpen:
             self.regionSharpened = False
-
         if self.dataset == None:
             return
-
         if self.n_discretization_intervals < 2:
             return
-
         self.checkedindices = []
         for i in range(len(self.checkBoxesColorsShownAttributeList)):
             self.checkedindices.append(getattr(self, self.checkBoxesColorsShownAttributeList[i]))
-
-        tstart = datetime.now()
         self.changeDisplay(callSharpen)
-        tend = datetime.now()
-        print(tend - tstart)
 
     def addToCache(self):
         ind = ''.join([str(i) for i in self.checkedindices])

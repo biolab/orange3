@@ -1,25 +1,18 @@
-# Copied from OWScatterPlotQt.py
-#
-# Show data using scatterplot
-#
-
-
-###########################################################################################
-##### WIDGET : Scatterplot visualization
-###########################################################################################
-from PyQt4.QtCore import SIGNAL, QSize
 import sys
-from PyQt4.QtGui import QApplication
+
 import numpy
+from PyQt4.QtCore import SIGNAL, QSize
+from PyQt4.QtGui import QApplication
+
 import Orange
-from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable
+from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.utils.plot import OWPlot, OWPalette, OWPlotGUI
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraphQt, OWScatterPlotGraphQt_test
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraphQt_test
 from Orange.widgets.widget import OWWidget, Default, AttributeList
-from Orange.widgets import gui
 
 
 VarTypes = Variable.VarTypes
@@ -395,7 +388,7 @@ class OWScatterPlotQt(OWWidget):
         self.connect(self.zoomSelectToolbar.buttons[g.Zoom], SIGNAL("clicked()",), self.graph.zoomButtonClicked)
         self.connect(self.zoomSelectToolbar.buttons[g.Pan], SIGNAL("clicked()",), self.graph.panButtonClicked)
         self.connect(self.zoomSelectToolbar.buttons[g.Select], SIGNAL("clicked()",), self.graph.selectButtonClicked)
-        
+
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
@@ -620,7 +613,7 @@ class OWScatterPlotQt(OWWidget):
     def updateProgress(self, current, total):
         self.progressBar.setTotalSteps(total)
         self.progressBar.setProgress(current)
-        
+
     def setShowGridlines(self):
         self.graph.enableGridXB(self.showGridlines)
         self.graph.enableGridYL(self.showGridlines)

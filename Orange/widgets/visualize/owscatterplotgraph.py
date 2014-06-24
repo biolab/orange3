@@ -1,27 +1,29 @@
-#
-# OWScatterPlotGraph.py
-#
-from pyqtgraph.graphicsItems.GraphicsWidgetAnchor import GraphicsWidgetAnchor
-from pyqtgraph.graphicsItems.ViewBox import ViewBox
-from Orange.widgets.widget import OWWidget
-from PyQt4 import QtCore
-from PyQt4.QtCore import QRectF, SIGNAL, QPointF, QSize, QPoint, pyqtSignal, QObject
-from Orange.widgets.gui import ControlledAttributesDict
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, ContinuousPaletteGenerator
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QColor, QImage, QApplication, QTransform, QPanGesture, QPinchGesture, QGraphicsObject, \
-    QGraphicsTextItem, QLinearGradient, QPen, QBrush, QGraphicsRectItem, QGraphicsItem
-import numpy
 import sys
-from Orange.data import DiscreteVariable, ContinuousVariable, Value
-from Orange.data.sql.table import SqlTable
-from Orange.widgets.utils.plot import OWPlot, OWPalette, OWPoint, ProbabilitiesItem, OWPlotGUI, \
-    TooltipManager, NOTHING, SELECT, SELECT_RIGHTCLICK, PANNING, ZOOMING, SELECTION_ADD, SELECTION_REMOVE, \
-    SELECTION_TOGGLE, xBottom, yLeft, yRight, xTop, OWLegendGradient, move_item_xy, OWLegendTitle
-import Orange
-from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleScatterPlotData
+
+import numpy
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.GraphicsWidgetAnchor import GraphicsWidgetAnchor
 from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem
+from PyQt4 import QtCore
+from PyQt4.QtCore import Qt, QRectF, QPointF, QPoint
+from PyQt4.QtGui import (QColor, QImage, QApplication, QTransform,
+                         QGraphicsObject, QGraphicsTextItem, QLinearGradient,
+                         QPen, QBrush, QGraphicsRectItem, QGraphicsItem)
+
+import Orange
+from Orange.data import DiscreteVariable, ContinuousVariable
+from Orange.data.sql.table import SqlTable
+from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
+                                               ContinuousPaletteGenerator)
+from Orange.widgets.utils.plot import (OWPalette, ProbabilitiesItem, OWPlotGUI,
+                                       TooltipManager, NOTHING, SELECT, PANNING,
+                                       ZOOMING, SELECTION_ADD, SELECTION_REMOVE,
+                                       SELECTION_TOGGLE, xBottom, yLeft,
+                                       move_item_xy)
+from Orange.widgets.utils.scaling import (get_variable_values_sorted,
+                                          ScaleScatterPlotData)
+from Orange.widgets.widget import OWWidget
+
 
 DONT_SHOW_TOOLTIPS = 0
 VISIBLE_ATTRIBUTES = 1

@@ -1,13 +1,12 @@
 import sys
+
 import psycopg2
-
 from PyQt4 import QtGui
-
-from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
 
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
 
 
 class OWSql(widget.OWWidget):
