@@ -38,8 +38,8 @@ class WidgetMetaClass(type(QDialog)):
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
                 hasattr(cls, "settingsFromWidgetCallback")):
-            raise SystemError("Reimplement settingsToWidgetCallback and "
-                              "settingsFromWidgetCallback")
+            raise TypeError("Reimplement settingsToWidgetCallback and "
+                            "settingsFromWidgetCallback")
 
         cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
 

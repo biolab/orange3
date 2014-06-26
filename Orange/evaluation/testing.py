@@ -88,7 +88,7 @@ class Results:
                 nrows = len(data)
             try:
                 dtype = data.Y.dtype
-            except:
+            except AttributeError:
                 pass
         if nrows is not None:
             self.actual = np.empty(nrows, dtype=dtype)
@@ -111,7 +111,7 @@ class Results:
 
 class Testing:
     """
-    Abstract base class for varius sampling procedures like cross-validation,
+    Abstract base class for various sampling procedures like cross-validation,
     leave one out or bootstrap. Derived classes define a `__call__` operator
     that executes the testing procedure and returns an instance of
     :obj:`Results`.
@@ -151,15 +151,15 @@ class Testing:
 
         if fitters:
             if not data:
-                raise AttributeError("{} is given fitters, but no data".
-                                     format(cls.__name__))
+                raise TypeError("{} is given fitters, but no data".
+                                format(cls.__name__))
             self.__init__(**kwargs)
             return self(data, fitters)
         return self
 
     def __call__(self, data, fitters):
-        raise SystemError("{}.__call__ is not implemented".
-                          format(type(self).__name__))
+        raise TypeError("{}.__call__ is not implemented".
+                        format(type(self).__name__))
 
 
 class CrossValidation(Testing):

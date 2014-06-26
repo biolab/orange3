@@ -434,7 +434,7 @@ class ContextHandler(SettingsHandler):
          search is necessary.
 
          Derived classes must overload this method."""
-        raise SystemError(self.__class__.__name__ + " does not overload match")
+        raise TypeError(self.__class__.__name__ + " does not overload match")
 
     def find_or_create_context(self, widget, *args, **kwargs):
         """Find the best matching context or create a new one if nothing
