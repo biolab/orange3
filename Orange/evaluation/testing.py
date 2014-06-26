@@ -270,3 +270,98 @@ class TestOnTrainingData(Testing):
             results.predicted[i] = values
             results.probabilities[i] = probs
         return results
+
+
+class Bootstrap(Testing):
+    def __init__(self, n_resamples=10, p=0.75):
+        self.n_resamples = n_resamples
+        self.p = p
+
+    def __call__(self, data, fitters):
+        from sklearn import cross_validation
+        indices = cross_validation.Bootstrap(
+            len(data), n_iter=self.n_resamples, train_size=self.p)
+
+        results = Results(data, len(fitters), store_data=self.store_data)
+
+        results.folds = []
+        if self.store_models:
+            results.models = []
+
+        row_indices = []
+        actual = []
+        predicted = [[] for _ in fitters]
+        probabilities = [[] for _ in fitters]
+        fold_start = 0
+        for train, test in indices:
+            train_data, test_data = data[train], data[test]
+            results.folds.append(slice(fold_start, fold_start + len(test)))
+            row_indices.append(test)
+            actual.append(test_data.Y.flatten())
+            if self.store_models:
+                fold_models = []
+                results.models.append(fold_models)
+
+            for i, fitter in enumerate(fitters):
+                model = fitter(train_data)
+                if self.store_models:
+                    fold_models.append(model)
+                values, probs = model(test_data, model.ValueProbs)
+                predicted[i].append(values)
+                probabilities[i].append(probs)
+
+            fold_start += len(test)
+
+        row_indices = np.hstack(row_indices)
+        actual = np.hstack(actual)
+        predicted = np.array([np.hstack(pred) for pred in predicted])
+        probabilities = np.array([np.vstack(prob) for prob in probabilities])
+        nrows = len(actual)
+        nmodels = len(predicted)
+
+        results.nrows = len(actual)
+        results.row_indices = row_indices
+        results.actual = actual
+        results.predicted = predicted.reshape(nmodels, nrows)
+        results.probabilities = probabilities
+        return results
+
+
+class TestOnTestData(object):
+    """
+    Test on a separate test data set.
+    """
+    def __new__(cls, train_data=None, test_data=None, fitters=None,
+                store_data=False, store_models=False, **kwargs):
+        self = super().__new__(cls)
+        self.store_data = store_data
+        self.store_models = store_models
+
+        if train_data is None and test_data is None and fitters is not None:
+            return self
+        elif train_data is not None and test_data is not None and \
+                fitters is not None:
+            self.__init__(**kwargs)
+            return self(train_data, test_data, fitters)
+        else:
+            raise TypeError("Expected 3 positional arguments")
+
+    def __call__(self, train_data, test_data, fitters):
+        results = Results(test_data, len(fitters), store_data=self.store_data)
+        models = []
+        if self.store_models:
+            results.models = [models]
+
+        results.row_indices = np.arange(len(test_data))
+        results.actual = test_data.Y.flatten()
+
+        for i, fitter in enumerate(fitters):
+            model = fitter(train_data)
+            values, probs = model(test_data, model.ValueProbs)
+            results.predicted[i] = values
+            results.probabilities[i][:, :] = probs
+            models.append(model)
+
+        results.nrows = len(test_data)
+        results.folds = [slice(0, len(test_data))]
+        return results
