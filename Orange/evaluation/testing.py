@@ -110,6 +110,7 @@ class Results:
         results.predicted = self.predicted[self.folds[fold]]
         results.probabilities = self.probabilities[self.folds[fold]]
         results.row_indices = self.row_indices[self.folds[fold]]
+        return results
 
 
 class Testing:
