@@ -1216,6 +1216,7 @@ class Table(MutableSequence, Storage):
         if any(isinstance(var, ContinuousVariable) for var in col_desc):
             dep_indices = np.argsort(row_data)
             dep_sizes, nans = bn.bincount(row_data, n_rows - 1)
+            dep_sizes = dep_sizes.astype(int, copy=False)
             if nans:
                 raise ValueError("cannot compute contigencies with missing "
                                  "row data")
