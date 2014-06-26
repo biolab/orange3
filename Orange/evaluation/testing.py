@@ -1,5 +1,8 @@
-from Orange.data import Domain, Table
 import numpy as np
+
+from sklearn import cross_validation
+
+from Orange.data import Domain, Table
 
 
 class Results:
@@ -149,8 +152,8 @@ class Testing:
         self.store_data = kwargs.pop('store_data', False)
         self.store_models = kwargs.pop('store_models', False)
 
-        if fitters:
-            if not data:
+        if fitters is not None:
+            if data is None:
                 raise TypeError("{} is given fitters, but no data".
                                 format(cls.__name__))
             self.__init__(**kwargs)
@@ -173,14 +176,19 @@ class CrossValidation(Testing):
     .. attribute:: k
 
         The number of folds.
+
+    .. attribute:: random_state
+
     """
-    def __init__(self, **kwargs):
-        self.k = kwargs.pop('k', 10)
+    def __init__(self, k=10, random_state=0):
+        self.k = k
+        self.random_state = random_state
 
     def __call__(self, data, fitters):
-        from sklearn import cross_validation
         n = len(data)
-        indices = cross_validation.KFold(n, self.k, shuffle=True)
+        indices = cross_validation.KFold(
+            n, self.k, shuffle=True, random_state=self.random_state
+        )
         results = Results(data, len(fitters), store_data=self.store_data)
 
         results.folds = []
@@ -273,14 +281,16 @@ class TestOnTrainingData(Testing):
 
 
 class Bootstrap(Testing):
-    def __init__(self, n_resamples=10, p=0.75):
+    def __init__(self, n_resamples=10, p=0.75, random_state=0):
         self.n_resamples = n_resamples
         self.p = p
+        self.random_state = random_state
 
     def __call__(self, data, fitters):
-        from sklearn import cross_validation
         indices = cross_validation.Bootstrap(
-            len(data), n_iter=self.n_resamples, train_size=self.p)
+            len(data), n_iter=self.n_resamples, train_size=self.p,
+            random_state=self.random_state
+        )
 
         results = Results(data, len(fitters), store_data=self.store_data)
 
