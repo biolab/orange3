@@ -28,7 +28,7 @@ def test_statistics(results):
 class OWTestLearners(widget.OWWidget):
     name = "Test Learners"
     description = ""
-    icon = "icons/Experiment.svg"
+    icon = "icons/TestLearners1.svg"
 
     inputs = [("Learner", Orange.classification.Fitter,
                "set_learner", widget.Multiple),
