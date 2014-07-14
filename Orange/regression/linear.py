@@ -21,6 +21,16 @@ class RidgeRegressionLearner(Fitter):
         return LinearModel(sk)
 
 
+class LassoRegressionLearner(Fitter):
+    def __init__(self, alpha=1.0):
+        self.alpha = alpha
+
+    def fit(self, X, Y, W):
+        sk = sklearn.linear_model.Lasso(alpha=self.alpha, fit_intercept=True)
+        sk.fit(X, Y)
+        return LinearModel(sk)
+
+
 class LinearModel(Model):
     supports_multiclass = True
 
