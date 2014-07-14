@@ -237,7 +237,7 @@ class OWPredictions(widget.OWWidget):
         """Update the predicted probability visibility state"""
         delegate = PredictionsItemDelegate()
         if self.class_var is not None:
-            if self.showProbabilities:
+            if self.showProbabilities and is_discrete(self.class_var):
                 float_fmt = "{{dist[{}]:.1f}}"
                 dist_fmt = " : ".join(
                     float_fmt.format(i)
@@ -314,7 +314,7 @@ def predict_discrete(predictor, data):
 
 
 def predict_continuous(predictor, data):
-    values = predictor(data, Model.Values)
+    values = predictor(data, Model.Value)
     return values, [None] * len(data)
 
 
@@ -334,8 +334,8 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
         except ValueError:
             return ""
         else:
+            fmt = self.__fmt
             if dist is not None:
-                fmt = self.__fmt
                 text = fmt.format(dist=DistFormater(dist), value=value)
             else:
                 text = fmt.format(value=value)
