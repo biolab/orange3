@@ -2,7 +2,16 @@ import numpy as np
 
 from sklearn import cross_validation
 
+import Orange.data
 from Orange.data import Domain, Table
+
+
+def is_discrete(var):
+    return isinstance(var, Orange.data.DiscreteVariable)
+
+
+def is_continuous(var):
+    return isinstance(var, Orange.data.ContinuousVariable)
 
 
 class Results:
@@ -85,7 +94,7 @@ class Results:
         dtype = np.float32
         if data:
             domain = data if isinstance(data, Domain) else data.domain
-            if nclasses is None:
+            if nclasses is None and is_discrete(domain.class_var):
                 nclasses = len(domain.class_var.values)
             if nrows is None:
                 nrows = len(data)
@@ -196,6 +205,7 @@ class CrossValidation(Testing):
         if self.store_models:
             results.models = []
         ptr = 0
+        class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
             fold_slice = slice(ptr, ptr + len(test))
@@ -209,9 +219,15 @@ class CrossValidation(Testing):
                 model = fitter(train_data)
                 if self.store_models:
                     fold_models.append(model)
-                values, probs = model(test_data, model.ValueProbs)
-                results.predicted[i][fold_slice] = values
-                results.probabilities[i][fold_slice, :] = probs
+
+                if is_discrete(class_var):
+                    values, probs = model(test_data, model.ValueProbs)
+                    results.predicted[i][fold_slice] = values
+                    results.probabilities[i][fold_slice, :] = probs
+                elif is_continuous(class_var):
+                    values = model(test_data, model.Value)
+                    results.predicted[i][fold_slice] = values
+
             ptr += len(test)
         return results
 
@@ -240,6 +256,7 @@ class LeaveOneOut(Testing):
         if self.store_models:
             results.models = []
         results.actual = Y.flatten()
+        class_var = data.domain.class_var
         for test_idx in results.row_indices:
             X[[0, test_idx]] = X[[test_idx, 0]]
             Y[[0, test_idx]] = Y[[test_idx, 0]]
@@ -255,9 +272,15 @@ class LeaveOneOut(Testing):
                 model = fitter(train_data)
                 if self.store_models:
                     fold_models.append(model)
-                values, probs = model(test_data, model.ValueProbs)
-                results.predicted[i][test_idx] = values
-                results.probabilities[i][test_idx, :] = probs
+
+                if is_discrete(class_var):
+                    values, probs = model(test_data, model.ValueProbs)
+                    results.predicted[i][test_idx] = values
+                    results.probabilities[i][test_idx, :] = probs
+                elif is_continuous(class_var):
+                    values = model(test_data, model.Value)
+                    results.predicted[i][test_idx] = values
+
         return results
 
 
@@ -271,13 +294,20 @@ class TestOnTrainingData(Testing):
             models = []
             results.models = [models]
         results.actual = data.Y.flatten()
+        class_var = data.domain.class_var
         for i, fitter in enumerate(fitters):
             model = fitter(data)
             if self.store_models:
                 models.append(model)
-            values, probs = model(data, model.ValueProbs)
-            results.predicted[i] = values
-            results.probabilities[i] = probs
+
+            if is_discrete(class_var):
+                values, probs = model(data, model.ValueProbs)
+                results.predicted[i] = values
+                results.probabilities[i] = probs
+            elif is_continuous(class_var):
+                values = model(data, model.Value)
+                results.predicted[i] = values
+
         return results
 
 
@@ -304,6 +334,7 @@ class Bootstrap(Testing):
         predicted = [[] for _ in fitters]
         probabilities = [[] for _ in fitters]
         fold_start = 0
+        class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
             results.folds.append(slice(fold_start, fold_start + len(test)))
@@ -317,16 +348,22 @@ class Bootstrap(Testing):
                 model = fitter(train_data)
                 if self.store_models:
                     fold_models.append(model)
-                values, probs = model(test_data, model.ValueProbs)
-                predicted[i].append(values)
-                probabilities[i].append(probs)
+
+                if is_discrete(class_var):
+                    values, probs = model(test_data, model.ValueProbs)
+                    predicted[i].append(values)
+                    probabilities[i].append(probs)
+                elif is_continuous(class_var):
+                    values = model(test_data, model.Value)
+                    predicted[i].append(values)
 
             fold_start += len(test)
 
         row_indices = np.hstack(row_indices)
         actual = np.hstack(actual)
         predicted = np.array([np.hstack(pred) for pred in predicted])
-        probabilities = np.array([np.vstack(prob) for prob in probabilities])
+        if is_discrete(class_var):
+            probabilities = np.array([np.vstack(prob) for prob in probabilities])
         nrows = len(actual)
         nmodels = len(predicted)
 
@@ -334,7 +371,8 @@ class Bootstrap(Testing):
         results.row_indices = row_indices
         results.actual = actual
         results.predicted = predicted.reshape(nmodels, nrows)
-        results.probabilities = probabilities
+        if is_discrete(class_var):
+            results.probabilities = probabilities
         return results
 
 
@@ -366,11 +404,17 @@ class TestOnTestData(object):
         results.row_indices = np.arange(len(test_data))
         results.actual = test_data.Y.flatten()
 
+        class_var = train_data.domain.class_var
         for i, fitter in enumerate(fitters):
             model = fitter(train_data)
-            values, probs = model(test_data, model.ValueProbs)
-            results.predicted[i] = values
-            results.probabilities[i][:, :] = probs
+            if is_discrete(class_var):
+                values, probs = model(test_data, model.ValueProbs)
+                results.predicted[i] = values
+                results.probabilities[i][:, :] = probs
+            elif is_continuous(class_var):
+                values = model(test_data, model.Value)
+                results.predicted[i] = values
+
             models.append(model)
 
         results.nrows = len(test_data)
