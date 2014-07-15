@@ -18,11 +18,27 @@ from Orange.widgets import widget, gui, settings
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
-def test_statistics(results):
-    return (scoring.CA(results),
-            scoring.F1(results),
-            scoring.Precision(results),
-            scoring.Recall(results))
+def classification_stats(results):
+    return (CA(results),
+            F1(results),
+            Precision(results),
+            Recall(results))
+
+classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
+
+
+def regression_stats(results):
+    return (MSE(results),
+            RMSE(results),
+            MAE(results),
+            R2(results))
+
+
+regression_stats.headers = ["MSE", "RMSE", "MAE", "R2"]
+
+
+def is_discrete(var):
+    return isinstance(var, Orange.data.DiscreteVariable)
 
 
 class OWTestLearners(widget.OWWidget):
@@ -94,7 +110,7 @@ class OWTestLearners(widget.OWWidget):
 
         self.result_model = QStandardItemModel()
         self.result_model.setHorizontalHeaderLabels(
-            ["Method", "CA", "F1", "Precision", "Recall"]
+            ["Method"] + classification_stats.headers
         )
         self.view.setModel(self.result_model)
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
@@ -109,6 +125,11 @@ class OWTestLearners(widget.OWWidget):
     def set_train_data(self, data):
         self.train_data = data
         self._invalidate()
+        if data is not None and is_discrete(data.domain.class_var):
+            headers = ["Method"] + classification_stats.headers
+        else:
+            headers = ["Method"] + regression_stats.headers
+        self.result_model.setHorizontalHeaderLabels(headers)
 
     def set_test_data(self, data):
         self.test_data = data
@@ -154,7 +175,14 @@ class OWTestLearners(widget.OWWidget):
             assert False
 
         results = list(split_by_model(results))
-        stats = [test_statistics(res) for res in results]
+        class_var = self.train_data.domain.class_var
+
+        if is_discrete(class_var):
+            test_stats = classification_stats
+        else:
+            test_stats = regression_stats
+
+        stats = [test_stats(res) for res in results]
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
@@ -227,7 +255,8 @@ def split_by_model(results):
         res.row_indices = results.row_indices
         res.actual = results.actual
         res.predicted = results.predicted[(i,), :]
-        res.probabilities = results.probabilities[(i,), :, :]
+        if hasattr(results, "probabilities"):
+            res.probabilities = results.probabilities[(i,), :, :]
 
         if results.models:
             res.models = [mf[i] for mf in results.models]
@@ -257,7 +286,8 @@ def results_add_by_model(x, y):
     res.folds = x.folds
     res.actual = x.actual
     res.predicted = numpy.vstack((x.predicted, y.predicted))
-    res.probabilities = numpy.vstack((x.probabilities, y.probabilities))
+    if hasattr(x, "probabilities") and hasattr(y, "probabilities"):
+        res.probabilities = numpy.vstack((x.probabilities, y.probabilities))
 
     if x.models is not None:
         res.models = [xm + ym for xm, ym in zip(x.models, y.models)]
@@ -267,9 +297,52 @@ def results_add_by_model(x, y):
 def results_merge(results):
     return functools.reduce(results_add_by_model, results, testing.Results())
 
+import sklearn.metrics
+import numpy as np
+
+
+def _skl_metric(results, metric):
+    return np.fromiter(
+        (metric(results.actual, predicted)
+         for predicted in results.predicted),
+        dtype=np.float64, count=len(results.predicted))
+
+
+def CA(results):
+    return _skl_metric(results, sklearn.metrics.accuracy_score)
+
+
+def Precision(results):
+    return _skl_metric(results, sklearn.metrics.precision_score)
+
+
+def Recall(results):
+    return _skl_metric(results, sklearn.metrics.recall_score)
+
+
+def F1(results):
+    return _skl_metric(results, sklearn.metrics.f1_score)
+
+
+def MSE(results):
+    return _skl_metric(results, sklearn.metrics.mean_squared_error)
+
+
+def RMSE(results):
+    return np.sqrt(MSE(results))
+
+
+def MAE(results):
+    return _skl_metric(results, sklearn.metrics.mean_absolute_error)
+
+
+def R2(results):
+    return _skl_metric(results, sklearn.metrics.r2_score)
+
 
 def main():
-    from Orange.classification import logistic_regression as lr, naive_bayes as nb
+    from Orange.classification import \
+        logistic_regression as lr, naive_bayes as nb
 
     app = QtGui.QApplication([])
     data = Orange.data.Table("iris")
