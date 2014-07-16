@@ -413,8 +413,9 @@ class Table(MutableSequence, Storage):
         f.write("\n")
 
         # data
+        domain_vars = [self.domain.index(var) for var in domain_vars]
         for i in self:
-            f.write("\t".join([str(i[j]) for j in domain_vars]))
+            f.write("\t".join(str(i[j]) for j in domain_vars))
             f.write("\n")
         f.close()
 
