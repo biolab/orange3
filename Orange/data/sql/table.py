@@ -418,10 +418,8 @@ class SqlTable(table.Table):
             if column.var_type == column.VarTypes.Continuous:
                 all_contingencies[i] = (self._continuous_contingencies(cur), [])
             else:
-                row_mapping = {v: i for i, v in enumerate(row.values)}
-                column_mapping = {v: i for i, v in enumerate(column.values)}
                 all_contingencies[i] = (self._discrete_contingencies(
-                    cur, row_mapping, column_mapping), [])
+                    cur, row, column), [])
         return all_contingencies
 
     def _continuous_contingencies(self, cur):
@@ -437,12 +435,11 @@ class SqlTable(table.Table):
         conts[-1] = np.array(conts[-1]).T
         return conts
 
-    def _discrete_contingencies(self, cur, row_mapping, col_mapping):
-        conts = np.zeros((len(row_mapping), len(col_mapping)))
-
+    def _discrete_contingencies(self, cur, row, column):
+        conts = np.zeros((len(row.values), len(column.values)))
         for row_value, col_value, count in cur.fetchall():
-            row_index = row_mapping[row_value]
-            col_index = col_mapping[col_value]
+            row_index = row.to_val(row_value)
+            col_index = column.to_val(col_value)
             conts[row_index, col_index] = count
         return conts
 
