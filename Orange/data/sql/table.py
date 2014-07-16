@@ -385,6 +385,8 @@ class SqlTable(table.Table):
         return dists
 
     def _compute_contingency(self, col_vars=None, row_var=None):
+        if col_vars is None:
+            col_vars = range(len(self.domain.variables))
         if len(col_vars) != 1:
             raise NotImplementedError("Contingency for multiple columns "
                                       "has not yet been implemented.")
