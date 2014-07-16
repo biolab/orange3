@@ -8,7 +8,7 @@ from Orange.classification import naive_bayes, majority
 
 class TestingTestCase(unittest.TestCase):
     def test_no_data(self):
-        self.assertRaises(AttributeError, testing.CrossValidation,
+        self.assertRaises(TypeError, testing.CrossValidation,
                           fitters=[naive_bayes.BayesLearner()])
 
 
