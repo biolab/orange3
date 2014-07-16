@@ -155,21 +155,26 @@ class OWTestLearners(widget.OWWidget):
 
         if self.resampling == OWTestLearners.KFold:
             results = testing.CrossValidation(
-                self.train_data, learners, k=self.k_folds
+                self.train_data, learners, k=self.k_folds, store_data=True
             )
         elif self.resampling == OWTestLearners.LeaveOneOut:
-            results = testing.LeaveOneOut(self.train_data, learners)
+            results = testing.LeaveOneOut(
+                self.train_data, learners, store_data=True
+            )
         elif self.resampling == OWTestLearners.Bootstrap:
             p = self.sample_p / 100.0
             results = testing.Bootstrap(
-                self.train_data, learners, n_resamples=self.n_repeat, p=p
+                self.train_data, learners, n_resamples=self.n_repeat, p=p,
+                store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTrain:
-            results = testing.TestOnTrainingData(self.train_data, learners)
+            results = testing.TestOnTrainingData(
+                self.train_data, learners, store_data=True
+            )
         elif self.resampling == OWTestLearners.TestOnTest:
             assert self.test_data is not None
             results = testing.TestOnTestData(
-                self.train_data, self.test_data, learners
+                self.train_data, self.test_data, learners, store_data=True
             )
         else:
             assert False
