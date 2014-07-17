@@ -127,9 +127,13 @@ class OWConfusionMatrix(widget.OWWidget):
         if results is not None:
             nmodels, ntests = results.predicted.shape
             headers = class_values + [unicodedata.lookup("N-ARY SUMMATION")]
-            # TODO: Store learners or their names in the results.
-#             self.learners = [l.name for l in results.learners]
-            self.learners = ["L %i" % (i + 1) for i in range(nmodels)]
+
+            # NOTE: The 'fitter_names' is set in 'Test Learners' widget.
+            if hasattr(results, "fitter_names"):
+                self.learners = results.fitter_names
+            else:
+                self.learners = ["L %i" % (i + 1) for i in range(nmodels)]
+
             self.tablemodel.setVerticalHeaderLabels(headers)
             self.tablemodel.setHorizontalHeaderLabels(headers)
             self.tablemodel.setRowCount(len(class_values) + 1)

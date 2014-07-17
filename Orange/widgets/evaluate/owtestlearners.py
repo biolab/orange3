@@ -239,6 +239,8 @@ class OWTestLearners(widget.OWWidget):
         results = [val.results for val in self.learners.values()]
         if results:
             combined = results_merge(results)
+            combined.fitter_names = [learner_name(val.learner)
+                                     for val in self.learners.values()]
         else:
             combined = None
         self.send("Evaluation Results", combined)
