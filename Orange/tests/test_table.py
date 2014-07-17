@@ -1006,7 +1006,7 @@ class TableTests(unittest.TestCase):
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
-        self.meta_data = np.random.random((self.nrows, len(self.metas)))
+        self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas)))
         self.weight_data = np.random.random((self.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
@@ -1025,8 +1025,8 @@ class TableTests(unittest.TestCase):
                      else a for a in attributes]
         class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str)
                       else c for c in classes]
-        meta_vars = [data.DiscreteVariable(name=m) if isinstance(m, str)
-                     else m for m in metas]
+        meta_vars = [data.DiscreteVariable(name=m, values=map(str, range(5)))
+                     if isinstance(m, str) else m for m in metas]
 
         domain = data.Domain(attr_vars, class_vars, meta_vars)
         return domain
