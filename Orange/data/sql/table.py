@@ -5,7 +5,9 @@ import functools
 from urllib import parse
 
 import numpy as np
-import psycopg2
+
+import Orange.misc
+psycopg2 = Orange.misc.import_late_warning("psycopg2")
 
 from .. import domain, variable, value, table, instance, filter,\
     DiscreteVariable, ContinuousVariable

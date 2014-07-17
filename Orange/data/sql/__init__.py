@@ -1,5 +1,7 @@
 import Orange
-import psycopg2
+import Orange.misc
+psycopg2 = Orange.misc.import_late_warning("psycopg2")
+
 
 def create_stored_procedures(uri=None, host=None, user=None, password=None, database=None, schema=None,
                             **kwargs):
