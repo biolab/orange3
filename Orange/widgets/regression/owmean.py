@@ -23,6 +23,7 @@ class OWMean(widget.OWWidget):
         gui.lineEdit(box, self, "learner_name")
         gui.button(self.controlArea, self, "Apply", callback=self.apply,
                    default=True)
+        self.apply()
 
     def set_data(self, data):
         self.data = data

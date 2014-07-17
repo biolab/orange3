@@ -96,6 +96,8 @@ class OWKNNLearner(widget.OWWidget):
         layout = self.layout()
         self.layout().setSizeConstraint(layout.SetFixedSize)
 
+        self.apply()
+
     def set_data(self, data):
         self.data = data
         if data is not None:
