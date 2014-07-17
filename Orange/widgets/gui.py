@@ -1321,6 +1321,78 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
     return slider
 
 
+def labeledSlider(widget, master, value, box=None,
+                 label=None, labels=(), labelFormat=" %d", ticks=False,
+                 callback=None, vertical=False, width=None, **misc):
+    """
+    Construct a slider.
+
+    :param widget: the widget into which the box is inserted
+    :type widget: PyQt4.QtGui.QWidget
+    :param master: master widget
+    :type master: PyQt4.QtGui.QWidget
+    :param value: the master's attribute with which the value is synchronized
+    :type value:  str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :param label: a label that is inserted into the box
+    :type label: str
+    :param labels: labels shown at different slider positions
+    :type labels: tuple of str
+    :param callback: a function that is called when the value is changed
+    :type callback: function
+
+    :param ticks: if set to `True`, ticks are added below the slider
+    :type ticks: bool
+    :param vertical: if set to `True`, the slider is vertical
+    :type vertical: bool
+    :param width: the width of the slider
+    :type width: int
+    :rtype: :obj:`PyQt4.QtGui.QSlider`
+    """
+    sliderBox = widgetBox(widget, box, orientation="horizontal",
+                          addToLayout=False)
+    if label:
+        widgetLabel(sliderBox, label)
+    sliderOrient = Qt.Vertical if vertical else Qt.Horizontal
+    slider = QtGui.QSlider(sliderOrient, sliderBox)
+    slider.labels = labels
+    slider.setRange(0, len(labels) - 1)
+    slider.setSingleStep(1)
+    slider.setPageStep(1)
+    slider.setTickInterval(1)
+    sliderBox.layout().addWidget(slider)
+    slider.setValue(getdeepattr(master, value))
+    if width:
+        slider.setFixedWidth(width)
+    if ticks:
+        slider.setTickPosition(QtGui.QSlider.TicksBelow)
+        slider.setTickInterval(ticks)
+
+    max_label_size = 0
+    slider.value_label = value_label = QtGui.QLabel(sliderBox)
+    value_label.setAlignment(Qt.AlignRight)
+    sliderBox.layout().addWidget(value_label)
+    for lb in labels:
+        value_label.setText(labelFormat % lb)
+        max_label_size = max(max_label_size, value_label.sizeHint().width())
+    value_label.setFixedSize(max_label_size, value_label.sizeHint().height())
+    value_label.setText(labelFormat % labels[getdeepattr(master, value)])
+    value_label.set_label = \
+        lambda x, lab=value_label, form=labelFormat, labs=labels: \
+        lab.setText(form % labs[x])
+    QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
+                           value_label.set_label)
+
+    connectControl(slider, master, value, callback,
+                   QtCore.SIGNAL("valueChanged(int)"),
+                   CallFrontHSlider(slider),
+                   CallBackLabeledSlider(slider, master))
+
+    miscellanea(slider, sliderBox, widget, **misc)
+    return slider
+
+
 # TODO comboBox looks overly complicated:
 # - is the argument control2attributeDict needed? doesn't emptyString do the
 #    job?
@@ -2082,6 +2154,18 @@ class CallBackRadioButton:
         if not self.disabled and self.control.ogValue is not None:
             arr = [butt.isChecked() for butt in self.control.buttons]
             self.widget.__setattr__(self.control.ogValue, arr.index(1))
+
+
+class CallBackLabeledSlider:
+    def __init__(self, control, widget):
+        self.control = control
+        self.widget = widget
+        self.disabled = False
+
+    def __call__(self, *_):  # triggered by toggled()
+        if not self.disabled and self.control.ogValue is not None:
+            self.widget.__setattr__(self.control.ogValue,
+                                    self.control.labels[self.control.value()])
 
 
 ##############################################################################
