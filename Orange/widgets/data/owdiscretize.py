@@ -444,7 +444,7 @@ class OWDiscretize(widget.OWWidget):
         output = None
         if self.data is not None:
             domain = self.discretized_domain()
-            output = Orange.data.Table.from_table(domain, self.data)
+            output = self.data.from_table(domain, self.data)
         self.send("Data", output)
 
     def storeSpecificSettings(self):
