@@ -247,26 +247,21 @@ class OWDiscretize(widget.OWWidget):
         cvars = [var for var in data.domain
                  if isinstance(var, Orange.data.ContinuousVariable)]
         self.varmodel[:] = cvars
-        # Reset (initialize) the variable discretization states.
-        self._reset()
 
         class_var = data.domain.class_var
         has_disc_class = isinstance(class_var, Orange.data.DiscreteVariable)
 
-        def set_enabled(group, button_index, enable, fallback_index=0):
-            "Set the button at button_index enabled state to `enable`"
-            button = group.buttons[button_index]
-            button.setEnabled(enable)
-            # If the newly disabled button is checked then change the
-            # current checked button
-            if not enable and button == group.group.checkedButton():
-                group.buttons[fallback_index].setChecked(True)
+        self.default_bbox.buttons[self.MDL - 1].setEnabled(has_disc_class)
+        self.bbox.buttons[self.MDL].setEnabled(has_disc_class)
 
-        group = self.default_bbox
-        set_enabled(group, self.MDL - 1, has_disc_class, 0)
+        # If the newly disabled MDL button is checked then change it
+        if not has_disc_class and self.default_method == self.MDL - 1:
+            self.default_method = 0
+        if not has_disc_class and self.method == self.MDL:
+            self.method = 0
 
-        group = self.bbox
-        set_enabled(group, self.MDL, has_disc_class, 0)
+        # Reset (initialize) the variable discretization states.
+        self._reset()
 
     def _restore(self, saved_state):
         # Restore variable states from a saved_state dictionary.
