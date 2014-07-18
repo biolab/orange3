@@ -159,7 +159,7 @@ class OWDiscretize(widget.OWWidget):
 
         box = gui.widgetBox(
             self.controlArea, self.tr("Default Discretization"))
-        rbox = gui.radioButtons(
+        self.default_bbox = rbox = gui.radioButtons(
             box, self, "default_method", callback=self._default_disc_changed)
 
         options = [
@@ -200,7 +200,7 @@ class OWDiscretize(widget.OWWidget):
 
         vlayout.addWidget(self.varview)
         # Controls for individual attr settings
-        controlbox = gui.radioButtons(
+        self.bbox = controlbox = gui.radioButtons(
             box, self, "method", callback=self._disc_method_changed
         )
         vlayout.addWidget(controlbox)
@@ -247,7 +247,26 @@ class OWDiscretize(widget.OWWidget):
         cvars = [var for var in data.domain
                  if isinstance(var, Orange.data.ContinuousVariable)]
         self.varmodel[:] = cvars
+        # Reset (initialize) the variable discretization states.
         self._reset()
+
+        class_var = data.domain.class_var
+        has_disc_class = isinstance(class_var, Orange.data.DiscreteVariable)
+
+        def set_enabled(group, button_index, enable, fallback_index=0):
+            "Set the button at button_index enabled state to `enable`"
+            button = group.buttons[button_index]
+            button.setEnabled(enable)
+            # If the newly disabled button is checked then change the
+            # current checked button
+            if not enable and button == group.group.checkedButton():
+                group.buttons[fallback_index].setChecked(True)
+
+        group = self.default_bbox
+        set_enabled(group, self.MDL - 1, has_disc_class, 0)
+
+        group = self.bbox
+        set_enabled(group, self.MDL, has_disc_class, 0)
 
     def _restore(self, saved_state):
         # Restore variable states from a saved_state dictionary.
@@ -275,6 +294,8 @@ class OWDiscretize(widget.OWWidget):
         self.varmodel[:] = []
         self.var_state = {}
         self.saved_var_states = {}
+        self.default_bbox.buttons[self.MDL - 1].setEnabled(True)
+        self.bbox.buttons[self.MDL].setEnabled(True)
 
     def _update_points(self):
         """
@@ -648,8 +669,9 @@ def join_contingency(contingency):
 def main():
     app = QtGui.QApplication([])
     w = OWDiscretize()
-    data = Orange.data.Table("iris")
     data = Orange.data.Table("brown-selected")
+    w.set_data(data)
+    w.set_data(None)
     w.set_data(data)
     w.show()
     return app.exec_()
