@@ -1,8 +1,8 @@
 import numpy as np
-import bottleneck as bn
-from Orange import data as Orange_data
-from ..data.value import Value
 import scipy
+import bottleneck as bn
+
+import Orange.data
 
 
 class Fitter:
@@ -44,14 +44,17 @@ class Model:
             raise ValueError("unspecified domain")
         self.domain = domain
 
-    def predict(self, table):
+    def predict(self, X):
         raise TypeError("Descendants of Model must overload method predict")
+
+    def predict_storage(self, table):
+        return self.predict(table.X)
 
     def __call__(self, data, ret=Value):
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if (ret > 0
-            and any(isinstance(v, Orange_data.ContinuousVariable)
+            and any(isinstance(v, Orange.data.ContinuousVariable)
                     for v in self.domain.class_vars)):
             raise ValueError("cannot predict continuous distributions")
 
@@ -60,14 +63,14 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Orange_data.Instance):
+        elif isinstance(data, Orange.data.Instance):
             if data.domain != self.domain:
-                data = Orange_data.Instance(self.domain, data)
+                data = Orange.data.Instance(self.domain, data)
             prediction = self.predict(np.atleast_2d(data.x))
-        elif isinstance(data, Orange_data.Table):
+        elif isinstance(data, Orange.data.Table):
             if data.domain != self.domain:
-                data = Orange_data.Table.from_table(self.domain, data)
-            prediction = self.predict(data.X)
+                data = data.__class__.from_table(self.domain, data)
+            prediction = self.predict_storage(data)
         else:
             raise TypeError("Unrecognized argument (instance of '%s')",
                             type(data).__name__)
@@ -127,8 +130,8 @@ class Model:
         # Return what we need to
         if ret == Model.Probs:
             return probs
-        if isinstance(data, Orange_data.Instance) and not multitarget:
-            value = Value(self.domain.class_var, value[0])
+        if isinstance(data, Orange.data.Instance) and not multitarget:
+            value = Orange.data.Value(self.domain.class_var, value[0])
         if ret == Model.Value:
             return value
         else:  # ret == Model.ValueProbs
