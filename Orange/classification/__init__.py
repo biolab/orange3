@@ -72,8 +72,8 @@ class Model:
                 data = data.__class__.from_table(self.domain, data)
             prediction = self.predict_storage(data)
         else:
-            raise TypeError("Unrecognized argument (instance of '%s')",
-                            type(data).__name__)
+            raise TypeError("Unrecognized argument (instance of '{}')".format(
+                            type(data).__name__))
 
         # Parse the result into value and probs
         multitarget = len(self.domain.class_vars) > 1
