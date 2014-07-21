@@ -16,7 +16,7 @@ class DiscretizeTable:
     .. attribute:: clean
         
         If `True`, features discretized into a single interval constant are
-        removed. This is useful for discretizatoin methods that infer the
+        removed. This is useful for discretization methods that infer the
         number of intervals from the data, such as
         :class:`Orange.feature.discretization.Entropy` (default: `True`).
 
