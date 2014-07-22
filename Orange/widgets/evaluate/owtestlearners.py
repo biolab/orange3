@@ -262,7 +262,7 @@ def split_by_model(results):
         res.row_indices = results.row_indices
         res.actual = results.actual
         res.predicted = results.predicted[(i,), :]
-        if hasattr(results, "probabilities"):
+        if results.probabilities is not None:
             res.probabilities = results.probabilities[(i,), :, :]
 
         if results.models:
@@ -293,7 +293,7 @@ def results_add_by_model(x, y):
     res.folds = x.folds
     res.actual = x.actual
     res.predicted = numpy.vstack((x.predicted, y.predicted))
-    if hasattr(x, "probabilities") and hasattr(y, "probabilities"):
+    if x.probabilities is not None and y.probabilities is not None:
         res.probabilities = numpy.vstack((x.probabilities, y.probabilities))
 
     if x.models is not None:

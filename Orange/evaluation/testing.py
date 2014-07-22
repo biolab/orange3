@@ -91,6 +91,10 @@ class Results:
         self.data = data if store_data else None
         self.models = None
         self.folds = None
+        self.row_indices = None
+        self.actual = None
+        self.predicted = None
+        self.probabilities = None
         dtype = np.float32
         if data:
             domain = data if isinstance(data, Domain) else data.domain
@@ -114,11 +118,20 @@ class Results:
     def get_fold(self, fold):
         results = Results()
         results.data = self.data
-        results.models = self.models[fold]
-        results.actual = self.actual[self.folds[fold]]
-        results.predicted = self.predicted[self.folds[fold]]
-        results.probabilities = self.probabilities[self.folds[fold]]
+
+        if self.folds is None:
+            raise ValueError("This 'Results' instance does not have folds.")
+
+        if self.models is not None:
+            results.models = self.models[fold]
+
         results.row_indices = self.row_indices[self.folds[fold]]
+        results.actual = self.actual[self.folds[fold]]
+        results.predicted = self.predicted[:, self.folds[fold]]
+
+        if self.probabilities is not None:
+            results.probabilities = self.probabilities[:, self.folds[fold]]
+
         return results
 
 
