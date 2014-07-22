@@ -12,6 +12,8 @@ from PyQt4.QtCore import Qt
 import Orange.data
 import Orange.classification
 from Orange.classification import Model
+from Orange.evaluation import testing
+
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
@@ -43,7 +45,8 @@ class OWPredictions(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "setData"),
               ("Predictors", Orange.classification.Model,
                "setPredictor", widget.Multiple)]
-    outputs = [("Predictions", Orange.data.Table)]
+    outputs = [("Predictions", Orange.data.Table),
+               ("Evaluation Results", testing.Results)]
 
     showProbabilities = Setting(True)
     showFullDataset = Setting(False)
@@ -278,6 +281,7 @@ class OWPredictions(widget.OWWidget):
     def commit(self):
         if self.data is None or not self.predictors:
             self.send("Predictions", None)
+            self.send("Evaluation Results", None)
             return
 
         predictor = next(iter(self.predictors.values())).predictor
@@ -322,7 +326,23 @@ class OWPredictions(widget.OWWidget):
         )
 
         predictions.name = self.data.name
+
+        results = None
+        if self.data.domain.class_var == class_var:
+            N = len(self.data)
+            results = testing.Results(self.data, store_data=True)
+            results.folds = None
+            results.row_indices = numpy.arange(N)
+            results.actual = self.data.Y.ravel()
+            results.predicted = numpy.vstack(
+                tuple(p.results[0] for p in slots))
+            if classification:
+                results.probabilities = numpy.array(
+                    [p.results[1] for p in slots])
+            results.fitter_names = [pname(p.predictor) for p in slots]
+
         self.send("Predictions", predictions)
+        self.send("Evaluation Results", results)
 
 
 def predict(predictor, data):
