@@ -412,8 +412,7 @@ class ContextHandler(SettingsHandler):
             globs.sort(key=lambda c: -c.time)
             del globs[self.MAX_SAVED_CONTEXTS:]
 
-    @staticmethod
-    def new_context():
+    def new_context(self):
         """Create a new context."""
         return Context()
 
@@ -572,6 +571,16 @@ class DomainContextHandler(ContextHandler):
 
         return attributes, metas
 
+    def new_context(self):
+        """Create a new context."""
+        context = super().new_context()
+        context.attributes = {}
+        context.metas = {}
+        context.ordered_domain = []
+        context.values = {}
+        context.no_copy = ["ordered_domain"]
+        return context
+
     #noinspection PyMethodOverriding,PyTupleAssignmentBalance
     def find_or_create_context(self, widget, domain):
         if not domain:
@@ -593,9 +602,6 @@ class DomainContextHandler(ContextHandler):
         if self.has_meta_attributes:
             context.ordered_domain += [(v.name, v.var_type)
                                        for v in domain.metas]
-        if is_new:
-            context.values = {}
-            context.no_copy = ["ordered_domain"]
         return context, is_new
 
     def settings_to_widget(self, widget):
@@ -678,7 +684,7 @@ class DomainContextHandler(ContextHandler):
             setting = self.known_settings[name]
 
             if name == setting.name or name.endswith(".%s" % setting.name):
-                value = self.encode_setting(widget, setting, value)
+                value = self.encode_setting(context, setting, value)
             else:
                 value = list(value)
 
