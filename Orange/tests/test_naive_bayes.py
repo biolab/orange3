@@ -25,12 +25,13 @@ class NaiveBayesTest(unittest.TestCase):
     def test_BayesStorage(self):
         nrows = 200
         ncols = 10
-        x = np.random.random_integers(0, 4, (nrows, ncols))
+        x = np.random.random_integers(0, 3, (nrows, ncols))
         x[:, 0] = 3
         y = x[:, ncols // 2].reshape(nrows, 1)
         continuous_table = Orange.data.Table(x, y)
-        table = Orange.data.discretization.DiscretizeTable(continuous_table)
+        table = Orange.data.discretization.DiscretizeTable(
+            continuous_table, clean=False)
         bayes = nb.BayesStorageLearner()
         results = testing.CrossValidation(table, [bayes], k=10)
         ca = scoring.CA(results)
-        self.assertGreater(ca, 0.6)
+        self.assertGreater(ca, 0.95)
