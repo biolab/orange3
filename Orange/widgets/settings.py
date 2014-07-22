@@ -684,7 +684,7 @@ class DomainContextHandler(ContextHandler):
             setting = self.known_settings[name]
 
             if name == setting.name or name.endswith(".%s" % setting.name):
-                value = self.encode_setting(widget, setting, value)
+                value = self.encode_setting(context, setting, value)
             else:
                 value = list(value)
 
