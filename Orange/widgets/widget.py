@@ -405,9 +405,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.settingsHandler.open_context(self, *a)
 
     def closeContext(self):
-        if self.current_context is not None:
-            self.settingsHandler.close_context(self)
-        self.current_context = None
+        self.settingsHandler.close_context(self)
 
     def retrieveSpecificSettings(self):
         pass

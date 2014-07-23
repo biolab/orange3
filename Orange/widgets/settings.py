@@ -483,7 +483,11 @@ class ContextHandler(SettingsHandler):
     def close_context(self, widget):
         """Close the context by calling :obj:`settings_from_widget` to write
         any relevant widget settings to the context."""
+        if widget.current_context is None:
+            return
+
         self.settings_from_widget(widget)
+        widget.current_context = None
 
     # TODO this method has misleading name (method 'initialize' does what
     #      this method's name would indicate.
