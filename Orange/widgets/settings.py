@@ -376,6 +376,7 @@ class ContextHandler(SettingsHandler):
         add an attribute 'context_settings' to the widget. This method
         does not open a context."""
         super().initialize(instance, data)
+        instance.current_context = None
         if data and "context_settings" in data:
             instance.context_settings = data["context_settings"]
         else:
@@ -666,6 +667,8 @@ class DomainContextHandler(ContextHandler):
         super().settings_from_widget(widget)
 
         context = widget.current_context
+        if context is None:
+            return
 
         def packer(setting, instance):
             value = getattr(instance, setting.name)

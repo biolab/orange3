@@ -13,7 +13,7 @@ from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.scheme import widgetsscheme as widget_scheme
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
-from Orange.widgets.settings import SettingsHandler, ContextHandler
+from Orange.widgets.settings import SettingsHandler
 
 
 class WidgetMetaClass(type(QDialog)):
@@ -97,10 +97,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
 
-        # 'current_context' MUST be the first thing assigned to a widget
         if self.settingsHandler:
-            if isinstance(self.settingsHandler, ContextHandler):
-                self.current_context = self.settingsHandler.new_context()
             stored_settings = kwargs.get('stored_settings', None)
             self.settingsHandler.initialize(self, stored_settings)
 

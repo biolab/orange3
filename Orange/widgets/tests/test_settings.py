@@ -281,6 +281,12 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         attrs, metas = self.handler.encode_domain(domain)
         return self.handler.match(context, None, attrs, metas)
 
+    def test_initialize_sets_current_context(self):
+        self.widget = MockWidget()
+        del self.widget.current_context
+        self.handler.initialize(self.widget)
+        self.assertIs(self.widget.current_context, None)
+
 
 class UndeclaredComponent:
     int_setting = Setting(42)
