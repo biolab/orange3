@@ -97,11 +97,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
 
-        # 'current_context' MUST be the first thing assigned to a widget
-        self.current_context = settings.Context()
-        if self.settingsHandler:
-            stored_settings = kwargs.get('stored_settings', None)
-            self.settingsHandler.initialize(self, stored_settings)
+        stored_settings = kwargs.get('stored_settings', None)
+        self.settingsHandler.initialize(self, stored_settings)
 
         self.signalManager = kwargs.get('signal_manager', None)
 
@@ -408,9 +405,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.settingsHandler.open_context(self, *a)
 
     def closeContext(self):
-        if self.current_context is not None:
-            self.settingsHandler.close_context(self)
-        self.current_context = None
+        self.settingsHandler.close_context(self)
 
     def retrieveSpecificSettings(self):
         pass

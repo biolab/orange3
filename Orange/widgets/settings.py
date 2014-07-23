@@ -376,6 +376,7 @@ class ContextHandler(SettingsHandler):
         add an attribute 'context_settings' to the widget. This method
         does not open a context."""
         super().initialize(instance, data)
+        instance.current_context = None
         if data and "context_settings" in data:
             instance.context_settings = data["context_settings"]
         else:
@@ -412,8 +413,7 @@ class ContextHandler(SettingsHandler):
             globs.sort(key=lambda c: -c.time)
             del globs[self.MAX_SAVED_CONTEXTS:]
 
-    @staticmethod
-    def new_context():
+    def new_context(self):
         """Create a new context."""
         return Context()
 
@@ -483,7 +483,11 @@ class ContextHandler(SettingsHandler):
     def close_context(self, widget):
         """Close the context by calling :obj:`settings_from_widget` to write
         any relevant widget settings to the context."""
+        if widget.current_context is None:
+            return
+
         self.settings_from_widget(widget)
+        widget.current_context = None
 
     # TODO this method has misleading name (method 'initialize' does what
     #      this method's name would indicate.
@@ -572,6 +576,16 @@ class DomainContextHandler(ContextHandler):
 
         return attributes, metas
 
+    def new_context(self):
+        """Create a new context."""
+        context = super().new_context()
+        context.attributes = {}
+        context.metas = {}
+        context.ordered_domain = []
+        context.values = {}
+        context.no_copy = ["ordered_domain"]
+        return context
+
     #noinspection PyMethodOverriding,PyTupleAssignmentBalance
     def find_or_create_context(self, widget, domain):
         if not domain:
@@ -593,9 +607,6 @@ class DomainContextHandler(ContextHandler):
         if self.has_meta_attributes:
             context.ordered_domain += [(v.name, v.var_type)
                                        for v in domain.metas]
-        if is_new:
-            context.values = {}
-            context.no_copy = ["ordered_domain"]
         return context, is_new
 
     def settings_to_widget(self, widget):
@@ -660,6 +671,8 @@ class DomainContextHandler(ContextHandler):
         super().settings_from_widget(widget)
 
         context = widget.current_context
+        if context is None:
+            return
 
         def packer(setting, instance):
             value = getattr(instance, setting.name)
@@ -678,7 +691,7 @@ class DomainContextHandler(ContextHandler):
             setting = self.known_settings[name]
 
             if name == setting.name or name.endswith(".%s" % setting.name):
-                value = self.encode_setting(widget, setting, value)
+                value = self.encode_setting(context, setting, value)
             else:
                 value = list(value)
 
