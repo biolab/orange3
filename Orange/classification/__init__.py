@@ -47,8 +47,13 @@ class Model:
     def predict(self, X):
         raise TypeError("Descendants of Model must overload method predict")
 
-    def predict_storage(self, table):
-        return self.predict(table.X)
+    def predict_storage(self, data):
+        if isinstance(data, Orange.data.Storage):
+            return self.predict(data.X)
+        elif isinstance(data, Orange.data.Instance):
+            return self.predict(np.atleast_2d(data.x))
+        raise TypeError("Unrecognized argument (instance of '{}')".format(
+                        type(data).__name__))
 
     def __call__(self, data, ret=Value):
         if not 0 <= ret <= 2:
@@ -66,10 +71,10 @@ class Model:
         elif isinstance(data, Orange.data.Instance):
             if data.domain != self.domain:
                 data = Orange.data.Instance(self.domain, data)
-            prediction = self.predict(np.atleast_2d(data.x))
+            prediction = self.predict_storage(data)
         elif isinstance(data, Orange.data.Table):
             if data.domain != self.domain:
-                data = data.__class__.from_table(self.domain, data)
+                data = data.from_table(self.domain, data)
             prediction = self.predict_storage(data)
         else:
             raise TypeError("Unrecognized argument (instance of '{}')".format(
