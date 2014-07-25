@@ -98,7 +98,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         QDialog.__init__(self, None, self.get_flags())
 
         stored_settings = kwargs.get('stored_settings', None)
-        self.settingsHandler.initialize(self, stored_settings)
+        if self.settingsHandler:
+            self.settingsHandler.initialize(self, stored_settings)
 
         self.signalManager = kwargs.get('signal_manager', None)
 
