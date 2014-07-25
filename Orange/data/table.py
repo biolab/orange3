@@ -348,17 +348,17 @@ class Table(MutableSequence, Storage):
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
-                "Invalid number of variable columns ({} != {}".format(
+                "Invalid number of variable columns ({} != {})".format(
                     X.shape[1], len(domain.attributes))
             )
         if Y.shape[1] != len(domain.class_vars):
             raise ValueError(
-                "Invalid number of class columns ({} != {}".format(
+                "Invalid number of class columns ({} != {})".format(
                     Y.shape[1], len(domain.class_vars))
             )
         if metas.shape[1] != len(domain.metas):
             raise ValueError(
-                "Invalid number of meta attribute columns ({} != {}".format(
+                "Invalid number of meta attribute columns ({} != {})".format(
                     metas.shape[1], len(domain.metas))
             )
         if not X.shape[0] == Y.shape[0] == metas.shape[0] == W.shape[0]:
