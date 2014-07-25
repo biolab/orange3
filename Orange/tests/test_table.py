@@ -561,7 +561,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[0], e2[0])
             self.assertEqual(e[1], e3[0])
 
-    @unittest.skip("Do we need checksum?")
     def test_pickle(self):
         import pickle
 
@@ -569,13 +568,16 @@ class TableTestCase(unittest.TestCase):
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d[0], d2[0])
-        self.assertEqual(d.checksum(), d2.checksum())
+
+        self.assertEqual(d.checksum(include_metas=False),
+                         d2.checksum(include_metas=False))
 
         d = data.Table("iris")
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d[0], d2[0])
-        self.assertEqual(d.checksum(), d2.checksum())
+        self.assertEqual(d.checksum(include_metas=False),
+                         d2.checksum(include_metas=False))
 
     def test_translate_through_slice(self):
         d = data.Table("iris")
