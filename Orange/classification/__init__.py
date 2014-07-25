@@ -45,7 +45,13 @@ class Model:
         self.domain = domain
 
     def predict(self, X):
-        raise TypeError("Descendants of Model must overload method predict")
+        if self.predict_storage == Model.predict_storage:
+            raise TypeError("Descendants of Model must overload method predict")
+        else:
+            Y = np.zeros((len(X), len(self.domain.class_vars)))
+            Y[:] = np.nan
+            table = Orange.data.Table(self.domain, X, Y)
+            return self.predict_storage(table)
 
     def predict_storage(self, data):
         if isinstance(data, Orange.data.Storage):
