@@ -1015,7 +1015,7 @@ class Table(MutableSequence, Storage):
                     sel += (col != "")
             elif isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
-                    s2 = np.zeros(len(self))
+                    s2 = np.zeros(len(self), dtype=bool)
                     for val in f.values:
                         if not isinstance(val, Real):
                             val = self.domain[f.column].to_val(val)
