@@ -159,7 +159,7 @@ class ExpandProbabilitiesTest(unittest.TestCase):
 class SparseTest(unittest.TestCase):
     def test_sparse_basket(self):
         current_dir = os.path.dirname(__file__)
-        dataset = os.path.join(current_dir, "iris.basket")
+        dataset = os.path.join(current_dir, "iris_basket.basket")
         table = BasketReader().read_file(dataset)
         test = Orange.data.Table.from_table_rows(table,
                                                  range(0, len(table), 2))
