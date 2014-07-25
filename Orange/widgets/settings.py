@@ -375,8 +375,8 @@ class ContextHandler(SettingsHandler):
         """Initialize the widget: call the inherited initialization and
         add an attribute 'context_settings' to the widget. This method
         does not open a context."""
-        super().initialize(instance, data)
         instance.current_context = None
+        super().initialize(instance, data)
         if data and "context_settings" in data:
             instance.context_settings = data["context_settings"]
         else:
