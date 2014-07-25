@@ -21,6 +21,14 @@ class Setting:
     """Description of a setting.
     """
 
+    # A misleading docstring for providing type hints for Settings to PyCharm
+    def __new__(cls, default, *args, **kw_args):
+        """
+        :type: default: T
+        :rtype: T
+        """
+        return super().__new__(cls)
+
     def __init__(self, default, **data):
         self.name = None  # Name gets set in widget's meta class
         self.default = default
