@@ -45,7 +45,7 @@ class MultiClassTest(unittest.TestCase):
 class ModelTest(unittest.TestCase):
 
     def test_predict_single_instance(self):
-        table = data.Table("iris")
+        table = data.Table("titanic")
         learn = nb.BayesLearner()
         clf = learn(table)
         pred = []
