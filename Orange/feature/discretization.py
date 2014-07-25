@@ -9,10 +9,14 @@ from ..feature import _discretization
 def _split_eq_width(dist, n):
     min = dist[0][0]
     max = dist[0][-1]
+    if min == max:
+        return []
     dif = (max-min)/n
     return [ min + (i+1)*dif for i in range(n-1) ]
 
 def _split_eq_width_fixed(min, max, n):
+    if min == max:
+        return []
     dif = (max-min)/n
     return [ min + (i+1)*dif for i in range(n-1) ]
 
@@ -110,4 +114,3 @@ class EqualWidth(Discretization):
                 d = Orange.statistics.distribution.get_distribution(data, attribute)
                 points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
-
