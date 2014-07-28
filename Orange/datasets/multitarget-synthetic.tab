@@ -1,6 +1,6 @@
 X1	X2	X3	Y1	Y2	Y3	Y4
 continuous	continuous	continuous	continuous	continuous	continuous	continuous
-			multiclass	multiclass	multiclass	multiclass
+			class	class	class	class
 0.628	0.095	0.652	0.490	1.237	1.808	0.422
 0.007	0.218	0.294	0.167	-0.664	-1.378	0.589
 0.863	-0.139	0.785	0.858	1.687	2.540	0.093
