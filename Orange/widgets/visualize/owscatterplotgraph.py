@@ -399,10 +399,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             color_index != -1 and \
             isinstance(self.data_domain[color_index], ContinuousVariable)
 
-        x_min, x_max = self.attr_values[attr_x]
-        y_min, y_max = self.attr_values[attr_y]
-        x_span = max(x_max - x_min, 1e-10)
-        y_span = max(y_max - y_min, 1e-10)
         index_x = self.attribute_name_index[attr_x]
         index_y = self.attribute_name_index[attr_y]
 
@@ -410,31 +406,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             x for x in (index_x, index_y, color_index, shape_index, size_index)
             if x != -1]
 
+        self.set_axis_title("bottom", attr_x)
         if isinstance(self.data_domain[index_x], DiscreteVariable):
-            off = (self.jitter_size + 10) / 100
             labels = get_variable_values_sorted(self.data_domain[index_x])
             self.set_labels("bottom", labels)
-        else:
-            off = (x_max - x_min) * \
-                  (self.jitter_size * self.jitter_continuous + 2) / 100
-        xmin = x_min - off
-        xmax = x_max + off
-
+        self.set_axis_title("left", attr_y)
         if isinstance(self.data_domain[index_y], DiscreteVariable):
-            off = (self.jitter_size + 10) / 100
             labels = get_variable_values_sorted(self.data_domain[index_y])
             self.set_labels("left", labels)
-        else:
-            off = (y_max - y_min) * \
-                  (self.jitter_size * self.jitter_continuous + 2) / 100
-        ymin = y_min - off
-        ymax = y_max + off
 
-        self.set_axis_title("bottom", attr_x)
-        self.set_axis_title("left", attr_y)
-
-        x_data, y_data = self.x_data, self.y_data = \
-            self.get_xy_data_positions(attr_x, attr_y)
+        self.x_data, self.y_data = self.get_xy_data_positions(attr_x, attr_y)
         self.valid_data = self.get_valid_list(attr_indices)
 
         # if self.potentials_curve:
@@ -483,8 +464,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         shape_data = self.compute_symbols()
         self.scatterplot_item = pg.ScatterPlotItem(
             antialias=True,
-            x=x_data, y=y_data, symbol=shape_data, size=size_data,
-            pen=color_data, brush=brush_data, data=np.arange(len(x_data)))
+            x=self.x_data, y=self.y_data, symbol=shape_data, size=size_data,
+            pen=color_data, brush=brush_data, data=np.arange(len(self.x_data)))
 
         self.scatterplot_item.sigClicked.connect(self.spot_item_clicked)
         self.scatterplot_item.selected_points = []
@@ -591,9 +572,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #        else:
         #            marked_data = []
 
-
         color_index = self.get_color_index()
-
         if color_index == -1:
             color_data = self.color(OWPalette.Data)
             brush_data = color_data.lighter(LIGHTER_VALUE)
@@ -650,7 +629,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         shape_index = -1
         attr_shape = self.attr_shape
         if attr_shape and attr_shape != "(Same shape)" and \
-                        len(self.data_domain[attr_shape].values) < 11:
+                len(self.data_domain[attr_shape].values) <= \
+                len(self.curve_symbols):
             shape_index = self.attribute_name_index[attr_shape]
         return shape_index
 
@@ -667,11 +647,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item:
             shape_data = self.compute_symbols()
             self.scatterplot_item.setSymbol(shape_data)
-
-
-    def update_filled_symbols(self):
-        ## TODO: Implement this in Curve.cpp
-        pass
 
     def update_grid(self):
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)
