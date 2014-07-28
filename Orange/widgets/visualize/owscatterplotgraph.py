@@ -25,7 +25,6 @@ from Orange.widgets.settings import Setting, ContextSetting
 MIN_SHAPE_SIZE = 6
 
 LIGHTER_VALUE = 160
-INITIAL_ALPHA_VALUE = 150
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
@@ -49,7 +48,7 @@ def to_unselected_color(point):
         raise TypeError('Expected SpotItem instead of %s' % point.__class__)
     color = point.pen().color()
     lighter_color = color.lighter(LIGHTER_VALUE)
-    lighter_color.setAlpha(INITIAL_ALPHA_VALUE)
+    lighter_color.setAlpha(self.alpha_value)
     point.setBrush(lighter_color)
 
 
@@ -279,6 +278,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.potentials_image = None
         self.potentials_curve = None
 
+        self.valid_data = None  # np.array
+
         self.gui = OWPlotGUI(self)
         self.continuous_palette = \
             ContinuousPaletteGenerator(QColor(200, 200, 200),
@@ -391,14 +392,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.__dict__.update(args)      # set value from args dictionary
 
-        color_index = -1
-        attr_color = self.attr_color
-        if attr_color != "" and attr_color != "(Same color)":
-            color_index = self.attribute_name_index[attr_color]
-            if isinstance(self.data_domain[attr_color], DiscreteVariable):
-                self.disc_palette.setNumberOfColors(
-                    len(self.data_domain[attr_color].values))
-
         shape_index = -1
         attr_shape = self.attr_shape
         if attr_shape and attr_shape != "(Same shape)" and \
@@ -410,6 +403,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if attr_size != "" and attr_size != "(Same size)":
             size_index = self.attribute_name_index[attr_size]
 
+        color_index = self.get_color_index()
         show_continuous_legend = \
             color_index != -1 and \
             isinstance(self.data_domain[color_index], ContinuousVariable)
@@ -449,7 +443,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.set_axis_title("left", attr_y)
 
         x_data, y_data = self.get_xy_data_positions(attr_x, attr_y)
-        valid_data = self.get_valid_list(attr_indices)
+        self.valid_data = self.get_valid_list(attr_indices)
 
         # if self.potentials_curve:
         #     self.potentials_curve.detach()
@@ -492,22 +486,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #     else:
         #         self.potentials_classifier = None
 
-        if color_index == -1:
-            color_data = self.color(OWPalette.Data)
-            brush_data = color_data.lighter(LIGHTER_VALUE)
-            brush_data.setAlpha(INITIAL_ALPHA_VALUE)
-        else:
-            if isinstance(self.data_domain[color_index], ContinuousVariable):
-                c_data = self.no_jittering_scaled_data[color_index]
-                palette = self.continuous_palette
-            else:
-                c_data = self.original_data[color_index]
-                palette = self.discrete_palette
-            valid_color_data = c_data * valid_data
-            color_data = [QColor(*palette.getRGB(i)) for i in valid_color_data]
-            brush_data = [color.lighter(LIGHTER_VALUE) for color in color_data]
-            for i in range(len(brush_data)):
-                brush_data[i].setAlpha(INITIAL_ALPHA_VALUE)
+        color_data, brush_data = self.compute_colors()
 
         if size_index == -1:
             size_data = self.point_width
@@ -614,16 +593,47 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             for p in points:
                 p.setSize(self.point_width)
 
-    def update_alpha_value(self):
-        for p in self.scatterplot_item.points():
-            brush = p.brush().color()
-            brush.setAlpha(self.alpha_value * (INITIAL_ALPHA_VALUE/255))
-            pen = p.pen().color()
-            pen.setAlpha(self.alpha_value)
-            p.setBrush(brush)
-            p.setPen(pen)
+    def get_color_index(self):
+        color_index = -1
+        attr_color = self.attr_color
+        if attr_color != "" and attr_color != "(Same color)":
+            color_index = self.attribute_name_index[attr_color]
+            if isinstance(self.data_domain[attr_color], DiscreteVariable):
+                self.disc_palette.setNumberOfColors(
+                    len(self.data_domain[attr_color].values))
+        return color_index
+
+    def compute_colors(self):
+        color_index = self.get_color_index()
+
+        if color_index == -1:
+            color_data = self.color(OWPalette.Data)
+            brush_data = color_data.lighter(LIGHTER_VALUE)
+            brush_data.setAlpha(self.alpha_value)
+        else:
+            if isinstance(self.data_domain[color_index], ContinuousVariable):
+                c_data = self.no_jittering_scaled_data[color_index]
+                palette = self.continuous_palette
+            else:
+                c_data = self.original_data[color_index]
+                palette = self.discrete_palette
+            valid_color_data = c_data * self.valid_data
+            color_data = [QColor(*palette.getRGB(i)) for i in valid_color_data]
+            brush_data = [color.lighter(LIGHTER_VALUE) for color in color_data]
+            color_data = [QPen(QBrush(col), 1.5) for col in color_data]
+            for i in range(len(brush_data)):
+                brush_data[i].setAlpha(self.alpha_value)
+        return color_data, brush_data
+
+    def update_colors(self):
+        if self.scatterplot_item:
+            color_data, brush_data = self.compute_colors()
+            self.scatterplot_item.setPen(color_data, update=False, mask=None)
+            self.scatterplot_item.setBrush(brush_data, mask=None)
 
         # self.plot_widget.plotItem.setAlpha(self.alpha_value)  # TODO: FIX
+
+    update_alpha_value = update_colors
 
     def update_filled_symbols(self):
         ## TODO: Implement this in Curve.cpp
@@ -852,3 +862,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def setGridColor(self, color):
         # called when closing set colors dialog (ColorPalleteDlg)
         print('setGridColor - color=%s' % color)
+
+    def save_to_file(self, size):
+        pass

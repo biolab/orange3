@@ -1,7 +1,7 @@
 import sys
 
 import numpy
-from PyQt4.QtCore import SIGNAL, QSize
+from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QApplication
 
 import Orange
@@ -17,6 +17,7 @@ from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
 class OWScatterPlot(OWWidget):
+
     name = 'Scatter plot'
     description = 'Scatter plot visualization'
 
@@ -42,76 +43,56 @@ class OWScatterPlot(OWWidget):
 
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
-
     def __init__(self):
-        def jitter_label_format(x):
-            if x == 0:
-                return "None"
-            elif x < 1:
-                return "%.1f %%" % x
-            else:
-                return "%d %%" % x
-
-
         super().__init__()
 
         self.graph = OWScatterPlotGraph(self, self.mainArea, "ScatterPlot")
         self.mainArea.layout().addWidget(self.graph.plot_widget)
 
-        # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
-        #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
-        # self.optimizationDlg = self.vizrank
-
-        self.classification_results = None
-        self.outlier_values = None
-        self.graph.send_selection_on_update = False
-        self.attribute_selection_list = None
-
-        self.data = None
-        self.subset_data = None
-
-        # self.connect(self.graphButton,
-        #              SIGNAL("clicked()"), self.graph.saveToFile)
+        self.data = None  # Orange.data.Table
+        self.subset_data = None  # Orange.data.Table
+        self.attribute_selection_list = None  # list of Orange.data.Variable
 
         common_options = {"labelWidth": 50, "orientation": "horizontal",
-                          "callback": self.major_graph_update,
                           "sendSelectedValue": True, "valueType": str}
-
-        box1 = gui.widgetBox(self.controlArea, "Axis Data")
-        self.cb_attr_x = gui.comboBox(
-            box1, self, "attr_x", label="Axis x:", **common_options)
-        self.cb_attr_y = gui.comboBox(
-            box1, self, "attr_y", label="Axis y:", **common_options)
+        box = gui.widgetBox(self.controlArea, "Axis Data")
+        self.cb_attr_x = gui.comboBox(box, self, "attr_x", label="Axis x:",
+                                      callback=self.major_graph_update,
+                                      **common_options)
+        self.cb_attr_y = gui.comboBox(box, self, "attr_y", label="Axis y:",
+                                      callback=self.major_graph_update,
+                                      **common_options)
         gui.valueSlider(
-            box1, self, value='graph.jitter_size',  label='Jittering: ',
+            box, self, value='graph.jitter_size',  label='Jittering: ',
             values=self.jitter_sizes, callback=self.reset_graph_data,
-            labelFormat=jitter_label_format)
+            labelFormat=lambda x:
+            "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
         gui.checkBox(
-            gui.indentedBox(box1), self, 'graph.jitter_continuous',
+            gui.indentedBox(box), self, 'graph.jitter_continuous',
             'Jitter continuous values', callback=self.reset_graph_data)
 
-        box2 = gui.widgetBox(self.controlArea, "Points")
+        box = gui.widgetBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
-            box2, self, "graph.attr_color", label="Color:",
-            emptyString="(Same color)", **common_options)
+            box, self, "graph.attr_color", label="Color:",
+            emptyString="(Same color)", callback=self.graph.update_colors,
+            **common_options)
         self.cb_attr_label = gui.comboBox(
-            box2, self, "graph.attr_label", label="Label:",
+            box, self, "graph.attr_label", label="Label:",
             emptyString="(No labels)", **common_options)
         self.cb_attr_shape = gui.comboBox(
-            box2, self, "graph.attr_shape", label="Shape:",
+            box, self, "graph.attr_shape", label="Shape:",
             emptyString="(Same shape)", **common_options)
         self.cb_attr_size = gui.comboBox(
-            box2, self, "graph.attr_size", label="Size:",
+            box, self, "graph.attr_size", label="Size:",
             emptyString="(Same size)", **common_options)
 
         g = self.graph.gui
+        box2 = g.point_properties_box(self.controlArea, box)
+        gui.button(box2, self, "Set Colors", self.set_colors)
 
-        box3 = g.point_properties_box(self.controlArea, box2)
-        gui.button(box3, self, "Set Colors", self.set_colors)
-
-        box4 = gui.widgetBox(self.controlArea, "Plot Properties")
-        g.add_widgets([g.ShowLegend, g.ShowGridLines], box4)
-        gui.checkBox(box4, self, value='graph.tooltip_shows_all',
+        box = gui.widgetBox(self.controlArea, "Plot Properties")
+        g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
+        gui.checkBox(box, self, value='graph.tooltip_shows_all',
                      label='Show all data on mouse hover')
 
         gui.separator(self.controlArea, 8, 8)
@@ -135,17 +116,20 @@ class OWScatterPlot(OWWidget):
         dlg = self.create_color_dialog()
         self.graph.cont_palette = dlg.getContinuousPalette("contPalette")
         self.graph.disc_palette = dlg.getDiscretePalette("discPalette")
-
         p = self.graph.plot_widget.palette()
-
         p.setColor(OWPalette.Canvas, dlg.getColor("Canvas"))
         p.setColor(OWPalette.Grid, dlg.getColor("Grid"))
         self.graph.set_palette(p)
+
         self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
             not self.auto_send_selection)
 
         self.mainArea.setMinimumWidth(700)
         self.mainArea.setMinimumHeight(550)
+
+        # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
+        #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
+        # self.optimizationDlg = self.vizrank
 
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
@@ -166,7 +150,7 @@ class OWScatterPlot(OWWidget):
         self.graph.rescale_data()
         self.major_graph_update()
 
-    def set_data(self, data):
+    def set_data(self, data: Orange.data.Table):
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if self.data and data and self.data.checksum() == data.checksum():
@@ -284,7 +268,7 @@ class OWScatterPlot(OWWidget):
         self.graph.clear_selection()
         self.update_graph(attributes, inside_colors, **args)
 
-    def update_graph(self, attributes=None, inside_colors=None, **args):
+    def update_graph(self, attributes=None, inside_colors=None, **_):
         self.graph.zoomStack = []
         if not self.graph.have_data:
             return
@@ -346,13 +330,13 @@ class OWScatterPlot(OWWidget):
              self.graph.attr_size and ("Size", self.graph.attr_size)])
         self.reportSettings(
             "Settings",
-            [("Symbol size", self.graph.pointWidth),
-             ("Opacity", self.graph.alphaValue),
+            [("Symbol size", self.graph.point_width),
+             ("Opacity", self.graph.alpha_value),
              ("Jittering", self.graph.jitter_size),
              ("Jitter continuous attributes",
               gui.YesNo[self.graph.jitter_continuous])])
         self.reportSection("Graph")
-        self.reportImage(self.graph.saveToFileDirect, QSize(400, 400))
+        self.reportImage(self.graph.save_to_file, QSize(400, 400))
 
 #test widget appearance
 if __name__ == "__main__":
