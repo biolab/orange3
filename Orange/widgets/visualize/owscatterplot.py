@@ -78,10 +78,12 @@ class OWScatterPlot(OWWidget):
             **common_options)
         self.cb_attr_label = gui.comboBox(
             box, self, "graph.attr_label", label="Label:",
-            emptyString="(No labels)", **common_options)
+            emptyString="(No labels)", callback=self.graph.update_labels,
+            **common_options)
         self.cb_attr_shape = gui.comboBox(
             box, self, "graph.attr_shape", label="Shape:",
-            emptyString="(Same shape)", **common_options)
+            emptyString="(Same shape)", callback=self.graph.update_shapes,
+            **common_options)
         self.cb_attr_size = gui.comboBox(
             box, self, "graph.attr_size", label="Size:",
             emptyString="(Same size)", **common_options)

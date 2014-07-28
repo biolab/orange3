@@ -238,8 +238,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_grid = Setting(True)
     show_axes_titles = Setting(True)
     show_legend = Setting(True)
-    jitter_size = Setting(3)
-    jitter_continuous = Setting(False)
     show_filled_symbols = Setting(True)
     show_probabilities = Setting(False)
     show_distributions = Setting(False)
@@ -247,6 +245,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     tooltip_shows_all = Setting(False)
     square_granularity = Setting(3)
     space_between_cells = Setting(True)
+
+    curve_symbols = "oxt+ds"
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
@@ -293,7 +293,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self._legend_position = None
         self._gradient_legend_position = None
 
-        self.curve_symbols = np.arange(13)
         self.tips = TooltipManager(self)
         # self.setMouseTracking(True)
         # self.grabGesture(QPinchGesture)
@@ -379,11 +378,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.remove_legend()
         self.remove_gradient_legend()
+        if self.scatterplot_item:
+            self.plot_widget.removeItem(self.scatterplot_item)
+
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
-        if self.scatterplot_item:
-            self.plot_widget.removeItem(self.scatterplot_item)
 
         if self.scaled_data is None or not len(self.scaled_data):
             self.set_axis_title("bottom", "")
@@ -392,17 +392,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.__dict__.update(args)      # set value from args dictionary
 
-        shape_index = -1
-        attr_shape = self.attr_shape
-        if attr_shape and attr_shape != "(Same shape)" and \
-                len(self.data_domain[attr_shape].values) < 11:
-            shape_index = self.attribute_name_index[attr_shape]
 
         size_index = -1
         attr_size = self.attr_shape
         if attr_size != "" and attr_size != "(Same size)":
             size_index = self.attribute_name_index[attr_size]
 
+        shape_index = self.get_shape_index()
         color_index = self.get_color_index()
         show_continuous_legend = \
             color_index != -1 and \
@@ -442,7 +438,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.set_axis_title("bottom", attr_x)
         self.set_axis_title("left", attr_y)
 
-        x_data, y_data = self.get_xy_data_positions(attr_x, attr_y)
+        x_data, y_data = self.x_data, self.y_data = \
+            self.get_xy_data_positions(attr_x, attr_y)
         self.valid_data = self.get_valid_list(attr_indices)
 
         # if self.potentials_curve:
@@ -494,18 +491,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             size_data = MIN_SHAPE_SIZE + \
                 self.no_jittering_scaled_data[size_index] * self.point_width
 
-        if shape_index == -1:
-            shape_data = self.curve_symbols[0]
-        else:
-            shape_data = [self.curve_symbols[i]
-                          for i in self.original_data[shape_index].astype(int)]
-
-#        if self.have_subset_data:
-#            subset_ids = [example.id for example in self.raw_subset_data]
-#            marked_data = [example.id in subset_ids
-#                           for example in self.raw_data]  # FIX!
-#        else:
-#            marked_data = []
+        shape_data = self.compute_symbols()
 
         self.scatterplot_item = pg.ScatterPlotItem(
             antialias=True,
@@ -518,15 +504,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.addItem(self.tooltip)
         self.scatterplot_item.scene().sigMouseMoved.connect(self.mouseMoved)
 
-        if self.attr_label:
-            label_column = self.raw_data.get_column_view(self.attr_label)[0]
-            formatter = self.raw_data.domain[self.attr_label].str_val
-            label_data = map(formatter, label_column)
-            for ind, label in enumerate(label_data):
-                ti = pg.TextItem(text=label, color=pg.mkColor(0, 0, 0))
-                self.plot_widget.addItem(ti)
-                ti.setPos(x_data[ind], y_data[ind])
-                self.labels.append(ti)
+        self.update_labels()
+        self.plot_widget.replot()
 
         # Here, create (up to) three separate legends
 
@@ -582,8 +561,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #         attr_color, values=values,
         #         parentSize=self.plot_widget.size())
 
-        self.plot_widget.replot()
-
     def update_point_size(self):
         if self.attr_size:
             self.master.update_graph()
@@ -604,12 +581,22 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return color_index
 
     def compute_colors(self):
+                #        if self.have_subset_data:
+        #            subset_ids = [example.id for example in self.raw_subset_data]
+        #            marked_data = [example.id in subset_ids
+        #                           for example in self.raw_data]  # FIX!
+        #        else:
+        #            marked_data = []
+
+
         color_index = self.get_color_index()
 
         if color_index == -1:
             color_data = self.color(OWPalette.Data)
             brush_data = color_data.lighter(LIGHTER_VALUE)
             brush_data.setAlpha(self.alpha_value)
+            color_data = [color_data] * len(self.x_data)
+            brush_data = [brush_data] * len(self.x_data)
         else:
             if isinstance(self.data_domain[color_index], ContinuousVariable):
                 c_data = self.no_jittering_scaled_data[color_index]
@@ -634,6 +621,50 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # self.plot_widget.plotItem.setAlpha(self.alpha_value)  # TODO: FIX
 
     update_alpha_value = update_colors
+
+    def create_labels(self):
+        for x, y in zip(self.x_data, self.y_data):
+            ti = pg.TextItem()
+            self.plot_widget.addItem(ti)
+            ti.setPos(x, y)
+            self.labels.append(ti)
+
+    def update_labels(self):
+        if not self.attr_label:
+            for label in self.labels:
+                label.setText("")
+            return
+        if not self.labels:
+            self.create_labels()
+        label_column = self.raw_data.get_column_view(self.attr_label)[0]
+        formatter = self.raw_data.domain[self.attr_label].str_val
+        label_data = map(formatter, label_column)
+        black = pg.mkColor(0, 0, 0)
+        for label, text in zip(self.labels, label_data):
+            label.setText(text, black)
+
+    def get_shape_index(self):
+        shape_index = -1
+        attr_shape = self.attr_shape
+        if attr_shape and attr_shape != "(Same shape)" and \
+                        len(self.data_domain[attr_shape].values) < 11:
+            shape_index = self.attribute_name_index[attr_shape]
+        return shape_index
+
+    def compute_symbols(self):
+        shape_index = self.get_shape_index()
+        if shape_index == -1:
+            shape_data = [self.curve_symbols[0]] * len(self.x_data)
+        else:
+            shape_data = [self.curve_symbols[i]
+                          for i in self.original_data[shape_index].astype(int)]
+        return shape_data
+
+    def update_shapes(self):
+        if self.scatterplot_item:
+            shape_data = self.compute_symbols()
+            self.scatterplot_item.setSymbol(shape_data)
+
 
     def update_filled_symbols(self):
         ## TODO: Implement this in Curve.cpp
