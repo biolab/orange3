@@ -22,15 +22,6 @@ from Orange.widgets.utils.scaling import (get_variable_values_sorted,
 from Orange.widgets.settings import Setting, ContextSetting
 
 
-MIN_SHAPE_SIZE = 6
-
-LIGHTER_VALUE = 160
-
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOptions(antialias=True)
-
-
 def is_selected(point):
     if not isinstance(point, SpotItem):
         raise TypeError('Expected SpotItem instead of %s' % point.__class__)
@@ -246,7 +237,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     square_granularity = Setting(3)
     space_between_cells = Setting(True)
 
-    curve_symbols = "oxt+ds"
+    CurveSymbols = "oxt+ds"
+    MinShapeSize = 6
+    LighterValue = 160
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
@@ -500,17 +493,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #         # construct an item to pass to ItemSample
         #         if disc_color_index != -1:
         #             p = QColor(*palette.getRGB(ind))
-        #             b = p.lighter(LIGHTER_VALUE)
+        #             b = p.lighter(LighterValue)
         #         else:
         #             p = def_color
-        #             b = p.lighter(LIGHTER_VALUE)
+        #             b = p.lighter(LighterValue)
         #         if discSizeIndex != -1:
-        #             sz = MIN_SHAPE_SIZE +
+        #             sz = MinShapeSize +
         #                 round(ind*self.point_width/len(varValues))
         #         else:
         #             sz = self.point_width
         #         if disc_shape_index != -1:
-        #             sym = self.curve_symbols[ind]
+        #             sym = self.CurveSymbols[ind]
         #         else:
         #             sym = self.scatterplot_item.opts['symbol']
         #         pg.ItemSampl
@@ -543,7 +536,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             size_data = np.full((len(self.x_data),), self.point_width)
         else:
             size_data = \
-                MIN_SHAPE_SIZE + \
+                self.MinShapeSize + \
                 self.no_jittering_scaled_data[size_index] * self.point_width
         return size_data
 
@@ -575,7 +568,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color_index = self.get_color_index()
         if color_index == -1:
             color_data = self.color(OWPalette.Data)
-            brush_data = color_data.lighter(LIGHTER_VALUE)
+            brush_data = color_data.lighter(self.LighterValue)
             brush_data.setAlpha(self.alpha_value)
             color_data = [color_data] * len(self.x_data)
             brush_data = [brush_data] * len(self.x_data)
@@ -588,7 +581,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 palette = self.discrete_palette
             valid_color_data = c_data * self.valid_data
             color_data = [QColor(*palette.getRGB(i)) for i in valid_color_data]
-            brush_data = [color.lighter(LIGHTER_VALUE) for color in color_data]
+            brush_data = [color.lighter(self.LighterValue) for color in color_data]
             color_data = [QPen(QBrush(col), 1.5) for col in color_data]
             for i in range(len(brush_data)):
                 brush_data[i].setAlpha(self.alpha_value)
@@ -630,16 +623,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         attr_shape = self.attr_shape
         if attr_shape and attr_shape != "(Same shape)" and \
                 len(self.data_domain[attr_shape].values) <= \
-                len(self.curve_symbols):
+                len(self.CurveSymbols):
             shape_index = self.attribute_name_index[attr_shape]
         return shape_index
 
     def compute_symbols(self):
         shape_index = self.get_shape_index()
         if shape_index == -1:
-            shape_data = [self.curve_symbols[0]] * len(self.x_data)
+            shape_data = [self.CurveSymbols[0]] * len(self.x_data)
         else:
-            shape_data = [self.curve_symbols[i]
+            shape_data = [self.CurveSymbols[i]
                           for i in self.original_data[shape_index].astype(int)]
         return shape_data
 
