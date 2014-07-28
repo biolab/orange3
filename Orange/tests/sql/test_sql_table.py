@@ -272,8 +272,6 @@ class SqlTableTests(PostgresTest):
              WHERE v1.col1 = 1
           ORDER BY v1.col0
         """ % dict(table_name='"%s"' % table_name))
-        for i in range(0, 5):
-            print(table[i])
 
         self.drop_sql_table(table_name)
 
