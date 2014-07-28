@@ -92,8 +92,13 @@ class OWDistributions(widget.OWWidget):
     #: Selected group variable
     groupvar_idx = settings.ContextSetting(-1)
 
+    Hist, ASH, Kernel = 0, 1, 2
+    #: Continuous variable density estimation method
+    cont_est_type = settings.Setting(ASH)
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.data = None
 
         box = gui.widgetBox(self.controlArea, "Variable")
 
@@ -122,6 +127,16 @@ class OWDistributions(widget.OWWidget):
             self._on_groupvar_idx_changed
         )
         box.layout().addWidget(self.groupvarview)
+
+        box = gui.widgetBox(self.controlArea, "Options")
+        self.estimator = 0
+        box = gui.radioButtons(
+            box, self, "cont_est_type",
+            ["Histogram",
+             "Average shifted histogram",
+             "Kernel density estimator"],
+            callback=self._on_cont_est_type_changed
+        )
 
         plotview = pg.PlotWidget(background=None)
         self.mainArea.layout().addWidget(plotview)
@@ -198,6 +213,18 @@ class OWDistributions(widget.OWWidget):
             dist = distribution.get_distribution(self.data, var)
             self.set_distribution(dist, var)
 
+    def _density_estimator(self):
+        if self.cont_est_type == OWDistributions.Hist:
+            def hist(dist):
+                h, edges = numpy.histogram(dist[0, :], bins=10,
+                                           weights=dist[1, :])
+                return edges, h
+            return hist
+        elif self.cont_est_type == OWDistributions.ASH:
+            return lambda dist: ash_curve(dist, m=5)
+        elif self.cont_est_type == OWDistributions.Kernel:
+            return rect_kernel_curve
+
     def set_distribution(self, dist, var):
         """
         Set the distribution to display.
@@ -210,7 +237,9 @@ class OWDistributions(widget.OWWidget):
         if is_continuous(var):
             self.plot.getAxis("left").setLabel("Density")
             self.plot.getAxis("bottom").setTicks(None)
-            edges, curve = rect_kernel_curve(dist)
+
+            curve_est = self._density_estimator()
+            edges, curve = curve_est(dist)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray))
@@ -247,7 +276,8 @@ class OWDistributions(widget.OWWidget):
                 X, W = dist
                 return numpy.r_[[X], [W / total]]
 
-            curves = [rect_kernel_curve(normalized(dist)) for dist in cont]
+            curve_est = self._density_estimator()
+            curves = [curve_est(normalized(dist)) for dist in cont]
 
             cum_curves = [curves[0]]
             for X, Y in curves[1:]:
@@ -294,6 +324,10 @@ class OWDistributions(widget.OWWidget):
     def _on_groupvar_idx_changed(self):
         self.groupvar_idx = selected_index(self.groupvarview)
         self._setup()
+
+    def _on_cont_est_type_changed(self):
+        if self.data is not None:
+            self._setup()
 
     def onDeleteWidget(self):
         self.plot.clear()
@@ -379,6 +413,60 @@ def sum_rect_curve(Xa, Ya, Xb, Yb):
     Y = numpy.cumsum(dY)[:-1]
 
     return unique, Y
+
+
+def ash_curve(dist, bandwidth=None, m=3, weights=None):
+    dist = numpy.asarray(dist)
+    X, W = dist
+    if bandwidth is None:
+        bandwidth = 3.5 * X.std() * (X.size ** (-1 / 3))
+
+    hist, edges = average_shifted_histogram(X, bandwidth, m, weights=W)
+    return edges, hist
+
+
+def average_shifted_histogram(a, h, m=3, weights=None):
+    """
+    Compute the average shifted histogram.
+
+    Parameters
+    ----------
+    a : array-like
+        Input data.
+    h : float
+        Base bin width.
+    m : int
+        Number of shifted histograms.
+    weights : array-like
+        An array of weights of the same shape as `a`
+    """
+    a = numpy.asarray(a)
+
+    if weights is not None:
+        weights = numpy.asarray(weights)
+        if weights.shape != a.shape:
+            raise ValueError("weights should have the same shape as a")
+        weights = weights.ravel()
+
+    a = a.ravel()
+
+    amin, amax = a.min(), a.max()
+    delta = h / m
+    offset = (m - 1) * delta
+    nbins = numpy.ceil((amax - amin + 2 * offset) / delta)
+    bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
+                          endpoint=True)
+    hist, edges = numpy.histogram(a, bins, weights=weights)
+
+    kernel = triangular_kernel((numpy.arange(2 * m - 1) - (m - 1)) / m)
+    kernel = kernel / numpy.sum(kernel)
+    ash = numpy.convolve(hist, kernel, mode="same")
+    ash /= ash.sum()
+    return ash, edges
+
+
+def triangular_kernel(x):
+    return numpy.clip(1, 0, 1 - numpy.abs(x))
 
 
 def main():
