@@ -1309,8 +1309,8 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
         label.setFixedSize(max(width1, width2), label.sizeHint().height())
         txt = labelFormat % (getdeepattr(master, value) / divideFactor)
         label.setText(txt)
-        label.setLbl = lambda x, l=label, f=labelFormat: \
-            l.setText(f % (x / divideFactor))
+        label.setLbl = lambda x: \
+            label.setText(labelFormat % (x / divideFactor))
         QtCore.QObject.connect(slider, QtCore.SIGNAL(signal_signature),
                                label.setLbl)
 
@@ -1325,7 +1325,7 @@ def labeledSlider(widget, master, value, box=None,
                  label=None, labels=(), labelFormat=" %d", ticks=False,
                  callback=None, vertical=False, width=None, **misc):
     """
-    Construct a slider.
+    Construct a slider with labels instead of numbers.
 
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
@@ -1356,13 +1356,13 @@ def labeledSlider(widget, master, value, box=None,
         widgetLabel(sliderBox, label)
     sliderOrient = Qt.Vertical if vertical else Qt.Horizontal
     slider = QtGui.QSlider(sliderOrient, sliderBox)
-    slider.labels = labels
+    slider.ogValue = value
     slider.setRange(0, len(labels) - 1)
     slider.setSingleStep(1)
     slider.setPageStep(1)
     slider.setTickInterval(1)
     sliderBox.layout().addWidget(slider)
-    slider.setValue(getdeepattr(master, value))
+    slider.setValue(labels.index(getdeepattr(master, value)))
     if width:
         slider.setFixedWidth(width)
     if ticks:
@@ -1377,17 +1377,92 @@ def labeledSlider(widget, master, value, box=None,
         value_label.setText(labelFormat % lb)
         max_label_size = max(max_label_size, value_label.sizeHint().width())
     value_label.setFixedSize(max_label_size, value_label.sizeHint().height())
-    value_label.setText(labelFormat % labels[getdeepattr(master, value)])
-    value_label.set_label = \
-        lambda x, lab=value_label, form=labelFormat, labs=labels: \
-        lab.setText(form % labs[x])
+    value_label.setText(getdeepattr(master, value))
+    if isinstance(labelFormat, str):
+        value_label.set_label = lambda x: \
+            value_label.setText(labelFormat % x)
+    else:
+        value_label.set_label = lambda x: value_label.setText(labelFormat(x))
     QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
                            value_label.set_label)
 
-    connectControl(slider, master, value, callback,
-                   QtCore.SIGNAL("valueChanged(int)"),
-                   CallFrontHSlider(slider),
-                   CallBackLabeledSlider(slider, master))
+    connectControl(slider, master, value, callback, "valueChanged(int)",
+                   CallFrontLabeledSlider(slider, labels),
+                   CallBackLabeledSlider(slider, master, labels))
+
+    miscellanea(slider, sliderBox, widget, **misc)
+    return slider
+
+
+def valueSlider(widget, master, value, box=None, label=None,
+                values=(), labelFormat=" %d", ticks=False,
+                callback=None, vertical=False, width=None, **misc):
+    """
+    Construct a slider with different values.
+
+    :param widget: the widget into which the box is inserted
+    :type widget: PyQt4.QtGui.QWidget
+    :param master: master widget
+    :type master: PyQt4.QtGui.QWidget
+    :param value: the master's attribute with which the value is synchronized
+    :type value:  str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :param label: a label that is inserted into the box
+    :type label: str
+    :param values: values at different slider positions
+    :type values: list of int
+    :param labelFormat: label format; default is `" %d"`; can also be a function
+    :type labelFormat: str or func
+    :param callback: a function that is called when the value is changed
+    :type callback: function
+
+    :param ticks: if set to `True`, ticks are added below the slider
+    :type ticks: bool
+    :param vertical: if set to `True`, the slider is vertical
+    :type vertical: bool
+    :param width: the width of the slider
+    :type width: int
+    :rtype: :obj:`PyQt4.QtGui.QSlider`
+    """
+    if isinstance(labelFormat, str):
+        labelFormat = lambda x, f=labelFormat: f(x)
+
+    sliderBox = widgetBox(widget, box, orientation="horizontal",
+                          addToLayout=False)
+    if label:
+        widgetLabel(sliderBox, label)
+    slider_orient = Qt.Vertical if vertical else Qt.Horizontal
+    slider = QtGui.QSlider(slider_orient, sliderBox)
+    slider.ogValue = value
+    slider.setRange(0, len(values) - 1)
+    slider.setSingleStep(1)
+    slider.setPageStep(1)
+    slider.setTickInterval(1)
+    sliderBox.layout().addWidget(slider)
+    slider.setValue(values.index(getdeepattr(master, value)))
+    if width:
+        slider.setFixedWidth(width)
+    if ticks:
+        slider.setTickPosition(QtGui.QSlider.TicksBelow)
+        slider.setTickInterval(ticks)
+
+    max_label_size = 0
+    slider.value_label = value_label = QtGui.QLabel(sliderBox)
+    value_label.setAlignment(Qt.AlignRight)
+    sliderBox.layout().addWidget(value_label)
+    for lb in values:
+        value_label.setText(labelFormat(lb))
+        max_label_size = max(max_label_size, value_label.sizeHint().width())
+    value_label.setFixedSize(max_label_size, value_label.sizeHint().height())
+    value_label.setText(labelFormat(getdeepattr(master, value)))
+    value_label.set_label = lambda x: value_label.setText(labelFormat(values[x]))
+    QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
+                           value_label.set_label)
+
+    connectControl(slider, master, value, callback, "valueChanged(int)",
+                   CallFrontLabeledSlider(slider, values),
+                   CallBackLabeledSlider(slider, master, values))
 
     miscellanea(slider, sliderBox, widget, **misc)
     return slider
@@ -2157,15 +2232,16 @@ class CallBackRadioButton:
 
 
 class CallBackLabeledSlider:
-    def __init__(self, control, widget):
+    def __init__(self, control, widget, lookup):
         self.control = control
         self.widget = widget
+        self.lookup = lookup
         self.disabled = False
 
-    def __call__(self, *_):  # triggered by toggled()
+    def __call__(self, *_):
         if not self.disabled and self.control.ogValue is not None:
             self.widget.__setattr__(self.control.ogValue,
-                                    self.control.labels[self.control.value()])
+                                    self.lookup[self.control.value()])
 
 
 ##############################################################################
@@ -2253,6 +2329,16 @@ class CallFrontHSlider(ControlledCallFront):
     def action(self, value):
         if value is not None:
             self.control.setValue(value)
+
+
+class CallFrontLabeledSlider(ControlledCallFront):
+    def __init__(self, control, lookup):
+        super().__init__(control)
+        self.lookup = lookup
+
+    def action(self, value):
+        if value is not None:
+            self.control.setValue(self.lookup.index(value))
 
 
 class CallFrontLogSlider(ControlledCallFront):
