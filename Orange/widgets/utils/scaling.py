@@ -50,7 +50,7 @@ def get_variable_value_indices(variable, sort_values_for_discrete_attrs=1):
     Create a dictionary with given variable. Keys are variable values, values
     are indices (transformed from string to int); in case all values are
     integers, we also sort them.
-    
+
     """
     if variable.var_type == VarTypes.Continuous:
         print("get_variable_value_indices - attribute %s is a continuous "
@@ -66,6 +66,7 @@ def get_variable_value_indices(variable, sort_values_for_discrete_attrs=1):
 
 class ScaleData:
     jitter_size = Setting(10)
+    jitter_continuous = Setting(False)
 
     def __init__(self):
         self.raw_data = None           # input data
@@ -97,7 +98,7 @@ class ScaleData:
         """
         Take examples from data and subset_data and merge them into one
         dataset.
-        
+
         """
         if data is None and subset_data is None:
             return None
@@ -206,7 +207,7 @@ class ScaleData:
                                                                         sort_values_for_discrete_attrs)
                     if 0 in [i == variable_value_indices[attr.values[i]]
                              for i in range(len(attr.values))]:
-                        # make the array a contiguous, otherwise the putmask 
+                        # make the array a contiguous, otherwise the putmask
                         # function does not work
                         line = no_jittering_data[index].copy()
                         indices = [np.where(line == val, 1, 0)
