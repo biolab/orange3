@@ -377,9 +377,9 @@ class OWPlotGUI:
         '''
             Creates a slider that controls point transparency
         '''
-        self._slider(widget, 'alpha_value', "Transparency: ", 0, 255, 10, 'update_alpha_value')
+        self._slider(widget, 'alpha_value', "Opacity: ", 0, 255, 10, 'update_alpha_value')
 
-    def point_properties_box(self, widget):
+    def point_properties_box(self, widget, box=None):
         '''
             Creates a box with controls for common point properties.
             Currently, these properties are point size and transparency.
@@ -387,9 +387,9 @@ class OWPlotGUI:
         return self.create_box([
             self.PointSize,
             self.AlphaValue
-            ], widget, "Point properties")
+            ], widget, box, "Point properties")
 
-    def plot_settings_box(self, widget):
+    def plot_settings_box(self, widget, box=None):
         '''
             Creates a box with controls for common plot settings
         '''
@@ -397,7 +397,7 @@ class OWPlotGUI:
             self.ShowLegend,
             self.ShowFilledSymbols,
             self.ShowGridLines,
-            ], widget, "Plot settings")
+            ], widget, box, "Plot settings")
 
     _functions = {
         ShowLegend : show_legend_check_box,
@@ -418,12 +418,13 @@ class OWPlotGUI:
         for id in ids:
             self.add_widget(id, widget)
 
-    def create_box(self, ids, widget, name):
+    def create_box(self, ids, widget, box, name):
         '''
             Creates a :obj:`.QGroupBox` with text ``name`` and adds it to ``widget``.
             The ``ids`` argument is a list of widget ID's that will be added to this box
         '''
-        box = gui.widgetBox(widget, name)
+        if box is None:
+            box = gui.widgetBox(widget, name)
         self.add_widgets(ids, box)
         return box
 
@@ -513,7 +514,7 @@ class OWPlotGUI:
         t.buttons[self.Select].click()
         return t
 
-    def effects_box(self, widget):
+    def effects_box(self, widget, box=None):
         b = self.create_box([
             self.AnimatePlot,
             self.AnimatePoints,
@@ -521,7 +522,7 @@ class OWPlotGUI:
         #    self.AntialiasPoints,
         #    self.AntialiasLines,
             self.AutoAdjustPerformance,
-            self.DisableAnimationsThreshold], widget, "Visual effects")
+            self.DisableAnimationsThreshold], widget, box, "Visual effects")
         return b
 
     def theme_combo_box(self, widget):

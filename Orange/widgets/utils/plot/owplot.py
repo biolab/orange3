@@ -1684,7 +1684,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
                 self.animate_plot = False
 
                 self.disabled_antialias_lines = self.animate_points
-                self.antialias_lines = False
+                self.antialias_lines = True
 
             elif hasattr(self, 'disabled_animate_points'):
                 self.animate_points = self.disabled_animate_points
@@ -1693,7 +1693,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
                 self.animate_plot = self.disabled_animate_plot
                 del self.disabled_animate_plot
 
-                self.antialias_lines = self.disabled_antialias_lines
+                self.antialias_lines = True # self.disabled_antialias_lines
                 del self.disabled_antialias_lines
 
     def animate(self, target, prop_name, end_val, duration = None, start_val = None):
