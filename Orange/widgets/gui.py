@@ -374,7 +374,7 @@ def label(widget, master, label, labelWidth=None, box=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param label: The text of the label, including attribute names
     :type label: str
     :param labelWidth: The width of the label (default: None)
@@ -539,7 +539,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param minv: minimal value
@@ -694,7 +694,7 @@ def checkBox(widget, master, value, label, box=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param label: label
@@ -833,7 +833,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param label: label
@@ -919,7 +919,7 @@ def button(widget, master, label, callback=None, width=None, height=None,
     :param widget: the widget into which the button is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param label: label
     :type label: str
     :param callback: a function that is called when the button is pressed
@@ -983,7 +983,7 @@ def toolButton(widget, master, label="", callback=None,
     :param widget: the widget into which the button is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param label: label
     :type label: str
     :param callback: a function that is called when the button is pressed
@@ -1078,7 +1078,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the name of the master's attribute with which the value is
         synchronized (list of ints - indices of selected items)
     :type value: str
@@ -1145,7 +1145,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param btnLabels: a list of labels or icons for radio buttons
@@ -1240,7 +1240,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param box: tells whether the widget has a border, and its label
@@ -1330,7 +1330,7 @@ def labeledSlider(widget, master, value, box=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param box: tells whether the widget has a border, and its label
@@ -1403,7 +1403,7 @@ def valueSlider(widget, master, value, box=None, label=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param box: tells whether the widget has a border, and its label
@@ -1491,7 +1491,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param box: tells whether the widget has a border, and its label
@@ -1604,7 +1604,7 @@ class OrangeListBox(QtGui.QListWidget):
                  dataValidityCallback=None, sizeHint=None, *args):
         """
         :param master: the master widget
-        :type master: PyQt4.QtGui.QWidget
+        :type master: OWWidget or OWComponent
         :param enableDragDrop: flag telling whether drag and drop is enabled
         :type enableDragDrop: bool
         :param dragDropCallback: callback for the end of drop event
@@ -1966,7 +1966,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
     `self.apply` if `dataDirty` is `True`.
 
     :param master: the master widget (used only to get the `changedFlag`)
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param sendButton: the button for committing the data
     :type sendButton: PyQt4.QtGui.QPushButton
     :param stopCheckbox: the check box
