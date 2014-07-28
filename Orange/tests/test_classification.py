@@ -4,7 +4,7 @@ import numpy as np
 
 from Orange import data
 import Orange.classification
-import Orange.classification.dummies as dummies
+from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 import Orange.classification.naive_bayes as nb
 from Orange.data.io import BasketReader
 
@@ -18,14 +18,14 @@ class MultiClassTest(unittest.TestCase):
         # multiple class variables
         y = np.random.random_integers(10, 11, (nrows, 2))
         t = data.Table(x, y)
-        learn = dummies.DummyLearner()
+        learn = DummyLearner()
         with self.assertRaises(TypeError):
             clf = learn(t)
 
         # single class variable
         y = np.random.random_integers(10, 11, (nrows, 1))
         t = data.Table(x, y)
-        learn = dummies.DummyLearner()
+        learn = DummyLearner()
         clf = learn(t)
         z = clf(x)
         self.assertEqual(z.ndim, 1)
@@ -36,7 +36,7 @@ class MultiClassTest(unittest.TestCase):
         x = np.random.random_integers(1, 3, (nrows, ncols))
         y = np.random.random_integers(10, 11, (nrows, 2))
         t = data.Table(x, y)
-        learn = dummies.DummyMulticlassLearner()
+        learn = DummyMulticlassLearner()
         clf = learn(t)
         z = clf(x)
         self.assertEqual(z.shape, y.shape)
@@ -60,7 +60,7 @@ class ModelTest(unittest.TestCase):
         # single class variable
         y = np.random.random_integers(1, 3, (nrows, 1)) // 2    # majority = 1
         t = data.Table(x, y)
-        learn = dummies.DummyLearner()
+        learn = DummyLearner()
         clf = learn(t)
         clf.ret = Orange.classification.Model.Probs
         y2 = clf(x, ret=Orange.classification.Model.Value)
@@ -74,7 +74,7 @@ class ModelTest(unittest.TestCase):
         y[:, 0] = y[:, 0] // 3          # majority = 1
         y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
         t = data.Table(x, y)
-        learn = dummies.DummyMulticlassLearner()
+        learn = DummyMulticlassLearner()
         clf = learn(t)
         clf.ret = Orange.classification.Model.Probs
         y2 = clf(x, ret=Orange.classification.Model.Value)
@@ -91,7 +91,7 @@ class ModelTest(unittest.TestCase):
         # single class variable
         y = np.random.random_integers(1, 2, (nrows, 1))
         t = data.Table(x, y)
-        learn = dummies.DummyLearner()
+        learn = DummyLearner()
         clf = learn(t)
         clf.ret = Orange.classification.Model.Value
         y2 = clf(x, ret=Orange.classification.Model.Probs)
@@ -105,7 +105,7 @@ class ModelTest(unittest.TestCase):
         y[:, 0] = y[:, 0] // 3          # majority = 1
         y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
         t = data.Table(x, y)
-        learn = dummies.DummyMulticlassLearner()
+        learn = DummyMulticlassLearner()
         clf = learn(t)
         clf.ret = Orange.classification.Model.Value
         probs = clf(x, ret=Orange.classification.Model.Probs)
@@ -135,7 +135,7 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         self.prepareTable(rows, attr, vars, class_var_domain)
         y = np.random.random_integers(2, 5, (rows, vars)) * 2
         t = data.Table(self.domain, self.x, y)
-        learn = dummies.DummyLearner()
+        learn = DummyLearner()
         clf = learn(t)
         z, p = clf(self.x, ret=Orange.classification.Model.ValueProbs)
         self.assertEqual(p.shape, (rows, class_var_domain))
@@ -149,7 +149,7 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         self.prepareTable(rows, attr, vars, class_var_domain)
         y = np.random.random_integers(2, 5, (rows, vars)) * 2
         t = data.Table(self.domain, self.x, y)
-        learn = dummies.DummyMulticlassLearner()
+        learn = DummyMulticlassLearner()
         clf = learn(t)
         z, p = clf(self.x, ret=Orange.classification.Model.ValueProbs)
         self.assertEqual(p.shape, (rows, vars, class_var_domain))
@@ -165,7 +165,7 @@ class SparseTest(unittest.TestCase):
                                                  range(0, len(table), 2))
         train = Orange.data.Table.from_table_rows(table,
                                                   range(1, len(table), 2))
-        learn = dummies.DummyMulticlassLearner()
+        learn = DummyMulticlassLearner()
         clf = learn(train)
         p = clf(test)
         self.assertEqual(p.shape, test.Y.shape)
