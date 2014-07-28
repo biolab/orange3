@@ -8,156 +8,144 @@ import Orange
 from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import gui
-from Orange.widgets.settings import DomainContextHandler
+from Orange.widgets.settings import \
+    DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.utils.plot import OWPlot, OWPalette, OWPlotGUI
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraphQt_test
+from Orange.widgets.utils.plot import OWPalette, OWPlotGUI
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
-VarTypes = Variable.VarTypes
+class OWScatterPlot(OWWidget):
+    name = 'Scatter plot'
+    description = 'Scatter plot visualization'
 
+    inputs = [("Data", Table, "set_data", Default),
+              ("Data Subset", Table, "set_subset_data"),
+              ("Features", AttributeList, "set_shown_attributes")]
 
-class OWScatterPlotQt(OWWidget):
-    """
-    <name>Scatterplot (Qt)</name>
-    <description>Scatterplot visualization.</description>
-    <contact>Gregor Leban (gregor.leban@fri.uni-lj.si)</contact>
-    <icon>icons/ScatterPlot.svg</icon>
-    <priority>130</priority>
-    """
-    name = 'Scatterplot'
-    description = 'Scatterplot visualization'
-
-    inputs =  [("Data", Table, "setData", Default), ("Data Subset", Table, "setSubsetData"), ("Features", AttributeList, "setShownAttributes")] #, ("Evaluation Results", ExperimentResults, "setTestResults"), ("VizRank Learner", Learner, "setVizRankLearner")]
-    outputs = [("Selected Data", Table), ("Other Data", Table)]
-
-    settingsList = ["graph." + s for s in OWPlot.point_settings + OWPlot.appearance_settings] + [
-                    "graph.showXaxisTitle", "graph.showYLaxisTitle", "showGridlines",
-                    "graph.showLegend", "graph.jitterSize", "graph.jitterContinuous", "graph.showFilledSymbols", "graph.showProbabilities",
-                    "graph.showDistributions", "autoSendSelection", "toolbarSelection", "graph.sendSelectionOnUpdate",
-                    "colorSettings", "selectedSchemaIndex", "VizRankLearnerName"]
-    jitterSizeNums = [0.0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 40, 50]
+    outputs = [("Selected Data", Table),
+               ("Other Data", Table)]
 
     settingsHandler = DomainContextHandler()
-    # contextHandlers = {"": DomainContextHandler("", ["attrX", "attrY",
-    #                                                  (["attrColor", "attrShape", "attrSize"], DomainContextHandler.Optional),
-    #                                                  ("attrLabel", DomainContextHandler.Optional + DomainContextHandler.IncludeMetaAttributes)])}
 
-    def __init__(self, parent=None, signalManager = None):
-        OWWidget.__init__(self, parent, signalManager, "Scatterplot (Qt)", True)
+    auto_send_selection = Setting(True)
+    toolbar_selection = Setting(0)
+    color_settings = Setting(None)
+    selected_schema_index = Setting(0)
 
-        ##TODO tukaj mas testni graf!
-        self.graph = OWScatterPlotGraphQt_test(self, self.mainArea, "ScatterPlotQt_test")
+    attr_x = ContextSetting("")
+    attr_y = ContextSetting("")
 
-        #add a graph widget
-        ##TODO pazi
-        # self.mainArea.layout().addWidget(self.graph.pgPlotWidget)             # tale je zaresni
-        self.mainArea.layout().addWidget(self.graph.glw)     # tale je testni
+    graph = SettingProvider(OWScatterPlotGraph)
+#    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
-        ## TODO spodaj je se en POZOR, kjer nastavis palette
+    jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
-        # self.vizrank = OWVizRank(self, self.signalManager, self.graph, orngVizRank.SCATTERPLOT, "ScatterPlotQt")
+
+    def __init__(self):
+        def jitter_label_format(x):
+            if x == 0:
+                return "None"
+            elif x < 1:
+                return "%.1f %%" % x
+            else:
+                return "%d %%" % x
+
+
+        super().__init__()
+
+        self.graph = OWScatterPlotGraph(self, self.mainArea, "ScatterPlot")
+        self.mainArea.layout().addWidget(self.graph.plot_widget)
+
+        # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
+        #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
         # self.optimizationDlg = self.vizrank
 
-        # local variables
-        self.showGridlines = 1
-        self.autoSendSelection = 1
-        self.toolbarSelection = 0
-        self.classificationResults = None
-        self.outlierValues = None
-        self.colorSettings = None
-        self.selectedSchemaIndex = 0
-        self.graph.sendSelectionOnUpdate = 0
-        self.attributeSelectionList = None
+        self.classification_results = None
+        self.outlier_values = None
+        self.graph.send_selection_on_update = False
+        self.attribute_selection_list = None
 
         self.data = None
-        self.subsetData = None
+        self.subset_data = None
 
-        #load settings
-        # self.loadSettings()
-        self.graph.setShowXaxisTitle()
-        self.graph.setShowYLaxisTitle()
+        # self.connect(self.graphButton,
+        #              SIGNAL("clicked()"), self.graph.saveToFile)
 
-        # self.connect(self.graphButton, SIGNAL("clicked()"), self.graph.saveToFile)
+        common_options = {"labelWidth": 50, "orientation": "horizontal",
+                          "callback": self.major_graph_update,
+                          "sendSelectedValue": True, "valueType": str}
 
-        box1 = gui.widgetBox(self.controlArea, "Axis Variables")
-        #x attribute
-        self.attrX = ""
-        self.attrXCombo = gui.comboBox(box1, self, "attrX", label="X-Axis:", labelWidth=50, orientation="horizontal", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
-        # y attribute
-        self.attrY = ""
-        self.attrYCombo = gui.comboBox(box1, self, "attrY", label="Y-Axis:", labelWidth=50, orientation="horizontal", callback = self.majorUpdateGraph, sendSelectedValue = 1, valueType = str)
+        box1 = gui.widgetBox(self.controlArea, "Axis Data")
+        self.cb_attr_x = gui.comboBox(
+            box1, self, "attr_x", label="Axis x:", **common_options)
+        self.cb_attr_y = gui.comboBox(
+            box1, self, "attr_y", label="Axis y:", **common_options)
+        gui.valueSlider(
+            box1, self, value='graph.jitter_size',  label='Jittering: ',
+            values=self.jitter_sizes, callback=self.reset_graph_data,
+            labelFormat=jitter_label_format)
+        gui.checkBox(
+            gui.indentedBox(box1), self, 'graph.jitter_continuous',
+            'Jitter continuous values', callback=self.reset_graph_data)
 
-        box2 = gui.widgetBox(self.controlArea, "Point Properties")
-        self.attrColor = ""
-        self.attrColorCombo = gui.comboBox(box2, self, "attrColor", label="Color:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same color)")
-        # labelling
-        self.attrLabel = ""
-        self.attrLabelCombo = gui.comboBox(box2, self, "attrLabel", label="Label:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, emptyString = "(No labels)")
-        # shaping
-        self.attrShape = ""
-        self.attrShapeCombo = gui.comboBox(box2, self, "attrShape", label="Shape:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same shape)")
-        # sizing
-        self.attrSize = ""
-        self.attrSizeCombo = gui.comboBox(box2, self, "attrSize", label="Size:", labelWidth=50, orientation="horizontal", callback = self.updateGraph, sendSelectedValue=1, valueType = str, emptyString = "(Same size)")
+        box2 = gui.widgetBox(self.controlArea, "Points")
+        self.cb_attr_color = gui.comboBox(
+            box2, self, "graph.attr_color", label="Color:",
+            emptyString="(Same color)", **common_options)
+        self.cb_attr_label = gui.comboBox(
+            box2, self, "graph.attr_label", label="Label:",
+            emptyString="(No labels)", **common_options)
+        self.cb_attr_shape = gui.comboBox(
+            box2, self, "graph.attr_shape", label="Shape:",
+            emptyString="(Same shape)", **common_options)
+        self.cb_attr_size = gui.comboBox(
+            box2, self, "graph.attr_size", label="Size:",
+            emptyString="(Same size)", **common_options)
 
         g = self.graph.gui
 
-        box3 = g.point_properties_box(self.controlArea)
-        # self.jitterSizeCombo = gui.comboBox(box3, self, "graph.jitter_size", label = 'Jittering size (% of size):'+'  ', orientation = "horizontal", callback = self.resetGraphData, items = self.jitterSizeNums, sendSelectedValue = 1, valueType = float)
-        ## TODO: jitter size slider ima samo interger values -> ali lahko slajda po self.jitterSizeNums
-        gui.hSlider(box3, self, value='graph.jitter_size', label='Jittering (%): ', minValue=1, maxValue=10, callback=self.resetGraphData)
-
-        gui.checkBox(gui.indentedBox(box3), self, 'graph.jitter_continuous', 'Jitter continuous values', callback = self.resetGraphData, tooltip = "Does jittering apply also on continuous attributes?")
-        gui.button(box3, self, "Set Colors", self.setColors, tooltip = "Set the canvas background color, grid color and color palette for coloring continuous variables")
+        box3 = g.point_properties_box(self.controlArea, box2)
+        gui.button(box3, self, "Set Colors", self.set_colors)
 
         box4 = gui.widgetBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box4)
-        # gui.comboBox(box4, self, "graph.tooltipKind", items = ["Don't Show Tooltips", "Show Visible Attributes", "Show All Attributes"], callback = self.updateGraph)
-        gui.checkBox(box4, self, value='graph.tooltipShowsAllAttributes', label='Show all attributes in tooltip')
+        gui.checkBox(box4, self, value='graph.tooltip_shows_all',
+                     label='Show all data on mouse hover')
 
-        box5 = gui.widgetBox(self.controlArea, "Auto Send Selected Data When...")
-        gui.checkBox(box5, self, 'autoSendSelection', 'Adding/Removing selection areas', callback = self.selectionChanged, tooltip = "Send selected data whenever a selection area is added or removed")
-        gui.checkBox(box5, self, 'graph.sendSelectionOnUpdate', 'Moving/Resizing selection areas', tooltip = "Send selected data when a user moves or resizes an existing selection area")
-        self.graph.selection_changed.connect(self.selectionChanged)
-
-        # zooming / selection
-        self.zoomSelectToolbar = g.zoom_select_toolbar(self.controlArea, buttons = g.default_zoom_select_buttons + [g.Spacing, g.ShufflePoints])
-        self.connect(self.zoomSelectToolbar.buttons[g.SendSelection], SIGNAL("clicked()"), self.sendSelections)
-        self.connect(self.zoomSelectToolbar.buttons[g.Zoom], SIGNAL("clicked()",), self.graph.zoomButtonClicked)
-        self.connect(self.zoomSelectToolbar.buttons[g.Pan], SIGNAL("clicked()",), self.graph.panButtonClicked)
-        self.connect(self.zoomSelectToolbar.buttons[g.Select], SIGNAL("clicked()",), self.graph.selectButtonClicked)
+        gui.separator(self.controlArea, 8, 8)
+        self.zoom_select_toolbar = g.zoom_select_toolbar(
+            self.controlArea, buttons=g.default_zoom_select_buttons +
+            [g.Spacing, g.ShufflePoints], nomargin=True)
+        buttons = self.zoom_select_toolbar.buttons
+        buttons[g.SendSelection].clicked.connect(self.send_selections)
+        buttons[g.Zoom].clicked.connect(self.graph.zoom_button_clicked)
+        buttons[g.Pan].clicked.connect(self.graph.pan_button_clicked)
+        buttons[g.Select].clicked.connect(self.graph.select_button_clicked)
+#        gui.checkBox(
+#            gui.indentedBox(self.controlArea, sep=40), self,
+#            'auto_send_selection', 'Send selection on change',
+#            callback=self.selection_changed)
+#        self.graph.selection_changed.connect(self.selection_changed)
 
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
-        self.debugSettings = ["attrX", "attrY", "attrColor", "attrLabel", "attrShape", "attrSize"]
-        # self.wdChildDialogs = [self.vizrank]        # used when running widget debugging
+        dlg = self.create_color_dialog()
+        self.graph.cont_palette = dlg.getContinuousPalette("contPalette")
+        self.graph.disc_palette = dlg.getDiscretePalette("discPalette")
 
-        dlg = self.createColorDialog()
-        self.graph.contPalette = dlg.getContinuousPalette("contPalette")
-        self.graph.discPalette = dlg.getDiscretePalette("discPalette")
-
-
-        ##TODO POZOR!
-        # p = self.graph.pgPlotWidget.palette()
-        p = self.graph.glw.palette()
-
-
+        p = self.graph.plot_widget.palette()
 
         p.setColor(OWPalette.Canvas, dlg.getColor("Canvas"))
         p.setColor(OWPalette.Grid, dlg.getColor("Grid"))
         self.graph.set_palette(p)
+        self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
+            not self.auto_send_selection)
 
-        self.graph.enableGridXB(self.showGridlines)
-        self.graph.enableGridYL(self.showGridlines)
-
-        # self.graph.resize(700, 550)
         self.mainArea.setMinimumWidth(700)
         self.mainArea.setMinimumHeight(550)
-        ## TODO tole je zdej minimum size --> najdi drug nacin za resize
-
 
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
@@ -174,249 +162,207 @@ class OWScatterPlotQt(OWWidget):
     #         c.attach(self.graph)
     #         self.graph.selectionCurveList.append(c)
 
-    # ##############################################################################################################################################################
-    # SCATTERPLOT SIGNALS
-    # ##############################################################################################################################################################
-
-    def resetGraphData(self):
+    def reset_graph_data(self, *_):
         self.graph.rescale_data()
-        self.majorUpdateGraph()
+        self.major_graph_update()
 
-    # receive new data and update all fields
-    def setData(self, data):
+    def set_data(self, data):
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if self.data and data and self.data.checksum() == data.checksum():
-            return    # check if the new data set is the same as the old one
+            return
 
         self.closeContext()
-        sameDomain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
+        same_domain = \
+            self.data and data and \
+            data.domain.checksum() == self.data.domain.checksum()
         self.data = data
 
-        # Temporary hack for SqlTables, which don't have X and Y
         # TODO: adapt scatter plot to work on SqlTables (avoid use of X and Y)
-        if type(self.data) is SqlTable:
-            self.data.X = numpy.zeros((len(self.data), len(self.data.domain.attributes)))
-            self.data.Y = numpy.zeros((len(self.data), len(self.data.domain.class_vars)))
-            for (i, row) in enumerate(data):
-                self.data.X[i] = [row[attr] for attr in self.data.domain.attributes]
+        if isinstance(self.data, SqlTable):
+            self.data.X = numpy.empty((len(self.data),
+                                       len(self.data.domain.attributes)))
+            self.data.Y = numpy.empty((len(self.data),
+                                       len(self.data.domain.class_vars)))
+            for i, row in enumerate(data):
+                self.data.X[i] = [row[attr]
+                                  for attr in self.data.domain.attributes]
                 if self.data.domain.class_vars:
-                    self.data.Y[i] = [row[cv] for cv in self.data.domain.class_vars]
+                    self.data.Y[i] = [row[cv]
+                                      for cv in self.data.domain.class_vars]
 
         # self.vizrank.clearResults()
-        if not sameDomain:
-            self.initAttrValues()
-        self.graph.insideColors = None
-        self.classificationResults = None
-        self.outlierValues = None
+        if not same_domain:
+            self.init_attr_values()
+        self.graph.inside_colors = None
+        self.classification_results = None
+        self.outlier_values = None
         self.openContext(self.data)
 
-    # set an example table with a data subset subset of the data. if called by a visual classifier, the update parameter will be 0
-    def setSubsetData(self, subsetData):
-        self.subsetData = subsetData
+    def set_subset_data(self, subset_data):
+        self.subset_data = subset_data
         # self.vizrank.clearArguments()
 
-    # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
+    # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.setData(self.data, self.subsetData)
+        self.graph.set_data(self.data, self.subset_data)
         # self.vizrank.resetDialog()
-        if self.attributeSelectionList and 0 not in [self.graph.attribute_name_index.has_key(attr) for attr in self.attributeSelectionList]:
-            self.attrX = self.attributeSelectionList[0]
-            self.attrY = self.attributeSelectionList[1]
-        self.attributeSelectionList = None
-        self.updateGraph()
-        self.sendSelections()
+        if self.attribute_selection_list and \
+                all(attr in self.graph.attribute_name_index
+                    for attr in self.attribute_selection_list):
+            self.attr_x = self.attribute_selection_list[0]
+            self.attr_y = self.attribute_selection_list[1]
+        self.attribute_selection_list = None
+        self.update_graph()
+        self.send_selections()
 
-    # receive information about which attributes we want to show on x and y axis
-    def setShownAttributes(self, list):
-        if list and len(list[:2]) == 2:
-            self.attributeSelectionList = list[:2]
+    def set_shown_attributes(self, attributes):
+        if attributes and len(attributes) >= 2:
+            self.attribute_selection_list = attributes[:2]
         else:
-            self.attributeSelectionList = None
+            self.attribute_selection_list = None
 
-
-    # TODO: Add support for visualizing ExperimentResults or remove code for it
-    # # visualize the results of the classification
-    # def setTestResults(self, results):
-    #     self.classificationResults = None
-    #     if isinstance(results, ExperimentResults) and len(results.results) > 0 and len(results.results[0].probabilities) > 0:
-    #         self.classificationResults = [results.results[i].probabilities[0][results.results[i].actualClass] for i in range(len(results.results))]
-    #         self.classificationResults = (self.classificationResults, "Probability of correct classification = %.2f%%")
-
-
-    # set the learning method to be used in VizRank
-    def setVizRankLearner(self, learner):
-        self.vizrank.externalLearner = learner
-
-    # send signals with selected and unselected examples as two datasets
-    def sendSelections(self):
-        (selected, unselected) = self.graph.getSelectionsAsExampleTables([self.attrX, self.attrY])
+    def send_selections(self):
+        selected, unselected = \
+            self.graph.get_selections_as_tables(self.get_shown_attributes())
         self.send("Selected Data", selected)
         self.send("Other Data", unselected)
-        print('\nselected data:\n', selected)
-        print('unselected data:\n', unselected)
 
-
-    # ##############################################################################################################################################################
-    # CALLBACKS FROM VIZRANK DIALOG
-    # ##############################################################################################################################################################
-
-    def showSelectedAttributes(self):
-        val = self.vizrank.getSelectedProjection()
-        if not val: return
+    # Callback from VizRank dialog
+    def show_selected_attributes(self):
+        val = self.vizrank.get_selected_projection()
+        if not val:
+            return
         if self.data.domain.class_var:
-            self.attrColor = self.data.domain.class_var.name
-        self.majorUpdateGraph(val[3])
+            self.graph.attr_color = self.data.domain.class_var.name
+        self.major_graph_update(val[3])
 
-    # ##############################################################################################################################################################
-    # ATTRIBUTE SELECTION
-    # ##############################################################################################################################################################
+    def get_shown_attributes(self):
+        return self.attr_x, self.attr_y
 
-    def getShownAttributeList(self):
-        return [self.attrX, self.attrY]
+    def init_attr_values(self):
+        self.cb_attr_x.clear()
+        self.cb_attr_y.clear()
+        self.cb_attr_color.clear()
+        self.cb_attr_color.addItem("(Same color)")
+        self.cb_attr_label.clear()
+        self.cb_attr_label.addItem("(No labels)")
+        self.cb_attr_shape.clear()
+        self.cb_attr_shape.addItem("(Same shape)")
+        self.cb_attr_size.clear()
+        self.cb_attr_size.addItem("(Same size)")
+        if not self.data:
+            return
 
-    def initAttrValues(self):
-        self.attrXCombo.clear()
-        self.attrYCombo.clear()
-        self.attrColorCombo.clear()
-        self.attrLabelCombo.clear()
-        self.attrShapeCombo.clear()
-        self.attrSizeCombo.clear()
+        for var in self.data.domain.metas:
+            self.cb_attr_label.addItem(self.icons[var.var_type], var.name)
+        for attr in self.data.domain.variables:
+            self.cb_attr_x.addItem(self.icons[attr.var_type], attr.name)
+            self.cb_attr_y.addItem(self.icons[attr.var_type], attr.name)
+            self.cb_attr_color.addItem(self.icons[attr.var_type], attr.name)
+            if attr.var_type == Variable.VarTypes.Discrete:
+                self.cb_attr_shape.addItem(self.icons[attr.var_type], attr.name)
+            else:
+                self.cb_attr_size.addItem(self.icons[attr.var_type], attr.name)
+            self.cb_attr_label.addItem(self.icons[attr.var_type], attr.name)
 
-        if not self.data: return
-
-        self.attrColorCombo.addItem("(Same color)")
-        self.attrLabelCombo.addItem("(No labels)")
-        self.attrShapeCombo.addItem("(Same shape)")
-        self.attrSizeCombo.addItem("(Same size)")
-
-        #labels are usually chosen from meta variables, put them on top
-        for metavar in self.data.domain._metas:
-            self.attrLabelCombo.addItem(self.icons[metavar.var_type], metavar.name)
-
-        contList = []
-        discList = []
-        for attr in self.data.domain:
-            if attr.var_type in [VarTypes.Discrete, VarTypes.Continuous]:
-                self.attrXCombo.addItem(self.icons[attr.var_type], attr.name)
-                self.attrYCombo.addItem(self.icons[attr.var_type], attr.name)
-                self.attrColorCombo.addItem(self.icons[attr.var_type], attr.name)
-                self.attrSizeCombo.addItem(self.icons[attr.var_type], attr.name)
-            if attr.var_type == VarTypes.Discrete:
-                self.attrShapeCombo.addItem(self.icons[attr.var_type], attr.name)
-            self.attrLabelCombo.addItem(self.icons[attr.var_type], attr.name)
-
-        self.attrX = str(self.attrXCombo.itemText(0))
-        if self.attrYCombo.count() > 1: self.attrY = str(self.attrYCombo.itemText(1))
-        else:                           self.attrY = str(self.attrYCombo.itemText(0))
-
-        if self.data.domain.class_var and self.data.domain.class_var.var_type in [VarTypes.Discrete, VarTypes.Continuous]:
-            self.attrColor = self.data.domain.class_var.name
+        self.attr_x = self.cb_attr_x.itemText(0)
+        if self.cb_attr_y.count() > 1:
+            self.attr_y = self.cb_attr_y.itemText(1)
         else:
-            self.attrColor = ""
-        self.attrShape = ""
-        self.attrSize= ""
-        self.attrLabel = ""
+            self.attr_y = self.cb_attr_y.itemText(0)
 
-    def majorUpdateGraph(self, attrList = None, insideColors = None, **args):
+        if self.data.domain.class_var:
+            self.graph.attr_color = self.data.domain.class_var.name
+        else:
+            self.graph.attr_color = ""
+        self.graph.attr_shape = ""
+        self.graph.attr_size = ""
+        self.graph.attr_label = ""
+
+    def major_graph_update(self, attributes=None, inside_colors=None, **args):
         self.graph.clear_selection()
-        self.updateGraph(attrList, insideColors, **args)
+        self.update_graph(attributes, inside_colors, **args)
 
-    def updateGraph(self, attrList = None, insideColors = None, **args):
+    def update_graph(self, attributes=None, inside_colors=None, **args):
         self.graph.zoomStack = []
         if not self.graph.have_data:
             return
+        if attributes and len(attributes) == 2:
+            self.attr_x, self.attr_y = attributes
 
-        if attrList and len(attrList) == 2:
-            self.attrX = attrList[0]
-            self.attrY = attrList[1]
+        self.graph.inside_colors = inside_colors or self.outlier_values
+        self.graph.update_data(self.attr_x, self.attr_y)
 
-        # if self.graph.dataHasDiscreteClass and (self.vizrank.showKNNCorrectButton.isChecked() or self.vizrank.showKNNWrongButton.isChecked()):
-        #     kNNExampleAccuracy, probabilities = self.vizrank.kNNClassifyData(self.graph.createProjectionAsExampleTable([self.graph.attributeNameIndex[self.attrX], self.graph.attributeNameIndex[self.attrY]]))
-        #     if self.vizrank.showKNNCorrectButton.isChecked(): kNNExampleAccuracy = ([1.0 - val for val in kNNExampleAccuracy], "Probability of wrong classification = %.2f%%")
-        #     else: kNNExampleAccuracy = (kNNExampleAccuracy, "Probability of correct classification = %.2f%%")
-        # else:
-        kNNExampleAccuracy = None
-
-        self.graph.insideColors = insideColors or self.classificationResults or kNNExampleAccuracy or self.outlierValues
-        self.graph.updateData(self.attrX, self.attrY, self.attrColor, self.attrShape, self.attrSize, self.attrLabel)
-
-
-    # ##############################################################################################################################################################
-    # SCATTERPLOT SETTINGS
-    # ##############################################################################################################################################################
     def saveSettings(self):
         OWWidget.saveSettings(self)
         # self.vizrank.saveSettings()
 
-    #update status on progress bar - gets called by OWScatterplotGraph
-    def updateProgress(self, current, total):
-        self.progressBar.setTotalSteps(total)
-        self.progressBar.setProgress(current)
+    def selection_changed(self):
+        self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
+            not self.auto_send_selection)
+        if self.auto_send_selection:
+            self.send_selections()
 
-    def setShowGridlines(self):
-        self.graph.enableGridXB(self.showGridlines)
-        self.graph.enableGridYL(self.showGridlines)
-
-    def selectionChanged(self):
-        self.zoomSelectToolbar.buttons[OWPlotGUI.SendSelection].setEnabled(not self.autoSendSelection)
-        if self.autoSendSelection:
-            self.sendSelections()
-
-    def setColors(self):
-        dlg = self.createColorDialog()
+    def set_colors(self):
+        dlg = self.create_color_dialog()
         if dlg.exec_():
-            self.colorSettings = dlg.getColorSchemas()
-            self.selectedSchemaIndex = dlg.selectedSchemaIndex
-            self.graph.contPalette = dlg.getContinuousPalette("contPalette")
-            self.graph.discPalette = dlg.getDiscretePalette("discPalette")
+            self.color_settings = dlg.getColorSchemas()
+            self.selected_schema_index = dlg.selected_schema_index
+            self.graph.cont_palette = dlg.getContinuousPalette("contPalette")
+            self.graph.disc_palette = dlg.getDiscretePalette("discPalette")
             self.graph.setCanvasBackground(dlg.getColor("Canvas"))
             self.graph.setGridColor(dlg.getColor("Grid"))
-            self.updateGraph()
+            self.update_graph()
 
-    def createColorDialog(self):
+    def create_color_dialog(self):
         c = ColorPaletteDlg(self, "Color Palette")
         c.createDiscretePalette("discPalette", "Discrete Palette")
         c.createContinuousPalette("contPalette", "Continuous Palette")
-        box = c.createBox("otherColors", "Other Colors")
-        c.createColorButton(box, "Canvas", "Canvas color", self.graph.color(OWPalette.Canvas))
+        box = c.createBox("otherColors", "Other")
+        c.createColorButton(box, "Canvas", "Canvas color",
+                            self.graph.color(OWPalette.Canvas))
         box.layout().addSpacing(5)
-        c.createColorButton(box, "Grid", "Grid color", self.graph.color(OWPalette.Grid))
+        c.createColorButton(box, "Grid", "Grid color",
+                            self.graph.color(OWPalette.Grid))
         box.layout().addSpacing(5)
-        c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
+        c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
     def closeEvent(self, ce):
         # self.vizrank.close()
-        OWWidget.closeEvent(self, ce)
-
+        super().closeEvent(ce)
 
     def sendReport(self):
-        self.startReport("%s [%s - %s]" % (self.windowTitle(), self.attrX, self.attrY))
-        self.reportSettings("Visualized attributes",
-                            [("X", self.attrX),
-                             ("Y", self.attrY),
-                             self.attrColor and ("Color", self.attrColor),
-                             self.attrLabel and ("Label", self.attrLabel),
-                             self.attrShape and ("Shape", self.attrShape),
-                             self.attrSize and ("Size", self.attrSize)])
-        self.reportSettings("Settings",
-                            [("Symbol size", self.graph.pointWidth),
-                             ("Transparency", self.graph.alphaValue),
-                             ("Jittering", self.graph.jitter_size),
-                             ("Jitter continuous attributes", gui.YesNo[self.graph.jitter_continuous])])
+        self.startReport(
+            "%s [%s - %s]" % (self.windowTitle(), self.attr_x, self.attr_y))
+        self.reportSettings(
+            "Visualized attributes",
+            [("X", self.attr_x),
+             ("Y", self.attr_y),
+             self.graph.attr_color and ("Color", self.graph.attr_color),
+             self.graph.attr_label and ("Label", self.graph.attr_label),
+             self.graph.attr_shape and ("Shape", self.graph.attr_shape),
+             self.graph.attr_size and ("Size", self.graph.attr_size)])
+        self.reportSettings(
+            "Settings",
+            [("Symbol size", self.graph.pointWidth),
+             ("Opacity", self.graph.alphaValue),
+             ("Jittering", self.graph.jitter_size),
+             ("Jitter continuous attributes",
+              gui.YesNo[self.graph.jitter_continuous])])
         self.reportSection("Graph")
         self.reportImage(self.graph.saveToFileDirect, QSize(400, 400))
 
 #test widget appearance
-if __name__=="__main__":
-    a=QApplication(sys.argv)
-    ow=OWScatterPlotQt()
+if __name__ == "__main__":
+    a = QApplication(sys.argv)
+    ow = OWScatterPlot()
     ow.show()
     data = Orange.data.Table(r"iris.tab")
     ow.setData(data)
     #ow.setData(orange.ExampleTable("wine.tab"))
     ow.handleNewSignals()
-    a.exec_()
+    a.exec()
     #save settings
     ow.saveSettings()
