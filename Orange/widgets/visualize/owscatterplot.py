@@ -86,7 +86,8 @@ class OWScatterPlot(OWWidget):
             **common_options)
         self.cb_attr_size = gui.comboBox(
             box, self, "graph.attr_size", label="Size:",
-            emptyString="(Same size)", **common_options)
+            emptyString="(Same size)", callback=self.graph.update_sizes,
+            **common_options)
 
         g = self.graph.gui
         box2 = g.point_properties_box(self.controlArea, box)

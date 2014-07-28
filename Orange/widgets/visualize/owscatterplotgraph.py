@@ -392,12 +392,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.__dict__.update(args)      # set value from args dictionary
 
-
-        size_index = -1
-        attr_size = self.attr_shape
-        if attr_size != "" and attr_size != "(Same size)":
-            size_index = self.attribute_name_index[attr_size]
-
+        size_index = self.get_size_index()
         shape_index = self.get_shape_index()
         color_index = self.get_color_index()
         show_continuous_legend = \
@@ -484,15 +479,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #         self.potentials_classifier = None
 
         color_data, brush_data = self.compute_colors()
-
-        if size_index == -1:
-            size_data = self.point_width
-        else:
-            size_data = MIN_SHAPE_SIZE + \
-                self.no_jittering_scaled_data[size_index] * self.point_width
-
+        size_data = self.compute_sizes()
         shape_data = self.compute_symbols()
-
         self.scatterplot_item = pg.ScatterPlotItem(
             antialias=True,
             x=x_data, y=y_data, symbol=shape_data, size=size_data,
@@ -561,14 +549,29 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #         attr_color, values=values,
         #         parentSize=self.plot_widget.size())
 
-    def update_point_size(self):
-        if self.attr_size:
-            self.master.update_graph()
+    def get_size_index(self):
+        size_index = -1
+        attr_size = self.attr_size
+        if attr_size != "" and attr_size != "(Same size)":
+            size_index = self.attribute_name_index[attr_size]
+        return size_index
+
+    def compute_sizes(self):
+        size_index = self.get_size_index()
+        if size_index == -1:
+            size_data = np.full((len(self.x_data),), self.point_width)
         else:
-            # self.scatterplot_item.setSize(size=self.point_width)  # TODO: FIX
-            points = self.scatterplot_item.points()
-            for p in points:
-                p.setSize(self.point_width)
+            size_data = \
+                MIN_SHAPE_SIZE + \
+                self.no_jittering_scaled_data[size_index] * self.point_width
+        return size_data
+
+    def update_sizes(self):
+        if self.scatterplot_item:
+            size_data = self.compute_sizes()
+            self.scatterplot_item.setSize(size_data)
+
+    update_point_size = update_sizes
 
     def get_color_index(self):
         color_index = -1
