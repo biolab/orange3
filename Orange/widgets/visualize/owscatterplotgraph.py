@@ -251,12 +251,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.scatterplot_item = None
 
         self.tooltip_data = []
-        self.tooltip = pg.TextItem(
-            text='',
-            color=pg.mkColor(0, 0, 0, 255),
-            border=pg.mkPen(200, 200, 200),
-            fill=pg.mkBrush(250, 250, 150, 255),
-            anchor=(0, 0))
+        self.tooltip = pg.TextItem(border=pg.mkPen(200, 200, 200),
+                                   fill=pg.mkBrush(250, 250, 200, 220))
         self.tooltip.hide()
 
         self.labels = []
@@ -338,7 +334,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         self.raw_data[index][self.raw_data.domain.class_var])
                 if i < len(points) - 1:
                     text += '------------------\n'
-            self.tooltip.setText(text)
+            self.tooltip.setText(text, color=(0, 0, 0))
             self.tooltip.setPos(act_pos)
             self.tooltip.show()
             self.tooltip.setZValue(10)
@@ -408,8 +404,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             labels = get_variable_values_sorted(self.data_domain[index_y])
             self.set_labels("left", labels)
 
-        self.x_data, self.y_data = self.get_xy_data_positions(attr_x, attr_y)
+        x_data, y_data = self.get_xy_data_positions(attr_x, attr_y)
         self.valid_data = self.get_valid_list(attr_indices)
+        self.n_points = len(x_data)
 
         # if self.potentials_curve:
         #     self.potentials_curve.detach()
@@ -456,9 +453,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         size_data = self.compute_sizes()
         shape_data = self.compute_symbols()
         self.scatterplot_item = pg.ScatterPlotItem(
-            antialias=True,
-            x=self.x_data, y=self.y_data, symbol=shape_data, size=size_data,
-            pen=color_data, brush=brush_data, data=np.arange(len(self.x_data)))
+            x=x_data, y=y_data, symbol=shape_data, size=size_data,
+            pen=color_data, brush=brush_data, data=np.arange(len(x_data)))
 
         self.scatterplot_item.sigClicked.connect(self.spot_item_clicked)
         self.scatterplot_item.selected_points = []
@@ -533,7 +529,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def compute_sizes(self):
         size_index = self.get_size_index()
         if size_index == -1:
-            size_data = np.full((len(self.x_data),), self.point_width)
+            size_data = np.full((self.n_points,), self.point_width)
         else:
             size_data = \
                 self.MinShapeSize + \
@@ -570,8 +566,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             color_data = self.color(OWPalette.Data)
             brush_data = color_data.lighter(self.LighterValue)
             brush_data.setAlpha(self.alpha_value)
-            color_data = [color_data] * len(self.x_data)
-            brush_data = [brush_data] * len(self.x_data)
+            color_data = [color_data] * self.n_points
+            brush_data = [brush_data] * self.n_points
         else:
             if isinstance(self.data_domain[color_index], ContinuousVariable):
                 c_data = self.no_jittering_scaled_data[color_index]
@@ -581,7 +577,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 palette = self.discrete_palette
             valid_color_data = c_data * self.valid_data
             color_data = [QColor(*palette.getRGB(i)) for i in valid_color_data]
-            brush_data = [color.lighter(self.LighterValue) for color in color_data]
+            brush_data = [color.lighter(self.LighterValue)
+                          for color in color_data]
             color_data = [QPen(QBrush(col), 1.5) for col in color_data]
             for i in range(len(brush_data)):
                 brush_data[i].setAlpha(self.alpha_value)
@@ -598,7 +595,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     update_alpha_value = update_colors
 
     def create_labels(self):
-        for x, y in zip(self.x_data, self.y_data):
+        for x, y in zip(*self.scatterplot_item.getData()):
             ti = pg.TextItem()
             self.plot_widget.addItem(ti)
             ti.setPos(x, y)
@@ -630,7 +627,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def compute_symbols(self):
         shape_index = self.get_shape_index()
         if shape_index == -1:
-            shape_data = [self.CurveSymbols[0]] * len(self.x_data)
+            shape_data = [self.CurveSymbols[0]] * self.n_points
         else:
             shape_data = [self.CurveSymbols[i]
                           for i in self.original_data[shape_index].astype(int)]
@@ -730,13 +727,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     #         self.potentialsImageFromClassifier = self.potentials_classifier
 
     def set_labels(self, axis, labels):
-        # orange labels are the pyqtgraph ticks (values displayed on axes)
-        """The format of ticks looks like this:
-            [
-                [ (majorTickValue1, majorTickString1), (majorTickValue2, majorTickString2), ... ],
-                [ (minorTickValue1, minorTickString1), (minorTickValue2, minorTickString2), ... ],
-                ...
-            ]"""
         axis = self.plot_widget.getAxis(axis)
         if labels:
             ticks = [[(i, labels[i]) for i in range(len(labels))]]
@@ -747,10 +737,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def set_axis_title(self, axis, title):
         self.plot_widget.setLabel(axis=axis, text=title)
 
-    def set_show_axes_titles(self):
-        self.plot_widget.showLabel(axis='bottom', show=self.show_axes_titles)
-        self.plot_widget.showLabel(axis='left', show=self.show_axes_titles)
-
     def color(self, role, group = None):
         if group:
             return self.plot_widget.palette().color(group, role)
@@ -759,12 +745,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def set_palette(self, p):
         self.plot_widget.setPalette(p)
-
-    def enableGridXB(self, b):
-        self.show_grid = b
-
-    def enableGridYL(self, b):
-        self.show_grid = b
 
     def legend(self):
         if hasattr(self, '_legend'):
