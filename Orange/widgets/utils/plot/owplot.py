@@ -1555,7 +1555,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
 
     # ####################################################################
     # return string with attribute names and their values for example example
-    def getExampleTooltipText(self, example, indices = None, maxIndices = 20):
+    def getExampleTooltipText(self, example, indices=None, maxIndices=20):
         if indices and type(indices[0]) == str:
             indices = [self.attributeNameIndex[i] for i in indices]
         if not indices:

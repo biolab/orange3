@@ -210,8 +210,6 @@ class ScatterViewBox(pg.ViewBox):
                     to_selected_color(p)
                     self.graph.selected_points.append(p)
 
-    def shuffle_points(self):
-        pass
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
@@ -226,7 +224,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     alpha_value = Setting(255)
     animate_plot = Setting(True)
     animate_points = Setting(True)
-    show_grid = Setting(True)
+    show_grid = Setting(False)
     show_axes_titles = Setting(True)
     show_legend = Setting(True)
     show_filled_symbols = Setting(True)
@@ -519,6 +517,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #         attr_color, values=values,
         #         parentSize=self.plot_widget.size())
 
+    def set_labels(self, axis, labels):
+        axis = self.plot_widget.getAxis(axis)
+        if labels:
+            ticks = [[(i, labels[i]) for i in range(len(labels))]]
+            axis.setTicks(ticks)
+        else:
+            axis.setTicks(None)
+
+    def set_axis_title(self, axis, title):
+        self.plot_widget.setLabel(axis=axis, text=title)
+
     def get_size_index(self):
         size_index = -1
         attr_size = self.attr_size
@@ -641,30 +650,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def update_grid(self):
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)
 
-    def add_tip(self, x, y, attr_indices=None, data_index=None, text=None):
-        if text is None:
-            if self.tooltip_shows_all:
-                text = self.get_tooltip_text(
-                    self.raw_data[data_index], range(len(self.attributeNames)))
-            else:
-                text = self.get_tooltip_text(
-                    self.raw_data[data_index], attr_indices)
-        self.tips.addToolTip(x, y, text)
-
-    # called from OWPlot
     # noinspection PyPep8Naming
     def buildTooltip(self, exampleIndex):
         if exampleIndex < 0:
             example = self.rawSubsetData[-exampleIndex - 1]
         else:
             example = self.raw_data[exampleIndex]
-
-        if self.tooltip_show_all:
-            text = self.getExampleTooltipText(example)
-        else:
-            text = self.getExampleTooltipText(
-                example, self.shown_attribute_indices)
-        return text
+        return self.getExampleTooltipText(
+            example, self.tooltip_show_all and self.shown_attribute_indices)
 
     def get_selections_as_tables(self, attr_list):
         attr_x, attr_y = attr_list
@@ -726,18 +719,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     #         self.potentialContext = (rx, ry, self.shown_x, self.shown_y, self.squareGranularity, self.jitter_size, self.jitter_continuous, self.spaceBetweenCells)
     #         self.potentialsImageFromClassifier = self.potentials_classifier
 
-    def set_labels(self, axis, labels):
-        axis = self.plot_widget.getAxis(axis)
-        if labels:
-            ticks = [[(i, labels[i]) for i in range(len(labels))]]
-            axis.setTicks(ticks)
-        else:
-            axis.setTicks(None)
-
-    def set_axis_title(self, axis, title):
-        self.plot_widget.setLabel(axis=axis, text=title)
-
-    def color(self, role, group = None):
+    def color(self, role, group=None):
         if group:
             return self.plot_widget.palette().color(group, role)
         else:
@@ -827,23 +809,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 #        self.scatterplot_item.getViewBox().unselect_all()
         pass
 
-    def shuffle_points(self):
-        pass
-        # if self.main_curve:
-        #     self.main_curve.shuffle_points()
-
     def update_animations(self, use_animations=None):
         if use_animations is not None:
             self.animate_plot = use_animations
             self.animate_points = use_animations
-
-    def setCanvasBackground(self, color):
-        # called when closing set colors dialog (ColorPalleteDlg)
-        print('setCanvasBackground - color=%s' % color)
-
-    def setGridColor(self, color):
-        # called when closing set colors dialog (ColorPalleteDlg)
-        print('setGridColor - color=%s' % color)
 
     def save_to_file(self, size):
         pass

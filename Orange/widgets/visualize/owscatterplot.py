@@ -46,8 +46,9 @@ class OWScatterPlot(OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.graph = OWScatterPlotGraph(self, self.mainArea, "ScatterPlot")
-        self.mainArea.layout().addWidget(self.graph.plot_widget)
+        box = gui.widgetBox(self.mainArea, True, margin=0)
+        self.graph = OWScatterPlotGraph(self, box, "ScatterPlot")
+        box.layout().addWidget(self.graph.plot_widget)
 
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
