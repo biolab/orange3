@@ -348,7 +348,7 @@ class SqlTable(table.Table):
         return self._get_stats(columns)
 
     def _get_stats(self, columns):
-        columns = [(c.to_sql(), c.var_type == c.VarTypes.Continuous)
+        columns = [(c.to_sql(), isinstance(c, ContinuousVariable))
                    for c in columns]
         filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
@@ -379,7 +379,7 @@ class SqlTable(table.Table):
         for col in columns:
             cur = self._sql_get_distribution(col.to_sql(), filters)
             dist = np.array(cur.fetchall())
-            if col.var_type == col.VarTypes.Continuous:
+            if isinstance(col, ContinuousVariable):
                 dists.append((dist.T, []))
             else:
                 dists.append((dist[:, 1].T, []))
@@ -417,7 +417,7 @@ class SqlTable(table.Table):
             cur = self._sql_compute_contingency(row_field, column_field,
                                                 filters)
 
-            if column.var_type == column.VarTypes.Continuous:
+            if isinstance(column, ContinuousVariable):
                 all_contingencies[i] = (self._continuous_contingencies(cur), [])
             else:
                 all_contingencies[i] = (self._discrete_contingencies(

@@ -394,8 +394,9 @@ class Table(MutableSequence, Storage):
 
         # second line
         #TODO Basket column.
-        t = {"Continuous":"c", "Discrete":"d", "String":"string", "Basket":"basket"}
-        f.write("\t".join([t[str(j.var_type)] for j in domain_vars]))
+        t = {"ContinuousVariable":"c", "DiscreteVariable":"d", "StringVariable":"string", "Basket":"basket"}
+
+        f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
         f.write("\n")
 
         # third line

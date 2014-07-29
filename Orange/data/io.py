@@ -265,7 +265,7 @@ def csvSaver(filename, data, delimiter='\t'):
             if metas:
                 for m in metas:
                     flags[data.domain.indices[m.name]] = 'm'
-            writer.writerow([str(d.var_type).lower() for d in data.domain]) # write attribute types
+            writer.writerow([type(d).__name__.replace("Variable", "").lower() for d in data.domain]) # write attribute types
             writer.writerow(flags) # write flags
         for ex in data: # write examples
             writer.writerow(ex)
