@@ -232,11 +232,17 @@ class OWDistributions(widget.OWWidget):
         assert len(dist) > 0
         self.plot.clear()
 
-        self.plot.getAxis("bottom").setLabel(var.name)
+        leftaxis = self.plot.getAxis("left")
+        bottomaxis = self.plot.getAxis("bottom")
+        bottomaxis.setLabel(var.name)
 
         if is_continuous(var):
-            self.plot.getAxis("left").setLabel("Density")
-            self.plot.getAxis("bottom").setTicks(None)
+            if self.cont_est_type == OWDistributions.Hist:
+                leftaxis.setLabel("Frequency")
+            else:
+                leftaxis.setLabel("Density")
+
+            bottomaxis.setTicks(None)
 
             curve_est = self._density_estimator()
             edges, curve = curve_est(dist)
@@ -246,8 +252,8 @@ class OWDistributions(widget.OWWidget):
             item.setPen(QtGui.QPen(Qt.black))
 
         elif is_discrete(var):
-            self.plot.getAxis("left").setLabel("Frequency")
-            self.plot.getAxis("bottom").setTicks([list(enumerate(var.values))])
+            leftaxis.setLabel("Frequency")
+            bottomaxis.setTicks([list(enumerate(var.values))])
             for i, w in enumerate(dist):
                 geom = QtCore.QRectF(i - 0.33, 0, 0.66, w)
                 item = DistributionBarItem(geom, [1.0], [Qt.gray])
@@ -262,19 +268,20 @@ class OWDistributions(widget.OWWidget):
         assert len(cont) > 0
         self.plot.clear()
 
-        self.plot.getAxis("bottom").setLabel(var.name)
+        leftaxis = self.plot.getAxis("left")
+        bottomaxis = self.plot.getAxis("bottom")
+        bottomaxis.setLabel(var.name)
 
         palette = colorpalette.ColorPaletteGenerator(len(cvar.values))
         colors = [palette[i] for i in range(len(cvar.values))]
 
         if is_continuous(var):
-            self.plot.getAxis("left").setLabel("Density")
-            self.plot.getAxis("bottom").setTicks(None)
-            total = sum(numpy.sum(W) for _, W in cont)
+            if self.cont_est_type == OWDistributions.Hist:
+                leftaxis.setLabel("Frequency")
+            else:
+                leftaxis.setLabel("Density")
 
-            def normalized(dist):
-                X, W = dist
-                return numpy.r_[[X], [W / total]]
+            bottomaxis.setTicks(None)
 
             weights = numpy.array([numpy.sum(W) for _, W in cont])
             weights /= numpy.sum(weights)
@@ -310,9 +317,8 @@ class OWDistributions(widget.OWWidget):
 #                 item.setPen(QtGui.QPen(color))
 #                 self.plot.addItem(item)
         elif is_discrete(var):
-            self.plot.getAxis("left").setLabel("Frequency")
-            axis = self.plot.getAxis("bottom")
-            axis.setTicks([list(enumerate(var.values))])
+            leftaxis.setLabel("Frequency")
+            bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
