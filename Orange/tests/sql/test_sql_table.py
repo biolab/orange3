@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from Orange.data.sql import table as sql_table
-from Orange.data import filter, DiscreteVariable, \
+from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table
 from Orange.data.sql.parser import SqlParser
 from Orange.tests.sql.base import PostgresTest, get_dburi
@@ -92,16 +92,16 @@ class SqlTableTests(PostgresTest):
             string_attr, = table.domain.metas
             VarTypes = float_attr.VarTypes
 
-            self.assertEqual(float_attr.var_type, VarTypes.Continuous)
+            self.assertIsInstance(float_attr, ContinuousVariable)
             self.assertEqual(float_attr.name, "col0")
             self.assertEqual(float_attr.to_sql(), '"col0"')
 
-            self.assertEqual(discrete_attr.var_type, VarTypes.Discrete)
+            self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
             self.assertEqual(discrete_attr.to_sql(), '"col1"')
             self.assertEqual(discrete_attr.values, ['f', 'm'])
 
-            self.assertEqual(string_attr.var_type, VarTypes.String)
+            self.assertIsInstance(string_attr, StringVariable)
             self.assertEqual(string_attr.name, "col2")
             self.assertEqual(string_attr.to_sql(), '"col2"')
 
