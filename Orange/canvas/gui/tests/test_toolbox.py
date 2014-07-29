@@ -37,14 +37,14 @@ class TestToolBox(test.QAppTestCase):
         w.show()
         w.removeItem(2)
 
-        self.assertEquals(w.count(), 3)
+        self.assertEqual(w.count(), 3)
         self.assertIs(w.widget(2), p4)
 
         p3 = QLabel("Once More Unto the Breach")
 
         w.insertItem(2, p3, "Dear friend")
 
-        self.assertEquals(w.count(), 4)
+        self.assertEqual(w.count(), 4)
 
         self.assertIs(w.widget(1), p2)
         self.assertIs(w.widget(2), p3)

@@ -36,8 +36,8 @@ class CrossValidationTestCase(unittest.TestCase):
                                 y[res.row_indices].reshape(nrows))
         self.assertEqual(len(res.folds), 10)
         for i, fold in enumerate(res.folds):
-            self.assertEquals(fold.start, i * 100)
-            self.assertEquals(fold.stop, (i + 1) * 100)
+            self.assertEqual(fold.start, i * 100)
+            self.assertEqual(fold.stop, (i + 1) * 100)
 
     def test_folds(self):
         nrows, ncols = 1000, 10
@@ -45,8 +45,8 @@ class CrossValidationTestCase(unittest.TestCase):
         res = testing.CrossValidation(t, [naive_bayes.BayesLearner()], k=5)
         self.assertEqual(len(res.folds), 5)
         for i, fold in enumerate(res.folds):
-            self.assertEquals(fold.start, i * 200)
-            self.assertEquals(fold.stop, (i + 1) * 200)
+            self.assertEqual(fold.start, i * 200)
+            self.assertEqual(fold.stop, (i + 1) * 200)
 
     def test_call_5(self):
         cv = testing.CrossValidation(k=5)
@@ -94,7 +94,7 @@ class CrossValidationTestCase(unittest.TestCase):
 
         cv = testing.CrossValidation(k=5, store_models=True)
         res = cv(t, fitters)
-        self.assertEquals(len(res.models), 5)
+        self.assertEqual(len(res.models), 5)
         for models in res.models:
             self.assertEqual(len(models), 2)
             self.assertIsInstance(models[0], naive_bayes.BayesClassifier)
@@ -105,9 +105,9 @@ class CrossValidationTestCase(unittest.TestCase):
         self.assertIsNone(res.models)
 
         res = testing.CrossValidation(t, fitters, k=5, store_models=True)
-        self.assertEquals(len(res.models), 5)
+        self.assertEqual(len(res.models), 5)
         for models in res.models:
-            self.assertEquals(len(models), 2)
+            self.assertEqual(len(models), 2)
             self.assertIsInstance(models[0], naive_bayes.BayesClassifier)
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
@@ -191,9 +191,9 @@ class LeaveOneOutTestCase(unittest.TestCase):
 
         cv = testing.LeaveOneOut(store_models=True)
         res = cv(t, fitters)
-        self.assertEquals(len(res.models), 50)
+        self.assertEqual(len(res.models), 50)
         for models in res.models:
-            self.assertEquals(len(models), 2)
+            self.assertEqual(len(models), 2)
             self.assertIsInstance(models[0], naive_bayes.BayesClassifier)
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
@@ -202,9 +202,9 @@ class LeaveOneOutTestCase(unittest.TestCase):
         self.assertIsNone(res.models)
 
         res = testing.LeaveOneOut(t, fitters, store_models=True)
-        self.assertEquals(len(res.models), 50)
+        self.assertEqual(len(res.models), 50)
         for models in res.models:
-            self.assertEquals(len(models), 2)
+            self.assertEqual(len(models), 2)
             self.assertIsInstance(models[0], naive_bayes.BayesClassifier)
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
@@ -284,9 +284,9 @@ class TestOnTrainingTestCase(unittest.TestCase):
 
         cv = testing.TestOnTrainingData(store_models=True)
         res = cv(t, fitters)
-        self.assertEquals(len(res.models), 1)
+        self.assertEqual(len(res.models), 1)
         for models in res.models:
-            self.assertEquals(len(models), 2)
+            self.assertEqual(len(models), 2)
             self.assertIsInstance(models[0], naive_bayes.BayesClassifier)
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
@@ -295,9 +295,9 @@ class TestOnTrainingTestCase(unittest.TestCase):
         self.assertIsNone(res.models)
 
         res = testing.TestOnTrainingData(t, fitters, store_models=True)
-        self.assertEquals(len(res.models), 1)
+        self.assertEqual(len(res.models), 1)
         for models in res.models:
-            self.assertEquals(len(models), 2)
+            self.assertEqual(len(models), 2)
             self.assertIsInstance(models[0], naive_bayes.BayesClassifier)
             self.assertIsInstance(models[1], majority.ConstantClassifier)
 
