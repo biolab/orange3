@@ -276,8 +276,12 @@ class OWDistributions(widget.OWWidget):
                 X, W = dist
                 return numpy.r_[[X], [W / total]]
 
+            weights = numpy.array([numpy.sum(W) for _, W in cont])
+            weights /= numpy.sum(weights)
+
             curve_est = self._density_estimator()
-            curves = [curve_est(normalized(dist)) for dist in cont]
+            curves = [curve_est(dist) for dist in cont]
+            curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
 
             cum_curves = [curves[0]]
             for X, Y in curves[1:]:
@@ -387,6 +391,7 @@ def rect_kernel_curve(dist, bandwidth=None):
 
     # NOTE: The final cumulative sum element is 0
     curve = numpy.cumsum(edge_weights)[:-1]
+    curve /= numpy.sum(W) * bandwidth
     return edges, curve
 
 
@@ -456,12 +461,14 @@ def average_shifted_histogram(a, h, m=3, weights=None):
     nbins = numpy.ceil((amax - amin + 2 * offset) / delta)
     bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
                           endpoint=True)
-    hist, edges = numpy.histogram(a, bins, weights=weights)
+    hist, edges = numpy.histogram(a, bins, weights=weights, density=True)
 
     kernel = triangular_kernel((numpy.arange(2 * m - 1) - (m - 1)) / m)
     kernel = kernel / numpy.sum(kernel)
     ash = numpy.convolve(hist, kernel, mode="same")
-    ash /= ash.sum()
+
+    ash = ash / numpy.diff(edges) / ash.sum()
+#     assert abs((numpy.diff(edges) * ash).sum()) <= 1e-6
     return ash, edges
 
 
