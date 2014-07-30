@@ -1,8 +1,9 @@
 import numpy as np
 import pyqtgraph as pg
+import pyqtgraph.graphicsItems.ScatterPlotItem
 from pyqtgraph.graphicsItems.GraphicsWidgetAnchor import GraphicsWidgetAnchor
 from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt, QRectF, QPointF
 from PyQt4.QtGui import (QColor, QTransform,
                          QGraphicsObject, QGraphicsTextItem, QLinearGradient,
@@ -41,6 +42,7 @@ def to_unselected_color(point):
     lighter_color = color.lighter(LIGHTER_VALUE)
     lighter_color.setAlpha(self.alpha_value)
     point.setBrush(lighter_color)
+
 
 
 class GradientLegendItem(QGraphicsObject, GraphicsWidgetAnchor):
@@ -211,6 +213,22 @@ class ScatterViewBox(pg.ViewBox):
                     self.graph.selected_points.append(p)
 
 
+def define_symbols():
+    Symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
+    path = QtGui.QPainterPath()
+    path.addEllipse(QtCore.QRectF(-0.25, -0.25, 0.5, 0.5))
+    path.moveTo(-0.5, 0.5)
+    path.lineTo(0.5, -0.5)
+    path.moveTo(-0.5, -0.5)
+    path.lineTo(0.5, 0.5)
+    Symbols["?"] = path
+
+    tr = QtGui.QTransform()
+    tr.rotate(180)
+    Symbols['t'] = tr.map(Symbols['t'])
+
+define_symbols()
+
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     selection_changed = QtCore.Signal()
@@ -235,7 +253,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     square_granularity = Setting(3)
     space_between_cells = Setting(True)
 
-    CurveSymbols = "oxt+ds"
+    CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
     LighterValue = 160
 
@@ -527,10 +545,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def compute_symbols(self):
         shape_index = self.get_shape_index()
         if shape_index == -1:
-            shape_data = [self.CurveSymbols[0]] * self.n_points
+            shape_data = self.CurveSymbols[np.zeros(self.n_points, dtype=int)]
         else:
-            shape_data = [self.CurveSymbols[i]
-                          for i in self.original_data[shape_index].astype(int)]
+            shape_data = self.original_data[shape_index]
+            shape_data[np.isnan(shape_data)] = len(self.CurveSymbols) - 1
+            shape_data = self.CurveSymbols[shape_data.astype(int)]
         return shape_data
 
     def update_shapes(self):
