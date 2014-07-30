@@ -350,67 +350,51 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.clear()
         ScaleScatterPlotData.set_data(self, data, subset_data, **args)
 
-    def update_data(self, attr_x, attr_y, **args):
-        # self.legend().clear()
-        self.tooltip_data = []
-        self.potentials_classifier = None
-        self.potentials_image = None
+    def update_data(self, attr_x, attr_y):
         self.shown_x = attr_x
         self.shown_y = attr_y
 
         self.remove_legend()
         if self.scatterplot_item:
             self.plot_widget.removeItem(self.scatterplot_item)
-
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
+        self.tooltip_data = []
+        self.set_axis_title("bottom", "")
+        self.set_axis_title("left", "")
 
         if self.scaled_data is None or not len(self.scaled_data):
-            self.set_axis_title("bottom", "")
-            self.set_axis_title("left", "")
+            self.valid_data = None
+            self.n_points = 0
             return
-
-        self.__dict__.update(args)      # set value from args dictionary
-
-        size_index = self.get_size_index()
-        shape_index = self.get_shape_index()
-        color_index = self.get_color_index()
-        show_continuous_legend = \
-            color_index != -1 and \
-            isinstance(self.data_domain[color_index], ContinuousVariable)
 
         index_x = self.attribute_name_index[attr_x]
         index_y = self.attribute_name_index[attr_y]
-
-        attr_indices = self.shown_attribute_indices = [
-            x for x in (index_x, index_y, color_index, shape_index, size_index)
-            if x != -1]
-
-        self.set_axis_title("bottom", attr_x)
-        if isinstance(self.data_domain[index_x], DiscreteVariable):
-            labels = get_variable_values_sorted(self.data_domain[index_x])
-            self.set_labels("bottom", labels)
-        self.set_axis_title("left", attr_y)
-        if isinstance(self.data_domain[index_y], DiscreteVariable):
-            labels = get_variable_values_sorted(self.data_domain[index_y])
-            self.set_labels("left", labels)
-
         x_data, y_data = self.get_xy_data_positions(attr_x, attr_y)
-        self.valid_data = self.get_valid_list(attr_indices)
+        self.valid_data = self.get_valid_list([index_x, index_y])
+        x_data = x_data[self.valid_data]
+        y_data = y_data[self.valid_data]
         self.n_points = len(x_data)
+
+        for axis, name, index in (("bottom", attr_x, index_x),
+                                  ("left", attr_y, index_y)):
+            self.set_axis_title(axis, name)
+            var = self.data_domain[index]
+            if isinstance(var, DiscreteVariable):
+                self.set_labels(axis, get_variable_values_sorted(var))
 
         color_data, brush_data = self.compute_colors()
         size_data = self.compute_sizes()
         shape_data = self.compute_symbols()
         self.scatterplot_item = pg.ScatterPlotItem(
-            x=x_data, y=y_data, symbol=shape_data, size=size_data,
-            pen=color_data, brush=brush_data, data=np.arange(len(x_data)))
-
-        self.scatterplot_item.sigClicked.connect(self.spot_item_clicked)
-        self.scatterplot_item.selected_points = []
+            x=x_data, y=y_data,
+            symbol=shape_data, size=size_data, pen=color_data, brush=brush_data,
+            data=np.arange(self.n_points))
         self.plot_widget.addItem(self.scatterplot_item)
         self.plot_widget.addItem(self.tooltip)
+        self.scatterplot_item.selected_points = []
+        self.scatterplot_item.sigClicked.connect(self.spot_item_clicked)
         self.scatterplot_item.scene().sigMouseMoved.connect(self.mouseMoved)
 
         self.update_labels()
@@ -458,7 +442,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if attr_color != "" and attr_color != "(Same color)":
             color_index = self.attribute_name_index[attr_color]
             if isinstance(self.data_domain[attr_color], DiscreteVariable):
-                self.disc_palette.setNumberOfColors(
+                self.discrete_palette.setNumberOfColors(
                     len(self.data_domain[attr_color].values))
         return color_index
 
@@ -471,28 +455,35 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #            marked_data = []
         color_index = self.get_color_index()
         if color_index == -1:
-            color_data = self.color(OWPalette.Data)
-            brush_data = color_data.lighter(self.LighterValue)
-            brush_data.setAlpha(self.alpha_value)
-            color_data = [color_data] * self.n_points
-            brush_data = [brush_data] * self.n_points
+            color = self.color(OWPalette.Data)
+            pen = [QPen(QBrush(color), 1.5)] * self.n_points
+            brush = [QBrush(QColor(128, 128, 128))] * self.n_points
         else:
             if isinstance(self.data_domain[color_index], ContinuousVariable):
-                c_data = self.no_jittering_scaled_data[color_index]
+                c_data = self.no_jittering_scaled_data[color_index, self.valid_data]
                 palette = self.continuous_palette
+                color = [QColor(*palette.getRGB(i)) for i in c_data]
+                pen = np.array([QPen(QBrush(col), 1.5) for col in color])
+                color = [col.lighter(self.LighterValue) for col in color]
+                for col in color:
+                    col.setAlpha(self.alpha_value)
+                brush = [QBrush(col.lighter(self.LighterValue)) for col in color]
             else:
-                c_data = self.original_data[color_index]
                 palette = self.discrete_palette
-            valid_color_data = c_data * self.valid_data
-            # TODO This could be slow! Can it be somehow changed to vector
-            # operations with numpy?
-            color_data = [QColor(*palette.getRGB(i)) for i in valid_color_data]
-            brush_data = [color.lighter(self.LighterValue)
-                          for color in color_data]
-            color_data = [QPen(QBrush(col), 1.5) for col in color_data]
-            for i in range(len(brush_data)):
-                brush_data[i].setAlpha(self.alpha_value)
-        return color_data, brush_data
+                n_colors = palette.numberOfColors
+                c_data = self.original_data[color_index, self.valid_data]
+                c_data[np.isnan(c_data)] = n_colors
+                c_data = c_data.astype(int)
+                colors = [palette[i] for i in range(n_colors)] + \
+                         [QColor(128, 128, 128)]
+                pens = np.array([QPen(QBrush(col), 1.5) for col in colors])
+                pen = pens[c_data]
+                for color in colors:
+                    color.setAlpha(self.alpha_value)
+                brushes = np.array(
+                    [QBrush(col.lighter(self.LighterValue)) for col in colors])
+                brush = brushes[c_data]
+        return pen, brush
 
     def update_colors(self):
         if self.scatterplot_item:
@@ -500,9 +491,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.scatterplot_item.setPen(color_data, update=False, mask=None)
             self.scatterplot_item.setBrush(brush_data, mask=None)
             self.make_legend()
-
-
-        # self.plot_widget.plotItem.setAlpha(self.alpha_value)  # TODO: FIX
 
     update_alpha_value = update_colors
 
@@ -600,6 +588,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
 
+
+        # if color_index != -1 and show_continuous_legend:
+        #     values = [("%%.%df"
+        #         % self.data_domain[attr_color].number_of_decimals % v)
+        #         for v in self.attr_values[attr_color]]
+        #     self.create_gradient_legend(
+        #         attr_color, values=values,
+        #         parentSize=self.plot_widget.size())
+
+
+
     def make_shape_legend(self):
         shape_index = self.get_shape_index()
         # Also don't create if same as color
@@ -615,15 +614,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.legend.addItem(
                 pg.ScatterPlotItem(pen=color, brush=brush, size=10,
                                    symbol=self.CurveSymbols[i]), value)
-
-
-        # if color_index != -1 and show_continuous_legend:
-        #     values = [("%%.%df"
-        #         % self.data_domain[attr_color].number_of_decimals % v)
-        #         for v in self.attr_values[attr_color]]
-        #     self.create_gradient_legend(
-        #         attr_color, values=values,
-        #         parentSize=self.plot_widget.size())
 
     def get_selections_as_tables(self, attr_list):
         attr_x, attr_y = attr_list

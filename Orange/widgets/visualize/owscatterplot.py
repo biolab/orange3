@@ -2,7 +2,7 @@ import sys
 
 import numpy
 from PyQt4.QtCore import QSize
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import QApplication, QColor
 
 import Orange
 from Orange.data import Table, Variable
@@ -118,11 +118,9 @@ class OWScatterPlot(OWWidget):
         self.icons = gui.attributeIconDict
 
         dlg = self.create_color_dialog()
-        self.graph.cont_palette = dlg.getContinuousPalette("contPalette")
-        self.graph.disc_palette = dlg.getDiscretePalette("discPalette")
+        self.graph.continuous_palette = dlg.getContinuousPalette("contPalette")
+        self.graph.discrete_palette = dlg.getDiscretePalette("discPalette")
         p = self.graph.plot_widget.palette()
-        p.setColor(OWPalette.Canvas, dlg.getColor("Canvas"))
-        p.setColor(OWPalette.Grid, dlg.getColor("Grid"))
         self.graph.set_palette(p)
 
         self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
@@ -297,23 +295,14 @@ class OWScatterPlot(OWWidget):
         if dlg.exec_():
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selected_schema_index
-            self.graph.cont_palette = dlg.getContinuousPalette("contPalette")
-            self.graph.disc_palette = dlg.getDiscretePalette("discPalette")
-            self.graph.setCanvasBackground(dlg.getColor("Canvas"))
-            self.graph.setGridColor(dlg.getColor("Grid"))
+            self.graph.continuous_palette = dlg.getContinuousPalette("contPalette")
+            self.graph.discrete_palette = dlg.getDiscretePalette("discPalette")
             self.update_graph()
 
     def create_color_dialog(self):
         c = ColorPaletteDlg(self, "Color Palette")
         c.createDiscretePalette("discPalette", "Discrete Palette")
         c.createContinuousPalette("contPalette", "Continuous Palette")
-        box = c.createBox("otherColors", "Other")
-        c.createColorButton(box, "Canvas", "Canvas color",
-                            self.graph.color(OWPalette.Canvas))
-        box.layout().addSpacing(5)
-        c.createColorButton(box, "Grid", "Grid color",
-                            self.graph.color(OWPalette.Grid))
-        box.layout().addSpacing(5)
         c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
