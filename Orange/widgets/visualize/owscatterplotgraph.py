@@ -213,7 +213,7 @@ class ScatterViewBox(pg.ViewBox):
                     self.graph.selected_points.append(p)
 
 
-def define_symbols():
+def _define_symbols():
     Symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
     path = QtGui.QPainterPath()
     path.addEllipse(QtCore.QRectF(-0.25, -0.25, 0.5, 0.5))
@@ -227,7 +227,7 @@ def define_symbols():
     tr.rotate(180)
     Symbols['t'] = tr.map(Symbols['t'])
 
-define_symbols()
+_define_symbols()
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
@@ -240,14 +240,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     point_width = Setting(10)
     alpha_value = Setting(255)
-    animate_plot = Setting(True)
-    animate_points = Setting(True)
     show_grid = Setting(False)
-    show_axes_titles = Setting(True)
     show_legend = Setting(True)
-    show_filled_symbols = Setting(True)
-    show_probabilities = Setting(False)
-    show_distributions = Setting(False)
     send_selection_on_update = Setting(True)
     tooltip_shows_all = Setting(False)
     square_granularity = Setting(3)
@@ -675,24 +669,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         selected = [i in selectedIndices for i in range(len(self.raw_data))]
         unselected = [i not in selectedIndices for i in range(len(self.raw_data))]
         return selected, unselected
-
-    # def computePotentials(self):
-    #     # import orangeom
-    #     s = self.graph_area.toRect().size()
-    #     if not s.isValid():
-    #         self.potentials_image = QImage()
-    #         return
-    #     rx = s.width()
-    #     ry = s.height()
-    #     rx -= rx % self.squareGranularity
-    #     ry -= ry % self.squareGranularity
-    #
-    #     ox = int(self.transform(xBottom, 0) - self.transform(xBottom, self.xmin))
-    #     oy = int(self.transform(yLeft, self.ymin) - self.transform(yLeft, 0))
-    #
-    #     if not getattr(self, "potentials_image", None) or getattr(self, "potentialContext", None) != (rx, ry, self.shown_x, self.shown_y, self.squareGranularity, self.jitter_size, self.jitter_continuous, self.spaceBetweenCells):
-    #         self.potentialContext = (rx, ry, self.shown_x, self.shown_y, self.squareGranularity, self.jitter_size, self.jitter_continuous, self.spaceBetweenCells)
-    #         self.potentialsImageFromClassifier = self.potentials_classifier
 
     def color(self, role, group=None):
         if group:
