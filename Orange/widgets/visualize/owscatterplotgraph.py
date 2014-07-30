@@ -44,16 +44,13 @@ def to_unselected_color(point):
     point.setBrush(lighter_color)
 
 
-
 class GradientLegendItem(QGraphicsObject, GraphicsWidgetAnchor):
     gradient_width = 20
 
     def __init__(self, title, palette, values, parent):
         QGraphicsObject.__init__(self, parent)
         GraphicsWidgetAnchor.__init__(self)
-        self.parent = parent
-        self.legend = parent
-
+        self.parent = self.legend = parent
         self.palette = palette
         self.values = values
 
@@ -82,6 +79,7 @@ class GradientLegendItem(QGraphicsObject, GraphicsWidgetAnchor):
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
 
     def set_orientation(self, orientation):
+        return
         if self.orientation == orientation:
             return
 
@@ -214,18 +212,18 @@ class ScatterViewBox(pg.ViewBox):
 
 
 def _define_symbols():
-    Symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
+    symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
     path = QtGui.QPainterPath()
     path.addEllipse(QtCore.QRectF(-0.25, -0.25, 0.5, 0.5))
     path.moveTo(-0.5, 0.5)
     path.lineTo(0.5, -0.5)
     path.moveTo(-0.5, -0.5)
     path.lineTo(0.5, 0.5)
-    Symbols["?"] = path
+    symbols["?"] = path
 
     tr = QtGui.QTransform()
     tr.rotate(180)
-    Symbols['t'] = tr.map(Symbols['t'])
+    symbols['t'] = tr.map(symbols['t'])
 
 _define_symbols()
 
@@ -473,14 +471,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             brush = [QBrush(QColor(128, 128, 128))] * self.n_points
         else:
             if isinstance(self.data_domain[color_index], ContinuousVariable):
-                c_data = self.no_jittering_scaled_data[color_index, self.valid_data]
+                c_data = self.no_jittering_scaled_data[color_index,
+                                                       self.valid_data]
                 palette = self.continuous_palette
                 color = [QColor(*palette.getRGB(i)) for i in c_data]
                 pen = np.array([QPen(QBrush(col), 1.5) for col in color])
-                color = [col.lighter(self.LighterValue) for col in color]
                 for col in color:
                     col.setAlpha(self.alpha_value)
-                brush = [QBrush(col.lighter(self.LighterValue)) for col in color]
+                brush = [QBrush(col.lighter(self.LighterValue))
+                         for col in color]
             else:
                 palette = self.discrete_palette
                 n_colors = palette.numberOfColors
@@ -601,17 +600,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         pen=color, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
-
-
-        # if color_index != -1 and show_continuous_legend:
-        #     values = [("%%.%df"
-        #         % self.data_domain[attr_color].number_of_decimals % v)
-        #         for v in self.attr_values[attr_color]]
-        #     self.create_gradient_legend(
-        #         attr_color, values=values,
-        #         parentSize=self.plot_widget.size())
-
-
+#        else:
+#            amin, amax = self.attr_values[self.attr_color]
+#            values = [color_var.valstr(v) for v in np.arange(amin, amax, (amin - amax) / 10)]
+#            GradientLegendItem("X", self.continuous_palette, values, self.legend)
 
     def make_shape_legend(self):
         shape_index = self.get_shape_index()

@@ -294,7 +294,7 @@ class OWScatterPlot(OWWidget):
         dlg = self.create_color_dialog()
         if dlg.exec_():
             self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selected_schema_index
+            self.selected_schema_index = dlg.selectedSchemaIndex
             self.graph.continuous_palette = dlg.getContinuousPalette("contPalette")
             self.graph.discrete_palette = dlg.getDiscretePalette("discPalette")
             self.update_graph()
