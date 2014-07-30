@@ -261,11 +261,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.shown_x = ""
         self.shown_y = ""
 
-        self.potentials_classifier = None
-        self.potentials_image = None
-        self.potentials_curve = None
-
         self.valid_data = None  # np.array
+        self.n_points = 0
 
         self.gui = OWPlotGUI(self)
         self.continuous_palette = \
@@ -275,10 +272,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.selection_behavior = 0
 
-        self._legend = None
-        self._gradient_legend = None
-        self._legend_position = None
-        self._gradient_legend_position = None
+        self.legend = None
+        self.legend_position = None
 
         self.tips = TooltipManager(self)
         # self.setMouseTracking(True)
@@ -364,7 +359,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.shown_y = attr_y
 
         self.remove_legend()
-        self.remove_gradient_legend()
         if self.scatterplot_item:
             self.plot_widget.removeItem(self.scatterplot_item)
 
@@ -406,47 +400,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.valid_data = self.get_valid_list(attr_indices)
         self.n_points = len(x_data)
 
-        # if self.potentials_curve:
-        #     self.potentials_curve.detach()
-        #     self.potentials_curve = None
-        # if self.show_probabilities and color_index >= 0:
-        #     if isinstance(self.data_domain[color_index], DiscreteVariable):
-        #         color_var = DiscreteVariable(
-        #             self.attribute_names[color_index],
-        #             values=get_variable_values_sorted(
-        #                 self.data_domain[color_index]))])
-        #     else:
-        #         color_var = ContinuousVariable(
-        #             self.attributeNames[color_index])
-        #     domain = Orange.data.Domain(
-        #         [self.data_domain[index_x], self.data_domain[index_y],
-        #          color_var])
-        #     x_diff = xmax - xmin
-        #     y_diff = ymax - ymin
-        #     scX = x_data / x_diff
-        #     scY = y_data / y_diff
-        #     classData = self.original_data[color_index]
-        #
-        #     probData = numpy.transpose(numpy.array([scX, scY, classData]))
-        #     probData= numpy.compress(valid_data, probData, axis = 0)
-        #
-        #     sys.stderr.flush()
-        #     self.xmin = xmin
-        #     self.xmax = xmax
-        #     self.ymin = ymin
-        #     self.ymax = ymax
-        #
-        #     if probData.any():
-        #         self.potentials_classifier = Orange.P2NN(
-        #             domain, probData, None, None, None, None)
-        #         self.potentials_curve =
-        #             ProbabilitiesItem(self.potentials_classifier,
-        #                               self.squareGranularity, 1.,
-        #                               self.spaceBetweenCells)
-        #         self.potentials_curve.attach(self)
-        #     else:
-        #         self.potentials_classifier = None
-
         color_data, brush_data = self.compute_colors()
         size_data = self.compute_sizes()
         shape_data = self.compute_symbols()
@@ -461,61 +414,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.scatterplot_item.scene().sigMouseMoved.connect(self.mouseMoved)
 
         self.update_labels()
+        self.make_legend()
         self.plot_widget.replot()
-
-        # Here, create (up to) three separate legends
-
-        # def get_discrete_index(ind):
-        #     if isinstance(self.data_domain[color_index], DiscreteVariable):
-        #         return ind
-        #     else:
-        #         return -1
-        #
-        # disc_color_index = get_discrete_index(color_index)
-        # disc_shape_index = get_discrete_index(shape_index)
-        # disc_size_index = get_discrete_index(size_index)
-        #
-        # max_index = max(disc_color_index, disc_shape_index, disc_size_index)
-        # if max_index != -1:
-        #     self.create_legend()
-        #
-        #
-        #     num = len(self.data_domain[max_index].values)
-        #     varValues = get_variable_values_sorted(
-        #         self.data_domain[max_index])
-        #     for ind in range(num):
-        #         # construct an item to pass to ItemSample
-        #         if disc_color_index != -1:
-        #             p = QColor(*palette.getRGB(ind))
-        #             b = p.lighter(LighterValue)
-        #         else:
-        #             p = def_color
-        #             b = p.lighter(LighterValue)
-        #         if discSizeIndex != -1:
-        #             sz = MinShapeSize +
-        #                 round(ind*self.point_width/len(varValues))
-        #         else:
-        #             sz = self.point_width
-        #         if disc_shape_index != -1:
-        #             sym = self.CurveSymbols[ind]
-        #         else:
-        #             sym = self.scatterplot_item.opts['symbol']
-        #         pg.ItemSampl
-        #         sample = lambda: None
-        #         sample.opts = {'pen': p,
-        #                 'brush': b,
-        #                 'size': sz,
-        #                 'symbol': sym
-        #         }
-        #         self.legend().addItem(item=sample, name=varValues[ind])
-
-        # if color_index != -1 and show_continuous_legend:
-        #     values = [("%%.%df"
-        #         % self.data_domain[attr_color].number_of_decimals % v)
-        #         for v in self.attr_values[attr_color]]
-        #     self.create_gradient_legend(
-        #         attr_color, values=values,
-        #         parentSize=self.plot_widget.size())
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
@@ -569,7 +469,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         #                           for example in self.raw_data]  # FIX!
         #        else:
         #            marked_data = []
-
         color_index = self.get_color_index()
         if color_index == -1:
             color_data = self.color(OWPalette.Data)
@@ -585,6 +484,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 c_data = self.original_data[color_index]
                 palette = self.discrete_palette
             valid_color_data = c_data * self.valid_data
+            # TODO This could be slow! Can it be somehow changed to vector
+            # operations with numpy?
             color_data = [QColor(*palette.getRGB(i)) for i in valid_color_data]
             brush_data = [color.lighter(self.LighterValue)
                           for color in color_data]
@@ -598,6 +499,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             color_data, brush_data = self.compute_colors()
             self.scatterplot_item.setPen(color_data, update=False, mask=None)
             self.scatterplot_item.setBrush(brush_data, mask=None)
+            self.make_legend()
+
 
         # self.plot_widget.plotItem.setAlpha(self.alpha_value)  # TODO: FIX
 
@@ -646,18 +549,81 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item:
             shape_data = self.compute_symbols()
             self.scatterplot_item.setSymbol(shape_data)
+        self.make_legend()
 
     def update_grid(self):
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)
 
-    # noinspection PyPep8Naming
-    def buildTooltip(self, exampleIndex):
-        if exampleIndex < 0:
-            example = self.rawSubsetData[-exampleIndex - 1]
+    def update_legend(self):
+        if self.legend:
+            self.legend.setVisible(self.show_legend)
+
+    def create_legend(self):
+        legend = self.legend = pg.graphicsItems.LegendItem.LegendItem()
+        legend.layout.setHorizontalSpacing(15)
+        legend.setParentItem(self.plot_widget.plotItem)
+        if self.legend_position:
+            legend.anchor(itemPos=(0, 0), parentPos=(0, 0),
+                          offset=self.legend_position)
         else:
-            example = self.raw_data[exampleIndex]
-        return self.getExampleTooltipText(
-            example, self.tooltip_show_all and self.shown_attribute_indices)
+            legend.anchor(itemPos=(1, 0), parentPos=(1, 0),
+                          offset=(-10, 10))
+
+    def remove_legend(self):
+        if self.legend:
+            self.legend_position = self.legend.pos()
+            self.legend.setParent(None)
+            self.legend = None
+
+    def make_legend(self):
+        self.remove_legend()
+        self.make_color_legend()
+        self.make_shape_legend()
+        self.update_legend()
+
+    def make_color_legend(self):
+        color_index = self.get_color_index()
+        if color_index == -1:
+            return
+        if not self.legend:
+            self.create_legend()
+        color_var = self.data_domain[color_index]
+        use_shape = self.get_shape_index() == color_index
+        if isinstance(color_var, DiscreteVariable):
+            palette = self.discrete_palette
+            for i, value in enumerate(color_var.values):
+                color = QColor(*palette.getRGB(i))
+                brush = color.lighter(self.LighterValue)
+                self.legend.addItem(
+                    pg.ScatterPlotItem(
+                        pen=color, brush=brush, size=10,
+                        symbol=self.CurveSymbols[i] if use_shape else "o"),
+                    value)
+
+    def make_shape_legend(self):
+        shape_index = self.get_shape_index()
+        # Also don't create if same as color
+        if shape_index == -1 or shape_index == self.get_color_index():
+            return
+        if not self.legend:
+            self.create_legend()
+        shape_var = self.data_domain[shape_index]
+        color = self.color(OWPalette.Data)
+        brush = color.lighter(self.LighterValue)
+        brush.setAlpha(self.alpha_value)
+        for i, value in enumerate(shape_var.values):
+            self.legend.addItem(
+                pg.ScatterPlotItem(pen=color, brush=brush, size=10,
+                                   symbol=self.CurveSymbols[i]), value)
+
+
+        # if color_index != -1 and show_continuous_legend:
+        #     values = [("%%.%df"
+        #         % self.data_domain[attr_color].number_of_decimals % v)
+        #         for v in self.attr_values[attr_color]]
+        #     self.create_gradient_legend(
+        #         attr_color, values=values,
+        #         parentSize=self.plot_widget.size())
 
     def get_selections_as_tables(self, attr_list):
         attr_x, attr_y = attr_list
@@ -681,7 +647,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             unselected = None
 
         return selected, unselected
-
 
     def get_selections_as_indices(self, attr_list, valid_data=None):
         attr_x, attr_y = attr_list
@@ -727,78 +692,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def set_palette(self, p):
         self.plot_widget.setPalette(p)
-
-    def legend(self):
-        if hasattr(self, '_legend'):
-            return self._legend
-        else:
-            return None
-
-    def gradient_legend(self):
-        if hasattr(self, '_gradient_legend'):
-            return self._gradient_legend
-        else:
-            return None
-
-    def create_legend(self, offset):
-        self._legend = pg.graphicsItems.LegendItem.LegendItem(offset=offset)
-        self._legend.setParentItem(self.plot_widget.plotItem)
-        if self._legend_position:
-            # if legend was moved from default position, show on the same position as before
-            item_pos = (0, 0)
-            parent_pos = (0, 0)
-            offset = self._legend_position
-        else:
-            item_pos = (1, 0)   # 0 - left and top; 1 - right and bottom
-            parent_pos = (1, 0) # 0 - left and top; 1 - right and bottom
-            offset = (-10, 10)
-        self._legend.anchor(itemPos=item_pos, parentPos=parent_pos, offset=offset)
-        self.update_legend()
-
-    def remove_legend(self):
-        if self._legend:
-            self._legend_position = self._legend.pos() # restore position next time it is shown
-            self._legend.items = []
-            while self._legend.layout.count() > 0:
-                self._legend.removeAt(0)
-            if self._legend.scene and self._legend.scene():
-                self._legend.scene().removeItem(self._legend)
-            self._legend = None
-
-    def create_gradient_legend(self, title, values, parentSize):
-        ## TODO: legendi se prekrijeta, ce se malo potrudis
-        self._gradient_legend = GradientLegendItem(title, self.cont_palette, [str(v) for v in values], self.plot_widget.plotItem)
-        if self._gradient_legend_position:
-            # if legend was moved from default position, show on the same position as before
-            item_pos = (0, 0)
-            parent_pos = (0, 0)
-            offset = self._gradient_legend_position
-        else:
-            y = 20 if not self._legend else self._legend.boundingRect().y() + self._legend.boundingRect().height() + 25 # shown beneath _legend
-            item_pos = (1, 0)   # 0 - left and top; 1 - right and bottom
-            parent_pos = (1, 0) # 0 - left and top; 1 - right and bottom
-            offset = (-10, y)
-        self._gradient_legend.anchor(itemPos=item_pos, parentPos=parent_pos, offset=offset)
-        self.update_legend()
-
-    def remove_gradient_legend(self):
-        if self._gradient_legend:
-            self._gradient_legend_position = self._gradient_legend.pos() # restore position next time it is shown
-            parent = self._gradient_legend.parentItem()
-            parent.removeItem(self._gradient_legend)   # tole nic ne naredi
-            self._gradient_legend.hide()               # tale skrije, rajsi bi vidu ce izbrise
-            self._gradient_legend = None
-
-    def update_legend(self):
-        if self._legend:
-            if (self._legend.isVisible() == self.show_legend):
-                return
-            self._legend.setVisible(self.show_legend)
-
-        if self._gradient_legend:
-            # if (self._gradient_legend.isVisible() == self.show_legend):
-            #     return
-            self._gradient_legend.setVisible(self.show_legend)
 
     def send_selection(self):
         if self.auto_send_selection_callback:
