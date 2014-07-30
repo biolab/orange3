@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+from math import isnan
 from PyQt4 import QtCore
 from PyQt4.QtGui import *
 from Orange.canvas.utils import environ
@@ -560,6 +561,8 @@ class ContinuousPaletteGenerator:
         self.passThroughBlack = passThroughBlack
 
     def getRGB(self, val):
+        if isnan(val):
+            return (157, 185, 250)
         if self.passThroughBlack:
             if val < 0.5:
                 return (self.c1Red - self.c1Red * val * 2, self.c1Green - self.c1Green * val * 2,
