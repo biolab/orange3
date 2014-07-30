@@ -445,6 +445,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             size_data = \
                 self.MinShapeSize + \
                 self.no_jittering_scaled_data[size_index] * self.point_width
+        size_data[np.isnan(size_data)] = self.MinShapeSize - 2
         return size_data
 
     def update_sizes(self):
