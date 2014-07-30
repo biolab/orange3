@@ -7,6 +7,7 @@ from mock import Mock
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, Setting, SettingsHandler, SettingProvider
+from Orange.widgets.utils import vartype
 
 
 CONTINOUS_ATTR = "cf1"
@@ -19,7 +20,9 @@ DISCRETE_META_JKL = "dm1"
 UNKNOWN_TYPE = -2
 VALUE = "abc"
 
-VarTypes = ContinuousVariable.VarTypes
+VarTypes = lambda: None
+VarTypes.Continuous = vartype(ContinuousVariable())
+VarTypes.Discrete = vartype(DiscreteVariable())
 
 domain = Domain(
     attributes=[
