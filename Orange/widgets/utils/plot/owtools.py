@@ -40,6 +40,7 @@ from PyQt4.QtGui import (QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem,
 from PyQt4.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, qVersion
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.utils.scaling import get_variable_values_sorted
+from Orange.data import ContinuousVariable
 
 from .owcurve import *
 from .owpalette import OWPalette
@@ -414,7 +415,7 @@ class ProbabilitiesItem(orangeqt.PlotItem):
         ox = p.x()
         oy = -p.y()
 
-        if self.classifier.classVar.varType == Orange.VarTypes.Continuous:
+        if isinstance(self.classifier.classVar, ContinuousVariable):
             imagebmp = orangeom.potentialsBitmap(self.classifier, rx, ry, ox, oy, self.granularity, self.scale)
             palette = [qRgb(255.*i/255., 255.*i/255., 255-(255.*i/255.)) for i in range(255)] + [qRgb(255, 255, 255)]
         else:

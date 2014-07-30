@@ -10,7 +10,7 @@ import Orange.data
 import Orange.feature.discretization as disc
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, vartype
 
 __all__ = ["OWDiscretize"]
 
@@ -63,7 +63,7 @@ def is_discretized(var):
 
 
 def variable_key(var):
-    return var.var_type, var.name
+    return vartype(var), var.name
 
 
 def button_group_reset(group):

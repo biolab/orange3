@@ -7,7 +7,7 @@ import warnings
 
 from Orange.canvas.utils import environ
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
-
+from Orange.widgets.utils import vartype
 
 __all__ = ["Setting", "SettingsHandler",
            "ContextSetting", "ContextHandler",
@@ -15,7 +15,6 @@ __all__ = ["Setting", "SettingsHandler",
            "ClassValuesContextHandler"]
 
 _immutables = (str, int, bytes, bool, float, tuple)
-
 
 class Setting:
     """Description of a setting.
@@ -561,10 +560,11 @@ class DomainContextHandler(ContextHandler):
         # noinspection PyShadowingNames
         def encode(attributes, encode_values):
             if not encode_values:
-                return {v.name: v.var_type for v in attributes}
+                return {v.name: vartype(v) 
+                    for v in attributes}
 
             is_discrete = lambda x: isinstance(x, DiscreteVariable)
-            return {v.name: v.values if is_discrete(v) else v.var_type
+            return {v.name: v.values if is_discrete(v) else vartype(v)
                     for v in attributes}
 
         match = self.match_values
@@ -609,11 +609,11 @@ class DomainContextHandler(ContextHandler):
         context.attributes, context.metas = encoded_domain
 
         if self.has_ordinary_attributes:
-            context.ordered_domain = [(v.name, v.var_type) for v in domain]
+            context.ordered_domain = [(v.name, vartype(v)) for v in domain]
         else:
             context.ordered_domain = []
         if self.has_meta_attributes:
-            context.ordered_domain += [(v.name, v.var_type)
+            context.ordered_domain += [(v.name, vartype(v))
                                        for v in domain.metas]
         return context, is_new
 
@@ -829,7 +829,7 @@ class DomainContextHandler(ContextHandler):
                     del data[setting.name]
 
         context.attributes, context.metas = attrs, metas
-        context.ordered_domain = [(attr.name, attr.var_type) for attr in
+        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
                                   itertools.chain(domain, domain.metas)]
         return context
 
@@ -913,11 +913,11 @@ class PerfectDomainContextHandler(DomainContextHandler):
                 return tuple(
                     (v.name,
                      v.values if isinstance(v, DiscreteVariable)
-                     else v.var_type)
+                     else vartype(v))
                     for v in attrs)
         else:
             def encode(attrs):
-                return tuple((v.name, v.var_type) for v in attrs)
+                return tuple((v.name, vartype(v)) for v in attrs)
         return (encode(domain.attributes),
                 encode(domain.class_vars),
                 encode(domain.metas))
