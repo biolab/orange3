@@ -168,6 +168,8 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         self.widget.current_context.attributes = encoded_attributes
         self.widget.current_context.metas = encoded_metas
         self.handler.initialize(self.widget)
+        self.handler.initialize(self.widget.subprovider)
+        self.handler.open_context(self.widget, domain)
 
     def test_settings_from_widget(self):
         widget = self.widget
@@ -359,10 +361,10 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         widget = MockWidget()
         handler.initialize(widget)
+        handler.initialize(widget.subprovider)
         widget.string_setting = "12345"
         handler.update_defaults(widget)
         handler.write_defaults()
-        print(handler.saved_defaults)
         self.assertEqual(handler.saved_defaults["string_setting"], "12345")
 
     def handler_with_defaults(self, defaults):
