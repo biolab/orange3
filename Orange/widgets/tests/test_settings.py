@@ -20,9 +20,8 @@ DISCRETE_META_JKL = "dm1"
 UNKNOWN_TYPE = -2
 VALUE = "abc"
 
-VarTypes = lambda: None
-VarTypes.Continuous = vartype(ContinuousVariable())
-VarTypes.Discrete = vartype(DiscreteVariable())
+Continuous = vartype(ContinuousVariable())
+Discrete = vartype(DiscreteVariable())
 
 domain = Domain(
     attributes=[
@@ -54,14 +53,14 @@ class DomainEncodingTests(unittest.TestCase):
 
         self.assertEqual(
             encoded_attributes,
-            {CONTINOUS_ATTR: VarTypes.Continuous,
-             DISCRETE_ATTR_ABC: VarTypes.Discrete,
-             DISCRETE_ATTR_DEF: VarTypes.Discrete,
-             DISCRETE_CLASS_GHI: VarTypes.Discrete, })
+            {CONTINOUS_ATTR: Continuous,
+             DISCRETE_ATTR_ABC: Discrete,
+             DISCRETE_ATTR_DEF: Discrete,
+             DISCRETE_CLASS_GHI: Discrete, })
         self.assertEqual(
             encoded_metas,
-            {CONTINUOUS_META: VarTypes.Continuous,
-             DISCRETE_META_JKL: VarTypes.Discrete, })
+            {CONTINUOUS_META: Continuous,
+             DISCRETE_META_JKL: Discrete, })
 
     def test_encode_domain_with_match_class(self):
         handler = DomainContextHandler(
@@ -71,14 +70,14 @@ class DomainEncodingTests(unittest.TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(domain)
 
         self.assertEqual(encoded_attributes, {
-            CONTINOUS_ATTR: VarTypes.Continuous,
-            DISCRETE_ATTR_ABC: VarTypes.Discrete,
-            DISCRETE_ATTR_DEF: VarTypes.Discrete,
+            CONTINOUS_ATTR: Continuous,
+            DISCRETE_ATTR_ABC: Discrete,
+            DISCRETE_ATTR_DEF: Discrete,
             DISCRETE_CLASS_GHI: ["g", "h", "i"],
         })
         self.assertEqual(encoded_metas, {
-            CONTINUOUS_META: VarTypes.Continuous,
-            DISCRETE_META_JKL: VarTypes.Discrete,
+            CONTINUOUS_META: Continuous,
+            DISCRETE_META_JKL: Discrete,
         })
 
     def test_encode_domain_with_match_all(self):
@@ -89,13 +88,13 @@ class DomainEncodingTests(unittest.TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(domain)
 
         self.assertEqual(encoded_attributes, {
-            CONTINOUS_ATTR: VarTypes.Continuous,
+            CONTINOUS_ATTR: Continuous,
             DISCRETE_ATTR_ABC: ["a", "b", "c"],
             DISCRETE_ATTR_DEF: ["d", "e", "f"],
             DISCRETE_CLASS_GHI: ["g", "h", "i"],
         })
         self.assertEqual(encoded_metas, {
-            CONTINUOUS_META: VarTypes.Continuous,
+            CONTINUOUS_META: Continuous,
             DISCRETE_META_JKL: ["j", "k", "l"],
         })
 
@@ -106,8 +105,8 @@ class DomainEncodingTests(unittest.TestCase):
 
         self.assertEqual(encoded_attributes, {})
         self.assertEqual(encoded_metas, {
-            CONTINUOUS_META: VarTypes.Continuous,
-            DISCRETE_META_JKL: VarTypes.Discrete,
+            CONTINUOUS_META: Continuous,
+            DISCRETE_META_JKL: Discrete,
         })
 
     def test_encode_domain_with_false_metas_in_res(self):
@@ -116,10 +115,10 @@ class DomainEncodingTests(unittest.TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(domain)
 
         self.assertEqual(encoded_attributes, {
-            CONTINOUS_ATTR: VarTypes.Continuous,
-            DISCRETE_ATTR_ABC: VarTypes.Discrete,
-            DISCRETE_ATTR_DEF: VarTypes.Discrete,
-            DISCRETE_CLASS_GHI: VarTypes.Discrete,
+            CONTINOUS_ATTR: Continuous,
+            DISCRETE_ATTR_ABC: Discrete,
+            DISCRETE_ATTR_DEF: Discrete,
+            DISCRETE_CLASS_GHI: Discrete,
         })
         self.assertEqual(encoded_metas, {})
 
@@ -193,22 +192,22 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         self.assertEqual((VALUE, UNKNOWN_TYPE), values['string_setting'])
         self.assertEqual([1, 2, 3], values['list_setting'])
         self.assertEqual(({1: 2}, UNKNOWN_TYPE), values['dict_setting'])
-        self.assertEqual((CONTINOUS_ATTR, VarTypes.Continuous), values['continuous_setting'])
-        self.assertEqual((DISCRETE_ATTR_ABC, VarTypes.Discrete), values['discrete_setting'])
-        self.assertEqual((DISCRETE_CLASS_GHI, VarTypes.Discrete), values['class_setting'])
+        self.assertEqual((CONTINOUS_ATTR, Continuous), values['continuous_setting'])
+        self.assertEqual((DISCRETE_ATTR_ABC, Discrete), values['discrete_setting'])
+        self.assertEqual((DISCRETE_CLASS_GHI, Discrete), values['class_setting'])
         self.assertEqual((DISCRETE_META_JKL, UNKNOWN_TYPE), values['excluded_meta_setting'])
-        self.assertEqual((DISCRETE_META_JKL, VarTypes.Discrete), values['meta_setting'])
+        self.assertEqual((DISCRETE_META_JKL, Discrete), values['meta_setting'])
 
     def test_settings_to_widget(self):
         self.widget.current_context.values = dict(
             string_setting=(VALUE, -2),
-            continuous_setting=(CONTINOUS_ATTR, VarTypes.Continuous),
-            discrete_setting=(DISCRETE_ATTR_ABC, VarTypes.Discrete),
+            continuous_setting=(CONTINOUS_ATTR, Continuous),
+            discrete_setting=(DISCRETE_ATTR_ABC, Discrete),
             list_setting=[1, 2, 3],
             attr_list_setting=[DISCRETE_ATTR_ABC, DISCRETE_CLASS_GHI],
             selection1=[0],
-            attr_tuple_list_setting=[(DISCRETE_META_JKL, VarTypes.Discrete),
-                                     (CONTINUOUS_META, VarTypes.Continuous)],
+            attr_tuple_list_setting=[(DISCRETE_META_JKL, Discrete),
+                                     (CONTINUOUS_META, Continuous)],
             selection2=[1],
         )
 
@@ -250,28 +249,28 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
 
     def test_match_if_all_values_match_returns_1(self):
         mock_context = Mock(values=dict(
-            discrete_setting=(DISCRETE_ATTR_ABC, VarTypes.Discrete),
-            required_setting=(DISCRETE_ATTR_ABC, VarTypes.Discrete),
+            discrete_setting=(DISCRETE_ATTR_ABC, Discrete),
+            required_setting=(DISCRETE_ATTR_ABC, Discrete),
         ))
 
         self.assertEqual(self.match(mock_context), 1.)
 
     def test_match_if_all_list_values_match_returns_1(self):
         mock_context = Mock(values=dict(
-            discrete_setting=("df1", VarTypes.Discrete)
+            discrete_setting=("df1", Discrete)
         ))
         self.assertEqual(self.match(mock_context), 1.)
 
     def test_match_if_all_required_list_values_match_returns_1(self):
         mock_context = Mock(values=dict(
-            required_setting=(DISCRETE_ATTR_ABC, VarTypes.Discrete)
+            required_setting=(DISCRETE_ATTR_ABC, Discrete)
         ))
 
         self.assertEqual(self.match(mock_context), 1.)
 
     def test_clone_context(self):
         mock_context = Mock(values=dict(
-            required_setting=(DISCRETE_ATTR_ABC, VarTypes.Discrete)
+            required_setting=(DISCRETE_ATTR_ABC, Discrete)
         ))
         attrs, metas = self.handler.encode_domain(domain)
         cloned_context = self.handler.clone_context(mock_context, domain, attrs, metas)

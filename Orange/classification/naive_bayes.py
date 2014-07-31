@@ -1,7 +1,7 @@
 import numpy as np
 
 from Orange.classification import Fitter, Model
-from Orange.data import Instance, Storage, Table, variable
+from Orange.data import Instance, Storage, Table, DiscreteVariable
 from Orange.statistics import contingency
 
 
@@ -9,7 +9,7 @@ class BayesLearner(Fitter):
     def fit_storage(self, table):
         if not isinstance(table, Storage):
             raise TypeError("Data is not a subclass of Orange.data.Storage.")
-        if not all(isinstance(var, variable.DiscreteVariable)
+        if not all(isinstance(var, DiscreteVariable)
                    for var in table.domain.variables):
             raise NotImplementedError("Only discrete variables are supported.")
 

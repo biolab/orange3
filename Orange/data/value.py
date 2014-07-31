@@ -109,9 +109,9 @@ class Value(float):
 
     @property
     def value(self):
-        from ..data import variable
-        if isinstance(self.variable, variable.DiscreteVariable):
+        from . import DiscreteVariable, StringVariable
+        if isinstance(self.variable, DiscreteVariable):
             return self.variable.values[int(self)]
-        if isinstance(self.variable, variable.StringVariable):
+        if isinstance(self.variable, StringVariable):
             return self._value
         return float(self)
