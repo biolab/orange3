@@ -1,4 +1,16 @@
 from functools import reduce
+from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable
+
+
+def vartype(var):
+    if isinstance(var, DiscreteVariable):
+        return 1
+    elif isinstance(var, ContinuousVariable):
+        return 2
+    elif isinstance(var, StringVariable):
+        return 3
+    else:
+        return 0
 
 
 def progress_bar_milestones(count, iterations=100):

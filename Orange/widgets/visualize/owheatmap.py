@@ -171,10 +171,10 @@ class OWHeatmap(widget.OWWidget):
             self.clearControls()
 
             for attr in dataset.domain.attributes:
-                self.comboBoxAttributesX.addItem(self.icons[attr.var_type], attr.name)
-                self.comboBoxAttributesY.addItem(self.icons[attr.var_type], attr.name)
+                self.comboBoxAttributesX.addItem(self.icons[attr], attr.name)
+                self.comboBoxAttributesY.addItem(self.icons[attr], attr.name)
             for var in dataset.domain.class_vars:
-                self.comboBoxClassvars.addItem(self.icons[var.var_type], var.name)
+                self.comboBoxClassvars.addItem(self.icons[var], var.name)
             self.X_attributes_select = 2
             self.Y_attributes_select = 3
             self.classvar_select = 0

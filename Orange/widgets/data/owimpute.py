@@ -17,7 +17,7 @@ from Orange.data import filter as data_filter
 
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, vartype
 
 
 def _margins(margins, container):
@@ -497,7 +497,7 @@ class OWImpute(OWWidget):
 
 
 def variable_key(variable):
-    return (variable.var_type, variable.name)
+    return (vartype(variable), variable.name)
 
 
 def unique(iterable):

@@ -9,12 +9,12 @@ class PickleTest(unittest.TestCase):
         """ Override __eq__ for Orange objects that do not implement it"""
 
         self.add_comparator(data.DiscreteVariable,
-                            compare_members=("var_type", "name", "values",
+                            compare_members=("name", "values",
                                              "ordered", "base_value"))
         self.add_comparator(data.ContinuousVariable,
-                            compare_members=("var_type", "name"))
+                            compare_members=("name",))
         self.add_comparator(data.StringVariable,
-                            compare_members=("var_type", "name"))
+                            compare_members=("name",))
         self.add_comparator(data.Domain,
                             compare_members=("attributes", "class_vars",
                                              "class_var", "variables",

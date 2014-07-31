@@ -5,7 +5,7 @@ from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QApplication, QColor
 
 import Orange
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, DiscreteVariable
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import gui
 from Orange.widgets.settings import \
@@ -241,16 +241,16 @@ class OWScatterPlot(OWWidget):
             return
 
         for var in self.data.domain.metas:
-            self.cb_attr_label.addItem(self.icons[var.var_type], var.name)
+            self.cb_attr_label.addItem(self.icons[var], var.name)
         for attr in self.data.domain.variables:
-            self.cb_attr_x.addItem(self.icons[attr.var_type], attr.name)
-            self.cb_attr_y.addItem(self.icons[attr.var_type], attr.name)
-            self.cb_attr_color.addItem(self.icons[attr.var_type], attr.name)
-            if attr.var_type == Variable.VarTypes.Discrete:
-                self.cb_attr_shape.addItem(self.icons[attr.var_type], attr.name)
+            self.cb_attr_x.addItem(self.icons[attr], attr.name)
+            self.cb_attr_y.addItem(self.icons[attr], attr.name)
+            self.cb_attr_color.addItem(self.icons[attr], attr.name)
+            if isinstance(attr, DiscreteVariable):
+                self.cb_attr_shape.addItem(self.icons[attr], attr.name)
             else:
-                self.cb_attr_size.addItem(self.icons[attr.var_type], attr.name)
-            self.cb_attr_label.addItem(self.icons[attr.var_type], attr.name)
+                self.cb_attr_size.addItem(self.icons[attr], attr.name)
+            self.cb_attr_label.addItem(self.icons[attr], attr.name)
 
         self.attr_x = self.cb_attr_x.itemText(0)
         if self.cb_attr_y.count() > 1:

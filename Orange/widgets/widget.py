@@ -14,6 +14,7 @@ from Orange.canvas.registry import description as widget_description
 from Orange.canvas.scheme import widgetsscheme as widget_scheme
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
+from Orange.widgets.utils import vartype
 
 
 class WidgetMetaClass(type(QDialog)):
@@ -282,6 +283,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
 
     # ##############################################
+    """
     def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
         self.error([1234, 1235, 1236])
         if not data:
@@ -297,6 +299,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.error(1236, "Unable to handle data set with no known classes")
             return 0
         return 1
+    """
 
     def restoreWidgetPosition(self):
         if self.save_position:

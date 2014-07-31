@@ -4,7 +4,8 @@ import re
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from Orange.widgets.utils import getdeepattr
-
+from Orange.data import ContinuousVariable, StringVariable, DiscreteVariable, Variable
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 
 YesNo = NoYes = ("No", "Yes")
@@ -1028,18 +1029,17 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
 
 class __AttributeIconDict(dict):
     def __getitem__(self, key):
-        from Orange.data import Variable
         if not self:
-            VarTypes = Variable.VarTypes
-            for tpe, char, col in ((VarTypes.Continuous, "C", (202, 0, 32)),
-                                  (VarTypes.Discrete, "D", (26, 150, 65)),
-                                  (VarTypes.String, "S", (0, 0, 0)),
+            for tpe, char, col in ((vartype(ContinuousVariable()), 
+                                        "C", (202, 0, 32)),
+                                  (vartype(DiscreteVariable()), 
+                                        "D", (26, 150, 65)),
+                                  (vartype(StringVariable()), 
+                                        "S", (0, 0, 0)),
                                   (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))
-        if isinstance(key, Variable):
-            key = key.var_type
-        if not key in self:
-            key = -1
+        if key not in self:
+            key = vartype(key) if isinstance(key, Variable) else -1
         return super().__getitem__(key)
 
 #: A dict that returns icons for different attribute types. The dict is

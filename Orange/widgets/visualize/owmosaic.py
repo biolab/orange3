@@ -13,7 +13,7 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
 
 from Orange.canvas.utils import environ
 from Orange.classification import Fitter
-from Orange.data import Table, Variable, filter
+from Orange.data import Table, Variable, filter, DiscreteVariable, ContinuousVariable
 from Orange.data.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
 from Orange.feature.discretization import EqualFreq
@@ -33,8 +33,6 @@ BOTTOM = 0
 LEFT = 1
 TOP = 2
 RIGHT = 3
-
-VarTypes = Variable.VarTypes
 
 # using function with same name from owtools.py
 # def get_variable_values_sorted(param):
@@ -323,9 +321,9 @@ class OWMosaicDisplay(OWWidget):
         self.attr4Combo.addItem("(None)")
 
         for attr in data.domain:
-            if attr.var_type == VarTypes.Discrete:
+            if isinstance(attr, DiscreteVariable):
                 for combo in [self.attr1Combo, self.attr2Combo, self.attr3Combo, self.attr4Combo]:
-                    combo.addItem(self.icons[VarTypes.Discrete], attr.name)
+                    combo.addItem(self.icons[attr], attr.name)
 
         if self.attr1Combo.count() > 0:
             self.attr1 = str(self.attr1Combo.itemText(0))
@@ -366,7 +364,7 @@ class OWMosaicDisplay(OWWidget):
             self.warning(0, "Data does not have a class variable.")
             return
 
-        if any(attr.var_type == VarTypes.Continuous for attr in self.data.domain):
+        if any(isinstance(attr, ContinuousVariable) for attr in self.data.domain):
             self.information(0, "Continuous attributes were discretized.")
             # previously done in optimizationDlg.setData()
             self.data = DiscretizeTable(data, method=EqualFreq())
@@ -378,7 +376,7 @@ class OWMosaicDisplay(OWWidget):
             self.information(2, "Unused attribute values were removed.")
         """
 
-        if self.data.domain.class_var.var_type == VarTypes.Discrete:
+        if isinstance(self.data.domain.class_var, DiscreteVariable):
             self.interiorColoring = CLASS_DISTRIBUTION
             self.colorPalette.setNumberOfColors(len(self.data.domain.class_var.values))
         else:
@@ -831,11 +829,11 @@ class OWMosaicDisplay(OWWidget):
             outerRect.setPen(QPen(Qt.black, 3, Qt.DotLine))
 
         if self.interiorColoring == CLASS_DISTRIBUTION and (
-                    not self.data.domain.class_var or not self.data.domain.class_var.var_type == VarTypes.Discrete):
+                    not self.data.domain.class_var or not isinstance(self.data.domain.class_var, DiscreteVariable)):
             return
 
         # draw pearsons residuals
-        if self.interiorColoring == PEARSON or not self.data.domain.class_var or self.data.domain.class_var.var_type != VarTypes.Discrete:
+        if self.interiorColoring == PEARSON or not self.data.domain.class_var or not isinstance(self.data.domain.class_var, DiscreteVariable):
             s = sum(self.aprioriDistributions[0])
             expected = s * reduce(lambda x, y: x * y,
                                   [self.aprioriDistributions[i][usedVals[i]] / float(s) for i in range(len(usedVals))])
@@ -1011,7 +1009,7 @@ class OWMosaicDisplay(OWWidget):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
         if self.interiorColoring == CLASS_DISTRIBUTION and (
-                    not data.domain.class_var or data.domain.class_var.var_type == VarTypes.Continuous):
+                    not data.domain.class_var or isinstance(data.domain.class_var, ContinuousVariable)):
             return
 
         if self.interiorColoring == PEARSON:
@@ -1056,7 +1054,7 @@ class OWMosaicDisplay(OWWidget):
             self.colorSettings = dlg.getColorSchemas()
             self.selectedSchemaIndex = dlg.selectedSchemaIndex
             self.colorPalette = dlg.getDiscretePalette("discPalette")
-            if self.data and self.data.domain.classVar and self.data.domain.classVar.varType == VarTypes.Discrete:
+            if self.data and self.data.domain.classVar and isinstance(self.data.domain.classVar, DiscreteVariable):
                 self.colorPalette.setNumberOfColors(len(self.data.domain.classVar.values))
             self.updateGraph()
 

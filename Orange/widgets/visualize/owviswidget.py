@@ -6,6 +6,7 @@ from Orange.canvas.utils import environ
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.widget import OWWidget
+from Orange.widgets.utils import vartype
 
 ICON_UP = os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")
 ICON_DOWN = os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")
@@ -29,7 +30,7 @@ class OWVisWidget(OWWidget):
         hidden = []
 
         domain = self.get_data_domain()
-        attr_info = lambda a: (a.name, a.var_type)
+        attr_info = lambda a: (a.name, vartype(a))
         if domain:
             if value:
                 shown = value if isinstance(value[0], tuple) else [attr_info(domain[a]) for a in value]

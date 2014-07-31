@@ -10,7 +10,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import *
 from Orange.data.table import Table
 
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, vartype
 
 import Orange
 
@@ -94,7 +94,7 @@ class VariablesListItemModel(itemmodels.VariableListModel):
         item_data = []
         for index in indexlist:
             var = self[index.row()]
-            descriptors.append((var.name, var.var_type))
+            descriptors.append((var.name, vartype(var)))
             vars.append(var)
             item_data.append(self.itemData(index))
         mime = QtCore.QMimeData()
@@ -300,7 +300,7 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
                     if not self._var_exists(setting, value, attrs, metas):
                         del value[item]
         context.attributes, context.metas = attrs, metas
-        context.ordered_domain = [(attr.name, attr.var_type) for attr in
+        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
                                   itertools.chain(domain, domain.metas)]
         return context
 
@@ -456,7 +456,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.openContext(data)
             all_vars = data.domain.variables + data.domain.metas
 
-            var_sig = lambda attr: (attr.name, attr.var_type)
+            var_sig = lambda attr: (attr.name, vartype(attr))
 
             domain_hints = {var_sig(attr): ("attribute", i)
                             for i, attr in enumerate(data.domain.attributes)}
@@ -499,7 +499,7 @@ class OWSelectAttributes(widget.OWWidget):
         """ Update the domain hints to be stored in the widgets settings.
         """
         hints_from_model = lambda role, model: [
-            ((attr.name, attr.var_type), (role, i))
+            ((attr.name, vartype(attr)), (role, i))
             for i, attr in enumerate(model)]
         hints = dict(hints_from_model("available", self.available_attrs))
         hints.update(hints_from_model("attribute", self.used_attrs))
