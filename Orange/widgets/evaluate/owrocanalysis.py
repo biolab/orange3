@@ -268,8 +268,8 @@ class OWROCAnalysis(widget.OWWidget):
         hbox.setFlat(True)
         gui.checkBox(hbox, self, "display_convex_curve",
                      "Show convex ROC curves", callback=self._replot)
-#         gui.checkBox(hbox, self, "display_convex_hull",
-#                      "Show ROC convex hull", callback=self._replot)
+        gui.checkBox(hbox, self, "display_convex_hull",
+                     "Show ROC convex hull", callback=self._replot)
 
         box = gui.widgetBox(self.controlArea, "Analysis")
 
@@ -420,6 +420,8 @@ class OWROCAnalysis(widget.OWWidget):
                     item.setPos(points.fpr[ind], points.tpr[ind])
                     self.plot.addItem(item)
 
+            hull_curves = [curve.merged.hull for curve in selected]
+
         elif self.roc_averaging == OWROCAnalysis.Vertical:
             for curve in curves:
                 graphics = curve.avg_vertical()
@@ -427,11 +429,15 @@ class OWROCAnalysis(widget.OWWidget):
                 self.plot.addItem(graphics.curve_item)
                 self.plot.addItem(graphics.confint_item)
 
+            hull_curves = [curve.avg_vertical.hull for curve in selected]
+
         elif self.roc_averaging == OWROCAnalysis.Threshold:
             for curve in curves:
                 graphics = curve.avg_threshold()
                 self.plot.addItem(graphics.curve_item)
                 self.plot.addItem(graphics.confint_item)
+
+            hull_curves = [curve.avg_threshold.hull for curve in selected]
 
         elif self.roc_averaging == OWROCAnalysis.NoAveraging:
             for curve in curves:
@@ -440,6 +446,18 @@ class OWROCAnalysis(widget.OWWidget):
                     self.plot.addItem(fold.curve_item)
                     if self.display_convex_curve:
                         self.plot.addItem(fold.hull_item)
+            hull_curves = [fold.hull for curve in selected for fold in curve.folds]
+
+        if self.display_convex_hull and hull_curves:
+            hull = convex_hull(hull_curves)
+            hull_pen = QPen(QColor(200, 200, 200, 100), 2)
+            hull_pen.setCosmetic(True)
+            item = self.plot.plot(
+                hull.fpr, hull.tpr,
+                pen=hull_pen,
+                brush=QBrush(QColor(200, 200, 200, 50)),
+                fillLevel=0)
+            item.setZValue(-10000)
 
         pen = QPen(QColor(100, 100, 100, 100), 1, Qt.DashLine)
         pen.setCosmetic(True)
@@ -593,6 +611,47 @@ def roc_curve_convex_hull(curve):
     tpr = numpy.array([p.tpr for p in hull])
     thres = numpy.array([p.threshold for p in hull])
     return (fpr, tpr, thres)
+
+
+def convex_hull(curves):
+    def slope(p1, p2):
+        x1, y1, *_ = p1
+        x2, y2, *_ = p2
+        if x1 != x2:
+            return  (y2 - y1) / (x2 - x1)
+        else:
+            return numpy.inf
+
+    curves = [list(map(roc_point._make, zip(*curve))) for curve in curves]
+
+    merged_points = reduce(operator.iadd, curves, [])
+    merged_points = sorted(merged_points)
+
+    if len(merged_points) == 0:
+        raise ValueError("No points")
+
+    if len(merged_points) <= 2:
+        return ROCPoints._make(zip(*merged_points))
+
+    points = iter(merged_points)
+
+    hull = deque([next(points)])
+
+    for point in points:
+        while True:
+            if len(hull) < 2:
+                hull.append(point)
+                break
+            else:
+                last = hull[-1]
+                if point[0] != last[0] and \
+                        slope(hull[-2], last) > slope(last, point):
+                    hull.append(point)
+                    break
+                else:
+                    hull.pop()
+
+    return ROCPoints._make(zip(*hull))
 
 
 def main():
