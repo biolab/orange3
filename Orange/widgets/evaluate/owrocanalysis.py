@@ -71,6 +71,18 @@ ROCData = namedtuple(
 
 
 def ROCData_from_results(results, clf_index, target):
+    """
+    Compute ROC Curve(s) from evaluation results.
+
+    :param Orange.evaluation.Results results:
+        Evaluation results.
+    :param int clf_index:
+        Learner/Fitter index in the `results`.
+    :param int target:
+        Target class index (i.e. positive class).
+    :rval ROCData:
+        A instance holding the computed curves.
+    """
     merged = roc_curve_for_fold(results, slice(0, -1), clf_index, target)
     merged_curve = ROCCurve(ROCPoints(*merged),
                             ROCPoints(*roc_curve_convex_hull(merged)))
@@ -116,18 +128,28 @@ def ROCData_from_results(results, clf_index, target):
 
 ROCData.from_results = staticmethod(ROCData_from_results)
 
-
+#: A curve item to be displayed in a plot
 PlotCurve = namedtuple(
     "PlotCurve",
-    ["curve",
-     "curve_item",
-     "hull_item"
+    ["curve",        # ROCCurve source curve
+     "curve_item",   # pg.PlotDataItem main curve
+     "hull_item"     # pg.PlotDataItem curve's convex hull
      ]
 )
 
 
 def plot_curve(curve, pen=None, shadow_pen=None, symbol="+",
                symbol_size=3, name=None):
+    """
+    Construct a `PlotCurve` for the given `ROCCurve`.
+
+    :param ROCCurve curve:
+        Source curve.
+
+    The other parameters are passed to pg.PlotDataItem
+
+    :rtype: PlotCurve
+    """
     points = curve.points
     item = pg.PlotDataItem(
         points.fpr, points.tpr,
@@ -143,18 +165,29 @@ def plot_curve(curve, pen=None, shadow_pen=None, symbol="+",
 
 PlotCurve.from_roc_curve = staticmethod(plot_curve)
 
-
+#: A curve displayed in a plot with error bars
 PlotAvgCurve = namedtuple(
     "PlotAvgCurve",
-    ["curve",
-     "curve_item",
-     "hull_item",
-     "confint_item"]
+    ["curve",         # ROCCurve
+     "curve_item",    # pg.PlotDataItem
+     "hull_item",     # pg.PlotDataItem
+     "confint_item",  # pg.ErrorBarItem
+     ]
 )
 
 
 def plot_avg_curve(curve, pen=None, shadow_pen=None, symbol="+",
                    symbol_size=4, name=None):
+    """
+    Construct a `PlotAvgCurve` for the given `curve`.
+
+    :param curve: Source curve.
+    :type curve: ROCAveragedVert or ROCAveragedThresh
+
+    The other parameters are passed to pg.PlotDataItem
+
+    :rtype: PlotAvgCurve
+    """
     pc = plot_curve(curve, pen=pen, shadow_pen=shadow_pen, symbol=symbol,
                     symbol_size=symbol_size, name=name)
 
@@ -183,6 +216,9 @@ Some = namedtuple("Some", ["val"])
 
 
 def once(f):
+    """
+    Return a function that will be called only once, and it's result cached.
+    """
     cached = None
 
     @wraps(f)
@@ -305,6 +341,7 @@ class OWROCAnalysis(widget.OWWidget):
         self.mainArea.layout().addWidget(self.plotview)
 
     def set_results(self, results):
+        """Set the input evaluation results."""
         self.clear()
         self.error(0)
 
@@ -350,6 +387,7 @@ class OWROCAnalysis(widget.OWWidget):
         self.target_cb.addItems(class_var.values)
 
     def curve_data(self, target, clf_idx):
+        """Return `ROCData' for the given target and classifier."""
         if (target, clf_idx) not in self._curve_data:
             data = ROCData.from_results(self.results, clf_idx, target)
             self._curve_data[target, clf_idx] = data
@@ -357,7 +395,7 @@ class OWROCAnalysis(widget.OWWidget):
         return self._curve_data[target, clf_idx]
 
     def plot_curves(self, target, clf_idx):
-
+        """Return a set of functions `plot_curves` generating plot curves."""
         def generate_pens(basecolor):
             pen = QPen(basecolor, 1)
             pen.setCosmetic(True)
