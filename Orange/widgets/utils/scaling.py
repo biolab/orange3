@@ -10,6 +10,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.datacaching import getCached, setCached
 
 
+# noinspection PyBroadException
 def checksum(x):
     if x is None:
         return None
@@ -21,46 +22,30 @@ def checksum(x):
 
 def get_variable_values_sorted(variable):
     """
-    Return a list of sorted values for given attribute.
-
-    EXPLANATION: if variable values have values 1, 2, 3, 4, ... then their
-    order in orange depends on when they appear first in the data. With this
-    function we get a sorted list of values.
+    Return a list of sorted values for given attribute, if all its values can be
+    cast to int's.
     """
     if isinstance(variable, ContinuousVariable):
-        print("get_variable_values_sorted - attribute %s is a continuous variable" % variable)
         return []
-
-    values = list(variable.values)
-
-    # do all attribute values contain integers?
     try:
-        int_values = [(int(val), val) for val in values]
+        return sorted(variable.values, key=int)
     except ValueError:
-        return values
-
-    # if all values were integers, we first sort them in ascending order
-    int_values.sort()
-    return [val[1] for val in int_values]
+        return variable.values
 
 
-def get_variable_value_indices(variable, sort_values_for_discrete_attrs=1):
+def get_variable_value_indices(variable, sort_values=True):
     """
     Create a dictionary with given variable. Keys are variable values, values
     are indices (transformed from string to int); in case all values are
     integers, we also sort them.
-
     """
     if isinstance(variable, ContinuousVariable):
-        print("get_variable_value_indices - attribute %s is a continuous "
-              "variable" % (str(variable)))
         return {}
-
-    if sort_values_for_discrete_attrs:
+    if sort_values:
         values = get_variable_values_sorted(variable)
     else:
-        values = list(variable.values)
-    return dict([(values[i], i) for i in range(len(values))])
+        values = variable.values
+    return {value: i for i, value in enumerate(values)}
 
 
 class ScaleData:
@@ -83,7 +68,6 @@ class ScaleData:
         self.have_data = False
         self.have_subset_data = False
 
-        self.jitter_continuous = 0
         self.jitter_seed = 0
 
         self.attr_values = {}
@@ -157,10 +141,11 @@ class ScaleData:
 
         self.data_domain = full_data.domain
         self.data_has_class = bool(full_data.domain.class_var)
-        self.data_has_continuous_class = bool(self.data_has_class and
-                                              isinstance(full_data.domain.class_var, ContinuousVariable))
-        self.data_has_discrete_class = bool(self.data_has_class and
-                                            isinstance(full_data.domain.class_var, DiscreteVariable))
+        self.data_has_continuous_class = \
+            isinstance(full_data.domain.class_var, ContinuousVariable)
+        self.data_has_discrete_class = \
+            isinstance(full_data.domain.class_var, DiscreteVariable)
+
         self.data_class_name = self.data_has_class and full_data.domain.class_var.name
         if self.data_has_class:
             self.data_class_index = self.attribute_name_index[self.data_class_name]

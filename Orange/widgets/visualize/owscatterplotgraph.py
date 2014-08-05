@@ -1,3 +1,4 @@
+from math import log10, floor, ceil
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -23,126 +24,24 @@ from Orange.widgets.utils.scaling import (get_variable_values_sorted,
 from Orange.widgets.settings import Setting, ContextSetting
 
 
-def is_selected(point):
-    if not isinstance(point, SpotItem):
-        raise TypeError('Expected SpotItem instead of %s' % point.__class__)
-    return point.pen().color() == point.brush().color()
-
-
-def to_selected_color(point):
-    if not isinstance(point, SpotItem):
-        raise TypeError('Expected SpotItem instead of %s' % point.__class__)
-    point.setBrush(point.pen().color())
-
-
-def to_unselected_color(point):
-    if not isinstance(point, SpotItem):
-        raise TypeError('Expected SpotItem instead of %s' % point.__class__)
-    color = point.pen().color()
-    lighter_color = color.lighter(LIGHTER_VALUE)
-    lighter_color.setAlpha(self.alpha_value)
-    point.setBrush(lighter_color)
-
-
-class GradientLegendItem(QGraphicsObject, GraphicsWidgetAnchor):
-    gradient_width = 20
-
-    def __init__(self, title, palette, values, parent):
-        QGraphicsObject.__init__(self, parent)
-        GraphicsWidgetAnchor.__init__(self)
-        self.parent = self.legend = parent
-        self.palette = palette
-        self.values = values
-
-        self.title = QGraphicsTextItem('%s:' % title, self)
-        f = self.title.font()
-        f.setBold(True)
-        self.title.setFont(f)
-        self.title_item = QGraphicsRectItem(self.title.boundingRect(), self)
-        self.title_item.setPen(QPen(Qt.NoPen))
-        self.title_item.stackBefore(self.title)
-
-        self.label_items = [QGraphicsTextItem(text, self) for text in values]
-        for i in self.label_items:
-            i.setTextWidth(50)
-
-        self.rect = QRectF()
-
-        self.gradient_item = QGraphicsRectItem(self)
-        self.gradient = QLinearGradient()
-        self.gradient.setStops([(v * 0.1, self.palette[v * 0.1])
-                                for v in range(11)])
-        self.orientation = Qt.Horizontal
-        self.set_orientation(Qt.Vertical)
-
-        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-
-    def set_orientation(self, orientation):
-        return
-        if self.orientation == orientation:
-            return
-
-        self.orientation = orientation
-
-        if self.orientation == Qt.Vertical:
-            height = max(item.boundingRect().height()
-                         for item in self.label_items)
-            total_height = height * max(5, len(self.label_items))
-            interval = (total_height -
-                        self.label_items[-1].boundingRect().height()
-                        ) / (len(self.label_items) - 1)
-            self.gradient_item.setRect(10, 0, self.gradient_width, total_height)
-            self.gradient.setStart(10, 0)
-            self.gradient.setFinalStop(10, total_height)
-            self.gradient_item.setBrush(QBrush(self.gradient))
-            self.gradient_item.setPen(QPen(Qt.NoPen))
-            y = -20   # hja, no; dela --> pri boundingRect() zato pristejem +20
-            x = 0
-            move_item_xy(self.title, x, y, False)
-            y = 10
-            x = 30
-            for item in self.label_items:
-                move_item_xy(item, x, y, False)
-                                       # self.parent.graph.animate_plot)
-                y += interval
-            self.rect = QRectF(10, 0,
-                               self.gradient_width +
-                               max(item.boundingRect().width()
-                                   for item in self.label_items),
-                               self.label_items[0].boundingRect().height() *
-                               max(5, len(self.label_items)))
-        else:
-            # za horizontalno orientacijo nisem dodajal title-a
-            width = 50
-            height = max(item.boundingRect().height()
-                         for item in self.label_items)
-            total_width = width * max(5, len(self.label_items))
-            interval = (total_width -
-                        self.label_items[-1].boundingRect().width()
-                        ) / (len(self.label_items) - 1)
-
-            self.gradient_item.setRect(0, 0, total_width, self.gradient_width)
-            self.gradient.setStart(0, 0)
-            self.gradient.setFinalStop(total_width, 0)
-            self.gradient_item.setBrush(QBrush(self.gradient))
-            self.gradient_item.setPen(QPen(Qt.NoPen))
-            x = 0
-            y = 30
-            for item in self.label_items:
-                move_item_xy(item, x, y, False)
-                                       # self.parent.graph.animate_plot)
-                x += interval
-            self.rect = QRectF(0, 0, total_width, self.gradient_width + height)
-
-    # noinspection PyPep8Naming
-    def boundingRect(self):
-        width = max(self.rect.width(), self.title_item.boundingRect().width())
-        height = self.rect.height() + self.title_item.boundingRect().height()
-        return QRectF(self.rect.left(), self.rect.top(), width, height)
-
-    def paint(self, painter, option, widget):
-        pass
+class DiscretizedScale:
+    def __init__(self, min_v, max_v):
+        super().__init__()
+        dif = max_v - min_v
+        decimals = -floor(log10(dif))
+        resolution = 10 ** -decimals
+        bins = ceil(dif / resolution)
+        if bins < 6:
+            decimals += 1
+            if bins < 3:
+                resolution /= 4
+            else:
+                resolution /= 2
+            bins = ceil(dif / resolution)
+        self.offset = resolution * floor(min_v // resolution)
+        self.bins = bins
+        self.decimals = max(decimals, 0)
+        self.width = resolution
 
 
 class ScatterViewBox(pg.ViewBox):
@@ -282,8 +181,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.selection_behavior = 0
 
-        self.legend = None
-        self.legend_position = None
+        self.legend = self.color_legend = None
+        self.legend_position = self.color_legend_position = None
 
         self.tips = TooltipManager(self)
         # self.setMouseTracking(True)
@@ -471,8 +370,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             brush = [QBrush(QColor(128, 128, 128))] * self.n_points
         else:
             if isinstance(self.data_domain[color_index], ContinuousVariable):
-                c_data = self.no_jittering_scaled_data[color_index,
-                                                       self.valid_data]
+                c_data = self.original_data[color_index, self.valid_data]
+                self.scale = DiscretizedScale(np.min(c_data), np.max(c_data))
+                c_data -= self.scale.offset
+                c_data /= self.scale.width
+                c_data = np.floor(c_data) + 0.5
+                c_data /= self.scale.bins
+                c_data = np.clip(c_data, 0, 1)
                 palette = self.continuous_palette
                 color = [QColor(*palette.getRGB(i)) for i in c_data]
                 pen = np.array([QPen(QBrush(col), 1.5) for col in color])
@@ -575,6 +479,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.legend_position = self.legend.pos()
             self.legend.setParent(None)
             self.legend = None
+        if self.color_legend:
+            self.color_legend_position = self.color_legend.pos()
+            self.color_legend.setParent(None)
+            self.color_legend = None
 
     def make_legend(self):
         self.remove_legend()
@@ -586,11 +494,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color_index = self.get_color_index()
         if color_index == -1:
             return
-        if not self.legend:
-            self.create_legend()
         color_var = self.data_domain[color_index]
         use_shape = self.get_shape_index() == color_index
         if isinstance(color_var, DiscreteVariable):
+            if not self.legend:
+                self.create_legend()
+
             palette = self.discrete_palette
             for i, value in enumerate(color_var.values):
                 color = QColor(*palette.getRGB(i))
@@ -600,14 +509,36 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         pen=color, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
-#        else:
-#            amin, amax = self.attr_values[self.attr_color]
-#            values = [color_var.valstr(v) for v in np.arange(amin, amax, (amin - amax) / 10)]
-#            GradientLegendItem("X", self.continuous_palette, values, self.legend)
+        else:
+            legend = self.color_legend = pg.graphicsItems.LegendItem.LegendItem()
+            legend.layout.setHorizontalSpacing(20)
+            legend.layout.setVerticalSpacing(0)
+            legend.setParentItem(self.plot_widget.plotItem)
+            if self.color_legend_position:
+                legend.anchor(itemPos=(0, 0), parentPos=(0, 0),
+                              offset=self.color_legend_position)
+            else:
+                legend.anchor(itemPos=(1, 0), parentPos=(1, 0),
+                              offset=(-10, 10))
+
+            scale = self.scale
+            labels = ["{0:{1}}".format(scale.offset + i * scale.width,
+                                       scale.decimals)
+                      for i in range(scale.bins + 1)]
+            palette = self.continuous_palette
+            symbol = "os"[self.get_shape_index() == -1]
+            for i in range(scale.bins):
+                color = QColor(*palette.getRGB((i + 0.5) / scale.bins))
+                brush = QBrush(color.lighter(self.LighterValue))
+                legend.addItem(
+                    pg.ScatterPlotItem(pen=color, brush=brush, size=15,
+                                       symbol=symbol),
+                    "   {} - {}".format(labels[i], labels[i + 1])
+                )
+
 
     def make_shape_legend(self):
         shape_index = self.get_shape_index()
-        # Also don't create if same as color
         if shape_index == -1 or shape_index == self.get_color_index():
             return
         if not self.legend:
