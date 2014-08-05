@@ -240,6 +240,20 @@ plot_curves = namedtuple(
 )
 
 
+class InfiniteLine(pg.InfiniteLine):
+    """pyqtgraph.InfiniteLine extended to support antialiasing.
+    """
+    def __init__(self, pos=None, angle=90, pen=None, movable=False,
+                 bounds=None, antialias=False):
+        super().__init__(pos, angle, pen, movable, bounds)
+        self.antialias = antialias
+
+    def paint(self, painter, *args):
+        if self.antialias:
+            painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        super().paint(painter, *args)
+
+
 class OWROCAnalysis(widget.OWWidget):
     name = "ROC Analysis"
     description = ("Displays Receiver Operating Characteristics curve " +
@@ -309,11 +323,30 @@ class OWROCAnalysis(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Analysis")
 
-#         gui.checkBox(box, self, "display_perf_line", "Show performance line",
-#                      callback=self._on_display_perf_line_changed)
         gui.checkBox(box, self, "display_def_threshold",
                      "Default threshold (0.5) point",
                      callback=self._on_display_def_threshold_changed)
+
+        gui.checkBox(box, self, "display_perf_line", "Show performance line",
+                     callback=self._on_display_perf_line_changed)
+        grid = QtGui.QGridLayout()
+        ibox = gui.indentedBox(box, orientation=grid)
+
+        sp = gui.spin(box, self, "fp_cost", 1, 1000, 10,
+                      callback=self._on_display_perf_line_changed)
+        grid.addWidget(QtGui.QLabel("FP Cost"), 0, 0)
+        grid.addWidget(sp, 0, 1)
+
+        sp = gui.spin(box, self, "fn_cost", 1, 1000, 10,
+                      callback=self._on_display_perf_line_changed)
+        grid.addWidget(QtGui.QLabel("FN Cost"))
+        grid.addWidget(sp, 1, 1)
+        sp = gui.spin(box, self, "target_prior", 1, 99,
+                      callback=self._on_display_perf_line_changed)
+        sp.setSuffix("%")
+        sp.addAction(QtGui.QAction("Auto", sp))
+        grid.addWidget(QtGui.QLabel("Prior target class probability"))
+        grid.addWidget(sp, 2, 1)
 
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QtGui.QFrame.StyledPanel)
@@ -459,6 +492,11 @@ class OWROCAnalysis(widget.OWWidget):
                     self.plot.addItem(item)
 
             hull_curves = [curve.merged.hull for curve in selected]
+            self._rocch = convex_hull(hull_curves)
+            iso_pen = QPen(QColor(Qt.black), 1)
+            iso_pen.setCosmetic(True)
+            self._perf_line = InfiniteLine(pen=iso_pen, antialias=True)
+            self.plot.addItem(self._perf_line)
 
         elif self.roc_averaging == OWROCAnalysis.Vertical:
             for curve in curves:
@@ -501,6 +539,9 @@ class OWROCAnalysis(widget.OWWidget):
         pen.setCosmetic(True)
         self.plot.plot([0, 1], [0, 1], pen=pen, antialias=True)
 
+        if self.roc_averaging == OWROCAnalysis.Merge:
+            self._update_perf_line()
+
     def _on_target_changed(self):
         self.plot.clear()
         self._setup_plot()
@@ -511,6 +552,9 @@ class OWROCAnalysis(widget.OWWidget):
             self._setup_plot()
 
     def _on_display_perf_line_changed(self):
+        if self.roc_averaging == OWROCAnalysis.Merge:
+            self._update_perf_line()
+
         if self.perf_line is not None:
             self.perf_line.setVisible(self.display_perf_line)
 
@@ -521,6 +565,21 @@ class OWROCAnalysis(widget.OWWidget):
         self.plot.clear()
         if self.results is not None:
             self._setup_plot()
+
+    def _update_perf_line(self):
+        if self._perf_line is None:
+            return
+
+        self._perf_line.setVisible(self.display_perf_line)
+        if self.display_perf_line:
+            m = roc_iso_performance_slope(
+                self.fp_cost, self.fn_cost, self.target_prior / 100.0)
+
+            hull = self._rocch
+            ind = roc_iso_performance_line(m, hull)
+            angle = numpy.arctan2(m, 1)  # in radians
+            self._perf_line.setAngle(angle * 180 / numpy.pi)
+            self._perf_line.setPos((hull.fpr[ind[0]], hull.tpr[ind[0]]))
 
     def onDeleteWidget(self):
         self.clear()
@@ -689,7 +748,42 @@ def convex_hull(curves):
                 else:
                     hull.pop()
 
-    return ROCPoints._make(zip(*hull))
+    return ROCPoints._make(map(numpy.array, zip(*hull)))
+
+
+def roc_iso_performance_line(slope, hull, tol=1e-5):
+    """
+    Return the indices where a line with `slope` touches the ROC convex hull.
+    """
+    fpr, tpr, *_ = hull
+
+    # Compute the distance of each point to a reference iso line
+    # going through point (0, 1). The point(s) with the minimum
+    # distance are our result
+
+    # y = m * x + 1
+    # m * x - 1y + 1 = 0
+    a, b, c = slope, -1, 1
+    dist = distance_to_line(a, b, c, fpr, tpr)
+    mindist = numpy.min(dist)
+
+    return numpy.flatnonzero((dist - mindist) <= tol)
+
+
+def distance_to_line(a, b, c, x0, y0):
+    """
+    Return the distance to a line ax + by + c = 0
+    """
+    assert a != 0 or b != 0
+    return numpy.abs(a * x0 + b * y0 + c) / numpy.sqrt(a ** 2 + b ** 2)
+
+
+def roc_iso_performance_slope(fp_cost, fn_cost, p):
+    assert 0 <= p <= 1
+    if fn_cost * p == 0:
+        return numpy.inf
+    else:
+        return (fp_cost * (1. - p)) / (fn_cost * p)
 
 
 def main():
