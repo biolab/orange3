@@ -2,13 +2,11 @@ from math import log10, floor, ceil
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
-from pyqtgraph.graphicsItems.GraphicsWidgetAnchor import GraphicsWidgetAnchor
+from pyqtgraph.graphicsItems.LegendItem import ItemSample, LegendItem
 from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt, QRectF, QPointF
-from PyQt4.QtGui import (QColor, QTransform,
-                         QGraphicsObject, QGraphicsTextItem, QLinearGradient,
-                         QPen, QBrush, QGraphicsRectItem, QGraphicsItem)
+from PyQt4.QtGui import QColor, QTransform, QPen, QBrush
 
 from Orange.data import DiscreteVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable
@@ -18,10 +16,44 @@ from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
 from Orange.widgets.utils.plot import (OWPalette, OWPlotGUI,
                                        TooltipManager, NOTHING, SELECT, PANNING,
                                        ZOOMING, SELECTION_ADD, SELECTION_REMOVE,
-                                       SELECTION_TOGGLE, move_item_xy)
+                                       SELECTION_TOGGLE)
 from Orange.widgets.utils.scaling import (get_variable_values_sorted,
                                           ScaleScatterPlotData)
 from Orange.widgets.settings import Setting, ContextSetting
+
+
+class PaletteItemSample(ItemSample):
+    def __init__(self, palette, scale):
+        super().__init__(None)
+        self.palette = palette
+        self.scale = scale
+        cutoffs = ["{0:{1}}".format(scale.offset + i * scale.width,
+                                   scale.decimals)
+                   for i in range(scale.bins + 1)]
+        self.labels = [QtGui.QStaticText("{} - {}".format(fr, to))
+                       for fr, to in zip(cutoffs, cutoffs[1:])]
+        for label in self.labels:
+            label.prepare()
+        self.text_width = max(label.size().width() for label in self.labels)
+
+    def boundingRect(self):
+        return QtCore.QRectF(0, 0,
+                             40 + self.text_width, 20 + self.scale.bins * 15)
+
+    def paint(self, p, *args):
+        p.setRenderHint(p.Antialiasing)  # only if the data is antialiased.
+        scale = self.scale
+        palette = self.palette
+        font = p.font()
+        font.setPixelSize(11)
+        p.setFont(font)
+        for i, label in enumerate(self.labels):
+            color = QColor(*palette.getRGB((i + 0.5) / scale.bins))
+            p.setPen(QPen(QBrush(QColor(0, 0, 0, 0)), 2))
+            p.setBrush(QBrush(color.lighter(OWScatterPlotGraph.LighterValue)))
+            p.drawRect(0, i * 15, 15, 15)
+            p.setPen(QPen(Qt.black))
+            p.drawStaticText(20, i * 15 + 1, label)
 
 
 class DiscretizedScale:
@@ -464,8 +496,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.legend.setVisible(self.show_legend)
 
     def create_legend(self):
-        legend = self.legend = pg.graphicsItems.LegendItem.LegendItem()
+        legend = self.legend = LegendItem()
         legend.layout.setHorizontalSpacing(15)
+        legend.layout.setVerticalSpacing(0)
         legend.setParentItem(self.plot_widget.plotItem)
         if self.legend_position:
             legend.anchor(itemPos=(0, 0), parentPos=(0, 0),
@@ -499,7 +532,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if isinstance(color_var, DiscreteVariable):
             if not self.legend:
                 self.create_legend()
-
             palette = self.discrete_palette
             for i, value in enumerate(color_var.values):
                 color = QColor(*palette.getRGB(i))
@@ -510,32 +542,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
         else:
-            legend = self.color_legend = pg.graphicsItems.LegendItem.LegendItem()
-            legend.layout.setHorizontalSpacing(20)
-            legend.layout.setVerticalSpacing(0)
+            legend = self.color_legend = LegendItem()
             legend.setParentItem(self.plot_widget.plotItem)
             if self.color_legend_position:
                 legend.anchor(itemPos=(0, 0), parentPos=(0, 0),
                               offset=self.color_legend_position)
             else:
-                legend.anchor(itemPos=(1, 0), parentPos=(1, 0),
-                              offset=(-10, 10))
-
-            scale = self.scale
-            labels = ["{0:{1}}".format(scale.offset + i * scale.width,
-                                       scale.decimals)
-                      for i in range(scale.bins + 1)]
-            palette = self.continuous_palette
-            symbol = "os"[self.get_shape_index() == -1]
-            for i in range(scale.bins):
-                color = QColor(*palette.getRGB((i + 0.5) / scale.bins))
-                brush = QBrush(color.lighter(self.LighterValue))
-                legend.addItem(
-                    pg.ScatterPlotItem(pen=color, brush=brush, size=15,
-                                       symbol=symbol),
-                    "   {} - {}".format(labels[i], labels[i + 1])
-                )
-
+                legend.anchor(itemPos=(1, 1), parentPos=(1, 1),
+                              offset=(-10, -50))
+            label = PaletteItemSample(self.continuous_palette, self.scale)
+            legend.addItem(label, "")
+            legend.setGeometry(label.boundingRect())
 
     def make_shape_legend(self):
         shape_index = self.get_shape_index()

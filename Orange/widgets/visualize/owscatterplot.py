@@ -17,7 +17,6 @@ from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
 class OWScatterPlot(OWWidget):
-
     name = 'Scatter plot'
     description = 'Scatter plot visualization'
 
