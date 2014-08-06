@@ -107,7 +107,7 @@ def contains_nan(A, axis=0):
         return _np_contains_nan(A, axis=axis)
 
 
-class LogisticRegressionLearner(classification.Fitter):
+class LogisticRegressionLearner(classification.SklFitter):
     def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
                  fit_intercept=True, intercept_scaling=1, class_weight=None,
                  random_state=None):
@@ -136,7 +136,7 @@ class LogisticRegressionLearner(classification.Fitter):
         return LogisticRegressionClassifier(clsf)
 
 
-class LogisticRegressionClassifier(classification.Model):
+class LogisticRegressionClassifier(classification.SklModel):
     def __init__(self, clf):
         self.clf = clf
 
