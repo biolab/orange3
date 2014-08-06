@@ -2,11 +2,11 @@ from math import log10, floor, ceil
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
-from pyqtgraph.graphicsItems.LegendItem import ItemSample, LegendItem
+from pyqtgraph.graphicsItems.LegendItem import ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt, QRectF, QPointF
-from PyQt4.QtGui import QColor, QTransform, QPen, QBrush
+from PyQt4.QtCore import Qt, QRectF, QPointF, Signal
+from PyQt4.QtGui import QColor, QPen, QBrush
+from PyQt4.QtGui import QStaticText, QPainterPath, QTransform
 
 from Orange.data import DiscreteVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable
@@ -30,18 +30,17 @@ class PaletteItemSample(ItemSample):
         cutoffs = ["{0:{1}}".format(scale.offset + i * scale.width,
                                    scale.decimals)
                    for i in range(scale.bins + 1)]
-        self.labels = [QtGui.QStaticText("{} - {}".format(fr, to))
+        self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cutoffs, cutoffs[1:])]
         for label in self.labels:
             label.prepare()
         self.text_width = max(label.size().width() for label in self.labels)
 
     def boundingRect(self):
-        return QtCore.QRectF(0, 0,
-                             40 + self.text_width, 20 + self.scale.bins * 15)
+        return QRectF(0, 0, 40 + self.text_width, 20 + self.scale.bins * 15)
 
     def paint(self, p, *args):
-        p.setRenderHint(p.Antialiasing)  # only if the data is antialiased.
+        p.setRenderHint(p.Antialiasing)
         scale = self.scale
         palette = self.palette
         font = p.font()
@@ -54,6 +53,33 @@ class PaletteItemSample(ItemSample):
             p.drawRect(0, i * 15, 15, 15)
             p.setPen(QPen(Qt.black))
             p.drawStaticText(20, i * 15 + 1, label)
+
+
+class PositionedLegendItem(pg.graphicsItems.LegendItem.LegendItem):
+    """
+    LegendItem that remembers its last position. The id of the legend is
+    computed from the widget's id and optional additional id (for widgets
+    with multiple legends).
+    """
+    positions = {}
+
+    def __init__(self, plot_item, widget, legend_id="", at_bottom=False):
+        super().__init__()
+        self.id = "{}-{}".format(id(widget), legend_id)
+        self.layout.setHorizontalSpacing(15)
+        self.layout.setVerticalSpacing(0)
+        self.setParentItem(plot_item)
+        position = PositionedLegendItem.positions.get(self.id)
+        if position:
+            self.anchor(itemPos=(0, 0), parentPos=(0, 0), offset=position)
+        elif at_bottom:
+            self.anchor(itemPos=(1, 1), parentPos=(1, 1), offset=(-10, -50))
+        else:
+            self.anchor(itemPos=(1, 0), parentPos=(1, 0), offset=(-10, 10))
+
+    def setParent(self, parent):
+        super().setParent(parent)
+        PositionedLegendItem.positions[self.id] = self.pos()
 
 
 class DiscretizedScale:
@@ -144,15 +170,15 @@ class ScatterViewBox(pg.ViewBox):
 
 def _define_symbols():
     symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
-    path = QtGui.QPainterPath()
-    path.addEllipse(QtCore.QRectF(-0.25, -0.25, 0.5, 0.5))
+    path = QPainterPath()
+    path.addEllipse(QRectF(-0.25, -0.25, 0.5, 0.5))
     path.moveTo(-0.5, 0.5)
     path.lineTo(0.5, -0.5)
     path.moveTo(-0.5, -0.5)
     path.lineTo(0.5, 0.5)
     symbols["?"] = path
 
-    tr = QtGui.QTransform()
+    tr = QTransform()
     tr.rotate(180)
     symbols['t'] = tr.map(symbols['t'])
 
@@ -160,7 +186,7 @@ _define_symbols()
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
-    selection_changed = QtCore.Signal()
+    selection_changed = Signal()
 
     attr_color = ContextSetting("", ContextSetting.OPTIONAL)
     attr_label = ContextSetting("", ContextSetting.OPTIONAL)
@@ -496,16 +522,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.legend.setVisible(self.show_legend)
 
     def create_legend(self):
-        legend = self.legend = LegendItem()
-        legend.layout.setHorizontalSpacing(15)
-        legend.layout.setVerticalSpacing(0)
-        legend.setParentItem(self.plot_widget.plotItem)
-        if self.legend_position:
-            legend.anchor(itemPos=(0, 0), parentPos=(0, 0),
-                          offset=self.legend_position)
-        else:
-            legend.anchor(itemPos=(1, 0), parentPos=(1, 0),
-                          offset=(-10, 10))
+        self.legend = PositionedLegendItem(self.plot_widget.plotItem, self)
 
     def remove_legend(self):
         if self.legend:
@@ -542,14 +559,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
         else:
-            legend = self.color_legend = LegendItem()
-            legend.setParentItem(self.plot_widget.plotItem)
-            if self.color_legend_position:
-                legend.anchor(itemPos=(0, 0), parentPos=(0, 0),
-                              offset=self.color_legend_position)
-            else:
-                legend.anchor(itemPos=(1, 1), parentPos=(1, 1),
-                              offset=(-10, -50))
+            legend = self.color_legend = PositionedLegendItem(
+                self.plot_widget.plotItem,
+                self, legend_id="colors", at_bottom=True)
             label = PaletteItemSample(self.continuous_palette, self.scale)
             legend.addItem(label, "")
             legend.setGeometry(label.boundingRect())
