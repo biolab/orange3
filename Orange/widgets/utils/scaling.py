@@ -391,22 +391,42 @@ class ScaleScatterPlotData(ScaleData):
     getOriginalSubsetData = get_original_subset_data
 
     # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
-    def get_xy_data_positions(self, xattr, yattr):
+    def get_xy_data_positions(self, xattr, yattr, filter_valid=False,
+                              copy=True):
         """
         Create x-y projection of attributes in attrlist.
 
         """
-        xattr_index, yattr_index = self.attribute_name_index[xattr], self.attribute_name_index[yattr]
+        xattr_index = self.attribute_name_index[xattr]
+        yattr_index = self.attribute_name_index[yattr]
 
-        xdata = self.scaled_data[xattr_index].copy()
-        ydata = self.scaled_data[yattr_index].copy()
+        xattr_index = self.attribute_name_index[xattr]
+        yattr_index = self.attribute_name_index[yattr]
+        if filter_valid is True:
+            filter_valid = self.get_valid_list([xattr_index, yattr_index])
+        if isinstance(filter_valid, np.ndarray):
+            xdata = self.scaled_data[xattr_index, filter_valid]
+            ydata = self.scaled_data[yattr_index, filter_valid]
+        elif copy:
+            xdata = self.scaled_data[xattr_index].copy()
+            ydata = self.scaled_data[yattr_index].copy()
+        else:
+            xdata = self.scaled_data[xattr_index]
+            ydata = self.scaled_data[yattr_index]
 
-        if isinstance(self.data_domain[xattr_index], DiscreteVariable): xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
-        else:  xdata = xdata * (self.attr_values[xattr][1] - self.attr_values[xattr][0]) + float(self.attr_values[xattr][0])
-
-        if isinstance(self.data_domain[yattr_index], DiscreteVariable): ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
-        else:  ydata = ydata * (self.attr_values[yattr][1] - self.attr_values[yattr][0]) + float(self.attr_values[yattr][0])
-        return (xdata, ydata)
+        if isinstance(self.data_domain[xattr_index], DiscreteVariable):
+            xdata *= len(self.data_domain[xattr_index].values)
+            xdata -= 0.5
+        else:
+            xdata *= self.attr_values[xattr][1] - self.attr_values[xattr][0]
+            xdata += float(self.attr_values[xattr][0])
+        if isinstance(self.data_domain[yattr_index], DiscreteVariable):
+            ydata *= len(self.data_domain[yattr_index].values)
+            ydata -= 0.5
+        else:
+            ydata *= self.attr_values[yattr][1] - self.attr_values[yattr][0]
+            ydata += float(self.attr_values[yattr][0])
+        return xdata, ydata
 
     getXYDataPositions = get_xy_data_positions
 
