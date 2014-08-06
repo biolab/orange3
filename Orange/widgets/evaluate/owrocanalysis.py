@@ -21,7 +21,7 @@ import Orange.data
 import Orange.evaluation.testing
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalette
+from Orange.widgets.utils import colorpalette, colorbrewer
 
 #: Points on a ROC curve
 ROCPoints = namedtuple(
@@ -310,9 +310,10 @@ class OWROCAnalysis(widget.OWWidget):
 
         cbox = gui.widgetBox(box, "Classifiers")
         cbox.setFlat(True)
-        gui.listBox(cbox, self, "selected_classifiers", "classifier_names",
-                    selectionMode=QtGui.QListView.MultiSelection,
-                    callback=self._on_classifiers_changed)
+        self.classifiers_list_box = gui.listBox(
+            cbox, self, "selected_classifiers", "classifier_names",
+            selectionMode=QtGui.QListView.MultiSelection,
+            callback=self._on_classifiers_changed)
 
         abox = gui.widgetBox(box, "Average ROC Curves")
         abox.setFlat(True)
@@ -423,9 +424,14 @@ class OWROCAnalysis(widget.OWWidget):
             names = ["#{}".format(i + 1)
                      for i in range(len(results.predicted))]
 
-        self.colors = colorpalette.ColorPaletteGenerator(len(names))
+        self.colors = colorpalette.ColorPaletteGenerator(
+            len(names), colorbrewer.colorSchemes["qualitative"]["Dark2"])
+
         self.classifier_names = names
         self.selected_classifiers = list(range(len(names)))
+        for i in range(len(names)):
+            listitem = self.classifiers_list_box.item(i)
+            listitem.setIcon(colorpalette.ColorPixmap(self.colors[i]))
 
         class_var = results.data.domain.class_var
         self.target_cb.addItems(class_var.values)
