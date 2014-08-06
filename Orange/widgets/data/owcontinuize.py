@@ -136,7 +136,7 @@ class OWContinuize(widget.OWWidget):
     #     self.send("Preprocessor", PreprocessedLearner(
     #         lambda data, weightId=0, tc=(self.targetValue if self.classTreatment else -1):
     #             Table(continuizer(data, weightId, tc)
-    #                 if data.domain.class_var and self.data.domain.class_var.var_type == Variable.VarTypes.Discrete
+    #                 if data.domain.class_var and isinstance(self.data.domain.class_var, DiscreteVariable)
     #                 else continuizer(data, weightId), data)))
 
     def sendData(self):

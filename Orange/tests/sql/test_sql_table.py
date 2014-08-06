@@ -90,7 +90,6 @@ class SqlTableTests(PostgresTest):
 
             float_attr, discrete_attr = table.domain
             string_attr, = table.domain.metas
-            VarTypes = float_attr.VarTypes
 
             self.assertIsInstance(float_attr, ContinuousVariable)
             self.assertEqual(float_attr.name, "col0")
