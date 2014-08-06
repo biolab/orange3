@@ -28,7 +28,7 @@ class PaletteItemSample(ItemSample):
         self.palette = palette
         self.scale = scale
         cutoffs = ["{0:{1}}".format(scale.offset + i * scale.width,
-                                   scale.decimals)
+                                    scale.decimals)
                    for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cutoffs, cutoffs[1:])]
@@ -49,7 +49,7 @@ class PaletteItemSample(ItemSample):
         for i, label in enumerate(self.labels):
             color = QColor(*palette.getRGB((i + 0.5) / scale.bins))
             p.setPen(QPen(QBrush(QColor(0, 0, 0, 0)), 2))
-            p.setBrush(QBrush(color.lighter(OWScatterPlotGraph.LighterValue)))
+            p.setBrush(QBrush(color))
             p.drawRect(0, i * 15, 15, 15)
             p.setPen(QPen(Qt.black))
             p.drawStaticText(20, i * 15 + 1, label)
@@ -169,6 +169,10 @@ class ScatterViewBox(pg.ViewBox):
 
 
 def _define_symbols():
+    """
+    Add symbol ? to ScatterPlotItemSymbols,
+    reflect the triangle to point upwards
+    """
     symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
     path = QPainterPath()
     path.addEllipse(QRectF(-0.25, -0.25, 0.5, 0.5))
@@ -204,7 +208,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
-    LighterValue = 160
+    DarkerValue = 120
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
@@ -241,6 +245,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.legend = self.color_legend = None
         self.legend_position = self.color_legend_position = None
+        self.scale = None
 
         self.tips = TooltipManager(self)
         # self.setMouseTracking(True)
@@ -437,10 +442,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 c_data = np.clip(c_data, 0, 1)
                 palette = self.continuous_palette
                 color = [QColor(*palette.getRGB(i)) for i in c_data]
-                pen = np.array([QPen(QBrush(col), 1.5) for col in color])
+                pen = np.array([QPen(QBrush(col.darker(self.DarkerValue)), 1)
+                                for col in color])
                 for col in color:
                     col.setAlpha(self.alpha_value)
-                brush = [QBrush(col.lighter(self.LighterValue))
+                brush = [QBrush(col)
                          for col in color]
             else:
                 palette = self.discrete_palette
@@ -450,12 +456,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 c_data = c_data.astype(int)
                 colors = [palette[i] for i in range(n_colors)] + \
                          [QColor(128, 128, 128)]
-                pens = np.array([QPen(QBrush(col), 1.5) for col in colors])
+                pens = np.array([QPen(QBrush(col.darker(self.DarkerValue)), 1.5)
+                                 for col in colors])
                 pen = pens[c_data]
                 for color in colors:
                     color.setAlpha(self.alpha_value)
                 brushes = np.array(
-                    [QBrush(col.lighter(self.LighterValue)) for col in colors])
+                    [QBrush(col) for col in colors])
                 brush = brushes[c_data]
         return pen, brush
 
@@ -552,7 +559,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             palette = self.discrete_palette
             for i, value in enumerate(color_var.values):
                 color = QColor(*palette.getRGB(i))
-                brush = color.lighter(self.LighterValue)
+                brush = color.lighter(self.DarkerValue)
                 self.legend.addItem(
                     pg.ScatterPlotItem(
                         pen=color, brush=brush, size=10,
@@ -574,7 +581,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.create_legend()
         shape_var = self.data_domain[shape_index]
         color = self.color(OWPalette.Data)
-        brush = color.lighter(self.LighterValue)
+        brush = color.lighter(self.DarkerValue)
         brush.setAlpha(self.alpha_value)
         for i, value in enumerate(shape_var.values):
             self.legend.addItem(
