@@ -1,4 +1,4 @@
-from math import log10, floor, ceil
+from math import log10, floor, ceil, isnan
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -27,11 +27,10 @@ class PaletteItemSample(ItemSample):
         super().__init__(None)
         self.palette = palette
         self.scale = scale
-        cutoffs = ["{0:{1}}".format(scale.offset + i * scale.width,
-                                    scale.decimals)
+        cuts = ["{0:{1}}".format(scale.offset + i * scale.width, scale.decimals)
                    for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
-                       for fr, to in zip(cutoffs, cutoffs[1:])]
+                       for fr, to in zip(cuts, cuts[1:])]
         for label in self.labels:
             label.prepare()
         self.text_width = max(label.size().width() for label in self.labels)
@@ -104,10 +103,9 @@ class DiscretizedScale:
 
 class ScatterViewBox(pg.ViewBox):
     def __init__(self, graph):
-        pg.ViewBox.__init__(self)
+        pg.ViewBox.__init__(self, enableMenu=False)
         self.graph = graph
         self.setMouseMode(self.PanMode)
-        self.setMenuEnabled(False)  # should disable the right click menu
 
     # noinspection PyPep8Naming
     def mouseDragEvent(self, ev):
@@ -141,30 +139,19 @@ class ScatterViewBox(pg.ViewBox):
                           if value_rect.contains(QPointF(all_points[i].pos()))]
         return points_in_rect
 
-    def unselect_all(self):
-        item = self.graph.scatterplot_item
-        points = item.points()
-        for p in points:
-            to_unselected_color(p)
-        self.graph.selected_points = []
-
     def toggle_points_selection(self, points):
         if self.graph.selection_behavior == SELECTION_ADD:
             for p in points:
-                to_selected_color(p)
                 self.graph.selected_points.append(p)
         elif self.graph.selection_behavior == SELECTION_REMOVE:
             for p in points:
-                to_unselected_color(p)
                 if p in self.graph.selected_points:
                     self.graph.selected_points.remove(p)
         elif self.graph.selection_behavior == SELECTION_TOGGLE:
             for p in points:
                 if is_selected(p):
-                    to_unselected_color(p)
                     self.graph.selected_points.remove(p)
                 else:
-                    to_selected_color(p)
                     self.graph.selected_points.append(p)
 
 
@@ -209,6 +196,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
     DarkerValue = 120
+    UnknownColor = (168, 50, 168)
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
@@ -236,15 +224,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.n_points = 0
 
         self.gui = OWPlotGUI(self)
-        self.continuous_palette = \
-            ContinuousPaletteGenerator(QColor(200, 200, 200),
-                                       QColor(0, 0, 0), True)
+        self.continuous_palette = ContinuousPaletteGenerator(
+            QColor(255, 255, 0), QColor(0, 0, 255), True)
         self.discrete_palette = ColorPaletteGenerator()
 
         self.selection_behavior = 0
 
         self.legend = self.color_legend = None
-        self.legend_position = self.color_legend_position = None
         self.scale = None
 
         self.tips = TooltipManager(self)
@@ -252,20 +238,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # self.grabGesture(QPinchGesture)
         # self.grabGesture(QPanGesture)
 
-        self.state = NOTHING
-        self._pressed_mouse_button = 0  # Qt.NoButton
-        self._pressed_point = None
-        self.selection_items = []
-        self._current_rs_item = None
-        self._current_ps_item = None
-        self.polygon_close_treshold = 10
         self.auto_send_selection_callback = None
-
-        self.data_range = {}
-        self.map_transform = QTransform()
-        self.graph_area = QRectF()
-        self.selected_points = []
-
         self.update_grid()
 
     def spot_item_clicked(self, plot, points):
@@ -415,9 +388,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         attr_color = self.attr_color
         if attr_color != "" and attr_color != "(Same color)":
             color_index = self.attribute_name_index[attr_color]
-            if isinstance(self.data_domain[attr_color], DiscreteVariable):
-                self.discrete_palette.setNumberOfColors(
-                    len(self.data_domain[attr_color].values))
+            color_var = self.data_domain[attr_color]
+            if isinstance(color_var, DiscreteVariable):
+                self.discrete_palette.setNumberOfColors(len(color_var.values))
         return color_index
 
     def compute_colors(self):
@@ -432,39 +405,41 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             color = self.color(OWPalette.Data)
             pen = [QPen(QBrush(color), 1.5)] * self.n_points
             brush = [QBrush(QColor(128, 128, 128))] * self.n_points
+            return pen, brush
+
+        c_data = self.original_data[color_index, self.valid_data]
+        if isinstance(self.data_domain[color_index], ContinuousVariable):
+            unknown_color = QColor(*self.UnknownColor)
+            self.scale = DiscretizedScale(np.min(c_data), np.max(c_data))
+            c_data -= self.scale.offset
+            c_data /= self.scale.width
+            c_data = np.floor(c_data) + 0.5
+            c_data /= self.scale.bins
+            c_data = np.clip(c_data, 0, 1)
+            palette = self.continuous_palette
+            color = [unknown_color if isnan(i) else QColor(*palette.getRGB(i))
+                     for i in c_data]
+            pen = np.array([QPen(QBrush(col.darker(self.DarkerValue)), 1)
+                            for col in color])
+            for col in color:
+                col.setAlpha(self.alpha_value)
+            brush = [QBrush(col)
+                     for col in color]
         else:
-            if isinstance(self.data_domain[color_index], ContinuousVariable):
-                c_data = self.original_data[color_index, self.valid_data]
-                self.scale = DiscretizedScale(np.min(c_data), np.max(c_data))
-                c_data -= self.scale.offset
-                c_data /= self.scale.width
-                c_data = np.floor(c_data) + 0.5
-                c_data /= self.scale.bins
-                c_data = np.clip(c_data, 0, 1)
-                palette = self.continuous_palette
-                color = [QColor(*palette.getRGB(i)) for i in c_data]
-                pen = np.array([QPen(QBrush(col.darker(self.DarkerValue)), 1)
-                                for col in color])
-                for col in color:
-                    col.setAlpha(self.alpha_value)
-                brush = [QBrush(col)
-                         for col in color]
-            else:
-                palette = self.discrete_palette
-                n_colors = palette.numberOfColors
-                c_data = self.original_data[color_index, self.valid_data]
-                c_data[np.isnan(c_data)] = n_colors
-                c_data = c_data.astype(int)
-                colors = [palette[i] for i in range(n_colors)] + \
-                         [QColor(128, 128, 128)]
-                pens = np.array([QPen(QBrush(col.darker(self.DarkerValue)), 1.5)
-                                 for col in colors])
-                pen = pens[c_data]
-                for color in colors:
-                    color.setAlpha(self.alpha_value)
-                brushes = np.array(
-                    [QBrush(col) for col in colors])
-                brush = brushes[c_data]
+            palette = self.discrete_palette
+            n_colors = palette.numberOfColors
+            c_data[np.isnan(c_data)] = n_colors
+            c_data = c_data.astype(int)
+            colors = [palette[i] for i in range(n_colors)] + \
+                     [QColor(128, 128, 128)]
+            pens = np.array([QPen(QBrush(col.darker(self.DarkerValue)), 1.5)
+                             for col in colors])
+            pen = pens[c_data]
+            for color in colors:
+                color.setAlpha(self.alpha_value)
+            brushes = np.array(
+                [QBrush(col) for col in colors])
+            brush = brushes[c_data]
         return pen, brush
 
     def update_colors(self):
@@ -534,11 +509,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def remove_legend(self):
         if self.legend:
-            self.legend_position = self.legend.pos()
             self.legend.setParent(None)
             self.legend = None
         if self.color_legend:
-            self.color_legend_position = self.color_legend.pos()
             self.color_legend.setParent(None)
             self.color_legend = None
 
@@ -582,11 +555,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.create_legend()
         shape_var = self.data_domain[shape_index]
         color = self.color(OWPalette.Data)
-        brush = color.lighter(self.DarkerValue)
-        brush.setAlpha(self.alpha_value)
+        pen = QPen(color.darker(self.DarkerValue))
+        color.setAlpha(self.alpha_value)
         for i, value in enumerate(shape_var.values):
             self.legend.addItem(
-                pg.ScatterPlotItem(pen=color, brush=brush, size=10,
+                pg.ScatterPlotItem(pen=pen, brush=color, size=10,
                                    symbol=self.CurveSymbols[i]), value)
 
     def get_selections_as_tables(self, attr_list):
