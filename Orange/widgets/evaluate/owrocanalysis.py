@@ -31,6 +31,7 @@ ROCPoints = namedtuple(
      "thresholds"  # (N,) array of thresholds (in descending order)
      ]
 )
+ROCPoints.is_valid = property(lambda self: self.fpr.size > 0)
 
 #: ROC Curve and it's convex hull
 ROCCurve = namedtuple(
@@ -39,6 +40,7 @@ ROCCurve = namedtuple(
      "hull"     # ROCPoints of the convex hull
     ]
 )
+ROCCurve.is_valid = property(lambda self: self.points.is_valid)
 
 #: A ROC Curve averaged vertically
 ROCAveragedVert = namedtuple(
@@ -48,6 +50,7 @@ ROCAveragedVert = namedtuple(
      "tpr_std",  # array standard deviation of tpr at each fpr point
      ]
 )
+ROCAveragedVert.is_valid = property(lambda self: self.points.is_valid)
 
 #: A ROC Curve averaged by thresholds
 ROCAveragedThresh = namedtuple(
@@ -58,6 +61,7 @@ ROCAveragedThresh = namedtuple(
      "fpr_std"   # array standard deviations of fpr at each threshold
      ]
 )
+ROCAveragedThresh.is_valid = property(lambda self: self.points.is_valid)
 
 #: Combined data for a ROC curve of a single algorithm
 ROCData = namedtuple(
@@ -96,7 +100,8 @@ def ROCData_from_results(results, clf_index, target):
         c = ROCCurve(ROCPoints(*points), ROCPoints(*hull))
         fold_curves.append(c)
 
-    curves = [fold.points for fold in fold_curves]
+    curves = [fold.points for fold in fold_curves
+              if fold.is_valid]
 
     fpr, tpr, std = roc_curve_vertical_average(curves)
     thresh = numpy.zeros_like(fpr) * numpy.nan
@@ -293,6 +298,8 @@ class OWROCAnalysis(widget.OWWidget):
         self.colors = []
         self._curve_data = {}
         self._plot_curves = {}
+        self._rocch = None
+        self._perf_line = None
 
         box = gui.widgetBox(self.controlArea, "Plot")
         tbox = gui.widgetBox(box, "Target Class")
@@ -352,6 +359,8 @@ class OWROCAnalysis(widget.OWWidget):
         self.plotview.setFrameStyle(QtGui.QFrame.StyledPanel)
 
         self.plot = pg.PlotItem()
+        self.plot.getViewBox().setMenuEnabled(False)
+
         pen = QPen(self.palette().color(QtGui.QPalette.Text))
 
         tickfont = QtGui.QFont(self.font())
@@ -404,6 +413,8 @@ class OWROCAnalysis(widget.OWWidget):
         self.colors = []
         self._curve_data = {}
         self._plot_curves = {}
+        self._rocch = None
+        self._perf_line = None
 
     def _initialize(self, results):
         names = getattr(results, "fitter_names", None)
@@ -492,11 +503,12 @@ class OWROCAnalysis(widget.OWWidget):
                     self.plot.addItem(item)
 
             hull_curves = [curve.merged.hull for curve in selected]
-            self._rocch = convex_hull(hull_curves)
-            iso_pen = QPen(QColor(Qt.black), 1)
-            iso_pen.setCosmetic(True)
-            self._perf_line = InfiniteLine(pen=iso_pen, antialias=True)
-            self.plot.addItem(self._perf_line)
+            if hull_curves:
+                self._rocch = convex_hull(hull_curves)
+                iso_pen = QPen(QColor(Qt.black), 1)
+                iso_pen.setCosmetic(True)
+                self._perf_line = InfiniteLine(pen=iso_pen, antialias=True)
+                self.plot.addItem(self._perf_line)
 
         elif self.roc_averaging == OWROCAnalysis.Vertical:
             for curve in curves:
@@ -622,6 +634,13 @@ def interp(x, xp, fp, left=None, right=None):
 
 def roc_curve_for_fold(res, fold, clf_idx, target):
     fold_actual = res.actual[fold]
+    P = numpy.sum(fold_actual == target)
+    N = fold_actual.size - P
+
+    if P == 0 or N == 0:
+        # Undefined TP and FP rate
+        return numpy.array([]), numpy.array([]), numpy.array([])
+
     fold_probs = res.probabilities[clf_idx][fold][:, target]
     return sklearn.metrics.roc_curve(
         fold_actual, fold_probs, pos_label=target
@@ -725,10 +744,10 @@ def convex_hull(curves):
     merged_points = sorted(merged_points)
 
     if len(merged_points) == 0:
-        raise ValueError("No points")
+        return ROCPoints(numpy.array([]), numpy.array([]), numpy.array([]))
 
     if len(merged_points) <= 2:
-        return ROCPoints._make(zip(*merged_points))
+        return ROCPoints._make(map(numpy.array, zip(*merged_points)))
 
     points = iter(merged_points)
 
