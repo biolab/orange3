@@ -21,9 +21,20 @@ from Orange.widgets.utils.scaling import (get_variable_values_sorted,
                                           ScaleScatterPlotData)
 from Orange.widgets.settings import Setting, ContextSetting
 
+# TODO Move utility classes to another module, so they can be used elsewhere
+
 
 class PaletteItemSample(ItemSample):
+    """A color strip to insert into legends for discretized continuous values"""
+
     def __init__(self, palette, scale):
+        """
+        :param palette: palette used for showing continuous values
+        :type palette: ContinuousPaletteGenerator
+        :param scale: an instance of DiscretizedScale that defines the
+                      conversion of values into bins
+        :type scale: DiscretizedScale
+        """
         super().__init__(None)
         self.palette = palette
         self.scale = scale
@@ -56,13 +67,31 @@ class PaletteItemSample(ItemSample):
 
 class PositionedLegendItem(pg.graphicsItems.LegendItem.LegendItem):
     """
-    LegendItem that remembers its last position. The id of the legend is
-    computed from the widget's id and optional additional id (for widgets
-    with multiple legends).
+    LegendItem that remembers its last position. The position is related to the
+    actual widget (it is not retained over sessions). If the widget has multiple
+    legends, they can be assigned different appendices to the id.
+
+    The id of the legend is computed from the widget's id and the optional
+    additional id.
     """
     positions = {}
 
     def __init__(self, plot_item, widget, legend_id="", at_bottom=False):
+        """
+        Construct a legend and insert it into a plot item.
+
+        :param plot_item: PlotItem into which the legend is inserted
+        :type: plot_item: PlotItem
+        :param widget: the widget with which the legend is associated; used
+          only for constructing the id
+        :type widget: object
+        :param legend_id: appendix used to distinguish between multiple legends
+          in the same widget
+        :type legend_id: str
+        :param at_bottom: if `True` (default is `False`) the default legend
+          position is at the bottom
+        :type at_bottom: bool
+        """
         super().__init__()
         self.id = "{}-{}".format(id(widget), legend_id)
         self.layout.setHorizontalSpacing(15)
@@ -82,7 +111,34 @@ class PositionedLegendItem(pg.graphicsItems.LegendItem.LegendItem):
 
 
 class DiscretizedScale:
+    """
+    Compute suitable bins for continuous value from its minimal and
+    maximal value.
+
+    The width of the bin is a power of 10 (including negative powers).
+    The minimal value is rounded up and the maximal is rounded down. If this
+    gives less than 3 bins, the width is divided by four; if it gives
+    less than 6, it is halved.
+
+    .. attribute:: offset
+        The start of the first bin.
+
+    .. attribute:: width
+        The width of the bins
+
+    .. attribute:: bins
+        The number of bins
+
+    .. attribute:: decimals
+        The number of decimals used for printing out the boundaries
+    """
     def __init__(self, min_v, max_v):
+        """
+        :param min_v: Minimal value
+        :type min_v: float
+        :param max_v: Maximal value
+        :type max_v: float
+        """
         super().__init__()
         dif = max_v - min_v
         decimals = -floor(log10(dif))
@@ -100,10 +156,24 @@ class DiscretizedScale:
         self.decimals = max(decimals, 0)
         self.width = resolution
 
+    def compute_bins(self, a):
+        """
+        Compute bin number(s) for the given value(s).
 
-class ScatterViewBox(pg.ViewBox):
-    def __init__(self, graph):
-        pg.ViewBox.__init__(self, enableMenu=False)
+        :param a: value(s)
+        :type a: a number or numpy.ndarray
+        """
+        a = (a - self.offset) / self.width
+        if isinstance(a, np.ndarray):
+            a.clip(0, self.bins - 1)
+        else:
+            a = min(self.bins - 1, max(0, a))
+        return a
+
+
+class InteractiveViewBox(pg.ViewBox):
+    def __init__(self, graph, enable_menu=False):
+        pg.ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
         self.setMouseMode(self.PanMode)
 
@@ -116,10 +186,9 @@ class ScatterViewBox(pg.ViewBox):
                 self.updateScaleBox(ev.buttonDownPos(), ev.pos())
                 if ev.isFinish():
                     self.rbScaleBox.hide()
-                    selection_pixel_rect = \
-                        QRectF(ev.buttonDownPos(ev.button()), pos)
-                    points = self.calculate_points_in_rect(selection_pixel_rect)
-                    self.graph.select(points)
+                    pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
+                    value_rect = self.childGroup.mapRectFromParent(pixel_rect)
+                    self.graph.selected_rectangle(value_rect)
                 else:
                     self.updateScaleBox(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
@@ -127,17 +196,6 @@ class ScatterViewBox(pg.ViewBox):
             super().mouseDragEvent(ev)
         else:
             ev.ignore()
-
-    # TODO: move this to ScatterplotGraph -- send value_rect as argument;
-    # TODO: rename ScatterViewBox to something general
-    def calculate_points_in_rect(self, pixel_rect):
-        item = self.graph.scatterplot_item
-        all_points = item.points()
-        value_rect = self.childGroup.mapRectFromParent(pixel_rect)
-        points_in_rect = [point
-                          for point in all_points
-                          if value_rect.contains(QPointF(point.pos()))]
-        return points_in_rect
 
 
 def _define_symbols():
@@ -185,7 +243,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
-        svb = ScatterViewBox(self)
+        svb = InteractiveViewBox(self)
         self.plot_widget = pg.PlotWidget(viewBox=svb, parent=parent)
         self.plot_widget.setAntialiasing(True)
         self.replot = self.plot_widget
@@ -517,6 +575,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.legend.addItem(
                 pg.ScatterPlotItem(pen=pen, brush=color, size=10,
                                    symbol=self.CurveSymbols[i]), value)
+
+    def selected_rectangle(self, value_rect):
+        points = [point
+                  for point in self.scatterplot_item.points()
+                  if value_rect.contains(QPointF(point.pos()))]
+        self.select(points)
 
     def unselect_all(self):
         self.selection = None
