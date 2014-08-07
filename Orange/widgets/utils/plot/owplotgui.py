@@ -264,11 +264,13 @@ class OWPlotGUI:
     Select = 13
 
     ZoomSelection = 15
+    ZoomReset = 16
 
     SelectionAdd = 21
     SelectionRemove = 22
     SelectionToggle = 23
     SelectionOne = 24
+    SimpleSelect = 25
 
     SendSelection = 31
     ClearSelection = 32
@@ -299,16 +301,18 @@ class OWPlotGUI:
     ]
 
     _buttons = {
-        Zoom : ('Zoom', 'state', ZOOMING, None, 'Dlg_zoom'),
-        Pan : ('Pan', 'state', PANNING, None, 'Dlg_pan_hand'),
-        Select : ('Select', 'state', SELECT, None, 'Dlg_arrow'),
-        SelectionAdd : ('Add to selection', 'selection_behavior', SELECTION_ADD, None, 'Dlg_select_add'),
-        SelectionRemove : ('Remove from selection', 'selection_behavior', SELECTION_REMOVE, None, 'Dlg_select_remove'),
-        SelectionToggle : ('Toggle selection', 'selection_behavior', SELECTION_TOGGLE, None, 'Dlg_select_toggle'),
-        SelectionOne : ('Replace selection', 'selection_behavior', SELECTION_REPLACE, None, 'Dlg_arrow'),
-        SendSelection : ('Send selection', None, None, 'send_selection', 'Dlg_send'),
-        ClearSelection : ('Clear selection', None, None, 'clear_selection', 'Dlg_clear'),
-        ShufflePoints : ('ShufflePoints', None, None, 'shuffle_points', 'Dlg_sort')
+        Zoom: ('Zoom', 'state', ZOOMING, None, 'Dlg_zoom'),
+        ZoomReset: ('Zoom', None, None, None, 'Dlg_zoom_reset'),
+        Pan: ('Pan', 'state', PANNING, None, 'Dlg_pan_hand'),
+        SimpleSelect: ('Select', 'state', SELECT, None, 'Dlg_arrow'),
+        Select: ('Select', 'state', SELECT, None, 'Dlg_arrow'),
+        SelectionAdd: ('Add to selection', 'selection_behavior', SELECTION_ADD, None, 'Dlg_select_add'),
+        SelectionRemove: ('Remove from selection', 'selection_behavior', SELECTION_REMOVE, None, 'Dlg_select_remove'),
+        SelectionToggle: ('Toggle selection', 'selection_behavior', SELECTION_TOGGLE, None, 'Dlg_select_toggle'),
+        SelectionOne: ('Replace selection', 'selection_behavior', SELECTION_REPLACE, None, 'Dlg_arrow'),
+        SendSelection: ('Send selection', None, None, 'send_selection', 'Dlg_send'),
+        ClearSelection: ('Clear selection', None, None, 'clear_selection', 'Dlg_clear'),
+        ShufflePoints: ('ShufflePoints', None, None, 'shuffle_points', 'Dlg_sort')
     }
 
     _check_boxes = {
@@ -511,7 +515,7 @@ class OWPlotGUI:
 
     def zoom_select_toolbar(self, widget, text = 'Zoom / Select', orientation = Qt.Horizontal, buttons = default_zoom_select_buttons, nomargin = False):
         t = self.toolbar(widget, text, orientation, buttons, nomargin)
-        t.buttons[self.Select].click()
+        t.buttons[self.SimpleSelect].click()
         return t
 
     def effects_box(self, widget, box=None):
