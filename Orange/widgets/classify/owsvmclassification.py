@@ -140,6 +140,7 @@ class OWSVMClassification(widget.OWWidget):
             gamma=self.gamma,
             coef0=self.coef0,
             tol=self.tol,
+            probability=True,
         )
         if self.svmtype == 0:
             learner = svm.SVMLearner(C=self.C, **common_args)
