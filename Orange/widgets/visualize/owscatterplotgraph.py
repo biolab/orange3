@@ -197,6 +197,9 @@ class InteractiveViewBox(pg.ViewBox):
         else:
             ev.ignore()
 
+    def mouseClickEvent(self, ev):
+        ev.accept()
+        self.graph.unselect_all()
 
 def _define_symbols():
     """
@@ -243,8 +246,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
-        svb = InteractiveViewBox(self)
-        self.plot_widget = pg.PlotWidget(viewBox=svb, parent=parent)
+        self.view_box = InteractiveViewBox(self)
+        self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent)
         self.plot_widget.setAntialiasing(True)
         self.replot = self.plot_widget
         ScaleScatterPlotData.__init__(self)
@@ -424,7 +427,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.brush_colors[:, 3] = 0
                 self.brush_colors[self.selection, 3] = self.alpha_value
             else:
-                self.brush_colors[4, :] = self.alpha_value
+                self.brush_colors[:, 3] = self.alpha_value
             pen = self.pen_colors
             brush = np.array([QBrush(QColor(*col)) for col in self.brush_colors.tolist()])
         else:
@@ -584,6 +587,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def unselect_all(self):
         self.selection = None
+        self.update_colors(keep_colors=True)
 
     def spot_item_clicked(self, plot, points):
         self.select(points)
