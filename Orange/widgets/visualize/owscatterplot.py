@@ -1,6 +1,6 @@
 import sys
 
-import numpy
+import numpy as np
 from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QApplication, QColor
 
@@ -53,6 +53,7 @@ class OWScatterPlot(OWWidget):
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
         self.attribute_selection_list = None  # list of Orange.data.Variable
+        self.selection_dirty = False
 
         common_options = {"labelWidth": 50, "orientation": "horizontal",
                           "sendSelectedValue": True, "valueType": str}
@@ -106,17 +107,15 @@ class OWScatterPlot(OWWidget):
                      g.StateButtonsEnd, g.ZoomReset, g.Spacing, g.SendSelection]
         )
         buttons = self.zoom_select_toolbar.buttons
-        buttons[g.SendSelection].clicked.connect(self.send_selections)
+        buttons[g.SendSelection].clicked.connect(self.send_selection)
         buttons[g.Zoom].clicked.connect(self.graph.zoom_button_clicked)
         buttons[g.Pan].clicked.connect(self.graph.pan_button_clicked)
         buttons[g.SimpleSelect].clicked.connect(self.graph.select_button_clicked)
         buttons[g.ZoomReset].clicked.connect(self.graph.reset_button_clicked)
-#        gui.checkBox(
-#            gui.indentedBox(self.controlArea, sep=40), self,
-#            'auto_send_selection', 'Send selection on change',
-#            callback=self.selection_changed)
-#        self.graph.selection_changed.connect(self.selection_changed)
-
+        cb_auto_send = gui.checkBox(
+            box, self, 'auto_send_selection', 'Send selection on change')
+        gui.setStopper(self, buttons[g.SendSelection], cb_auto_send,
+                       "selection_dirty", self.send_selection)
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
@@ -169,10 +168,10 @@ class OWScatterPlot(OWWidget):
 
         # TODO: adapt scatter plot to work on SqlTables (avoid use of X and Y)
         if isinstance(self.data, SqlTable):
-            self.data.X = numpy.empty((len(self.data),
-                                       len(self.data.domain.attributes)))
-            self.data.Y = numpy.empty((len(self.data),
-                                       len(self.data.domain.class_vars)))
+            self.data.X = np.empty((len(self.data),
+                                   len(self.data.domain.attributes)))
+            self.data.Y = np.empty((len(self.data),
+                                   len(self.data.domain.class_vars)))
             for i, row in enumerate(data):
                 self.data.X[i] = [row[attr]
                                   for attr in self.data.domain.attributes]
@@ -183,9 +182,6 @@ class OWScatterPlot(OWWidget):
         # self.vizrank.clearResults()
         if not same_domain:
             self.init_attr_values()
-        self.graph.inside_colors = None
-        self.classification_results = None
-        self.outlier_values = None
         self.openContext(self.data)
 
     def set_subset_data(self, subset_data):
@@ -203,20 +199,13 @@ class OWScatterPlot(OWWidget):
             self.attr_y = self.attribute_selection_list[1]
         self.attribute_selection_list = None
         self.update_graph()
-        self.send_selections()
+        self.send_selection()
 
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
         else:
             self.attribute_selection_list = None
-
-    def send_selections(self):
-        return
-        selected, unselected = \
-            self.graph.get_selections_as_tables(self.get_shown_attributes())
-        self.send("Selected Data", selected)
-        self.send("Other Data", unselected)
 
     # Callback from VizRank dialog
     def show_selected_attributes(self):
@@ -284,12 +273,28 @@ class OWScatterPlot(OWWidget):
     def saveSettings(self):
         OWWidget.saveSettings(self)
         # self.vizrank.saveSettings()
-
-    def selection_changed(self):
+    """
+    def auto_selection_changed(self):
         self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
             not self.auto_send_selection)
         if self.auto_send_selection:
-            self.send_selections()
+            self.send_selection()
+    """
+    def selection_changed(self):
+        if self.auto_send_selection:
+            self.send_selection()
+        else:
+            self.selection_dirty = True
+
+    def send_selection(self):
+        self.selection_dirty = False
+        selection = self.graph.get_selection()
+        selected = self.data[selection]
+        unselection = np.full(len(self.data), True, dtype=bool)
+        unselection[selection] = False
+        unselected = self.data[unselection]
+        self.send("Selected Data", selected)
+        self.send("Other Data", unselected)
 
     def set_colors(self):
         dlg = self.create_color_dialog()

@@ -234,7 +234,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     alpha_value = Setting(255)
     show_grid = Setting(False)
     show_legend = Setting(True)
-    send_selection_on_update = Setting(True)
     tooltip_shows_all = Setting(False)
     square_granularity = Setting(3)
     space_between_cells = Setting(True)
@@ -285,7 +284,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # self.grabGesture(QPinchGesture)
         # self.grabGesture(QPanGesture)
 
-        self.auto_send_selection_callback = None
         self.update_grid()
 
     def set_data(self, data, subset_data=None, **args):
@@ -395,7 +393,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.pen_colors = self.brush_colors = None
         color_index = self.get_color_index()
         if color_index == -1:
-            color = self.color(OWPalette.Data)
+            color = self.plot_widget.palette().color(OWPalette.Data)
             pen = [QPen(QBrush(color), 1.5)] * self.n_points
             if self.selection is not None:
                 brush = [(QBrush(QColor(128, 128, 128, 255)),
@@ -570,7 +568,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not self.legend:
             self.create_legend()
         shape_var = self.data_domain[shape_index]
-        color = self.color(OWPalette.Data)
+        color = self.plot_widget.palette().color(OWPalette.Data)
         pen = QPen(color.darker(self.DarkerValue))
         color.setAlpha(self.alpha_value)
         for i, value in enumerate(shape_var.values):
@@ -651,58 +649,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:  # Handle shift and no modifiers
             self.selection[indices] = True
         self.update_colors(keep_colors=True)
-        #        self.master.selection_changed.emit()
+        self.master.selection_changed()
 
-    def get_selections_as_tables(self, attr_list):
-        attr_x, attr_y = attr_list
-        if not self.have_data:
-            return None, None
-
-        sel_indices, unsel_indices = self.get_selections_as_indices(attr_list)
-
-        if type(self.raw_data) is SqlTable:
-            selected = [self.raw_data[i]
-                        for i, val in enumerate(sel_indices) if val]
-            unselected = [self.raw_data[i]
-                          for (i, val) in enumerate(unsel_indices) if val]
+    def get_selection(self):
+        if self.selection is None:
+            return np.array([], dtype=int)
         else:
-            selected = self.raw_data[np.array(sel_indices)]
-            unselected = self.raw_data[np.array(unsel_indices)]
-
-        if len(selected) == 0:
-            selected = None
-        if len(unselected) == 0:
-            unselected = None
-
-        return selected, unselected
-
-    def get_selections_as_indices(self, attr_list, valid_data=None):
-        attr_x, attr_y = attr_list
-        if not self.have_data:
-            return [], []
-        attr_indices = [self.attribute_name_index[attr] for attr in attr_list]
-        if valid_data is None:
-            valid_data = self.get_valid_list(attr_indices)
-        x_array, y_array = self.get_xy_data_positions(attr_x, attr_y)
-        return self.get_selected_points(x_array, y_array, valid_data)
-
-    def get_selected_points(self, xData, yData, validData):
-        # hoping that the indices will be in same order as raw_data
-        ## TODO check if actually selecting the right points
-        pass
-
-    def color(self, role, group=None):
-        if group:
-            return self.plot_widget.palette().color(group, role)
-        else:
-            return self.plot_widget.palette().color(role)
+            return np.arange(len(self.raw_data)
+                )[self.valid_data][self.selection]
 
     def set_palette(self, p):
         self.plot_widget.setPalette(p)
-
-    def send_selection(self):
-        if self.auto_send_selection_callback:
-            self.auto_send_selection_callback()
 
     def save_to_file(self, size):
         pass
