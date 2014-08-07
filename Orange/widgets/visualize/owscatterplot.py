@@ -12,6 +12,7 @@ from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.utils.plot import OWPalette, OWPlotGUI
+from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
@@ -38,7 +39,7 @@ class OWScatterPlot(OWWidget):
     attr_y = ContextSetting("")
 
     graph = SettingProvider(OWScatterPlotGraph)
-#    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
+    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
@@ -100,13 +101,16 @@ class OWScatterPlot(OWWidget):
 
         gui.separator(self.controlArea, 8, 8)
         self.zoom_select_toolbar = g.zoom_select_toolbar(
-            self.controlArea, buttons=g.default_zoom_select_buttons +
-            [g.Spacing, g.ShufflePoints], nomargin=True)
+            self.controlArea, nomargin=True,
+            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
+                     g.StateButtonsEnd, g.ZoomReset, g.Spacing, g.SendSelection]
+        )
         buttons = self.zoom_select_toolbar.buttons
         buttons[g.SendSelection].clicked.connect(self.send_selections)
         buttons[g.Zoom].clicked.connect(self.graph.zoom_button_clicked)
         buttons[g.Pan].clicked.connect(self.graph.pan_button_clicked)
-        buttons[g.Select].clicked.connect(self.graph.select_button_clicked)
+        buttons[g.SimpleSelect].clicked.connect(self.graph.select_button_clicked)
+        buttons[g.ZoomReset].clicked.connect(self.graph.reset_button_clicked)
 #        gui.checkBox(
 #            gui.indentedBox(self.controlArea, sep=40), self,
 #            'auto_send_selection', 'Send selection on change',
@@ -275,8 +279,6 @@ class OWScatterPlot(OWWidget):
             return
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
-
-        self.graph.inside_colors = inside_colors or self.outlier_values
         self.graph.update_data(self.attr_x, self.attr_y)
 
     def saveSettings(self):

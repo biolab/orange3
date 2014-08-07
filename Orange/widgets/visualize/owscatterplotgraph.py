@@ -1,10 +1,12 @@
-from math import log10, floor, ceil, isnan
+from math import log10, floor, ceil
 import numpy as np
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ViewBox import ViewBox
 import pyqtgraph.graphicsItems.ScatterPlotItem
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
-from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem
-from PyQt4.QtCore import Qt, QRectF, QPointF, Signal
+from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem, ScatterPlotItem
+from pyqtgraph.graphicsItems.TextItem import TextItem
+from PyQt4.QtCore import Qt, QRectF, QPointF
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush
 from PyQt4.QtGui import QStaticText, QPainterPath, QTransform
 
@@ -14,9 +16,8 @@ from Orange.widgets import gui
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
                                                ContinuousPaletteGenerator)
 from Orange.widgets.utils.plot import (OWPalette, OWPlotGUI,
-                                       TooltipManager, NOTHING, SELECT, PANNING,
-                                       ZOOMING, SELECTION_ADD, SELECTION_REMOVE,
-                                       SELECTION_TOGGLE)
+                                       TooltipManager, SELECT, PANNING,
+                                       ZOOMING)
 from Orange.widgets.utils.scaling import (get_variable_values_sorted,
                                           ScaleScatterPlotData)
 from Orange.widgets.settings import Setting, ContextSetting
@@ -171,13 +172,13 @@ class DiscretizedScale:
         return a
 
 
-class InteractiveViewBox(pg.ViewBox):
+class InteractiveViewBox(ViewBox):
     def __init__(self, graph, enable_menu=False):
-        pg.ViewBox.__init__(self, enableMenu=enable_menu)
+        ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
         self.setMouseMode(self.PanMode)
 
-    # noinspection PyPep8Naming
+    # noinspection PyPep8Naming,PyMethodOverriding
     def mouseDragEvent(self, ev):
         if self.graph.state == SELECT:
             ev.accept()
@@ -188,7 +189,7 @@ class InteractiveViewBox(pg.ViewBox):
                     self.rbScaleBox.hide()
                     pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
                     value_rect = self.childGroup.mapRectFromParent(pixel_rect)
-                    self.graph.selected_rectangle(value_rect)
+                    self.graph.select_by_rectangle(value_rect)
                 else:
                     self.updateScaleBox(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
@@ -200,6 +201,7 @@ class InteractiveViewBox(pg.ViewBox):
     def mouseClickEvent(self, ev):
         ev.accept()
         self.graph.unselect_all()
+
 
 def _define_symbols():
     """
@@ -223,8 +225,6 @@ _define_symbols()
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
-    selection_changed = Signal()
-
     attr_color = ContextSetting("", ContextSetting.OPTIONAL)
     attr_label = ContextSetting("", ContextSetting.OPTIONAL)
     attr_shape = ContextSetting("", ContextSetting.OPTIONAL)
@@ -254,17 +254,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.scatterplot_item = None
 
         self.tooltip_data = []
-        self.tooltip = pg.TextItem(border=pg.mkPen(200, 200, 200),
-                                   fill=pg.mkBrush(250, 250, 200, 220))
+        self.tooltip = TextItem(
+            border=pg.mkPen(200, 200, 200), fill=pg.mkBrush(250, 250, 200, 220))
         self.tooltip.hide()
 
         self.labels = []
 
         self.master = scatter_widget
-        self.inside_colors = None
         self.shown_attribute_indices = []
         self.shown_x = ""
         self.shown_y = ""
+        self.pen_colors = self.brush_colors = None
 
         self.valid_data = None  # np.ndarray
         self.selection = None  # np.ndarray
@@ -278,7 +278,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.selection_behavior = 0
 
         self.legend = self.color_legend = None
-        self.scale = None
+        self.scale = None  # DiscretizedScale
 
         self.tips = TooltipManager(self)
         # self.setMouseTracking(True)
@@ -314,8 +314,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         index_x = self.attribute_name_index[attr_x]
         index_y = self.attribute_name_index[attr_y]
         self.valid_data = self.get_valid_list([index_x, index_y])
-        x_data, y_data = self.get_xy_data_positions(attr_x, attr_y,
-                                                    self.valid_data)
+        x_data, y_data = self.get_xy_data_positions(
+            attr_x, attr_y, self.valid_data)
         x_data = x_data[self.valid_data]
         y_data = y_data[self.valid_data]
         self.n_points = len(x_data)
@@ -330,14 +330,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color_data, brush_data = self.compute_colors()
         size_data = self.compute_sizes()
         shape_data = self.compute_symbols()
-        self.scatterplot_item = pg.ScatterPlotItem(
-            x=x_data, y=y_data,
-            symbol=shape_data, size=size_data, pen=color_data, brush=brush_data,
-            data=np.arange(self.n_points))
+        self.scatterplot_item = ScatterPlotItem(
+            x=x_data, y=y_data, data=np.arange(self.n_points),
+            symbol=shape_data, size=size_data, pen=color_data, brush=brush_data)
         self.plot_widget.addItem(self.scatterplot_item)
         self.plot_widget.addItem(self.tooltip)
         self.scatterplot_item.selected_points = []
-        self.scatterplot_item.sigClicked.connect(self.spot_item_clicked)
+        self.scatterplot_item.sigClicked.connect(self.select_by_click)
         self.scatterplot_item.scene().sigMouseMoved.connect(self.mouseMoved)
 
         self.update_labels()
@@ -397,7 +396,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color_index = self.get_color_index()
         if color_index == -1:
             color = self.color(OWPalette.Data)
-            pen = [QPen(QBrush(color), 1.5) for i in self.n_points]
+            pen = [QPen(QBrush(color), 1.5)] * self.n_points
             if self.selection is not None:
                 brush = [(QBrush(QColor(128, 128, 128, 255)),
                           QBrush(QColor(128, 128, 128)))[s]
@@ -429,7 +428,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             else:
                 self.brush_colors[:, 3] = self.alpha_value
             pen = self.pen_colors
-            brush = np.array([QBrush(QColor(*col)) for col in self.brush_colors.tolist()])
+            brush = np.array([QBrush(QColor(*col))
+                              for col in self.brush_colors.tolist()])
         else:
             if self.pen_colors is None:
                 palette = self.discrete_palette
@@ -465,12 +465,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             if not keep_colors:
                 self.make_legend()
 
-
     update_alpha_value = update_colors
 
     def create_labels(self):
         for x, y in zip(*self.scatterplot_item.getData()):
-            ti = pg.TextItem()
+            ti = TextItem()
             self.plot_widget.addItem(ti)
             ti.setPos(x, y)
             self.labels.append(ti)
@@ -552,7 +551,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 color = QColor(*palette.getRGB(i))
                 brush = color.lighter(self.DarkerValue)
                 self.legend.addItem(
-                    pg.ScatterPlotItem(
+                    ScatterPlotItem(
                         pen=color, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
@@ -576,36 +575,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color.setAlpha(self.alpha_value)
         for i, value in enumerate(shape_var.values):
             self.legend.addItem(
-                pg.ScatterPlotItem(pen=pen, brush=color, size=10,
-                                   symbol=self.CurveSymbols[i]), value)
-
-    def selected_rectangle(self, value_rect):
-        points = [point
-                  for point in self.scatterplot_item.points()
-                  if value_rect.contains(QPointF(point.pos()))]
-        self.select(points)
-
-    def unselect_all(self):
-        self.selection = None
-        self.update_colors(keep_colors=True)
-
-    def spot_item_clicked(self, plot, points):
-        self.select(points)
-
-    def select(self, points):
-        keys = QApplication.keyboardModifiers()
-        if self.selection is None or not keys & (
-                Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
-            self.selection = np.full(self.n_points, False, dtype=np.bool)
-        indices = [p.data() for p in points]
-        if keys & Qt.ControlModifier:
-            self.selection[indices] = False
-        elif keys & Qt.AltModifier:
-            self.selection[indices] = 1 - self.selection[indices]
-        else:  # Handle shift and no modifiers
-            self.selection[indices] = True
-        self.update_colors(keep_colors=True)
-#        self.master.selection_changed.emit()
+                ScatterPlotItem(pen=pen, brush=color, size=10,
+                                symbol=self.CurveSymbols[i]), value)
 
     # noinspection PyPep8Naming
     def mouseMoved(self, pos):
@@ -649,6 +620,38 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def select_button_clicked(self):
         self.scatterplot_item.getViewBox().setMouseMode(
             self.scatterplot_item.getViewBox().RectMode)
+
+    def reset_button_clicked(self):
+        self.view_box.autoRange()
+
+    def select_by_click(self, _, points):
+        self.select(points)
+
+    def select_by_rectangle(self, value_rect):
+        points = [point
+                  for point in self.scatterplot_item.points()
+                  if value_rect.contains(QPointF(point.pos()))]
+        self.select(points)
+
+    def unselect_all(self):
+        self.selection = None
+        self.update_colors(keep_colors=True)
+
+    def select(self, points):
+        # noinspection PyArgumentList
+        keys = QApplication.keyboardModifiers()
+        if self.selection is None or not keys & (
+                        Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
+            self.selection = np.full(self.n_points, False, dtype=np.bool)
+        indices = [p.data() for p in points]
+        if keys & Qt.ControlModifier:
+            self.selection[indices] = False
+        elif keys & Qt.AltModifier:
+            self.selection[indices] = 1 - self.selection[indices]
+        else:  # Handle shift and no modifiers
+            self.selection[indices] = True
+        self.update_colors(keep_colors=True)
+        #        self.master.selection_changed.emit()
 
     def get_selections_as_tables(self, attr_list):
         attr_x, attr_y = attr_list
