@@ -21,7 +21,7 @@ from Orange.statistics.distribution import get_distribution
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils import getHtmlCompatibleString
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg, defaultRGBColors
+from Orange.widgets.utils.colorpalette import ColorPaletteDlg, DefaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
 
@@ -267,7 +267,7 @@ class OWMosaicDisplay(OWWidget):
         # self.collapsableWBox.updateControls()
         dlg = self.createColorDialog()
         self.colorPalette = dlg.getDiscretePalette("discPalette")
-        self.selectionColorPalette = [QColor(*col) for col in defaultRGBColors]
+        self.selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
 
 
     def permutationListToggle(self):
@@ -378,7 +378,7 @@ class OWMosaicDisplay(OWWidget):
 
         if isinstance(self.data.domain.class_var, DiscreteVariable):
             self.interiorColoring = CLASS_DISTRIBUTION
-            self.colorPalette.setNumberOfColors(len(self.data.domain.class_var.values))
+            self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
         else:
             self.interiorColoring = PEARSON
 
@@ -1055,13 +1055,13 @@ class OWMosaicDisplay(OWWidget):
             self.selectedSchemaIndex = dlg.selectedSchemaIndex
             self.colorPalette = dlg.getDiscretePalette("discPalette")
             if self.data and self.data.domain.classVar and isinstance(self.data.domain.classVar, DiscreteVariable):
-                self.colorPalette.setNumberOfColors(len(self.data.domain.classVar.values))
+                self.colorPalette.set_number_of_colors(len(self.data.domain.classVar.values))
             self.updateGraph()
 
     def createColorDialog(self):
         c = ColorPaletteDlg(self, "Color Palette")
         c.createDiscretePalette("discPalette", "Discrete Palette",
-                                defaultRGBColors)  #defaultColorBrewerPalette)
+                                DefaultRGBColors)  #defaultColorBrewerPalette)
         c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
         return c
 

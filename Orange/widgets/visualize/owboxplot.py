@@ -324,10 +324,10 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_labels = [self.attr_label(lab) for lab in self.label_txts]
         self.draw_axis_disc()
         if self.grouping_select[0]:
-            self.discPalette.setNumberOfColors(len(self.conts[0]))
+            self.discPalette.set_number_of_colors(len(self.conts[0]))
             self.boxes = [self.strudel(cont) for cont in self.conts]
         else:
-            self.discPalette.setNumberOfColors(len(self.dist))
+            self.discPalette.set_number_of_colors(len(self.dist))
             self.boxes = [self.strudel(self.dist)]
 
         for row, box in enumerate(self.boxes):

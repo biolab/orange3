@@ -93,7 +93,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.add_relevant_selections(old_selection_conditions)
 
         if self.data_has_discrete_class:
-            self.discrete_palette.setNumberOfColors(len(self.data_domain.class_var.values))
+            self.discrete_palette.set_number_of_colors(len(self.data_domain.class_var.values))
 
         self.draw_curves()
         self.draw_distributions()

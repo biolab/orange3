@@ -208,6 +208,7 @@ class OWScatterPlot(OWWidget):
             self.attribute_selection_list = None
 
     def send_selections(self):
+        return
         selected, unselected = \
             self.graph.get_selections_as_tables(self.get_shown_attributes())
         self.send("Selected Data", selected)
@@ -266,7 +267,6 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_label = ""
 
     def major_graph_update(self, attributes=None, inside_colors=None, **args):
-        self.graph.clear_selection()
         self.update_graph(attributes, inside_colors, **args)
 
     def update_graph(self, attributes=None, inside_colors=None, **_):

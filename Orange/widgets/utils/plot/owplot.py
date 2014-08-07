@@ -447,7 +447,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
             else:
                 self.add_axis(key)
 
-        self.continuous_palette = ColorPaletteGenerator(numberOfColors = -1)
+        self.continuous_palette = ColorPaletteGenerator(number_of_colors= -1)
         self.discrete_palette = ColorPaletteGenerator()
 
         self.gui = OWPlotGUI(self)
