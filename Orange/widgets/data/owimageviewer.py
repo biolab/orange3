@@ -716,8 +716,10 @@ class ImageLoader(QObject):
         # Future yielding a QNetworkReply when finished.
         reply = self._netmanager.get(request)
         future._reply = reply
+        n_redir = 0
 
         def on_reply_ready(reply, future):
+            nonlocal n_redir
             if reply.error() == QNetworkReply.OperationCanceledError:
                 # The network request itself was canceled
                 future.cancel()
@@ -727,6 +729,23 @@ class ImageLoader(QObject):
                 # XXX Maybe convert the error into standard
                 # http and urllib exceptions.
                 future.set_exception(Exception(reply.errorString()))
+                return
+
+            # Handle a possible redirection
+            location = reply.attribute(
+                QNetworkRequest.RedirectionTargetAttribute)
+
+            if location is not None and n_redir < 1:
+                n_redir += 1
+                print(location)
+                location = reply.url().resolved(location)
+                # Retry the original request with a new url.
+                request = QNetworkRequest(reply.request())
+                request.setUrl(location)
+                newreply = self._netmanager.get(request)
+                future._reply = newreply
+                newreply.finished.connect(
+                    partial(on_reply_ready, newreply, future))
                 return
 
             reader = QImageReader(reply)
