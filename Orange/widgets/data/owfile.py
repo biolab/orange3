@@ -13,7 +13,7 @@ def addOrigin(examples, filename):
     strings = [var for var in vars if isinstance(var, StringVariable)]
     dirname, basename = os.path.split(filename)
     for var in strings:
-        if hasattr(var, "type") and not hasattr(var, "origin"):
+        if "type" in var.attributes and "origin" not in var.attributes:
             var.attributes["origin"] = dirname
 
 class OWFile(widget.OWWidget):
