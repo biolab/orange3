@@ -553,7 +553,7 @@ class OWEditDomain(widget.OWWidget):
             all_new_vars = list(self.domain_model)
             attrs = all_new_vars[: n_attrs]
             class_vars = all_new_vars[n_attrs: n_attrs + n_class_vars]
-            new_metas = all_new_vars[n_vars + n_class_vars:]
+            new_metas = all_new_vars[n_attrs + n_class_vars:]
             new_domain = Orange.data.Domain(attrs, class_vars, new_metas)
             new_data = Orange.data.Table.from_table(new_domain, self.data)
 
