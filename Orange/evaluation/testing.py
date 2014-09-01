@@ -172,16 +172,18 @@ class Testing:
         :type store_models: bool
         """
         self = super().__new__(cls)
-        self.store_data = kwargs.pop('store_data', False)
-        self.store_models = kwargs.pop('store_models', False)
 
+        if (data is not None) ^ (fitters is not None):
+            raise TypeError(
+                "Either none or both of 'data' and 'fitters' required.")
         if fitters is not None:
-            if data is None:
-                raise TypeError("{} is given fitters, but no data".
-                                format(cls.__name__))
             self.__init__(**kwargs)
             return self(data, fitters)
         return self
+
+    def __init__(self, store_data=False, store_models=False):
+        self.store_data = store_data
+        self.store_models = store_models
 
     def __call__(self, data, fitters):
         raise TypeError("{}.__call__ is not implemented".
@@ -203,7 +205,9 @@ class CrossValidation(Testing):
     .. attribute:: random_state
 
     """
-    def __init__(self, k=10, random_state=0):
+    def __init__(self, k=10, random_state=0, store_data=False,
+                 store_models=False):
+        super().__init__(store_data=store_data, store_models=store_models)
         self.k = k
         self.random_state = random_state
 
@@ -325,7 +329,9 @@ class TestOnTrainingData(Testing):
 
 
 class Bootstrap(Testing):
-    def __init__(self, n_resamples=10, p=0.75, random_state=0):
+    def __init__(self, n_resamples=10, p=0.75, random_state=0,
+                 store_data=False, store_models=False):
+        super().__init__(store_data=store_data, store_models=store_models)
         self.n_resamples = n_resamples
         self.p = p
         self.random_state = random_state
@@ -389,17 +395,14 @@ class Bootstrap(Testing):
         return results
 
 
-class TestOnTestData(object):
+class TestOnTestData(Testing):
     """
     Test on a separate test data set.
     """
-    def __new__(cls, train_data=None, test_data=None, fitters=None,
-                store_data=False, store_models=False, **kwargs):
+    def __new__(cls, train_data=None, test_data=None, fitters=None, **kwargs):
         self = super().__new__(cls)
-        self.store_data = store_data
-        self.store_models = store_models
 
-        if train_data is None and test_data is None and fitters is not None:
+        if train_data is None and test_data is None and fitters is None:
             return self
         elif train_data is not None and test_data is not None and \
                 fitters is not None:

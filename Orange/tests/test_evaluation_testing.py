@@ -212,7 +212,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
         data = Table('iris')[30:130]
         fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
 
-        results = testing.LeaveOneOut(k=10)(data, fitters)
+        results = testing.LeaveOneOut()(data, fitters)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -305,7 +305,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
         data = Table('iris')[30:130]
         fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
 
-        results = testing.TestOnTrainingData(k=10)(data, fitters)
+        results = testing.TestOnTrainingData()(data, fitters)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
