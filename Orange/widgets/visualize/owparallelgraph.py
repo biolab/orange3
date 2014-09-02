@@ -127,7 +127,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                 attr = self.data_domain[self.attributes[i]]
                 if isinstance(attr, ContinuousVariable):
                     self.set_axis_scale(axis_id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
-                elif isinstance(attr, DiscreteVarible):
+                elif isinstance(attr, DiscreteVariable):
                     attribute_values = get_variable_values_sorted(self.data_domain[self.attributes[i]])
                     attr_len = len(attribute_values)
                     values = [float(1.0 + 2.0 * j) / float(2 * attr_len) for j in range(len(attribute_values))]
