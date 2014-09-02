@@ -115,3 +115,12 @@ class Value(float):
         if isinstance(self.variable, StringVariable):
             return self._value
         return float(self)
+
+    def __getnewargs__(self):
+        return self.variable, float(self)
+
+    def __getstate__(self):
+        return dict(value=getattr(self, '_value', None))
+
+    def __setstate__(self, state):
+        self._value = state.get('value', None)
