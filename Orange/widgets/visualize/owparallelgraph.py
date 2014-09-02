@@ -193,7 +193,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                                            OWPoint(OWPoint.Rect, self.discrete_palette[i], self.point_width))
             else:
                 values = self.attr_values[self.data_domain.class_var.name]
-                decimals = self.data_domain.class_var.numberOfDecimals
+                decimals = self.data_domain.class_var.number_of_decimals
                 self.legend().add_color_gradient(self.data_domain.class_var.name,
                                                  ["%%.%df" % decimals % v for v in values])
         else:
@@ -364,7 +364,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                     condition = self.selection_conditions.get(attr.name, [0, 1])
                     val = self.attr_values[attr.name][0] + condition[pos] * (
                         self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
-                    str_val = attr.name + "= %%.%df" % attr.numberOfDecimals % val
+                    str_val = attr.name + "= %%.%df" % attr.number_of_decimals % val
                     QToolTip.showText(ev.globalPos(), str_val)
             else:
                 for curve in self.items():
