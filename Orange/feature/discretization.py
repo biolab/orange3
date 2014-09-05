@@ -300,6 +300,7 @@ def join_contingency(contingency):
     """
     Join contingency list into a single ordered distribution.
     """
+    import time
     k = len(contingency)
     values = numpy.r_[tuple(contingency[i][0] for i in range(k))]
     I = numpy.zeros((len(values), k))
@@ -311,15 +312,17 @@ def join_contingency(contingency):
         start += span
 
     sort_ind = numpy.argsort(values)
-
     values, I = values[sort_ind], I[sort_ind, :]
 
-    unique, uniq_index = numpy.unique(values, return_index=True)
-    #
-    spans = numpy.diff(numpy.r_[uniq_index, len(values)])
-    I = [numpy.sum(I[start:start + span], axis=0)
-         for start, span in zip(uniq_index, spans)]
-    I = numpy.array(I)
-    assert I.shape[0] == unique.shape[0]
-    return unique, I
+    last = None
+    iv = -1
+    for i in range(len(values)):
+        if last != values[i]:
+            iv += 1
+            last = values[i]
+            values[iv] = last
+            I[iv] = I[i]
+        else:
+            I[iv] += I[i]
+    return values[:iv+1],I[:iv+1]
 
