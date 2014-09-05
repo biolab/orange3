@@ -266,6 +266,9 @@ class Domain:
         state.pop("known_domains", None)
         return state
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.known_domains = weakref.WeakKeyDictionary()
 
     def index(self, var):
         """

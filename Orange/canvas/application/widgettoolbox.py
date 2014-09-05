@@ -229,10 +229,10 @@ class DragStartEventListener(QObject):
                 # Process the widget's mouse event, before starting the
                 # drag operation, so the widget can update its state.
                 obj.mouseMoveEvent(event)
-
                 self.dragStartOperationRequested.emit(obj)
 
-                self.buttonDownObj.setDown(False)
+                obj.setDown(False)
+
                 self.button = None
                 self.buttonDownPos = None
                 self.buttonDownObj = None

@@ -1,7 +1,7 @@
 from Orange import classification
 from sklearn.svm import SVC, LinearSVC, NuSVC, SVR, NuSVR, OneClassSVM
 
-class SVMLearner(classification.Fitter):
+class SVMLearner(classification.SklFitter):
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, probability=False,
@@ -27,7 +27,7 @@ class SVMLearner(classification.Fitter):
             return SVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVMClassifier(clf.fit(X, Y.reshape(-1)))
 
-class SVMClassifier(classification.Model):
+class SVMClassifier(classification.SklModel):
 
     def __init__(self, clf):
         self.clf = clf
@@ -40,7 +40,7 @@ class SVMClassifier(classification.Model):
         return value
 
 
-class LinearSVMLearner(classification.Fitter):
+class LinearSVMLearner(classification.SklFitter):
 
     def __init__(self, penalty='l2', loss='l2', dual=True, tol=0.0001,
                 C=1.0, multi_class='ovr', fit_intercept=True,
@@ -64,7 +64,7 @@ class LinearSVMLearner(classification.Fitter):
                         random_state=self.random_state)
         return LinearSVMClassifier(clf.fit(X, Y.reshape(-1)))
 
-class LinearSVMClassifier(classification.Model):
+class LinearSVMClassifier(classification.SklModel):
 
     def __init__(self, clf):
         self.clf = clf
@@ -74,7 +74,7 @@ class LinearSVMClassifier(classification.Model):
         return value
 
 
-class NuSVMLearner(classification.Fitter):
+class NuSVMLearner(classification.SklFitter):
 
     def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  shrinking=True, probability=False, tol=0.001, cache_size=200,
@@ -100,7 +100,7 @@ class NuSVMLearner(classification.Fitter):
             return NuSVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return NuSVMClassifier(clf.fit(X, Y.reshape(-1)))
 
-class NuSVMClassifier(classification.Model):
+class NuSVMClassifier(classification.SklModel):
 
     def __init__(self, clf):
         self.clf = clf
@@ -113,7 +113,7 @@ class NuSVMClassifier(classification.Model):
         return value
 
 
-class SVRLearner(classification.Fitter):
+class SVRLearner(classification.SklFitter):
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, C=1.0, epsilon=0.1, shrinking=True,
@@ -138,7 +138,7 @@ class SVRLearner(classification.Fitter):
             return SVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVRClassifier(clf.fit(X, Y.reshape(-1)))
 
-class SVRClassifier(classification.Model):
+class SVRClassifier(classification.SklModel):
 
     def __init__(self, clf):
         self.clf = clf
@@ -148,7 +148,7 @@ class SVRClassifier(classification.Model):
         return value
 
 
-class NuSVRLearner(classification.Fitter):
+class NuSVRLearner(classification.SklFitter):
 
     def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, tol=0.001,
@@ -173,7 +173,7 @@ class NuSVRLearner(classification.Fitter):
             return NuSVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return NuSVRClassifier(clf.fit(X, Y.reshape(-1)))
 
-class NuSVRClassifier(classification.Model):
+class NuSVRClassifier(classification.SklModel):
 
     def __init__(self, clf):
         self.clf = clf
@@ -183,7 +183,7 @@ class NuSVRClassifier(classification.Model):
         return value
 
 
-class OneClassSVMLearner(classification.Fitter):
+class OneClassSVMLearner(classification.SklFitter):
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, nu=0.5, shrinking=True, cache_size=200, max_iter=-1):
@@ -206,7 +206,7 @@ class OneClassSVMLearner(classification.Fitter):
             return OneClassSVMClassifier(clf.fit(X, W.reshape(-1)))
         return OneClassSVMClassifier(clf.fit(X))
 
-class OneClassSVMClassifier(classification.Model):
+class OneClassSVMClassifier(classification.SklModel):
 
     def __init__(self, clf):
         self.clf = clf

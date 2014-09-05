@@ -4,6 +4,7 @@ Link Item
 =========
 
 """
+import math
 
 from PyQt4.QtGui import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
@@ -14,6 +15,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt, QPointF, QEvent
 
 from .nodeitem import SHADOW_COLOR
+from .utils import stroke_path
 
 
 class LinkCurveItem(QGraphicsPathItem):
@@ -41,6 +43,8 @@ class LinkCurveItem(QGraphicsPathItem):
         self.shadow.setEnabled(False)
 
         self.__hover = False
+        self.__enabled = True
+        self.__shape = None
 
     def linkItem(self):
         """
@@ -49,29 +53,48 @@ class LinkCurveItem(QGraphicsPathItem):
         return self.__canvasLink
 
     def setHoverState(self, state):
+        self.prepareGeometryChange()
+        self.__shape = None
         self.__hover = state
         self.__update()
 
+    def setLinkEnabled(self, state):
+        self.prepareGeometryChange()
+        self.__shape = None
+        self.__enabled = state
+        self.__update()
+
+    def isLinkEnabled(self):
+        return self.__enabled
+
     def setCurvePenSet(self, pen, hoverPen):
+        self.prepareGeometryChange()
         if pen is not None:
             self.normalPen = pen
         if hoverPen is not None:
             self.hoverPen = hoverPen
+        self.__shape = None
         self.__update()
 
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemEnabledHasChanged:
-            # Update the pen style
-            self.__update()
+    def shape(self):
+        if self.__shape is None:
+            path = self.path()
+            pen = QPen(self.pen())
+            pen.setWidthF(max(pen.widthF(), 7.0))
+            pen.setStyle(Qt.SolidLine)
+            self.__shape = stroke_path(path, pen)
+        return self.__shape
 
-        return QGraphicsPathItem.itemChange(self, change, value)
+    def setPath(self, path):
+        self.__shape = None
+        QGraphicsPathItem.setPath(self, path)
 
     def __update(self):
         shadow_enabled = self.__hover
         if self.shadow.isEnabled() != shadow_enabled:
             self.shadow.setEnabled(shadow_enabled)
 
-        link_enabled = self.isEnabled()
+        link_enabled = self.__enabled
         if link_enabled:
             pen_style = Qt.SolidLine
         else:
@@ -319,11 +342,19 @@ class LinkItem(QGraphicsObject):
             sink_pos = self.sinkAnchor.anchorScenePos()
             source_pos = self.curveItem.mapFromScene(source_pos)
             sink_pos = self.curveItem.mapFromScene(sink_pos)
-            # TODO: get the orthogonal angle to the anchors path.
+
+            # Adaptive offset for the curve control points to avoid a
+            # cusp when the two points have the same y coordinate
+            # and are close together
+            delta = source_pos - sink_pos
+            dist = math.sqrt(delta.x() ** 2 + delta.y() ** 2)
+            cp_offset = min(dist / 2.0, 60.0)
+
+            # TODO: make the curve tangent orthogonal to the anchors path.
             path = QPainterPath()
             path.moveTo(source_pos)
-            path.cubicTo(source_pos + QPointF(60, 0),
-                         sink_pos - QPointF(60, 0),
+            path.cubicTo(source_pos + QPointF(cp_offset, 0),
+                         sink_pos - QPointF(cp_offset, 0),
                          sink_pos)
 
             self.curveItem.setPath(path)
@@ -418,7 +449,12 @@ class LinkItem(QGraphicsObject):
         dashed line.
 
         """
-        QGraphicsObject.setEnabled(self, enabled)
+        # This getter/setter pair override a property from the base class.
+        # They should be renamed to e.g. setLinkEnabled/linkEnabled
+        self.curveItem.setLinkEnabled(enabled)
+
+    def isEnabled(self):
+        return self.curveItem.isLinkEnabled()
 
     def setDynamicEnabled(self, enabled):
         """

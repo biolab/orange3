@@ -2,14 +2,18 @@
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
-
 from urllib import parse
+
 import numpy as np
-import psycopg2
+
+import Orange.misc
+psycopg2 = Orange.misc.import_late_warning("psycopg2")
 
 from .. import domain, variable, value, table, instance, filter,\
     DiscreteVariable, ContinuousVariable
 from Orange.data.sql import filter as sql_filter
+from Orange.data.sql.filter import CustomFilterSql
+from Orange.data.sql.parser import SqlParser
 
 
 class SqlTable(table.Table):
@@ -26,7 +30,7 @@ class SqlTable(table.Table):
     def __init__(
             self, uri=None,
             host=None, database=None, user=None, password=None, schema=None,
-            table=None, **kwargs):
+            table=None, type_hints=None, **kwargs):
         """
         Create a new proxy for sql table.
 
@@ -40,8 +44,16 @@ class SqlTable(table.Table):
 
         All but the database and table parameters are optional. Any additional
         parameters will be forwarded to the psycopg2 backend.
+
+        Variable types will be inferred based on the column types
+        (double -> ContinuousVariable, everything else -> StringVariable). You
+        can tell SqlTable to use different variables by passing a dict mapping
+        column names to Variable instances as type_hints parameter.
+
+        Class vars and metas can be specified as a list of column names in
+        __class_vars__ and __metas__ keys in type_hints dict.
         """
-        assert uri is not None or table is not None
+        assert uri is not None or database is not None
 
         connection_args = dict(
             host=host,
@@ -52,16 +64,58 @@ class SqlTable(table.Table):
         )
         if uri is not None:
             parameters = self.parse_uri(uri)
-            table = parameters.pop("table")
+            table = parameters.pop("table", None)
             connection_args.update(parameters)
         connection_args.update(kwargs)
 
         self.connection = psycopg2.connect(**connection_args)
         self.host = host
         self.database = database
-        self.table_name = self.name = table
-        self.domain = self._create_domain()
-        self.name = self.table_name
+
+        if table is not None:
+            self.table_name = self.quote_identifier(table)
+            self.domain = self.domain_from_fields(
+                self._get_fields(table),
+                type_hints=type_hints)
+            self.name = table
+
+    @classmethod
+    def from_sql(
+            cls, uri=None,
+            host=None, database=None, user=None, password=None, schema=None,
+            sql=None, type_hints=None, **kwargs):
+        """
+        Create a new proxy for sql select.
+
+        Database connection parameters can be specified either as a string:
+
+            table = SqlTable("user:password@host:port/database/table")
+
+        or using a set of keyword arguments:
+
+            table = SqlTable(database="test", sql="SELECT iris FROM iris")
+
+        All but the database and the sql parameters are optional. Any
+        additional parameters will be forwarded to the psycopg2 backend.
+
+        Variable types will be inferred based on the column types
+        (double -> ContinuousVariable, everything else -> StringVariable). You
+        can tell SqlTable to use different variables by passing a dict mapping
+        column names to Variable instances as type_hints parameter.
+
+        Class vars and metas can be specified as a list of column names in
+        __class_vars__ and __metas__ keys in type_hints dict.
+        """
+        table = cls(uri, host, database, user, password, schema, **kwargs)
+        p = SqlParser(sql)
+        table.table_name = p.from_
+        table.domain = table.domain_from_fields(
+            p.fields_with_types(table.connection),
+            type_hints=type_hints)
+        if p.where:
+            table.row_filters = (CustomFilterSql(p.where), )
+
+        return table
 
     @staticmethod
     def parse_uri(uri):
@@ -88,27 +142,49 @@ class SqlTable(table.Table):
             params['table'] = table
         return params
 
-    def _create_domain(self):
-        attributes, metas = [], []
-        for name, field_type, values in self._get_fields():
-            if 'double' in field_type:
-                attr = variable.ContinuousVariable(name=name)
-                attributes.append(attr)
-            elif 'char' in field_type and values:
-                attr = variable.DiscreteVariable(name=name, values=values)
-                attributes.append(attr)
+    def domain_from_fields(self, fields, type_hints=None):
+        """:fields: tuple(field_name, field_type, field_expression, values)"""
+        type_hints = type_hints or {}
+        attributes, class_vars, metas = [], [], []
+        suggested_metas = type_hints.pop('__metas__', [])
+        suggested_class_vars = type_hints.pop('__class_vars__', [])
+
+        for name, field_type, field_expr, values in fields:
+            var = self.var_from_field(name, field_type, field_expr, values,
+                                      type_hints)
+
+            if var.name in suggested_metas or \
+                    isinstance(var, variable.StringVariable):
+                metas.append(var)
+            elif var.name in suggested_class_vars:
+                class_vars.append(var)
             else:
-                attr = variable.StringVariable(name=name)
-                metas.append(attr)
-            field_name = '"%s"' % name
-            attr.to_sql = lambda field_name=field_name: field_name
+                attributes.append(var)
 
-        return domain.Domain(attributes, metas=metas)
+        return domain.Domain(attributes, class_vars, metas=metas)
 
-    def _get_fields(self):
-        cur = self._sql_get_fields()
+    @staticmethod
+    def var_from_field(name, field_type, field_expr, values, type_hints):
+        if name in type_hints:
+            var = type_hints[name]
+            if not var.name:
+                var.name = name
+        else:
+            if 'double' in field_type:
+                var = variable.ContinuousVariable(name=name)
+            elif 'char' in field_type and values:
+                var = variable.DiscreteVariable(name=name, values=values)
+            else:
+                var = variable.StringVariable(name=name)
+        var.to_sql = lambda: field_expr
+        return var
+
+    def _get_fields(self, table_name):
+        cur = self._sql_get_fields(table_name)
         for field, field_type in cur.fetchall():
-            yield field, field_type, self._get_field_values(field, field_type)
+            yield (field, field_type,
+                   self.quote_identifier(field),
+                   self._get_field_values(field, field_type))
 
     def _get_field_values(self, field_name, field_type):
         if 'double' in field_type:
@@ -235,7 +311,8 @@ class SqlTable(table.Table):
         table.connection = self.connection
         table.domain = self.domain
         table.row_filters = self.row_filters
-        table.table_name = table.name = self.table_name
+        table.table_name = self.table_name
+        table.name = self.name
         table.database = self.database
         table.host = self.host
         return table
@@ -271,7 +348,7 @@ class SqlTable(table.Table):
         return self._get_stats(columns)
 
     def _get_stats(self, columns):
-        columns = [(c.to_sql(), c.var_type == c.VarTypes.Continuous)
+        columns = [(c.to_sql(), isinstance(c, ContinuousVariable))
                    for c in columns]
         filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
@@ -302,7 +379,7 @@ class SqlTable(table.Table):
         for col in columns:
             cur = self._sql_get_distribution(col.to_sql(), filters)
             dist = np.array(cur.fetchall())
-            if col.var_type == col.VarTypes.Continuous:
+            if isinstance(col, ContinuousVariable):
                 dists.append((dist.T, []))
             else:
                 dists.append((dist[:, 1].T, []))
@@ -310,6 +387,8 @@ class SqlTable(table.Table):
         return dists
 
     def _compute_contingency(self, col_vars=None, row_var=None):
+        if col_vars is None:
+            col_vars = range(len(self.domain.variables))
         if len(col_vars) != 1:
             raise NotImplementedError("Contingency for multiple columns "
                                       "has not yet been implemented.")
@@ -338,13 +417,11 @@ class SqlTable(table.Table):
             cur = self._sql_compute_contingency(row_field, column_field,
                                                 filters)
 
-            if column.var_type == column.VarTypes.Continuous:
+            if isinstance(column, ContinuousVariable):
                 all_contingencies[i] = (self._continuous_contingencies(cur), [])
             else:
-                row_mapping = {v: i for i, v in enumerate(row.values)}
-                column_mapping = {v: i for i, v in enumerate(column.values)}
                 all_contingencies[i] = (self._discrete_contingencies(
-                    cur, row_mapping, column_mapping), [])
+                    cur, row, column), [])
         return all_contingencies
 
     def _continuous_contingencies(self, cur):
@@ -360,12 +437,11 @@ class SqlTable(table.Table):
         conts[-1] = np.array(conts[-1]).T
         return conts
 
-    def _discrete_contingencies(self, cur, row_mapping, col_mapping):
-        conts = np.zeros((len(row_mapping), len(col_mapping)))
-
+    def _discrete_contingencies(self, cur, row, column):
+        conts = np.zeros((len(row.values), len(column.values)))
         for row_value, col_value, count in cur.fetchall():
-            row_index = row_mapping[row_value]
-            col_index = col_mapping[col_value]
+            row_index = row.to_val(row_value)
+            col_index = column.to_val(col_value)
             conts[row_index, col_index] = count
         return conts
 
@@ -461,7 +537,7 @@ class SqlTable(table.Table):
     def _sql_query(self, fields, filters=(),
                    group_by=None, order_by=None, offset=None, limit=None):
         sql = ["SELECT", ', '.join(fields),
-               "FROM", self.quote_identifier(self.table_name)]
+               "FROM", self.table_name]
         if filters:
             sql.extend(["WHERE", " AND ".join(filters)])
         if group_by is not None:
@@ -478,15 +554,16 @@ class SqlTable(table.Table):
         fields = ["COUNT(*)"]
         return self._sql_query(fields, filters)
 
-    def _sql_get_fields(self):
+    def _sql_get_fields(self, table_name):
+        table_name = self.unquote_identifier(table_name)
         sql = ["SELECT column_name, data_type",
                "FROM INFORMATION_SCHEMA.COLUMNS",
-               "WHERE table_name =", self.quote_string(self.table_name)]
+               "WHERE table_name =", self.quote_string(table_name)]
         return self._execute_sql_query(" ".join(sql))
 
     def _sql_get_distinct_values(self, field_name):
         sql = ["SELECT DISTINCT", self.quote_identifier(field_name),
-               "FROM", self.quote_identifier(self.table_name),
+               "FROM", self.table_name,
                "ORDER BY", self.quote_identifier(field_name),
                "LIMIT 21"]
         return self._execute_sql_query(" ".join(sql))
@@ -520,6 +597,12 @@ class SqlTable(table.Table):
 
     def quote_identifier(self, value):
         return '"%s"' % value
+
+    def unquote_identifier(self, value):
+        if value.startswith('"'):
+            return value[1:len(value)-1]
+        else:
+            return value
 
     def quote_string(self, value):
         return "'%s'" % value

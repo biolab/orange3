@@ -265,7 +265,7 @@ class Table(MutableSequence, Storage):
 
         if isinstance(row_indices, slice):
             start, stop, stride = row_indices.indices(source.X.shape[0])
-            n_rows = (stop - start) / stride
+            n_rows = (stop - start) // stride
             if n_rows < 0:
                 n_rows = 0
         elif row_indices is ...:
@@ -280,6 +280,7 @@ class Table(MutableSequence, Storage):
         self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
         self.metas = get_columns(row_indices, conversion.metas, n_rows)
         self.W = np.array(source.W[row_indices])
+        self.name = getattr(source, 'name', '')
         return self
 
 
@@ -301,6 +302,7 @@ class Table(MutableSequence, Storage):
         self.Y = source.Y[row_indices]
         self.metas = source.metas[row_indices]
         self.W = source.W[row_indices]
+        self.name = getattr(source, 'name', '')
         return self
 
 
@@ -346,17 +348,17 @@ class Table(MutableSequence, Storage):
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
-                "Invalid number of variable columns ({} != {}".format(
+                "Invalid number of variable columns ({} != {})".format(
                     X.shape[1], len(domain.attributes))
             )
         if Y.shape[1] != len(domain.class_vars):
             raise ValueError(
-                "Invalid number of class columns ({} != {}".format(
+                "Invalid number of class columns ({} != {})".format(
                     Y.shape[1], len(domain.class_vars))
             )
         if metas.shape[1] != len(domain.metas):
             raise ValueError(
-                "Invalid number of meta attribute columns ({} != {}".format(
+                "Invalid number of meta attribute columns ({} != {})".format(
                     metas.shape[1], len(domain.metas))
             )
         if not X.shape[0] == Y.shape[0] == metas.shape[0] == W.shape[0]:
@@ -392,8 +394,9 @@ class Table(MutableSequence, Storage):
 
         # second line
         #TODO Basket column.
-        t = {"Continuous":"c", "Discrete":"d", "String":"string", "Basket":"basket"}
-        f.write("\t".join([t[str(j.var_type)] for j in domain_vars]))
+        t = {"ContinuousVariable":"c", "DiscreteVariable":"d", "StringVariable":"string", "Basket":"basket"}
+
+        f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
         f.write("\n")
 
         # third line
@@ -411,8 +414,9 @@ class Table(MutableSequence, Storage):
         f.write("\n")
 
         # data
+        domain_vars = [self.domain.index(var) for var in domain_vars]
         for i in self:
-            f.write("\t".join([str(i[j]) for j in domain_vars]))
+            f.write("\t".join(str(i[j]) for j in domain_vars))
             f.write("\n")
         f.close()
 
@@ -430,7 +434,7 @@ class Table(MutableSequence, Storage):
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
             if not ext:
-                for ext in [".tab", ".basket"]:
+                for ext in [".tab", ".txt", ".basket"]:
                     if os.path.exists(absolute_filename + ext):
                         absolute_filename += ext
                         break
@@ -443,6 +447,8 @@ class Table(MutableSequence, Storage):
             raise IOError('File "{}" was not found.'.format(filename))
         if ext == ".tab":
             data = io.TabDelimReader().read_file(absolute_filename, cls)
+        elif ext == ".txt":
+            data = io.TxtReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
             data = io.BasketReader().read_file(absolute_filename, cls)
         else:
@@ -1010,7 +1016,7 @@ class Table(MutableSequence, Storage):
                     sel += (col != "")
             elif isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
-                    s2 = np.zeros(len(self))
+                    s2 = np.zeros(len(self), dtype=bool)
                     for val in f.values:
                         if not isinstance(val, Real):
                             val = self.domain[f.column].to_val(val)
@@ -1212,6 +1218,7 @@ class Table(MutableSequence, Storage):
         if any(isinstance(var, ContinuousVariable) for var in col_desc):
             dep_indices = np.argsort(row_data)
             dep_sizes, nans = bn.bincount(row_data, n_rows - 1)
+            dep_sizes = dep_sizes.astype(int, copy=False)
             if nans:
                 raise ValueError("cannot compute contigencies with missing "
                                  "row data")

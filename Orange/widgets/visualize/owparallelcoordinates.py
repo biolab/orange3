@@ -239,7 +239,8 @@ if __name__ == "__main__":
     a = QApplication(sys.argv)
     ow = OWParallelCoordinates()
     ow.show()
-    ow.graph.discrete_palette = ColorPaletteGenerator(rgbColors=[(127, 201, 127), (190, 174, 212), (253, 192, 134)])
+    ow.graph.discrete_palette = ColorPaletteGenerator(
+        rgb_colors=[(127, 201, 127), (190, 174, 212), (253, 192, 134)])
     data = Orange.data.Table("iris")
     ow.set_data(data)
     ow.handleNewSignals()

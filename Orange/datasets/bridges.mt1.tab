@@ -1,6 +1,6 @@
 IDENTIF	RIVER	LOCATION	ERECTED	PURPOSE	LENGTH	LANES	CLEAR-G	T-OR-D	MATERIAL	SPAN	REL-L	TYPE
 s	d	s	c	d	c	c	d	d	d	d	d	d
-i		i						multiclass	multiclass	multiclass	multiclass	multiclass
+i		i						class	class	class	class	class
 E1	2	3	1818	4		2	1	1	1	1	1	1
 E2	1	25	1819	4	1037	2	1	1	1	1	1	1
 E3	1	39	1829	2		1	1	1	1		1	1

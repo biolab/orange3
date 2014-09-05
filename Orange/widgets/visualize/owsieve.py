@@ -1,23 +1,19 @@
-# OWSieveDiagram.py
-#
-
-###########################################################################################
-##### WIDGET :
-###########################################################################################
-import random
-from PyQt4.QtCore import SIGNAL, Qt
 from math import sqrt, floor, ceil
+import random
 import sys
-import Orange
-from Orange.statistics.contingency import get_contingency
-from Orange.widgets.utils import getHtmlCompatibleString
-from Orange.widgets.visualize.owmosaic import OWCanvasText, OWCanvasRectangle, OWCanvasEllipse, OWCanvasLine
-from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QColor, QPen, QBrush, QDialog, QApplication
-from Orange.data import Table, Variable
-from Orange.widgets.widget import OWWidget, Default, AttributeList
-from Orange.widgets import gui
 
-VarTypes = Variable.VarTypes
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
+                         QDialog, QApplication)
+
+import Orange
+from Orange.data import Table, Variable, ContinuousVariable
+from Orange.statistics.contingency import get_contingency
+from Orange.widgets import gui
+from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
+                                               OWCanvasEllipse, OWCanvasLine)
+from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
 class OWSieveDiagram(OWWidget):
@@ -108,7 +104,7 @@ class OWSieveDiagram(OWWidget):
         self.data = data
 
         if data:
-            if any(attr.var_type == VarTypes.Continuous for attr in data.domain):
+            if any(isinstance(attr, ContinuousVariable) for attr in data.domain):
                 self.information(0, "Continuous attributes were discretized using entropy discretization.")
 #            if not self.data or len(data.domain) != len(self.data.domain):
 #                self.information(1, "Unused attribute values were removed.")
@@ -174,9 +170,9 @@ class OWSieveDiagram(OWWidget):
 
         if not self.data: return
         for i in range(len(self.data.domain)):
-            self.attrXCombo.addItem(self.icons[self.data.domain[i].var_type], self.data.domain[i].name)
-            self.attrYCombo.addItem(self.icons[self.data.domain[i].var_type], self.data.domain[i].name)
-            self.attrConditionCombo.addItem(self.icons[self.data.domain[i].var_type], self.data.domain[i].name)
+            self.attrXCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
+            self.attrYCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
+            self.attrConditionCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
         self.attrCondition = str(self.attrConditionCombo.itemText(0))
 
         if self.attrXCombo.count() > 0:

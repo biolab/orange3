@@ -7,6 +7,7 @@ import numpy as np
 import bottleneck as bn
 from Orange.data import Instance, Storage
 
+
 class Filter:
     """
     The base class for filters.
@@ -15,6 +16,7 @@ class Filter:
 
         Reverts the selection
     """
+
     def __init__(self, negate=False):
         self.negate = negate
 
@@ -40,6 +42,7 @@ class IsDefined(Filter):
         The columns to be checked, given as a sequence of indices, names or
         :obj:`Orange.data.Variable`.
     """
+
     def __init__(self, columns=None, negate=False):
         super().__init__(negate)
         self.columns = columns
@@ -68,6 +71,7 @@ class HasClass(Filter):
     returns all rows for which all class values are defined, even if they
     equal zero.
     """
+
     def __call__(self, data):
         if isinstance(data, Instance):
             return self.negate != bn.anynan(data._y)
@@ -92,6 +96,7 @@ class Random(Filter):
         The proportion (if below 1) or the probability (if 1 or above) of
         selected instances
     """
+
     def __init__(self, prob=None, negate=False):
         super().__init__(negate)
         self.prob = prob
@@ -106,7 +111,7 @@ class Random(Filter):
                 pass
 
         retain = np.zeros(len(data), dtype=bool)
-        n = self.prob if self.prob >= 1 else self.prob*len(data)
+        n = int(self.prob) if self.prob >= 1 else int(self.prob * len(data))
         if self.negate:
             retain[n:] = True
         else:
@@ -128,6 +133,7 @@ class SameValue(Filter):
 
         The reference value
     """
+
     def __init__(self, column, value, negate=False):
         super().__init__(negate)
         self.column = column
@@ -188,6 +194,7 @@ class Values(Filter):
 
         Revert the selection
     """
+
     def __init__(self, conditions=None, conjunction=True, negate=False):
         super().__init__(negate)
         self.conjunction = conjunction
@@ -214,7 +221,6 @@ class Values(Filter):
         return data[sel]
 
 
-
 class ValueFilter:
     """
     The base class for subfilters that check individual values of data
@@ -234,6 +240,7 @@ class ValueFilter:
         The column to which the filter applies (int, str or
         :obj:`Orange.data.Variable`).
     """
+
     def __init__(self, column):
         self.column = column
         self.last_domain = None
@@ -241,7 +248,6 @@ class ValueFilter:
     def cache_position(self, domain):
         self.pos_cache = domain.index(self.column)
         self.last_domain = domain
-
 
 
 class FilterDiscrete(ValueFilter):
@@ -259,6 +265,7 @@ class FilterDiscrete(ValueFilter):
         The list (or a set) of accepted values. If None, it checks whether
         the value is defined.
     """
+
     def __init__(self, column, values):
         super().__init__(column)
         self.values = values
@@ -297,6 +304,7 @@ class FilterContinuous(ValueFilter):
         `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside` or
         `IsDefined`.
     """
+
     def __init__(self, position, oper, ref=None, max=None, **a):
         super().__init__(position)
         if a:
@@ -368,6 +376,7 @@ class FilterContinuous(ValueFilter):
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
     Between = Outside = IsDefined = 0
 
+
 Enum("Equal", "NotEqual", "Less", "LessEqual", "Greater", "GreaterEqual",
      "Between", "Outside", "IsDefined").pull_up(FilterContinuous)
 
@@ -400,6 +409,7 @@ class FilterString(ValueFilter):
 
         Tells whether the comparisons are case sensitive
     """
+
     def __init__(self, position, oper, ref=None, max=None,
                  case_sensitive=True, **a):
         super().__init__(position)
@@ -461,6 +471,7 @@ class FilterString(ValueFilter):
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
     Between = Outside = Contains = StartsWith = EndsWith = IsDefined = 0
+
 
 Enum("Equal", "NotEqual",
      "Less", "LessEqual", "Greater", "GreaterEqual",

@@ -2,6 +2,7 @@ from itertools import chain
 from PyQt4 import QtGui, Qt
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import *
+from Orange.widgets.utils import vartype
 from Orange.data.table import Table
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
 import Orange.data.filter as data_filter
@@ -209,7 +210,7 @@ class OWSelectData(widget.OWWidget):
             lc = [str(x) for x in lc[:2]]
         else:
             lc = ["", ""]
-        if box and var.var_type == box.var_type:
+        if box and vartype(var) == box.var_type:
             lc = self._get_lineedit_contents(box) + lc
         oper = oper_combo.currentIndex()
 
@@ -222,13 +223,13 @@ class OWSelectData(widget.OWWidget):
                 combo.setCurrentIndex(int(lc[0]))
             else:
                 combo.setCurrentIndex(0)
-            combo.var_type = var.var_type
+            combo.var_type = vartype(var)
             self.cond_list.setCellWidget(oper_combo.row, 2, combo)
             combo.currentIndexChanged.connect(self.conditions_changed)
         else:
             box = gui.widgetBox(self, orientation="horizontal",
                                 addToLayout=False)
-            box.var_type = var.var_type
+            box.var_type = vartype(var)
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
             if isinstance(var, ContinuousVariable):
                 box.controls = [add_numeric(lc[0])]

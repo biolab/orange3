@@ -10,8 +10,8 @@ class Score:
     def __new__(cls, results=None, **kwargs):
         self = super().__new__(cls)
         if results is not None:
-            self.__init__(**kwargs)
-            return self(results)
+            self.__init__()
+            return self(results, **kwargs)
         else:
             return self
 
@@ -28,13 +28,14 @@ class Score:
         return NotImplementedError
 
     def scores_by_folds(self, results, **kwargs):
-        nfolds = len(self.folds)
+        nfolds = len(results.folds)
+        nmodels = len(results.predicted)
         if self.is_scalar:
-            scores = np.empty((len(results), nfolds), dtype=np.float64)
+            scores = np.empty((nfolds, nmodels), dtype=np.float64)
         else:
             scores = [None] * nfolds
         for fold in range(nfolds):
-            fold_results = results.get_results(fold)
+            fold_results = results.get_fold(fold)
             scores[fold] = self.compute_score(fold_results, **kwargs)
         return scores
 
@@ -47,6 +48,7 @@ class Score:
             (score_function(results.actual, predicted)
              for predicted in results.predicted),
             dtype=np.float64, count=len(results.predicted))
+
 
 class CA(Score):
     def compute_score(self, results):
@@ -80,10 +82,11 @@ class AUC(Score):
     separate_folds = True
 
     def compute_score(self, results, target=None):
-        if not isinstance(results.domain.class_var, DiscreteVariable):
+        domain = results.data.domain
+        if not isinstance(domain.class_var, DiscreteVariable):
             raise ValueError("AUC.compute_score expects a domain with a "
                              "(single) discrete variable")
-        n_classes = len(results.domain.class_var.values)
+        n_classes = len(domain.class_var.values)
         if n_classes < 2:
             raise ValueError("Class variable has less than two values")
         if target is None:
@@ -92,9 +95,10 @@ class AUC(Score):
                                  "target class is not specified")
             else:
                 target = 1
-        return np.fromiter(
-            (sklearn.metrics.roc_auc_score(actual, probabilities[target])
-             for actual, probabilities in zip(results.actual,
-                                              results.probabilities)),
-            dtype=np.float64, count=len(results))
 
+        y = np.array(results.actual == target, dtype=int)
+
+        return np.fromiter(
+            (sklearn.metrics.roc_auc_score(y, probabilities[:, target])
+             for probabilities in results.probabilities),
+            dtype=np.float64, count=len(results.predicted))

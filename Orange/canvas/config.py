@@ -12,7 +12,7 @@ import itertools
 import pkg_resources
 
 from PyQt4.QtGui import (
-    QDesktopServices, QPainter, QFont, QFontMetrics, QColor, QPixmap
+    QDesktopServices, QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 )
 
 from PyQt4.QtCore import Qt, QCoreApplication, QPoint, QRect
@@ -293,3 +293,14 @@ def splash_screen():
     p.drawText(br, Qt.AlignCenter, version)
     p.end()
     return pm, QRect(88, 193, 200, 20)
+
+
+def application_icon():
+    """
+    Return the main application icon.
+    """
+    path = pkg_resources.resource_filename(
+        __name__, "icons/orange-canvas.svg"
+    )
+    return QIcon(path)
+

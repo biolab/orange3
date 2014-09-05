@@ -10,7 +10,7 @@ class Instance:
         Construct a new data instance.
 
         :param domain: domain that describes the instance's variables
-        :type domain: Orange.data.domain
+        :type domain: Orange.data.Domain
         :param data: instance's values
         :type data: Orange.data.Instance or a sequence of values
         """

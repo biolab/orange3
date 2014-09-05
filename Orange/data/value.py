@@ -48,7 +48,7 @@ class Value(float):
         that are neither discrete nor continuous. If `value` is `None`, the
         derived `float` value is used.
     """
-    __slots__ = "variable", "value"
+    __slots__ = "variable", "_value"
 
     def __new__(cls, variable, value=Unknown):
         """
@@ -66,12 +66,11 @@ class Value(float):
             try:
                 self = super().__new__(cls, value)
                 self.variable = variable
-                self.value = None
                 return self
             except:
                 pass
         self = super().__new__(cls, -1)
-        self.value = value
+        self._value = value
         self.variable = variable
         return self
 
@@ -91,10 +90,8 @@ class Value(float):
                     or other in self.variable.unknown_str)
         if isinstance(other, str):
             return self.variable.str_val(self) == other
-        if self.value:
-            if isinstance(other, Value) and other.value:
-                other = other.value
-            return self.value == other
+        if isinstance(other, Value):
+            return self.value == other.value
         return super().__eq__(other)
 
     def __contains__(self, other):
@@ -109,3 +106,21 @@ class Value(float):
             return super().__hash__(self)
         else:
             return super().__hash__(self) ^ hash(self.value)
+
+    @property
+    def value(self):
+        from . import DiscreteVariable, StringVariable
+        if isinstance(self.variable, DiscreteVariable):
+            return self.variable.values[int(self)]
+        if isinstance(self.variable, StringVariable):
+            return self._value
+        return float(self)
+
+    def __getnewargs__(self):
+        return self.variable, float(self)
+
+    def __getstate__(self):
+        return dict(value=getattr(self, '_value', None))
+
+    def __setstate__(self, state):
+        self._value = state.get('value', None)

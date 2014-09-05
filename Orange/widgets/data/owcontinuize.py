@@ -67,15 +67,11 @@ class OWContinuize(widget.OWWidget):
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.sendDataIf)
 
-        self.controlArea.layout().addSpacing(4)
-
         box = gui.widgetBox(self.controlArea, "Continuous attributes")
         gui.radioButtonsInBox(
             box, self, "continuous_treatment",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.sendDataIf)
-
-        self.controlArea.layout().addSpacing(4)
 
         box = gui.widgetBox(self.controlArea, "Discrete class attribute")
         gui.radioButtonsInBox(
@@ -84,16 +80,12 @@ class OWContinuize(widget.OWWidget):
             callback=self.sendDataIf
         )
 
-        self.controlArea.layout().addSpacing(4)
-
         zbbox = gui.widgetBox(self.controlArea, "Value range")
 
         gui.radioButtonsInBox(
             zbbox, self, "zero_based",
             btnLabels=self.value_ranges,
             callback=self.sendDataIf)
-
-        self.controlArea.layout().addSpacing(4)
 
         snbox = gui.widgetBox(self.controlArea, "Send data")
         gui.button(snbox, self, "Send data", callback=self.sendData,
@@ -136,7 +128,7 @@ class OWContinuize(widget.OWWidget):
     #     self.send("Preprocessor", PreprocessedLearner(
     #         lambda data, weightId=0, tc=(self.targetValue if self.classTreatment else -1):
     #             Table(continuizer(data, weightId, tc)
-    #                 if data.domain.class_var and self.data.domain.class_var.var_type == Variable.VarTypes.Discrete
+    #                 if data.domain.class_var and isinstance(self.data.domain.class_var, DiscreteVariable)
     #                 else continuizer(data, weightId), data)))
 
     def sendData(self):

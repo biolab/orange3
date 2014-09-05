@@ -57,7 +57,8 @@ class TabDelimReader:
 
         for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
             tpe = tpe.strip()
-            flag = flag.split()
+            flag = self.non_escaped_spaces.split(flag)
+            flag = [f.replace("\\ ", " ") for f in flag]
             if "i" in flag or "ignore" in flag:
                 continue
             if "b" in flag or "basket" in flag:
@@ -67,6 +68,8 @@ class TabDelimReader:
             is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
             is_weight = "w" in flag or "weight" in flag \
                 or tpe in ["w", "weight"]
+
+            attrs = [f.split("=", 1) for f in flag if "=" in f]
 
             if is_weight:
                 if is_class:
@@ -89,6 +92,8 @@ class TabDelimReader:
                 var = DiscreteVariable.make(name, values, True)
             var.fix_order = (isinstance(var, DiscreteVariable)
                              and not var.values)
+
+            var.attributes.update(attrs)
 
             if is_class:
                 if is_meta:
@@ -193,6 +198,46 @@ class TabDelimReader:
         return table
 
 
+class TxtReader:
+    MISSING_VALUES = frozenset({"", "NA", "?"})
+
+    @staticmethod
+    def read_header(file, delimiter=None):
+        first_line = file.readline()
+        file.seek(0)
+        if delimiter is None:
+            for delimiter in "\t,; ":
+                if delimiter in first_line:
+                    break
+            else:
+                delimiter = None
+        if delimiter == " ":
+            delimiter = None
+        atoms = first_line.split(delimiter)
+        try:
+            [float(atom) for atom in set(atoms) - TxtReader.MISSING_VALUES]
+            header_lines = 0
+            names = ["Var{:04}".format(i + 1) for i in range(len(atoms))]
+        except ValueError:
+            names = [atom.strip() for atom in atoms]
+            header_lines = 1
+        domain = Domain([ContinuousVariable.make(name) for name in names])
+        return domain, header_lines, delimiter
+
+    def read_file(self, filename, cls=None):
+        from ..data import Table
+        if cls is None:
+            cls = Table
+        with open(filename, "rt") as file:
+            domain, header_lines, delimiter = self.read_header(file)
+        with open(filename, "rb") as file:
+            arr = np.genfromtxt(file, delimiter=delimiter,
+                                skip_header=header_lines,
+                                missing_values=self.MISSING_VALUES)
+        table = cls.from_numpy(domain, arr)
+        return table
+
+
 class BasketReader():
     def read_file(self, filename, cls=None):
         if cls is None:
@@ -212,23 +257,29 @@ class BasketReader():
         return cls.from_numpy(domain,
                               attrs and X, classes and Y, metas and meta_attrs)
 
+
 def csvSaver(filename, data, delimiter='\t'):
     with open(filename, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=delimiter)
-        writer.writerow([d.name for d in data.domain]) # write attribute names
+        all_vars = data.domain.variables + data.domain.metas
+        writer.writerow([v.name for v in all_vars])  # write variable names
         if delimiter == '\t':
-            flags = ['']*len(data.domain)
-            class_var = data.domain.class_var
-            metas = data.domain.metas
-            if class_var:
-                flags[data.domain.indices[class_var.name]] = 'class'
-            if metas:
-                for m in metas:
-                    flags[data.domain.indices[m.name]] = 'm'
-            writer.writerow([str(d.var_type).lower() for d in data.domain]) # write attribute types
+            flags = ([''] * len(data.domain.attributes)) + \
+                    (['class'] * len(data.domain.class_vars)) + \
+                    (['m'] * len(data.domain.metas))
+
+            for i, var in enumerate(all_vars):
+                attrs = ["{0!s}={1!s}".format(*item).replace(" ", "\\ ")
+                         for item in var.attributes.items()]
+                if attrs:
+                    flags[i] += (" " if flags[i] else "") + (" ".join(attrs))
+
+            writer.writerow([type(v).__name__.replace("Variable", "").lower()
+                             for v in all_vars])  # write variable types
             writer.writerow(flags) # write flags
         for ex in data: # write examples
             writer.writerow(ex)
+
 
 def saveCsv(filename, data):
     csvSaver(filename, data, ',')

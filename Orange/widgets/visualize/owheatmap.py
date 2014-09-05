@@ -1,22 +1,18 @@
-from PyQt4.QtGui import QApplication
-
 __author__ = 'jurre'
+
+import heapq
+import re
+
+import numpy as np
 import pyqtgraph as pg
+from PyQt4 import QtGui, QtCore
+
 import Orange
 from Orange import feature, statistics
 from Orange.data import discretization, Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
 from Orange.widgets import widget, gui
-
-from PyQt4 import QtGui, QtCore
-
-import numpy as np
-
-import re
-import heapq
-
-from datetime import datetime
 
 
 class Heatmap(pg.ImageItem):
@@ -147,38 +143,14 @@ class OWHeatmap(widget.OWWidget):
 
     def data(self, dataset):
         if dataset:
-
-
-
-
-            ##TODO: remove the lines that "repair" the tables
-            # "repair" SqlTable
-            if type(dataset) == SqlTable or not dataset.domain.class_var:
-                classvars = []
-                for attr in dataset.domain.attributes:
-                    if isinstance(attr, Orange.data.DiscreteVariable):
-                        classvars.append(attr)
-                dataset.domain.class_vars = tuple(classvars)
-                dataset.domain.class_var = classvars[0] if len(classvars) > 0 else None
-
-                if not dataset.domain.class_var and "glass" in dataset.name:
-                    glass = Orange.data.Table("Glass")
-                    dataset.domain = glass.domain
-                    dataset._create_domain()
-
-
-
-
-
             self.dataset = dataset
-
             self.clearControls()
 
             for attr in dataset.domain.attributes:
-                self.comboBoxAttributesX.addItem(self.icons[attr.var_type], attr.name)
-                self.comboBoxAttributesY.addItem(self.icons[attr.var_type], attr.name)
+                self.comboBoxAttributesX.addItem(self.icons[attr], attr.name)
+                self.comboBoxAttributesY.addItem(self.icons[attr], attr.name)
             for var in dataset.domain.class_vars:
-                self.comboBoxClassvars.addItem(self.icons[var.var_type], var.name)
+                self.comboBoxClassvars.addItem(self.icons[var], var.name)
             self.X_attributes_select = 2
             self.Y_attributes_select = 3
             self.classvar_select = 0
@@ -212,21 +184,14 @@ class OWHeatmap(widget.OWWidget):
     def attrChanged(self, callSharpen=False):
         if not callSharpen:
             self.regionSharpened = False
-
         if self.dataset == None:
             return
-
         if self.n_discretization_intervals < 2:
             return
-
         self.checkedindices = []
         for i in range(len(self.checkBoxesColorsShownAttributeList)):
             self.checkedindices.append(getattr(self, self.checkBoxesColorsShownAttributeList[i]))
-
-        tstart = datetime.now()
         self.changeDisplay(callSharpen)
-        tend = datetime.now()
-        print(tend - tstart)
 
     def addToCache(self):
         ind = ''.join([str(i) for i in self.checkedindices])

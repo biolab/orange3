@@ -1,8 +1,8 @@
 import numpy as np
-import bottleneck as bn
-from Orange import data as Orange_data
-from ..data.value import Value
 import scipy
+import bottleneck as bn
+
+import Orange.data
 
 
 class Fitter:
@@ -16,23 +16,21 @@ class Fitter:
         return self.fit(data.X, data.Y, data.W)
 
     def __call__(self, data):
-        X, Y, W = data.X, data.Y, data.W if data.has_weights else None
-        if np.shape(Y)[1] > 1 and not self.supports_multiclass:
+        if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
             raise TypeError("fitter doesn't support multiple class variables")
         self.domain = data.domain
         if type(self).fit is Fitter.fit:
             clf = self.fit_storage(data)
         else:
+            X, Y, W = data.X, data.Y, data.W if data.has_weights else None
             clf = self.fit(X, Y, W)
         clf.domain = data.domain
-        clf.Y = Y
         clf.supports_multiclass = self.supports_multiclass
         return clf
 
 
 class Model:
     supports_multiclass = False
-    Y = None
     Value = 0
     Probs = 1
     ValueProbs = 2
@@ -44,14 +42,28 @@ class Model:
             raise ValueError("unspecified domain")
         self.domain = domain
 
-    def predict(self, table):
-        raise TypeError("Descendants of Model must overload method predict")
+    def predict(self, X):
+        if self.predict_storage == Model.predict_storage:
+            raise TypeError("Descendants of Model must overload method predict")
+        else:
+            Y = np.zeros((len(X), len(self.domain.class_vars)))
+            Y[:] = np.nan
+            table = Orange.data.Table(self.domain, X, Y)
+            return self.predict_storage(table)
+
+    def predict_storage(self, data):
+        if isinstance(data, Orange.data.Storage):
+            return self.predict(data.X)
+        elif isinstance(data, Orange.data.Instance):
+            return self.predict(np.atleast_2d(data.x))
+        raise TypeError("Unrecognized argument (instance of '{}')".format(
+                        type(data).__name__))
 
     def __call__(self, data, ret=Value):
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if (ret > 0
-            and any(isinstance(v, Orange_data.ContinuousVariable)
+            and any(isinstance(v, Orange.data.ContinuousVariable)
                     for v in self.domain.class_vars)):
             raise ValueError("cannot predict continuous distributions")
 
@@ -60,17 +72,17 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Orange_data.Instance):
+        elif isinstance(data, Orange.data.Instance):
             if data.domain != self.domain:
-                data = Orange_data.Instance(self.domain, data)
-            prediction = self.predict(np.atleast_2d(data.x))
-        elif isinstance(data, Orange_data.Table):
+                data = Orange.data.Instance(self.domain, data)
+            prediction = self.predict_storage(data)
+        elif isinstance(data, Orange.data.Table):
             if data.domain != self.domain:
-                data = Orange_data.Table.from_table(self.domain, data)
-            prediction = self.predict(data.X)
+                data = data.from_table(self.domain, data)
+            prediction = self.predict_storage(data)
         else:
-            raise TypeError("Unrecognized argument (instance of '%s')",
-                            type(data).__name__)
+            raise TypeError("Unrecognized argument (instance of '{}')".format(
+                            type(data).__name__))
 
         # Parse the result into value and probs
         multitarget = len(self.domain.class_vars) > 1
@@ -103,10 +115,41 @@ class Model:
             else:
                 return probs
 
+        # Return what we need to
+        if ret == Model.Probs:
+            return probs
+        if isinstance(data, Orange.data.Instance) and not multitarget:
+            value = Orange.data.Value(self.domain.class_var, value[0])
+        if ret == Model.Value:
+            return value
+        else:  # ret == Model.ValueProbs
+            return value, probs
+
+
+class SklFitter(Fitter):
+    def __call__(self, data):
+        clf = super().__call__(data)
+        clf.used_vals = [np.unique(y) for y in data.Y.T]
+        return clf
+
+
+class SklModel(Model):
+    used_vals = None
+
+    def __call__(self, data, ret=Model.Value):
+        prediction = super().__call__(data, ret=ret)
+
+        if ret == Model.Value:
+            return prediction
+
+        if ret == Model.Probs:
+            probs = prediction
+        else:  # ret == Model.ValueProbs
+            value, probs = prediction
+
         # Expand probability predictions for class values which are not present
         if ret != self.Value:
             n_class = len(self.domain.class_vars)
-            used_vals = [np.unique(y) for y in self.Y.T]
             max_values = max(len(cv.values) for cv in self.domain.class_vars)
             if max_values != probs.shape[-1]:
                 if not self.supports_multiclass:
@@ -116,7 +159,8 @@ class Model:
                     i = 0
                     class_values = len(self.domain.class_vars[c].values)
                     for cv in range(class_values):
-                        if i < len(used_vals[c]) and cv == used_vals[c][i]:
+                        if (i < len(self.used_vals[c]) and
+                                cv == self.used_vals[c][i]):
                             probs_ext[:, c, cv] = probs[:, c, i]
                             i += 1
                 if self.supports_multiclass:
@@ -124,12 +168,7 @@ class Model:
                 else:
                     probs = probs_ext[:, 0, :]
 
-        # Return what we need to
         if ret == Model.Probs:
             return probs
-        if isinstance(data, Orange_data.Instance) and not multitarget:
-            value = Value(self.domain.class_var, value[0])
-        if ret == Model.Value:
-            return value
         else:  # ret == Model.ValueProbs
             return value, probs

@@ -264,6 +264,6 @@ def get_contingencies(dat, skipDiscrete=False, skipContinuous=False):
             contigs.append(get_contingency(cont, vars[col], row_var, unks))
     except NotImplementedError:
         if columns is None:
-            columns = np.arange(len(vars))
+            columns = range(len(vars))
         contigs = [get_contingency(dat, i) for i in columns]
     return contigs

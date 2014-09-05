@@ -198,11 +198,11 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[2, "e"], "4ex")
             self.assertEqual(d[-1, "e"], "was last")
 
-            with self.assertRaises(ValueError):
+            with self.assertRaises(IndexError):
                 del d[100]
             self.assertEqual(len(d), initlen - 5)
 
-            with self.assertRaises(ValueError):
+            with self.assertRaises(IndexError):
                 del d[-100]
             self.assertEqual(len(d), initlen - 5)
 
@@ -561,7 +561,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[0], e2[0])
             self.assertEqual(e[1], e3[0])
 
-    @unittest.skip("Do we need checksum?")
     def test_pickle(self):
         import pickle
 
@@ -569,13 +568,16 @@ class TableTestCase(unittest.TestCase):
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d[0], d2[0])
-        self.assertEqual(d.checksum(), d2.checksum())
+
+        self.assertEqual(d.checksum(include_metas=False),
+                         d2.checksum(include_metas=False))
 
         d = data.Table("iris")
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d[0], d2[0])
-        self.assertEqual(d.checksum(), d2.checksum())
+        self.assertEqual(d.checksum(include_metas=False),
+                         d2.checksum(include_metas=False))
 
     def test_translate_through_slice(self):
         d = data.Table("iris")
@@ -1006,7 +1008,7 @@ class TableTests(unittest.TestCase):
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
-        self.meta_data = np.random.random((self.nrows, len(self.metas)))
+        self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas)))
         self.weight_data = np.random.random((self.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
@@ -1025,8 +1027,8 @@ class TableTests(unittest.TestCase):
                      else a for a in attributes]
         class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str)
                       else c for c in classes]
-        meta_vars = [data.DiscreteVariable(name=m) if isinstance(m, str)
-                     else m for m in metas]
+        meta_vars = [data.DiscreteVariable(name=m, values=map(str, range(5)))
+                     if isinstance(m, str) else m for m in metas]
 
         domain = data.Domain(attr_vars, class_vars, meta_vars)
         return domain

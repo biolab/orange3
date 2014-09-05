@@ -16,12 +16,10 @@ from Orange.canvas.utils import environ
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets.settings import SettingProvider, Setting
-from Orange.data import Variable
+from Orange.data import Variable, ContinuousVariable, DiscreteVariable
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft
 from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleData
-
-VarTypes = Variable.VarTypes
 
 NO_STATISTICS = 0
 MEANS = 1
@@ -95,7 +93,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.add_relevant_selections(old_selection_conditions)
 
         if self.data_has_discrete_class:
-            self.discrete_palette.setNumberOfColors(len(self.data_domain.class_var.values))
+            self.discrete_palette.set_number_of_colors(len(self.data_domain.class_var.values))
 
         self.draw_curves()
         self.draw_distributions()
@@ -127,9 +125,9 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.set_show_axis_title(axis_id, self.show_attr_values)
             if self.show_attr_values:
                 attr = self.data_domain[self.attributes[i]]
-                if attr.var_type == VarTypes.Continuous:
+                if isinstance(attr, ContinuousVariable):
                     self.set_axis_scale(axis_id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
-                elif attr.var_type == VarTypes.Discrete:
+                elif isinstance(attr, DiscreteVariable):
                     attribute_values = get_variable_values_sorted(self.data_domain[self.attributes[i]])
                     attr_len = len(attribute_values)
                     values = [float(1.0 + 2.0 * j) / float(2 * attr_len) for j in range(len(attribute_values))]
@@ -187,7 +185,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def draw_legend(self):
         if self.data_has_class:
-            if self.data_domain.class_var.var_type == VarTypes.Discrete:
+            if isinstance(self.data_domain.class_var, DiscreteVariable):
                 self.legend().clear()
                 values = get_variable_values_sorted(self.data_domain.class_var)
                 for i, value in enumerate(values):
@@ -195,7 +193,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                                            OWPoint(OWPoint.Rect, self.discrete_palette[i], self.point_width))
             else:
                 values = self.attr_values[self.data_domain.class_var.name]
-                decimals = self.data_domain.class_var.numberOfDecimals
+                decimals = self.data_domain.class_var.number_of_decimals
                 self.legend().add_color_gradient(self.data_domain.class_var.name,
                                                  ["%%.%df" % decimals % v for v in values])
         else:
@@ -213,7 +211,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             n_attr = len(self.attributes)
             data = []
             for attr_idx in self.attribute_indices:
-                if self.data_domain[attr_idx].var_type != VarTypes.Continuous:
+                if not isinstance(self.data_domain[attr_idx], ContinuousVariable):
                     data.append([()])
                     continue  # only for continuous attributes
 
@@ -307,7 +305,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         # we create a hash table of possible class values (happens only if we have a discrete class)
         if self.domain_contingencies is None:
             self.domain_contingencies = dict(
-                zip([attr for attr in self.data_domain if attr.var_type == VarTypes.Discrete],
+                zip([attr for attr in self.data_domain if isinstance(attr, DiscreteVariable)],
                     get_contingencies(self.raw_data, skipContinuous=True)))
             self.domain_contingencies[class_] = get_contingency(self.raw_data, class_, class_)
 
@@ -316,7 +314,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         for axis_idx, attr_idx in enumerate(self.attribute_indices):
             attr = self.data_domain[attr_idx]
-            if attr.var_type != VarTypes.Discrete:
+            if isinstance(attr, DiscreteVariable):
                 continue
 
             contingency = self.domain_contingencies[attr]
@@ -362,11 +360,11 @@ class OWParallelGraph(OWPlot, ScaleData):
                                                           canvas_position.y())
             if contact:
                 attr = self.data_domain[self.attributes[index]]
-                if attr.var_type == VarTypes.Continuous:
+                if isinstance(attr, ContinuousVariable):
                     condition = self.selection_conditions.get(attr.name, [0, 1])
                     val = self.attr_values[attr.name][0] + condition[pos] * (
                         self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
-                    str_val = attr.name + "= %%.%df" % attr.numberOfDecimals % val
+                    str_val = attr.name + "= %%.%df" % attr.number_of_decimals % val
                     QToolTip.showText(ev.globalPos(), str_val)
             else:
                 for curve in self.items():
@@ -433,7 +431,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.selection_conditions[attr.name] = old_condition
             self.update_data(self.attributes, self.visualized_mid_labels)
 
-            if attr.var_type == VarTypes.Continuous:
+            if isinstance(attr, ContinuousVariable):
                 val = self.attr_values[attr.name][0] + old_condition[pos] * (
                     self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
                 strVal = attr.name + "= %.2f" % val

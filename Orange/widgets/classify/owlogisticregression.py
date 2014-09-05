@@ -85,10 +85,12 @@ class OWLogisticRegression(widget.OWWidget):
             fit_intercept=self.fit_intercept,
             intercept_scaling=self.intercept_scaling
         )
+        learner.name = self.learner_name
         classifier = None
 
         if self.data is not None:
             classifier = learner(self.data)
+            classifier.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
