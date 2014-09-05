@@ -143,31 +143,7 @@ class OWHeatmap(widget.OWWidget):
 
     def data(self, dataset):
         if dataset:
-
-
-
-
-            ##TODO: remove the lines that "repair" the tables
-            # "repair" SqlTable
-            if type(dataset) == SqlTable or not dataset.domain.class_var:
-                classvars = []
-                for attr in dataset.domain.attributes:
-                    if isinstance(attr, Orange.data.DiscreteVariable):
-                        classvars.append(attr)
-                dataset.domain.class_vars = tuple(classvars)
-                dataset.domain.class_var = classvars[0] if len(classvars) > 0 else None
-
-                if not dataset.domain.class_var and "glass" in dataset.name:
-                    glass = Orange.data.Table("Glass")
-                    dataset.domain = glass.domain
-                    dataset.domain_from_table()
-
-
-
-
-
             self.dataset = dataset
-
             self.clearControls()
 
             for attr in dataset.domain.attributes:
