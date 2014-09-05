@@ -81,7 +81,7 @@ if [[ ! $INPLACE ]]; then
     echo "Retrieving a template from $TEMPLATE_URL"
     # check for a url schema
     if [[ $TEMPLATE_URL =~ $SCHEMA_REGEX ]]; then
-        curl --fail --silent "$TEMPLATE_URL" | tar -x -C "$BUILD_DIR"
+        curl --fail --silent --location --max-redirs 1 "$TEMPLATE_URL" | tar -x -C "$BUILD_DIR"
         TEMPLATE=( $BUILD_DIR/*.app )
 
     elif [[ -d $TEMPLATE_URL ]]; then
@@ -132,6 +132,11 @@ sed -i.bak "s@/.*\.app/@$TEMPLATE/@g" "${SITE_PACKAGES}"/sipconfig.py
     LDFLAGS=${EXTRA_LDFLAGS}:${LDFLAGS:+:$LDFLAGS}
     "$PIP" install qt-graph-helpers
 )
+
+echo "Installing pyqtgraph sqlparse"
+echo "============================="
+
+"$PIP" install pyqtgraph sqlparse
 
 echo "Installing Orange"
 echo "================="
