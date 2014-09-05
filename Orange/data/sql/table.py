@@ -558,7 +558,8 @@ class SqlTable(table.Table):
         table_name = self.unquote_identifier(table_name)
         sql = ["SELECT column_name, data_type",
                "FROM INFORMATION_SCHEMA.COLUMNS",
-               "WHERE table_name =", self.quote_string(table_name)]
+               "WHERE table_name =", self.quote_string(table_name),
+               "ORDER BY ordinal_position"]
         return self._execute_sql_query(" ".join(sql))
 
     def _sql_get_distinct_values(self, field_name):
