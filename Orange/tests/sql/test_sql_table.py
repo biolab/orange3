@@ -6,9 +6,10 @@ from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table
 from Orange.data.sql.parser import SqlParser
-from Orange.tests.sql.base import PostgresTest, get_dburi
+from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class SqlTableUnitTests(unittest.TestCase):
     def setUp(self):
         self.table = sql_table.SqlTable.__new__(sql_table.SqlTable)
@@ -79,6 +80,7 @@ class SqlTableUnitTests(unittest.TestCase):
         self.fail(self._formatMessage(msg, standardMsg))
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class SqlTableTests(PostgresTest):
     def test_constructs_correct_attributes(self):
         data = list(zip(self.float_variable(21),

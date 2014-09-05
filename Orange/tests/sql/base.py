@@ -4,7 +4,11 @@ import string
 import unittest
 import uuid
 
-import psycopg2
+try:
+    import psycopg2
+    has_psycopg2 = True
+except ImportError:
+    has_psycopg2 = False
 
 import Orange
 from Orange.data.sql import table as sql_table
@@ -45,6 +49,7 @@ def create_iris():
     return get_dburi() + '/iris'
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
