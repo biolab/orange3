@@ -8,13 +8,14 @@ from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
 
 # TODO What is this?!
-def addOrigin(examples, filename):
+def add_origin(examples, filename):
     vars = examples.domain.variables + examples.domain.metas
     strings = [var for var in vars if isinstance(var, StringVariable)]
-    dirname, basename = os.path.split(filename)
+    dir_name, basename = os.path.split(filename)
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
-            var.attributes["origin"] = dirname
+            var.attributes["origin"] = dir_name
+
 
 class OWFile(widget.OWWidget):
     name = "File"
@@ -42,7 +43,8 @@ class OWFile(widget.OWWidget):
     recent_files = Setting(["(none)"])
     new_variables = Setting(False)
 
-#    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes() if len(ft)>2 and ft[2]]
+#    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes()
+#                           if len(ft)>2 and ft[2]]
     registered_file_types = []
     dlgFormats = (
         "Tab-delimited files (*.tab)\n"
@@ -63,12 +65,12 @@ class OWFile(widget.OWWidget):
 
         vbox = gui.widgetBox(self.controlArea, "Data File", addSpace=True)
         box = gui.widgetBox(vbox, orientation=0)
-        self.filecombo = QtGui.QComboBox(box)
-        self.filecombo.setMinimumWidth(300)
-        box.layout().addWidget(self.filecombo)
-        self.filecombo.activated[int].connect(self.selectFile)
+        self.file_combo = QtGui.QComboBox(box)
+        self.file_combo.setMinimumWidth(300)
+        box.layout().addWidget(self.file_combo)
+        self.file_combo.activated[int].connect(self.select_file)
 
-        button = gui.button(box, self, '...', callback=self.browseFile)
+        button = gui.button(box, self, '...', callback=self.browse_file)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
         button.setSizePolicy(
             QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
@@ -81,7 +83,8 @@ class OWFile(widget.OWWidget):
             QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
 
         gui.checkBox(vbox, self, "new_variables",
-                     "Treat variables from different files as different")
+                     "Columns with same name in different files " +
+                     "represent different variables")
 
         box = gui.widgetBox(self.controlArea, "Info", addSpace=True)
         self.infoa = gui.widgetLabel(box, 'No data loaded.')
@@ -98,63 +101,60 @@ class OWFile(widget.OWWidget):
         if len(self.recent_files) > 0:
             self.open_file(self.recent_files[0])
 
-
     def set_file_list(self):
-        self.filecombo.clear()
+        self.file_combo.clear()
         if not self.recent_files:
-            self.filecombo.addItem("(none)")
+            self.file_combo.addItem("(none)")
         for file in self.recent_files:
             if file == "(none)":
-                self.filecombo.addItem("(none)")
+                self.file_combo.addItem("(none)")
             else:
-                self.filecombo.addItem(os.path.split(file)[1])
-        self.filecombo.addItem("Browse documentation data sets...")
-
+                self.file_combo.addItem(os.path.split(file)[1])
+        self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
         if self.recent_files:
             return self.open_file(self.recent_files[0])
 
-
-    def selectFile(self, n):
+    def select_file(self, n):
         if n < len(self.recent_files) :
             name = self.recent_files[n]
             del self.recent_files[n]
             self.recent_files.insert(0, name)
         elif n:
-            self.browseFile(True)
+            self.browse_file(True)
 
         if len(self.recent_files) > 0:
             self.set_file_list()
             self.open_file(self.recent_files[0])
 
-    def browseFile(self, in_demos=0):
+    def browse_file(self, in_demos=0):
         if in_demos:
             try:
-                startfile = get_sample_datasets_dir()
+                start_file = get_sample_datasets_dir()
             except AttributeError:
-                startfile = ""
-            if not startfile or not os.path.exists(startfile):
-                widgetsdir = os.path.dirname(gui.__file__)
-                orangedir = os.path.dirname(widgetsdir)
-                startfile = os.path.join(orangedir, "doc", "datasets")
-            if not startfile or not os.path.exists(startfile):
+                start_file = ""
+            if not start_file or not os.path.exists(start_file):
+                widgets_dir = os.path.dirname(gui.__file__)
+                orange_dir = os.path.dirname(widgets_dir)
+                start_file = os.path.join(orange_dir, "doc", "datasets")
+            if not start_file or not os.path.exists(start_file):
                 d = os.getcwd()
                 if os.path.basename(d) == "canvas":
                     d = os.path.dirname(d)
-                startfile = os.path.join(os.path.dirname(d), "doc", "datasets")
-            if not os.path.exists(startfile):
+                start_file = os.path.join(os.path.dirname(d), "doc", "datasets")
+            if not os.path.exists(start_file):
                 QtGui.QMessageBox.information(None, "File",
                     "Cannot find the directory with example data sets")
                 return
         else:
             if self.recent_files and self.recent_files[0] != "(none)":
-                startfile = self.recent_files[0]
+                start_file = self.recent_files[0]
             else:
-                startfile = os.path.expanduser("~/")
+                start_file = os.path.expanduser("~/")
 
         filename = QtGui.QFileDialog.getOpenFileName(
-            self, 'Open Orange Data File', startfile, self.dlgFormats)
+            self, 'Open Orange Data File', start_file, self.dlgFormats)
         if not filename:
             return
         if filename in self.recent_files:
@@ -163,16 +163,14 @@ class OWFile(widget.OWWidget):
         self.set_file_list()
         self.open_file(self.recent_files[0])
 
-
     # Open a file, create data from it and send it over the data channel
     def open_file(self, fn):
         self.error()
         self.warning()
         self.information()
 
-
         if not os.path.exists(fn):
-            dirname, basename = os.path.split(fn)
+            dir_name, basename = os.path.split(fn)
             if os.path.exists(os.path.join(".", basename)):
                 fn = os.path.join(".", basename)
                 self.information("Loading '{}' from the current directory."
@@ -208,26 +206,27 @@ class OWFile(widget.OWWidget):
         else:
             domain = data.domain
             self.infoa.setText(
-                '{} instance(s), {} feature(s), {} meta attributes'
+                "{} instance(s), {} feature(s), {} meta attributes"
                 .format(len(data), len(domain.attributes), len(domain.metas)))
             if isinstance(domain.class_var, ContinuousVariable):
-                self.infob.setText('Regression; Numerical class.')
+                self.infob.setText("Regression; numerical class.")
             elif isinstance(domain.class_var, DiscreteVariable):
-                self.infob.setText('Classification; Discrete class with {} values.'
+                self.infob.setText("Classification; " +
+                                   "discrete class with {} values."
                                    .format(len(domain.class_var.values)))
             elif data.domain.class_vars:
-                self.infob.setText('Multi-target; {} target variables.'
+                self.infob.setText("Multi-target; {} target variables."
                                    .format(len(data.domain.class_vars)))
             else:
                 self.infob.setText("Data has no target variable.")
 
-            addOrigin(data, fn)
+            add_origin(data, fn)
             # make new data and send it
-            fName = os.path.split(fn)[1]
-            if "." in fName:
-                data.name = fName[:fName.rfind('.')]
+            file_name = os.path.split(fn)[1]
+            if "." in file_name:
+                data.name = file_name[:file_name.rfind('.')]
             else:
-                data.name = fName
+                data.name = file_name
 
             self.dataReport = self.prepareDataReport(data)
         self.send("Data", data)
