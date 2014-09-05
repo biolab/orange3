@@ -1,0 +1,7 @@
+language: python
+python:
+  - "3.4"
+# command to install dependencies
+install: "source install.sh"
+# # command to run tests
+script: python setup.py test

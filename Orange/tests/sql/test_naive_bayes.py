@@ -6,8 +6,10 @@ import Orange.classification.naive_bayes as nb
 from Orange.data.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
 from Orange.data.variable import DiscreteVariable
+from Orange.tests.sql.base import has_psycopg2
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
         table = SqlTable(host='localhost', database='test', table='iris',

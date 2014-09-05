@@ -48,7 +48,8 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'bottleneck'
+    'bottleneck',
+    "sqlparse"
 )
 
 if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
@@ -92,6 +93,7 @@ def git_version():
         GIT_REVISION = "Unknown"
 
     return GIT_REVISION
+
 
 def write_version_py(filename='Orange/version.py'):
     # Copied from numpy setup.py
@@ -152,8 +154,56 @@ def configuration(parent_package='', top_path=None):
     return config
 
 
-def all_with_extension(path, extensions):
-    return [os.path.join(path, "*.%s" % extension) for extension in extensions]
+PACKAGES = [
+    "Orange",
+    "Orange.canvas",
+    "Orange.canvas.application",
+    "Orange.canvas.application.tutorials",
+    "Orange.canvas.canvas",
+    "Orange.canvas.canvas.items",
+    "Orange.canvas.document",
+    "Orange.canvas.gui",
+    "Orange.canvas.help",
+    "Orange.canvas.preview",
+    "Orange.canvas.registry",
+    "Orange.canvas.scheme",
+    "Orange.canvas.styles",
+    "Orange.canvas.utils",
+    "Orange.classification",
+    "Orange.data",
+    "Orange.data.sql",
+    "Orange.evaluation",
+    "Orange.feature",
+    "Orange.misc",
+    "Orange.statistics",
+    "Orange.testing",
+    "Orange.widgets",
+    "Orange.widgets.data",
+    "Orange.widgets.visualize",
+    "Orange.widgets.classify",
+    "Orange.widgets.regression",
+    "Orange.widgets.evaluate",
+    "Orange.widgets.unsupervised",
+    "Orange.widgets.utils",
+    "Orange.widgets.utils.plot",
+    "Orange.widgets.utils.plot.primitives"
+]
+
+PACKAGE_DATA = {
+    "Orange": ["datasets/*.{}".format(ext) for ext in ["tab", "csv", "basket"]],
+    "Orange.canvas": ["icons/*.png", "icons/*.svg"],
+    "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
+    "Orange.canvas.application.tutorials": ["*.ows"],
+    "Orange.widgets": ["icons/*.png", "icons/*.svg"],
+    "Orange.widgets.data": ["icons/*.svg", "icons/paintdata/*.png", "icons/paintdata/*.svg"],
+    "Orange.widgets.visualize": ["icons/*.svg"],
+    "Orange.widgets.classify": ["icons/*.svg"],
+    "Orange.widgets.regression": ["icons/*.svg"],
+    "Orange.widgets.evaluate": ["icons/*.svg"],
+    "Orange.widgets.unsupervised": ["icons/*.svg"],
+    "Orange.widgets.plot": ["*.fs", "*.gs", "*.vs"],
+    "Orange.widgets.plot.primitives": ["*.obj"],
+}
 
 
 def setup_package():
@@ -170,45 +220,8 @@ def setup_package():
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
-        package_data={
-            "Orange": all_with_extension(path="datasets", extensions=("tab", "csv", "basket")),
-            "Orange.canvas": ["icons/*.png", "icons/*.svg", "WidgetTabs.txt"],
-            "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
-            "Orange.canvas.application.tutorials": ["*.ows"],
-            "Orange.widgets": ["icons/*.png"],
-            "Orange.widgets.data": ["icons/*.svg", "icons/paintdata/*.png", "icons/paintdata/*.svg"],
-            "Orange.widgets.visualize": ["icons/*.svg"],
-            "Orange.widgets.plot": ["*.fs", "*.gs", "*.vs"],
-            "Orange.widgets.plot.primitives": ["*.obj"],
-        },
-        packages=["Orange",
-                  "Orange.canvas",
-                  "Orange.canvas.application",
-                  "Orange.canvas.application.tutorials",
-                  "Orange.canvas.canvas",
-                  "Orange.canvas.canvas.items",
-                  "Orange.canvas.document",
-                  "Orange.canvas.gui",
-                  "Orange.canvas.help",
-                  "Orange.canvas.preview",
-                  "Orange.canvas.registry",
-                  "Orange.canvas.scheme",
-                  "Orange.canvas.styles",
-                  "Orange.canvas.utils",
-                  "Orange.classification",
-                  "Orange.data",
-                  "Orange.data.sql",
-                  "Orange.evaluation",
-                  "Orange.feature",
-                  "Orange.misc",
-                  "Orange.statistics",
-                  "Orange.testing",
-                  "Orange.widgets",
-                  "Orange.widgets.data",
-                  "Orange.widgets.utils",
-                  "Orange.widgets.utils.plot",
-                  "Orange.widgets.utils.plot.primitives",
-                  "Orange.widgets.visualize"],
+        packages=PACKAGES,
+        package_data=PACKAGE_DATA,
         **extra_setuptools_args
     )
 

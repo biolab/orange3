@@ -42,14 +42,14 @@ class OWPurgeDomain(widget.OWWidget):
         self.resortedAttrs = "-"
         self.classAttr = "-"
 
-        boxAt = gui.widgetBox(self.controlArea, "Attributes", addSpace=True)
+        boxAt = gui.widgetBox(self.controlArea, "Attributes")
         gui.checkBox(boxAt, self, 'sortValues', 'Sort attribute values',
                      callback=self.optionsChanged)
+        gui.separator(boxAt, 2)
         rua = gui.checkBox(
             boxAt, self, "removeAttributes",
             "Remove attributes with less than two values",
             callback=self.removeAttributesChanged)
-
         ruv = gui.checkBox(
             gui.indentedBox(boxAt, sep=gui.checkButtonOffsetHint(rua)),
             self,
@@ -63,6 +63,7 @@ class OWPurgeDomain(widget.OWWidget):
         boxAt = gui.widgetBox(self.controlArea, "Classes", addSpace=True)
         gui.checkBox(boxAt, self, 'sortClasses', 'Sort classes',
                      callback=self.optionsChanged)
+        gui.separator(boxAt, 2)
         rua = gui.checkBox(
             boxAt, self, "removeClassAttribute",
             "Remove class attribute if there are less than two classes",

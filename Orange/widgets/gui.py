@@ -305,8 +305,7 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     setLayout(b, orientation)
     b.layout().setSpacing(spacing)
     b.layout().setMargin(margin)
-    if not "addSpace" in misc:
-        misc["addSpace"] = bool(box)
+    misc.setdefault('addSpace', bool(box))
     miscellanea(b, None, widget, **misc)
     return b
 
@@ -1129,6 +1128,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     connectControl(lb, master, value, callback, "itemSelectionChanged()",
                    CallFrontListBox(lb), CallBackListBox(lb, master))
 
+    misc.setdefault('addSpace', True)
     miscellanea(lb, bg, widget, **misc)
     return lb
 
@@ -1177,6 +1177,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     connectControl(bg.group, master, value, callback, "buttonClicked(int)",
                    CallFrontRadioButtons(bg), CallBackRadioButton(bg, master))
 
+    misc.setdefault('addSpace', bool(box))
     miscellanea(bg.group, bg, widget, **misc)
     return bg
 

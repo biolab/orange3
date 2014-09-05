@@ -158,7 +158,8 @@ class OWRank(widget.OWWidget):
         selMethBox.layout().addLayout(grid)
 
         applyButton = gui.button(
-            selMethBox, self, "Commit", callback=self.apply, default=True)
+            selMethBox, self, "Commit", callback=self.apply, default=True,
+            addSpace=4)
         autoApplyCB = gui.checkBox(
             selMethBox, self, "autoApply", "Commit automatically")
         gui.setStopper(

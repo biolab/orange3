@@ -1,9 +1,11 @@
+import unittest
 from Orange.data.sql.table import SqlTable, SqlRowInstance
 from Orange.data import filter, domain
 
-from Orange.tests.sql.base import PostgresTest
+from Orange.tests.sql.base import PostgresTest, has_psycopg2
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class IsDefinedFilterTests(PostgresTest):
     def setUp(self):
         self.data = [
@@ -57,6 +59,7 @@ class IsDefinedFilterTests(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class HasClassFilterTests(PostgresTest):
     def setUp(self):
         self.data = [
@@ -91,6 +94,7 @@ class HasClassFilterTests(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class SameValueFilterTests(PostgresTest):
     def setUp(self):
         self.data = [
@@ -179,6 +183,7 @@ class SameValueFilterTests(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class ValuesFilterTests(PostgresTest):
     def setUp(self):
         self.data = [
@@ -316,6 +321,7 @@ class ValuesFilterTests(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
+@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class FilterStringTest(PostgresTest):
     def setUp(self):
         self.data = [
