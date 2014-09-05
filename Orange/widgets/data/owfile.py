@@ -23,11 +23,6 @@ class OWFile(widget.OWWidget):
     description = """
     Read a data table from a supported file format on the the file system and
     send it to the the output."""
-    long_description = """
-    The common start of a schema, which reads the data from a file. The widget
-    maintains a history of most recently used data files. For convenience, the
-    history also includes a directory with the sample data sets that come with
-    Orange."""
     icon = "icons/File.svg"
     author = "Janez Demsar"
     maintainer_email = "janez.demsar(@at@)fri.uni-lj.si"
