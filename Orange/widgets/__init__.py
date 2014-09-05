@@ -11,6 +11,8 @@ def widget_discovery(discovery):
     pkgs = ["Orange.widgets.data",
             "Orange.widgets.visualize",
             "Orange.widgets.classify",
-            "Orange.widgets.evaluate"]
+            "Orange.widgets.regression",
+            "Orange.widgets.evaluate",
+            "Orange.widgets.unsupervised"]
     for pkg in pkgs:
         discovery.process_category_package(pkg, distribution=dist)

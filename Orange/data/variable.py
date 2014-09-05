@@ -15,11 +15,6 @@ class Variable:
 
         The name of the variable.
 
-    .. attribute:: var_type
-
-        The variable type; should be `VarTypes.Discrete`,
-        `VarTypes.Continuous`, or `VarTypes.String`.
-
     .. attribute:: ordered
 
         A flag which tells whether the variable`s values are ordered.
@@ -45,20 +40,18 @@ class Variable:
 
         A dictionary with user-defined attributes of the variable
     """
-    VarTypes = Enum("None", "Discrete", "Continuous", "String")
     MakeStatus = Enum("OK", "MissingValues", "NoRecognizedValues",
                       "Incompatible", "NotFound")
     DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
 
     variable_types = []
 
-    def __init__(self, var_type, name="", ordered=False):
+    def __init__(self, name="", ordered=False):
         """
         Construct a variable descriptor and store the general properties of
         variables.
         """
         self.name = name
-        self.var_type = var_type
         self.ordered = ordered
         self.unknown_str = set(Variable.DefaultUnknownStr)
         self.source_variable = None
@@ -121,13 +114,11 @@ class Variable:
     def __getstate__(self):
         state = self.__dict__.copy()
         state.pop("_get_value_lock")
-        state["var_type"] = str(state["var_type"])
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._get_value_lock = threading.Lock()
-        self.var_type = getattr(Variable.VarTypes, state["var_type"])
 
     @classmethod
     def clear_cache(cls):
@@ -155,7 +146,7 @@ class DiscreteVariable(Variable):
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1):
         """ Construct a discrete variable descriptor with the given values. """
-        super().__init__(Variable.VarTypes.Discrete, name, ordered)
+        super().__init__(name, ordered)
         self.values = list(values)
         self.base_value = base_value
         DiscreteVariable.all_discrete_vars[name].add(self)
@@ -373,7 +364,7 @@ class ContinuousVariable(Variable):
         Construct a new continuous variable. The number of decimals is set to
         three, but adjusted at the first call of :obj:`to_val`.
         """
-        super().__init__(Variable.VarTypes.Continuous, name)
+        super().__init__(name)
         self.number_of_decimals = 3
         self.adjust_decimals = 2
         ContinuousVariable.all_continuous_vars[name] = self
@@ -437,7 +428,7 @@ class StringVariable(Variable):
 
     def __init__(self, name="", default_col=-1):
         """Construct a new descriptor."""
-        super().__init__(Variable.VarTypes.String, name, default_col)
+        super().__init__(name, default_col)
         StringVariable.all_string_vars[name] = self
 
     @staticmethod

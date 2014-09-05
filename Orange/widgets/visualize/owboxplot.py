@@ -15,7 +15,7 @@ from Orange.statistics import contingency, distribution, tests
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils import datacaching, colorpalette
+from Orange.widgets.utils import datacaching, colorpalette, vartype
 from Orange.widgets.utils.plot import owaxis
 
 
@@ -196,8 +196,8 @@ class OWBoxPlot(widget.OWWidget):
         self.attrCombo.clear()
         if dataset:
             self.openContext(self.ddataset)
-            self.attributes = [(a.name, a.var_type) for a in dataset.domain]
-            self.grouping = ["None"] + [(a.name, a.var_type)
+            self.attributes = [(a.name, vartype(a)) for a in dataset.domain]
+            self.grouping = ["None"] + [(a.name, vartype(a))
                                         for a in dataset.domain
                                         if isinstance(a, DiscreteVariable)]
             self.grouping_select = [0]
@@ -324,10 +324,10 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_labels = [self.attr_label(lab) for lab in self.label_txts]
         self.draw_axis_disc()
         if self.grouping_select[0]:
-            self.discPalette.setNumberOfColors(len(self.conts[0]))
+            self.discPalette.set_number_of_colors(len(self.conts[0]))
             self.boxes = [self.strudel(cont) for cont in self.conts]
         else:
-            self.discPalette.setNumberOfColors(len(self.dist))
+            self.discPalette.set_number_of_colors(len(self.dist))
             self.boxes = [self.strudel(self.dist)]
 
         for row, box in enumerate(self.boxes):

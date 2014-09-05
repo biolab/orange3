@@ -4,13 +4,13 @@ import random
 import numpy as np
 import Orange
 
-from Orange.data import Table
+from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
-from Orange.widgets.tests.test_settings import VarTypes
 from Orange.widgets.utils.datacaching import getCached, setCached
 
 
+# noinspection PyBroadException
 def checksum(x):
     if x is None:
         return None
@@ -22,50 +22,35 @@ def checksum(x):
 
 def get_variable_values_sorted(variable):
     """
-    Return a list of sorted values for given attribute.
-
-    EXPLANATION: if variable values have values 1, 2, 3, 4, ... then their
-    order in orange depends on when they appear first in the data. With this
-    function we get a sorted list of values.
+    Return a list of sorted values for given attribute, if all its values can be
+    cast to int's.
     """
-    if variable.var_type == VarTypes.Continuous:
-        print("get_variable_values_sorted - attribute %s is a continuous variable" % variable)
+    if isinstance(variable, ContinuousVariable):
         return []
-
-    values = list(variable.values)
-
-    # do all attribute values contain integers?
     try:
-        int_values = [(int(val), val) for val in values]
+        return sorted(variable.values, key=int)
     except ValueError:
-        return values
-
-    # if all values were integers, we first sort them in ascending order
-    int_values.sort()
-    return [val[1] for val in int_values]
+        return variable.values
 
 
-def get_variable_value_indices(variable, sort_values_for_discrete_attrs=1):
+def get_variable_value_indices(variable, sort_values=True):
     """
     Create a dictionary with given variable. Keys are variable values, values
     are indices (transformed from string to int); in case all values are
     integers, we also sort them.
-    
     """
-    if variable.var_type == VarTypes.Continuous:
-        print("get_variable_value_indices - attribute %s is a continuous "
-              "variable" % (str(variable)))
+    if isinstance(variable, ContinuousVariable):
         return {}
-
-    if sort_values_for_discrete_attrs:
+    if sort_values:
         values = get_variable_values_sorted(variable)
     else:
-        values = list(variable.values)
-    return dict([(values[i], i) for i in range(len(values))])
+        values = variable.values
+    return {value: i for i, value in enumerate(values)}
 
 
 class ScaleData:
     jitter_size = Setting(10)
+    jitter_continuous = Setting(False)
 
     def __init__(self):
         self.raw_data = None           # input data
@@ -83,7 +68,6 @@ class ScaleData:
         self.have_data = False
         self.have_subset_data = False
 
-        self.jitter_continuous = 0
         self.jitter_seed = 0
 
         self.attr_values = {}
@@ -97,7 +81,7 @@ class ScaleData:
         """
         Take examples from data and subset_data and merge them into one
         dataset.
-        
+
         """
         if data is None and subset_data is None:
             return None
@@ -157,10 +141,11 @@ class ScaleData:
 
         self.data_domain = full_data.domain
         self.data_has_class = bool(full_data.domain.class_var)
-        self.data_has_continuous_class = bool(self.data_has_class and
-                                              full_data.domain.class_var.var_type == VarTypes.Continuous)
-        self.data_has_discrete_class = bool(self.data_has_class and
-                                            full_data.domain.class_var.var_type == VarTypes.Discrete)
+        self.data_has_continuous_class = \
+            isinstance(full_data.domain.class_var, ContinuousVariable)
+        self.data_has_discrete_class = \
+            isinstance(full_data.domain.class_var, DiscreteVariable)
+
         self.data_class_name = self.data_has_class and full_data.domain.class_var.name
         if self.data_has_class:
             self.data_class_index = self.attribute_name_index[self.data_class_name]
@@ -177,9 +162,9 @@ class ScaleData:
 
         for index in range(len(full_data.domain)):
             attr = full_data.domain[index]
-            if attr.var_type == VarTypes.Discrete:
+            if isinstance(attr, DiscreteVariable):
                 self.attr_values[attr.name] = [0, len(attr.values)]
-            elif attr.var_type == VarTypes.Continuous:
+            elif isinstance(attr, ContinuousVariable):
                 self.attr_values[attr.name] = [self.domain_data_stat[index].min,
                                                self.domain_data_stat[index].max]
 
@@ -200,13 +185,13 @@ class ScaleData:
 
             for index in range(len(data.domain)):
                 attr = data.domain[index]
-                if attr.var_type == VarTypes.Discrete:
+                if isinstance(attr, DiscreteVariable):
                     # see if the values for discrete attributes have to be resorted
                     variable_value_indices = get_variable_value_indices(data.domain[index],
                                                                         sort_values_for_discrete_attrs)
                     if 0 in [i == variable_value_indices[attr.values[i]]
                              for i in range(len(attr.values))]:
-                        # make the array a contiguous, otherwise the putmask 
+                        # make the array a contiguous, otherwise the putmask
                         # function does not work
                         line = no_jittering_data[index].copy()
                         indices = [np.where(line == val, 1, 0)
@@ -219,7 +204,7 @@ class ScaleData:
                     no_jittering_data[index] = ((no_jittering_data[index] * 2.0 + 1.0)
                                                 / float(2 * len(attr.values)))
 
-                elif attr.var_type == VarTypes.Continuous:
+                elif isinstance(attr, ContinuousVariable):
                     diff = self.domain_data_stat[index].max - self.domain_data_stat[
                         index].min or 1     # if all values are the same then prevent division by zero
                     no_jittering_data[index] = (no_jittering_data[index] -
@@ -254,11 +239,11 @@ class ScaleData:
             # Need to use a different seed for each feature
             random = np.random.RandomState(seed=rseed)
             attr = data.domain[index]
-            if attr.var_type == VarTypes.Discrete:
+            if isinstance(attr, DiscreteVariable):
                 scaled_data[index] += (self.jitter_size / (50.0 * max(1, len(attr.values)))) * \
                                       (random.rand(len(full_data)) - 0.5)
 
-            elif attr.var_type == VarTypes.Continuous and self.jitter_continuous:
+            elif isinstance(attr, ContinuousVariable) and self.jitter_continuous:
                 scaled_data[index] += self.jitter_size / 50.0 * (0.5 - random.rand(len(full_data)))
                 scaled_data[index] = np.absolute(scaled_data[index])       # fix values below zero
                 ind = np.where(scaled_data[index] > 1.0, 1, 0)     # fix values above 1
@@ -290,10 +275,10 @@ class ScaleData:
         if instance[index].isSpecial():
             print("Warning: scaling instance with missing value")
             return 0.5
-        if instance.domain[index].var_type == VarTypes.Discrete:
+        if isinstance(instance.domain[index], DiscreteVariable):
             d = get_variable_value_indices(instance.domain[index])
             return (d[instance[index].value] * 2 + 1) / float(2 * len(d))
-        elif instance.domain[index].var_type == VarTypes.Continuous:
+        elif isinstance(instance.domain[index], ContinuousVariable):
             diff = self.domain_data_stat[index].max - self.domain_data_stat[index].min
             if diff == 0:
                 diff = 1          # if all values are the same then prevent division by zero
@@ -301,19 +286,19 @@ class ScaleData:
 
     def get_attribute_label(self, attr_name):
         if self.attribute_flip_info.get(attr_name, 0) and \
-                        self.data_domain[attr_name].var_type == VarTypes.Continuous:
+                        isinstance(self.data_domain[attr_name], ContinuousVariable):
             return "-" + attr_name
         return attr_name
 
     def flip_attribute(self, attr_name):
         if attr_name not in self.attribute_names:
             return 0
-        if self.data_domain[attr_name].var_type == VarTypes.Discrete:
+        if isinstance(self.data_domain[attr_name], DiscreteVariable):
             return 0
 
         index = self.attribute_name_index[attr_name]
         self.attribute_flip_info[attr_name] = 1 - self.attribute_flip_info.get(attr_name, 0)
-        if self.data_domain[attr_name].var_type == VarTypes.Continuous:
+        if isinstance(self.data_domain[attr_name], ContinuousVariable):
             self.attr_values[attr_name] = [-self.attr_values[attr_name][1], -self.attr_values[attr_name][0]]
 
         self.scaled_data[index] = 1 - self.scaled_data[index]
@@ -385,9 +370,9 @@ class ScaleScatterPlotData(ScaleData):
         data = self.original_data.take(indices, axis = 0)
         for i, ind in enumerate(indices):
             [minVal, maxVal] = self.attr_values[self.data_domain[ind].name]
-            if self.data_domain[ind].varType == Orange.data.Variable.VarTypes.Discrete:
+            if isinstance(self.data_domain[ind], DiscreteVariable):
                 data[i] += (self.jitter_size/50.0)*(np.random.random(len(self.raw_data)) - 0.5)
-            elif self.data_domain[ind].varType == Orange.data.Variable.VarTypes.Continuous and self.jitter_continuous:
+            elif isinstance(self.data_domain[ind], ContinuousVariable) and self.jitter_continuous:
                 data[i] += (self.jitter_size/(50.0*(maxVal-minVal or 1)))*(np.random.random(len(self.raw_data)) - 0.5)
         return data
 
@@ -397,31 +382,51 @@ class ScaleScatterPlotData(ScaleData):
         data = self.original_subset_data.take(indices, axis = 0)
         for i, ind in enumerate(indices):
             [minVal, maxVal] = self.attr_values[self.raw_subset_data.domain[ind].name]
-            if self.data_domain[ind].varType == Orange.core.VarTypes.Discrete:
+            if isinstance(self.data_domain[ind], DiscreteVariable):
                 data[i] += (self.jitter_size/(50.0*max(1, maxVal)))*(np.random.random(len(self.raw_subset_data)) - 0.5)
-            elif self.data_domain[ind].varType == Orange.core.VarTypes.Continuous and self.jitter_continuous:
+            elif isinstance(self.data_domain[ind], ContinuousVariable) and self.jitter_continuous:
                 data[i] += (self.jitter_size/(50.0*(maxVal-minVal or 1)))*(np.random.random(len(self.raw_subset_data)) - 0.5)
         return data
 
     getOriginalSubsetData = get_original_subset_data
 
     # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
-    def get_xy_data_positions(self, xattr, yattr):
+    def get_xy_data_positions(self, xattr, yattr, filter_valid=False,
+                              copy=True):
         """
         Create x-y projection of attributes in attrlist.
 
         """
-        xattr_index, yattr_index = self.attribute_name_index[xattr], self.attribute_name_index[yattr]
+        xattr_index = self.attribute_name_index[xattr]
+        yattr_index = self.attribute_name_index[yattr]
 
-        xdata = self.scaled_data[xattr_index].copy()
-        ydata = self.scaled_data[yattr_index].copy()
+        xattr_index = self.attribute_name_index[xattr]
+        yattr_index = self.attribute_name_index[yattr]
+        if filter_valid is True:
+            filter_valid = self.get_valid_list([xattr_index, yattr_index])
+        if isinstance(filter_valid, np.ndarray):
+            xdata = self.scaled_data[xattr_index, filter_valid]
+            ydata = self.scaled_data[yattr_index, filter_valid]
+        elif copy:
+            xdata = self.scaled_data[xattr_index].copy()
+            ydata = self.scaled_data[yattr_index].copy()
+        else:
+            xdata = self.scaled_data[xattr_index]
+            ydata = self.scaled_data[yattr_index]
 
-        if self.data_domain[xattr_index].var_type == Orange.data.Variable.VarTypes.Discrete: xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
-        else:  xdata = xdata * (self.attr_values[xattr][1] - self.attr_values[xattr][0]) + float(self.attr_values[xattr][0])
-
-        if self.data_domain[yattr_index].var_type == Orange.data.Variable.VarTypes.Discrete: ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
-        else:  ydata = ydata * (self.attr_values[yattr][1] - self.attr_values[yattr][0]) + float(self.attr_values[yattr][0])
-        return (xdata, ydata)
+        if isinstance(self.data_domain[xattr_index], DiscreteVariable):
+            xdata *= len(self.data_domain[xattr_index].values)
+            xdata -= 0.5
+        else:
+            xdata *= self.attr_values[xattr][1] - self.attr_values[xattr][0]
+            xdata += float(self.attr_values[xattr][0])
+        if isinstance(self.data_domain[yattr_index], DiscreteVariable):
+            ydata *= len(self.data_domain[yattr_index].values)
+            ydata -= 0.5
+        else:
+            ydata *= self.attr_values[yattr][1] - self.attr_values[yattr][0]
+            ydata += float(self.attr_values[yattr][0])
+        return xdata, ydata
 
     getXYDataPositions = get_xy_data_positions
 
@@ -436,10 +441,10 @@ class ScaleScatterPlotData(ScaleData):
         xdata = self.scaled_subset_data[xattr_index].copy()
         ydata = self.scaled_subset_data[yattr_index].copy()
 
-        if self.data_domain[xattr_index].varType == Orange.core.VarTypes.Discrete: xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
+        if isinstance(self.data_domain[xattr_index], DiscreteVariable): xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
         else:  xdata = xdata * (self.attr_values[xattr][1] - self.attr_values[xattr][0]) + float(self.attr_values[xattr][0])
 
-        if self.data_domain[yattr_index].varType == Orange.core.VarTypes.Discrete: ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
+        if isinstance(self.data_domain[yattr_index], DiscreteVariable): ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
         else:  ydata = ydata * (self.attr_values[yattr][1] - self.attr_values[yattr][0]) + float(self.attr_values[yattr][0])
         return (xdata, ydata)
 

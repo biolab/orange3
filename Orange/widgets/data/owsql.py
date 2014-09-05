@@ -1,13 +1,12 @@
 import sys
+
 import psycopg2
-
 from PyQt4 import QtGui
-
-from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
 
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
 
 
 class OWSql(widget.OWWidget):
@@ -35,6 +34,7 @@ class OWSql(widget.OWWidget):
     password = Setting(None)
     table = Setting(None)
     tables = Setting([])
+    sql = Setting("")
 
     def __init__(self, parent=None, signalManager=None, stored_settings=None):
         super(OWSql, self).__init__(parent=parent,
@@ -69,18 +69,30 @@ class OWSql(widget.OWWidget):
 
         tables = gui.widgetBox(box, orientation='horizontal')
         self.tablecombo = QtGui.QComboBox(tables)
-        for i, item in enumerate(['Select a table'] + self.tables):
+        choices = ['Select a table'] + self.tables + ['Custom SQL']
+        for i, item in enumerate(choices):
             self.tablecombo.addItem(item)
             if item == self.table:
                 self.tablecombo.setCurrentIndex(i)
 
         tables.layout().addWidget(self.tablecombo)
-        self.tablecombo.activated[int].connect(self.open_table)
+        self.tablecombo.activated[int].connect(self.select_table)
         self.connectbutton = gui.button(
             tables, self, '↻', callback=self.connect)
         self.connectbutton.setSizePolicy(
             QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         tables.layout().addWidget(self.connectbutton)
+
+        self.custom_sql = gui.widgetBox(box, orientation='vertical')
+        self.custom_sql.setVisible(False)
+        self.sqltext = QtGui.QTextEdit(self.custom_sql)
+        self.sqltext.setPlainText(self.sql)
+        self.custom_sql.layout().addWidget(self.sqltext)
+
+        self.executebtn = gui.button(
+            self.custom_sql, self, 'Execute', callback=self.execute_sql)
+
+        box.layout().addWidget(self.custom_sql)
 
         if self.table:
             self.open_table()
@@ -115,6 +127,15 @@ class OWSql(widget.OWWidget):
             tables.append(table_name)
         self.tables = tables
 
+    def select_table(self):
+        curIdx = self.tablecombo.currentIndex()
+        if self.tablecombo.itemText(curIdx) != "Custom SQL":
+            self.custom_sql.setVisible(False)
+            return self.open_table()
+        else:
+            self.custom_sql.setVisible(True)
+            self.table = None
+
     def open_table(self):
         if self.tablecombo.currentIndex() == 0:
             return
@@ -126,15 +147,25 @@ class OWSql(widget.OWWidget):
                          user=self.username,
                          password=self.password,
                          table=self.table)
-        print("Created table")
+        self.send("Data", table)
+
+    def execute_sql(self):
+        self.sql = self.sqltext.toPlainText()
+        table = SqlTable.from_sql(
+            host=self.host,
+            database=self.database,
+            user=self.username,
+            password=self.password,
+            sql=self.sql)
         self.send("Data", table)
 
 
 if __name__ == "__main__":
     import os
+
     a = QtGui.QApplication(sys.argv)
     settings = os.path.join(widget.environ.widget_settings_dir,
-                          OWSql.name + ".ini")
+                            OWSql.name + ".ini")
     ow = OWSql()
     ow.show()
     a.exec_()

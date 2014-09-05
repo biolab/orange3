@@ -63,7 +63,11 @@ def tuple_eval(source):
     if not isinstance(node.body, ast.Tuple):
         raise ValueError("%r is not a tuple literal" % source)
 
-    if not all(isinstance(el, (ast.Str, ast.Num))
+    if not all(isinstance(el, (ast.Str, ast.Num)) or
+               # allow signed number literals in Python3 (i.e. -1|+1|-1.0)
+               (isinstance(el, ast.UnaryOp) and
+                isinstance(el.op, (ast.UAdd, ast.USub)) and
+                isinstance(el.operand, ast.Num))
                for el in node.body.elts):
         raise ValueError("Can only contain numbers or strings")
 

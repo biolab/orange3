@@ -63,8 +63,7 @@ class ControlPoint(GraphicsPathObject):
     def itemChange(self, change, value):
 
         if change == QGraphicsItem.ItemPositionChange:
-            pos = value.toPointF()
-            newpos = self.constrain(pos)
+            newpos = self.constrain(value)
             return newpos
 
         return GraphicsPathObject.itemChange(self, change, value)

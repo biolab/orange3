@@ -43,6 +43,7 @@ class IntersphinxHelpProvider(HelpProvider):
         self.inventory = inventory
 
         self.islocal = bool(QUrl(inventory).toLocalFile())
+        self.items = None
 
         self._fetch_inventory()
 
@@ -52,10 +53,13 @@ class IntersphinxHelpProvider(HelpProvider):
         else:
             ref = description.name
 
-        if not hasattr(self, "items"):
+        if not self.islocal and not self._reply.isFinished():
             self._reply.waitForReadyRead(2000)
 
-        labels = self.items.get("std:label", {})
+        if self.items is None:
+            labels = {}
+        else:
+            labels = self.items.get("std:label", {})
         entry = labels.get(ref.lower(), None)
         if entry is not None:
             _, _, url, _ = entry
@@ -88,7 +92,6 @@ class IntersphinxHelpProvider(HelpProvider):
             self._load_inventory(open(str(url.toLocalFile()), "rb"))
 
     def _on_finished(self, reply):
-        del self._reply
         if reply.error() != QNetworkReply.NoError:
             log.error("An error occurred while fetching "
                       "intersphinx inventory {0!r}".format(self.inventory))
@@ -107,16 +110,17 @@ class IntersphinxHelpProvider(HelpProvider):
             join = urljoin
 
         if version == "# Sphinx inventory version 1":
-            inventory = read_inventory_v1(stream, self.target, join)
+            items = read_inventory_v1(stream, self.target, join)
         elif version == "# Sphinx inventory version 2":
-            inventory = read_inventory_v2(stream, self.target, join)
+            items = read_inventory_v2(stream, self.target, join)
         else:
             log.error("Invalid/unknown intersphinx inventory format.")
             self._error = (ValueError,
                            "{0} does not seem to be an intersphinx "
                            "inventory file".format(self.target))
+            items = None
 
-        self.items = inventory
+        self.items = items
 
 
 def qurl_query_items(url):

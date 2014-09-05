@@ -24,7 +24,7 @@ import Orange
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import DomainContextHandler, Setting, ContextSetting
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, vartype
 
 from .owpythonscript import PythonSyntaxHighlighter
 
@@ -380,11 +380,10 @@ class StringFeatureEditor(FeatureEditor):
         )
 
 
-_types = Orange.data.Variable.VarTypes
 _VarMap = {
-    DiscreteDescriptor: _types.Discrete,
-    ContinuousDescriptor: _types.Continuous,
-    StringDescriptor: _types.String
+    DiscreteDescriptor: vartype(Orange.data.DiscreteVariable()),
+    ContinuousDescriptor: vartype(Orange.data.ContinuousVariable()),
+    StringDescriptor: vartype(Orange.data.StringVariable())
 }
 
 

@@ -80,10 +80,10 @@ class TestToolTree(QAppTestCase):
         item.setText("New text")
 
         self.assertTrue(len(changed) == 1)
-        self.assertEquals(changed[-1][0].data(Qt.DisplayRole),
+        self.assertEqual(changed[-1][0].data(Qt.DisplayRole),
                           "New text")
 
-        self.assertEquals(model.data(model.index(1)), "New text")
+        self.assertEqual(model.data(model.index(1)), "New text")
 
         model.setFlatteningMode(FlattenedTreeItemModel.InternalNodesDisabled)
 

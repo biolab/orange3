@@ -33,6 +33,7 @@ from ..gui.utils import message_information, disabled
 from ..scheme import (
     scheme, signalmanager, SchemeNode, SchemeLink, BaseSchemeAnnotation
 )
+from ..scheme import widgetsscheme
 from ..canvas.scene import CanvasScene
 from ..canvas.view import CanvasView
 from ..canvas import items
@@ -977,6 +978,11 @@ class SchemeEditWidget(QWidget):
                 # Re post the event
                 self.__showHelpFor(event.href())
 
+            elif event.type() == \
+                    widgetsscheme.ActivateParentEvent.ActivateParent:
+                self.window().activateWindow()
+                self.window().raise_()
+
         return QWidget.eventFilter(self, obj, event)
 
     def sceneMousePressEvent(self, event):
@@ -1234,6 +1240,7 @@ class SchemeEditWidget(QWidget):
         widget = self.scheme().widget_for_node(node)
         widget.show()
         widget.raise_()
+        widget.activateWindow()
 
     def __onNodePositionChanged(self, item, pos):
         node = self.__scene.node_for_item(item)

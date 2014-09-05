@@ -140,7 +140,7 @@ class TestReadWrite(test.QAppTestCase):
 
     def test_safe_evals(self):
         s = readwrite.string_eval(r"'\x00\xff'")
-        self.assertEquals(s, chr(0) + chr(255))
+        self.assertEqual(s, chr(0) + chr(255))
 
         with self.assertRaises(ValueError):
             readwrite.string_eval("[1, 2]")

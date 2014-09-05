@@ -7,7 +7,7 @@ import warnings
 
 from Orange.canvas.utils import environ
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
-
+from Orange.widgets.utils import vartype
 
 __all__ = ["Setting", "SettingsHandler",
            "ContextSetting", "ContextHandler",
@@ -16,10 +16,17 @@ __all__ = ["Setting", "SettingsHandler",
 
 _immutables = (str, int, bytes, bool, float, tuple)
 
-
 class Setting:
     """Description of a setting.
     """
+
+    # A misleading docstring for providing type hints for Settings to PyCharm
+    def __new__(cls, default, *args, **kw_args):
+        """
+        :type: default: T
+        :rtype: T
+        """
+        return super().__new__(cls)
 
     def __init__(self, default, **data):
         self.name = None  # Name gets set in widget's meta class
@@ -375,6 +382,7 @@ class ContextHandler(SettingsHandler):
         """Initialize the widget: call the inherited initialization and
         add an attribute 'context_settings' to the widget. This method
         does not open a context."""
+        instance.current_context = None
         super().initialize(instance, data)
         if data and "context_settings" in data:
             instance.context_settings = data["context_settings"]
@@ -412,8 +420,7 @@ class ContextHandler(SettingsHandler):
             globs.sort(key=lambda c: -c.time)
             del globs[self.MAX_SAVED_CONTEXTS:]
 
-    @staticmethod
-    def new_context():
+    def new_context(self):
         """Create a new context."""
         return Context()
 
@@ -434,7 +441,7 @@ class ContextHandler(SettingsHandler):
          search is necessary.
 
          Derived classes must overload this method."""
-        raise SystemError(self.__class__.__name__ + " does not overload match")
+        raise TypeError(self.__class__.__name__ + " does not overload match")
 
     def find_or_create_context(self, widget, *args, **kwargs):
         """Find the best matching context or create a new one if nothing
@@ -483,7 +490,11 @@ class ContextHandler(SettingsHandler):
     def close_context(self, widget):
         """Close the context by calling :obj:`settings_from_widget` to write
         any relevant widget settings to the context."""
+        if widget.current_context is None:
+            return
+
         self.settings_from_widget(widget)
+        widget.current_context = None
 
     # TODO this method has misleading name (method 'initialize' does what
     #      this method's name would indicate.
@@ -549,10 +560,11 @@ class DomainContextHandler(ContextHandler):
         # noinspection PyShadowingNames
         def encode(attributes, encode_values):
             if not encode_values:
-                return {v.name: v.var_type for v in attributes}
+                return {v.name: vartype(v) 
+                    for v in attributes}
 
             is_discrete = lambda x: isinstance(x, DiscreteVariable)
-            return {v.name: v.values if is_discrete(v) else v.var_type
+            return {v.name: v.values if is_discrete(v) else vartype(v)
                     for v in attributes}
 
         match = self.match_values
@@ -572,6 +584,16 @@ class DomainContextHandler(ContextHandler):
 
         return attributes, metas
 
+    def new_context(self):
+        """Create a new context."""
+        context = super().new_context()
+        context.attributes = {}
+        context.metas = {}
+        context.ordered_domain = []
+        context.values = {}
+        context.no_copy = ["ordered_domain"]
+        return context
+
     #noinspection PyMethodOverriding,PyTupleAssignmentBalance
     def find_or_create_context(self, widget, domain):
         if not domain:
@@ -587,15 +609,12 @@ class DomainContextHandler(ContextHandler):
         context.attributes, context.metas = encoded_domain
 
         if self.has_ordinary_attributes:
-            context.ordered_domain = [(v.name, v.var_type) for v in domain]
+            context.ordered_domain = [(v.name, vartype(v)) for v in domain]
         else:
             context.ordered_domain = []
         if self.has_meta_attributes:
-            context.ordered_domain += [(v.name, v.var_type)
+            context.ordered_domain += [(v.name, vartype(v))
                                        for v in domain.metas]
-        if is_new:
-            context.values = {}
-            context.no_copy = ["ordered_domain"]
         return context, is_new
 
     def settings_to_widget(self, widget):
@@ -660,6 +679,8 @@ class DomainContextHandler(ContextHandler):
         super().settings_from_widget(widget)
 
         context = widget.current_context
+        if context is None:
+            return
 
         def packer(setting, instance):
             value = getattr(instance, setting.name)
@@ -678,7 +699,7 @@ class DomainContextHandler(ContextHandler):
             setting = self.known_settings[name]
 
             if name == setting.name or name.endswith(".%s" % setting.name):
-                value = self.encode_setting(widget, setting, value)
+                value = self.encode_setting(context, setting, value)
             else:
                 value = list(value)
 
@@ -808,7 +829,7 @@ class DomainContextHandler(ContextHandler):
                     del data[setting.name]
 
         context.attributes, context.metas = attrs, metas
-        context.ordered_domain = [(attr.name, attr.var_type) for attr in
+        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
                                   itertools.chain(domain, domain.metas)]
         return context
 
@@ -892,11 +913,11 @@ class PerfectDomainContextHandler(DomainContextHandler):
                 return tuple(
                     (v.name,
                      v.values if isinstance(v, DiscreteVariable)
-                     else v.var_type)
+                     else vartype(v))
                     for v in attrs)
         else:
             def encode(attrs):
-                return tuple((v.name, v.var_type) for v in attrs)
+                return tuple((v.name, vartype(v)) for v in attrs)
         return (encode(domain.attributes),
                 encode(domain.class_vars),
                 encode(domain.metas))

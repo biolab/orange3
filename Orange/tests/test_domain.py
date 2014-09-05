@@ -1,4 +1,7 @@
 import unittest
+import pickle
+
+from Orange.data import Domain
 
 from Orange.testing import create_pickling_tests
 from Orange import data
@@ -381,6 +384,12 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(g_to_f.attributes, [-2])
         self.assertEqual(g_to_f.class_vars, [None, x])
         self.assertEqual(g_to_f.metas, [-1, x, -3])
+
+    def test_unpickling_recreates_known_domains(self):
+        domain = Domain([])
+        unpickled_domain = pickle.loads(pickle.dumps(domain))
+        self.assertTrue(hasattr(unpickled_domain, 'known_domains'))
+
 
 if __name__ == "__main__":
     unittest.main()

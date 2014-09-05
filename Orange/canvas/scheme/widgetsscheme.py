@@ -184,6 +184,8 @@ class WidgetManager(QObject):
         self.__widget_for_node[node] = widget
         self.__node_for_widget[widget] = node
 
+        self.__initialize_widget_state(node, widget)
+
         self.widget_for_node_added.emit(node, widget)
 
     def remove_widget_for_node(self, node):
@@ -193,8 +195,12 @@ class WidgetManager(QObject):
         widget = self.widget_for_node(node)
 
         self.__widgets.remove(widget)
+
         del self.__widget_for_node[node]
         del self.__node_for_widget[widget]
+
+        node.title_changed.disconnect(widget.setCaption)
+        widget.progressBarValueChanged.disconnect(node.set_progress)
 
         self.widget_for_node_removed.emit(node, widget)
 
@@ -218,6 +224,7 @@ class WidgetManager(QObject):
             self.__delay_delete.add(widget)
         else:
             widget.deleteLater()
+            del self.__widget_processing_state[widget]
 
     def create_widget_instance(self, node):
         """
@@ -257,6 +264,10 @@ class WidgetManager(QObject):
         # Widget's info/warning/error messages.
         widget.widgetStateChanged.connect(self.__on_widget_state_changed)
 
+        # Widget's statusTip
+        node.set_status_message(widget.statusMessage())
+        widget.statusMessageChanged.connect(node.set_status_message)
+
         # Widget's progress bar value state.
         widget.progressBarValueChanged.connect(node.set_progress)
 
@@ -271,9 +282,20 @@ class WidgetManager(QObject):
             # A widget can already enter blocking state in __init__
             self.__widget_processing_state[widget] |= self.BlockingUpdate
 
+        if widget.processingState != 0:
+            # It can also start processing (initialization of resources, ...)
+            self.__widget_processing_state[widget] |= self.ProcessingUpdate
+            node.set_processing_state(1)
+            node.set_progress(widget.progressBarValue)
+
         # Install a help shortcut on the widget
         help_shortcut = QShortcut(QKeySequence("F1"), widget)
         help_shortcut.activated.connect(self.__on_help_request)
+
+        # Up shortcut (activate/open parent)
+        up_shortcut = QShortcut(
+            QKeySequence(Qt.ControlModifier + Qt.Key_Up), widget)
+        up_shortcut.activated.connect(self.__on_activate_parent)
 
         return widget
 
@@ -328,6 +350,24 @@ class WidgetManager(QObject):
             event = QWhatsThisClickedEvent(url)
             QCoreApplication.sendEvent(self.scheme(), event)
 
+    def __on_activate_parent(self):
+        """
+        Activate parent shortcut was pressed.
+        """
+        event = ActivateParentEvent()
+        QCoreApplication.sendEvent(self.scheme(), event)
+
+    def __initialize_widget_state(self, node, widget):
+        """
+        Initialize the tracked info/warning/error message state.
+        """
+        for message_type, state in widget.widgetState.items():
+            for message_id, message_value in state.items():
+                message = user_message_from_state(
+                    widget, message_type, message_id, message_value)
+
+                node.set_state_message(message)
+
     def __on_widget_state_changed(self, message_type, message_id,
                                   message_value):
         """
@@ -345,25 +385,9 @@ class WidgetManager(QObject):
         except KeyError:
             pass
         else:
-            message_type = str(message_type)
-            if message_type == "Info":
-                contents = widget.widgetStateToHtml(True, False, False)
-                level = UserMessage.Info
-            elif message_type == "Warning":
-                contents = widget.widgetStateToHtml(False, True, False)
-                level = UserMessage.Warning
-            elif message_type == "Error":
-                contents = widget.widgetStateToHtml(False, False, True)
-                level = UserMessage.Error
-            else:
-                raise ValueError("Invalid message_type: %r" % message_type)
+            message = user_message_from_state(
+                widget, str(message_type), message_id, message_value)
 
-            if not contents:
-                contents = None
-
-            message = UserMessage(contents, severity=level,
-                                  message_id=message_type,
-                                  data={"content-type": "text/html"})
             node.set_state_message(message)
 
     def __on_processing_state_changed(self, state):
@@ -442,6 +466,29 @@ class WidgetManager(QObject):
             self.__delay_delete.remove(widget)
             widget.deleteLater()
             del self.__widget_processing_state[widget]
+
+
+def user_message_from_state(widget, message_type, message_id, message_value):
+    message_type = str(message_type)
+    if message_type == "Info":
+        contents = widget.widgetStateToHtml(True, False, False)
+        level = UserMessage.Info
+    elif message_type == "Warning":
+        contents = widget.widgetStateToHtml(False, True, False)
+        level = UserMessage.Warning
+    elif message_type == "Error":
+        contents = widget.widgetStateToHtml(False, False, True)
+        level = UserMessage.Error
+    else:
+        raise ValueError("Invalid message_type: %r" % message_type)
+
+    if not contents:
+        contents = None
+
+    message = UserMessage(contents, severity=level,
+                          message_id=message_type,
+                          data={"content-type": "text/html"})
+    return message
 
 
 class WidgetsSignalManager(SignalManager):
@@ -773,3 +820,10 @@ class SignalWrapper(object):
         else:
             # Might be running stand alone without a manager.
             self.method(*args)
+
+
+class ActivateParentEvent(QEvent):
+    ActivateParent = QEvent.registerEventType()
+
+    def __init__(self):
+        QEvent.__init__(self, self.ActivateParent)

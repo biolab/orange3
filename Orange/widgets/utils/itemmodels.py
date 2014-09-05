@@ -1,9 +1,15 @@
 import pickle
-
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-
 from contextlib import contextmanager
+
+from PyQt4 import QtGui, QtCore
+from PyQt4.QtGui import  QItemSelectionModel
+from PyQt4.QtCore import Qt, QAbstractListModel, QModelIndex, QByteArray
+from PyQt4.QtCore import pyqtSignal as Signal
+
+from PyQt4.QtGui import (
+    QWidget, QBoxLayout, QToolButton, QAbstractButton, QAction
+)
+
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.widgets import gui
 
@@ -380,73 +386,6 @@ def safe_text(text):
     return text
 
 
-class VariableEditor(QWidget):
-    def __init__(self, var, parent):
-        QWidget.__init__(self, parent)
-        self.var = var
-        layout = QHBoxLayout()
-        self.type_cb = QComboBox(self)
-        for attr, icon in gui.attributeIconDict.items():
-            if attr != -1:
-                self.type_cb.addItem(icon, str(attr))
-        layout.addWidget(self.type_cb)
-
-        self.name_le = QLineEdit(self)
-        layout.addWidget(self.name_le)
-
-        self.setLayout(layout)
-
-        self.type_cb.currentIndexChanged.connect(self.edited)
-        self.name_le.editingFinished.connect(self.edited)
-
-    def edited(self, *_):
-        self.emit(SIGNAL("edited()"))
-
-    def setData(self, tpe, name):
-        self.type_cb.setCurrentIndex(list(self._attr.keys()).index(tpe))
-        self.name_le.setText(name)
-
-
-class DiscreteVariableEditor(VariableEditor):
-    def __init__(self, var, parent):
-        VariableEditor.__init__(self, var, parent)
-
-
-class ContinuousVariableEditor(QLineEdit):
-    def setVariable(self, var):
-        self.setText(var.name)
-
-    def getVariable(self):
-        return ContinuousVariable(self.text())
-
-
-class StringVariableEditor(QLineEdit):
-    def setVariable(self, var):
-        self.setText(str(var.name))
-
-    def getVariable(self):
-        return StringVariable(self.text())
-
-
-class VariableDelegate(QStyledItemDelegate):
-    def createEditor(self, parent, option, index):
-        var = index.data(Qt.EditRole)
-        if isinstance(var, DiscreteVariable):
-            return DiscreteVariableEditor(var, parent)
-        elif isinstance(var, ContinuousVariable):
-            return ContinuousVariableEditor(var, parent)
-        elif isinstance(var, StringVariable):
-            return StringVariableEditor(var, parent)
-#        return VariableEditor(var, parent)
-
-    def setEditorData(self, editor, index):
-        var = index.data(Qt.EditRole)
-        editor.variable = var
-
-    def setModelData(self, editor, model, index):
-        model.set_data(index, editor.variable, Qt.EditRole)
-
-
 class ListSingleSelectionModel(QItemSelectionModel):
     """ Item selection model for list item models with single selection.
 
@@ -454,6 +393,8 @@ class ListSingleSelectionModel(QItemSelectionModel):
         - selectedIndexChanged(QModelIndex)
 
     """
+    selectedIndexChanged = Signal(QModelIndex)
+
     def __init__(self, model, parent=None):
         QItemSelectionModel.__init__(self, model, parent)
         self.selectionChanged.connect(self.onSelectionChanged)
@@ -464,7 +405,8 @@ class ListSingleSelectionModel(QItemSelectionModel):
             index = index.pop()
         else:
             index = QModelIndex()
-        self.emit(SIGNAL("selectedIndexChanged(QModelIndex)"), index)
+
+        self.selectedIndexChanged.emit(index)
 
     def selectedRow(self):
         """ Return QModelIndex of the selected row or invalid if no selection.

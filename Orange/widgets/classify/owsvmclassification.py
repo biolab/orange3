@@ -12,7 +12,7 @@ from Orange.widgets import widget, settings, gui
 
 class OWSVMClassification(widget.OWWidget):
     name = "SVM Classification"
-    description = ""
+    description = "Support Vector Machine Classification."
     icon = "icons/SVM.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data")]
@@ -119,12 +119,17 @@ class OWSVMClassification(widget.OWWidget):
         self.apply()
 
     def set_data(self, data):
-
-        self.data = data
+        """Set the input train data set."""
+        self.warning(0)
 
         if data is not None:
-            self.data = data
+            if not isinstance(data.domain.class_var,
+                              Orange.data.DiscreteVariable):
+                data = None
+                self.warning(0, "Data does not have a discrete class var")
 
+        self.data = data
+        if data is not None:
             self.apply()
 
     def apply(self):
@@ -135,16 +140,18 @@ class OWSVMClassification(widget.OWWidget):
             gamma=self.gamma,
             coef0=self.coef0,
             tol=self.tol,
+            probability=True,
         )
         if self.svmtype == 0:
             learner = svm.SVMLearner(C=self.C, **common_args)
         else:
             learner = svm.NuSVMLearner(nu=self.nu, **common_args)
+        learner.name = self.learner_name
 
         classifier = None
-
         if self.data is not None:
             classifier = learner(self.data)
+            classifier.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)

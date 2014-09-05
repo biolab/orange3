@@ -4,7 +4,8 @@ import re
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from Orange.widgets.utils import getdeepattr
-
+from Orange.data import ContinuousVariable, StringVariable, DiscreteVariable, Variable
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 
 YesNo = NoYes = ("No", "Yes")
@@ -304,8 +305,7 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     setLayout(b, orientation)
     b.layout().setSpacing(spacing)
     b.layout().setMargin(margin)
-    if not "addSpace" in misc:
-        misc["addSpace"] = bool(box)
+    misc.setdefault('addSpace', bool(box))
     miscellanea(b, None, widget, **misc)
     return b
 
@@ -374,7 +374,7 @@ def label(widget, master, label, labelWidth=None, box=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param label: The text of the label, including attribute names
     :type label: str
     :param labelWidth: The width of the label (default: None)
@@ -539,7 +539,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param minv: minimal value
@@ -607,7 +607,6 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         bi = widgetBox(b, orientation=0, addToLayout=False)
     else:
         bi = b
-    bi.setDisabled(disabled)
 
     cbox = None
     if checked is not None:
@@ -622,6 +621,11 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     sbox = bi.control = \
         (SpinBoxWFocusOut, DoubleSpinBoxWFocusOut)[isDouble](minv, maxv,
                                                              step, bi)
+    if bi is not widget:
+        bi.setDisabled(disabled)
+    else:
+        sbox.setDisabled(disabled)
+
     if decimals is not None:
         sbox.setDecimals(decimals)
     sbox.setAlignment(alignment)
@@ -690,7 +694,7 @@ def checkBox(widget, master, value, label, box=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param label: label
@@ -829,7 +833,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param label: label
@@ -915,7 +919,7 @@ def button(widget, master, label, callback=None, width=None, height=None,
     :param widget: the widget into which the button is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param label: label
     :type label: str
     :param callback: a function that is called when the button is pressed
@@ -979,7 +983,7 @@ def toolButton(widget, master, label="", callback=None,
     :param widget: the widget into which the button is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param label: label
     :type label: str
     :param callback: a function that is called when the button is pressed
@@ -1024,18 +1028,17 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
 
 class __AttributeIconDict(dict):
     def __getitem__(self, key):
-        from Orange.data import Variable
         if not self:
-            VarTypes = Variable.VarTypes
-            for tpe, char, col in ((VarTypes.Continuous, "C", (202, 0, 32)),
-                                  (VarTypes.Discrete, "D", (26, 150, 65)),
-                                  (VarTypes.String, "S", (0, 0, 0)),
+            for tpe, char, col in ((vartype(ContinuousVariable()), 
+                                        "C", (202, 0, 32)),
+                                  (vartype(DiscreteVariable()), 
+                                        "D", (26, 150, 65)),
+                                  (vartype(StringVariable()), 
+                                        "S", (0, 0, 0)),
                                   (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))
-        if isinstance(key, Variable):
-            key = key.var_type
-        if not key in self:
-            key = -1
+        if key not in self:
+            key = vartype(key) if isinstance(key, Variable) else -1
         return super().__getitem__(key)
 
 #: A dict that returns icons for different attribute types. The dict is
@@ -1074,7 +1077,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the name of the master's attribute with which the value is
         synchronized (list of ints - indices of selected items)
     :type value: str
@@ -1125,6 +1128,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     connectControl(lb, master, value, callback, "itemSelectionChanged()",
                    CallFrontListBox(lb), CallBackListBox(lb, master))
 
+    misc.setdefault('addSpace', True)
     miscellanea(lb, bg, widget, **misc)
     return lb
 
@@ -1141,7 +1145,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param btnLabels: a list of labels or icons for radio buttons
@@ -1173,6 +1177,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     connectControl(bg.group, master, value, callback, "buttonClicked(int)",
                    CallFrontRadioButtons(bg), CallBackRadioButton(bg, master))
 
+    misc.setdefault('addSpace', bool(box))
     miscellanea(bg.group, bg, widget, **misc)
     return bg
 
@@ -1236,7 +1241,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param box: tells whether the widget has a border, and its label
@@ -1305,13 +1310,160 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
         label.setFixedSize(max(width1, width2), label.sizeHint().height())
         txt = labelFormat % (getdeepattr(master, value) / divideFactor)
         label.setText(txt)
-        label.setLbl = lambda x, l=label, f=labelFormat: \
-            l.setText(f % (x / divideFactor))
+        label.setLbl = lambda x: \
+            label.setText(labelFormat % (x / divideFactor))
         QtCore.QObject.connect(slider, QtCore.SIGNAL(signal_signature),
                                label.setLbl)
 
     connectControl(slider, master, value, callback, signal_signature,
                    CallFrontHSlider(slider))
+
+    miscellanea(slider, sliderBox, widget, **misc)
+    return slider
+
+
+def labeledSlider(widget, master, value, box=None,
+                 label=None, labels=(), labelFormat=" %d", ticks=False,
+                 callback=None, vertical=False, width=None, **misc):
+    """
+    Construct a slider with labels instead of numbers.
+
+    :param widget: the widget into which the box is inserted
+    :type widget: PyQt4.QtGui.QWidget
+    :param master: master widget
+    :type master: OWWidget or OWComponent
+    :param value: the master's attribute with which the value is synchronized
+    :type value:  str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :param label: a label that is inserted into the box
+    :type label: str
+    :param labels: labels shown at different slider positions
+    :type labels: tuple of str
+    :param callback: a function that is called when the value is changed
+    :type callback: function
+
+    :param ticks: if set to `True`, ticks are added below the slider
+    :type ticks: bool
+    :param vertical: if set to `True`, the slider is vertical
+    :type vertical: bool
+    :param width: the width of the slider
+    :type width: int
+    :rtype: :obj:`PyQt4.QtGui.QSlider`
+    """
+    sliderBox = widgetBox(widget, box, orientation="horizontal",
+                          addToLayout=False)
+    if label:
+        widgetLabel(sliderBox, label)
+    sliderOrient = Qt.Vertical if vertical else Qt.Horizontal
+    slider = QtGui.QSlider(sliderOrient, sliderBox)
+    slider.ogValue = value
+    slider.setRange(0, len(labels) - 1)
+    slider.setSingleStep(1)
+    slider.setPageStep(1)
+    slider.setTickInterval(1)
+    sliderBox.layout().addWidget(slider)
+    slider.setValue(labels.index(getdeepattr(master, value)))
+    if width:
+        slider.setFixedWidth(width)
+    if ticks:
+        slider.setTickPosition(QtGui.QSlider.TicksBelow)
+        slider.setTickInterval(ticks)
+
+    max_label_size = 0
+    slider.value_label = value_label = QtGui.QLabel(sliderBox)
+    value_label.setAlignment(Qt.AlignRight)
+    sliderBox.layout().addWidget(value_label)
+    for lb in labels:
+        value_label.setText(labelFormat % lb)
+        max_label_size = max(max_label_size, value_label.sizeHint().width())
+    value_label.setFixedSize(max_label_size, value_label.sizeHint().height())
+    value_label.setText(getdeepattr(master, value))
+    if isinstance(labelFormat, str):
+        value_label.set_label = lambda x: \
+            value_label.setText(labelFormat % x)
+    else:
+        value_label.set_label = lambda x: value_label.setText(labelFormat(x))
+    QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
+                           value_label.set_label)
+
+    connectControl(slider, master, value, callback, "valueChanged(int)",
+                   CallFrontLabeledSlider(slider, labels),
+                   CallBackLabeledSlider(slider, master, labels))
+
+    miscellanea(slider, sliderBox, widget, **misc)
+    return slider
+
+
+def valueSlider(widget, master, value, box=None, label=None,
+                values=(), labelFormat=" %d", ticks=False,
+                callback=None, vertical=False, width=None, **misc):
+    """
+    Construct a slider with different values.
+
+    :param widget: the widget into which the box is inserted
+    :type widget: PyQt4.QtGui.QWidget
+    :param master: master widget
+    :type master: OWWidget or OWComponent
+    :param value: the master's attribute with which the value is synchronized
+    :type value:  str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :param label: a label that is inserted into the box
+    :type label: str
+    :param values: values at different slider positions
+    :type values: list of int
+    :param labelFormat: label format; default is `" %d"`; can also be a function
+    :type labelFormat: str or func
+    :param callback: a function that is called when the value is changed
+    :type callback: function
+
+    :param ticks: if set to `True`, ticks are added below the slider
+    :type ticks: bool
+    :param vertical: if set to `True`, the slider is vertical
+    :type vertical: bool
+    :param width: the width of the slider
+    :type width: int
+    :rtype: :obj:`PyQt4.QtGui.QSlider`
+    """
+    if isinstance(labelFormat, str):
+        labelFormat = lambda x, f=labelFormat: f(x)
+
+    sliderBox = widgetBox(widget, box, orientation="horizontal",
+                          addToLayout=False)
+    if label:
+        widgetLabel(sliderBox, label)
+    slider_orient = Qt.Vertical if vertical else Qt.Horizontal
+    slider = QtGui.QSlider(slider_orient, sliderBox)
+    slider.ogValue = value
+    slider.setRange(0, len(values) - 1)
+    slider.setSingleStep(1)
+    slider.setPageStep(1)
+    slider.setTickInterval(1)
+    sliderBox.layout().addWidget(slider)
+    slider.setValue(values.index(getdeepattr(master, value)))
+    if width:
+        slider.setFixedWidth(width)
+    if ticks:
+        slider.setTickPosition(QtGui.QSlider.TicksBelow)
+        slider.setTickInterval(ticks)
+
+    max_label_size = 0
+    slider.value_label = value_label = QtGui.QLabel(sliderBox)
+    value_label.setAlignment(Qt.AlignRight)
+    sliderBox.layout().addWidget(value_label)
+    for lb in values:
+        value_label.setText(labelFormat(lb))
+        max_label_size = max(max_label_size, value_label.sizeHint().width())
+    value_label.setFixedSize(max_label_size, value_label.sizeHint().height())
+    value_label.setText(labelFormat(getdeepattr(master, value)))
+    value_label.set_label = lambda x: value_label.setText(labelFormat(values[x]))
+    QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
+                           value_label.set_label)
+
+    connectControl(slider, master, value, callback, "valueChanged(int)",
+                   CallFrontLabeledSlider(slider, values),
+                   CallBackLabeledSlider(slider, master, values))
 
     miscellanea(slider, sliderBox, widget, **misc)
     return slider
@@ -1340,7 +1492,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param master: master widget
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param box: tells whether the widget has a border, and its label
@@ -1453,7 +1605,7 @@ class OrangeListBox(QtGui.QListWidget):
                  dataValidityCallback=None, sizeHint=None, *args):
         """
         :param master: the master widget
-        :type master: PyQt4.QtGui.QWidget
+        :type master: OWWidget or OWComponent
         :param enableDragDrop: flag telling whether drag and drop is enabled
         :type enableDragDrop: bool
         :param dragDropCallback: callback for the end of drop event
@@ -1815,7 +1967,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
     `self.apply` if `dataDirty` is `True`.
 
     :param master: the master widget (used only to get the `changedFlag`)
-    :type master: PyQt4.QtGui.QWidget
+    :type master: OWWidget or OWComponent
     :param sendButton: the button for committing the data
     :type sendButton: PyQt4.QtGui.QPushButton
     :param stopCheckbox: the check box
@@ -2080,6 +2232,19 @@ class CallBackRadioButton:
             self.widget.__setattr__(self.control.ogValue, arr.index(1))
 
 
+class CallBackLabeledSlider:
+    def __init__(self, control, widget, lookup):
+        self.control = control
+        self.widget = widget
+        self.lookup = lookup
+        self.disabled = False
+
+    def __call__(self, *_):
+        if not self.disabled and self.control.ogValue is not None:
+            self.widget.__setattr__(self.control.ogValue,
+                                    self.lookup[self.control.value()])
+
+
 ##############################################################################
 # call fronts (change of the attribute value changes the related control)
 
@@ -2165,6 +2330,16 @@ class CallFrontHSlider(ControlledCallFront):
     def action(self, value):
         if value is not None:
             self.control.setValue(value)
+
+
+class CallFrontLabeledSlider(ControlledCallFront):
+    def __init__(self, control, lookup):
+        super().__init__(control)
+        self.lookup = lookup
+
+    def action(self, value):
+        if value is not None:
+            self.control.setValue(self.lookup.index(value))
 
 
 class CallFrontLogSlider(ControlledCallFront):
