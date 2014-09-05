@@ -67,15 +67,11 @@ class OWContinuize(widget.OWWidget):
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.sendDataIf)
 
-        self.controlArea.layout().addSpacing(4)
-
         box = gui.widgetBox(self.controlArea, "Continuous attributes")
         gui.radioButtonsInBox(
             box, self, "continuous_treatment",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.sendDataIf)
-
-        self.controlArea.layout().addSpacing(4)
 
         box = gui.widgetBox(self.controlArea, "Discrete class attribute")
         gui.radioButtonsInBox(
@@ -84,16 +80,12 @@ class OWContinuize(widget.OWWidget):
             callback=self.sendDataIf
         )
 
-        self.controlArea.layout().addSpacing(4)
-
         zbbox = gui.widgetBox(self.controlArea, "Value range")
 
         gui.radioButtonsInBox(
             zbbox, self, "zero_based",
             btnLabels=self.value_ranges,
             callback=self.sendDataIf)
-
-        self.controlArea.layout().addSpacing(4)
 
         snbox = gui.widgetBox(self.controlArea, "Send data")
         gui.button(snbox, self, "Send data", callback=self.sendData,

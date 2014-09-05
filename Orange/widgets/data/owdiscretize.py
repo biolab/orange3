@@ -184,7 +184,7 @@ class OWDiscretize(widget.OWWidget):
         vlayout = QHBoxLayout()
         box = gui.widgetBox(
             self.controlArea, "Individual Attribute Settings",
-            orientation=vlayout
+            orientation=vlayout, spacing=8
         )
 
         # List view with all attributes
