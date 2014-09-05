@@ -118,8 +118,9 @@ class EqualWidth(Discretization):
         return _discretized_var(data, attribute, points)
 
 
-import numpy
+#MDL-Entropy discretization
 
+import numpy
 
 def normalize(X, axis=None, out=None):
     """
@@ -287,7 +288,8 @@ class EntropyMDL(Discretization):
     def __call__(self, data, attribute):
         from Orange.statistics import contingency as c
         cont = c.get_contingency(data, attribute)
-        values, I = join_contingency(cont)
+        #values, I = _join_contingency(cont)
+        values, I = _discretization.join_contingency(cont)
         cut_ind = numpy.array(entropy_discretize_sorted(I))
         if len(cut_ind) > 0:
             points = values[cut_ind - 1]
@@ -296,7 +298,7 @@ class EntropyMDL(Discretization):
             return None
 
 
-def join_contingency(contingency):
+def _join_contingency(contingency): #obsolete: use _discretization.join_contingency
     """
     Join contingency list into a single ordered distribution.
     """
