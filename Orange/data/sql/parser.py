@@ -49,7 +49,8 @@ class SqlParser:
             " LIMIT 0")
         cur.execute("SELECT column_name, data_type"
                     "  FROM INFORMATION_SCHEMA.COLUMNS"
-                    " WHERE table_name = 'xxx'")
+                    " WHERE table_name = 'xxx'"
+                    " ORDER BY ordinal_position")
 
         if self.fields is None:
             for field_name, field_type in cur.fetchall():
