@@ -157,6 +157,7 @@ class ExpandProbabilitiesTest(unittest.TestCase):
 
 
 class SparseTest(unittest.TestCase):
+    @unittest.skip("TODO: learner for sparse multiclass data.")
     def test_sparse_basket(self):
         current_dir = os.path.dirname(__file__)
         dataset = os.path.join(current_dir, "iris_basket.basket")
