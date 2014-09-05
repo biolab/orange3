@@ -78,14 +78,15 @@ BUNDLE_LITE=$SCRIPT_DIR_NAME/bundle-lite/Orange.app
 
 # Versions of included 3rd party software
 
-PYTHON_VER=3.3.3
-PIP_VER=1.5.2
-SETUPTOOLS_VER=2.1
-NUMPY_VER=1.7.1
-SCIPY_VER=0.12.0
-QT_VER=4.8.5
-SIP_VER=4.15.2
-PYQT_VER=4.10.3
+PYTHON_VER=3.4.1
+PIP_VER=1.5.6
+SETUPTOOLS_VER=5.7
+NUMPY_VER=1.8.2
+SCIPY_VER=0.14.0
+QT_VER=4.8.6
+SIP_VER=4.16.2
+PYQT_VER=4.11.1
+SCIKIT_LEARN_VER=0.15.1
 #PYQWT_VER=5.2.0
 
 # Number of make jobs
@@ -122,7 +123,7 @@ function create_template {
 		FRAMEWORKS_DIR="$BUNDLE_DIR"Frameworks/
 		RESOURCES_DIR="$BUNDLE_DIR"Resources/
 
-		PYVERSION="3.3"
+		PYVERSION="3.4"
 
 		PYTHONEXECUTABLE="$FRAMEWORKS_DIR"Python.framework/Resources/Python.app/Contents/MacOS/Python
 		PYTHONHOME="$FRAMEWORKS_DIR"Python.framework/Versions/"$PYVERSION"/
@@ -340,7 +341,7 @@ function install_scipy {
 }
 
 function install_scikit_learn {
-  "$PIP" install scikit-learn==0.13
+  "$PIP" install scikit-learn==$SCIKIT_LEARN_VER
 
   "$PYTHON" -c"import sklearn"
 }
@@ -408,10 +409,10 @@ function cleanup {
 }
 
 function make_standalone {
-	"$PIP" install macholib
+	"$PIP" install macholib==1.5.1
 	"$PYTHON" -m macholib standalone $APP
-	yes y | "$PIP" uninstall altgraph
-	yes y | "$PIP" uninstall macholib
+	"$PIP" uninstall --yes altgraph
+	"$PIP" uninstall --yes macholib
 }
 
 pushd $BUILD_TEMP
@@ -436,8 +437,6 @@ install_qt4
 install_sip
 
 install_pyqt4
-
-#install_pyqwt5
 
 install_ipython
 
