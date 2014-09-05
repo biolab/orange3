@@ -124,7 +124,7 @@ class OWDataSampler(widget.OWWidget):
             fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
         )
         bbox = gui.radioButtons(ibox, self, "cvType", orientation=form,
-                                callback=self.cvTypeChanged, addSpace=True)
+                                callback=self.cvTypeChanged)
         bbox.setContentsMargins(1, 1, 1, 1)
 
         kfold_rb = gui.appendRadioButton(bbox, "K-Fold:", insertInto=None,

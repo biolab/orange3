@@ -70,6 +70,8 @@ class OWConcatenate(widget.OWWidget):
         gui.appendRadioButton(
             box, self.tr("Intersection of attributes in all tables"))
 
+        gui.separator(box)
+
         label = gui.widgetLabel(
             box,
             self.tr("The resulting table will have class only if there " +
