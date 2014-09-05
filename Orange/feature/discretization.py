@@ -122,7 +122,7 @@ class EqualWidth(Discretization):
 
 import numpy
 
-def normalize(X, axis=None, out=None):
+def _normalize(X, axis=None, out=None):
     """
     Normalize `X` array so it sums to 1.0 over the `axis`.
 
@@ -147,7 +147,7 @@ def normalize(X, axis=None, out=None):
         return out
 
 
-def entropy_normalized(D, axis=None):
+def _entropy_normalized(D, axis=None):
     """
     Compute the entropy of distribution array `D`.
 
@@ -170,7 +170,7 @@ def entropy_normalized(D, axis=None):
     return - numpy.sum(D * numpy.log2(Dc), axis=axis)
 
 
-def entropy(D, axis=None):
+def _entropy(D, axis=None):
     """
     Compute the entropy of distribution `D`.
 
@@ -182,11 +182,11 @@ def entropy(D, axis=None):
         Axis of `D` along which to compute the entropy.
 
     """
-    D = normalize(D, axis=axis)
-    return entropy_normalized(D, axis=axis)
+    D = _normalize(D, axis=axis)
+    return _entropy_normalized(D, axis=axis)
 
 
-def entropy_cuts_sorted(CS):
+def _entropy_cuts_sorted(CS):
     """
     Return the class information entropy induced by partitioning
     the `CS` distribution at all N-1 candidate cut points.
@@ -205,8 +205,8 @@ def entropy_cuts_sorted(CS):
     S2Dist = numpy.cumsum(CS[::-1], axis=0)[-2::-1]
 
     # Entropy of S1[i] and S2[i] sets
-    ES1 = entropy(S1Dist, axis=1)
-    ES2 = entropy(S2Dist, axis=1)
+    ES1 = _entropy(S1Dist, axis=1)
+    ES2 = _entropy(S2Dist, axis=1)
 
     # Number of cases in S1[i] and S2[i] sets
     S1_count = numpy.sum(S1Dist, axis=1)
@@ -224,7 +224,7 @@ def entropy_cuts_sorted(CS):
     return E, ES1, ES2
 
 
-def entropy_disc(X, C):
+def _entropy_disc(X, C):
     """
     Entropy discretization.
 
@@ -236,17 +236,17 @@ def entropy_disc(X, C):
     sort_ind = numpy.argsort(X, axis=0)
     X = X[sort_ind]
     C = C[sort_ind]
-    return entropy_discretize_sorted(X, C)
+    return _entropy_discretize_sorted(X, C)
 
 
-def entropy_discretize_sorted(C):
+def _entropy_discretize_sorted(C):
     """
     Entropy discretization on a sorted C.
 
     :param C: (N, K) array of class distributions.
 
     """
-    E, ES1, ES2 = entropy_cuts_sorted(C)
+    E, ES1, ES2 = _entropy_cuts_sorted(C)
     # TODO: Also get the left right distribution counts from
     # entropy_cuts_sorted,
 
@@ -258,7 +258,7 @@ def entropy_discretize_sorted(C):
     S2_c = numpy.sum(C[cut_index:], axis=0)
     S_c = S1_c + S2_c
 
-    ES = entropy(numpy.sum(C, axis=0))
+    ES = _entropy(numpy.sum(C, axis=0))
     ES1, ES2 = ES1[cut_index - 1], ES2[cut_index - 1]
 
     # Information gain of the best split
@@ -276,21 +276,31 @@ def entropy_discretize_sorted(C):
         # Accept the cut point and recursively split the subsets.
         left, right = [], []
         if k1 > 1 and cut_index > 1:
-            left = entropy_discretize_sorted(C[:cut_index, :])
+            left = _entropy_discretize_sorted(C[:cut_index, :])
         if k2 > 1 and cut_index < len(C) - 1:
-            right = entropy_discretize_sorted(C[cut_index:, :])
+            right = _entropy_discretize_sorted(C[cut_index:, :])
         return left + [cut_index] + [i + cut_index for i in right]
     else:
         return []
 
 
 class EntropyMDL(Discretization):
+    """ Infers the intervals by recursively splitting the feature to
+    minimize the class-entropy of training examples until the entropy
+    decrease is smaller than the increase of minimal description length
+    (MDL) induced by the new cut-off point [FayyadIrani93].
+
+    Discretization intervals contain approximately equal number of
+    training data instances. If no suitable cut-off points are found,
+    the new feature is constant and can be removed.
+    """
+    
     def __call__(self, data, attribute):
         from Orange.statistics import contingency as c
         cont = c.get_contingency(data, attribute)
         #values, I = _join_contingency(cont)
         values, I = _discretization.join_contingency(cont)
-        cut_ind = numpy.array(entropy_discretize_sorted(I))
+        cut_ind = numpy.array(_entropy_discretize_sorted(I))
         if len(cut_ind) > 0:
             points = values[cut_ind - 1]
             return _discretized_var(data, attribute, points)
