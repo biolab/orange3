@@ -7,8 +7,8 @@ from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 
 
-# TODO What is this?!
 def add_origin(examples, filename):
+    """Adds attribute with file location to each variable"""
     vars = examples.domain.variables + examples.domain.metas
     strings = [var for var in vars if isinstance(var, StringVariable)]
     dir_name, basename = os.path.split(filename)
