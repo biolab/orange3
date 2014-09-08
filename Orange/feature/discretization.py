@@ -183,6 +183,24 @@ def _entropy(D, axis=None):
     return _entropy_normalized(D, axis=axis)
 
 
+def _entropy1(D):
+    """
+    Compute the entropy of distributions in `D`
+    (one per each row).
+    """
+    D = _normalize(D)
+    return _discretization.entropy_normalized1(D)
+
+
+def _entropy2(D):
+    """
+    Compute the entropy of distributions in `D`
+    (one per each row).
+    """
+    D = _normalize(D, axis=1)
+    return _discretization.entropy_normalized2(D)
+
+
 def _entropy_cuts_sorted(CS):
     """
     Return the class information entropy induced by partitioning
@@ -202,8 +220,8 @@ def _entropy_cuts_sorted(CS):
     S2Dist = np.cumsum(CS[::-1], axis=0)[-2::-1]
 
     # Entropy of S1[i] and S2[i] sets
-    ES1 = _entropy(S1Dist, axis=1)
-    ES2 = _entropy(S2Dist, axis=1)
+    ES1 = _entropy2(S1Dist)
+    ES2 = _entropy2(S2Dist)
 
     # Number of cases in S1[i] and S2[i] sets
     S1_count = np.sum(S1Dist, axis=1)
@@ -221,21 +239,6 @@ def _entropy_cuts_sorted(CS):
     return E, ES1, ES2
 
 
-def _entropy_disc(X, C):
-    """
-    Entropy discretization.
-
-    :param X: (N, 1) array
-    :param C: (N, K) array (class probabilities must sum(axis=1) to 1 )
-
-    :rval:
-    """
-    sort_ind = np.argsort(X, axis=0)
-    X = X[sort_ind]
-    C = C[sort_ind]
-    return _entropy_discretize_sorted(X, C)
-
-
 def _entropy_discretize_sorted(C):
     """
     Entropy discretization on a sorted C.
@@ -249,13 +252,13 @@ def _entropy_discretize_sorted(C):
 
     # Note the + 1
     cut_index = np.argmin(E) + 1
-
+    
     # Distribution of classed in S1, S2 and S
     S1_c = np.sum(C[:cut_index], axis=0)
     S2_c = np.sum(C[cut_index:], axis=0)
     S_c = S1_c + S2_c
 
-    ES = _entropy(np.sum(C, axis=0))
+    ES = _entropy1(np.sum(C, axis=0))
     ES1, ES2 = ES1[cut_index - 1], ES2[cut_index - 1]
 
     # Information gain of the best split
