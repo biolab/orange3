@@ -323,6 +323,7 @@ class NodeAnchorItem(GraphicsPathObject):
     """
 
     def __init__(self, parent, *args):
+        self.__boundingRect = None
         GraphicsPathObject.__init__(self, parent, *args)
         self.setAcceptHoverEvents(True)
         self.setPen(QPen(Qt.NoPen))
@@ -355,6 +356,9 @@ class NodeAnchorItem(GraphicsPathObject):
         self.__dottedStroke = None
         self.__shape = None
 
+        self.prepareGeometryChange()
+        self.__boundingRect = None
+
     def parentNodeItem(self):
         """
         Return a parent :class:`NodeItem` or ``None`` if this anchor's
@@ -367,6 +371,9 @@ class NodeAnchorItem(GraphicsPathObject):
         """
         Set the anchor's curve path as a :class:`QPainterPath`.
         """
+        self.prepareGeometryChange()
+        self.__boundingRect = None
+
         self.__anchorPath = path
         # Create a stroke of the path.
         stroke_path = QPainterPathStroker()
@@ -535,22 +542,27 @@ class NodeAnchorItem(GraphicsPathObject):
             return GraphicsPathObject.shape(self)
 
     def boundingRect(self):
-        if self.__shape is not None:
-            return self.__shape.controlPointRect()
-        else:
-            return GraphicsPathObject.boundingRect(self)
+        if self.__boundingRect is None:
+            self.__boundingRect = super().boundingRect().adjusted(-5, -5, 5, 5)
+        return self.__boundingRect
 
     def hoverEnterEvent(self, event):
+        self.prepareGeometryChange()
+        self.__boundingRect = None
         self.shadow.setEnabled(True)
         return GraphicsPathObject.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
+        self.prepareGeometryChange()
+        self.__boundingRect = None
         self.shadow.setEnabled(False)
         return GraphicsPathObject.hoverLeaveEvent(self, event)
 
     def __updatePositions(self):
         """Update anchor points positions.
         """
+        self.prepareGeometryChange()
+        self.__boundingRect = None
         for point, t in zip(self.__points, self.__pointPositions):
             pos = self.__anchorPath.pointAtPercent(t)
             point.setPos(pos)
@@ -783,6 +795,7 @@ class NodeItem(QGraphicsObject):
     Z_VALUE = 100
 
     def __init__(self, widget_description=None, parent=None, **kwargs):
+        self.__boundingRect = None
         QGraphicsObject.__init__(self, parent, **kwargs)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemHasNoContents, True)
@@ -887,6 +900,9 @@ class NodeItem(QGraphicsObject):
         self.errorItem = iconItem(QStyle.SP_MessageBoxCritical)
         self.warningItem = iconItem(QStyle.SP_MessageBoxWarning)
         self.infoItem = iconItem(QStyle.SP_MessageBoxInformation)
+
+        self.prepareGeometryChange()
+        self.__boundingRect = None
 
     # TODO: Remove the set[Widget|Category]Description. The user should
     # handle setting of icons, title, ...
@@ -1172,7 +1188,9 @@ class NodeItem(QGraphicsObject):
         # TODO: Important because of this any time the child
         # items change geometry the self.prepareGeometryChange()
         # needs to be called.
-        return self.childrenBoundingRect()
+        if self.__boundingRect is None:
+            self.__boundingRect = self.childrenBoundingRect()
+        return self.__boundingRect
 
     def shape(self):
         # Shape for mouse hit detection.
@@ -1214,6 +1232,7 @@ class NodeItem(QGraphicsObject):
 
         # The NodeItems boundingRect could change.
         self.prepareGeometryChange()
+        self.__boundingRect = None
         self.captionTextItem.setHtml(text)
         self.captionTextItem.document().adjustSize()
         width = self.captionTextItem.textWidth()

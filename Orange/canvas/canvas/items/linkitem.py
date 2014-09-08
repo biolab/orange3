@@ -152,6 +152,7 @@ class LinkItem(QGraphicsObject):
     Z_VALUE = 0
 
     def __init__(self, *args):
+        self.__boundingRect = None
         QGraphicsObject.__init__(self, *args)
         self.setFlag(QGraphicsItem.ItemHasNoContents, True)
         self.setAcceptedMouseButtons(Qt.RightButton | Qt.LeftButton)
@@ -180,6 +181,9 @@ class LinkItem(QGraphicsObject):
         self.__dynamicEnabled = False
 
         self.hover = False
+
+        self.prepareGeometryChange()
+        self.__boundingRect = None
 
     def setSourceItem(self, item, anchor=None):
         """
@@ -337,6 +341,7 @@ class LinkItem(QGraphicsObject):
 
     def __updateCurve(self):
         self.prepareGeometryChange()
+        self.__boundingRect = None
         if self.sourceAnchor and self.sinkAnchor:
             source_pos = self.sourceAnchor.anchorScenePos()
             sink_pos = self.sinkAnchor.anchorScenePos()
@@ -367,6 +372,7 @@ class LinkItem(QGraphicsObject):
 
     def __updateText(self):
         self.prepareGeometryChange()
+        self.__boundingRect = None
 
         if self.__sourceName or self.__sinkName:
             if self.__sourceName != self.__sinkName:
@@ -407,6 +413,7 @@ class LinkItem(QGraphicsObject):
     def setHoverState(self, state):
         if self.hover != state:
             self.prepareGeometryChange()
+            self.__boundingRect = None
             self.hover = state
             self.sinkIndicator.setHoverState(state)
             self.sourceIndicator.setHoverState(state)
@@ -436,7 +443,9 @@ class LinkItem(QGraphicsObject):
         return QGraphicsObject.sceneEventFilter(self, obj, event)
 
     def boundingRect(self):
-        return self.childrenBoundingRect()
+        if self.__boundingRect is None:
+            self.__boundingRect = self.childrenBoundingRect()
+        return self.__boundingRect
 
     def shape(self):
         return self.curveItem.shape()
@@ -493,6 +502,7 @@ class LinkItem(QGraphicsObject):
 
     def __updatePen(self):
         self.prepareGeometryChange()
+        self.__boundingRect = None
         if self.__dynamic:
             if self.__dynamicEnabled:
                 color = QColor(0, 150, 0, 150)
