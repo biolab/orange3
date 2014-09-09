@@ -319,7 +319,7 @@ def sample_random_n(table, n, stratified=False, replace=False,
             random_state=random_state
         )
     else:
-        train_size = max(len(table.domain.class_var.values), n)
+        train_size = n
         test_size = max(len(table) - train_size, 0)
         ind = cross_validation.ShuffleSplit(
             len(table), n_iter=1, test_size=test_size,
