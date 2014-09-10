@@ -263,7 +263,7 @@ def _entropy_discretize_sorted(C):
 
     # Information gain of the best split
     Gain = ES - E[cut_index - 1]
-    # Number of classes in S, S1 and S2 (with non zero counts)
+    # Number of different classes in S, S1 and S2
     k = np.sum(S_c > 0)
     k1 = np.sum(S1_c > 0)
     k2 = np.sum(S2_c > 0)
@@ -301,7 +301,8 @@ class EntropyMDL(Discretization):
         values, I = _discretization.join_contingency(cont)
         cut_ind = np.array(_entropy_discretize_sorted(I))
         if len(cut_ind) > 0:
-            points = values[cut_ind - 1]
+            #"the midpoint between each successive pair of examples" (FI p.1)
+            points = (values[cut_ind] + values[cut_ind - 1])/2.
             return _discretized_var(data, attribute, points)
         else:
             return None
