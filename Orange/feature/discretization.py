@@ -239,7 +239,7 @@ def _entropy_cuts_sorted(CS):
     return E, ES1, ES2
 
 
-def _entropy_discretize_sorted(C):
+def _entropy_discretize_sorted(C, force=False):
     """
     Entropy discretization on a sorted C.
 
@@ -280,6 +280,8 @@ def _entropy_discretize_sorted(C):
         if k2 > 1 and cut_index < len(C) - 1:
             right = _entropy_discretize_sorted(C[cut_index:, :])
         return left + [cut_index] + [i + cut_index for i in right]
+    elif force:
+        return [cut_index]
     else:
         return []
 
@@ -293,13 +295,22 @@ class EntropyMDL(Discretization):
     Discretization intervals contain approximately equal number of
     training data instances. If no suitable cut-off points are found,
     the new feature is constant and can be removed.
+
+    .. attribute:: force
+
+        Induce at least one cut-off point, even when its information
+        gain is lower than MDL (default: False).
+
     """
     
+    def __init__(self, force=False):
+        self.force = force
+
     def __call__(self, data, attribute):
         cont = contingency.get_contingency(data, attribute)
         #values, I = _join_contingency(cont)
         values, I = _discretization.join_contingency(cont)
-        cut_ind = np.array(_entropy_discretize_sorted(I))
+        cut_ind = np.array(_entropy_discretize_sorted(I, self.force))
         if len(cut_ind) > 0:
             #"the midpoint between each successive pair of examples" (FI p.1)
             points = (values[cut_ind] + values[cut_ind - 1])/2.
