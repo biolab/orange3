@@ -60,3 +60,5 @@ _`Discretization Algorithms`
 
 .. autoclass:: EqualFreq
 
+.. autoclass:: EntropyMDL
+

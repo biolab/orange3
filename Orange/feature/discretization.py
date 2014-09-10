@@ -3,6 +3,7 @@ import Orange.statistics.distribution
 
 from Orange.feature.transformation import ColumnTransformation
 from Orange.data.sql.table import SqlTable
+from Orange.statistics import contingency
 
 from ..feature import _discretization
 
@@ -114,3 +115,236 @@ class EqualWidth(Discretization):
                 d = Orange.statistics.distribution.get_distribution(data, attribute)
                 points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
+
+
+#MDL-Entropy discretization
+
+def _normalize(X, axis=None, out=None):
+    """
+    Normalize `X` array so it sums to 1.0 over the `axis`.
+
+    Parameters
+    ----------
+    X : array
+        Array to normalize.
+    axis : optional int
+        Axis over which the resulting array sums to 1.
+    out : optional array
+        Output array of the same shape as X.
+    """
+    X = np.asarray(X, dtype=float)
+    scale = np.sum(X, axis=axis, keepdims=True)
+    if out is None:
+        return X / scale
+    else:
+        if out is not X:
+            assert out.shape == X.shape
+            out[:] = X
+        out /= scale
+        return out
+
+
+def _entropy_normalized(D, axis=None):
+    """
+    Compute the entropy of distribution array `D`.
+
+    `D` must be a distribution (i.e. sum to 1.0 over `axis`)
+
+    Parameters
+    ----------
+    D : array
+        Distribution.
+    axis : optional int
+        Axis of `D` along which to compute the entropy.
+
+    """
+    # req: (np.sum(D, axis=axis) >= 0).all()
+    # req: (np.sum(D, axis=axis) <= 1).all()
+    # req: np.all(np.abs(np.sum(D, axis=axis) - 1) < 1e-9)
+
+    D = np.asarray(D)
+    Dc = np.clip(D, np.finfo(D.dtype).eps, 1.0)
+    return - np.sum(D * np.log2(Dc), axis=axis)
+
+
+def _entropy(D, axis=None):
+    """
+    Compute the entropy of distribution `D`.
+
+    Parameters
+    ----------
+    D : array
+        Distribution.
+    axis : optional int
+        Axis of `D` along which to compute the entropy.
+
+    """
+    D = _normalize(D, axis=axis)
+    return _entropy_normalized(D, axis=axis)
+
+
+def _entropy1(D):
+    """
+    Compute the entropy of distributions in `D`
+    (one per each row).
+    """
+    D = _normalize(D)
+    return _discretization.entropy_normalized1(D)
+
+
+def _entropy2(D):
+    """
+    Compute the entropy of distributions in `D`
+    (one per each row).
+    """
+    D = _normalize(D, axis=1)
+    return _discretization.entropy_normalized2(D)
+
+
+def _entropy_cuts_sorted(CS):
+    """
+    Return the class information entropy induced by partitioning
+    the `CS` distribution at all N-1 candidate cut points.
+
+    Parameters
+    ----------
+    CS : (N, K) array of class distributions.
+    """
+    CS = np.asarray(CS)
+    # |--|-------|--------|
+    #  S1    ^       S2
+    # S1 contains all points which are <= to cut point
+    # Cumulative distributions for S1 and S2 (left right set)
+    # i.e. a cut at index i separates the CS into S1Dist[i] and S2Dist[i]
+    S1Dist = np.cumsum(CS, axis=0)[:-1]
+    S2Dist = np.cumsum(CS[::-1], axis=0)[-2::-1]
+
+    # Entropy of S1[i] and S2[i] sets
+    ES1 = _entropy2(S1Dist)
+    ES2 = _entropy2(S2Dist)
+
+    # Number of cases in S1[i] and S2[i] sets
+    S1_count = np.sum(S1Dist, axis=1)
+    S2_count = np.sum(S2Dist, axis=1)
+
+    # Number of all cases
+    S_count = np.sum(CS)
+
+    ES1w = ES1 * S1_count / S_count
+    ES2w = ES2 * S2_count / S_count
+
+    # E(A, T; S) Class information entropy of the partition S
+    E = ES1w + ES2w
+
+    return E, ES1, ES2
+
+
+def _entropy_discretize_sorted(C, force=False):
+    """
+    Entropy discretization on a sorted C.
+
+    :param C: (N, K) array of class distributions.
+
+    """
+    E, ES1, ES2 = _entropy_cuts_sorted(C)
+    # TODO: Also get the left right distribution counts from
+    # entropy_cuts_sorted,
+
+    # Note the + 1
+    cut_index = np.argmin(E) + 1
+    
+    # Distribution of classed in S1, S2 and S
+    S1_c = np.sum(C[:cut_index], axis=0)
+    S2_c = np.sum(C[cut_index:], axis=0)
+    S_c = S1_c + S2_c
+
+    ES = _entropy1(np.sum(C, axis=0))
+    ES1, ES2 = ES1[cut_index - 1], ES2[cut_index - 1]
+
+    # Information gain of the best split
+    Gain = ES - E[cut_index - 1]
+    # Number of different classes in S, S1 and S2
+    k = np.sum(S_c > 0)
+    k1 = np.sum(S1_c > 0)
+    k2 = np.sum(S2_c > 0)
+
+    assert k > 0
+    delta = np.log2(3 ** k - 2) - (k * ES - k1 * ES1 - k2 * ES2)
+    N = np.sum(S_c)
+
+    if Gain > np.log2(N - 1) / N + delta / N:
+        # Accept the cut point and recursively split the subsets.
+        left, right = [], []
+        if k1 > 1 and cut_index > 1:
+            left = _entropy_discretize_sorted(C[:cut_index, :])
+        if k2 > 1 and cut_index < len(C) - 1:
+            right = _entropy_discretize_sorted(C[cut_index:, :])
+        return left + [cut_index] + [i + cut_index for i in right]
+    elif force:
+        return [cut_index]
+    else:
+        return []
+
+
+class EntropyMDL(Discretization):
+    """ Infers the intervals by recursively splitting the feature to
+    minimize the class-entropy of training examples until the entropy
+    decrease is smaller than the increase of minimal description length
+    (MDL) induced by the new cut-off point [FayyadIrani93].
+
+    Discretization intervals contain approximately equal number of
+    training data instances. If no suitable cut-off points are found,
+    the new feature is constant and can be removed.
+
+    .. attribute:: force
+
+        Induce at least one cut-off point, even when its information
+        gain is lower than MDL (default: False).
+
+    """
+    
+    def __init__(self, force=False):
+        self.force = force
+
+    def __call__(self, data, attribute):
+        cont = contingency.get_contingency(data, attribute)
+        #values, I = _join_contingency(cont)
+        values, I = _discretization.join_contingency(cont)
+        cut_ind = np.array(_entropy_discretize_sorted(I, self.force))
+        if len(cut_ind) > 0:
+            #"the midpoint between each successive pair of examples" (FI p.1)
+            points = (values[cut_ind] + values[cut_ind - 1])/2.
+            return _discretized_var(data, attribute, points)
+        else:
+            return None
+
+
+def _join_contingency(contingency): #obsolete: use _discretization.join_contingency
+    """
+    Join contingency list into a single ordered distribution.
+    """
+    k = len(contingency)
+    values = np.r_[tuple(contingency[i][0] for i in range(k))]
+    I = np.zeros((len(values), k))
+    start = 0
+    for i in range(k):
+        counts = contingency[i][1]
+        span = len(counts)
+        I[start: start + span, i] = contingency[i][1]
+        start += span
+
+    sort_ind = np.argsort(values)
+    values, I = values[sort_ind], I[sort_ind, :]
+
+    last = None
+    iv = -1
+    for i in range(len(values)):
+        if last != values[i]:
+            iv += 1
+            last = values[i]
+            values[iv] = last
+            I[iv] = I[i]
+        else:
+            I[iv] += I[i]
+    return values[:iv+1],I[:iv+1]
+
