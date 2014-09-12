@@ -1,6 +1,7 @@
 import csv
 import re
 import sys
+from itertools import chain
 
 import bottleneck as bn
 import numpy as np
@@ -286,14 +287,9 @@ def save_csv(filename, data):
 
 
 def save_tab_fast(f, data):
-    writers = [(mat, [var.repr_val for var in c])
-               for mat, c in (
-                   (data.X, data.domain.attributes),
-                   (data.Y, data.domain.class_vars),
-                   (data.metas, data.domain.metas))]
-    for i in range(len(data)):
-        for mat, ws in writers:
-            f.write("\t".join(w(mat[i][j]) for j, w in enumerate(ws)))
+    wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
+    for Xi, Yi, Mi in zip(data.X, data.Y, data.metas):
+        f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
         f.write("\n")
 
 
@@ -328,11 +324,10 @@ def save_tab_delimited(filename, data):
 
     # data
     # noinspection PyBroadException
-#    try:
-    save_tab_fast(f, data)
-#    except:
-#        raise(NotImplementedError, "Slow!")
-#        domain_vars = [data.domain.index(var) for var in domain_vars]
-#        for i in data:
-#            f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
+    try:
+        save_tab_fast(f, data)
+    except:
+        domain_vars = [data.domain.index(var) for var in domain_vars]
+        for i in data:
+            f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
     f.close()
