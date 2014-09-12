@@ -74,15 +74,14 @@ class OWMPR(OWWidget):
         self.projectionTableModel.setHorizontalHeaderLabels(["P-Index", "", ""])
         self.projectionTable.setModel(self.projectionTableModel)
 
-        self.projectionTable.setColumnWidth(0, 80)
+        self.projectionTable.setColumnWidth(0, 90)
         self.projectionTable.sortByColumn(0, Qt.DescendingOrder)
         self.projectionTable.selectionModel().selectionChanged.connect(self.on_selection_changed)
 
         gui.button(self.controlArea, self, "Rank Projections", callback=self.rank, default=True)
-        self.resize(340, 600)
+        self.resize(370, 600)
 
     def set_data(self, data):
-        print("Set data")
         self.data = data
         self.infoa.setText("Data set: {}".format(data.name) if self.data else "No data loaded.")
 
@@ -90,7 +89,6 @@ class OWMPR(OWWidget):
         if self.progress:
             return
 
-        print("Ranking...")
         disc = Orange.feature.discretization.EqualWidth(n=10)
 
         ndomain = Orange.data.Domain(
