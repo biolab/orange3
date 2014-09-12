@@ -1,403 +1,678 @@
-from itertools import chain
-from PyQt4 import QtGui, Qt
-from Orange.widgets import widget, gui
+import copy
+import sys
+from functools import partial, reduce
+
+from PyQt4 import QtCore
+from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
+import itertools
+from Orange.widgets import gui, widget
 from Orange.widgets.settings import *
-from Orange.widgets.utils import vartype
 from Orange.data.table import Table
-from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
-import Orange.data.filter as data_filter
+
+from Orange.widgets.utils import itemmodels, vartype
+
+import Orange
 
 
-class OWSelectData(widget.OWWidget):
-    name = "Select Data"
-    id = "Orange.widgets.data.file"
-    description = "Selection of data based on values of variables"
-    icon = "icons/SelectData.svg"
+def slices(indices):
+    """ Group the given integer indices into slices
+    """
+    indices = list(sorted(indices))
+    if indices:
+        first = last = indices[0]
+        for i in indices[1:]:
+            if i == last + 1:
+                last = i
+            else:
+                yield first, last + 1
+                first = last = i
+        yield first, last + 1
+
+
+def source_model(view):
+    """ Return the source model for the Qt Item View if it uses
+    the QSortFilterProxyModel.
+    """
+    if isinstance(view.model(), QtGui.QSortFilterProxyModel):
+        return view.model().sourceModel()
+    else:
+        return view.model()
+
+
+def source_indexes(indexes, view):
+    """ Map model indexes through a views QSortFilterProxyModel
+    """
+    model = view.model()
+    if isinstance(model, QtGui.QSortFilterProxyModel):
+        return list(map(model.mapToSource, indexes))
+    else:
+        return indexes
+
+
+def delslice(model, start, end):
+    """ Delete the start, end slice (rows) from the model.
+    """
+    if isinstance(model, itemmodels.PyListModel):
+        del model[start:end]
+    elif isinstance(model, QtCore.QAbstractItemModel):
+        model.removeRows(start, end - start)
+    else:
+        raise TypeError(type(model))
+
+
+class VariablesListItemModel(itemmodels.VariableListModel):
+    """ An Qt item model for for list of orange.Variable objects.
+    Supports drag operations
+    """
+    def flags(self, index):
+        flags = super().flags(index)
+        if index.isValid():
+            flags |= Qt.ItemIsDragEnabled
+        else:
+            flags |= Qt.ItemIsDropEnabled
+        return flags
+
+    ###########
+    # Drag/Drop
+    ###########
+
+    MIME_TYPE = "application/x-Orange-VariableListModelData"
+
+    def supportedDropActions(self):
+        return Qt.MoveAction
+
+    def supportedDragActions(self):
+        return Qt.MoveAction
+
+    def mimeTypes(self):
+        return [self.MIME_TYPE]
+
+    def mimeData(self, indexlist):
+        descriptors = []
+        vars = []
+        item_data = []
+        for index in indexlist:
+            var = self[index.row()]
+            descriptors.append((var.name, vartype(var)))
+            vars.append(var)
+            item_data.append(self.itemData(index))
+        mime = QtCore.QMimeData()
+        mime.setData(self.MIME_TYPE, QtCore.QByteArray(str(descriptors)))
+        mime._vars = vars
+        mime._item_data = item_data
+        return mime
+
+    def dropMimeData(self, mime, action, row, column, parent):
+        if action == Qt.IgnoreAction:
+            return True
+        vars, item_data = self.items_from_mime_data(mime)
+        if vars is None:
+            return False
+        if row == -1:
+            row = len(self)
+        self[row:row] = vars
+        for i, data in enumerate(item_data):
+            self.setItemData(self.index(row + i), data)
+        return True
+
+    def items_from_mime_data(self, mime):
+        if not mime.hasFormat(self.MIME_TYPE):
+            return None, None
+        if hasattr(mime, "_vars"):
+            vars = mime._vars
+            item_data = mime._item_data
+            return vars, item_data
+        else:
+            #TODO: get vars from orange.Variable.getExisting
+            return None, None
+
+
+class ClassVarListItemModel(VariablesListItemModel):
+    def dropMimeData(self, mime, action, row, column, parent):
+        """ Ensure only one variable can be dropped onto the view.
+        """
+        vars, _ = self.items_from_mime_data(mime)
+        if vars is None or len(self) + len(vars) > 1:
+            return False
+        if action == Qt.IgnoreAction:
+            return True
+        return VariablesListItemModel.dropMimeData(
+            self, mime, action, row, column, parent)
+
+
+class VariablesListItemView(QtGui.QListView):
+    """ A Simple QListView subclass initialized for displaying
+    variables.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(self.ExtendedSelection)
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(self.DragDrop)
+        if hasattr(self, "setDefaultDropAction"):
+            # TODO do we still need this?
+            # For compatibility with Qt version < 4.6
+            self.setDefaultDropAction(Qt.MoveAction)
+        self.setDragDropOverwriteMode(False)
+        self.viewport().setAcceptDrops(True)
+
+    def startDrag(self, supported_actions):
+        indices = self.selectionModel().selectedIndexes()
+        indices = [i for i in indices if i.flags() & Qt.ItemIsDragEnabled]
+        if indices:
+            data = self.model().mimeData(indices)
+            if not data:
+                return
+#            rect = QtCore.QRect()
+#            pixmap = self.render_to_pixmap(indices)
+            drag = QtGui.QDrag(self)
+            drag.setMimeData(data)
+#            drag.setPixmap(pixmap)
+            default_action = QtCore.Qt.IgnoreAction
+            if hasattr(self, "defaultDropAction") and \
+                    self.defaultDropAction() != Qt.IgnoreAction and \
+                    supported_actions & self.defaultDropAction():
+                default_action = self.defaultDropAction()
+            elif (supported_actions & Qt.CopyAction and
+                  self.dragDropMode() != self.InternalMove):
+                default_action = Qt.CopyAction
+            res = drag.exec_(supported_actions, default_action)
+            if res == Qt.MoveAction:
+                selected = self.selectionModel().selectedIndexes()
+                rows = list(map(QtCore.QModelIndex.row, selected))
+                for s1, s2 in reversed(list(slices(rows))):
+                    delslice(self.model(), s1, s2)
+
+    def render_to_pixmap(self, indices):
+        pass
+
+
+class ClassVariableItemView(VariablesListItemView):
+    def __init__(self, parent=None):
+        VariablesListItemView.__init__(self, parent)
+        self.setDropIndicatorShown(False)
+
+    def dragEnterEvent(self, event):
+        """ Don't accept drops if the class is already present in the model.
+        """
+        if self.accepts_drop(event):
+            event.accept()
+        else:
+            event.ignore()
+
+    def accepts_drop(self, event):
+        mime = event.mimeData()
+        vars, _ = self.model().items_from_mime_data(mime)
+        if vars is None:
+            return event.ignore()
+
+        if len(self.model()) + len(vars) > 1:
+            return event.ignore()
+        return True
+
+
+class VariableFilterProxyModel(QtGui.QSortFilterProxyModel):
+    """ A proxy model for filtering a list of variables based on
+    their names and labels.
+
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._filter_string = ""
+
+    def set_filter_string(self, filter):
+        self._filter_string = str(filter).lower()
+        self.invalidateFilter()
+
+    def filter_accepts_variable(self, var):
+        row_str = var.name + " ".join(("%s=%s" % item)
+                                      for item in var.attributes.items())
+        row_str = row_str.lower()
+        filters = self._filter_string.split()
+
+        return all(f in row_str for f in filters)
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        model = self.sourceModel()
+        if isinstance(model, itemmodels.VariableListModel):
+            var = model[source_row]
+            return self.filter_accepts_variable(var)
+        else:
+            return True
+
+
+class CompleterNavigator(QtCore.QObject):
+    """ An event filter to be installed on a QLineEdit, to enable
+    Key up/ down to navigate between posible completions.
+    """
+    def eventFilter(self, obj, event):
+        if (event.type() == QtCore.QEvent.KeyPress and
+                isinstance(obj, QtGui.QLineEdit)):
+            if event.key() == Qt.Key_Down:
+                diff = 1
+            elif event.key() == Qt.Key_Up:
+                diff = -1
+            else:
+                return False
+            completer = obj.completer()
+            if completer is not None and completer.completionCount() > 0:
+                current = completer.currentRow()
+                current += diff
+                completer.setCurrentRow(current % completer.completionCount())
+                completer.complete()
+            return True
+        else:
+            return False
+
+
+class SelectAttributesDomainContextHandler(DomainContextHandler):
+    """Select Columns widget has context settings in a specific format.
+    This context handler modifies match and clone_context to account for that.
+    """
+
+    def match_value(self, setting, value, attrs, metas):
+        if setting.name == 'domain_role_hints':
+            value = self.decode_setting(setting, value)
+            matched = available = 0
+            for item, category in value.items():
+                role, role_idx = category
+                if role != 'available':
+                    available += 1
+                    if self._var_exists(setting, item, attrs, metas):
+                        matched += 1
+            return matched, available
+        return super().match_value(setting, value, attrs, metas)
+
+    def clone_context(self, context, domain, attrs, metas):
+        context = copy.deepcopy(context)
+        for name, setting in self.settings.items():
+            if not isinstance(setting, ContextSetting):
+                continue
+            value = context.values.get(name, None)
+            if value is None:
+                continue
+            if isinstance(value, dict):
+                for item, category in value.items():
+                    if not self._var_exists(setting, value, attrs, metas):
+                        del value[item]
+        context.attributes, context.metas = attrs, metas
+        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
+                                  itertools.chain(domain, domain.metas)]
+        return context
+
+
+class OWSelectAttributes(widget.OWWidget):
+    name = "Select Columns"
+    description = """Select columns from the data table and define
+    sets of features, classes or meta variables."""
+    icon = "icons/SelectColumns.svg"
     priority = 100
-    category = "Data"
-    author = "Peter Juvan, Janez Demšar"
-    author_email = "janez.demsar(@at@)fri.uni-lj.si"
+    author = "Ales Erjavec"
+    author_email = "ales.erjavec(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
-    outputs = [("Matching Data", Table), ("Unmatched Data", Table)]
+    outputs = [("Data", Table), ("Features", widget.AttributeList)]
 
     want_main_area = False
+    want_control_area = False
 
-    settingsHandler = DomainContextHandler(
-        match_values=DomainContextHandler.MATCH_VALUES_ALL)
-    conditions = ContextSetting([])
-    update_on_change = Setting(True)
-    purge_attributes = Setting(True)
-    purge_classes = Setting(True)
-
-    operator_names = {
-        ContinuousVariable: ["equals", "is not",
-                             "is below", "is at most",
-                             "is greater than", "is at least",
-                             "is between", "is outside",
-                             "is defined"],
-        DiscreteVariable: ["is", "is not", "is one of", "is not one of",
-                           "is defined"],
-        StringVariable: ["equals", "is not",
-                         "is before", "is equal or before",
-                         "is after", "is equal or after",
-                         "is between", "is outside",
-                         "begins with", "ends with",
-                         "is defined"]}
+    settingsHandler = SelectAttributesDomainContextHandler()
+    domain_role_hints = ContextSetting({})
 
     def __init__(self):
         super().__init__()
+        self.controlArea = QtGui.QWidget(self.leftWidgetPart)
+        self.layout().addWidget(self.controlArea)
+        layout = QtGui.QGridLayout()
+        self.controlArea.setLayout(layout)
+        layout.setMargin(4)
+        box = gui.widgetBox(self.controlArea, "Available Variables",
+                            addToLayout=False)
+        self.filter_edit = QtGui.QLineEdit()
+        self.filter_edit.setToolTip("Filter the list of available variables.")
+        box.layout().addWidget(self.filter_edit)
+        if hasattr(self.filter_edit, "setPlaceholderText"):
+            self.filter_edit.setPlaceholderText("Filter")
 
-        self.old_purge_classes = True
+        self.completer = QtGui.QCompleter()
+        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
+        self.completer_model = QtGui.QStringListModel()
+        self.completer.setModel(self.completer_model)
+        self.completer.setModelSorting(
+            QtGui.QCompleter.CaseSensitivelySortedModel)
 
-        self.conditions = []
-        self.last_output_conditions = None
+        self.filter_edit.setCompleter(self.completer)
+        self.completer_navigator = CompleterNavigator(self)
+        self.filter_edit.installEventFilter(self.completer_navigator)
 
-        box = gui.widgetBox(self.controlArea, 'Conditions', stretch=100)
-        self.cond_list = QtGui.QTableWidget(box)
-        box.layout().addWidget(self.cond_list)
-        self.cond_list.setShowGrid(False)
-        self.cond_list.setSelectionMode(QtGui.QTableWidget.NoSelection)
-        self.cond_list.setColumnCount(3)
-        self.cond_list.setRowCount(0)
-        self.cond_list.verticalHeader().hide()
-        self.cond_list.horizontalHeader().hide()
-        self.cond_list.resizeColumnToContents(0)
-        self.cond_list.horizontalHeader().setResizeMode(
-            QtGui.QHeaderView.Stretch)
-        self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
+        self.available_attrs = VariablesListItemModel()
+        self.available_attrs_proxy = VariableFilterProxyModel()
+        self.available_attrs_proxy.setSourceModel(self.available_attrs)
+        self.available_attrs_view = VariablesListItemView()
+        self.available_attrs_view.setModel(self.available_attrs_proxy)
 
-        box2 = gui.widgetBox(box, orientation="horizontal")
-        self.add_button = gui.button(box2, self, "Add condition",
-                                     callback=self.add_row)
-        self.add_all_button = gui.button(box2, self, "Add all variables",
-                                         callback=self.add_all)
-        self.remove_all_button = gui.button(box2, self, "Remove all",
-                                            callback=self.remove_all)
-        gui.rubber(box2)
+        aa = self.available_attrs
+        aa.dataChanged.connect(self.update_completer_model)
+        aa.rowsInserted.connect(self.update_completer_model)
+        aa.rowsRemoved.connect(self.update_completer_model)
 
-        info = gui.widgetBox(self.controlArea, '', orientation="horizontal")
-        box_data_in = gui.widgetBox(info, 'Data In')
-#        self.data_in_rows = gui.widgetLabel(box_data_in, " ")
-        self.data_in_variables = gui.widgetLabel(box_data_in, " ")
-        gui.rubber(box_data_in)
+        self.available_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.available_attrs_view))
+        self.filter_edit.textChanged.connect(self.update_completer_prefix)
+        self.filter_edit.textChanged.connect(
+            self.available_attrs_proxy.set_filter_string)
 
-        box_data_out = gui.widgetBox(info, 'Data Out')
-        self.data_out_rows = gui.widgetLabel(box_data_out, " ")
-#        self.dataOutAttributesLabel = gui.widgetLabel(box_data_out, " ")
-        gui.rubber(box_data_out)
+        box.layout().addWidget(self.available_attrs_view)
+        layout.addWidget(box, 0, 0, 3, 1)
 
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        boxSettings = gui.widgetBox(box, 'Purging')
-        cb = gui.checkBox(boxSettings, self, "purge_attributes",
-                          "Remove unused values/attributes",
-                          callback=self.on_purge_change)
-        self.purgeClassesCB = gui.checkBox(
-            gui.indentedBox(boxSettings, sep=gui.checkButtonOffsetHint(cb)),
-            self, "purge_classes", "Remove unused classes",
-            callback=self.on_purge_change)
-        boxCommit = gui.widgetBox(box, 'Commit')
-        gui.checkBox(boxCommit, self, "update_on_change", "Commit on change")
-        gui.button(boxCommit, self, "Commit", self.output_data, default=True)
+        box = gui.widgetBox(self.controlArea, "Features", addToLayout=False)
+        self.used_attrs = VariablesListItemModel()
+        self.used_attrs_view = VariablesListItemView()
+        self.used_attrs_view.setModel(self.used_attrs)
+        self.used_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.used_attrs_view))
+        box.layout().addWidget(self.used_attrs_view)
+        layout.addWidget(box, 0, 2, 1, 1)
 
-        self.set_data(None)
-        self.resize(600, 400)
+        box = gui.widgetBox(self.controlArea, "Class", addToLayout=False)
+        self.class_attrs = ClassVarListItemModel()
+        self.class_attrs_view = ClassVariableItemView()
+        self.class_attrs_view.setModel(self.class_attrs)
+        self.class_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.class_attrs_view))
+        self.class_attrs_view.setMaximumHeight(24)
+        box.layout().addWidget(self.class_attrs_view)
+        layout.addWidget(box, 1, 2, 1, 1)
 
+        box = gui.widgetBox(self.controlArea, "Meta Attributes",
+                            addToLayout=False)
+        self.meta_attrs = VariablesListItemModel()
+        self.meta_attrs_view = VariablesListItemView()
+        self.meta_attrs_view.setModel(self.meta_attrs)
+        self.meta_attrs_view.selectionModel().selectionChanged.connect(
+            partial(self.update_interface_state, self.meta_attrs_view))
+        box.layout().addWidget(self.meta_attrs_view)
+        layout.addWidget(box, 2, 2, 1, 1)
 
-    def add_row(self, attr=None, condition_type=None, condition_value=None):
-        model = self.cond_list.model()
-        row = model.rowCount()
-        model.insertRow(row)
+        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        layout.addWidget(bbox, 0, 1, 1, 1)
 
-        attr_combo = QtGui.QComboBox()
-        attr_combo.row = row
-        for var in chain(self.data.domain.variables, self.data.domain.metas):
-            attr_combo.addItem(*gui.attributeItem(var))
-        attr_combo.setCurrentIndex(attr or 0)
-        self.cond_list.setCellWidget(row, 0, attr_combo)
+        self.up_attr_button = gui.button(bbox, self, "Up",
+            callback=partial(self.move_up, self.used_attrs_view))
+        self.move_attr_button = gui.button(bbox, self, ">",
+            callback=partial(self.move_selected, self.used_attrs_view))
+        self.down_attr_button = gui.button(bbox, self, "Down",
+            callback=partial(self.move_down, self.used_attrs_view))
 
-        self.remove_all_button.setDisabled(False)
-        self.set_new_operators(attr_combo, attr is not None,
-                               condition_type, condition_value)
-        attr_combo.currentIndexChanged.connect(
-            lambda _: self.set_new_operators(attr_combo, False))
+        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        layout.addWidget(bbox, 1, 1, 1, 1)
+        self.move_class_button = gui.button(bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.class_attrs_view, exclusive=True))
 
-        self.cond_list.resizeRowToContents(row)
+        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        layout.addWidget(bbox, 2, 1, 1, 1)
+        self.up_meta_button = gui.button(bbox, self, "Up",
+            callback=partial(self.move_up, self.meta_attrs_view))
+        self.move_meta_button = gui.button(bbox, self, ">",
+            callback=partial(self.move_selected, self.meta_attrs_view))
+        self.down_meta_button = gui.button(bbox, self, "Down",
+            callback=partial(self.move_down, self.meta_attrs_view))
 
-    def add_all(self):
-        if self.cond_list.rowCount():
-            Mb = QtGui.QMessageBox
-            if Mb.question(
-                    self, "Remove existing filters",
-                    "This will replace the existing filters with "
-                    "filters for all variables.", Mb.Ok | Mb.Cancel) != Mb.Ok:
-                return
-            self.remove_all()
-        domain = self.data.domain
-        for i in range(len(domain.variables) + len(domain.metas)):
-            self.add_row(i)
+        bbox = gui.widgetBox(self.controlArea, orientation="horizontal",
+                             addToLayout=False, margin=0)
+        gui.button(bbox, self, "Apply", callback=self.commit)
+        gui.button(bbox, self, "Reset", callback=self.reset)
 
+        layout.addWidget(bbox, 3, 0, 1, 3)
 
-    def remove_all(self):
-        self.remove_all_rows()
-        self.conditions_changed()
+        layout.setRowStretch(0, 4)
+        layout.setRowStretch(1, 0)
+        layout.setRowStretch(2, 2)
+        layout.setHorizontalSpacing(0)
+        self.controlArea.setLayout(layout)
 
+        self.data = None
+        self.output_report = None
+        self.original_completer_items = []
 
-    def remove_all_rows(self):
-        self.cond_list.clear()
-        self.cond_list.setRowCount(0)
-        self.remove_all_button.setDisabled(True)
+        self.resize(500, 600)
 
+        # For automatic widget testing using
+        self._guiElements.extend(
+            [(QtGui.QListView, self.available_attrs_view),
+             (QtGui.QListView, self.used_attrs_view),
+             (QtGui.QListView, self.class_attrs_view),
+             (QtGui.QListView, self.meta_attrs_view),
+             ])
 
-    def set_new_operators(self, attr_combo, adding_all,
-                          selected_index=None, selected_values=None):
-        oper_combo = QtGui.QComboBox()
-        oper_combo.row = attr_combo.row
-        oper_combo.attr_combo = attr_combo
-        var = self.data.domain[attr_combo.currentText()]
-        oper_combo.addItems(self.operator_names[type(var)])
-        oper_combo.setCurrentIndex(selected_index or 0)
-        self.set_new_values(oper_combo, adding_all, selected_values)
-        self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
-        oper_combo.currentIndexChanged.connect(
-            lambda _: self.set_new_values(oper_combo, False))
-
-    @staticmethod
-    def _get_lineedit_contents(box):
-        return [child.text() for child in getattr(box, "controls", [box])
-                if isinstance(child, QtGui.QLineEdit)]
-
-    @staticmethod
-    def _get_value_contents(box):
-        cont = []
-        for child in getattr(box, "controls", [box]):
-            if isinstance(child, QtGui.QLineEdit):
-                cont.append(child.text())
-            elif isinstance(child, QtGui.QComboBox):
-                cont.append(child.currentIndex())
-        return tuple(cont)
-
-    class QDoubleValidatorEmpty(QtGui.QDoubleValidator):
-        def validate(self, input_, pos):
-            if not input_:
-                return (QtGui.QDoubleValidator.Acceptable, input_, pos)
-            else:
-                return super().validate(input_, pos)
-
-    def set_new_values(self, oper_combo, adding_all, selected_values=None):
-        def remove_children():
-            for child in box.children()[1:]:
-                box.layout().removeWidget(child)
-                child.setParent(None)
-
-        def add_textual(contents):
-            le = gui.lineEdit(box, self, None)
-            if contents:
-                le.setText(contents)
-            le.setMaximumWidth(60)
-            le.setAlignment(Qt.Qt.AlignRight)
-            le.editingFinished.connect(self.conditions_changed)
-            return le
-
-        def add_numeric(contents):
-            le = add_textual(contents)
-            le.setValidator(OWSelectData.QDoubleValidatorEmpty())
-            return le
-
-        var = self.data.domain[oper_combo.attr_combo.currentText()]
-        box = self.cond_list.cellWidget(oper_combo.row, 2)
-        if selected_values is not None:
-            lc = list(selected_values) + ["", ""]
-            lc = [str(x) for x in lc[:2]]
-        else:
-            lc = ["", ""]
-        if box and vartype(var) == box.var_type:
-            lc = self._get_lineedit_contents(box) + lc
-        oper = oper_combo.currentIndex()
-
-        if oper == oper_combo.count() - 1:
-            self.cond_list.removeCellWidget(oper_combo.row, 2)
-        elif isinstance(var, DiscreteVariable):
-            combo = QtGui.QComboBox()
-            combo.addItems([""] + var.values)
-            if lc[0]:
-                combo.setCurrentIndex(int(lc[0]))
-            else:
-                combo.setCurrentIndex(0)
-            combo.var_type = vartype(var)
-            self.cond_list.setCellWidget(oper_combo.row, 2, combo)
-            combo.currentIndexChanged.connect(self.conditions_changed)
-        else:
-            box = gui.widgetBox(self, orientation="horizontal",
-                                addToLayout=False)
-            box.var_type = vartype(var)
-            self.cond_list.setCellWidget(oper_combo.row, 2, box)
-            if isinstance(var, ContinuousVariable):
-                box.controls = [add_numeric(lc[0])]
-                if oper > 5:
-                    gui.widgetLabel(box, " and ")
-                    box.controls.append(add_numeric(lc[1]))
-                gui.rubber(box)
-            elif isinstance(var, StringVariable):
-                box.controls = [add_textual(lc[0])]
-                if oper in [6, 7]:
-                    gui.widgetLabel(box, " and ")
-                    box.controls.append(add_textual(lc[1]))
-            else:
-                box.controls = []
-        if not adding_all:
-            self.conditions_changed()
-
-
-    def set_data(self, data):
+    def set_data(self, data=None):
+        self.update_domain_role_hints()
         self.closeContext()
         self.data = data
-        self.remove_all_rows()
-        self.add_button.setDisabled(data is None)
-        domain = data and data.domain
-        self.add_all_button.setDisabled(
-            data is None or
-            len(domain.variables) + len(domain.metas) > 100)
-        if not data:
+        if data is not None:
+            self.openContext(data)
+            all_vars = data.domain.variables + data.domain.metas
+
+            var_sig = lambda attr: (attr.name, vartype(attr))
+
+            domain_hints = {var_sig(attr): ("attribute", i)
+                            for i, attr in enumerate(data.domain.attributes)}
+
+            domain_hints.update({var_sig(attr): ("meta", i)
+                                for i, attr in enumerate(data.domain.metas)})
+
+            if data.domain.class_var:
+                domain_hints[var_sig(data.domain.class_var)] = ("class", 0)
+
+            # update the hints from context settings
+            domain_hints.update(self.domain_role_hints)
+
+            attrs_for_role = lambda role: [
+                (domain_hints[var_sig(attr)][1], attr)
+                for attr in all_vars if domain_hints[var_sig(attr)][0] == role]
+
+            attributes = [
+                attr for place, attr in sorted(attrs_for_role("attribute"))]
+            classes = [
+                attr for place, attr in sorted(attrs_for_role("class"))]
+            metas = [
+                attr for place, attr in sorted(attrs_for_role("meta"))]
+            available = [
+                attr for place, attr in sorted(attrs_for_role("available"))]
+
+            self.used_attrs[:] = attributes
+            self.class_attrs[:] = classes
+            self.meta_attrs[:] = metas
+            self.available_attrs[:] = available
+        else:
+            self.used_attrs[:] = []
+            self.class_attrs[:] = []
+            self.meta_attrs[:] = []
+            self.available_attrs[:] = []
+
+        self.commit()
+
+    def update_domain_role_hints(self):
+        """ Update the domain hints to be stored in the widgets settings.
+        """
+        hints_from_model = lambda role, model: [
+            ((attr.name, vartype(attr)), (role, i))
+            for i, attr in enumerate(model)]
+        hints = dict(hints_from_model("available", self.available_attrs))
+        hints.update(hints_from_model("attribute", self.used_attrs))
+        hints.update(hints_from_model("class", self.class_attrs))
+        hints.update(hints_from_model("meta", self.meta_attrs))
+        self.domain_role_hints = hints
+
+    def selected_rows(self, view):
+        """ Return the selected rows in the view.
+        """
+        rows = view.selectionModel().selectedRows()
+        model = view.model()
+        if isinstance(model, QtGui.QSortFilterProxyModel):
+            rows = [model.mapToSource(r) for r in rows]
+        return [r.row() for r in rows]
+
+    def move_rows(self, view, rows, offset):
+        model = view.model()
+        newrows = [min(max(0, row + offset), len(model) - 1) for row in rows]
+
+        for row, newrow in sorted(zip(rows, newrows), reverse=offset > 0):
+            model[row], model[newrow] = model[newrow], model[row]
+
+        selection = QtGui.QItemSelection()
+        for nrow in newrows:
+            index = model.index(nrow, 0)
+            selection.select(index, index)
+        view.selectionModel().select(
+            selection, QtGui.QItemSelectionModel.ClearAndSelect)
+
+    def move_up(self, view):
+        selected = self.selected_rows(view)
+        self.move_rows(view, selected, -1)
+
+    def move_down(self, view):
+        selected = self.selected_rows(view)
+        self.move_rows(view, selected, 1)
+
+    def move_selected(self, view, exclusive=False):
+        if self.selected_rows(view):
+            self.move_selected_from_to(view, self.available_attrs_view)
+        elif self.selected_rows(self.available_attrs_view):
+            self.move_selected_from_to(self.available_attrs_view, view,
+                                       exclusive)
+
+    def move_selected_from_to(self, src, dst, exclusive=False):
+        self.move_from_to(src, dst, self.selected_rows(src), exclusive)
+
+    def move_from_to(self, src, dst, rows, exclusive=False):
+        src_model = source_model(src)
+        attrs = [src_model[r] for r in rows]
+
+        if exclusive and len(attrs) != 1:
             return
-        self.openContext(data)
-        if not self.conditions and len(domain.variables):
-            self.add_row()
-        self.update_info(data, self.data_in_variables)
-        for attr, cond_type, cond_value in self.conditions:
-            attrs = [a.name for a in domain.variables + domain.metas]
-            if attr in attrs:
-                self.add_row(attrs.index(attr), cond_type, cond_value)
 
+        for s1, s2 in reversed(list(slices(rows))):
+            del src_model[s1:s2]
 
-    def on_purge_change(self):
-        if self.purge_attributes:
-            if not self.purgeClassesCB.isEnabled():
-                self.purgeClassesCB.setEnabled(True)
-                self.purge_classes = self.old_purge_classes
+        dst_model = source_model(dst)
+        if exclusive and len(dst_model) > 0:
+            src_model.append(dst_model[0])
+            del dst_model[0]
+
+        dst_model.extend(attrs)
+
+    def update_interface_state(self, focus=None, selected=None, deselected=None):
+        for view in [self.available_attrs_view, self.used_attrs_view,
+                     self.class_attrs_view, self.meta_attrs_view]:
+            if view is not focus and not view.hasFocus() and self.selected_rows(view):
+                view.selectionModel().clear()
+
+        available_selected = bool(self.selected_rows(self.available_attrs_view))
+
+        move_attr_enabled = bool(self.selected_rows(self.available_attrs_view) or \
+                                self.selected_rows(self.used_attrs_view))
+        self.move_attr_button.setEnabled(move_attr_enabled)
+        if move_attr_enabled:
+            self.move_attr_button.setText(">" if available_selected else "<")
+
+        move_class_enabled = bool(len(self.selected_rows(self.available_attrs_view)) == 1 or \
+                                  self.selected_rows(self.class_attrs_view))
+
+        self.move_class_button.setEnabled(move_class_enabled)
+        if move_class_enabled:
+            self.move_class_button.setText(">" if available_selected else "<")
+
+        move_meta_enabled = bool(self.selected_rows(self.available_attrs_view) or \
+                                 self.selected_rows(self.meta_attrs_view))
+        self.move_meta_button.setEnabled(move_meta_enabled)
+        if move_meta_enabled:
+            self.move_meta_button.setText(">" if available_selected else "<")
+
+    def update_completer_model(self, *_):
+        """ This gets called when the model for available attributes changes
+        through either drag/drop or the left/right button actions.
+
+        """
+        vars = list(self.available_attrs)
+        items = [var.name for var in vars]
+        labels = reduce(list.__add__,
+                        [list(v.attributes.items()) for v in vars], [])
+        items.extend(["%s=%s" % item for item in labels])
+        items.extend(reduce(list.__add__, list(map(list, labels)), []))
+
+        new = sorted(set(items))
+        if new != self.original_completer_items:
+            self.original_completer_items = new
+            self.completer_model.setStringList(self.original_completer_items)
+
+    def update_completer_prefix(self, filter):
+        """ Prefixes all items in the completer model with the current
+        already done completion to enable the completion of multiple keywords.
+        """
+        prefix = str(self.completer.completionPrefix())
+        if not prefix.endswith(" ") and " " in prefix:
+            prefix, _ = prefix.rsplit(" ", 1)
+            items = [prefix + " " + item
+                     for item in self.original_completer_items]
         else:
-            if self.purgeClassesCB.isEnabled():
-                self.purgeClassesCB.setEnabled(False)
-                self.old_purge_classes = self.purge_classes
-                self.purge_classes = False
-        self.conditions_changed()
+            items = self.original_completer_items
+        old = list(map(str, self.completer_model.stringList()))
 
-    def conditions_changed(self):
-        try:
-            self.conditions = []
-            self.conditions = [
-                (self.cond_list.cellWidget(row, 0).currentText(),
-                 self.cond_list.cellWidget(row, 1).currentIndex(),
-                 self._get_value_contents(self.cond_list.cellWidget(row, 2)))
-                for row in range(self.cond_list.rowCount())]
-            if self.update_on_change and (
-                    self.last_output_conditions is None or
-                    self.last_output_conditions != self.conditions):
-                self.output_data()
-        except AttributeError:
-            # Attribute error appears if the signal is triggered when the
-            # controls are being constructed
-            pass
+        if set(old) != set(items):
+            self.completer_model.setStringList(items)
 
+    def commit(self):
+        self.update_domain_role_hints()
+        if self.data is not None:
+            attributes = list(self.used_attrs)
+            class_var = list(self.class_attrs)
+            metas = list(self.meta_attrs)
 
-    def output_data(self):
-        matching_output = self.data
-        non_matching_output = None
-        if self.data:
-            domain = self.data.domain
-            filters = data_filter.Values()
-            for attr_name, oper, values in self.conditions:
-                attr_index = domain.index(attr_name)
-                attr = domain[attr_index]
-                if isinstance(attr, ContinuousVariable):
-                    if any(not v for v in values):
-                        continue
-                    filter = data_filter.FilterContinuous(
-                        attr_index, oper, *[float(v) for v in values])
-                elif isinstance(attr, StringVariable):
-                    if any(v for v in values):
-                        continue
-                    filter = data_filter.FilterString(
-                        attr_index, oper, *[str(v) for v in values])
-                else:
-                    if oper in [2, 3]:
-                        raise NotImplementedError(
-                            "subset filters for discrete attributes are not "
-                            "implemented yet")
-                    elif oper == 4:
-                        f_values = None
-                    else:
-                        if not values or not values[0]:
-                            continue
-                        if oper == 0:
-                            f_values = {values[0] - 1}
-                        else:
-                            f_values = set(range(len(attr.values)))
-                            f_values.remove(values[0] - 1)
-                    filter = data_filter.FilterDiscrete(attr_index, f_values)
-                filters.conditions.append(filter)
-
-            matching_output = filters(self.data)
-            filters.negate = True
-            non_matching_output = filters(self.data)
-
-            if hasattr(self.data, "name"):
-                matching_output.name = self.data.name
-                non_matching_output.name = self.data.name
-
-            """
-            if self.purge_attributes or self.purge_classes:
-                remover = orange.RemoveUnusedValues(removeOneValued=True)
-
-                newDomain = remover(matching_output, 0, True, self.purge_classes)
-                if newDomain != matching_output.domain:
-                    matching_output = orange.ExampleTable(newDomain, matching_output)
-
-                newDomain = remover(non_matching_output, 0, True, self.purge_classes)
-                if newDomain != non_matching_output.domain:
-                    nonmatchingOutput = orange.ExampleTable(newDomain, non_matching_output)
-            """
-        self.send("Matching Data", matching_output)
-        self.send("Unmatched Data", non_matching_output)
-
-#        self.update_info(matching_output,
-#                         self.data_out_variables, self.data_out_rows)
-
-
-    def update_info(self, data, lab1):
-        def sp(s, capitalize=True):
-            return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
-
-        if not data:
-            lab1.setText("")
+            domain = Orange.data.Domain(attributes, class_var, metas)
+            newdata = self.data.from_table(domain, self.data)
+            self.output_report = self.prepareDataReport(newdata)
+            self.output_domain = domain
+            self.send("Data", newdata)
+            self.send("Features", widget.AttributeList(attributes))
         else:
-            lab1.setText("%s row%s, %s variable%s" % (sp(len(data)) +
-            sp(len(data.domain.variables) + len(data.domain.metas))))
+            self.output_report = []
+            self.send("Data", None)
+            self.send("Features", None)
 
-
+    def reset(self):
+        if self.data is not None:
+            self.available_attrs[:] = []
+            self.used_attrs[:] = self.data.domain.attributes
+            self.class_attrs[:] = self.data.domain.class_vars
+            self.meta_attrs[:] = self.data.domain.metas
+            self.update_domain_role_hints()
 
     def sendReport(self):
-        self.reportSettings("Output", [("Remove unused values/attributes", self.purge_attributes),
-                                       ("Remove unused classes", self.purge_classes)])
-        text = "<table>\n<th>Attribute</th><th>Condition</th><th>Value</th>/n"
-        for i, cond in enumerate(self.conditions):
-            if cond.type == "OR":
-                text += "<tr><td span=3>\"OR\"</td></tr>\n"
-            else:
-                text += "<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (cond.varName, repr(cond.operator), cond.val1)
+        self.reportData(self.data, "Input data")
+        self.reportData(self.output_report, "Output data")
+        if self.data:
+            all_vars = self.data.domain.variables + self.data.domain.metas
+            used_vars = self.output_domain.variables + self.output_domain.metas
+            if len(all_vars) != len(used_vars):
+                removed = set(all_vars).difference(set(used_vars))
+                self.reportSettings("",
+                    [("Removed", "%i (%s)" %
+                     (len(removed), ", ".join(x.name for x in removed)))])
 
-        text += "</table>"
-        import OWReport
-        self.reportSection("Conditions")
-        self.reportRaw(OWReport.reportTable(self.cond_list))
-#        self.reportTable("Conditions", self.criteriaTable)
-
-
-def test():
-    app = QtGui.QApplication([])
-    w = OWSelectData()
-    w.set_data(Table("iris"))
-    w.show()
-    app.exec_()
 
 if __name__ == "__main__":
-    test()
+    app = QtGui.QApplication(sys.argv)
+    w = OWSelectAttributes()
+#    data = Orange.data.Table("rep:dicty-express.tab")
+    data = Orange.data.Table("brown-selected.tab")
+    w.set_data(data)
+    w.show()
+    app.exec_()
+    w.set_data(None)
+    w.saveSettings()
+
+
