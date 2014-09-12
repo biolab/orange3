@@ -369,6 +369,16 @@ class ContinuousVariable(Variable):
         self.adjust_decimals = 2
         ContinuousVariable.all_continuous_vars[name] = self
 
+    @property
+    def number_of_decimals(self):
+        return self._number_of_decimals
+
+    # noinspection PyAttributeOutsideInit
+    @number_of_decimals.setter
+    def number_of_decimals(self, x):
+        self._number_of_decimals = x
+        self._out_format = "%.{}f".format(self.number_of_decimals)
+
     @staticmethod
     def make(name):
         """
@@ -415,7 +425,7 @@ class ContinuousVariable(Variable):
         """
         if isnan(val):
             return "?"
-        return "%.*f" % (self.number_of_decimals, val)
+        return self._out_format % val
 
     str_val = repr_val
 

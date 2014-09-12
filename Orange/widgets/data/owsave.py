@@ -3,7 +3,7 @@ import re
 
 from PyQt4 import QtGui
 
-from Orange.data.io import saveCsv, saveTabDelimited
+from Orange.data.io import save_csv, save_tab_delimited
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -23,7 +23,7 @@ class OWSave(widget.OWWidget):
 
     last_dir = Setting("")
 
-    savers = {".tab": saveTabDelimited, ".csv": saveCsv}
+    savers = {".tab": save_tab_delimited, ".csv": save_csv}
     dlgFormats = 'Tab-delimited files (*.tab)\nComma separated (*.csv)\n'
     re_filterExtension = re.compile(r"\(\*(?P<ext>\.[^ )]+)")
 

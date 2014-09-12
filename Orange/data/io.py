@@ -1,6 +1,7 @@
 import csv
 import re
 import sys
+from itertools import chain
 
 import bottleneck as bn
 import numpy as np
@@ -258,7 +259,7 @@ class BasketReader():
                               attrs and X, classes and Y, metas and meta_attrs)
 
 
-def csvSaver(filename, data, delimiter='\t'):
+def csv_saver(filename, data, delimiter='\t'):
     with open(filename, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=delimiter)
         all_vars = data.domain.variables + data.domain.metas
@@ -281,8 +282,63 @@ def csvSaver(filename, data, delimiter='\t'):
             writer.writerow(ex)
 
 
-def saveCsv(filename, data):
-    csvSaver(filename, data, ',')
+def save_csv(filename, data):
+    csv_saver(filename, data, ',')
 
-def saveTabDelimited(filename, data):
-    csvSaver(filename, data)
+
+def _save_tab_fast(f, data):
+    wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
+    for Xi, Yi, Mi in zip(data.X, data.Y, data.metas):
+        f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
+        f.write("\n")
+
+
+def save_tab_delimited(filename, data):
+    """
+    Save the data to tab-delimited file.
+
+    The function uses a fast implementation for numpy data, and a slower
+    fall-back for general storages.
+
+    :param filename: the name of the file
+    :type filename: str
+    :param data: the data to be saved
+    :type data: Orange.data.Storage
+    """
+    f = open(filename, "w")
+    domain_vars = data.domain.variables + data.domain.metas
+    # first line
+    f.write("\t".join([str(j.name) for j in domain_vars]))
+    f.write("\n")
+
+    # second line
+    #TODO Basket column.
+    t = {"ContinuousVariable": "c", "DiscreteVariable": "d",
+         "StringVariable": "string", "Basket": "basket"}
+
+    f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
+    f.write("\n")
+
+    # third line
+    m = list(data.domain.metas)
+    c = list(data.domain.class_vars)
+    r = []
+    for i in domain_vars:
+        if i in m:
+            r.append("m")
+        elif i in c:
+            r.append("c")
+        else:
+            r.append("")
+    f.write("\t".join(r))
+    f.write("\n")
+
+    # data
+    # noinspection PyBroadException
+    try:
+        _save_tab_fast(f, data)
+    except:
+        domain_vars = [data.domain.index(var) for var in domain_vars]
+        for i in data:
+            f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
+    f.close()
