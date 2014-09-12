@@ -48,7 +48,7 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'bottleneck',
+    'bottlechest',
     "sqlparse"
 )
 

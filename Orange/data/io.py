@@ -2,7 +2,7 @@ import csv
 import re
 import sys
 
-import bottleneck as bn
+import bottlechest as bn
 import numpy as np
 from scipy import sparse
 
