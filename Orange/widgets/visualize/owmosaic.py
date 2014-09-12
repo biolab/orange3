@@ -414,7 +414,7 @@ class OWMosaicDisplay(OWWidget):
             self.warning(10)
         else:
             try:
-                self.subset_data = data.select(self.data.domain)
+                self.subset_data = data.from_table(self.data.domain, data)
                 self.warning(10)
             except:
                 self.subset_data = None
