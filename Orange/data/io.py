@@ -286,7 +286,7 @@ def save_csv(filename, data):
     csv_saver(filename, data, ',')
 
 
-def save_tab_fast(f, data):
+def _save_tab_fast(f, data):
     wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
     for Xi, Yi, Mi in zip(data.X, data.Y, data.metas):
         f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
@@ -294,6 +294,17 @@ def save_tab_fast(f, data):
 
 
 def save_tab_delimited(filename, data):
+    """
+    Save the data to tab-delimited file.
+
+    The function uses a fast implementation for numpy data, and a slower
+    fall-back for general storages.
+
+    :param filename: the name of the file
+    :type filename: str
+    :param data: the data to be saved
+    :type data: Orange.data.Storage
+    """
     f = open(filename, "w")
     domain_vars = data.domain.variables + data.domain.metas
     # first line
@@ -325,7 +336,7 @@ def save_tab_delimited(filename, data):
     # data
     # noinspection PyBroadException
     try:
-        save_tab_fast(f, data)
+        _save_tab_fast(f, data)
     except:
         domain_vars = [data.domain.index(var) for var in domain_vars]
         for i in data:
