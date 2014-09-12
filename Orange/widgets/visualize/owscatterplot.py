@@ -193,10 +193,10 @@ class OWScatterPlot(OWWidget):
         self.graph.set_data(self.data, self.subset_data)
         # self.vizrank.resetDialog()
         if self.attribute_selection_list and \
-                all(attr in self.graph.attribute_name_index
+                all(attr.name in self.graph.attribute_name_index
                     for attr in self.attribute_selection_list):
-            self.attr_x = self.attribute_selection_list[0]
-            self.attr_y = self.attribute_selection_list[1]
+            self.attr_x = self.attribute_selection_list[0].name
+            self.attr_y = self.attribute_selection_list[1].name
         self.attribute_selection_list = None
         self.update_graph()
         self.send_selection()
