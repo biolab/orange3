@@ -258,7 +258,7 @@ class BasketReader():
                               attrs and X, classes and Y, metas and meta_attrs)
 
 
-def csvSaver(filename, data, delimiter='\t'):
+def csv_saver(filename, data, delimiter='\t'):
     with open(filename, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=delimiter)
         all_vars = data.domain.variables + data.domain.metas
@@ -281,8 +281,41 @@ def csvSaver(filename, data, delimiter='\t'):
             writer.writerow(ex)
 
 
-def saveCsv(filename, data):
-    csvSaver(filename, data, ',')
+def save_csv(filename, data):
+    csv_saver(filename, data, ',')
 
-def saveTabDelimited(filename, data):
-    csvSaver(filename, data)
+
+def save_tab_delimited(filename, data):
+    f = open(filename, "w")
+    domain_vars = data.domain.metas + data.domain.variables
+    # first line
+    f.write("\t".join([str(j.name) for j in domain_vars]))
+    f.write("\n")
+
+    # second line
+    #TODO Basket column.
+    t = {"ContinuousVariable": "c", "DiscreteVariable": "d",
+         "StringVariable": "string", "Basket": "basket"}
+
+    f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
+    f.write("\n")
+
+    # third line
+    m = list(data.domain.metas)
+    c = list(data.domain.class_vars)
+    r = []
+    for i in domain_vars:
+        if i in m:
+            r.append("m")
+        elif i in c:
+            r.append("c")
+        else:
+            r.append("")
+    f.write("\t".join(r))
+    f.write("\n")
+
+    # data
+    domain_vars = [data.domain.index(var) for var in domain_vars]
+    for i in data:
+        f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
+    f.close()
