@@ -307,8 +307,8 @@ class EntropyMDL(Discretization):
         self.force = force
 
     def __call__(self, data, attribute):
-        values, I = contingency.get_contingency(data, attribute)
-        I = I.T
+        cont = contingency.get_contingency(data, attribute)
+        values, I = cont.values, cont.counts.T
         cut_ind = np.array(_entropy_discretize_sorted(I, self.force))
         if len(cut_ind) > 0:
             #"the midpoint between each successive pair of examples" (FI p.1)
