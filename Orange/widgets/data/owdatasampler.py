@@ -83,7 +83,7 @@ class OWDataSampler(widget.OWWidget):
         gui.appendRadioButton(sampling, "Random Sampling:")
 
         self.samplingBox[0] = ibox = gui.indentedBox(sampling)
-        ibox.setEnabled(self.samplingType == OWDataSampler.RandomSampling)
+        ibox.setEnabled(self.sampling   Type == OWDataSampler.RandomSampling)
 
         ibox = gui.radioButtons(ibox, self, "sampleSizeType",
                                 callback=self.sampleSizeTypeChanged)

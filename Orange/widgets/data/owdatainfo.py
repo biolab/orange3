@@ -11,9 +11,8 @@ except ImportError:
 class OWDataInfo(widget.OWWidget):
     name = "Data Info"
     id = "orange.widgets.data.info"
-    description = "Shows basic information about the data"
-    long_description = """Shows the number of data instances and number of
-    variables of different types and kinds."""
+    description = """Display the basic information about the data set, like
+    number and type of variables in columns and number of rows."""
     icon = "icons/DataInfo.svg"
     author = "Aleš Erjavec, Janez Demsar"
     maintainer_email = "ales.erjavec(@at@)fri.uni-lj.si"
@@ -32,7 +31,7 @@ class OWDataInfo(widget.OWWidget):
                     "Location"):
             name = box.lower().replace(" ", "_")
             bo = gui.widgetBox(self.controlArea, box,
-                               addSpace=box != "Meta Attributes")
+                               addSpace=False and box != "Meta Attributes")
             gui.label(bo, self, "%%(%s)s" % name)
 
     def resize(self):
@@ -41,7 +40,7 @@ class OWDataInfo(widget.OWWidget):
 
     def data(self, data):
         def n_or_none(i):
-            return i or "-"
+            return i or "(none)"
 
         def count(s, tpe):
             return sum(isinstance(x, tpe) for x in s)
@@ -70,7 +69,7 @@ class OWDataInfo(widget.OWWidget):
         else:
             sparses = ""
         domain = data.domain
-        self.data_set_size = pack_table((("Samples", len(data)),
+        self.data_set_size = pack_table((("Rows", len(data)),
                                          ("Variables", len(domain)))) + sparses
 
         if not domain.attributes:
