@@ -588,7 +588,7 @@ class OWMosaicDisplay(OWWidget):
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
         if type(data) == SqlTable:
-            dict = ZeroDict() # ZeroDict is like ordinary dict, except it returns 0 if key not found
+            cond_dist = ZeroDict() # ZeroDict is like ordinary dict, except it returns 0 if key not found
 
             # get instances of attributes instead of strings, because of to_sql()
             var_attrs = []
@@ -618,33 +618,28 @@ class OWMosaicDisplay(OWWidget):
                 cur = data._execute_sql_query(" ".join(sql))
                 res = cur.fetchall()
                 for r in list(res):
-                    dict['-'.join(r[:-1])] = r[-1]
+                    cond_dist['-'.join(r[:-1])] = r[-1]
         else:
-            dict = {}
+            cond_dist = {}
             for i in range(0, len(attrs) + 1):
                 attr = []
-                for j in range(0, i+1):
+                for j in range(0, i + 1):
                     if j == len(attrs):
                         attr.append(data.domain.class_var)
                     else:
-                        if data.domain.class_var.name == attrs[j]:
-                            attr.append(data.domain.class_var)
-                        else:
-                            ind = data.domain.index(attrs[j])
-                            a = data.domain.attributes[ind]
-                            attr.append(a)
+                        attr.append(data.domain[attrs[j]])
 
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     filt = filter.Values()
                     filt.domain = data.domain
-                    for k in range(len(indices)):
-                        vals.append(attr[k].values[indices[k]])
-                        fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[indices[k]]])
+                    for k, ind in enumerate(indices):
+                        vals.append(attr[k].values[ind])
+                        fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
                         filt.conditions.append(fd)
                     filtdata = filt(data)
-                    dict['-'.join(vals)] = len(filtdata)
-        return dict
+                    cond_dist['-'.join(vals)] = len(filtdata)
+        return cond_dist
 
 
     # ############################################################################
