@@ -62,9 +62,10 @@ class Storage:
                     - for discrete, contingency_table is a 2d numpy array, where
                       element (i, j) contains count of rows with i-th value
                       of the row variable and j-th value of the column variable.
-                    - for continuous, contingency is a list of 2d numpy arrays,
-                      one for each value of the row variable. 2d arrays contain
-                       ordered distinct values of the column_variable in first
-                       row and their counts in the second.
+                    - for continuous, contingency is a list of two arrays,
+                      where the first array contains ordered distinct values 
+                      of the column_variable and the element (i,j) of the second 
+                      arrays contains count of rows with i-th value                                          of the row variable and j-th value of the ordered column 
+                      variable.
         """
         raise NotImplementedError

@@ -65,7 +65,7 @@ class Discrete(np.ndarray):
         if row_variable is None:
             row_variable = data.domain.class_var
             if row_variable is None:
-                raise ValueError("row_variable needs to be specified (data"
+                raise ValueError("row_variable needs to be specified (data "
                                  "has no class)")
         row_variable = _get_variable(row_variable, data, "row_variable")
         col_variable = _get_variable(col_variable, data, "col_variable")
