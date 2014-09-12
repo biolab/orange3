@@ -285,9 +285,21 @@ def save_csv(filename, data):
     csv_saver(filename, data, ',')
 
 
+def save_tab_fast(f, data):
+    writers = [(mat, [var.repr_val for var in c])
+               for mat, c in (
+                   (data.X, data.domain.attributes),
+                   (data.Y, data.domain.class_vars),
+                   (data.metas, data.domain.metas))]
+    for i in range(len(data)):
+        for mat, ws in writers:
+            f.write("\t".join(w(mat[i][j]) for j, w in enumerate(ws)))
+        f.write("\n")
+
+
 def save_tab_delimited(filename, data):
     f = open(filename, "w")
-    domain_vars = data.domain.metas + data.domain.variables
+    domain_vars = data.domain.variables + data.domain.metas
     # first line
     f.write("\t".join([str(j.name) for j in domain_vars]))
     f.write("\n")
@@ -315,7 +327,12 @@ def save_tab_delimited(filename, data):
     f.write("\n")
 
     # data
-    domain_vars = [data.domain.index(var) for var in domain_vars]
-    for i in data:
-        f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
+    # noinspection PyBroadException
+#    try:
+    save_tab_fast(f, data)
+#    except:
+#        raise(NotImplementedError, "Slow!")
+#        domain_vars = [data.domain.index(var) for var in domain_vars]
+#        for i in data:
+#            f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
     f.close()
