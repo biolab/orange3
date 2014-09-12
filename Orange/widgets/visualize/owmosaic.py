@@ -2,6 +2,7 @@ import os
 import sys
 from math import sqrt
 from functools import reduce
+from itertools import product
 
 import numpy
 from PyQt4.QtCore import QPoint, Qt, QRectF
@@ -620,17 +621,6 @@ class OWMosaicDisplay(OWWidget):
                     dict['-'.join(r[:-1])] = r[-1]
         else:
             dict = {}
-            def counter(s):
-                t = [0 for i in range(0, len(s))]
-                while True:
-                    yield t
-                    for i in range(len(s)):
-                        t[i] = (t[i] + 1) % s[i]
-                        if t[i]:
-                            break
-                    else:
-                        break
-
             for i in range(0, len(attrs) + 1):
                 attr = []
                 for j in range(0, i+1):
@@ -644,8 +634,7 @@ class OWMosaicDisplay(OWWidget):
                             a = data.domain.attributes[ind]
                             attr.append(a)
 
-                s = [len(a.values) for a in attr]
-                for indices in counter(s):
+                for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     filt = filter.Values()
                     filt.domain = data.domain
