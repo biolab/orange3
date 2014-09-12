@@ -8,7 +8,7 @@ from functools import reduce
 from warnings import warn
 
 import numpy as np
-import bottleneck as bn
+import bottlechest as bn
 from scipy import sparse as sp
 from sklearn.utils import validation
 

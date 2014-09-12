@@ -3,7 +3,7 @@ import re
 import sys
 from itertools import chain
 
-import bottleneck as bn
+import bottlechest as bn
 import numpy as np
 from scipy import sparse
 

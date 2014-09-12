@@ -1,6 +1,6 @@
 import numpy as np
 import scipy
-import bottleneck as bn
+import bottlechest as bn
 
 import Orange.data
 
