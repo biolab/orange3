@@ -419,7 +419,7 @@ class OWMosaicDisplay(OWWidget):
             except:
                 self.subset_data = None
                 self.warning(10,
-                             data and "'Examples' and 'Example Subset' data do not have compatible domains. Unable to draw 'Example Subset' data." or "")
+                             data and "'Data' and 'Data Subset' do not have compatible domains." or "")
         self.cb_show_subset.setDisabled(self.subset_data is None)
 
 
@@ -523,7 +523,7 @@ class OWMosaicDisplay(OWWidget):
 
         if len(data) == 0:
             self.warning(5,
-                         "There are no examples with valid values for currently visualized attributes. Unable to visualize.")
+                         "No data instances with valid values for currently visualized attributes.")
             return
         else:
             self.warning(5)
