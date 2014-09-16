@@ -482,10 +482,8 @@ def flatten(node, nbins=None):
     else:
         N, M = node.children.shape[:2]
 
-        valid = np.where(node.children, True, False)
-
-        xind = {i: np.flatnonzero(valid[i, :]) for i in range(N)}
-        yind = {j: np.flatnonzero(valid[:, j]) for j in range(M)}
+        xind = {i: np.flatnonzero(node.children[i, :]) for i in range(N)}
+        yind = {j: np.flatnonzero(node.children[:, j]) for j in range(M)}
         xind = {i: ind[0] for i, ind in xind.items() if ind.size}
         yind = {j: ind[0] for j, ind in yind.items() if ind.size}
 
