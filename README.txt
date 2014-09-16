@@ -37,3 +37,9 @@ access to installed PyQt4.
 To start orange canvas from the command line, run::
 
      python3 -m Orange.canvas
+
+Windows dev setup
+-----------------
+
+Windows + gcc:
+	python setup.py build_ext -i --compile=mingw32
