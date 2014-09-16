@@ -31,7 +31,10 @@ class Discretizer(ColumnTransformation):
         self.points = points
 
     def _transform(self, c):
-        return np.where(np.isnan(c), np.NaN, np.digitize(c, self.points))
+        if c.size:
+            return np.where(np.isnan(c), np.NaN, np.digitize(c, self.points))
+        else:
+            return np.array([], dtype=int)
 
 
 def _discretized_var(data, var, points):
