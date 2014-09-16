@@ -7,7 +7,9 @@ from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
                          QDialog, QApplication)
 
 import Orange
-from Orange.data import Table, Variable, ContinuousVariable
+from Orange.data import Table, ContinuousVariable
+from Orange.data.discretization import DiscretizeTable
+from Orange.feature.discretization import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.utils import getHtmlCompatibleString
@@ -105,7 +107,8 @@ class OWSieveDiagram(OWWidget):
 
         if data:
             if any(isinstance(attr, ContinuousVariable) for attr in data.domain):
-                self.information(0, "Continuous attributes were discretized using entropy discretization.")
+                self.data = DiscretizeTable(data, method=EqualFreq())
+                self.information(0, "Continuous attributes were discretized.")
 #            if not self.data or len(data.domain) != len(self.data.domain):
 #                self.information(1, "Unused attribute values were removed.")
 

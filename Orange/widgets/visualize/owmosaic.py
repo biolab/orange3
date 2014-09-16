@@ -381,9 +381,10 @@ class OWMosaicDisplay(OWWidget):
             return
 
         if any(isinstance(attr, ContinuousVariable) for attr in self.data.domain):
-            self.information(0, "Continuous attributes were discretized.")
             # previously done in optimizationDlg.setData()
             self.data = DiscretizeTable(data, method=EqualFreq())
+            self.information(0, "Continuous attributes were discretized.")
+
 
         """ TODO: check
         if data.has_missing_class():
