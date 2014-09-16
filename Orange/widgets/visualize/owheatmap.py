@@ -383,12 +383,12 @@ class OWHeatMap(widget.OWWidget):
             if len(heap) % nbins == 0 or tick > 1:
                 update_time = time.time()
                 self.update_map(flatten(root._replace(children=children),
-                                        nbins=self.n_bins))
+                                        nbins=self.n_bins, preserve_max=True))
 
         self._root = root._replace(children=children)
         self._cache[xvar, yvar, zvar] = self._root
 
-        r = flatten(self._root, self.n_bins)
+        r = flatten(self._root, self.n_bins, preserve_max=True)
         assert r.brect == root.brect
         self.update_map(r)
 
@@ -475,7 +475,7 @@ def bins_join(bins):
     return np.hstack([b[:-1] for b in bins[:-1]] + [bins[-1]])
 
 
-def flatten(node, nbins=None):
+def flatten(node, nbins=None, preserve_max=False):
     if node.is_leaf:
         return node
     else:
@@ -506,13 +506,23 @@ def flatten(node, nbins=None):
         else:
             repeats = (nbins, nbins)
 
-        contingencies = \
-            [[np.tile(node.contingencies[i, j],  # / (nbins ** 2),
-                      repeats)
-              if node.children[i, j] is None
-              else node.children[i, j].contingencies
-              for j in range(nbins)]
-             for i in range(nbins)]
+        def child_contingency(node, row, col):
+            child = node.children[row, col]
+            if child is None:
+                return np.tile(node.contingencies[row, col], repeats)
+            elif preserve_max:
+                parent_max = np.max(node.contingencies[row, col])
+                c_max = np.max(child.contingencies)
+                if c_max > 0:
+                    return child.contingencies * (parent_max / c_max)
+                else:
+                    return child.contingencies
+            else:
+                return child.contingencies
+
+        contingencies = [[child_contingency(node, i, j)
+                          for j in range(nbins)]
+                         for i in range(nbins)]
 
         contingencies = stack_tile_blocks(contingencies)
         cnode = Tree(xbins, ybins, contingencies, None)
