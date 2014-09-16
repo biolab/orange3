@@ -46,7 +46,7 @@ def _discretized_var(data, var, points):
             + ["[%f, %f)" % (p1, p2) for p1, p2 in zip(points, points[1:])] \
             + [">=%f" % points[-1]]
         def discretized_attribute():
-            return 'bin(%s, ARRAY%s)' % (var.to_sql(), str(points))
+            return 'bin(%s, ARRAY%s)' % (var.to_sql(), str(list(points)))
     else:
         values = ["single_value"]
         def discretized_attribute():
