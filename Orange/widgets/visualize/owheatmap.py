@@ -379,8 +379,7 @@ class OWHeatMap(widget.OWWidget):
             children[i, j] = t
 
             self.progressBarSet(100.0 * (niter - len(heap)) / niter)
-            tick = update_time - time.time()
-
+            tick = time.time() - update_time
             if len(heap) % nbins == 0 or tick > 1:
                 update_time = time.time()
                 self.update_map(flatten(root._replace(children=children),
