@@ -25,6 +25,10 @@ def is_continuous(var):
     return isinstance(var, Orange.data.ContinuousVariable)
 
 
+def is_not_none(obj):
+    return obj is not None
+
+
 Tree = namedtuple(
     "Tree",
     ["xbins",          # bin edges on the first axis
@@ -59,8 +63,7 @@ Tree.depth = (
     lambda self:
         1 if self.is_leaf
           else max(ch.depth() + 1
-                   for ch in filter(lambda ch: ch is not None,
-                                    self.children.flat))
+                   for ch in filter(is_not_none, self.children.flat))
 )
 
 
@@ -143,38 +146,72 @@ class DensityPatch(pg.GraphicsObject):
                 int(np.log2(root.nbins)))
 
         if (p, cell_shape, cell_size) not in self._cache:
-            self._cache[p, cell_shape, cell_size] = pic = \
-                create_picture(resample(root, 2 ** p), palette=self._palette,
-                               shape=cell_shape)
+            self._cache[p, cell_shape, cell_size] = patch = \
+                create_picture_patch(resample(root, 2 ** p),
+                                     palette=self._palette,
+                                     shape=cell_shape)
         else:
-            pic = self._cache[p, cell_shape, cell_size]
+            patch = self._cache[p, cell_shape, cell_size]
+
+        exposed = option.exposedRect
+
+        def bound_paint(patch, rect):
+            if not rect.intersects(patch.rect):
+                return
+            elif rect.contains(patch.rect) or patch.is_leaf:
+                patch.picture.play(painter)
+            else:
+                for sub in patch.subpatches:
+                    bound_paint(sub, rect)
+
+                if len(patch.subpatches) != patch.node.nbins ** 2:
+                    patch.patch.play(painter)
 
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
-        pic.play(painter)
+
+        bound_paint(patch, exposed)
 
 
-def create_picture(node, palette=None, scale=None, shape=Rect):
+Patch = namedtuple(
+  "Patch",
+  ["node",     # source node
+   "picture",  # combined full picture
+   "patch",    # contribution from this node alone
+   "subpatches"  # a list of child patches
+   ]
+)
+
+Patch.rect = property(
+    lambda self: QRectF(*self.node.brect)
+)
+
+Patch.is_leaf = property(
+    lambda self: len(self.subpatches) == 0
+)
+
+
+def create_picture_patch(node, palette=None, scale=None, shape=Rect):
     pic = QtGui.QPicture()
+    subpatches = []
     if node.is_empty:
-        return pic
+        return Patch(node, pic, pic, [])
 
-    painter = QtGui.QPainter(pic)
+    painter1 = QtGui.QPainter(pic)
 
     ctng = node.contingencies
 
     if not node.is_leaf:
         # First run down the non None children
-        for ch in filter(None, node.children.flat):
-            subpic = create_picture(ch, palette, scale, shape=shape)
-            subpic.play(painter)
+        for ch in filter(is_not_none, node.children.flat):
+            sub = create_picture_patch(ch, palette, scale, shape=shape)
+            sub.picture.play(painter1)
+            subpatches.append(sub)
 
     colors = create_image(ctng, palette, scale=scale)
     x, y, w, h = node.brect
     N, M = ctng.shape[:2]
-    painter.save()
-    painter.translate(x, y)
-    painter.scale(w / node.nbins, h / node.nbins)
+
     indices = itertools.product(range(N), range(M))
 
     ctng = ctng.reshape((-1,) + ctng.shape[2:])
@@ -189,6 +226,12 @@ def create_picture(node, palette=None, scale=None, shape=Rect):
         # Skip all None children they were already painted.
         skip = (ch is not None for ch in node.children.flat)
 
+    thispic = QtGui.QPicture()
+    painter = QtGui.QPainter(thispic)
+    painter.save()
+    painter.translate(x, y)
+    painter.scale(w / node.nbins, h / node.nbins)
+
     for (i, j), skip, any_ in zip(indices, skip, ctng_any):
         if not skip and any_:
             painter.setBrush(QtGui.QColor(*colors[i, j]))
@@ -202,7 +245,11 @@ def create_picture(node, palette=None, scale=None, shape=Rect):
 
     painter.restore()
     painter.end()
-    return pic
+
+    painter1.drawPicture(0, 0, thispic)
+    painter1.end()
+
+    return Patch(node, pic, thispic, subpatches)
 
 
 def resample(node, samplewidth):
