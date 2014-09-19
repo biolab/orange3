@@ -1,4 +1,5 @@
 import time
+import itertools
 import heapq
 from functools import reduce
 from collections import namedtuple
@@ -29,7 +30,7 @@ Tree = namedtuple(
     ["xbins",          # bin edges on the first axis
      "ybins",          # bin edges on the second axis
      "contingencies",  # x/y contingency table/s
-     "children",       # an (N, N) array of sub trees or None (if leaf)
+     "children",       # an (nbins, nbins) array of sub trees or None (if leaf)
      ]
 )
 
@@ -42,12 +43,281 @@ Tree.is_empty = property(
 )
 
 Tree.brect = property(
-    lambda self: \
+    lambda self:
         (self.xbins[0],
          self.ybins[0],
          self.xbins[-1] - self.xbins[0],
          self.ybins[-1] - self.ybins[0])
 )
+
+Tree.nbins = property(
+    lambda self: self.xbins.size - 1
+)
+
+
+Tree.depth = (
+    lambda self:
+        1 if self.is_leaf
+          else max(ch.depth() + 1
+                   for ch in filter(lambda ch: ch is not None,
+                                    self.children.flat))
+)
+
+
+def blockshaped(arr, rows, cols):
+    N, M = arr.shape[:2]
+    rest = arr.shape[2:]
+    assert N % rows == 0
+    assert M % cols == 0
+    return (arr.reshape((N // rows, rows, -1, cols) + rest)
+               .swapaxes(1, 2)
+               .reshape((N // rows, M // cols, rows, cols) + rest))
+
+
+Rect, RoundRect, Circle = 0, 1, 2
+
+
+class DensityPatch(pg.GraphicsObject):
+    Rect, RoundRect, Circle = Rect, RoundRect, Circle
+
+    def __init__(self, root=None, cell_size=10, cell_shape=Rect, palette=None):
+        super().__init__()
+        self.setFlag(QtGui.QGraphicsItem.ItemUsesExtendedStyleOption, True)
+        self._root = root
+        self._cache = {}
+        self._cell_size = cell_size
+        self._cell_shape = cell_shape
+        self._palette = palette
+
+    def boundingRect(self):
+        return self.rect()
+
+    def rect(self):
+        if self._root is not None:
+            return QRectF(*self._root.brect)
+        else:
+            return QRectF()
+
+    def set_root(self, root):
+        self.prepareGeometryChange()
+        self._root = root
+        self._cache.clear()
+        self.update()
+
+    def set_cell_shape(self, shape):
+        if self._cell_shape != shape:
+            self._cell_shape = shape
+            self.update()
+
+    def cell_shape(self):
+        return self._cell_shape
+
+    def set_cell_size(self, size):
+        assert size >= 1
+        if self._cell_size != size:
+            self._cell_size = size
+            self.update()
+
+    def cell_size(self):
+        return self._cell_size
+
+    def paint(self, painter, option, widget):
+        root = self._root
+        if root is None:
+            return
+
+        cell_shape, cell_size = self._cell_shape, self._cell_size
+        nbins = root.nbins
+        T = painter.worldTransform()
+        # level of detail is the geometric mean of a transformed
+        # unit rectangle's sides (== sqrt(area)).
+        lod = option.levelOfDetailFromTransform(T)
+        rect = self.rect()
+        # sqrt(area) of one cell
+        size1 = np.sqrt(rect.width() * rect.height()) / nbins
+        cell_size = cell_size
+        scale = cell_size / (lod * size1)
+        p = int(np.floor(np.log2(scale)))
+
+        p = min(max(p, - int(np.log2(nbins ** (root.depth() - 1)))),
+                int(np.log2(root.nbins)))
+
+        if (p, cell_shape, cell_size) not in self._cache:
+            self._cache[p, cell_shape, cell_size] = pic = \
+                create_picture(resample(root, 2 ** p), palette=self._palette,
+                               shape=cell_shape)
+        else:
+            pic = self._cache[p, cell_shape, cell_size]
+
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+        pic.play(painter)
+
+
+def create_picture(node, palette=None, scale=None, shape=Rect):
+    pic = QtGui.QPicture()
+    if node.is_empty:
+        return pic
+
+    painter = QtGui.QPainter(pic)
+
+    ctng = node.contingencies
+
+    if not node.is_leaf:
+        # First run down the non None children
+        for ch in filter(None, node.children.flat):
+            subpic = create_picture(ch, palette, scale, shape=shape)
+            subpic.play(painter)
+
+    colors = create_image(ctng, palette, scale=scale)
+    x, y, w, h = node.brect
+    N, M = ctng.shape[:2]
+    painter.save()
+    painter.translate(x, y)
+    painter.scale(w / node.nbins, h / node.nbins)
+    indices = itertools.product(range(N), range(M))
+
+    ctng = ctng.reshape((-1,) + ctng.shape[2:])
+    if ctng.ndim == 2:
+        ctng_any = ctng.any(axis=1)
+    else:
+        ctng_any = ctng > 0
+
+    if node.is_leaf:
+        skip = itertools.repeat(False)
+    else:
+        # Skip all None children they were already painted.
+        skip = (ch is not None for ch in node.children.flat)
+
+    for (i, j), skip, any_ in zip(indices, skip, ctng_any):
+        if not skip and any_:
+            painter.setBrush(QtGui.QColor(*colors[i, j]))
+            if shape == Rect:
+                painter.drawRect(i, j, 1, 1)
+            elif shape == Circle:
+                painter.drawEllipse(i, j, 1, 1)
+            elif shape == RoundRect:
+                painter.drawRoundedRect(i, j, 1, 1, 25.0, 25.0,
+                                        Qt.RelativeSize)
+
+    painter.restore()
+    painter.end()
+    return pic
+
+
+def resample(node, samplewidth):
+    assert 0 < samplewidth <= node.nbins
+    assert int(np.log2(samplewidth)) == np.log2(samplewidth)
+
+    if samplewidth == 1:
+        return node._replace(children=None)
+    elif samplewidth > 1:
+        samplewidth = int(samplewidth)
+        ctng = blockshaped(node.contingencies, samplewidth, samplewidth)
+        ctng = ctng.sum(axis=(2, 3))
+        assert ctng.shape[0] == node.nbins // samplewidth
+        return Tree(node.xbins[::samplewidth],
+                    node.ybins[::samplewidth],
+                    ctng,
+                    None)
+    elif node.is_leaf:
+        return Tree(*node)
+    else:
+        nbins = node.nbins
+        children = [resample(ch, samplewidth * nbins)
+                    if ch is not None else None
+                    for ch in node.children.flat]
+
+        children_ar = np.full(nbins ** 2, None, dtype=object)
+        children_ar[:] = children
+        return node._replace(children=children_ar.reshape((-1, nbins)))
+
+
+class HeatmapItem(pg.GraphicsObject):
+    def __init__(self, root=None):
+        super().__init__()
+        self._root = root
+        self._cache = {}
+
+    def boundingRect(self):
+        return self.rect()
+
+    def set_root(self, root):
+        self.prepareGeometryChange()
+        self._root = root
+        self._cache = {}
+        self.update()
+
+    def rect(self):
+        if self._root is not None:
+            return QRectF(*self._root.brect)
+        else:
+            return QRectF()
+
+    def paint(self, painter, option, widget):
+        rect = option.exposedRect
+
+        if self._root is None or not rect.intersects(self.rect()):
+            return
+
+        xs, xe, ys, ye = bindices(self._root, rect)
+        nbins = self._root.nbins
+
+        T = painter.worldTransform()
+        # level of detail is the geometric mean of a transformed
+        # unit rectangle's sides (== sqrt(area)).
+        lod = option.levelOfDetailFromTransform(T)
+        # approx target size for a single cell
+        size = 10
+        # sqrt(area) of one cell (geometric mean of the sides)
+        size1 = np.sqrt(self.rect().height() * self.rect().width()) / nbins
+        scale = size1 * lod / size
+
+        p = np.floor(np.log2(1 / scale))
+        bw = max(min(2 ** int(p), nbins), 1)
+
+        if bw not in self._cache:
+            self._cache[bw] = pix = self._pixmap(self._root, bw)
+        else:
+            pix = self._cache[bw]
+
+        d = nbins ** self._root.depth()
+        rect = self.rect()
+        painter.translate(rect.topLeft())
+        painter.scale(rect.width() / d, rect.height() / d)
+        painter.drawPixmap(QRectF(0, 0, d, d), pix, QRectF(pix.rect()))
+
+        undersampled = p < 0
+        if undersampled and not self._root.is_leaf:
+            scale = scale / nbins
+            p = np.floor(np.log2(1 / scale))
+            bw = min(2 ** int(p), nbins)
+            children = self._root.children[xs:xe, ys:ye]
+            indices = itertools.product(range(xs, xe), range(ys, ye))
+            for (i, j), ch in zip(indices, children.flat):
+                if not (ch is None or ch.is_empty):
+                    if (i, j, bw) not in self._cache:
+                        self._cache[i, j, bw] = pix = self._pixmap(
+                            ch, bw, self._root.contingencies[i, j].max()
+                        )
+                    else:
+                        pix = self._cache[i, j, bw]
+
+                    painter.drawPixmap(
+                        QRectF(i * nbins, j * nbins, nbins, nbins),
+                        pix,
+                        QRectF(pix.rect())
+                    )
+
+    def _pixmap(self, node, bw, scale=None):
+        ctng = node.contingencies
+        if bw > 1:
+            ctng = blockshaped(ctng, bw, bw).sum(axis=(2, 3))
+
+        colors = create_image(ctng, scale=scale)
+        data, _ = pg.makeARGB(colors)
+        img = pg.makeQImage(data)
+        return QtGui.QPixmap.fromImage(img)
 
 
 class OWHeatMap(widget.OWWidget):
@@ -67,7 +337,7 @@ class OWHeatMap(widget.OWWidget):
 
     use_cache = settings.Setting(True)
 
-    n_bins = 16
+    n_bins = 32
     mouse_mode = 0
 
     def __init__(self, parent=None):
@@ -78,6 +348,7 @@ class OWHeatMap(widget.OWWidget):
 
         self._root = None
         self._displayed_root = None
+        self._item = None
         self._cache = {}
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
@@ -119,12 +390,11 @@ class OWHeatMap(widget.OWWidget):
         self.mouseBehaviourBox = gui.radioButtons(
             self.controlArea, self, value='mouse_mode',
             btnLabels=('Drag', 'Select'),
-            box='Mouse left button behaviour',
+            box='Mouse left button behavior',
             callback=self._update_mouse_mode
         )
 
         box = gui.widgetBox(self.controlArea, box='Display')
-
         gui.button(box, self, "Sharpen", self.sharpen)
 
         gui.rubber(self.controlArea)
@@ -133,6 +403,8 @@ class OWHeatMap(widget.OWWidget):
         self.plot.setMenuEnabled(False)
         self.plot.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.plot.setMinimumSize(500, 500)
+        self.plot.getViewBox().sigTransformChanged.connect(
+            self._on_transform_changed)
         self.mainArea.layout().addWidget(self.plot)
 
     def set_data(self, dataset):
@@ -189,6 +461,7 @@ class OWHeatMap(widget.OWWidget):
         self.z_values = []
         self._root = None
         self._displayed_root = None
+        self._item = None
         self._cache = {}
         self.plot.clear()
 
@@ -271,24 +544,44 @@ class OWHeatMap(widget.OWWidget):
 
     def update_map(self, root):
         self.plot.clear()
+        self._item = None
+
         self._displayed_root = root
 
         palette = self.colors
         contingencies = root.contingencies
 
+        def Tree_take(node, indices, axis):
+            """Take elements from the contingency matrices in node."""
+            contig = np.take(node.contingencies, indices, axis)
+            if node.is_leaf:
+                return node._replace(contingencies=contig)
+            else:
+                children_ar = np.full(node.children.size, None, dtype=object)
+                children_ar[:] = [
+                    Tree_take(ch, indices, axis) if ch is not None else None
+                    for ch in node.children.flat
+                ]
+                children = children_ar.reshape(node.children.shape)
+                return node._replace(contingencies=contig, children=children)
+
         if contingencies.ndim == 3:
-            _, _, k = contingencies.shape
             if not self.selected_z_values:
                 return
 
-            if self.selected_z_values != range(k):
-                palette = [palette[i] for i in self.selected_z_values]
-                contingencies = contingencies[:, :, self.selected_z_values]
+            _, _, k = contingencies.shape
 
-        colors = create_image(contingencies, palette)
-        root_img = pg.ImageItem(colors)
-        root_img.setRect(QRectF(*root.brect))
-        self.plot.addItem(root_img)
+            if self.selected_z_values != list(range(k)):
+                palette = [palette[i] for i in self.selected_z_values]
+                root = Tree_take(root, self.selected_z_values, 2)
+
+#         self._item = item = HeatmapItem(root)
+        self._item = item = DensityPatch(
+            root, cell_size=10,
+            cell_shape=DensityPatch.Rect,
+            palette=palette
+        )
+        self.plot.addItem(item)
 
     def sharpen(self):
         viewb = self.plot.getViewBox()
@@ -317,10 +610,6 @@ class OWHeatMap(widget.OWWidget):
         xs, xe, ys, ye = bindices(root, region)
         ndim = root.contingencies.ndim
         nbins = self.n_bins
-        xbins = [np.linspace(root.xbins[i], root.xbins[i + 1], self.n_bins + 1)
-                 for i in range(root.contingencies.shape[0])]
-        ybins = [np.linspace(root.ybins[j], root.ybins[j + 1], self.n_bins + 1)
-                 for j in range(root.contingencies.shape[1])]
 
         if root.children is not None:
             children = np.array(root.children)
@@ -359,6 +648,7 @@ class OWHeatMap(widget.OWWidget):
         self.progressBarInit()
 
         update_time = time.time()
+        changed = False
         while heap:
             _, (i, j) = heapq.heappop(heap)
 
@@ -367,32 +657,52 @@ class OWHeatMap(widget.OWWidget):
             ybins = np.linspace(root.ybins[j], root.ybins[j + 1],
                                 self.n_bins + 1)
 
-            assert xbins.size == self.n_bins + 1
-            assert ybins.size == self.n_bins + 1
-
             if root.contingencies[i, j].any():
                 t = grid_bin(data, xvar, yvar, xbins, ybins, zvar)
+                changed = True
                 assert t.contingencies.shape[:2] == (self.n_bins, self.n_bins)
             else:
-                t = Tree(xbins, ybins, np.zeros_like(root.contingencies), None)
+                t = Tree(xbins, ybins,
+                         np.zeros((self.n_bins, self.n_bins) +
+                                  root.contingencies.shape[2:]),
+                         None)
 
             children[i, j] = t
 
             self.progressBarSet(100.0 * (niter - len(heap)) / niter)
             tick = time.time() - update_time
-            if len(heap) % nbins == 0 or tick > 1:
+            if changed and (len(heap) % nbins == 0 or tick > 1):
                 update_time = time.time()
-                self.update_map(flatten(root._replace(children=children),
-                                        nbins=self.n_bins, preserve_max=True))
+                changed = False
+                self.update_map(root._replace(children=children))
 
         self._root = root._replace(children=children)
         self._cache[xvar, yvar, zvar] = self._root
 
-        r = flatten(self._root, self.n_bins, preserve_max=True)
-        assert r.brect == root.brect
-        self.update_map(r)
+        self.update_map(self._root)
 
         self.progressBarFinished()
+
+    def _on_transform_changed(self, *args):
+        if self._item is None:
+            return
+
+        item = self._item
+        rect = item.rect()
+
+        T = self.plot.transform() * item.sceneTransform()
+        lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
+        size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
+        size = 10
+        scale = lod * size1 / size
+        p = np.floor(np.log10(1 / scale))
+        bw = 2 ** int(p)
+#         if bw < 1:
+#             print("undersampled", lod, p)
+#         else:
+#             print("oversampled", lod, p)
+
+        viewrect = self.plot.getViewBox().viewRect()
 
     def _update_mouse_mode(self):
         if self.mouse_mode == 0:
@@ -547,15 +857,15 @@ def bindices(node, rect):
                     node.ybins.size - 2, node.ybins.size - 1])
 
 
-def create_image(contingencies, palette=None):
+def create_image(contingencies, palette=None, scale=None):
 #     import scipy.signal
 #     import scipy.ndimage
 
-#     contingencies = node.contingencies
-    total = np.sum(contingencies)
+    if scale is None:
+        scale = contingencies.max()
 
-    if total > 0:
-        P = contingencies / total
+    if scale > 0:
+        P = contingencies / scale
     else:
         P = contingencies
 
@@ -578,7 +888,7 @@ def create_image(contingencies, palette=None):
         argmax = np.argmax(P, axis=2)
         irow, icol = np.indices(argmax.shape)
         P_max = P[irow, icol, argmax]
-        P_max /= P_max.max()
+#         P_max /= P_max.max()
         colors = 255 - colors[argmax.ravel()]
 
         # XXX: Non linear intensity scaling
@@ -587,7 +897,7 @@ def create_image(contingencies, palette=None):
         colors = 255 - colors
     elif P.ndim == 2:
         palette = colorpalette.ColorPaletteBW()
-        mix = contingencies / contingencies.max()
+        mix = P
 
 #         mix = scipy.ndimage.filters.gaussian_filter(
 #             mix, bandwidth, mode="constant")
@@ -663,8 +973,8 @@ def main():
     w = OWHeatMap()
     w.show()
     w.raise_()
-    data = Orange.data.Table('iris')
-    data = Orange.data.Table('housing')
+#     data = Orange.data.Table('iris')
+#     data = Orange.data.Table('housing')
     data = Orange.data.Table('adult')
     w.set_data(data)
     rval = app.exec_()
