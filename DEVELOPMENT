@@ -43,6 +43,6 @@ python setup.py develop
 
 And you are done.
 
-If you also want to use the GUI, you shoul continue with downloading sip and pyqt from http://www.riverbankcomputing.com/software/pyqt/intro 
+If you also want to use the GUI, you should continue with downloading sip and pyqt from http://www.riverbankcomputing.com/software/pyqt/intro 
 To install them, run python configure.py followed by make -j 4 (if you have 4 cores) and make install.
 
