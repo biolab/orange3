@@ -370,7 +370,7 @@ class HeatmapItem(pg.GraphicsObject):
 class OWHeatMap(widget.OWWidget):
     name = "Heat map"
     description = "Draw a two dimentional density plot."
-
+    icon = "icons/Heatmap.svg"
     priority = 100
 
     inputs = [("Data", Orange.data.Table, "set_data")]
