@@ -153,24 +153,27 @@ class DensityPatch(pg.GraphicsObject):
         else:
             patch = self._cache[p, cell_shape, cell_size]
 
-        exposed = option.exposedRect
-
-        def bound_paint(patch, rect):
+        def intersect_patch(patch, rect):
             if not rect.intersects(patch.rect):
-                return
+                return []
             elif rect.contains(patch.rect) or patch.is_leaf:
-                patch.picture.play(painter)
+                return [patch.picture]
+
             else:
-                for sub in patch.subpatches:
-                    bound_paint(sub, rect)
+                accum = reduce(list.__iadd__,
+                               map(lambda patch: intersect_patch(patch, rect),
+                                   patch.subpatches),
+                               [])
 
                 if len(patch.subpatches) != patch.node.nbins ** 2:
-                    patch.patch.play(painter)
+                    accum.append(patch.patch)
+                return accum
 
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
 
-        bound_paint(patch, exposed)
+        for picture in intersect_patch(patch, option.exposedRect):
+            picture.play(painter)
 
 
 Patch = namedtuple(
@@ -671,7 +674,7 @@ class OWHeatMap(widget.OWWidget):
         self.plot.getViewBox().setMouseMode(mode)
 
     def onDeleteWidget(self):
-        self.plot.clear()
+        self.clear()
         super().onDeleteWidget()
 
 
