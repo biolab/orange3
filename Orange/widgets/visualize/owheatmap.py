@@ -280,93 +280,6 @@ def resample(node, samplewidth):
         return node._replace(children=children_ar.reshape((-1, nbins)))
 
 
-class HeatmapItem(pg.GraphicsObject):
-    def __init__(self, root=None):
-        super().__init__()
-        self._root = root
-        self._cache = {}
-
-    def boundingRect(self):
-        return self.rect()
-
-    def set_root(self, root):
-        self.prepareGeometryChange()
-        self._root = root
-        self._cache = {}
-        self.update()
-
-    def rect(self):
-        if self._root is not None:
-            return QRectF(*self._root.brect)
-        else:
-            return QRectF()
-
-    def paint(self, painter, option, widget):
-        rect = option.exposedRect
-
-        if self._root is None or not rect.intersects(self.rect()):
-            return
-
-        xs, xe, ys, ye = bindices(self._root, rect)
-        nbins = self._root.nbins
-
-        T = painter.worldTransform()
-        # level of detail is the geometric mean of a transformed
-        # unit rectangle's sides (== sqrt(area)).
-        lod = option.levelOfDetailFromTransform(T)
-        # approx target size for a single cell
-        size = 10
-        # sqrt(area) of one cell (geometric mean of the sides)
-        size1 = np.sqrt(self.rect().height() * self.rect().width()) / nbins
-        scale = size1 * lod / size
-
-        p = np.floor(np.log2(1 / scale))
-        bw = max(min(2 ** int(p), nbins), 1)
-
-        if bw not in self._cache:
-            self._cache[bw] = pix = self._pixmap(self._root, bw)
-        else:
-            pix = self._cache[bw]
-
-        d = nbins ** self._root.depth()
-        rect = self.rect()
-        painter.translate(rect.topLeft())
-        painter.scale(rect.width() / d, rect.height() / d)
-        painter.drawPixmap(QRectF(0, 0, d, d), pix, QRectF(pix.rect()))
-
-        undersampled = p < 0
-        if undersampled and not self._root.is_leaf:
-            scale = scale / nbins
-            p = np.floor(np.log2(1 / scale))
-            bw = min(2 ** int(p), nbins)
-            children = self._root.children[xs:xe, ys:ye]
-            indices = itertools.product(range(xs, xe), range(ys, ye))
-            for (i, j), ch in zip(indices, children.flat):
-                if not (ch is None or ch.is_empty):
-                    if (i, j, bw) not in self._cache:
-                        self._cache[i, j, bw] = pix = self._pixmap(
-                            ch, bw, self._root.contingencies[i, j].max()
-                        )
-                    else:
-                        pix = self._cache[i, j, bw]
-
-                    painter.drawPixmap(
-                        QRectF(i * nbins, j * nbins, nbins, nbins),
-                        pix,
-                        QRectF(pix.rect())
-                    )
-
-    def _pixmap(self, node, bw, scale=None):
-        ctng = node.contingencies
-        if bw > 1:
-            ctng = blockshaped(ctng, bw, bw).sum(axis=(2, 3))
-
-        colors = create_image(ctng, scale=scale)
-        data, _ = pg.makeARGB(colors)
-        img = pg.makeQImage(data)
-        return QtGui.QPixmap.fromImage(img)
-
-
 class OWHeatMap(widget.OWWidget):
     name = "Heat map"
     description = "Draw a two dimentional density plot."
@@ -622,7 +535,6 @@ class OWHeatMap(widget.OWWidget):
                 palette = [palette[i] for i in self.selected_z_values]
                 root = Tree_take(root, self.selected_z_values, 2)
 
-#         self._item = item = HeatmapItem(root)
         self._item = item = DensityPatch(
             root, cell_size=10,
             cell_shape=DensityPatch.Rect,
