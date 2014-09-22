@@ -67,6 +67,24 @@ Tree.depth = (
 )
 
 
+def max_contingency(node):
+    """Return the maximum contingency value from node."""
+    if node.is_leaf:
+        return node.contingencies.max()
+    else:
+        valid = np.nonzero(node.children)
+        children = node.children[valid]
+        mask = np.ones_like(node.children, dtype=bool)
+        mask[valid] = False
+        ctng = node.contingencies[mask]
+        v = 0.0
+        if len(children):
+            v = max(max_contingency(ch) for ch in children)
+        if len(ctng):
+            v = max(ctng.max(), v)
+        return v
+
+
 def blockshaped(arr, rows, cols):
     N, M = arr.shape[:2]
     rest = arr.shape[2:]
@@ -146,10 +164,15 @@ class DensityPatch(pg.GraphicsObject):
                 int(np.log2(root.nbins)))
 
         if (p, cell_shape, cell_size) not in self._cache:
+            rs_root = resample(root, 2 ** p)
+
+#             cscale = max_contingency(rs_root)
             self._cache[p, cell_shape, cell_size] = patch = \
-                create_picture_patch(resample(root, 2 ** p),
-                                     palette=self._palette,
-                                     shape=cell_shape)
+                create_picture_patch(
+                    rs_root, palette=self._palette,
+#                     scale=cscale,
+                    shape=cell_shape
+                )
         else:
             patch = self._cache[p, cell_shape, cell_size]
 
@@ -573,82 +596,35 @@ class OWHeatMap(widget.OWWidget):
         ndim = root.contingencies.ndim
         nbins = self.n_bins
 
-        if root.children is not None:
-            children = np.array(root.children)
-        else:
-            children = np.full((self.n_bins, self.n_bins), None, dtype=object)
+        def bin_func(xbins, ybins):
+            return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
 
-        if ndim == 3:
-            # compute_chisqares expects classes in 1 dim
-            c = root.contingencies
-            chi_lr, chi_up = compute_chi_squares(
-                c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
-            )
-
-            def max_chisq(i, j):
-                def valid(i, j):
-                    return 0 <= i < chi_up.shape[0] and \
-                           0 <= j < chi_lr.shape[1]
-
-                return max(chi_lr[i, j] if valid(i, j) else 0,
-                           chi_lr[i, j - 1] if valid(i, j - 1) else 0,
-                           chi_up[i, j] if valid(i, j) else 0,
-                           chi_up[i - 1, j] if valid(i - 1, j) else 0)
-
-            heap = [(-max_chisq(i - xs, j - ys), (i, j))
-                    for i in range(xs, xe)
-                    for j in range(ys, ye)
-                    if children[i, j] is None]
-        else:
-            heap = list(enumerate((i, j)
-                        for i in range(xs, xe)
-                        for j in range(ys, ye)
-                        if children[i, j] is None))
-
-        heap = sorted(heap)
-        niter = len(heap)
         self.progressBarInit()
-
+        last_node = root
         update_time = time.time()
         changed = False
-        while heap:
-            _, (i, j) = heapq.heappop(heap)
 
-            xbins = np.linspace(root.xbins[i], root.xbins[i + 1],
-                                self.n_bins + 1)
-            ybins = np.linspace(root.ybins[j], root.ybins[j + 1],
-                                self.n_bins + 1)
-
-            if root.contingencies[i, j].any():
-                t = grid_bin(data, xvar, yvar, xbins, ybins, zvar)
-                changed = True
-                assert t.contingencies.shape[:2] == (self.n_bins, self.n_bins)
-            else:
-                t = Tree(xbins, ybins,
-                         np.zeros((self.n_bins, self.n_bins) +
-                                  root.contingencies.shape[2:]),
-                         None)
-
-            children[i, j] = t
-
-            self.progressBarSet(100.0 * (niter - len(heap)) / niter)
+        for i, node in enumerate(sharpen_region(self._root, region, nbins, bin_func)):
             tick = time.time() - update_time
-            if changed and (len(heap) % nbins == 0 or tick > 1):
-                update_time = time.time()
+
+            changed = changed or node is not last_node
+            if changed and ((i % nbins == 0) or tick > 2.0):
+                self.update_map(node)
+                last_node = node
                 changed = False
-                self.update_map(root._replace(children=children))
+                update_time = time.time()
+                self.progressBarSet(100 * i / (nbins ** 2))
 
-        self._root = root._replace(children=children)
+        self._root = last_node
         self._cache[xvar, yvar, zvar] = self._root
-
         self.update_map(self._root)
-
         self.progressBarFinished()
+        return
 
     def _on_transform_changed(self, *args):
         if self._item is None:
             return
-
+        return
         item = self._item
         rect = item.rect()
 
@@ -737,6 +713,69 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
 
     contingencies = np.asarray(contingencies)
     return Tree(xbins, ybins, contingencies, None)
+
+
+def sharpen_region(node, region, nbins, gridbin_func):
+    if not QRectF(*node.brect).intersects(region):
+        return node
+
+    xs, xe, ys, ye = bindices(node, region)
+    ndim = node.contingencies.ndim
+
+    if node.children is not None:
+        children = np.array(node.children, dtype=object)
+    else:
+        children = np.full((nbins, nbins), None, dtype=object)
+
+    if ndim == 3:
+        # compute_chisqares expects classes in 1 dim
+        c = node.contingencies
+        chi_lr, chi_up = compute_chi_squares(
+            c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
+        )
+
+        def max_chisq(i, j):
+            def valid(i, j):
+                return 0 <= i < chi_up.shape[0] and \
+                       0 <= j < chi_lr.shape[1]
+
+            return max(chi_lr[i, j] if valid(i, j) else 0,
+                       chi_lr[i, j - 1] if valid(i, j - 1) else 0,
+                       chi_up[i, j] if valid(i, j) else 0,
+                       chi_up[i - 1, j] if valid(i - 1, j) else 0)
+
+        heap = [(-max_chisq(i - xs, j - ys), (i, j))
+                for i in range(xs, xe)
+                for j in range(ys, ye)
+                if children[i, j] is None]
+    else:
+        heap = list(enumerate((i, j)
+                    for i in range(xs, xe)
+                    for j in range(ys, ye)
+                    if children[i, j] is None))
+
+    heap = sorted(heap)
+    update_node = node
+    while heap:
+        _, (i, j) = heapq.heappop(heap)
+
+        xbins = np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
+        ybins = np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
+
+        if node.contingencies[i, j].any():
+            t = gridbin_func(xbins, ybins)
+            assert t.contingencies.shape[:2] == (nbins, nbins)
+        else:
+            t = None
+
+        children[i, j] = t
+        if t is None:
+            yield update_node
+        else:
+            update_node = update_node._replace(
+                children=np.array(children, dtype=object)
+            )
+            yield update_node
 
 
 def stack_tile_blocks(blocks):
@@ -935,9 +974,9 @@ def main():
     w = OWHeatMap()
     w.show()
     w.raise_()
-#     data = Orange.data.Table('iris')
+    data = Orange.data.Table('iris')
 #     data = Orange.data.Table('housing')
-    data = Orange.data.Table('adult')
+#     data = Orange.data.Table('adult')
     w.set_data(data)
     rval = app.exec_()
     w.onDeleteWidget()
