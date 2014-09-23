@@ -192,27 +192,4 @@ within :obj:`Orange.statistics`.
     :return: a list of distributions
     :rtype: list of numpy arrays
 
-.. method:: _compute_contingency(self, col_vars=None, row_var=None)
-
-    Compute contingency matrices for one or more discrete or continuous
-    variables against the specified discrete variable. The result is a list of
-    pairs of 2-d numpy arrays, one for each column variable.
-
-    The first array in each pair contains the contingency matrix:
-    column corresponds values of the "column variable" (different for each
-    pair) and rows correspond to values of the "row variable" (same for all;
-    in typical applications, the row variable is the target variable).
-
-    The second array gives the distribution of the row variables for instances
-    in which the value of the column variable is missing. This information is
-    stored as a 1-d vector in which each element corresponds to one value of
-    the row variable.
-
-    :param col_vars: variables whose values will correspond to columns of
-        contingency matrices
-    :type col_vars: list of ints, variable names or descriptors of type
-        :obj:`Orange.data.Variable`
-    :param row_var: a discrete variable whose values will correspond to the
-        rows of contingency matrices
-    :type row_var: int, variable name or :obj:`~Orange.data.DiscreteVariable`
-
+.. automethod:: Orange.data.storage.Storage._compute_contingency
