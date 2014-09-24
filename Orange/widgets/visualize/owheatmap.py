@@ -1,6 +1,8 @@
 import time
 import itertools
 import heapq
+import operator
+
 from functools import reduce
 from collections import namedtuple
 
@@ -323,7 +325,8 @@ class OWHeatMap(widget.OWWidget):
 
     use_cache = settings.Setting(True)
 
-    n_bins = 32
+    n_bins = 2 ** 4
+
     mouse_mode = 0
 
     def __init__(self, parent=None):
@@ -577,7 +580,7 @@ class OWHeatMap(widget.OWWidget):
 
         self.sharpen_region(rect)
 
-    def sharpen_region(self, region):
+    def sharpen_root_region(self, region):
         data = self.dataset
         xvar = self.x_var_model[self.x_var_index]
         yvar = self.y_var_model[self.y_var_index]
@@ -592,8 +595,6 @@ class OWHeatMap(widget.OWWidget):
         if not QRectF(*root.brect).intersects(region):
             return
 
-        xs, xe, ys, ye = bindices(root, region)
-        ndim = root.contingencies.ndim
         nbins = self.n_bins
 
         def bin_func(xbins, ybins):
@@ -604,9 +605,9 @@ class OWHeatMap(widget.OWWidget):
         update_time = time.time()
         changed = False
 
-        for i, node in enumerate(sharpen_region(self._root, region, nbins, bin_func)):
+        for i, node in enumerate(
+                sharpen_region(self._root, region, nbins, bin_func)):
             tick = time.time() - update_time
-
             changed = changed or node is not last_node
             if changed and ((i % nbins == 0) or tick > 2.0):
                 self.update_map(node)
@@ -619,28 +620,129 @@ class OWHeatMap(widget.OWWidget):
         self._cache[xvar, yvar, zvar] = self._root
         self.update_map(self._root)
         self.progressBarFinished()
-        return
 
-    def _on_transform_changed(self, *args):
+    def _sampling_width(self):
         if self._item is None:
-            return
-        return
+            return 0
+
         item = self._item
         rect = item.rect()
 
         T = self.plot.transform() * item.sceneTransform()
         lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
-        size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
-        size = 10
-        scale = lod * size1 / size
-        p = np.floor(np.log10(1 / scale))
-        bw = 2 ** int(p)
-#         if bw < 1:
-#             print("undersampled", lod, p)
-#         else:
-#             print("oversampled", lod, p)
 
-        viewrect = self.plot.getViewBox().viewRect()
+        size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
+        cell_size = 10
+        scale = cell_size / (lod * size1)
+        p = int(np.floor(np.log2(scale)))
+        p = min(p, int(np.log2(self.n_bins)))
+        return 2 ** int(p)
+
+    def sharpen_region(self, region):
+        data = self.dataset
+        xvar = self.x_var_model[self.x_var_index]
+        yvar = self.y_var_model[self.y_var_index]
+
+        if 0 <= self.z_var_index < len(self.z_var_model):
+            zvar = self.z_var_model[self.z_var_index]
+        else:
+            zvar = None
+
+        root = self._root
+        nbins = self.n_bins
+
+        if not QRectF(*root.brect).intersects(region):
+            return
+
+        def bin_func(xbins, ybins):
+            return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
+
+        def min_depth(node, region):
+            if not region.intersects(QRectF(*node.brect)):
+                return np.inf
+            elif node.is_leaf:
+                return 1
+            elif node.is_empty:
+                return 1
+            else:
+                xs, xe, ys, ye = bindices(node, region)
+                children = node.children[xs: xe, ys: ye].ravel()
+                contingency = node.contingencies[xs: xe, ys: ye]
+                if contingency.ndim == 3:
+                    contingency = contingency.reshape(-1, contingency.shape[2])
+
+                if any(ch is None and np.any(val)
+                       for ch, val in zip(children, contingency)):
+                    return 1
+                else:
+                    ch_depth = [min_depth(ch, region) + 1
+                                for ch in filter(is_not_none, children.flat)]
+                    return min(ch_depth if ch_depth else [1])
+
+        depth = min_depth(self._root, region)
+        bw = self._sampling_width()
+        nodes = self.select_nodes_to_sharpen(self._root, region, bw,
+                                             depth + 1)
+        root = self._root
+        self.progressBarInit()
+        update_time = time.time()
+
+        for i, node in enumerate(nodes):
+            root = sharpen_region_recur(
+                root, QRectF(*node.brect).intersect(region),
+                nbins, depth + 1, bin_func
+            )
+            tick = time.time() - update_time
+            if tick > 2.0:
+                self.update_map(root)
+                update_time = time.time()
+
+            self.progressBarSet(100 * i / len(nodes))
+
+        self._root = root
+
+        self._cache[xvar, yvar, zvar] = self._root
+        self.update_map(self._root)
+        self.progressBarFinished()
+
+    def select_nodes_to_sharpen(self, node, region, bw, depth):
+        """
+        :param node:
+        :param bw: bandwidth (samplewidth)
+        :param depth: maximum node depth to consider
+        """
+
+        if not QRectF(*node.brect).intersects(region):
+            return []
+        elif bw >= 1:
+            return []
+        elif depth == 1:
+            return []
+        elif node.is_empty:
+            return []
+        elif node.is_leaf:
+            return [node]
+        else:
+            xs, xe, ys, ye = bindices(node, region)
+
+            def intersect_indices(rows, cols):
+                mask = (xs <= rows) & (rows < xe) & (ys <= cols) & (cols < ye)
+                return rows[mask], cols[mask]
+
+            indices1 = intersect_indices(*Node_nonzero(node))
+            indices2 = intersect_indices(*node.children.nonzero())
+            # If there are any non empty and non expanded cells in the
+            # intersection return the node for sharpening, ...
+            if np.any(np.array(indices1) != np.array(indices2)):
+                return [node]
+
+            children = node.children[indices2]
+            # ... else run down the children in the intersection
+            return reduce(operator.iadd,
+                          (self.select_nodes_to_sharpen(
+                               ch, region, bw * node.nbins, depth - 1)
+                           for ch in children.flat),
+                          [])
 
     def _update_mouse_mode(self):
         if self.mouse_mode == 0:
@@ -648,6 +750,9 @@ class OWHeatMap(widget.OWWidget):
         else:
             mode = pg.ViewBox.RectMode
         self.plot.getViewBox().setMouseMode(mode)
+
+    def _on_transform_changed(self, *args):
+        pass
 
     def onDeleteWidget(self):
         self.clear()
@@ -715,15 +820,59 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
     return Tree(xbins, ybins, contingencies, None)
 
 
+def sharpen_node_cell(node, i, j, nbins, gridbin_func):
+    if node.is_leaf:
+        children = np.full((nbins, nbins), None, dtype=object)
+    else:
+        children = np.array(node.children, dtype=None)
+
+    xbins = np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
+    ybins = np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
+
+    if node.contingencies[i, j].any():
+        t = gridbin_func(xbins, ybins)
+        assert t.contingencies.shape[:2] == (nbins, nbins)
+        children[i, j] = t
+        return node._replace(children=children)
+    else:
+        return node
+
+
+def sharpen_node_cell_range(node, xrange, yrange, nbins, gridbin_func):
+    if node.is_leaf:
+        children = np.full((nbins, nbins), None, dtype=object)
+    else:
+        children = np.array(node.children, dtype=None)
+
+    xs, xe = xrange.start, xrange.stop
+    ys, ye = yrange.start, yrange.stop
+
+    xbins = np.linspace(node.xbins[xs], node.xbins[xe], (xe - xs) * nbins + 1)
+    ybins = np.linspace(node.ybins[ys], node.ybins[ye], (ye - ys) * nbins + 1)
+
+    if node.contingencies[xs: xe, ys: ye].any():
+        t = gridbin_func(xbins, ybins)
+        for i, j in itertools.product(range(xs, xe), range(ys, ye)):
+            children[i, j] = Tree(t.xbins[i * nbins: (i + 1) * nbins + 1],
+                                  t.ybins[j * nbins: (j + 1) * nbins + 1],
+                                  t.contingencies[xs: xe, ys: ye])
+            assert children[i, j].shape[:2] == (nbins, nbins)
+        return node._replace(children=children)
+    else:
+        return node
+
+
 def sharpen_region(node, region, nbins, gridbin_func):
     if not QRectF(*node.brect).intersects(region):
-        return node
+        raise ValueError()
+#         return node
 
     xs, xe, ys, ye = bindices(node, region)
     ndim = node.contingencies.ndim
 
     if node.children is not None:
         children = np.array(node.children, dtype=object)
+        assert children.ndim == 2
     else:
         children = np.full((nbins, nbins), None, dtype=object)
 
@@ -776,6 +925,60 @@ def sharpen_region(node, region, nbins, gridbin_func):
                 children=np.array(children, dtype=object)
             )
             yield update_node
+
+
+def Node_mask(node):
+    if node.contingencies.ndim == 3:
+        return node.contingencies.any(axis=2)
+    else:
+        return node.contingencies > 0
+
+
+def Node_nonzero(node):
+    return np.nonzero(Node_mask(node))
+
+
+def sharpen_region_recur(node, region, nbins, depth, gridbin_func):
+    if depth <= 1:
+        return node
+    elif not QRectF(*node.brect).intersects(region):
+        return node
+    elif node.is_empty:
+        return node
+    elif node.is_leaf:
+        xs, xe, ys, ye = bindices(node, region)
+        # indices in need of update
+        indices = Node_nonzero(node)
+        for i, j in zip(*indices):
+            if xs <= i < xe and ys <= j < ye:
+                node = sharpen_node_cell(node, i, j, nbins, gridbin_func)
+
+        # if the exposed region is empty the node.is_leaf property
+        # is preserved
+        if node.is_leaf:
+            return node
+
+        return sharpen_region_recur(node, region, nbins, depth, gridbin_func)
+    else:
+        xs, xe, ys, ye = bindices(node, region)
+
+        # indices is need of update
+        indices1 = Node_nonzero(node)
+        indices2 = node.children.nonzero()
+        indices = sorted(set(list(zip(*indices1))) - set(list(zip(*indices2))))
+
+        for i, j in indices:
+            if xs <= i < xe and ys <= j < ye:
+                node = sharpen_node_cell(node, i, j, nbins, gridbin_func)
+
+        children = np.array(node.children, dtype=object)
+        children[xs: xe, ys: ye] = [
+            [sharpen_region_recur(ch, region, nbins, depth - 1, gridbin_func)
+             if ch is not None else None
+             for ch in row]
+            for row in np.array(children[xs: xe, ys: ye])
+        ]
+        return node._replace(children=children)
 
 
 def stack_tile_blocks(blocks):
@@ -976,7 +1179,7 @@ def main():
     w.raise_()
     data = Orange.data.Table('iris')
 #     data = Orange.data.Table('housing')
-#     data = Orange.data.Table('adult')
+    data = Orange.data.Table('adult')
     w.set_data(data)
     rval = app.exec_()
     w.onDeleteWidget()
