@@ -9,7 +9,7 @@ from collections import namedtuple
 import numpy as np
 import pyqtgraph as pg
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, QRectF
+from PyQt4.QtCore import Qt, QRectF, QPointF
 
 import Orange.data
 from Orange.statistics import contingency
@@ -683,13 +683,25 @@ class OWHeatMap(widget.OWWidget):
         bw = self._sampling_width()
         nodes = self.select_nodes_to_sharpen(self._root, region, bw,
                                              depth + 1)
+
+        def update_rects(node):
+            scored = score_candidate_rects(node, region)
+            ind1 = set(zip(*Node_nonzero(node)))
+            ind2 = set(zip(*node.children.nonzero())) \
+                   if not node.is_leaf else set()
+            ind = ind1 - ind2
+            return [(score, r) for score, i, j, r in scored if (i, j) in ind]
+
+        scored_rects = reduce(operator.iadd, map(update_rects, nodes), [])
+        scored_rects = sorted(scored_rects, reverse=True,
+                              key=operator.itemgetter(0))
         root = self._root
         self.progressBarInit()
         update_time = time.time()
 
-        for i, node in enumerate(nodes):
+        for i, (_, rect) in enumerate(scored_rects):
             root = sharpen_region_recur(
-                root, QRectF(*node.brect).intersect(region),
+                root, rect.intersect(region),
                 nbins, depth + 1, bin_func
             )
             tick = time.time() - update_time
@@ -697,7 +709,7 @@ class OWHeatMap(widget.OWWidget):
                 self.update_map(root)
                 update_time = time.time()
 
-            self.progressBarSet(100 * i / len(nodes))
+            self.progressBarSet(100 * i / len(scored_rects))
 
         self._root = root
 
@@ -1112,6 +1124,43 @@ def create_image(contingencies, palette=None, scale=None):
         colors = colors.reshape(mix.shape + (3,))
 
     return colors
+
+
+def score_candidate_rects(node, region):
+    """
+    Score candidate bin rects in node.
+
+    Return a list of (score, i, j QRectF) list)
+
+    """
+    xs, xe, ys, ye = bindices(node, region)
+
+    if node.contingencies.ndim == 3:
+        c = node.contingencies
+        # compute_chisqares expects classes in 1 dim
+        chi_lr, chi_up = compute_chi_squares(
+            c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
+        )
+
+        def max_chisq(i, j):
+            def valid(i, j):
+                return 0 <= i < chi_up.shape[0] and \
+                       0 <= j < chi_lr.shape[1]
+
+            return max(chi_lr[i, j] if valid(i, j) else 0,
+                       chi_lr[i, j - 1] if valid(i, j - 1) else 0,
+                       chi_up[i, j] if valid(i, j) else 0,
+                       chi_up[i - 1, j] if valid(i - 1, j) else 0)
+
+        return [(max_chisq(i - xs, j - ys), i, j,
+                 QRectF(QPointF(node.xbins[i], node.ybins[j]),
+                        QPointF(node.xbins[i + 1], node.ybins[j + 1])))
+                 for i, j in itertools.product(range(xs, xe), range(ys, ye))]
+    else:
+        return [(1, i, j,
+                 QRectF(QPointF(node.xbins[i], node.ybins[j]),
+                        QPointF(node.xbins[i + 1], node.ybins[j + 1])))
+                 for i, j in itertools.product(range(xs, xe), range(ys, ye))]
 
 
 def compute_chi_squares(observes):
