@@ -1,12 +1,15 @@
 import time
+import itertools
 import heapq
+import operator
+
 from functools import reduce
 from collections import namedtuple
 
 import numpy as np
 import pyqtgraph as pg
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, QRectF
+from PyQt4.QtCore import Qt, QRectF, QPointF
 
 import Orange.data
 from Orange.statistics import contingency
@@ -24,12 +27,16 @@ def is_continuous(var):
     return isinstance(var, Orange.data.ContinuousVariable)
 
 
+def is_not_none(obj):
+    return obj is not None
+
+
 Tree = namedtuple(
     "Tree",
     ["xbins",          # bin edges on the first axis
      "ybins",          # bin edges on the second axis
      "contingencies",  # x/y contingency table/s
-     "children",       # an (N, N) array of sub trees or None (if leaf)
+     "children",       # an (nbins, nbins) array of sub trees or None (if leaf)
      ]
 )
 
@@ -42,18 +49,269 @@ Tree.is_empty = property(
 )
 
 Tree.brect = property(
-    lambda self: \
+    lambda self:
         (self.xbins[0],
          self.ybins[0],
          self.xbins[-1] - self.xbins[0],
          self.ybins[-1] - self.ybins[0])
 )
 
+Tree.nbins = property(
+    lambda self: self.xbins.size - 1
+)
+
+
+Tree.depth = (
+    lambda self:
+        1 if self.is_leaf
+          else max(ch.depth() + 1
+                   for ch in filter(is_not_none, self.children.flat))
+)
+
+
+def max_contingency(node):
+    """Return the maximum contingency value from node."""
+    if node.is_leaf:
+        return node.contingencies.max()
+    else:
+        valid = np.nonzero(node.children)
+        children = node.children[valid]
+        mask = np.ones_like(node.children, dtype=bool)
+        mask[valid] = False
+        ctng = node.contingencies[mask]
+        v = 0.0
+        if len(children):
+            v = max(max_contingency(ch) for ch in children)
+        if len(ctng):
+            v = max(ctng.max(), v)
+        return v
+
+
+def blockshaped(arr, rows, cols):
+    N, M = arr.shape[:2]
+    rest = arr.shape[2:]
+    assert N % rows == 0
+    assert M % cols == 0
+    return (arr.reshape((N // rows, rows, -1, cols) + rest)
+               .swapaxes(1, 2)
+               .reshape((N // rows, M // cols, rows, cols) + rest))
+
+
+Rect, RoundRect, Circle = 0, 1, 2
+
+
+class DensityPatch(pg.GraphicsObject):
+    Rect, RoundRect, Circle = Rect, RoundRect, Circle
+
+    def __init__(self, root=None, cell_size=10, cell_shape=Rect, palette=None):
+        super().__init__()
+        self.setFlag(QtGui.QGraphicsItem.ItemUsesExtendedStyleOption, True)
+        self._root = root
+        self._cache = {}
+        self._cell_size = cell_size
+        self._cell_shape = cell_shape
+        self._palette = palette
+
+    def boundingRect(self):
+        return self.rect()
+
+    def rect(self):
+        if self._root is not None:
+            return QRectF(*self._root.brect)
+        else:
+            return QRectF()
+
+    def set_root(self, root):
+        self.prepareGeometryChange()
+        self._root = root
+        self._cache.clear()
+        self.update()
+
+    def set_cell_shape(self, shape):
+        if self._cell_shape != shape:
+            self._cell_shape = shape
+            self.update()
+
+    def cell_shape(self):
+        return self._cell_shape
+
+    def set_cell_size(self, size):
+        assert size >= 1
+        if self._cell_size != size:
+            self._cell_size = size
+            self.update()
+
+    def cell_size(self):
+        return self._cell_size
+
+    def paint(self, painter, option, widget):
+        root = self._root
+        if root is None:
+            return
+
+        cell_shape, cell_size = self._cell_shape, self._cell_size
+        nbins = root.nbins
+        T = painter.worldTransform()
+        # level of detail is the geometric mean of a transformed
+        # unit rectangle's sides (== sqrt(area)).
+        lod = option.levelOfDetailFromTransform(T)
+        rect = self.rect()
+        # sqrt(area) of one cell
+        size1 = np.sqrt(rect.width() * rect.height()) / nbins
+        cell_size = cell_size
+        scale = cell_size / (lod * size1)
+        p = int(np.floor(np.log2(scale)))
+
+        p = min(max(p, - int(np.log2(nbins ** (root.depth() - 1)))),
+                int(np.log2(root.nbins)))
+
+        if (p, cell_shape, cell_size) not in self._cache:
+            rs_root = resample(root, 2 ** p)
+
+#             cscale = max_contingency(rs_root)
+            self._cache[p, cell_shape, cell_size] = patch = \
+                create_picture_patch(
+                    rs_root, palette=self._palette,
+#                     scale=cscale,
+                    shape=cell_shape
+                )
+        else:
+            patch = self._cache[p, cell_shape, cell_size]
+
+        def intersect_patch(patch, rect):
+            if not rect.intersects(patch.rect):
+                return []
+            elif rect.contains(patch.rect) or patch.is_leaf:
+                return [patch.picture]
+
+            else:
+                accum = reduce(list.__iadd__,
+                               map(lambda patch: intersect_patch(patch, rect),
+                                   patch.subpatches),
+                               [])
+
+                if len(patch.subpatches) != patch.node.nbins ** 2:
+                    accum.append(patch.patch)
+                return accum
+
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+
+        for picture in intersect_patch(patch, option.exposedRect):
+            picture.play(painter)
+
+
+Patch = namedtuple(
+  "Patch",
+  ["node",     # source node
+   "picture",  # combined full picture
+   "patch",    # contribution from this node alone
+   "subpatches"  # a list of child patches
+   ]
+)
+
+Patch.rect = property(
+    lambda self: QRectF(*self.node.brect)
+)
+
+Patch.is_leaf = property(
+    lambda self: len(self.subpatches) == 0
+)
+
+
+def create_picture_patch(node, palette=None, scale=None, shape=Rect):
+    pic = QtGui.QPicture()
+    subpatches = []
+    if node.is_empty:
+        return Patch(node, pic, pic, [])
+
+    painter1 = QtGui.QPainter(pic)
+
+    ctng = node.contingencies
+
+    if not node.is_leaf:
+        # First run down the non None children
+        for ch in filter(is_not_none, node.children.flat):
+            sub = create_picture_patch(ch, palette, scale, shape=shape)
+            sub.picture.play(painter1)
+            subpatches.append(sub)
+
+    colors = create_image(ctng, palette, scale=scale)
+    x, y, w, h = node.brect
+    N, M = ctng.shape[:2]
+
+    indices = itertools.product(range(N), range(M))
+
+    ctng = ctng.reshape((-1,) + ctng.shape[2:])
+    if ctng.ndim == 2:
+        ctng_any = ctng.any(axis=1)
+    else:
+        ctng_any = ctng > 0
+
+    if node.is_leaf:
+        skip = itertools.repeat(False)
+    else:
+        # Skip all None children they were already painted.
+        skip = (ch is not None for ch in node.children.flat)
+
+    thispic = QtGui.QPicture()
+    painter = QtGui.QPainter(thispic)
+    painter.save()
+    painter.translate(x, y)
+    painter.scale(w / node.nbins, h / node.nbins)
+
+    for (i, j), skip, any_ in zip(indices, skip, ctng_any):
+        if not skip and any_:
+            painter.setBrush(QtGui.QColor(*colors[i, j]))
+            if shape == Rect:
+                painter.drawRect(i, j, 1, 1)
+            elif shape == Circle:
+                painter.drawEllipse(i, j, 1, 1)
+            elif shape == RoundRect:
+                painter.drawRoundedRect(i, j, 1, 1, 25.0, 25.0,
+                                        Qt.RelativeSize)
+
+    painter.restore()
+    painter.end()
+
+    painter1.drawPicture(0, 0, thispic)
+    painter1.end()
+
+    return Patch(node, pic, thispic, subpatches)
+
+
+def resample(node, samplewidth):
+    assert 0 < samplewidth <= node.nbins
+    assert int(np.log2(samplewidth)) == np.log2(samplewidth)
+
+    if samplewidth == 1:
+        return node._replace(children=None)
+    elif samplewidth > 1:
+        samplewidth = int(samplewidth)
+        ctng = blockshaped(node.contingencies, samplewidth, samplewidth)
+        ctng = ctng.sum(axis=(2, 3))
+        assert ctng.shape[0] == node.nbins // samplewidth
+        return Tree(node.xbins[::samplewidth],
+                    node.ybins[::samplewidth],
+                    ctng,
+                    None)
+    elif node.is_leaf:
+        return Tree(*node)
+    else:
+        nbins = node.nbins
+        children = [resample(ch, samplewidth * nbins)
+                    if ch is not None else None
+                    for ch in node.children.flat]
+
+        children_ar = np.full(nbins ** 2, None, dtype=object)
+        children_ar[:] = children
+        return node._replace(children=children_ar.reshape((-1, nbins)))
+
 
 class OWHeatMap(widget.OWWidget):
     name = "Heat map"
     description = "Draw a two dimentional density plot."
-
+    icon = "icons/Heatmap.svg"
     priority = 100
 
     inputs = [("Data", Orange.data.Table, "set_data")]
@@ -67,7 +325,8 @@ class OWHeatMap(widget.OWWidget):
 
     use_cache = settings.Setting(True)
 
-    n_bins = 16
+    n_bins = 2 ** 4
+
     mouse_mode = 0
 
     def __init__(self, parent=None):
@@ -78,6 +337,7 @@ class OWHeatMap(widget.OWWidget):
 
         self._root = None
         self._displayed_root = None
+        self._item = None
         self._cache = {}
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
@@ -119,12 +379,11 @@ class OWHeatMap(widget.OWWidget):
         self.mouseBehaviourBox = gui.radioButtons(
             self.controlArea, self, value='mouse_mode',
             btnLabels=('Drag', 'Select'),
-            box='Mouse left button behaviour',
+            box='Mouse left button behavior',
             callback=self._update_mouse_mode
         )
 
         box = gui.widgetBox(self.controlArea, box='Display')
-
         gui.button(box, self, "Sharpen", self.sharpen)
 
         gui.rubber(self.controlArea)
@@ -133,6 +392,8 @@ class OWHeatMap(widget.OWWidget):
         self.plot.setMenuEnabled(False)
         self.plot.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.plot.setMinimumSize(500, 500)
+        self.plot.getViewBox().sigTransformChanged.connect(
+            self._on_transform_changed)
         self.mainArea.layout().addWidget(self.plot)
 
     def set_data(self, dataset):
@@ -189,6 +450,7 @@ class OWHeatMap(widget.OWWidget):
         self.z_values = []
         self._root = None
         self._displayed_root = None
+        self._item = None
         self._cache = {}
         self.plot.clear()
 
@@ -271,24 +533,43 @@ class OWHeatMap(widget.OWWidget):
 
     def update_map(self, root):
         self.plot.clear()
+        self._item = None
+
         self._displayed_root = root
 
         palette = self.colors
         contingencies = root.contingencies
 
+        def Tree_take(node, indices, axis):
+            """Take elements from the contingency matrices in node."""
+            contig = np.take(node.contingencies, indices, axis)
+            if node.is_leaf:
+                return node._replace(contingencies=contig)
+            else:
+                children_ar = np.full(node.children.size, None, dtype=object)
+                children_ar[:] = [
+                    Tree_take(ch, indices, axis) if ch is not None else None
+                    for ch in node.children.flat
+                ]
+                children = children_ar.reshape(node.children.shape)
+                return node._replace(contingencies=contig, children=children)
+
         if contingencies.ndim == 3:
-            _, _, k = contingencies.shape
             if not self.selected_z_values:
                 return
 
-            if self.selected_z_values != range(k):
-                palette = [palette[i] for i in self.selected_z_values]
-                contingencies = contingencies[:, :, self.selected_z_values]
+            _, _, k = contingencies.shape
 
-        colors = create_image(contingencies, palette)
-        root_img = pg.ImageItem(colors)
-        root_img.setRect(QRectF(*root.brect))
-        self.plot.addItem(root_img)
+            if self.selected_z_values != list(range(k)):
+                palette = [palette[i] for i in self.selected_z_values]
+                root = Tree_take(root, self.selected_z_values, 2)
+
+        self._item = item = DensityPatch(
+            root, cell_size=10,
+            cell_shape=DensityPatch.Rect,
+            palette=palette
+        )
+        self.plot.addItem(item)
 
     def sharpen(self):
         viewb = self.plot.getViewBox()
@@ -299,7 +580,7 @@ class OWHeatMap(widget.OWWidget):
 
         self.sharpen_region(rect)
 
-    def sharpen_region(self, region):
+    def sharpen_root_region(self, region):
         data = self.dataset
         xvar = self.x_var_model[self.x_var_index]
         yvar = self.y_var_model[self.y_var_index]
@@ -314,85 +595,166 @@ class OWHeatMap(widget.OWWidget):
         if not QRectF(*root.brect).intersects(region):
             return
 
-        xs, xe, ys, ye = bindices(root, region)
-        ndim = root.contingencies.ndim
         nbins = self.n_bins
-        xbins = [np.linspace(root.xbins[i], root.xbins[i + 1], self.n_bins + 1)
-                 for i in range(root.contingencies.shape[0])]
-        ybins = [np.linspace(root.ybins[j], root.ybins[j + 1], self.n_bins + 1)
-                 for j in range(root.contingencies.shape[1])]
 
-        if root.children is not None:
-            children = np.array(root.children)
-        else:
-            children = np.full((self.n_bins, self.n_bins), None, dtype=object)
+        def bin_func(xbins, ybins):
+            return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
 
-        if ndim == 3:
-            # compute_chisqares expects classes in 1 dim
-            c = root.contingencies
-            chi_lr, chi_up = compute_chi_squares(
-                c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
-            )
-
-            def max_chisq(i, j):
-                def valid(i, j):
-                    return 0 <= i < chi_up.shape[0] and \
-                           0 <= j < chi_lr.shape[1]
-
-                return max(chi_lr[i, j] if valid(i, j) else 0,
-                           chi_lr[i, j - 1] if valid(i, j - 1) else 0,
-                           chi_up[i, j] if valid(i, j) else 0,
-                           chi_up[i - 1, j] if valid(i - 1, j) else 0)
-
-            heap = [(-max_chisq(i - xs, j - ys), (i, j))
-                    for i in range(xs, xe)
-                    for j in range(ys, ye)
-                    if children[i, j] is None]
-        else:
-            heap = list(enumerate((i, j)
-                        for i in range(xs, xe)
-                        for j in range(ys, ye)
-                        if children[i, j] is None))
-
-        heap = sorted(heap)
-        niter = len(heap)
         self.progressBarInit()
-
+        last_node = root
         update_time = time.time()
-        while heap:
-            _, (i, j) = heapq.heappop(heap)
+        changed = False
 
-            xbins = np.linspace(root.xbins[i], root.xbins[i + 1],
-                                self.n_bins + 1)
-            ybins = np.linspace(root.ybins[j], root.ybins[j + 1],
-                                self.n_bins + 1)
-
-            assert xbins.size == self.n_bins + 1
-            assert ybins.size == self.n_bins + 1
-
-            if root.contingencies[i, j].any():
-                t = grid_bin(data, xvar, yvar, xbins, ybins, zvar)
-                assert t.contingencies.shape[:2] == (self.n_bins, self.n_bins)
-            else:
-                t = Tree(xbins, ybins, np.zeros_like(root.contingencies), None)
-
-            children[i, j] = t
-
-            self.progressBarSet(100.0 * (niter - len(heap)) / niter)
+        for i, node in enumerate(
+                sharpen_region(self._root, region, nbins, bin_func)):
             tick = time.time() - update_time
-            if len(heap) % nbins == 0 or tick > 1:
+            changed = changed or node is not last_node
+            if changed and ((i % nbins == 0) or tick > 2.0):
+                self.update_map(node)
+                last_node = node
+                changed = False
                 update_time = time.time()
-                self.update_map(flatten(root._replace(children=children),
-                                        nbins=self.n_bins, preserve_max=True))
+                self.progressBarSet(100 * i / (nbins ** 2))
 
-        self._root = root._replace(children=children)
+        self._root = last_node
         self._cache[xvar, yvar, zvar] = self._root
-
-        r = flatten(self._root, self.n_bins, preserve_max=True)
-        assert r.brect == root.brect
-        self.update_map(r)
-
+        self.update_map(self._root)
         self.progressBarFinished()
+
+    def _sampling_width(self):
+        if self._item is None:
+            return 0
+
+        item = self._item
+        rect = item.rect()
+
+        T = self.plot.transform() * item.sceneTransform()
+        lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
+
+        size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
+        cell_size = 10
+        scale = cell_size / (lod * size1)
+        p = int(np.floor(np.log2(scale)))
+        p = min(p, int(np.log2(self.n_bins)))
+        return 2 ** int(p)
+
+    def sharpen_region(self, region):
+        data = self.dataset
+        xvar = self.x_var_model[self.x_var_index]
+        yvar = self.y_var_model[self.y_var_index]
+
+        if 0 <= self.z_var_index < len(self.z_var_model):
+            zvar = self.z_var_model[self.z_var_index]
+        else:
+            zvar = None
+
+        root = self._root
+        nbins = self.n_bins
+
+        if not QRectF(*root.brect).intersects(region):
+            return
+
+        def bin_func(xbins, ybins):
+            return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
+
+        def min_depth(node, region):
+            if not region.intersects(QRectF(*node.brect)):
+                return np.inf
+            elif node.is_leaf:
+                return 1
+            elif node.is_empty:
+                return 1
+            else:
+                xs, xe, ys, ye = bindices(node, region)
+                children = node.children[xs: xe, ys: ye].ravel()
+                contingency = node.contingencies[xs: xe, ys: ye]
+                if contingency.ndim == 3:
+                    contingency = contingency.reshape(-1, contingency.shape[2])
+
+                if any(ch is None and np.any(val)
+                       for ch, val in zip(children, contingency)):
+                    return 1
+                else:
+                    ch_depth = [min_depth(ch, region) + 1
+                                for ch in filter(is_not_none, children.flat)]
+                    return min(ch_depth if ch_depth else [1])
+
+        depth = min_depth(self._root, region)
+        bw = self._sampling_width()
+        nodes = self.select_nodes_to_sharpen(self._root, region, bw,
+                                             depth + 1)
+
+        def update_rects(node):
+            scored = score_candidate_rects(node, region)
+            ind1 = set(zip(*Node_nonzero(node)))
+            ind2 = set(zip(*node.children.nonzero())) \
+                   if not node.is_leaf else set()
+            ind = ind1 - ind2
+            return [(score, r) for score, i, j, r in scored if (i, j) in ind]
+
+        scored_rects = reduce(operator.iadd, map(update_rects, nodes), [])
+        scored_rects = sorted(scored_rects, reverse=True,
+                              key=operator.itemgetter(0))
+        root = self._root
+        self.progressBarInit()
+        update_time = time.time()
+
+        for i, (_, rect) in enumerate(scored_rects):
+            root = sharpen_region_recur(
+                root, rect.intersect(region),
+                nbins, depth + 1, bin_func
+            )
+            tick = time.time() - update_time
+            if tick > 2.0:
+                self.update_map(root)
+                update_time = time.time()
+
+            self.progressBarSet(100 * i / len(scored_rects))
+
+        self._root = root
+
+        self._cache[xvar, yvar, zvar] = self._root
+        self.update_map(self._root)
+        self.progressBarFinished()
+
+    def select_nodes_to_sharpen(self, node, region, bw, depth):
+        """
+        :param node:
+        :param bw: bandwidth (samplewidth)
+        :param depth: maximum node depth to consider
+        """
+
+        if not QRectF(*node.brect).intersects(region):
+            return []
+        elif bw >= 1:
+            return []
+        elif depth == 1:
+            return []
+        elif node.is_empty:
+            return []
+        elif node.is_leaf:
+            return [node]
+        else:
+            xs, xe, ys, ye = bindices(node, region)
+
+            def intersect_indices(rows, cols):
+                mask = (xs <= rows) & (rows < xe) & (ys <= cols) & (cols < ye)
+                return rows[mask], cols[mask]
+
+            indices1 = intersect_indices(*Node_nonzero(node))
+            indices2 = intersect_indices(*node.children.nonzero())
+            # If there are any non empty and non expanded cells in the
+            # intersection return the node for sharpening, ...
+            if np.any(np.array(indices1) != np.array(indices2)):
+                return [node]
+
+            children = node.children[indices2]
+            # ... else run down the children in the intersection
+            return reduce(operator.iadd,
+                          (self.select_nodes_to_sharpen(
+                               ch, region, bw * node.nbins, depth - 1)
+                           for ch in children.flat),
+                          [])
 
     def _update_mouse_mode(self):
         if self.mouse_mode == 0:
@@ -401,8 +763,11 @@ class OWHeatMap(widget.OWWidget):
             mode = pg.ViewBox.RectMode
         self.plot.getViewBox().setMouseMode(mode)
 
+    def _on_transform_changed(self, *args):
+        pass
+
     def onDeleteWidget(self):
-        self.plot.clear()
+        self.clear()
         super().onDeleteWidget()
 
 
@@ -465,6 +830,167 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
 
     contingencies = np.asarray(contingencies)
     return Tree(xbins, ybins, contingencies, None)
+
+
+def sharpen_node_cell(node, i, j, nbins, gridbin_func):
+    if node.is_leaf:
+        children = np.full((nbins, nbins), None, dtype=object)
+    else:
+        children = np.array(node.children, dtype=None)
+
+    xbins = np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
+    ybins = np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
+
+    if node.contingencies[i, j].any():
+        t = gridbin_func(xbins, ybins)
+        assert t.contingencies.shape[:2] == (nbins, nbins)
+        children[i, j] = t
+        return node._replace(children=children)
+    else:
+        return node
+
+
+def sharpen_node_cell_range(node, xrange, yrange, nbins, gridbin_func):
+    if node.is_leaf:
+        children = np.full((nbins, nbins), None, dtype=object)
+    else:
+        children = np.array(node.children, dtype=None)
+
+    xs, xe = xrange.start, xrange.stop
+    ys, ye = yrange.start, yrange.stop
+
+    xbins = np.linspace(node.xbins[xs], node.xbins[xe], (xe - xs) * nbins + 1)
+    ybins = np.linspace(node.ybins[ys], node.ybins[ye], (ye - ys) * nbins + 1)
+
+    if node.contingencies[xs: xe, ys: ye].any():
+        t = gridbin_func(xbins, ybins)
+        for i, j in itertools.product(range(xs, xe), range(ys, ye)):
+            children[i, j] = Tree(t.xbins[i * nbins: (i + 1) * nbins + 1],
+                                  t.ybins[j * nbins: (j + 1) * nbins + 1],
+                                  t.contingencies[xs: xe, ys: ye])
+            assert children[i, j].shape[:2] == (nbins, nbins)
+        return node._replace(children=children)
+    else:
+        return node
+
+
+def sharpen_region(node, region, nbins, gridbin_func):
+    if not QRectF(*node.brect).intersects(region):
+        raise ValueError()
+#         return node
+
+    xs, xe, ys, ye = bindices(node, region)
+    ndim = node.contingencies.ndim
+
+    if node.children is not None:
+        children = np.array(node.children, dtype=object)
+        assert children.ndim == 2
+    else:
+        children = np.full((nbins, nbins), None, dtype=object)
+
+    if ndim == 3:
+        # compute_chisqares expects classes in 1 dim
+        c = node.contingencies
+        chi_lr, chi_up = compute_chi_squares(
+            c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
+        )
+
+        def max_chisq(i, j):
+            def valid(i, j):
+                return 0 <= i < chi_up.shape[0] and \
+                       0 <= j < chi_lr.shape[1]
+
+            return max(chi_lr[i, j] if valid(i, j) else 0,
+                       chi_lr[i, j - 1] if valid(i, j - 1) else 0,
+                       chi_up[i, j] if valid(i, j) else 0,
+                       chi_up[i - 1, j] if valid(i - 1, j) else 0)
+
+        heap = [(-max_chisq(i - xs, j - ys), (i, j))
+                for i in range(xs, xe)
+                for j in range(ys, ye)
+                if children[i, j] is None]
+    else:
+        heap = list(enumerate((i, j)
+                    for i in range(xs, xe)
+                    for j in range(ys, ye)
+                    if children[i, j] is None))
+
+    heap = sorted(heap)
+    update_node = node
+    while heap:
+        _, (i, j) = heapq.heappop(heap)
+
+        xbins = np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
+        ybins = np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
+
+        if node.contingencies[i, j].any():
+            t = gridbin_func(xbins, ybins)
+            assert t.contingencies.shape[:2] == (nbins, nbins)
+        else:
+            t = None
+
+        children[i, j] = t
+        if t is None:
+            yield update_node
+        else:
+            update_node = update_node._replace(
+                children=np.array(children, dtype=object)
+            )
+            yield update_node
+
+
+def Node_mask(node):
+    if node.contingencies.ndim == 3:
+        return node.contingencies.any(axis=2)
+    else:
+        return node.contingencies > 0
+
+
+def Node_nonzero(node):
+    return np.nonzero(Node_mask(node))
+
+
+def sharpen_region_recur(node, region, nbins, depth, gridbin_func):
+    if depth <= 1:
+        return node
+    elif not QRectF(*node.brect).intersects(region):
+        return node
+    elif node.is_empty:
+        return node
+    elif node.is_leaf:
+        xs, xe, ys, ye = bindices(node, region)
+        # indices in need of update
+        indices = Node_nonzero(node)
+        for i, j in zip(*indices):
+            if xs <= i < xe and ys <= j < ye:
+                node = sharpen_node_cell(node, i, j, nbins, gridbin_func)
+
+        # if the exposed region is empty the node.is_leaf property
+        # is preserved
+        if node.is_leaf:
+            return node
+
+        return sharpen_region_recur(node, region, nbins, depth, gridbin_func)
+    else:
+        xs, xe, ys, ye = bindices(node, region)
+
+        # indices is need of update
+        indices1 = Node_nonzero(node)
+        indices2 = node.children.nonzero()
+        indices = sorted(set(list(zip(*indices1))) - set(list(zip(*indices2))))
+
+        for i, j in indices:
+            if xs <= i < xe and ys <= j < ye:
+                node = sharpen_node_cell(node, i, j, nbins, gridbin_func)
+
+        children = np.array(node.children, dtype=object)
+        children[xs: xe, ys: ye] = [
+            [sharpen_region_recur(ch, region, nbins, depth - 1, gridbin_func)
+             if ch is not None else None
+             for ch in row]
+            for row in np.array(children[xs: xe, ys: ye])
+        ]
+        return node._replace(children=children)
 
 
 def stack_tile_blocks(blocks):
@@ -547,15 +1073,15 @@ def bindices(node, rect):
                     node.ybins.size - 2, node.ybins.size - 1])
 
 
-def create_image(contingencies, palette=None):
+def create_image(contingencies, palette=None, scale=None):
 #     import scipy.signal
 #     import scipy.ndimage
 
-#     contingencies = node.contingencies
-    total = np.sum(contingencies)
+    if scale is None:
+        scale = contingencies.max()
 
-    if total > 0:
-        P = contingencies / total
+    if scale > 0:
+        P = contingencies / scale
     else:
         P = contingencies
 
@@ -578,7 +1104,7 @@ def create_image(contingencies, palette=None):
         argmax = np.argmax(P, axis=2)
         irow, icol = np.indices(argmax.shape)
         P_max = P[irow, icol, argmax]
-        P_max /= P_max.max()
+#         P_max /= P_max.max()
         colors = 255 - colors[argmax.ravel()]
 
         # XXX: Non linear intensity scaling
@@ -587,7 +1113,7 @@ def create_image(contingencies, palette=None):
         colors = 255 - colors
     elif P.ndim == 2:
         palette = colorpalette.ColorPaletteBW()
-        mix = contingencies / contingencies.max()
+        mix = P
 
 #         mix = scipy.ndimage.filters.gaussian_filter(
 #             mix, bandwidth, mode="constant")
@@ -598,6 +1124,43 @@ def create_image(contingencies, palette=None):
         colors = colors.reshape(mix.shape + (3,))
 
     return colors
+
+
+def score_candidate_rects(node, region):
+    """
+    Score candidate bin rects in node.
+
+    Return a list of (score, i, j QRectF) list)
+
+    """
+    xs, xe, ys, ye = bindices(node, region)
+
+    if node.contingencies.ndim == 3:
+        c = node.contingencies
+        # compute_chisqares expects classes in 1 dim
+        chi_lr, chi_up = compute_chi_squares(
+            c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
+        )
+
+        def max_chisq(i, j):
+            def valid(i, j):
+                return 0 <= i < chi_up.shape[0] and \
+                       0 <= j < chi_lr.shape[1]
+
+            return max(chi_lr[i, j] if valid(i, j) else 0,
+                       chi_lr[i, j - 1] if valid(i, j - 1) else 0,
+                       chi_up[i, j] if valid(i, j) else 0,
+                       chi_up[i - 1, j] if valid(i - 1, j) else 0)
+
+        return [(max_chisq(i - xs, j - ys), i, j,
+                 QRectF(QPointF(node.xbins[i], node.ybins[j]),
+                        QPointF(node.xbins[i + 1], node.ybins[j + 1])))
+                 for i, j in itertools.product(range(xs, xe), range(ys, ye))]
+    else:
+        return [(1, i, j,
+                 QRectF(QPointF(node.xbins[i], node.ybins[j]),
+                        QPointF(node.xbins[i + 1], node.ybins[j + 1])))
+                 for i, j in itertools.product(range(xs, xe), range(ys, ye))]
 
 
 def compute_chi_squares(observes):
@@ -664,7 +1227,7 @@ def main():
     w.show()
     w.raise_()
     data = Orange.data.Table('iris')
-    data = Orange.data.Table('housing')
+#     data = Orange.data.Table('housing')
     data = Orange.data.Table('adult')
     w.set_data(data)
     rval = app.exec_()
