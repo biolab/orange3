@@ -418,24 +418,27 @@ class SqlTable(table.Table):
                                                 filters)
 
             if isinstance(column, ContinuousVariable):
-                all_contingencies[i] = (self._continuous_contingencies(cur), [])
+                all_contingencies[i] = (self._continuous_contingencies(cur, row), [])
             else:
                 all_contingencies[i] = (self._discrete_contingencies(
                     cur, row, column), [])
         return all_contingencies
 
-    def _continuous_contingencies(self, cur):
-        conts = []
-        last_row_value = None
-        for row_value, column_value, count in cur.fetchall():
-            if row_value != last_row_value:
-                if conts:
-                    conts[-1] = np.array(conts[-1]).T
-                conts.append(([]))
-            conts[-1].append((column_value, count))
-            last_row_value = row_value
-        conts[-1] = np.array(conts[-1]).T
-        return conts
+    def _continuous_contingencies(self, cur, row):
+        data = cur.fetchall()
+        values = np.zeros(len(data))
+        counts = np.zeros((len(row.values), len(data)))
+        last = None
+        i = -1
+        for row_value, column_value, count in data:
+            if column_value == last:
+                counts[row.to_val(row_value), i] += count
+            else:
+                i += 1
+                last = column_value
+                values[i] = column_value
+                counts[row.to_val(row_value), i] += count
+        return (values, counts)
 
     def _discrete_contingencies(self, cur, row, column):
         conts = np.zeros((len(row.values), len(column.values)))
@@ -591,8 +594,9 @@ class SqlTable(table.Table):
 
     def _sql_compute_contingency(self, row_field, column_field, filters):
         fields = [row_field, column_field, "COUNT(%s)" % column_field]
+
         group_by = [row_field, column_field]
-        order_by = [row_field, column_field]
+        order_by = [column_field]
         return self._sql_query(fields, filters,
                                group_by=group_by, order_by=order_by)
 

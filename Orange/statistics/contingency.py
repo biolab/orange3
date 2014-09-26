@@ -65,7 +65,7 @@ class Discrete(np.ndarray):
         if row_variable is None:
             row_variable = data.domain.class_var
             if row_variable is None:
-                raise ValueError("row_variable needs to be specified (data"
+                raise ValueError("row_variable needs to be specified (data "
                                  "has no class)")
         row_variable = _get_variable(row_variable, data, "row_variable")
         col_variable = _get_variable(col_variable, data, "col_variable")
@@ -145,7 +145,7 @@ class Discrete(np.ndarray):
                 self.unknowns /= t
 
 
-class Continuous(list):
+class Continuous:
     def __init__(self, dat=None, col_variable=None, row_variable=None,
                  unknowns=None):
         if isinstance(dat, data.Storage):
@@ -156,14 +156,11 @@ class Continuous(list):
 
         if row_variable is not None:
             row_variable = _get_variable(row_variable, dat, "row_variable")
-            rows = len(row_variable.values)
-        else:
-            rows = len(dat)
         if col_variable is not None:
             col_variable = _get_variable(col_variable, dat, "col_variable")
 
-        if dat is not None:
-            self[:] = dat
+        self.values, self.counts = dat
+
         self.row_variable = row_variable
         self.col_variable = col_variable
         if unknowns is not None:
@@ -183,7 +180,7 @@ class Continuous(list):
         self.row_variable = _get_variable(row_variable, data, "row_variable")
         self.col_variable = _get_variable(col_variable, data, "col_variable")
         try:
-            self[:], self.unknowns = data._compute_contingency(
+            (self.values, self.counts), self.unknowns = data._compute_contingency(
                 [col_variable], row_variable)[0]
         except NotImplementedError:
             raise NotImplementedError("Fallback method for computation of "
@@ -191,22 +188,28 @@ class Continuous(list):
 
 
     def __eq__(self, other):
-        return (len(self) == len(other) and
-                all(np.array_equal(rs, ro) for rs, ro in zip(self, other)) and
+        return (np.array_equal(self.values, other.values) and
+                np.array_equal(self.counts, other.counts) and
                 (not hasattr(other, "unknowns") or
                  np.array_equal(self.unknowns, other.unknowns)))
 
 
     def __getitem__(self, index):
+        """ Return contingencies for a given class value. """
         if isinstance(index, (str, float)):
             index = self.row_variable.to_val(index)
-        return super().__getitem__(index)
+        C = self.counts[index]
+        ind = C > 0
+        return np.vstack((self.values[ind], C[ind]))
+
+    
+    def __len__(self):
+        return self.counts.shape[0]
 
 
     def __setitem__(self, index, value):
-        if isinstance(index, (str, float)):
-            index = self.row_variable.to_val(index)
-        super().__setitem__(index, value)
+        raise NotImplementedError("Setting individual class contingencies is "
+                                  "not implemented yet. Set .values and .counts.")
 
 
     def normalize(self, axis=None):

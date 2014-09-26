@@ -51,20 +51,33 @@ class Storage:
         raise NotImplementedError
 
     def _compute_contingency(self, col_vars=None, row_var=None):
-        """Compute contingency tables with row_var values in rows and column_var
-         values in columns.
+        """
+        Compute contingency matrices for one or more discrete or
+        continuous variables against the specified discrete variable.
 
-        :param col_vars: variables to compute contingency tables for
-        :param row_var: discrete variable in rows of the contingency tables
-        :return: a list of tuples (contingency_table, unknown), one for each
-                 var in col_vars. Structure of the contingency_table depends
-                 on the type of the column variable:
-                    - for discrete, contingency_table is a 2d numpy array, where
-                      element (i, j) contains count of rows with i-th value
-                      of the row variable and j-th value of the column variable.
-                    - for continuous, contingency is a list of 2d numpy arrays,
-                      one for each value of the row variable. 2d arrays contain
-                       ordered distinct values of the column_variable in first
-                       row and their counts in the second.
+        The resulting list  contains a pair for each column variable.
+        The first element contains the contingencies and the second
+        elements gives the distribution of the row variables for instances
+        in which the value of the column variable is missing.
+
+        The format of contingencies returned depends on the variable type:
+
+        - for discrete variables, it is a numpy array, where
+          element (i, j) contains count of rows with i-th value of the
+          row variable and j-th value of the column variable.
+
+        - for continuous variables, contingency is a list of two arrays,
+          where the first array contains ordered distinct values of the
+          column_variable and the element (i,j) of the second array
+          contains count of rows with i-th value of the row variable
+          and j-th value of the ordered column variable.
+
+        :param col_vars: variables whose values will correspond to columns of
+            contingency matrices
+        :type col_vars: list of ints, variable names or descriptors of type
+            :obj:`Orange.data.Variable`
+        :param row_var: a discrete variable whose values will correspond to the
+            rows of contingency matrices
+        :type row_var: int, variable name or :obj:`Orange.data.DiscreteVariable`
         """
         raise NotImplementedError

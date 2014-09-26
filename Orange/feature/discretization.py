@@ -311,8 +311,7 @@ class EntropyMDL(Discretization):
 
     def __call__(self, data, attribute):
         cont = contingency.get_contingency(data, attribute)
-        #values, I = _join_contingency(cont)
-        values, I = _discretization.join_contingency(cont)
+        values, I = cont.values, cont.counts.T
         cut_ind = np.array(_entropy_discretize_sorted(I, self.force))
         if len(cut_ind) > 0:
             #"the midpoint between each successive pair of examples" (FI p.1)
@@ -320,34 +319,4 @@ class EntropyMDL(Discretization):
             return _discretized_var(data, attribute, points)
         else:
             return None
-
-
-def _join_contingency(contingency): #obsolete: use _discretization.join_contingency
-    """
-    Join contingency list into a single ordered distribution.
-    """
-    k = len(contingency)
-    values = np.r_[tuple(contingency[i][0] for i in range(k))]
-    I = np.zeros((len(values), k))
-    start = 0
-    for i in range(k):
-        counts = contingency[i][1]
-        span = len(counts)
-        I[start: start + span, i] = contingency[i][1]
-        start += span
-
-    sort_ind = np.argsort(values)
-    values, I = values[sort_ind], I[sort_ind, :]
-
-    last = None
-    iv = -1
-    for i in range(len(values)):
-        if last != values[i]:
-            iv += 1
-            last = values[i]
-            values[iv] = last
-            I[iv] = I[i]
-        else:
-            I[iv] += I[i]
-    return values[:iv+1],I[:iv+1]
 
