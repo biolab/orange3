@@ -148,7 +148,7 @@ class SqlTable(table.Table):
         """:fields: tuple(field_name, field_type, field_expression, values)"""
         attributes, class_vars, metas = [], [], []
         suggested_metas, suggested_class_vars = [],[]
-        if type_hints:
+        if type_hints != None:
             suggested_metas = [ f.name for f in type_hints.metas ]
             suggested_class_vars = [ f.name for f in type_hints.class_vars ]
 
@@ -168,7 +168,7 @@ class SqlTable(table.Table):
 
     @staticmethod
     def var_from_field(name, field_type, field_expr, values, type_hints):
-        if type_hints and name in type_hints:
+        if type_hints != None and name in type_hints:
             var = type_hints[name]
         else:
             if 'double' in field_type:

@@ -15,7 +15,7 @@ class IsDefinedFilterTests(PostgresTest):
             [7, None, 3, None, 'f'],
         ]
         self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri)
+        self.table = SqlTable(self.table_uri, guess_values=True)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
@@ -69,7 +69,7 @@ class HasClassFilterTests(PostgresTest):
             [7, None, 3, None, 'f'],
         ]
         self.table_uri = self.create_sql_table(self.data)
-        table = SqlTable(self.table_uri)
+        table = SqlTable(self.table_uri, guess_values=True)
         variables = table.domain.variables
         new_table = table.copy()
         new_table.domain = domain.Domain(variables[:-1], variables[-1:])
@@ -104,7 +104,7 @@ class SameValueFilterTests(PostgresTest):
             [2, 2, 3, 'b', 'f'],
         ]
         self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri)
+        self.table = SqlTable(self.table_uri, guess_values=True)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
@@ -193,7 +193,7 @@ class ValuesFilterTests(PostgresTest):
             [2, 2, 3, 'b', 'f'],
         ]
         self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri)
+        self.table = SqlTable(self.table_uri, guess_values=True)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
