@@ -39,7 +39,7 @@ class Discrete_Test(unittest.TestCase):
 
         correct = [[2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8],
                    [1, 4, 2, 4, 8, 2, 12, 4, 5, 3, 2, 1, 2]]
-        np.testing.assert_almost_equal(cont[2], correct)
+        np.testing.assert_almost_equal(cont[d.domain.class_var.values.index("Iris-virginica")], correct)
 
 
     @staticmethod
