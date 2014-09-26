@@ -15,9 +15,8 @@ from Orange.data.sql.table import SqlTable
 from Orange.widgets import gui
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
                                                ContinuousPaletteGenerator)
-from Orange.widgets.utils.plot import (OWPalette, OWPlotGUI,
-                                       TooltipManager, SELECT, PANNING,
-                                       ZOOMING)
+from Orange.widgets.utils.plot import \
+    OWPalette, OWPlotGUI, SELECT, PANNING, ZOOMING
 from Orange.widgets.utils.scaling import (get_variable_values_sorted,
                                           ScaleScatterPlotData)
 from Orange.widgets.settings import Setting, ContextSetting
@@ -279,7 +278,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.legend = self.color_legend = None
         self.scale = None  # DiscretizedScale
 
-        self.tips = TooltipManager(self)
         # self.setMouseTracking(True)
         # self.grabGesture(QPinchGesture)
         # self.grabGesture(QPanGesture)

@@ -16,7 +16,20 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.widgets.utils import datacaching, colorpalette, vartype
-from Orange.widgets.utils.plot import owaxis
+
+
+def compute_scale(min, max):
+    magnitude = int(3 * math.log10(abs(max - min)) + 1)
+    if magnitude % 3 == 0:
+        first_place = 1
+    elif magnitude % 3 == 1:
+        first_place = 2
+    else:
+        first_place = 5
+    magnitude = magnitude // 3 - 1
+    step = first_place * pow(10, magnitude)
+    first_val = math.ceil(min / step) * step
+    return first_val, step
 
 
 class BoxData:
@@ -427,7 +440,7 @@ class OWBoxPlot(widget.OWWidget):
         bottom = min(stat.a_min for stat in self.stats)
         top = max(stat.a_max for stat in self.stats)
 
-        first_val, step = owaxis.OWAxis.compute_scale(bottom, top)
+        first_val, step = compute_scale(bottom, top)
         while bottom < first_val:
             first_val -= step
         bottom = first_val
@@ -485,7 +498,7 @@ class OWBoxPlot(widget.OWWidget):
             if max_box == 0:
                 self.scale_x = 1
                 return
-            _, step = owaxis.OWAxis.compute_scale(0, max_box)
+            _, step = compute_scale(0, max_box)
             step = int(step)
             steps = int(math.ceil(max_box / step))
         max_box = step * steps

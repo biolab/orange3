@@ -12,9 +12,16 @@ but can also be used directly or subclassed
 
 """
 
-from .owcurve import *
-from .owpoint import *
-from .owlegend import *
-from .owaxis import *
-from .owplot import *
-from .owtools import *
+from .owplotgui import *
+from .owpalette import *
+from .owconstants import *
+
+try:
+    from .owcurve import *
+    from .owpoint import *
+    from .owlegend import *
+    from .owaxis import *
+    from .owplot import *
+    from .owtools import *
+except ImportError:
+    pass

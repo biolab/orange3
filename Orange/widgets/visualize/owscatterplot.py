@@ -11,7 +11,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.utils.plot import OWPalette, OWPlotGUI
+from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
