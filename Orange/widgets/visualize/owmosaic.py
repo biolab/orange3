@@ -1,7 +1,9 @@
 import os
 import sys
-from math import sqrt
+from collections import defaultdict
 from functools import reduce
+from itertools import product
+from math import sqrt
 
 import numpy
 from PyQt4.QtCore import QPoint, Qt, QRectF
@@ -39,12 +41,6 @@ RIGHT = 3
 #     if hasattr(param, "values"):
 #         return param.values
 #     return []
-
-
-class ZeroDict(dict):
-    """Just a dict, which return 0 if key not found."""
-    def __getitem__(self, key):
-        return dict.get(self, key, 0)
 
 
 class SelectionRectangle(QGraphicsRectItem):
@@ -379,6 +375,8 @@ class OWMosaicDisplay(OWWidget):
         if not self.data.domain.class_var:
             self.warning(0, "Data does not have a class variable.")
             return
+        else:
+            self.warning(0)
 
         if any(isinstance(attr, ContinuousVariable) for attr in self.data.domain):
             # previously done in optimizationDlg.setData()
@@ -413,12 +411,12 @@ class OWMosaicDisplay(OWWidget):
             self.warning(10)
         else:
             try:
-                self.subset_data = data.select(self.data.domain)
+                self.subset_data = data.from_table(self.data.domain, data)
                 self.warning(10)
             except:
                 self.subset_data = None
                 self.warning(10,
-                             data and "'Examples' and 'Example Subset' data do not have compatible domains. Unable to draw 'Example Subset' data." or "")
+                             data and "'Data' and 'Data Subset' do not have compatible domains." or "")
         self.cb_show_subset.setDisabled(self.subset_data is None)
 
 
@@ -522,7 +520,7 @@ class OWMosaicDisplay(OWWidget):
 
         if len(data) == 0:
             self.warning(5,
-                         "There are no examples with valid values for currently visualized attributes. Unable to visualize.")
+                         "No data instances with valid values for currently visualized attributes.")
             return
         else:
             self.warning(5)
@@ -587,75 +585,40 @@ class OWMosaicDisplay(OWWidget):
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
         if type(data) == SqlTable:
-            dict = ZeroDict() # ZeroDict is like ordinary dict, except it returns 0 if key not found
-
-            # get instances of attributes instead of strings, because of to_sql()
-            var_attrs = []
-            for a in attrs:
-                for va in data.domain.attributes:
-                    if va.name == a:
-                        var_attrs.append(va)
-                        break
-
+            cond_dist = defaultdict(lambda: 0)
+            var_attrs = [data.domain[a] for a in attrs]
             # make all possible pairs of attributes + class_var
             for i in range(0, len(var_attrs) + 1):
-                attr = []
-                for j in range(0, i+1):
-                    if j == len(var_attrs):
-                        attr.append(data.domain.class_var.name) ## TODO: hm, tale self sem dodal tako na hitro
-                    else:
-                        attr.append(var_attrs[j].to_sql())
-
-                sql = []
-                sql.append("SELECT")
-                sql.append(", ".join(attr))
-                sql.append(", COUNT(%s)" % attr[0])
-                sql.append("FROM %s" % data.name)
-                sql.append("GROUP BY")
-                sql.append(", ".join(attr))
-
-                cur = data._execute_sql_query(" ".join(sql))
+                attr = [v.to_sql() for v in var_attrs[:i + 1]]
+                if i == len(var_attrs):
+                    attr.append(data.domain.class_var.to_sql())
+                fields = attr + ["COUNT(*)"]
+                filters = [f.to_sql() for f in data.row_filters]
+                filters = [f for f in filters if f]
+                cur = data._sql_query(fields, filters=filters, group_by=attr)
                 res = cur.fetchall()
                 for r in list(res):
-                    dict['-'.join(r[:-1])] = r[-1]
+                    cond_dist['-'.join(r[:-1])] = r[-1]
         else:
-            dict = {}
-            def counter(s):
-                t = [0 for i in range(0, len(s))]
-                while True:
-                    yield t
-                    for i in range(len(s)):
-                        t[i] = (t[i] + 1) % s[i]
-                        if t[i]:
-                            break
-                    else:
-                        break
-
+            cond_dist = {}
             for i in range(0, len(attrs) + 1):
                 attr = []
-                for j in range(0, i+1):
+                for j in range(0, i + 1):
                     if j == len(attrs):
                         attr.append(data.domain.class_var)
                     else:
-                        if data.domain.class_var.name == attrs[j]:
-                            attr.append(data.domain.class_var)
-                        else:
-                            ind = data.domain.index(attrs[j])
-                            a = data.domain.attributes[ind]
-                            attr.append(a)
-
-                s = [len(a.values) for a in attr]
-                for indices in counter(s):
+                        attr.append(data.domain[attrs[j]])
+                for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     filt = filter.Values()
                     filt.domain = data.domain
-                    for k in range(len(indices)):
-                        vals.append(attr[k].values[indices[k]])
-                        fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[indices[k]]])
+                    for k, ind in enumerate(indices):
+                        vals.append(attr[k].values[ind])
+                        fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
                         filt.conditions.append(fd)
                     filtdata = filt(data)
-                    dict['-'.join(vals)] = len(filtdata)
-        return dict
+                    cond_dist['-'.join(vals)] = len(filtdata)
+        return cond_dist
 
 
     # ############################################################################
