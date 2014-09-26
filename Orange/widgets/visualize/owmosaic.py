@@ -611,7 +611,6 @@ class OWMosaicDisplay(OWWidget):
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     filt = filter.Values()
-                    filt.domain = data.domain
                     for k, ind in enumerate(indices):
                         vals.append(attr[k].values[ind])
                         fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
