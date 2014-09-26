@@ -55,6 +55,7 @@ class OWLiftCurve(widget.OWWidget):
     name = "Lift Curve"
     description = ""
     icon = "icons/LiftCurve.svg"
+    priority = 1020
 
     inputs = [
         {"name": "Evaluation Results",

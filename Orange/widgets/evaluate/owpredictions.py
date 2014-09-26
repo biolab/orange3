@@ -38,6 +38,7 @@ def pname(predictor):
 class OWPredictions(widget.OWWidget):
     name = "Predictions"
     icon = "icons/Predictions.svg"
+    priority = 200
     description = "Displays predictions of models for a particular data set."
     inputs = [("Data", Orange.data.Table, "setData"),
               ("Predictors", Orange.classification.Model,

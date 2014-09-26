@@ -45,6 +45,7 @@ class OWTestLearners(widget.OWWidget):
     name = "Test Learners"
     description = ""
     icon = "icons/TestLearners1.svg"
+    priority = 100
 
     inputs = [("Learner", Orange.classification.Fitter,
                "set_learner", widget.Multiple),
