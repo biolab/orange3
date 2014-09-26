@@ -793,8 +793,8 @@ class OWMosaicDisplay(OWWidget):
                     r = OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 2 * d + 1, y1 - y0 + 2 * d + 1, z=50)
                     r.setPen(QPen(self.colorPalette[counts.index(max(counts))], 2, Qt.DashLine))
 
-        aprioriDist = None;
-        pearson = None;
+        aprioriDist = None
+        pearson = None
         expected = None
         outerRect = OWCanvasRectangle(self.canvas, x0, y0, x1 - x0, y1 - y0, z=30)
 
@@ -884,7 +884,7 @@ class OWMosaicDisplay(OWWidget):
                         boxCounts.append(tempVal)
                         #boxCounts.append(aprioriDist[val]/float(sum(aprioriDist.values())) * reduce(operator.mul, [contingencies[usedAttrs[i]][usedVals[i]][clsVal]/float(sum(contingencies[usedAttrs[i]][usedVals[i]].values())) for i in range(len(usedAttrs))]))
 
-                total1 = 0;
+                total1 = 0
                 total2 = 0
                 if self.useBoxes:
                     if self.horizontalDistribution:
@@ -971,7 +971,7 @@ class OWMosaicDisplay(OWWidget):
             actual = [self.conditionalDict[attrVals + "-" + clsValues[i]] for i in range(len(aprioriDist))]
             if sum(actual) > 0:
                 apriori = [aprioriDist[key] for key in clsValues]
-                aprioriText = "";
+                aprioriText = ""
                 actualText = ""
                 text = ""
                 for i in range(len(clsValues)):
@@ -1169,8 +1169,8 @@ class OWCanvasText(QGraphicsTextItem):
         if font:
             self.setFont(font)
         if bold:
-            font = self.font();
-            font.setBold(bold);
+            font = self.font()
+            font.setBold(bold)
             self.setFont(font)
         if htmlText:
             self.setHtml(htmlText)
