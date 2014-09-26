@@ -1,8 +1,9 @@
 import os
 import sys
-from math import sqrt
+from collections import defaultdict
 from functools import reduce
 from itertools import product
+from math import sqrt
 
 import numpy
 from PyQt4.QtCore import QPoint, Qt, QRectF
@@ -40,12 +41,6 @@ RIGHT = 3
 #     if hasattr(param, "values"):
 #         return param.values
 #     return []
-
-
-class ZeroDict(dict):
-    """Just a dict, which return 0 if key not found."""
-    def __getitem__(self, key):
-        return dict.get(self, key, 0)
 
 
 class SelectionRectangle(QGraphicsRectItem):
@@ -590,34 +585,17 @@ class OWMosaicDisplay(OWWidget):
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
         if type(data) == SqlTable:
-            cond_dist = ZeroDict() # ZeroDict is like ordinary dict, except it returns 0 if key not found
-
-            # get instances of attributes instead of strings, because of to_sql()
-            var_attrs = []
-            for a in attrs:
-                for va in data.domain.attributes:
-                    if va.name == a:
-                        var_attrs.append(va)
-                        break
-
+            cond_dist = defaultdict(lambda: 0)
+            var_attrs = [data.domain[a] for a in attrs]
             # make all possible pairs of attributes + class_var
             for i in range(0, len(var_attrs) + 1):
-                attr = []
-                for j in range(0, i+1):
-                    if j == len(var_attrs):
-                        attr.append(data.domain.class_var.name) ## TODO: hm, tale self sem dodal tako na hitro
-                    else:
-                        attr.append(var_attrs[j].to_sql())
-
-                sql = []
-                sql.append("SELECT")
-                sql.append(", ".join(attr))
-                sql.append(", COUNT(%s)" % attr[0])
-                sql.append("FROM %s" % data.name)
-                sql.append("GROUP BY")
-                sql.append(", ".join(attr))
-
-                cur = data._execute_sql_query(" ".join(sql))
+                attr = [v.to_sql() for v in var_attrs[:i + 1]]
+                if i == len(var_attrs):
+                    attr.append(data.domain.class_var.to_sql())
+                fields = attr + ["COUNT(*)"]
+                filters = [f.to_sql() for f in data.row_filters]
+                filters = [f for f in filters if f]
+                cur = data._sql_query(fields, filters=filters, group_by=attr)
                 res = cur.fetchall()
                 for r in list(res):
                     cond_dist['-'.join(r[:-1])] = r[-1]
@@ -630,7 +608,6 @@ class OWMosaicDisplay(OWWidget):
                         attr.append(data.domain.class_var)
                     else:
                         attr.append(data.domain[attrs[j]])
-
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     filt = filter.Values()
