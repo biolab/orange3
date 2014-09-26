@@ -30,7 +30,7 @@ class OWScatterPlot(OWWidget):
 
     settingsHandler = DomainContextHandler()
 
-    auto_send_selection = Setting(True)
+    auto_send_selection = Setting(False)
     toolbar_selection = Setting(0)
     color_settings = Setting(None)
     selected_schema_index = Setting(0)
@@ -288,11 +288,15 @@ class OWScatterPlot(OWWidget):
 
     def send_selection(self):
         self.selection_dirty = False
-        selection = self.graph.get_selection()
-        selected = self.data[selection]
-        unselection = np.full(len(self.data), True, dtype=bool)
-        unselection[selection] = False
-        unselected = self.data[unselection]
+        # TODO: Implement selection for sql data
+        if isinstance(self.data, SqlTable):
+            selected = unselected = self.data
+        else:
+            selection = self.graph.get_selection()
+            selected = self.data[selection]
+            unselection = np.full(len(self.data), True, dtype=bool)
+            unselection[selection] = False
+            unselected = self.data[unselection]
         self.send("Selected Data", selected)
         self.send("Other Data", unselected)
 
