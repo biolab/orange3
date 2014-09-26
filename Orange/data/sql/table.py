@@ -30,7 +30,7 @@ class SqlTable(table.Table):
     def __init__(
             self, uri=None,
             host=None, database=None, user=None, password=None, schema=None,
-            table=None, type_hints=None, **kwargs):
+            table=None, type_hints=None, guess_values=False, **kwargs):
         """
         Create a new proxy for sql table.
 
@@ -45,10 +45,12 @@ class SqlTable(table.Table):
         All but the database and table parameters are optional. Any additional
         parameters will be forwarded to the psycopg2 backend.
 
-        Variable types will be inferred based on the column types
-        (double -> ContinuousVariable, everything else -> StringVariable). You
-        can tell SqlTable to use different variables by passing a dict mapping
-        column names to Variable instances as type_hints parameter.
+        If type_hints (an Orange domain) contain a column name, then
+        the variable type from type_hints will be used. If it does not,
+        the variable type is selected based on the column type (double
+        -> ContinuousVariable, everything else -> StringVariable).
+        If guess_values is True, database columns with less that 20
+        different strings will become DiscreteVariables.
 
         Class vars and metas can be specified as a list of column names in
         __class_vars__ and __metas__ keys in type_hints dict.
@@ -75,7 +77,7 @@ class SqlTable(table.Table):
         if table is not None:
             self.table_name = self.quote_identifier(table)
             self.domain = self.domain_from_fields(
-                self._get_fields(table),
+                self._get_fields(table, guess_values=guess_values),
                 type_hints=type_hints)
             self.name = table
 
@@ -89,19 +91,19 @@ class SqlTable(table.Table):
 
         Database connection parameters can be specified either as a string:
 
-            table = SqlTable("user:password@host:port/database/table")
+            table = SqlTable.from_sql("user:password@host:port/database/table")
 
         or using a set of keyword arguments:
 
-            table = SqlTable(database="test", sql="SELECT iris FROM iris")
+            table = SqlTable.from_sql(database="test", sql="SELECT iris FROM iris")
 
         All but the database and the sql parameters are optional. Any
         additional parameters will be forwarded to the psycopg2 backend.
 
-        Variable types will be inferred based on the column types
-        (double -> ContinuousVariable, everything else -> StringVariable). You
-        can tell SqlTable to use different variables by passing a dict mapping
-        column names to Variable instances as type_hints parameter.
+        If type_hints (an Orange domain) contain a column name, then
+        the variable type from type_hints will be used. If it does not,
+        the variable type is selected based on the column type (double
+        -> ContinuousVariable, everything else -> StringVariable).
 
         Class vars and metas can be specified as a list of column names in
         __class_vars__ and __metas__ keys in type_hints dict.
@@ -144,10 +146,11 @@ class SqlTable(table.Table):
 
     def domain_from_fields(self, fields, type_hints=None):
         """:fields: tuple(field_name, field_type, field_expression, values)"""
-        type_hints = type_hints or {}
         attributes, class_vars, metas = [], [], []
-        suggested_metas = type_hints.pop('__metas__', [])
-        suggested_class_vars = type_hints.pop('__class_vars__', [])
+        suggested_metas, suggested_class_vars = [],[]
+        if type_hints:
+            suggested_metas = [ f.name for f in type_hints.metas ]
+            suggested_class_vars = [ f.name for f in type_hints.class_vars ]
 
         for name, field_type, field_expr, values in fields:
             var = self.var_from_field(name, field_type, field_expr, values,
@@ -165,10 +168,8 @@ class SqlTable(table.Table):
 
     @staticmethod
     def var_from_field(name, field_type, field_expr, values, type_hints):
-        if name in type_hints:
+        if type_hints and name in type_hints:
             var = type_hints[name]
-            if not var.name:
-                var.name = name
         else:
             if 'double' in field_type:
                 var = variable.ContinuousVariable(name=name)
@@ -179,12 +180,12 @@ class SqlTable(table.Table):
         var.to_sql = lambda: field_expr
         return var
 
-    def _get_fields(self, table_name):
+    def _get_fields(self, table_name, guess_values=False):
         cur = self._sql_get_fields(table_name)
         for field, field_type in cur.fetchall():
             yield (field, field_type,
                    self.quote_identifier(field),
-                   self._get_field_values(field, field_type))
+                   self._get_field_values(field, field_type) if guess_values else ())
 
     def _get_field_values(self, field_name, field_type):
         if 'double' in field_type:
