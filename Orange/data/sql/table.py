@@ -2,8 +2,7 @@
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
-import logging
-import traceback
+import re
 from urllib import parse
 
 import numpy as np
@@ -18,7 +17,6 @@ from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.filter import CustomFilterSql
 from Orange.data.sql.parser import SqlParser
 
-log = logging.getLogger('Orange.canvas.sql')
 
 
 class SqlTable(table.Table):
@@ -337,6 +335,18 @@ class SqlTable(table.Table):
             return self._count_rows()
         return self._cached__len__
 
+    def approx_len(self):
+        if self._cached__len__ is not None:
+            return self._cached__len__
+        if not self.row_filters:
+            cur = self._sql_reltuples()
+            return int(cur.fetchone()[0])
+        else:
+            cur = self._sql_count_estimate()
+            s = ''.join(row[0] for row in cur.fetchall())
+            return int(re.findall('rows=(\d*)', s)[0])
+
+
     def _count_rows(self):
         filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
@@ -567,6 +577,17 @@ class SqlTable(table.Table):
     def _sql_count_rows(self, filters):
         fields = ["COUNT(*)"]
         return self._sql_query(fields, filters)
+
+    def _sql_reltuples(self):
+        sql = "SELECT reltuples FROM pg_class WHERE relname = %s;"
+        return self._execute_sql_query(sql, (self.name,))
+
+    def _sql_count_estimate(self):
+        sql = ["EXPLAIN SELECT *", "FROM", self.table_name]
+        if self.row_filters:
+            sql.extend(["WHERE", " AND ".join(
+                f.to_sql() for f in self.row_filters)])
+        return self._execute_sql_query(' '.join(sql))
 
     def _sql_get_fields(self, table_name):
         table_name = self.unquote_identifier(table_name)
