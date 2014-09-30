@@ -318,6 +318,13 @@ class SqlTable(table.Table):
         table.host = self.host
         return table
 
+    def __bool__(self):
+        """Return True if the SqlTable is not empty."""
+        filters = [f.to_sql() for f in self.row_filters]
+        filters = [f for f in filters if f]
+        cur = self._sql_query(["1"], filters, limit=1)
+        return cur.fetchone() is not None
+
     _cached__len__ = None
 
     def __len__(self):
