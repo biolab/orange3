@@ -232,6 +232,7 @@ class PyListModel(QAbstractListModel):
             start, stop, step = _as_contiguous_range(start, stop, step)
             self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
+            s = len(self) + s if s < 0 else s
             self.beginRemoveRows(QModelIndex(), s, s)
         del self._list[s]
         del self._other_data[s]
@@ -250,6 +251,7 @@ class PyListModel(QAbstractListModel):
             self._other_data[s] = (_store() for _ in value)
             self.endInsertRows()
         else:
+            s = len(self) + s if s < 0 else s
             self._list[s] = value
             self._other_data[s] = _store()
             self.dataChanged.emit(self.index(s), self.index(s))
