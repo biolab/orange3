@@ -27,16 +27,30 @@ from Orange.widgets.utils import itemmodels, colorpalette
 
 
 def indices_to_mask(indices, size):
+    """
+    Convert an array of integer indices into a boolean mask index.
+    The elements in indices must be unique.
+
+    :param ndarray[int] indices: Integer indices.
+    :param int size: Size of the resulting mask.
+
+    """
     mask = numpy.zeros(size, dtype=bool)
     mask[indices] = True
     return mask
 
 
 def split_on_condition(array, condition):
+    """
+    Split an array in two parts based on a boolean mask array `condition`.
+    """
     return array[condition], array[~condition]
 
 
 def stack_on_condition(a, b, condition):
+    """
+    Inverse of `split_on_condition`.
+    """
     axis = 0
     N = condition.size
     shape = list(a.shape)
@@ -55,21 +69,34 @@ def stack_on_condition(a, b, condition):
 from collections import namedtuple
 from functools import singledispatch
 
+# Base commands
 Append = namedtuple("Append", ["points"])
 Insert = namedtuple("Insert", ["indices", "points"])
 Move = namedtuple("Move", ["indices", "delta"])
 DeleteIndices = namedtuple("DeleteIndices", ["indices"])
+# A composite of two operators
+Composite = namedtuple("Composite", ["f", "g"])
 
+# Non-base commands
+# These should be `normalized` (expressed) using base commands
 AirBrush = namedtuple("AirBrush", ["pos", "radius", "intensity", "rstate"])
 Jitter = namedtuple("Jitter", ["pos", "radius", "intensity", "rstate"])
 Magnet = namedtuple("Magnet", ["pos", "radius", "density"])
 DeleteRegion = namedtuple("DeleteRegion", ["region"])
 
-Composit = namedtuple("Composit", ["f", "g"])
 
-
+# Transforms functions for base commands
 @singledispatch
 def transform(command, data):
+    """
+    Generic transform for base commands
+
+    :param command: An instance of base command
+    :param ndarray data: Input data array
+    :rval:
+        A (transformed_data, command) tuple of the transformed input data
+        and a base command expressing the inverse operation.
+    """
     raise NotImplementedError
 
 
@@ -107,11 +134,11 @@ def move(command, data):
     return data, Move(command.indices, -command.delta)
 
 
-@transform.register(Composit)
+@transform.register(Composite)
 def compositum(command, data):
     data, ginv = command.g(data)
     data, finv = command.f(data)
-    return data, Composit(ginv, finv)
+    return data, Composite(ginv, finv)
 
 
 class PaintViewBox(pg.ViewBox):
@@ -191,7 +218,7 @@ class DataTool(QObject):
     editingStarted = Signal()
     #: User ended an editing operation.
     editingFinished = Signal()
-
+    #: Emits a data transformation command
     issueCommand = Signal(object)
 
     def __init__(self, parent, plot):
@@ -538,7 +565,11 @@ class ZoomTool(DataTool):
         pass
 
 
-class Command(QtGui.QUndoCommand):
+class SimpleUndoCommand(QtGui.QUndoCommand):
+    """
+    :param function redo: A function expressing a redo action.
+    :param function undo: A function expressing a undo action.
+    """
     def __init__(self, redo, undo, parent=None):
         super().__init__(parent)
         self._redo = redo
@@ -552,6 +583,8 @@ class Command(QtGui.QUndoCommand):
 
 
 class UndoCommand(QtGui.QUndoCommand):
+    """An QUndoCommand applying a data transformation operation
+    """
     def __init__(self, command, model, parent=None, text=None):
         super().__init__(parent,)
         self._command = command
@@ -567,12 +600,10 @@ class UndoCommand(QtGui.QUndoCommand):
         self._model.execute(self._undo)
 
     def mergeWith(self, other):
-#         return False
-
         if self.id() != other.id():
             return False
 
-        composit = Composit(self._command, other._command)
+        composit = Composite(self._command, other._command)
         merged_command = merge_cmd(composit)
 
         if merged_command is composit:
@@ -580,7 +611,7 @@ class UndoCommand(QtGui.QUndoCommand):
 
         assert other._undo is not None
 
-        composit = Composit(other._undo, self._undo)
+        composit = Composite(other._undo, self._undo)
         merged_undo = merge_cmd(composit)
 
         if merged_undo is composit:
@@ -598,7 +629,7 @@ def merge_cmd(composit):
     f = composit.f
     g = composit.g
 
-    if isinstance(g, Composit):
+    if isinstance(g, Composite):
         g = merge_cmd(g)
 
     if isinstance(f, Append) and isinstance(g, Append):
@@ -874,7 +905,7 @@ class OWPaintData(widget.OWWidget):
                         labels)
         newlabel = next(labels)
 
-        command = Command(
+        command = SimpleUndoCommand(
             lambda: self.class_model.append(newlabel),
             lambda: self.class_model.__delitem__(-1)
         )
@@ -894,8 +925,8 @@ class OWPaintData(widget.OWWidget):
         self.undo_stack.push(UndoCommand(DeleteIndices(mask), self))
         self.undo_stack.push(UndoCommand(Move((move_mask, 2), -1), self))
         self.undo_stack.push(
-            Command(lambda: self.class_model.__delitem__(index),
-                    lambda: self.class_model.insert(index, label)))
+            SimpleUndoCommand(lambda: self.class_model.__delitem__(index),
+                              lambda: self.class_model.insert(index, label)))
         self.undo_stack.endMacro()
 
         newindex = min(max(index - 1, 0), len(self.class_model) - 1)
