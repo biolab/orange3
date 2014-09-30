@@ -35,6 +35,7 @@ class OWSql(widget.OWWidget):
     table = Setting(None)
     tables = Setting([])
     sql = Setting("")
+    guess_values = Setting(True)
 
     def __init__(self, parent=None, signalManager=None, stored_settings=None):
         super(OWSql, self).__init__(parent=parent,
@@ -94,6 +95,10 @@ class OWSql(widget.OWWidget):
 
         box.layout().addWidget(self.custom_sql)
 
+        gui.checkBox(box, self, "guess_values",
+                     "Auto-discover discrete variables.",
+                     callback=self.open_table)
+
         if self.table:
             self.open_table()
 
@@ -146,7 +151,8 @@ class OWSql(widget.OWWidget):
                          database=self.database,
                          user=self.username,
                          password=self.password,
-                         table=self.table)
+                         table=self.table,
+                         guess_values=self.guess_values)
         self.send("Data", table)
 
     def execute_sql(self):
