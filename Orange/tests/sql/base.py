@@ -65,9 +65,10 @@ class PostgresTest(unittest.TestCase):
         return get_dburi() + '/' + str(table_name)
 
     @contextlib.contextmanager
-    def sql_table_from_data(self, data):
+    def sql_table_from_data(self, data, guess_values=True):
         table_name = self._create_sql_table(data)
-        yield sql_table.SqlTable(get_dburi() + '/' + str(table_name))
+        yield sql_table.SqlTable(get_dburi() + '/' \
+            + str(table_name), guess_values=guess_values)
         self.drop_sql_table(table_name)
 
     def _create_sql_table(self, data):

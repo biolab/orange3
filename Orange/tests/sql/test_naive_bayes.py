@@ -5,6 +5,7 @@ from numpy import array
 import Orange.classification.naive_bayes as nb
 from Orange.data.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
+from Orange.data import Domain
 from Orange.data.variable import DiscreteVariable
 from Orange.tests.sql.base import has_psycopg2
 
@@ -13,10 +14,9 @@ from Orange.tests.sql.base import has_psycopg2
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
         table = SqlTable(host='localhost', database='test', table='iris',
-                         type_hints=dict(iris=DiscreteVariable(
-                             values=['Iris-setosa', 'Iris-versicolor',
-                                     'Iris-virginica']),
-                                         __class_vars__=['iris']))
+                         type_hints=Domain([], DiscreteVariable("iris", 
+                                values=['Iris-setosa', 'Iris-virginica',
+                                        'Iris-versicolor'])))
         table = DiscretizeTable(table)
         bayes = nb.BayesLearner()
         clf = bayes(table)
