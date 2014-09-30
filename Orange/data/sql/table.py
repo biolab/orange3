@@ -333,14 +333,16 @@ class SqlTable(table.Table):
         computed only the first time the length is requested.
         """
         if self._cached__len__ is None:
-            cur = self._count_rows()
-            self._cached__len__ = cur.fetchone()[0]
+            return self._count_rows()
         return self._cached__len__
 
     def _count_rows(self):
         filters = [f.to_sql() for f in self.row_filters]
         filters = [f for f in filters if f]
-        return self._sql_count_rows(filters)
+        cur = self._sql_count_rows(filters)
+        self._cached__len__ = cur.fetchone()[0]
+        return self._cached__len__
+
 
     def has_weights(self):
         return False
