@@ -1,72 +1,238 @@
-import copy
-import math
+
 import os
-import random
+import unicodedata
+import itertools
+from functools import partial
+from itertools import count
+
+import numpy
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-from PyQt4 import QtSvg
+
+from PyQt4.QtGui import (
+    QListView, QAction, QIcon, QSizePolicy, QPen
+)
+
+from PyQt4.QtCore import Qt, QObject, QTimer, QSize, QSizeF, QPointF, QRectF
+from PyQt4.QtCore import pyqtSignal as Signal
+
+import pyqtgraph as pg
+
+import Orange.data
+
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting, SettingProvider
-from Orange.widgets.utils import itemmodels
-from Orange.widgets.utils.plot import owplot, owconstants, owpoint
-from Orange.data.domain import Domain
-from Orange.data.instance import Instance
-from Orange.data.table import Table
-from Orange.data.variable import DiscreteVariable, ContinuousVariable
+from Orange.widgets.settings import Setting
+from Orange.widgets.utils import itemmodels, colorpalette
 
 
-class PaintDataPlot(owplot.OWPlot):
-    def __init__(self, parent=None, name="None", show_legend=1, axes=None,
-                 widget=None):
+def indices_to_mask(indices, size):
+    """
+    Convert an array of integer indices into a boolean mask index.
+    The elements in indices must be unique.
 
-        super().__init__(parent, name, show_legend,
-                         axes or [owconstants.xBottom, owconstants.yLeft],
-                         widget)
-        self.state = owconstants.NOTHING
-        self.graph_margin = 10
-        self.y_axis_extra_margin = -10
-        self.animate_plot = False
-        self.animate_points = False
+    :param ndarray[int] indices: Integer indices.
+    :param int size: Size of the resulting mask.
+
+    """
+    mask = numpy.zeros(size, dtype=bool)
+    mask[indices] = True
+    return mask
+
+
+def split_on_condition(array, condition):
+    """
+    Split an array in two parts based on a boolean mask array `condition`.
+    """
+    return array[condition], array[~condition]
+
+
+def stack_on_condition(a, b, condition):
+    """
+    Inverse of `split_on_condition`.
+    """
+    axis = 0
+    N = condition.size
+    shape = list(a.shape)
+    shape[axis] = N
+    shape = tuple(shape)
+    arr = numpy.empty(shape, dtype=a.dtype)
+    arr[condition] = a
+    arr[~condition] = b
+    return arr
+
+
+# ###########################
+# Data manipulation operators
+# ###########################
+
+from collections import namedtuple
+from functools import singledispatch
+
+# Base commands
+Append = namedtuple("Append", ["points"])
+Insert = namedtuple("Insert", ["indices", "points"])
+Move = namedtuple("Move", ["indices", "delta"])
+DeleteIndices = namedtuple("DeleteIndices", ["indices"])
+# A composite of two operators
+Composite = namedtuple("Composite", ["f", "g"])
+
+# Non-base commands
+# These should be `normalized` (expressed) using base commands
+AirBrush = namedtuple("AirBrush", ["pos", "radius", "intensity", "rstate"])
+Jitter = namedtuple("Jitter", ["pos", "radius", "intensity", "rstate"])
+Magnet = namedtuple("Magnet", ["pos", "radius", "density"])
+DeleteRegion = namedtuple("DeleteRegion", ["region"])
+
+
+# Transforms functions for base commands
+@singledispatch
+def transform(command, data):
+    """
+    Generic transform for base commands
+
+    :param command: An instance of base command
+    :param ndarray data: Input data array
+    :rval:
+        A (transformed_data, command) tuple of the transformed input data
+        and a base command expressing the inverse operation.
+    """
+    raise NotImplementedError
+
+
+@transform.register(Append)
+def append(command, data):
+    return (numpy.vstack([data, command.points]),
+            DeleteIndices(slice(len(data),
+                                len(data) + len(command.points))))
+
+
+@transform.register(Insert)
+def insert(command, data):
+    indices = indices_to_mask(command.indices, len(data) + len(command.points))
+    return (stack_on_condition(command.points, data, indices),
+            DeleteIndices(indices))
+
+
+@transform.register(DeleteIndices)
+def delete(command, data, ):
+    if isinstance(command.indices, slice):
+        condition = indices_to_mask(command.indices, len(data))
+    else:
+        indices = numpy.asarray(command.indices)
+        if indices.dtype == numpy.bool:
+            condition = indices
+        else:
+            condition = indices_to_mask(indices, len(data))
+    data, deleted = split_on_condition(data, ~condition)
+    return data, Insert(command.indices, deleted)
+
+
+@transform.register(Move)
+def move(command, data):
+    data[command.indices] += command.delta
+    return data, Move(command.indices, -command.delta)
+
+
+@transform.register(Composite)
+def compositum(command, data):
+    data, ginv = command.g(data)
+    data, finv = command.f(data)
+    return data, Composite(ginv, finv)
+
+
+class PaintViewBox(pg.ViewBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setAcceptHoverEvents(True)
         self.tool = None
 
     def mousePressEvent(self, event):
-        if self.state == owconstants.NOTHING and self.tool:
-            self.tool.mousePressEvent(event)
+        if self.tool is not None and self.tool.mousePressEvent(event):
+            event.accept()
         else:
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.state == owconstants.NOTHING and self.tool:
-            self.tool.mouseMoveEvent(event)
+        if self.tool is not None and self.tool.mouseMoveEvent(event):
+            event.accept()
         else:
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if self.state == owconstants.NOTHING and self.tool:
-            self.tool.mouseReleaseEvent(event)
+        if self.tool is not None and self.tool.mouseReleaseEvent(event):
+            event.accept()
         else:
             super().mouseReleaseEvent(event)
 
+    def mouseClickEvent(self, event):
+        if self.tool is not None and self.tool.mouseClickEvent(event):
+            event.accept()
+        else:
+            super().mouseClickEvent(event)
 
-class DataTool(QtCore.QObject):
+    def mouseDragEvent(self, event, axis=None):
+        if self.tool is not None and self.tool.mouseDragEvent(event):
+            event.accept()
+        else:
+            super().mouseDragEvent(event)
+
+    def hoverEnterEvent(self, event):
+        if self.tool is not None and self.tool.hoverEnterEvent(event):
+            event.accept()
+        else:
+            super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        if self.tool is not None and self.tool.hoverLeaveEvent(event):
+            event.accept()
+        else:
+            super().hoverLeaveEvent(event)
+
+
+def crosshairs(color, radius=24, circle=False):
+    radius = max(radius, 16)
+    pixmap = QtGui.QPixmap(radius, radius)
+    pixmap.fill(Qt.transparent)
+    painter = QtGui.QPainter()
+    painter.begin(pixmap)
+    painter.setRenderHints(painter.Antialiasing)
+    pen = QtGui.QPen(QtGui.QBrush(color), 1)
+    pen.setWidthF(1.5)
+    painter.setPen(pen)
+    if circle:
+        painter.drawEllipse(2, 2, radius - 2, radius - 2)
+    painter.drawLine(radius / 2, 7, radius / 2, radius / 2 - 7)
+    painter.drawLine(7, radius / 2, radius / 2 - 7, radius / 2)
+    painter.end()
+    return pixmap
+
+
+class DataTool(QObject):
     """
-    A base class for data tools that operate on PaintDataPlot
-    widget.
-
+    A base class for data tools that operate on PaintViewBox.
     """
-    cursor = None
-    editingFinished = QtCore.pyqtSignal()
-    radiusDensity = False
+    #: Tool mouse cursor has changed
+    cursorChanged = Signal(QtGui.QCursor)
+    #: User started an editing operation.
+    editingStarted = Signal()
+    #: User ended an editing operation.
+    editingFinished = Signal()
+    #: Emits a data transformation command
+    issueCommand = Signal(object)
 
-    def __init__(self, parent):
-        QtCore.QObject.__init__(self, parent)
-        self.widget = parent
-        self.state = owconstants.NOTHING
+    def __init__(self, parent, plot):
+        super().__init__(parent)
+        self._cursor = Qt.ArrowCursor
+        self._plot = plot
 
-    def setCursor(self):
-        if self.cursor is not None:
-            self.widget.plot.setCursor(self.cursor)
+    def cursor(self):
+        return QtGui.QCursor(self._cursor)
+
+    def setCursor(self, cursor):
+        if self._cursor != cursor:
+            self._cursor = QtGui.QCursor(cursor)
+            self.cursorChanged.emit()
 
     def mousePressEvent(self, event):
         return False
@@ -77,399 +243,464 @@ class DataTool(QtCore.QObject):
     def mouseReleaseEvent(self, event):
         return False
 
-    def toDataPoint(self, point):
+    def mouseClickEvent(self, event):
+        return False
+
+    def mouseDragEvent(self, event):
+        return False
+
+    def hoverEnterEvent(self, event):
+        return False
+
+    def hoverLeaveEvent(self, event):
+        return False
+
+    def mapToPlot(self, point):
+        """Map a point in ViewBox local coordinates into plot coordinates.
         """
-        Converts mouse position point to data point as its represented on the
-        graph.
-        """
-        # first we convert it from widget point to scene point
-        scenePoint = self.widget.plot.mapToScene(point)
-        # and then from scene to data point
-        return self.widget.plot.map_from_graph(scenePoint, zoom=True)
+        box = self._plot.getViewBox()
+        return box.mapToView(point)
 
-    def onToolSelection(self):
-        self.widget.plot.state = self.state
-        self.setCursor()
-        self.widget.radiusSlider.box.setVisible(self.radiusDensity)
-        self.widget.densitySlider.box.setVisible(self.radiusDensity)
+    def activate(self, ):
+        """Activate the tool"""
+        pass
+
+    def deactivate(self, ):
+        """Deactivate a tool"""
+        pass
 
 
-
-class ColorTool(DataTool):
-    def setCursor2(self, circle):
-        pixmap = QtGui.QPixmap(24, 24)
-        pixmap.fill(QtCore.Qt.transparent)
-        painter = QtGui.QPainter()
-        painter.begin(pixmap)
-        painter.setRenderHints(painter.Antialiasing)
-        color = self.widget.getColor(self.widget.selectedClassLabelIndex())
-        pen = QtGui.QPen(QtGui.QBrush(color), 1)
-        pen.setWidthF(1.5)
-        painter.setPen(pen)
-        if circle:
-            painter.drawEllipse(2, 2, 20, 20)
-        painter.drawLine(12, 7, 12, 17)
-        painter.drawLine(7, 12, 17, 12)
-        painter.end()
-        self.widget.plot.setCursor(QtGui.QCursor(pixmap))
-
-
-class PutInstanceTool(ColorTool):
-    def setCursor(self):
-        super().setCursor2(False)
-
+class PutInstanceTool(DataTool):
+    """
+    Add a single data instance with a mouse click.
+    """
     def mousePressEvent(self, event):
-        dataPoint = self.toDataPoint(event.pos())
-        if event.buttons() & QtCore.Qt.LeftButton:
-            self.widget.addDataPoints([dataPoint])
+        if event.button() == Qt.LeftButton:
+            self.editingStarted.emit()
+            pos = self.mapToPlot(event.pos())
+            self.issueCommand.emit(Append([pos]))
+            event.accept()
             self.editingFinished.emit()
-        return True
+            return True
+        else:
+            return super().mousePressEvent(event)
 
 
-class BrushTool(ColorTool):
-    radiusDensity = True
-
-    def setCursor(self):
-        super().setCursor2(True)
-
+class PenTool(DataTool):
+    """
+    Add points on a path specified with a mouse drag.
+    """
     def mousePressEvent(self, event):
-        if event.buttons() & QtCore.Qt.LeftButton:
-            dataPoint = self.toDataPoint(event.pos())
-            self.previousDataPoint = dataPoint
-            self.widget.addDataPoints(self.createPoints(dataPoint))
-        return True
+        if event.button() == Qt.LeftButton:
+            self.editingStarted.emit()
+            self.__handleEvent(event)
+            return True
+        else:
+            return super().mousePressEvent()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & QtCore.Qt.LeftButton:
-            dataPoint = self.toDataPoint(event.pos())
-            r2000 = self.widget.brushRadius / 2000
-            if (abs(dataPoint[0] - self.previousDataPoint[0]) > r2000 or
-                    abs(dataPoint[1] - self.previousDataPoint[1]) > r2000):
-                self.widget.addDataPoints(self.createPoints(dataPoint))
-                self.previousDataPoint = dataPoint
-        return True
+        if event.buttons() & Qt.LeftButton:
+            self.__handleEvent(event)
+            return True
+        else:
+            return super().mouseMoveEvent()
 
     def mouseReleaseEvent(self, event):
-        if event.button() & QtCore.Qt.LeftButton:
+        if event.button() == Qt.LeftButton:
             self.editingFinished.emit()
-        return True
+            return True
+        else:
+            return super().mouseReleaseEvent()
 
-    def createPoints(self, point):
-        """
-        Creates random points around the point that is passed in.
-        """
-        points = []
-        x, y = point
-        radius = self.widget.brushRadius / 1000
-        for i in range(self.widget.density):
-            rndX = random.random() * radius
-            rndY = random.random() * radius
-            points.append((x + (radius / 2) - rndX, y + (radius / 2) - rndY))
-        return points
+    def __handleEvent(self, event):
+        pos = self.mapToPlot(event.pos())
+        self.issueCommand.emit(Append([pos]))
+        event.accept()
+
+
+class AirBrushTool(DataTool):
+    """
+    Add points with an 'air brush'.
+    """
+    def __init__(self, parent, plot):
+        super().__init__(parent, plot)
+        self.__timer = QTimer(self, interval=50)
+        self.__timer.timeout.connect(self.__timout)
+        self.__count = itertools.count()
+        self.__pos = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.editingStarted.emit()
+            self.__pos = self.mapToPlot(event.pos())
+            self.__timer.start()
+            return True
+        else:
+            return super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            self.__pos = self.mapToPlot(event.pos())
+            return True
+        else:
+            return super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.__timer.stop()
+            self.editingFinished.emit()
+            return True
+        else:
+            return super().mouseReleaseEvent(event)
+
+    def __timout(self):
+        self.issueCommand.emit(
+            AirBrush(self.__pos, None, None, next(self.__count))
+        )
+
+
+def random_state(rstate):
+    if isinstance(rstate, numpy.random.RandomState):
+        return rstate
+    else:
+        return numpy.random.RandomState(rstate)
+
+
+def create_data(x, y, radius, size, rstate):
+    random = random_state(rstate)
+    x = random.normal(x, radius / 2, size=size)
+    y = random.normal(y, radius / 2, size=size)
+    return numpy.c_[x, y]
 
 
 class MagnetTool(DataTool):
-    radiusDensity = True
+    """
+    Draw points closer to the mouse position.
+    """
+    def __init__(self, parent, plot):
+        super().__init__(parent, plot)
+        self.__timer = QTimer(self, interval=50)
+        self.__timer.timeout.connect(self.__timeout)
+        self._radius = 20.0
+        self._density = 4.0
+        self._pos = None
 
     def mousePressEvent(self, event):
-        radius = self.widget.brushRadius
-        if event.buttons() & QtCore.Qt.LeftButton:
-            dataPoint = self.toDataPoint(event.pos())
-            self.widget.magnet(dataPoint, self.widget.density, radius)
-        return True
+        if event.button() == Qt.LeftButton:
+            self.editingStarted.emit()
+            self._pos = self.mapToPlot(event.pos())
+            self.__timer.start()
+            return True
+        else:
+            return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        self.mousePressEvent(event)
+        if event.buttons() & Qt.LeftButton:
+            self._pos = self.mapToPlot(event.pos())
+            return True
+        else:
+            return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() & QtCore.Qt.LeftButton:
+        if event.button() == Qt.LeftButton:
+            self.__timer.stop()
             self.editingFinished.emit()
-        return True
+            return True
+        else:
+            return super().mouseReleaseEvent(event)
+
+    def __timeout(self):
+        self.issueCommand.emit(
+            Magnet(self._pos, self._radius, self._density)
+        )
 
 
 class JitterTool(DataTool):
-    radiusDensity = True
+    """
+    Jitter points around the mouse position.
+    """
+    def __init__(self, parent, plot):
+        super().__init__(parent, plot)
+        self.__timer = QTimer(self, interval=50)
+        self.__timer.timeout.connect(self._do)
+        self._pos = None
+        self._radius = 20.0
+        self._intensity = 5.0
+        self.__count = itertools.count()
 
     def mousePressEvent(self, event):
-        radius = self.widget.brushRadius
-        if event.buttons() & QtCore.Qt.LeftButton:
-            dataPoint = self.toDataPoint(event.pos())
-            self.widget.jitter(dataPoint, self.widget.density, radius)
-        return True
+        if event.button() == Qt.LeftButton:
+            self.editingStarted.emit()
+            self._pos = self.mapToPlot(event.pos())
+            self.__timer.start()
+            return True
+        else:
+            return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        self.mousePressEvent(event)
+        if event.buttons() & Qt.LeftButton:
+            self._pos = self.mapToPlot(event.pos())
+            return True
+        else:
+            return super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.__timer.stop()
+            self.editingFinished.emit()
+            return True
+        else:
+            return super().mouseReleaseEvent(event)
+
+    def _do(self):
+        self.issueCommand.emit(
+            Jitter(self._pos, self._radius, self._intensity,
+                   next(self.__count))
+        )
 
 
 class SelectTool(DataTool):
-    cursor = QtCore.Qt.ArrowCursor
+    cursor = Qt.ArrowCursor
 
-    def __init__(self, parent):
-        super(SelectTool, self).__init__(parent)
-        self.widget.plot.activate_selection()
+    def __init__(self, parent, plot):
+        super().__init__(parent, plot)
+        self._item = None
+        self._start_pos = None
+        self._selection_rect = None
+        self._delete_action = QAction(
+            "Delete", self,
+            shortcut=QtGui.QKeySequence.Delete,
+            shortcutContext=Qt.WindowShortcut
+        )
+        self._delete_action.triggered.connect(self.delete)
 
-    def onToolSelection(self):
-        super().onToolSelection()
-        self.widget.plot.activate_selection()
+    def setSelectionRect(self, rect):
+        if self._selection_rect != rect:
+            self._selection_rect = QRectF(rect)
+            self._item.setPos(self._selection_rect.topLeft())
+            self._item.setSize(self._selection_rect.size())
+
+    def selectionRect(self):
+        return QRectF(self._item.pos(), QSizeF(*self._item.size()))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            pos = self.mapToPlot(event.pos())
+            if self._item.isVisible():
+                if self.selectionRect().contains(pos):
+                    event.setAccepted(False)
+                    self._item.setCursor(Qt.ClosedHandCursor)
+                    return False
+
+            self._start_pos = pos
+            self._item.setVisible(True)
+            self._plot.addItem(self._item)
+
+            self.setSelectionRect(QRectF(pos, pos))
+            event.accept()
+            self.editingStarted.emit()
+            return True
+        else:
+            return super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            pos = self.mapToPlot(event.pos())
+            self.setSelectionRect(QRectF(self._start_pos, pos).normalized())
+            event.accept()
+            return True
+        else:
+            return super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            pos = self.mapToPlot(event.pos())
+            self.setSelectionRect(QRectF(self._start_pos, pos).normalized())
+            event.accept()
+            self.editingFinished.emit()
+            self._item.setCursor(Qt.OpenHandCursor)
+            return True
+        else:
+            return super().mouseReleaseEvent(event)
+
+    def activate(self):
+        if self._item is None:
+            self._item = pg.RectROI((0, 0), (0, 0), pen=(25, 25, 25))
+            self._item.setAcceptedMouseButtons(Qt.LeftButton)
+            self._item.setVisible(False)
+            self._item.setCursor(Qt.OpenHandCursor)
+            self._plot.addItem(self._item)
+
+        self._plot.addAction(self._delete_action)
+
+    def deactivate(self):
+        self.setSelectionRect(QRectF())
+        self._item.setVisible(False)
+        self._plot.removeAction(self._delete_action)
+
+    def delete(self):
+        self.issueCommand.emit(DeleteRegion(self.selectionRect()))
 
 
 class ZoomTool(DataTool):
-    # Cannot create QIcon before application is initialized
+
     cursor = None
 
-    def __init__(self, parent):
-        if self.cursor is None:
-            self.cursor = QtGui.QCursor(
-                QtGui.QPixmap(_i("Dlg_zoom.png", "../icons")))
-        super(ZoomTool, self).__init__(parent)
-        self.state = owconstants.ZOOMING
+    def __init__(self, parent, plot):
+        super().__init__(parent, plot)
+
+    def mousePressEvent(self, event):
+        return False
+
+    def mouseMoveEvent(self, event):
+        return False
+
+    def mouseReleaseEvent(self, event):
+        return False
+
+    def activate(self):
+        pass
+
+    def deactivate(self):
+        pass
 
 
-
-class CommandAddData(QtGui.QUndoCommand):
-    def __init__(self, points, classLabel, widget, description):
-        super(CommandAddData, self).__init__(description)
-        self.data = widget.data
-        self.points = points
-        self.row = len(self.data)
-        self.classLabel = classLabel
-        self.widget = widget
-
-    def redo(self):
-        instances = [Instance(self.widget.data.domain,
-                              [x, y, self.classLabel])
-                     for x, y in self.points if 0 <= x <= 1 and 0 <= y <= 1]
-        self.widget.data.extend(instances)
-        self.widget.updatePlot()
-
-    def undo(self):
-        del self.widget.data[self.row:self.row + len(self.points)]
-        self.widget.updatePlot()
-
-
-class CommandDelData(QtGui.QUndoCommand):
-    def __init__(self, selectedPoints, widget, description):
-        super(CommandDelData, self).__init__(description)
-        self.data = widget.data
-        self.points = selectedPoints
-        self.widget = widget
-        self.oldData = copy.deepcopy(self.data)
+class SimpleUndoCommand(QtGui.QUndoCommand):
+    """
+    :param function redo: A function expressing a redo action.
+    :param function undo: A function expressing a undo action.
+    """
+    def __init__(self, redo, undo, parent=None):
+        super().__init__(parent)
+        self._redo = redo
+        self._undo = undo
 
     def redo(self):
-        attr1, attr2 = self.widget.attr1, self.widget.attr2
-        selected = [i for i, ex in enumerate(self.data)
-                    if (float(ex[attr1]), float(ex[attr2])) in self.points]
-        for i in reversed(selected):
-            del self.widget.data[i]
-        self.widget.updatePlot()
+        self._redo()
 
     def undo(self):
-        self.widget.data = self.oldData
-        self.widget.updatePlot()
+        self._undo()
 
 
-class CommandMagnet(QtGui.QUndoCommand):
-    def __init__(self, point, density, radius, widget, description):
-        super(CommandMagnet, self).__init__(description)
-        self.data = widget.data
-        self.widget = widget
-        self.density = density
-        self.radius = radius
-        self.point = point
-        self.oldData = copy.deepcopy(self.widget.data)
+class UndoCommand(QtGui.QUndoCommand):
+    """An QUndoCommand applying a data transformation operation
+    """
+    def __init__(self, command, model, parent=None, text=None):
+        super().__init__(parent,)
+        self._command = command
+        self._model = model
+        self._undo = None
+        if text is not None:
+            self.setText(text)
 
     def redo(self):
-        x, y = self.point
-        rx = ry = self.radius / 1000
-        for ex in self.widget.data:
-            x1, y1 = float(ex[self.widget.attr1]), float(ex[self.widget.attr2])
-            distsq = (x1 - x) ** 2 + (y1 - y) ** 2
-            dist = math.sqrt(distsq)
-            attraction = self.density / 100.0
-            advance = 0.005
-            dx = -(x1 - x) / dist * attraction / max(distsq, rx) * advance
-            dy = -(y1 - y) / dist * attraction / max(distsq, ry) * advance
-            ex[self.widget.attr1] = x1 + dx
-            ex[self.widget.attr2] = y1 + dy
-        self.widget.updatePlot()
+        self._undo = self._model.execute(self._command)
 
     def undo(self):
-        self.widget.data = self.oldData
-        self.widget.updatePlot()
+        self._model.execute(self._undo)
+
+    def mergeWith(self, other):
+        if self.id() != other.id():
+            return False
+
+        composit = Composite(self._command, other._command)
+        merged_command = merge_cmd(composit)
+
+        if merged_command is composit:
+            return False
+
+        assert other._undo is not None
+
+        composit = Composite(other._undo, self._undo)
+        merged_undo = merge_cmd(composit)
+
+        if merged_undo is composit:
+            return False
+
+        self._command = merged_command
+        self._undo = merged_undo
+        return True
+
+    def id(self):
+        return 1
 
 
-class CommandJitter(QtGui.QUndoCommand):
-    def __init__(self, point, density, radius, widget, description):
-        super(CommandJitter, self).__init__(description)
-        self.data = widget.data
-        self.widget = widget
-        self.density = density
-        self.point = point
-        self.radius = radius
-        self.oldData = copy.deepcopy(self.data)
+def merge_cmd(composit):
+    f = composit.f
+    g = composit.g
 
-    def redo(self):
-        x, y = self.point
-        rx = ry = self.radius / 1000
-        for ex in self.widget.data:
-            x1, y1 = float(ex[self.widget.attr1]), float(ex[self.widget.attr2])
-            distsq = (x1 - x) ** 2 + (y1 - y) ** 2
-            dist = math.sqrt(distsq)
-            attraction = self.density / 100.0
-            advance = 0.01
-            dx = -(x1 - x) / dist * attraction / max(dist, rx) * advance
-            dy = -(y1 - y) / dist * attraction / max(dist, ry) * advance
-            ex[self.widget.attr1] = x1 - random.normalvariate(0, dx)
-            ex[self.widget.attr2] = y1 - random.normalvariate(0, dy)
-        self.widget.updatePlot()
+    if isinstance(g, Composite):
+        g = merge_cmd(g)
 
-    def undo(self):
-        self.widget.data = self.oldData
-        self.widget.updatePlot()
+    if isinstance(f, Append) and isinstance(g, Append):
+        return Append(numpy.vstack((f.points, g.points)))
+    elif isinstance(f, Move) and isinstance(g, Move):
+        if f.indices == g.indices:
+            return Move(f.indices, f.delta + g.delta)
+        else:
+            return composit
+#     elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
+#         indices = numpy.array(g.indices)
+#         return DeleteIndices(indices)
+    else:
+        return composit
 
 
-class CommandAddClassLabel(QtGui.QUndoCommand):
-    def __init__(self, newClassLabel, classValuesModel, widget,
-                 description):
-        super(CommandAddClassLabel, self).__init__(description)
-        self.data = widget.data
-        self.newClassLabel = newClassLabel
-        self.oldDomain = widget.data.domain
-        self.classValuesModel = classValuesModel
-        self.widget = widget
-        self.newClassLabel = newClassLabel
-        self.oldData = copy.deepcopy(self.data)
-        #self.oldClassValuesModel = copy.deepcopy(self.classValuesModel)
+def apply_attractor(data, point, density, radius):
+    delta = data - point
+    dist_sq = numpy.sum(delta ** 2, axis=1)
+    dist = numpy.sqrt(dist_sq)
 
-    def redo(self):
-        self.classValuesModel.append(self.newClassLabel)
-        newdomain = Domain([ContinuousVariable(self.widget.attr1),
-                            ContinuousVariable(self.widget.attr2)],
-                           DiscreteVariable("Class",
-                                            values=self.classValuesModel))
-        newdata = Table(newdomain)
-        instances = [Instance(newdomain,
-                              [float(ex[a]) for a in ex.domain.attributes] +
-                              [str(ex.get_class())]) for ex in self.data]
+    dist[dist < radius] = 0
+    dist_sq = dist ** 2
+    valid = (dist_sq > 100 * numpy.finfo(dist.dtype).eps)
+    assert valid.shape == (dist.shape[0],)
 
-        newdata.extend(instances)
-        self.widget.data = newdata
-        self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
-        newindex = self.classValuesModel.index(len(self.classValuesModel) - 1)
-        self.widget.classValuesView.selectionModel().select(
-            newindex, QtGui.QItemSelectionModel.ClearAndSelect)
-        self.widget.updatePlot()
-        self.widget.updateCursor()
+    df = 0.05 * density / dist_sq[valid]
 
-    def undo(self):
-        self.widget.data = self.oldData
-        #self.widget.classValuesModel = self.oldClassValuesModel
-        del self.classValuesModel[-1]
-        index = self.widget.selectedClassLabelIndex()
-        newindex = self.classValuesModel.index(max(0, index - 1))
-        self.widget.classValuesView.selectionModel().select(
-            newindex, QtGui.QItemSelectionModel.ClearAndSelect)
-        self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
-        self.widget.updatePlot()
-        self.widget.updateCursor()
+    df_bound = 1 - radius / dist[valid]
+
+    df = numpy.clip(df, 0, df_bound)
+
+    dx = numpy.zeros_like(delta)
+    dx[valid] = df.reshape(-1, 1) * delta[valid]
+    return dx
 
 
-class CommandRemoveClassLabel(QtGui.QUndoCommand):
-    def __init__(self, classValuesModel, index, widget, description):
-        super(CommandRemoveClassLabel, self).__init__(description)
-        self.data = widget.data
-        self.classValuesModel = classValuesModel
-        self.index = index
-        self.widget = widget
-        self.oldData = copy.deepcopy(self.data)
-        #self.oldClassValuesModel = copy.deepcopy(self.classValuesModel)
+def apply_jitter(data, point, density, radius, rstate=None):
+    random = random_state(rstate)
 
-    def redo(self):
-        self.label = self.classValuesModel.pop(self.index)
-        examples = [ex for ex in self.data
-                    if str(ex.get_class()) != self.label]
-        newdomain = Domain([ContinuousVariable(self.widget.attr1),
-                            ContinuousVariable(self.widget.attr2)],
-                           DiscreteVariable("Class",
-                                            values=self.classValuesModel))
-        newdata = Table(newdomain)
-        for ex in examples:
-            if str(ex.get_class()) != self.label and \
-                    str(ex.get_class()) in self.classValuesModel:
-                newdata.append(
-                    Instance(newdomain,
-                             [float(ex[a]) for a in ex.domain.attributes] +
-                             [str(ex.get_class())]))
+    delta = data - point
+    dist_sq = numpy.sum(delta ** 2, axis=1)
+    dist = numpy.sqrt(dist_sq)
+    valid = dist_sq > 100 * numpy.finfo(dist_sq.dtype).eps
 
-        self.widget.data = newdata
-        self.widget.updatePlot()
-        self.widget.updateCursor()
+    df = 0.05 * density / dist_sq[valid]
+    df_bound = 1 - radius / dist[valid]
+    df = numpy.clip(df, 0, df_bound)
 
-    def undo(self):
-        self.classValuesModel.insert(self.index, self.label)
-        self.widget.data = self.oldData
-        #self.widget.classValuesModel = self.oldClassValuesModel
-        self.widget.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
-        self.widget.updatePlot()
-        self.widget.updateCursor()
+    dx = numpy.zeros_like(delta)
+    jitter = random.normal(0, 0.1, size=(df.size, data.shape[1]))
 
-
-class CommandChangeLabelName(QtGui.QUndoCommand):
-    def __init__(self, data, classValuesModel, index, widget, description):
-        super(CommandChangeLabelName, self).__init__(description)
-        self.data = data
-        self.classValuesModel = classValuesModel
-        self.changedLabel = classValuesModel[index]
-        self.widget = widget
-        self.index = index
-
-    def redo(self):
-        newdomain = Domain([ContinuousVariable(self.widget.attr1),
-                            ContinuousVariable(self.widget.attr2)],
-                           DiscreteVariable("Class",
-                                            values=self.classValuesModel))
-        newdata = Table(newdomain)
-        for ex in self.data:
-            print(ex.get_class())
-            if str(ex.get_class()) not in self.classValuesModel:
-                self.oldLabelName = str(ex.get_class())
-                instance = Instance(
-                    newdomain, [float(ex[a]) for a in ex.domain.attributes] +
-                               [self.changedLabel])
-                newdata.append(instance)
-            else:
-                newdata.append(
-                    Instance(newdomain,
-                             [float(ex[a]) for a in ex.domain.attributes] +
-                             [str(ex.get_class())]))
-        self.widget.data = newdata
-        self.widget.updatePlot()
-
-    def undo(self):
-        self.classValuesModel[self.index] = self.oldLabelName
-        self.widget.data = self.data
-        self.widget.updatePlot()
+    dx[valid, :] = df.reshape(-1, 1) * jitter
+    return dx
 
 
 class ColoredListModel(itemmodels.PyListModel):
-
-    MIME_TYPE = "application/x-Orange-ColoredList"
-
-    def __init__(self, iterable, parent, plot, flags,
+    def __init__(self, iterable, parent, flags,
                  list_item_role=QtCore.Qt.DisplayRole,
                  supportedDropActions=QtCore.Qt.MoveAction):
-        self.plot = plot
+
         super().__init__(iterable, parent, flags, list_item_role,
                          supportedDropActions)
+        self.colors = colorpalette.ColorPaletteGenerator(10)
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if self._is_index_valid_for(index, self) and \
                 role == QtCore.Qt.DecorationRole:
-            rgb = self.plot.discrete_palette.getRGB(index.row())
-            return gui.createAttributePixmap("", QtGui.QColor(*rgb))
+            return gui.createAttributePixmap("", self.colors[index.row()])
         else:
             return super().data(index, role)
-
 
 
 def _i(name, icon_path="icons/paintdata",
@@ -479,7 +710,7 @@ def _i(name, icon_path="icons/paintdata",
 
 class OWPaintData(widget.OWWidget):
     TOOLS = [
-        ("Brush", "Create multiple instances", BrushTool, _i("brush.svg")),
+        ("Brush", "Create multiple instances", AirBrushTool, _i("brush.svg")),
         ("Put", "Put individual instances", PutInstanceTool, _i("put.svg")),
         ("Select", "Select and move instances", SelectTool,
             _i("select-transparent_42px.png")),
@@ -489,81 +720,84 @@ class OWPaintData(widget.OWWidget):
     ]
 
     name = "Paint Data"
-    description = """
-    Creates the data by painting on the graph."""
-    long_description = """
-    """
+    description = """Create data by painting on the graph."""
+    long_description = ""
     icon = "icons/PaintData.svg"
-    author = "Martin Frlin"
     priority = 10
-    category = "Data"
     keywords = ["data", "paint", "create"]
-    outputs = [("Data", Table)]
 
-    commit_on_change = Setting(False)
+    outputs = [("Data", Orange.data.Table)]
+
+    autocommit = Setting(False)
     attr1 = Setting("x")
     attr2 = Setting("y")
+
     brushRadius = Setting(75)
     density = Setting(7)
 
-    plot = SettingProvider(PaintDataPlot)
-
-    def __init__(self, parent=None, signalManager=None, settings=None):
-        super().__init__(parent, signalManager, settings)
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self.data = None
+        self.current_tool = None
+        self._invalidated = False
 
-        self.undoStack = QtGui.QUndoStack(self)
+        self.labels = ["Class-1", "Class-2"]
 
-        self.plot = PaintDataPlot(self.mainArea, "Painted Plot", widget=self)
-        self.classValuesModel = ColoredListModel(
-            ["Class-1", "Class-2"], self, self.plot,
+        self.undo_stack = QtGui.QUndoStack(self)
+
+        self.class_model = ColoredListModel(
+            self.labels, self,
             flags=QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled |
-            QtCore.Qt.ItemIsEditable)
-        self.classValuesModel.dataChanged.connect(self.classNameChange)
-        self.data = Table(
-            Domain([ContinuousVariable(self.attr1),
-                    ContinuousVariable(self.attr2)],
-                   DiscreteVariable("Class", values=self.classValuesModel)))
+                  QtCore.Qt.ItemIsEditable)
 
-        self.toolsStackCache = {}
+        self.class_model.dataChanged.connect(self._class_value_changed)
+        self.class_model.rowsInserted.connect(self._class_count_changed)
+        self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        self.initUI()
-        self.initPlot()
-        self.updatePlot()
+        self.tools_cache = {}
 
-    def initUI(self):
+        self._init_ui()
+
+        self.data = numpy.zeros((0, 3))
+        self.colors = colorpalette.ColorPaletteGenerator(10)
+
+    def _init_ui(self):
         namesBox = gui.widgetBox(self.controlArea, "Names")
 
         gui.lineEdit(namesBox, self, "attr1", "Variable X ",
                      controlWidth=80, orientation="horizontal",
-                     enterPlaceholder=True, callback=self.commitIf)
+                     enterPlaceholder=True, callback=self._attr_name_changed)
         gui.lineEdit(namesBox, self, "attr2", "Variable Y ",
                      controlWidth=80, orientation="horizontal",
-                     enterPlaceholder=True, callback=self.commitIf)
+                     enterPlaceholder=True, callback=self._attr_name_changed)
         gui.separator(namesBox)
 
         gui.widgetLabel(namesBox, "Class labels")
-        self.classValuesView = listView = QtGui.QListView()
-        listView.setSelectionMode(QtGui.QListView.SingleSelection)
-        listView.setSizePolicy(QtGui.QSizePolicy.Ignored,
-                               QtGui.QSizePolicy.Maximum)
-        listView.setModel(self.classValuesModel)
-        listView.selectionModel().select(
-            self.classValuesModel.index(0),
-            QtGui.QItemSelectionModel.ClearAndSelect)
-        listView.setFixedHeight(80)
-        listView.clicked.connect(self.updateCursor)
+        self.classValuesView = listView = QListView(
+            selectionMode=QListView.SingleSelection,
+            sizePolicy=QSizePolicy(QSizePolicy.Ignored,
+                                   QSizePolicy.Maximum)
+        )
+        listView.setModel(self.class_model)
+        itemmodels.select_row(listView, 0)
         namesBox.layout().addWidget(listView)
 
-        addClassLabel = QtGui.QAction("+", self)
-        addClassLabel.pyqtConfigure(toolTip="Add class label")
-        addClassLabel.triggered.connect(self.addNewClassLabel)
-        self.removeClassLabel = QtGui.QAction("-", self)
-        self.removeClassLabel.pyqtConfigure(toolTip="Remove class label")
-        self.removeClassLabel.triggered.connect(self.removeSelectedClassLabel)
+        addClassLabel = QAction(
+            "+", self,
+            toolTip="Add new class label",
+            triggered=self.add_new_class_label
+        )
+
+        self.removeClassLabel = QAction(
+            unicodedata.lookup("MINUS SIGN"), self,
+            toolTip="Remove selected class label",
+            triggered=self.remove_selected_class_label
+        )
+
         actionsWidget = itemmodels.ModelActionsWidget(
-            [addClassLabel, self.removeClassLabel], self)
+            [addClassLabel, self.removeClassLabel], self
+        )
         actionsWidget.layout().addStretch(10)
         actionsWidget.layout().setSpacing(1)
         namesBox.layout().addWidget(actionsWidget)
@@ -576,198 +810,287 @@ class OWPaintData(widget.OWWidget):
         self.toolActions.setExclusive(True)
 
         for i, (name, tooltip, tool, icon) in enumerate(self.TOOLS):
-            action = QtGui.QAction(name, self)
-            action.setToolTip(tooltip)
-            action.setCheckable(True)
-            action.setIcon(QtGui.QIcon(icon))
-            # using the old connect here due to problems with overloading
-            self.connect(action, QtCore.SIGNAL("triggered()"),
-                         lambda tool=tool: self.setCurrentTool(tool))
-            button = QtGui.QToolButton()
+            action = QAction(
+                name, self,
+                toolTip=tooltip,
+                checkable=True,
+                icon=QIcon(icon),
+            )
+            action.triggered.connect(partial(self.set_current_tool, tool))
+
+            button = QtGui.QToolButton(
+                iconSize=QSize(24, 24),
+                toolButtonStyle=Qt.ToolButtonTextUnderIcon,
+                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                       QSizePolicy.Fixed)
+            )
             button.setDefaultAction(action)
-            button.setIconSize(QtCore.QSize(24, 24))
-            button.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
-            button.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
-                                 QtGui.QSizePolicy.Fixed)
+
             toolsBox.layout().addWidget(button, i / 3, i % 3)
             self.toolActions.addAction(action)
-
-            if name in ("Jitter", "Magnet"):
-                picture = QtSvg.QSvgRenderer(icon)
-                pixmap = QtGui.QPixmap(24, 24)
-                pixmap.fill(QtCore.Qt.transparent)
-                painter = QtGui.QPainter()
-                painter.begin(pixmap)
-                painter.setRenderHints(painter.Antialiasing)
-                picture.render(painter)
-                painter.end()
-                tool.cursor = QtGui.QCursor(pixmap)
 
         for column in range(3):
             toolsBox.layout().setColumnMinimumWidth(column, 10)
             toolsBox.layout().setColumnStretch(column, 1)
 
-        smallButtons = gui.widgetBox(buttonBox)
+        undo = self.undo_stack.createUndoAction(self)
+        redo = self.undo_stack.createRedoAction(self)
 
-#        undoRedoBox = gui.widgetBox(smallButtons, "", addSpace=True)
-        icon_undo = _i("Dlg_undo.png", "../icons")
-        undo = QtGui.QAction(QtGui.QIcon(icon_undo), "", self)
-        undo.pyqtConfigure(toolTip="Undo Action (Ctrl+Z)")
-        undo.setShortcut("Ctrl+Z")
-        undo.triggered.connect(self.undoStack.undo)
-        icon_redo = _i("Dlg_redo.png", "../icons")
-        redo = QtGui.QAction(QtGui.QIcon(icon_redo), "", self)
-        redo.pyqtConfigure(toolTip="Redo Action (Ctrl+Shift+Z)")
-        redo.setShortcut("Ctrl+Shift+Z")
-        redo.triggered.connect(self.undoStack.redo)
-        undoRedoActionsWidget = itemmodels.ModelActionsWidget(
-            [undo, redo], self, direction=QtGui.QBoxLayout.TopToBottom)
-        undoRedoActionsWidget.layout().addStretch(10)
-        undoRedoActionsWidget.layout().setSpacing(1)
-        smallButtons.layout().addWidget(undoRedoActionsWidget)
+        undo.setShortcut(QtGui.QKeySequence.Undo)
+        redo.setShortcut(QtGui.QKeySequence.Redo)
+
+        self.addActions([undo, redo])
 
         gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
-        self.radiusSlider = gui.hSlider(
-            indBox, self, "brushRadius", None, 50, 100,
-            label="Radius", createLabel=None)
-        self.densitySlider = gui.hSlider(
-            indBox, self, "density", None, 3, 10,
-            label="Density", createLabel=None)
+        form = QtGui.QFormLayout(
+            formAlignment=Qt.AlignLeft,
+            labelAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
+        )
+        indBox.layout().addLayout(form)
+        slider = gui.hSlider(
+            indBox, self, "brushRadius", minValue=1, maxValue=100,
+            createLabel=False
+        )
+        form.addRow("Radius", slider)
+
+        slider = gui.hSlider(
+            indBox, self, "density", None, minValue=1, maxValue=100,
+            createLabel=False
+        )
+
+        form.addRow("Intensity", slider)
 
         gui.rubber(self.controlArea)
         commitBox = gui.widgetBox(self.controlArea, "Commit")
-        gui.checkBox(commitBox, self, "commit_on_change", "Commit on change",
+        gui.checkBox(commitBox, self, "autocommit", "Commit on change",
                      tooltip="Send the data on any change.")
-        gui.button(commitBox, self, "Commit", callback=self.sendData)
+        gui.button(commitBox, self, "Commit", callback=self.commit)
 
-        QtGui.QShortcut("Delete", self).activated.connect(self.deleteSelected)
+        # main area GUI
+        viewbox = PaintViewBox()
+        self.plotview = pg.PlotWidget(background="w", viewBox=viewbox)
+        self.plot = self.plotview.getPlotItem()
+
+        axis_color = self.palette().color(QtGui.QPalette.Text)
+        axis_pen = QtGui.QPen(axis_color)
+
+        tickfont = QtGui.QFont(self.font())
+        tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
+
+        axis = self.plot.getAxis("bottom")
+        axis.setLabel(self.attr1)
+        axis.setPen(axis_pen)
+        axis.setTickFont(tickfont)
+
+        axis = self.plot.getAxis("left")
+        axis.setLabel(self.attr2)
+        axis.setPen(axis_pen)
+        axis.setTickFont(tickfont)
+
+        self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0),
+                           disableAutoRange=True)
+
+        self.mainArea.layout().addWidget(self.plotview)
 
         # enable brush tool
         self.toolActions.actions()[0].setChecked(True)
-        self.setCurrentTool(self.TOOLS[0][2])
-        # main area GUI
-        self.mainArea.layout().addWidget(self.plot)
+        self.set_current_tool(self.TOOLS[0][2])
 
-    def getColor(self, i):
-        rgb = self.plot.discrete_palette.getRGB(i)
-        return QtGui.QColor(*rgb)
+    def add_new_class_label(self):
 
-    def updateCursor(self):
-        self.currentTool.setCursor()
+        labels = ("Class-%i" % i for i in count(1))
+        labels = filter(lambda label: label not in self.class_model,
+                        labels)
+        newlabel = next(labels)
 
-    def initPlot(self):
-        self.plot.set_axis_title(owconstants.xBottom, self.data.domain[0].name)
-        self.plot.set_axis_title(owconstants.yLeft, self.data.domain[1].name)
-        self.plot.set_axis_scale(owconstants.xBottom, 0, 1, 0.1)
-        self.plot.set_axis_scale(owconstants.yLeft, 0, 1, 0.1)
-        self.updatePlot()
+        command = SimpleUndoCommand(
+            lambda: self.class_model.append(newlabel),
+            lambda: self.class_model.__delitem__(-1)
+        )
+        self.undo_stack.push(command)
 
-    def updatePlot(self):
-        colors = [self.getColor(i)
-                  for i in range(self.classValuesModel.rowCount())]
-        c_data = [colors[int(value)] for value in self.data.Y[:, 0]]
-        self.plot.set_main_curve_data(
-            list(self.data.X[:, 0]), list(self.data.X[:, 1]),
-            color_data=c_data, label_data=[], size_data=[5],
-            shape_data=[owpoint.OWPoint.Diamond])
-        self.plot.replot()
+    def remove_selected_class_label(self):
+        index = self.selected_class_label()
 
-    def addNewClassLabel(self):
-        i = 1
-        newlabel = ""  # For PyCharm
-        while True:
-            newlabel = "Class-%i" % i
-            if newlabel not in self.classValuesModel:
-                break
-            i += 1
-        command = CommandAddClassLabel(newlabel,
-                                       self.classValuesModel, self,
-                                       "Add Label")
-        self.undoStack.push(command)
+        if index is None:
+            return
 
-        self.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
-        self.updateCursor()
+        label = self.class_model[index]
+        mask = self.data[:, 2] == index
+        move_mask = self.data[~mask][:, 2] > index
 
-    def removeSelectedClassLabel(self):
-        index = self.selectedClassLabelIndex()
-        if index is not None:
-            command = CommandRemoveClassLabel(self.classValuesModel,
-                                              index, self, "Remove Label")
-            self.undoStack.push(command)
+        self.undo_stack.beginMacro("Delete class label")
+        self.undo_stack.push(UndoCommand(DeleteIndices(mask), self))
+        self.undo_stack.push(UndoCommand(Move((move_mask, 2), -1), self))
+        self.undo_stack.push(
+            SimpleUndoCommand(lambda: self.class_model.__delitem__(index),
+                              lambda: self.class_model.insert(index, label)))
+        self.undo_stack.endMacro()
 
-        newindex = self.classValuesModel.index(max(0, index - 1))
-        self.classValuesView.selectionModel().select(
-            newindex, QtGui.QItemSelectionModel.ClearAndSelect)
-        self.removeClassLabel.setEnabled(len(self.classValuesModel) > 1)
+        newindex = min(max(index - 1, 0), len(self.class_model) - 1)
+        itemmodels.select_row(self.classValuesView, newindex)
 
-    def classNameChange(self, index, _):
-        command = CommandChangeLabelName(self.classValuesModel,
-                                         index.row(), self, "Label Change")
-        self.undoStack.push(command)
+    def _class_count_changed(self):
+        self.labels = list(self.class_model)
+        self.removeClassLabel.setEnabled(len(self.class_model) > 1)
 
-    def selectedClassLabelIndex(self):
-        rows = [i.row()
-                for i in self.classValuesView.selectionModel().selectedRows()]
+        if self.selected_class_label() is None:
+            itemmodels.select_row(self.classValuesView, 0)
+
+    def _class_value_changed(self, index, _):
+        index = index.row()
+        newvalue = self.class_model[index]
+        oldvalue = self.labels[index]
+        if newvalue != oldvalue:
+            self.labels[index] = newvalue
+#             command = Command(
+#                 lambda: self.class_model.__setitem__(index, newvalue),
+#                 lambda: self.class_model.__setitem__(index, oldvalue),
+#             )
+#             self.undo_stack.push(command)
+            self.invalidate()
+
+    def selected_class_label(self):
+        rows = self.classValuesView.selectedIndexes()
         if rows:
-            return rows[0]
+            return rows[0].row()
         else:
             return None
 
-    def setCurrentTool(self, tool):
-        if tool not in self.toolsStackCache:
-            newtool = tool(self)
-            newtool.editingFinished.connect(self.commitIf)
-            self.toolsStackCache[tool] = newtool
+    def set_current_tool(self, tool):
+        if self.current_tool is not None:
+            self.current_tool.deactivate()
+            self.current_tool.editingStarted.disconnect(
+                self._on_editing_started)
+            self.current_tool.editingFinished.disconnect(
+                self._on_editing_finished)
+            self.current_tool = None
+            self.plot.getViewBox().tool = None
 
-        self.currentTool = tool = self.toolsStackCache[tool]
-        self.plot.tool = tool
-        tool.onToolSelection()
+        if tool not in self.tools_cache:
+            newtool = tool(self, self.plot)
+            newtool.editingFinished.connect(self.invalidate)
+            self.tools_cache[tool] = newtool
+            newtool.issueCommand.connect(self._add_command)
 
-    def addDataPoints(self, points):
-        command = CommandAddData(
-            points, self.classValuesModel[self.selectedClassLabelIndex()], self, "Add Data")
-        self.undoStack.push(command)
+        self.current_tool = tool = self.tools_cache[tool]
+        self.plot.getViewBox().tool = tool
+        tool.editingStarted.connect(self._on_editing_started)
+        tool.editingFinished.connect(self._on_editing_finished)
+        tool.activate()
 
-    def delDataPoints(self, points):
-        if points:
-            command = CommandDelData(points, self, "Delete Data")
-            self.undoStack.push(command)
+    def _on_editing_started(self):
+        self.undo_stack.beginMacro("macro")
 
-    def deleteSelected(self):
-        points = [point.coordinates() for point in self.plot.selected_points()]
-        self.delDataPoints(points)
-        self.plot.unselect_all_points()
-        self.commitIf()
+    def _on_editing_finished(self):
+        self.undo_stack.endMacro()
 
-    def magnet(self, point, density, radius):
-        command = CommandMagnet(point, density, radius, self, "Magnet")
-        self.undoStack.push(command)
+    def execute(self, command):
+        if isinstance(command, (Append, DeleteIndices, Insert, Move)):
+            self.data, undo = transform(command, self.data)
+            self._replot()
+            return undo
+        else:
+            assert False, "Non normalized command"
 
-    def jitter(self, point, density, radius):
-        command = CommandJitter(point, density, radius, self, "Jitter")
-        self.undoStack.push(command)
+    def _add_command(self, cmd):
+        name = "Name"
+        if isinstance(cmd, Append):
+            cls = self.selected_class_label()
+            points = numpy.array([[p.x(), p.y(), cls] for p in cmd.points])
+            self.undo_stack.push(UndoCommand(Append(points), self, text=name))
+        elif isinstance(cmd, Move):
+            self.undo_stack.push(UndoCommand(cmd, self, text=name))
+        elif isinstance(cmd, DeleteRegion):
+            indices = [i for i, (x, y) in enumerate(self.data[:, :2])
+                       if cmd.region.contains(QPointF(x, y))]
+            indices = numpy.array(indices, dtype=int)
+            self.undo_stack.push(
+                UndoCommand(DeleteIndices(indices), self, text="Delete")
+            )
+        elif isinstance(cmd, DeleteIndices):
+            self.undo_stack.push(UndoCommand(cmd, self, text="Delete"))
+        elif isinstance(cmd, (Insert, )):
+            self.undo_stack.push(UndoCommand(cmd, self))
+        elif isinstance(cmd, AirBrush):
+            data = create_data(cmd.pos.x(), cmd.pos.y(),
+                               self.brushRadius / 1000,
+                               1 + self.density / 20, cmd.rstate)
+            self._add_command(Append([QPointF(*p) for p in zip(*data.T)]))
+        elif isinstance(cmd, Jitter):
+            point = numpy.array([cmd.pos.x(), cmd.pos.y()])
+            delta = - apply_jitter(self.data[:, :2], point,
+                                   self.density / 100.0, 0, cmd.rstate)
+            self._add_command(Move((..., slice(0, 2)), delta))
+        elif isinstance(cmd, Magnet):
+            point = numpy.array([cmd.pos.x(), cmd.pos.y()])
+            delta = - apply_attractor(self.data[:, :2], point,
+                                      self.density / 100.0, 0)
+            self._add_command(Move((..., slice(0, 2)), delta))
+        else:
+            assert False, "unreachable"
 
-    def commitIf(self):
-        if self.commit_on_change:
-            self.sendData()
+    def _replot(self):
+        def pen(color):
+            pen = QPen(color, 1)
+            pen.setCosmetic(True)
+            return pen
 
-    def sendData(self):
-        data = self.data
-        values = set([str(ex.get_class()) for ex in data])
-        if len(values) == 1:
-            # Remove the useless class variable.
-            domain = Domain(data.domain.attributes)
-            data = Table(domain, data)
+        self.plot.clear()
+        nclasses = len(self.class_model)
+        pens = [pen(self.colors[i]) for i in range(nclasses)]
+
+        item = pg.ScatterPlotItem(
+            self.data[:, 0], self.data[:, 1],
+            symbol="+",
+            pen=[pens[int(ci)] for ci in self.data[:, 2]]
+        )
+
+        self.plot.addItem(item)
+
+    def _attr_name_changed(self):
+        self.plot.getAxis("bottom").setLabel(self.attr1)
+        self.plot.getAxis("left").setLabel(self.attr2)
+        self.invalidate()
+
+    def invalidate(self):
+        self._invalidated = True
+        if self.autocommit:
+            self.commit()
+
+    def commit(self):
+        X, Y = self.data[:, :2], self.data[:, 2]
+        attrs = (Orange.data.ContinuousVariable(self.attr1),
+                 Orange.data.ContinuousVariable(self.attr2))
+        if len(self.class_model) > 1:
+            domain = Orange.data.Domain(
+                attrs,
+                Orange.data.DiscreteVariable(
+                    "Class", values=list(self.class_model))
+            )
+            data = Orange.data.Table.from_numpy(domain, X, Y)
+        else:
+            domain = Orange.data.Domain(attrs)
+            data = Orange.data.Table.from_numpy(domain, X)
+
         self.send("Data", data)
+        self._invalidated = False
 
     def sizeHint(self):
-        return QtCore.QSize(1200, 800)
+        sh = super().sizeHint()
+        return sh.expandedTo(QSize(1200, 800))
+
+    def onDeleteWidget(self):
+        self.plot.clear()
 
 
 if __name__ == "__main__":
     a = QtGui.QApplication([])
     ow = OWPaintData()
     ow.show()
+    ow.raise_()
     a.exec_()
     ow.saveSettings()
+    ow.onDeleteWidget()
