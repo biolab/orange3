@@ -1,6 +1,6 @@
-import numpy
 from sklearn import neighbors
 from sklearn.preprocessing import Imputer
+from numpy import isnan, cov
 import Orange.data
 import Orange.classification
 from Orange.data.continuizer import DomainContinuizer
@@ -8,13 +8,12 @@ from Orange.data.continuizer import DomainContinuizer
 def is_discrete(var):
     return isinstance(var, Orange.data.DiscreteVariable)
 
-def replace_nan(X):
-    # Default scikit Imputer
-    # Use Orange imputer when implemented
-    if numpy.isnan(X).sum():
-            imp = Imputer()
-            X = imp.fit_transform(X)
-    return X
+def replace_nan(X, imp_model):
+        # Default scikit Imputer
+        # Use Orange imputer when implemented
+        if isnan(X).sum():
+                X = imp_model.transform(X)
+        return X
 
 class KNNLearner(Orange.classification.Fitter):
     def __init__(self, n_neighbors=5, metric="euclidean", normalize=True):
@@ -43,25 +42,28 @@ class KNNLearner(Orange.classification.Fitter):
         return super().__call__(data)
 
     def fit(self, X, Y, W):
-        X = replace_nan(X)
+        self.imputer = Imputer()
+        self.imputer.fit(X)
+        X = replace_nan(X, self.imputer)
         if self.metric == "mahalanobis":
             skclf = neighbors.KNeighborsClassifier(
-                n_neighbors=self.n_neighbors, metric=self.metric, V = numpy.cov(X.T)
+                n_neighbors=self.n_neighbors, metric=self.metric, V = cov(X.T)
             )
         else:
             skclf = neighbors.KNeighborsClassifier(
                 n_neighbors=self.n_neighbors, metric=self.metric
             )
         skclf.fit(X, Y.ravel())
-        return KNNClassifier(skclf)
+        return KNNClassifier(skclf, self.imputer)
 
 
 class KNNClassifier(Orange.classification.Model):
-    def __init__(self, clf):
+    def __init__(self, clf, imp):
         self.clf = clf
+        self.imputer = imp
 
     def predict(self, X):
-        X = replace_nan(X)
+        X = replace_nan(X, imp_model=self.imputer)
         value = self.clf.predict(X)
         prob = self.clf.predict_proba(X)
         return value, prob
