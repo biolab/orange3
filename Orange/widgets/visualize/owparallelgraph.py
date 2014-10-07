@@ -161,6 +161,15 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         selected_curves = defaultdict(list)
         background_curves = defaultdict(list)
+
+        diff, mins = [], []
+        for i in self.attribute_indices:
+            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+            mins.append(self.domain_data_stat[i].min)
+
+        def scale_row(row):
+            return [(x - m) / d for x, m, d in zip(row, mins, diff)]
+
         for row_idx, row in enumerate(self.data[:, self.attribute_indices]):
             #if not self.valid_data[row_idx]:
             #    continue
@@ -169,7 +178,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
             if is_selected(row):
                 color += (self.alpha_value,)
-                selected_curves[color].extend(row)
+                selected_curves[color].extend(scale_row(row))
                 self.selected_examples.append(row_idx)
             else:
                 color += (self.alpha_value_2,)
