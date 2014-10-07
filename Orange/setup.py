@@ -9,7 +9,6 @@ def configuration(parent_package='', top_path=None):
         libraries.append('m')
 
     config = Configuration('Orange', parent_package, top_path)
-
     config.add_subpackage('classification')
     config.add_subpackage('data')
     config.add_subpackage('evaluation')

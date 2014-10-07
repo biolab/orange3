@@ -2,9 +2,12 @@
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
+import logging
+import traceback
 from urllib import parse
 
 import numpy as np
+import sys
 
 import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
@@ -14,6 +17,8 @@ from .. import domain, variable, value, table, instance, filter,\
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.filter import CustomFilterSql
 from Orange.data.sql.parser import SqlParser
+
+log = logging.getLogger('Orange.canvas.sql')
 
 
 class SqlTable(table.Table):
@@ -228,11 +233,7 @@ class SqlTable(table.Table):
                 var = self.domain[col_idx]
                 return value.Value(
                     var,
-                    self.backend.query(
-                        self.table_name,
-                        fields=var.name,
-                        limit=row_idx,
-                    )
+                    self._query(self.table_name, var, rows=[row_idx])
                 )
             except TypeError:
                 pass
@@ -623,10 +624,19 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def _execute_sql_query(self, sql, param=None):
+        caller = [s for s in traceback.extract_stack() if not s[2].startswith('_')]
+        self.debug(caller[-1])
+        self.debug(sql)
+        sys.stdout.flush()
         cur = self.connection.cursor()
         cur.execute(sql, param)
+        self.debug('DONE')
         self.connection.commit()
         return cur
+
+    def debug(self, message):
+        import datetime
+        log.debug('%s %s', datetime.datetime.now(), message)
 
 
 class SqlRowInstance(instance.Instance):

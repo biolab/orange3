@@ -9,16 +9,17 @@ import math
 import numpy as np
 
 from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
-from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath
+from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
 
 from Orange.canvas.utils import environ
+from Orange.data.discretization import DiscretizeTable
+from Orange.feature.discretization import EqualFreq
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
-from Orange.statistics.distribution import get_distribution
-from Orange.widgets.settings import SettingProvider, Setting
-from Orange.data import Variable, ContinuousVariable, DiscreteVariable
+from Orange.widgets.settings import Setting
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
-    xBottom, yLeft
+    xBottom, yLeft, OWPlotItem
 from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleData
 
 NO_STATISTICS = 0
@@ -34,6 +35,10 @@ class OWParallelGraph(OWPlot, ScaleData):
     show_distributions = Setting(False)
     show_attr_values = Setting(True)
     show_statistics = Setting(default=False)
+
+    group_lines = Setting(default=False)
+    number_of_groups = Setting(default=5)
+    number_of_steps = Setting(default=30)
 
     use_splines = Setting(False)
     alpha_value = Setting(150)
@@ -57,6 +62,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.visualized_mid_labels = []
         self.attribute_indices = []
         self.valid_data = []
+        self.groups = {}
 
         self.selected_examples = []
         self.unselected_examples = []
@@ -64,9 +70,16 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.top_pixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/downgreenarrow.png"))
 
     def set_data(self, data, subset_data=None, **args):
-        OWPlot.setData(self, data)
-        ScaleData.set_data(self, data, subset_data, **args)
+        self.start_progress()
+        self.set_progress(1, 100)
+        self.data = data
+        self.have_data = True
         self.domain_contingencies = None
+        self.groups = {}
+        OWPlot.setData(self, data)
+        ScaleData.set_data(self, data, subset_data, no_data=True, **args)
+        self.end_progress()
+
 
     def update_data(self, attributes, mid_labels=None):
         old_selection_conditions = self.selection_conditions
@@ -95,7 +108,12 @@ class OWParallelGraph(OWPlot, ScaleData):
         if self.data_has_discrete_class:
             self.discrete_palette.set_number_of_colors(len(self.data_domain.class_var.values))
 
-        self.draw_curves()
+        if self.group_lines:
+            self.show_statistics = False
+            self.draw_groups()
+        else:
+            self.show_statistics = True
+            self.draw_curves()
         self.draw_distributions()
         self.draw_axes()
         self.draw_statistics()
@@ -143,16 +161,24 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         selected_curves = defaultdict(list)
         background_curves = defaultdict(list)
-        for row_idx, data in enumerate(self.scaled_data.T):
-            if not self.valid_data[row_idx]:
-                continue
 
-            row = data[self.attribute_indices]
+        diff, mins = [], []
+        for i in self.attribute_indices:
+            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+            mins.append(self.domain_data_stat[i].min)
+
+        def scale_row(row):
+            return [(x - m) / d for x, m, d in zip(row, mins, diff)]
+
+        for row_idx, row in enumerate(self.data[:, self.attribute_indices]):
+            #if not self.valid_data[row_idx]:
+            #    continue
+
             color = self.select_color(row_idx)
 
             if is_selected(row):
                 color += (self.alpha_value,)
-                selected_curves[color].extend(row)
+                selected_curves[color].extend(scale_row(row))
                 self.selected_examples.append(row_idx)
             else:
                 color += (self.alpha_value_2,)
@@ -165,9 +191,9 @@ class OWParallelGraph(OWPlot, ScaleData):
     def select_color(self, row_index):
         if self.data_has_class:
             if self.data_has_continuous_class:
-                return self.continuous_palette.getRGB(self.no_jittering_scaled_data[self.data_class_index][row_index])
+                return self.continuous_palette.getRGB(self.data[row_index, self.data_class_index])
             else:
-                return self.discrete_palette.getRGB(self.original_data[self.data_class_index][row_index])
+                return self.discrete_palette.getRGB(self.data[row_index, self.data_class_index])
         else:
             return 0, 0, 0
 
@@ -182,6 +208,41 @@ class OWParallelGraph(OWPlot, ScaleData):
             curve.set_segment_length(n_attr)
             curve.set_data(x_values, y_values)
             curve.attach(self)
+
+    def draw_groups(self):
+        phis, mus, sigmas = self.compute_groups()
+
+        diff, mins = [], []
+        for i in self.attribute_indices:
+            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+            mins.append(self.domain_data_stat[i].min)
+
+        for j, (phi, cluster_mus, cluster_sigma) in enumerate(zip(phis, mus, sigmas)):
+            for i, (mu1, sigma1, mu2, sigma2), in enumerate(
+                    zip(cluster_mus, cluster_sigma, cluster_mus[1:], cluster_sigma[1:])):
+                nmu1 = (mu1 - mins[i]) / diff[i]
+                nmu2 = (mu2 - mins[i + 1]) / diff[i + 1]
+                nsigma1 = math.sqrt(sigma1) / diff[i]
+                nsigma2 = math.sqrt(sigma2) / diff[i + 1]
+
+                polygon = ParallelCoordinatePolygon(i, nmu1, nmu2, nsigma1, nsigma2, phi,
+                                                    self.discrete_palette.getRGB(j))
+                polygon.attach(self)
+
+        self.replot()
+
+    def compute_groups(self):
+        key = (tuple(self.attributes), self.number_of_groups, self.number_of_steps)
+        if key not in self.groups:
+            def callback(i, n):
+                self.set_progress(i, 2*n)
+
+            conts = create_contingencies(self.data[:, self.attribute_indices], callback=callback)
+            self.set_progress(50, 100)
+            w, mu, sigma, phi = lac(conts, self.number_of_groups, self.number_of_steps)
+            self.set_progress(100, 100)
+            self.groups[key] = phi, mu, sigma
+        return self.groups[key]
 
     def draw_legend(self):
         if self.data_has_class:
@@ -235,7 +296,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                     curr = []
                     class_values = get_variable_values_sorted(self.data_domain.class_var)
                     for c in range(len(class_values)):
-                        attr_values = self.scaled_data[attr_idx, self.original_data[self.data_class_index] == c]
+                        attr_values = self.data[attr_idx, self.data[self.data_class_index] == c]
                         attr_values = attr_values[~np.isnan(attr_values)]
 
                         if len(attr_values) == 0:
@@ -535,3 +596,232 @@ class ParallelCoordinatesCurve(OWCurve):
         self.path.moveTo(x, y)
         for x, y in segment[1:]:
             self.path.lineTo(x, y)
+
+
+class ParallelCoordinatePolygon(OWPlotItem):
+    def __init__(self, i, mu1, mu2, sigma1, sigma2, phi, color):
+        OWPlotItem.__init__(self)
+        self.outer_box = QGraphicsPolygonItem(self)
+        self.inner_box = QGraphicsPolygonItem(self)
+
+        self.i = i
+        self.mu1 = mu1
+        self.mu2 = mu2
+        self.sigma1 = sigma1
+        self.sigma2 = sigma2
+        self.phi = phi
+
+        self.twosigmapolygon = QPolygonF([
+            QPointF(i, mu1 - sigma1), QPointF(i, mu1 + sigma1),
+            QPointF(i + 1, mu2 + sigma2), QPointF(i + 1, mu2 - sigma2),
+            QPointF(i, mu1 - sigma1)
+        ])
+
+        self.sigmapolygon = QPolygonF([
+            QPointF(i, mu1 - .5 * sigma1), QPointF(i, mu1 + .5 * sigma1),
+            QPointF(i + 1, mu2 + .5 * sigma2), QPointF(i + 1, mu2 - .5 * sigma2),
+            QPointF(i, mu1 - .5 * sigma1)
+        ])
+
+        if isinstance(color, tuple):
+            color = QColor(*color)
+        color.setAlphaF(.3)
+        self.outer_box.setBrush(color)
+        self.outer_box.setPen(QColor(0, 0, 0, 0))
+        self.inner_box.setBrush(color)
+        self.inner_box.setPen(color)
+
+    def update_properties(self):
+        self.outer_box.setPolygon(self.graph_transform().map(self.twosigmapolygon))
+        self.inner_box.setPolygon(self.graph_transform().map(self.sigmapolygon))
+
+
+def initialize_random(conts, k):
+    mu = np.zeros((k, len(conts)))
+    sigma = np.zeros((k, len(conts)))
+    for i, (c, cw) in enumerate(conts):
+        w = np.random.random((len(c), k))
+        w /= w.sum(axis=1)[:, None]
+
+        c = c[:, 0] if i == 0 else c[:, 1]
+
+        for j in range(k):
+            mu1 = np.dot(w[:, j] * cw, c) / (w[:, j] * cw).sum()
+            cn = c - mu1
+            sigma1 = np.sum(cn ** 2 * w[:, j] * cw, axis=0) / (w[:, j] * cw).sum()
+
+            mu[j, i] = mu1
+            sigma[j, i] = sigma1
+
+    return mu, sigma
+
+def initialize_kmeans(conts, k):
+    x = []
+    xm = {}
+    for i, (c, cw) in enumerate(conts[1:-1]):
+        oldx, oldxm, x, xm = x, xm, [], {}
+        if i == 0:
+            for a, w in zip(c, cw):
+                x.append((tuple(a), w))
+                xm.setdefault(tuple(a)[1:], []).append(len(x) - 1)
+        else:
+            for a, w in zip(c, cw):
+                for l in oldxm[tuple(a[:2])]:
+                    olda, oldw = oldx[l]
+                    x.append((olda + (a[2],), oldw+w))
+                    xm.setdefault(tuple(a)[1:], []).append(len(x) - 1)
+
+    X = np.array([y[0] for y in x])
+
+    import sklearn.cluster
+    kmeans = sklearn.cluster.KMeans(n_clusters=k)
+    Y = kmeans.fit_predict(X)
+    means = kmeans.cluster_centers_
+    covars = np.zeros((k, len(conts)))
+    for j in range(k):
+        xn = X[Y == j, :] - means[j]
+        covars[j] = np.sum(xn ** 2, axis=0) / len(xn)
+
+    return means, covars
+
+
+def lac(conts, k, nsteps=30, window_size=1):
+    """
+    k expected classes,
+    m data points,
+    each with dim dimensions
+    """
+    dim = len(conts)
+
+    np.random.seed(42)
+    # Initialize parameters
+    priors = np.ones(k) / k
+
+
+    print("Initializing")
+    import sys; sys.stdout.flush()
+    means, covars = initialize_random(conts, k)
+    #means, covars = initialize_kmeans(conts, k)
+    print("Done")
+
+    w = [np.empty((k, len(c[0]),)) for c in conts]
+    active = np.ones(k, dtype=np.bool)
+
+    for i in range(1, nsteps + 1):
+        for l, (c, cw) in enumerate(conts):
+            lower = l - window_size if l - window_size >= 0 else None
+            upper = l + window_size + 1 if l + window_size + 1 <= dim else None
+            dims = slice(lower, upper)
+            active_dim = min(l, window_size)
+
+            x = c
+
+            # E step
+            for j in range(k):
+                if any(np.abs(covars[j, dims]) < 1e-15):
+                    active[j] = 0
+
+                if active[j]:
+                    det = covars[j, dims].prod()
+                    inv_covars = 1. / covars[j, dims]
+                    xn = x - means[j, dims]
+                    factor = (2.0 * np.pi) ** (x.shape[1]/ 2.0) * det ** 0.5
+                    w[l][j] = priors[j] * np.exp(np.sum(xn * inv_covars * xn, axis=1) * -.5) / factor
+                else:
+                    w[l][j] = 0
+            w[l][active] /= w[l][active].sum(axis=0)
+
+            # M step
+            n = np.sum(w[l], axis=1)
+            priors = n / np.sum(n)
+            for j in range(k):
+                if n[j]:
+                    mu = np.dot(w[l][j, :] * cw, x[:, active_dim]) / (w[l][j, :] * cw).sum()
+
+                    xn = x[:, active_dim] - mu
+                    sigma = np.sum(xn ** 2 * w[l][j] * cw, axis=0) / (w[l][j, :] * cw).sum()
+
+                    if np.isnan(mu).any() or np.isnan(sigma).any():
+                        return w, means, covars, priors
+                else:
+                    active[j] = 0
+                    mu = 0.
+                    sigma = 0.
+                means[j, l] = mu
+                covars[j, l] = sigma
+
+    # w = np.zeros((k, m))
+    # for j in range(k):
+    #     if active[j]:
+    #         det = covars[j].prod()
+    #         inv_covars = 1. / covars[j]
+    #         xn = X - means[j]
+    #         factor = (2.0 * np.pi) ** (xn.shape[1] / 2.0) * det ** 0.5
+    #         w[j] = priors[j] * exp(-.5 * np.sum(xn * inv_covars * xn, axis=1)) / factor
+    # w[active] /= w[active].sum(axis=0)
+
+    return w, means, covars, priors
+
+
+def create_contingencies(X, callback=None):
+    window_size = 1
+    dim = len(X.domain)
+
+    X_ = DiscretizeTable(X, method=EqualFreq(n=10))
+    vals = [[tuple(map(str.strip, v.strip('[]()<>=').split(','))) for v in var.values]
+            for var in X_.domain]
+    m = [{i: (float(v[0]) if len(v) == 1 else (float(v[0]) + (float(v[1]) - float(v[0])) / 2))
+          for i, v in enumerate(val)} for val in vals]
+
+    from Orange.data.sql.table import SqlTable
+    if isinstance(X, SqlTable):
+        conts = []
+        al = len(X.domain)
+        if al > 1:
+            conts.append(create_sql_contingency(X_, [0, 1], m))
+            if callback:
+                callback(1, al)
+            for a1, a2, a3 in zip(range(al), range(1, al), range(2, al)):
+                conts.append(create_sql_contingency(X_, [a1, a2, a3], m))
+                if callback:
+                    callback(a3, al)
+            if al > 2:
+                conts.append(create_sql_contingency(X_, [al-2, al-1], m))
+                if callback:
+                    callback(al, al)
+    else:
+        conts = [defaultdict(float) for i in range(len(X_.domain))]
+        for i, r in enumerate(X_):
+            row = tuple(m[vi].get(v) for vi, v in enumerate(r))
+            for l in range(len(X_.domain)):
+                lower = l - window_size if l - window_size >= 0 else None
+                upper = l + window_size + 1 if l + window_size + 1 <= dim else None
+                dims = slice(lower, upper)
+
+                conts[l][row[dims]] += 1
+        conts = [zip(*x.items()) for x in conts]
+        conts = [(np.array(c), np.array(cw)) for c, cw in conts]
+
+    # for i, ((c1, cw1), (c2, cw2)) in enumerate(zip(contss, conts)):
+    #     a = np.sort(np.hstack((c1, cw1[:, None])), axis=0)
+    #     b = np.sort(np.hstack((c2, cw2[:, None])), axis=0)
+    #     assert_almost_equal(a, b)
+
+    return conts
+
+
+def create_sql_contingency(X, columns, m):
+    group_by = [a.to_sql() for a in (X.domain[c] for c in columns)]
+    fields = group_by + ['COUNT(%s)' % group_by[0]]
+    filters = [f.to_sql() for f in X.row_filters]
+    filters = [f for f in filters if f]
+    cur = X._sql_query(fields, filters, group_by)
+    def convert(row):
+        c = len(row) - 1
+        return [
+            m[columns[i]].get(v) if i != c else v
+            for i, v in enumerate(row)
+        ]
+
+    cont = np.array(list(map(convert, cur.fetchall())), dtype='float')
+    return cont[:, :-1], cont[:, -1:].flatten()
