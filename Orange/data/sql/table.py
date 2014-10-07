@@ -181,6 +181,11 @@ class SqlTable(table.Table):
         else:
             if 'double' in field_type:
                 var = variable.ContinuousVariable(name=name)
+            elif 'int' in field_type and not values:
+                var = variable.ContinuousVariable(name=name)
+            elif 'int' in field_type and values:
+                # TODO: make sure that int values are OK
+                var = variable.DiscreteVariable(name=name, values=values)
             elif 'char' in field_type and values:
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
@@ -203,7 +208,7 @@ class SqlTable(table.Table):
     def _get_field_values(self, field_name, field_type):
         if 'double' in field_type:
             return ()
-        elif 'char' in field_type:
+        elif 'char' in field_type or 'int' in field_type:
             return self._get_distinct_values(field_name)
 
     def _get_distinct_values(self, field_name):
