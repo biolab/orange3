@@ -364,7 +364,7 @@ class OWSelectRows(widget.OWWidget):
         if data is None:
             lab1.setText("")
         else:
-            lab1.setText("%s row%s, %s variable%s" % (sp(len(data)) +
+            lab1.setText("~%s row%s, %s variable%s" % (sp(data.approx_len()) +
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
     def sendReport(self):
