@@ -609,11 +609,12 @@ class OWMosaicDisplay(OWWidget):
                         attr.append(data.domain[attrs[j]])
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
-                    filt = filter.Values()
+                    conditions = []
                     for k, ind in enumerate(indices):
                         vals.append(attr[k].values[ind])
                         fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
-                        filt.conditions.append(fd)
+                        conditions.append(fd)
+                    filt = filter.Values(conditions)
                     filtdata = filt(data)
                     cond_dist['-'.join(vals)] = len(filtdata)
         return cond_dist
