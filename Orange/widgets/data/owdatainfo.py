@@ -69,7 +69,7 @@ class OWDataInfo(widget.OWWidget):
         else:
             sparses = ""
         domain = data.domain
-        self.data_set_size = pack_table((("Rows", data.approx_len()),
+        self.data_set_size = pack_table((("Rows", data.approx_len(1)),
                                          ("Variables", len(domain)))) + sparses
 
         if not domain.attributes:

@@ -19,7 +19,7 @@ class IsDefinedFilterTests(PostgresTest):
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
-        self.table.connection.close()
+        self.table.connection_pool.closeall()
 
     def test_on_all_columns(self):
         filtered_data = filter.IsDefined()(self.table)
@@ -77,7 +77,7 @@ class HasClassFilterTests(PostgresTest):
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
-        self.table.connection.close()
+        self.table.connection_pool.closeall()
 
     def test_has_class(self):
         filtered_data = filter.HasClass()(self.table)
@@ -108,7 +108,7 @@ class SameValueFilterTests(PostgresTest):
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
-        self.table.connection.close()
+        self.table.connection_pool.closeall()
 
     def test_on_continuous_attribute(self):
         filtered_data = filter.SameValue(0, 1)(self.table)
@@ -197,7 +197,7 @@ class ValuesFilterTests(PostgresTest):
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
-        self.table.connection.close()
+        self.table.connection_pool.closeall()
 
     def test_values_filter_with_no_conditions(self):
         filtered_data = filter.Values()(self.table)
@@ -341,7 +341,7 @@ class FilterStringTest(PostgresTest):
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
-        self.table.connection.close()
+        self.table.connection_pool.closeall()
 
     def test_filter_string_is_defined(self):
         filtered_data = filter.Values(conditions=[

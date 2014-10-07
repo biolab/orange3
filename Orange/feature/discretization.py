@@ -77,12 +77,11 @@ class EqualFreq(Discretization):
 
     def __call__(self, data, attribute):
         if type(data) == Orange.data.sql.table.SqlTable:
-            filters = [f.to_sql() for f in data.row_filters]
-            filters = [f for f in filters if f]
             att = attribute.to_sql()
             quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
-            cur = data._sql_query(['quantile(%s, ARRAY%s)' % (att, str(quantiles))], filters)
-            points = cur.fetchone()[0]
+            query = data._sql_query(['quantile(%s, ARRAY%s)' % (att, str(quantiles))])
+            with data._execute_sql_query(query) as cur:
+                points = cur.fetchone()[0]
         else:
             d = Orange.statistics.distribution.get_distribution(data, attribute)
             points = _discretization.split_eq_freq(d, n=self.n)
@@ -106,11 +105,10 @@ class EqualWidth(Discretization):
             points = _split_eq_width_fixed(min, max, n=self.n)
         else:
             if type(data) == Orange.data.sql.table.SqlTable:
-                filters = [f.to_sql() for f in data.row_filters]
-                filters = [f for f in filters if f]
                 att = attribute.to_sql()
-                cur = data._sql_query(['min(%s)' % att, 'max(%s)' % att], filters)
-                min, max = cur.fetchone()
+                query = data._sql_query(['min(%s)' % att, 'max(%s)' % att])
+                with data._execute_sql_query(query) as cur:
+                    min, max = cur.fetchone()
                 dif = (max - min) / self.n
                 points = [min + (i + 1) * dif for i in range(self.n - 1)]
             else:

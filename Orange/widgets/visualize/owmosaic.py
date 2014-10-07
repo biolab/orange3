@@ -593,10 +593,9 @@ class OWMosaicDisplay(OWWidget):
                 if i == len(var_attrs):
                     attr.append(data.domain.class_var.to_sql())
                 fields = attr + ["COUNT(*)"]
-                filters = [f.to_sql() for f in data.row_filters]
-                filters = [f for f in filters if f]
-                cur = data._sql_query(fields, filters=filters, group_by=attr)
-                res = cur.fetchall()
+                query = data._sql_query(fields, group_by=attr)
+                with data._execute_sql_query(query) as cur:
+                    res = cur.fetchall()
                 for r in list(res):
                     cond_dist['-'.join(r[:-1])] = r[-1]
         else:

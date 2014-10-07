@@ -3,6 +3,8 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
 import re
+import threading
+from contextlib import contextmanager
 from urllib import parse
 
 import numpy as np
@@ -10,6 +12,7 @@ import sys
 
 import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
+psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
 from .. import domain, variable, value, table, instance, filter,\
     DiscreteVariable, ContinuousVariable
@@ -20,7 +23,7 @@ from Orange.data.sql.parser import SqlParser
 
 
 class SqlTable(table.Table):
-    connection = None
+    connection_pool = None
     table_name = None
     domain = None
     row_filters = ()
@@ -73,7 +76,7 @@ class SqlTable(table.Table):
             connection_args.update(parameters)
         connection_args.update(kwargs)
 
-        self.connection = psycopg2.connect(**connection_args)
+        self.connection_pool = psycopg2.pool.ThreadedConnectionPool(1, 6, **connection_args)
         self.host = host
         self.database = database
 
@@ -113,10 +116,12 @@ class SqlTable(table.Table):
         """
         table = cls(uri, host, database, user, password, schema, **kwargs)
         p = SqlParser(sql)
+        conn = table.connection_pool.getconn()
         table.table_name = p.from_
         table.domain = table.domain_from_fields(
-            p.fields_with_types(table.connection),
+            p.fields_with_types(conn),
             type_hints=type_hints)
+        table.connection_pool.putconn(conn)
         if p.where:
             table.row_filters = (CustomFilterSql(p.where), )
 
@@ -184,11 +189,16 @@ class SqlTable(table.Table):
         return var
 
     def _get_fields(self, table_name, guess_values=False):
-        cur = self._sql_get_fields(table_name)
-        for field, field_type in cur.fetchall():
-            yield (field, field_type,
-                   self.quote_identifier(field),
-                   self._get_field_values(field, field_type) if guess_values else ())
+        table_name = self.unquote_identifier(table_name)
+        sql = ["SELECT column_name, data_type",
+               "FROM INFORMATION_SCHEMA.COLUMNS",
+               "WHERE table_name =", self.quote_string(table_name),
+               "ORDER BY ordinal_position"]
+        with self._execute_sql_query(" ".join(sql)) as cur:
+            for field, field_type in cur.fetchall():
+                yield (field, field_type,
+                       self.quote_identifier(field),
+                       self._get_field_values(field, field_type) if guess_values else ())
 
     def _get_field_values(self, field_name, field_type):
         if 'double' in field_type:
@@ -197,8 +207,12 @@ class SqlTable(table.Table):
             return self._get_distinct_values(field_name)
 
     def _get_distinct_values(self, field_name):
-        cur = self._sql_get_distinct_values(field_name)
-        values = cur.fetchall()
+        sql = " ".join(["SELECT DISTINCT", self.quote_identifier(field_name),
+                        "FROM", self.table_name,
+                        "ORDER BY", self.quote_identifier(field_name),
+                        "LIMIT 21"])
+        with self._execute_sql_query(sql) as cur:
+            values = cur.fetchall()
         if len(values) > 20:
             return ()
         else:
@@ -284,7 +298,6 @@ class SqlTable(table.Table):
             fields = ["*"]
 
         filters = [f.to_sql() for f in filters]
-        filters = [f for f in filters if f]
 
         offset = limit = None
         if rows is not None:
@@ -298,17 +311,18 @@ class SqlTable(table.Table):
                 limit = stop - offset + 1
 
         # TODO: this returns all rows between min(rows) and max(rows): fix!
-        cur = self._sql_query(fields, filters, offset=offset, limit=limit)
-        while True:
-            row = cur.fetchone()
-            if row is None:
-                break
-            yield row
+        query = self._sql_query(fields, filters, offset=offset, limit=limit)
+        with self._execute_sql_query(query) as cur:
+            while True:
+                row = cur.fetchone()
+                if row is None:
+                    break
+                yield row
 
     def copy(self):
         """Return a copy of the SqlTable"""
         table = SqlTable.__new__(SqlTable)
-        table.connection = self.connection
+        table.connection_pool = self.connection_pool
         table.domain = self.domain
         table.row_filters = self.row_filters
         table.table_name = self.table_name
@@ -319,10 +333,9 @@ class SqlTable(table.Table):
 
     def __bool__(self):
         """Return True if the SqlTable is not empty."""
-        filters = [f.to_sql() for f in self.row_filters]
-        filters = [f for f in filters if f]
-        cur = self._sql_query(["1"], filters, limit=1)
-        return cur.fetchone() is not None
+        query = self._sql_query(["1"], limit=1)
+        with self._execute_sql_query(query) as cur:
+            return cur.fetchone() is not None
 
     _cached__len__ = None
 
@@ -335,25 +348,30 @@ class SqlTable(table.Table):
             return self._count_rows()
         return self._cached__len__
 
-    def approx_len(self):
+    def _count_rows(self):
+        query = self._sql_query(["COUNT(*)"])
+        with self._execute_sql_query(query) as cur:
+            self._cached__len__ = cur.fetchone()[0]
+        return self._cached__len__
+
+    def approx_len(self, get_exact=False):
         if self._cached__len__ is not None:
             return self._cached__len__
         if not self.row_filters:
-            cur = self._sql_reltuples()
-            return int(cur.fetchone()[0])
+            sql = "SELECT reltuples FROM pg_class WHERE relname = %s;"
+            with self._execute_sql_query(sql, (self.name,)) as cur:
+                alen = int(cur.fetchone()[0])
         else:
-            cur = self._sql_count_estimate()
-            s = ''.join(row[0] for row in cur.fetchall())
-            return int(re.findall('rows=(\d*)', s)[0])
-
-
-    def _count_rows(self):
-        filters = [f.to_sql() for f in self.row_filters]
-        filters = [f for f in filters if f]
-        cur = self._sql_count_rows(filters)
-        self._cached__len__ = cur.fetchone()[0]
-        return self._cached__len__
-
+            sql = ["EXPLAIN SELECT *", "FROM", self.table_name]
+            if self.row_filters:
+                sql.extend(["WHERE", " AND ".join(
+                    f.to_sql() for f in self.row_filters)])
+            with self._execute_sql_query(' '.join(sql)) as cur:
+                s = ''.join(row[0] for row in cur.fetchall())
+            alen = int(re.findall('rows=(\d*)', s)[0])
+        if get_exact:
+            threading.Thread(target=len, args=(self,)).start()
+        return alen
 
     def has_weights(self):
         return False
@@ -371,10 +389,13 @@ class SqlTable(table.Table):
     def _get_stats(self, columns):
         columns = [(c.to_sql(), isinstance(c, ContinuousVariable))
                    for c in columns]
-        filters = [f.to_sql() for f in self.row_filters]
-        filters = [f for f in filters if f]
-        cur = self._sql_get_stats(columns, filters)
-        results = cur.fetchone()
+        sql_fields = []
+        for field_name, continuous in columns:
+            stats = self.CONTINUOUS_STATS if continuous else self.DISCRETE_STATS
+            sql_fields.append(stats % dict(field_name=field_name))
+        query = self._sql_query(sql_fields)
+        with self._execute_sql_query(query) as cur:
+            results = cur.fetchone()
         stats = []
         i = 0
         for ci, (field_name, continuous) in enumerate(columns):
@@ -394,17 +415,18 @@ class SqlTable(table.Table):
         return self._get_distributions(columns)
 
     def _get_distributions(self, columns):
-        filters = [f.to_sql() for f in self.row_filters]
-        filters = [f for f in filters if f]
         dists = []
         for col in columns:
-            cur = self._sql_get_distribution(col.to_sql(), filters)
-            dist = np.array(cur.fetchall())
+            field_name = col.to_sql()
+            fields = field_name, "COUNT(%s)" % field_name
+            query = self._sql_query(fields, group_by=[field_name],
+                                    order_by=[field_name])
+            with self._execute_sql_query(query) as cur:
+                dist = np.array(cur.fetchall())
             if isinstance(col, ContinuousVariable):
                 dists.append((dist.T, []))
             else:
                 dists.append((dist[:, 1].T, []))
-        self.connection.commit()
         return dists
 
     def _compute_contingency(self, col_vars=None, row_var=None):
@@ -429,20 +451,19 @@ class SqlTable(table.Table):
 
         row_field = row.to_sql()
 
-        filters = [f.to_sql() for f in self.row_filters]
-        filters = [f for f in filters if f]
-
         all_contingencies = [None] * len(columns)
         for i, column in enumerate(columns):
-            column_field = columns[0].to_sql()
-            cur = self._sql_compute_contingency(row_field, column_field,
-                                                filters)
-
-            if isinstance(column, ContinuousVariable):
-                all_contingencies[i] = (self._continuous_contingencies(cur, row), [])
-            else:
-                all_contingencies[i] = (self._discrete_contingencies(
-                    cur, row, column), [])
+            column_field = column.to_sql()
+            fields = [row_field, column_field, "COUNT(%s)" % column_field]
+            group_by = [row_field, column_field]
+            order_by = [column_field]
+            query = self._sql_query(fields, group_by=group_by, order_by=order_by)
+            with self._execute_sql_query(query) as cur:
+                if isinstance(column, ContinuousVariable):
+                    all_contingencies[i] = (self._continuous_contingencies(cur, row), [])
+                else:
+                    all_contingencies[i] = (self._discrete_contingencies(
+                        cur, row, column), [])
         return all_contingencies
 
     def _continuous_contingencies(self, cur, row):
@@ -562,8 +583,10 @@ class SqlTable(table.Table):
                    group_by=None, order_by=None, offset=None, limit=None):
         sql = ["SELECT", ', '.join(fields),
                "FROM", self.table_name]
-        if filters:
-            sql.extend(["WHERE", " AND ".join(filters)])
+        row_filters = [f.to_sql() for f in self.row_filters]
+        row_filters.extend(filters)
+        if row_filters:
+            sql.extend(["WHERE", " AND ".join(row_filters)])
         if group_by is not None:
             sql.extend(["GROUP BY", ", ".join(group_by)])
         if order_by is not None:
@@ -572,37 +595,7 @@ class SqlTable(table.Table):
             sql.extend(["OFFSET", str(offset)])
         if limit is not None:
             sql.extend(["LIMIT", str(limit)])
-        return self._execute_sql_query(" ".join(sql))
-
-    def _sql_count_rows(self, filters):
-        fields = ["COUNT(*)"]
-        return self._sql_query(fields, filters)
-
-    def _sql_reltuples(self):
-        sql = "SELECT reltuples FROM pg_class WHERE relname = %s;"
-        return self._execute_sql_query(sql, (self.name,))
-
-    def _sql_count_estimate(self):
-        sql = ["EXPLAIN SELECT *", "FROM", self.table_name]
-        if self.row_filters:
-            sql.extend(["WHERE", " AND ".join(
-                f.to_sql() for f in self.row_filters)])
-        return self._execute_sql_query(' '.join(sql))
-
-    def _sql_get_fields(self, table_name):
-        table_name = self.unquote_identifier(table_name)
-        sql = ["SELECT column_name, data_type",
-               "FROM INFORMATION_SCHEMA.COLUMNS",
-               "WHERE table_name =", self.quote_string(table_name),
-               "ORDER BY ordinal_position"]
-        return self._execute_sql_query(" ".join(sql))
-
-    def _sql_get_distinct_values(self, field_name):
-        sql = ["SELECT DISTINCT", self.quote_identifier(field_name),
-               "FROM", self.table_name,
-               "ORDER BY", self.quote_identifier(field_name),
-               "LIMIT 21"]
-        return self._execute_sql_query(" ".join(sql))
+        return " ".join(sql)
 
     DISCRETE_STATS = "SUM(CASE TRUE WHEN %(field_name)s IS NULL THEN 1 " \
                      "ELSE 0 END), " \
@@ -611,26 +604,6 @@ class SqlTable(table.Table):
     CONTINUOUS_STATS = "MIN(%(field_name)s), MAX(%(field_name)s), " \
                        "AVG(%(field_name)s), STDDEV(%(field_name)s), " \
                        + DISCRETE_STATS
-
-    def _sql_get_stats(self, fields, filters):
-        sql_fields = []
-        for field_name, continuous in fields:
-            stats = self.CONTINUOUS_STATS if continuous else self.DISCRETE_STATS
-            sql_fields.append(stats % dict(field_name=field_name))
-        return self._sql_query(sql_fields, filters)
-
-    def _sql_get_distribution(self, field_name, filters):
-        fields = field_name, "COUNT(%s)" % field_name
-        return self._sql_query(fields, filters,
-                               group_by=[field_name], order_by=[field_name])
-
-    def _sql_compute_contingency(self, row_field, column_field, filters):
-        fields = [row_field, column_field, "COUNT(%s)" % column_field]
-
-        group_by = [row_field, column_field]
-        order_by = [column_field]
-        return self._sql_query(fields, filters,
-                               group_by=group_by, order_by=order_by)
 
     def quote_identifier(self, value):
         return '"%s"' % value
@@ -644,11 +617,14 @@ class SqlTable(table.Table):
     def quote_string(self, value):
         return "'%s'" % value
 
-    def _execute_sql_query(self, sql, param=None):
-        cur = self.connection.cursor()
-        cur.execute(sql, param)
-        self.connection.commit()
-        return cur
+    @contextmanager
+    def _execute_sql_query(self, query, param=None):
+        connection = self.connection_pool.getconn()
+        cur = connection.cursor()
+        cur.execute(query, param)
+        connection.commit()
+        yield cur
+        self.connection_pool.putconn(connection)
 
 
 class SqlRowInstance(instance.Instance):
