@@ -3,9 +3,11 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
 import logging
+import traceback
 from urllib import parse
 
 import numpy as np
+import sys
 
 import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
@@ -622,11 +624,9 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def _execute_sql_query(self, sql, param=None):
-        import traceback
         caller = [s for s in traceback.extract_stack() if not s[2].startswith('_')]
         self.debug(caller[-1])
         self.debug(sql)
-        import sys
         sys.stdout.flush()
         cur = self.connection.cursor()
         cur.execute(sql, param)
