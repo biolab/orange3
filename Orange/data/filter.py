@@ -195,10 +195,12 @@ class Values(Filter):
         Revert the selection
     """
 
-    def __init__(self, conditions=None, conjunction=True, negate=False):
+    def __init__(self, conditions, conjunction=True, negate=False):
         super().__init__(negate)
         self.conjunction = conjunction
-        self.conditions = conditions if conditions is not None else []
+        if not conditions:
+            raise ValueError("Filter with no conditions.")
+        self.conditions = conditions
 
     def __call__(self, data):
         if isinstance(data, Instance):

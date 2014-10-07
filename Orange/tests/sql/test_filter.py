@@ -200,11 +200,8 @@ class ValuesFilterTests(PostgresTest):
         self.table.connection_pool.closeall()
 
     def test_values_filter_with_no_conditions(self):
-        filtered_data = filter.Values()(self.table)
-        correct_data = self.data
-
-        self.assertEqual(len(filtered_data), len(correct_data))
-        self.assertSequenceEqual(filtered_data, correct_data)
+        with self.assertRaises(ValueError):
+            filtered_data = filter.Values([])(self.table)
 
     def test_discrete_value_filter(self):
         filtered_data = filter.Values(conditions=[
