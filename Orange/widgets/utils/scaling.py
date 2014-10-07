@@ -168,6 +168,9 @@ class ScaleData:
                 self.attr_values[attr.name] = [self.domain_data_stat[index].min,
                                                self.domain_data_stat[index].max]
 
+        if 'no_data' in args:
+            return
+
         # the original_data, no_jittering_scaled_data and validArray are arrays
         # that we can cache so that other visualization widgets don't need to
         # compute it. The scaled_data on the other hand has to be computed for

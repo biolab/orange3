@@ -85,6 +85,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.add_visual_settings(self.settings_tab)
         self.add_annotation_settings(self.settings_tab)
         self.add_color_settings(self.settings_tab)
+        self.add_group_settings(self.settings_tab)
 
         self.settings_tab.layout().addStretch(100)
         self.icons = attributeIconDict
@@ -120,6 +121,17 @@ class OWParallelCoordinates(OWVisWidget):
         gui.button(box, self, "Set colors", self.select_colors,
                    tooltip="Set the canvas background color and color palette for coloring continuous variables")
 
+    def add_group_settings(self, parent):
+        box = gui.widgetBox(parent, "Groups", orientation="vertical")
+        box2 = gui.widgetBox(box, orientation="horizontal")
+        gui.checkBox(box2, self, "graph.group_lines", "Group lines into", tooltip="Show clusters instead of lines",
+                     callback=self.update_graph)
+        gui.spin(box2, self, "graph.number_of_groups", 0, 30, callback=self.update_graph)
+        gui.label(box2, self, "groups")
+        box2 = gui.widgetBox(box, orientation="horizontal")
+        gui.spin(box2, self, "graph.number_of_steps", 0, 100, label="In no more than", callback=self.update_graph)
+        gui.label(box2, self, "steps")
+
     def flip_attribute(self, item):
         if self.graph.flip_attribute(str(item.text())):
             self.update_graph()
@@ -152,7 +164,7 @@ class OWParallelCoordinates(OWVisWidget):
         if data and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if checksum(data) == checksum(self.data):
-            return  # check if the new data set is the same as the old one
+            return # check if the new data set is the same as the old one
 
         self.__ignore_updates = True
         self.closeContext()
@@ -171,6 +183,7 @@ class OWParallelCoordinates(OWVisWidget):
     # attribute selection signal - list of attributes to show
     def set_shown_attributes(self, shown_attributes):
         self.new_shown_attributes = shown_attributes
+
     new_shown_attributes = None
 
     # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
@@ -239,9 +252,11 @@ if __name__ == "__main__":
     a = QApplication(sys.argv)
     ow = OWParallelCoordinates()
     ow.show()
-    ow.graph.discrete_palette = ColorPaletteGenerator(
-        rgb_colors=[(127, 201, 127), (190, 174, 212), (253, 192, 134)])
-    data = Orange.data.Table("iris")
+    ow.graph.discrete_palette = ColorPaletteGenerator(rgb_colors=[(127, 201, 127), (190, 174, 212), (253, 192, 134)])
+    ow.graph.group_lines = True
+    ow.graph.number_of_groups = 10
+    ow.graph.number_of_steps = 30
+    data = Orange.data.Table("edt-all-vs-zero")
     ow.set_data(data)
     ow.handleNewSignals()
 

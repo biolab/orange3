@@ -228,11 +228,7 @@ class SqlTable(table.Table):
                 var = self.domain[col_idx]
                 return value.Value(
                     var,
-                    self.backend.query(
-                        self.table_name,
-                        fields=var.name,
-                        limit=row_idx,
-                    )
+                    self._query(self.table_name, var, rows=[row_idx])
                 )
             except TypeError:
                 pass
@@ -623,6 +619,8 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def _execute_sql_query(self, sql, param=None):
+        import datetime
+        print(datetime.datetime.now(), sql)
         cur = self.connection.cursor()
         cur.execute(sql, param)
         self.connection.commit()
