@@ -288,10 +288,10 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
 
     def clone_context(self, context, domain, attrs, metas):
         context = copy.deepcopy(context)
-        for name, setting in self.settings.items():
+        for setting, data, instance in self.provider.traverse_settings(data=context.values):
             if not isinstance(setting, ContextSetting):
                 continue
-            value = context.values.get(name, None)
+            value = data.get(setting.name, None)
             if value is None:
                 continue
             if isinstance(value, dict):
