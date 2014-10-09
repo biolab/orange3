@@ -624,19 +624,10 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def _execute_sql_query(self, sql, param=None):
-        caller = [s for s in traceback.extract_stack() if not s[2].startswith('_')]
-        self.debug(caller[-1])
-        self.debug(sql)
-        sys.stdout.flush()
         cur = self.connection.cursor()
         cur.execute(sql, param)
-        self.debug('DONE')
         self.connection.commit()
         return cur
-
-    def debug(self, message):
-        import datetime
-        log.debug('%s %s', datetime.datetime.now(), message)
 
 
 class SqlRowInstance(instance.Instance):
