@@ -269,9 +269,8 @@ class SqlTable(table.Table):
     @functools.lru_cache(maxsize=128)
     def _fetch_row(self, row_index):
         attributes = self.domain.variables + self.domain.metas
-        filters = self.row_filters
         rows = [row_index]
-        values = self._query(attributes, filters, rows)
+        values = self._query(attributes, rows=rows)
         return SqlRowInstance(self.domain, list(values)[0])
 
     def __iter__(self):
@@ -279,9 +278,8 @@ class SqlTable(table.Table):
         then yields resulting rows as SqlRowInstances as they are requested.
         """
         attributes = self.domain.variables + self.domain.metas
-        filters = self.row_filters
 
-        for row in self._query(attributes, filters):
+        for row in self._query(attributes):
             yield SqlRowInstance(self.domain, row)
 
     def _query(self, attributes=None, filters=(), rows=None):
