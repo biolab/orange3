@@ -142,6 +142,7 @@ class DiscreteVariable(Variable):
         for regression.
     """
     all_discrete_vars = collections.defaultdict(set)
+    has_numeric_values = False
     presorted_values = []
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1):
@@ -181,6 +182,9 @@ class DiscreteVariable(Variable):
         :param s: values, represented as a number, string or `None`
         :rtype: float
         """
+        if self.has_numeric_values:
+            s = str(s)
+
         if isinstance(s, int):
             return s
         if isinstance(s, Real):

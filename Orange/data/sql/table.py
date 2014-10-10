@@ -187,7 +187,7 @@ class SqlTable(table.Table):
                 # TODO: make sure that int values are OK
                 values = [str(val) for val in values]
                 var = variable.DiscreteVariable(name=name, values=values)
-                var.has_int_values = True
+                var.has_numeric_values = True
             elif any(t in field_type for t in {'char', 'text'}) and values:
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
@@ -277,10 +277,7 @@ class SqlTable(table.Table):
     def _fetch_row(self, row_index):
         attributes = self.domain.variables + self.domain.metas
         rows = [row_index]
-        values = list(list(self._query(attributes, rows=rows))[0])
-        for i, (val, var) in enumerate(zip(values, attributes)):
-            if hasattr(var, 'has_int_values') or isinstance(var, StringVariable):
-                values[i] = str(val)
+        values = list(self._query(attributes, rows=rows))[0]
         return SqlRowInstance(self.domain, values)
 
     def __iter__(self):
@@ -290,10 +287,6 @@ class SqlTable(table.Table):
         attributes = self.domain.variables + self.domain.metas
 
         for row in self._query(attributes):
-            row = list(row)
-            for i, (val, var) in enumerate(zip(row, attributes)):
-                if hasattr(var, 'has_int_values') or isinstance(var, StringVariable):
-                    row[i] = str(val)
             yield SqlRowInstance(self.domain, row)
 
     def _query(self, attributes=None, filters=(), rows=None):
