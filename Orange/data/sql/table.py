@@ -76,7 +76,8 @@ class SqlTable(table.Table):
             connection_args.update(parameters)
         connection_args.update(kwargs)
 
-        self.connection_pool = psycopg2.pool.ThreadedConnectionPool(1, 6, **connection_args)
+        self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
+            1, 6, **connection_args)
         self.host = host
         self.database = database
 
@@ -179,16 +180,17 @@ class SqlTable(table.Table):
         if type_hints != None and name in type_hints:
             var = type_hints[name]
         else:
-            if any(t in field_type for t in {'double', 'numeric'}):
+            if any(t in field_type for t in ('double', 'numeric')):
                 var = variable.ContinuousVariable(name=name)
             elif 'int' in field_type and not values:
                 var = variable.ContinuousVariable(name=name)
-            elif 'int' in field_type and values:
+            elif any(t in field_type for t in ('int', 'boolean')) and values:
                 # TODO: make sure that int values are OK
                 values = [str(val) for val in values]
                 var = variable.DiscreteVariable(name=name, values=values)
                 var.has_numeric_values = True
-            elif any(t in field_type for t in {'char', 'text'}) and values:
+            elif (any(t in field_type for t in ('char', 'text', 'boolean'))
+                  and values):
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
                 var = variable.StringVariable(name=name)
@@ -208,7 +210,7 @@ class SqlTable(table.Table):
                        self._get_field_values(field, field_type) if guess_values else ())
 
     def _get_field_values(self, field_name, field_type):
-        if any(t in field_type for t in {'char', 'int', 'text'}):
+        if any(t in field_type for t in ('boolean', 'int', 'char', 'text')):
             return self._get_distinct_values(field_name)
         else:
             return ()
