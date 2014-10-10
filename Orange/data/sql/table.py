@@ -355,18 +355,10 @@ class SqlTable(table.Table):
     def approx_len(self, get_exact=False):
         if self._cached__len__ is not None:
             return self._cached__len__
-        if not self.row_filters:
-            sql = "SELECT reltuples FROM pg_class WHERE relname = %s;"
-            with self._execute_sql_query(sql, (self.name,)) as cur:
-                alen = int(cur.fetchone()[0])
-        else:
-            sql = ["EXPLAIN SELECT *", "FROM", self.table_name]
-            if self.row_filters:
-                sql.extend(["WHERE", " AND ".join(
-                    f.to_sql() for f in self.row_filters)])
-            with self._execute_sql_query(' '.join(sql)) as cur:
-                s = ''.join(row[0] for row in cur.fetchall())
-            alen = int(re.findall('rows=(\d*)', s)[0])
+        sql = "EXPLAIN " + self._sql_query(["*"])
+        with self._execute_sql_query(sql) as cur:
+            s = ''.join(row[0] for row in cur.fetchall())
+        alen = int(re.findall('rows=(\d*)', s)[0])
         if get_exact:
             threading.Thread(target=len, args=(self,)).start()
         return alen
