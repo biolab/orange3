@@ -106,7 +106,8 @@ class EqualWidth(Discretization):
         else:
             if type(data) == Orange.data.sql.table.SqlTable:
                 att = attribute.to_sql()
-                query = data._sql_query(['min(%s)' % att, 'max(%s)' % att])
+                query = data._sql_query(['min(%s)::double precision' % att,
+                                         'max(%s)::double precision' % att])
                 with data._execute_sql_query(query) as cur:
                     min, max = cur.fetchone()
                 dif = (max - min) / self.n

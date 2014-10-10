@@ -606,8 +606,10 @@ class SqlTable(table.Table):
                      "ELSE 0 END), " \
                      "SUM(CASE TRUE WHEN %(field_name)s IS NULL THEN 0 " \
                      "ELSE 1 END)"
-    CONTINUOUS_STATS = "MIN(%(field_name)s), MAX(%(field_name)s), " \
-                       "AVG(%(field_name)s), STDDEV(%(field_name)s), " \
+    CONTINUOUS_STATS = "MIN(%(field_name)s)::double precision, " \
+                       "MAX(%(field_name)s)::double precision, " \
+                       "AVG(%(field_name)s)::double precision, " \
+                       "STDDEV(%(field_name)s)::double precision, " \
                        + DISCRETE_STATS
 
     def quote_identifier(self, value):
