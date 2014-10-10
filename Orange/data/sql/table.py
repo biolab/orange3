@@ -179,7 +179,7 @@ class SqlTable(table.Table):
         if type_hints != None and name in type_hints:
             var = type_hints[name]
         else:
-            if 'double' in field_type:
+            if any(t in field_type for t in {'double', 'numeric'}):
                 var = variable.ContinuousVariable(name=name)
             elif 'int' in field_type and not values:
                 var = variable.ContinuousVariable(name=name)
@@ -188,7 +188,7 @@ class SqlTable(table.Table):
                 values = [str(val) for val in values]
                 var = variable.DiscreteVariable(name=name, values=values)
                 var.has_int_values = True
-            elif 'char' in field_type and values:
+            elif any(t in field_type for t in {'char', 'text'}) and values:
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
                 var = variable.StringVariable(name=name)
@@ -208,10 +208,10 @@ class SqlTable(table.Table):
                        self._get_field_values(field, field_type) if guess_values else ())
 
     def _get_field_values(self, field_name, field_type):
-        if 'double' in field_type:
-            return ()
-        elif 'char' in field_type or 'int' in field_type:
+        if any(t in field_type for t in {'char', 'int', 'text'}):
             return self._get_distinct_values(field_name)
+        else:
+            return ()
 
     def _get_distinct_values(self, field_name):
         sql = " ".join(["SELECT DISTINCT", self.quote_identifier(field_name),
