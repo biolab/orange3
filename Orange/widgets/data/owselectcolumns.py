@@ -475,13 +475,17 @@ class OWSelectAttributes(widget.OWWidget):
                 for attr in all_vars if domain_hints[var_sig(attr)][0] == role]
 
             attributes = [
-                attr for place, attr in sorted(attrs_for_role("attribute"))]
+                attr for place, attr in sorted(attrs_for_role("attribute"),
+                                               key=lambda a: a[0])]
             classes = [
-                attr for place, attr in sorted(attrs_for_role("class"))]
+                attr for place, attr in sorted(attrs_for_role("class"),
+                                               key=lambda a: a[0])]
             metas = [
-                attr for place, attr in sorted(attrs_for_role("meta"))]
+                attr for place, attr in sorted(attrs_for_role("meta"),
+                                               key=lambda a: a[0])]
             available = [
-                attr for place, attr in sorted(attrs_for_role("available"))]
+                attr for place, attr in sorted(attrs_for_role("available"),
+                                               key=lambda a: a[0])]
 
             self.used_attrs[:] = attributes
             self.class_attrs[:] = classes
