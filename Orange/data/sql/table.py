@@ -292,7 +292,6 @@ class SqlTable(table.Table):
         for row in self._query(attributes):
             row = list(row)
             for i, (val, var) in enumerate(zip(row, attributes)):
-                print(zip(row, attributes))
                 if hasattr(var, 'has_int_values') or isinstance(var, StringVariable):
                     row[i] = str(val)
             yield SqlRowInstance(self.domain, row)
