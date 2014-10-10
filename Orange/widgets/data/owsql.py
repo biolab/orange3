@@ -121,9 +121,16 @@ class OWSql(widget.OWWidget):
         if self._connection is None:
             return
         cur = self._connection.cursor()
-        cur.execute("SELECT table_name "
-                    "  FROM information_schema.tables "
-                    " WHERE table_schema = 'public'")
+        cur.execute("""SELECT --n.nspname as "Schema",
+                              c.relname as "Name"
+                       FROM pg_catalog.pg_class c
+                  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                      WHERE c.relkind IN ('r','v','m','S','f','')
+                        AND n.nspname <> 'pg_catalog'
+                        AND n.nspname <> 'information_schema'
+                        AND n.nspname !~ '^pg_toast'
+                        AND pg_catalog.pg_table_is_visible(c.oid)
+                   ORDER BY 1;""")
         self.tablecombo.clear()
         self.tablecombo.addItem("Select a table")
         tables = []
