@@ -15,7 +15,7 @@ psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
 from .. import domain, variable, value, table, instance, filter,\
-    DiscreteVariable, ContinuousVariable
+    DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.filter import CustomFilterSql
 from Orange.data.sql.parser import SqlParser
@@ -185,7 +185,9 @@ class SqlTable(table.Table):
                 var = variable.ContinuousVariable(name=name)
             elif 'int' in field_type and values:
                 # TODO: make sure that int values are OK
+                values = [str(val) for val in values]
                 var = variable.DiscreteVariable(name=name, values=values)
+                var.has_int_values = True
             elif 'char' in field_type and values:
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
@@ -275,8 +277,11 @@ class SqlTable(table.Table):
     def _fetch_row(self, row_index):
         attributes = self.domain.variables + self.domain.metas
         rows = [row_index]
-        values = self._query(attributes, rows=rows)
-        return SqlRowInstance(self.domain, list(values)[0])
+        values = list(list(self._query(attributes, rows=rows))[0])
+        for i, (val, var) in enumerate(zip(values, attributes)):
+            if hasattr(var, 'has_int_values') or isinstance(var, StringVariable):
+                values[i] = str(val)
+        return SqlRowInstance(self.domain, values)
 
     def __iter__(self):
         """ Iterating through the rows executes the query using a cursor and
@@ -285,6 +290,10 @@ class SqlTable(table.Table):
         attributes = self.domain.variables + self.domain.metas
 
         for row in self._query(attributes):
+            for i, (val, var) in enumerate(zip(row, attributes)):
+                print(zip(row, attributes))
+                if hasattr(var, 'has_int_values') or isinstance(var, StringVariable):
+                    row[i] = str(val)
             yield SqlRowInstance(self.domain, row)
 
     def _query(self, attributes=None, filters=(), rows=None):
