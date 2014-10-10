@@ -1,3 +1,5 @@
+import threading
+
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
 from Orange.data.table import Table
@@ -69,8 +71,16 @@ class OWDataInfo(widget.OWWidget):
         else:
             sparses = ""
         domain = data.domain
-        self.data_set_size = pack_table((("Rows", len(data)),
-                                         ("Variables", len(domain)))) + sparses
+        self.data_set_size = pack_table((
+            ("Rows", '~{}'.format(data.approx_len())),
+            ("Variables", len(domain)))) + sparses
+
+        def update_size():
+            self.data_set_size = pack_table((
+                ("Rows", len(data)),
+                ("Variables", len(domain)))) + sparses
+
+        threading.Thread(target=update_size).start()
 
         if not domain.attributes:
             self.features = "None"

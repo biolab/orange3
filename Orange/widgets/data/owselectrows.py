@@ -299,7 +299,7 @@ class OWSelectRows(widget.OWWidget):
         non_matching_output = None
         if self.data:
             domain = self.data.domain
-            filters = data_filter.Values()
+            conditions = []
             for attr_name, oper, values in self.conditions:
                 attr_index = domain.index(attr_name)
                 attr = domain[attr_index]
@@ -329,11 +329,13 @@ class OWSelectRows(widget.OWWidget):
                             f_values = set(range(len(attr.values)))
                             f_values.remove(values[0] - 1)
                     filter = data_filter.FilterDiscrete(attr_index, f_values)
-                filters.conditions.append(filter)
+                conditions.append(filter)
 
-            matching_output = filters(self.data)
-            filters.negate = True
-            non_matching_output = filters(self.data)
+            if conditions:
+                filters = data_filter.Values(conditions)
+                matching_output = filters(self.data)
+                filters.negate = True
+                non_matching_output = filters(self.data)
 
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name
@@ -362,7 +364,7 @@ class OWSelectRows(widget.OWWidget):
         if data is None:
             lab1.setText("")
         else:
-            lab1.setText("%s row%s, %s variable%s" % (sp(len(data)) +
+            lab1.setText("~%s row%s, %s variable%s" % (sp(data.approx_len()) +
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
     def sendReport(self):
