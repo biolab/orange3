@@ -290,6 +290,7 @@ class SqlTable(table.Table):
         attributes = self.domain.variables + self.domain.metas
 
         for row in self._query(attributes):
+            row = list(row)
             for i, (val, var) in enumerate(zip(row, attributes)):
                 print(zip(row, attributes))
                 if hasattr(var, 'has_int_values') or isinstance(var, StringVariable):
