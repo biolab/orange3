@@ -463,17 +463,21 @@ class SqlTable(table.Table):
             fields = [row_field, column_field, "COUNT(%s)" % column_field]
             group_by = [row_field, column_field]
             order_by = [column_field]
-            query = self._sql_query(fields, group_by=group_by, order_by=order_by)
+            filters = ['%s IS NOT NULL' % f
+                       for f in (row_field, column_field)]
+            query = self._sql_query(fields, filters=filters,
+                                    group_by=group_by, order_by=order_by)
             with self._execute_sql_query(query) as cur:
+                data = list(cur.fetchall())
                 if isinstance(column, ContinuousVariable):
-                    all_contingencies[i] = (self._continuous_contingencies(cur, row), [])
+                    all_contingencies[i] = \
+                        (self._continuous_contingencies(data, row), [])
                 else:
-                    all_contingencies[i] = (self._discrete_contingencies(
-                        cur, row, column), [])
+                    all_contingencies[i] =\
+                        (self._discrete_contingencies(data, row, column), [])
         return all_contingencies
 
-    def _continuous_contingencies(self, cur, row):
-        data = cur.fetchall()
+    def _continuous_contingencies(self, data, row):
         values = np.zeros(len(data))
         counts = np.zeros((len(row.values), len(data)))
         last = None
@@ -488,9 +492,9 @@ class SqlTable(table.Table):
                 counts[row.to_val(row_value), i] += count
         return (values, counts)
 
-    def _discrete_contingencies(self, cur, row, column):
+    def _discrete_contingencies(self, data, row, column):
         conts = np.zeros((len(row.values), len(column.values)))
-        for row_value, col_value, count in cur.fetchall():
+        for row_value, col_value, count in data:
             row_index = row.to_val(row_value)
             col_index = column.to_val(col_value)
             conts[row_index, col_index] = count
