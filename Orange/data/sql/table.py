@@ -423,7 +423,9 @@ class SqlTable(table.Table):
         for col in columns:
             field_name = col.to_sql()
             fields = field_name, "COUNT(%s)" % field_name
-            query = self._sql_query(fields, group_by=[field_name],
+            query = self._sql_query(fields,
+                                    filters=['%s IS NOT NULL' % field_name],
+                                    group_by=[field_name],
                                     order_by=[field_name])
             with self._execute_sql_query(query) as cur:
                 dist = np.array(cur.fetchall())
