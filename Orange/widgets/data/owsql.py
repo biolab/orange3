@@ -104,6 +104,22 @@ class OWSql(widget.OWWidget):
         if self.table:
             self.open_table()
 
+    def error(self, id=0, text=""):
+        super().error(id, text)
+        if 'server' in text or 'host' in text:
+            self.servertext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+        else:
+            self.servertext.setStyleSheet('')
+        if 'role' in text:
+            self.usernametext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+        else:
+            self.usernametext.setStyleSheet('')
+        if 'database' in text:
+            self.databasetext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+        else:
+            self.databasetext.setStyleSheet('')
+
+
     def connect(self):
         hostport = self.servertext.text().split(':')
         self.host = hostport[0]
@@ -111,16 +127,21 @@ class OWSql(widget.OWWidget):
         self.database = self.databasetext.text()
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
-        self._connection = psycopg2.connect(
-            host=self.host,
-            port=self.port,
-            database=self.database,
-            user=self.username,
-            password=self.password
-        )
-        print("Connected")
+        try:
+            self._connection = psycopg2.connect(
+                host=self.host,
+                port=self.port,
+                database=self.database,
+                user=self.username,
+                password=self.password
+            )
+            self.error(0)
+            self.refresh_tables()
+        except psycopg2.Error as err:
+            self.error(0, str(err).split('\n')[0])
+            self.tables = []
+            self.tablecombo.clear()
 
-        self.refresh_tables()
 
     def refresh_tables(self):
         if self._connection is None:
