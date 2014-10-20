@@ -513,6 +513,13 @@ class CanvasMainWindow(QMainWindow):
                     shortcut=QKeySequence.Preferences
                     )
 
+        self.canvas_addons_action = \
+            QAction(self.tr("&Add-ons..."), self,
+                    objectName="canvas-addons-action",
+                    toolTip=self.tr("Manage add-ons."),
+                    triggered=self.open_addons,
+                    )
+
         self.show_output_action = \
             QAction(self.tr("Show Output View"), self,
                     toolTip=self.tr("Show application output."),
@@ -641,6 +648,7 @@ class CanvasMainWindow(QMainWindow):
 #        self.options_menu.addAction("Attach Python Console")
         self.options_menu.addSeparator()
         self.options_menu.addAction(self.canvas_settings_action)
+        self.options_menu.addAction(self.canvas_addons_action)
 
         # Widget menu
         menu_bar.addMenu(self.widget_menu)
@@ -1500,6 +1508,11 @@ class CanvasMainWindow(QMainWindow):
         status = dlg.exec_()
         if status == 0:
             self.__update_from_settings()
+
+    def open_addons(self):
+        from .addons import AddonManagerDialog
+        dlg = AddonManagerDialog(self, windowTitle=self.tr("Add-ons"))
+        return dlg.exec_()
 
     def show_output_view(self):
         """Show a window with application output.
