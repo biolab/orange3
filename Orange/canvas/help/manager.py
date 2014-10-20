@@ -139,7 +139,7 @@ def left_trim_lines(lines):
     """
     Remove all unnecessary leading space from lines.
     """
-    lines_striped = list(zip(lines[1:], list(map(string.lstrip, lines[1:]))))
+    lines_striped = list(zip(lines[1:], list(map(str.lstrip, lines[1:]))))
     lines_striped = list(filter(itemgetter(1), lines_striped))
     indent = min([len(line) - len(striped) \
                   for line, striped in lines_striped] + [sys.maxsize])
