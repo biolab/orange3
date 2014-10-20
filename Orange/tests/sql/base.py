@@ -63,7 +63,8 @@ class PostgresTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        pass
+        SqlTable.connection_pool.closeall()
+        SqlTable.connection_pool = None
 
     def create_sql_table(self, data):
         table_name = self._create_sql_table(data)
