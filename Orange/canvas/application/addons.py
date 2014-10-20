@@ -12,9 +12,14 @@ from distutils import version
 
 import pkg_resources
 
+try:
+    import docutils.core
+except ImportError:
+    docutils = None
+
 from PyQt4.QtGui import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
-    QTextEdit, QTextOption, QDialogButtonBox, QProgressDialog,
+    QTextBrowser, QTextOption, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QPalette, QStandardItemModel, QStandardItem,
     QSortFilterProxyModel
 )
@@ -119,16 +124,17 @@ class AddonManagerWidget(QWidget):
         header.setResizeMode(0, QHeaderView.Fixed)
         header.setResizeMode(2, QHeaderView.ResizeToContents)
 
-        self.__details = QTextEdit(
-            frameShape=QTextEdit.NoFrame,
+        self.__details = QTextBrowser(
+            frameShape=QTextBrowser.NoFrame,
             readOnly=True,
-            lineWrapMode=QTextEdit.WidgetWidth,
+            lineWrapMode=QTextBrowser.WidgetWidth,
+            openExternalLinks=True,
         )
+
         self.__details.setWordWrapMode(QTextOption.WordWrap)
         palette = QPalette(self.palette())
         palette.setColor(QPalette.Base, Qt.transparent)
         self.__details.setPalette(palette)
-
         self.layout().addWidget(self.__details)
 
     def set_items(self, items):
@@ -228,7 +234,24 @@ class AddonManagerWidget(QWidget):
         else:
             description = item[0].description
 
-        return "<pre>{}<pre>".format(escape(description))
+        if docutils is not None:
+            try:
+                html = docutils.core.publish_string(
+                    description,
+                    writer_name="html",
+                    settings_overrides={
+                        "output-encoding": "utf-8",
+#                         "embed-stylesheet": False,
+#                         "stylesheet": [],
+#                         "stylesheet_path": []
+                    }
+                ).decode("utf-8")
+
+            except ValueError:
+                html = "<pre>{}<pre>".format(escape(description))
+        else:
+            html = "<pre>{}<pre>".format(escape(description))
+        return html
 
     def sizeHint(self):
         return QSize(480, 420)
