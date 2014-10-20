@@ -76,8 +76,9 @@ class SqlTable(table.Table):
             connection_args.update(parameters)
         connection_args.update(kwargs)
 
-        self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
-            1, 6, **connection_args)
+        if self.connection_pool is None:
+            self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
+                1, 6, **connection_args)
         self.host = host
         self.database = database
 
@@ -204,10 +205,11 @@ class SqlTable(table.Table):
                "WHERE table_name =", self.quote_string(table_name),
                "ORDER BY ordinal_position"]
         with self._execute_sql_query(" ".join(sql)) as cur:
-            for field, field_type in cur.fetchall():
-                yield (field, field_type,
-                       self.quote_identifier(field),
-                       self._get_field_values(field, field_type) if guess_values else ())
+            fields = cur.fetchall()
+        for field, field_type in fields:
+            yield (field, field_type,
+                   self.quote_identifier(field),
+                   self._get_field_values(field, field_type) if guess_values else ())
 
     def _get_field_values(self, field_name, field_type):
         if any(t in field_type for t in ('boolean', 'int', 'char', 'text')):

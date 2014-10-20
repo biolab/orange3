@@ -3,6 +3,7 @@ import os
 import string
 import unittest
 import uuid
+from Orange.data.sql.table import SqlTable
 
 try:
     import psycopg2
@@ -12,6 +13,10 @@ except ImportError:
 
 import Orange
 from Orange.data.sql import table as sql_table
+
+
+def connection_params():
+    return SqlTable.parse_uri(get_dburi())
 
 
 def get_dburi():
@@ -24,8 +29,7 @@ def get_dburi():
 
 def create_iris():
     iris = Orange.data.Table("iris")
-    connection_params = sql_table.SqlTable.parse_uri(get_dburi())
-    with psycopg2.connect(**connection_params) as conn:
+    with psycopg2.connect(**connection_params()) as conn:
         cur = conn.cursor()
         cur.execute("DROP TABLE IF EXISTS iris")
         cur.execute("""
@@ -53,11 +57,14 @@ def create_iris():
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        SqlTable.connection_pool = \
+            psycopg2.pool.ThreadedConnectionPool(1, 1, **connection_params())
         cls.iris_uri = create_iris()
 
     @classmethod
     def tearDownClass(cls):
-        pass
+        SqlTable.connection_pool.closeall()
+        SqlTable.connection_pool = None
 
     def create_sql_table(self, data):
         table_name = self._create_sql_table(data)
@@ -66,8 +73,10 @@ class PostgresTest(unittest.TestCase):
 
     @contextlib.contextmanager
     def sql_table_from_data(self, data, guess_values=True):
+        assert SqlTable.connection_pool is not None
+
         table_name = self._create_sql_table(data)
-        yield sql_table.SqlTable(get_dburi() + '/' \
+        yield SqlTable(get_dburi() + '/' \
             + str(table_name), guess_values=guess_values)
         self.drop_sql_table(table_name)
 
@@ -80,7 +89,7 @@ class PostgresTest(unittest.TestCase):
         ]
         table_name = uuid.uuid4()
         create_table_sql = """
-            CREATE TABLE "%(table_name)s" (
+            CREATE TEMPORARY TABLE "%(table_name)s" (
                 %(columns)s
             )
         """ % dict(
@@ -90,7 +99,7 @@ class PostgresTest(unittest.TestCase):
                 for i, t in enumerate(sql_column_types)
             )
         )
-        conn = psycopg2.connect(**sql_table.SqlTable.parse_uri(get_dburi()))
+        conn = SqlTable.connection_pool.getconn()
         cur = conn.cursor()
         cur.execute(create_table_sql)
         for row in data:
@@ -111,7 +120,7 @@ class PostgresTest(unittest.TestCase):
             )
             cur.execute(insert_sql)
         conn.commit()
-        conn.close()
+        SqlTable.connection_pool.putconn(conn)
         return table_name
 
     def _get_column_types(self, data):
@@ -125,11 +134,12 @@ class PostgresTest(unittest.TestCase):
         return column_size
 
     def drop_sql_table(self, table_name):
-        conn = psycopg2.connect(**sql_table.SqlTable.parse_uri(get_dburi()))
+        conn = SqlTable.connection_pool.getconn()
         cur = conn.cursor()
         cur.execute("""DROP TABLE "%s" """ % table_name)
         conn.commit()
-        conn.close()
+        SqlTable.connection_pool.putconn(conn)
+
 
     def float_variable(self, size):
         return [i*.1 for i in range(size)]
