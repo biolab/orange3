@@ -29,6 +29,7 @@ class OWSql(widget.OWWidget):
     want_main_area = False
 
     host = Setting(None)
+    port = Setting(None)
     database = Setting(None)
     username = Setting(None)
     password = Setting(None)
@@ -49,7 +50,8 @@ class OWSql(widget.OWWidget):
         self.servertext = QtGui.QLineEdit(box)
         self.servertext.setPlaceholderText('Server')
         if self.host:
-            self.servertext.setText(self.host)
+            self.servertext.setText(self.host if not self.port else
+                                    '{}:{}'.format(self.host, self.port))
         box.layout().addWidget(self.servertext)
         self.databasetext = QtGui.QLineEdit(box)
         self.databasetext.setPlaceholderText('Database')
@@ -103,12 +105,15 @@ class OWSql(widget.OWWidget):
             self.open_table()
 
     def connect(self):
-        self.host = self.servertext.text()
+        hostport = self.servertext.text().split(':')
+        self.host = hostport[0]
+        self.port = hostport[1] if len(hostport) == 2 else None
         self.database = self.databasetext.text()
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
         self._connection = psycopg2.connect(
             host=self.host,
+            port=self.port,
             database=self.database,
             user=self.username,
             password=self.password
