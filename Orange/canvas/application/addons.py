@@ -21,15 +21,17 @@ from PyQt4.QtGui import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QTextOption, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QPalette, QStandardItemModel, QStandardItem,
-    QSortFilterProxyModel
+    QSortFilterProxyModel, QStyle, QStyledItemDelegate,
+    QStyleOptionViewItemV4, QApplication
 )
 
 from PyQt4.QtCore import (
-    Qt, QObject, QMetaObject, QSize, QTimer, QThread, Q_ARG
+    Qt, QObject, QMetaObject, QEvent, QSize, QTimer, QThread, Q_ARG
 )
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from ..gui.utils import message_warning, message_critical as message_error
+from ..help.manager import get_dist_meta, trim
 
 Installable = namedtuple(
     "Installable",
@@ -78,6 +80,54 @@ def is_updatable(item):
             return dist.version < inst.version
 
 
+class TristateCheckItemDelegate(QStyledItemDelegate):
+    """
+    A QStyledItemDelegate which properly toggles Qt.ItemIsTristate check
+    state transitions on user interaction.
+    """
+    def editorEvent(self, event, model, option, index):
+        flags = model.flags(index)
+        if not flags & Qt.ItemIsUserCheckable or \
+                not option.state & QStyle.State_Enabled or \
+                not flags & Qt.ItemIsEnabled:
+            return False
+
+        checkstate = model.data(index, Qt.CheckStateRole)
+        if checkstate is None:
+            return False
+
+        widget = option.widget
+        style = widget.style() if widget else QApplication.style()
+        if event.type() in {QEvent.MouseButtonPress, QEvent.MouseButtonRelease,
+                            QEvent.MouseButtonDblClick}:
+            pos = event.pos()
+            opt = QStyleOptionViewItemV4(option)
+            self.initStyleOption(opt, index)
+            rect = style.subElementRect(
+                QStyle.SE_ItemViewItemCheckIndicator, opt, widget)
+
+            if event.button() != Qt.LeftButton or not rect.contains(pos):
+                return False
+
+            if event.type() in {QEvent.MouseButtonPress,
+                                QEvent.MouseButtonDblClick}:
+                return True
+
+        elif event.type() == QEvent.KeyPress:
+            if event.key() != Qt.Key_Space and event.key() != Qt.Key_Select:
+                return False
+        else:
+            return False
+
+        if model.flags(index) & Qt.ItemIsTristate:
+            checkstate = (checkstate + 1) % 3
+        else:
+            checkstate = \
+                Qt.Unchecked if checkstate == Qt.Checked else Qt.Checked
+
+        return model.setData(index, checkstate, Qt.CheckStateRole)
+
+
 class AddonManagerWidget(QWidget):
 
     statechanged = Signal()
@@ -103,7 +153,7 @@ class AddonManagerWidget(QWidget):
             selectionMode=QTreeView.SingleSelection,
             alternatingRowColors=True
         )
-
+        self.__view.setItemDelegateForColumn(0, TristateCheckItemDelegate())
         self.layout().addWidget(view)
 
         self.__model = model = QStandardItemModel()
@@ -148,7 +198,7 @@ class AddonManagerWidget(QWidget):
                 installed = True
                 ins, dist = item
                 name = dist.project_name
-                summary = dist.summary
+                summary = get_dist_meta(dist).get("Summary", "")
                 version = ins.version if ins is not None else dist.version
             else:
                 installed = False
@@ -157,11 +207,19 @@ class AddonManagerWidget(QWidget):
                 summary = ins.summary
                 version = ins.version
 
+            updatable = is_updatable(item)
+
             item1 = QStandardItem()
             item1.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable |
                            Qt.ItemIsUserCheckable |
-                           (Qt.ItemIsTristate if is_updatable(item) else 0))
-            item1.setCheckState(Qt.Checked if installed else Qt.Unchecked)
+                           (Qt.ItemIsTristate if updatable else 0))
+
+            if installed and updatable:
+                item1.setCheckState(Qt.PartiallyChecked)
+            elif installed:
+                item1.setCheckState(Qt.Checked)
+            else:
+                item1.setCheckState(Qt.Unchecked)
 
             item2 = QStandardItem(name)
 
@@ -228,7 +286,8 @@ class AddonManagerWidget(QWidget):
         if isinstance(item, Installed):
             remote, dist = item
             if remote is None:
-                description = ""
+                description = get_dist_meta(dist).get("Description")
+                description = trim(description)
             else:
                 description = remote.description
         else:
