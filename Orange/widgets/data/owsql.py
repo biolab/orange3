@@ -181,6 +181,7 @@ class OWSql(widget.OWWidget):
         self.table = self.tablecombo.currentText()
 
         table = SqlTable(host=self.host,
+                         port=self.port,
                          database=self.database,
                          user=self.username,
                          password=self.password,
@@ -192,6 +193,7 @@ class OWSql(widget.OWWidget):
         self.sql = self.sqltext.toPlainText()
         table = SqlTable.from_sql(
             host=self.host,
+            port=self.port,
             database=self.database,
             user=self.username,
             password=self.password,
