@@ -327,7 +327,7 @@ def save_tab_delimited(filename, data):
         if i in m:
             r.append("m")
         elif i in c:
-            r.append("c")
+            r.append("class")
         else:
             r.append("")
     f.write("\t".join(r))
