@@ -287,7 +287,7 @@ class AddonManagerWidget(QWidget):
             remote, dist = item
             if remote is None:
                 description = get_dist_meta(dist).get("Description")
-                description = trim(description)
+                description = description
             else:
                 description = remote.description
         else:
@@ -296,7 +296,7 @@ class AddonManagerWidget(QWidget):
         if docutils is not None:
             try:
                 html = docutils.core.publish_string(
-                    description,
+                    trim(description),
                     writer_name="html",
                     settings_overrides={
                         "output-encoding": "utf-8",
@@ -306,7 +306,9 @@ class AddonManagerWidget(QWidget):
                     }
                 ).decode("utf-8")
 
-            except ValueError:
+            except docutils.utils.SystemMessage:
+                html = "<pre>{}<pre>".format(escape(description))
+            except Exception:
                 html = "<pre>{}<pre>".format(escape(description))
         else:
             html = "<pre>{}<pre>".format(escape(description))
