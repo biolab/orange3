@@ -21,7 +21,7 @@ from PyQt4.QtGui import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QTextOption, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QPalette, QStandardItemModel, QStandardItem,
-    QSortFilterProxyModel, QStyle, QStyledItemDelegate,
+    QSortFilterProxyModel, QItemSelectionModel, QStyle, QStyledItemDelegate,
     QStyleOptionViewItemV4, QApplication
 )
 
@@ -158,7 +158,7 @@ class AddonManagerWidget(QWidget):
         self.layout().addWidget(view)
 
         self.__model = model = QStandardItemModel()
-        model.setHorizontalHeaderLabels(["", "Name", "Version"])
+        model.setHorizontalHeaderLabels(["", "Name", "Version", "Action"])
         model.dataChanged.connect(self.__data_changed)
         proxy = QSortFilterProxyModel(
             filterKeyColumn=1,
@@ -192,7 +192,7 @@ class AddonManagerWidget(QWidget):
         self.__items = items
         model = self.__model
         model.clear()
-        model.setHorizontalHeaderLabels(["", "Name", "Version"])
+        model.setHorizontalHeaderLabels(["", "Name", "Version", "Action"])
 
         for item in items:
             if isinstance(item, Installed):
@@ -204,6 +204,7 @@ class AddonManagerWidget(QWidget):
             else:
                 installed = False
                 (ins,) = item
+                dist = None
                 name = ins.name
                 summary = ins.summary
                 version = ins.version
@@ -228,13 +229,28 @@ class AddonManagerWidget(QWidget):
             item2.setToolTip(summary)
             item2.setData(item, Qt.UserRole)
 
+            if updatable:
+                version = "{} < {}".format(dist.version, ins.version)
+
             item3 = QStandardItem(version)
             item3.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-            model.appendRow([item1, item2, item3])
+
+            item4 = QStandardItem()
+            item4.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+            model.appendRow([item1, item2, item3, item4])
 
         self.__view.resizeColumnToContents(0)
         self.__view.setColumnWidth(
-            1, max(100, self.__view.sizeHintForColumn(1)))
+            1, max(150, self.__view.sizeHintForColumn(1)))
+        self.__view.setColumnWidth(
+            2, max(150, self.__view.sizeHintForColumn(2)))
+
+        if self.__items:
+            self.__view.selectionModel().select(
+                self.__view.model().index(0, 0),
+                QItemSelectionModel.Select | QItemSelectionModel.Rows
+            )
 
     def item_state(self):
         steps = []
@@ -259,7 +275,28 @@ class AddonManagerWidget(QWidget):
         else:
             return -1
 
-    def __data_changed(self, *q):
+    def __data_changed(self, topleft, bottomright):
+        rows = range(topleft.row(), bottomright.row() + 1)
+        proxy = self.__view.model()
+        map_to_source = proxy.mapToSource
+
+        for i in rows:
+            sourceind = map_to_source(proxy.index(i, 0))
+            modelitem = self.__model.itemFromIndex(sourceind)
+            actionitem = self.__model.item(modelitem.row(), 3)
+            item = self.__items[modelitem.row()]
+
+            state = modelitem.checkState()
+            flags = modelitem.flags()
+
+            if flags & Qt.ItemIsTristate and state == Qt.Checked:
+                actionitem.setText("Update")
+            elif isinstance(item, Available) and state == Qt.Checked:
+                actionitem.setText("Install")
+            elif isinstance(item, Installed) and state == Qt.Unchecked:
+                actionitem.setText("Uninstall")
+            else:
+                actionitem.setText("")
         self.statechanged.emit()
 
     def __update_details(self):
@@ -434,7 +471,6 @@ class AddonManagerDialog(QDialog):
         self._executor.shutdown(wait=False)
 
         if self.__thread is not None:
-
             self.__thread.quit()
             self.__thread.wait(1000)
 
