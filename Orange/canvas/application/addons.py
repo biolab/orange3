@@ -30,7 +30,8 @@ from PyQt4.QtCore import (
 )
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-from ..gui.utils import message_warning, message_critical as message_error
+from ..gui.utils import message_warning, message_information, \
+                        message_critical as message_error
 from ..help.manager import get_dist_meta, trim
 
 Installable = namedtuple(
@@ -450,7 +451,7 @@ class AddonManagerDialog(QDialog):
             self.__thread.start()
 
             self.__installer.moveToThread(self.__thread)
-            self.__installer.finished.connect(self.accept)
+            self.__installer.finished.connect(self.__on_installer_finished)
             self.__installer.error.connect(self.__on_installer_error)
             self.__installer.installStatusChanged.connect(
                 self.__progress.setLabelText)
@@ -471,6 +472,12 @@ class AddonManagerDialog(QDialog):
             parent=self
         )
         self.reject()
+
+    def __on_installer_finished(self):
+        message_information(
+            "Please restart the application for changes to take effect.",
+            parent=self)
+        self.accept()
 
 
 def list_pypi_addons():
