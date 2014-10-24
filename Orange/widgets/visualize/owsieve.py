@@ -27,6 +27,8 @@ class OWSieveDiagram(OWWidget):
     <priority>4200</priority>
     """
     name = "Sieve Diagram"
+    icon = "icons/SieveDiagram.svg"
+
     inputs = [("Data", Table, "setData", Default), ("Features", AttributeList, "setShownAttributes")]
     outputs = []
 
