@@ -183,10 +183,10 @@ class SqlTable(table.Table):
         else:
             # always continuous
             if any(t in field_type for t in
-                   ('real', 'float', 'double', 'numeric')):
+                   ('real', 'float', 'double', 'numeric', 'serial')):
                 var = variable.ContinuousVariable(name=name)
             # continuous or discrete
-            elif any(t in field_type for t in ('int', 'serial')):
+            elif 'int' in field_type:
                 if values:
                     values = [str(val) for val in values]
                     var = variable.DiscreteVariable(name=name, values=values)
