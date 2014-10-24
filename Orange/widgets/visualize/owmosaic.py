@@ -115,7 +115,7 @@ class OWMosaicDisplay(OWWidget):
     color_settings = Setting(None)
     selected_schema_index = Setting(0)
     cellspace = Setting(4)
-    show_subset_data_boxes = Setting(1)
+    show_subset_data_boxes = Setting(True)
     remove_unused_values = Setting(True)
     variable1 = ContextSetting("")
     variable2 = ContextSetting("")
@@ -126,6 +126,8 @@ class OWMosaicDisplay(OWWidget):
                             "Class distribution"]
     subboxesOpts = ["Expected class distribution",
                     "Apriori class distribution"]
+
+    _apriori_pen_color = QColor(255, 255, 255, 128)
 
     def __init__(self, parent=None):
         super().__init__(self, parent)
@@ -609,13 +611,13 @@ class OWMosaicDisplay(OWWidget):
     # ############################################################################
 
     ##  DRAW DATA - draw rectangles for attributes in attrList inside rect (x0,x1), (y0,y1)
-    def DrawData(self, attrList, x0_x1, y0_y1, side, condition, totalAttrs, usedAttrs=[], usedVals=[],
+    def DrawData(self, attrList, x0_x1, y0_y1, side, condition, totalAttrs, used_attrs=[], used_vals=[],
                  attrVals="", **args):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
         if self.conditionalDict[attrVals] == 0:
-            self.addRect(x0, x1, y0, y1, "", usedAttrs, usedVals, attrVals=attrVals)
-            self.DrawText(side, attrList[0], (x0, x1), (y0, y1), totalAttrs, usedAttrs, usedVals,
+            self.addRect(x0, x1, y0, y1, "", used_attrs, used_vals, attrVals=attrVals)
+            self.DrawText(side, attrList[0], (x0, x1), (y0, y1), totalAttrs, used_attrs, used_vals,
                           attrVals)  # store coordinates for later drawing of labels
             return
 
@@ -641,10 +643,10 @@ class OWMosaicDisplay(OWWidget):
         # if we are visualizing the third attribute and the first attribute has the last value, we have to reverse the order in which the boxes will be drawn
         # otherwise, if the last cell, nearest to the labels of the fourth attribute, is empty, we wouldn't be able to position the labels
         valRange = list(range(len(values)))
-        if len(attrList + usedAttrs) == 4 and len(usedAttrs) == 2:
-            attr1Values = self.attributeValuesDict.get(usedAttrs[0], None) or get_variable_values_sorted(
-                self.data.domain[usedAttrs[0]])
-            if usedVals[0] == attr1Values[-1]:
+        if len(attrList + used_attrs) == 4 and len(used_attrs) == 2:
+            attr1Values = self.attributeValuesDict.get(used_attrs[0], None) or get_variable_values_sorted(
+                self.data.domain[used_attrs[0]])
+            if used_vals[0] == attr1Values[-1]:
                 valRange = valRange[::-1]
 
         for i in valRange:
@@ -660,37 +662,37 @@ class OWMosaicDisplay(OWWidget):
             if side % 2 == 0:  # if we are moving horizontally
                 if len(attrList) == 1:
                     self.addRect(x0 + start, x0 + end, y0, y1,
-                                 condition + 4 * "&nbsp;" + attr + ": <b>" + htmlVal + "</b><br>", usedAttrs + [attr],
-                                 usedVals + [val], newAttrVals, **args)
+                                 condition + 4 * "&nbsp;" + attr + ": <b>" + htmlVal + "</b><br>", used_attrs + [attr],
+                                 used_vals + [val], newAttrVals, **args)
                 else:
                     self.DrawData(attrList[1:], (x0 + start, x0 + end), (y0, y1), side + 1,
                                   condition + 4 * "&nbsp;" + attr + ": <b>" + htmlVal + "</b><br>", totalAttrs,
-                                  usedAttrs + [attr], usedVals + [val], newAttrVals, **args)
+                                  used_attrs + [attr], used_vals + [val], newAttrVals, **args)
             else:
                 if len(attrList) == 1:
                     self.addRect(x0, x1, y0 + start, y0 + end,
-                                 condition + 4 * "&nbsp;" + attr + ": <b> " + htmlVal + "</b><br>", usedAttrs + [attr],
-                                 usedVals + [val], newAttrVals, **args)
+                                 condition + 4 * "&nbsp;" + attr + ": <b> " + htmlVal + "</b><br>", used_attrs + [attr],
+                                 used_vals + [val], newAttrVals, **args)
                 else:
                     self.DrawData(attrList[1:], (x0, x1), (y0 + start, y0 + end), side + 1,
                                   condition + 4 * "&nbsp;" + attr + ": <b>" + htmlVal + "</b><br>", totalAttrs,
-                                  usedAttrs + [attr], usedVals + [val], newAttrVals, **args)
+                                  used_attrs + [attr], used_vals + [val], newAttrVals, **args)
 
-        self.DrawText(side, attrList[0], (x0, x1), (y0, y1), totalAttrs, usedAttrs, usedVals, attrVals)
+        self.DrawText(side, attrList[0], (x0, x1), (y0, y1), totalAttrs, used_attrs, used_vals, attrVals)
 
 
     ######################################################################
     ## DRAW TEXT - draw legend for all attributes in attrList and their possible values
-    def DrawText(self, side, attr, x0_x1, y0_y1, totalAttrs, usedAttrs, usedVals, attrVals):
+    def DrawText(self, side, attr, x0_x1, y0_y1, totalAttrs, used_attrs, used_vals, attrVals):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
         if self.drawnSides[side]: return
 
         # the text on the right will be drawn when we are processing visualization of the last value of the first attribute
         if side == RIGHT:
-            attr1Values = self.attributeValuesDict.get(usedAttrs[0], None) or get_variable_values_sorted(
-                self.data.domain[usedAttrs[0]])
-            if usedVals[0] != attr1Values[-1]:
+            attr1Values = self.attributeValuesDict.get(used_attrs[0], None) or get_variable_values_sorted(
+                self.data.domain[used_attrs[0]])
+            if used_vals[0] != attr1Values[-1]:
                 return
 
         if not self.conditionalDict[attrVals]:
@@ -753,22 +755,25 @@ class OWMosaicDisplay(OWWidget):
                 currPos += perc * height + self.cellspace * (totalAttrs - side)
 
     # draw a rectangle, set it to back and add it to rect list
-    def addRect(self, x0, x1, y0, y1, condition="", usedAttrs=[], usedVals=[], attrVals="", **args):
-        if x0 == x1: x1 += 1
-        if y0 == y1: y1 += 1
+    def addRect(self, x0, x1, y0, y1, condition="", used_attrs=[], used_vals=[], attrVals="", **args):
+        if x0 == x1:
+            x1 += 1
+        if y0 == y1:
+            y1 += 1
 
-        if x1 - x0 + y1 - y0 == 2: y1 += 1  # if we want to show a rectangle of width and height 1 it doesn't show anything. in such cases we therefore have to increase size of one edge
+        if x1 - x0 + y1 - y0 == 2:
+            y1 += 1  # if we want to show a rectangle of width and height 1 it doesn't show anything. in such cases we therefore have to increase size of one edge
 
-        if "selectionDict" in args and tuple(usedVals) in args["selectionDict"]:
+        if "selectionDict" in args and tuple(used_vals) in selectionDict:
             d = 2
             OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 1 + 2 * d, y1 - y0 + 1 + 2 * d,
-                              penColor=args["selectionDict"][tuple(usedVals)], penWidth=2, z=-100)
+                              penColor=args["selectionDict"][tuple(used_vals)], penWidth=2, z=-100)
 
         # if we have selected a rule that contains this combination of attr values then show a kind of selection of this rectangle
-        if self.activeRule and len(usedAttrs) == len(self.activeRule[0]) and sum(
-                [v in usedAttrs for v in self.activeRule[0]]) == len(self.activeRule[0]):
+        if self.activeRule and len(used_attrs) == len(self.activeRule[0]) and sum(
+                [v in used_attrs for v in self.activeRule[0]]) == len(self.activeRule[0]):
             for vals in self.activeRule[1]:
-                if usedVals == [vals[self.activeRule[0].index(a)] for a in usedAttrs]:
+                if used_vals == [vals[self.activeRule[0].index(a)] for a in used_attrs]:
                     values = list(
                         self.attributeValuesDict.get(self.data.domain.classVar.name, [])) or get_variable_values_sorted(
                         self.data.domain.classVar)
@@ -786,12 +791,12 @@ class OWMosaicDisplay(OWWidget):
 
         # we have to remember which conditions were new in this update so that when we right click we can only remove the last added selections
         if self.selectionRectangle != None and self.selectionRectangle.collidesWithItem(outerRect) and tuple(
-                usedVals) not in self.selectionConditions:
-            self.recentlyAdded = getattr(self, "recentlyAdded", []) + [tuple(usedVals)]
-            self.selectionConditions = self.selectionConditions + [tuple(usedVals)]
+                used_vals) not in self.selectionConditions:
+            self.recentlyAdded = getattr(self, "recentlyAdded", []) + [tuple(used_vals)]
+            self.selectionConditions = self.selectionConditions + [tuple(used_vals)]
 
         # show rectangle selected or not
-        if tuple(usedVals) in self.selectionConditions:
+        if tuple(used_vals) in self.selectionConditions:
             outerRect.setPen(QPen(Qt.black, 3, Qt.DotLine))
 
         if self.interior_coloring == CLASS_DISTRIBUTION and (
@@ -802,7 +807,7 @@ class OWMosaicDisplay(OWWidget):
         if self.interior_coloring == PEARSON or not self.data.domain.class_var or not isinstance(self.data.domain.class_var, DiscreteVariable):
             s = sum(self.aprioriDistributions[0])
             expected = s * reduce(lambda x, y: x * y,
-                                  [self.aprioriDistributions[i][usedVals[i]] / float(s) for i in range(len(usedVals))])
+                                  [self.aprioriDistributions[i][used_vals[i]] / float(s) for i in range(len(used_vals))])
             actual = self.conditionalDict[attrVals]
             pearson = float(actual - expected) / sqrt(expected)
             if abs(pearson) < 2:
@@ -849,24 +854,29 @@ class OWMosaicDisplay(OWWidget):
                 total += v
 
             # show apriori boxes and lines
-            if (self.show_apriori_distribution_lines or self.use_boxes) and abs(x1 - x0) > self.box_size and abs(
-                            y1 - y0) > self.box_size:
-                apriori = [aprioriDist[val] / float(len(self.data)) for val in clsValues]
-                if self.show_apriori_distribution_boxes or self.data.domain.class_var.name in usedAttrs:  # we want to show expected class distribution under independence hypothesis
-                    boxCounts = apriori
+            if (self.show_apriori_distribution_lines or self.use_boxes) and \
+                    abs(x1 - x0) > self.box_size and \
+                    abs(y1 - y0) > self.box_size:
+                apriori = [aprioriDist[val] / float(len(self.data))
+                           for val in clsValues]
+                if self.show_apriori_distribution_boxes or \
+                        self.data.domain.class_var.name in used_attrs:
+                    box_counts = apriori
                 else:
-                    contingencies = self.optimizationDlg.getContingencys(usedAttrs)
-                    boxCounts = []
+                    contingencies = \
+                        self.optimizationDlg.getContingencys(used_attrs)
+                    box_counts = []
                     for clsVal in clsValues:
-                        # compute: P(c_i) * prod (P(c_i|attr_k) / P(c_i))  for each class value
-                        Pci = aprioriDist[clsVal] / float(sum(aprioriDist.values()))
-                        tempVal = Pci
-                        if Pci > 0:
+                        # compute: P(c_i) * prod (P(c_i|attr_k) / P(c_i))
+                        # for each class value
+                        pci = aprioriDist[clsVal] / float(sum(aprioriDist.values()))
+                        tempVal = pci
+                        if pci > 0:
                             #tempVal = 1.0 / Pci
-                            for i in range(len(usedAttrs)):
-                                tempVal *= contingencies[usedAttrs[i]][usedVals[i]][clsVal] / Pci
-                        boxCounts.append(tempVal)
-                        #boxCounts.append(aprioriDist[val]/float(sum(aprioriDist.values())) * reduce(operator.mul, [contingencies[usedAttrs[i]][usedVals[i]][clsVal]/float(sum(contingencies[usedAttrs[i]][usedVals[i]].values())) for i in range(len(usedAttrs))]))
+                            for ua, uv in zip(used_attrs, used_vals):
+                                tempVal *= contingencies[ua][uv] / pci
+                        box_counts.append(tempVal)
+                        #boxCounts.append(aprioriDist[val]/float(sum(aprioriDist.values())) * reduce(operator.mul, [contingencies[used_attrs[i]][used_vals[i]][clsVal]/float(sum(contingencies[used_attrs[i]][used_vals[i]].values())) for i in range(len(used_attrs))]))
 
                 total1 = 0
                 total2 = 0
@@ -881,7 +891,7 @@ class OWMosaicDisplay(OWWidget):
                     if self.show_apriori_distribution_boxes:
                         val2 = apriori[i]
                     else:
-                        val2 = boxCounts[i] / float(sum(boxCounts))
+                        val2 = box_counts[i] / float(sum(box_counts))
                     if self.horizontal_distribution:
                         if i == len(clsValues) - 1:
                             v1 = x1 - x0 - total1
@@ -902,7 +912,7 @@ class OWMosaicDisplay(OWWidget):
                     if self.use_boxes:
                         OWCanvasRectangle(self.canvas, x, y, w, h, self.colorPalette[i], self.colorPalette[i], z=20)
                     if i < len(clsValues) - 1 and self.show_apriori_distribution_lines:
-                        OWCanvasLine(self.canvas, xL1, yL1, xL2, yL2, z=10)
+                        OWCanvasLine(self.canvas, xL1, yL1, xL2, yL2, z=10, penColor=self._apriori_pen_color)
 
                     total1 += v1
                     total2 += v2
@@ -1185,7 +1195,7 @@ class OWCanvasText(QGraphicsTextItem):
         QGraphicsTextItem.setPos(self, x, y)
 
 
-def OWCanvasRectangle(canvas, x=0, y=0, width=0, height=0, penColor=Qt.black, brushColor=None, penWidth=1, z=0,
+def OWCanvasRectangle(canvas, x=0, y=0, width=0, height=0, penColor=QColor(128, 128, 128), brushColor=None, penWidth=1, z=0,
                       penStyle=Qt.SolidLine, pen=None, tooltip=None, show=1):
     rect = QGraphicsRectItem(x, y, width, height, None, canvas)
     if brushColor: rect.setBrush(QBrush(brushColor))
@@ -1202,7 +1212,7 @@ def OWCanvasRectangle(canvas, x=0, y=0, width=0, height=0, penColor=Qt.black, br
     return rect
 
 
-def OWCanvasLine(canvas, x1=0, y1=0, x2=0, y2=0, penWidth=1, penColor=Qt.black, pen=None, z=0, tooltip=None, show=1):
+def OWCanvasLine(canvas, x1=0, y1=0, x2=0, y2=0, penWidth=2, penColor=QColor(255, 255, 255, 128), pen=None, z=0, tooltip=None, show=1):
     r = QGraphicsLineItem(x1, y1, x2, y2, None, canvas)
     if pen != None:
         r.setPen(pen)
