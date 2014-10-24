@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="Hierarchical clustering. The schema clusters the data items in Iris data set by first estimating the distances between data instances. Distance matrix is passed to hierarchical clustering, which renders the dendrogram. Select different parts of the dendrogram to further analyze the corresponding data.&#10;&#10;Notice that hierarchical clustering can only handle small data sets, that is, those that contain only a small number of data instances. For larger data sets the distance matrix may get too big and may not fit in the memory. An alternative method that can consider such data sets is k-means clustering." title="Hierarchical Clustering" version="2.0">
+<scheme description="Hierarchical clustering. The workflow clusters the data items in Iris data set by first estimating the distances between data instances. Distance matrix is passed to hierarchical clustering, which renders the dendrogram. Select different parts of the dendrogram to further analyze the corresponding data.&#10;&#10;Notice that hierarchical clustering can only handle small data sets, that is, those that contain only a small number of data instances. For larger data sets the distance matrix may get too big and may not fit in the memory. An alternative method that can consider such data sets is k-means clustering." title="Hierarchical Clustering" version="2.0">
 	<nodes>
 		<node id="0" name="File" position="(150, 150)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWFile.OWFile" title="File" version="" />
 		<node id="1" name="Data Table" position="(318.0, 131.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWDataTable.OWDataTable" title="Data Table" version="" />
@@ -25,12 +25,12 @@ between data samples.
 a heat map.
 		</text>
 		<arrow end="(136.0, 119.0)" fill="#C1272D" id="4" start="(112.0, 80.0)" />
-		<text font-family="Helvetica" font-size="12" id="5" rect="(75.0, 16.0, 150.0, 60.0)">Read the data. Try this schema with the Iris data set (from data sets that come with Orange).
+		<text font-family="Helvetica" font-size="12" id="5" rect="(75.0, 16.0, 150.0, 60.0)">Read the data. Try this workflow with the Iris data set (from data sets that come with Orange).
 		</text>
 		<arrow end="(445.0, 373.0)" fill="#C1272D" id="6" start="(455.0, 420.0)" />
 		<text font-family="Helvetica" font-size="12" id="7" rect="(405.0, 427.0, 100.0, 36.0)">Hierarchically cluster the data.
 		</text>
-		<text font-family="Helvetica" font-size="12" id="8" rect="(530.0, 385.0, 150.0, 144.0)">Choose any part of the clustering dendrogram. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this schema into interactive data analysis.
+		<text font-family="Helvetica" font-size="12" id="8" rect="(530.0, 385.0, 150.0, 144.0)">Choose any part of the clustering dendrogram. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this workflow into interactive data analysis.
 		</text>
 	</annotations>
 	<thumbnail />

@@ -62,13 +62,13 @@ spec = \
       "QSS stylesheet to use"),
 
      ("schemeinfo/show-at-new-scheme", bool, True,
-      "Show Scheme Properties when creating a new Scheme"),
+      "Show Workflow Properties when creating a new Workflow"),
 
      ("mainwindow/scheme-margins-enabled", bool, False,
-      "Show margins around the scheme view"),
+      "Show margins around the workflow view"),
 
      ("mainwindow/show-scheme-shadow", bool, True,
-      "Show shadow around the scheme view"),
+      "Show shadow around the workflow view"),
 
      ("mainwindow/toolbox-dock-exclusive", bool, True,
       "Should the toolbox show only one expanded category at the time"),
@@ -84,7 +84,7 @@ spec = \
       "button"),
 
      ("mainwindow/number-of-recent-schemes", int, 15,
-      "Number of recent schemes to keep in history"),
+      "Number of recent workflows to keep in history"),
 
      ("schemeedit/show-channel-names", bool, True,
       "Show channel names"),
@@ -96,7 +96,7 @@ spec = \
       "Enable node animations."),
 
      ("schemeedit/freeze-on-load", bool, False,
-      "Freeze signal propagation when loading a scheme."),
+      "Freeze signal propagation when loading a workflow."),
 
      ("quickmenu/trigger-on-double-click", bool, True,
       "Show quick menu on double click."),

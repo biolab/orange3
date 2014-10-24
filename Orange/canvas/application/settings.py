@@ -238,8 +238,8 @@ class UserSettingsDialog(QMainWindow):
         cb_anim = QCheckBox(
             self.tr("Enable node animations"),
             objectName="enable-node-animations",
-            toolTip=self.tr("Enable shadow and ping animations for node "
-                            "items in the scheme.")
+            toolTip=self.tr("Enable shadow and ping animations for nodes "
+                            "in the workflow.")
         )
         self.bind(cb_anim, "checked", "schemeedit/enable-node-animations")
         nodes.layout().addWidget(cb_anim)
