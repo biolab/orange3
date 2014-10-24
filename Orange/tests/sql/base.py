@@ -27,6 +27,14 @@ def get_dburi():
         return "postgres://localhost/test"
 
 
+def server_version():
+    if has_psycopg2:
+        with psycopg2.connect(**connection_params()) as conn:
+            return conn.server_version
+    else:
+        return 0
+
+
 def create_iris():
     iris = Orange.data.Table("iris")
     with psycopg2.connect(**connection_params()) as conn:
@@ -66,8 +74,8 @@ class PostgresTest(unittest.TestCase):
         SqlTable.connection_pool.closeall()
         SqlTable.connection_pool = None
 
-    def create_sql_table(self, data):
-        table_name = self._create_sql_table(data)
+    def create_sql_table(self, data, columns=None):
+        table_name = self._create_sql_table(data, columns)
         self.table_name = str(table_name)
         return get_dburi() + '/' + str(table_name)
 
@@ -80,13 +88,14 @@ class PostgresTest(unittest.TestCase):
             + str(table_name), guess_values=guess_values)
         self.drop_sql_table(table_name)
 
-    def _create_sql_table(self, data):
+    def _create_sql_table(self, data, sql_column_types=None):
         data = list(data)
-        column_size = self._get_column_types(data)
-        sql_column_types = [
-            'float' if size == 0 else 'varchar(%s)' % size
-            for size in column_size
-        ]
+        if sql_column_types is None:
+            column_size = self._get_column_types(data)
+            sql_column_types = [
+                'float' if size == 0 else 'varchar(%s)' % size
+                for size in column_size
+            ]
         table_name = uuid.uuid4()
         create_table_sql = """
             CREATE TEMPORARY TABLE "%(table_name)s" (

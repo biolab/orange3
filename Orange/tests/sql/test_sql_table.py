@@ -6,7 +6,8 @@ from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
 from Orange.data.sql.parser import SqlParser
-from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2
+from Orange.data.sql.table import SqlTable
+from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2, server_version
 
 
 @unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
@@ -314,3 +315,206 @@ class SqlTableTests(PostgresTest):
             )
 
         self.assertEqual(len(iris.domain), 5)
+
+    def test_discrete_bigint(self):
+        table = np.arange(6).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['bigint'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+    def test_continous_bigint(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['bigint'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_discrete_int(self):
+        table = np.arange(6).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['int'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+    def test_continous_int(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['int'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_discrete_smallint(self):
+        table = np.arange(6).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['smallint'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+    def test_continous_smallint(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['smallint'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_boolean(self):
+        table = np.array(['F', 'T', 0, 1, 'False', 'True']).reshape(-1, 1)
+        uri = self.create_sql_table(table, ['boolean'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+    def test_discrete_char(self):
+        table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
+        uri = self.create_sql_table(table, ['char(1)'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+    def test_meta_char(self):
+        table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
+        uri = self.create_sql_table(table, ['char(1)'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+    def test_discrete_varchar(self):
+        table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
+        uri = self.create_sql_table(table, ['varchar(1)'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+
+    def test_meta_varchar(self):
+        table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
+        uri = self.create_sql_table(table, ['varchar(1)'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+    def test_date(self):
+        table = np.array(['2014-04-12', '2014-04-13', '2014-04-14',
+                          '2014-04-15', '2014-04-16']).reshape(-1, 1)
+        uri = self.create_sql_table(table, ['date'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+    def test_double_precision(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['double precision'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_numeric(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['numeric(15, 2)'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_real(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['real'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_serial(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['serial'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    @unittest.skipIf(server_version() < 90200, "Type not supported on this server version.")
+    def test_smallserial(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['smallserial'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    @unittest.skipIf(server_version() < 90200, "Type not supported on this server version.")
+    def test_bigserial(self):
+        table = np.arange(25).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['bigserial'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+
+    def test_text(self):
+        table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape((-1, 1))
+        uri = self.create_sql_table(table, ['text'])
+
+        sql_table = SqlTable(uri, guess_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(uri, guess_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+    def assertFirstAttrIsInstance(self, table, variable_type):
+        self.assertGreater(len(table.domain), 0)
+        attr = table.domain[0]
+        self.assertIsInstance(attr, variable_type)
+
+    def assertFirstMetaIsInstance(self, table, variable_type):
+        self.assertGreater(len(table.domain.metas), 0)
+        attr = table.domain[-1]
+        self.assertIsInstance(attr, variable_type)
