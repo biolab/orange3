@@ -126,6 +126,17 @@ class SqlTableTests(PostgresTest):
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
             self.assertEqual(len(filtered_table), 0)
 
+    def test_X_small(self):
+        uri = self.create_sql_table(np.arange(100).reshape((-1, 1)))
+        sql_table = SqlTable(uri)
+        self.assertSequenceEqual([x[0] for x in sql_table.X], range(100))
+
+    def test_X_large(self):
+        uri = self.create_sql_table(np.arange(1100).reshape((-1, 1)))
+        sql_table = SqlTable(uri)
+        with self.assertRaises(ValueError):
+            sql_table.X
+
     def test_query_all(self):
         table = sql_table.SqlTable(self.iris_uri)
         results = list(table)
