@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="How good are supervised data mining methods on your classification data set? Here's a schema that scores various classification techniques on a data set from medicine. A central widget here is the one for evaluation, which is given the data and a set of learners, does cross-validation and scores predictive accuracy, and outputs the scores for further examination." title="Cross-Validation" version="2.0">
+<scheme description="How good are supervised data mining methods on your classification data set? Here's a workflow that scores various classification techniques on a data set from medicine. A central widget here is the one for evaluation, which is given the data and a set of learners, does cross-validation and scores predictive accuracy, and outputs the scores for further examination." title="Cross-Validation" version="2.0">
 	<nodes>
 		<node id="0" name="File" position="(96.0, 134.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWFile.OWFile" title="File" version="" />
 		<node id="1" name="Naive Bayes" position="(175.0, 253.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Classify.OWNaiveBayes.OWNaiveBayes" title="Naive Bayes" version="" />

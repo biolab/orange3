@@ -377,7 +377,7 @@ class CanvasMainWindow(QMainWindow):
         self.new_action = \
             QAction(self.tr("New"), self,
                     objectName="action-new",
-                    toolTip=self.tr("Open a new scheme."),
+                    toolTip=self.tr("Open a new workflow."),
                     triggered=self.new_scheme,
                     shortcut=QKeySequence.New,
                     icon=canvas_icons("New.svg")
@@ -386,7 +386,7 @@ class CanvasMainWindow(QMainWindow):
         self.open_action = \
             QAction(self.tr("Open"), self,
                     objectName="action-open",
-                    toolTip=self.tr("Open a scheme."),
+                    toolTip=self.tr("Open a workflow."),
                     triggered=self.open_scheme,
                     shortcut=QKeySequence.Open,
                     icon=canvas_icons("Open.svg")
@@ -395,7 +395,7 @@ class CanvasMainWindow(QMainWindow):
         self.open_and_freeze_action = \
             QAction(self.tr("Open and Freeze"), self,
                     objectName="action-open-and-freeze",
-                    toolTip=self.tr("Open a new scheme and freeze signal "
+                    toolTip=self.tr("Open a new workflow and freeze signal "
                                     "propagation."),
                     triggered=self.open_and_freeze_scheme
                     )
@@ -403,7 +403,7 @@ class CanvasMainWindow(QMainWindow):
         self.save_action = \
             QAction(self.tr("Save"), self,
                     objectName="action-save",
-                    toolTip=self.tr("Save current scheme."),
+                    toolTip=self.tr("Save current workflow."),
                     triggered=self.save_scheme,
                     shortcut=QKeySequence.Save,
                     )
@@ -411,7 +411,7 @@ class CanvasMainWindow(QMainWindow):
         self.save_as_action = \
             QAction(self.tr("Save As ..."), self,
                     objectName="action-save-as",
-                    toolTip=self.tr("Save current scheme as."),
+                    toolTip=self.tr("Save current workflow as."),
                     triggered=self.save_scheme_as,
                     shortcut=QKeySequence.SaveAs,
                     )
@@ -473,7 +473,7 @@ class CanvasMainWindow(QMainWindow):
         self.recent_action = \
             QAction(self.tr("Browse Recent"), self,
                     objectName="recent-action",
-                    toolTip=self.tr("Browse and open a recent scheme."),
+                    toolTip=self.tr("Browse and open a recent workflow."),
                     triggered=self.recent_scheme,
                     shortcut=QKeySequence(Qt.ControlModifier | \
                                           (Qt.ShiftModifier | Qt.Key_R)),
@@ -481,9 +481,9 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.reload_last_action = \
-            QAction(self.tr("Reload Last Scheme"), self,
+            QAction(self.tr("Reload Last Workflow"), self,
                     objectName="reload-last-action",
-                    toolTip=self.tr("Reload last open scheme."),
+                    toolTip=self.tr("Reload last open workflow."),
                     triggered=self.reload_last,
                     shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R)
                     )
@@ -496,9 +496,9 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.show_properties_action = \
-            QAction(self.tr("Scheme Info"), self,
+            QAction(self.tr("Workflow Info"), self,
                     objectName="show-properties-action",
-                    toolTip=self.tr("Show scheme properties."),
+                    toolTip=self.tr("Show workflow properties."),
                     triggered=self.show_scheme_properties,
                     shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_I),
                     icon=canvas_icons("Document Info.svg")
@@ -568,10 +568,10 @@ class CanvasMainWindow(QMainWindow):
         self.dock_help_action = None
 
         self.toogle_margins_action = \
-            QAction(self.tr("Show Scheme Margins"), self,
+            QAction(self.tr("Show Workflow Margins"), self,
                     checkable=True,
                     checked=True,
-                    toolTip=self.tr("Show margins around the scheme view."),
+                    toolTip=self.tr("Show margins around the workflow view."),
                     toggled=self.set_scheme_margins_enabled
                     )
 
@@ -849,7 +849,7 @@ class CanvasMainWindow(QMainWindow):
 
         if show:
             status = self.show_scheme_properties_for(
-                new_scheme, self.tr("New Scheme")
+                new_scheme, self.tr("New Workflow")
             )
 
             if status == QDialog.Rejected:
@@ -880,8 +880,8 @@ class CanvasMainWindow(QMainWindow):
         # set one or more extra sidebar locations where Schemes are stored.
         # Also use setHistory
         filename = QFileDialog.getOpenFileName(
-            self, self.tr("Open Orange Scheme File"),
-            start_dir, self.tr("Orange Scheme (*.ows)"),
+            self, self.tr("Open Orange Workflow File"),
+            start_dir, self.tr("Orange Workflow (*.ows)"),
         )
 
         if filename:
@@ -955,7 +955,7 @@ class CanvasMainWindow(QMainWindow):
 
         except Exception:
             message_critical(
-                 self.tr("Could not load an Orange Scheme file"),
+                 self.tr("Could not load an Orange Workflow file"),
                  title=self.tr("Error"),
                  informative_text=self.tr("An unexpected error occurred "
                                           "while loading '%s'.") % filename,
@@ -964,12 +964,12 @@ class CanvasMainWindow(QMainWindow):
             return None
         if errors:
             message_warning(
-                self.tr("Errors occurred while loading the scheme."),
+                self.tr("Errors occurred while loading the workflow."),
                 title=self.tr("Problem"),
                 informative_text=self.tr(
                      "There were problems loading some "
                      "of the widgets/links in the "
-                     "scheme."
+                     "workflow."
                 ),
                 details="\n".join(map(repr, errors))
             )
@@ -1023,7 +1023,7 @@ class CanvasMainWindow(QMainWindow):
         document = self.current_document()
         title = document.scheme().title or "untitled"
         selected = message_question(
-            self.tr('Do you want to save the changes you made to scheme "%s"?')
+            self.tr('Do you want to save the changes you made to workflow "%s"?')
                     % title,
             self.tr("Save Changes?"),
             self.tr("Your changes will be lost if you do not save them."),
@@ -1059,7 +1059,7 @@ class CanvasMainWindow(QMainWindow):
                 # The client should fail attempting to write.
                 return True
             except Exception:
-                log.error("Error sniffing scheme version in '%s'", path,
+                log.error("Error sniffing workflow version in '%s'", path,
                           exc_info=True)
                 # Malformed .ows file, ...
                 return True
@@ -1119,8 +1119,8 @@ class CanvasMainWindow(QMainWindow):
             start_dir = os.path.join(str(start_dir), title + ".ows")
 
         filename = QFileDialog.getSaveFileName(
-            self, self.tr("Save Orange Scheme File"),
-            start_dir, self.tr("Orange Scheme (*.ows)")
+            self, self.tr("Save Orange Workflow File"),
+            start_dir, self.tr("Orange Workflow (*.ows)")
         )
 
         if filename:
@@ -1157,7 +1157,7 @@ class CanvasMainWindow(QMainWindow):
         except Exception:
             log.error("Error saving %r to %r", scheme, filename, exc_info=True)
             message_critical(
-                self.tr('An error occurred while trying to save scheme '
+                self.tr('An error occurred while trying to save workflow '
                         '"%s" to "%s"') % (title, basename),
                 title=self.tr("Error saving %s") % basename,
                 exc_info=True,
@@ -1175,7 +1175,7 @@ class CanvasMainWindow(QMainWindow):
             if ex.errno == 2:
                 # user might enter a string containing a path separator
                 message_warning(
-                    self.tr('Scheme "%s" could not be saved. The path does '
+                    self.tr('Workflow "%s" could not be saved. The path does '
                             'not exist') % title,
                     title="",
                     informative_text=self.tr("Choose another location."),
@@ -1183,7 +1183,7 @@ class CanvasMainWindow(QMainWindow):
                 )
             elif ex.errno == 13:
                 message_warning(
-                    self.tr('Scheme "%s" could not be saved. You do not '
+                    self.tr('Workflow "%s" could not be saved. You do not '
                             'have write permissions.') % title,
                     title="",
                     informative_text=self.tr(
@@ -1193,7 +1193,7 @@ class CanvasMainWindow(QMainWindow):
                 )
             else:
                 message_warning(
-                    self.tr('Scheme "%s" could not be saved.') % title,
+                    self.tr('Workflow "%s" could not be saved.') % title,
                     title="",
                     informative_text=ex.strerror,
                     exc_info=True,
@@ -1204,7 +1204,7 @@ class CanvasMainWindow(QMainWindow):
         except Exception:
             log.error("Error saving %r to %r", scheme, filename, exc_info=True)
             message_critical(
-                self.tr('An error occurred while trying to save scheme '
+                self.tr('An error occurred while trying to save workflow '
                         '"%s" to "%s"') % (title, basename),
                 title=self.tr("Error saving %s") % basename,
                 exc_info=True,
@@ -1240,7 +1240,7 @@ class CanvasMainWindow(QMainWindow):
         model = previewmodel.PreviewModel(items=items)
 
         dialog = previewdialog.PreviewDialog(self)
-        title = self.tr("Recent Schemes")
+        title = self.tr("Recent Workflows")
         dialog.setWindowTitle(title)
         template = ('<h3 style="font-size: 26px">\n'
                     #'<img height="26" src="canvas_icons:Recent.svg">\n'
@@ -1335,7 +1335,7 @@ class CanvasMainWindow(QMainWindow):
 
         new_action = \
             QAction(self.tr("New"), dialog,
-                    toolTip=self.tr("Open a new scheme."),
+                    toolTip=self.tr("Open a new workflow."),
                     triggered=new_scheme,
                     shortcut=QKeySequence.New,
                     icon=canvas_icons("New.svg")
@@ -1344,7 +1344,7 @@ class CanvasMainWindow(QMainWindow):
         open_action = \
             QAction(self.tr("Open"), dialog,
                     objectName="welcome-action-open",
-                    toolTip=self.tr("Open a scheme."),
+                    toolTip=self.tr("Open a workflow."),
                     triggered=open_scheme,
                     shortcut=QKeySequence.Open,
                     icon=canvas_icons("Open.svg")
@@ -1353,7 +1353,7 @@ class CanvasMainWindow(QMainWindow):
         recent_action = \
             QAction(self.tr("Recent"), dialog,
                     objectName="welcome-recent-action",
-                    toolTip=self.tr("Browse and open a recent scheme."),
+                    toolTip=self.tr("Browse and open a recent workflow."),
                     triggered=open_recent,
                     shortcut=QKeySequence(Qt.ControlModifier | \
                                           (Qt.ShiftModifier | Qt.Key_R)),
@@ -1363,7 +1363,7 @@ class CanvasMainWindow(QMainWindow):
         tutorials_action = \
             QAction(self.tr("Tutorial"), dialog,
                     objectName="welcome-tutorial-action",
-                    toolTip=self.tr("Browse tutorial schemes."),
+                    toolTip=self.tr("Browse tutorial workflows."),
                     triggered=tutorial,
                     icon=canvas_icons("Tutorials.svg")
                     )
@@ -1400,7 +1400,7 @@ class CanvasMainWindow(QMainWindow):
 
         dialog = SchemeInfoDialog(self)
 
-        dialog.setWindowTitle(self.tr("Scheme Info"))
+        dialog.setWindowTitle(self.tr("Workflow Info"))
         dialog.setFixedSize(725, 450)
 
         dialog.setShowAtNewScheme(

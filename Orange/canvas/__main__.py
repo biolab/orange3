@@ -79,7 +79,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    usage = "usage: %prog [options] [scheme_file]"
+    usage = "usage: %prog [options] [workflow_file]"
     parser = optparse.OptionParser(usage=usage)
 
     parser.add_option("--no-discovery",
