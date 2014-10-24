@@ -43,20 +43,20 @@ class OWRandomForest(widget.OWWidget):
         basic_box = gui.widgetBox(self.controlArea, "Basic properties", orientation=form)
         form.addWidget(QtGui.QLabel(self.tr("Number of trees in the forest: ")), 0, 0, Qt.AlignLeft)
         spin = gui.spin(basic_box, self, "n_estimators", minv=1, maxv=1e4,
-                        callback=self.settingsChanged, addToLayout=False)
+                        callback=self.settingsChanged, addToLayout=False, controlWidth=50)
         form.addWidget(spin, 0, 1, Qt.AlignRight)
 
         max_features_cb = gui.checkBox(basic_box, self, "use_max_features", callback=self.settingsChanged,
                           addToLayout=False, label="Consider a number of best attributes at each split")
         max_features_spin = gui.spin(basic_box, self, "max_features", 2, 50, addToLayout=False,
-                 callback=self.settingsChanged)
+                 callback=self.settingsChanged, controlWidth=50)
         form.addWidget(max_features_cb, 1, 0, Qt.AlignLeft)
         form.addWidget(max_features_spin, 1, 1, Qt.AlignRight)
 
         random_state_cb = gui.checkBox(basic_box, self, "use_random_state", callback=self.settingsChanged, addToLayout=False,
                           label="Use seed for random generator:")
-        random_state_spin = gui.spin(basic_box, self, "random_state", 0, 2**32-1, addToLayout=False,
-                 callback=self.settingsChanged)
+        random_state_spin = gui.spin(basic_box, self, "random_state", 0, 2**31-1, addToLayout=False,
+                 callback=self.settingsChanged, controlWidth=50)
         form.addWidget(random_state_cb, 2, 0, Qt.AlignLeft)
         form.addWidget(random_state_spin, 2, 1, Qt.AlignRight)
         self._max_features_spin = max_features_spin
