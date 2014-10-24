@@ -13,6 +13,8 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
                          QGraphicsTextItem, QBrush, QGraphicsLineItem,
                          QGraphicsEllipseItem)
 
+from Orange.widgets.settings import (Setting, DomainContextHandler,
+                                     ContextSetting)
 from Orange.canvas.utils import environ
 from Orange.classification import Fitter
 from Orange.data import Table, Variable, filter, DiscreteVariable, ContinuousVariable
@@ -95,32 +97,30 @@ class MosaicSceneView(QGraphicsView):
 
 
 class OWMosaicDisplay(OWWidget):
-    """
-    <name>Mosaic Display</name>
-    <description>Shows a mosaic display.</description>
-    <contact>Gregor Leban (gregor.leban@fri.uni-lj.si)</contact>
-    <icon>icons/MosaicDisplay.svg</icon>
-    <priority>4100</priority>
-    """
     name = "Mosaic Display"
     description = "Shows mosaic displays"
-    long_description = """Shows mosaic displays"""
     icon = "icons/MosaicDisplay.svg"
 
     inputs = [("Data", Table, "setData", Default),
               ("Data Subset", Table, "setSubsetData")]
     outputs = [("Selected Data", Table), ("Learner", Fitter)]
 
-    settingsList = ["horizontalDistribution", "showAprioriDistributionLines",
-                    "showAprioriDistributionBoxes", "horizontalDistribution",
-                    "useBoxes", "interiorColoring", "boxSize", "colorSettings",
-                    "selectedSchemaIndex", "cellspace", "showSubsetDataBoxes",
-                    "removeUnusedValues"]
-
     settingsHandler = DomainContextHandler()
-    # contextHandlers = {
-    #     "": DomainContextHandler("", ["attr1", "attr2", "attr3", "attr4", "manualAttributeValuesDict"],
-    #                              loadImperfect=0)}
+    horizontalDistribution = Setting(False)
+    showAprioriDistributionLines = Setting(False)
+    showAprioriDistributionBoxes = Setting(True)
+    useBoxes = Setting(True)
+    boxSize = Setting(5)
+    interiorColoring = Setting(0)
+    colorSettings = Setting(None)
+    selectedSchemaIndex = Setting(0)
+    cellspace = Setting(4)
+    showSubsetDataBoxes = Setting(1)
+    removeUnusedValues = Setting(True)
+    attr1 = ContextSetting("")
+    attr2 = ContextSetting("")
+    attr3 = ContextSetting("")
+    attr4 = ContextSetting("")
 
     interiorColoringOpts = ["Standardized (Pearson) residuals",
                             "Class distribution"]
@@ -136,22 +136,7 @@ class OWMosaicDisplay(OWWidget):
         self.subset_data = None
         self.names = []  # class values
 
-        #load settings
-        self.colorSettings = None
-        self.selectedSchemaIndex = 0
-        self.interiorColoring = 0
-        self.cellspace = 4
-        self.showAprioriDistributionBoxes = 1
-        self.useBoxes = 1
-        self.showSubsetDataBoxes = 1
-        self.horizontalDistribution = 0
-        self.showAprioriDistributionLines = 0
-        self.boxSize = 5
         self.exploreAttrPermutations = 0
-        self.attr1 = ""
-        self.attr2 = ""
-        self.attr3 = ""
-        self.attr4 = ""
 
         self.attributeNameOffset = 30
         self.attributeValueOffset = 15
@@ -163,15 +148,12 @@ class OWMosaicDisplay(OWWidget):
         self.conditionalDict = None
         self.conditionalSubsetDict = None
         self.activeRule = None
-        self.removeUnusedValues = 0
 
         self.selectionRectangle = None
         self.selectionConditionsHistorically = []
         self.selectionConditions = []
 
         # color paletes for visualizing pearsons residuals
-        #self.blueColors = [QColor(255, 255, 255), QColor(117, 149, 255),
-                           # QColor(38, 43, 232), QColor(1,5,173)]
         self.blue_colors = [QColor(255, 255, 255), QColor(210, 210, 255),
                             QColor(110, 110, 255), QColor(0, 0, 255)]
         self.red_colors = [QColor(255, 255, 255), QColor(255, 200, 200),
@@ -193,8 +175,7 @@ class OWMosaicDisplay(OWWidget):
         #add controls to self.controlArea widget
         #self.controlArea.setMinimumWidth(235)
 
-        texts = ["1st Attribute", "2nd Attribute", "3rd Attribute",
-                 "4th Attribute"]
+        texts = ["Variable 1", "Variable 2", "Variable 3", "Variable 4"]
         for i in range(1, 5):
             box = gui.widgetBox(self.general_tab, texts[i - 1],
                                 orientation="horizontal")
