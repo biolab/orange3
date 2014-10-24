@@ -24,7 +24,7 @@ class OWSave(widget.OWWidget):
     last_dir = Setting("")
 
     savers = {".tab": save_tab_delimited, ".csv": save_csv}
-    dlgFormats = 'Tab-delimited files (*.tab)\nComma separated (*.csv)\n'
+    dlgFormats = 'Tab-delimited files (*.tab)\nComma separated (*.csv)'
     re_filterExtension = re.compile(r"\(\*(?P<ext>\.[^ )]+)")
 
     def __init__(self, parent=None, signalManager=None, settings=None):
@@ -72,6 +72,7 @@ class OWSave(widget.OWWidget):
                     self.error(str(errValue))
                     return
                 self.error()
+
 
 if __name__ == "__main__":
     import sys
