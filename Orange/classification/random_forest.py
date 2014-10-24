@@ -13,7 +13,7 @@ def replace_nan(X, imp_model):
         return X
 
 # TODO: implement sending a single decision tree
-class RandomForestLearner(Orange.classification.Fitter):
+class RandomForestLearner(Orange.classification.SklFitter):
     def __init__(self, n_estimators=10, max_features="auto",
                  random_state=None, max_depth=3, max_leaf_nodes=5, index_output=0):
         self.n_estimators = n_estimators
@@ -36,7 +36,7 @@ class RandomForestLearner(Orange.classification.Fitter):
         return RandomForestClassifier(rf_model, self.imputer)
 
 
-class RandomForestClassifier(Orange.classification.Model):
+class RandomForestClassifier(Orange.classification.SklModel):
     def __init__(self, clf, imp):
         self.clf = clf
         self.imputer = imp
