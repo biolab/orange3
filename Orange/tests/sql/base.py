@@ -27,6 +27,14 @@ def get_dburi():
         return "postgres://localhost/test"
 
 
+def server_version():
+    if has_psycopg2:
+        with psycopg2.connect(**connection_params()) as conn:
+            return conn.server_version
+    else:
+        return 0
+
+
 def create_iris():
     iris = Orange.data.Table("iris")
     with psycopg2.connect(**connection_params()) as conn:

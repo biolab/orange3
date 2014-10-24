@@ -7,7 +7,7 @@ from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
 from Orange.data.sql.parser import SqlParser
 from Orange.data.sql.table import SqlTable
-from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2
+from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2, server_version
 
 
 @unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
@@ -477,6 +477,7 @@ class SqlTableTests(PostgresTest):
         sql_table = SqlTable(uri, guess_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
+    @unittest.skipIf(server_version() < 90200, "Type not supported on this server version.")
     def test_smallserial(self):
         table = np.arange(25).reshape((-1, 1))
         uri = self.create_sql_table(table, ['smallserial'])
@@ -487,6 +488,7 @@ class SqlTableTests(PostgresTest):
         sql_table = SqlTable(uri, guess_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
+    @unittest.skipIf(server_version() < 90200, "Type not supported on this server version.")
     def test_bigserial(self):
         table = np.arange(25).reshape((-1, 1))
         uri = self.create_sql_table(table, ['bigserial'])
