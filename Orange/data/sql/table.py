@@ -382,6 +382,9 @@ class SqlTable(table.Table):
             threading.Thread(target=len, args=(self,)).start()
         return alen
 
+    _X = None
+    _Y = None
+
     def download_data(self, limit=None):
         """Download SQL data and store it in memory as numpy matrices."""
         if limit and len(self) > limit: #TODO: faster check for size limit
@@ -393,13 +396,15 @@ class SqlTable(table.Table):
     @property
     def X(self):
         """Numpy array with attribute values."""
-        self.download_data(1000)
+        if self._X is None:
+            self.download_data(1000)
         return self._X
 
     @property
     def Y(self):
         """Numpy array with class values."""
-        self.download_data(1000)
+        if self._Y is None:
+            self.download_data(1000)
         return self._Y
 
     def has_weights(self):
