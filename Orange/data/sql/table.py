@@ -181,17 +181,25 @@ class SqlTable(table.Table):
         if type_hints != None and name in type_hints:
             var = type_hints[name]
         else:
-            if any(t in field_type for t in ('double', 'numeric')):
+            # always continuous
+            if any(t in field_type for t in
+                   ('real', 'float', 'double', 'numeric')):
                 var = variable.ContinuousVariable(name=name)
-            elif 'int' in field_type and not values:
-                var = variable.ContinuousVariable(name=name)
-            elif any(t in field_type for t in ('int', 'boolean')) and values:
-                # TODO: make sure that int values are OK
-                values = [str(val) for val in values]
-                var = variable.DiscreteVariable(name=name, values=values)
+            # continuous or discrete
+            elif any(t in field_type for t in ('int', 'serial')):
+                if values:
+                    values = [str(val) for val in values]
+                    var = variable.DiscreteVariable(name=name, values=values)
+                    var.has_numeric_values = True
+                else:
+                    var = variable.ContinuousVariable(name=name)
+            # always discrete
+            elif 'boolean' in field_type:
+                var = variable.DiscreteVariable(name=name,
+                                                values=['False', 'True'])
                 var.has_numeric_values = True
-            elif (any(t in field_type for t in ('char', 'text', 'boolean'))
-                  and values):
+            # discrete or string
+            elif any(t in field_type for t in ('char', 'text')) and values:
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
                 var = variable.StringVariable(name=name)
@@ -212,7 +220,7 @@ class SqlTable(table.Table):
                    self._get_field_values(field, field_type) if guess_values else ())
 
     def _get_field_values(self, field_name, field_type):
-        if any(t in field_type for t in ('boolean', 'int', 'char', 'text')):
+        if any(t in field_type for t in ('int', 'serial', 'char', 'text')):
             return self._get_distinct_values(field_name)
         else:
             return ()
