@@ -186,12 +186,10 @@ class SqlTable(table.Table):
             elif 'int' in field_type and not values:
                 var = variable.ContinuousVariable(name=name)
             elif any(t in field_type for t in ('int', 'boolean')) and values:
-                # TODO: make sure that int values are OK
                 values = [str(val) for val in values]
                 var = variable.DiscreteVariable(name=name, values=values)
                 var.has_numeric_values = True
-            elif (any(t in field_type for t in ('char', 'text', 'boolean'))
-                  and values):
+            elif any(t in field_type for t in ('char', 'text')) and values:
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
                 var = variable.StringVariable(name=name)
