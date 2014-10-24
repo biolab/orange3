@@ -20,8 +20,9 @@ from Orange.widgets.widget import OWWidget, Default, AttributeList
 class OWScatterPlot(OWWidget):
     name = 'Scatter plot'
     description = 'Scatter plot visualization'
+    icon = "icons/ScatterPlot.svg"
 
-    inputs = [("Data", Table, "set_data", Default),
+inputs = [("Data", Table, "set_data", Default),
               ("Data Subset", Table, "set_subset_data"),
               ("Features", AttributeList, "set_shown_attributes")]
 

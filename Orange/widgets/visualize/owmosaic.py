@@ -103,6 +103,10 @@ class OWMosaicDisplay(OWWidget):
     <priority>4100</priority>
     """
     name = "Mosaic Display"
+    description = "Shows mosaic displays"
+    long_description = """Shows mosaic displays"""
+    icon = "icons/MosaicDisplay.svg"
+
     inputs = [("Data", Table, "setData", Default),
               ("Data Subset", Table, "setSubsetData")]
     outputs = [("Selected Data", Table), ("Learner", Fitter)]
