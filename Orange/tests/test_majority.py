@@ -41,3 +41,20 @@ class MajorityTest(unittest.TestCase):
         clf = learn(iris[:0])
         y = clf(iris[0], clf.Probs)
         self.assertTrue(np.allclose(y, y.sum() / y.size))
+
+    def test_missing(self):
+        iris = data.Table('iris')
+        learn = maj.MajorityFitter()
+        for e in iris[:len(iris)/2:2]:
+            e.set_class("?")
+        clf = learn(iris)
+        y = clf(iris)
+        self.assertTrue((y == 2).all())
+
+        iris = data.Table('iris')
+        learn = maj.MajorityFitter()
+        for e in iris:
+            e.set_class("?")
+        clf = learn(iris)
+        y = clf(iris)
+        self.assertTrue((y == 0).all())
