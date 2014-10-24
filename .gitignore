@@ -2,6 +2,7 @@
 build
 dist
 Orange.egg-info/*
+Orange.egg-info
 Orange/version.py
 doc/build
 *.so
@@ -13,6 +14,7 @@ MANIFEST
 __pycache__
 
 # Editor files
+.idea
 .idea/*
 *~
 .project
