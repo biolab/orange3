@@ -58,7 +58,6 @@ class SqlParser:
         else:
             for (field_name, field_type), (field_expr, field_alias) \
                     in zip(cur.fetchall(), self.fields):
-                print(field_name, field_type, field_expr)
                 yield (field_name, field_type, field_expr, ())
         cur.execute("DROP TABLE xxx")
         conn.commit()
