@@ -203,7 +203,10 @@ class SqlTable(table.Table):
                 var = variable.DiscreteVariable(name=name, values=values)
             else:
                 var = variable.StringVariable(name=name)
-        var.to_sql = lambda: field_expr
+        if isinstance(var, ContinuousVariable):
+            var.to_sql = lambda: "({})::double precision".format(field_expr)
+        else:
+            var.to_sql = lambda: field_expr
         return var
 
     def _get_fields(self, table_name, guess_values=False):
