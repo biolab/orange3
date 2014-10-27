@@ -34,7 +34,6 @@ class OWSql(widget.OWWidget):
     username = Setting(None)
     password = Setting(None)
     table = Setting(None)
-    tables = Setting([])
     sql = Setting("")
     guess_values = Setting(True)
 
@@ -72,11 +71,6 @@ class OWSql(widget.OWWidget):
 
         tables = gui.widgetBox(box, orientation='horizontal')
         self.tablecombo = QtGui.QComboBox(tables)
-        choices = ['Select a table'] + self.tables + ['Custom SQL']
-        for i, item in enumerate(choices):
-            self.tablecombo.addItem(item)
-            if item == self.table:
-                self.tablecombo.setCurrentIndex(i)
 
         tables.layout().addWidget(self.tablecombo)
         self.tablecombo.activated[int].connect(self.select_table)
@@ -100,7 +94,7 @@ class OWSql(widget.OWWidget):
         gui.checkBox(box, self, "guess_values",
                      "Auto-discover discrete variables.",
                      callback=self.open_table)
-
+        self.connect()
         if self.table:
             self.open_table()
 
@@ -139,13 +133,14 @@ class OWSql(widget.OWWidget):
             self.refresh_tables()
         except psycopg2.Error as err:
             self.error(0, str(err).split('\n')[0])
-            self.tables = []
             self.tablecombo.clear()
 
 
     def refresh_tables(self):
+        self.tablecombo.clear()
         if self._connection is None:
             return
+
         cur = self._connection.cursor()
         cur.execute("""SELECT --n.nspname as "Schema",
                               c.relname as "Name"
@@ -157,13 +152,13 @@ class OWSql(widget.OWWidget):
                         AND n.nspname !~ '^pg_toast'
                         AND pg_catalog.pg_table_is_visible(c.oid)
                    ORDER BY 1;""")
-        self.tablecombo.clear()
+
         self.tablecombo.addItem("Select a table")
-        tables = []
-        for table_name, in cur.fetchall():
+        for i, (table_name,) in enumerate(cur.fetchall()):
             self.tablecombo.addItem(table_name)
-            tables.append(table_name)
-        self.tables = tables
+            if table_name == self.table:
+                self.tablecombo.setCurrentIndex(i + 1)
+        self.tablecombo.addItem("Custom SQL")
 
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
@@ -175,7 +170,7 @@ class OWSql(widget.OWWidget):
             self.table = None
 
     def open_table(self):
-        if self.tablecombo.currentIndex() == 0:
+        if self.tablecombo.currentIndex() <= 0:
             return
 
         self.table = self.tablecombo.currentText()
