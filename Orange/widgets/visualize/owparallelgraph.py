@@ -811,17 +811,14 @@ def create_contingencies(X, callback=None):
 
 
 def create_sql_contingency(X, columns, m):
-    group_by = [a.to_sql() for a in (X.domain[c] for c in columns)]
-    fields = group_by + ['COUNT(%s)' % group_by[0]]
-    filters = [f.to_sql() for f in X.row_filters]
-    filters = [f for f in filters if f]
-    cur = X._sql_query(fields, filters, group_by)
     def convert(row):
         c = len(row) - 1
-        return [
-            m[columns[i]].get(v) if i != c else v
-            for i, v in enumerate(row)
-        ]
+        return [m[columns[i]].get(v) if i != c else v
+                for i, v in enumerate(row)]
 
-    cont = np.array(list(map(convert, cur.fetchall())), dtype='float')
+    group_by = [a.to_sql() for a in (X.domain[c] for c in columns)]
+    fields = group_by + ['COUNT(%s)' % group_by[0]]
+    query = X._sql_query(fields, group_by=group_by)
+    with X._execute_sql_query(query) as cur:
+        cont = np.array(list(map(convert, cur.fetchall())), dtype='float')
     return cont[:, :-1], cont[:, -1:].flatten()
