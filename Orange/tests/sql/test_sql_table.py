@@ -96,7 +96,7 @@ class SqlTableTests(PostgresTest):
 
             self.assertIsInstance(float_attr, ContinuousVariable)
             self.assertEqual(float_attr.name, "col0")
-            self.assertEqual(float_attr.to_sql(), '"col0"')
+            self.assertTrue("col0" in float_attr.to_sql())
 
             self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
