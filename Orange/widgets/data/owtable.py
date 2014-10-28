@@ -5,9 +5,10 @@ from functools import reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+from Orange.data import ContinuousVariable
 from Orange.data.storage import Storage
 from Orange.data.table import Table
-from Orange.data import ContinuousVariable
+from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import widget, gui
@@ -417,7 +418,7 @@ class OWDataTable(widget.OWWidget):
             self.setInfo(self.data.get(self.table2id.get(
                 self.tabs.currentWidget(), None), None))
 
-        if not len(self.data):
+        if not self.data:
             self.send_button.setEnabled(False)
 
     #TODO Implement
@@ -636,8 +637,11 @@ class OWDataTable(widget.OWWidget):
             self.info_meta.setText('')
             self.info_class.setText('')
         else:
-            descriptions = datacaching.getCached(
-                data, self.__compute_density, (data, ))
+            if isinstance(data, SqlTable):
+                descriptions = ['', '', '']
+            else:
+                descriptions = datacaching.getCached(
+                    data, self.__compute_density, (data, ))
             out_i = "%s instance%s" % sp(data)
             if descriptions is self.__no_missing:
                 out_i += " (no missing values)"
