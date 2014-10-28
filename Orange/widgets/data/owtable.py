@@ -282,7 +282,7 @@ class OWDataTable(widget.OWWidget):
     outputs = [("Selected Data", Table, Default),
                ("Other Data", Table)]
 
-    show_distributions = Setting(True)
+    show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
     auto_commit = Setting(False)
