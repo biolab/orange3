@@ -176,8 +176,8 @@ class OWParallelGraph(OWPlot, ScaleData):
             return [(x - m) / d for x, m, d in zip(row, mins, diff)]
 
         for row_idx, row in enumerate(self.data[:, self.attribute_indices]):
-            #if not self.valid_data[row_idx]:
-            #    continue
+            if any(np.isnan(v) for v in row.x):
+                continue
 
             color = self.select_color(row_idx)
 
