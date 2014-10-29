@@ -182,6 +182,9 @@ class DiscreteVariable(Variable):
         :param s: values, represented as a number, string or `None`
         :rtype: float
         """
+        if s is None:
+            return Unknown
+
         if self.has_numeric_values:
             s = str(s)
 
