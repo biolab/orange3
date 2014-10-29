@@ -759,7 +759,7 @@ class OWMosaicDisplay(OWWidget):
                 if used_vals == [vals[self.activeRule[0].index(a)] for a in used_attrs]:
                     values = list(
                         self.attributeValuesDict.get(self.data.domain.classVar.name, [])) or get_variable_values_sorted(
-                        self.data.domain.classVar)
+                        self.data.domain.class_var)
                     counts = [self.conditionalDict[attrVals + "-" + val] for val in values]
                     d = 2
                     r = OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 2 * d + 1, y1 - y0 + 2 * d + 1, z=50)
@@ -982,8 +982,8 @@ class OWMosaicDisplay(OWWidget):
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.colorPalette = dlg.getDiscretePalette("discPalette")
-            if self.data and self.data.domain.classVar and isinstance(self.data.domain.classVar, DiscreteVariable):
-                self.colorPalette.set_number_of_colors(len(self.data.domain.classVar.values))
+            if self.data and self.data.domain.class_var and isinstance(self.data.domain.class_var, DiscreteVariable):
+                self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
             self.updateGraph()
 
     def createColorDialog(self):
