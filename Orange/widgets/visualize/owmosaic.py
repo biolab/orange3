@@ -340,12 +340,6 @@ class OWMosaicDisplay(OWWidget):
         if not self.data:
             return
 
-        if not self.data.domain.class_var:
-            self.warning(0, "Data does not have a class variable.")
-            return
-        else:
-            self.warning(0)
-
         if any(isinstance(attr, ContinuousVariable) for attr in self.data.domain):
             # previously done in optimizationDlg.setData()
             self.data = DiscretizeTable(data, method=EqualFreq())
