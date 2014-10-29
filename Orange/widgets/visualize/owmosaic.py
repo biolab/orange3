@@ -752,7 +752,7 @@ class OWMosaicDisplay(OWWidget):
                     r = OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 2 * d + 1, y1 - y0 + 2 * d + 1, z=50)
                     r.setPen(QPen(self.colorPalette[counts.index(max(counts))], 2, Qt.DashLine))
 
-        aprioriDist = None
+        aprioriDist = ()
         pearson = None
         expected = None
         outerRect = OWCanvasRectangle(self.canvas, x0, y0, x1 - x0, y1 - y0, z=30)
