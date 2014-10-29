@@ -778,10 +778,22 @@ def create_contingencies(X, callback=None):
     dim = len(X.domain)
 
     X_ = DiscretizeTable(X, method=EqualFreq(n=10))
-    vals = [[tuple(map(str.strip, v.strip('[]()<>=').split(','))) for v in var.values]
-            for var in X_.domain]
-    m = [{i: (float(v[0]) if len(v) == 1 else (float(v[0]) + (float(v[1]) - float(v[0])) / 2))
-          for i, v in enumerate(val)} for val in vals]
+    m = []
+    for i, var in enumerate(X_.domain):
+        cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=').split(',')))
+                          for v in var.values]
+        try:
+            float_values = [[float(v) for v in vals] for vals in cleaned_values]
+            bin_centers = {
+                i: v[0] if len(v) == 1 else v[0] + (v[1] - v[0])
+                for i, v in enumerate(float_values)
+            }
+        except ValueError:
+            bin_centers = {
+                i: i
+                for i, v in enumerate(cleaned_values)
+            }
+        m.append(bin_centers)
 
     from Orange.data.sql.table import SqlTable
     if isinstance(X, SqlTable):
