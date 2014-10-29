@@ -96,7 +96,7 @@ class OWMPR(OWWidget):
                 [disc(self.data, attr) if type(attr) == Orange.data.variable.ContinuousVariable
                  else attr for attr in self.data.domain.attributes], self.data.domain.class_vars)
 
-        t = Orange.data.Table(ndomain, self.data)
+        t = self.data.from_table(ndomain, self.data)
 
         attrs = t.domain.attributes
 
