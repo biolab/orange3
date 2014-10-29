@@ -112,7 +112,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.show_statistics = False
             self.draw_groups()
         else:
-            self.show_statistics = True
+            self.show_statistics = False
             self.draw_curves()
         self.draw_distributions()
         self.draw_axes()
@@ -268,8 +268,8 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def draw_statistics(self):
         """Draw lines that represent standard deviation or quartiles"""
+        return # TODO: Implement using BasicStats
         if self.show_statistics and self.have_data:
-            n_attr = len(self.attributes)
             data = []
             for attr_idx in self.attribute_indices:
                 if not isinstance(self.data_domain[attr_idx], ContinuousVariable):
@@ -277,14 +277,13 @@ class OWParallelGraph(OWPlot, ScaleData):
                     continue  # only for continuous attributes
 
                 if not self.data_has_class or self.data_has_continuous_class:    # no class
-                    attr_values = self.no_jittering_scaled_data[attr_idx]
-                    attr_values = attr_values[~np.isnan(attr_values)]
-
                     if self.show_statistics == MEANS:
-                        m = attr_values.mean()
-                        dev = attr_values.std()
+                        m = self.domain_data_stat[attr_idx].mean
+                        dev = self.domain_data_stat[attr_idx].var
                         data.append([(m - dev, m, m + dev)])
                     elif self.show_statistics == MEDIAN:
+                        data.append([(0, 0, 0)]); continue
+
                         sorted_array = np.sort(attr_values)
                         if len(sorted_array) > 0:
                             data.append([(sorted_array[int(len(sorted_array) / 4.0)],
@@ -295,6 +294,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                 else:
                     curr = []
                     class_values = get_variable_values_sorted(self.data_domain.class_var)
+
                     for c in range(len(class_values)):
                         attr_values = self.data[attr_idx, self.data[self.data_class_index] == c]
                         attr_values = attr_values[~np.isnan(attr_values)]
