@@ -814,6 +814,8 @@ def create_contingencies(X, callback=None):
     else:
         conts = [defaultdict(float) for i in range(len(X_.domain))]
         for i, r in enumerate(X_):
+            if any(np.isnan(r)):
+                continue
             row = tuple(m[vi].get(v) for vi, v in enumerate(r))
             for l in range(len(X_.domain)):
                 lower = l - window_size if l - window_size >= 0 else None
@@ -839,8 +841,9 @@ def create_sql_contingency(X, columns, m):
                 for i, v in enumerate(row)]
 
     group_by = [a.to_sql() for a in (X.domain[c] for c in columns)]
+    filters = ['%s IS NOT NULL' % a for a in group_by]
     fields = group_by + ['COUNT(%s)' % group_by[0]]
-    query = X._sql_query(fields, group_by=group_by)
+    query = X._sql_query(fields, group_by=group_by, filters=filters)
     with X._execute_sql_query(query) as cur:
         cont = np.array(list(map(convert, cur.fetchall())), dtype='float')
     return cont[:, :-1], cont[:, -1:].flatten()
