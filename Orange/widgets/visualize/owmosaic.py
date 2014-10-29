@@ -564,8 +564,10 @@ class OWMosaicDisplay(OWWidget):
                 query = data._sql_query(fields, group_by=attr)
                 with data._execute_sql_query(query) as cur:
                     res = cur.fetchall()
-                for r in list(res):
-                    cond_dist['-'.join(r[:-1])] = r[-1]
+                for r in res:
+                    str_values =[a.repr_val(a.to_val(x)) for a, x in zip(var_attrs, r[:-1])]
+                    str_values = [x if x != '?' else 'None' for x in str_values]
+                    cond_dist['-'.join(str_values)] = r[-1]
         else:
             cond_dist = {}
             for i in range(0, len(attrs) + 1):
