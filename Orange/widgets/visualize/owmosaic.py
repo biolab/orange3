@@ -552,31 +552,24 @@ class OWMosaicDisplay(OWWidget):
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
-        if type(data) == SqlTable:
-            cond_dist = defaultdict(lambda: 0)
-            var_attrs = [data.domain[a] for a in attrs]
-            # make all possible pairs of attributes + class_var
-            for i in range(0, len(var_attrs) + 1):
-                attr = [v.to_sql() for v in var_attrs[:i + 1]]
-                if i == len(var_attrs):
-                    attr.append(data.domain.class_var.to_sql())
-                fields = attr + ["COUNT(*)"]
+        cond_dist = {}
+        all_attrs = [data.domain[a] for a in attrs]
+        if data.domain.class_var is not None:
+            all_attrs.append(data.domain.class_var)
+
+        for i in range(1, len(all_attrs)+1):
+            attr = all_attrs[:i]
+            if type(data) == SqlTable:
+                # make all possible pairs of attributes + class_var
+                fields = [v.to_sql() for v in attr] + ["COUNT(*)"]
                 query = data._sql_query(fields, group_by=attr)
                 with data._execute_sql_query(query) as cur:
                     res = cur.fetchall()
                 for r in res:
-                    str_values =[a.repr_val(a.to_val(x)) for a, x in zip(var_attrs, r[:-1])]
+                    str_values =[a.repr_val(a.to_val(x)) for a, x in zip(all_attrs, r[:-1])]
                     str_values = [x if x != '?' else 'None' for x in str_values]
                     cond_dist['-'.join(str_values)] = r[-1]
-        else:
-            cond_dist = {}
-            for i in range(0, len(attrs) + 1):
-                attr = []
-                for j in range(0, i + 1):
-                    if j == len(attrs):
-                        attr.append(data.domain.class_var)
-                    else:
-                        attr.append(data.domain[attrs[j]])
+            else:
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     conditions = []
