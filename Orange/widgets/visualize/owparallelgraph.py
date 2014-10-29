@@ -164,8 +164,13 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         diff, mins = [], []
         for i in self.attribute_indices:
-            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
-            mins.append(self.domain_data_stat[i].min)
+            var = self.data_domain[i]
+            if isinstance(var, DiscreteVariable):
+                diff.append(len(var.values))
+                mins.append(-0.5)
+            else:
+                diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+                mins.append(self.domain_data_stat[i].min)
 
         def scale_row(row):
             return [(x - m) / d for x, m, d in zip(row, mins, diff)]
@@ -214,8 +219,13 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         diff, mins = [], []
         for i in self.attribute_indices:
-            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
-            mins.append(self.domain_data_stat[i].min)
+            var = self.data_domain[i]
+            if isinstance(var, DiscreteVariable):
+                diff.append(len(var.values))
+                mins.append(-0.5)
+            else:
+                diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+                mins.append(self.domain_data_stat[i].min)
 
         for j, (phi, cluster_mus, cluster_sigma) in enumerate(zip(phis, mus, sigmas)):
             for i, (mu1, sigma1, mu2, sigma2), in enumerate(
