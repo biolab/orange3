@@ -683,10 +683,11 @@ class DomainContextHandler(ContextHandler):
             return
 
         def packer(setting, instance):
-            value = getattr(instance, setting.name)
-            yield setting.name, self.encode_setting(context, setting, value)
-            if hasattr(setting, "selected"):
-                yield setting.selected, list(getattr(instance, setting.selected))
+            if hasattr(instance, setting.name):
+                value = getattr(instance, setting.name)
+                yield setting.name, self.encode_setting(context, setting, value)
+                if hasattr(setting, "selected"):
+                    yield setting.selected, list(getattr(instance, setting.selected))
 
         context.values = self.provider.pack(widget, packer=packer)
 
