@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+from numpy.testing import assert_almost_equal
 
 from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
@@ -125,6 +126,30 @@ class SqlTableTests(PostgresTest):
             table.domain[0].values.append('x')
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
             self.assertEqual(len(filtered_table), 0)
+
+    def test_XY_small(self):
+        mat = np.random.randint(0, 2, (20, 3))
+        uri = self.create_sql_table(mat)
+        sql_table = SqlTable(uri, type_hints=Domain([], DiscreteVariable(
+            name='col2', values=['0', '1', '2'])))
+        assert_almost_equal(sql_table.X, mat[:,:2])
+        assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
+
+    def test_XY_large(self):
+        mat = np.random.randint(0, 2, (1020, 3))
+        uri = self.create_sql_table(mat)
+        sql_table = SqlTable(uri, type_hints=Domain([], DiscreteVariable(
+            name='col2', values=['0', '1', '2'])))
+        with self.assertRaises(ValueError):
+            sql_table.X
+        with self.assertRaises(ValueError):
+            sql_table.Y
+        with self.assertRaises(ValueError):
+            sql_table.download_data(1019)
+        sql_table.download_data()
+        assert_almost_equal(sql_table.X, mat[:,:2])
+        assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
+
 
     def test_query_all(self):
         table = sql_table.SqlTable(self.iris_uri)
