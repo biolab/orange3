@@ -231,6 +231,8 @@ class SqlTable(table.Table):
     def _get_distinct_values(self, field_name):
         sql = " ".join(["SELECT DISTINCT", self.quote_identifier(field_name),
                         "FROM", self.table_name,
+                        "WHERE {} IS NOT NULL".format(
+                            self.quote_identifier(field_name)),
                         "ORDER BY", self.quote_identifier(field_name),
                         "LIMIT 21"])
         with self._execute_sql_query(sql) as cur:

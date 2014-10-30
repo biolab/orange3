@@ -546,7 +546,7 @@ class OWMosaicDisplay(OWWidget):
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
-        cond_dist = {}
+        cond_dist = defaultdict(int)
         all_attrs = [data.domain[a] for a in attrs]
         if data.domain.class_var is not None:
             all_attrs.append(data.domain.class_var)
