@@ -555,7 +555,8 @@ class OWMosaicDisplay(OWWidget):
             attr = all_attrs[:i]
             if type(data) == SqlTable:
                 # make all possible pairs of attributes + class_var
-                fields = [v.to_sql() for v in attr] + ["COUNT(*)"]
+                attr = [a.to_sql() for a in attr]
+                fields = attr + ["COUNT(*)"]
                 query = data._sql_query(fields, group_by=attr)
                 with data._execute_sql_query(query) as cur:
                     res = cur.fetchall()
