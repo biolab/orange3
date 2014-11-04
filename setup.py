@@ -52,6 +52,9 @@ INSTALL_REQUIRES = (
     "sqlparse"
 )
 
+if sys.version_info < (3, 4):
+    INSTALL_REQUIRES = INSTALL_REQUIRES + ("singledispatch",)
+
 if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
         'install_egg_info', 'build_sphinx', 'egg_info', 'easy_install',
         'upload', 'test'}.intersection(sys.argv)) > 0:

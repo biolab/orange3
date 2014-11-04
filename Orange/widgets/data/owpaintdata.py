@@ -1,5 +1,6 @@
 
 import os
+import sys
 import unicodedata
 import itertools
 from functools import partial
@@ -67,7 +68,11 @@ def stack_on_condition(a, b, condition):
 # ###########################
 
 from collections import namedtuple
-from functools import singledispatch
+if sys.version_info < (3, 4):
+    from singledispatch import singledispatch
+else:
+    from functools import singledispatch
+
 
 # Base commands
 Append = namedtuple("Append", ["points"])
