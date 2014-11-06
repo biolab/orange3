@@ -735,7 +735,8 @@ class OWMosaicDisplay(OWWidget):
         if x1 - x0 + y1 - y0 == 2:
             y1 += 1  # if we want to show a rectangle of width and height 1 it doesn't show anything. in such cases we therefore have to increase size of one edge
 
-        if "selectionDict" in args and tuple(used_vals) in selectionDict:
+        if ("selectionDict" in args and
+            tuple(used_vals) in args["selectionDict"]):
             d = 2
             OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 1 + 2 * d, y1 - y0 + 1 + 2 * d,
                               penColor=args["selectionDict"][tuple(used_vals)], penWidth=2, z=-100)
