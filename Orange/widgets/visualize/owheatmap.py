@@ -167,46 +167,25 @@ class DensityPatch(pg.GraphicsObject):
 
         if (p, cell_shape, cell_size) not in self._cache:
             rs_root = resample(root, 2 ** p)
-
-#             cscale = max_contingency(rs_root)
-            self._cache[p, cell_shape, cell_size] = patch = \
-                create_picture_patch(
-                    rs_root, palette=self._palette,
-#                     scale=cscale,
-                    shape=cell_shape
-                )
+            patch = Patch_create(rs_root, palette=self._palette,
+#                                  scale=cscale,
+                                 shape=cell_shape)
+            self._cache[p, cell_shape, cell_size] = patch
         else:
             patch = self._cache[p, cell_shape, cell_size]
-
-        def intersect_patch(patch, rect):
-            if not rect.intersects(patch.rect):
-                return []
-            elif rect.contains(patch.rect) or patch.is_leaf:
-                return [patch.picture]
-
-            else:
-                accum = reduce(list.__iadd__,
-                               map(lambda patch: intersect_patch(patch, rect),
-                                   patch.subpatches),
-                               [])
-
-                if len(patch.subpatches) != patch.node.nbins ** 2:
-                    accum.append(patch.patch)
-                return accum
 
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
 
-        for picture in intersect_patch(patch, option.exposedRect):
+        for picture in picture_intersect(patch, option.exposedRect):
             picture.play(painter)
 
-
+#: A visual patch utilizing QPicture
 Patch = namedtuple(
   "Patch",
-  ["node",     # source node
-   "picture",  # combined full picture
-   "patch",    # contribution from this node alone
-   "subpatches"  # a list of child patches
+  ["node",      # : Tree # source node (Tree)
+   "picture",   # : () -> QPicture # combined full QPicture
+   "children",  # : () -> sequence # all child subpatches
    ]
 )
 
@@ -215,69 +194,103 @@ Patch.rect = property(
 )
 
 Patch.is_leaf = property(
-    lambda self: len(self.subpatches) == 0
+    lambda self: len(self.children()) == 0
 )
 
+Some = namedtuple("Some", ["val"])
 
-def create_picture_patch(node, palette=None, scale=None, shape=Rect):
-    pic = QtGui.QPicture()
-    subpatches = []
+
+def once(f):
+    cached = None
+
+    def f_once():
+        nonlocal cached
+        if cached is None:
+            cached = Some(f())
+        return cached.val
+    return f_once
+
+
+def picture_intersect(patch, region):
+    """Return a list of all QPictures in `patch` that intersect region.
+    """
+    if not region.intersects(patch.rect):
+        return []
+    elif region.contains(patch.rect) or patch.is_leaf:
+        return [patch.picture()]
+    else:
+        accum = reduce(
+            operator.iadd,
+            (picture_intersect(child, region) for child in patch.children()),
+            []
+        )
+        return accum
+
+
+def Patch_create(node, palette=None, scale=None, shape=Rect):
+    """Create a `Patch` for visualizing node.
+    """
+    # note: the patch (picture and children fields) is is lazy evaluated.
     if node.is_empty:
-        return Patch(node, pic, pic, [])
-
-    painter1 = QtGui.QPainter(pic)
-
-    ctng = node.contingencies
-
-    if not node.is_leaf:
-        # First run down the non None children
-        for ch in filter(is_not_none, node.children.flat):
-            sub = create_picture_patch(ch, palette, scale, shape=shape)
-            sub.picture.play(painter1)
-            subpatches.append(sub)
-
-    colors = create_image(ctng, palette, scale=scale)
-    x, y, w, h = node.brect
-    N, M = ctng.shape[:2]
-
-    indices = itertools.product(range(N), range(M))
-
-    ctng = ctng.reshape((-1,) + ctng.shape[2:])
-    if ctng.ndim == 2:
-        ctng_any = ctng.any(axis=1)
+        return Patch(node, once(lambda: QtGui.QPicture()), once(lambda: ()))
     else:
-        ctng_any = ctng > 0
+        @once
+        def picture_this_level():
+            pic = QtGui.QPicture()
+            painter = QtGui.QPainter(pic)
+            ctng = node.contingencies
+            colors = create_image(ctng, palette, scale=scale)
+            x, y, w, h = node.brect
+            N, M = ctng.shape[:2]
 
-    if node.is_leaf:
-        skip = itertools.repeat(False)
-    else:
-        # Skip all None children they were already painted.
-        skip = (ch is not None for ch in node.children.flat)
+            # Nonzero contingency mask
+            any_mask = Node_mask(node)
 
-    thispic = QtGui.QPicture()
-    painter = QtGui.QPainter(thispic)
-    painter.save()
-    painter.translate(x, y)
-    painter.scale(w / node.nbins, h / node.nbins)
+            if node.is_leaf:
+                skip = itertools.repeat(False)
+            else:
+                # Skip all None children they were already painted.
+                skip = (ch is not None for ch in node.children.flat)
 
-    for (i, j), skip, any_ in zip(indices, skip, ctng_any):
-        if not skip and any_:
-            painter.setBrush(QtGui.QColor(*colors[i, j]))
-            if shape == Rect:
-                painter.drawRect(i, j, 1, 1)
-            elif shape == Circle:
-                painter.drawEllipse(i, j, 1, 1)
-            elif shape == RoundRect:
-                painter.drawRoundedRect(i, j, 1, 1, 25.0, 25.0,
-                                        Qt.RelativeSize)
+            painter.save()
+            painter.translate(x, y)
+            painter.scale(w / node.nbins, h / node.nbins)
 
-    painter.restore()
-    painter.end()
+            indices = itertools.product(range(N), range(M))
+            for (i, j), skip, any_ in zip(indices, skip, any_mask.flat):
+                if not skip and any_:
+                    painter.setBrush(QtGui.QColor(*colors[i, j]))
+                    if shape == Rect:
+                        painter.drawRect(i, j, 1, 1)
+                    elif shape == Circle:
+                        painter.drawEllipse(i, j, 1, 1)
+                    elif shape == RoundRect:
+                        painter.drawRoundedRect(i, j, 1, 1, 25.0, 25.0,
+                                                Qt.RelativeSize)
+            painter.restore()
+            painter.end()
+            return pic
 
-    painter1.drawPicture(0, 0, thispic)
-    painter1.end()
+        @once
+        def child_patches():
+            if node.is_leaf:
+                children = []
+            else:
+                children = filter(is_not_none, node.children.flat)
+            return tuple(Patch_create(child, palette, scale, shape)
+                         for child in children) + \
+                   (Patch(node, picture_this_level, once(lambda: ())),)
 
-    return Patch(node, pic, thispic, subpatches)
+        @once
+        def picture_children():
+            pic = QtGui.QPicture()
+            painter = QtGui.QPainter(pic)
+            for ch in child_patches():
+                painter.drawPicture(0, 0, ch.picture())
+            painter.end()
+            return pic
+
+        return Patch(node, picture_children, child_patches)
 
 
 def resample(node, samplewidth):
