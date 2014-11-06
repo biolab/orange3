@@ -334,17 +334,13 @@ class OWMosaicDisplay(OWWidget):
         self.attributeValuesDict = {}
         self.information([0, 1, 2])
 
-        # self.data = self.optimizationDlg.setData(data, self.removeUnusedValues)
-        # zgornja vrstica je diskretizirala tabelo in odstranila unused values
-
         if not self.data:
             return
 
-        if any(isinstance(attr, ContinuousVariable) for attr in self.data.domain):
-            # previously done in optimizationDlg.setData()
-            self.data = DiscretizeTable(data, method=EqualFreq())
-            self.information(0, "Continuous attributes were discretized.")
-
+        if any(isinstance(attr, ContinuousVariable)
+               for attr in self.data.domain):
+            self.information(0, "Data contains continuous variables. " +
+                             "Discretize the data to use them.")
 
         """ TODO: check
         if data.has_missing_class():
@@ -355,14 +351,16 @@ class OWMosaicDisplay(OWWidget):
 
         if isinstance(self.data.domain.class_var, DiscreteVariable):
             self.interior_coloring = CLASS_DISTRIBUTION
-            self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
+            self.colorPalette.set_number_of_colors(
+                len(self.data.domain.class_var.values))
         else:
             self.interior_coloring = PEARSON
 
         self.initCombos(self.data)
         self.openContext(self.data)
 
-        # if we first received subset data we now have to call setSubsetData to process it
+        # if we first received subset data
+        # we now have to call setSubsetData to process it
         if self.unprocessed_subset_data:
             self.setSubsetData(self.unprocessed_subset_data)
             self.unprocessed_subset_data = None
@@ -377,13 +375,14 @@ class OWMosaicDisplay(OWWidget):
                 self.warning(10)
             except:
                 self.subset_data = None
-                self.warning(10,
-                             data and "'Data' and 'Data Subset' do not have compatible domains." or "")
+                self.warning(10, data and "'Data' and 'Data Subset'" +
+                             " do not have compatible domains." or "")
         self.cb_show_subset.setDisabled(self.subset_data is None)
 
 
 
-    # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
+    # this is called by OWBaseWidget after setData and setSubsetData are called.
+    # this way the graph is updated only once
     def handleNewSignals(self):
         self.updateGraphAndPermList()
 
