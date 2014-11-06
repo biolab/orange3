@@ -112,7 +112,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.show_statistics = False
             self.draw_groups()
         else:
-            self.show_statistics = True
+            self.show_statistics = False
             self.draw_curves()
         self.draw_distributions()
         self.draw_axes()
@@ -164,15 +164,20 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         diff, mins = [], []
         for i in self.attribute_indices:
-            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
-            mins.append(self.domain_data_stat[i].min)
+            var = self.data_domain[i]
+            if isinstance(var, DiscreteVariable):
+                diff.append(len(var.values))
+                mins.append(-0.5)
+            else:
+                diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+                mins.append(self.domain_data_stat[i].min)
 
         def scale_row(row):
             return [(x - m) / d for x, m, d in zip(row, mins, diff)]
 
         for row_idx, row in enumerate(self.data[:, self.attribute_indices]):
-            #if not self.valid_data[row_idx]:
-            #    continue
+            if any(np.isnan(v) for v in row.x):
+                continue
 
             color = self.select_color(row_idx)
 
@@ -214,8 +219,13 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         diff, mins = [], []
         for i in self.attribute_indices:
-            diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
-            mins.append(self.domain_data_stat[i].min)
+            var = self.data_domain[i]
+            if isinstance(var, DiscreteVariable):
+                diff.append(len(var.values))
+                mins.append(-0.5)
+            else:
+                diff.append(self.domain_data_stat[i].max - self.domain_data_stat[i].min or 1)
+                mins.append(self.domain_data_stat[i].min)
 
         for j, (phi, cluster_mus, cluster_sigma) in enumerate(zip(phis, mus, sigmas)):
             for i, (mu1, sigma1, mu2, sigma2), in enumerate(
@@ -268,8 +278,8 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def draw_statistics(self):
         """Draw lines that represent standard deviation or quartiles"""
+        return # TODO: Implement using BasicStats
         if self.show_statistics and self.have_data:
-            n_attr = len(self.attributes)
             data = []
             for attr_idx in self.attribute_indices:
                 if not isinstance(self.data_domain[attr_idx], ContinuousVariable):
@@ -277,14 +287,13 @@ class OWParallelGraph(OWPlot, ScaleData):
                     continue  # only for continuous attributes
 
                 if not self.data_has_class or self.data_has_continuous_class:    # no class
-                    attr_values = self.no_jittering_scaled_data[attr_idx]
-                    attr_values = attr_values[~np.isnan(attr_values)]
-
                     if self.show_statistics == MEANS:
-                        m = attr_values.mean()
-                        dev = attr_values.std()
+                        m = self.domain_data_stat[attr_idx].mean
+                        dev = self.domain_data_stat[attr_idx].var
                         data.append([(m - dev, m, m + dev)])
                     elif self.show_statistics == MEDIAN:
+                        data.append([(0, 0, 0)]); continue
+
                         sorted_array = np.sort(attr_values)
                         if len(sorted_array) > 0:
                             data.append([(sorted_array[int(len(sorted_array) / 4.0)],
@@ -295,6 +304,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                 else:
                     curr = []
                     class_values = get_variable_values_sorted(self.data_domain.class_var)
+
                     for c in range(len(class_values)):
                         attr_values = self.data[attr_idx, self.data[self.data_class_index] == c]
                         attr_values = attr_values[~np.isnan(attr_values)]
@@ -768,10 +778,22 @@ def create_contingencies(X, callback=None):
     dim = len(X.domain)
 
     X_ = DiscretizeTable(X, method=EqualFreq(n=10))
-    vals = [[tuple(map(str.strip, v.strip('[]()<>=').split(','))) for v in var.values]
-            for var in X_.domain]
-    m = [{i: (float(v[0]) if len(v) == 1 else (float(v[0]) + (float(v[1]) - float(v[0])) / 2))
-          for i, v in enumerate(val)} for val in vals]
+    m = []
+    for i, var in enumerate(X_.domain):
+        cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=').split(',')))
+                          for v in var.values]
+        try:
+            float_values = [[float(v) for v in vals] for vals in cleaned_values]
+            bin_centers = {
+                i: v[0] if len(v) == 1 else v[0] + (v[1] - v[0])
+                for i, v in enumerate(float_values)
+            }
+        except ValueError:
+            bin_centers = {
+                i: i
+                for i, v in enumerate(cleaned_values)
+            }
+        m.append(bin_centers)
 
     from Orange.data.sql.table import SqlTable
     if isinstance(X, SqlTable):
@@ -792,6 +814,8 @@ def create_contingencies(X, callback=None):
     else:
         conts = [defaultdict(float) for i in range(len(X_.domain))]
         for i, r in enumerate(X_):
+            if any(np.isnan(r)):
+                continue
             row = tuple(m[vi].get(v) for vi, v in enumerate(r))
             for l in range(len(X_.domain)):
                 lower = l - window_size if l - window_size >= 0 else None
@@ -817,8 +841,9 @@ def create_sql_contingency(X, columns, m):
                 for i, v in enumerate(row)]
 
     group_by = [a.to_sql() for a in (X.domain[c] for c in columns)]
+    filters = ['%s IS NOT NULL' % a for a in group_by]
     fields = group_by + ['COUNT(%s)' % group_by[0]]
-    query = X._sql_query(fields, group_by=group_by)
+    query = X._sql_query(fields, group_by=group_by, filters=filters)
     with X._execute_sql_query(query) as cur:
         cont = np.array(list(map(convert, cur.fetchall())), dtype='float')
     return cont[:, :-1], cont[:, -1:].flatten()

@@ -83,7 +83,7 @@ class OWParallelCoordinates(OWVisWidget):
         self.add_zoom_select_toolbar(self.general_tab)
 
         self.add_visual_settings(self.settings_tab)
-        self.add_annotation_settings(self.settings_tab)
+        #self.add_annotation_settings(self.settings_tab)
         self.add_color_settings(self.settings_tab)
         self.add_group_settings(self.settings_tab)
 

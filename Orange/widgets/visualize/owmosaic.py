@@ -340,12 +340,6 @@ class OWMosaicDisplay(OWWidget):
         if not self.data:
             return
 
-        if not self.data.domain.class_var:
-            self.warning(0, "Data does not have a class variable.")
-            return
-        else:
-            self.warning(0)
-
         if any(isinstance(attr, ContinuousVariable) for attr in self.data.domain):
             # previously done in optimizationDlg.setData()
             self.data = DiscretizeTable(data, method=EqualFreq())
@@ -552,29 +546,25 @@ class OWMosaicDisplay(OWWidget):
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
-        if type(data) == SqlTable:
-            cond_dist = defaultdict(lambda: 0)
-            var_attrs = [data.domain[a] for a in attrs]
-            # make all possible pairs of attributes + class_var
-            for i in range(0, len(var_attrs) + 1):
-                attr = [v.to_sql() for v in var_attrs[:i + 1]]
-                if i == len(var_attrs):
-                    attr.append(data.domain.class_var.to_sql())
+        cond_dist = defaultdict(int)
+        all_attrs = [data.domain[a] for a in attrs]
+        if data.domain.class_var is not None:
+            all_attrs.append(data.domain.class_var)
+
+        for i in range(1, len(all_attrs)+1):
+            attr = all_attrs[:i]
+            if type(data) == SqlTable:
+                # make all possible pairs of attributes + class_var
+                attr = [a.to_sql() for a in attr]
                 fields = attr + ["COUNT(*)"]
                 query = data._sql_query(fields, group_by=attr)
                 with data._execute_sql_query(query) as cur:
                     res = cur.fetchall()
-                for r in list(res):
-                    cond_dist['-'.join(r[:-1])] = r[-1]
-        else:
-            cond_dist = {}
-            for i in range(0, len(attrs) + 1):
-                attr = []
-                for j in range(0, i + 1):
-                    if j == len(attrs):
-                        attr.append(data.domain.class_var)
-                    else:
-                        attr.append(data.domain[attrs[j]])
+                for r in res:
+                    str_values =[a.repr_val(a.to_val(x)) for a, x in zip(all_attrs, r[:-1])]
+                    str_values = [x if x != '?' else 'None' for x in str_values]
+                    cond_dist['-'.join(str_values)] = r[-1]
+            else:
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
                     conditions = []
@@ -757,13 +747,13 @@ class OWMosaicDisplay(OWWidget):
                 if used_vals == [vals[self.activeRule[0].index(a)] for a in used_attrs]:
                     values = list(
                         self.attributeValuesDict.get(self.data.domain.classVar.name, [])) or get_variable_values_sorted(
-                        self.data.domain.classVar)
+                        self.data.domain.class_var)
                     counts = [self.conditionalDict[attrVals + "-" + val] for val in values]
                     d = 2
                     r = OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 2 * d + 1, y1 - y0 + 2 * d + 1, z=50)
                     r.setPen(QPen(self.colorPalette[counts.index(max(counts))], 2, Qt.DashLine))
 
-        aprioriDist = None
+        aprioriDist = ()
         pearson = None
         expected = None
         outerRect = OWCanvasRectangle(self.canvas, x0, y0, x1 - x0, y1 - y0, z=30)
@@ -980,8 +970,8 @@ class OWMosaicDisplay(OWWidget):
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.colorPalette = dlg.getDiscretePalette("discPalette")
-            if self.data and self.data.domain.classVar and isinstance(self.data.domain.classVar, DiscreteVariable):
-                self.colorPalette.set_number_of_colors(len(self.data.domain.classVar.values))
+            if self.data and self.data.domain.class_var and isinstance(self.data.domain.class_var, DiscreteVariable):
+                self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
             self.updateGraph()
 
     def createColorDialog(self):

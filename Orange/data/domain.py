@@ -174,7 +174,7 @@ class Domain:
         """
         if isinstance(var, str):
             if not var in self.indices:
-                raise IndexError("Variable '%s' is not in the domain", var)
+                raise IndexError("Variable '%s' is not in the domain %s" % (var, self))
             idx = self.indices[var]
             return self._variables[idx] if idx >= 0 else self._metas[-1 - idx]
 
@@ -187,7 +187,7 @@ class Domain:
                     if each is var:
                         return var
                 raise IndexError(
-                    "Variable '%s' is not in the domain", var.name)
+                    "Variable '%s' is not in the domain %s" % (var.name, self))
             else:
                 return var
 
