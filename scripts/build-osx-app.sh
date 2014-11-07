@@ -71,7 +71,7 @@ if [[ $INPLACE ]]; then
     fi
 fi
 
-TEMPLATE_URL=${TEMPLATE_URL:-"http://orange.biolab.si/download/bundle-templates/Orange3.app-template.tar.gz"}
+TEMPLATE_URL=${TEMPLATE_URL:-"http://orange.biolab.si/download/files/bundle-templates/Orange3.app-template.tar.gz"}
 
 SCHEMA_REGEX='^(https?|ftp|local)://.*'
 
