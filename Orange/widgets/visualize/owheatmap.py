@@ -100,6 +100,13 @@ def blockshaped(arr, rows, cols):
 Rect, RoundRect, Circle = 0, 1, 2
 
 
+def lod_from_transform(T):
+    # Return level of detail from a only transform without taking
+    # into account the rotation or shear.
+    r = T.mapRect(QRectF(0, 0, 1, 1))
+    return np.sqrt(r.width() * r.height())
+
+
 class DensityPatch(pg.GraphicsObject):
     Rect, RoundRect, Circle = Rect, RoundRect, Circle
 
@@ -154,12 +161,17 @@ class DensityPatch(pg.GraphicsObject):
         T = painter.worldTransform()
         # level of detail is the geometric mean of a transformed
         # unit rectangle's sides (== sqrt(area)).
-        lod = option.levelOfDetailFromTransform(T)
+#         lod = option.levelOfDetailFromTransform(T)
+        lod = lod_from_transform(T)
         rect = self.rect()
         # sqrt(area) of one cell
         size1 = np.sqrt(rect.width() * rect.height()) / nbins
         cell_size = cell_size
         scale = cell_size / (lod * size1)
+
+        if np.isinf(scale):
+            scale = np.finfo(float).max
+
         p = int(np.floor(np.log2(scale)))
 
         p = min(max(p, - int(np.log2(nbins ** (root.depth() - 1)))),
@@ -642,11 +654,13 @@ class OWHeatMap(widget.OWWidget):
         rect = item.rect()
 
         T = self.plot.transform() * item.sceneTransform()
-        lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
-
+#         lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
+        lod = lod_from_transform(T)
         size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
         cell_size = 10
         scale = cell_size / (lod * size1)
+        if np.isinf(scale):
+            scale = np.finfo(float).max
         p = int(np.floor(np.log2(scale)))
         p = min(p, int(np.log2(self.n_bins)))
         return 2 ** int(p)
