@@ -534,6 +534,24 @@ class SqlTableTests(PostgresTest):
         sql_table = SqlTable(uri, guess_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
+    def test_recovers_connection_after_sql_error(self):
+        import psycopg2
+        uri = self.create_sql_table(np.arange(25).reshape((-1, 1)))
+
+        sql_table = SqlTable(uri)
+
+        try:
+            broken_query = "SELECT 1/%s FROM %s" % (sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
+            with sql_table._execute_sql_query(broken_query) as cur:
+                cur.fetchall()
+        except psycopg2.DataError:
+            pass
+
+        working_query = "SELECT %s FROM %s" % (sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
+        with sql_table._execute_sql_query(working_query) as cur:
+            cur.fetchall()
+
+
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain), 0)
         attr = table.domain[0]
