@@ -169,10 +169,7 @@ class OWScatterPlot(OWWidget):
 
         # TODO: adapt scatter plot to work on SqlTables (avoid use of X and Y)
         if isinstance(self.data, SqlTable):
-            self.data.X = np.empty((len(self.data),
-                                   len(self.data.domain.attributes)))
-            self.data.Y = np.empty((len(self.data),
-                                   len(self.data.domain.class_vars)))
+            self.data.download_data()
             for i, row in enumerate(data):
                 self.data.X[i] = [row[attr]
                                   for attr in self.data.domain.attributes]
