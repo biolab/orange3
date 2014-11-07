@@ -211,18 +211,18 @@ class OWSieveDiagram(OWWidget):
 
         # compute contingency of x and y attributes
         for entry in contX:
-            sum = 0
+            sum_ = 0
             try:
-                for val in entry: sum += val
+                for val in entry: sum_ += val
             except: pass
-            valsX.append(sum)
+            valsX.append(sum_)
 
         for entry in contY:
-            sum = 0
+            sum_ = 0
             try:
-                for val in entry: sum += val
+                for val in entry: sum_ += val
             except: pass
-            valsY.append(sum)
+            valsY.append(sum_)
 
         # create cartesian product of selected attributes and compute contingency
         # (cart, profit) = FeatureByCartesianProduct(data, [data.domain[self.attrX], data.domain[self.attrY]])
@@ -267,8 +267,8 @@ class OWSieveDiagram(OWWidget):
         chisquare = 0.0
         for i in range(len(valsX)):
             for j in range(len(valsY)):
-                ((xAttr, xVal), (yAttr, yVal), actual, sum) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
-                expected = float(xVal*yVal)/float(sum)
+                ((xAttr, xVal), (yAttr, yVal), actual, sum_) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
+                expected = float(xVal*yVal)/float(sum_)
                 if expected == 0: continue
                 pearson2 = (actual - expected)*(actual - expected) / expected
                 chisquare += pearson2
@@ -277,27 +277,29 @@ class OWSieveDiagram(OWWidget):
         # draw rectangles
         currX = xOff
         max_ylabel_w = 0
+
+        normX, normY = sum(valsX), sum(valsY)
         for i in range(len(valsX)):
             if valsX[i] == 0: continue
             currY = yOff
-            width = int(float(sqareSize * valsX[i])/float(len(data)))
-
+            width = int(float(sqareSize * valsX[i])/float(normX))
+            
             #for j in range(len(valsY)):
             for j in range(len(valsY)-1, -1, -1):   # this way we sort y values correctly
-                ((xAttr, xVal), (yAttr, yVal), actual, sum) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
+                ((xAttr, xVal), (yAttr, yVal), actual, sum_) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
                 if valsY[j] == 0: continue
-                height = int(float(sqareSize * valsY[j])/float(len(data)))
+                height = int(float(sqareSize * valsY[j])/float(normY))
 
                 # create rectangle
                 rect = OWCanvasRectangle(self.canvas, currX+2, currY+2, width-4, height-4, z = -10)
-                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum)
+                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum_)
 
-                expected = float(xVal*yVal)/float(sum)
+                expected = float(xVal*yVal)/float(sum_)
                 pearson = (actual - expected) / sqrt(expected)
                 tooltipText = """<b>X Attribute: %s</b><br>Value: <b>%s</b><br>Number of examples (p(x)): <b>%d (%.2f%%)</b><hr>
                                 <b>Y Attribute: %s</b><br>Value: <b>%s</b><br>Number of examples (p(y)): <b>%d (%.2f%%)</b><hr>
                                 <b>Number Of Examples (Probabilities):</b><br>Expected (p(x)p(y)): <b>%.1f (%.2f%%)</b><br>Actual (p(x,y)): <b>%d (%.2f%%)</b>
-                                <hr><b>Statistics:</b><br>Chi-square: <b>%.2f</b><br>Standardized Pearson residual: <b>%.2f</b>""" %(self.attrX, getHtmlCompatibleString(xAttr), xVal, 100.0*float(xVal)/float(sum), self.attrY, getHtmlCompatibleString(yAttr), yVal, 100.0*float(yVal)/float(sum), expected, 100.0*float(xVal*yVal)/float(sum*sum), actual, 100.0*float(actual)/float(sum), chisquare, pearson )
+                                <hr><b>Statistics:</b><br>Chi-square: <b>%.2f</b><br>Standardized Pearson residual: <b>%.2f</b>""" %(self.attrX, getHtmlCompatibleString(xAttr), xVal, 100.0*float(xVal)/float(sum_), self.attrY, getHtmlCompatibleString(yAttr), yVal, 100.0*float(yVal)/float(sum_), expected, 100.0*float(xVal*yVal)/float(sum_*sum_), actual, 100.0*float(actual)/float(sum_), chisquare, pearson )
                 rect.setToolTip(tooltipText)
 
                 currY += height
