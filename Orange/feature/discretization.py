@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import Orange.statistics.distribution
 
@@ -37,14 +39,40 @@ class Discretizer(ColumnTransformation):
             return np.array([], dtype=int)
 
 
+def _fmt_interval(low, high, decimals):
+    assert low if low is not None else -np.inf < \
+           high if high is not None else np.inf
+    assert decimals >= 0
+
+    def fmt_value(value, decimals):
+        return (("%%.%if" % decimals) % value).rstrip("0").rstrip(".")
+
+    if (low is None or np.isinf(low)) and \
+            not (high is None or np.isinf(high)):
+        return "<{}".format(fmt_value(high, decimals))
+    elif (high is None or np.isinf(high)) and \
+            not (low is None or np.isinf(low)):
+        return ">={}".format(fmt_value(low, decimals))
+    else:
+        return "[{}, {})".format(fmt_value(low, decimals),
+                                 fmt_value(high, decimals))
+
+
 def _discretized_var(data, var, points):
     name = "D_" + data.domain[var].name
     var = data.domain[var]
 
+    def pairwise(iterable):
+        "Iterator over neighboring pairs of `iterable`"
+        first, second = itertools.tee(iterable, 2)
+        next(second)
+        yield from zip(first, second)
+
     if len(points) >= 1:
-        values = ["<%f" % points[0]] \
-            + ["[%f, %f)" % (p1, p2) for p1, p2 in zip(points, points[1:])] \
-            + [">=%f" % points[-1]]
+        values = [_fmt_interval(low, high, var.number_of_decimals)
+                  for low, high in pairwise([-np.inf] + list(points) +
+                                            [np.inf])]
+
         def discretized_attribute():
             return 'bin(%s, ARRAY%s)' % (var.to_sql(), str(list(points)))
     else:
