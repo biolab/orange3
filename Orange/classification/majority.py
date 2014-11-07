@@ -1,7 +1,6 @@
 from numpy import tile, array
 
-from Orange import classification
-from Orange import data
+from Orange import classification, data
 from Orange.statistics import distribution
 
 
