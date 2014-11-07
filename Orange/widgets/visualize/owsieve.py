@@ -10,10 +10,8 @@ from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
 
 
 import Orange
-from Orange.data import Table, ContinuousVariable
-from Orange.data.discretization import DiscretizeTable
+from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.data.sql.table import SqlTable
-from Orange.feature.discretization import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.utils import getHtmlCompatibleString
@@ -113,10 +111,8 @@ class OWSieveDiagram(OWWidget):
 
         if data:
             if any(isinstance(attr, ContinuousVariable) for attr in data.domain):
-                self.data = DiscretizeTable(data, method=EqualFreq())
-                self.information(0, "Continuous attributes were discretized.")
-#            if not self.data or len(data.domain) != len(self.data.domain):
-#                self.information(1, "Unused attribute values were removed.")
+                self.information(0, "Data contains continuous variables. " +
+                                 "Discretize the data to use them.")
 
         if not sameDomain:
             self.initCombos()
@@ -177,10 +173,11 @@ class OWSieveDiagram(OWWidget):
         self.attrConditionValueCombo.clear()
 
         if not self.data: return
-        for i in range(len(self.data.domain)):
-            self.attrXCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
-            self.attrYCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
-            self.attrConditionCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
+        for i, var in enumerate(self.data.domain):
+            if isinstance(var, DiscreteVariable):
+                self.attrXCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
+                self.attrYCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
+                self.attrConditionCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
         self.attrCondition = str(self.attrConditionCombo.itemText(0))
 
         if self.attrXCombo.count() > 0:
