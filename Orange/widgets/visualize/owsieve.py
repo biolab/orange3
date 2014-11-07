@@ -145,10 +145,9 @@ class OWSieveDiagram(OWWidget):
         else:
             # data = orange.Preprocessor_dropMissing(self.data.select([xAttr, yAttr, self.attrCondition]))
             # data = self.data.select({self.attrCondition:self.attrConditionValue})
-            filt = Orange.data.filter.Values()
-            filt.domain = self.data.domain
             fd = Orange.data.filter.FilterDiscrete(column=self.attrCondition, values=[self.attrConditionValue])
-            filt.conditions.append(fd)
+            filt = Orange.data.filter.Values([fd])
+            filt.domain = self.data.domain
             data = filt(self.data)
 
         # if dropMissingData: return orange.Preprocessor_dropMissing(data)
@@ -334,12 +333,13 @@ class OWSieveDiagram(OWWidget):
             s = [len(a.values) for a in attr]
             for indices in counter(s):
                 vals = []
-                filt = Orange.data.filter.Values()
-                filt.domain = data.domain
+                conditions = []
                 for k in range(len(indices)):
                     vals.append(attr[k].values[indices[k]])
                     fd = Orange.data.filter.FilterDiscrete(column=attr[k], values=[attr[k].values[indices[k]]])
-                    filt.conditions.append(fd)
+                    conditions.append(fd)
+                filt = Orange.data.filter.Values(conditions)
+                filt.domain = data.domain
                 filtdata = filt(data)
                 dict['-'.join(vals)] = len(filtdata)
 
