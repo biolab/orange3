@@ -58,3 +58,12 @@ class MajorityTest(unittest.TestCase):
         clf = learn(iris)
         y = clf(iris)
         self.assertTrue((y == 0).all())
+
+    def test_continuous(self):
+        iris = data.Table('auto-mpg')
+        learn = maj.MajorityFitter()
+        # for e in iris[:len(iris)/2:2]:
+        #     e.set_class("?")
+        clf = learn(iris)
+        y = clf(iris)
+        self.assertTrue((y == 2).all())
