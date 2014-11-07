@@ -668,10 +668,12 @@ class SqlTable(table.Table):
     def _execute_sql_query(self, query, param=None):
         connection = self.connection_pool.getconn()
         cur = connection.cursor()
-        cur.execute(query, param)
-        connection.commit()
-        yield cur
-        self.connection_pool.putconn(connection)
+        try:
+            cur.execute(query, param)
+            yield cur
+        finally:
+            connection.commit()
+            self.connection_pool.putconn(connection)
 
 
 class SqlRowInstance(instance.Instance):
