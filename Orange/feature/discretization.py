@@ -92,9 +92,8 @@ class Discretization:
 
 
 class EqualFreq(Discretization):
-    """Discretizes the feature by spliting its domain to a fixed number of
-    equal-width intervals. The span of original variable is the difference
-    between the smallest and the largest feature value.
+    """Discretization into intervals that contain
+    an approximately equal number of data instances.
 
     .. attribute:: n
 
@@ -117,8 +116,7 @@ class EqualFreq(Discretization):
 
 
 class EqualWidth(Discretization):
-    """Infers the cut-off points so that the discretization intervals contain
-    approximately equal number of training data instances.
+    """Discretization into a fixed number of equal-width intervals.
 
     .. attribute:: n
 
