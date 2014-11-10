@@ -498,11 +498,11 @@ class OWMosaicDisplay(OWWidget):
             width = 50
             if len(attrList) > 1:
                 text = OWCanvasText(self.canvas, attrList[1], bold=1, show=0)
-                width = text.boundingRect().width() + 30 + 20
+                width = text.boundingRect().height() + 30 + 20
                 xOff = width
                 if len(attrList) == 4:
                     text = OWCanvasText(self.canvas, attrList[3], bold=1, show=0)
-                    width += text.boundingRect().width() + 30 + 20
+                    width += text.boundingRect().height() + 30 + 20
 
             # get the maximum height of rectangle
             height = 90
@@ -681,17 +681,6 @@ class OWMosaicDisplay(OWWidget):
         height = y1 - y0 - (side % 2 == 1) * self._cellspace * (totalAttrs - side) * (len(values) - 1)
 
         #calculate position of first attribute
-        if side == 0:
-            OWCanvasText(self.canvas, attr, x0 + (x1 - x0) / 2, y1 + self.attributeNameOffset, Qt.AlignCenter, bold=1)
-        elif side == 1:
-            OWCanvasText(self.canvas, attr, x0 - self.attributeNameOffset, y0 + (y1 - y0) / 2,
-                         Qt.AlignRight | Qt.AlignVCenter, bold=1)
-        elif side == 2:
-            OWCanvasText(self.canvas, attr, x0 + (x1 - x0) / 2, y0 - self.attributeNameOffset, Qt.AlignCenter, bold=1)
-        else:
-            OWCanvasText(self.canvas, attr, x1 + self.attributeNameOffset, y0 + (y1 - y0) / 2,
-                         Qt.AlignLeft | Qt.AlignVCenter, bold=1)
-
         currPos = 0
 
         if attrVals == "":
@@ -703,6 +692,9 @@ class OWMosaicDisplay(OWWidget):
             counts = [1] * len(values)
             total = sum(counts)
 
+        max_ylabel_w1 = 0
+        max_ylabel_w2 = 0
+
         for i in range(len(values)):
             val = values[i]
             perc = counts[i] / float(total)
@@ -710,19 +702,34 @@ class OWMosaicDisplay(OWWidget):
                 OWCanvasText(self.canvas, str(val), x0 + currPos + width * 0.5 * perc, y1 + self.attributeValueOffset,
                              Qt.AlignCenter, bold=0)
             elif side == 1:
-                OWCanvasText(self.canvas, str(val), x0 - self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
+                t = OWCanvasText(self.canvas, str(val), x0 - self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
                              Qt.AlignRight | Qt.AlignVCenter, bold=0)
+                max_ylabel_w1 = max(int(t.boundingRect().width()), max_ylabel_w1)
             elif side == 2:
                 OWCanvasText(self.canvas, str(val), x0 + currPos + width * perc * 0.5, y0 - self.attributeValueOffset,
                              Qt.AlignCenter, bold=0)
             else:
-                OWCanvasText(self.canvas, str(val), x1 + self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
+                t = OWCanvasText(self.canvas, str(val), x1 + self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
                              Qt.AlignLeft | Qt.AlignVCenter, bold=0)
+                max_ylabel_w2 = max(int(t.boundingRect().width()), max_ylabel_w2)
 
             if side % 2 == 0:
                 currPos += perc * width + self._cellspace * (totalAttrs - side)
             else:
                 currPos += perc * height + self._cellspace * (totalAttrs - side)
+
+        if side == 0:
+            OWCanvasText(self.canvas, attr, x0 + (x1 - x0) / 2, y1 + self.attributeNameOffset, Qt.AlignCenter, bold=1)
+        elif side == 1:
+            OWCanvasText(self.canvas, attr, max(x0 - max_ylabel_w1 - self.attributeValueOffset, 20), y0 + (y1 - y0) / 2,
+                         Qt.AlignRight | Qt.AlignVCenter, bold=1, vertical=True)
+        elif side == 2:
+            OWCanvasText(self.canvas, attr, x0 + (x1 - x0) / 2, y0 - self.attributeNameOffset, Qt.AlignCenter, bold=1)
+        else:
+            OWCanvasText(self.canvas, attr, min(x1+50, x1 + max_ylabel_w2 + self.attributeValueOffset), y0 + (y1 - y0) / 2,
+                         Qt.AlignLeft | Qt.AlignVCenter, bold=1, vertical=True)
+
+
 
     # draw a rectangle, set it to back and add it to rect list
     def addRect(self, x0, x1, y0, y1, condition="", used_attrs=[], used_vals=[], attrVals="", **args):
@@ -1097,7 +1104,7 @@ class SortAttributeValuesDlg(OWWidget):
 
 class OWCanvasText(QGraphicsTextItem):
     def __init__(self, canvas, text="", x=0, y=0, alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
-                 htmlText=None, tooltip=None, show=1):
+                 htmlText=None, tooltip=None, show=1, vertical=False):
         QGraphicsTextItem.__init__(self, text, None, canvas)
 
         if font:
@@ -1110,6 +1117,9 @@ class OWCanvasText(QGraphicsTextItem):
             self.setHtml(htmlText)
 
         self.alignment = alignment
+        self.vertical = vertical
+        if vertical:
+            self.setRotation(-90)
 
         self.setPos(x, y)
         self.x, self.y = x, y
@@ -1123,7 +1133,11 @@ class OWCanvasText(QGraphicsTextItem):
 
     def setPos(self, x, y):
         self.x, self.y = x, y
-        rect = self.boundingRect()
+        rect = QGraphicsTextItem.boundingRect(self)
+        if self.vertical:
+            h, w = rect.height(), rect.width()
+            rect.setWidth(h)
+            rect.setHeight(-w)
         if int(self.alignment & Qt.AlignRight):
             x -= rect.width()
         elif int(self.alignment & Qt.AlignHCenter):
