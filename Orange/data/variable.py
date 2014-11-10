@@ -410,8 +410,14 @@ class ContinuousVariable(Variable):
     def to_val(self, s):
         """
         Convert a value, given as an instance of an arbitrary type, to a float.
-        If the value is given as a string, it adjusts the number of decimals
-        if needed.
+        """
+        if s in self.unknown_str:
+            return Unknown
+        return float(s)
+
+    def val_from_str_add(self, s):
+        """
+        Convert a value from a string (adjusting the number of decimals).
         """
         if s in self.unknown_str:
             return Unknown
@@ -420,11 +426,13 @@ class ContinuousVariable(Variable):
             #      Is there something we can do about it?
             ndec = s.strip().rfind(".")
             ndec = len(s) - ndec - 1 if ndec != -1 else 0
-            if self.adjust_decimals == 2 or ndec > self.number_of_decimals:
+            if self.adjust_decimals == 2:
                 self.number_of_decimals = ndec
-        return float(s)
+                self.adjust_decimals = 1
+            elif ndec > self.number_of_decimals:
+                self.number_of_decimals = ndec
 
-    val_from_str_add = to_val
+        return float(s)
 
     def repr_val(self, val):
         """
