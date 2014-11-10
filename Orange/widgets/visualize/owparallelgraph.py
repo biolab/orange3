@@ -251,7 +251,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.set_progress(50, 100)
             w, mu, sigma, phi = lac(conts, self.number_of_groups, self.number_of_steps)
             self.set_progress(100, 100)
-            self.groups[key] = phi, mu, sigma
+            self.groups[key] = map(np.nan_to_num, (phi, mu, sigma))
         return self.groups[key]
 
     def draw_legend(self):
