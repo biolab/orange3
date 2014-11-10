@@ -40,8 +40,8 @@ class Discretizer(ColumnTransformation):
 
 
 def _fmt_interval(low, high, decimals):
-    assert low if low is not None else -np.inf < \
-           high if high is not None else np.inf
+    assert (low if low is not None else -np.inf) < \
+           (high if high is not None else np.inf)
     assert decimals >= 0
 
     def fmt_value(value, decimals):
