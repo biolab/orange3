@@ -97,7 +97,7 @@ class EqualFreq(Discretization):
 
     .. attribute:: n
 
-        Number of discretization intervals (default: 4).
+        Maximum number of discretization intervals (default: 4).
     """
     def __init__(self, n=4):
         self.n = n
@@ -108,7 +108,7 @@ class EqualFreq(Discretization):
             quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
             query = data._sql_query(['quantile(%s, ARRAY%s)' % (att, str(quantiles))])
             with data._execute_sql_query(query) as cur:
-                points = cur.fetchone()[0]
+                points = sorted(set(cur.fetchone()[0]))
         else:
             d = Orange.statistics.distribution.get_distribution(data, attribute)
             points = _discretization.split_eq_freq(d, n=self.n)
