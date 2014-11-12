@@ -2,6 +2,7 @@ import sys
 
 import numpy as np
 from PyQt4.QtCore import QSize
+from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication, QColor
 
 import Orange
@@ -15,6 +16,20 @@ from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
+
+
+def font_resize(font, factor, minsize=None, maxsize=None):
+    font = QtGui.QFont(font)
+    fontinfo = QtGui.QFontInfo(font)
+    size = fontinfo.pointSizeF() * factor
+
+    if minsize is not None:
+        size = max(size, minsize)
+    if maxsize is not None:
+        size = min(size, maxsize)
+
+    font.setPointSizeF(size)
+    return font
 
 
 class OWScatterPlot(OWWidget):
@@ -50,6 +65,17 @@ class OWScatterPlot(OWWidget):
         box = gui.widgetBox(self.mainArea, True, margin=0)
         self.graph = OWScatterPlotGraph(self, box, "ScatterPlot")
         box.layout().addWidget(self.graph.plot_widget)
+        plot = self.graph.plot_widget
+
+        axisfont = font_resize(self.font(), 0.8, minsize=11)
+        axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
+        axis = plot.getAxis("bottom")
+        axis.setTickFont(axisfont)
+        axis.setPen(axispen)
+
+        axis = plot.getAxis("left")
+        axis.setTickFont(axisfont)
+        axis.setPen(axispen)
 
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table

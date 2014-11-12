@@ -417,6 +417,29 @@ class OWHeatMap(widget.OWWidget):
         self.plot.setMenuEnabled(False)
         self.plot.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.plot.setMinimumSize(500, 500)
+
+        def font_resize(font, factor, minsize=None, maxsize=None):
+            font = QtGui.QFont(font)
+            fontinfo = QtGui.QFontInfo(font)
+            size = fontinfo.pointSizeF() * factor
+
+            if minsize is not None:
+                size = max(size, minsize)
+            if maxsize is not None:
+                size = min(size, maxsize)
+
+            font.setPointSizeF(size)
+            return font
+
+        axisfont = font_resize(self.font(), 0.8, minsize=11)
+        axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
+        axis = self.plot.getAxis("bottom")
+        axis.setTickFont(axisfont)
+        axis.setPen(axispen)
+        axis = self.plot.getAxis("left")
+        axis.setTickFont(axisfont)
+        axis.setPen(axispen)
+
         self.plot.getViewBox().sigTransformChanged.connect(
             self._on_transform_changed)
         self.mainArea.layout().addWidget(self.plot)
