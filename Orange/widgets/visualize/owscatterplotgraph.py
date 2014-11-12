@@ -1,17 +1,18 @@
+from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 import pyqtgraph.graphicsItems.ScatterPlotItem
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
-from pyqtgraph.graphicsItems.ScatterPlotItem import SpotItem, ScatterPlotItem
+from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
-from PyQt4.QtCore import Qt, QRectF, QPointF
-from PyQt4.QtGui import QApplication, QColor, QPen, QBrush
+from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
+from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
 from PyQt4.QtGui import QStaticText, QPainterPath, QTransform
 
 from Orange.data import DiscreteVariable, ContinuousVariable
-from Orange.data.sql.table import SqlTable
+
 from Orange.widgets import gui
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
                                                ContinuousPaletteGenerator)
@@ -245,16 +246,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
         self.view_box = InteractiveViewBox(self)
-        self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent)
+        self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
+                                         background="w")
         self.plot_widget.setAntialiasing(True)
-        self.replot = self.plot_widget
+
+        self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
         self.scatterplot_item = None
-
-        self.tooltip_data = []
-        self.tooltip = TextItem(
-            border=pg.mkPen(200, 200, 200), fill=pg.mkBrush(250, 250, 200, 220))
-        self.tooltip.hide()
 
         self.labels = []
 
@@ -284,6 +282,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.update_grid()
 
+        self._tooltip_delegate = HelpEventDelegate(self.help_event)
+        self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
+
     def set_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
         ScaleScatterPlotData.set_data(self, data, subset_data, **args)
@@ -298,7 +299,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
-        self.tooltip_data = []
         self.set_axis_title("bottom", "")
         self.set_axis_title("left", "")
 
@@ -328,12 +328,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         shape_data = self.compute_symbols()
         self.scatterplot_item = ScatterPlotItem(
             x=x_data, y=y_data, data=np.arange(self.n_points),
-            symbol=shape_data, size=size_data, pen=color_data, brush=brush_data)
+            symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
+        )
+
         self.plot_widget.addItem(self.scatterplot_item)
-        self.plot_widget.addItem(self.tooltip)
+
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
-        self.scatterplot_item.scene().sigMouseMoved.connect(self.mouseMoved)
 
         self.update_labels()
         self.make_legend()
@@ -574,37 +575,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 ScatterPlotItem(pen=pen, brush=color, size=10,
                                 symbol=self.CurveSymbols[i]), value)
 
-    # noinspection PyPep8Naming
-    def mouseMoved(self, pos):
-        act_pos = self.scatterplot_item.mapFromScene(pos)
-        points = self.scatterplot_item.pointsAt(act_pos)
-        text = ""
-        if len(points):
-            for i, p in enumerate(points):
-                index = p.data()
-                text += "Attributes:\n"
-                if self.tooltip_shows_all:
-                    text += "".join(
-                        '   {} = {}\n'.format(attr.name,
-                                              self.raw_data[index][attr])
-                        for attr in self.data_domain.attributes)
-                else:
-                    text += '   {} = {}\n   {} = {}\n'.format(
-                        self.shown_x, self.raw_data[index][self.shown_x],
-                        self.shown_y, self.raw_data[index][self.shown_y])
-                if self.data_domain.class_var:
-                    text += 'Class:\n   {} = {}\n'.format(
-                        self.data_domain.class_var.name,
-                        self.raw_data[index][self.raw_data.domain.class_var])
-                if i < len(points) - 1:
-                    text += '------------------\n'
-            self.tooltip.setText(text, color=(0, 0, 0))
-            self.tooltip.setPos(act_pos)
-            self.tooltip.show()
-            self.tooltip.setZValue(10)
-        else:
-            self.tooltip.hide()
-
     def zoom_button_clicked(self):
         self.scatterplot_item.getViewBox().setMouseMode(
             self.scatterplot_item.getViewBox().RectMode)
@@ -661,3 +631,50 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def save_to_file(self, size):
         pass
+
+    def help_event(self, event):
+        if self.scatterplot_item is None:
+            return False
+
+        act_pos = self.scatterplot_item.mapFromScene(event.scenePos())
+        points = self.scatterplot_item.pointsAt(act_pos)
+        text = ""
+        if len(points):
+            for i, p in enumerate(points):
+                index = p.data()
+                text += "Attributes:\n"
+                if self.tooltip_shows_all:
+                    text += "".join(
+                        '   {} = {}\n'.format(attr.name,
+                                              self.raw_data[index][attr])
+                        for attr in self.data_domain.attributes)
+                else:
+                    text += '   {} = {}\n   {} = {}\n'.format(
+                        self.shown_x, self.raw_data[index][self.shown_x],
+                        self.shown_y, self.raw_data[index][self.shown_y])
+                if self.data_domain.class_var:
+                    text += 'Class:\n   {} = {}\n'.format(
+                        self.data_domain.class_var.name,
+                        self.raw_data[index][self.raw_data.domain.class_var])
+                if i < len(points) - 1:
+                    text += '------------------\n'
+
+            text = ('<span style="white-space:pre">{}</span>'
+                    .format(escape(text)))
+
+            QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
+            return True
+        else:
+            return False
+
+
+class HelpEventDelegate(QObject):
+    def __init__(self, delegate, parent=None):
+        super().__init__(parent)
+        self.delegate = delegate
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.GraphicsSceneHelp:
+            return self.delegate(event)
+        else:
+            return False
