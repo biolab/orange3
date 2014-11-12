@@ -322,6 +322,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             var = self.data_domain[index]
             if isinstance(var, DiscreteVariable):
                 self.set_labels(axis, get_variable_values_sorted(var))
+            else:
+                self.set_labels(axis, None)
 
         color_data, brush_data = self.compute_colors()
         size_data = self.compute_sizes()
