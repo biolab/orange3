@@ -312,10 +312,11 @@ class OWScatterPlot(OWWidget):
 
     def send_selection(self):
         self.selection_dirty = False
+        selected = unselected = None
         # TODO: Implement selection for sql data
         if isinstance(self.data, SqlTable):
             selected = unselected = self.data
-        else:
+        elif self.data is not None:
             selection = self.graph.get_selection()
             selected = self.data[selection]
             unselection = np.full(len(self.data), True, dtype=bool)
