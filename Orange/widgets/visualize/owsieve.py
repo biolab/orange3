@@ -21,21 +21,15 @@ from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
 class OWSieveDiagram(OWWidget):
-    """
-    <name>Sieve Diagram</name>
-    <description>Sieve diagram.</description>
-    <contact>Gregor Leban (gregor.leban@fri.uni-lj.si)</contact>
-    <icon>icons/SieveDiagram.svg</icon>
-    <priority>4200</priority>
-    """
     name = "Sieve Diagram"
     icon = "icons/SieveDiagram.svg"
+    priority = 4200
 
-    inputs = [("Data", Table, "setData", Default), ("Features", AttributeList, "setShownAttributes")]
+    inputs = [("Data", Table, "setData", Default),
+              ("Features", AttributeList, "setShownAttributes")]
     outputs = []
 
     settingsList = ["showLines", "showCases", "showInColor"]
-
     def __init__(self,parent=None, signalManager = None):
         OWWidget.__init__(self, parent, signalManager, "Sieve diagram", True)
 
@@ -342,9 +336,9 @@ class OWSieveDiagram(OWWidget):
                     conditions = []
                     for k, ind in enumerate(indices):
                         vals.append(attr[k].values[ind])
-                        fd = filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
+                        fd = Orange.data.filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
                         conditions.append(fd)
-                    filt = filter.Values(conditions)
+                    filt = Orange.data.filter.Values(conditions)
                     filtdata = filt(data)
                     cond_dist['-'.join(vals)] = len(filtdata)
         return cond_dist
