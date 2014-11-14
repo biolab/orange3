@@ -1135,7 +1135,7 @@ class Table(MutableSequence, Storage):
             else:
                 if W is not None:
                     ranks = np.argsort(m)
-                    vals = np.vstack((m[ranks], W[ranks]))
+                    vals = np.vstack((m[ranks], W[ranks].flatten()))
                     unknowns = bn.countnans(m, W)
                 else:
                     vals = np.ones((2, m.shape[0]))

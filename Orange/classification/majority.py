@@ -1,12 +1,15 @@
 from numpy import tile, array
 
-from Orange import classification
+from Orange import classification, data
 from Orange.statistics import distribution
 
 
 class MajorityFitter(classification.Fitter):
-    def fit_storage(self, data):
-        dist = distribution.get_distribution(data, data.domain.class_var)
+    def fit_storage(self, dat):
+        if not isinstance(dat.domain.class_var, data.DiscreteVariable):
+            raise ValueError("classification.MajorityFitter expects a domain with a "
+                             "(single) discrete variable")
+        dist = distribution.get_distribution(dat, dat.domain.class_var)
         N = dist.sum()
         if N > 0:
             dist /= N

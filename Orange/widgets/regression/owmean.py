@@ -10,7 +10,7 @@ class OWMean(widget.OWWidget):
     icon = "icons/Mean.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Learner", mean.MeanLearner), ("Predictor", mean.MeanModel)]
+    outputs = [("Learner", mean.MeanFitter), ("Predictor", mean.MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")
 
@@ -26,17 +26,24 @@ class OWMean(widget.OWWidget):
         self.apply()
 
     def set_data(self, data):
-        self.data = data
+        self.error(0)
         if data is not None:
-            self.apply()
+            if not isinstance(data.domain.class_var,
+                              Orange.data.ContinuousVariable):
+                data = None
+                self.error(0, "Continuous class variable expected.")
+
+        self.data = data
+        self.apply()
 
     def apply(self):
-        learner = mean.MeanLearner()
+        learner = mean.MeanFitter()
         learner.name = self.learner_name
-        predictor = None
         if self.data is not None:
             predictor = learner(self.data)
             predictor.name = learner.name
+        else:
+            predictor = None
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
