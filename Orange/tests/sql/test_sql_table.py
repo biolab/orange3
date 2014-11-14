@@ -217,8 +217,8 @@ class SqlTableTests(PostgresTest):
                      FROM iris a
                INNER JOIN iris b ON a."sepal width" = b."sepal width"
                     WHERE a."petal width" < 1
-                 ORDER BY a."petal width" ASC""",
-            type_hints=Domain([DiscreteVariable( \
+                 ORDER BY a."sepal length", b. "petal length" ASC""",
+            type_hints=Domain([DiscreteVariable(
                 name="qualitative petal length", values=['<', '>'])], []))
 
         self.assertEqual(len(table), 498)
