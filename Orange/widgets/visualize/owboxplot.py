@@ -404,16 +404,18 @@ class OWBoxPlot(widget.OWWidget):
                 "cannot compute significance"
         elif len(self.stats) == 2:
             if self.display == 2:
-                z, self.p = tests.wilcoxon_rank_sum(
-                    self.stats[0].dist, self.stats[1].dist)
-                t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
+                t = ""
+                # z, self.p = tests.wilcoxon_rank_sum(
+                #    self.stats[0].dist, self.stats[1].dist)
+                # t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
             else:
                 t, self.p = stat_ttest()
                 t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
         else:
             if self.display == 2:
-                U, self.p = -1, -1
-                t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
+                t = ""
+                # U, self.p = -1, -1
+                # t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
             else:
                 F, self.p = stat_ANOVA()
                 t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
