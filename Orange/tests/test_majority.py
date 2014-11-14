@@ -45,7 +45,7 @@ class MajorityTest(unittest.TestCase):
     def test_missing(self):
         iris = data.Table('iris')
         learn = majority_.MajorityFitter()
-        for e in iris[:len(iris)/2:2]:
+        for e in iris[: len(iris) // 2 : 2]:
             e.set_class("?")
         clf = learn(iris)
         y = clf(iris)
