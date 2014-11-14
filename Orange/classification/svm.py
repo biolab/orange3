@@ -23,7 +23,7 @@ class SVMLearner(classification.SklFitter):
                   gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
                   probability=self.probability, tol=self.tol,
                   cache_size=self.cache_size, max_iter=self.max_iter)
-        if W.shape[1]>0:
+        if W is not None:
             return SVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVMClassifier(clf.fit(X, Y.reshape(-1)))
 
@@ -96,7 +96,7 @@ class NuSVMLearner(classification.SklFitter):
                     gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
                     probability=self.probability, tol=self.tol, cache_size=self.cache_size,
                     max_iter=self.max_iter)
-        if W.shape[1]>0:
+        if W is not None:
             return NuSVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return NuSVMClassifier(clf.fit(X, Y.reshape(-1)))
 
@@ -134,7 +134,7 @@ class SVRLearner(classification.SklFitter):
                   coef0=self.coef0, tol=self.tol, C=self.C, epsilon=self.epsilon,
                   shrinking=self.shrinking, cache_size=self.cache_size,
                   max_iter=self.max_iter)
-        if W.shape[1]>0:
+        if W is not None:
             return SVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVRClassifier(clf.fit(X, Y.reshape(-1)))
 
@@ -169,7 +169,7 @@ class NuSVRLearner(classification.SklFitter):
                     gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
                     tol=self.tol, cache_size=self.cache_size,
                     max_iter=self.max_iter)
-        if W.shape[1]>0:
+        if W is not None:
             return NuSVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return NuSVRClassifier(clf.fit(X, Y.reshape(-1)))
 
@@ -202,7 +202,7 @@ class OneClassSVMLearner(classification.SklFitter):
                           gamma=self.gamma, coef0=self.coef0, tol=self.tol,
                           nu=self.nu, shrinking=self.shrinking,
                           cache_size=self.cache_size, max_iter=self.max_iter)
-        if W.shape[1]>0:
+        if W is not None:
             return OneClassSVMClassifier(clf.fit(X, W.reshape(-1)))
         return OneClassSVMClassifier(clf.fit(X))
 
