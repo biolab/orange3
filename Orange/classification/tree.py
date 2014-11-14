@@ -8,10 +8,10 @@ class ClassificationTreeLearner(classification.SklFitter):
                  min_samples_split=2, min_samples_leaf=1,
                  max_features=None,
                  random_state=None, max_leaf_nodes=None):
-        self.arguments = vars()
+        self.params = vars()
 
     def fit(self, X, Y, W):
-        clf = tree.DecisionTreeClassifier(**self.arguments)
+        clf = tree.DecisionTreeClassifier(**self.params)
         if W is None:
             return ClassificationTreeClassifier(clf.fit(X, Y))
         else:

@@ -128,16 +128,16 @@ class Model:
 
 class SklFitter(Fitter):
 
-    _arguments = None
+    _params = None
 
     @property
-    def arguments(self):
-        return self._arguments
+    def params(self):
+        return self._params
 
-    @arguments.setter
-    def arguments(self, value):
-        self._arguments = value
-        self._arguments.pop("self", None)
+    @params.setter
+    def params(self, value):
+        self._params = value
+        self._params.pop("self", None)
 
     def __call__(self, data):
         clf = super().__call__(data)
