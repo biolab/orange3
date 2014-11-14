@@ -68,7 +68,8 @@ class SklearnTreeTest(unittest.TestCase):
         clf = clf.fit(table.X, table.Y)
         clfw = tree.DecisionTreeClassifier(max_depth=2)
         clfw = clfw.fit(table.X, table.Y, sample_weight=np.arange(len(table)))
-        self.assertFalse(np.all(clf.tree_.feature == clfw.tree_.feature))
+        self.assertFalse(len(clf.tree_.feature) == len(clfw.tree_.feature) and
+                         np.all(clf.tree_.feature == clfw.tree_.feature))
 
     def test_impurity(self):
         table = Orange.data.Table('iris')
