@@ -36,8 +36,8 @@ class CrossValidationTestCase(unittest.TestCase):
                                 y[res.row_indices].reshape(nrows))
         self.assertEqual(len(res.folds), 10)
         for i, fold in enumerate(res.folds):
-            self.assertEqual(fold.start, i * 100)
-            self.assertEqual(fold.stop, (i + 1) * 100)
+            self.assertAlmostEqual(fold.start, i * 100, delta=3)
+            self.assertAlmostEqual(fold.stop, (i + 1) * 100, delta=3)
 
     def test_folds(self):
         nrows, ncols = 1000, 10
@@ -45,8 +45,8 @@ class CrossValidationTestCase(unittest.TestCase):
         res = testing.CrossValidation(t, [naive_bayes.BayesLearner()], k=5)
         self.assertEqual(len(res.folds), 5)
         for i, fold in enumerate(res.folds):
-            self.assertEqual(fold.start, i * 200)
-            self.assertEqual(fold.stop, (i + 1) * 200)
+            self.assertAlmostEqual(fold.start, i * 200, delta=3)
+            self.assertAlmostEqual(fold.stop, (i + 1) * 200, delta=3)
 
     def test_call_5(self):
         cv = testing.CrossValidation(k=5)
@@ -61,8 +61,8 @@ class CrossValidationTestCase(unittest.TestCase):
                                 y[res.row_indices].reshape(nrows))
         self.assertEqual(len(res.folds), 5)
         for i, fold in enumerate(res.folds):
-            self.assertEqual(fold.start, i * 200)
-            self.assertEqual(fold.stop, (i + 1) * 200)
+            self.assertAlmostEqual(fold.start, i * 200, delta=3)
+            self.assertAlmostEqual(fold.stop, (i + 1) * 200, delta=3)
 
     def test_store_data(self):
         nrows, ncols = 1000, 10
