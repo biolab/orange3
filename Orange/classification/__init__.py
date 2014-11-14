@@ -22,7 +22,7 @@ class Fitter:
         if type(self).fit is Fitter.fit:
             clf = self.fit_storage(data)
         else:
-            X, Y, W = data.X, data.Y, data.W if data.has_weights else None
+            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
             clf = self.fit(X, Y, W)
         clf.domain = data.domain
         clf.supports_multiclass = self.supports_multiclass
