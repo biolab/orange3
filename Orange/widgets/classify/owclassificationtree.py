@@ -8,10 +8,10 @@ class OWClassificationTree(widget.OWWidget):
     name = "Classification Tree"
     icon = "icons/ClassificationTree.svg"
     priority = 30
-    inputs = [("Data", Orange.data.Table, "setData")]
+    inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [
-#        ("Learner", classification.ClassificationTreeLearner),
-#        ("Classifier", classification.naive_bayes.ClassificationTreeLearner)
+#        ("Learner", classification.tree.ClassificationTreeLearner),
+#        ("Classifier", classification.tree.ClassificationTreeClassifier)
     ]
     want_main_area = False
 
@@ -106,6 +106,7 @@ class OWClassificationTree(widget.OWWidget):
 
 
 if __name__ == "__main__":
+    import sys
     a = QApplication(sys.argv)
     ow = OWClassificationTree()
 
