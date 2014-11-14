@@ -127,6 +127,18 @@ class Model:
 
 
 class SklFitter(Fitter):
+
+    _arguments = None
+
+    @property
+    def arguments(self):
+        return self._arguments
+
+    @arguments.setter
+    def arguments(self, value):
+        self._arguments = value
+        self._arguments.pop("self", None)
+
     def __call__(self, data):
         clf = super().__call__(data)
         clf.used_vals = [np.unique(y) for y in data.Y.T]

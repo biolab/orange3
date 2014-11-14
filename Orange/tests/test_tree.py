@@ -3,6 +3,16 @@ import numpy as np
 import Orange.data
 from sklearn import tree
 from sklearn.tree._tree import TREE_LEAF
+import Orange.classification.tree
+
+class TreeTest(unittest.TestCase):
+
+    def test_classification(self):
+        table = Orange.data.Table('iris')
+        learn = Orange.classification.tree.ClassificationTreeLearner()
+        clf = learn(table)
+        Z = clf(table)
+        self.assertTrue(np.all(table.Y.flatten() == Z))
 
 
 class SklearnTreeTest(unittest.TestCase):
