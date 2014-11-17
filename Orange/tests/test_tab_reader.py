@@ -11,7 +11,8 @@ Feature 1\tFeature 2\tClass 1\tClass 42
 c        \tM F      \tc      \td
          \t         \tclass  \tclass
 1.0      \tM        \t5      \trich
-2.0      \tF        \t7      \tpoor
+         \tF        \t7      \tpoor
+2.0      \tM        \t4      \t
 """
 
 
@@ -31,5 +32,5 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c2.name, "Class 42")
 
         print(table.domain.attributes[1].values)
-        np.testing.assert_almost_equal(table.X, np.array([[1, 0], [2, 1]]))
-        np.testing.assert_almost_equal(table.Y, np.array([[5, 1], [7, 0]]))
+        np.testing.assert_almost_equal(table.X, np.array([[1, 0], [np.nan, 1], [2, 0]]))
+        np.testing.assert_almost_equal(table.Y, np.array([[5, 1], [7, 0], [4, np.nan]]))

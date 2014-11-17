@@ -136,8 +136,8 @@ class TabDelimReader:
         line_count = 0
         Xr = None
         for lne in f:
-            values = lne.strip()
-            if not values:
+            values = lne
+            if not values.strip():
                 continue
             values = values.split("\t")
             if len(values) > self.n_columns:
