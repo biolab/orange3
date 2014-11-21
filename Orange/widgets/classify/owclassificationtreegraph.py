@@ -11,8 +11,7 @@ from Orange.widgets.utils.plot import OWPalette as OWColorPalette
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.widget import OWWidget as OWBaseWidget
-from Orange.classification.tree import ClassificationTreeWrapper
-import Orange
+from numpy import argmax
 
 class PieChart(QGraphicsRectItem):
     def __init__(self, dist, r, parent, scene):
@@ -46,34 +45,37 @@ class ClassificationTreeNode(GraphicsNode):
     """
         ClassificationTreeNode graphics and statistic from Scikit learn tree.Tree object.
     """
-    def __init__(self, tree, parent=None, parentItem=None, scene=None, i=0):
+    def __init__(self, tree, parent=None, parentItem=None, scene=None, i=0, distr=None):
         GraphicsNode.__init__(self, tree, parent, parentItem, scene)
+        self.distribution = distr
         self.tree = tree
         self.i = i
         self.parent = parent
-        self.pie = PieChart(self.distribution(i=self.i), 20, self, scene)
+        self.pie = PieChart(self.get_distribution(), 20, self, scene)
         # self.majorityClass, self.majorityCount = max(self.tree.distribution.items(), key=lambda (key, val): val)
         fm = QFontMetrics(self.document().defaultFont())
         self.attr_text_w = fm.width(str(self.attribute() if self.attribute() else ""))
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
 
-    # Infer parameters and statistics from Scikit learn tree node
-    def distribution(self, i=0):
-        """
-        :param i: index of current node.
-        :return: Return prediction at node i.
-        """
-        return [0.7, 0.3]
+    def get_distribution(self):
+        s = 1.0 * sum([v for _, v in self.distribution.items()])
+        return [v/s for k, v in sorted(self.distribution.items(), key=lambda e: e[0])]
+
 
     def num_nodes(self):
-        """ :return: Number of nodes below particular node. """
+        """
+        :return:
+            Number of nodes below particular node.
+        """
         return self.num_nodesw(self.i)
 
     def num_nodesw(self, i=0):
         """
-        :param i: index of current node.
-        :return: Number of nodes below particular node.
+        :param i:
+            index of current node.
+        :return:
+            Number of nodes below particular node.
         """
         s = 1
         if self.tree.children_left[i] > 0:
@@ -84,7 +86,9 @@ class ClassificationTreeNode(GraphicsNode):
 
 
     def num_leaves(self, i=0):
-        """ :return: Number of leaves below particular node. """
+        """
+            :return: Number of leaves below particular node.
+        """
         return self.num_leavesw(i = self.i)
 
     def num_leavesw(self, i=0):
@@ -103,15 +107,20 @@ class ClassificationTreeNode(GraphicsNode):
         return s
 
     def rule(self):
-        """:return: Rule to reach node"""
+        """
+        :return:
+            Rule to reach node
+        """
         # TODO: this is easily extended to Classification Rules-compatible form
         return self.rulew(i=self.i, first=True)
 
 
     def rulew(self, i=0, first=False):
         """
-        :param i: index of current node.
-        :return: Rule to reach node i.
+        :param i:
+            Index of current node.
+        :return:
+            Rule to reach node i.
         """
         if i > 0:
             sign = "&lt;=" if self.tree.children_left[self.parent.i] == i else "&gt;"
@@ -123,17 +132,21 @@ class ClassificationTreeNode(GraphicsNode):
             return None
 
     def attribute(self):
-        return self.attributew(i=self.i)
+        return "feature_" + str(self.attributew(i=self.i))
 
     def attributew(self, i=0):
         """
+        :return:
             Attribute at node to split on.
         """
         return self.tree.feature[i]
 
-    def majority(self, i=0):
-        # TODO
-        pass
+    def majority(self):
+        """
+        :return:
+            Majority class at node.
+        """
+        return argmax(self.get_distribution())
 
 
     # Interface methods
@@ -353,6 +366,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         text = "<p>numNodes: %d</p>" % node.num_nodes()
         text += "<p>numLeaves: %d</p>" % node.num_leaves()
         text += "<p>rule: %s</p>  " % node.rule()
+        text += "<p>dist: %s</p>  " % str(node.get_distribution())
         node.setHtml(text)
 
     def activateLoadedSettings(self):
@@ -381,15 +395,14 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
                 color = BodyCasesColor_Default.light(light)
             elif self.NodeColorMethod == 2:
                 # majority class probability
-                # modus = dist.modus()
-                # p = dist[modus] / (dist.abs or 1)
-                modus = 1
-                p = 0.3
+                modus = node.majority()
+                p = node.get_distribution()[modus] / sum(node.get_distribution())
                 light = 400 - 300 * p
                 color = palette[int(modus)].light(light)
             elif self.NodeColorMethod == 3:
                 # target class probability
-                # p = dist[self.TargetClassIndex] / (dist.cases or 1)
+                modus = node.majority()
+                p = node.get_distribution()[modus] / sum(node.get_distribution())
                 light = 200 - 100 * p
                 color = palette[self.TargetClassIndex].light(light)
             elif self.NodeColorMethod == 4:
@@ -412,7 +425,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             n.pie.setVisible(self.ShowPies and n.isVisible())
         self.scene.update()
 
-    def ctree(self, tree=None):
+    def ctree(self, clf=None):
         """
             Set the input tree classifier.
 
@@ -421,7 +434,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         """
 
         self.clear()
-        if not tree:
+        if not clf:
             self.centerRootButton.setDisabled(1)
             self.centerNodeButton.setDisabled(0)
             self.infoa.setText('No tree.')
@@ -430,11 +443,11 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.rootNode = None
         else:
             self.infoa.setText('Tree found on input.')
-            self.tree = tree
+            self.tree = clf.clf.tree_
             # if hasattr(self.scene, "colorPalette"):
             #   self.scene.colorPalette.setNumberOfColors(len(self.tree.distribution))
 #            self.scene.setDataModel(GraphicsTree(self.tree))
-            self.rootNode = self.walkcreate(self.tree, None)
+            self.rootNode = self.walkcreate(self.tree, None, distr=clf.distr)
             self.infoa.setText('Number of nodes: ' + str(self.rootNode.num_nodes()))
             self.infob.setText('Number of leaves: ' + str(self.rootNode.num_leaves()))
 #            self.scene.addItem(self.rootNode)
@@ -448,7 +461,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.update()
 
 
-    def walkcreate(self, tree, parent=None, level=0, i=0):
+    def walkcreate(self, tree, parent=None, level=0, i=0, distr=None):
         """
         Recursively draw tree structure from Scikit learn Tree object.
         This method need to call ClassificationTreeNode to dispaly nodes and pies.
@@ -459,7 +472,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         :param i:
         :return:
         """
-        node = ClassificationTreeNode(tree, parent, None, self.scene, i=i)
+        node = ClassificationTreeNode(tree, parent, None, self.scene, i=i, distr=distr[i])
         node.borderRadius = 10
         if parent:
             parent.graph_add_edge(GraphicsEdge(None, self.scene, node1=parent, node2=node))
@@ -468,30 +481,26 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         left_child_index = tree.children_left[i]
         right_child_index = tree.children_right[i]
 
-        # First draw right child, then left
+        # First draw left child, then right
         if left_child_index >= 0:
-            self.walkcreate(tree, parent=node, level=level+1, i=left_child_index)
+            self.walkcreate(tree, parent=node, level=level+1, i=left_child_index, distr=distr)
         if right_child_index >= 0:
-            self.walkcreate(tree, parent=node, level=level+1, i=right_child_index)
+            self.walkcreate(tree, parent=node, level=level+1, i=right_child_index, distr=distr)
         return node
-
 
     def nodeToolTip(self, node):
         text = node.rule()
         return text
 
 if __name__=="__main__":
+    from sklearn.datasets import load_iris
+    from Orange.classification.tree import ClassificationTreeLearner
     a = QApplication(sys.argv)
     ow = OWClassificationTreeGraph()
-    import pickle
-##    a.setMainWidget(ow)
-    # data = orange.ExampleTable('../../doc/datasets/voting.tab')
-    # data = orange.ExampleTable(r"../../doc/datasets/zoo.tab")
-    # tree = orange.TreeLearner(data, storeExamples = 1)
-    tree = pickle.load(open("iris_tree.pkl", "rb"))
-    ow.ctree(tree.clf.tree_)
-
-    # here you can test setting some stuff
+    iris = load_iris()
+    model = ClassificationTreeLearner(max_depth=3)
+    clf = model.fit(iris.data, iris.target, None)
+    ow.ctree(clf)
     ow.show()
     a.exec_()
     ow.saveSettings()
