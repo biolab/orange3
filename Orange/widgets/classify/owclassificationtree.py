@@ -1,8 +1,9 @@
 from PyQt4.QtGui import QApplication
 import Orange.data
-from Orange import classification
+from Orange.classification import tree
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+
 
 class OWClassificationTree(widget.OWWidget):
     name = "Classification Tree"
@@ -10,8 +11,8 @@ class OWClassificationTree(widget.OWWidget):
     priority = 30
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [
-#        ("Learner", classification.tree.ClassificationTreeLearner),
-#        ("Classifier", classification.tree.ClassificationTreeClassifier)
+        ("Learner", tree.ClassificationTreeLearner),
+        ("Classifier", tree.ClassificationTreeClassifier)
     ]
     want_main_area = False
 
@@ -79,7 +80,10 @@ class OWClassificationTree(widget.OWWidget):
 
     def set_learner(self):
         self.btn_apply.setFocus()
-        self.learner = ...
+        self.learner = tree.ClassificationTreeLearner(
+            criterion=self.scores[self.attribute_score][1],
+            max_depth=self.max_depth,
+            min_samples_split=self.min_internal, min_samples_leaf=self.min_leaf)
         self.learner.name = self.name
         if self.preprocessor:
             self.learner = self.preprocessor.wrapLearner(self.learner)
