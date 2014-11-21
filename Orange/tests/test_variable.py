@@ -66,6 +66,12 @@ class DiscreteVariableTest(unittest.TestCase):
             find_comp("abc", values=["a", "d", "b"], ordered=True), abd)
         self.assertIs(find_comp("abc", values=["a", "b", "c"]), abc_un)
 
+    def test_make(self):
+        var = data.DiscreteVariable.make("a", values=["F", "M"])
+        self.assertIsInstance(var, data.DiscreteVariable)
+        self.assertEqual(var.name, "a")
+        self.assertEqual(var.values, ["F", "M"])
+
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",
     ("variable", lambda: data.ContinuousVariable()),
