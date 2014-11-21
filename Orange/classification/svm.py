@@ -1,33 +1,7 @@
-from sklearn.svm import SVC, LinearSVC, NuSVC, SVR, NuSVR, OneClassSVM
+import sklearn.svm as sklsvm
 
 from Orange.classification import SklFitter, SklModel
 
-
-class SVMLearner(SklFitter):
-
-    def __init__(self, C=1.0, kernel='rbf', degree=3, gamma=0.0,
-                 coef0=0.0, shrinking=True, probability=False,
-                 tol=0.001, cache_size=200, max_iter=-1):
-        self.C = C
-        self.kernel = kernel
-        self.degree = degree
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.shrinking = shrinking
-        self.probability = probability
-        self.tol = tol
-        self.cache_size = cache_size
-        self.max_iter = max_iter
-        self.supports_multiclass = True
-
-    def fit(self, X, Y, W):
-        clf = SVC(C=self.C, kernel=self.kernel, degree=self.degree,
-                  gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
-                  probability=self.probability, tol=self.tol,
-                  cache_size=self.cache_size, max_iter=self.max_iter)
-        if W is not None:
-            return SVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
-        return SVMClassifier(clf.fit(X, Y.reshape(-1)))
 
 class SVMClassifier(SklModel):
 
@@ -39,59 +13,27 @@ class SVMClassifier(SklModel):
         return value
 
 
+class SVMLearner(SklFitter):
+    __wraps__ = sklsvm.SVC
+    __returns__ = SVMClassifier
+
+    def __init__(self, C=1.0, kernel='rbf', degree=3, gamma=0.0,
+                 coef0=0.0, shrinking=True, probability=False,
+                 tol=0.001, cache_size=200, max_iter=-1):
+        self.params = vars()
+        self.supports_multiclass = True
+        self.supports_weights = True
+
+
 class LinearSVMLearner(SklFitter):
+    __wraps__ = sklsvm.LinearSVC
 
     def __init__(self, penalty='l2', loss='l2', dual=True, tol=0.0001,
                 C=1.0, multi_class='ovr', fit_intercept=True,
                 intercept_scaling=True, random_state=None):
-        self.penalty = penalty
-        self.loss = loss
-        self.dual = dual
-        self.tol = tol
-        self.C = C
-        self.multi_class = multi_class
-        self.fit_intercept = fit_intercept
-        self.intercept_scaling = intercept_scaling
-        self.random_state = random_state
+        self.params = vars()
         self.supports_multiclass = True
 
-    def fit(self, X, Y, W):
-        clf = LinearSVC(penalty=self.penalty, loss=self.loss, dual=self.dual,
-                        tol=self.tol, C=self.C, multi_class=self.multi_class,
-                        fit_intercept=self.fit_intercept,
-                        intercept_scaling=self.intercept_scaling,
-                        random_state=self.random_state)
-        return LinearSVMClassifier(clf.fit(X, Y.reshape(-1)))
-
-class LinearSVMClassifier(SklModel):
-    pass
-
-
-class NuSVMLearner(SklFitter):
-
-    def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
-                 shrinking=True, probability=False, tol=0.001, cache_size=200,
-                 max_iter=-1):
-        self.nu = nu
-        self.kernel = kernel
-        self.degree = degree
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.shrinking = shrinking
-        self.probability = probability
-        self.tol = tol
-        self.cache_size = cache_size
-        self.max_iter = max_iter
-        self.supports_multiclass = True
-
-    def fit(self, X, Y, W):
-        clf = NuSVC(nu=self.nu, kernel=self.kernel, degree=self.degree,
-                    gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
-                    probability=self.probability, tol=self.tol, cache_size=self.cache_size,
-                    max_iter=self.max_iter)
-        if W is not None:
-            return NuSVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
-        return NuSVMClassifier(clf.fit(X, Y.reshape(-1)))
 
 class NuSVMClassifier(SklModel):
 
@@ -103,89 +45,45 @@ class NuSVMClassifier(SklModel):
         return value
 
 
+class NuSVMLearner(SklFitter):
+    __wraps__ = sklsvm.NuSVC
+    __returns__ = NuSVMClassifier
+
+    def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
+                 shrinking=True, probability=False, tol=0.001, cache_size=200,
+                 max_iter=-1):
+        self.params = vars()
+        self.supports_multiclass = True
+        self.supports_weights = True
+
+
 class SVRLearner(SklFitter):
+    __wraps__ = sklsvm.SVR
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, C=1.0, epsilon=0.1, shrinking=True,
                 cache_size=200, max_iter=-1):
-        self.kernel = kernel
-        self.degree = degree
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.tol = tol
-        self.C = C
-        self.epsilon = epsilon
-        self.shrinking  = shrinking
-        self.cache_size = cache_size
-        self.max_iter = max_iter
-
-    def fit(self, X, Y, W):
-        clf = SVR(kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                  coef0=self.coef0, tol=self.tol, C=self.C, epsilon=self.epsilon,
-                  shrinking=self.shrinking, cache_size=self.cache_size,
-                  max_iter=self.max_iter)
-        if W is not None:
-            return SVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
-        return SVRClassifier(clf.fit(X, Y.reshape(-1)))
-
-class SVRClassifier(SklModel):
-    pass
+        self.params = vars()
+        self.supports_weights = True
 
 
 class NuSVRLearner(SklFitter):
+    __wraps__ = sklsvm.NuSVR
 
     def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, tol=0.001,
                  cache_size=200, max_iter=-1):
-        self.nu = nu
-        self.C = C
-        self.kernel = kernel
-        self.degree = degree
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.shrinking = shrinking
-        self.tol = tol
-        self.cache_size = cache_size
-        self.max_iter = max_iter
-
-    def fit(self, X, Y, W):
-        clf = NuSVR(nu=self.nu, C=self.C, kernel=self.kernel, degree=self.degree,
-                    gamma=self.gamma, coef0=self.coef0, shrinking=self.shrinking,
-                    tol=self.tol, cache_size=self.cache_size,
-                    max_iter=self.max_iter)
-        if W is not None:
-            return NuSVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
-        return NuSVRClassifier(clf.fit(X, Y.reshape(-1)))
-
-class NuSVRClassifier(SklModel):
-    pass
+        self.params = vars()
+        self.supports_weights = True
 
 
 class OneClassSVMLearner(SklFitter):
+    __wraps__ = sklsvm.OneClassSVM
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, nu=0.5, shrinking=True, cache_size=200, max_iter=-1):
-        self.kernel = kernel
-        self.degree = degree
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.tol = tol
-        self.nu = nu
-        self.shrinking = shrinking
-        self.cache_size = cache_size
-        self.max_iter = max_iter
-
-    def fit(self, X, Y, W):
-        clf = OneClassSVM(kernel=self.kernel, degree=self.degree,
-                          gamma=self.gamma, coef0=self.coef0, tol=self.tol,
-                          nu=self.nu, shrinking=self.shrinking,
-                          cache_size=self.cache_size, max_iter=self.max_iter)
-        if W is not None:
-            return OneClassSVMClassifier(clf.fit(X, W.reshape(-1)))
-        return OneClassSVMClassifier(clf.fit(X))
-
-class OneClassSVMClassifier(SklModel):
-    pass
+        self.params = vars()
+        self.supports_weights = True
 
 
 

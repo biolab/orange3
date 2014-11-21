@@ -15,23 +15,14 @@ def replace_nan(X, imp_model):
 # TODO: implement sending a single decision tree
 class RandomForestLearner(Orange.classification.SklFitter):
     def __init__(self, n_estimators=10, max_features="auto",
-                 random_state=None, max_depth=3, max_leaf_nodes=5, index_output=0):
-        self.n_estimators = n_estimators
-        self.max_features = max_features
-        self.random_state = random_state
-        self.max_depth = max_depth
-        self.max_leaf_nodes = max_leaf_nodes
-        self.index_output = index_output
+                 random_state=None, max_depth=3, max_leaf_nodes=5):
+        self.params = vars()
 
     def fit(self, X, Y, W):
         self.imputer = Imputer()
         self.imputer.fit(X)
         X = replace_nan(X, self.imputer)
-        rf_model = RandomForest(n_estimators=self.n_estimators,
-                                max_features=self.max_features,
-                                random_state=self.random_state,
-                                max_depth=self.max_depth,
-                                max_leaf_nodes=self.max_leaf_nodes)
+        rf_model = RandomForest(**self.params)
         rf_model.fit(X, Y.ravel())
         return RandomForestClassifier(rf_model, self.imputer)
 

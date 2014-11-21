@@ -31,6 +31,7 @@ class Fitter:
 
 class Model:
     supports_multiclass = False
+    supports_weights = False
     Value = 0
     Probs = 1
     ValueProbs = 2
@@ -126,25 +127,6 @@ class Model:
             return value, probs
 
 
-class SklFitter(Fitter):
-
-    _params = None
-
-    @property
-    def params(self):
-        return self._params
-
-    @params.setter
-    def params(self, value):
-        self._params = value
-        self._params.pop("self", None)
-
-    def __call__(self, data):
-        clf = super().__call__(data)
-        clf.used_vals = [np.unique(y) for y in data.Y.T]
-        return clf
-
-
 class SklModel(Model):
     used_vals = None
 
@@ -190,3 +172,34 @@ class SklModel(Model):
             return probs
         else:  # ret == Model.ValueProbs
             return value, probs
+
+
+class SklFitter(Fitter):
+
+    __wraps__ = None
+    __returns__ = SklModel
+    _params = None
+
+    @property
+    def params(self):
+        return self._params
+
+    @params.setter
+    def params(self, value):
+        self._params = value
+        self._params.pop("self", None)
+
+    def __call__(self, data):
+        clf = super().__call__(data)
+        clf.used_vals = [np.unique(y) for y in data.Y.T]
+        return clf
+
+    def fit(self, X, Y, W):
+        clf = self.__wraps__(**self.params)
+        Y = Y.reshape(-1)
+        if W is None or not self.supports_weights:
+            return self.__returns__(clf.fit(X, Y))
+        return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
+
+
+
