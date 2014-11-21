@@ -8,7 +8,7 @@ import Orange.data
 class Fitter:
     supports_multiclass = False
 
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         raise NotImplementedError(
             "Descendants of Fitter must overload method fit")
 
