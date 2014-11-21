@@ -61,19 +61,21 @@ class TestMahalanobis(TestCase):
         self.ma = Mahalanobis()
 
     def test_mahalanobis_distance_many_examples(self):
-        np.testing.assert_almost_equal(self.ma(self.random_array).X,
-                                       np.array([[ 0.        ,  3.41805924,  3.38963781],
-                                                 [ 3.41805924,  0.        ,      np.nan],
-                                                 [ 3.38963781,      np.nan,  0.        ]]))
+        np.testing.assert_almost_equal(self.ma(self.hilbert).X,
+                                       np.array([[ 0.        ,  2.82842712,  1.78885431],
+                                                 [ 2.82842712,  0.        ,  2.11344888],
+                                                 [ 1.78885431,  2.11344888,  0.        ]]))
         np.testing.assert_almost_equal(self.ma(self.random_array, axis=0).X,
                                        np.array([[ 0.        ,  2.44948974,  2.44948974,  2.44948974],
                                                  [ 2.44948974,  0.        ,  2.44948974,  2.44948974],
                                                  [ 2.44948974,  2.44948974,  0.        ,  2.44948974],
                                                  [ 2.44948974,  2.44948974,  2.44948974,  0.        ]]))
-        np.testing.assert_almost_equal(self.ma(self.random_array, self.random_array).X,
-                                       np.array([[ 0.        ,  2.22140068,  2.00484521],
-                                                 [ 2.22140068,  0.        ,  3.0778143 ],
-                                                 [ 2.00484521,  3.0778143 ,  0.        ]]))
+        """
+        np.testing.assert_almost_equal(self.ma(self.hilbert, self.hilbert).X,
+                                       np.array([[ 0.        ,  2.29128807,  1.54919324],
+                                                 [ 2.29128807,  0.        ,  2.2416512 ],
+                                                 [ 1.54919324,  2.2416512 ,  0.        ]]))
+        """
         np.testing.assert_almost_equal(self.ma(self.random_array, self.random_array, axis=0).X,
                                        np.array([[ 0.        ,  2.64575131,  2.64575131,  2.64575131],
                                                  [ 2.64575131,  0.        ,  2.64575131,  2.64575131],
@@ -144,7 +146,7 @@ class TestSpearmanRAbsolute(TestCase):
         np.testing.assert_almost_equal(self.spa(self.breast[0], self.breast[0]), 0)
         np.testing.assert_almost_equal(self.spa(self.breast[0], self.breast[1]), 0.49166666666666664)
 
-    def test_spearmanr_distance_many_examples(self):
+    def test_spearmanrabsolute_distance_many_examples(self):
         np.testing.assert_almost_equal(self.spa(self.breast[:2]).X,
                                        np.array([[ 0.        ,  0.49166667],
                                                  [ 0.49166667,  0.        ]]))
