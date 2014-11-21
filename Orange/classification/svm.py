@@ -85,6 +85,12 @@ class OneClassSVMLearner(SklFitter):
         self.params = vars()
         self.supports_weights = True
 
+    def fit(self, X, Y=None, W=None):
+        clf = self.__wraps__(**self.params)
+        if W is not None:
+            return self.__returns__(clf.fit(X, W.reshape(-1)))
+        return self.__returns__(clf.fit(X))
+
 
 
 if __name__ == '__main__':
