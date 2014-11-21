@@ -295,10 +295,10 @@ def _save_tab_fast(f, data):
 
 def save_tab_delimited(filename, data):
     """
-    Save the data to tab-delimited file.
+    Save data to tab-delimited file.
 
-    The function uses a fast implementation for numpy data, and a slower
-    fall-back for general storages.
+    Function uses fast implementation in case of numpy data, and slower
+    fall-back for general storage.
 
     :param filename: the name of the file
     :type filename: str

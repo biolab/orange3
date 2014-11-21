@@ -67,6 +67,7 @@ class OWSave(widget.OWWidget):
             if self.data is not None:
                 file_ext = os.path.splitext(self.filename)[1].lower() or ".tab"
                 try:
+
                     self.savers[file_ext](self.filename, self.data)
                 except Exception as errValue:
                     self.error(str(errValue))
