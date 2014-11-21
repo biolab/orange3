@@ -8,7 +8,7 @@ import Orange.data
 class Fitter:
     supports_multiclass = False
 
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         raise NotImplementedError(
             "Descendants of Fitter must overload method fit")
 
@@ -147,6 +147,12 @@ class SklFitter(Fitter):
 
 class SklModel(Model):
     used_vals = None
+
+    def __init__(self, clf):
+        self.clf = clf
+
+    def predict(self, X):
+        return self.clf.predict(X)
 
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
