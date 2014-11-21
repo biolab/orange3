@@ -1,6 +1,7 @@
 from Orange import classification
 from sklearn import tree
-
+import numpy as np
+from collections import Counter
 
 class ClassificationTreeLearner(classification.SklFitter):
 
@@ -10,14 +11,48 @@ class ClassificationTreeLearner(classification.SklFitter):
                  random_state=None, max_leaf_nodes=None):
         self.params = vars()
 
+    def distribute_items(self, X, Y, t, id, items):
+        """Store example ids into leaves and compute class distributions."""
+        if t.children_left[id] == tree._tree.TREE_LEAF:
+            self.items[id] = items
+            self.distr[id] = Counter(Y[items].flatten())
+        else:
+            x = X[items, :]
+            left = items[np.where(x[:, t.feature[id]] <= t.threshold[id])]
+            right = items[np.where(x[:, t.feature[id]] > t.threshold[id])]
+            self.distribute_items(X, Y, t, t.children_left[id], left)
+            self.distribute_items(X, Y, t, t.children_right[id], right)
+            self.distr[id] = self.distr[t.children_left[id]] + self.distr[t.children_right[id]]
+
     def fit(self, X, Y, W):
         clf = tree.DecisionTreeClassifier(**self.params)
         if W is None:
-            return ClassificationTreeClassifier(clf.fit(X, Y))
+            clf = clf.fit(X, Y)
         else:
-            return ClassificationTreeClassifier(
-                clf.fit(X, Y, sample_weight=W.reshape(-1)))
+            clf = clf.fit(X, Y, sample_weight=W.reshape(-1))
+        t = clf.tree_
+        self.items = [None]*t.node_count
+        self.distr = [None]*t.node_count
+        self.distribute_items(X, Y, t, 0, np.arange(len(X)))
+        return ClassificationTreeClassifier(clf, self.items, self.distr)
 
 
 class ClassificationTreeClassifier(classification.SklModel):
-    pass
+
+    def __init__(self, clf, items, distr):
+        super().__init__(clf)
+        self.items = items
+        self.distr = distr
+
+    def get_distr(self, id):
+        return self.distr[id]
+
+    def get_items(self, id):
+        """Return ids of examples belonging to node id."""
+        t = self.clf.tree_
+        if t.children_left[id] == tree._tree.TREE_LEAF:
+            return self.items[id]
+        else:
+            left = self.get_items(t.children_left[id])
+            right = self.get_items(t.children_right[id])
+        return np.hstack((left, right))

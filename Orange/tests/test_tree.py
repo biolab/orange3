@@ -4,6 +4,7 @@ import Orange.data
 from sklearn import tree
 from sklearn.tree._tree import TREE_LEAF
 import Orange.classification.tree
+from collections import Counter
 
 class TreeTest(unittest.TestCase):
 
@@ -14,6 +15,17 @@ class TreeTest(unittest.TestCase):
         Z = clf(table)
         self.assertTrue(np.all(table.Y.flatten() == Z))
 
+    def test_items_in_nodes(self):
+        table = Orange.data.Table('iris')
+        learn = Orange.classification.tree.ClassificationTreeLearner()
+        clf = learn(table)
+        self.assertTrue(len(clf.get_items(0))==len(table))
+
+    def test_distr_in_nodes(self):
+        table = Orange.data.Table('car')
+        learn = Orange.classification.tree.ClassificationTreeLearner()
+        clf = learn(table)
+        self.assertTrue(clf.get_distr(0)==Counter(table.Y.flatten()))
 
 class SklearnTreeTest(unittest.TestCase):
 
