@@ -148,6 +148,12 @@ class SklFitter(Fitter):
 class SklModel(Model):
     used_vals = None
 
+    def __init__(self, clf):
+        self.clf = clf
+
+    def predict(self, X):
+        return self.clf.predict(X)
+
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
 

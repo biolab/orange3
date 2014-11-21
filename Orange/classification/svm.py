@@ -1,7 +1,9 @@
-from Orange import classification
 from sklearn.svm import SVC, LinearSVC, NuSVC, SVR, NuSVR, OneClassSVM
 
-class SVMLearner(classification.SklFitter):
+from Orange.classification import SklFitter, SklModel
+
+
+class SVMLearner(SklFitter):
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, probability=False,
@@ -27,10 +29,7 @@ class SVMLearner(classification.SklFitter):
             return SVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVMClassifier(clf.fit(X, Y.reshape(-1)))
 
-class SVMClassifier(classification.SklModel):
-
-    def __init__(self, clf):
-        self.clf = clf
+class SVMClassifier(SklModel):
 
     def predict(self, X):
         value = self.clf.predict(X)
@@ -40,7 +39,7 @@ class SVMClassifier(classification.SklModel):
         return value
 
 
-class LinearSVMLearner(classification.SklFitter):
+class LinearSVMLearner(SklFitter):
 
     def __init__(self, penalty='l2', loss='l2', dual=True, tol=0.0001,
                 C=1.0, multi_class='ovr', fit_intercept=True,
@@ -64,17 +63,11 @@ class LinearSVMLearner(classification.SklFitter):
                         random_state=self.random_state)
         return LinearSVMClassifier(clf.fit(X, Y.reshape(-1)))
 
-class LinearSVMClassifier(classification.SklModel):
-
-    def __init__(self, clf):
-        self.clf = clf
-
-    def predict(self, X):
-        value = self.clf.predict(X)
-        return value
+class LinearSVMClassifier(SklModel):
+    pass
 
 
-class NuSVMLearner(classification.SklFitter):
+class NuSVMLearner(SklFitter):
 
     def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  shrinking=True, probability=False, tol=0.001, cache_size=200,
@@ -100,10 +93,7 @@ class NuSVMLearner(classification.SklFitter):
             return NuSVMClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return NuSVMClassifier(clf.fit(X, Y.reshape(-1)))
 
-class NuSVMClassifier(classification.SklModel):
-
-    def __init__(self, clf):
-        self.clf = clf
+class NuSVMClassifier(SklModel):
 
     def predict(self, X):
         value = self.clf.predict(X)
@@ -113,7 +103,7 @@ class NuSVMClassifier(classification.SklModel):
         return value
 
 
-class SVRLearner(classification.SklFitter):
+class SVRLearner(SklFitter):
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, C=1.0, epsilon=0.1, shrinking=True,
@@ -138,17 +128,11 @@ class SVRLearner(classification.SklFitter):
             return SVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return SVRClassifier(clf.fit(X, Y.reshape(-1)))
 
-class SVRClassifier(classification.SklModel):
-
-    def __init__(self, clf):
-        self.clf = clf
-
-    def predict(self, X):
-        value = self.clf.predict(X)
-        return value
+class SVRClassifier(SklModel):
+    pass
 
 
-class NuSVRLearner(classification.SklFitter):
+class NuSVRLearner(SklFitter):
 
     def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, tol=0.001,
@@ -173,17 +157,11 @@ class NuSVRLearner(classification.SklFitter):
             return NuSVRClassifier(clf.fit(X, Y.reshape(-1), W.reshape(-1)))
         return NuSVRClassifier(clf.fit(X, Y.reshape(-1)))
 
-class NuSVRClassifier(classification.SklModel):
-
-    def __init__(self, clf):
-        self.clf = clf
-
-    def predict(self, X):
-        value = self.clf.predict(X)
-        return value
+class NuSVRClassifier(SklModel):
+    pass
 
 
-class OneClassSVMLearner(classification.SklFitter):
+class OneClassSVMLearner(SklFitter):
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, nu=0.5, shrinking=True, cache_size=200, max_iter=-1):
@@ -206,14 +184,9 @@ class OneClassSVMLearner(classification.SklFitter):
             return OneClassSVMClassifier(clf.fit(X, W.reshape(-1)))
         return OneClassSVMClassifier(clf.fit(X))
 
-class OneClassSVMClassifier(classification.SklModel):
+class OneClassSVMClassifier(SklModel):
+    pass
 
-    def __init__(self, clf):
-        self.clf = clf
-
-    def predict(self, X):
-        value = self.clf.predict(X)
-        return value
 
 
 if __name__ == '__main__':

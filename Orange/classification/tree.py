@@ -20,10 +20,4 @@ class ClassificationTreeLearner(classification.SklFitter):
 
 
 class ClassificationTreeClassifier(classification.SklModel):
-
-    def __init__(self, clf):
-        self.clf = clf
-
-    def predict(self, X):
-        value = self.clf.predict(X)
-        return value
+    pass
