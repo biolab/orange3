@@ -11,6 +11,7 @@ from Orange.widgets.utils.plot import OWPalette as OWColorPalette
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.widget import OWWidget as OWBaseWidget
+from Orange.classification.tree import ClassificationTreeWrapper
 import Orange
 
 class PieChart(QGraphicsRectItem):
@@ -42,16 +43,100 @@ class PieChart(QGraphicsRectItem):
         painter.drawEllipse(-self.r, -self.r, 2*self.r, 2*self.r)
 
 class ClassificationTreeNode(GraphicsNode):
-    def __init__(self, attr, tree, parent=None, parentItem=None, scene=None):
+    """
+        ClassificationTreeNode graphics and statistic from Scikit learn tree.Tree object.
+    """
+    def __init__(self, tree, parent=None, parentItem=None, scene=None, i=0):
         GraphicsNode.__init__(self, tree, parent, parentItem, scene)
-        self.attr = attr
-        self.pie = PieChart(self.tree.distribution, 20, self, scene)
+        self.tree = tree
+        self.i = i
+        self.parent = parent
+        self.pie = PieChart(self.distribution(i=self.i), 20, self, scene)
         # self.majorityClass, self.majorityCount = max(self.tree.distribution.items(), key=lambda (key, val): val)
         fm = QFontMetrics(self.document().defaultFont())
-        self.attr_text_w = fm.width(str(self.attr if self.attr else ""))
+        self.attr_text_w = fm.width(str(self.attribute() if self.attribute() else ""))
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
 
+    # Infer parameters and statistics from Scikit learn tree node
+    def distribution(self, i=0):
+        """
+        :param i: index of current node.
+        :return: Return prediction at node i.
+        """
+        return [0.7, 0.3]
+
+    def num_nodes(self):
+        """ :return: Number of nodes below particular node. """
+        return self.num_nodesw(self.i)
+
+    def num_nodesw(self, i=0):
+        """
+        :param i: index of current node.
+        :return: Number of nodes below particular node.
+        """
+        s = 1
+        if self.tree.children_left[i] > 0:
+            s += self.num_nodesw(i = self.tree.children_left[i])
+        if self.tree.children_right[i] > 0:
+            s += self.num_nodesw(i = self.tree.children_right[i])
+        return s
+
+
+    def num_leaves(self, i=0):
+        """ :return: Number of leaves below particular node. """
+        return self.num_leavesw(i = self.i)
+
+    def num_leavesw(self, i=0):
+        """
+        :param i: index of current node.
+        :return: Number of leaves below particular node.
+        """
+        s = 0
+        if self.tree.children_left[i] < 0 and self.tree.children_right[i] < 0:
+            # Node is leaf
+            return 1
+        if self.tree.children_left[i] > 0:
+            s += self.num_leavesw(i = self.tree.children_left[i])
+        if self.tree.children_right[i] > 0:
+            s += self.num_leavesw(i = self.tree.children_right[i])
+        return s
+
+    def rule(self):
+        """:return: Rule to reach node"""
+        # TODO: this is easily extended to Classification Rules-compatible form
+        return self.rulew(i=self.i, first=True)
+
+
+    def rulew(self, i=0, first=False):
+        """
+        :param i: index of current node.
+        :return: Rule to reach node i.
+        """
+        if i > 0:
+            sign = "&lt;=" if self.tree.children_left[self.parent.i] == i else "&gt;"
+            thresh = self.tree.threshold[self.parent.i]
+            attr = self.parent.attribute()
+            pr = self.parent.rule()
+            return (pr + " AND " if pr else "") + "%s %s %f" % (attr, sign, thresh )
+        else:
+            return None
+
+    def attribute(self):
+        return self.attributew(i=self.i)
+
+    def attributew(self, i=0):
+        """
+            Attribute at node to split on.
+        """
+        return self.tree.feature[i]
+
+    def majority(self, i=0):
+        # TODO
+        pass
+
+
+    # Interface methods
     def updateContents(self):
         self.prepareGeometryChange()
         if getattr(self, "_rect", QRectF()).isValid() and not self.truncateText:
@@ -63,7 +148,7 @@ class ClassificationTreeNode(GraphicsNode):
         self.droplet.setVisible(bool(self.branches))
         self.pie.setPos(self.rect().right(), self.rect().center().y())
         fm = QFontMetrics(self.document().defaultFont())
-        self.attr_text_w = fm.width(str(self.attr if self.attr else ""))
+        self.attr_text_w = fm.width(str(self.attribute() if self.attribute() else ""))
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
         
@@ -96,9 +181,6 @@ class ClassificationTreeNode(GraphicsNode):
         else:
             return rect | GraphicsNode.boundingRect(self) | attr_rect
 
-    def rule(self):
-        return self.parent.rule() + [(self.parent.tree.branchSelector.classVar, self.attr)] if self.parent else []
-    
     def paint(self, painter, option, widget=None):
         if self.isSelected():
             option.state = option.state.__xor__(QStyle.State_Selected)
@@ -108,7 +190,7 @@ class ClassificationTreeNode(GraphicsNode):
             painter.drawRoundedRect(self.boundingRect().adjusted(-2, 1, -1, -1), 10, 10)#self.borderRadius, self.borderRadius)
             painter.restore()
         painter.setFont(self.document().defaultFont())
-        painter.drawText(QPointF(0, -self.line_descent), str(self.attr) if self.attr else "")
+        painter.drawText(QPointF(0, -self.line_descent), str(self.attribute()) if self.attribute() else "")
         painter.save()
         painter.setBrush(self.backgroundBrush)
         rect = self.rect()
@@ -122,68 +204,6 @@ class ClassificationTreeNode(GraphicsNode):
         return QGraphicsTextItem.paint(self, painter, option, widget)
 #        TextTreeNode.paint(self, painter, option, widget)
 
-import re
-def parseRules(rules):
-    def joinCont(rule1, rule2):
-        int1, int2=["(",-1e1000,1e1000,")"], ["(",-1e1000,1e1000,")"]
-        rule=[rule1, rule2]
-        interval=[int1, int2]
-        for i in [0,1]:
-            if rule[i][1].startswith("in"):
-                r=rule[i][1][2:]
-                interval[i]=[r.strip(" ")[0]]+map(lambda a: float(a), r.strip("()[] ").split(","))+[r.strip(" ")[-1]]
-            else:
-                if "<" in rule[i][1]:
-                    interval[i][3]=("=" in rule[i][1] and "]") or ")"
-                    interval[i][2]=float(rule[i][1].strip("<>= "))
-                else:
-                    interval[i][0]=("=" in rule[i][1] and "[") or "("
-                    interval[i][1]=float(rule[i][1].strip("<>= "))
-
-        inter=[None]*4
-
-        if interval[0][1]<interval[1][1] or (interval[0][1]==interval[1][1] and interval[0][0]=="["):
-            interval.reverse()
-        inter[:2]=interval[0][:2]
-
-        if interval[0][2]>interval[1][2] or (interval[0][2]==interval[1][2] and interval[0][3]=="]"):
-            interval.reverse()
-        inter[2:]=interval[0][2:]
-
-
-        if 1e1000 in inter or -1e1000 in inter:
-            rule=((-1e1000==inter[1] and "<") or ">")
-            rule+=(("[" in inter or "]" in inter) and "=") or ""
-            rule+=(-1e1000==inter[1] and str(inter[2])) or str(inter[1])
-        else:
-            rule="in "+inter[0]+str(inter[1])+","+str(inter[2])+inter[3]
-        return (rule1[0], rule)
-
-    def joinDisc(rule1, rule2):
-        r1,r2=rule1[1],rule2[1]
-        r1=re.sub("^in ","",r1)
-        r2=re.sub("^in ","",r2)
-        r1=r1.strip("[]=")
-        r2=r2.strip("[]=")
-        s1=set([s.strip(" ") for s in r1.split(",")])
-        s2=set([s.strip(" ") for s in r2.split(",")])
-        s=s1 & s2
-        if len(s)==1:
-            return (rule1[0], "= "+str(list(s)[0]))
-        else:
-            return (rule1[0], "in ["+",".join([str(st) for st in s])+"]")
-
-    rules.sort(lambda a,b: (a[0].name<b[0].name and -1) or 1 )
-    newRules=[rules[0]]
-    for r in rules[1:]:
-        if r[0].name==newRules[-1][0].name:
-            if re.search("(a-zA-Z\"')+",r[1].lstrip("in")):
-                newRules[-1]=joinDisc(r,newRules[-1])
-            else:
-                newRules[-1]=joinCont(r,newRules[-1])
-        else:
-            newRules.append(r)
-    return newRules
 
 #BodyColor_Default = QColor(Qt.gray) 
 BodyColor_Default = QColor(255, 225, 10)
@@ -327,6 +347,12 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         # else:
             # text += "<hr>" + fix(node.majorityClass)
         #    pass
+
+
+        # Debug
+        text = "<p>numNodes: %d</p>" % node.num_nodes()
+        text += "<p>numLeaves: %d</p>" % node.num_leaves()
+        text += "<p>rule: %s</p>  " % node.rule()
         node.setHtml(text)
 
     def activateLoadedSettings(self):
@@ -386,35 +412,6 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             n.pie.setVisible(self.ShowPies and n.isVisible())
         self.scene.update()
 
-    # def ctree(self, classifier=None):
-    #     """
-    #     Set the input TreeClassifier.
-    #     """
-    #     self.send("Data", None)
-    #     # self.closeContext()
-    #     self.targetCombo.clear()
-    #     self.classifier = classifier
-    #     if classifier:
-    #         for name in classifier.domain.classVar.values:
-    #             self.targetCombo.addItem(name)
-    #         self.TargetClassIndex = 0
-    #         self.openContext("", classifier.domain)
-    #     else:
-    #         self.openContext("", None)
-    #     OWTreeViewer2D.ctree(self, classifier)
-    #     self.togglePies()
-    #
-    # def walkcreate(self, tree, parent=None, level=0, attrVal=""):
-    #     node=ClassificationTreeNode(attrVal, tree, parent, None, self.scene)
-    #     if parent:
-    #         parent.graph_add_edge(GraphicsEdge(None, self.scene, node1=parent, node2=node))
-    #     if tree.branches:
-    #         for i in range(len(tree.branches)):
-    #             if tree.branches[i]:
-    #                 self.walkcreate(tree.branches[i],node,level+1,tree.branchDescriptions[i])
-    #     return node
-
-
     def ctree(self, tree=None):
         """
             Set the input tree classifier.
@@ -434,14 +431,12 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         else:
             self.infoa.setText('Tree found on input.')
             self.tree = tree
-            # self.infoa.setText('Number of nodes: ' + str(orngTree.countNodes(tree)))
-            # self.infob.setText('Number of leaves: ' + str(orngTree.countLeaves(tree)))
-
-
             # if hasattr(self.scene, "colorPalette"):
             #   self.scene.colorPalette.setNumberOfColors(len(self.tree.distribution))
 #            self.scene.setDataModel(GraphicsTree(self.tree))
             self.rootNode = self.walkcreate(self.tree, None)
+            self.infoa.setText('Number of nodes: ' + str(self.rootNode.num_nodes()))
+            self.infob.setText('Number of leaves: ' + str(self.rootNode.num_leaves()))
 #            self.scene.addItem(self.rootNode)
             self.scene.fixPos(self.rootNode, self.HSpacing,self.VSpacing)
             self.activateLoadedSettings()
@@ -454,55 +449,36 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
 
     def walkcreate(self, tree, parent=None, level=0, i=0):
-        '''
+        """
+        Recursively draw tree structure from Scikit learn Tree object.
+        This method need to call ClassificationTreeNode to dispaly nodes and pies.
 
-            Recursively draw tree structure from Scikit learn Tree object.
-            This method need to call ClassificationTreeNode to dispaly nodes and pies.
-
-            :param tree:
-            :param parent:
-            :param level:
-            :param i:
-            :return:
-        '''
-
-        # node = GraphicsNode(tree, parent, None, self.scene)
-        node = ClassificationTreeNode(tree, parent, None, None, self.scene)
+        :param tree:
+        :param parent:
+        :param level:
+        :param i:
+        :return:
+        """
+        node = ClassificationTreeNode(tree, parent, None, self.scene, i=i)
         node.borderRadius = 10
         if parent:
             parent.graph_add_edge(GraphicsEdge(None, self.scene, node1=parent, node2=node))
 
+        # Parsing the Scikit learn structure
         left_child_index = tree.children_left[i]
         right_child_index = tree.children_right[i]
 
-        # First draw right chile, then left
-        if right_child_index >= 0:
-            self.walkcreate(tree, parent=node, level=level+1, i=right_child_index)
-
+        # First draw right child, then left
         if left_child_index >= 0:
             self.walkcreate(tree, parent=node, level=level+1, i=left_child_index)
-
+        if right_child_index >= 0:
+            self.walkcreate(tree, parent=node, level=level+1, i=right_child_index)
         return node
 
 
-    # def nodeToolTip(self, node):
-    #     rule = list(node.rule())
-    #     fix = lambda str: str.replace(">", "&gt;").replace("<", "&lt;")
-    #     if rule:
-    #         try:
-    #             rule=parseRules(list(rule))
-    #         except:
-    #             pass
-    #         text="<b>IF</b> "+" <b>AND</b><br>  ".join([fix(a[0].name+" = "+a[1]) for a in rule])+"\n<br><b>THEN</b> "+fix(node.majorityClass) + "<hr>"
-    #     else:
-    #         text="<b>THEN</b> "+fix(node.majorityClass) + "<hr>"
-    #     text += "Instances: %(ninst)i (%(prop).1f%%)<hr>" % {"ninst": node.tree.distribution.cases, "prop": float(node.tree.distribution.cases)/self.tree.distribution.cases*100}
-    #
-    #     text += "<br>".join(["<font color=%(color)s>%(name)s: %(num)i (%(ratio).1f% %)</font>" % \
-    #                          {"name":fix(d[0]), "num":int(d[1]), "ratio":d[1]/sum(node.tree.distribution)*100, "color":self.scene.colorPalette[i].name()}\
-    #                          for i,d in enumerate(node.tree.distribution.items()) if d[1]!=0])
-    #     text += "<hr>Partition on: %(nodename)s" % {"nodename": node.tree.branchSelector.classVar.name} if node.tree.branches else ""
-    #     return text
+    def nodeToolTip(self, node):
+        text = node.rule()
+        return text
 
 if __name__=="__main__":
     a = QApplication(sys.argv)
@@ -513,7 +489,7 @@ if __name__=="__main__":
     # data = orange.ExampleTable(r"../../doc/datasets/zoo.tab")
     # tree = orange.TreeLearner(data, storeExamples = 1)
     tree = pickle.load(open("iris_tree.pkl", "rb"))
-    ow.ctree(tree)
+    ow.ctree(tree.clf.tree_)
 
     # here you can test setting some stuff
     ow.show()
