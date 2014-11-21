@@ -292,6 +292,8 @@ class DiscreteVariable(Variable):
         """
         base_rep = base_value != -1 and values[base_value]
         existing = DiscreteVariable.all_discrete_vars.get(name)
+        if existing is None:
+            return None
         if not ordered:
             values = DiscreteVariable.ordered_values(values)
         for var in existing:
