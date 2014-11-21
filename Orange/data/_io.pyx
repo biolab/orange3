@@ -77,6 +77,7 @@ cpdef sparse_prescan_fast(fname):
             elif c == "#":
                 state = COMMENT
 
+    fclose(f)
     return n_attributes, n_classes, n_metas, n_lines
 
 
@@ -252,9 +253,13 @@ def sparse_read_float(fname):
                 else:
                     atomp[0] = 0
                     b_atom = atom
+                    """
                     attr_index = t_names.get(b_atom, -1)
                     if attr_index < 0:
                         attr_index = t_names[b_atom] = len(t_names)
+                    """
+                    attr_index = t_names.setdefault(b_atom,len(t_names))
+
                     atomp = atom
                     if c == "=":
                         value = 0
