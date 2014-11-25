@@ -664,6 +664,25 @@ class SqlTable(table.Table):
     def quote_string(self, value):
         return "'%s'" % value
 
+    def sample(self, percentage):
+        if "," in self.table_name:
+            raise NotImplementedError("Sampling of complex queries is not supported")
+
+        sample_table = self.unquote_identifier(self.table_name) + '_%s_percent' % str(percentage).replace('.', '_')
+        try:
+            with self._execute_sql_query("SELECT * FROM %s LIMIT 0" % self.quote_identifier(sample_table)) as cur:
+                cur.fetchall()
+        except psycopg2.ProgrammingError:
+            with self._execute_sql_query('SELECT blocksample_percent(%s, %s, %s)' % (
+                    self.quote_string(sample_table),
+                    self.quote_string(self.unquote_identifier(self.table_name)),
+                    percentage)) as cur:
+                cur.fetchall()
+
+        sampled_table = self.copy()
+        sampled_table.table_name = self.quote_identifier(sample_table)
+        return sampled_table
+
     @contextmanager
     def _execute_sql_query(self, query, param=None):
         connection = self.connection_pool.getconn()

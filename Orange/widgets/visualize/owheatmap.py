@@ -12,6 +12,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, QRectF, QPointF
 
 import Orange.data
+from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
 from Orange.feature.discretization import EqualWidth, _discretized_var
 
@@ -347,6 +348,9 @@ class OWHeatMap(widget.OWWidget):
     y_var_index = settings.Setting(1)
     z_var_index = settings.Setting(0)
     selected_z_values = settings.Setting([])
+    sample_level = settings.Setting(0)
+
+    sample_levels = [0.1, 1, 5, 10, 100]
 
     use_cache = settings.Setting(True)
 
@@ -366,6 +370,10 @@ class OWHeatMap(widget.OWWidget):
         self._cache = {}
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
+
+        self.sampling_box = box = gui.widgetBox(self.controlArea, "Sampling")
+        gui.comboBox(box, self, 'sample_level',
+                     items=self.sample_levels, callback=self.update_sample)
 
         box = gui.widgetBox(self.controlArea, "Input")
 
@@ -448,8 +456,27 @@ class OWHeatMap(widget.OWWidget):
         self.closeContext()
         self.clear()
 
-        self.dataset = dataset
+        if isinstance(dataset, SqlTable):
+            self.original_data = dataset
+            self.sampling_box.setVisible(True)
 
+            self.update_sample()
+        else:
+            self.dataset = dataset
+            self.sampling_box.setVisible(False)
+            self.set_sampled_data(self.dataset)
+
+    def update_sample(self):
+        self.clear()
+
+        level = self.sample_levels[int(float(self.sample_level))]
+        if 0 < level < 100:
+            self.dataset = self.original_data.sample(level)
+        if level >= 100:
+            self.dataset = self.original_data
+        self.set_sampled_data(self.dataset)
+
+    def set_sampled_data(self, dataset):
         if dataset is not None:
             domain = dataset.domain
             cvars = list(filter(is_continuous, domain.variables))
