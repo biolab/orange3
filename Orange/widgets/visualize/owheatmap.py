@@ -111,13 +111,17 @@ def lod_from_transform(T):
 class DensityPatch(pg.GraphicsObject):
     Rect, RoundRect, Circle = Rect, RoundRect, Circle
 
-    def __init__(self, root=None, cell_size=10, cell_shape=Rect, palette=None):
+    Linear, Sqrt, Log = 1, 2, 3
+
+    def __init__(self, root=None, cell_size=10, cell_shape=Rect,
+                 color_scale=Sqrt, palette=None):
         super().__init__()
         self.setFlag(QtGui.QGraphicsItem.ItemUsesExtendedStyleOption, True)
         self._root = root
         self._cache = {}
         self._cell_size = cell_size
         self._cell_shape = cell_shape
+        self._color_scale = color_scale
         self._palette = palette
 
     def boundingRect(self):
@@ -152,6 +156,14 @@ class DensityPatch(pg.GraphicsObject):
     def cell_size(self):
         return self._cell_size
 
+    def set_color_scale(self, scale):
+        if self._color_scale != scale:
+            self._color_scale = scale
+            self.update()
+
+    def color_scale(self):
+        return self._color_scale
+
     def paint(self, painter, option, widget):
         root = self._root
         if root is None:
@@ -180,15 +192,33 @@ class DensityPatch(pg.GraphicsObject):
 
         if (p, cell_shape, cell_size) not in self._cache:
             rs_root = resample(root, 2 ** p)
+            rs_max = rs_root.contingencies.max()
+
+            def log_scale(ctng):
+                log_max = np.log(rs_max + 1)
+                log_ctng = np.log(ctng + 1)
+                return log_ctng / log_max
+
+            def sqrt_scale(ctng):
+                sqrt_max = np.sqrt(rs_max)
+                sqrt_ctng = np.sqrt(ctng)
+                return sqrt_ctng / (sqrt_max or 1)
+
+            def lin_scale(ctng):
+                return ctng / (rs_max or 1)
+
+            scale = {self.Linear: lin_scale, self.Sqrt: sqrt_scale,
+                     self.Log: log_scale}
             patch = Patch_create(rs_root, palette=self._palette,
-#                                  scale=cscale,
+                                 scale=scale[self._color_scale],
                                  shape=cell_shape)
             self._cache[p, cell_shape, cell_size] = patch
         else:
             patch = self._cache[p, cell_shape, cell_size]
 
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.setPen(Qt.NoPen)
+#         painter.setPen(Qt.NoPen)
+        painter.setPen(pg.mkPen((200, 200, 200, 200)))
 
         for picture in picture_intersect(patch, option.exposedRect):
             picture.play(painter)
@@ -348,6 +378,7 @@ class OWHeatMap(widget.OWWidget):
     y_var_index = settings.Setting(1)
     z_var_index = settings.Setting(0)
     selected_z_values = settings.Setting([])
+    color_scale = settings.Setting(1)
     sample_level = settings.Setting(0)
 
     sample_levels = [0.1, 1, 5, 10, 100]
@@ -400,14 +431,20 @@ class OWHeatMap(widget.OWWidget):
             callback=self._on_z_var_changed)
         self.comboBoxClassvars.setModel(self.z_var_model)
 
-        box = gui.widgetBox(box, 'Colors displayed')
-        box.setFlat(True)
+        box1 = gui.widgetBox(box, 'Colors displayed', margin=0)
+        box1.setFlat(True)
 
         self.z_values_view = gui.listBox(
-            box, self, "selected_z_values", "z_values",
+            box1, self, "selected_z_values", "z_values",
             callback=self._on_z_values_selection_changed,
-            selectionMode=QtGui.QListView.MultiSelection
+            selectionMode=QtGui.QListView.MultiSelection,
+            addSpace=False
         )
+        box1 = gui.widgetBox(box, "Color Scale", margin=0)
+        box1.setFlat(True)
+        gui.comboBox(box1, self, "color_scale",
+                     items=["Linear", "Square root", "Logarithmic"],
+                     callback=self._on_color_scale_changed)
 
         self.mouseBehaviourBox = gui.radioButtons(
             self.controlArea, self, value='mouse_mode',
@@ -544,7 +581,11 @@ class OWHeatMap(widget.OWWidget):
 
     def _on_z_values_selection_changed(self):
         if self._displayed_root is not None:
-            self.update_map(self._displayed_root, )
+            self.update_map(self._displayed_root)
+
+    def _on_color_scale_changed(self):
+        if self._displayed_root is not None:
+            self.update_map(self._displayed_root)
 
     def setup_plot(self):
         """Setup the density map plot"""
@@ -642,6 +683,7 @@ class OWHeatMap(widget.OWWidget):
         self._item = item = DensityPatch(
             root, cell_size=10,
             cell_shape=DensityPatch.Rect,
+            color_scale=self.color_scale + 1,
             palette=palette
         )
         self.plot.addItem(item)
@@ -1155,12 +1197,14 @@ def create_image(contingencies, palette=None, scale=None):
 #     import scipy.ndimage
 
     if scale is None:
-        scale = contingencies.max()
+        scale = lambda c: c / (contingencies.max() or 1)
 
-    if scale > 0:
-        P = contingencies / scale
-    else:
-        P = contingencies
+    P = scale(contingencies)
+
+#     if scale > 0:
+#         P = contingencies / scale
+#     else:
+#         P = contingencies
 
 #     nbins = node.xbins.shape[0] - 1
 #     smoothing = 32
@@ -1181,6 +1225,8 @@ def create_image(contingencies, palette=None, scale=None):
         argmax = np.argmax(P, axis=2)
         irow, icol = np.indices(argmax.shape)
         P_max = P[irow, icol, argmax]
+        P_max = np.sqrt(P_max)
+
 #         P_max /= P_max.max()
         colors = 255 - colors[argmax.ravel()]
 
