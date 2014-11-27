@@ -217,8 +217,7 @@ class DensityPatch(pg.GraphicsObject):
             patch = self._cache[p, cell_shape, cell_size]
 
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
-#         painter.setPen(Qt.NoPen)
-        painter.setPen(pg.mkPen((200, 200, 200, 200)))
+        painter.setPen(Qt.NoPen)
 
         for picture in picture_intersect(patch, option.exposedRect):
             picture.play(painter)
