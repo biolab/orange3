@@ -350,14 +350,14 @@ class OWHeatMap(widget.OWWidget):
     selected_z_values = settings.Setting([])
     sample_level = settings.Setting(0)
 
-    sample_percentages = [0.001, 0.01, 0.1, 1, 5, 10, 100]
-    sample_percentages_captions = ['0.001%', '0.01%', '0.1%', '1%', '5%', '10%', '100%']
-    sample_times = [0.5, 1, 2, 5]
-    sample_times_captions = ['0.5s', '1s', '2s', '5s']
+    sample_percentages = [0.001, 0.01, 0.1, 1, 10, 100]
+    sample_percentages_captions = ['0.001%', '0.01%', '0.1%', '1%', '10%', '100%']
+    sample_times = [0.1, 0.5, 1, 5]
+    sample_times_captions = ['0.1s', '0.5s', '1s', '5s']
 
     use_cache = settings.Setting(True)
 
-    n_bins = 2 ** 4
+    n_bins = 2 ** 7
 
     mouse_mode = 0
 
