@@ -350,7 +350,10 @@ class OWHeatMap(widget.OWWidget):
     selected_z_values = settings.Setting([])
     sample_level = settings.Setting(0)
 
-    sample_levels = [0.1, 1, 5, 10, 100]
+    sample_percentages = [0.001, 0.01, 0.1, 1, 5, 10, 100]
+    sample_percentages_captions = ['0.001%', '0.01%', '0.1%', '1%', '5%', '10%', '100%']
+    sample_times = [0.5, 1, 2, 5]
+    sample_times_captions = ['0.5s', '1s', '2s', '5s']
 
     use_cache = settings.Setting(True)
 
@@ -372,8 +375,11 @@ class OWHeatMap(widget.OWWidget):
         self.colors = colorpalette.ColorPaletteGenerator(10)
 
         self.sampling_box = box = gui.widgetBox(self.controlArea, "Sampling")
+        sampling_options =\
+            self.sample_times_captions + self.sample_percentages_captions
         gui.comboBox(box, self, 'sample_level',
-                     items=self.sample_levels, callback=self.update_sample)
+                     items=sampling_options,
+                     callback=self.update_sample)
 
         box = gui.widgetBox(self.controlArea, "Input")
 
@@ -458,6 +464,7 @@ class OWHeatMap(widget.OWWidget):
 
         if isinstance(dataset, SqlTable):
             self.original_data = dataset
+            self.sample_level = 0
             self.sampling_box.setVisible(True)
 
             self.update_sample()
@@ -469,11 +476,22 @@ class OWHeatMap(widget.OWWidget):
     def update_sample(self):
         self.clear()
 
-        level = self.sample_levels[int(float(self.sample_level))]
-        if 0 < level < 100:
-            self.dataset = self.original_data.sample(level)
-        if level >= 100:
-            self.dataset = self.original_data
+        sample_type, level = None, 0
+        if self.sample_level < len(self.sample_times):
+            sample_type = 'time'
+            level = self.sample_times[self.sample_level]
+        else:
+            sample_type = 'percentage'
+            level = self.sample_level - len(self.sample_times)
+            level = self.sample_percentages[level]
+
+        if sample_type == 'time':
+            self.dataset = self.original_data.sample_time(level)
+        else:
+            if 0 < level < 100:
+                self.dataset = self.original_data.sample_percentage(level)
+            if level >= 100:
+                self.dataset = self.original_data
         self.set_sampled_data(self.dataset)
 
     def set_sampled_data(self, dataset):
