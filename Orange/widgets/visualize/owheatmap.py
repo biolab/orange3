@@ -1225,9 +1225,9 @@ def create_image(contingencies, palette=None, scale=None):
         argmax = np.argmax(P, axis=2)
         irow, icol = np.indices(argmax.shape)
         P_max = P[irow, icol, argmax]
-        P_max = np.sqrt(P_max)
+        positive = P_max > 0
+        P_max = np.where(positive, P_max * 0.95 + 0.05, 0.0)
 
-#         P_max /= P_max.max()
         colors = 255 - colors[argmax.ravel()]
 
         # XXX: Non linear intensity scaling
@@ -1237,6 +1237,8 @@ def create_image(contingencies, palette=None, scale=None):
     elif P.ndim == 2:
         palette = colorpalette.ColorPaletteBW()
         mix = P
+        positive = mix > 0
+        mix = np.where(positive, mix * 0.99 + 0.01, 0.0)
 
 #         mix = scipy.ndimage.filters.gaussian_filter(
 #             mix, bandwidth, mode="constant")
