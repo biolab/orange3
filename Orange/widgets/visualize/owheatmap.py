@@ -192,7 +192,7 @@ class DensityPatch(pg.GraphicsObject):
 
         if (p, cell_shape, cell_size) not in self._cache:
             rs_root = resample(root, 2 ** p)
-            rs_max = rs_root.contingencies.max()
+            rs_max = max_contingency(rs_root)
 
             def log_scale(ctng):
                 log_max = np.log(rs_max + 1)
