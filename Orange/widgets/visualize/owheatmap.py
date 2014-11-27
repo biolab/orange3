@@ -357,7 +357,7 @@ class OWHeatMap(widget.OWWidget):
 
     use_cache = settings.Setting(True)
 
-    n_bins = 2 ** 7
+    n_bins = 2 ** 4
 
     mouse_mode = 0
 
