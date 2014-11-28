@@ -20,6 +20,7 @@ from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.filter import CustomFilterSql
 from Orange.data.sql.parser import SqlParser
 
+LARGE_TABLE = 100000
 
 
 class SqlTable(table.Table):
@@ -419,6 +420,9 @@ class SqlTable(table.Table):
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_var=False):
+        if self.approx_len() > LARGE_TABLE:
+            self = self.sample_time(1)
+
         if columns is not None:
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
@@ -449,6 +453,9 @@ class SqlTable(table.Table):
         return stats
 
     def _compute_distributions(self, columns=None):
+        if self.approx_len() > LARGE_TABLE:
+            self = self.sample_time(1)
+
         if columns is not None:
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
@@ -473,6 +480,9 @@ class SqlTable(table.Table):
         return dists
 
     def _compute_contingency(self, col_vars=None, row_var=None):
+        if self.approx_len() > LARGE_TABLE:
+            self = self.sample_time(1)
+
         if col_vars is None:
             col_vars = range(len(self.domain.variables))
         if len(col_vars) != 1:
