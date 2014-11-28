@@ -1,5 +1,6 @@
 # import orange, orngTree, OWGUI, OWColorPalette
 import sys
+from Orange.classification.tree import ClassificationTreeClassifier, ClassificationTreeLearner
 # from Orange.widgets.utils.plot import OWPlotGUI as OWGUI
 from Orange.widgets import gui as OWGUI
 from Orange.widgets.utils.plot import OWPalette as OWColorPalette
@@ -279,15 +280,6 @@ class GraphicsEdge(QGraphicsLineItem, graph_edge):
 class TreeGraphicsView(QGraphicsView):
     def __init__(self, master, scene, *args):
         QGraphicsView.__init__(self, scene, *args)
-#        try:
-#            import PyQt4.QtOpenGL as gl
-#            fmt = gl.QGLFormat()
-#            fmt.setSampleBuffers(True)
-#            fmt.setSamples(32)
-#            print fmt.sampleBuffers()
-#            self.setViewport(gl.QGLWidget(fmt, self))
-#        except Exception, ex:
-#            print ex
         self.viewport().setMouseTracking(True)
         self.setFocusPolicy(Qt.WheelFocus)
         self.setRenderHint(QPainter.Antialiasing)
@@ -317,9 +309,6 @@ class TreeGraphicsScene(QGraphicsScene):
                 return
         if not x or not y: x, y= self.HSpacing, self.VSpacing
         self._fixPos(node,x,y)
-        
-        # self.setSceneRect(reduce(QRectF.united, [item.sceneBoundingRect() for item in self.items() if item.isVisible()], QRectF(0, 0, 10, 10)).adjusted(0, 0, 100, 100))
-#        print self.sceneRect()
         self.update()
         
     def _fixPos(self, node, x, y):
@@ -405,6 +394,9 @@ class TreeNavigator(QGraphicsView):
 
 
 class OWTreeViewer2D(OWWidget):
+
+
+
     settingsList = ["ZoomAutoRefresh", "AutoArrange", "ToolTipsEnabled",
                     "Zoom", "VSpacing", "HSpacing", "MaxTreeDepth", "MaxTreeDepthB",
                     "LineWidth", "LineWidthMethod",
@@ -416,7 +408,7 @@ class OWTreeViewer2D(OWWidget):
         self.root = None
         self.selectedNode = None
 
-        # self.inputs = [("Classification Tree", Orange.classification.tree.TreeClassifier, self.ctree)]
+        self.inputs = [("Classification Tree", ClassificationTreeClassifier, self.ctree)]
         self.outputs = [("Examples", ExampleTable)]
 
         #set default settings
@@ -437,23 +429,13 @@ class OWTreeViewer2D(OWWidget):
         # self.loadSettings()
         self.NodeInfo.sort()
 
-# Changed when the GUI was simplified - added here to override any saved settings
+        # Changed when the GUI was simplified - added here to override any saved settings
         self.VSpacing = 1; self.HSpacing = 1
         self.ToolTipsEnabled = 1
         self.LineWidth = 15  # Also reset when the LineWidthMethod is changed!
-        
-        # GUI definition
-#        self.tabs = OWGUI.tabWidget(self.controlArea)
 
-        # GENERAL TAB
-        # GeneralTab = OWGUI.createTabPage(self.tabs, "General")
-#        GeneralTab = TreeTab = OWGUI.createTabPage(self.tabs, "Tree")
-#        NodeTab = OWGUI.createTabPage(self.tabs, "Node")
-
+        # Contents
         GeneralTab = NodeTab = TreeTab = self.controlArea
-
-
-
         self.infBox = OWGUI.widgetBox(GeneralTab, 'Info', sizePolicy = QSizePolicy(QSizePolicy.Minimum , QSizePolicy.Fixed ), addSpace=True)
         self.infoa = OWGUI.widgetLabel(self.infBox, 'No tree.')
         self.infob = OWGUI.widgetLabel(self.infBox, " ")
@@ -462,21 +444,27 @@ class OWTreeViewer2D(OWWidget):
         OWGUI.hSlider(self.sizebox, self, 'Zoom', label='Zoom', minValue=1, maxValue=10, step=1,
                       callback=self.toggleZoomSlider, ticks=1)
         OWGUI.separator(self.sizebox)
-        
-        # cb, sb = OWGUI.checkWithSpin(self.sizebox, self, "Max node width:", 50, 200, "LimitNodeWidth", "MaxNodeWidth",
-        #                              tooltip="Limit the width of tree nodes",
-        #                              checkCallback=self.toggleNodeSize,
-        #                              spinCallback=self.toggleNodeSize,
-        #                              step=10)
-        # b = OWGUI.checkBox(OWGUI.indentedBox(self.sizebox, sep=OWGUI.checkButtonOffsetHint(cb)), self, "TruncateText", "Truncate text", callback=self.toggleTruncateText)
-        # cb.disables.append(b)
-        # cb.makeConsistent()
 
-        # OWGUI.checkWithSpin(self.sizebox, self, 'Max tree depth:', 1, 20, 'MaxTreeDepthB', "MaxTreeDepth",
-        #                     tooltip='Defines the depth of the tree displayed',
-        #                     checkCallback=self.toggleTreeDepth,
-        #                     spinCallback=self.toggleTreeDepth)
-        
+
+        s, cb = OWGUI.spin(self.sizebox, self,  "MaxNodeWidth", 50, 200,
+                 label="Max node width:",
+                 checked="LimitNodeWidth",
+                 callback=self.toggleNodeSize,
+                 step=10
+                 )
+
+        b = OWGUI.checkBox(OWGUI.indentedBox(self.sizebox,
+                                             sep=OWGUI.checkButtonOffsetHint(cb)), self, "TruncateText", "Truncate text", callback=self.toggleTruncateText)
+
+        s.disables.append(b)
+        s.makeConsistent()
+
+        OWGUI.spin(self.sizebox, self, 'MaxTreeDepth', 1, 20,
+                 label = 'Max tree depth:',
+                 tooltip = "Defines the depth of the tree displayed",
+                 checked = "MaxTreeDepthB",
+                 callback = self.toggleTreeDepth)
+
         
         self.edgebox = OWGUI.widgetBox(GeneralTab, "Edge Widths", addSpace=True)
         OWGUI.comboBox(self.edgebox, self,  'LineWidthMethod',
@@ -486,15 +474,15 @@ class OWTreeViewer2D(OWWidget):
         grid = QGridLayout()
         grid.setContentsMargins(*self.controlArea.layout().getContentsMargins())
         
-        # navButton = OWGUI.button(self.controlArea, self, "Navigator", self.toggleNavigator, debuggingEnabled = 0, addToLayout=False)
-        # findbox = OWGUI.widgetBox(self.controlArea, orientation = "horizontal")
+        navButton = OWGUI.button(self.controlArea, self, "Navigator", self.toggleNavigator, addToLayout=False)
+        findbox = OWGUI.widgetBox(self.controlArea, orientation = "horizontal")
         self.centerRootButton=OWGUI.button(self.controlArea, self, "Find Root", addToLayout=False,
                                            callback=lambda :self.rootNode and \
                                            self.sceneView.centerOn(self.rootNode.x(), self.rootNode.y()))
         self.centerNodeButton=OWGUI.button(self.controlArea, self, "Find Selected", addToLayout=False,
                                            callback=lambda :self.selectedNode and \
                                            self.sceneView.centerOn(self.selectedNode.scenePos()))
-        # grid.addWidget(navButton, 0, 0, 1, 2)
+        grid.addWidget(navButton, 0, 0, 1, 2)
         grid.addWidget(self.centerRootButton, 1, 0)
         grid.addWidget(self.centerNodeButton, 1, 1)
         self.leftWidgetPart.layout().insertLayout(1, grid)
@@ -560,17 +548,18 @@ class OWTreeViewer2D(OWWidget):
         for edge in self.scene.edges():
             if self.LineWidthMethod==0:
                 width=5 # self.LineWidth
-            # elif self.LineWidthMethod == 1:
-            #     width = (edge.node2.tree.distribution.cases/self.tree.distribution.cases) * 20 # self.LineWidth
-            # elif self.LineWidthMethod == 2:
-            #     width = (edge.node2.tree.distribution.cases/edge.node1.tree.distribution.cases) * 10 # self.LineWidth
-
+            elif self.LineWidthMethod == 1:
+                width = (edge.node2.num_instances()/self.rootNode.num_instances()) * 20 # self.LineWidth
+            elif self.LineWidthMethod == 2:
+                width = (edge.node2.num_instances()/edge.node1.num_instances()) * 10 # self.LineWidth
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
         
     def toggleNodeSize(self):
-        pass
-    
+        self.setNodeInfo()
+        self.scene.update()
+        self.sceneView.repaint()
+
     def toggleTruncateText(self):
         for n in self.scene.nodes():
             n.truncateText = self.TruncateText
@@ -589,7 +578,7 @@ class OWTreeViewer2D(OWWidget):
         # self.toggleLineWidth()
 #        self.toggleNodeSize()
 
-    def ctree(self, tree=None):
+    def ctree(self, tree):
         self.clear()
         if not tree:
             self.centerRootButton.setDisabled(1)
@@ -600,14 +589,8 @@ class OWTreeViewer2D(OWWidget):
             self.rootNode = None
         else:
             self.infoa.setText('Yes tree.')
-            self.tree = tree
-            # self.infoa.setText('Number of nodes: ' + str(orngTree.countNodes(tree)))
-            # self.infob.setText('Number of leaves: ' + str(orngTree.countLeaves(tree)))
-            # if hasattr(self.scene, "colorPalette"):
-            #   self.scene.colorPalette.setNumberOfColors(len(self.tree.distribution))
-#            self.scene.setDataModel(GraphicsTree(self.tree))
+            self.tree = clf.tree
             self.rootNode = self.walkcreate(self.tree, None)
-#            self.scene.addItem(self.rootNode)
             self.scene.fixPos(self.rootNode, self.HSpacing,self.VSpacing)
             self.activateLoadedSettings()
             self.sceneView.centerOn(self.rootNode.x(), self.rootNode.y())
@@ -650,11 +633,11 @@ class OWTreeViewer2D(OWWidget):
     def walkupdate(self, node, level=0):
         if not node:
             return
-        if self.MaxTreeDepthB and self.MaxTreeDepth<=level+1:
+        if self.MaxTreeDepthB and self.MaxTreeDepth <= level+1:
             node.setOpen(False)
             return
         else:
-            node.setOpen(True,1)
+            node.setOpen(True, 1)
         for n in node.branches:
             self.walkupdate(n,level+1)
 
@@ -707,32 +690,25 @@ class OWDefTreeViewer2D(OWTreeViewer2D):
         self.scene = TreeGraphicsScene(self)
         self.sceneView = TreeGraphicsView(self, self.scene, self.mainArea)
         self.mainArea.layout().addWidget(self.sceneView)
-#        self.scene.setSceneRect(0,0,800,800)
+        self.scene.setSceneRect(0,0,800,800)
         self.navWidget = QWidget(None)
         self.navWidget.setLayout(QVBoxLayout(self.navWidget))
         scene = TreeGraphicsScene(self.navWidget)
         self.treeNav = TreeNavigator(self.sceneView)
-#        self.treeNav.setScene(scene)
+        self.treeNav.setScene(scene)
         self.navWidget.layout().addWidget(self.treeNav)
-#        self.sceneView.setNavigator(self.treeNav)
+        # self.sceneView.setNavigator(self.treeNav)
         self.navWidget.resize(400,400)
-#        OWGUI.button(self.TreeTab,self,"Navigator",self.toggleNavigator)
+        OWGUI.button(self.TreeTab,self,"Navigator",self.toggleNavigator)
 
 if __name__=="__main__":
     a = QApplication(sys.argv)
     ow = OWDefTreeViewer2D()
-    data = ExampleTable(r"../../datasets/zoo.tab", None)
-
-    tree = pickle.load(open("iris_tree.pkl", "rb"))
-    print(tree.children_left)
-    print(tree.children_right)
-
-    # tree is object from sklearn Tree Class
-
-    # tree = orange.Trclf = clf.fit(iris.data, iris.target)eeLearner(data, storeExamples = 1)
+    data = ExampleTable(r"../../datasets/iris.tab", None)
     ow.activateLoadedSettings()
-    # ow.ctree(None)
-    ow.ctree(tree)
+    learner = ClassificationTreeLearner()
+    clf = learner(data)
+    ow.ctree(clf)
 
     # here you can test setting some stuff
     ow.show()
