@@ -207,7 +207,7 @@ class OWSql(widget.OWWidget):
             if sample:
                 s = table.sample_time(1)
                 domain = s.get_domain(guess_values=True)
-                self.warning(
+                self.information(
                     1, "Domain was generated from a sample of the table.")
             else:
                 domain = table.get_domain(guess_values=True)
