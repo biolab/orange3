@@ -667,10 +667,12 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def sample_percentage(self, percentage, no_cache=False):
-        return self._sample('blocksample_percent', percentage)
+        return self._sample('blocksample_percent', percentage,
+                            no_cache=no_cache)
 
     def sample_time(self, time_in_seconds, no_cache=False):
-        return self._sample('blocksample_time', int(time_in_seconds * 1000))
+        return self._sample('blocksample_time', int(time_in_seconds * 1000),
+                            no_cache=no_cache)
 
     def _sample(self, method, parameter, no_cache=False):
         if "," in self.table_name:
