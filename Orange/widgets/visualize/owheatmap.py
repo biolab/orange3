@@ -380,10 +380,10 @@ class OWHeatMap(widget.OWWidget):
     color_scale = settings.Setting(1)
     sample_level = settings.Setting(0)
 
-    sample_percentages = [0.001, 0.01, 0.1, 1, 10, 100]
-    sample_percentages_captions = ['0.001%', '0.01%', '0.1%', '1%', '10%', '100%']
-    sample_times = [0.1, 0.5, 1, 5]
-    sample_times_captions = ['0.1s', '0.5s', '1s', '5s']
+    sample_percentages = []
+    sample_percentages_captions = []
+    sample_times = [0.1, 0.5, 2.5, 5, 15, 30, 60]
+    sample_times_captions = ['0.1s', '1s', '5s', '10s', '30s', '1min', '2min']
 
     use_cache = settings.Setting(True)
 
