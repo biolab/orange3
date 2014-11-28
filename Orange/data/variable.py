@@ -292,7 +292,7 @@ class DiscreteVariable(Variable):
         """
         base_rep = base_value != -1 and values[base_value]
         existing = DiscreteVariable.all_discrete_vars.get(name)
-        if not existing:
+        if existing is None:
             return None
         if not ordered:
             values = DiscreteVariable.ordered_values(values)
@@ -301,6 +301,8 @@ class DiscreteVariable(Variable):
                     var.base_value != -1
                     and var.values[var.base_value] != base_rep):
                 continue
+            if not values:
+                break  # we have the variable - any existing values are OK
             if ordered:
                 i = 0
                 for val in var.values:
@@ -308,18 +310,20 @@ class DiscreteVariable(Variable):
                         i += 1
                         if i == len(values):
                             break  # we have all the values
-                else:  # We have some remaining values: check them, add them
-                    if set(ordered[i:]) & set(var.values):
+                else:  # we have some remaining values: check them, add them
+                    if set(values[i:]) & set(var.values):
                         continue  # next var in existing
                     for val in values[i:]:
                         var.add_value(val)
                 break  # we have the variable
-            elif not var.values or not values or set(var.values) & set(values):
+            else:  # not ordered
+                if var.values and not set(var.values) & set(values):
+                    continue  # empty intersection of values; not compatible
                 vv = set(var.values)
                 for val in values:
                     if val not in vv:
                         var.add_value(val)
-                break
+                break  # we have the variable
         else:
             return None
         if base_value != -1 and var.base_value == -1:

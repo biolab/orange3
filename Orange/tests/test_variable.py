@@ -19,6 +19,58 @@ class DiscreteVariableTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             var.to_val("G")
 
+    def test_find_compatible_unordered(self):
+        gend = data.DiscreteVariable("gend", values=["F", "M"])
+
+        find_comp = data.DiscreteVariable.find_compatible
+        self.assertIs(find_comp("gend"), gend)
+        self.assertIs(find_comp("gend", values=["F"]), gend)
+        self.assertIs(find_comp("gend", values=["F", "M"]), gend)
+        self.assertIs(find_comp("gend", values=["M", "F"]), gend)
+
+        # Incompatible since it is ordered
+        self.assertIsNone(find_comp("gend", values=["M", "F"], ordered=True))
+        self.assertIsNone(find_comp("gend", values=["F", "M"], ordered=True))
+        self.assertIsNone(find_comp("gend", values=["F"], ordered=True))
+        self.assertIsNone(find_comp("gend", values=["M"], ordered=True))
+        self.assertIsNone(find_comp("gend", values=["N"], ordered=True))
+
+        # Incompatible due to empty intersection
+        self.assertIsNone(find_comp("gend", values=["N"]))
+
+        # Compatible, adds values
+        self.assertIs(find_comp("gend", values=["F", "N", "R"]), gend)
+        self.assertEqual(gend.values, ["F", "M", "N", "R"])
+
+    def test_find_compatible_unordered(self):
+        abc = data.DiscreteVariable("abc", values="abc", ordered=True)
+
+        find_comp = data.DiscreteVariable.find_compatible
+
+        self.assertIsNone(find_comp("abc"))
+        self.assertIsNone(find_comp("abc", list("abc")))
+        self.assertIs(find_comp("abc", ordered=True), abc)
+        self.assertIs(find_comp("abc", ["a"], ordered=True), abc)
+        self.assertIs(find_comp("abc", ["a", "b"], ordered=True), abc)
+        self.assertIs(find_comp("abc", ["a", "b", "c"], ordered=True), abc)
+        self.assertIs(find_comp("abc", ["a", "b", "c", "d"], ordered=True), abc)
+
+        abd = data.DiscreteVariable.make(
+            "abc", values=["a", "d", "b"], ordered=True)
+        self.assertIsNot(abc, abd)
+
+        abc_un = data.DiscreteVariable.make("abc", values=["a", "b", "c"])
+        self.assertIsNot(abc_un, abc)
+
+        self.assertIs(
+            find_comp("abc", values=["a", "d", "b"], ordered=True), abd)
+        self.assertIs(find_comp("abc", values=["a", "b", "c"]), abc_un)
+
+    def test_make(self):
+        var = data.DiscreteVariable.make("a", values=["F", "M"])
+        self.assertIsInstance(var, data.DiscreteVariable)
+        self.assertEqual(var.name, "a")
+        self.assertEqual(var.values, ["F", "M"])
 
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",
