@@ -380,10 +380,10 @@ class OWHeatMap(widget.OWWidget):
     color_scale = settings.Setting(1)
     sample_level = settings.Setting(0)
 
-    sample_percentages = [0.001, 0.01, 0.1, 1, 10, 100]
-    sample_percentages_captions = ['0.001%', '0.01%', '0.1%', '1%', '10%', '100%']
-    sample_times = [0.1, 0.5, 1, 5]
-    sample_times_captions = ['0.1s', '0.5s', '1s', '5s']
+    sample_percentages = []
+    sample_percentages_captions = []
+    sample_times = [0.1, 0.5, 3, 5, 20, 40, 80]
+    sample_times_captions = ['0.1s', '1s', '5s', '10s', '30s', '1min', '2min']
 
     use_cache = settings.Setting(True)
 
@@ -410,6 +410,8 @@ class OWHeatMap(widget.OWWidget):
         gui.comboBox(box, self, 'sample_level',
                      items=sampling_options,
                      callback=self.update_sample)
+
+        gui.button(box, self, "Sharpen", self.sharpen)
 
         box = gui.widgetBox(self.controlArea, "Input")
 
@@ -457,9 +459,6 @@ class OWHeatMap(widget.OWWidget):
             box='Mouse left button behavior',
             callback=self._update_mouse_mode
         )
-
-        box = gui.widgetBox(self.controlArea, box='Display')
-        gui.button(box, self, "Sharpen", self.sharpen)
 
         gui.rubber(self.controlArea)
 
@@ -512,7 +511,6 @@ class OWHeatMap(widget.OWWidget):
     def update_sample(self):
         self.clear()
 
-        sample_type, level = None, 0
         if self.sample_level < len(self.sample_times):
             sample_type = 'time'
             level = self.sample_times[self.sample_level]
@@ -522,10 +520,12 @@ class OWHeatMap(widget.OWWidget):
             level = self.sample_percentages[level]
 
         if sample_type == 'time':
-            self.dataset = self.original_data.sample_time(level)
+            self.dataset = \
+                self.original_data.sample_time(level, no_cache=True)
         else:
             if 0 < level < 100:
-                self.dataset = self.original_data.sample_percentage(level)
+                self.dataset = \
+                    self.original_data.sample_percentage(level, no_cache=True)
             if level >= 100:
                 self.dataset = self.original_data
         self.set_sampled_data(self.dataset)
@@ -562,8 +562,8 @@ class OWHeatMap(widget.OWWidget):
                     item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
 
             self.labelDataInput.setText(
-                'Data set: %s\nInstances: %d'
-                % (getattr(self.dataset, "name", "untitled"), len(dataset))
+                'Data set: %s'
+                % (getattr(self.dataset, "name", "untitled"),)
             )
 
             self.setup_plot()

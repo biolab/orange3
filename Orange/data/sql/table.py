@@ -84,9 +84,7 @@ class SqlTable(table.Table):
 
         if table is not None:
             self.table_name = self.quote_identifier(table)
-            self.domain = self.domain_from_fields(
-                self._get_fields(table, guess_values=guess_values),
-                type_hints=type_hints)
+            self.domain = self.get_domain(type_hints, guess_values)
             self.name = table
 
     @classmethod
@@ -153,6 +151,10 @@ class SqlTable(table.Table):
         if table:
             params['table'] = table
         return params
+
+    def get_domain(self, type_hints=None, guess_values=False):
+        fields = self._get_fields(self.table_name, guess_values=guess_values)
+        return self.domain_from_fields(fields, type_hints)
 
     def domain_from_fields(self, fields, type_hints=None):
         """:fields: tuple(field_name, field_type, field_expression, values)"""
@@ -664,30 +666,40 @@ class SqlTable(table.Table):
     def quote_string(self, value):
         return "'%s'" % value
 
-    def sample_percentage(self, percentage):
+    def sample_percentage(self, percentage, no_cache=False):
         return self._sample('blocksample_percent', percentage)
 
-    def sample_time(self, time_in_seconds):
+    def sample_time(self, time_in_seconds, no_cache=False):
         return self._sample('blocksample_time', int(time_in_seconds * 1000))
 
-    def _sample(self, method, parameter):
+    def _sample(self, method, parameter, no_cache=False):
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
 
-        sample_table = self.unquote_identifier(self.table_name) + '_%s_%s' % (method, str(parameter).replace('.', '_'))
+        sample_table = '__%s_%s_%s' % (
+            self.unquote_identifier(self.table_name),
+            method,
+            str(parameter).replace('.', '_'))
+        create = False
         try:
             with self._execute_sql_query("SELECT * FROM %s LIMIT 0" % self.quote_identifier(sample_table)) as cur:
                 cur.fetchall()
-            with self._execute_sql_query("DROP TABLE %s" % self.quote_identifier(sample_table)) as cur:
-                cur.fetchall()
+
+            if no_cache:
+                with self._execute_sql_query("DROP TABLE %s" % self.quote_identifier(sample_table)) as cur:
+                    cur.fetchall()
+                create = True
+
         except psycopg2.ProgrammingError:
-            pass
-        with self._execute_sql_query('SELECT %s(%s, %s, %s)' % (
-                method,
-                self.quote_string(sample_table),
-                self.quote_string(self.unquote_identifier(self.table_name)),
-                parameter)) as cur:
-            cur.fetchall()
+            create = True
+
+        if create:
+            with self._execute_sql_query('SELECT %s(%s, %s, %s)' % (
+                    method,
+                    self.quote_string(sample_table),
+                    self.quote_string(self.unquote_identifier(self.table_name)),
+                    parameter)) as cur:
+                cur.fetchall()
 
         sampled_table = self.copy()
         sampled_table.table_name = self.quote_identifier(sample_table)
