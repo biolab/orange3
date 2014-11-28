@@ -511,7 +511,6 @@ class OWHeatMap(widget.OWWidget):
     def update_sample(self):
         self.clear()
 
-        sample_type, level = None, 0
         if self.sample_level < len(self.sample_times):
             sample_type = 'time'
             level = self.sample_times[self.sample_level]
@@ -521,10 +520,12 @@ class OWHeatMap(widget.OWWidget):
             level = self.sample_percentages[level]
 
         if sample_type == 'time':
-            self.dataset = self.original_data.sample_time(level)
+            self.dataset = \
+                self.original_data.sample_time(level, no_cache=True)
         else:
             if 0 < level < 100:
-                self.dataset = self.original_data.sample_percentage(level)
+                self.dataset = \
+                    self.original_data.sample_percentage(level, no_cache=True)
             if level >= 100:
                 self.dataset = self.original_data
         self.set_sampled_data(self.dataset)
