@@ -17,9 +17,7 @@ class ClassificationTreeLearner(classification.SklFitter):
             self.items[id] = items
             self.distr[id] = Counter(Y[items].flatten())
 
-            # Add zero counts for classes not in the current subtree for completeness.
-            for item in set(Y.flatten()) - set(self.distr[id].keys()):
-                self.distr[id][item] = 0
+
         else:
             x = X[items, :]
             left = items[np.where(x[:, t.feature[id]] <= t.threshold[id])]
