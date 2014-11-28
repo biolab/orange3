@@ -674,7 +674,10 @@ class SqlTable(table.Table):
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
 
-        sample_table = self.unquote_identifier(self.table_name) + '_%s_%s' % (method, str(parameter).replace('.', '_'))
+        sample_table = '__%s_%s_%s' % (
+            self.unquote_identifier(self.table_name),
+            method,
+            str(parameter).replace('.', '_'))
         create = False
         try:
             with self._execute_sql_query("SELECT * FROM %s LIMIT 0" % self.quote_identifier(sample_table)) as cur:
