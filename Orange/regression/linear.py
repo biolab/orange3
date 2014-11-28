@@ -1,5 +1,7 @@
 
 import sklearn.linear_model
+import sklearn.pipeline
+import sklearn.preprocessing
 
 from ..classification import Fitter, Model
 
@@ -29,9 +31,6 @@ class LassoRegressionLearner(Fitter):
         sk = sklearn.linear_model.Lasso(alpha=self.alpha, fit_intercept=True)
         sk.fit(X, Y)
         return LinearModel(sk)
-
-import sklearn.pipeline
-import sklearn.preprocessing
 
 class SGDRegressionLearner(Fitter):
     def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1, eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25, learning_rate='invscaling', n_iter=5):

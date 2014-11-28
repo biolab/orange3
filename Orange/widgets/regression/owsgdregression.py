@@ -40,8 +40,6 @@ class OWSGDRegression(widget.OWWidget):
     penalty_type = settings.Setting(L2)
     InvScaling, Constant = 0, 1
     learning_rate = settings.Setting(InvScaling)
-    #: numerical tolerance
-    #tol = settings.Setting(0.001)
 
     want_main_area = False
 
@@ -56,7 +54,6 @@ class OWSGDRegression(widget.OWWidget):
         form = QGridLayout()
         typebox = gui.radioButtonsInBox(
             self.controlArea, self, "lossfunc", [],
-            #box=self.tr("Loss function to be used"),
             orientation=form,
         )
 
@@ -124,26 +121,6 @@ class OWSGDRegression(widget.OWWidget):
         self._func_params = [epsilon]
         self._penalty_params = [l1_ratio]
         self._lrate_params = [power_t]
-
-        
-        #self._func_params = [alpha, epsilon, eta0, l1_ratio, power_t]
-        """
-        # Numerical tolerance control
-        box = gui.widgetBox(self.controlArea, "Alpha")
-        gui.doubleSpin(box, self, "alpha", 1e-7, 1e-3, 5e-7)
-
-        box = gui.widgetBox(self.controlArea, "Epsilon")
-        gui.doubleSpin(box, self, "epsilon", 1e-7, 1e-3, 5e-7)
-
-        box = gui.widgetBox(self.controlArea, "Eta0")
-        gui.doubleSpin(box, self, "eta0", 1e-7, 1e-3, 5e-7)
-
-        box = gui.widgetBox(self.controlArea, "L1 ratio")
-        gui.doubleSpin(box, self, "l1_ratio", 1e-7, 1e-3, 5e-7)
-
-        box = gui.widgetBox(self.controlArea, "Power t")
-        gui.doubleSpin(box, self, "power_t", 1e-7, 1e-3, 5e-7)
-        """
 
         gui.button(self.controlArea, self, "&Apply",
                    callback=self.apply, default=True)
