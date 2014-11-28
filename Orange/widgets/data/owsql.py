@@ -6,12 +6,9 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QCursor, QMessageBox
 
 from Orange.data import Table
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, LARGE_TABLE
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-
-
-LARGE_TABLE = 100000
 
 
 class OWSql(widget.OWWidget):
@@ -188,7 +185,7 @@ class OWSql(widget.OWWidget):
                          table=self.table,
                          guess_values=False)
         sample = False
-        from datetime import datetime
+
         if table.approx_len() > LARGE_TABLE and self.guess_values:
             confirm = QMessageBox(self)
             confirm.setIcon(QMessageBox.Warning)

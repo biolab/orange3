@@ -19,7 +19,7 @@ from Orange.canvas.utils import environ
 from Orange.classification import Fitter
 from Orange.data import Table, Variable, filter, DiscreteVariable, ContinuousVariable
 from Orange.data.discretization import DiscretizeTable
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.feature.discretization import EqualFreq
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets import gui
@@ -327,6 +327,9 @@ class OWMosaicDisplay(OWWidget):
     # ------------- SIGNALS --------------------------
     # # DATA signal - receive new data and update all fields
     def setData(self, data):
+        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
+            data = data.sample_time(DEFAULT_SAMPLE_TIME)
+
         self.closeContext()
         self.data = data
         self.bestPlacements = None

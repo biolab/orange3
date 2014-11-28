@@ -11,7 +11,7 @@ from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
 
 import Orange
 from Orange.data import Table, ContinuousVariable, DiscreteVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.utils import getHtmlCompatibleString
@@ -97,6 +97,9 @@ class OWSieveDiagram(OWWidget):
 
     # receive new data and update all fields
     def setData(self, data):
+        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
+            data = data.sample_time(DEFAULT_SAMPLE_TIME)
+
         self.information(0)
         self.information(1)
         sameDomain = self.data and data and self.data.domain.checksum() == data.domain.checksum() # preserve attribute choice if the domain is the same

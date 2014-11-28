@@ -5,6 +5,7 @@ from PyQt4.QtGui import QApplication
 from Orange.canvas.registry.description import Default
 import Orange.data
 from Orange.data import Table
+from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets.gui import attributeIconDict
 from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
@@ -161,7 +162,10 @@ class OWParallelCoordinates(OWVisWidget):
     # ------------- SIGNALS --------------------------
     # receive new data and update all fields
     def set_data(self, data):
-        if data and (len(data) == 0 or len(data.domain) == 0):
+        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
+            data = data.sample_time(DEFAULT_SAMPLE_TIME)
+
+        if data and (not bool(data) or len(data.domain) == 0):
             data = None
         if checksum(data) == checksum(self.data):
             return # check if the new data set is the same as the old one
