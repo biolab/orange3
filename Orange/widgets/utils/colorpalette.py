@@ -611,10 +611,10 @@ class ColorPaletteGenerator:
 
     def __init__(self, number_of_colors=None, rgb_colors=DefaultRGBColors):
         self.number_of_colors = 0
-        self.rgb_colors = rgb_colors
+        self.rgb_colors = self.default_colors = rgb_colors
         self.rgb_array = None  # np.ndarray
         self.rgba_array = None  # np.ndarray
-        if type(rgb_colors) == dict:
+        if isinstance(rgb_colors, dict):
             self.rgb_colors_dict = rgb_colors
             self.set_number_of_colors(max(rgb_colors.keys()))
         else:
@@ -627,6 +627,15 @@ class ColorPaletteGenerator:
         self.number_of_colors = number_of_colors
         if self.rgb_colors_dict is not None:
             self.rgb_colors = self.rgb_colors_dict[max(3, number_of_colors)]
+        elif number_of_colors is None or \
+                number_of_colors < len(self.rgb_colors):
+            self.rgb_colors = self.default_colors
+        else:
+            self.rgb_colors = []
+            for i in range(self.number_of_colors):
+                col = QColor()
+                col.setHsv(360 / number_of_colors * i, 255, 255)
+                self.rgb_colors.append(col.getRgb())
         self.rgb_array = np.array(self.rgb_colors)
         self.rgba_array = np.hstack([
             self.rgb_array, np.full((len(self.rgb_colors), 1), 255)])
