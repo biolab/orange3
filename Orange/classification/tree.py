@@ -1,9 +1,9 @@
 from Orange.classification import SklFitter
-from sklearn.tree import DecisionTreeClassifier
+import sklearn.tree as skltree
 
 
 class ClassificationTreeLearner(SklFitter):
-    __wraps__ = DecisionTreeClassifier
+    __wraps__ = skltree.DecisionTreeClassifier
 
     def __init__(self, criterion="gini", splitter="best", max_depth=None,
                  min_samples_split=2, min_samples_leaf=1,
