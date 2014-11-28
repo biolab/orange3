@@ -318,11 +318,12 @@ class OWSelectRows(widget.OWWidget):
                     else:
                         if not values or not values[0]:
                             continue
+                        values = [attr.values[i-1] for i in values]
                         if oper == 0:
-                            f_values = {values[0] - 1}
+                            f_values = {values[0]}
                         else:
-                            f_values = set(range(len(attr.values)))
-                            f_values.remove(values[0] - 1)
+                            f_values = set(attr.values)
+                            f_values.remove(values[0])
                     filter = data_filter.FilterDiscrete(attr_index, f_values)
                 conditions.append(filter)
 
