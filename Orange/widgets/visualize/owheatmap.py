@@ -411,6 +411,8 @@ class OWHeatMap(widget.OWWidget):
                      items=sampling_options,
                      callback=self.update_sample)
 
+        gui.button(box, self, "Sharpen", self.sharpen)
+
         box = gui.widgetBox(self.controlArea, "Input")
 
         self.labelDataInput = gui.widgetLabel(box, 'No data on input')
@@ -457,9 +459,6 @@ class OWHeatMap(widget.OWWidget):
             box='Mouse left button behavior',
             callback=self._update_mouse_mode
         )
-
-        box = gui.widgetBox(self.controlArea, box='Display')
-        gui.button(box, self, "Sharpen", self.sharpen)
 
         gui.rubber(self.controlArea)
 
@@ -562,8 +561,8 @@ class OWHeatMap(widget.OWWidget):
                     item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
 
             self.labelDataInput.setText(
-                'Data set: %s\nInstances: %d'
-                % (getattr(self.dataset, "name", "untitled"), len(dataset))
+                'Data set: %s'
+                % (getattr(self.dataset, "name", "untitled"),)
             )
 
             self.setup_plot()
