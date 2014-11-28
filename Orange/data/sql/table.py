@@ -84,9 +84,7 @@ class SqlTable(table.Table):
 
         if table is not None:
             self.table_name = self.quote_identifier(table)
-            self.domain = self.domain_from_fields(
-                self._get_fields(table, guess_values=guess_values),
-                type_hints=type_hints)
+            self.domain = self.get_domain(type_hints, guess_values)
             self.name = table
 
     @classmethod
@@ -153,6 +151,10 @@ class SqlTable(table.Table):
         if table:
             params['table'] = table
         return params
+
+    def get_domain(self, type_hints=None, guess_values=False):
+        fields = self._get_fields(self.table_name, guess_values=guess_values)
+        return self.domain_from_fields(fields, type_hints)
 
     def domain_from_fields(self, fields, type_hints=None):
         """:fields: tuple(field_name, field_type, field_expression, values)"""
