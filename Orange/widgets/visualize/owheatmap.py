@@ -12,6 +12,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, QRectF, QPointF
 
 import Orange.data
+from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
 from Orange.feature.discretization import EqualWidth, _discretized_var
 
@@ -110,13 +111,17 @@ def lod_from_transform(T):
 class DensityPatch(pg.GraphicsObject):
     Rect, RoundRect, Circle = Rect, RoundRect, Circle
 
-    def __init__(self, root=None, cell_size=10, cell_shape=Rect, palette=None):
+    Linear, Sqrt, Log = 1, 2, 3
+
+    def __init__(self, root=None, cell_size=10, cell_shape=Rect,
+                 color_scale=Sqrt, palette=None):
         super().__init__()
         self.setFlag(QtGui.QGraphicsItem.ItemUsesExtendedStyleOption, True)
         self._root = root
         self._cache = {}
         self._cell_size = cell_size
         self._cell_shape = cell_shape
+        self._color_scale = color_scale
         self._palette = palette
 
     def boundingRect(self):
@@ -151,6 +156,14 @@ class DensityPatch(pg.GraphicsObject):
     def cell_size(self):
         return self._cell_size
 
+    def set_color_scale(self, scale):
+        if self._color_scale != scale:
+            self._color_scale = scale
+            self.update()
+
+    def color_scale(self):
+        return self._color_scale
+
     def paint(self, painter, option, widget):
         root = self._root
         if root is None:
@@ -179,8 +192,25 @@ class DensityPatch(pg.GraphicsObject):
 
         if (p, cell_shape, cell_size) not in self._cache:
             rs_root = resample(root, 2 ** p)
+            rs_max = max_contingency(rs_root)
+
+            def log_scale(ctng):
+                log_max = np.log(rs_max + 1)
+                log_ctng = np.log(ctng + 1)
+                return log_ctng / log_max
+
+            def sqrt_scale(ctng):
+                sqrt_max = np.sqrt(rs_max)
+                sqrt_ctng = np.sqrt(ctng)
+                return sqrt_ctng / (sqrt_max or 1)
+
+            def lin_scale(ctng):
+                return ctng / (rs_max or 1)
+
+            scale = {self.Linear: lin_scale, self.Sqrt: sqrt_scale,
+                     self.Log: log_scale}
             patch = Patch_create(rs_root, palette=self._palette,
-#                                  scale=cscale,
+                                 scale=scale[self._color_scale],
                                  shape=cell_shape)
             self._cache[p, cell_shape, cell_size] = patch
         else:
@@ -347,6 +377,13 @@ class OWHeatMap(widget.OWWidget):
     y_var_index = settings.Setting(1)
     z_var_index = settings.Setting(0)
     selected_z_values = settings.Setting([])
+    color_scale = settings.Setting(1)
+    sample_level = settings.Setting(0)
+
+    sample_percentages = []
+    sample_percentages_captions = []
+    sample_times = [0.1, 0.5, 3, 5, 20, 40, 80]
+    sample_times_captions = ['0.1s', '1s', '5s', '10s', '30s', '1min', '2min']
 
     use_cache = settings.Setting(True)
 
@@ -366,6 +403,15 @@ class OWHeatMap(widget.OWWidget):
         self._cache = {}
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
+
+        self.sampling_box = box = gui.widgetBox(self.controlArea, "Sampling")
+        sampling_options =\
+            self.sample_times_captions + self.sample_percentages_captions
+        gui.comboBox(box, self, 'sample_level',
+                     items=sampling_options,
+                     callback=self.update_sample)
+
+        gui.button(box, self, "Sharpen", self.sharpen)
 
         box = gui.widgetBox(self.controlArea, "Input")
 
@@ -392,14 +438,20 @@ class OWHeatMap(widget.OWWidget):
             callback=self._on_z_var_changed)
         self.comboBoxClassvars.setModel(self.z_var_model)
 
-        box = gui.widgetBox(box, 'Colors displayed')
-        box.setFlat(True)
+        box1 = gui.widgetBox(box, 'Colors displayed', margin=0)
+        box1.setFlat(True)
 
         self.z_values_view = gui.listBox(
-            box, self, "selected_z_values", "z_values",
+            box1, self, "selected_z_values", "z_values",
             callback=self._on_z_values_selection_changed,
-            selectionMode=QtGui.QListView.MultiSelection
+            selectionMode=QtGui.QListView.MultiSelection,
+            addSpace=False
         )
+        box1 = gui.widgetBox(box, "Color Scale", margin=0)
+        box1.setFlat(True)
+        gui.comboBox(box1, self, "color_scale",
+                     items=["Linear", "Square root", "Logarithmic"],
+                     callback=self._on_color_scale_changed)
 
         self.mouseBehaviourBox = gui.radioButtons(
             self.controlArea, self, value='mouse_mode',
@@ -407,9 +459,6 @@ class OWHeatMap(widget.OWWidget):
             box='Mouse left button behavior',
             callback=self._update_mouse_mode
         )
-
-        box = gui.widgetBox(self.controlArea, box='Display')
-        gui.button(box, self, "Sharpen", self.sharpen)
 
         gui.rubber(self.controlArea)
 
@@ -448,8 +497,40 @@ class OWHeatMap(widget.OWWidget):
         self.closeContext()
         self.clear()
 
-        self.dataset = dataset
+        if isinstance(dataset, SqlTable):
+            self.original_data = dataset
+            self.sample_level = 0
+            self.sampling_box.setVisible(True)
 
+            self.update_sample()
+        else:
+            self.dataset = dataset
+            self.sampling_box.setVisible(False)
+            self.set_sampled_data(self.dataset)
+
+    def update_sample(self):
+        self.clear()
+
+        if self.sample_level < len(self.sample_times):
+            sample_type = 'time'
+            level = self.sample_times[self.sample_level]
+        else:
+            sample_type = 'percentage'
+            level = self.sample_level - len(self.sample_times)
+            level = self.sample_percentages[level]
+
+        if sample_type == 'time':
+            self.dataset = \
+                self.original_data.sample_time(level, no_cache=True)
+        else:
+            if 0 < level < 100:
+                self.dataset = \
+                    self.original_data.sample_percentage(level, no_cache=True)
+            if level >= 100:
+                self.dataset = self.original_data
+        self.set_sampled_data(self.dataset)
+
+    def set_sampled_data(self, dataset):
         if dataset is not None:
             domain = dataset.domain
             cvars = list(filter(is_continuous, domain.variables))
@@ -481,8 +562,8 @@ class OWHeatMap(widget.OWWidget):
                     item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
 
             self.labelDataInput.setText(
-                'Data set: %s\nInstances: %d'
-                % (getattr(self.dataset, "name", "untitled"), len(dataset))
+                'Data set: %s'
+                % (getattr(self.dataset, "name", "untitled"),)
             )
 
             self.setup_plot()
@@ -517,7 +598,11 @@ class OWHeatMap(widget.OWWidget):
 
     def _on_z_values_selection_changed(self):
         if self._displayed_root is not None:
-            self.update_map(self._displayed_root, )
+            self.update_map(self._displayed_root)
+
+    def _on_color_scale_changed(self):
+        if self._displayed_root is not None:
+            self.update_map(self._displayed_root)
 
     def setup_plot(self):
         """Setup the density map plot"""
@@ -615,6 +700,7 @@ class OWHeatMap(widget.OWWidget):
         self._item = item = DensityPatch(
             root, cell_size=10,
             cell_shape=DensityPatch.Rect,
+            color_scale=self.color_scale + 1,
             palette=palette
         )
         self.plot.addItem(item)
@@ -1128,12 +1214,14 @@ def create_image(contingencies, palette=None, scale=None):
 #     import scipy.ndimage
 
     if scale is None:
-        scale = contingencies.max()
+        scale = lambda c: c / (contingencies.max() or 1)
 
-    if scale > 0:
-        P = contingencies / scale
-    else:
-        P = contingencies
+    P = scale(contingencies)
+
+#     if scale > 0:
+#         P = contingencies / scale
+#     else:
+#         P = contingencies
 
 #     nbins = node.xbins.shape[0] - 1
 #     smoothing = 32
@@ -1154,7 +1242,9 @@ def create_image(contingencies, palette=None, scale=None):
         argmax = np.argmax(P, axis=2)
         irow, icol = np.indices(argmax.shape)
         P_max = P[irow, icol, argmax]
-#         P_max /= P_max.max()
+        positive = P_max > 0
+        P_max = np.where(positive, P_max * 0.95 + 0.05, 0.0)
+
         colors = 255 - colors[argmax.ravel()]
 
         # XXX: Non linear intensity scaling
@@ -1164,6 +1254,8 @@ def create_image(contingencies, palette=None, scale=None):
     elif P.ndim == 2:
         palette = colorpalette.ColorPaletteBW()
         mix = P
+        positive = mix > 0
+        mix = np.where(positive, mix * 0.99 + 0.01, 0.0)
 
 #         mix = scipy.ndimage.filters.gaussian_filter(
 #             mix, bandwidth, mode="constant")

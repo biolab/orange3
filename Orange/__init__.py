@@ -31,6 +31,7 @@ def _import(name):
 
 
 _import(".data")
+_import(".distance")
 _import(".feature")
 _import(".feature.discretization")
 _import(".data.discretization")

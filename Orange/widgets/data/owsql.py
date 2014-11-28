@@ -2,11 +2,16 @@ import sys
 
 import psycopg2
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QApplication, QCursor, QMessageBox
 
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+
+
+LARGE_TABLE = 100000
 
 
 class OWSql(widget.OWWidget):
@@ -181,7 +186,37 @@ class OWSql(widget.OWWidget):
                          user=self.username,
                          password=self.password,
                          table=self.table,
-                         guess_values=self.guess_values)
+                         guess_values=False)
+        sample = False
+        from datetime import datetime
+        if table.approx_len() > LARGE_TABLE and self.guess_values:
+            confirm = QMessageBox(self)
+            confirm.setIcon(QMessageBox.Warning)
+            confirm.setText("Attribute discovery might take "
+                            "a long time on large tables.\n"
+                            "Do you want to auto discover attributes?")
+            confirm.addButton("Yes", QMessageBox.YesRole)
+            no_button = confirm.addButton("No", QMessageBox.NoRole)
+            sample_button = confirm.addButton("Yes, on a sample",
+                                              QMessageBox.YesRole)
+            confirm.exec()
+            if confirm.clickedButton() == no_button:
+                self.guess_values = False
+            elif confirm.clickedButton() == sample_button:
+                sample = True
+
+        if self.guess_values:
+            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            if sample:
+                s = table.sample_time(1)
+                domain = s.get_domain(guess_values=True)
+                self.warning(
+                    1, "Domain was generated from a sample of the table.")
+            else:
+                domain = table.get_domain(guess_values=True)
+            QApplication.restoreOverrideCursor()
+            table.domain = domain
+
         self.send("Data", table)
 
     def execute_sql(self):

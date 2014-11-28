@@ -20,4 +20,4 @@ __pycache__
 .project
 .pydevproject
 .settings/*
-
+.DS_Store

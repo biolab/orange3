@@ -1,5 +1,7 @@
 from importlib import import_module
 
+from .distmatrix import DistMatrix
+
 def import_late_warning(name):
     try:
         return import_module(name)
