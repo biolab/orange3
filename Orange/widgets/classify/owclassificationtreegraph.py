@@ -8,10 +8,13 @@
 from owtreeviewer2d import *
 # import OWColorPalette
 from Orange.widgets.utils.plot import OWPalette as OWColorPalette
+from Orange.classification.tree import ClassificationTreeLearner, ClassificationTreeClassifier
+from Orange.data.table import Table
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.widget import OWWidget as OWBaseWidget
-from numpy import argmax
+from numpy import argmax, zeros
+
 
 class PieChart(QGraphicsRectItem):
     def __init__(self, dist, r, parent, scene):
@@ -52,15 +55,19 @@ class ClassificationTreeNode(GraphicsNode):
         self.i = i
         self.parent = parent
         self.pie = PieChart(self.get_distribution(), 20, self, scene)
-        # self.majorityClass, self.majorityCount = max(self.tree.distribution.items(), key=lambda (key, val): val)
         fm = QFontMetrics(self.document().defaultFont())
         self.attr_text_w = fm.width(str(self.attribute() if self.attribute() else ""))
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
 
     def get_distribution(self):
-        s = 1.0 * sum([v for _, v in self.distribution.items()])
-        return [v/s for k, v in sorted(self.distribution.items(), key=lambda e: e[0])]
+        """
+        :return: Distribution of class values.
+        """
+        d = zeros((self.tree.value.shape[2], ), dtype="float")
+        for k, v in self.distribution.items():
+            d[k] = v
+        return list(d / d.sum())
 
 
     def num_nodes(self):
@@ -85,9 +92,16 @@ class ClassificationTreeNode(GraphicsNode):
         return s
 
 
+    def num_instances(self):
+        """
+        :return: Number of instances in a particular node.
+        """
+        return self.tree.n_node_samples[self.i]
+
+
     def num_leaves(self, i=0):
         """
-            :return: Number of leaves below particular node.
+        :return: Number of leaves below a particular node.
         """
         return self.num_leavesw(i = self.i)
 
@@ -98,7 +112,6 @@ class ClassificationTreeNode(GraphicsNode):
         """
         s = 0
         if self.tree.children_left[i] < 0 and self.tree.children_right[i] < 0:
-            # Node is leaf
             return 1
         if self.tree.children_left[i] > 0:
             s += self.num_leavesw(i = self.tree.children_left[i])
@@ -106,33 +119,58 @@ class ClassificationTreeNode(GraphicsNode):
             s += self.num_leavesw(i = self.tree.children_right[i])
         return s
 
+
+    def split_condition(self):
+        """
+        :return: split condition to reach a particular node.
+        """
+        if self.i> 0:  # Node is not root
+            sign = "<=" if self.tree.children_left[self.parent.i] == self.i else ">"
+            thresh = self.tree.threshold[self.parent.i]
+            return "%s %f" % (sign, thresh)
+        else:
+            return ""
+
+
     def rule(self):
         """
         :return:
             Rule to reach node
+            Rules are represented as list is tuples (attribute index, sign, threshold)
         """
         # TODO: this is easily extended to Classification Rules-compatible form
-        return self.rulew(i=self.i, first=True)
+        return self.rulew(i=self.i)
 
 
-    def rulew(self, i=0, first=False):
+    def rulew(self, i=0):
         """
         :param i:
             Index of current node.
         :return:
             Rule to reach node i.
+            Rules are represented as list is tuples (attribute index, sign, threshold)
         """
         if i > 0:
-            sign = "&lt;=" if self.tree.children_left[self.parent.i] == i else "&gt;"
+            sign = "<=" if self.tree.children_left[self.parent.i] == i else ">"
             thresh = self.tree.threshold[self.parent.i]
             attr = self.parent.attribute()
             pr = self.parent.rule()
-            return (pr + " AND " if pr else "") + "%s %s %f" % (attr, sign, thresh )
+            pr.append((attr, sign, thresh))
+            return pr
         else:
-            return None
+            return []
+
+    def is_leaf(self):
+        """
+        :return: Node is leaf
+        """
+        return self.tree.children_left[self.i] < 0 and self.tree.children_right[self.i] < 0
 
     def attribute(self):
-        return "feature_" + str(self.attributew(i=self.i))
+        """
+        :return: Node attribute index.
+        """
+        return self.attributew(i=self.i)
 
     def attributew(self, i=0):
         """
@@ -203,7 +241,9 @@ class ClassificationTreeNode(GraphicsNode):
             painter.drawRoundedRect(self.boundingRect().adjusted(-2, 1, -1, -1), 10, 10)#self.borderRadius, self.borderRadius)
             painter.restore()
         painter.setFont(self.document().defaultFont())
-        painter.drawText(QPointF(0, -self.line_descent), str(self.attribute()) if self.attribute() else "")
+        # painter.drawText(QPointF(0, -self.line_descent), str(self.attribute()) if self.attribute() else "")
+        draw_text = str(self.split_condition())
+        painter.drawText(QPointF(0, -self.line_descent), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
         rect = self.rect()
@@ -223,25 +263,40 @@ BodyColor_Default = QColor(255, 225, 10)
 BodyCasesColor_Default = QColor(Qt.blue) #QColor(0, 0, 128)
 
 class OWClassificationTreeGraph(OWTreeViewer2D):
-    settingsList = OWTreeViewer2D.settingsList+['ShowPies', "colorSettings", "selectedColorSettingsIndex"]
+    name = "Classification Tree Viewer"
+    description = "Classification Tree Viewer"
+    icon = "icons/ClassificationTree.svg"
+
+    # settingsList = ["ZoomAutoRefresh", "AutoArrange", "ToolTipsEnabled",
+    #                 "Zoom", "VSpacing", "HSpacing", "MaxTreeDepth", "MaxTreeDepthB",
+    #                 "LineWidth", "LineWidthMethod",
+    #                 "MaxNodeWidth", "LimitNodeWidth", "NodeInfo", "NodeColorMethod",
+    #                 "TruncateText"]
+
+    # inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
+    # outputs = [("Examples", Table)]
+
+
+    settingsList = OWTreeViewer2D.settingsList + ['ShowPies', "colorSettings", "selectedColorSettingsIndex"]
     # contextHandlers = {"": DomainContextHandler("", ["TargetClassIndex"], matchValues=1)}
     contextHandlers = {"": DomainContextHandler("", ["TargetClassIndex"])}
     
     nodeColorOpts = ['Default', 'Instances in node', 'Majority class probability', 'Target class probability', 'Target class distribution']
     nodeInfoButtons = ['Majority class', 'Majority class probability', 'Target class probability', 'Number of instances']
-    
+
     def __init__(self, parent=None, signalManager = None, name='ClassificationTreeViewer2D'):
+        OWTreeViewer2D.__init__(self, parent, signalManager, name)
         self.ShowPies=1
         self.TargetClassIndex=0
         self.colorSettings = None
         self.selectedColorSettingsIndex = 0
         self.showNodeInfoText = False
         self.NodeColorMethod = 2
-        
-        OWTreeViewer2D.__init__(self, parent, signalManager, name)
+        self.colorMethodBox = None
 
-        # self.inputs = [("Classification Tree", Orange.classification.tree.TreeClassifier, self.ctree)]
-        self.outputs = [("Data", ExampleTable)]
+
+        # self.inputs = [("Classification Tree", ClassificationTreeClassifier, self.ctree)]
+        # self.outputs = [("Data", ExampleTable)]
 
         self.scene = TreeGraphicsScene(self)
         self.sceneView = TreeGraphicsView(self, self.scene)
@@ -264,24 +319,25 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         
         colorbox = OWGUI.widgetBox(self.NodeTab, "Node Color", addSpace=True)
         
-        OWGUI.comboBox(colorbox, self, 'NodeColorMethod', items=self.nodeColorOpts,
+        self.colorMethodBox = OWGUI.comboBox(colorbox, self, 'NodeColorMethod', items=self.nodeColorOpts,
                                 callback=self.toggleNodeColor)
-        self.targetCombo=OWGUI.comboBox(colorbox,self, "TargetClassIndex", orientation=0, items=[],label="Target class",callback=self.toggleTargetClass)
+        self.targetCombo = OWGUI.comboBox(colorbox,self, "TargetClassIndex", orientation=0, items=[],
+                                        label="Target class",callback=self.toggleTargetClass)
 
         OWGUI.checkBox(colorbox, self, 'ShowPies', 'Show distribution pie charts', tooltip='Show pie graph with class distribution?', callback=self.togglePies)
         OWGUI.separator(colorbox)
-        # OWGUI.button(colorbox, self, "Set Colors", callback=self.setColors, debuggingEnabled = 0)
+        OWGUI.button(colorbox, self, "Set Colors", callback=self.setColors)
 
         nodeInfoBox = OWGUI.widgetBox(self.NodeTab, "Show Info")
         nodeInfoSettings = ['maj', 'majp', 'tarp', 'inst']
         self.NodeInfoW = []; self.dummy = 0
         for i in range(len(self.nodeInfoButtons)):
             setattr(self, nodeInfoSettings[i], i in self.NodeInfo)
-            # w = OWGUI.checkBox(nodeInfoBox, self, nodeInfoSettings[i], \
-            #                               self.nodeInfoButtons[i], callback=self.setNodeInfo, getwidget=1, id=i)
-            # self.NodeInfoW.append(w)
+            w = OWGUI.checkBox(nodeInfoBox, self, nodeInfoSettings[i], \
+                self.nodeInfoButtons[i], callback=self.setNodeInfo, getwidget=1)
+            self.NodeInfoW.append(w)
 
-#        OWGUI.button(self.controlArea, self, "Save as", callback=self.saveGraph, debuggingEnabled = 0)
+        # OWGUI.button(self.controlArea, self, "Save as", callback=self.saveGraph)
         self.NodeInfoSorted=list(self.NodeInfo)
         self.NodeInfoSorted.sort()
         
@@ -313,6 +369,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.selectedColorSettingsIndex = dlg.selectedSchemaIndex
             self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
             self.scene.update()
+            self.toggleNodeColor()
 
     def createColorDialog(self):
         c = ColorPaletteDlg(self, "Color Palette")
@@ -334,39 +391,21 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.fixPos(self.rootNode, 10, 10)
         
     def updateNodeInfo(self, node, flags=31):
-        fix = lambda str: str.replace(">", "&gt;").replace("<", "&lt;")
-        text = ""
-        
-#        text += "%s<br>" % fix(node.attr if node.attr else "")
-            
         lines = []
         if flags & 1:
-            start = "Majority class: " if self.showNodeInfoText else "" 
-#            lines += [start + "<font color=%s>%s</font>" % (self.scene.colorPalette[node.tree.examples.domain.classVar.values.index(node.majorityClass)].name(), fix(node.majorityClass))]
-            # lines += [start + fix(node.majorityClass)]
+            lines.append(self.domain.class_vars[0].values[node.majority()])
         if flags & 2:
-            start = "Majority class probability: " if self.showNodeInfoText else "" 
-            # lines += [start + "%.1f" % (100.0 * float(node.majorityCount) / node.tree.distribution.abs)]
+            lines.append("%.3f" % node.get_distribution()[node.majority()])
         if flags & 4:
-            start = "Target class probability: "  if self.showNodeInfoText else "" 
-            # lines += [start + "%.1f" % (100.0 * float(node.tree.distribution[self.TargetClassIndex]) / node.tree.distribution.abs)]
+            lines.append("%.3f" % node.get_distribution()[self.TargetClassIndex])
         if flags & 8:
-            start = "Instances: " if self.showNodeInfoText else "" 
-            # lines += [start + "%i" % node.tree.distribution.cases]
-        text += "<br>".join(lines)
-        # if node.tree.branchSelector:
-            # text += "<hr>" + "%s" % fix(node.tree.branchSelector.classVar.name)
-            # pass
-        # else:
-            # text += "<hr>" + fix(node.majorityClass)
-        #    pass
-
-
-        # Debug
-        text = "<p>numNodes: %d</p>" % node.num_nodes()
-        text += "<p>numLeaves: %d</p>" % node.num_leaves()
-        text += "<p>rule: %s</p>  " % node.rule()
-        text += "<p>dist: %s</p>  " % str(node.get_distribution())
+            lines.append(str(node.num_instances()))
+        text = "<br>".join(lines)
+        text += "<hr>"
+        if node.is_leaf():
+            text += self.domain.class_vars[0].values[node.majority()]
+        else:
+            text += self.domain.attributes[node.attribute()].name
         node.setHtml(text)
 
     def activateLoadedSettings(self):
@@ -381,7 +420,9 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.update()
         self.sceneView.repaint()
 
+
     def toggleNodeColor(self):
+        self.NodeColorMethod = self.nodeColorOpts.index(self.colorMethodBox.currentText())
         palette = self.scene.colorPalette
         for node in self.scene.nodes():
             # dist = node.tree.distribution
@@ -390,8 +431,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
                 color = BodyColor_Default
             elif self.NodeColorMethod == 1:
                 # number of instances in node
-                all_cases = self.tree.distribution.cases
-                light = 200 - 100 * dist.cases / (all_cases or 1)
+                all_cases = self.rootNode.num_nodes()
+                light = 200 - 100 * node.num_nodes() / (all_cases or 1)
                 color = BodyCasesColor_Default.light(light)
             elif self.NodeColorMethod == 2:
                 # majority class probability
@@ -401,20 +442,19 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
                 color = palette[int(modus)].light(light)
             elif self.NodeColorMethod == 3:
                 # target class probability
-                modus = node.majority()
-                p = node.get_distribution()[modus] / sum(node.get_distribution())
+                p = node.get_distribution()[self.TargetClassIndex] / sum(node.get_distribution())
                 light = 200 - 100 * p
                 color = palette[self.TargetClassIndex].light(light)
             elif self.NodeColorMethod == 4:
                 # target class distribution
-                # all_target = self.tree.distribution[self.TargetClassIndex] or 1
-                # light = 200 - 100 * dist[self.TargetClassIndex] / all_target
+                all_target = int(self.rootNode.get_distribution()[self.TargetClassIndex] * self.rootNode.num_instances())
+                light = 200 - 100 * (node.num_instances() * node.get_distribution()[self.TargetClassIndex]) / all_target
                 color = palette[self.TargetClassIndex].light(light)
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 
     def toggleTargetClass(self):
-        if self.NodeColorMethod in [3,4]:
+        if self.NodeColorMethod in [3, 4]:
             self.toggleNodeColor()
         if self.tarp:
             self.setNodeInfo()
@@ -432,25 +472,27 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             :param tree:
             :return:
         """
-
         self.clear()
         if not clf:
             self.centerRootButton.setDisabled(1)
             self.centerNodeButton.setDisabled(0)
             self.infoa.setText('No tree.')
             self.infob.setText('')
-            self.tree=None
+            self.tree = None
             self.rootNode = None
         else:
             self.infoa.setText('Tree found on input.')
             self.tree = clf.clf.tree_
+            self.domain = clf.domain
+            for name in self.domain.class_vars[0].values:
+                self.targetCombo.addItem(name)
             # if hasattr(self.scene, "colorPalette"):
             #   self.scene.colorPalette.setNumberOfColors(len(self.tree.distribution))
-#            self.scene.setDataModel(GraphicsTree(self.tree))
+            #            self.scene.setDataModel(GraphicsTree(self.tree))
             self.rootNode = self.walkcreate(self.tree, None, distr=clf.distr)
             self.infoa.setText('Number of nodes: ' + str(self.rootNode.num_nodes()))
             self.infob.setText('Number of leaves: ' + str(self.rootNode.num_leaves()))
-#            self.scene.addItem(self.rootNode)
+            #            self.scene.addItem(self.rootNode)
             self.scene.fixPos(self.rootNode, self.HSpacing,self.VSpacing)
             self.activateLoadedSettings()
             self.sceneView.centerOn(self.rootNode.x(), self.rootNode.y())
@@ -464,7 +506,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     def walkcreate(self, tree, parent=None, level=0, i=0, distr=None):
         """
         Recursively draw tree structure from Scikit learn Tree object.
-        This method need to call ClassificationTreeNode to dispaly nodes and pies.
+        This method need to call ClassificationTreeNode to display nodes and pies.
 
         :param tree:
         :param parent:
@@ -489,17 +531,19 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         return node
 
     def nodeToolTip(self, node):
-        text = node.rule()
+        if node.i > 0:
+            text = " AND ".join("%s %s %.3f" % (self.domain.attributes[a].name, s, t) for a, s, t in node.rule())
+        else:
+            text = "Root node"
         return text
 
 if __name__=="__main__":
-    from sklearn.datasets import load_iris
-    from Orange.classification.tree import ClassificationTreeLearner
     a = QApplication(sys.argv)
     ow = OWClassificationTreeGraph()
-    iris = load_iris()
-    model = ClassificationTreeLearner(max_depth=3)
-    clf = model.fit(iris.data, iris.target, None)
+    import Orange.data.table as table
+    data = table.Table(r"../datasets/iris.tab")
+    learner = ClassificationTreeLearner(max_depth=3)
+    clf = learner(data)
     ow.ctree(clf)
     ow.show()
     a.exec_()
