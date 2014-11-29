@@ -79,7 +79,7 @@ class SqlTable(table.Table):
 
         if self.connection_pool is None:
             self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
-                1, 6, **connection_args)
+                1, 16, **connection_args)
         self.host = host
         self.database = database
 
