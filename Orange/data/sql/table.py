@@ -20,7 +20,8 @@ from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.filter import CustomFilterSql
 from Orange.data.sql.parser import SqlParser
 
-
+LARGE_TABLE = 100000
+DEFAULT_SAMPLE_TIME = 1
 
 class SqlTable(table.Table):
     connection_pool = None
@@ -419,6 +420,9 @@ class SqlTable(table.Table):
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_var=False):
+        if self.approx_len() > LARGE_TABLE:
+            self = self.sample_time(DEFAULT_SAMPLE_TIME)
+
         if columns is not None:
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
@@ -449,6 +453,9 @@ class SqlTable(table.Table):
         return stats
 
     def _compute_distributions(self, columns=None):
+        if self.approx_len() > LARGE_TABLE:
+            self = self.sample_time(DEFAULT_SAMPLE_TIME)
+
         if columns is not None:
             columns = [self.domain.var_from_domain(col) for col in columns]
         else:
@@ -473,6 +480,9 @@ class SqlTable(table.Table):
         return dists
 
     def _compute_contingency(self, col_vars=None, row_var=None):
+        if self.approx_len() > LARGE_TABLE:
+            self = self.sample_time(DEFAULT_SAMPLE_TIME)
+
         if col_vars is None:
             col_vars = range(len(self.domain.variables))
         if len(col_vars) != 1:
@@ -717,6 +727,9 @@ class SqlTable(table.Table):
         finally:
             connection.commit()
             self.connection_pool.putconn(connection)
+
+    def checksum(self, include_metas=True):
+        return np.nan
 
 
 class SqlRowInstance(instance.Instance):

@@ -199,7 +199,7 @@ class OWBoxPlot(widget.OWWidget):
     # noinspection PyTypeChecker
     def data(self, dataset):
         if dataset is not None and (
-                not len(dataset) or not len(dataset.domain)):
+                not bool(dataset) or not len(dataset.domain)):
             dataset = None
         self.closeContext()
         self.ddataset = dataset

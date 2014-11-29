@@ -7,7 +7,7 @@ from PyQt4.QtGui import QApplication, QColor
 
 import Orange
 from Orange.data import Table, Variable, DiscreteVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets import gui
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
@@ -181,7 +181,10 @@ class OWScatterPlot(OWWidget):
         self.graph.rescale_data()
         self.major_graph_update()
 
-    def set_data(self, data: Orange.data.Table):
+    def set_data(self, data):
+        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
+            data = data.sample_time(DEFAULT_SAMPLE_TIME)
+
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if self.data and data and self.data.checksum() == data.checksum():

@@ -35,8 +35,7 @@ class OWSelectRows(widget.OWWidget):
                              "is greater than", "is at least",
                              "is between", "is outside",
                              "is defined"],
-        DiscreteVariable: ["is", "is not", "is one of", "is not one of",
-                           "is defined"],
+        DiscreteVariable: ["is", "is not", "is defined"],
         StringVariable: ["equals", "is not",
                          "is before", "is equal or before",
                          "is after", "is equal or after",
@@ -314,20 +313,17 @@ class OWSelectRows(widget.OWWidget):
                     filter = data_filter.FilterString(
                         attr_index, oper, *[str(v) for v in values])
                 else:
-                    if oper in [2, 3]:
-                        raise NotImplementedError(
-                            "subset filters for discrete attributes are not "
-                            "implemented yet")
-                    elif oper == 4:
+                    if oper == 2:
                         f_values = None
                     else:
                         if not values or not values[0]:
                             continue
+                        values = [attr.values[i-1] for i in values]
                         if oper == 0:
-                            f_values = {values[0] - 1}
+                            f_values = {values[0]}
                         else:
-                            f_values = set(range(len(attr.values)))
-                            f_values.remove(values[0] - 1)
+                            f_values = set(attr.values)
+                            f_values.remove(values[0])
                     filter = data_filter.FilterDiscrete(attr_index, f_values)
                 conditions.append(filter)
 
