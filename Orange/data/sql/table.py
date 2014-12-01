@@ -9,6 +9,7 @@ from urllib import parse
 
 import numpy as np
 import sys
+from psycopg2._psycopg import cursor
 
 import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
@@ -18,7 +19,6 @@ from .. import domain, variable, value, table, instance, filter,\
     DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.filter import CustomFilterSql
-from Orange.data.sql.parser import SqlParser
 
 LARGE_TABLE = 100000
 DEFAULT_SAMPLE_TIME = 1
@@ -84,7 +84,10 @@ class SqlTable(table.Table):
         self.database = database
 
         if table is not None:
-            self.table_name = self.quote_identifier(table)
+            if not table.startswith("("):
+                self.table_name = self.quote_identifier(table)
+            else:
+                self.table_name = table
             self.domain = self.get_domain(type_hints, guess_values)
             self.name = table
 
@@ -115,16 +118,9 @@ class SqlTable(table.Table):
         Class vars and metas can be specified as a list of column names in
         __class_vars__ and __metas__ keys in type_hints dict.
         """
-        table = cls(uri, host, database, user, password, schema, **kwargs)
-        p = SqlParser(sql)
-        conn = table.connection_pool.getconn()
-        table.table_name = p.from_
-        table.domain = table.domain_from_fields(
-            p.fields_with_types(conn),
-            type_hints=type_hints)
-        table.connection_pool.putconn(conn)
-        if p.where:
-            table.row_filters = (CustomFilterSql(p.where), )
+        sql = "(\n%s) as my_table" % sql.strip("; ")
+        table = cls(uri, host, database, user, password, schema, table=sql,
+                    type_hints=type_hints, **kwargs)
 
         return table
 
@@ -154,84 +150,85 @@ class SqlTable(table.Table):
         return params
 
     def get_domain(self, type_hints=None, guess_values=False):
-        fields = self._get_fields(self.table_name, guess_values=guess_values)
-        return self.domain_from_fields(fields, type_hints)
+        if type_hints is None:
+            type_hints = domain.Domain([])
 
-    def domain_from_fields(self, fields, type_hints=None):
-        """:fields: tuple(field_name, field_type, field_expression, values)"""
-        attributes, class_vars, metas = [], [], []
-        suggested_metas, suggested_class_vars = [],[]
-        if type_hints != None:
-            suggested_metas = [ f.name for f in type_hints.metas ]
-            suggested_class_vars = [ f.name for f in type_hints.class_vars ]
+        fields = []
+        query = "SELECT * FROM %s LIMIT 0" % self.table_name
+        with self._execute_sql_query(query) as cur:
+            assert isinstance(cur, cursor)
+            for col in cur.description:
+                fields.append(col)
 
-        for name, field_type, field_expr, values in fields:
-            var = self.var_from_field(name, field_type, field_expr, values,
-                                      type_hints)
+        def add_to_sql(var, field_name):
+            if isinstance(var, ContinuousVariable):
+                var.to_sql = lambda: "({})::double precision".format(
+                    self.quote_identifier(field_name))
+            else:
+                var.to_sql = lambda: self.quote_identifier(field_name)
 
-            if var.name in suggested_metas or \
-                    isinstance(var, variable.StringVariable):
+        attrs, class_vars, metas = [], [], []
+        for field_name, type_code, *rest in fields:
+            if field_name in type_hints:
+                var = type_hints[field_name]
+            else:
+                var = self.get_variable(field_name, type_code, guess_values)
+            add_to_sql(var, field_name)
+
+            if isinstance(var, StringVariable):
                 metas.append(var)
-            elif var.name in suggested_class_vars:
-                class_vars.append(var)
             else:
-                attributes.append(var)
-
-        return domain.Domain(attributes, class_vars, metas=metas)
-
-    @staticmethod
-    def var_from_field(name, field_type, field_expr, values, type_hints):
-        if type_hints != None and name in type_hints:
-            var = type_hints[name]
-        else:
-            # always continuous
-            if any(t in field_type for t in
-                   ('real', 'float', 'double', 'numeric', 'serial')):
-                var = variable.ContinuousVariable(name=name)
-            # continuous or discrete
-            elif 'int' in field_type:
-                if values:
-                    values = [str(val) for val in values]
-                    var = variable.DiscreteVariable(name=name, values=values)
-                    var.has_numeric_values = True
+                if var in type_hints.class_vars:
+                    class_vars.append(var)
+                elif var in type_hints.metas:
+                    metas.append(var)
                 else:
-                    var = variable.ContinuousVariable(name=name)
-            # always discrete
-            elif 'boolean' in field_type:
-                var = variable.DiscreteVariable(name=name,
-                                                values=['False', 'True'])
-                var.has_numeric_values = True
-            # discrete or string
-            elif any(t in field_type for t in ('char', 'text')) and values:
-                var = variable.DiscreteVariable(name=name, values=values)
-            else:
-                var = variable.StringVariable(name=name)
-        if isinstance(var, ContinuousVariable):
-            var.to_sql = lambda: "({})::double precision".format(field_expr)
-        else:
-            var.to_sql = lambda: field_expr
-        return var
+                    attrs.append(var)
 
-    def _get_fields(self, table_name, guess_values=False):
-        table_name = self.unquote_identifier(table_name)
-        sql = ["SELECT column_name, data_type",
-               "FROM INFORMATION_SCHEMA.COLUMNS",
-               "WHERE table_name =", self.quote_string(table_name),
-               "ORDER BY ordinal_position"]
-        with self._execute_sql_query(" ".join(sql)) as cur:
-            fields = cur.fetchall()
-        for field, field_type in fields:
-            yield (field, field_type,
-                   self.quote_identifier(field),
-                   self._get_field_values(field, field_type) if guess_values else ())
+        return domain.Domain(attrs, class_vars, metas)
 
-    def _get_field_values(self, field_name, field_type):
-        if any(t in field_type for t in ('int', 'serial', 'char', 'text')):
-            return self._get_distinct_values(field_name)
-        else:
-            return ()
+    def get_variable(self, field_name, type_code, inspect_values=False):
+        FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
+        INT_TYPES = (20, 21, 23)  # bigint, int, smallint
+        CHAR_TYPES = (25, 1042, 1043,)  # text, char, varchar
+        BOOLEAN_TYPES = (16,)  # bool
 
-    def _get_distinct_values(self, field_name):
+        def continous_variable(name):
+            return ContinuousVariable(name=name)
+
+        def discrete_variable(name, values, has_numeric_values=False):
+            var = DiscreteVariable(name=name, values=values)
+            var.has_numeric_values = has_numeric_values
+            var.to_sql = lambda: self.quote_identifier(field_name)
+            return var
+
+        def string_variable(name):
+            var = StringVariable(name=name)
+            var.to_sql = lambda: self.quote_identifier(field_name)
+            return var
+
+        if type_code in FLOATISH_TYPES:
+            return continous_variable(field_name)
+
+        if type_code in INT_TYPES:  # bigint, int, smallint
+            if inspect_values:
+                values = self.get_distinct_values(field_name)
+                if values:
+                    return discrete_variable(field_name, values, True)
+            return continous_variable(field_name)
+
+        if type_code in BOOLEAN_TYPES:
+                return discrete_variable(field_name, ['False', 'True'], True)
+
+        if type_code in CHAR_TYPES:
+            if inspect_values:
+                values = self.get_distinct_values(field_name)
+                if values:
+                    return discrete_variable(field_name, values)
+
+        return string_variable(field_name)
+
+    def get_distinct_values(self, field_name):
         sql = " ".join(["SELECT DISTINCT", self.quote_identifier(field_name),
                         "FROM", self.table_name,
                         "WHERE {} IS NOT NULL".format(

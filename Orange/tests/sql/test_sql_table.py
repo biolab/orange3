@@ -97,16 +97,17 @@ class SqlTableTests(PostgresTest):
 
             self.assertIsInstance(float_attr, ContinuousVariable)
             self.assertEqual(float_attr.name, "col0")
-            self.assertTrue("col0" in float_attr.to_sql())
+            self.assertTrue('"col0"' in float_attr.to_sql())
 
             self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
-            self.assertEqual(discrete_attr.to_sql(), '"col1"')
+            print(discrete_attr.to_sql())
+            self.assertTrue('"col1"' in discrete_attr.to_sql())
             self.assertEqual(discrete_attr.values, ['f', 'm'])
 
             self.assertIsInstance(string_attr, StringVariable)
             self.assertEqual(string_attr.name, "col2")
-            self.assertEqual(string_attr.to_sql(), '"col2"')
+            self.assertTrue('"col2"' in string_attr.to_sql())
 
     def test_len(self):
         with self.sql_table_from_data(zip(self.float_variable(26))) as table:
@@ -152,7 +153,7 @@ class SqlTableTests(PostgresTest):
 
 
     def test_query_all(self):
-        table = sql_table.SqlTable(self.iris_uri)
+        table = sql_table.SqlTable(self.iris_uri, guess_values=True)
         results = list(table)
 
         self.assertEqual(len(results), 150)
@@ -222,7 +223,7 @@ class SqlTableTests(PostgresTest):
                 name="qualitative petal length", values=['<', '>'])], []))
 
         self.assertEqual(len(table), 498)
-        self.assertEqual(list(table[497]), [4.9, 5.1, 1.])
+        self.assertAlmostEqual(list(table[497]), [5.8, 1.2, 0.])
 
     def _mock_attribute(self, attr_name, formula=None):
         if formula is None:
@@ -236,50 +237,6 @@ class SqlTableTests(PostgresTest):
                 return formula
 
         return attr
-
-    def test_get_attributes_from_sql_parse(self):
-        sql = [
-            "SELECT",
-            "a.test AS a_test,",
-            "CASE WHEN a.n = 1 THEN 1",
-            "WHEN a.n = 2 THEN 2",
-            "ELSE 0",
-            "END AS c,",
-            "b.test,",
-            "c.\"another test\"",
-            "FROM",
-            '"table" a',
-            'INNER JOIN "table" b ON a.x = b.x',
-            'CROSS JOIN "table" c ON b.x = c.x',
-            'LEFT OUTER JOIN "table" d on c.x = d.x',
-            'RIGHT OUTER JOIN "table" e on d.x = e.x',
-            'FULL OUTER JOIN "table" f on f.x = e.x',
-            'WHERE',
-            '1 = 1',
-            'GROUP BY',
-            'a.group',
-            'HAVING',
-            'a.haver = 1',
-            'LIMIT',
-            '1',
-            'OFFSET',
-            '1',
-        ]
-
-        p = SqlParser(" ".join(sql))
-        self.assertEqual(
-            p.from_.replace(" ", ""),
-            "".join(sql[9:15]).replace(" ", ""))
-        self.assertEqual(
-            p.where.replace(" ", ""),
-            "".join(sql[16:17]).replace(" ", ""))
-        self.assertEqual(
-            p.sql_without_limit.replace(" ", ""),
-            "".join(sql[:21]).replace(" ", ""))
-
-    def test_raises_on_unsupported_keywords(self):
-        with self.assertRaises(ValueError):
-            SqlParser("SELECT * FROM table FOR UPDATE")
 
     def test_universal_table(self):
         uri, table_name = self.construct_universal_table()
