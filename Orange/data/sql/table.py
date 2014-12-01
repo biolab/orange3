@@ -73,7 +73,7 @@ class SqlTable(table.Table):
         )
         if uri is not None:
             parameters = self.parse_uri(uri)
-            table = parameters.pop("table", None)
+            table = parameters.pop("table", table)
             connection_args.update(parameters)
         connection_args.update(kwargs)
 
