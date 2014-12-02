@@ -89,7 +89,7 @@ class OWSql(widget.OWWidget):
         self.custom_sql.layout().addWidget(self.sqltext)
 
         self.executebtn = gui.button(
-            self.custom_sql, self, 'Execute', callback=self.execute_sql)
+            self.custom_sql, self, 'Execute', callback=self.open_table)
 
         box.layout().addWidget(self.custom_sql)
 
@@ -145,7 +145,7 @@ class OWSql(widget.OWWidget):
 
         cur = self._connection.cursor()
         cur.execute("""SELECT --n.nspname as "Schema",
-                              c.relname as "Name"
+                              c.relname AS "Name"
                        FROM pg_catalog.pg_class c
                   LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                       WHERE c.relkind IN ('r','v','m','S','f','')
@@ -175,17 +175,19 @@ class OWSql(widget.OWWidget):
         if self.tablecombo.currentIndex() <= 0:
             return
 
-        self.table = self.tablecombo.currentText()
+        if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
+            self.table = self.tablecombo.currentText()
+        else:
+            self.table = self.sqltext.toPlainText()
 
-        table = SqlTable(host=self.host,
-                         port=self.port,
-                         database=self.database,
-                         user=self.username,
-                         password=self.password,
-                         table=self.table,
-                         guess_values=False)
+        table = SqlTable(dict(host=self.host,
+                              port=self.port,
+                              database=self.database,
+                              user=self.username,
+                              password=self.password),
+                         self.table,
+                         inspect_values=False)
         sample = False
-
         if table.approx_len() > LARGE_TABLE and self.guess_values:
             confirm = QMessageBox(self)
             confirm.setIcon(QMessageBox.Warning)
@@ -215,18 +217,6 @@ class OWSql(widget.OWWidget):
             table.domain = domain
 
         self.send("Data", table)
-
-    def execute_sql(self):
-        self.sql = self.sqltext.toPlainText()
-        table = SqlTable.from_sql(
-            host=self.host,
-            port=self.port,
-            database=self.database,
-            user=self.username,
-            password=self.password,
-            sql=self.sql)
-        self.send("Data", table)
-
 
 if __name__ == "__main__":
     import os

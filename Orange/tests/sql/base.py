@@ -2,6 +2,7 @@ import contextlib
 import os
 import string
 import unittest
+from urllib import parse
 import uuid
 from Orange.data.sql.table import SqlTable
 
@@ -16,7 +17,7 @@ from Orange.data.sql import table as sql_table
 
 
 def connection_params():
-    return SqlTable.parse_uri(get_dburi())
+    return parse_uri(get_dburi())
 
 
 def get_dburi():
@@ -25,6 +26,31 @@ def get_dburi():
         return dburi
     else:
         return "postgres://localhost/test"
+
+
+def parse_uri(uri):
+    parsed_uri = parse.urlparse(uri)
+    database = parsed_uri.path.strip('/')
+    if "/" in database:
+        database, table = database.split('/', 1)
+    else:
+        table = ""
+
+    params = parse.parse_qs(parsed_uri.query)
+    for key, value in params.items():
+        if len(params[key]) == 1:
+            params[key] = value[0]
+
+    params.update(dict(
+        host=parsed_uri.hostname,
+        port=parsed_uri.port,
+        user=parsed_uri.username,
+        database=database,
+        password=parsed_uri.password,
+    ))
+    if table:
+        params['table'] = table
+    return params
 
 
 def server_version():
@@ -58,7 +84,62 @@ def create_iris():
                     values.append(iris.domain.class_var.values[int(val)])
             cur.execute("""INSERT INTO iris VALUES
             (%s, %s, %s, %s, '%s')""" % tuple(values))
-    return get_dburi() + '/iris'
+    return get_dburi(), 'iris'
+
+
+class ParseUriTests(unittest.TestCase):
+    def test_parses_connection_uri(self):
+        parameters = parse_uri(
+            "sql://user:password@host:7678/database/table")
+
+        self.assertDictContainsSubset(dict(
+            host="host",
+            user="user",
+            password="password",
+            port=7678,
+            database="database",
+            table="table"
+        ), parameters)
+
+    def test_parse_minimal_connection_uri(self):
+        parameters = parse_uri(
+            "sql://host/database/table")
+
+        self.assertDictContainsSubset(
+            dict(host="host", database="database", table="table"),
+            parameters
+        )
+
+    def assertDictContainsSubset(self, subset, dictionary, msg=None):
+        """Checks whether dictionary is a superset of subset.
+
+        This method has been copied from unittest/case.py and undeprecated.
+        """
+        from unittest.case import safe_repr
+
+        missing = []
+        mismatched = []
+        for key, value in subset.items():
+            if key not in dictionary:
+                missing.append(key)
+            elif value != dictionary[key]:
+                mismatched.append('%s, expected: %s, actual: %s' %
+                                  (safe_repr(key), safe_repr(value),
+                                   safe_repr(dictionary[key])))
+
+        if not (missing or mismatched):
+            return
+
+        standardMsg = ''
+        if missing:
+            standardMsg = 'Missing: %s' % ','.join(safe_repr(m) for m in
+                                                   missing)
+        if mismatched:
+            if standardMsg:
+                standardMsg += '; '
+            standardMsg += 'Mismatched values: %s' % ','.join(mismatched)
+
+        self.fail(self._formatMessage(msg, standardMsg))
 
 
 @unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
@@ -67,7 +148,7 @@ class PostgresTest(unittest.TestCase):
     def setUpClass(cls):
         SqlTable.connection_pool = \
             psycopg2.pool.ThreadedConnectionPool(1, 1, **connection_params())
-        cls.iris_uri = create_iris()
+        cls.conn, cls.iris = create_iris()
 
     @classmethod
     def tearDownClass(cls):
@@ -76,16 +157,15 @@ class PostgresTest(unittest.TestCase):
 
     def create_sql_table(self, data, columns=None):
         table_name = self._create_sql_table(data, columns)
-        self.table_name = str(table_name)
-        return get_dburi() + '/' + str(table_name)
+        return connection_params(), table_name
 
     @contextlib.contextmanager
     def sql_table_from_data(self, data, guess_values=True):
         assert SqlTable.connection_pool is not None
 
         table_name = self._create_sql_table(data)
-        yield SqlTable(get_dburi() + '/' \
-            + str(table_name), guess_values=guess_values)
+        yield SqlTable(connection_params(), table_name,
+                       inspect_values=guess_values)
         self.drop_sql_table(table_name)
 
     def _create_sql_table(self, data, sql_column_types=None):
@@ -130,7 +210,7 @@ class PostgresTest(unittest.TestCase):
             cur.execute(insert_sql)
         conn.commit()
         SqlTable.connection_pool.putconn(conn)
-        return table_name
+        return str(table_name)
 
     def _get_column_types(self, data):
         if not data:

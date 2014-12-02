@@ -5,10 +5,8 @@ import functools
 import re
 import threading
 from contextlib import contextmanager
-from urllib import parse
 
 import numpy as np
-import sys
 from psycopg2._psycopg import cursor
 
 import Orange.misc
@@ -18,10 +16,10 @@ psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 from .. import domain, variable, value, table, instance, filter,\
     DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.data.sql import filter as sql_filter
-from Orange.data.sql.filter import CustomFilterSql
 
 LARGE_TABLE = 100000
 DEFAULT_SAMPLE_TIME = 1
+
 
 class SqlTable(table.Table):
     connection_pool = None
@@ -35,119 +33,57 @@ class SqlTable(table.Table):
         return super().__new__(cls)
 
     def __init__(
-            self, uri=None,
-            host=None, database=None, user=None, password=None, schema=None,
-            table=None, type_hints=None, guess_values=False, **kwargs):
+            self, connection_params, table_or_sql,
+            type_hints=None, inspect_values=False):
         """
         Create a new proxy for sql table.
 
-        Database connection parameters can be specified either as a string:
+        To create a new SqlTable, you specify the connection parameters
+        for psycopg2 and the name of the table/sql query used to fetch
+        the data.
 
-            table = SqlTable("user:password@host:port/database/table")
+            table = SqlTable('database_name', 'table_name')
+            table = SqlTable('database_name', 'SELECT * FROM table')
 
-        or using a set of keyword arguments:
+        For complex configurations, you can replace database name with the
+        dictionary of connection parameters, that will be passed to the
+        sql backend (psycopg2).
 
-            table = SqlTable(database="test", table="iris")
+        For the list of all the supported connection parameters see:
+        http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
 
-        All but the database and table parameters are optional. Any additional
-        parameters will be forwarded to the psycopg2 backend.
 
-        If type_hints (an Orange domain) contain a column name, then
-        the variable type from type_hints will be used. If it does not,
-        the variable type is selected based on the column type (double
-        -> ContinuousVariable, everything else -> StringVariable).
-        If guess_values is True, database columns with less that 20
-        different strings will become DiscreteVariables.
+        Data domain is inferred from the columns of the table/query.
 
-        Class vars and metas can be specified as a list of column names in
-        __class_vars__ and __metas__ keys in type_hints dict.
+        The (very quick) default setting is to treat all numeric columns as
+        continuous variables and everything else as (useless) strings.
+
+        By setting the inspect_values parameter to True, you allow us to
+        inspect the column values thus resulting in a better domain.
+        All int/string columns with less than 21 values will be used as
+        discrete features.
+
+        Further more, you can construct your own domain and pass it as the
+        type_hints parameter. Variables from the domain will be used for
+        the columns with the same names and types will be guessed for the
+        rest.
         """
-        assert uri is not None or database is not None
-
-        connection_args = dict(
-            host=host,
-            user=user,
-            password=password,
-            database=database,
-            schema=schema
-        )
-        if uri is not None:
-            parameters = self.parse_uri(uri)
-            table = parameters.pop("table", table)
-            connection_args.update(parameters)
-        connection_args.update(kwargs)
+        if isinstance(connection_params, str):
+            connection_params = dict(database=connection_params)
 
         if self.connection_pool is None:
             self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
-                1, 16, **connection_args)
-        self.host = host
-        self.database = database
+                1, 16, **connection_params)
+        self.connection_params = connection_params
 
-        if table is not None:
-            if not table.startswith("("):
-                self.table_name = self.quote_identifier(table)
+        if table_or_sql is not None:
+            if "SELECT" in table_or_sql.upper():
+                table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
-                self.table_name = table
-            self.domain = self.get_domain(type_hints, guess_values)
+                table = self.quote_identifier(table_or_sql)
+            self.table_name = table
+            self.domain = self.get_domain(type_hints, inspect_values)
             self.name = table
-
-    @classmethod
-    def from_sql(
-            cls, uri=None,
-            host=None, database=None, user=None, password=None, schema=None,
-            sql=None, type_hints=None, **kwargs):
-        """
-        Create a new proxy for sql select.
-
-        Database connection parameters can be specified either as a string:
-
-            table = SqlTable.from_sql("user:password@host:port/database/table")
-
-        or using a set of keyword arguments:
-
-            table = SqlTable.from_sql(database="test", sql="SELECT iris FROM iris")
-
-        All but the database and the sql parameters are optional. Any
-        additional parameters will be forwarded to the psycopg2 backend.
-
-        If type_hints (an Orange domain) contain a column name, then
-        the variable type from type_hints will be used. If it does not,
-        the variable type is selected based on the column type (double
-        -> ContinuousVariable, everything else -> StringVariable).
-
-        Class vars and metas can be specified as a list of column names in
-        __class_vars__ and __metas__ keys in type_hints dict.
-        """
-        sql = "(\n%s) as my_table" % sql.strip("; ")
-        table = cls(uri, host, database, user, password, schema, table=sql,
-                    type_hints=type_hints, **kwargs)
-
-        return table
-
-    @staticmethod
-    def parse_uri(uri):
-        parsed_uri = parse.urlparse(uri)
-        database = parsed_uri.path.strip('/')
-        if "/" in database:
-            database, table = database.split('/', 1)
-        else:
-            table = ""
-
-        params = parse.parse_qs(parsed_uri.query)
-        for key, value in params.items():
-            if len(params[key]) == 1:
-                params[key] = value[0]
-
-        params.update(dict(
-            host=parsed_uri.hostname,
-            port=parsed_uri.port,
-            user=parsed_uri.username,
-            database=database,
-            password=parsed_uri.password,
-        ))
-        if table:
-            params['table'] = table
-        return params
 
     def get_domain(self, type_hints=None, guess_values=False):
         if type_hints is None:
@@ -349,8 +285,7 @@ class SqlTable(table.Table):
         table.row_filters = self.row_filters
         table.table_name = self.table_name
         table.name = self.name
-        table.database = self.database
-        table.host = self.host
+        table.connection_params = self.connection_params
         return table
 
     def __bool__(self):
