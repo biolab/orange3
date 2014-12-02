@@ -20,6 +20,8 @@ class ClassificationTreeLearner(SklFitter):
         if t.children_left[id] == skltree._tree.TREE_LEAF:
             self.items[id] = items
             self.distr[id] = Counter(Y[items].flatten())
+
+
         else:
             x = X[items, :]
             left = items[np.where(x[:, t.feature[id]] <= t.threshold[id])]
@@ -27,6 +29,10 @@ class ClassificationTreeLearner(SklFitter):
             self.distribute_items(X, Y, t, t.children_left[id], left)
             self.distribute_items(X, Y, t, t.children_right[id], right)
             self.distr[id] = self.distr[t.children_left[id]] + self.distr[t.children_right[id]]
+        # Add zero counts for classes not in the current subtree for completeness.
+        for item in set(Y) - set(self.distr[id].keys()):
+            self.distr[id][item] = 0
+
 
     def fit(self, X, Y, W):
         clf = skltree.DecisionTreeClassifier(**self.params)
