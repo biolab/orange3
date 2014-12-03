@@ -100,6 +100,9 @@ class SqlTable(table.Table):
             if isinstance(var, ContinuousVariable):
                 var.to_sql = lambda: "({})::double precision".format(
                     self.quote_identifier(field_name))
+            elif isinstance(var, DiscreteVariable):
+                var.to_sql = lambda: "({})::text".format(
+                    self.quote_identifier(field_name))
             else:
                 var.to_sql = lambda: self.quote_identifier(field_name)
 
@@ -129,43 +132,30 @@ class SqlTable(table.Table):
         CHAR_TYPES = (25, 1042, 1043,)  # text, char, varchar
         BOOLEAN_TYPES = (16,)  # bool
 
-        def continous_variable(name):
-            return ContinuousVariable(name=name)
-
-        def discrete_variable(name, values, has_numeric_values=False):
-            var = DiscreteVariable(name=name, values=values)
-            var.has_numeric_values = has_numeric_values
-            var.to_sql = lambda: self.quote_identifier(field_name)
-            return var
-
-        def string_variable(name):
-            var = StringVariable(name=name)
-            var.to_sql = lambda: self.quote_identifier(field_name)
-            return var
-
         if type_code in FLOATISH_TYPES:
-            return continous_variable(field_name)
+            return ContinuousVariable(field_name)
 
         if type_code in INT_TYPES:  # bigint, int, smallint
             if inspect_values:
                 values = self.get_distinct_values(field_name)
                 if values:
-                    return discrete_variable(field_name, values, True)
-            return continous_variable(field_name)
+                    return DiscreteVariable(field_name, values)
+            return ContinuousVariable(field_name)
 
         if type_code in BOOLEAN_TYPES:
-                return discrete_variable(field_name, ['False', 'True'], True)
+                return DiscreteVariable(field_name, ['false', 'true'])
 
         if type_code in CHAR_TYPES:
             if inspect_values:
                 values = self.get_distinct_values(field_name)
                 if values:
-                    return discrete_variable(field_name, values)
+                    return DiscreteVariable(field_name, values)
 
-        return string_variable(field_name)
+        return StringVariable(field_name)
 
     def get_distinct_values(self, field_name):
-        sql = " ".join(["SELECT DISTINCT", self.quote_identifier(field_name),
+        sql = " ".join(["SELECT DISTINCT (%s)::text" %
+                            self.quote_identifier(field_name),
                         "FROM", self.table_name,
                         "WHERE {} IS NOT NULL".format(
                             self.quote_identifier(field_name)),
