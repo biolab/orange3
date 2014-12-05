@@ -12,7 +12,7 @@ class OWClassificationTree(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [
         ("Learner", tree.ClassificationTreeLearner),
-        ("Classifier", tree.ClassificationTreeClassifier)
+        ("ClassificationTree", tree.ClassificationTreeClassifier)
     ]
     want_main_area = False
 
@@ -99,10 +99,10 @@ class OWClassificationTree(widget.OWWidget):
                 self.classifier = None
         else:
             self.classifier = None
-        self.send("Classification Tree", self.classifier)
+        self.send("ClassificationTree", self.classifier)
 
     def set_data(self, data):
-        if self.data.class_var is None:
+        if data.domain.class_vars is None:
             self.error("Data has no target variable")
             data = None
         self.data = data
@@ -113,10 +113,8 @@ if __name__ == "__main__":
     import sys
     a = QApplication(sys.argv)
     ow = OWClassificationTree()
-
-#    d = orange.Table('iris')
-#    ow.setData(d)
-
+    d = Orange.data.table.Table('iris')
+    ow.set_data(d)
     ow.show()
     a.exec_()
     ow.saveSettings()
