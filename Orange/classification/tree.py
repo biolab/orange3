@@ -20,8 +20,6 @@ class ClassificationTreeLearner(SklFitter):
         if t.children_left[id] == skltree._tree.TREE_LEAF:
             self.items[id] = items
             self.distr[id] = Counter(Y[items].flatten())
-
-
         else:
             x = X[items, :]
             left = items[np.where(x[:, t.feature[id]] <= t.threshold[id])]
