@@ -339,19 +339,15 @@ class TreeNavigator(QGraphicsView):
 
 
 class OWTreeViewer2D(OWWidget):
-    zoom_auto_refresh = Setting(False)
-    auto_arrange = Setting(False)
-    max_tree_depth = Setting(0)
-    line_width_method = Setting(2)
-    node_size = Setting(5)
-    max_node_width = Setting(150)
-    node_info = Setting([0, 1])
     zoom = Setting(5)
+    line_width_method = Setting(2)
+    max_tree_depth = Setting(0)
+    max_node_width = Setting(150)
 
     _VSPACING = 5
     _HSPACING = 5
     _TOOLTIPS_ENABLED = True
-    _DEF_NODE_WIDTH = 30
+    _DEF_NODE_WIDTH = 24
     _DEF_NODE_HEIGHT = 20
 
     want_graph = True
@@ -363,14 +359,10 @@ class OWTreeViewer2D(OWWidget):
         self.root_node = None
         self.tree = None
 
-        self.node_info.sort()
-
-        self.infBox = gui.widgetBox(
-            self.controlArea, 'Info',
-            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed),
-            addSpace=True)
-        self.infoa = gui.widgetLabel(self.infBox, 'No tree.')
-        self.infob = gui.widgetLabel(self.infBox, " ")
+        box = gui.widgetBox(
+            self.controlArea, 'Tree size', addSpace=20,
+            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        self.info = gui.widgetLabel(box, 'No tree.')
 
         box = gui.widgetBox(self.controlArea, "Size", addSpace=True)
         gui.hSlider(
@@ -385,19 +377,15 @@ class OWTreeViewer2D(OWWidget):
             box, self, 'max_tree_depth',
             label="Depth ", orientation="horizontal",
             items=["Unlimited"] + ["{} levels".format(x) for x in range(2, 10)],
-            sendSelectedValue=False, callback=self.toggle_tree_depth).\
-            setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+            sendSelectedValue=False, callback=self.toggle_tree_depth,
+            sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                   QSizePolicy.Fixed))
         gui.comboBox(
             box, self,  'line_width_method', label="Edge width ",
             orientation="horizontal",
             items=['Fixed', 'Relative to root', 'Relative to parent'],
             callback=self.toggle_line_width)
-
-        # gui.button(self.controlArea, self, "Navigator",
-        #            self.toggleNavigator, addToLayout=False)
         self.resize(800, 500)
-
-        # self.connect(self.graphButton, SIGNAL("clicked()"), self.saveGraph)
 
     def send_report(self):
         from PyQt4.QtSvg import QSvgGenerator
@@ -432,13 +420,13 @@ class OWTreeViewer2D(OWWidget):
 
     def toggle_line_width(self):
         root_instances = self.root_node.num_instances()
-        width = 7
+        width = 3
         for edge in self.scene.edges():
+            num_inst = edge.node2.num_instances()
             if self.line_width_method == 1:
-                width = 20 * edge.node2.num_instances() / root_instances
+                width = 12 * num_inst / root_instances
             elif self.line_width_method == 2:
-                width = 10 * \
-                    edge.node2.num_instances() / edge.node1.num_instances()
+                width = 12 * num_inst / edge.node1.num_instances()
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 
@@ -457,6 +445,7 @@ class OWTreeViewer2D(OWWidget):
         self.scene.fix_pos(self.root_node, 10, 10)
         self.scene.update()
         self.toggle_tree_depth()
+        self.toggle_line_width()
 
     def ctree(self, tree):
         self.clear()
@@ -468,7 +457,7 @@ class OWTreeViewer2D(OWWidget):
             self.tree = None
             self.root_node = None
         else:
-            self.infoa.setText('Yes tree.')
+            self.infoa.setText('Tree.')
             self.tree = tree
             self.root_node = self.walkcreate(self.tree.clf.tree_, None)
             self.scene.fix_pos(self.root_node, self._HSPACING, self._VSPACING)
@@ -517,14 +506,9 @@ class OWTreeViewer2D(OWWidget):
 
     def rescale_tree(self):
         node_height = self._DEF_NODE_HEIGHT
-        node_width = self._DEF_NODE_WIDTH * ((self.node_size - 1) *
-                                             (1.5 / 9.0) + 0.5)
-        k = 1.0
-#        self.scene.VSpacing = node_height * k * (0.3 + self._VSPACING * 0.15)
-#        self.scene.HSpacing = node_width * k * (0.3 + self._HSPACING * 0.20)
+        node_width = self._DEF_NODE_WIDTH
         for r in self.scene.nodeList:
-            r.set_rect(r.rect().x(), r.rect().y(),
-                       node_width * k, node_height * k)
+            r.set_rect(r.rect().x(), r.rect().y(), node_width, node_height)
         self.scene.fix_pos()
 
     def update_selection(self):

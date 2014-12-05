@@ -6,13 +6,8 @@ from Orange.classification.tree import ClassificationTreeClassifier
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from numpy import argmax, zeros
 from Orange.widgets.settings import \
-    Setting, ContextSetting, PerfectDomainContextHandler
+    Setting, ContextSetting, ClassValuesContextHandler
 from Orange.widgets import gui
-
-
-#BodyColor_Default = QColor(Qt.gray)
-BodyColor_Default = QColor(255, 225, 10)
-BodyCasesColor_Default = QColor(Qt.blue)  # QColor(0, 0, 128)
 
 
 class OWClassificationTreeGraph(OWTreeViewer2D):
@@ -20,8 +15,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     description = "Classification Tree Viewer"
     icon = "icons/ClassificationTree.svg"
 
-    # TODO The context handler is too strict: class values would suffice
-    settingsHandler = PerfectDomainContextHandler()
+    settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
     color_settings = Setting(None)
     selected_color_settings_index = Setting(0)
@@ -41,26 +35,14 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
         self.scene.selectionChanged.connect(self.update_selection)
 
-        # self.navWidget = OWWidget(self)
-        # self.navWidget.lay = QVBoxLayout(self.navWidget)
-
-        # scene = TreeGraphicsScene(self.navWidget)
-        # self.treeNav = TreeNavigator(self.sceneView)
-        # self.navWidget.lay.addWidget(self.treeNav)
-        # self.navWidget.resize(400,400)
-        # self.navWidget.setWindowTitle("Navigator")
-        # self.setMouseTracking(True)
-
-        colorbox = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
-
+        box = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
         self.target_combo = gui.comboBox(
-            colorbox, self, "target_class_index", orientation=0, items=[],
+            box, self, "target_class_index", orientation=0, items=[],
             label="Target class", callback=self.toggle_target_class)
-        gui.separator(colorbox)
-        gui.button(colorbox, self, "Set Colors", callback=self.set_colors)
+        gui.separator(box)
+        gui.button(box, self, "Set Colors", callback=self.set_colors)
         dlg = self.create_color_dialog()
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
-        gui.rubber(self.controlArea)
 
     def sendReport(self):
         if self.tree:
@@ -124,7 +106,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         if not node.is_leaf():
             text += "<hr/><center>{}</center>".format(
                 self.domain.attributes[node.attribute()].name)
-        node.setHtml(text)
+        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">{}</p>'.
+                     format(text))
 
     def activate_loaded_settings(self):
         if not self.tree:
@@ -161,30 +144,24 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     def ctree(self, clf=None):
         self.clear()
         if not clf:
-            #self.centerRootButton.setDisabled(1)
-            #self.centerNodeButton.setDisabled(0)
-            self.infoa.setText('No tree.')
-            self.infob.setText('')
+            self.info.setText('No tree.')
             self.tree = None
             self.root_node = None
         else:
-            self.infoa.setText('Tree found on input.')
             self.tree = clf.clf.tree_
             self.domain = clf.domain
             self.target_combo.clear()
             self.target_combo.addItem("None")
             self.target_combo.addItems(self.domain.class_vars[0].values)
             self.root_node = self.walkcreate(self.tree, None, distr=clf.distr)
-            self.infoa.setText('Number of nodes: {}'.
-                               format(self.root_node.num_nodes()))
-            self.infob.setText('Number of leaves: {}'.
-                               format(self.root_node.num_leaves()))
+            self.info.setText(
+                '{} nodes, {} leaves'.
+                format(self.root_node.num_nodes(),
+                       self.root_node.num_leaves()))
             self.scene.fix_pos(self.root_node, self._HSPACING, self._VSPACING)
             self.activate_loaded_settings()
             self.scene_view.centerOn(self.root_node.x(), self.root_node.y())
             self.update_node_tooltips()
-            #self.centerRootButton.setDisabled(0)
-            #self.centerNodeButton.setDisabled(1)
         self.scene.update()
 
     def walkcreate(self, tree, parent=None, level=0, i=0, distr=None):
@@ -205,7 +182,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
     def node_tooltip(self, node):
         if node.i > 0:
-            text = " AND ".join(
+            text = "<br/> AND ".join(
                 "%s %s %.3f" % (self.domain.attributes[a].name, s, t)
                 for a, s, t in node.rule())
         else:
@@ -322,7 +299,8 @@ class ClassificationTreeNode(GraphicsNode):
             sign = [">", "<="][self.tree.children_left[self.parent.i] == self.i]
             thresh = self.tree.threshold[self.parent.i]
             return "%s %f" % (sign, thresh)
-#            return "%s %s" % (sign, self.tree.domain.attributes[self.attribute()].str_val(thresh))
+#            return "%s %s" % (sign,
+#                self.tree.domain.attributes[self.attribute()].str_val(thresh))
         else:
             return ""
 
@@ -430,7 +408,7 @@ class ClassificationTreeNode(GraphicsNode):
         # painter.drawText(QPointF(0, -self.line_descent),
         #                  str(self.attribute()) if self.attribute() else "")
         draw_text = str(self.split_condition())
-        painter.drawText(QPointF(0, -self.line_descent), draw_text)
+        painter.drawText(QPointF(0, -self.line_descent - 1), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
         rect = self.rect()
