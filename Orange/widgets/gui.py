@@ -1498,7 +1498,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :param orientation: orientation of the layout in the box
-    :type orientation: str
+    :type orientation: str or int or bool
     :param label: a label that is inserted into the box
     :type label: str
     :param labelWidth: the width of the label

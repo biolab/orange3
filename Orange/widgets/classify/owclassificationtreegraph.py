@@ -21,22 +21,19 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     description = "Classification Tree Viewer"
     icon = "icons/ClassificationTree.svg"
 
+    # TODO This context handler is too strict: we only need the same class
+    # values
     settingsHandler = PerfectDomainContextHandler()
     show_pies = Setting(True)
     color_settings = Setting(None)
     selected_color_settings_index = Setting(0)
     show_node_info_text = Setting(False)
-    node_color_method = Setting(2)
-    color_method_box = Setting(None)
 
     target_class_index = ContextSetting(0)
 
     inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
     outputs = [("Examples", Table)]
 
-    node_color_opts = [
-        'Default', 'Instances in node', 'Majority class probability',
-        'Target class probability', 'Target class distribution']
     node_info_buttons = [
         'Majority class', 'Majority class probability',
         'Target class probability', 'Number of instances']
@@ -64,9 +61,6 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
         colorbox = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
 
-        self.color_method_box = gui.comboBox(
-            colorbox, self, 'node_color_method', items=self.node_color_opts,
-            callback=self.toggle_node_color)
         self.target_combo = gui.comboBox(
             colorbox, self, "target_class_index", orientation=0, items=[],
             label="Target class", callback=self.toggle_target_class)
@@ -107,8 +101,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             tclass = tsize = "N/A"
         self.reportSettings(
             "Information",
-            [("Node color", self.node_color_opts[self.node_color_method]),
-             ("Target class", tclass),
+            [("Target class", tclass),
              ("Data in nodes", ", ".join(
                  s for i, s in enumerate(self.node_info_buttons)
                  if self.node_info_w[i].isChecked())),
@@ -178,48 +171,23 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.update()
         self.scene_view.repaint()
 
-
     def toggle_node_color(self):
-        self.node_color_method = \
-            self.node_color_opts.index(self.color_method_box.currentText())
         palette = self.scene.colorPalette
         for node in self.scene.nodes():
-            # dist = node.tree.distribution
-            if self.node_color_method == 0:
-                color = BodyColor_Default
-            # number of instances in node
-            elif self.node_color_method == 1:
-                all_cases = self.root_node.num_nodes()
-                light = 200 - 100 * node.num_nodes() / (all_cases or 1)
-                color = BodyCasesColor_Default.light(light)
-            # majority class probability
-            elif self.node_color_method == 2:
+            distr = node.get_distribution()
+            total = sum(distr)
+            if self.target_class_index:
+                p = distr[self.target_class_index - 1] / total
+                color = palette[self.target_class_index].light(200 - 100 * p)
+            else:
                 modus = node.majority()
-                p = node.get_distribution()[modus] / \
-                    sum(node.get_distribution())
-                light = 400 - 300 * p
-                color = palette[int(modus)].light(light)
-            # target class probability
-            elif self.node_color_method == 3:
-                p = node.get_distribution()[self.target_class_index] / \
-                    sum(node.get_distribution())
-                light = 200 - 100 * p
-                color = palette[self.target_class_index].light(light)
-            # target class distribution
-            elif self.node_color_method == 4:
-                all_target = int(
-                    self.root_node.get_distribution()[self.target_class_index] *
-                    self.root_node.num_instances())
-                light = 200 - 100 * node.num_instances() * \
-                    node.get_distribution()[self.target_class_index] / \
-                    all_target
-                color = palette[self.target_class_index].light(light)
+                p = distr[modus] / total
+                color = palette[int(modus)].light(400 - 300 * p)
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 
     def toggle_target_class(self):
-        if self.node_color_method in [3, 4]:
-            self.toggle_node_color()
+        self.toggle_node_color()
         if self.tarp:
             self.set_node_info()
         self.scene.update()
@@ -242,8 +210,9 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.infoa.setText('Tree found on input.')
             self.tree = clf.clf.tree_
             self.domain = clf.domain
-            for name in self.domain.class_vars[0].values:
-                self.target_combo.addItem(name)
+            self.target_combo.clear()
+            self.target_combo.addItem("None")
+            self.target_combo.addItems(self.domain.class_vars[0].values)
             self.root_node = self.walkcreate(self.tree, None, distr=clf.distr)
             self.infoa.setText('Number of nodes: ' + str(self.root_node.num_nodes()))
             self.infob.setText('Number of leaves: ' + str(self.root_node.num_leaves()))
