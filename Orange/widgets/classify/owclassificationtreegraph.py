@@ -62,7 +62,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         # self.navWidget.setWindowTitle("Navigator")
         # self.setMouseTracking(True)
 
-        colorbox = gui.widgetBox(self.controlArea, "Node Color", addSpace=True)
+        colorbox = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
 
         self.color_method_box = gui.comboBox(
             colorbox, self, 'node_color_method', items=self.node_color_opts,
@@ -142,7 +142,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             n.set_rect(QRectF())
             self.update_node_info(n, flags)
         w = max([n.rect().width() for n in self.scene.nodes()] + [0])
-        if self.limit_node_width and w > self.max_node_width:
+        if w > self.max_node_width < 200:
             w = self.max_node_width
         for n in self.scene.nodes():
             n.set_rect(QRectF(n.rect().x(), n.rect().y(), w, n.rect().height()))
@@ -327,6 +327,7 @@ class ClassificationTreeNode(GraphicsNode):
                                         else ""))
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
+        self._rect = None
 
     def get_distribution(self):
         """
@@ -448,15 +449,8 @@ class ClassificationTreeNode(GraphicsNode):
 
     def update_contents(self):
         self.prepareGeometryChange()
-        if getattr(self, "_rect", QRectF()).isValid() and not self.truncate_text:
-            if hasattr(self, "pie"):
-                self.setTextWidth(self._rect.width() -
-                                  self.pie.boundingRect().width() / 2)
-            else:
-                self.setTextWidth(0)
-        else:
-            self.setTextWidth(-1)
-            self.setTextWidth(self.document().idealWidth())
+        self.setTextWidth(-1)
+        self.setTextWidth(self.document().idealWidth())
         self.droplet.setPos(self.rect().center().x(), self.rect().height())
         self.droplet.setVisible(bool(self.branches))
         self.pie.setPos(self.rect().right(), self.rect().center().y())
@@ -467,7 +461,7 @@ class ClassificationTreeNode(GraphicsNode):
         self.line_descent = fm.descent()
 
     def rect(self):
-        if self.truncate_text and getattr(self, "_rect", QRectF()).isValid():
+        if self._rect and self._rect.isValid():
             return self._rect
         else:
             rect = QRectF(QPointF(0,0), self.document().size())
@@ -481,12 +475,7 @@ class ClassificationTreeNode(GraphicsNode):
         self.prepareGeometryChange()
         rect = QRectF() if rect is None else rect
         self._rect = rect
-        if rect.isValid() and not self.truncate_text:
-            self.setTextWidth(
-                self._rect.width() - self.pie.boundingRect().width() / 2
-                if hasattr(self, "pie") else 0)
-        else:
-            self.setTextWidth(-1)
+        self.setTextWidth(-1)
         self.update_contents()
         self.update()
 
@@ -497,10 +486,7 @@ class ClassificationTreeNode(GraphicsNode):
         else:
             attr_rect = QRectF(0, 0, 1, 1)
         rect = self.rect().adjusted(-5, -5, 5, 5)
-        if self.truncate_text:
-            return rect | attr_rect
-        else:
-            return rect | GraphicsNode.boundingRect(self) | attr_rect
+        return rect | attr_rect
 
     def paint(self, painter, option, widget=None):
         if self.isSelected():
@@ -521,10 +507,7 @@ class ClassificationTreeNode(GraphicsNode):
         rect = self.rect()
         painter.drawRoundedRect(rect.adjusted(-3, 0, 0, 0), 10, 10)
         painter.restore()
-        if self.truncate_text:
-            painter.setClipRect(rect)
-        else:
-            painter.setClipRect(rect | QRectF(QPointF(0, 0), self.document().size()))
+        painter.setClipRect(rect)
         return QGraphicsTextItem.paint(self, painter, option, widget)
 
 if __name__ == "__main__":

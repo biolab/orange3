@@ -84,23 +84,10 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
         "QBrush", fget=backgroundBrush, fset=setBackgroundBrush,
         doc="Background brush")
 
-    def setTruncateText(self, truncate):
-        if self._truncate_text != truncate:
-            self._truncate_text = truncate
-            self.update_contents()
-
-    def truncateText(self):
-        return getattr(self, "_truncate_text", False)
-
-    truncate_text = pyqtProperty("bool", fget=truncateText,
-                                fset=setTruncateText,
-                                doc="Truncate text")
-
     def __init__(self, tree, parent, *args, **kwargs):
         QGraphicsTextItem.__init__(self, *args)
         GraphNode.__init__(self, **kwargs)
         self._background_brush = None
-        self._truncate_text = False
         self._rect = None
 
         self.tree = tree
@@ -118,11 +105,8 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
         return super().setHtml("<body>" + html + "</body>")
     
     def update_contents(self):
-        if getattr(self, "_rect", QRectF()).isValid() and not self.truncate_text:
-            self.setTextWidth(self._rect.width())
-        else:
-            self.setTextWidth(-1)
-            self.setTextWidth(self.document().idealWidth())
+        self.setTextWidth(-1)
+        self.setTextWidth(self.document().idealWidth())
         self.droplet.setPos(self.rect().center().x(), self.rect().height())
         self.droplet.setVisible(bool(self.branches))
         
@@ -139,17 +123,15 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
         return path
     
     def rect(self):
-        if self.truncate_text and getattr(self, "_rect", QRectF()).isValid():
+        if getattr(self, "_rect", QRectF()).isValid():
             return self._rect
         else:
             return QRectF(QPointF(0, 0), self.document().size()) | \
                 getattr(self, "_rect", QRectF(0, 0, 1, 1))
         
     def boundingRect(self):
-        if self.truncate_text and getattr(self, "_rect", QRectF()).isValid():
-            return self._rect
-        else:
-            return super().boundingRect()
+        return self._rect if getattr(self, "_rect", QRectF()).isValid() \
+            else super().boundingRect()
     
     @property  
     def branches(self):
@@ -361,15 +343,12 @@ class TreeNavigator(QGraphicsView):
 class OWTreeViewer2D(OWWidget):
     zoom_auto_refresh = Setting(False)
     auto_arrange = Setting(False)
-    max_tree_depth = Setting(5)
-    limit_depth = Setting(False)
+    max_tree_depth = Setting(0)
     line_width_method = Setting(2)
     node_size = Setting(5)
     max_node_width = Setting(150)
-    limit_node_width = Setting(True)
     node_info = Setting([0, 1])
     zoom = Setting(5)
-    truncate_text = Setting(True)
 
     _VSPACING = 5
     _HSPACING = 5
@@ -397,30 +376,23 @@ class OWTreeViewer2D(OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Size", addSpace=True)
         gui.hSlider(
-            box, self, 'zoom', label='Zoom',
-            minValue=1, maxValue=10, step=1,
-            callback=self.toggle_zoom_slider, ticks=True, addSpace=True)
-        s, cb = gui.spin(
-            box, self, "max_node_width", 50, 200,
-            label="Max node width:", checked="limit_node_width",
-            callback=self.toggle_node_size, step=10)
-        b = gui.checkBox(
-            gui.indentedBox(box, sep=gui.checkButtonOffsetHint(cb)),
-            self, "truncate_text", "Truncate text",
-            callback=self.toggle_truncate_text)
-        s.disables.append(b)
-        s.makeConsistent()
-        gui.spin(
-            box, self, 'max_tree_depth', 1, 20,
-            label='Max tree depth:',
-            tooltip="Defines the depth of the tree displayed",
-            checked="limit_depth",
-            callback=self.toggle_tree_depth)
-
-        box = gui.widgetBox(self.controlArea, "Edge Widths", addSpace=True)
+            box, self, 'zoom', label='Zoom ',
+            minValue=1, maxValue=10, step=1, createLabel=False, ticks=False,
+            callback=self.toggle_zoom_slider, addSpace=True)
+        gui.hSlider(
+            box, self, 'max_node_width', label='Width ',
+            minValue=50, maxValue=200, step=1, createLabel=False, ticks=False,
+            callback=self.toggle_node_size, addSpace=True)
         gui.comboBox(
-            box, self,  'line_width_method',
-            items=['Equal width', 'Root node', 'Parent node'],
+            box, self, 'max_tree_depth',
+            label="Depth ", orientation="horizontal",
+            items=["Unlimited"] + ["{} levels".format(x) for x in range(2, 10)],
+            sendSelectedValue=False, callback=self.toggle_tree_depth).\
+            setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        gui.comboBox(
+            box, self,  'line_width_method', label="Edge width ",
+            orientation="horizontal",
+            items=['Fixed', 'Relative to root', 'Relative to parent'],
             callback=self.toggle_line_width)
 
         # gui.button(self.controlArea, self, "Navigator",
@@ -477,11 +449,6 @@ class OWTreeViewer2D(OWWidget):
         self.scene.update()
         self.sceneView.repaint()
 
-    def toggle_truncate_text(self):
-        for n in self.scene.nodes():
-            n.truncateText = self.truncate_text
-        self.scene.fix_pos(self.root_node, 10, 10)
-
     def toggle_navigator(self):
         self.nav_widget.setHidden(not self.nav_widget.isHidden())
 
@@ -530,7 +497,7 @@ class OWTreeViewer2D(OWWidget):
     def walkupdate(self, node, level=0):
         if not node:
             return
-        if self.limit_depth and self.max_tree_depth <= level+1:
+        if self.max_tree_depth and self.max_tree_depth < level+1:
             node.set_open(False)
             return
         else:
