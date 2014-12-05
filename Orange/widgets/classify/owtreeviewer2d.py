@@ -1,7 +1,5 @@
-from Orange.classification.tree import ClassificationTreeClassifier
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
-from Orange.data.table import Table
 from Orange.widgets.settings import Setting
 
 from PyQt4.QtCore import *

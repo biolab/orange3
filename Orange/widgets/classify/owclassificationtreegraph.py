@@ -2,9 +2,8 @@ import sys
 from Orange.widgets.classify.owtreeviewer2d import *
 
 from Orange.data import Table
-from Orange.classification.tree import ClassificationTreeLearner
+from Orange.classification.tree import ClassificationTreeClassifier
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.widget import OWWidget
 from numpy import argmax, zeros
 from Orange.widgets.settings import \
     Setting, ContextSetting, PerfectDomainContextHandler
@@ -13,7 +12,7 @@ from Orange.widgets import gui
 
 #BodyColor_Default = QColor(Qt.gray)
 BodyColor_Default = QColor(255, 225, 10)
-BodyCasesColor_Default = QColor(Qt.blue) #QColor(0, 0, 128)
+BodyCasesColor_Default = QColor(Qt.blue)  # QColor(0, 0, 128)
 
 
 class OWClassificationTreeGraph(OWTreeViewer2D):
@@ -21,20 +20,18 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     description = "Classification Tree Viewer"
     icon = "icons/ClassificationTree.svg"
 
-    # TODO This context handler is too strict: we only need the same class
-    # values
+    # TODO The context handler is too strict: class values would suffice
     settingsHandler = PerfectDomainContextHandler()
-    show_pies = Setting(True)
+    target_class_index = ContextSetting(0)
     color_settings = Setting(None)
     selected_color_settings_index = Setting(0)
-
-    target_class_index = ContextSetting(0)
 
     inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
     outputs = [("Examples", Table)]
 
     def __init__(self):
         super().__init__()
+        self.domain = None
 
         self.scene = TreeGraphicsScene(self)
         self.scene_view = TreeGraphicsView(self.scene)
@@ -59,10 +56,6 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.target_combo = gui.comboBox(
             colorbox, self, "target_class_index", orientation=0, items=[],
             label="Target class", callback=self.toggle_target_class)
-        gui.checkBox(colorbox, self, 'show_pies',
-                     'Show distribution pie charts',
-                     tooltip='Show pie graph with class distribution',
-                     callback=self.toggle_pies)
         gui.separator(colorbox)
         gui.button(colorbox, self, "Set Colors", callback=self.set_colors)
         dlg = self.create_color_dialog()
@@ -79,9 +72,6 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.reportSettings(
             "Information",
             [("Target class", tclass),
-             ("Data in nodes", ", ".join(
-                 s for i, s in enumerate(self.node_info_buttons)
-                 if self.node_info_w[i].isChecked())),
              ("Line widths",
                  ["Constant", "Proportion of all instances",
                   "Proportion of parent's instances"][self.line_width_method]),
@@ -104,18 +94,19 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
                           self.selected_color_settings_index)
         return c
 
-    def set_node_info(self, widget=None, id=None):
-        for n in self.scene.nodes():
-            n.set_rect(QRectF())
-            self.update_node_info(n)
+    def set_node_info(self):
+        for node in self.scene.nodes():
+            node.set_rect(QRectF())
+            self.update_node_info(node)
         w = max([n.rect().width() for n in self.scene.nodes()] + [0])
         if w > self.max_node_width < 200:
             w = self.max_node_width
-        for n in self.scene.nodes():
-            n.set_rect(QRectF(n.rect().x(), n.rect().y(), w, n.rect().height()))
+        for node in self.scene.nodes():
+            node.set_rect(QRectF(node.rect().x(), node.rect().y(),
+                                 w, node.rect().height()))
         self.scene.fix_pos(self.root_node, 10, 10)
 
-    def update_node_info(self, node, flags=31):
+    def update_node_info(self, node):
         distr = node.get_distribution()
         total = int(node.num_instances())
         if self.target_class_index:
@@ -167,11 +158,6 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.set_node_info()
         self.scene.update()
 
-    def toggle_pies(self):
-        for n in self.scene.nodes():
-            n.pie.setVisible(self.show_pies and n.isVisible())
-        self.scene.update()
-
     def ctree(self, clf=None):
         self.clear()
         if not clf:
@@ -189,9 +175,11 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.target_combo.addItem("None")
             self.target_combo.addItems(self.domain.class_vars[0].values)
             self.root_node = self.walkcreate(self.tree, None, distr=clf.distr)
-            self.infoa.setText('Number of nodes: ' + str(self.root_node.num_nodes()))
-            self.infob.setText('Number of leaves: ' + str(self.root_node.num_leaves()))
-            self.scene.fix_pos(self.root_node, self._HSPACING,self._VSPACING)
+            self.infoa.setText('Number of nodes: {}'.
+                               format(self.root_node.num_nodes()))
+            self.infob.setText('Number of leaves: {}'.
+                               format(self.root_node.num_leaves()))
+            self.scene.fix_pos(self.root_node, self._HSPACING, self._VSPACING)
             self.activate_loaded_settings()
             self.scene_view.centerOn(self.root_node.x(), self.root_node.y())
             self.update_node_tooltips()
@@ -265,7 +253,7 @@ class ClassificationTreeNode(GraphicsNode):
         self.tree = tree
         self.i = i
         self.parent = parent
-        self.pie = PieChart(self.get_distribution(), 20, self, scene)
+        self.pie = PieChart(self.get_distribution(), 8, self, scene)
         fm = QFontMetrics(self.document().defaultFont())
         self.attr_text_w = fm.width(str(self.attribute() if self.attribute()
                                         else ""))
@@ -310,7 +298,7 @@ class ClassificationTreeNode(GraphicsNode):
         """
         :return: Number of leaves below a particular node.
         """
-        return self.num_leavesw(i = self.i)
+        return self.num_leavesw(i=self.i)
 
     def num_leavesw(self, i=0):
         """
@@ -341,8 +329,7 @@ class ClassificationTreeNode(GraphicsNode):
     def rule(self):
         """
         :return:
-            Rule to reach node
-            Rules are represented as list is tuples (attribute index, sign, threshold)
+            Rule to reach node as list of tuples (attr index, sign, threshold)
         """
         # TODO: this is easily extended to Classification Rules-compatible form
         return self.rulew(i=self.i)
@@ -352,8 +339,8 @@ class ClassificationTreeNode(GraphicsNode):
         :param i:
             Index of current node.
         :return:
-            Rule to reach node i.
-            Rules are represented as list is tuples (attribute index, sign, threshold)
+            Rule to reach node i, represented as list of tuples (attr index,
+            sign, threshold)
         """
         if i > 0:
             sign = "<=" if self.tree.children_left[self.parent.i] == i else ">"
@@ -370,7 +357,7 @@ class ClassificationTreeNode(GraphicsNode):
         :return: Node is leaf
         """
         return self.tree.children_left[self.i] < 0 and \
-               self.tree.children_right[self.i] < 0
+            self.tree.children_right[self.i] < 0
 
     def attribute(self):
         """
@@ -409,11 +396,8 @@ class ClassificationTreeNode(GraphicsNode):
         if self._rect and self._rect.isValid():
             return self._rect
         else:
-            rect = QRectF(QPointF(0,0), self.document().size())
-            return rect.adjusted(
-                0, 0,
-                self.pie.boundingRect().width() / 2 if hasattr(self, "pie")
-                else 0, 0) | \
+            return QRectF(QPointF(0, 0), self.document().size()).\
+                adjusted(0, 0, 8, 0) | \
                 (getattr(self, "_rect") or QRectF(0, 0, 1, 1))
 
     def set_rect(self, rect):
@@ -456,9 +440,9 @@ class ClassificationTreeNode(GraphicsNode):
         return QGraphicsTextItem.paint(self, painter, option, widget)
 
 if __name__ == "__main__":
+    from Orange.classification.tree import ClassificationTreeLearner
     a = QApplication(sys.argv)
     ow = OWClassificationTreeGraph()
-    from Orange.data import Table
     ow.ctree(ClassificationTreeLearner(max_depth=3)(Table('iris')))
     ow.show()
     a.exec_()
