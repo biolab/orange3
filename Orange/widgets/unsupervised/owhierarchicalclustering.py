@@ -23,6 +23,8 @@ from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 import Orange.data
 
+import Orange.misc
+
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
 
@@ -835,7 +837,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     icon = "icons/HierarchicalClustering.svg"
     priority = 2100
 
-    inputs = [("Distances", numpy.ndarray, "set_distances"),
+    inputs = [("Distances", Orange.misc.DistMatrix, "set_distances"),
               ("Items", object, "set_items", widget.Dynamic)]
 
     outputs = [("Selected Data", Orange.data.Table),
@@ -1054,9 +1056,13 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._clear_plot()
 
         distances = self.matrix
-        if distances is not None:
-            method = LINKAGE[self.linkage].lower()
 
+        if distances is not None:
+            # Convert to flat upper triangular distances
+            i, j = numpy.triu_indices(distances.X.shape[0], k=1)
+            distances = distances.X[i, j]
+
+            method = LINKAGE[self.linkage].lower()
             Z = scipy.cluster.hierarchy.linkage(
                 distances, method=method
             )
@@ -1559,11 +1565,16 @@ def clusters_at_height(root, height):
 def test_main():
     from PyQt4.QtGui import QApplication
     import sip
+    import Orange.distance as distance
+
     app = QApplication([])
     w = OWHierarchicalClustering()
+
     data = Orange.data.Table("iris.tab")
-    distances = scipy.spatial.distance.pdist(data.X, metric="euclidean")
-    w.set_distances(distances)
+    matrix = distance.Euclidean()(data)
+    matrix.items = data
+
+    w.set_distances(matrix)
     w.set_items(data)
     w.handleNewSignals()
     w.show()

@@ -1,6 +1,5 @@
-import numpy
-
 import Orange.data
+import Orange.misc
 from Orange.widgets import widget, gui, settings
 from Orange import distance
 
@@ -24,7 +23,7 @@ class OWDistances(widget.OWWidget):
     icon = "icons/Distance.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Distances", numpy.ndarray)]
+    outputs = [("Distances", Orange.misc.DistMatrix)]
 
     axis = settings.Setting(0)
     metric_idx = settings.Setting(0)
