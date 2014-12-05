@@ -14,8 +14,8 @@ class IsDefinedFilterTests(PostgresTest):
             [None, None, None, None, None],
             [7, None, 3, None, 'f'],
         ]
-        self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri, guess_values=True)
+        conn, self.table_name = self.create_sql_table(self.data)
+        self.table = SqlTable(conn, self.table_name, inspect_values=True)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
@@ -67,8 +67,8 @@ class HasClassFilterTests(PostgresTest):
             [None, None, None, None, None],
             [7, None, 3, None, 'f'],
         ]
-        self.table_uri = self.create_sql_table(self.data)
-        table = SqlTable(self.table_uri, guess_values=True)
+        self.conn, self.table_name = self.create_sql_table(self.data)
+        table = SqlTable(self.conn, self.table_name, inspect_values=True)
         variables = table.domain.variables
         new_table = table.copy()
         new_table.domain = domain.Domain(variables[:-1], variables[-1:])
@@ -101,8 +101,8 @@ class SameValueFilterTests(PostgresTest):
             [None, 3, 1, 'b', None],
             [2, 2, 3, 'b', 'f'],
         ]
-        self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri, guess_values=True)
+        self.conn, self.table_name = self.create_sql_table(self.data)
+        self.table = SqlTable(self.conn, self.table_name, inspect_values=True)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
@@ -189,8 +189,8 @@ class ValuesFilterTests(PostgresTest):
             [None, 3, 1, 'b', None],
             [2, 2, 3, 'b', 'f'],
         ]
-        self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri, guess_values=True)
+        conn, self.table_name = self.create_sql_table(self.data)
+        self.table = SqlTable(conn, self.table_name, inspect_values=True)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)
@@ -329,8 +329,8 @@ class FilterStringTest(PostgresTest):
             "eu tortor sed diam placerat porttitor et volutpat risus. In"
             "vulputate rutrum lacus ac sagittis. Suspendisse interdum luctus"
             "sem auctor commodo.".split(' ')] + [[None], [None]]
-        self.table_uri = self.create_sql_table(self.data)
-        self.table = SqlTable(self.table_uri)
+        self.conn, self.table_name = self.create_sql_table(self.data)
+        self.table = SqlTable(self.conn, self.table_name)
 
     def tearDown(self):
         self.drop_sql_table(self.table_name)

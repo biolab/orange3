@@ -1,13 +1,20 @@
 import numpy
-from sklearn.metrics import pairwise
 
 import Orange.data
 from Orange.widgets import widget, gui, settings
+from Orange import distance
 
 
 _METRICS = [
-    ("Euclidean", pairwise.euclidean_distances),
-    ("Manhattan", pairwise.manhattan_distances)
+    ("Euclidean", distance.Euclidean()),
+    ("Manhattan", distance.Manhattan()),
+    ("Cosine", distance.Cosine()),
+    ("Jaccard", distance.Jaccard()),
+    ("Mahalanobis", distance.Mahalanobis()),
+    ("Spearman", distance.SpearmanR()),
+    ("Spearman absolute", distance.SpearmanRAbsolute()),
+    ("Pearson", distance.PearsonR()),
+    ("Pearson absolute", distance.PearsonRAbsolute()),
 ]
 
 
@@ -40,7 +47,7 @@ class OWDistances(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, self.tr("Distance Metric"))
         gui.comboBox(box, self, "metric_idx",
-                     items=["Euclidean", "Manhattan"],
+                     items=list(zip(*_METRICS))[0],
                      callback=self._invalidate)
 
         box = gui.widgetBox(self.controlArea, self.tr("Commit"))
@@ -58,10 +65,8 @@ class OWDistances(widget.OWWidget):
         distances = None
         if self.data is not None:
             metric = _METRICS[self.metric_idx][1]
-            X = self.data.X
-            if self.axis == 1:
-                X = X.T
-            distances = metric(X, X)
+            X = self.data
+            distances = metric(X, X, self.axis)
 
         self.send("Distances", distances)
 

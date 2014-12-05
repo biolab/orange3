@@ -6,80 +6,9 @@ from numpy.testing import assert_almost_equal
 from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
-from Orange.data.sql.parser import SqlParser
 from Orange.data.sql.table import SqlTable
-from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2, server_version
-
-
-@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
-class SqlTableUnitTests(unittest.TestCase):
-    def setUp(self):
-        self.table = sql_table.SqlTable.__new__(sql_table.SqlTable)
-
-    def test_parses_connection_uri(self):
-        parameters = self.table.parse_uri(
-            "sql://user:password@host:7678/database/table")
-
-        self.assertDictContainsSubset(dict(
-            host="host",
-            user="user",
-            password="password",
-            port=7678,
-            database="database",
-            table="table"
-        ), parameters)
-
-    def test_parse_minimal_connection_uri(self):
-        parameters = self.table.parse_uri(
-            "sql://host/database/table")
-
-        self.assertDictContainsSubset(
-            dict(host="host", database="database", table="table"),
-            parameters
-        )
-
-    def test_parse_schema(self):
-        parameters = self.table.parse_uri(
-            "sql://host/database/table?schema=schema")
-
-        self.assertDictContainsSubset(
-            dict(database="database",
-                 table="table",
-                 host="host",
-                 schema="schema"),
-            parameters
-        )
-
-    def assertDictContainsSubset(self, subset, dictionary, msg=None):
-        """Checks whether dictionary is a superset of subset.
-
-        This method has been copied from unittest/case.py and undeprecated.
-        """
-        from unittest.case import safe_repr
-
-        missing = []
-        mismatched = []
-        for key, value in subset.items():
-            if key not in dictionary:
-                missing.append(key)
-            elif value != dictionary[key]:
-                mismatched.append('%s, expected: %s, actual: %s' %
-                                  (safe_repr(key), safe_repr(value),
-                                   safe_repr(dictionary[key])))
-
-        if not (missing or mismatched):
-            return
-
-        standardMsg = ''
-        if missing:
-            standardMsg = 'Missing: %s' % ','.join(safe_repr(m) for m in
-                                                   missing)
-        if mismatched:
-            if standardMsg:
-                standardMsg += '; '
-            standardMsg += 'Mismatched values: %s' % ','.join(mismatched)
-
-        self.fail(self._formatMessage(msg, standardMsg))
+from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2, \
+    server_version
 
 
 @unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
@@ -97,16 +26,17 @@ class SqlTableTests(PostgresTest):
 
             self.assertIsInstance(float_attr, ContinuousVariable)
             self.assertEqual(float_attr.name, "col0")
-            self.assertTrue("col0" in float_attr.to_sql())
+            self.assertTrue('"col0"' in float_attr.to_sql())
 
             self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
-            self.assertEqual(discrete_attr.to_sql(), '"col1"')
+            print(discrete_attr.to_sql())
+            self.assertTrue('"col1"' in discrete_attr.to_sql())
             self.assertEqual(discrete_attr.values, ['f', 'm'])
 
             self.assertIsInstance(string_attr, StringVariable)
             self.assertEqual(string_attr.name, "col2")
-            self.assertEqual(string_attr.to_sql(), '"col2"')
+            self.assertTrue('"col2"' in string_attr.to_sql())
 
     def test_len(self):
         with self.sql_table_from_data(zip(self.float_variable(26))) as table:
@@ -129,17 +59,19 @@ class SqlTableTests(PostgresTest):
 
     def test_XY_small(self):
         mat = np.random.randint(0, 2, (20, 3))
-        uri = self.create_sql_table(mat)
-        sql_table = SqlTable(uri, type_hints=Domain([], DiscreteVariable(
-            name='col2', values=['0', '1', '2'])))
-        assert_almost_equal(sql_table.X, mat[:,:2])
+        conn, table_name = self.create_sql_table(mat)
+        sql_table = SqlTable(conn, table_name,
+                             type_hints=Domain([], DiscreteVariable(
+                                 name='col2', values=['0', '1', '2'])))
+        assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
     def test_XY_large(self):
         mat = np.random.randint(0, 2, (1020, 3))
-        uri = self.create_sql_table(mat)
-        sql_table = SqlTable(uri, type_hints=Domain([], DiscreteVariable(
-            name='col2', values=['0', '1', '2'])))
+        conn, table_name = self.create_sql_table(mat)
+        sql_table = SqlTable(conn, table_name,
+                             type_hints=Domain([], DiscreteVariable(
+                                 name='col2', values=['0', '1', '2'])))
         with self.assertRaises(ValueError):
             sql_table.X
         with self.assertRaises(ValueError):
@@ -147,18 +79,18 @@ class SqlTableTests(PostgresTest):
         with self.assertRaises(ValueError):
             sql_table.download_data(1019)
         sql_table.download_data()
-        assert_almost_equal(sql_table.X, mat[:,:2])
+        assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
 
     def test_query_all(self):
-        table = sql_table.SqlTable(self.iris_uri)
+        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
         results = list(table)
 
         self.assertEqual(len(results), 150)
 
     def test_query_subset_of_attributes(self):
-        table = sql_table.SqlTable(self.iris_uri)
+        table = sql_table.SqlTable(self.conn, self.iris)
         attributes = [
             self._mock_attribute("sepal length"),
             self._mock_attribute("sepal width"),
@@ -178,7 +110,7 @@ class SqlTableTests(PostgresTest):
         )
 
     def test_query_subset_of_rows(self):
-        table = sql_table.SqlTable(self.iris_uri)
+        table = sql_table.SqlTable(self.conn, self.iris)
         all_results = list(table._query())
 
         results = list(table._query(rows=range(10)))
@@ -198,18 +130,19 @@ class SqlTableTests(PostgresTest):
         self.assertSequenceEqual(results, all_results[10:])
 
     def test_type_hints(self):
-        table = sql_table.SqlTable(self.iris_uri, guess_values=True)
+        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
         self.assertEqual(len(table.domain), 5)
         self.assertEqual(len(table.domain.metas), 0)
-        table = sql_table.SqlTable(self.iris_uri, guess_values=True,
-                   type_hints=Domain([], [], metas=[StringVariable("iris")])) 
+        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True,
+                                   type_hints=Domain([], [], metas=[
+                                       StringVariable("iris")]))
         self.assertEqual(len(table.domain), 4)
         self.assertEqual(len(table.domain.metas), 1)
 
     def test_joins(self):
-        table = sql_table.SqlTable.from_sql(
-            get_dburi(),
-            sql="""SELECT a."sepal length",
+        table = sql_table.SqlTable(
+            self.conn,
+            """SELECT a."sepal length",
                           b. "petal length",
                           CASE WHEN b."petal length" < 3 THEN '<'
                                ELSE '>'
@@ -219,10 +152,11 @@ class SqlTableTests(PostgresTest):
                     WHERE a."petal width" < 1
                  ORDER BY a."sepal length", b. "petal length" ASC""",
             type_hints=Domain([DiscreteVariable(
-                name="qualitative petal length", values=['<', '>'])], []))
+                name="qualitative petal length",
+                values=['<', '>'])], []))
 
         self.assertEqual(len(table), 498)
-        self.assertEqual(list(table[497]), [4.9, 5.1, 1.])
+        self.assertAlmostEqual(list(table[497]), [5.8, 1.2, 0.])
 
     def _mock_attribute(self, attr_name, formula=None):
         if formula is None:
@@ -237,54 +171,10 @@ class SqlTableTests(PostgresTest):
 
         return attr
 
-    def test_get_attributes_from_sql_parse(self):
-        sql = [
-            "SELECT",
-            "a.test AS a_test,",
-            "CASE WHEN a.n = 1 THEN 1",
-            "WHEN a.n = 2 THEN 2",
-            "ELSE 0",
-            "END AS c,",
-            "b.test,",
-            "c.\"another test\"",
-            "FROM",
-            '"table" a',
-            'INNER JOIN "table" b ON a.x = b.x',
-            'CROSS JOIN "table" c ON b.x = c.x',
-            'LEFT OUTER JOIN "table" d on c.x = d.x',
-            'RIGHT OUTER JOIN "table" e on d.x = e.x',
-            'FULL OUTER JOIN "table" f on f.x = e.x',
-            'WHERE',
-            '1 = 1',
-            'GROUP BY',
-            'a.group',
-            'HAVING',
-            'a.haver = 1',
-            'LIMIT',
-            '1',
-            'OFFSET',
-            '1',
-        ]
-
-        p = SqlParser(" ".join(sql))
-        self.assertEqual(
-            p.from_.replace(" ", ""),
-            "".join(sql[9:15]).replace(" ", ""))
-        self.assertEqual(
-            p.where.replace(" ", ""),
-            "".join(sql[16:17]).replace(" ", ""))
-        self.assertEqual(
-            p.sql_without_limit.replace(" ", ""),
-            "".join(sql[:21]).replace(" ", ""))
-
-    def test_raises_on_unsupported_keywords(self):
-        with self.assertRaises(ValueError):
-            SqlParser("SELECT * FROM table FOR UPDATE")
-
     def test_universal_table(self):
         uri, table_name = self.construct_universal_table()
 
-        table = sql_table.SqlTable.from_sql(uri, sql="""
+        table = sql_table.SqlTable(self.conn, """
             SELECT
                 v1.col2 as v1,
                 v2.col2 as v2,
@@ -302,252 +192,261 @@ class SqlTableTests(PostgresTest):
 
         self.drop_sql_table(table_name)
 
-
     def construct_universal_table(self):
         values = []
         for r in range(1, 6):
             for c in range(1, 6):
                 values.extend((r, c, r * c))
         table = Table(np.array(values).reshape((-1, 3)))
-        uri = self.create_sql_table(table)
-        return uri.rsplit('/', 1)
+        return self.create_sql_table(table)
 
     def test_class_var_type_hints(self):
-        iris = sql_table.SqlTable(self.iris_uri, 
-                    type_hints=Domain([], DiscreteVariable("iris", 
-                        values=['Iris-setosa', 'Iris-virginica', 
-                                'Iris-versicolor'])))
+        iris = sql_table.SqlTable(self.conn, self.iris,
+                                  type_hints=Domain([],
+                                                      DiscreteVariable("iris",
+                                                                       values=[
+                                                                           'Iris-setosa',
+                                                                           'Iris-virginica',
+                                                                           'Iris-versicolor'])))
 
         self.assertEqual(len(iris.domain.class_vars), 1)
         self.assertEqual(iris.domain.class_vars[0].name, 'iris')
 
     def test_metas_type_hints(self):
-        iris = sql_table.SqlTable(self.iris_uri,
-                    type_hints=Domain([], [], metas=[DiscreteVariable("iris", 
-                        values=['Iris-setosa', 'Iris-virginica', 
-                                'Iris-versicolor'])]))
+        iris = sql_table.SqlTable(self.conn, self.iris,
+                                  type_hints=Domain([], [], metas=[
+                                      DiscreteVariable("iris",
+                                                       values=['Iris-setosa',
+                                                               'Iris-virginica',
+                                                               'Iris-versicolor'])]))
 
         self.assertEqual(len(iris.domain.metas), 1)
         self.assertEqual(iris.domain.metas[0].name, 'iris')
 
     def test_select_all(self):
-        iris = sql_table.SqlTable.from_sql(
-            self.iris_uri,
-            sql='SELECT * FROM iris',
-            type_hints=Domain([], DiscreteVariable("iris", 
-                 values=['Iris-setosa', 'Iris-virginica', 
-                'Iris-versicolor']))
-            )
+        iris = sql_table.SqlTable(
+            self.conn,
+            "SELECT * FROM iris",
+            type_hints=Domain(
+                [], DiscreteVariable("iris", values=['Iris-setosa',
+                                                     'Iris-virginica',
+                                                     'Iris-versicolor']))
+        )
 
         self.assertEqual(len(iris.domain), 5)
 
     def test_discrete_bigint(self):
         table = np.arange(6).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['bigint'])
+        conn, table_name = self.create_sql_table(table, ['bigint'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
     def test_continous_bigint(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['bigint'])
+        conn, table_name = self.create_sql_table(table, ['bigint'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_discrete_int(self):
         table = np.arange(6).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['int'])
+        conn, table_name = self.create_sql_table(table, ['int'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
     def test_continous_int(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['int'])
+        conn, table_name = self.create_sql_table(table, ['int'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_discrete_smallint(self):
         table = np.arange(6).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['smallint'])
+        conn, table_name = self.create_sql_table(table, ['smallint'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
     def test_continous_smallint(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['smallint'])
+        conn, table_name = self.create_sql_table(table, ['smallint'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_boolean(self):
         table = np.array(['F', 'T', 0, 1, 'False', 'True']).reshape(-1, 1)
-        uri = self.create_sql_table(table, ['boolean'])
+        conn, table_name = self.create_sql_table(table, ['boolean'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
     def test_discrete_char(self):
         table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
-        uri = self.create_sql_table(table, ['char(1)'])
+        conn, table_name = self.create_sql_table(table, ['char(1)'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
     def test_meta_char(self):
         table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
-        uri = self.create_sql_table(table, ['char(1)'])
+        conn, table_name = self.create_sql_table(table, ['char(1)'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
     def test_discrete_varchar(self):
         table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
-        uri = self.create_sql_table(table, ['varchar(1)'])
+        conn, table_name = self.create_sql_table(table, ['varchar(1)'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
     def test_meta_varchar(self):
         table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
-        uri = self.create_sql_table(table, ['varchar(1)'])
+        conn, table_name = self.create_sql_table(table, ['varchar(1)'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
     def test_date(self):
         table = np.array(['2014-04-12', '2014-04-13', '2014-04-14',
                           '2014-04-15', '2014-04-16']).reshape(-1, 1)
-        uri = self.create_sql_table(table, ['date'])
+        conn, table_name = self.create_sql_table(table, ['date'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
     def test_double_precision(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['double precision'])
+        conn, table_name = self.create_sql_table(table, ['double precision'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_numeric(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['numeric(15, 2)'])
+        conn, table_name = self.create_sql_table(table, ['numeric(15, 2)'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_real(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['real'])
+        conn, table_name = self.create_sql_table(table, ['real'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_serial(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['serial'])
+        conn, table_name = self.create_sql_table(table, ['serial'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-    @unittest.skipIf(server_version() < 90200, "Type not supported on this server version.")
+    @unittest.skipIf(server_version() < 90200,
+                     "Type not supported on this server version.")
     def test_smallserial(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['smallserial'])
+        conn, table_name = self.create_sql_table(table, ['smallserial'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-    @unittest.skipIf(server_version() < 90200, "Type not supported on this server version.")
+    @unittest.skipIf(server_version() < 90200,
+                     "Type not supported on this server version.")
     def test_bigserial(self):
         table = np.arange(25).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['bigserial'])
+        conn, table_name = self.create_sql_table(table, ['bigserial'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
     def test_text(self):
         table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape((-1, 1))
-        uri = self.create_sql_table(table, ['text'])
+        conn, table_name = self.create_sql_table(table, ['text'])
 
-        sql_table = SqlTable(uri, guess_values=False)
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        sql_table = SqlTable(uri, guess_values=True)
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
     def test_recovers_connection_after_sql_error(self):
         import psycopg2
-        uri = self.create_sql_table(np.arange(25).reshape((-1, 1)))
 
-        sql_table = SqlTable(uri)
+        conn, table_name = self.create_sql_table(
+            np.arange(25).reshape((-1, 1)))
+        sql_table = SqlTable(conn, table_name)
 
         try:
-            broken_query = "SELECT 1/%s FROM %s" % (sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
+            broken_query = "SELECT 1/%s FROM %s" % (
+                sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
             with sql_table._execute_sql_query(broken_query) as cur:
                 cur.fetchall()
         except psycopg2.DataError:
             pass
 
-        working_query = "SELECT %s FROM %s" % (sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
+        working_query = "SELECT %s FROM %s" % (
+            sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
         with sql_table._execute_sql_query(working_query) as cur:
             cur.fetchall()
 
