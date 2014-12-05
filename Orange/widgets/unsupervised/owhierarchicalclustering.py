@@ -896,10 +896,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         form.addRow(gui.appendRadioButton(box, "Max depth", addToLayout=False),
                     self.max_depth_spin)
-#         form.addRow(QRadioButton("None"), QLabel())
-#         form.addRow(QRadioButton("Max depth"), QSpinBox())
-#         form.addRow(QRadioButton("Max num of leaves"), QSpinBox())
-        box.layout().addLayout(form)
 
 #         box = gui.widgetBox(self.controlArea, "Clusters")
 #         form = QFormLayout()
@@ -1355,24 +1351,6 @@ class GraphicsSimpleTextList(QGraphicsWidget):
     def __iter__(self):
         return iter(self.label_items)
 
-from PyQt4.QtGui import QStaticText
-
-
-class TextItem(QGraphicsSimpleTextItem):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._width = -1
-        self._static = QStaticText()
-
-    def setWidth(self, width):
-        if self._width != width:
-            self.prepareGeometryChange()
-            self._width = width
-
-    def paint(self, painter, option, widget):
-        if self._static is None:
-            pass
-
 
 class WrapperLayoutItem(QGraphicsLayoutItem):
     """A Graphics layout item wrapping a QGraphicsItem allowing it
@@ -1564,116 +1542,6 @@ class SliderLine(QGraphicsObject):
         painter.restore()
 
 
-class CutoffLine(QGraphicsObject):
-    """A dragable cutoff line for selection of clusters in a DendrogramWidget.
-    """
-    value_changed = Signal()
-
-    def __init__(self, widget):
-        assert(isinstance(widget, DendrogramWidget))
-        QGraphicsObject.__init__(self, widget)
-        self._line = QLineF()
-        self._pen = QPen()
-        self.setAcceptedMouseButtons(Qt.LeftButton)
-        self.setPen(make_pen(brush=QColor(50, 50, 50), width=1, cosmetic=True))
-
-        geom = widget.geometry()
-        if widget.orientation in [Left, Right]:
-            self.setLine(0, 0, 0, geom.height())
-            self.setCursor(Qt.SizeHorCursor)
-        else:
-            self.setLine(0, geom.height(), geom.width(), geom.height())
-            self.setCursor(Qt.SizeVerCursor)
-
-        root = widget._root
-        if root:
-            self.cutoff_height = root.value.height
-            self.setZValue(widget.item(root).zValue() + root.value.height + 10)
-        else:
-            self.cutoff_height = 0
-        widget.geometryChanged.connect(self.on_geometry_changed)
-
-    def setLine(self, *args):
-        line = QLineF(*args)
-        if self._line != line:
-            self.prepareGeometryChange()
-            self._line = line
-            self.update()
-
-    def line(self):
-        return QLineF(self._line)
-
-    def setPen(self, pen):
-        pen = QPen(pen)
-        if self._pen != pen:
-            self.prepareGeometryChange()
-            self._pen = pen
-            self.update()
-
-    def pen(self):
-        return QPen(self._pen)
-
-    def boundingRect(self):
-        r = QRectF(self._line.p1(), self._line.p2())
-        penw = self.pen().width()
-        return r.adjusted(-penw, -penw, penw, penw)
-
-    def paint(self, painter, *args):
-        painter.save()
-        painter.setPen(self.pen())
-        painter.drawLine(self._line)
-        painter.restore()
-
-    def set_cutoff_height(self, height):
-        if self.cutoff_height != height:
-            self.cutoff_height = height
-            widget = self.parentWidget()
-            pos = widget.pos_at_height(height)
-            geom = widget.geometry()
-
-            if widget.orientation in [Left, Right]:
-                self.setLine(pos.x(), 0, pos.x(), geom.height())
-            else:
-                self.setLine(0, pos.y(), geom.width(), pos.y())
-
-            self.value_changed.emit()
-
-            root = widget._root
-            if root:
-                clusters = clusters_at_height(root, height)
-                items = [widget.item(cl) for cl in clusters]
-                widget.set_selected_items(items)
-
-    def on_geometry_changed(self):
-        widget = self.parentWidget()
-        height = self.cutoff_height
-        geom = widget.geometry()
-        pos = widget.pos_at_height(height)
-
-        if widget.orientation in [Left, Right]:
-            self.setLine(pos.x(), 0, pos.x(), geom.height())
-            self.setCursor(Qt.SizeHorCursor)
-        else:
-            self.setLine(0, pos.y(), geom.width(), pos.y())
-            self.setCursor(Qt.SizeVerCursor)
-        root = widget._root
-        if root:
-            self.setZValue(widget.item(root).zValue() + root.value.height + 10)
-
-    def mousePressEvent(self, event):
-        pass
-
-    def mouseMoveEvent(self, event):
-        widget = self.parentWidget()
-        height = widget.height_at(event.pos())
-        self.set_cutoff_height(height)
-
-    def mouseReleaseEvent(self, event):
-        widget = self.parentWidget()
-        height = widget.height_at(event.pos())
-        self.set_cutoff_height(height)
-
-
 def clusters_at_height(root, height):
     """Return a list of clusters by cutting the clustering at `height`.
     """
@@ -1701,7 +1569,7 @@ def test_main():
     w.show()
     w.raise_()
     rval = app.exec_()
-    w.onWidgetDelete()
+    w.onDeleteWidget()
     sip.delete(w)
     del w
     app.processEvents()
