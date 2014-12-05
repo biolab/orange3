@@ -18,8 +18,8 @@ from Orange.widgets.settings import (Setting, DomainContextHandler,
 from Orange.widgets.utils import datacaching, colorpalette, vartype
 
 
-def compute_scale(min, max):
-    magnitude = int(3 * math.log10(abs(max - min)) + 1)
+def compute_scale(min_, max_):
+    magnitude = int(3 * math.log10(abs(max_ - min_)) + 1)
     if magnitude % 3 == 0:
         first_place = 1
     elif magnitude % 3 == 1:
@@ -28,7 +28,7 @@ def compute_scale(min, max):
         first_place = 5
     magnitude = magnitude // 3 - 1
     step = first_place * pow(10, magnitude)
-    first_val = math.ceil(min / step) * step
+    first_val = math.ceil(min_ / step) * step
     return first_val, step
 
 
@@ -44,7 +44,7 @@ class BoxData:
         self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / N)
         self.dev = math.sqrt(self.var)
         s = 0
-        thresholds = [N / 4, N / 2, 3 * N / 4]
+        thresholds = [N / 4, N / 2, N / 4 * 3]
         thresh_i = 0
         q = []
         for i, e in enumerate(dist[1]):
@@ -62,6 +62,7 @@ class BoxData:
         self.q25, self.median, self.q75 = q
 
 
+# noinspection PyUnresolvedReferences
 class OWBoxPlot(widget.OWWidget):
     """
     Here's how the widget's functions call each other:
@@ -139,6 +140,12 @@ class OWBoxPlot(widget.OWWidget):
         self.stats = []
         self.ddataset = None
 
+        self.label_txts = self.mean_labels = self.boxes = self.labels = \
+            self.attr_labels = self.order = []
+        self.p = -1.0
+        self.scale_x = self.scene_min_x = self.scene_width = self.label_width \
+            = 0
+
         self.attr_list_box = gui.listBox(
             self.controlArea, self, "attributes_select", "attributes",
             box="Variable", callback=self.attr_changed)
@@ -182,6 +189,7 @@ class OWBoxPlot(widget.OWWidget):
         super().resizeEvent(ev)
         self.layout_changed()
 
+    # noinspection PyPep8Naming
     def setColors(self):
         dlg = self.createColorDialog()
         if dlg.exec_():
@@ -190,6 +198,7 @@ class OWBoxPlot(widget.OWWidget):
             self.discPalette = dlg.getDiscretePalette("discPalette")
             self.display_changed()
 
+    # noinspection PyPep8Naming
     def createColorDialog(self):
         c = colorpalette.ColorPaletteDlg(self, "Color Palette")
         c.createDiscretePalette("discPalette", "Discrete Palette")
@@ -357,6 +366,7 @@ class OWBoxPlot(widget.OWWidget):
         self.boxView.centerOn(self.scene_width / 2,
                               -30 - len(self.boxes) * 40 / 2 + 45)
 
+    # noinspection PyPep8Naming
     def compute_tests(self):
         # The t-test and ANOVA are implemented here since they efficiently use
         # the widget-specific data in self.stats.
@@ -372,6 +382,7 @@ class OWBoxPlot(widget.OWWidget):
             return t, p
 
         # TODO: Check this function
+        # noinspection PyPep8Naming
         def stat_ANOVA():
             N = sum(stat.N for stat in self.stats)
             grand_avg = sum(stat.N * stat.mean for stat in self.stats) / N
@@ -393,22 +404,25 @@ class OWBoxPlot(widget.OWWidget):
                 "cannot compute significance"
         elif len(self.stats) == 2:
             if self.display == 2:
-                z, self.p = tests.wilcoxon_rank_sum(
-                    self.stats[0].dist, self.stats[1].dist)
-                t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
+                t = ""
+                # z, self.p = tests.wilcoxon_rank_sum(
+                #    self.stats[0].dist, self.stats[1].dist)
+                # t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
             else:
                 t, self.p = stat_ttest()
                 t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
         else:
             if self.display == 2:
-                U, self.p = -1, -1
-                t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
+                t = ""
+                # U, self.p = -1, -1
+                # t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
             else:
                 F, self.p = stat_ANOVA()
                 t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
         self.infot1.setText("<center>%s</center>" % t)
 
-    def attr_label(self, text):
+    @staticmethod
+    def attr_label(text):
         return QtGui.QGraphicsSimpleTextItem(text)
 
     def mean_label(self, stat, attr, val_name):
@@ -451,8 +465,8 @@ class OWBoxPlot(widget.OWWidget):
         gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
 
         bv = self.boxView
-        viewRect = bv.viewport().rect().adjusted(15, 15, -15, -30)
-        self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+        viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
+        self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
         # In principle we should repeat this until convergence since the new
         # scaling is too conservative. (No chance am I doing this.)
@@ -460,7 +474,7 @@ class OWBoxPlot(widget.OWWidget):
                   for stat, mean_lab in zip(self.stats, self.mean_labels))
         if mlb < gbottom:
             gbottom = mlb
-            self.scale_x = scale_x = viewRect.width() / (gtop - gbottom)
+            self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
         self.scene_min_x = gbottom * scale_x
         self.scene_width = (gtop - gbottom) * scale_x
@@ -504,8 +518,8 @@ class OWBoxPlot(widget.OWWidget):
         max_box = step * steps
 
         bv = self.boxView
-        viewRect = bv.viewport().rect().adjusted(15, 15, -15, -30)
-        self.scene_width = viewRect.width()
+        viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
+        self.scene_width = viewrect.width()
 
         lab_width = max(lab.boundingRect().width() for lab in self.attr_labels)
         lab_width = max(lab_width, 40)
@@ -579,9 +593,9 @@ class OWBoxPlot(widget.OWWidget):
         return labels
 
     def box_group(self, stat, height=20):
-        def line(x0, y0, x1, y1, *args, **kwargs):
+        def line(x0, y0, x1, y1, *args):
             return QtGui.QGraphicsLineItem(x0 * scale_x, y0, x1 * scale_x, y1,
-                                           *args, **kwargs)
+                                           *args)
 
         scale_x = self.scale_x
         box = QtGui.QGraphicsItemGroup()
