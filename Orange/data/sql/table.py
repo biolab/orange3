@@ -38,35 +38,33 @@ class SqlTable(table.Table):
         """
         Create a new proxy for sql table.
 
-        To create a new SqlTable, you specify the connection parameters
+        To create a new SqlTable, specify the connection parameters
         for psycopg2 and the name of the table/sql query used to fetch
         the data.
 
             table = SqlTable('database_name', 'table_name')
             table = SqlTable('database_name', 'SELECT * FROM table')
 
-        For complex configurations, you can replace database name with the
-        dictionary of connection parameters, that will be passed to the
-        sql backend (psycopg2).
-
-        For the list of all the supported connection parameters see:
+        For complex configurations, dictionary of connection parameters can
+        be used instead of the database name. For documentation about
+        connection parameters, see:
         http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
 
 
         Data domain is inferred from the columns of the table/query.
 
         The (very quick) default setting is to treat all numeric columns as
-        continuous variables and everything else as (useless) strings.
+        continuous variables and everything else as strings and placed among
+        meta attributes.
 
-        By setting the inspect_values parameter to True, you allow us to
-        inspect the column values thus resulting in a better domain.
-        All int/string columns with less than 21 values will be used as
-        discrete features.
+        If inspect_values parameter is set to True, all column values are
+        inspected and int/string columns with less than 21 values are
+        intepreted as discrete features.
 
-        Further more, you can construct your own domain and pass it as the
-        type_hints parameter. Variables from the domain will be used for
-        the columns with the same names and types will be guessed for the
-        rest.
+        Domains can be constructed by the caller and passed in
+        type_hints parameter. Variables from the domain are used for
+        the columns with the matching names; for columns without the matching
+        name in the domain, types are inferred as described above.
         """
         if isinstance(connection_params, str):
             connection_params = dict(database=connection_params)
