@@ -13,7 +13,7 @@ from Orange.tests.sql.base import has_psycopg2
 @unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
-        table = SqlTable(host='localhost', database='test', table='iris',
+        table = SqlTable(dict(host='localhost', database='test'), 'iris',
                          type_hints=Domain([], DiscreteVariable("iris", 
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))

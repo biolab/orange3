@@ -122,8 +122,12 @@ class OWDataInfo(widget.OWWidget):
                     (("Discrete", dis), ("Continuous", con)))
 
         if SqlTable is not None and isinstance(data, SqlTable):
-            self.location = "Table '%s' in database '%s/%s'" % (
-                data.name, data.host, data.database)
+            connection_string = ' '.join(
+                '%s=%s' % (key, value)
+                for key, value in data.connection_params.items()
+                if value is not None)
+            self.location = "Table '%s', using connection:\n%s" % (
+                data.table_name, connection_string)
         else:
             self.location = "Data is stored in memory"
 
