@@ -32,8 +32,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     #                 "MaxNodeWidth", "LimitNodeWidth", "NodeInfo", "NodeColorMethod",
     #                 "TruncateText"]
 
-    # inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
-    # outputs = [("Examples", Table)]
+    inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
+    outputs = [("Examples", Table)]
 
 
     settingsList = OWTreeViewer2D.settingsList + ['ShowPies', "colorSettings", "selectedColorSettingsIndex"]
