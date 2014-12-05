@@ -27,16 +27,11 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     show_pies = Setting(True)
     color_settings = Setting(None)
     selected_color_settings_index = Setting(0)
-    show_node_info_text = Setting(False)
 
     target_class_index = ContextSetting(0)
 
     inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
     outputs = [("Examples", Table)]
-
-    node_info_buttons = [
-        'Majority class', 'Majority class probability',
-        'Target class probability', 'Number of instances']
 
     def __init__(self):
         super().__init__()
@@ -70,26 +65,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
                      callback=self.toggle_pies)
         gui.separator(colorbox)
         gui.button(colorbox, self, "Set Colors", callback=self.set_colors)
-
-        node_info_box = gui.widgetBox(self.controlArea, "Show Info")
-        node_info_settings = ['maj', 'majp', 'tarp', 'inst']
-        self.node_info_w = []
-        self.dummy = 0
-        for i in range(len(self.node_info_buttons)):
-            setattr(self, node_info_settings[i], i in self.node_info)
-            w = gui.checkBox(
-                node_info_box, self, node_info_settings[i],
-                self.node_info_buttons[i], callback=self.set_node_info,
-                getwidget=True)
-            self.node_info_w.append(w)
-
-        # gui.button(self.controlArea, self, "Save as", callback=self.saveGraph)
-        self.node_info_sorted = list(self.node_info)
-        self.node_info_sorted.sort()
-
         dlg = self.create_color_dialog()
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
-
         gui.rubber(self.controlArea)
 
     def sendReport(self):
@@ -128,12 +105,9 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         return c
 
     def set_node_info(self, widget=None, id=None):
-        flags = sum(2 ** i
-                    for i, name in enumerate(['maj', 'majp', 'tarp', 'inst'])
-                    if getattr(self, name))
         for n in self.scene.nodes():
             n.set_rect(QRectF())
-            self.update_node_info(n, flags)
+            self.update_node_info(n)
         w = max([n.rect().width() for n in self.scene.nodes()] + [0])
         if w > self.max_node_width < 200:
             w = self.max_node_width
@@ -142,21 +116,23 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.fix_pos(self.root_node, 10, 10)
 
     def update_node_info(self, node, flags=31):
-        lines = []
-        if flags & 1:
-            lines.append(self.domain.class_vars[0].values[node.majority()])
-        if flags & 2:
-            lines.append("%.3f" % node.get_distribution()[node.majority()])
-        if flags & 4:
-            lines.append("%.3f" % node.get_distribution()[self.target_class_index])
-        if flags & 8:
-            lines.append(str(node.num_instances()))
-        text = "<br>".join(lines)
-        text += "<hr>"
-        if node.is_leaf():
-            text += self.domain.class_vars[0].values[node.majority()]
+        distr = node.get_distribution()
+        total = int(node.num_instances())
+        if self.target_class_index:
+            tabs = distr[self.target_class_index - 1]
+            text = ""
         else:
-            text += self.domain.attributes[node.attribute()].name
+            modus = node.majority()
+            tabs = distr[modus]
+            text = self.domain.class_vars[0].values[modus] + "<br/>"
+        if tabs > 0.999:
+            text += "100%, {}/{}".format(total, total)
+        else:
+            text += "{:2.1f}%, {}/{}".format(100 * tabs,
+                                             int(total * tabs), total)
+        if not node.is_leaf():
+            text += "<hr/><center>{}</center>".format(
+                self.domain.attributes[node.attribute()].name)
         node.setHtml(text)
 
     def activate_loaded_settings(self):
@@ -188,8 +164,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
     def toggle_target_class(self):
         self.toggle_node_color()
-        if self.tarp:
-            self.set_node_info()
+        self.set_node_info()
         self.scene.update()
 
     def toggle_pies(self):
@@ -355,10 +330,11 @@ class ClassificationTreeNode(GraphicsNode):
         """
         :return: split condition to reach a particular node.
         """
-        if self.i > 0:  # Node is not root
+        if self.i > 0:
             sign = [">", "<="][self.tree.children_left[self.parent.i] == self.i]
             thresh = self.tree.threshold[self.parent.i]
             return "%s %f" % (sign, thresh)
+#            return "%s %s" % (sign, self.tree.domain.attributes[self.attribute()].str_val(thresh))
         else:
             return ""
 
