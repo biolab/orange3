@@ -422,7 +422,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     # this function is only intended for derived classes to send appropriate
     # signals when all settings are loaded
-    def activateLoadedSettings(self):
+    def activate_loaded_settings(self):
         pass
 
     # reimplemented in other widgets
