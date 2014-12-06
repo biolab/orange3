@@ -170,8 +170,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.update()
 
     def walkcreate(self, tree, parent=None, level=0, i=0, distr=None):
-        node = ClassificationTreeNode(tree, parent, None, self.scene,
-                                      i=i, distr=distr[i])
+        node = ClassificationTreeNode(tree, self.domain, parent, None,
+                                      self.scene, i=i, distr=distr[i])
         if parent:
             parent.graph_add_edge(
                 GraphicsEdge(None, self.scene, node1=parent, node2=node))
@@ -228,11 +228,12 @@ class PieChart(QGraphicsRectItem):
 
 
 class ClassificationTreeNode(GraphicsNode):
-    def __init__(self, tree, parent=None, parent_item=None,
+    def __init__(self, tree, domain, parent=None, parent_item=None,
                  scene=None, i=0, distr=None):
         super().__init__(tree, parent, parent_item, scene)
         self.distribution = distr
         self.tree = tree
+        self.domain = domain
         self.i = i
         self.parent = parent
         self.pie = PieChart(self.get_distribution(), 8, self, scene)
@@ -303,9 +304,8 @@ class ClassificationTreeNode(GraphicsNode):
         if self.i > 0:
             sign = [">", "<="][self.tree.children_left[self.parent.i] == self.i]
             thresh = self.tree.threshold[self.parent.i]
-            return "%s %f" % (sign, thresh)
-#            return "%s %s" % (sign,
-#                self.tree.domain.attributes[self.attribute()].str_val(thresh))
+            return "%s %s" % (
+                sign, self.domain.attributes[self.attribute()].str_val(thresh))
         else:
             return ""
 
@@ -401,18 +401,18 @@ class ClassificationTreeNode(GraphicsNode):
         return rect | attr_rect
 
     def paint(self, painter, option, widget=None):
+        rect = self.rect()
         if self.isSelected():
             option.state ^= QStyle.State_Selected
         painter.setFont(self.document().defaultFont())
         draw_text = str(self.split_condition())
-        painter.drawText(QPointF(0, -self.line_descent - 1), draw_text)
+        painter.drawText(QPointF(4, -self.line_descent - 1), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
         if self.isSelected():
             painter.setPen(QPen(QBrush(Qt.black), 2))
         else:
             painter.setPen(QPen(Qt.gray))
-        rect = self.rect()
         if self.is_leaf():
             painter.drawRect(rect.adjusted(-3, 0, 0, 0))
         else:
