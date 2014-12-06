@@ -41,6 +41,7 @@ class GraphicsDroplet(QGraphicsEllipseItem):
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton)
         self.setBrush(QBrush(Qt.gray))
+        self.setPen(Qt.white)
         
     def hoverEnterEvent(self, event):
         super().hoverEnterEvent(event)
@@ -138,8 +139,9 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
     def paint(self, painter, option, widget=0):
         painter.save()
         painter.setBrush(self.backgroundBrush)
+        painter.setPen(QPen(Qt.gray))
         rect = self.rect()
-        painter.drawRoundedRect(rect, 10, 10)
+        painter.drawRoundedRect(rect, 4, 4)
         painter.restore()
         painter.setClipRect(rect)
         return QGraphicsTextItem.paint(self, painter, option, widget)
@@ -364,27 +366,33 @@ class OWTreeViewer2D(OWWidget):
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
         self.info = gui.widgetLabel(box, 'No tree.')
 
-        box = gui.widgetBox(self.controlArea, "Size", addSpace=True)
-        gui.hSlider(
-            box, self, 'zoom', label='Zoom ',
-            minValue=1, maxValue=10, step=1, createLabel=False, ticks=False,
-            callback=self.toggle_zoom_slider, addSpace=True)
-        gui.hSlider(
-            box, self, 'max_node_width', label='Width ',
-            minValue=50, maxValue=200, step=1, createLabel=False, ticks=False,
-            callback=self.toggle_node_size, addSpace=True)
-        gui.comboBox(
+        layout = QGridLayout()
+        layout.setVerticalSpacing(20)
+        box = gui.widgetBox(self.controlArea, "Size", addSpace=True,
+                            orientation=layout)
+        layout.addWidget(QLabel("Zoom: "), 0, 0, Qt.AlignRight)
+        layout.addWidget(gui.hSlider(
+            box, self, 'zoom', minValue=1, maxValue=10, step=1,
+            createLabel=False, ticks=False, addToLayout=False, addSpace=False,
+            callback=self.toggle_zoom_slider), 0, 1)
+        layout.addWidget(QLabel("Width: "), 1, 0, Qt.AlignRight)
+        layout.addWidget(gui.hSlider(
+            box, self, 'max_node_width', minValue=50, maxValue=200, step=1,
+            createLabel=False, ticks=False, addToLayout=False, addSpace=False,
+            callback=self.toggle_node_size), 1, 1)
+        layout.addWidget(QLabel("Depth: "), 2, 0, Qt.AlignRight)
+        layout.addWidget(gui.comboBox(
             box, self, 'max_tree_depth',
-            label="Depth ", orientation="horizontal",
             items=["Unlimited"] + ["{} levels".format(x) for x in range(2, 10)],
+            addToLayout=False,
             sendSelectedValue=False, callback=self.toggle_tree_depth,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
-                                   QSizePolicy.Fixed))
-        gui.comboBox(
-            box, self,  'line_width_method', label="Edge width ",
-            orientation="horizontal",
+                                   QSizePolicy.Fixed)), 2, 1)
+        layout.addWidget(QLabel("Edge width: "), 3, 0, Qt.AlignRight)
+        layout.addWidget(gui.comboBox(
+            box, self,  'line_width_method', addToLayout=False,
             items=['Fixed', 'Relative to root', 'Relative to parent'],
-            callback=self.toggle_line_width)
+            callback=self.toggle_line_width), 3, 1)
         self.resize(800, 500)
 
     def send_report(self):
@@ -424,9 +432,9 @@ class OWTreeViewer2D(OWWidget):
         for edge in self.scene.edges():
             num_inst = edge.node2.num_instances()
             if self.line_width_method == 1:
-                width = 12 * num_inst / root_instances
+                width = 8 * num_inst / root_instances
             elif self.line_width_method == 2:
-                width = 12 * num_inst / edge.node1.num_instances()
+                width = 8 * num_inst / edge.node1.num_instances()
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 

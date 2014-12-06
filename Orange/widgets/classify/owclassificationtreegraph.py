@@ -43,6 +43,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         gui.button(box, self, "Set Colors", callback=self.set_colors)
         dlg = self.create_color_dialog()
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
+        gui.rubber(self.controlArea)
 
     def sendReport(self):
         if self.tree:
@@ -104,9 +105,10 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             text += "{:2.1f}%, {}/{}".format(100 * tabs,
                                              int(total * tabs), total)
         if not node.is_leaf():
-            text += "<hr/><center>{}</center>".format(
+            text += "<hr/>{}".format(
                 self.domain.attributes[node.attribute()].name)
-        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">{}</p>'.
+        node.setHtml('<center><p style="line-height: 120%; margin-bottom: 0">'
+                     '{}</p></center>'.
                      format(text))
 
     def activate_loaded_settings(self):
@@ -143,6 +145,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
     def ctree(self, clf=None):
         self.clear()
+        self.closeContext()
         if not clf:
             self.info.setText('No tree.')
             self.tree = None
@@ -153,6 +156,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.target_combo.clear()
             self.target_combo.addItem("None")
             self.target_combo.addItems(self.domain.class_vars[0].values)
+            self.target_class_index = 0
+            self.openContext(self.domain.class_var)
             self.root_node = self.walkcreate(self.tree, None, distr=clf.distr)
             self.info.setText(
                 '{} nodes, {} leaves'.
@@ -217,7 +222,7 @@ class PieChart(QGraphicsRectItem):
             painter.drawPie(-self.r, -self.r, 2 * self.r, 2 * self.r,
                             int(start_angle), int(angle))
             start_angle += angle
-        painter.setPen(QPen(Qt.black))
+        painter.setPen(QPen(Qt.white))
         painter.setBrush(QBrush())
         painter.drawEllipse(-self.r, -self.r, 2 * self.r, 2 * self.r)
 
@@ -398,21 +403,20 @@ class ClassificationTreeNode(GraphicsNode):
     def paint(self, painter, option, widget=None):
         if self.isSelected():
             option.state ^= QStyle.State_Selected
-        if self.isSelected():
-            painter.save()
-            painter.setBrush(QBrush(QColor(125, 162, 206, 192)))
-            painter.drawRoundedRect(
-                self.boundingRect().adjusted(-2, 1, -1, -1), 10, 10)
-            painter.restore()
         painter.setFont(self.document().defaultFont())
-        # painter.drawText(QPointF(0, -self.line_descent),
-        #                  str(self.attribute()) if self.attribute() else "")
         draw_text = str(self.split_condition())
         painter.drawText(QPointF(0, -self.line_descent - 1), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
+        if self.isSelected():
+            painter.setPen(QPen(QBrush(Qt.black), 2))
+        else:
+            painter.setPen(QPen(Qt.gray))
         rect = self.rect()
-        painter.drawRoundedRect(rect.adjusted(-3, 0, 0, 0), 10, 10)
+        if self.is_leaf():
+            painter.drawRect(rect.adjusted(-3, 0, 0, 0))
+        else:
+            painter.drawRoundedRect(rect.adjusted(-3, 0, 0, 0), 4, 4)
         painter.restore()
         painter.setClipRect(rect)
         return QGraphicsTextItem.paint(self, painter, option, widget)

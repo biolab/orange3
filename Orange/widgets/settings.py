@@ -899,7 +899,7 @@ class ClassValuesContextHandler(ContextHandler):
             return
 
         if name in self.known_settings:
-            self.update_packed_data(widget.current_context, name, copy.copy(value))
+            self.update_packed_data(widget.current_context.values, name, copy.copy(value))
 
 
 ### Requires the same the same attributes in the same order
