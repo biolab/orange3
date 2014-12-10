@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from collections import namedtuple, deque, OrderedDict
-from operator import attrgetter
+from collections import namedtuple, OrderedDict
 from itertools import chain
 from functools import reduce
 
 import numpy
 import scipy.cluster.hierarchy
-import scipy.spatial.distance
 
 from PyQt4.QtGui import (
     QGraphicsWidget, QGraphicsLinearLayout, QGraphicsPathItem,
     QGraphicsScene, QGraphicsView, QTransform, QPainterPath,
-    QColor, QBrush, QPen, QFontMetrics, QFormLayout, QSizePolicy,
-    QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
-    QGraphicsPolygonItem, QLabel
+    QColor, QBrush, QPen, QFontMetrics, QGridLayout, QFormLayout,
+    QSizePolicy, QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
+    QGraphicsPolygonItem
 )
 
 from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QEvent
@@ -25,7 +23,7 @@ import pyqtgraph as pg
 import Orange.data
 import Orange.misc
 from Orange.clustering.hierarchical import \
-    postorder, preorder, Tree, tree_from_linkage, leaves, prune
+    postorder, preorder, Tree, tree_from_linkage, leaves, prune, top_clusters
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
@@ -214,6 +212,7 @@ class DendrogramWidget(QGraphicsWidget):
     Left, Top, Right, Bottom = 1, 2, 3, 4
 
     selectionChanged = Signal()
+    selectionEdited = Signal()
 
     def __init__(self, parent=None, root=None, orientation=Left):
         QGraphicsWidget.__init__(self, parent)
@@ -607,6 +606,7 @@ class DendrogramWidget(QGraphicsWidget):
                     self.select_item(obj, not obj.isSelected())
                 else:
                     self.set_selected_items([obj])
+                self.selectionEdited.emit()
                 assert self._highlighted_item is obj
                 event.accept()
                 return True
@@ -646,10 +646,21 @@ class OWHierarchicalClustering(widget.OWWidget):
     outputs = [("Selected Data", Orange.data.Table),
                ("Other Data", Orange.data.Table)]
 
+    #: Selected linkage
     linkage = settings.Setting(1)
+    #: Index of the selected annotation item (variable, ...)
     annotation_idx = settings.Setting(0)
+    #: Selected tree pruning (none/max depth)
     pruning = settings.Setting(0)
+    #: Maximum depth when max depth pruning is selected
     max_depth = settings.Setting(10)
+
+    #: Selected cluster selection method (none, cut distance, top n)
+    selection_method = settings.Setting(0)
+    #: Cut height ratio wrt root height
+    cut_ratio = settings.Setting(75.0)
+    #: Number of top clusters to select
+    top_n = settings.Setting(3)
 
     append_clusters = settings.Setting(True)
     cluster_role = settings.Setting(2)
@@ -685,28 +696,54 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.controlArea, self, "pruning", box="Pruning",
             callback=self._invalidate_pruning
         )
-        form = QFormLayout(
-            labelAlignment=Qt.AlignLeft,
-            formAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
+        grid = QGridLayout()
+        box.layout().addLayout(grid)
+        grid.addWidget(
+            gui.appendRadioButton(box, "None", addToLayout=False),
+            0, 0
         )
-        box.layout().addLayout(form)
-        form.addRow(gui.appendRadioButton(box, "None", addToLayout=False),
-                    QLabel())
         self.max_depth_spin = gui.spin(
             box, self, "max_depth", minv=1, maxv=100,
             callback=self._invalidate_pruning,
             keyboardTracking=False
         )
 
-        form.addRow(gui.appendRadioButton(box, "Max depth", addToLayout=False),
-                    self.max_depth_spin)
+        grid.addWidget(
+            gui.appendRadioButton(box, "Max depth", addToLayout=False),
+            1, 0)
+        grid.addWidget(self.max_depth_spin, 1, 1)
 
-#         box = gui.widgetBox(self.controlArea, "Clusters")
-#         form = QFormLayout()
-#         form.addRow(QRadioButton("Manual"), QLabel())
-#         form.addRow(QRadioButton("Cluster distance"), QSpinBox())
-#         box.layout().addLayout(form)
+        box = gui.radioButtons(
+            self.controlArea, self, "selection_method",
+            box="Selection",
+            callback=self._selection_method_changed)
+
+        grid = QGridLayout()
+        box.layout().addLayout(grid)
+        grid.addWidget(
+            gui.appendRadioButton(box, "Manual", addToLayout=False),
+            0, 0
+        )
+        grid.addWidget(
+            gui.appendRadioButton(box, "Height ratio", addToLayout=False),
+            1, 0
+        )
+        self.cut_ratio_spin = gui.spin(
+            box, self, "cut_ratio", 0, 100, step=1e-1, spinType=float,
+            callback=self._selection_method_changed
+        )
+        self.cut_ratio_spin.setSuffix("%")
+
+        grid.addWidget(self.cut_ratio_spin, 1, 1)
+
+        grid.addWidget(
+            gui.appendRadioButton(box, "Top N", addToLayout=False),
+            2, 0
+        )
+        self.top_n_spin = gui.spin(box, self, "top_n", 1, 20,
+                                   callback=self._selection_method_changed)
+        grid.addWidget(self.top_n_spin, 2, 1)
+        box.layout().addLayout(grid)
 
         self.controlArea.layout().addStretch()
 
@@ -782,8 +819,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.setSizePolicy(QSizePolicy.MinimumExpanding,
                                       QSizePolicy.MinimumExpanding)
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
-        fm = self.fontMetrics()
+        self.dendrogram.selectionEdited.connect(self._selection_edited)
 
+        fm = self.fontMetrics()
         self.dendrogram.setContentsMargins(
             5, fm.lineSpacing() / 2,
             5, fm.lineSpacing() / 2
@@ -813,6 +851,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.bottom_axis.line.valueChanged.connect(self._axis_slider_changed)
         self.top_axis.line.valueChanged.connect(self._axis_slider_changed)
         self.dendrogram.geometryChanged.connect(self._dendrogram_geom_changed)
+        self._set_cut_line_visible(self.selection_method == 1)
 
     def set_distances(self, matrix):
         self.matrix = matrix
@@ -852,8 +891,6 @@ class OWHierarchicalClustering(widget.OWWidget):
             self._main_graphics.sizeHint(Qt.PreferredSize).height()
         )
         self._main_graphics.layout().activate()
-        if root:
-            self.cut_line.show()
 
     def _update(self):
         self._clear_plot()
@@ -880,13 +917,12 @@ class OWHierarchicalClustering(widget.OWWidget):
                 self._set_displayed_root(prune(tree, level=self.max_depth))
             else:
                 self._set_displayed_root(tree)
-
-            c = self.dendrogram.pos_at_height(tree.value.height * 0.75)
-            self.cut_line.setValue(c.x())
         else:
             self.linkmatrix = None
             self.root = None
             self._set_displayed_root(None)
+
+        self._apply_selection()
 
     def _update_labels(self):
         labels = []
@@ -924,11 +960,19 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def _invalidate_pruning(self):
         if self.root:
+            selection = self.dendrogram.selected_nodes()
+            ranges = [node.value.range for node in selection]
             if self.pruning:
                 self._set_displayed_root(
                     prune(self.root, level=self.max_depth))
             else:
                 self._set_displayed_root(self.root)
+            selected = [node for node in preorder(self._displayed_root)
+                        if node.value.range in ranges]
+
+            self.dendrogram.set_selected_clusters(selected)
+
+        self._apply_selection()
 
     def commit(self):
         self._invalidated = False
@@ -1048,8 +1092,10 @@ class OWHierarchicalClustering(widget.OWWidget):
     def _dendrogram_slider_changed(self, value):
         p = QPointF(value, 0)
         cl_height = self.dendrogram.height_at(p)
+
         self.set_cutoff_height(cl_height)
 
+        # Sync the cut positions between the dendrogram and the axis.
         self._set_slider_value(value, self.dendrogram.size().width())
 
     def _set_slider_value(self, value, span):
@@ -1067,10 +1113,51 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def set_cutoff_height(self, height):
         self.cutoff_height = height
+        if self.root:
+            self.cut_ratio = 100 * height / self.root.value.height
+        self.select_max_height(height)
+
+    def _set_cut_line_visible(self, visible):
+        self.cut_line.setVisible(visible)
+        self.top_axis.line.setVisible(visible)
+        self.bottom_axis.line.setVisible(visible)
+
+    def select_top_n(self, n):
+        root = self._displayed_root
+        if root:
+            clusters = top_clusters(root, n)
+            self.dendrogram.set_selected_clusters(clusters)
+
+    def select_max_height(self, height):
         root = self._displayed_root
         if root:
             clusters = clusters_at_height(root, height)
             self.dendrogram.set_selected_clusters(clusters)
+
+    def _selection_method_changed(self):
+        self._set_cut_line_visible(self.selection_method == 1)
+        if self.root:
+            self._apply_selection()
+
+    def _apply_selection(self):
+        if not self.root:
+            return
+
+        if self.selection_method == 0:
+            pass
+        elif self.selection_method == 1:
+            height = self.cut_ratio * self.root.value.height / 100
+            self.set_cutoff_height(height)
+            pos = self.dendrogram.pos_at_height(height)
+            self._set_slider_value(pos.x(), self.dendrogram.size().width())
+        elif self.selection_method == 2:
+            self.select_top_n(self.top_n)
+
+    def _selection_edited(self):
+        # Selection was edited by clicking on a cluster in the
+        # dendrogram view.
+        self.selection_method = 0
+        self._selection_method_changed()
 
 from contextlib import contextmanager
 
