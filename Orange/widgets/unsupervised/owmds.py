@@ -1,6 +1,6 @@
 import numpy
 
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import sklearn.manifold
@@ -9,7 +9,7 @@ import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalette, colorbrewer
+from Orange.widgets.utils import colorpalette
 
 from Orange.widgets.utils import itemmodels
 
@@ -24,6 +24,29 @@ def is_discrete(var):
 
 def is_continuous(var):
     return isinstance(var, Orange.data.ContinuousVariable)
+
+
+def torgerson(distances, n_components=2):
+    distances = numpy.asarray(distances)
+    assert distances.shape[0] == distances.shape[1]
+    N = distances.shape[0]
+    # O ^ 2
+    D_sq = distances ** 2
+
+    # double center the D_sq
+    rsum = numpy.sum(D_sq, axis=1, keepdims=True)
+    csum = numpy.sum(D_sq, axis=0, keepdims=True)
+    total = numpy.sum(csum)
+    D_sq -= rsum / N
+    D_sq -= csum / N
+    D_sq += total / (N ** 2)
+    B = numpy.multiply(D_sq, -0.5, out=D_sq)
+
+    U, L, _ = numpy.linalg.svd(B)
+    U = U[:, :n_components]
+    L = L[:n_components]
+    D = numpy.diag(numpy.sqrt(L))
+    return numpy.dot(U, D)
 
 
 class OWMDS(widget.OWWidget):
@@ -42,11 +65,16 @@ class OWMDS(widget.OWWidget):
 
     outputs = ({"name": "Data", "type": Orange.data.Table},)
 
+    #: Initialization type
+    PCA, Random = 0, 1
+
     settingsHandler = settings.DomainContextHandler()
 
     max_iter = settings.Setting(300)
-    n_init = settings.Setting(1)
     eps = settings.Setting(1e-3)
+    initialization = settings.Setting(PCA)
+    n_init = settings.Setting(1)
+
     output_embeding_role = settings.Setting(1)
     autocommit = settings.Setting(True)
 
@@ -76,16 +104,23 @@ class OWMDS(widget.OWWidget):
             formAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
         )
-        form.addRow("N Restarts:",
-                    gui.spin(box, self, "n_init", 1, 10, step=1))
+
         form.addRow("Max iterations:",
                     gui.spin(box, self, "max_iter", 10, 10 ** 4, step=1))
+
 #         form.addRow("Eps:",
 #                     gui.spin(box, self, "eps", 1e-9, 1e-3, step=1e-9,
 #                              spinType=float))
 
+        form.addRow("Initialization",
+                    gui.comboBox(box, self, "initialization",
+                                 items=["PCA (Torgerson)", "Random"]))
+
+#         form.addRow("N Restarts:",
+#                     gui.spin(box, self, "n_init", 1, 10, step=1))
+
         box.layout().addLayout(form)
-        gui.button(box, self, "Optimize", callback=self._invalidate_embeding)
+        gui.button(box, self, "Apply", callback=self._invalidate_embeding)
 
         box = gui.widgetBox(self.controlArea, "Graph")
         self.colorvar_model = itemmodels.VariableListModel()
@@ -185,13 +220,21 @@ class OWMDS(widget.OWWidget):
                 self._effective_matrix = Orange.distance.Euclidean()(self.data)
 
         X = self._effective_matrix.X
+
+        if self.initialization == OWMDS.PCA:
+            init = torgerson(X, n_components=2)
+            n_init = 1
+        else:
+            init = None
+            n_init = self.n_init
+
         dissim = "precomputed"
 
         mds = sklearn.manifold.MDS(
-            metric=True, dissimilarity=dissim, n_components=2,
-            n_init=self.n_init, max_iter=self.max_iter
+            dissimilarity=dissim, n_components=2,
+            n_init=n_init, max_iter=self.max_iter
         )
-        embeding = mds.fit_transform(X, )
+        embeding = mds.fit_transform(X, init=init)
         self.embeding = embeding
         self.stress = mds.stress_
 
