@@ -3,19 +3,20 @@
 from collections import namedtuple, OrderedDict
 from itertools import chain
 from functools import reduce
+from contextlib import contextmanager
 
 import numpy
 import scipy.cluster.hierarchy
 
 from PyQt4.QtGui import (
-    QGraphicsWidget, QGraphicsLinearLayout, QGraphicsPathItem,
+    QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
     QGraphicsScene, QGraphicsView, QTransform, QPainterPath,
     QColor, QBrush, QPen, QFontMetrics, QGridLayout, QFormLayout,
     QSizePolicy, QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
-    QGraphicsPolygonItem
+    QGraphicsPolygonItem, QGraphicsLayoutItem
 )
 
-from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QEvent
+from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
@@ -66,16 +67,6 @@ def dendrogram_layout(tree, expand_leaves=False):
 
 
 Point = namedtuple("Point", ["x", "y"])
-
-LineSegment = namedtuple("LineSegment", ["end"])
-QuadSegment = namedtuple("QuadSegment", ["c", "end"])
-CubicSegment = namedtuple("CubicSegment", ["c1", "c2", "end"])
-Path = namedtuple("Path", ["start", "segments"])
-
-Line = namedtuple("Line", ["start", "end"])
-Quad = namedtuple("Quad", ["start", "c", "end"])
-Cubic = namedtuple("Cubic", ["start", "c1", "c2", "end"])
-
 Element = namedtuple("Element", ["anchor", "path"])
 
 
@@ -97,17 +88,10 @@ def Path_toQtPath(geom):
     return p
 
 
-class Lines(list):
-    def __str__(self):
-        return "Lines({!s})".format(super().__str__())
-
-    def __repr__(self):
-        return "Lines({!r})".format(super().__repr())
-
+#: Dendrogram orientation flags
 Left, Top, Right, Bottom = 1, 2, 3, 4
 
 
-#:: Node a -> Node (a, PathElement list)
 def dendrogram_path(tree, orientation=Left):
     layout = dendrogram_layout(tree)
     T = {}
@@ -184,6 +168,16 @@ def path_outline(path, width=1, join_style=Qt.MiterJoin):
     return stroke.united(path)
 
 
+@contextmanager
+def blocked(obj):
+    old = obj.signalsBlocked()
+    obj.blockSignals(True)
+    try:
+        yield obj
+    finally:
+        obj.blockSignals(old)
+
+
 class DendrogramWidget(QGraphicsWidget):
     """A Graphics Widget displaying a dendrogram."""
 
@@ -229,7 +223,6 @@ class DendrogramWidget(QGraphicsWidget):
         self._cluster_parent = {}
 
         self.setContentsMargins(5, 5, 5, 5)
-#         self.geometryChanged.connect(self._rescale)
         self.set_root(root)
 
     def clear(self):
@@ -1159,20 +1152,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.selection_method = 0
         self._selection_method_changed()
 
-from contextlib import contextmanager
-
-
-@contextmanager
-def blocked(obj):
-    old = obj.signalsBlocked()
-    obj.blockSignals(True)
-    try:
-        yield obj
-    finally:
-        obj.blockSignals(old)
-
-from PyQt4.QtGui import QGraphicsLayoutItem
-
 
 class GraphicsSimpleTextList(QGraphicsWidget):
     """A simple text list widget."""
@@ -1289,34 +1268,6 @@ class WrapperLayoutItem(QGraphicsLayoutItem):
 
     def setToolTip(self, tip):
         self.item.setToolTip(tip)
-
-
-class SliderLineWidget(QGraphicsWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def eventFilter(self, obj, event):
-        if obj is self._widget and \
-                event.type() == QEvent.GraphicsSceneResize or \
-                event.type() == QEvent.GraphicsSceneMove:
-            pass
-
-        return super().eventFilter(obj, event)
-
-    def setWidget(self, widget):
-        pass
-
-    def widget(self):
-        pass
-
-    def paint(self, painter, option, widget=None):
-        painter.save()
-        painter.setPen(self._pen)
-        painter.drawLine(self._line)
-        painter.restore()
-
-from PyQt4.QtGui import QGraphicsObject
-from PyQt4.QtCore import QLineF
 
 
 class SliderLine(QGraphicsObject):
