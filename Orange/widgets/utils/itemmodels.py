@@ -10,7 +10,9 @@ from PyQt4.QtGui import (
     QWidget, QBoxLayout, QToolButton, QAbstractButton, QAction
 )
 
-from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
+from Orange.data import (
+    Variable, DiscreteVariable, ContinuousVariable, StringVariable
+)
 from Orange.widgets import gui
 
 
@@ -328,9 +330,10 @@ class VariableListModel(PyListModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid_for(index, self):
-            i = index.row()
-            var = self[i]
-            if role == Qt.DisplayRole:
+            var = self[index.row()]
+            if not isinstance(var, Variable):
+                return super().data(index, role)
+            elif role == Qt.DisplayRole:
                 return var.name
             elif role == Qt.DecorationRole:
                 return gui.attributeIconDict[var]
