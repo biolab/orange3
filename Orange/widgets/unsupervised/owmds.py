@@ -275,8 +275,10 @@ class OWMDS(widget.OWWidget):
             self._setup_plot()
 
     def _setup_plot(self):
+        have_data = self.data is not None
+
         if self._pen_data is None:
-            if self.color_var > 0:
+            if have_data and self.color_var > 0:
                 color_var = self.colorvar_model[self.color_var]
                 if is_discrete(color_var):
                     palette = colorpalette.ColorPaletteGenerator(
@@ -293,7 +295,7 @@ class OWMDS(widget.OWWidget):
             self._pen_data = pen_data
 
         if self._shape_data is None:
-            if self.shape_var > 0:
+            if have_data and self.shape_var > 0:
                 Symbols = pg.graphicsItems.ScatterPlotItem.Symbols
                 symbols = numpy.array(list(Symbols.keys()))
 
@@ -309,7 +311,7 @@ class OWMDS(widget.OWWidget):
         if self._size_data is None:
             MinPointSize = 1
             point_size = 8 + MinPointSize
-            if self.size_var > 0:
+            if have_data and self.size_var > 0:
                 size_var = self.sizevar_model[self.size_var]
                 size_data = numpy.array(self.data[:, size_var]).ravel()
                 dmin, dmax = numpy.nanmin(size_data), numpy.nanmax(size_data)
