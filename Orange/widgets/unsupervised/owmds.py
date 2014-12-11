@@ -143,9 +143,11 @@ class OWMDS(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         box = gui.widgetBox(self.controlArea, "Output")
-        gui.comboBox(box, self, "output_embeding_role",
-                     items=["None", "As attributes", "As metas"],
-                     callback=self._invalidate_output)
+        cb = gui.comboBox(box, self, "output_embeding_role",
+                          box="Append coordinates",
+                          items=["Do not append", "As attributes", "As metas"],
+                          callback=self._invalidate_output)
+        cb.box.setFlat(True)
 
         cb = gui.checkBox(box, self, "autocommit", "Auto commit")
         b = gui.button(box, self, "Commit", callback=self.commit, default=True)
