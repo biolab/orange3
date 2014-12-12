@@ -155,9 +155,6 @@ class OWScatterPlot(OWWidget):
         self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
             not self.auto_send_selection)
 
-        self.mainArea.setMinimumWidth(700)
-        self.mainArea.setMinimumHeight(550)
-
         # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
         #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
         # self.optimizationDlg = self.vizrank

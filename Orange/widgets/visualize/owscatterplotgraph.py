@@ -8,6 +8,7 @@ from pyqtgraph.graphicsItems.LegendItem import ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
+from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
 from PyQt4.QtGui import QStaticText, QPainterPath, QTransform
 
@@ -249,6 +250,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
                                          background="w")
         self.plot_widget.setAntialiasing(True)
+        self.plot_widget.sizeHint = lambda: QtCore.QSize(500,500)
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
