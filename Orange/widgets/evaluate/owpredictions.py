@@ -245,7 +245,7 @@ class OWPredictions(widget.OWWidget):
                     for i in range(len(self.class_var.values))
                 )
                 dist_fmt = "{dist:.1f}"
-                fmt = dist_fmt + " -> {value!s}"
+                fmt = "{value!s} (" + dist_fmt + ")"
             else:
                 fmt = "{value!s}"
             delegate.setFormat(fmt)
@@ -375,7 +375,7 @@ class TableModel(QtCore.QAbstractTableModel):
             return max([len(row) for row in self._table] or [0])
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Vertical and  role == Qt.DisplayRole:
+        if orientation == Qt.Vertical and role == Qt.DisplayRole:
             return str(section + 1)
         elif orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return (self._header[section] if section < len(self._header)
@@ -399,7 +399,7 @@ class PredictionsModel(TableModel):
 def tool_tip(value):
     value, dist = value
     if dist is not None:
-        return "{!s} -> {!s}".format(dist, value)
+        return "{!s} {!s}".format(value, dist)
     else:
         return str(value)
 
@@ -408,12 +408,12 @@ def is_discrete(var):
     return isinstance(var, Orange.data.DiscreteVariable)
 
 
-class DistFormater(object):
+class DistFormater:
     def __init__(self, dist):
         self.dist = dist
 
     def __format__(self, fmt):
-        return " : ".join(("%" + fmt) % v for v in self.dist)
+        return ", ".join(("%" + fmt) % v for v in self.dist)
 
 
 if __name__ == "__main__":
