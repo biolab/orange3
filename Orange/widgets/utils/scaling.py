@@ -237,7 +237,7 @@ class ScaleData:
 
         # Random generators for jittering
         random = np.random.RandomState(seed=self.jitter_seed)
-        rand_seeds = random.random_integers(0, 2 ** 32 - 1,
+        rand_seeds = random.random_integers(0, 2 ** 30 - 1,
                                             size=len(data.domain))
         for index, rseed in zip(list(range(len(data.domain))), rand_seeds):
             # Need to use a different seed for each feature
