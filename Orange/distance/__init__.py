@@ -19,7 +19,7 @@ class Euclidean():
         if dist.size == 1:
             dist = dist[0, 0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -36,7 +36,7 @@ class Manhattan():
         if dist.size == 1:
             dist = dist[0, 0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -53,7 +53,7 @@ class Cosine():
         if dist.size == 1:
             dist = dist[0, 0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -74,7 +74,7 @@ class Jaccard():
         if dist.size == 1:
             dist = dist[0, 0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -95,7 +95,7 @@ class Mahalanobis():
         if dist.size == 1:
             dist = dist[0, 0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -133,7 +133,7 @@ class SpearmanR():
             dist = dist[:slc, slc:]
             if transpose:
                 dist = dist.T
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -168,7 +168,7 @@ class SpearmanRAbsolute():
             dist = dist[:slc, slc:]
             if transpose:
                 dist = dist.T
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -200,7 +200,7 @@ class PearsonR():
         if dist.size == 1:
             dist = dist[0][0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist
 
 
@@ -232,5 +232,5 @@ class PearsonRAbsolute():
         if dist.size == 1:
             dist = dist[0][0]
         else:
-            dist = DistMatrix(dist)
+            dist = DistMatrix(dist, e1, e2)
         return dist

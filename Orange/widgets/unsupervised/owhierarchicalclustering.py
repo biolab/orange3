@@ -633,8 +633,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     icon = "icons/HierarchicalClustering.svg"
     priority = 2100
 
-    inputs = [("Distances", Orange.misc.DistMatrix, "set_distances"),
-              ("Items", object, "set_items", widget.Dynamic)]
+    inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
+              # ("Items", object, "set_items", widget.Dynamic)]
 
     outputs = [("Selected Data", Orange.data.Table),
                ("Other Data", Orange.data.Table)]
@@ -849,8 +849,9 @@ class OWHierarchicalClustering(widget.OWWidget):
     def set_distances(self, matrix):
         self.matrix = matrix
         self._invalidate_clustering()
+        self._set_items(matrix.row_items)
 
-    def set_items(self, items):
+    def _set_items(self, items):
         self.items = items
         if items is None:
             self.label_cb.model()[:] = ["None", "Enumeration"]
@@ -1413,10 +1414,10 @@ def test_main():
 
     data = Orange.data.Table("iris.tab")
     matrix = distance.Euclidean()(data)
-    matrix.items = data
+    # matrix.items = data
 
     w.set_distances(matrix)
-    w.set_items(data)
+    # w.set_items(data)
     w.handleNewSignals()
     w.show()
     w.raise_()
