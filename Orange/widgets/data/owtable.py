@@ -348,6 +348,7 @@ class OWDataTable(widget.OWWidget):
 
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)
+        self.tabs.sizeHint = lambda: QtCore.QSize(600,500)
         self.id2table = {}  # key: widget id, value: table
         self.table2id = {}  # key: table, value: widget id
         self.tabs.currentChanged.connect(self.tab_clicked)
