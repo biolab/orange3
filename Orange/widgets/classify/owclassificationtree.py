@@ -89,23 +89,24 @@ class OWClassificationTree(widget.OWWidget):
             self.learner = self.preprocessor.wrapLearner(self.learner)
         self.send("Learner", self.learner)
 
-        self.error()
+        self.error(1)
         if self.data is not None:
             try:
                 self.classifier = self.learner(self.data)
                 self.classifier.name = self.name
             except Exception as errValue:
-                self.error(str(errValue))
+                self.error(1, str(errValue))
                 self.classifier = None
         else:
             self.classifier = None
         self.send("ClassificationTree", self.classifier)
 
     def set_data(self, data):
-        if data.domain.class_vars is None:
-            self.error("Data has no target variable")
-            data = None
+        self.error(0)
         self.data = data
+        if data is not None and data.domain.class_var is None:
+            self.error(0, "Data has no target variable")
+            self.data = None
         self.set_learner()
 
 
