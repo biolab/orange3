@@ -5,7 +5,7 @@ from PyQt4.QtGui import QGridLayout, QLabel
 from PyQt4.QtCore import Qt
 
 import Orange.data
-from Orange.classification import svm
+from Orange.classification import svm, SklModel
 from Orange.widgets import widget, settings, gui
 
 
@@ -20,7 +20,7 @@ class OWSVMRegression(widget.OWWidget):
     outputs = [{"name": "Learner",
                 "type": svm.SVRLearner},
                {"name": "Predictor",
-                "type": svm.SVRClassifier}]
+                "type": SklModel}]
 
     learner_name = settings.Setting("SVM Regression")
 
