@@ -133,8 +133,13 @@ class SklModel(Model):
     def __init__(self, clf):
         self.clf = clf
 
+
     def predict(self, X):
-        return self.clf.predict(X)
+        value = self.clf.predict(X)
+        if hasattr(self.clf, "predict_proba"):
+            probs = self.clf.predict_proba(X)
+            return value, probs
+        return value
 
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
