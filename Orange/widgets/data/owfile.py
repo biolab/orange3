@@ -90,8 +90,6 @@ class OWFile(widget.OWWidget):
         self.warnings.setSizePolicy(
             QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
 
-        gui.rubber(self.controlArea)
-
         self.set_file_list()
         if len(self.recent_files) > 0:
             self.open_file(self.recent_files[0])
@@ -180,21 +178,25 @@ class OWFile(widget.OWWidget):
         self.loaded_file = ""
 
         data = None
+        err_value = None
         try:
             # TODO handle self.new_variables
             data = Table(fn)
             self.loaded_file = fn
-        except Exception as errValue:
-            if "is being loaded as" in str(errValue):
+        except Exception as exc:
+            err_value = str(exc)
+            if "is being loaded as" in str(err_value):
                 try:
                     data = Table(fn)
                     self.loaded_file = fn
-                    self.warning(0, errValue)
+                    self.warning(0, err_value)
                 except:
-                    self.error(errValue)
-                    self.infoa.setText('Data was not loaded due to an error.')
-                    self.infob.setText('Error:')
-                    self.warnings.setText(errValue)
+                    data = None
+        if err_value is not None:
+            self.error(err_value)
+            self.infoa.setText('Data was not loaded due to an error.')
+            self.infob.setText('Error:')
+            self.warnings.setText(err_value)
 
         if data is None:
             self.dataReport = None
@@ -214,6 +216,7 @@ class OWFile(widget.OWWidget):
                                    .format(len(data.domain.class_vars)))
             else:
                 self.infob.setText("Data has no target variable.")
+            self.warnings.setText("")
 
             add_origin(data, fn)
             # make new data and send it
