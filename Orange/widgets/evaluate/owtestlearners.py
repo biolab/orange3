@@ -110,10 +110,8 @@ class OWTestLearners(widget.OWWidget):
         )
 
         self.result_model = QStandardItemModel()
-        self.result_model.setHorizontalHeaderLabels(
-            ["Method"] + classification_stats.headers
-        )
         self.view.setModel(self.result_model)
+        self._update_header()
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.view)
 
@@ -121,16 +119,13 @@ class OWTestLearners(widget.OWWidget):
         if key in self.learners and learner is None:
             del self.learners[key]
         else:
-            self.learners[key] = Input(learner, None, None)
+            self.learners[key] = Input(learner, None, ())
+        self._update_stats_model()
 
     def set_train_data(self, data):
         self.train_data = data
+        self._update_header()
         self._invalidate()
-        if data is not None and is_discrete(data.domain.class_var):
-            headers = ["Method"] + classification_stats.headers
-        else:
-            headers = ["Method"] + regression_stats.headers
-        self.result_model.setHorizontalHeaderLabels(headers)
 
     def set_test_data(self, data):
         self.test_data = data
@@ -145,6 +140,9 @@ class OWTestLearners(widget.OWWidget):
         self._invalidate()
 
     def update_results(self):
+        if self.train_data is None:
+            return
+
         # items in need of an update
         items = [(key, input) for key, input in self.learners.items()
                  if input.results is None]
@@ -173,7 +171,8 @@ class OWTestLearners(widget.OWWidget):
                 self.train_data, learners, store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTest:
-            assert self.test_data is not None
+            if self.test_data is None:
+                return
             results = testing.TestOnTestData(
                 self.train_data, self.test_data, learners, store_data=True
             )
@@ -194,6 +193,18 @@ class OWTestLearners(widget.OWWidget):
 
         self.setStatusMessage("")
         self._update_stats_model()
+
+    def _update_header(self):
+        headers = ["Method"]
+        if self.train_data is not None:
+            if is_discrete(self.train_data.domain.class_var):
+                headers.extend(classification_stats.headers)
+            else:
+                headers.extend(regression_stats.headers)
+        for i in reversed(range(len(headers),
+                                self.result_model.columnCount())):
+            self.result_model.takeColumn(i)
+        self.result_model.setHorizontalHeaderLabels(headers)
 
     def _update_stats_model(self):
         model = self.view.model()
@@ -230,14 +241,16 @@ class OWTestLearners(widget.OWWidget):
                 row = all_keys.index(key)
                 for c in range(1, model.columnCount()):
                     item = model.item(row, c)
-                    item.setData(None, Qt.DisplayRole)
+                    if item is not None:
+                        item.setData(None, Qt.DisplayRole)
 
     def apply(self):
         self.update_results()
         self.commit()
 
     def commit(self):
-        results = [val.results for val in self.learners.values()]
+        results = [val.results for val in self.learners.values()
+                   if val.results is not None]
         if results:
             combined = results_merge(results)
             combined.fitter_names = [learner_name(val.learner)
