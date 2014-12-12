@@ -140,6 +140,7 @@ class OWTestLearners(widget.OWWidget):
         self._invalidate()
 
     def update_results(self):
+        self.warning(1, "")
         if self.train_data is None:
             return
 
@@ -149,6 +150,9 @@ class OWTestLearners(widget.OWWidget):
         learners = [input.learner for _, input in items]
 
         self.setStatusMessage("Running")
+        if self.test_data is not None and \
+                self.resampling != OWTestLearners.TestOnTest:
+            self.warning(1, "Select 'Test on test data' to use the test data")
 
         # TODO: Test each learner individually
 
