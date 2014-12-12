@@ -7,7 +7,6 @@ import threading
 from contextlib import contextmanager
 
 import numpy as np
-from psycopg2._psycopg import cursor
 
 import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
@@ -90,7 +89,6 @@ class SqlTable(table.Table):
         fields = []
         query = "SELECT * FROM %s LIMIT 0" % self.table_name
         with self._execute_sql_query(query) as cur:
-            assert isinstance(cur, cursor)
             for col in cur.description:
                 fields.append(col)
 
