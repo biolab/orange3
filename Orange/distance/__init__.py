@@ -6,16 +6,12 @@ from Orange import data
 from Orange.misc import DistMatrix
 
 
-def _impute(x1, x2):
+def _impute(data):
     """Imputation transformer for completing missing values."""
     imputer = preprocessing.Imputer()
-    if x1 is not None:
-        x1 = imputer.fit_transform(x1)
-        x1 = x1 if sparse.issparse(x1) else np.squeeze(x1)
-    if x2 is not None:
-        x2 = imputer.fit_transform(x2)
-        x2 = x2 if sparse.issparse(x2) else np.squeeze(x2)
-    return x1, x2
+    data.X = imputer.fit_transform(data.X)
+    data.X = data.X if sparse.issparse(data.X) else np.squeeze(data.X)
+    return data
 
 
 class Euclidean():
@@ -27,7 +23,6 @@ class Euclidean():
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         dist = metrics.pairwise.pairwise_distances(x1, x2, metric='euclidean')
         if dist.size == 1:
             dist = dist[0, 0]
@@ -45,7 +40,6 @@ class Manhattan():
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         dist = metrics.pairwise.pairwise_distances(x1, x2, metric='manhattan')
         if dist.size == 1:
             dist = dist[0, 0]
@@ -63,7 +57,6 @@ class Cosine():
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         dist = metrics.pairwise.pairwise_distances(x1, x2, metric='cosine')
         if dist.size == 1:
             dist = dist[0, 0]
@@ -81,7 +74,6 @@ class Jaccard():
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         if isinstance(e1, data.RowInstance):
             x1 = x1.reshape(1, len(x1))
         if isinstance(e2, data.RowInstance):
@@ -103,7 +95,6 @@ class Mahalanobis():
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         if isinstance(e1, data.RowInstance):
             x1 = x1.reshape(1, len(x1))
         if isinstance(e2, data.RowInstance):
@@ -144,7 +135,6 @@ class SpearmanR():
             x1, x2 = x2, x1
             slc = len(e1) if x1.ndim > 1 else 1
             transpose = True
-        x1, x2 = _impute(x1, x2)
         rho, _ = stats.spearmanr(x1, x2, axis=axis)
         dist = (1. - rho) / 2.
         if isinstance(dist, np.ndarray):
@@ -180,7 +170,6 @@ class SpearmanRAbsolute():
             x1, x2 = x2, x1
             slc = len(e1) if x1.ndim > 1 else 1
             transpose = True
-        x1, x2 = _impute(x1, x2)
         rho, _ = stats.spearmanr(x1, x2, axis=axis)
         dist = (1. - np.abs(rho)) / 2.
         if isinstance(dist, np.ndarray):
@@ -210,7 +199,6 @@ class PearsonR():
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         if x1.ndim == 1:
             x1 = list([x1])
         if x2.ndim == 1:
@@ -243,7 +231,6 @@ class PearsonRAbsolute():
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        x1, x2 = _impute(x1, x2)
         if x1.ndim == 1:
             x1 = list([x1])
         if x2.ndim == 1:
