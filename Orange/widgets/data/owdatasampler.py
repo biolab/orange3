@@ -24,23 +24,23 @@ class OWDataSampler(widget.OWWidget):
 
     want_main_area = False
 
+    #: Ways to specify sample sizes for RandomSampling
+    Fixed, Ratio = 0, 1
+
     stratified = Setting(False)
     useSeed = Setting(False)
     seed = Setting(0)
     replacement = Setting(False)
     samplingType = Setting(0)
-    sampleSizeType = Setting(0)
+    sampleSizeType = Setting(Ratio)
     sampleSizeNumber = Setting(1)
-    sampleSizePercentage = Setting(30)
+    sampleSizePercentage = Setting(70)
     cvType = Setting(0)
     numberOfFolds = Setting(10)
     selectedFold = Setting(1)
 
     #: Sampling types
     RandomSampling, CrossValidation = 0, 1
-
-    #: Ways to specify sample sizes for RandomSampling
-    Fixed, Ratio = 0, 1
 
     #: CV Type
     KFold, LeaveOneOut = 0, 1
