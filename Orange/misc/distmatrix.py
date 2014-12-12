@@ -10,17 +10,30 @@ class DistMatrix():
 
     .. attribute:: X
 
-        Matrix data
-    """
+        Matrix data.
 
-    def __init__(self, data):
+    .. attribute:: row_items
+
+        Items corresponding to matrix rows.
+
+    .. attribute:: col_items
+
+        Items corresponding to matrix columns.
+    """
+    def __init__(self, data, row_items=None, col_items=None):
         """Construct a new distance matrix containing the given data.
 
         :param data: Distance matrix
-        :type data: numpy array or Python list containing lists or tuples.
+        :type data: numpy array
+        :param row_items: Items in matrix rows
+        :type row_items: `Orange.data.Table` or `Orange.data.Instance`
+        :param col_items: Items in matrix columns
+        :type col_items: `Orange.data.Table` or `Orange.data.Instance`
         """
         self.dim = data.shape
         self.X = np.array(data)
+        self.row_items = row_items
+        self.col_items = col_items
 
     def get_KNN(self, i, k):
         """Return k columns with the lowest value in the i-th row.
