@@ -302,10 +302,15 @@ class OWDataTable(widget.OWWidget):
         self.color_by_class = True
 
         info_box = gui.widgetBox(self.controlArea, "Info")
-        self.info_ex = gui.widgetLabel(info_box, 'No data on input.')
+        self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
+        self.info_ex.setWordWrap(True)
         self.info_attr = gui.widgetLabel(info_box, ' ')
+        self.info_attr.setWordWrap(True)
         self.info_class = gui.widgetLabel(info_box, ' ')
+        self.info_class.setWordWrap(True)
         self.info_meta = gui.widgetLabel(info_box, ' ')
+        self.info_meta.setWordWrap(True)
+
         gui.separator(info_box)
         gui.button(info_box, self, "Restore Original Order",
                    callback=self.reset_sort_clicked,
