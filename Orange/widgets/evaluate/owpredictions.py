@@ -146,7 +146,7 @@ class OWPredictions(widget.OWWidget):
             self.predictors[id] = PredictorSlot(predictor, pname(predictor),
                                                 None)
 
-        if self.class_var is None and predictor is not None:
+        if predictor is not None:
             self.class_var = predictor.domain.class_var
 
     def handleNewSignals(self):
