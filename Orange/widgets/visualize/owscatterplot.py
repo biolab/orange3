@@ -46,7 +46,7 @@ class OWScatterPlot(OWWidget):
 
     settingsHandler = DomainContextHandler()
 
-    auto_send_selection = Setting(False)
+    auto_send_selection = Setting(True)
     toolbar_selection = Setting(0)
     color_settings = Setting(None)
     selected_schema_index = Setting(0)

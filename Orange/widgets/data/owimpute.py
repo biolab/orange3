@@ -203,7 +203,7 @@ class OWImpute(OWWidget):
 
     default_method = settings.Setting(1)
     variable_methods = settings.ContextSetting({})
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_main_area = False
 

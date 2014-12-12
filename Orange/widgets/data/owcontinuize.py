@@ -31,7 +31,7 @@ class OWContinuize(widget.OWWidget):
 
     transform_class = Setting(False)
 
-    autosend = Setting(0)
+    autosend = Setting(True)
 
     multinomial_treats = (
         ("Target or First value as base", DomainContinuizer.LowestIsBase),
