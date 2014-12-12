@@ -111,7 +111,7 @@ class OWTestLearners(widget.OWWidget):
 
         self.result_model = QStandardItemModel()
         self.result_model.setHorizontalHeaderLabels(
-            ["Method"] + classification_stats.headers
+            ["Method"]
         )
         self.view.setModel(self.result_model)
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
@@ -126,10 +126,13 @@ class OWTestLearners(widget.OWWidget):
     def set_train_data(self, data):
         self.train_data = data
         self._invalidate()
-        if data is not None and is_discrete(data.domain.class_var):
-            headers = ["Method"] + classification_stats.headers
-        else:
-            headers = ["Method"] + regression_stats.headers
+        headers = ["Method"]
+        if data is not None:
+            if is_discrete(data.domain.class_var):
+                headers.extend(classification_stats.headers)
+            else:
+                headers.extend(regression_stats.headers)
+
         self.result_model.setHorizontalHeaderLabels(headers)
 
     def set_test_data(self, data):
@@ -145,6 +148,10 @@ class OWTestLearners(widget.OWWidget):
         self._invalidate()
 
     def update_results(self):
+        if self.train_data is None:
+            self._invalidate()
+            return
+
         # items in need of an update
         items = [(key, input) for key, input in self.learners.items()
                  if input.results is None]
@@ -173,7 +180,9 @@ class OWTestLearners(widget.OWWidget):
                 self.train_data, learners, store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTest:
-            assert self.test_data is not None
+            if self.test_data is None:
+                self._invalidate()
+                return
             results = testing.TestOnTestData(
                 self.train_data, self.test_data, learners, store_data=True
             )
@@ -237,7 +246,8 @@ class OWTestLearners(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        results = [val.results for val in self.learners.values()]
+        results = [val.results for val in self.learners.values()
+                   if val.results is not None]
         if results:
             combined = results_merge(results)
             combined.fitter_names = [learner_name(val.learner)
