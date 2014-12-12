@@ -326,9 +326,9 @@ class OWDataTable(widget.OWWidget):
         self.c_show_attribute_labels.setEnabled(True)
         gui.checkBox(box, self, "show_distributions",
                      'Visualize continuous values',
-                     callback=self.cbShowDistributions)
+                     callback=self.cb_show_distributions)
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
-                     callback=self.cbShowDistributions)
+                     callback=self.cb_show_distributions)
         gui.button(box, self, "Set colors", self.set_colors,
                    tooltip="Set the background color and color palette")
 
@@ -350,7 +350,7 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.id2table = {}  # key: widget id, value: table
         self.table2id = {}  # key: table, value: widget id
-        self.tabs.currentChanged.connect(self.tabClicked)
+        self.tabs.currentChanged.connect(self.tab_clicked)
         self.selectionChangedFlag = False
 
     def create_color_dialog(self):
@@ -405,10 +405,10 @@ class OWDataTable(widget.OWWidget):
             self.tabs.addTab(table, tab_name)
 
             self.progressBarInit()
-            self.setTable(table, data)
+            self.set_table(table, data)
             self.progressBarFinished()
             self.tabs.setCurrentIndex(self.tabs.indexOf(table))
-            self.setInfo(data)
+            self.set_info(data)
             self.send_button.setEnabled(not self.auto_commit)
 
         elif tid in self.data:
@@ -417,7 +417,7 @@ class OWDataTable(widget.OWWidget):
             table.hide()
             self.tabs.removeTab(self.tabs.indexOf(table))
             self.table2id.pop(self.id2table.pop(tid))
-            self.setInfo(self.data.get(self.table2id.get(
+            self.set_info(self.data.get(self.table2id.get(
                 self.tabs.currentWidget(), None), None))
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
@@ -426,7 +426,7 @@ class OWDataTable(widget.OWWidget):
             self.send_button.setEnabled(False)
 
     #TODO Implement
-    def sendReport(self):
+    def send_report(self):
         """
         qTableInstance = self.tabs.currentWidget()
         id = self.table2id.get(qTableInstance, None)
@@ -438,7 +438,7 @@ class OWDataTable(widget.OWWidget):
         """
 
     # Writes data into table, adjusts the column width.
-    def setTable(self, table, data):
+    def set_table(self, table, data):
         if data is None:
             return
         QtGui.qApp.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -546,11 +546,11 @@ class OWDataTable(widget.OWWidget):
         table.oldSortingIndex = index
         table.oldSortingOrder = order
 
-    def tabClicked(self, index):
+    def tab_clicked(self, index):
         """Updates the info box when a tab is clicked."""
         qTableInstance = self.tabs.widget(index)
         tid = self.table2id.get(qTableInstance, None)
-        self.setInfo(self.data.get(tid, None))
+        self.set_info(self.data.get(tid, None))
         self.update_selection()
 
     def draw_attribute_labels(self, table):
@@ -569,7 +569,7 @@ class OWDataTable(widget.OWWidget):
         for table in self.table2id:
             self.draw_attribute_labels(table)
 
-    def cbShowDistributions(self):
+    def cb_show_distributions(self):
         for ti in range(self.tabs.count()):
             color_schema = self.discPalette if self.color_by_class else None
             if self.show_distributions:
@@ -590,7 +590,7 @@ class OWDataTable(widget.OWWidget):
             data = self.data[tid]
             table.horizontalHeader().setSortIndicatorShown(False)
             self.progressBarInit()
-            self.setTable(table, data)
+            self.set_table(table, data)
             self.progressBarFinished()
 
     __no_missing = [""] * 3
@@ -622,7 +622,7 @@ class OWDataTable(widget.OWWidget):
             descriptions = self.__no_missing
         return descriptions
 
-    def setInfo(self, data):
+    def set_info(self, data):
         """Updates data info."""
         def sp(n):
             if n == 0:
@@ -657,7 +657,8 @@ class OWDataTable(widget.OWWidget):
             threading.Thread(target=update_num_inst).start()
 
             self.info_attr.setText("%s feature%s" %
-                    sp(len(data.domain.attributes)) + descriptions[0])
+                                   sp(len(data.domain.attributes)) +
+                                   descriptions[0])
 
             self.info_meta.setText("%s meta attribute%s" %
                                    sp(len(data.domain.metas)) + descriptions[2])
