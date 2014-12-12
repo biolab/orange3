@@ -287,7 +287,7 @@ class OWDataTable(widget.OWWidget):
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
-    auto_commit = Setting(False)
+    auto_commit = Setting(True)
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
