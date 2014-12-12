@@ -402,11 +402,6 @@ class OWDataTable(widget.OWWidget):
             self.id2table[tid] = table
             self.table2id[table] = tid
             tab_name = getattr(data, "name", "")
-            if tab_name:
-                tab_name += " "
-            tab_name += "(" + str(tid[1]) + ")"
-            if tid[2] is not None:
-                tab_name += " [" + str(tid[2]) + "]"
             self.tabs.addTab(table, tab_name)
 
             self.progressBarInit()
@@ -424,6 +419,8 @@ class OWDataTable(widget.OWWidget):
             self.table2id.pop(self.id2table.pop(tid))
             self.setInfo(self.data.get(self.table2id.get(
                 self.tabs.currentWidget(), None), None))
+
+        self.tabs.tabBar().setVisible(self.tabs.count() > 1)
 
         if not self.data:
             self.send_button.setEnabled(False)
