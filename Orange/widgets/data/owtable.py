@@ -6,6 +6,7 @@ from functools import reduce
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+from PyQt4.QtGui import QItemSelectionModel, QItemSelection
 
 from Orange.data import ContinuousVariable
 from Orange.data.storage import Storage
@@ -222,6 +223,14 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
                   self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
                   )
 
+    def reset_sort(self):
+        self.sorted_map = range(len(data))
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
+                  self.index(0, 0),
+                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
+                  )
+
 
 #noinspection PyArgumentList
 class TableViewWithCopy(QtGui.QTableView):
@@ -386,7 +395,7 @@ class OWDataTable(widget.OWWidget):
 
             table = TableViewWithCopy()     # QTableView()
             table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
-            table.setSortingEnabled(True)
+            table.setSortingEnabled(False)
             table.setHorizontalScrollMode(QtGui.QTableWidget.ScrollPerPixel)
             table.horizontalHeader().setMovable(True)
             table.horizontalHeader().setClickable(True)
@@ -536,13 +545,26 @@ class OWDataTable(widget.OWWidget):
 
     def sort_by_column(self, index):
         table = self.tabs.currentWidget()
-        table.horizontalHeader().setSortIndicatorShown(1)
-        if index == table.oldSortingIndex:
+        if index == table.oldSortingIndex and index != -1:
             order = (table.oldSortingOrder == QtCore.Qt.AscendingOrder and
                      QtCore.Qt.DescendingOrder or QtCore.Qt.AscendingOrder)
         else:
             order = QtCore.Qt.AscendingOrder
-        table.sortByColumn(index, order)
+        oldsel = self.get_current_selection()
+        model = table.model()
+        if index == -1:
+            table.horizontalHeader().setSortIndicatorShown(False)
+            model.reset_sort()
+        else:
+            table.horizontalHeader().setSortIndicatorShown(1)
+            table.sortByColumn(index, order)
+        newsort = sorted(enumerate(model.sorted_map), key=lambda x: x[1])
+        newsel = [ newsort[a][0] for a in oldsel ]
+        itemsel = QItemSelection()
+        for a in newsel:
+            itemsel.select(model.index(a, 0), model.index(a, 0))
+        table.selectionModel().select(itemsel, QItemSelectionModel.Rows | \
+            QItemSelectionModel.Select | QItemSelectionModel.Clear)
         table.oldSortingIndex = index
         table.oldSortingOrder = order
 
@@ -586,12 +608,7 @@ class OWDataTable(widget.OWWidget):
     def reset_sort_clicked(self):
         table = self.tabs.currentWidget()
         if table:
-            tid = self.table2id[table]
-            data = self.data[tid]
-            table.horizontalHeader().setSortIndicatorShown(False)
-            self.progressBarInit()
-            self.set_table(table, data)
-            self.progressBarFinished()
+            self.sort_by_column(-1)
 
     __no_missing = [""] * 3
 
