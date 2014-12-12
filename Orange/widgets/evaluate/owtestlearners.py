@@ -121,7 +121,8 @@ class OWTestLearners(widget.OWWidget):
         if key in self.learners and learner is None:
             del self.learners[key]
         else:
-            self.learners[key] = Input(learner, None, None)
+            self.learners[key] = Input(learner, None, ())
+        self._update_stats_model()
 
     def set_train_data(self, data):
         self.train_data = data
@@ -242,7 +243,8 @@ class OWTestLearners(widget.OWWidget):
                 row = all_keys.index(key)
                 for c in range(1, model.columnCount()):
                     item = model.item(row, c)
-                    item.setData(None, Qt.DisplayRole)
+                    if item is not None:
+                        item.setData(None, Qt.DisplayRole)
 
     def apply(self):
         self.update_results()
