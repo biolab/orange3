@@ -634,7 +634,6 @@ class OWHierarchicalClustering(widget.OWWidget):
     priority = 2100
 
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
-              # ("Items", object, "set_items", widget.Dynamic)]
 
     outputs = [("Selected Data", Orange.data.Table),
                ("Other Data", Orange.data.Table)]
@@ -1414,10 +1413,8 @@ def test_main():
 
     data = Orange.data.Table("iris.tab")
     matrix = distance.Euclidean()(data)
-    # matrix.items = data
 
     w.set_distances(matrix)
-    # w.set_items(data)
     w.handleNewSignals()
     w.show()
     w.raise_()
