@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 import bottlechest as bn
-
+import warnings
 import Orange.data
 
 
@@ -133,8 +133,13 @@ class SklModel(Model):
     def __init__(self, clf):
         self.clf = clf
 
+
     def predict(self, X):
-        return self.clf.predict(X)
+        value = self.clf.predict(X)
+        if hasattr(self.clf, "predict_proba"):
+            probs = self.clf.predict_proba(X)
+            return value, probs
+        return value
 
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
@@ -190,6 +195,9 @@ class SklFitter(Fitter):
         self._params.pop("self", None)
 
     def __call__(self, data):
+        if any(map(lambda v: isinstance(v, Orange.data.variable.DiscreteVariable) and len(v.values) > 2,
+                   data.domain._variables)):
+            warnings.warn("ScikitLearn methods currently do not support multinomial attributes. Proceed with caution.")
         clf = super().__call__(data)
         clf.used_vals = [np.unique(y) for y in data.Y.T]
         return clf
