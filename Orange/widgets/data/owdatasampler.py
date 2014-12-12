@@ -152,6 +152,8 @@ class OWDataSampler(widget.OWWidget):
         gui.button(self.controlArea, self, "Sample Data",
                    callback=self.commit)
 
+        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
+
     def samplingTypeChanged(self):
         for i, sbox in enumerate(self.samplingBox):
             sbox.setEnabled(self.samplingType == i)
