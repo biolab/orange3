@@ -106,10 +106,11 @@ class OWSieveDiagram(OWWidget):
         # self.data = self.optimizationDlg.setData(data, 0)
         self.data = data
 
+        self.warning(0, "")
         if data:
             if any(isinstance(attr, ContinuousVariable) for attr in data.domain):
-                self.information(0, "Data contains continuous variables. " +
-                                 "Discretize the data to use them.")
+                self.warning(0, "Data contains continuous variables. " +
+                             "Discretize the data to use them.")
 
         if not sameDomain:
             self.initCombos()

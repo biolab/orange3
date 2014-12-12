@@ -4,9 +4,11 @@ import time
 import os
 import warnings
 
-from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty, SIGNAL, QDir
+from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
+    QDir
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
-    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget
+    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget, QStyle,\
+    QApplication
 
 from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
@@ -149,6 +151,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return (Qt.Window if cls.resizing_enabled
                 else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
+    # noinspection PyAttributeOutsideInit
     def insertLayout(self):
         def createPixmapWidget(self, parent, iconName):
             w = QLabel(parent)
@@ -161,6 +164,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
         self.setLayout(QVBoxLayout())
         self.layout().setMargin(2)
+
+        self.warning_bar = gui.widgetBox(self, orientation="horizontal",
+                                         margin=0, spacing=0)
+        self.warning_icon = gui.widgetLabel(self.warning_bar, "")
+        self.warning_label = gui.widgetLabel(self.warning_bar, "")
+        self.warning_label.setStyleSheet("padding-top: 5px")
+        self.warning_bar.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
+        gui.rubber(self.warning_bar)
+        self.warning_bar.setVisible(False)
 
         self.topWidgetPart = gui.widgetBox(self,
                                            orientation="horizontal", margin=0)
@@ -540,32 +552,88 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def error(self, id=0, text=""):
         self.setState("Error", id, text)
 
-    def setState(self, stateType, id, text):
+    def setState(self, state_type, id, text):
         changed = 0
         if type(id) == list:
             for val in id:
-                if val in self.widgetState[stateType]:
-                    self.widgetState[stateType].pop(val)
+                if val in self.widgetState[state_type]:
+                    self.widgetState[state_type].pop(val)
                     changed = 1
         else:
             if type(id) == str:
                 text = id
                 id = 0
             if not text:
-                if id in self.widgetState[stateType]:
-                    self.widgetState[stateType].pop(id)
+                if id in self.widgetState[state_type]:
+                    self.widgetState[state_type].pop(id)
                     changed = 1
             else:
-                self.widgetState[stateType][id] = text
+                self.widgetState[state_type][id] = text
                 changed = 1
 
         if changed:
             if type(id) == list:
                 for i in id:
-                    self.widgetStateChanged.emit(stateType, i, "")
+                    self.widgetStateChanged.emit(state_type, i, "")
             else:
-                self.widgetStateChanged.emit(stateType, id, text or "")
+                self.widgetStateChanged.emit(state_type, id, text or "")
+
+        tooltip_lines = []
+        highest_type = None
+        for a_type in ("Error", "Warning", "Info"):
+            msgs_for_ids = self.widgetState.get(a_type)
+            if not msgs_for_ids:
+                continue
+            msgs_for_ids = list(msgs_for_ids.values())
+            if not msgs_for_ids:
+                continue
+            tooltip_lines += msgs_for_ids
+            if highest_type is None:
+                highest_type = a_type
+
+        if highest_type is None:
+            self.set_warning_bar(None)
+        elif len(tooltip_lines) == 1:
+            msg = tooltip_lines[0]
+            if "\n" in msg:
+                self.set_warning_bar(
+                    highest_type, msg[:msg.index("\n")] + " (...)", msg)
+            else:
+                self.set_warning_bar(
+                    highest_type, tooltip_lines[0], tooltip_lines[0])
+        else:
+            self.set_warning_bar(
+                highest_type,
+                "{} problems during execution".format(len(tooltip_lines)),
+                "\n".join(tooltip_lines))
+
         return changed
+
+    def set_warning_bar(self, state_type, text=None, tooltip=None):
+        colors = {"Error": ("#ffc6c6", "black", QStyle.SP_MessageBoxCritical),
+                  "Warning": ("#ffffc9", "black", QStyle.SP_MessageBoxWarning),
+                  "Info": ("#ceceff", "black", QStyle.SP_MessageBoxInformation)}
+        current_height = self.height()
+        if state_type is None:
+            if self.warning_bar.isVisible():
+                new_height = current_height - self.warning_bar.height()
+                self.warning_bar.setVisible(False)
+                self.resize(self.width(), new_height)
+            return
+        background, foreground, icon = colors[state_type]
+        style = QApplication.instance().style()
+        self.warning_icon.setPixmap(style.standardIcon(icon).pixmap(14, 14))
+
+        self.warning_bar.setStyleSheet(
+            "background-color: {}; color: {};"
+            "padding: 3px; padding-left: 6px; vertical-align: center".
+            format(background, foreground))
+        self.warning_label.setText(text)
+        self.warning_label.setToolTip(tooltip)
+        if not self.warning_bar.isVisible():
+            self.warning_bar.setVisible(True)
+            new_height = current_height + self.warning_bar.height()
+            self.resize(self.width(), new_height)
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
         pixmaps = self.getWidgetStateIcons()
