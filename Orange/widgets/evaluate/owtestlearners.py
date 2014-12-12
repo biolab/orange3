@@ -132,6 +132,9 @@ class OWTestLearners(widget.OWWidget):
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
+        for i in reversed(range(len(headers),
+                                self.result_model.columnCount())):
+            self.result_model.takeColumn(i)
 
         self.result_model.setHorizontalHeaderLabels(headers)
 
