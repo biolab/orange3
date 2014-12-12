@@ -82,7 +82,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     want_status_bar = False
     no_report = False
 
-    save_position = False
+    save_position = True
     resizing_enabled = True
 
     widgetStateChanged = Signal(str, int, str)
@@ -93,6 +93,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     settingsHandler = None
     """:type: SettingsHandler"""
+
+    savedWidgetGeometry = settings.Setting(None)
 
     def __new__(cls, parent=None, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
@@ -302,9 +304,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     """
 
     def restoreWidgetPosition(self):
+        restored = False
         if self.save_position:
-            geometry = getattr(self, "savedWidgetGeometry", None)
-            restored = False
+            geometry = self.savedWidgetGeometry
             if geometry is not None:
                 restored = self.restoreGeometry(QByteArray(geometry))
 
@@ -319,43 +321,56 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 height = min(height, geometry.height())
                 self.resize(width, height)
 
-                #Move the widget to the center of available space if it is
+                # Move the widget to the center of available space if it is
                 # currently outside it
                 if not space.contains(self.frameGeometry()):
                     x = max(0, space.width() / 2 - width / 2)
                     y = max(0, space.height() / 2 - height / 2)
 
                     self.move(x, y)
+        return restored
 
-    # when widget is resized, save new width and height into widgetWidth and
-    # widgetHeight. some widgets can put this two variables into settings and
-    # last widget shape is restored after restart
+    def __updateSavedGeometry(self):
+        if self.__was_restored:
+            # Update the saved geometry only between explicit show/hide
+            # events (i.e. changes initiated by the user not by Qt's default
+            # window management).
+            self.savedWidgetGeometry = self.saveGeometry()
+
+    # when widget is resized, save the new width and height
     def resizeEvent(self, ev):
         QDialog.resizeEvent(self, ev)
         # Don't store geometry if the widget is not visible
-        # (the widget receives the resizeEvent before showEvent and we must not
-        # overwrite the the savedGeometry before then)
+        # (the widget receives a resizeEvent (with the default sizeHint)
+        # before showEvent and we must not overwrite the the savedGeometry
+        # with it)
         if self.save_position and self.isVisible():
-            self.savedWidgetGeometry = str(self.saveGeometry())
+            self.__updateSavedGeometry()
+
+    def moveEvent(self, ev):
+        QDialog.moveEvent(self, ev)
+        if self.save_position and self.isVisible():
+            self.__updateSavedGeometry()
 
     # set widget state to hidden
     def hideEvent(self, ev):
         if self.save_position:
-            self.savedWidgetGeometry = str(self.saveGeometry())
+            self.__updateSavedGeometry()
+        self.__was_restored = False
         QDialog.hideEvent(self, ev)
 
-    # set widget state to shown
+    def closeEvent(self, ev):
+        if self.save_position and self.isVisible():
+            self.__updateSavedGeometry()
+        self.__was_restored = False
+        QDialog.closeEvent(self, ev)
+
     def showEvent(self, ev):
         QDialog.showEvent(self, ev)
         if self.save_position:
-            if not self.__was_restored:
-                self.__was_restored = True
-                self.restoreWidgetPosition()
-
-    def closeEvent(self, ev):
-        if self.save_position:
-            self.savedWidgetGeometry = str(self.saveGeometry())
-        QDialog.closeEvent(self, ev)
+            # Restore saved geometry on show
+            self.restoreWidgetPosition()
+        self.__was_restored = True
 
     def wheelEvent(self, event):
         """ Silently accept the wheel event. This is to ensure combo boxes
