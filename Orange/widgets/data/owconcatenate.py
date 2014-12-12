@@ -110,6 +110,8 @@ class OWConcatenate(widget.OWWidget):
         )
 
         ibox.layout().addLayout(form)
+        mleft, mtop, mright, _ = ibox.layout().getContentsMargins()
+        ibox.layout().setContentsMargins(mleft, mtop, mright, 4)
 
         cb.disables.append(ibox)
         cb.makeConsistent()

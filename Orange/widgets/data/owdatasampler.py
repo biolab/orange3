@@ -58,22 +58,24 @@ class OWDataSampler(widget.OWWidget):
         self.dataInfoLabel = gui.widgetLabel(box, 'No data on input.')
         self.outputInfoLabel = gui.widgetLabel(box, ' ')
 
-        form = QtGui.QFormLayout(
-            formAlignment=Qt.AlignLeft | Qt.AlignTop,
-            labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
-        )
+        form = QtGui.QGridLayout()
 
         box = gui.widgetBox(self.controlArea, "Options", orientation=form)
         cb = gui.checkBox(box, self, "stratified", "Stratified (if possible)",
                           callback=self.settingsChanged, addToLayout=False)
 
-        form.addRow(cb, QtGui.QWidget())
+        form.addWidget(cb, 0, 0)
+
         cb = gui.checkBox(box, self, "useSeed", "Random seed:",
                           callback=self.settingsChanged, addToLayout=False)
+
         spin = gui.spin(box, self, "seed", minv=0, maxv=2 ** 31 - 1,
                         callback=self.settingsChanged, addToLayout=False)
-        form.addRow(cb, spin)
+        spin.setEnabled(self.useSeed)
+        cb.toggled[bool].connect(spin.setEnabled)
+
+        form.addWidget(cb, 1, 0)
+        form.addWidget(spin, 1, 1)
 
         box = gui.widgetBox(self.controlArea, self.tr("Sampling Type"))
 
@@ -149,6 +151,8 @@ class OWDataSampler(widget.OWWidget):
 
         gui.button(self.controlArea, self, "Sample Data",
                    callback=self.commit)
+
+        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
     def samplingTypeChanged(self):
         for i, sbox in enumerate(self.samplingBox):
