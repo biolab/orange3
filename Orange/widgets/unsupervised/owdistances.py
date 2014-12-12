@@ -65,7 +65,7 @@ class OWDistances(widget.OWWidget):
         if self.data is not None:
             metric = _METRICS[self.metric_idx][1]
             X = self.data
-            distances = metric(X, X, self.axis)
+            distances = metric(X, X, 1-self.axis)
 
         self.send("Distances", distances)
 
