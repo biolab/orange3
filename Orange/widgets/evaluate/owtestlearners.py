@@ -110,10 +110,8 @@ class OWTestLearners(widget.OWWidget):
         )
 
         self.result_model = QStandardItemModel()
-        self.result_model.setHorizontalHeaderLabels(
-            ["Method"]
-        )
         self.view.setModel(self.result_model)
+        self._update_header()
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.view)
 
@@ -126,18 +124,8 @@ class OWTestLearners(widget.OWWidget):
 
     def set_train_data(self, data):
         self.train_data = data
+        self._update_header()
         self._invalidate()
-        headers = ["Method"]
-        if data is not None:
-            if is_discrete(data.domain.class_var):
-                headers.extend(classification_stats.headers)
-            else:
-                headers.extend(regression_stats.headers)
-        for i in reversed(range(len(headers),
-                                self.result_model.columnCount())):
-            self.result_model.takeColumn(i)
-
-        self.result_model.setHorizontalHeaderLabels(headers)
 
     def set_test_data(self, data):
         self.test_data = data
@@ -153,7 +141,6 @@ class OWTestLearners(widget.OWWidget):
 
     def update_results(self):
         if self.train_data is None:
-            self._invalidate()
             return
 
         # items in need of an update
@@ -185,7 +172,6 @@ class OWTestLearners(widget.OWWidget):
             )
         elif self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
-                self._invalidate()
                 return
             results = testing.TestOnTestData(
                 self.train_data, self.test_data, learners, store_data=True
@@ -207,6 +193,18 @@ class OWTestLearners(widget.OWWidget):
 
         self.setStatusMessage("")
         self._update_stats_model()
+
+    def _update_header(self):
+        headers = ["Method"]
+        if self.train_data is not None:
+            if is_discrete(self.train_data.domain.class_var):
+                headers.extend(classification_stats.headers)
+            else:
+                headers.extend(regression_stats.headers)
+        for i in reversed(range(len(headers),
+                                self.result_model.columnCount())):
+            self.result_model.takeColumn(i)
+        self.result_model.setHorizontalHeaderLabels(headers)
 
     def _update_stats_model(self):
         model = self.view.model()
