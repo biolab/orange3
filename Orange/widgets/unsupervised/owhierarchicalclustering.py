@@ -526,7 +526,7 @@ class DendrogramWidget(QGraphicsWidget):
         if not self._root:
             return
 
-        self._layout = dendrogram_path(self._root)
+        self._layout = dendrogram_path(self._root, self.orientation)
         for node_geom in postorder(self._layout):
             node, geom = node_geom.value
             item = self._items[node]
@@ -557,7 +557,7 @@ class DendrogramWidget(QGraphicsWidget):
         if self.orientation in [Left, Right]:
             drect = QSizeF(self._root.value.height, leaf_count - 1)
         else:
-            drect = QSizeF(self._root.value.last - 1, leaf_count - 1)
+            drect = QSizeF(self._root.value.last - 1, self._root.value.height)
 
         transform = QTransform().scale(
             crect.width() / drect.width(),
