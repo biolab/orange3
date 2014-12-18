@@ -1156,14 +1156,15 @@ class OWHierarchicalClustering(widget.OWWidget):
 class GraphicsSimpleTextList(QGraphicsWidget):
     """A simple text list widget."""
 
-    def __init__(self, labels=[], orientation=Qt.Vertical, parent=None):
+    def __init__(self, labels=[], orientation=Qt.Vertical,
+                 alignment=Qt.AlignCenter, parent=None):
         QGraphicsWidget.__init__(self, parent)
         layout = QGraphicsLinearLayout(orientation)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
         self.orientation = orientation
-        self.alignment = Qt.AlignCenter
+        self.alignment = alignment
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label_items = []
         self.set_labels(labels)
@@ -1249,7 +1250,7 @@ class WrapperLayoutItem(QGraphicsLayoutItem):
             self.item.setPos(rect.bottomLeft())
 
     def sizeHint(self, which, constraint=QSizeF()):
-        if which in [Qt.PreferredSize]:
+        if which == Qt.PreferredSize:
             size = self.item.boundingRect().size()
             if self.orientation == Qt.Horizontal:
                 return size
