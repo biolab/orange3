@@ -15,25 +15,20 @@ from Orange.evaluation import testing, scoring
 from Orange.widgets import widget, gui, settings
 
 
-
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    if len(results.data.domain.class_var.values) > 2:
-        return (CA(results),
-                F1(results),
-                Precision(results),
-                Recall(results))
-    else:
-        return (CA(results),
-                F1(results),
-                Precision(results),
-                Recall(results),
-                AUC(results))
+    stats = (CA(results),
+             F1(results),
+             Precision(results),
+             Recall(results))
+    if len(results.data.domain.class_var.values) <= 2:
+        return (AUC(results),) + stats
+    return stats
 
-classification_stats.headers = ["CA", "F1", "Precision", "Recall", "AUC"]
-
+classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
+classification_stats.headers_binary = ["AUC"]
 
 def regression_stats(results):
     return (MSE(results),
@@ -195,13 +190,6 @@ class OWTestLearners(widget.OWWidget):
         class_var = self.train_data.domain.class_var
         
         if is_discrete(class_var):
-            if len(class_var.values) > 2:
-                self.warning(2, 'Multiclass format is not supported for AUC score')
-                classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
-            else:
-                self.warning(2, '')
-                classification_stats.headers = ["CA", "F1", "Precision", "Recall", "AUC"]
-
             test_stats = classification_stats
         else:
             test_stats = regression_stats
@@ -220,6 +208,8 @@ class OWTestLearners(widget.OWWidget):
         headers = ["Method"]
         if self.train_data is not None:
             if is_discrete(self.train_data.domain.class_var):
+                if len(self.train_data.domain.class_var.values) <= 2:
+                    headers.extend(classification_stats.headers_binary)
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
