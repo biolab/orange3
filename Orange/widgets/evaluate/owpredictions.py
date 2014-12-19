@@ -59,6 +59,9 @@ class OWPredictions(widget.OWWidget):
         self.infolabel.setMinimumWidth(200)
 
         box = gui.widgetBox(self.controlArea, "Options")
+        gui.button(box, self, "Restore Original Order",
+                   callback=self._updatePredictionsModel,
+                   tooltip="Show rows in the original order")
         gui.checkBox(box, self, "showProbabilities",
                      "Show predicted probabilities",
                      callback=self._updatePredictionDelegate)
@@ -132,6 +135,7 @@ class OWPredictions(widget.OWWidget):
             self.predictionsview.setModel(None)
             self.invalidatePredictions()
         else:
+            self.tableview.setModel(None)
             model = ExampleTableModel(data, None)
             self.tableview.setModel(model)
             self.invalidatePredictions()
