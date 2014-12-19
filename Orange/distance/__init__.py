@@ -8,10 +8,10 @@ from Orange.misc import DistMatrix
 
 def _impute(data):
     """Imputation transformer for completing missing values."""
-    imputer = preprocessing.Imputer()
-    data.X = imputer.fit_transform(data.X)
-    data.X = data.X if sparse.issparse(data.X) else np.squeeze(data.X)
-    return data
+    imp_data = data.Table(data)
+    imp_data.X = preprocessing.Imputer().fit_transform(imp_data.X)
+    imp_data.X = imp_data.X if sparse.issparse(imp_data.X) else np.squeeze(imp_data.X)
+    return imp_data
 
 
 class Euclidean():
