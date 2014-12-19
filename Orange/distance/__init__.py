@@ -15,6 +15,7 @@ def _impute(data):
 
 
 def _orange_to_numpy(x):
+    """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance` to :class:`numpy.ndarray`."""
     if isinstance(x, data.Table):
         return x.X
     elif isinstance(x, data.RowInstance):
@@ -24,15 +25,30 @@ def _orange_to_numpy(x):
 
 
 class SklDistance():
-    """
-        Generic scikit-learn distance.
-
-        NOTE: The VI argument is only used for Mahalanobis distance!
-    """
+    """Generic scikit-learn distance."""
     def __init__(self, metric):
+        """
+        :param metric: The metric to be used for distance calculation
+        :type metric: str
+        """
         self.metric = metric
 
     def __call__(self, e1, e2=None, axis=1, **kwargs):
+        """
+        Method for calculating distances.
+
+        :param e1: input data instances
+        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances
+           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows,
+           if axis=0 we calculate distances between columns
+        :type axis: int
+        :param kwargs: used just for Mahalanobis for passing inverse of covariance matrix
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.DistMatrix`
+        """
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if axis == 0:
@@ -52,10 +68,27 @@ class SklDistance():
 
 
 class SklMahalanobis(SklDistance):
+    """Mahalanobis class."""
     def __init__(self):
         self.metric = 'mahalanobis'
 
     def __call__(self, e1, e2=None, axis=1, VI=None):
+        """
+        Method for calculating distances.
+
+        :param e1: input data instances
+        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances
+           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows,
+           if axis=0 we calculate distances between columns
+        :type axis: int
+        :param VI: the inverse of the covariance matrix
+        :type VI: nd.array
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.DistMatrix`
+        """
         return super().__call__(e1, e2, axis, VI=VI)
 
 
@@ -67,15 +100,22 @@ Mahalanobis = SklMahalanobis()
 
 
 class SpearmanDistance():
-    """Spearman's rank correlation coefficient."""
-
+    """ Generic Spearman's rank correlation coefficient. """
     def __init__(self, absolute):
         self.absolute = absolute
 
     def __call__(self, e1, e2=None, axis=1):
         """
-        :param e1: data instances.
-        :param e2: data instances.
+        :param e1: input data instances
+        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances
+           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows,
+           if axis=0 we calculate distances between columns
+        :type axis: int
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.DistMatrix`
 
         Returns Spearman's dissimilarity between e1 and e2,
         i.e.
@@ -122,15 +162,22 @@ SpearmanRAbsolute = SpearmanDistance(absolute=True)
 
 
 class PearsonDistance():
-    """Pearson's rank correlation coefficient."""
-
+    """ Generic Pearson's rank correlation coefficient. """
     def __init__(self, absolute):
         self.absolute = absolute
 
     def __call__(self, e1, e2=None, axis=1):
         """
-        :param e1: data instances.
-        :param e2: data instances.
+        :param e1: input data instances
+        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances
+           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows,
+           if axis=0 we calculate distances between columns
+        :type axis: int
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.DistMatrix`
 
         Returns Pearson's dissimilarity between e1 and e2,
         i.e.
