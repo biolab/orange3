@@ -9,15 +9,15 @@ class TestEuclidean(TestCase):
     def setUp(self):
         self.iris = Table('iris')
         self.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
-        self.dist = Euclidean()
+        self.dist = Euclidean
 
     def test_euclidean_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.iris[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1]), 0.53851648071346281)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1], axis=0), 0.53851648071346281)
+        np.testing.assert_almost_equal(self.dist(self.iris[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1]).X, np.array([[0.53851648071346281]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1], axis=0).X, np.array([[0.53851648071346281]]))
 
     def test_euclidean_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.iris[:2]).X,
@@ -55,20 +55,34 @@ class TestEuclidean(TestCase):
                                        np.array([[ 0.        ,  3.74165739],
                                                  [ 3.74165739,  0.        ]]))
 
+    def test_euclidean_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.iris[0].x, self.iris[1].x, axis=0).X, np.array([[0.53851648071346281]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X).X,
+                                       np.array([[ 0.        ,  0.53851648],
+                                                 [ 0.53851648,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[2].x, self.iris[:3].X).X,
+                                       np. array([[ 0.50990195,  0.3       ,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X, self.iris[3].x).X,
+                                       np.array([[ 0.64807407],
+                                                 [ 0.33166248]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X, self.iris[:3].X).X,
+                                       np.array([[ 0.        ,  0.53851648,  0.50990195],
+                                                 [ 0.53851648,  0.        ,  0.3       ]]))
+
 
 class TestManhattan(TestCase):
     def setUp(self):
         self.iris = Table('iris')
         self.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
-        self.dist = Manhattan()
+        self.dist = Manhattan
 
     def test_manhattan_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.iris[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1]), 0.7)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1], axis=0), 0.7)
+        np.testing.assert_almost_equal(self.dist(self.iris[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1]).X, np.array([[0.7]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1], axis=0).X, np.array([[0.7]]))
 
     def test_manhattan_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.iris[:2]).X,
@@ -106,20 +120,34 @@ class TestManhattan(TestCase):
                                        np.array([[  0.,   6.],
                                                  [  6.,   0.]]))
 
+    def test_manhattan_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.iris[0].x, self.iris[1].x, axis=0).X, np.array([[0.7]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X).X,
+                                       np.array([[ 0. ,  0.7],
+                                                 [ 0.7,  0. ]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[2].x, self.iris[:3].X).X,
+                                       np.array([[ 0.8,  0.5,  0. ]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X, self.iris[3].x).X,
+                                       np.array([[ 1. ],
+                                                 [ 0.5]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X, self.iris[:3].X).X,
+                                       np.array([[ 0. ,  0.7,  0.8],
+                                                 [ 0.7,  0. ,  0.5]]))
+
 
 class TestCosine(TestCase):
     def setUp(self):
         self.iris = Table('iris')
         self.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
-        self.dist = Cosine()
+        self.dist = Cosine
 
     def test_cosine_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.iris[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1]), 0.00142084)
-        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1], axis=0), 0.00142084)
+        np.testing.assert_almost_equal(self.dist(self.iris[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1]).X, np.array([[0.00142084]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[0], self.iris[1], axis=0).X, np.array([[0.00142084]]))
 
     def test_cosine_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.iris[:2]).X,
@@ -157,19 +185,33 @@ class TestCosine(TestCase):
                                        np.array([[  0.0           ,   1.00000000e+00],
                                                  [  1.00000000e+00,   0.0           ]]))
 
+    def test_cosine_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.iris[0].x, self.iris[1].x, axis=0).X, np.array([[0.00142084]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X).X,
+                                       np.array([[  0.            ,   1.42083650e-03],
+                                                 [  1.42083650e-03,   0.             ]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[2].x, self.iris[:3].X).X,
+                                       np.array([[  1.26527175e-05,   1.20854727e-03,   0.0         ]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X, self.iris[3].x).X,
+                                       np.array([[ 0.00089939],
+                                                 [ 0.00120607]]))
+        np.testing.assert_almost_equal(self.dist(self.iris[:2].X, self.iris[:3].X).X,
+                                       np.array([[  0.0           ,   1.42083650e-03,   1.26527175e-05],
+                                                 [  1.42083650e-03,   0.0           ,   1.20854727e-03]]))
+
 
 class TestJaccard(TestCase):
     def setUp(self):
         self.titanic = Table('titanic')[173:177]
-        self.dist = Jaccard()
+        self.dist = Jaccard
 
     def test_jaccard_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.titanic[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.titanic[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[2]),  0.5)
-        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[2], axis=0),  0.5)
+        np.testing.assert_almost_equal(self.dist(self.titanic[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[2]).X,  np.array([[0.5]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[0], self.titanic[2], axis=0).X,  np.array([[0.5]]))
 
     def test_jaccard_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.titanic).X,
@@ -194,6 +236,22 @@ class TestJaccard(TestCase):
                                                  [ 1. ,  np.nan ,  1. ],
                                                  [ 0.5,  1. ,  0. ]]))
 
+    def test_jaccard_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.titanic[0].x, self.titanic[2].x, axis=0).X,  np.array([[0.5]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic.X).X,
+                                       np.array([[ 0. ,  0. ,  0.5,  0.5],
+                                                 [ 0. ,  0. ,  0.5,  0.5],
+                                                 [ 0.5,  0.5,  0. ,  0. ],
+                                                 [ 0.5,  0.5,  0. ,  0. ]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[2].x, self.titanic[:3].X).X,
+                                       np.array([[ 0.5,  0.5,  0. ]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[:2].X, self.titanic[3].x).X,
+                                       np.array([[ 0.5],
+                                                 [ 0.5]]))
+        np.testing.assert_almost_equal(self.dist(self.titanic[:2].X, self.titanic[:3].X).X,
+                                       np.array([[ 0. ,  0. ,  0.5],
+                                                 [ 0. ,  0. ,  0.5]]))
+
 
 class TestMahalanobis(TestCase):
     def setUp(self):
@@ -202,13 +260,13 @@ class TestMahalanobis(TestCase):
                                        [ 0.33333333,  0.25      ,  0.2       ]]))
         # self.rand = Table(np.eye(5))
         self.hilbert_cov_inv = np.linalg.inv(np.cov(self.hilbert))
-        self.dist = Mahalanobis()
+        self.dist = Mahalanobis
 
     def test_mahalanobis_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], VI=self.hilbert_cov_inv), 0)
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], VI=self.hilbert_cov_inv, axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], self.hilbert[1], VI=self.hilbert_cov_inv),  2.5819888768157)
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], self.hilbert[1], VI=self.hilbert_cov_inv, axis=0),  2.5819888768157)
+        np.testing.assert_almost_equal(self.dist(self.hilbert[0], VI=self.hilbert_cov_inv).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.hilbert[0], VI=self.hilbert_cov_inv, axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.hilbert[0], self.hilbert[1], VI=self.hilbert_cov_inv).X,  np.array([[2.5819888768157]]))
+        np.testing.assert_almost_equal(self.dist(self.hilbert[0], self.hilbert[1], VI=self.hilbert_cov_inv, axis=0).X,  np.array([[2.5819888768157]]))
 
     def test_mahalanobis_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.hilbert).X,
@@ -237,19 +295,31 @@ class TestMahalanobis(TestCase):
                                                  [ 2.58198888,  0.        ,  2.26568596],
                                                  [     np.nan,  2.26568596,  0.        ]]))
 
+    def test_mahalanobis_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.hilbert[0].x, self.hilbert[1].x, VI=self.hilbert_cov_inv, axis=0).X,  np.array([[2.5819888768157]]))
+        np.testing.assert_almost_equal(self.dist(self.hilbert.X).X,
+                                       np.array([[ 0.        ,  2.82842712,  1.78885431],
+                                                 [ 2.82842712,  0.        ,  2.11344888],
+                                                 [ 1.78885431,  2.11344888,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.hilbert[:2].X, self.hilbert[2].x).X,
+                                       np.array([[ 1.78885431],
+                                                 [ 2.11344888]]))
+
+
+
 
 class TestSpearmanR(TestCase):
     def setUp(self):
         self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = SpearmanR()
+        self.dist = SpearmanR
 
     def test_spearmanr_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]), 0.5083333333333333)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0), 0.5083333333333333)
+        np.testing.assert_almost_equal(self.dist(self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]).X, np.array([[0.5083333333333333]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0).X, np.array([[0.5083333333333333]]))
 
     def test_spearmanr_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.breast[:2]).X,
@@ -291,19 +361,40 @@ class TestSpearmanR(TestCase):
                                                  [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
                                                  [ 0.25,  0.75,  0.25,  0.75,  0.75,  0.75,  1.  ,  0.75,  0.  ]]))
 
+    def test_spearmanr_distacne_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.breast[0].x, self.breast[1].x, axis=0).X, np.array([[0.5083333333333333]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:2].X).X,
+                                       np.array([[ 0.                ,  0.5083333333333333],
+                                                 [ 0.5083333333333333,  0.                ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[2].x, self.breast[:3].X).X,
+                                       np. array([[ 0.56282809, 0.65526475, 0.3288367 ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:3].X, self.breast[2].x).X,
+                                       np. array([[ 0.56282809 ],
+                                                  [ 0.65526475 ],
+                                                  [ 0.3288367  ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:3].X, self.breast[:3].X, axis=0).X,
+                                       np.array([[ 0.  ,  0.25,  0.  ,  0.25,  0.25,  0.25,  0.75,  0.25,  0.25],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
+                                                 [ 0.  ,  0.25,  0.  ,  0.25,  0.25,  0.25,  0.75,  0.25,  0.25],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
+                                                 [ 0.75,  0.25,  0.75,  0.25,  0.25,  0.25,  0.  ,  0.25,  1.  ],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
+                                                 [ 0.25,  0.75,  0.25,  0.75,  0.75,  0.75,  1.  ,  0.75,  0.  ]]))
 
 class TestSpearmanRAbsolute(TestCase):
     def setUp(self):
         self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = SpearmanRAbsolute()
+        self.dist = SpearmanRAbsolute
 
     def test_spearmanrabsolute_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]), 0.49166666666666664)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0), 0.49166666666666664)
+        np.testing.assert_almost_equal(self.dist(self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]).X, np.array([[0.49166666666666664]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0).X, np.array([[0.49166666666666664]]))
 
     def test_spearmanrabsolute_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.breast[:2]).X,
@@ -341,19 +432,41 @@ class TestSpearmanRAbsolute(TestCase):
                                                  [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
                                                  [ 0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.  ,  0.25,  0.  ]]))
 
+    def test_spearmanrabsolute_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.breast[0].x, self.breast[1].x, axis=0).X, np.array([[0.49166666666666664]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:2].X).X,
+                                       np.array([[ 0.        ,  0.49166667],
+                                                 [ 0.49166667,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[3].x, self.breast[:4].X).X,
+                                       np.array([[ 0.40995497,  0.3288367 ,  0.29564403,  0.07836298]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:4].X, self.breast[3].x).X,
+                                       np.array([[ 0.40995497 ],
+                                                 [ 0.3288367  ],
+                                                 [ 0.29564403 ],
+                                                 [ 0.07836298 ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:3].X, self.breast[:3].X, axis=0).X,
+                                       np.array([[ 0.  ,  0.25,  0.  ,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
+                                                 [ 0.  ,  0.25,  0.  ,  0.25,  0.25,  0.25,  0.25,  0.25,  0.25],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
+                                                 [ 0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.  ,  0.25,  0.  ],
+                                                 [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
+                                                 [ 0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.  ,  0.25,  0.  ]]))
 
 class TestPearsonR(TestCase):
     def setUp(self):
         self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = PearsonR()
+        self.dist = PearsonR
 
     def test_pearsonr_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]), 0.48462293898088876)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0), 0.48462293898088876)
+        np.testing.assert_almost_equal(self.dist(self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]).X, np.array([[0.48462293898088876]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0).X, np.array([[0.48462293898088876]]))
 
     def test_pearsonr_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.breast[:2]).X,
@@ -390,19 +503,41 @@ class TestPearsonR(TestCase):
                                                  [ 0.24072005,  0.08043531,  0.06493949,  0.21622332,  0.21452448, 0.29560909,  0.14419442,  0.        ,  0.45930368],
                                                  [ 0.42847752,  0.43326547,  0.46590168,  0.37404826,  0.42283252, 0.42766076,  0.57976119,  0.45930368,  0.        ]]))
 
+    def test_pearsonr_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.breast[0].x, self.breast[1].x, axis=0).X, np.array([[0.48462293898088876]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:2].X).X,
+                                       np.array([[ 0.        ,  0.48462294],
+                                                 [ 0.48462294,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[2].x, self.breast[:3].X).X,
+                                       np.array([[ 0.10133593,  0.32783865,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:3].X, self.breast[2].x).X,
+                                       np.array([[ 0.10133593 ],
+                                                 [0.32783865  ],
+                                                 [0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:20].X, self.breast[:20].X, axis=0).X,
+                                       np.array([[ 0.        ,  0.10239274,  0.12786763,  0.13435117,  0.15580385, 0.27429811,  0.21006195,  0.24072005,  0.42847752],
+                                                 [ 0.10239274,  0.        ,  0.01695375,  0.10313851,  0.1138925 , 0.16978203,  0.1155948 ,  0.08043531,  0.43326547],
+                                                 [ 0.12786763,  0.01695375,  0.        ,  0.16049178,  0.13692762, 0.21784201,  0.11607395,  0.06493949,  0.46590168],
+                                                 [ 0.13435117,  0.10313851,  0.16049178,  0.        ,  0.07181648, 0.15585667,  0.13891172,  0.21622332,  0.37404826],
+                                                 [ 0.15580385,  0.1138925 ,  0.13692762,  0.07181648,  0.        , 0.16301705,  0.17324382,  0.21452448,  0.42283252],
+                                                 [ 0.27429811,  0.16978203,  0.21784201,  0.15585667,  0.16301705, 0.        ,  0.25512861,  0.29560909,  0.42766076],
+                                                 [ 0.21006195,  0.1155948 ,  0.11607395,  0.13891172,  0.17324382, 0.25512861,  0.        ,  0.14419442,  0.57976119],
+                                                 [ 0.24072005,  0.08043531,  0.06493949,  0.21622332,  0.21452448, 0.29560909,  0.14419442,  0.        ,  0.45930368],
+                                                 [ 0.42847752,  0.43326547,  0.46590168,  0.37404826,  0.42283252, 0.42766076,  0.57976119,  0.45930368,  0.        ]]))
+
 
 class TestPearsonRAbsolute(TestCase):
     def setUp(self):
         self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = PearsonRAbsolute()
+        self.dist = PearsonRAbsolute
 
     def test_pearsonrabsolute_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0), 0)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]), 0.48462293898088876)
-        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0), 0.48462293898088876)
+        np.testing.assert_almost_equal(self.dist(self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0]).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[0], axis=0).X, np.array([[0]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1]).X, np.array([[0.48462293898088876]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[0], self.breast[1], axis=0).X, np.array([[0.48462293898088876]]))
 
     def test_pearsonrabsolute_distance_many_examples(self):
         np.testing.assert_almost_equal(self.dist(self.breast[:2]).X,
@@ -428,6 +563,27 @@ class TestPearsonRAbsolute(TestCase):
                                        np.array([[ 0.4983256 ],
                                                  [ 0.42682613]]))
         np.testing.assert_almost_equal(self.dist(self.breast[:20], self.breast[:20], axis=0).X,
+                                       np.array([[ 0.        ,  0.10239274,  0.12786763,  0.13435117,  0.15580385, 0.27429811,  0.21006195,  0.24072005,  0.42847752],
+                                                 [ 0.10239274,  0.        ,  0.01695375,  0.10313851,  0.1138925 , 0.16978203,  0.1155948 ,  0.08043531,  0.43326547],
+                                                 [ 0.12786763,  0.01695375,  0.        ,  0.16049178,  0.13692762, 0.21784201,  0.11607395,  0.06493949,  0.46590168],
+                                                 [ 0.13435117,  0.10313851,  0.16049178,  0.        ,  0.07181648, 0.15585667,  0.13891172,  0.21622332,  0.37404826],
+                                                 [ 0.15580385,  0.1138925 ,  0.13692762,  0.07181648,  0.        , 0.16301705,  0.17324382,  0.21452448,  0.42283252],
+                                                 [ 0.27429811,  0.16978203,  0.21784201,  0.15585667,  0.16301705, 0.        ,  0.25512861,  0.29560909,  0.42766076],
+                                                 [ 0.21006195,  0.1155948 ,  0.11607395,  0.13891172,  0.17324382, 0.25512861,  0.        ,  0.14419442,  0.42023881],
+                                                 [ 0.24072005,  0.08043531,  0.06493949,  0.21622332,  0.21452448, 0.29560909,  0.14419442,  0.        ,  0.45930368],
+                                                 [ 0.42847752,  0.43326547,  0.46590168,  0.37404826,  0.42283252, 0.42766076,  0.42023881,  0.45930368,  0.        ]]))
+
+    def test_pearsonrabsolute_distance_numpy(self):
+        np.testing.assert_almost_equal(self.dist(self.breast[0].x, self.breast[1].x, axis=0).X, np.array([[0.48462293898088876]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:2].X).X,
+                                       np.array([[ 0.        ,  0.48462294],
+                                                 [ 0.48462294,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[2].x, self.breast[:3].X).X,
+                                       np.array([[ 0.10133593,  0.32783865,  0.        ]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:2].X, self.breast[3].x).X,
+                                       np.array([[ 0.4983256 ],
+                                                 [ 0.42682613]]))
+        np.testing.assert_almost_equal(self.dist(self.breast[:20].X, self.breast[:20].X, axis=0).X,
                                        np.array([[ 0.        ,  0.10239274,  0.12786763,  0.13435117,  0.15580385, 0.27429811,  0.21006195,  0.24072005,  0.42847752],
                                                  [ 0.10239274,  0.        ,  0.01695375,  0.10313851,  0.1138925 , 0.16978203,  0.1155948 ,  0.08043531,  0.43326547],
                                                  [ 0.12786763,  0.01695375,  0.        ,  0.16049178,  0.13692762, 0.21784201,  0.11607395,  0.06493949,  0.46590168],
