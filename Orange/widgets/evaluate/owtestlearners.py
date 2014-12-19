@@ -19,13 +19,16 @@ Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    return (CA(results),
-            F1(results),
-            Precision(results),
-            Recall(results))
+    stats = (CA(results),
+             F1(results),
+             Precision(results),
+             Recall(results))
+    if len(results.data.domain.class_var.values) == 2:
+        return (AUC(results),) + stats
+    return stats
 
 classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
-
+classification_stats.headers_binary = ["AUC"]
 
 def regression_stats(results):
     return (MSE(results),
@@ -185,29 +188,35 @@ class OWTestLearners(widget.OWWidget):
 
         results = list(split_by_model(results))
         class_var = self.train_data.domain.class_var
-
+        
         if is_discrete(class_var):
             test_stats = classification_stats
         else:
             test_stats = regression_stats
-
+        
+        self._update_header()
+        
         stats = [test_stats(res) for res in results]
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
         self.setStatusMessage("")
+        
         self._update_stats_model()
 
     def _update_header(self):
         headers = ["Method"]
         if self.train_data is not None:
             if is_discrete(self.train_data.domain.class_var):
+                if len(self.train_data.domain.class_var.values) == 2:
+                    headers.extend(classification_stats.headers_binary)
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
         for i in reversed(range(len(headers),
                                 self.result_model.columnCount())):
             self.result_model.takeColumn(i)
+        
         self.result_model.setHorizontalHeaderLabels(headers)
 
     def _update_stats_model(self):
@@ -343,6 +352,10 @@ def Precision(results):
 
 def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
+
+
+def AUC(results):
+    return _skl_metric(results, sklearn.metrics.roc_auc_score)
 
 
 def F1(results):
