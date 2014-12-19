@@ -23,7 +23,7 @@ def classification_stats(results):
              F1(results),
              Precision(results),
              Recall(results))
-    if len(results.data.domain.class_var.values) <= 2:
+    if len(results.data.domain.class_var.values) == 2:
         return (AUC(results),) + stats
     return stats
 
@@ -208,7 +208,7 @@ class OWTestLearners(widget.OWWidget):
         headers = ["Method"]
         if self.train_data is not None:
             if is_discrete(self.train_data.domain.class_var):
-                if len(self.train_data.domain.class_var.values) <= 2:
+                if len(self.train_data.domain.class_var.values) == 2:
                     headers.extend(classification_stats.headers_binary)
                 headers.extend(classification_stats.headers)
             else:
