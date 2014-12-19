@@ -14,101 +14,64 @@ def _impute(data):
     return imp_data
 
 
-class Euclidean():
-    """Euclidean distance."""
-    def __call__(self, e1, e2=None, axis=1):
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else None
+def _orange_to_numpy(x):
+    if isinstance(x, data.Table):
+        return x.X
+    elif isinstance(x, data.RowInstance):
+        return x.x
+    else:
+        return x
+
+
+class SklDistance():
+    """
+        Generic scikit-learn distance.
+
+        NOTE: The VI argument is only used for Mahalanobis distance!
+    """
+    def __init__(self, metric):
+        self.metric = metric
+
+    def __call__(self, e1, e2=None, axis=1, **kwargs):
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
         if axis == 0:
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric='euclidean')
-        if dist.size == 1:
-            dist = dist[0, 0]
-        else:
+        if not sparse.issparse(x1):
+            x1 = np.atleast_2d(x1)
+        if e2 is not None and not sparse.issparse(x2):
+            x2 = np.atleast_2d(x2)
+        dist = metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric, **kwargs)
+        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2)
+        else:
+            dist = DistMatrix(dist)
         return dist
 
 
-class Manhattan():
-    """Manhattan distance."""
-    def __call__(self, e1, e2=None, axis=1):
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else None
-        if axis == 0:
-            x1 = x1.T
-            if x2 is not None:
-                x2 = x2.T
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric='manhattan')
-        if dist.size == 1:
-            dist = dist[0, 0]
-        else:
-            dist = DistMatrix(dist, e1, e2)
-        return dist
+class SklMahalanobis(SklDistance):
+    def __init__(self):
+        self.metric = 'mahalanobis'
+
+    def __call__(self, e1, e2=None, axis=1, VI=None):
+        return super().__call__(e1, e2, axis, VI=VI)
 
 
-class Cosine():
-    """Cosine distance."""
-    def __call__(self, e1, e2=None, axis=1):
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else None
-        if axis == 0:
-            x1 = x1.T
-            if x2 is not None:
-                x2 = x2.T
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric='cosine')
-        if dist.size == 1:
-            dist = dist[0, 0]
-        else:
-            dist = DistMatrix(dist, e1, e2)
-        return dist
+Euclidean = SklDistance('euclidean')
+Manhattan = SklDistance('manhattan')
+Cosine = SklDistance('cosine')
+Jaccard = SklDistance('jaccard')
+Mahalanobis = SklMahalanobis()
 
 
-class Jaccard():
-    """Jaccard distance"""
-    def __call__(self, e1, e2=None, axis=1):
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else None
-        if axis == 0:
-            x1 = x1.T
-            if x2 is not None:
-                x2 = x2.T
-        if isinstance(e1, data.RowInstance):
-            x1 = x1.reshape(1, len(x1))
-        if isinstance(e2, data.RowInstance):
-            x2 = x2.reshape(1, len(x2))
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric='jaccard')
-        if dist.size == 1:
-            dist = dist[0, 0]
-        else:
-            dist = DistMatrix(dist, e1, e2)
-        return dist
-
-
-class Mahalanobis():
-    """Mahalanobis distance."""
-    def __call__(self, e1, e2=None, VI=None, axis=1):
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else None
-        if axis == 0:
-            x1 = x1.T
-            if x2 is not None:
-                x2 = x2.T
-        if isinstance(e1, data.RowInstance):
-            x1 = x1.reshape(1, len(x1))
-        if isinstance(e2, data.RowInstance):
-            x2 = x2.reshape(1, len(x2))
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric='mahalanobis', VI=VI)
-        if dist.size == 1:
-            dist = dist[0, 0]
-        else:
-            dist = DistMatrix(dist, e1, e2)
-        return dist
-
-
-class SpearmanR():
+class SpearmanDistance():
     """Spearman's rank correlation coefficient."""
+
+    def __init__(self, absolute):
+        self.absolute = absolute
+
     def __call__(self, e1, e2=None, axis=1):
         """
         :param e1: data instances.
@@ -121,67 +84,49 @@ class SpearmanR():
 
         where r is Spearman's rank coefficient.
         """
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else x1
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
+        if x2 is None:
+            x2 = x1
         if x1.ndim == 1 or x2.ndim == 1:
             axis = 0
             slc = len(x1) if x1.ndim > 1 else 1
         else:
-            slc = len(x1) if axis == 1 else len(e1.domain.attributes)
+            slc = len(x1) if axis == 1 else x1.shape[1]
         # stats.spearmanr does not work when e1=Table and e2=RowInstance
         # so we replace e1 and e2 and then transpose the result
         transpose = False
-        if isinstance(e1, data.Table) and isinstance(e2, data.RowInstance):
+        if x1.ndim == 2 and x2.ndim == 1:
             x1, x2 = x2, x1
             slc = len(e1) if x1.ndim > 1 else 1
             transpose = True
         rho, _ = stats.spearmanr(x1, x2, axis=axis)
-        dist = (1. - rho) / 2.
-        if isinstance(dist, np.ndarray):
-            dist = dist[:slc, slc:]
-            if transpose:
-                dist = dist.T
-            dist = DistMatrix(dist, e1, e2)
-        return dist
-
-
-class SpearmanRAbsolute():
-    """Spearman's absolute rank correlation coefficient."""
-    def __call__(self, e1, e2=None, axis=1):
-        """
-        Return absolute Spearman's dissimilarity between e1 and e2,
-        i.e.
-
-        .. math:: (1 - abs(r))/2
-
-        where r is Spearman's correlation coefficient.
-        """
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else x1
-        if x1.ndim == 1 or x2.ndim == 1:
-            axis = 0
-            slc = len(x1) if x1.ndim > 1 else 1
+        if self.absolute:
+            dist = (1. - np.abs(rho)) / 2.
         else:
-            slc = len(e1) if axis == 1 else len(e1.domain.attributes)
-        # stats.spearmanr does not work when e1=Table and e2=RowInstance
-        # so we replace e1 and e2 and then transpose the result
-        transpose = False
-        if isinstance(e1, data.Table) and isinstance(e2, data.RowInstance):
-            x1, x2 = x2, x1
-            slc = len(e1) if x1.ndim > 1 else 1
-            transpose = True
-        rho, _ = stats.spearmanr(x1, x2, axis=axis)
-        dist = (1. - np.abs(rho)) / 2.
-        if isinstance(dist, np.ndarray):
+            dist = (1. - rho) / 2.
+        if isinstance(dist, np.float):
+            dist = np.array([[dist]])
+        elif isinstance(dist, np.ndarray):
             dist = dist[:slc, slc:]
-            if transpose:
-                dist = dist.T
+        if transpose:
+           dist = dist.T
+        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2)
+        else:
+            dist = DistMatrix(dist)
         return dist
 
+SpearmanR = SpearmanDistance(absolute=False)
+SpearmanRAbsolute = SpearmanDistance(absolute=True)
 
-class PearsonR():
+
+class PearsonDistance():
     """Pearson's rank correlation coefficient."""
+
+    def __init__(self, absolute):
+        self.absolute = absolute
+
     def __call__(self, e1, e2=None, axis=1):
         """
         :param e1: data instances.
@@ -194,8 +139,10 @@ class PearsonR():
 
         where r is Pearson's rank coefficient.
         """
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else x1
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
+        if x2 is None:
+            x2 = x1
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
@@ -204,41 +151,16 @@ class PearsonR():
         if x2.ndim == 1:
             x2 = list([x2])
         rho = np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
-        dist = (1. - rho) / 2.
-        if dist.size == 1:
-            dist = dist[0][0]
+        if self.absolute:
+            dist = (1. - np.abs(rho)) / 2.
         else:
+            dist = (1. - rho) / 2.
+        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2)
+        else:
+            dist = DistMatrix(dist)
         return dist
 
 
-class PearsonRAbsolute():
-    """Pearson's absolute rank correlation coefficient."""
-    def __call__(self, e1, e2=None, axis=1):
-        """
-        :param e1: data instances.
-        :param e2: data instances.
-
-        Returns absolute Pearson's dissimilarity between e1 and e2,
-        i.e.
-
-        .. math:: (1-abs(r))/2
-
-        where r is Pearson's rank coefficient.
-        """
-        x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
-        x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else x1
-        if axis == 0:
-            x1 = x1.T
-            x2 = x2.T
-        if x1.ndim == 1:
-            x1 = list([x1])
-        if x2.ndim == 1:
-            x2 = list([x2])
-        rho = np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
-        dist = (1. - np.abs(rho)) / 2.
-        if dist.size == 1:
-            dist = dist[0][0]
-        else:
-            dist = DistMatrix(dist, e1, e2)
-        return dist
+PearsonR = PearsonDistance(absolute=False)
+PearsonRAbsolute = PearsonDistance(absolute=True)
