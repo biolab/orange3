@@ -1,9 +1,17 @@
 import numpy as np
-from scipy import stats
-from sklearn import metrics
+from scipy import stats, sparse
+from sklearn import metrics, preprocessing
 
 from Orange import data
 from Orange.misc import DistMatrix
+
+
+def _impute(data):
+    """Imputation transformer for completing missing values."""
+    imp_data = data.Table(data)
+    imp_data.X = preprocessing.Imputer().fit_transform(imp_data.X)
+    imp_data.X = imp_data.X if sparse.issparse(imp_data.X) else np.squeeze(imp_data.X)
+    return imp_data
 
 
 class Euclidean():
@@ -79,7 +87,7 @@ class Jaccard():
 
 
 class Mahalanobis():
-    """ Mahalanobis distance."""
+    """Mahalanobis distance."""
     def __call__(self, e1, e2=None, VI=None, axis=1):
         x1 = e1.x if isinstance(e1, data.RowInstance) else e1.X
         x2 = e2.x if isinstance(e2, data.RowInstance) else e2.X if e2 is not None else None
