@@ -59,6 +59,9 @@ class OWPredictions(widget.OWWidget):
         self.infolabel.setMinimumWidth(200)
 
         box = gui.widgetBox(self.controlArea, "Options")
+        gui.button(box, self, "Restore Original Order",
+                   callback=self._updatePredictionsModel,
+                   tooltip="Show rows in the original order")
         gui.checkBox(box, self, "showProbabilities",
                      "Show predicted probabilities",
                      callback=self._updatePredictionDelegate)
@@ -92,6 +95,7 @@ class OWPredictions(widget.OWWidget):
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel
         )
+        self.predictionsview.setSortingEnabled(True)
         self.predictionsview.setItemDelegate(PredictionsItemDelegate())
         self.predictionsview.verticalHeader().hide()
 
@@ -131,6 +135,7 @@ class OWPredictions(widget.OWWidget):
             self.predictionsview.setModel(None)
             self.invalidatePredictions()
         else:
+            self.tableview.setModel(None)
             model = ExampleTableModel(data, None)
             self.tableview.setModel(model)
             self.invalidatePredictions()
@@ -222,7 +227,26 @@ class OWPredictions(widget.OWWidget):
         else:
             model = None
 
-        self.predictionsview.setModel(model)
+        self.proxyModel = PredictionsSortProxyModel(self.predictionsview, self._updateExampleTableModel)   # QtGui.QSortFilterProxyModel()
+        self.proxyModel.setSourceModel(model)
+        self.proxyModel.setDynamicSortFilter(True)
+        self.predictionsview.setModel(self.proxyModel)
+        self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
+        self._updateExampleTableModel()
+
+    def _updateExampleTableModel(self):
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        model = self.tableview.model()
+        n = len(model.examples)
+        model.sorted_map = [None] * n
+        for i in range(n):
+            model.sorted_map[i] = self.proxyModel.mapToSource(self.proxyModel.index(i, 0)).row()
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
+                  model.index(0, 0),
+                  model.index(len(model.examples) - 1, len(model.all_attrs) - 1)
+                  )
+        self.tableview.reset()
 
     def _updateDataView(self):
         """Update data column visibility."""
@@ -344,6 +368,25 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         super().paint(painter, option, index)
+
+
+class PredictionsSortProxyModel(QtGui.QSortFilterProxyModel):
+    def __init__(self, predictionsview, onSortCallback, parent=None):
+        super().__init__(parent)
+        self.callback = onSortCallback
+        self.predictionsview = predictionsview
+
+    def sort(self, p_int, Qt_SortOrder_order=None):
+        super().sort(p_int, Qt_SortOrder_order)
+        self.predictionsview.horizontalHeader().setSortIndicatorShown(True)
+        self.callback()
+
+    def lessThan(self, left, right):
+        left_data = self.sourceModel().data(left, Qt.DisplayRole)
+        left_str = self.predictionsview.itemDelegate(left).displayText(left_data, None)
+        right_data = self.sourceModel().data(right, Qt.DisplayRole)
+        right_str = self.predictionsview.itemDelegate(right).displayText(right_data, None)
+        return left_str < right_str
 
 
 class TableModel(QtCore.QAbstractTableModel):

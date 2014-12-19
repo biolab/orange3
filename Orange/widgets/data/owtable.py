@@ -224,7 +224,7 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
                   )
 
     def reset_sort(self):
-        self.sorted_map = range(len(data))
+        self.sorted_map = range(len(self.examples))
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
                   self.index(0, 0),
