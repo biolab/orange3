@@ -106,9 +106,9 @@ class Domain:
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        self.indices = {var.name: idx
+        self._indices = {var.name: idx
                         for idx, var in enumerate(self._variables)}
-        self.indices.update((var.name, -1 - idx)
+        self._indices.update((var.name, -1 - idx)
                             for idx, var in enumerate(metas))
 
         self.anonymous = False
@@ -129,11 +129,11 @@ class Domain:
         Domain is marked as :attr:`anonymous`, so data from any other domain of
         the same shape can be converted into this one and vice-versa.
 
-        :param nd.array X: 2-dimensional array with data
+        :param `numpy.ndarray` X: 2-dimensional array with data
         :param Y: 1- of 2- dimensional data for target
-        :type Y: nd.array or None
-        :param nd.array metas: meta attributes
-        :type metas: nd.array or None
+        :type Y: `numpy.ndarray` or None
+        :param `numpy.ndarray` metas: meta attributes
+        :type metas: `numpy.ndarray` or None
         :return: a new domain
         :rtype: :class:`Domain`
         """
@@ -187,10 +187,10 @@ class Domain:
         :rtype: :class:`Variable`
         """
         if isinstance(var, str):
-            if not var in self.indices:
+            if not var in self._indices:
                 raise IndexError("Variable '{}' is not in the domain {}".
                                  format(var, self))
-            idx = self.indices[var]
+            idx = self._indices[var]
             return self._variables[idx] if idx >= 0 else self._metas[-1 - idx]
 
         if not no_index and isinstance(var, int):
@@ -239,8 +239,8 @@ class Domain:
         in the domain.
         """
         if isinstance(item, str):
-            return item in self.indices
-        if isinstance(item, Variable) and not item.name in self.indices:
+            return item in self._indices
+        if isinstance(item, Variable) and not item.name in self._indices:
             return False
             # ... but not the opposite!
             # It may just be a variable with the same name
@@ -286,7 +286,7 @@ class Domain:
         with an instance of :class:`Variable`, `int` or `str`.
         """
         if isinstance(var, str):
-            idx = self.indices.get(var, None)
+            idx = self._indices.get(var, None)
             if idx is None:
                 raise ValueError("'%s' is not in domain" % var)
             else:

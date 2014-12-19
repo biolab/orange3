@@ -10,35 +10,53 @@ Orange to assign names and types to the corresponding columns. Domain
 descriptors are also stored in predictive models and other objects to
 facilitate automated conversions between domains, as described below.
 
+Domains are most often constructed automatically when loading the data or
+wrapping the numpy arrays into Orange's :obj:`~Orange.data.Table`. ::
+
+    >>> from Orange.data import Table
+    >>> iris = Table("iris")
+    >>> iris.domain
+    [sepal length, sepal width, petal length, petal width | iris]
+
 .. autoclass:: Orange.data.Domain
 
     .. attribute:: attributes
 
-        A list of descriptors (instances of :class:`Orange.data.Variable`)
-        for attributes (features, independent variables).
+        A tuple of descriptors (instances of :class:`Orange.data.Variable`)
+        for attributes (features, independent variables). ::
+
+            >>> iris.domain.attributes
+            (ContinuousVariable('sepal length'), ContinuousVariable('sepal width'),
+            ContinuousVariable('petal length'), ContinuousVariable('petal width'))
+
+    .. attribute:: class_var
+
+        Class variable if the domain has a single class; `None` otherwise. ::
+
+            >>> iris.domain.class_var
+            DiscreteVariable('iris')
 
     .. attribute:: class_vars
 
-        A list of descriptors for class attributes (outcomes, dependent
-        variables).
+        A tuple of descriptors for class attributes (outcomes, dependent
+        variables). ::
+
+            >>> iris.domain.class_vars
+            (DiscreteVariable('iris'),)
 
     .. attribute:: variables
 
         A list of attributes and class attributes (the concatenation of
-        the above).
+        the above). ::
 
-    .. attribute:: class_var
-
-        Class variable if the domain has a single class; `None` otherwise.
+            >>> iris.domain.variables
+            (ContinuousVariable('sepal length'), ContinuousVariable('sepal width'),
+            ContinuousVariable('petal length'), ContinuousVariable('petal width'),
+            DiscreteVariable('iris'))
 
     .. attribute:: metas
 
         List of meta attributes.
-
-    .. attribute:: indices
-
-        A dictionary that maps variable names into indices. It includes
-        ordinary attributes, class variables and meta attributes
 
     .. attribute:: anonymous
 
@@ -60,10 +78,8 @@ facilitate automated conversions between domains, as described below.
         This constructs a new domain with some features from the Iris data set
         and a new feature *color*. ::
 
-            from Orange.data import Domain, DiscreteVariable, Table
-            iris = Table("iris")
             new_domain = Domain(["sepal length", "petal length", DiscreteVariable("color")],
-                                iris.domain.class_var, source=data.domain)
+                                iris.domain.class_var, source=iris.domain)
 
     .. automethod:: from_numpy
 
@@ -81,19 +97,16 @@ facilitate automated conversions between domains, as described below.
 
         ::
 
-            >>> from Orange.data import Table
-            >>> iris = Table("iris")
-            >>> domain = iris.domain
-            >>> domain.var_from_domain("petal length")
+            >>> iris.domain.var_from_domain("petal length")
             ContinuousVariable('petal length')
-            >>> domain.var_from_domain(2)
+            >>> iris.domain.var_from_domain(2)
             ContinuousVariable('petal length')
 
     .. automethod:: __getitem__
 
         ::
 
-            >>> domain[1:3]
+            >>> iris.domain[1:3]
             (ContinuousVariable('sepal width'), ContinuousVariable('petal length'))
 
     .. automethod:: __len__
@@ -101,20 +114,34 @@ facilitate automated conversions between domains, as described below.
 
         ::
 
-            >>> "petal length" in domain
+            >>> "petal length" in iris.domain
             True
-            >>> "age" in domain
+            >>> "age" in iris.domain
             False
 
     .. automethod:: index
 
         ::
 
-            >>> domain.index("petal length")
+            >>> iris.domain.index("petal length")
             2
 
     .. automethod:: has_discrete_attributes
+
+        ::
+
+            >>> iris.domain.has_discrete_attributes()
+            False
+            >>> iris.domain.has_discrete_attributes(include_class=True)
+            True
+
+
     .. automethod:: has_continuous_attributes
+
+        ::
+
+            >>> iris.domain.has_continuous_attributes()
+            True
 
 Domain conversion
 #################
@@ -142,6 +169,3 @@ Domain conversion
     When the source or the target domain is anonymous, they match if they have
     the same number of variables and types. In this case, the data is copied
     without considering the attribute descriptors.
-
-    .. automethod:: Domain.get_conversion
-    .. automethod:: Domain.convert
