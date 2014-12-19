@@ -231,6 +231,7 @@ class OWPredictions(widget.OWWidget):
         self.proxyModel.setSourceModel(model)
         self.proxyModel.setDynamicSortFilter(True)
         self.predictionsview.setModel(self.proxyModel)
+        self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
         self._updateExampleTableModel()
 
     def _updateExampleTableModel(self):
@@ -377,6 +378,7 @@ class PredictionsSortProxyModel(QtGui.QSortFilterProxyModel):
 
     def sort(self, p_int, Qt_SortOrder_order=None):
         super().sort(p_int, Qt_SortOrder_order)
+        self.predictionsview.horizontalHeader().setSortIndicatorShown(True)
         self.callback()
 
     def lessThan(self, left, right):
