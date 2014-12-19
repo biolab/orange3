@@ -22,7 +22,7 @@ class TreeTest(unittest.TestCase):
         self.assertTrue(len(clf.get_items(0))==len(table))
 
     def test_distr_in_nodes(self):
-        table = Orange.data.Table('car')
+        table = Orange.data.Table('iris')
         learn = Orange.classification.tree.ClassificationTreeLearner()
         clf = learn(table)
         self.assertTrue(clf.get_distr(0)==Counter(table.Y.flatten()))
