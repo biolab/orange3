@@ -58,4 +58,7 @@ class LinearModel(Model):
         elif vals.shape[1] == 1:
             return vals.ravel()
         else:
+
             return vals
+    def __str__(self):
+        return 'LinearModel {}'.format(self.skmodel)
