@@ -4,8 +4,7 @@ Regression (``regression``)
 
 .. automodule:: Orange.regression
 
-Orange implements a set of methods for regression modeling, that is,
-where the outcome - dependent variable is real-valued:
+Orange implements a set of methods for regression modeling:
 
 .. toctree::
    :maxdepth: 2

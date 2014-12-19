@@ -1,58 +1,74 @@
 import numpy
 
-from Orange import classification, data
+from Orange import classification
+from Orange.data import ContinuousVariable
 from Orange.statistics import distribution
+
 
 class MeanFitter(classification.Fitter):
     """
-    Fits a regression model that returns the average response (class) value.
+    Fit a regression model that returns the average response (class) value.
     """
-    def fit_storage(self, dat):
+    def fit_storage(self, data):
         """
-        Constructs `Orange.regression.MeanModel` from given data.
+        Construct a :obj:`MeanModel` by computing the mean value of the given
+        data.
 
-        :param dat: table of data
-        :type dat: Orange.data.Table
+        :param data: data table
+        :type data: Orange.data.Table
         :return: regression model, which always returns mean value
-        :rtype: Orange.regression.mean.MeanModel
+        :rtype: :obj:`MeanModel`
         """
-        if not isinstance(dat.domain.class_var, data.ContinuousVariable):
+        if not isinstance(data.domain.class_var, ContinuousVariable):
             raise ValueError("regression.MeanFitter expects a domain with a "
                              "(single) continuous variable")
-        dist = distribution.get_distribution(dat, dat.domain.class_var)
+        dist = distribution.get_distribution(data, data.domain.class_var)
         return MeanModel(dist)
 
+
+# noinspection PyMissingConstructor
 class MeanModel(classification.Model):
     """
     A regression model that returns the average response (class) value.
-    """
-    def __init__(self, dist):
-        """
-        Constructs `Orange.regression.MeanModel` that always returns mean value of given distribution.
+    Instances can be constructed directly, by passing a distribution to the
+    constructor, or by calling the :obj:`MeanFitter`.
 
-        If no or empty distribution given, constructs a model that returns zero.
+    .. automethod:: __init__
+
+    """
+    def __init__(self, dist, domain=None):
+        """
+        Construct :obj:`Orange.regression.MeanModel` that always returns the
+        mean value computed from the given distribution.
+
+        If the distribution is empty, it constructs a model that returns zero.
 
         :param dist: domain for the `Table`
         :type dist: Orange.statistics.distribution.Continuous
         :return: regression model that returns mean value
-        :rtype: Orange.regression.Model
+        :rtype: :obj:`MeanModel`
         """
+        # Don't call super().__init__ because it will raise an error since
+        # domain is None.
+        self.domain = domain
         self.dist = dist
         if dist.any():
             self.mean = self.dist.mean()
         else:
             self.mean = 0.0
 
+    # noinspection PyPep8Naming
     def predict(self, X):
         """
-        Returns mean value for each given instance in X.
+        Return predictions (that is, the same mean value) for each given
+        instance in `X`.
 
-        :param X: data table for which to make predictions
-        :type X: Orange.data.Table
-        :return: predicted value
-        :rtype: vector of mean values
+        :param X: data for which to make predictions
+        :type X: :obj:`numpy.ndarray`
+        :return: a vector of predictions
+        :rtype: :obj:`numpy.ndarray`
         """
-        return numpy.zeros(X.shape[0]) + self.mean
+        return numpy.full(len(X), self.mean)
 
     def __str__(self):
-        return 'MeanModel {}'.format(self.mean)
+        return 'MeanModel({})'.format(self.mean)

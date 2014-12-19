@@ -7,31 +7,22 @@ Mean (``mean``)
 .. index:: mean fitter
    pair: regression; mean fitter
 
-Fitting a mean model consists of computing mean value of class
-distribution. The regression model is represented as an instance of
-:obj:`Orange.regression.mean.MeanModel`, which returns the
-mean value for all instances.
+*Mean model* predicts the same value (usually the distribution mean) for all
+data instances. Its accuracy can serve as a baseline for other regression
+models.
 
-Accuracy of mean model servers as a baseline when evaluating other
-regression models.
+The model fitter (:class:`MeanFitter`) computes the mean of the given data or
+distribution. The model is stored as an instance of :class:`MeanModel`. ::
 
-
-Example
-=======
-
+    >>> from Orange.data import Table
     >>> from Orange.regression.mean import MeanFitter
-    >>> mpg = Orange.data.Table('auto-mpg')
-    >>> mean_ = MeanFitter()
-    >>> model = mean_(mpg[30:110])
+    >>> mpg = Table('auto-mpg')
+    >>> fitter = MeanFitter()
+    >>> model = fitter(mpg)
     >>> print(model)
-    MeanModel 18.4625
-    >>> mpg[1].get_class()
-    Value('mpg', 15.0))
-    >>> model(mpg[1])
-    Value('mpg', 18.5),
-
-MeanFitter and MeanModel
-------------------------
+    MeanModel(23.51457286432161)
+    >>> model(mpg[:4])
+    array([ 23.51457286,  23.51457286,  23.51457286,  23.51457286])
 
 .. autoclass:: MeanFitter
    :members:
