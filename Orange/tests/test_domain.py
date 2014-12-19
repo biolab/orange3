@@ -388,7 +388,7 @@ class TestDomainInit(unittest.TestCase):
     def test_unpickling_recreates_known_domains(self):
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
-        self.assertTrue(hasattr(unpickled_domain, 'known_domains'))
+        self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
 
 
 if __name__ == "__main__":
