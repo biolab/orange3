@@ -15,16 +15,26 @@ from Orange.evaluation import testing, scoring
 from Orange.widgets import widget, gui, settings
 
 
+from Orange.data import DiscreteVariable
+
+
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    return (CA(results),
-            F1(results),
-            Precision(results),
-            Recall(results))
+    if len(results.data.domain.class_var.values) > 2:
+        return (CA(results),
+                F1(results),
+                Precision(results),
+                Recall(results))
+    else:
+        return (CA(results),
+                F1(results),
+                Precision(results),
+                Recall(results),
+                AUC(results))
 
-classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
+classification_stats.headers = ["CA", "F1", "Precision", "Recall", "AUC"]
 
 
 def regression_stats(results):
@@ -141,6 +151,7 @@ class OWTestLearners(widget.OWWidget):
 
     def update_results(self):
         self.warning(1, "")
+        
         if self.train_data is None:
             return
 
@@ -185,17 +196,27 @@ class OWTestLearners(widget.OWWidget):
 
         results = list(split_by_model(results))
         class_var = self.train_data.domain.class_var
-
+        
         if is_discrete(class_var):
+            if len(class_var.values) > 2:
+                self.warning(2, 'Multiclass format is not supported for AUC score')
+                classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
+            else:
+                self.warning(2, '')
+                classification_stats.headers = ["CA", "F1", "Precision", "Recall", "AUC"]
+
             test_stats = classification_stats
         else:
             test_stats = regression_stats
-
+        
+        self._update_header()
+        
         stats = [test_stats(res) for res in results]
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
         self.setStatusMessage("")
+        
         self._update_stats_model()
 
     def _update_header(self):
@@ -208,6 +229,7 @@ class OWTestLearners(widget.OWWidget):
         for i in reversed(range(len(headers),
                                 self.result_model.columnCount())):
             self.result_model.takeColumn(i)
+        
         self.result_model.setHorizontalHeaderLabels(headers)
 
     def _update_stats_model(self):
@@ -340,10 +362,11 @@ def CA(results):
 def Precision(results):
     return _skl_metric(results, sklearn.metrics.precision_score)
 
-
 def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
 
+def AUC(results):
+    return _skl_metric(results, sklearn.metrics.roc_auc_score)
 
 def F1(results):
     return _skl_metric(results, sklearn.metrics.f1_score)
