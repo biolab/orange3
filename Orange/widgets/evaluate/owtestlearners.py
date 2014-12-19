@@ -15,8 +15,6 @@ from Orange.evaluation import testing, scoring
 from Orange.widgets import widget, gui, settings
 
 
-from Orange.data import DiscreteVariable
-
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
@@ -151,7 +149,6 @@ class OWTestLearners(widget.OWWidget):
 
     def update_results(self):
         self.warning(1, "")
-        
         if self.train_data is None:
             return
 
@@ -362,11 +359,14 @@ def CA(results):
 def Precision(results):
     return _skl_metric(results, sklearn.metrics.precision_score)
 
+
 def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
 
+
 def AUC(results):
     return _skl_metric(results, sklearn.metrics.roc_auc_score)
+
 
 def F1(results):
     return _skl_metric(results, sklearn.metrics.f1_score)
