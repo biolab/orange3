@@ -18,14 +18,16 @@ linear regression is therefore to fit the unknown coefficients.
 Example
 =======
 
-    >>> from Orange.classification.majority import LinearRegressionLearner
+    >>> from Orange.regression.linear import LinearRegressionLearner
     >>> mpg = Orange.data.Table('auto-mpg')
     >>> mean_ = LinearRegressionLearner()
-    >>> model = mean_(mpg[30:110])
+    >>> model = mean_(mpg[40:110])
     >>> print(model)
-    MeanModel 18.4625
+    LinearModel LinearRegression(copy_X=True, fit_intercept=True, normalize=False)
+    >>> mpg[20]
+    Value('mpg', 25.0)
     >>> model(mpg[0])
-    Value('mpg', 18.5)
+    Value('mpg', 24.6)
 
 .. autoclass:: Orange.regression.linear.LinearRegressionLearner
 .. autoclass:: Orange.regression.linear.RidgeRegressionLearner
