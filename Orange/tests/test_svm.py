@@ -7,31 +7,29 @@ import Orange.classification.svm as svm
 class SVMTest(unittest.TestCase):
 
     def setUp(self):
-        self.d1 = data.Table('iris')
-        self.d1.shuffle()
-        self.d2 = data.Table('zoo')
-        self.d2.shuffle()
+        self.data = data.Table('ionosphere')
+        self.data.shuffle()
 
     def test_SVM(self):
-        n = int(0.7*self.d1.X.shape[0])
+        n = int(0.7*self.data.X.shape[0])
         learn = svm.SVMLearner()
-        clf = learn(self.d1[:n])
-        z = clf(self.d1[n:])
-        self.assertTrue(np.sum(z.reshape((-1, 1)) == self.d1.Y[n:]) > 0.8*len(z))
+        clf = learn(self.data[:n])
+        z = clf(self.data[n:])
+        self.assertTrue(np.sum(z.reshape((-1, 1)) == self.data.Y[n:]) > 0.7*len(z))
 
     def test_LinearSVM(self):
-        n = int(0.7*self.d2.X.shape[0])
+        n = int(0.7*self.data.X.shape[0])
         learn = svm.LinearSVMLearner()
-        clf = learn(self.d2[:n])
-        z = clf(self.d2[n:])
-        self.assertTrue(np.sum(z.reshape((-1, 1)) == self.d2.Y[n:]) > 0.8*len(z))
+        clf = learn(self.data[:n])
+        z = clf(self.data[n:])
+        self.assertTrue(np.sum(z.reshape((-1, 1)) == self.data.Y[n:]) > 0.7*len(z))
 
     def test_NuSVM(self):
-        n = int(0.7*self.d2.X.shape[0])
+        n = int(0.7*self.data.X.shape[0])
         learn = svm.NuSVMLearner(nu=0.01)
-        clf = learn(self.d2[:n])
-        z = clf(self.d2[n:])
-        self.assertTrue(np.sum(z.reshape((-1, 1)) == self.d2.Y[n:]) > 0.8*len(z))
+        clf = learn(self.data[:n])
+        z = clf(self.data[n:])
+        self.assertTrue(np.sum(z.reshape((-1, 1)) == self.data.Y[n:]) > 0.7*len(z))
 
     def test_SVR(self):
         nrows = 500
@@ -69,4 +67,4 @@ class SVMTest(unittest.TestCase):
         learn = svm.OneClassSVMLearner(kernel="rbf", nu=0.1, gamma=0.1)
         clf = learn(t)
         z = clf(x2)
-        self.assertTrue(np.sum(z == 1) > 0.8*len(z))
+        self.assertTrue(np.sum(z == 1) > 0.7*len(z))
