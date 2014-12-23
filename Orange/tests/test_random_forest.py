@@ -7,33 +7,31 @@ from Orange.evaluation import scoring, testing
 
 class RandomForestTest(unittest.TestCase):
     def test_RandomForest(self):
-        table = Orange.data.Table('titanic')
+        table = Orange.data.Table('iris')
         forest = rf.RandomForestLearner()
-        results = testing.CrossValidation(table[::20], [forest], k=10)
+        results = testing.CrossValidation(table, [forest], k=10)
         ca = scoring.CA(results)
-        self.assertGreater(ca, 0.7)
-        self.assertLess(ca, 0.9)
+        self.assertGreater(ca, 0.9)
+        self.assertLess(ca, 0.99)
 
     def test_predict_single_instance(self):
-        table = Orange.data.Table('titanic')
+        table = Orange.data.Table('iris')
         forest = rf.RandomForestLearner()
         c = forest(table)
-        for ins in table[::20]:
+        for ins in table:
             c(ins)
             val, prob = c(ins, c.ValueProbs)
 
     def test_predict_table(self):
-        table = Orange.data.Table('titanic')
+        table = Orange.data.Table('iris')
         forest = rf.RandomForestLearner()
         c = forest(table)
-        table = table[::20]
         c(table)
         vals, probs = c(table, c.ValueProbs)
 
     def test_predict_numpy(self):
-        table = Orange.data.Table('titanic')
+        table = Orange.data.Table('iris')
         forest = rf.RandomForestLearner()
         c = forest(table)
-        X = table.X[::20]
-        c(X)
-        vals, probs = c(X, c.ValueProbs)
+        c(table.X)
+        vals, probs = c(table.X, c.ValueProbs)
