@@ -1215,14 +1215,13 @@ class GraphicsSimpleTextList(QGraphicsWidget):
         QGraphicsWidget.setFont(self, font)
         for item in self.label_items:
             item.setFont(font)
-        self.layout().invalidate()
-        self.updateGeometry()
 
-    def sizeHint(self, which, constraint=QRectF()):
-        if not self.isVisible():
-            return QSizeF(0, 0)
-        else:
-            return QGraphicsWidget.sizeHint(self, which, constraint)
+        layout = self.layout()
+        for i in range(layout.count()):
+            layout.itemAt(i).updateGeometry()
+
+        self.layout().activate()
+        self.updateGeometry()
 
     def __iter__(self):
         return iter(self.label_items)
