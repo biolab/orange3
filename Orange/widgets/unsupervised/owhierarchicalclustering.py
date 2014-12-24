@@ -526,7 +526,7 @@ class DendrogramWidget(QGraphicsWidget):
         if not self._root:
             return
 
-        self._layout = dendrogram_path(self._root)
+        self._layout = dendrogram_path(self._root, self.orientation)
         for node_geom in postorder(self._layout):
             node, geom = node_geom.value
             item = self._items[node]
@@ -557,7 +557,7 @@ class DendrogramWidget(QGraphicsWidget):
         if self.orientation in [Left, Right]:
             drect = QSizeF(self._root.value.height, leaf_count - 1)
         else:
-            drect = QSizeF(self._root.value.last - 1, leaf_count - 1)
+            drect = QSizeF(self._root.value.last - 1, self._root.value.height)
 
         transform = QTransform().scale(
             crect.width() / drect.width(),
@@ -1156,14 +1156,15 @@ class OWHierarchicalClustering(widget.OWWidget):
 class GraphicsSimpleTextList(QGraphicsWidget):
     """A simple text list widget."""
 
-    def __init__(self, labels=[], orientation=Qt.Vertical, parent=None):
+    def __init__(self, labels=[], orientation=Qt.Vertical,
+                 alignment=Qt.AlignCenter, parent=None):
         QGraphicsWidget.__init__(self, parent)
         layout = QGraphicsLinearLayout(orientation)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
         self.orientation = orientation
-        self.alignment = Qt.AlignCenter
+        self.alignment = alignment
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label_items = []
         self.set_labels(labels)
@@ -1214,14 +1215,13 @@ class GraphicsSimpleTextList(QGraphicsWidget):
         QGraphicsWidget.setFont(self, font)
         for item in self.label_items:
             item.setFont(font)
-        self.layout().invalidate()
-        self.updateGeometry()
 
-    def sizeHint(self, which, constraint=QRectF()):
-        if not self.isVisible():
-            return QSizeF(0, 0)
-        else:
-            return QGraphicsWidget.sizeHint(self, which, constraint)
+        layout = self.layout()
+        for i in range(layout.count()):
+            layout.itemAt(i).updateGeometry()
+
+        self.layout().activate()
+        self.updateGeometry()
 
     def __iter__(self):
         return iter(self.label_items)
@@ -1249,7 +1249,7 @@ class WrapperLayoutItem(QGraphicsLayoutItem):
             self.item.setPos(rect.bottomLeft())
 
     def sizeHint(self, which, constraint=QSizeF()):
-        if which in [Qt.PreferredSize]:
+        if which == Qt.PreferredSize:
             size = self.item.boundingRect().size()
             if self.orientation == Qt.Horizontal:
                 return size
