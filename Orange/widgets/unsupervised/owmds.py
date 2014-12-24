@@ -219,7 +219,7 @@ class OWMDS(widget.OWWidget):
             if self.matrix is not None:
                 self._effective_matrix = self.matrix
             elif self.data is not None:
-                self._effective_matrix = Orange.distance.Euclidean()(self.data)
+                self._effective_matrix = Orange.distance.Euclidean(self.data)
 
         X = self._effective_matrix.X
 

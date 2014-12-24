@@ -576,7 +576,7 @@ def test():
     w.raise_()
 #     data = Orange.data.Table("iris")
     data = Orange.data.Table("housing")
-    dist = Orange.distance.Euclidean()(data)
+    dist = Orange.distance.Euclidean(data)
     w.set_distances(dist)
     w.handleNewSignals()
     rval = app.exec_()

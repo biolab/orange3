@@ -1412,7 +1412,7 @@ def test_main():
     w = OWHierarchicalClustering()
 
     data = Orange.data.Table("iris.tab")
-    matrix = distance.Euclidean()(data)
+    matrix = distance.Euclidean(data)
 
     w.set_distances(matrix)
     w.handleNewSignals()

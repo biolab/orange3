@@ -2,13 +2,14 @@ import numpy as np
 from scipy import stats, sparse
 from sklearn import metrics, preprocessing
 
+import Orange
 from Orange import data
 from Orange.misc import DistMatrix
 
 
 def _impute(data):
     """Imputation transformer for completing missing values."""
-    imp_data = data.Table(data)
+    imp_data = Orange.data.Table(data)
     imp_data.X = preprocessing.Imputer().fit_transform(imp_data.X)
     imp_data.X = imp_data.X if sparse.issparse(imp_data.X) else np.squeeze(imp_data.X)
     return imp_data

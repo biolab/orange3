@@ -5,15 +5,15 @@ from Orange import distance
 
 
 _METRICS = [
-    ("Euclidean", distance.Euclidean()),
-    ("Manhattan", distance.Manhattan()),
-    ("Cosine", distance.Cosine()),
-    ("Jaccard", distance.Jaccard()),
-    ("Mahalanobis", distance.Mahalanobis()),
-    ("Spearman", distance.SpearmanR()),
-    ("Spearman absolute", distance.SpearmanRAbsolute()),
-    ("Pearson", distance.PearsonR()),
-    ("Pearson absolute", distance.PearsonRAbsolute()),
+    ("Euclidean", distance.Euclidean),
+    ("Manhattan", distance.Manhattan),
+    ("Cosine", distance.Cosine),
+    ("Jaccard", distance.Jaccard),
+    ("Mahalanobis", distance.Mahalanobis),
+    ("Spearman", distance.SpearmanR),
+    ("Spearman absolute", distance.SpearmanRAbsolute),
+    ("Pearson", distance.PearsonR),
+    ("Pearson absolute", distance.PearsonRAbsolute),
 ]
 
 
