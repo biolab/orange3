@@ -159,7 +159,8 @@ class OWDistanceMap(widget.OWWidget):
         super().__init__(parent)
 
         self.matrix = None
-        self.clustering = None
+        self._tree = None
+        self._ordered_tree = None
         self._sorted_matrix = None
         self._sort_indices = None
         self._selection = None
@@ -169,7 +170,7 @@ class OWDistanceMap(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Element sorting", margin=0)
         gui.comboBox(box, self, "sorting",
                      items=["None", "Clustering",
-#                             "Clustering with ordered leaves"
+                            "Clustering with ordered leaves"
                             ],
                      callback=self._invalidate_ordering)
 
@@ -292,6 +293,7 @@ class OWDistanceMap(widget.OWWidget):
         self.matrix = None
         self.cluster = None
         self._tree = None
+        self._ordered_tree = None
         self._sorted_matrix = None
         self._selection = []
         self._clear_plot()
@@ -322,6 +324,13 @@ class OWDistanceMap(widget.OWWidget):
             self._tree = hierarchical.dist_matrix_clustering(self.matrix)
         return self._tree
 
+    def _ordered_cluster_tree(self):
+        if self._ordered_tree is None:
+            tree = self._cluster_tree()
+            self._ordered_tree = \
+                hierarchical.optimal_leaf_ordering(tree, self.matrix)
+        return self._ordered_tree
+
     def _setup_scene(self):
         self.matrix_item = DistanceMapItem(self._sorted_matrix[:, ::-1])
 
@@ -330,10 +339,12 @@ class OWDistanceMap(widget.OWWidget):
                               padding=0)
         self.matrix_item.selectionChanged.connect(self._invalidate_selection)
 
-        if self.sorting > 0:
+        if self.sorting == 0:
+            tree = None
+        elif self.sorting == 1:
             tree = self._cluster_tree()
         else:
-            tree = None
+            tree = self._ordered_cluster_tree()
 
         self._set_displayed_dendrogram(tree)
 
@@ -360,10 +371,11 @@ class OWDistanceMap(widget.OWWidget):
             self._sorted_matrix = self.matrix.X
             self._sort_indices = None
         else:
-            if self._tree is None:
-                self._tree = hierarchical.dist_matrix_clustering(self.matrix)
+            if self.sorting == 1:
+                tree = self._cluster_tree()
+            elif self.sorting == 2:
+                tree = self._ordered_cluster_tree()
 
-            tree = self._tree
             leaves = hierarchical.leaves(tree)
             indices = numpy.array([leaf.value.index for leaf in leaves])
             X = self.matrix.X
@@ -562,8 +574,8 @@ def test():
     w = OWDistanceMap()
     w.show()
     w.raise_()
-    data = Orange.data.Table("iris")
-#     data = Orange.data.Table("housing")
+#     data = Orange.data.Table("iris")
+    data = Orange.data.Table("housing")
     dist = Orange.distance.Euclidean()(data)
     w.set_distances(dist)
     w.handleNewSignals()
