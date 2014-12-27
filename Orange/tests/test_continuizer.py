@@ -6,7 +6,7 @@ import unittest
 
 class Continuizer_Test(unittest.TestCase):
     def setUp(self):
-        Variable.clear_cache()
+        Variable._clear_cache()
         self.data = Table("test4")
 
     def test_default(self):
@@ -136,7 +136,7 @@ class Continuizer_Test(unittest.TestCase):
             self.data,
             normalize_continuous=DomainContinuizer.NormalizeBySpan,
             transform_class=True, zero_based=False)
-        
+
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in dom))
         self.assertIsNot(dom.class_var, self.data.domain.class_var)

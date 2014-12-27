@@ -82,6 +82,7 @@ def _discretized_var(data, var, points):
 
     dvar = Orange.data.variable.DiscreteVariable(name=name, values=values)
     dvar.get_value_from = Discretizer(var, points)
+    dvar.source_variable = var
     dvar.to_sql = discretized_attribute
     return dvar
 
@@ -280,7 +281,7 @@ def _entropy_discretize_sorted(C, force=False):
 
     # Note the + 1
     cut_index = np.argmin(E) + 1
-    
+
     # Distribution of classed in S1, S2 and S
     S1_c = np.sum(C[:cut_index], axis=0)
     S2_c = np.sum(C[cut_index:], axis=0)
@@ -330,7 +331,7 @@ class EntropyMDL(Discretization):
         gain is lower than MDL (default: False).
 
     """
-    
+
     def __init__(self, force=False):
         self.force = force
 
