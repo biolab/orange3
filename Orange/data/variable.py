@@ -1,9 +1,9 @@
+from math import isnan, floor
 from numbers import Real
-from ..misc.enum import Enum
-import threading
+import types
+
 from ..data.value import Value, Unknown
 import collections
-from math import isnan, floor
 
 
 class Variable:
@@ -38,19 +38,16 @@ class Variable:
     _DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
     _variable_types = []
 
-    def __init__(self, name="", get_value_from=None):
+    def __init__(self, name="", compute_value=None):
         """
         Construct a variable descriptor.
         """
         self.name = name
-        self.get_value_from = get_value_from
+        if compute_value is not None:
+            self.compute_value = compute_value
         self.unknown_str = set(Variable._DefaultUnknownStr)
         self.source_variable = None
         self.attributes = {}
-        self.get_value_from = None
-        # TODO: I (JD) removed locking. Do we need a separate attribute/method
-        # then? Couldn't we remove the attribute and just have
-        # self.compute_value: lambda *x: Unknown as the default instead of None?
 
     @staticmethod
     def is_primitive():
@@ -122,19 +119,9 @@ class Variable:
 
     __repr__ = __str__
 
-    def compute_value(self, inst):
-        """
-        Compute the value of the variable by calling
-        :obj:`Variable.get_value_from`. Return
-        :obj:`~Orange.data.value.Unknown` if `get_value_from` is not set.
-
-        :param inst: Data instance in the original domain
-        :type inst: data.Instance
-        :rtype: float
-        """
-        if self.get_value_from is None:
-            return Unknown
-        return self.get_value_from(inst)
+    @staticmethod
+    def compute_value(self, _):
+        return Unknown
 
     @classmethod
     def _clear_cache(cls):
@@ -489,7 +476,7 @@ class StringVariable(Variable):
 
     def __init__(self, name="", default_col=-1):
         """Construct a new descriptor."""
-        super().__init__(name, default_col)
+        super().__init__(name)
         StringVariable.all_string_vars[name] = self
 
     @staticmethod

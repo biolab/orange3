@@ -81,7 +81,7 @@ def _discretized_var(data, var, points):
             return "'%s'" % values[0]
 
     dvar = Orange.data.variable.DiscreteVariable(name=name, values=values)
-    dvar.get_value_from = Discretizer(var, points)
+    dvar.compute_value = Discretizer(var, points)
     dvar.source_variable = var
     dvar.to_sql = discretized_attribute
     return dvar
