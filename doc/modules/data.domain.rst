@@ -78,15 +78,23 @@ wrapping the numpy arrays into Orange's :obj:`~Orange.data.Table`. ::
         *gender* and continuous feature *age*, and a continuous target *salary*.
         ::
 
-            from Orange.data import Domain, DiscreteVariable, ContinuousVariable
-            domain = Domain([DiscreteVariable("gender"), ContinuousVariable("age")],
-                            ContinuousVariable("salary"))
+            >>> from Orange.data import Domain, DiscreteVariable, ContinuousVariable
+            >>> domain = Domain([DiscreteVariable.make("gender"),
+            ...                  ContinuousVariable.make("age")],
+            ...                 ContinuousVariable.make("salary"))
+            >>> domain
+            [gender, age | salary]
 
         This constructs a new domain with some features from the Iris data set
         and a new feature *color*. ::
 
-            new_domain = Domain(["sepal length", "petal length", DiscreteVariable("color")],
-                                iris.domain.class_var, source=iris.domain)
+            >>> new_domain = Domain(["sepal length",
+            ...                      "petal length",
+            ...                      DiscreteVariable.make("color")],
+            ...                     iris.domain.class_var,
+            ...                     source=iris.domain)
+            >>> new_domain
+            [sepal length, petal length, color | iris]
 
     .. automethod:: from_numpy
 
