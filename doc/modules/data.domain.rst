@@ -6,8 +6,15 @@ Domain description (``domain``)
 
 Description of a domain stores a list of features, class(es) and meta
 attribute descriptors. A domain descriptor is attached to all tables in
-Orange to assign names and types to the corresponding columns. Domain
-descriptors are also stored in predictive models and other objects to
+Orange to assign names and types to the corresponding columns. Columns in
+the :obj:`Orange.data.Table` have the roles of attributes (features,
+independent variables), class(es) (targets, outcomes, dependent variables)
+and meta attributes; in parallel to that, the domain descriptor stores
+their corresponding
+descriptions in collections of variable descriptors of type
+:obj:`Orange.data.Variable`.
+
+Domain descriptors are also stored in predictive models and other objects to
 facilitate automated conversions between domains, as described below.
 
 Domains are most often constructed automatically when loading the data or
