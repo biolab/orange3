@@ -73,6 +73,18 @@ class Instance:
     def weight(self, weight):
         self._weight = weight
 
+    def __setitem__(self, key, value):
+        if not isinstance(key, int):
+            key = self._domain.index(key)
+        value = self._domain[key].to_val(value)
+        if key >= 0:
+            if not isinstance(value, (int, float)):
+                raise TypeError("Expected primitive value, got '%s'" %
+                                type(value).__name__)
+            self._values[key] = value
+        else:
+            self._metas[-1 - key] = value
+
     def __getitem__(self, key):
         if not isinstance(key, int):
             key = self._domain.index(key)
@@ -107,17 +119,6 @@ class Instance:
         return s
 
     __repr__ = __str__
-
-    def __setitem__(self, key, value):
-        if not isinstance(key, int):
-            key = self._domain.index(key)
-        if key >= 0:
-            if not isinstance(value, float):
-                raise TypeError("Expected primitive value, got '%s'" %
-                                type(value).__name__)
-            self._values[key] = value
-        else:
-            self._metas[-1 - key] = value
 
     def __eq__(self, other):
         if not isinstance(other, Instance):

@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from Orange.data import \
-    Instance, Domain, Unknown, \
+    Instance, Domain, Unknown, Value, \
     DiscreteVariable, ContinuousVariable, StringVariable
 
 class TestInstance(unittest.TestCase):
@@ -197,3 +197,64 @@ class TestInstance(unittest.TestCase):
             self.assertEqual(inst2._y[0], 1)
             assert_array_equal(inst2._metas, np.array([0, Unknown, 42],
                                                       dtype=object))
+
+    def test_get_item(self):
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
+                                    [DiscreteVariable("y", values="ABC")],
+                                    self.metas)
+        vals = [42, "M", "B", "X", 43, "Foo"]
+        inst = Instance(domain, vals)
+
+        val = inst[0]
+        self.assertIsInstance(val, Value)
+        self.assertEqual(inst[0], 42)
+        self.assertEqual(inst["x"], 42)
+        self.assertEqual(inst[domain[0]], 42)
+
+        val = inst[1]
+        self.assertIsInstance(val, Value)
+        self.assertEqual(inst[1], "M")
+        self.assertEqual(inst["g"], "M")
+        self.assertEqual(inst[domain[1]], "M")
+
+        val = inst[-2]
+        self.assertIsInstance(val, Value)
+        self.assertEqual(inst[-2], 43)
+        self.assertEqual(inst["Meta 2"], 43)
+        self.assertEqual(inst[self.metas[1]], 43)
+
+        with self.assertRaises(ValueError):
+            inst["asdf"] = 42
+        with self.assertRaises(ValueError):
+            inst[ContinuousVariable("asdf")] = 42
+
+    def test_set_item(self):
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
+                                    [DiscreteVariable("y", values="ABC")],
+                                    self.metas)
+        vals = [42, "M", "B", "X", 43, "Foo"]
+        inst = Instance(domain, vals)
+
+        inst[0] = 43
+        self.assertEqual(inst[0], 43)
+        inst["x"] = 44
+        self.assertEqual(inst[0], 44)
+        inst[domain[0]] = 45
+        self.assertEqual(inst[0], 45)
+
+        inst[1] = "F"
+        self.assertEqual(inst[1], "F")
+        inst["g"] = "M"
+        self.assertEqual(inst[1], "M")
+        with self.assertRaises(ValueError):
+            inst[1] = "N"
+        with self.assertRaises(ValueError):
+            inst["asdf"] = 42
+
+        inst[-1] = "Y"
+        self.assertEqual(inst[-1], "Y")
+        inst["Meta 1"] = "Z"
+        self.assertEqual(inst[-1], "Z")
+        inst[domain.metas[0]] = "X"
+        self.assertEqual(inst[-1], "X")
+
