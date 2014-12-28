@@ -258,3 +258,39 @@ class TestInstance(unittest.TestCase):
         inst[domain.metas[0]] = "X"
         self.assertEqual(inst[-1], "X")
 
+    def test_str(self):
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")])
+        inst = Instance(domain, [42, 0])
+        self.assertEqual(str(inst), "[42.000, M]")
+
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
+                                    [DiscreteVariable("y", values="ABC")])
+        inst = Instance(domain, [42, "M", "B"])
+        self.assertEqual(str(inst), "[42.000, M | B]")
+
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
+                                    [DiscreteVariable("y", values="ABC")],
+                                    self.metas)
+        inst = Instance(domain, [42, "M", "B", "X", 43, "Foo"])
+        self.assertEqual(str(inst), "[42.000, M | B] {X, 43.000, Foo}")
+
+        domain = self.create_domain([],
+                                    [DiscreteVariable("y", values="ABC")],
+                                    self.metas)
+        inst = Instance(domain, ["B", "X", 43, "Foo"])
+        self.assertEqual(str(inst), "[ | B] {X, 43.000, Foo}")
+
+        domain = self.create_domain([],
+                                    [],
+                                    self.metas)
+        inst = Instance(domain, ["X", 43, "Foo"])
+        self.assertEqual(str(inst), "[] {X, 43.000, Foo}")
+
+        domain = self.create_domain(self.attributes)
+        inst = Instance(domain, range(len(self.attributes)))
+        self.assertEqual(str(inst), "[0.000, 1.000, 2.000, 3.000, 4.000, ...]")
+
+        for attr in domain:
+            attr.number_of_decimals = 0
+        self.assertEqual(str(inst), "[0, 1, 2, 3, 4, ...]")
+
