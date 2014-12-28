@@ -1008,7 +1008,8 @@ class TableTests(unittest.TestCase):
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
-        self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas)))
+        self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas))
+                                           ).astype(object)
         self.weight_data = np.random.random((self.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
