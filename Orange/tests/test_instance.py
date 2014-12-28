@@ -184,10 +184,8 @@ class TestInstance(unittest.TestCase):
         self.assertEqual(inst2._y[0], 1)
         assert_array_equal(inst2._metas, np.array([0, 43, "Foo"], dtype=object))
 
-        domain2 = self.create_domain(["z",
-                                      DiscreteVariable.make("g", values="MF"),
-                                      self.metas[1]],
-                                     [DiscreteVariable.make("y", values="ABC")],
+        domain2 = self.create_domain(["z", domain[1], self.metas[1]],
+                                     domain.class_vars,
                                      [self.metas[0], "w", domain[0]])
         inst2 = Instance(domain2, inst)
         with warnings.catch_warnings():
@@ -216,6 +214,12 @@ class TestInstance(unittest.TestCase):
         self.assertEqual(inst[1], "M")
         self.assertEqual(inst["g"], "M")
         self.assertEqual(inst[domain[1]], "M")
+
+        val = inst[2]
+        self.assertIsInstance(val, Value)
+        self.assertEqual(inst[2], "B")
+        self.assertEqual(inst["y"], "B")
+        self.assertEqual(inst[domain.class_var], "B")
 
         val = inst[-2]
         self.assertIsInstance(val, Value)
@@ -250,6 +254,13 @@ class TestInstance(unittest.TestCase):
             inst[1] = "N"
         with self.assertRaises(ValueError):
             inst["asdf"] = 42
+
+        inst[2] = "C"
+        self.assertEqual(inst[2], "C")
+        inst["y"] = "A"
+        self.assertEqual(inst[2], "A")
+        inst[domain.class_var] = "B"
+        self.assertEqual(inst[2], "B")
 
         inst[-1] = "Y"
         self.assertEqual(inst[-1], "Y")
@@ -293,4 +304,36 @@ class TestInstance(unittest.TestCase):
         for attr in domain:
             attr.number_of_decimals = 0
         self.assertEqual(str(inst), "[0, 1, 2, 3, 4, ...]")
+
+    def test_eq(self):
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
+                                    [DiscreteVariable("y", values="ABC")],
+                                    self.metas)
+        vals = [42, "M", "B", "X", 43, "Foo"]
+        inst = Instance(domain, vals)
+        inst2 = Instance(domain, vals)
+        self.assertTrue(inst == inst2)
+        self.assertTrue(inst2 == inst)
+
+        inst2[0] = 43
+        self.assertFalse(inst == inst2)
+
+        inst2[0] = Unknown
+        self.assertFalse(inst == inst2)
+
+        inst2 = Instance(domain, vals)
+        inst2[2] = "C"
+        self.assertFalse(inst == inst2)
+
+        inst2 = Instance(domain, vals)
+        inst2[-1] = "Y"
+        self.assertFalse(inst == inst2)
+
+        inst2 = Instance(domain, vals)
+        inst2[-2] = "33"
+        self.assertFalse(inst == inst2)
+
+        inst2 = Instance(domain, vals)
+        inst2[-3] = "Bar"
+        self.assertFalse(inst == inst2)
 
