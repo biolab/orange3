@@ -44,7 +44,7 @@ class Instance:
     def x(self):
         """
         Instance's attributes as a 1-dimensional numpy array whose length
-        equals len(self.domain.attributes)
+        equals `len(self.domain.attributes)`.
         """
         return self._x
 
@@ -52,7 +52,7 @@ class Instance:
     def y(self):
         """
         Instance's classes as a 1-dimensional numpy array whose length
-        equals len(self.domain.attributes)
+        equals `len(self.domain.attributes)`.
         """
         return self._y
 
@@ -60,7 +60,7 @@ class Instance:
     def metas(self):
         """
         Instance's meta attributes as a 1-dimensional numpy array whose length
-        equals len(self.domain.attributes)
+        equals `len(self.domain.attributes)`.
         """
         return self._metas
 
