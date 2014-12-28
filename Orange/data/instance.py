@@ -122,11 +122,12 @@ class Instance:
     def __eq__(self, other):
         if not isinstance(other, Instance):
             other = Instance(self._domain, other)
-        nan_mask = np.isnan(self._values) | np.isnan(other._values)
-        return np.array_equal(self._values[nan_mask], other._values[nan_mask]) \
+        nan1 = np.isnan(self._values)
+        nan2 = np.isnan(other._values)
+        return np.array_equal(nan1, nan2) and \
+            np.array_equal(self._values[~nan1], other._values[~nan2]) \
             and all(m1 == m2 or
-                    (m1 is None or isinstance(m1, float) and isnan(m1)) or
-                    (m2 is None or isinstance(m2, float) and isnan(m2))
+                    type(m1) == type(m2) == float and isnan(m1) and isnan(m2)
                     for m1, m2 in zip(self._metas, other._metas))
 
     def __iter__(self):
