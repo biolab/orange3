@@ -449,8 +449,8 @@ class Table(MutableSequence, Storage):
                            (Unknown if not i else i(example))
                            for i in c.class_vars]
             self.metas[row] = [example._values[i] if isinstance(i, int) else
-                               (Unknown if not i else i(example))
-                               for i in c.metas]
+                               (var.Unknown if not i else i(example))
+                               for i, var in zip(c.metas, domain.metas)]
         else:
             self.X[row] = [var.to_val(val)
                            for var, val in zip(domain.attributes, example)]
@@ -458,7 +458,8 @@ class Table(MutableSequence, Storage):
                            for var, val in
                            zip(domain.class_vars,
                                example[len(domain.attributes):])]
-            self.metas[row] = Unknown
+            self.metas[row] = np.array([var.Unknown for var in domain.metas],
+                                       dtype=object)
 
 
     # Helper function for __setitem__ and insert:

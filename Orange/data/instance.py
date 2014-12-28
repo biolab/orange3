@@ -22,8 +22,7 @@ class Instance:
         self.sparse_x = self.sparse_y = self.sparse_metas = None
         if data is None:
             self._values = np.repeat(Unknown, len(domain.variables))
-            self._metas = np.array([Unknown if var.is_primitive() else None
-                                    for var in domain.metas],
+            self._metas = np.array([var.Unknown for var in domain.metas],
                                    dtype=object)
             self._weight = 1
         elif isinstance(data, Instance) and data.domain == domain:

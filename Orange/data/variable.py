@@ -6,6 +6,9 @@ import collections
 from math import isnan, floor
 
 
+ValueUnknown = Unknown  # Shadowing within classes
+
+
 class Variable:
     """
     The base class for variable descriptors, which contains the variable's
@@ -45,6 +48,7 @@ class Variable:
     DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
 
     variable_types = []
+    Unknown = ValueUnknown
 
     def __init__(self, name="", ordered=False):
         """
@@ -73,7 +77,7 @@ class Variable:
         :rtype: float
         """
         if self.get_value_from is None:
-            return Unknown
+            return self.Unknown
         with self._get_value_lock:
             return self.get_value_from(inst)
 
@@ -182,14 +186,14 @@ class DiscreteVariable(Variable):
         :rtype: float
         """
         if s is None:
-            return Unknown
+            return ValueUnknown
 
         if isinstance(s, int):
             return s
         if isinstance(s, Real):
             return s if isnan(s) else floor(s + 0.25)
         if s in self.unknown_str:
-            return Unknown
+            return ValueUnknown
         if not isinstance(s, str):
             raise TypeError('Cannot convert {} to value of "{}"'.format(
                 type(s).__name__, self.name))
@@ -210,7 +214,8 @@ class DiscreteVariable(Variable):
         :rtype: float
         """
         try:
-            return Unknown if s in self.unknown_str else self.values.index(s)
+            return ValueUnknown if s in self.unknown_str \
+                else self.values.index(s)
         except ValueError:
             self.add_value(s)
             return len(self.values) - 1
@@ -412,7 +417,7 @@ class ContinuousVariable(Variable):
         Convert a value, given as an instance of an arbitrary type, to a float.
         """
         if s in self.unknown_str:
-            return Unknown
+            return ValueUnknown
         return float(s)
 
     def val_from_str_add(self, s):
@@ -420,7 +425,7 @@ class ContinuousVariable(Variable):
         Convert a value from a string (adjusting the number of decimals).
         """
         if s in self.unknown_str:
-            return Unknown
+            return ValueUnknown
         if self.adjust_decimals and isinstance(s, str):
             #TODO: This may significantly slow down file reading.
             #      Is there something we can do about it?
@@ -450,6 +455,7 @@ class StringVariable(Variable):
     Descriptor for string variables.
     """
     all_string_vars = {}
+    Unknown = None
 
     def __init__(self, name="", default_col=-1):
         """Construct a new descriptor."""

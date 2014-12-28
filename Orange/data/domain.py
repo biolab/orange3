@@ -374,8 +374,7 @@ class Domain:
                 metas = [var.to_val(val)
                          for var, val in zip(self._metas, inst[nvars:])]
             else:
-                metas = [Unknown if var.is_primitive() else None
-                         for var in self._metas]
+                metas = [var.Unknown for var in self._metas]
             # Let np.array decide dtype for values
         return np.array(values), np.array(metas, dtype=object)
 
