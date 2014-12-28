@@ -385,6 +385,11 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(g_to_f.class_vars, [None, x])
         self.assertEqual(g_to_f.metas, [-1, x, -3])
 
+    def test_conversion_size(self):
+        domain = data.Domain([age, gender, income], [race])
+        self.assertRaises(ValueError, domain.convert, [0] * 5)
+        self.assertRaises(ValueError, domain.convert, [0] * 3)
+
     def test_unpickling_recreates_known_domains(self):
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
