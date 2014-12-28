@@ -656,7 +656,7 @@ class SqlRowInstance(instance.Instance):
     attributes.
     """
     def __init__(self, domain, data=None):
-        super().__init__(domain, data)
         nvar = len(domain.variables)
+        super().__init__(domain, data[:nvar])
         if len(data) > nvar:
             self._metas = data[nvar:]
