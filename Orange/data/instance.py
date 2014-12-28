@@ -14,24 +14,19 @@ class Instance:
         :param data: instance's values
         :type data: Orange.data.Instance or a sequence of values
         """
+        if data is None and isinstance(domain, Instance):
+            data = domain
+            domain = data.domain
+
         self._domain = domain
         self.sparse_x = self.sparse_y = self.sparse_metas = None
-
         if data is None:
-            if isinstance(domain, Instance):
-                data = domain
-                self._domain = domain = domain.domain
-            else:
-                self._values = np.repeat(Unknown, len(domain.variables))
-                self._x = self._values[:len(domain.attributes)]
-                self._y = self._values[len(domain.attributes):]
-                self._metas = np.array(
-                    [Unknown if var.is_primitive else None for var in
-                     domain.metas],
-                    dtype=object)
-                self._weight = 1
-                return
-        if isinstance(data, Instance) and data.domain == domain:
+            self._values = np.repeat(Unknown, len(domain.variables))
+            self._metas = np.array([Unknown if var.is_primitive() else None
+                                    for var in domain.metas],
+                                   dtype=object)
+            self._weight = 1
+        elif isinstance(data, Instance) and data.domain == domain:
             self._values = np.array(data._values)
             self._metas = np.array(data._metas)
             self._weight = data._weight
@@ -46,7 +41,6 @@ class Instance:
         """The domain describing the instance's values."""
         return self._domain
 
-
     @property
     def x(self):
         """
@@ -54,7 +48,6 @@ class Instance:
         equals len(self.domain.attributes)
         """
         return self._x
-
 
     @property
     def y(self):
@@ -64,7 +57,6 @@ class Instance:
         """
         return self._y
 
-
     @property
     def metas(self):
         """
@@ -73,17 +65,14 @@ class Instance:
         """
         return self._metas
 
-
     @property
     def weight(self):
         """The weight of the data instance. Default is 1."""
         return self._weight
 
-
     @weight.setter
     def weight(self, weight):
         self._weight = weight
-
 
     def __getitem__(self, key):
         if not isinstance(key, int):
@@ -120,7 +109,6 @@ class Instance:
 
     __repr__ = __str__
 
-
     def __setitem__(self, key, value):
         if not isinstance(key, int):
             key = self._domain.index(key)
@@ -132,21 +120,15 @@ class Instance:
         else:
             self._metas[-1 - key] = value
 
-
     def __eq__(self, other):
-        # TODO: rewrite to Cython
         if not isinstance(other, Instance):
             other = Instance(self._domain, other)
-        for v1, v2 in zip(self._values, other._values):
-            if not (isnan(v1) or isnan(v2) or v1 == v2):
-                return False
-        for m1, m2 in zip(self._metas, other._metas):
-            if not (m1 == m2
-                    or (isinstance(m1, float) and isnan(m1)) or m1 is None
-                    or (isinstance(m2, float) and isnan(m2)) or m2 is None):
-                return False
-        return True
-
+        nan_mask = np.isnan(self._values) | np.isnan(other._values)
+        return np.array_equal(self._values[nan_mask], other._values[nan_mask]) \
+            and all(m1 == m2 or
+                    (m1 is None or isinstance(m1, float) and isnan(m1)) or
+                    (m2 is None or isinstance(m2, float) and isnan(m2))
+                    for m1, m2 in zip(self._metas, other._metas))
 
     def __iter__(self):
         return iter(self._values)
@@ -154,16 +136,13 @@ class Instance:
     def __len__(self):
         return len(self._values)
 
-
     def attributes(self):
         """Return iterator over the instance's attributes"""
         return iter(self._values[:len(self._domain.attributes)])
 
-
     def classes(self):
         """Return iterator over the instance's class attributes"""
         return iter(self._y)
-
 
     # A helper function for get_class and set_class
     def _check_single_class(self):
@@ -171,7 +150,6 @@ class Instance:
             raise TypeError("Domain has no class variable")
         elif len(self._domain.class_vars) > 1:
             raise TypeError("Domain has multiple class variables")
-
 
     def get_class(self):
         """
@@ -181,15 +159,13 @@ class Instance:
         self._check_single_class()
         return Value(self._domain.class_var, self._y[0])
 
-
     def get_classes(self):
         """
         Return the class value as a list of instances of
         :obj:`Orange.data.Value`.
         """
         return (Value(var, value)
-            for var, value in zip(self._domain.class_vars, self._y))
-
+                for var, value in zip(self._domain.class_vars, self._y))
 
     def set_class(self, value):
         """
