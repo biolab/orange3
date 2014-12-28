@@ -362,6 +362,8 @@ class Domain:
             metas = [inst._values[i] if isinstance(i, int) else
                      (Unknown if not i else i(inst)) for i in c.metas]
         else:
+            if len(inst) != len(self._variables):
+                raise ValueError("invalid data length for domain")
             values = [var.to_val(val)
                       for var, val in zip(self._variables, inst)]
             metas = [Unknown if var.is_primitive else None
