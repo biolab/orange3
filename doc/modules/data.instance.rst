@@ -70,8 +70,25 @@ Rows of Data Tables
     :members:
 
     `RowInstance` is a specialization of :obj:`~Orange.data.Instance` that
-    represents a row of :obj:`Orange.data.Table`.
+    represents a row of :obj:`Orange.data.Table`. `RowInstance` is returned
+    by indexing a `Table`.
 
-    Although the instance's data can be retrieved through attributes :obj:`x`,
-    :obj:`y` and :obj:`metas`, changing them modifies the corresponding table
-    only if the underlying numpy arrays are not sparse.
+    The difference between `Instance` and `RowInstance` is that the latter
+    represents a view into the table: changing the `RowInstance` changes the
+    data in the table::
+
+        >>> iris[42]
+        [4.4, 3.2, 1.3, 0.2 | Iris-setosa]
+        >>> inst = iris[42]
+        >>> inst.set_class("Iris-virginica")
+        >>> iris[42]
+        [4.4, 3.2, 1.3, 0.2 | Iris-virginica]
+
+    Dense tables can also be modified directly through :obj:`x`, :obj:`y` and
+    :obj:`metas`. ::
+
+        >>> inst.x[0] = 5
+        >>> iris[42]
+        [5.0, 3.2, 1.3, 0.2 | Iris-virginica]
+
+    Sparse tables cannot be changed in this way.
