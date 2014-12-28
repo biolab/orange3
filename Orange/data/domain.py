@@ -362,12 +362,18 @@ class Domain:
             metas = [inst._values[i] if isinstance(i, int) else
                      (Unknown if not i else i(inst)) for i in c.metas]
         else:
-            if len(inst) != len(self._variables):
+            nvars = len(self._variables)
+            nmetas = len(self._metas)
+            if len(inst) != nvars and len(inst) != nvars + nmetas:
                 raise ValueError("invalid data length for domain")
             values = [var.to_val(val)
                       for var, val in zip(self._variables, inst)]
-            metas = [Unknown if var.is_primitive else None
-                     for var in self._metas]
+            if len(inst) == nvars + nmetas:
+                metas = [var.to_val(val)
+                         for var, val in zip(self._metas, inst[nvars:])]
+            else:
+                metas = [Unknown if var.is_primitive() else None
+                         for var in self._metas]
             # Let np.array decide dtype for values
         return np.array(values), np.array(metas, dtype=object)
 
