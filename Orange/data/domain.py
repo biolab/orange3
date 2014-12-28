@@ -357,9 +357,11 @@ class Domain:
             if inst.domain == self:
                 return inst._values, inst._metas
             c = self.get_conversion(inst.domain)
-            values = [inst._values[i] if isinstance(i, int) else
+            values = [(inst._values[i] if i >= 0 else inst._metas[-i - 1])
+                      if isinstance(i, int) else
                       (Unknown if not i else i(inst)) for i in c.variables]
-            metas = [inst._values[i] if isinstance(i, int) else
+            metas = [(inst._values[i] if i >= 0 else inst._metas[-i - 1])
+                     if isinstance(i, int) else
                      (Unknown if not i else i(inst)) for i in c.metas]
         else:
             nvars = len(self._variables)
