@@ -55,11 +55,11 @@ DState = namedtuple(
 
 
 def is_derived(var):
-    return var.get_value_from is not None
+    return var.compute_value is not None
 
 
 def is_discretized(var):
-    return is_derived(var) and isinstance(var.get_value_from, disc.Discretizer)
+    return isinstance(var.compute_value, disc.Discretizer)
 
 
 def variable_key(var):
@@ -305,7 +305,7 @@ class OWDiscretize(widget.OWWidget):
                 # no transformation took place
                 return None, var
             elif is_discretized(dvar):
-                return dvar.get_value_from.points, dvar
+                return dvar.compute_value.points, dvar
             else:
                 assert False
 

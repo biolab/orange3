@@ -102,8 +102,8 @@ Base class
         DiscreteVariable('D_sepal length')
         >>> d_iris_1.domain[0].source_variable
         ContinuousVariable('sepal length')
-        >>> d_iris_1.domain[0].get_value_from
-        <Orange.feature.discretization.Discretizer object at 0x10da56978>
+        >>> d_iris_1.domain[0].compute_value
+        <Orange.feature.discretization.Discretizer at 0x10d5108d0>
 
     The data is loaded and the instances on even places are put into a new
     table, from which we compute discretized data. The discretized variable

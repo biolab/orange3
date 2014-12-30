@@ -382,7 +382,7 @@ class TestDomainInit(unittest.TestCase):
         g_to_f = f.get_conversion(g)
         self.assertIs(g_to_f.source, g)
         self.assertEqual(g_to_f.attributes, [-2])
-        self.assertEqual(g_to_f.class_vars, [None, x])
+        self.assertEqual(g_to_f.class_vars, [data.Variable.compute_value, x])
         self.assertEqual(g_to_f.metas, [-1, x, -3])
 
     def test_unpickling_recreates_known_domains(self):

@@ -635,24 +635,24 @@ def column_imputer_as_value(variable, table):
             values=variable.values + [value],
             base_value=variable.base_value
         )
-        var.get_value_from = Lookup(
+        var.compute_value = Lookup(
             variable,
             numpy.arange(len(variable.values), dtype=int),
             unknown=len(variable.values)
         )
         codomain = [var]
-        transformers = [var.get_value_from]
+        transformers = [var.compute_value]
     elif isinstance(variable, Orange.data.ContinuousVariable):
         fmt = "{var.name}_def"
         var = Orange.data.DiscreteVariable(
             fmt.format(var=variable),
             values=("undef", "def"),
         )
-        var.get_value_from = IsDefined(variable)
+        var.compute_value = IsDefined(variable)
         codomain = [variable, var]
         stats = basic_stats.BasicStats(table, variable)
         transformers = [ReplaceUnknowns(variable, stats.mean),
-                        var.get_value_from]
+                        var.compute_value]
     else:
         raise TypeError(type(variable))
 
@@ -851,11 +851,10 @@ class ImputerModel(object):
 
     def _is_var_transform(self, imputer):
         """
-        Is `imputer` implemented as a Varible.get_value_from.
-
+        Is `imputer` implemented as a Varible.compute_value.
         """
         for var, t in zip(imputer.codomain, imputer.transformers):
-            if var.get_value_from and var.get_value_from is t:
+            if var.compute_value and var.compute_value is t:
                 pass
             else:
                 return False
@@ -885,7 +884,7 @@ Imputation:
     reduce((+), map(F.transform, F.domain)) == F.codomain
 
     A ColumnImputer is a mapping [var] -> [var', [var1', ...]].
-    The mapping is specified with either var'.get_value_from or
+    The mapping is specified with either var'.compute_value or
     by ColumnImputer i.e. ColumnImputer must contain a Transformation for
     each codomain variable
     data transform = Transform of Variable * (Variable * Transformation) list

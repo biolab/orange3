@@ -46,16 +46,16 @@ StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 def make_variable(descriptor):
 
     if descriptor.expression.strip():
-        get_value_from = \
+        compute_value = \
             lambda instance: eval(descriptor.expression,
                                   {"instance": instance, "_": instance})
     else:
-        get_value_from = lambda _: float("nan")
+        compute_value = lambda _: float("nan")
 
     if isinstance(descriptor, ContinuousDescriptor):
         var = Orange.data.ContinuousVariable(descriptor.name)
         var.number_of_decimals = descriptor.number_of_decimals
-        var.get_value_from = get_value_from
+        var.compute_value = compute_value
         return var
     elif isinstance(descriptor, DiscreteDescriptor):
         var = Orange.data.DiscreteVariable(
@@ -64,13 +64,13 @@ def make_variable(descriptor):
             ordered=descriptor.ordered,
             base_value=descriptor.base_value
         )
-        var.get_value_from = get_value_from
+        var.compute_value = compute_value
         return var
     elif isinstance(descriptor, StringDescriptor):
         var = Orange.data.StringVariable(
             descriptor.name,
         )
-        var.get_value_from = get_value_from
+        var.compute_value = compute_value
         return var
     else:
         raise TypeError
@@ -725,7 +725,7 @@ def construct_variables(descriptions, source_vars):
     for desc in descriptions:
         _, func = bind_variable(desc, source_vars)
         var = make_variable(desc)
-        var.get_value_from = func
+        var.compute_value = func
         variables.append(var)
     return variables
 

@@ -20,16 +20,17 @@ class Variable:
         A set of values that represent unknowns in conversion from textual
         formats. Default is `{"?", ".", "", "NA", "~", None}`.
 
-    .. attribute:: get_value_from
+    .. attribute:: compute_value
 
         A function for computing the variable's value when converting from
-        another domain which does not have this variable. The function should
-        not be called directly; see :obj:`~Variable.compute_value`.
+        another domain which does not contain this variable. The base class
+        defines a static method `compute_value`, which returns `Unknown`.
+        Non-primitive variables must redefine it to return `None`.
 
     .. attribute:: source_variable
 
-        An optional descriptor of the source variable if this variable is
-        computed (via :obj:`get_value_from`) from another variable.
+        An optional descriptor of the source variable - if any - from which
+        this variable is derived and computed via :obj:`compute_value`.
 
     .. attribute:: attributes
 
@@ -120,7 +121,7 @@ class Variable:
     __repr__ = __str__
 
     @staticmethod
-    def compute_value(self, _):
+    def compute_value(_):
         return Unknown
 
     @classmethod
@@ -483,6 +484,10 @@ class StringVariable(Variable):
     def is_primitive():
         """Return `False`: string variables are not stored as floats."""
         return False
+
+    @staticmethod
+    def compute_value(_):
+        return None
 
     def to_val(self, s):
         """

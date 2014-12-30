@@ -10,7 +10,7 @@ class DomainConversion:
     Indices and functions for conversion between domains.
 
     Every list contains indices (instances of int) of variables in the
-    source domain, or the variable's get_value_from function if the source
+    source domain, or the variable's compute_value function if the source
     domain does not contain the variable.
 
     .. attribute:: source
