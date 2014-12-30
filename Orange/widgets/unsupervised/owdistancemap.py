@@ -148,8 +148,9 @@ class DistanceMapItem(pg.ImageItem):
         if event.button() == Qt.LeftButton:
             r, c = self._cellAt(event.pos())
             if r != -1 and c != -1:
-                if not event.modifiers() & Qt.ControlModifier:
-                    self.__select(QRect(), self.Clear)
+                # Clear existing selection
+                # TODO: Fix extended selection.
+                self.__select(QRect(), self.Clear)
                 selrange = QRect(c, r, 2, 2)
                 self.__elastic_band_select(selrange, self.Select | self.Clear)
 
