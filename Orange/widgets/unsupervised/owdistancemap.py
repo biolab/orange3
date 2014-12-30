@@ -8,7 +8,7 @@ import numpy
 from PyQt4.QtGui import (
     QSlider, QLabel, QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform
+    QBrush, QTransform, QGraphicsWidget
 )
 
 from PyQt4.QtCore import (
@@ -223,6 +223,11 @@ class DistanceMapItem(pg.ImageItem):
             self.setToolTip("{}, {}: {:.3f}".format(i, j, d))
         else:
             self.setToolTip("")
+
+
+class DendrogramWidget(DendrogramWidget):
+    def sceneEventFilter(self, recv, event):
+        return QGraphicsWidget.sceneEventFilter(self, recv, event)
 
 
 class OWDistanceMap(widget.OWWidget):
