@@ -380,10 +380,19 @@ def rect_kernel_curve(dist, bandwidth=None):
     X = dist[0, :]
     W = dist[1, :]
 
+    def IQR(a, weights=None):
+        """Interquartile range of `a`."""
+        q1, q3 = weighted_quantiles(a, [0.25, 0.75], weights=weights)
+        return q3 - q1
+
     if bandwidth is None:
-        # Modified SNR (Simple Normal Reference) rule
-        # XXX: This is only a part of Silverman's rule.
-        bandwidth = 0.9 * X.std() * (X.size ** -0.2)
+        # Silverman's rule of thumb.
+        A = weighted_std(X, weights=W)
+        iqr = IQR(X, weights=W)
+        if iqr > 0:
+            A = min(A, iqr / 1.34)
+
+        bandwidth = 0.9 * A * (X.size ** -0.2)
 
     bottom_edges = X - bandwidth / 2
     top_edges = X + bandwidth / 2
@@ -430,7 +439,7 @@ def ash_curve(dist, bandwidth=None, m=3, weights=None):
     dist = numpy.asarray(dist)
     X, W = dist
     if bandwidth is None:
-        bandwidth = 3.5 * X.std() * (X.size ** (-1 / 3))
+        bandwidth = 3.5 * weighted_std(X, weights=W) * (X.size ** (-1 / 3))
 
     hist, edges = average_shifted_histogram(X, bandwidth, m, weights=W)
     return edges, hist
@@ -482,6 +491,62 @@ def triangular_kernel(x):
     return numpy.clip(1, 0, 1 - numpy.abs(x))
 
 
+def weighted_std(a, axis=None, weights=None, ddof=0):
+    mean = numpy.average(a, axis=axis, weights=weights)
+
+    if axis is not None:
+        shape = shape_reduce_keep_dims(a.shape, axis)
+        mean = mean.reshape(shape)
+
+    sq_diff = numpy.power(a - mean, 2)
+    mean_sq_diff, wsum = numpy.average(
+        sq_diff, axis=axis, weights=weights, returned=True
+    )
+
+    if ddof != 0:
+        mean_sq_diff *= wsum / (wsum - ddof)
+
+    return numpy.sqrt(mean_sq_diff)
+
+
+def weighted_quantiles(a, prob=[0.25, 0.5, 0.75], alphap=0.4, betap=0.4,
+                       axis=None, weights=None):
+    a = numpy.asarray(a)
+    prob = numpy.asarray(prob)
+
+    sort_ind = numpy.argsort(a, axis)
+    a = a[sort_ind]
+
+    if weights is None:
+        weights = numpy.ones_like(a)
+    else:
+        weights = numpy.asarray(weights)
+        weights = weights[sort_ind]
+
+    n = numpy.sum(weights)
+    k = numpy.cumsum(weights, axis)
+
+    # plotting positions for the known n knots
+    pk = (k - alphap * weights) / (n + 1 - alphap * weights - betap * weights)
+
+#     m = alphap + prob * (1 - alphap - betap)
+
+    return numpy.interp(prob, pk, a, left=a[0], right=a[-1])
+
+
+def shape_reduce_keep_dims(shape, axis):
+    if shape is None:
+        return ()
+
+    shape = list(shape)
+    if isinstance(axis, collections.Sequence):
+        for ax in axis:
+            shape[ax] = 1
+    else:
+        shape[axis] = 1
+    return tuple(shape)
+
+
 def main():
     import gc
     app = QtGui.QApplication([])
@@ -489,8 +554,8 @@ def main():
     w.show()
 #     data = Orange.data.Table("brown-selected")
 #     data = Orange.data.Table("lenses")
-#    data = Orange.data.Table("heart_disease")
-    data = Orange.data.Table("adult")
+#     data = Orange.data.Table("housing")
+    data = Orange.data.Table("heart_disease")
     w.set_data(data)
     rval = app.exec_()
     w.deleteLater()
