@@ -69,6 +69,7 @@ def stack_on_condition(a, b, condition):
 
 from collections import namedtuple
 if sys.version_info < (3, 4):
+    # use singledispatch backports from pypi
     from singledispatch import singledispatch
 else:
     from functools import singledispatch
@@ -79,6 +80,7 @@ Append = namedtuple("Append", ["points"])
 Insert = namedtuple("Insert", ["indices", "points"])
 Move = namedtuple("Move", ["indices", "delta"])
 DeleteIndices = namedtuple("DeleteIndices", ["indices"])
+
 # A composite of two operators
 Composite = namedtuple("Composite", ["f", "g"])
 
@@ -87,7 +89,9 @@ Composite = namedtuple("Composite", ["f", "g"])
 AirBrush = namedtuple("AirBrush", ["pos", "radius", "intensity", "rstate"])
 Jitter = namedtuple("Jitter", ["pos", "radius", "intensity", "rstate"])
 Magnet = namedtuple("Magnet", ["pos", "radius", "density"])
-DeleteRegion = namedtuple("DeleteRegion", ["region"])
+SelectRegion = namedtuple("SelectRegion", ["region"])
+DeleteSelection = namedtuple("DeleteSelection", [])
+MoveSelection = namedtuple("MoveSelection", ["delta"])
 
 
 # Transforms functions for base commands
@@ -464,6 +468,18 @@ class JitterTool(DataTool):
         )
 
 
+class _RectROI(pg.ROI):
+    def __init__(self, pos, size, **kwargs):
+        super().__init__(pos, size, **kwargs)
+
+    def setRect(self, rect):
+        self.setPos(rect.topLeft(), finish=False)
+        self.setSize(rect.size(), finish=False)
+
+    def rect(self):
+        return QRectF(self.pos(), QSizeF(*self.size()))
+
+
 class SelectTool(DataTool):
     cursor = Qt.ArrowCursor
 
@@ -472,6 +488,7 @@ class SelectTool(DataTool):
         self._item = None
         self._start_pos = None
         self._selection_rect = None
+        self._mouse_dragging = False
         self._delete_action = QAction(
             "Delete", self,
             shortcut=QtGui.QKeySequence.Delete,
@@ -482,20 +499,22 @@ class SelectTool(DataTool):
     def setSelectionRect(self, rect):
         if self._selection_rect != rect:
             self._selection_rect = QRectF(rect)
-            self._item.setPos(self._selection_rect.topLeft())
-            self._item.setSize(self._selection_rect.size())
+            self._item.setRect(self._selection_rect)
 
     def selectionRect(self):
-        return QRectF(self._item.pos(), QSizeF(*self._item.size()))
+        return self._item.rect()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             pos = self.mapToPlot(event.pos())
             if self._item.isVisible():
                 if self.selectionRect().contains(pos):
+                    # Allow the event to propagate to the item.
                     event.setAccepted(False)
                     self._item.setCursor(Qt.ClosedHandCursor)
                     return False
+
+            self._mouse_dragging = True
 
             self._start_pos = pos
             self._item.setVisible(True)
@@ -503,7 +522,6 @@ class SelectTool(DataTool):
 
             self.setSelectionRect(QRectF(pos, pos))
             event.accept()
-            self.editingStarted.emit()
             return True
         else:
             return super().mousePressEvent(event)
@@ -522,29 +540,57 @@ class SelectTool(DataTool):
             pos = self.mapToPlot(event.pos())
             self.setSelectionRect(QRectF(self._start_pos, pos).normalized())
             event.accept()
-            self.editingFinished.emit()
+            self.issueCommand.emit(SelectRegion(self.selectionRect()))
             self._item.setCursor(Qt.OpenHandCursor)
+            self._mouse_dragging = False
             return True
         else:
             return super().mouseReleaseEvent(event)
 
     def activate(self):
         if self._item is None:
-            self._item = pg.RectROI((0, 0), (0, 0), pen=(25, 25, 25))
+            self._item = _RectROI((0, 0), (0, 0), pen=(25, 25, 25))
             self._item.setAcceptedMouseButtons(Qt.LeftButton)
             self._item.setVisible(False)
             self._item.setCursor(Qt.OpenHandCursor)
+            self._item.sigRegionChanged.connect(self._on_region_changed)
+            self._item.sigRegionChangeStarted.connect(
+                self._on_region_change_started)
+            self._item.sigRegionChangeFinished.connect(
+                self._on_region_change_finished)
             self._plot.addItem(self._item)
+            self._mouse_dragging = False
 
         self._plot.addAction(self._delete_action)
 
     def deactivate(self):
-        self.setSelectionRect(QRectF())
-        self._item.setVisible(False)
+        self._reset()
         self._plot.removeAction(self._delete_action)
 
+    def _reset(self):
+        self.setSelectionRect(QRectF())
+        self._item.setVisible(False)
+        self._mouse_dragging = False
+
     def delete(self):
-        self.issueCommand.emit(DeleteRegion(self.selectionRect()))
+        if not self._mouse_dragging and self._item.isVisible():
+            self.issueCommand.emit(DeleteSelection())
+            self._reset()
+
+    def _on_region_changed(self):
+        if not self._mouse_dragging:
+            newrect = self._item.rect()
+            delta = newrect.topLeft() - self._selection_rect.topLeft()
+            self._selection_rect = newrect
+            self.issueCommand.emit(MoveSelection(delta))
+
+    def _on_region_change_started(self):
+        if not self._mouse_dragging:
+            self.editingStarted.emit()
+
+    def _on_region_change_finished(self):
+        if not self._mouse_dragging:
+            self.editingFinished.emit()
 
 
 class ZoomTool(DataTool):
@@ -630,6 +676,25 @@ class UndoCommand(QtGui.QUndoCommand):
         return 1
 
 
+def indices_eq(ind1, ind2):
+    if isinstance(ind1, tuple) and isinstance(ind2, tuple):
+        if len(ind1) != len(ind2):
+            return False
+        else:
+            return all(indices_eq(i1, i2) for i1, i2 in zip(ind1, ind2))
+    elif isinstance(ind1, slice) and isinstance(ind2, slice):
+        return ind1 == ind2
+    elif ind1 is ... and ind2 is ...:
+        return True
+
+    ind1, ind1 = numpy.array(ind1), numpy.array(ind2)
+
+    if ind1.shape != ind2.shape or ind1.dtype != ind2.dtype:
+        return False
+    else:
+        return (ind1 == ind2).all()
+
+
 def merge_cmd(composit):
     f = composit.f
     g = composit.g
@@ -640,9 +705,10 @@ def merge_cmd(composit):
     if isinstance(f, Append) and isinstance(g, Append):
         return Append(numpy.vstack((f.points, g.points)))
     elif isinstance(f, Move) and isinstance(g, Move):
-        if f.indices == g.indices:
+        if indices_eq(f.indices, g.indices):
             return Move(f.indices, f.delta + g.delta)
         else:
+            # TODO: union of indices, ...
             return composit
 #     elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
 #         indices = numpy.array(g.indices)
@@ -745,7 +811,9 @@ class OWPaintData(widget.OWWidget):
 
         self.data = None
         self.current_tool = None
+        self._selected_indices = None
         self._invalidated = False
+        self._scatter_item = None
 
         self.labels = ["Class-1", "Class-2"]
 
@@ -980,6 +1048,7 @@ class OWPaintData(widget.OWWidget):
             self.tools_cache[tool] = newtool
             newtool.issueCommand.connect(self._add_command)
 
+        self._selected_region = QRectF()
         self.current_tool = tool = self.tools_cache[tool]
         self.plot.getViewBox().tool = tool
         tool.editingStarted.connect(self._on_editing_started)
@@ -994,6 +1063,12 @@ class OWPaintData(widget.OWWidget):
 
     def execute(self, command):
         if isinstance(command, (Append, DeleteIndices, Insert, Move)):
+            if isinstance(command, (DeleteIndices, Insert)):
+                self._selected_indices = None
+
+                if isinstance(self.current_tool, SelectTool):
+                    self.current_tool._reset()
+
             self.data, undo = transform(command, self.data)
             self._replot()
             return undo
@@ -1002,22 +1077,36 @@ class OWPaintData(widget.OWWidget):
 
     def _add_command(self, cmd):
         name = "Name"
+
         if isinstance(cmd, Append):
             cls = self.selected_class_label()
             points = numpy.array([[p.x(), p.y(), cls] for p in cmd.points])
             self.undo_stack.push(UndoCommand(Append(points), self, text=name))
         elif isinstance(cmd, Move):
             self.undo_stack.push(UndoCommand(cmd, self, text=name))
-        elif isinstance(cmd, DeleteRegion):
+        elif isinstance(cmd, SelectRegion):
             indices = [i for i, (x, y) in enumerate(self.data[:, :2])
                        if cmd.region.contains(QPointF(x, y))]
             indices = numpy.array(indices, dtype=int)
-            self.undo_stack.push(
-                UndoCommand(DeleteIndices(indices), self, text="Delete")
-            )
+            self._selected_indices = indices
+        elif isinstance(cmd, DeleteSelection):
+            indices = self._selected_indices
+            if indices is not None and indices.size:
+                self.undo_stack.push(
+                    UndoCommand(DeleteIndices(indices), self, text="Delete")
+                )
+        elif isinstance(cmd, MoveSelection):
+            indices = self._selected_indices
+            if indices is not None and indices.size:
+                self.undo_stack.push(
+                    UndoCommand(
+                        Move((self._selected_indices, slice(0, 2)),
+                             numpy.array([cmd.delta.x(), cmd.delta.y()])),
+                        self, text="Move")
+                )
         elif isinstance(cmd, DeleteIndices):
             self.undo_stack.push(UndoCommand(cmd, self, text="Delete"))
-        elif isinstance(cmd, (Insert, )):
+        elif isinstance(cmd, Insert):
             self.undo_stack.push(UndoCommand(cmd, self))
         elif isinstance(cmd, AirBrush):
             data = create_data(cmd.pos.x(), cmd.pos.y(),
@@ -1043,17 +1132,20 @@ class OWPaintData(widget.OWWidget):
             pen.setCosmetic(True)
             return pen
 
-        self.plot.clear()
+        if self._scatter_item is not None:
+            self.plot.removeItem(self._scatter_item)
+            self._scatter_item = None
+
         nclasses = len(self.class_model)
         pens = [pen(self.colors[i]) for i in range(nclasses)]
 
-        item = pg.ScatterPlotItem(
+        self._scatter_item = pg.ScatterPlotItem(
             self.data[:, 0], self.data[:, 1],
             symbol="+",
             pen=[pens[int(ci)] for ci in self.data[:, 2]]
         )
 
-        self.plot.addItem(item)
+        self.plot.addItem(self._scatter_item)
 
     def _attr_name_changed(self):
         self.plot.getAxis("bottom").setLabel(self.attr1)
@@ -1091,11 +1183,22 @@ class OWPaintData(widget.OWWidget):
         self.plot.clear()
 
 
-if __name__ == "__main__":
-    a = QtGui.QApplication([])
+def test():
+    import gc
+    import sip
+    app = QtGui.QApplication([])
     ow = OWPaintData()
     ow.show()
     ow.raise_()
-    a.exec_()
+    rval = app.exec_()
     ow.saveSettings()
     ow.onDeleteWidget()
+    sip.delete(ow)
+    del ow
+    gc.collect()
+    app.processEvents()
+    return rval
+
+
+if __name__ == "__main__":
+    sys.exit(test())
