@@ -60,7 +60,7 @@ class PaletteItemSample(ItemSample):
         p.setFont(font)
         for i, label in enumerate(self.labels):
             color = QColor(*palette.getRGB((i + 0.5) / scale.bins))
-            p.setPen(QPen(QBrush(QColor(0, 0, 0, 0)), 2))
+            p.setPen(Qt.NoPen)
             p.setBrush(QBrush(color))
             p.drawRect(0, i * 15, 15, 15)
             p.setPen(QPen(Qt.black))
@@ -395,9 +395,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not keep_colors:
             self.pen_colors = self.brush_colors = None
         color_index = self.get_color_index()
+
+        def make_pen(color, width):
+            p = QPen(color, width)
+            p.setCosmetic(True)
+            return p
+
         if color_index == -1:
             color = self.plot_widget.palette().color(OWPalette.Data)
-            pen = [QPen(QBrush(color), 1.5)] * self.n_points
+            pen = [make_pen(color, 1.5)] * self.n_points
             if self.selection is not None:
                 brush = [(QBrush(QColor(128, 128, 128, 255)),
                           QBrush(QColor(128, 128, 128)))[s]
@@ -421,7 +427,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     [self.pen_colors,
                      np.full((self.n_points, 1), self.alpha_value)])
                 self.pen_colors *= 100 / self.DarkerValue
-                self.pen_colors = [QPen(QBrush(QColor(*col)), 1.5)
+                self.pen_colors = [make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
             if self.selection is not None:
                 self.brush_colors[:, 3] = 0
@@ -441,7 +447,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 colors = palette.getRGB(np.arange(n_colors + 1))
                 colors[n_colors] = (128, 128, 128)
                 pens = np.array(
-                    [QPen(QBrush(QColor(*col).darker(self.DarkerValue)), 1.5)
+                    [make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])
                 self.pen_colors = pens[c_data]
                 self.brush_colors = np.array([
