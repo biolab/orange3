@@ -72,7 +72,7 @@ def feature_clustering(data, distance=Orange.distance.PearsonR,
     :param Orange.distance.Distance distance: A distance measure.
     :param str linkage:
     """
-    matrix = distance(data, axis=1)
+    matrix = distance(data, axis=0)
     return dist_matrix_clustering(matrix, linkage=linkage)
 
 
