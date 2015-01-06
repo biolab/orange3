@@ -517,8 +517,8 @@ class OWDistanceMap(widget.OWWidget):
             n, colors = max(colors.items())
             colors = numpy.array(colors, dtype=numpy.ubyte)
             low, high = self.color_low * 255, self.color_high * 255
-            points = numpy.linspace(low, high, n, dtype=numpy.float)
-            space = numpy.linspace(0, 255, 255, dtype=numpy.float)
+            points = numpy.linspace(low, high, n)
+            space = numpy.linspace(0, 255, 255)
 
             r = numpy.interp(space, points, colors[:, 0], left=255, right=0)
             g = numpy.interp(space, points, colors[:, 1], left=255, right=0)
