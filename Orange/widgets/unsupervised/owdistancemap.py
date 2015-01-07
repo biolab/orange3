@@ -435,6 +435,7 @@ class OWDistanceMap(widget.OWWidget):
         self.viewbox.addItem(self.matrix_item)
         self.viewbox.setRange(QRectF(0, 0, *self._sorted_matrix.shape),
                               padding=0)
+
         self.matrix_item.selectionChanged.connect(self._invalidate_selection)
 
         if self.sorting == 0:
@@ -510,6 +511,10 @@ class OWDistanceMap(widget.OWWidget):
         for textlist in [self.right_labels, self.bottom_labels]:
             textlist.set_labels(labels or [])
             textlist.setVisible(bool(labels))
+
+        constraint = -1 if labels else 0
+        self.right_labels.setMaximumWidth(constraint)
+        self.bottom_labels.setMaximumHeight(constraint)
 
     def _update_color(self):
         if self.matrix_item:
