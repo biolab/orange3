@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 import numpy
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
+from PyQt4.QtCore import pyqtSignal as Signal
 
 import Orange.data
 import Orange.classification
@@ -225,25 +226,27 @@ class OWPredictions(widget.OWWidget):
         else:
             model = None
 
-        self.proxyModel = PredictionsSortProxyModel(self.predictionsview, self._updateExampleTableModel)   # QtGui.QSortFilterProxyModel()
+        self.proxyModel = PredictionsSortProxyModel()
         self.proxyModel.setSourceModel(model)
         self.proxyModel.setDynamicSortFilter(True)
         self.predictionsview.setModel(self.proxyModel)
         self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
-        self._updateExampleTableModel()
+        self.proxyModel.orderChanged.connect(self._updateDataSortOrder)
+        self.proxyModel.orderChanged.connect(
+            lambda: self.predictionsview.horizontalHeader()
+                        .setSortIndicatorShown(True)
+        )
+        self._updateDataSortOrder()
 
-    def _updateExampleTableModel(self):
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+    def _updateDataSortOrder(self):
+        "Update data row order to match the current predictions view order"
         model = self.tableview.model()
         n = len(model.examples)
         model.sorted_map = [None] * n
-        for i in range(n):
-            model.sorted_map[i] = self.proxyModel.mapToSource(self.proxyModel.index(i, 0)).row()
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  model.index(0, 0),
-                  model.index(len(model.examples) - 1, len(model.all_attrs) - 1)
-                  )
+        proxy = self.proxyModel
+        sort_ind = [proxy.mapToSource(proxy.index(i, 0)).row()
+                    for i in range(n)]
+        model.sorted_map = sort_ind
         self.tableview.reset()
 
     def _updateDataView(self):
@@ -386,22 +389,25 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
 
 
 class PredictionsSortProxyModel(QtGui.QSortFilterProxyModel):
-    def __init__(self, predictionsview, onSortCallback, parent=None):
-        super().__init__(parent)
-        self.callback = onSortCallback
-        self.predictionsview = predictionsview
+    orderChanged = Signal()
 
-    def sort(self, p_int, Qt_SortOrder_order=None):
-        super().sort(p_int, Qt_SortOrder_order)
-        self.predictionsview.horizontalHeader().setSortIndicatorShown(True)
-        self.callback()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def sort(self, column, order=Qt.AscendingOrder):
+        super().sort(column, order)
+        self.orderChanged.emit()
 
     def lessThan(self, left, right):
-        left_data = self.sourceModel().data(left, Qt.DisplayRole)
-        left_str = self.predictionsview.itemDelegate(left).displayText(left_data, None)
-        right_data = self.sourceModel().data(right, Qt.DisplayRole)
-        right_str = self.predictionsview.itemDelegate(right).displayText(right_data, None)
-        return left_str < right_str
+        role = self.sortRole()
+        left_data = self.sourceModel().data(left, role)
+        right_data = self.sourceModel().data(right, role)
+
+        return self._key(left_data) < self._key(right_data)
+
+    def _key(self, prediction):
+        value, probs = prediction
+        return value, (list(probs) if probs is not None else None)
 
 
 class TableModel(QtCore.QAbstractTableModel):
@@ -475,13 +481,16 @@ class DistFormater:
 
 
 if __name__ == "__main__":
-    import Orange.classification.naive_bayes
+    import Orange.classification.svm as svm
+    import Orange.classification.logistic_regression as lr
     app = QtGui.QApplication([])
     w = OWPredictions()
     data = Orange.data.Table("iris")
-    nb = Orange.classification.naive_bayes.BayesLearner()(data)
+    svm_clf = svm.SVMLearner(probability=True)(data)
+    lr_clf = lr.LogisticRegressionLearner()(data)
     w.setData(data)
-    w.setPredictor(nb, 1)
+    w.setPredictor(svm_clf, 0)
+    w.setPredictor(lr_clf, 1)
     w.handleNewSignals()
     w.show()
     app.exec_()
