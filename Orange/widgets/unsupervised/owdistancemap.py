@@ -4,16 +4,13 @@ import itertools
 
 import numpy
 
-
 from PyQt4.QtGui import (
-    QSlider, QLabel, QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
+    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
     QBrush, QTransform, QGraphicsWidget
 )
 
-from PyQt4.QtCore import (
-    Qt, QEvent, QRect, QRectF, QSize, QSizeF, QPointF
-)
+from PyQt4.QtCore import Qt, QRect, QRectF, QSize, QPointF
 from PyQt4.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
@@ -598,31 +595,6 @@ class TextList(GraphicsSimpleTextList):
             fix += 1
             font.setPointSize(height - fix)
         return height - fix
-
-
-class ImageWidget(pg.GraphicsWidget):
-    def __init__(self, image=None, parent=None):
-        super().__init__(parent)
-        self._image = image
-        self._image.setParentItem(self)
-
-    def sizeHint(self, which, constraint=QSizeF()):
-        if which == Qt.PreferredSize:
-            w, h = self._image.image.shape
-            # Take into account the constraint, keep aspect ratio, ...
-            return QSizeF(w, h)
-        else:
-            return super().sizeHint(which, constraint)
-
-    def setGeometry(self, geom):
-        super().setGeometry(geom)
-        geom = self.geometry()
-        self._image.setRect(self.contentsRect())
-
-    def changeEvent(self, event):
-        if event.type() == QEvent.ContentsRectChange:
-            self._image.setRect(self.contentsRect())
-        super().changeEvent(event)
 
 
 ##########################
