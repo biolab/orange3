@@ -75,11 +75,6 @@ class OWPredictions(widget.OWWidget):
         )
 
         gui.rubber(self.controlArea)
-        box = gui.widgetBox(self.controlArea, self.tr("Commit"))
-#         cb = gui.checkBox(box, self, "autocommit", "Auto commit")
-        button = gui.button(box, self, "Send Predictions",
-                            callback=self.commit,
-                            default=True)
 
         # Main GUI
         self.splitter = QtGui.QSplitter(
