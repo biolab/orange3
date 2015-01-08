@@ -1,6 +1,7 @@
 import math
 import os
 import re
+import itertools
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from Orange.widgets.utils import getdeepattr
@@ -13,12 +14,7 @@ _enter_icon = None
 __re_label = re.compile(r"(^|[^%])%\((?P<value>[a-zA-Z]\w*)\)")
 
 
-def id_generator(id_):
-    while True:
-        id_ += 1
-        yield id_
-
-OrangeUserRole = id_generator(Qt.UserRole)
+OrangeUserRole = itertools.count(Qt.UserRole)
 
 
 class ControlledAttributesDict(dict):

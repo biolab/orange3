@@ -1,9 +1,15 @@
 import pickle
-from contextlib import contextmanager
+import operator
 
-from PyQt4 import QtGui, QtCore
+from contextlib import contextmanager
+from functools import reduce, lru_cache
+from xml.sax.saxutils import escape
+
+from PyQt4 import QtGui
 from PyQt4.QtGui import  QItemSelectionModel
-from PyQt4.QtCore import Qt, QAbstractListModel, QModelIndex, QByteArray
+from PyQt4.QtCore import (
+    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex, QByteArray
+)
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from PyQt4.QtGui import (
@@ -470,3 +476,163 @@ class ModelActionsWidget(QWidget):
 
     def addAction(self, action, *args):
         return self.insertAction(-1, action, *args)
+
+
+class TableModel(QAbstractTableModel):
+    """
+    An adapter for using Orange.data.Table within Qt's Item View Framework.
+
+    :param Orange.data.Table sourcedata: Source data table.
+    :param QObject parent:
+    """
+    #: Orange.data.Value for the index.
+    ValueRole = gui.TableValueRole  # next(gui.OrangeUserRole)
+    #: Orange.data.Value of the row's class.
+    ClassValueRole = gui.TableClassValueRole  # next(gui.OrangeUserRole)
+    #: Orange.data.Variable of the column.
+    VariableRole = gui.TableVariable  # next(gui.OrangeUserRole)
+    #: The column's role (position) in the domain.
+    #: One of `Attribute. ClassVar, Meta
+    DomainRole = next(gui.OrangeUserRole)
+
+    #: Column domain roles
+    Attribute, ClassVar, Meta = range(3)
+
+    def __init__(self, sourcedata, parent=None):
+        super().__init__(parent)
+        self.source = sourcedata
+        #: source table domain
+        self.domain = domain = sourcedata.domain
+        #: list of all domain variables (attrs + class_vars + metas)
+        self.vars = domain.attributes + domain.class_vars + domain.metas
+
+        self.cls_color = QtGui.QColor(160, 160, 160)
+        self.meta_color = QtGui.QColor(220, 220, 200)
+
+        # domain roles for all table columns
+        self._column_roles = \
+            (([TableModel.Attribute] * len(domain.attributes)) +
+             ([TableModel.ClassVar] * len(domain.class_vars)) +
+             ([TableModel.Meta] * len(domain.metas)))
+
+        role_to_color = {TableModel.Attribute: None,
+                         TableModel.ClassVar: self.cls_color,
+                         TableModel.Meta: self.meta_color}
+
+        self._background = [role_to_color[r] for r in self._column_roles]
+
+        self._labels = sorted(
+            reduce(operator.ior,
+                   [set(attr.attributes) for attr in self.vars],
+                   set()))
+
+        self._extra_data = {}
+
+        @lru_cache(maxsize=1000)
+        def row_instance(index):
+            return self.source[index]
+
+        self._row_instance = row_instance
+
+    def data(self, index, role,
+             # For optimizing out LOAD_GLOBAL byte code instructions in
+             # the item role tests (goes from 14 us to 9 us average).
+             _str=str,
+             _Qt_DisplayRole=Qt.DisplayRole,
+             _Qt_EditRole=Qt.EditRole,
+             _Qt_BackgroundRole=Qt.BackgroundRole,
+             _ValueRole=ValueRole,
+             _ClassValueRole=ClassValueRole,
+             _VariableRole=VariableRole,
+             _DomainRole=DomainRole,
+             # Some cached local precomputed values.
+             # All of the above roles we respond to
+             _recognizedRoles=set([Qt.DisplayRole,
+                                   Qt.EditRole,
+                                   Qt.BackgroundRole,
+                                   ValueRole,
+                                   ClassValueRole,
+                                   VariableRole,
+                                   DomainRole]),
+             ):
+
+        row, col = index.row(), index.column()
+        if role not in _recognizedRoles:
+            return self._extra_data.get((row, col, role), None)
+
+        instance = self._row_instance(row)
+        var = self.vars[col]
+
+        if role == _Qt_DisplayRole:
+            return _str(instance[var])
+        elif role == _Qt_EditRole:
+            return instance[var]
+        elif role == _Qt_BackgroundRole:
+            return self._background[col]
+        elif role == _ValueRole:
+            return instance[var]
+        elif role == _ClassValueRole:
+            try:
+                return instance.get_class()
+            except TypeError:
+                return None
+        elif role == _VariableRole:
+            return var
+        elif role == _DomainRole:
+            return self._column_roles[col]
+        else:
+            return None
+
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            try:
+                self.source[index.row(), index.column()] = value
+            except (TypeError, IndexError):
+                return False
+        else:
+            self._other_data[index.row(), index.column(), role] = value
+
+        self.dataChanged.emit(index, index)
+        return True
+
+    def parent(self, index):
+        return QModelIndex()
+
+    def rowCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        else:
+            return len(self.source)
+
+    def columnCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        else:
+            return len(self.vars)
+
+    def _tooltip(self, variable, labels=None):
+        """
+        Return an header tool tip text for an `Orange.data.Variable` instance.
+        """
+
+        if labels is None:
+            labels = variable.attributes.keys()
+
+        pairs = [(escape(key), escape(str(variable.attributes[key])))
+                 for key in labels if key in variable.attributes]
+        tip = "<b>%s</b>" % escape(variable.name)
+        tip = "<br/>".join([tip] + ["%s = %s" % pair for pair in pairs])
+        return tip
+
+    def headerData(self, section, orientation, role):
+        display_role = role == Qt.DisplayRole
+        if orientation == Qt.Vertical:
+            return section + 1 if display_role else None
+
+        var = self.vars[section]
+        if role == Qt.DisplayRole:
+            return var.name
+        elif role == Qt.ToolTipRole:
+            return self._tooltip(var, self._labels)
+        else:
+            return None
