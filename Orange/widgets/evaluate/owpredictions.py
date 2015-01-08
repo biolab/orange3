@@ -241,13 +241,13 @@ class OWPredictions(widget.OWWidget):
     def _updateDataSortOrder(self):
         "Update data row order to match the current predictions view order"
         model = self.tableview.model()
-        n = len(model.examples)
-        model.sorted_map = [None] * n
-        proxy = self.proxyModel
-        sort_ind = [proxy.mapToSource(proxy.index(i, 0)).row()
-                    for i in range(n)]
-        model.sorted_map = sort_ind
-        self.tableview.reset()
+        if model is not None:
+            n = len(model.examples)
+            proxy = self.proxyModel
+            sort_ind = [proxy.mapToSource(proxy.index(i, 0)).row()
+                        for i in range(n)]
+            model.sorted_map = sort_ind
+            self.tableview.reset()
 
     def _updateDataView(self):
         """Update data column visibility."""
