@@ -1,12 +1,15 @@
 import sys
 import threading
 import traceback
+import io
+import csv
 from math import isnan
-from functools import reduce
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-from PyQt4.QtGui import QItemSelectionModel, QItemSelection
+
+from PyQt4.QtGui import QSortFilterProxyModel
+from PyQt4.QtCore import Qt
 
 from Orange.data import ContinuousVariable
 from Orange.data.storage import Storage
@@ -17,225 +20,75 @@ from Orange.statistics import basic_stats
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import colorpalette, datacaching
-from Orange.widgets.widget import Multiple, Default
+from Orange.widgets.utils import itemmodels
 
 
-##############################################################################
+class TableModel(itemmodels.TableModel):
+    #: header data flags
+    Name, Labels, Icon = 1, 2, 4
 
-def safe_call(func):
-    from functools import wraps
-    # noinspection PyBroadException
+    def __init__(self, data, parent=None):
+        super().__init__(data, parent)
+        self._dist = None
+        self._continuous = [isinstance(var, ContinuousVariable)
+                            for var in self.vars]
+        self._header_flags = TableModel.Name
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception:
-            traceback.print_exc(file=sys.stderr)
-    return wrapper
+    def data(self, index, role=Qt.DisplayRole,
+             # for faster local lookup
+             _BarRole=gui.TableBarItem.BarRole):
+        if role == _BarRole and self._continuous[index.column()]:
+            val = super().data(index, self.ValueRole)
+            if isnan(val):
+                return None
 
-
-#noinspection PyMethodOverriding
-class ExampleTableModel(QtCore.QAbstractItemModel):
-    def __init__(self, data, _, *args):
-        def _n_cols(density, attrs):
-            if density == Storage.MISSING:
-                return 0
-            elif density == Storage.DENSE:
-                return len(attrs)
-            else:
-                return 1
-
-        QtCore.QAbstractItemModel.__init__(self, *args)
-        self.examples = data
-        domain = self.domain = data.domain
-        self.all_attrs = domain.attributes + domain.class_vars + domain.metas
-        self.X_density = data.X_density()
-        self.Y_density = data.Y_density()
-        self.metas_density = data.metas_density()
-        self.n_attr_cols = _n_cols(self.X_density, domain.attributes)
-        self.n_attr_class_cols = self.n_attr_cols + _n_cols(self.Y_density,
-                                                            domain.class_vars)
-        self.n_cols = self.n_attr_class_cols + _n_cols(self.metas_density,
-                                                       domain.metas)
-        self.nvariables = len(domain)
-        self.dist = None
-
-        self.cls_color = QtGui.QColor(160, 160, 160)
-        self.meta_color = QtGui.QColor(220, 220, 200)
-        self.sorted_map = range(len(data))
-
-        self.attr_labels = sorted(
-            reduce(set.union, [attr.attributes for attr in self.all_attrs],
-                   set()))
-        self._show_attr_labels = False
-        self._other_data = {}
-
-    def get_show_attr_labels(self):
-        return self._show_attr_labels
-
-    def set_show_attr_labels(self, val):
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
-        self._show_attr_labels = val
-        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)"),
-                  QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
-
-    show_attr_labels = QtCore.pyqtProperty("bool",
-                                           fget=get_show_attr_labels,
-                                           fset=set_show_attr_labels,
-                                           )
-
-    @safe_call
-    def data(self, index, role):
-        row, col = self.sorted_map[index.row()], index.column()
-        example = self.examples[row]
-
-        if role == gui.TableClassValueRole:
-            return example.get_class()
-
-        # check whether we have a sparse columns,
-        # handle background color role while you are at it
-        sp_data = attributes = None
-        if col < self.n_attr_cols:
-            if role == QtCore.Qt.BackgroundRole:
-                return
-            density = self.X_density
-            if density != Storage.DENSE:
-                sp_data, attributes = example.sparse_x, self.domain.attributes
-        elif col < self.n_attr_class_cols:
-            if role == QtCore.Qt.BackgroundRole:
-                return self.cls_color
-            density = self.Y_density
-            if density != Storage.DENSE:
-                sp_data, attributes = example.sparse_y, self.domain.class_vars
+            if self._dist is None:
+                self._dist = datacaching.getCached(
+                    self.source, basic_stats.DomainBasicStats,
+                    (self.source, True)
+                )
+            dist = self._dist[index.column()]
+            return (val - dist.min) / (dist.max - dist.min or 1)
         else:
-            if role == QtCore.Qt.BackgroundRole:
-                return self.meta_color
-            density = self.metas_density
-            if density != Storage.DENSE:
-                sp_data, attributes = \
-                    example.sparse_metas, self.domain.class_vars
+            return super().data(index, role)
 
-        if sp_data is not None:
-            if role == QtCore.Qt.DisplayRole:
-                if density == Storage.SPARSE:
-                    return ", ".join(
-                        "{}={}".format(attributes[i].name,
-                                       attributes[i].repr_val(v))
-                        for i, v in zip(sp_data.indices, sp_data.data))
-                else:
-                    return ", ".join(
-                        attributes[i].name for i in sp_data.indices)
-
-        else:   # not sparse
-            attr = self.all_attrs[col]
-            val = example[attr]
-            if role == QtCore.Qt.DisplayRole:
-                return str(val)
-            elif (role == gui.TableBarItem.BarRole and
-                    isinstance(attr, ContinuousVariable) and
-                    not isnan(val)):
-                if self.dist is None:
-                    self.dist = datacaching.getCached(
-                        self.examples, basic_stats.DomainBasicStats,
-                        (self.examples, True))
-                dist = self.dist[col]
-                return (val - dist.min) / (dist.max - dist.min or 1)
-            elif role == gui.TableValueRole:
-                return val
-            elif role == gui.TableVariable:
-                return val.variable
-
-        return self._other_data.get((index.row(), index.column(), role), None)
-
-    def setData(self, index, variant, role):
-        self._other_data[index.row(), index.column(), role] = variant
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  index, index)
-
-    def index(self, row, col, parent=QtCore.QModelIndex()):
-        return self.createIndex(row, col, 0)
-
-    def parent(self, index):
-        return QtCore.QModelIndex()
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        if parent.isValid():
-            return 0
-        else:
-            return max([len(self.examples)] +
-                       [row for row, _, _ in self._other_data.keys()])
-
-    def columnCount(self, index=QtCore.QModelIndex()):
-        return self.n_cols
-
-    def is_sparse(self, col):
-        return (
-            col < self.n_attr_cols and self.X_density > Storage.DENSE
-            or
-            self.n_attr_cols <= col < self.n_attr_class_cols
-            and self.Y_density > Storage.DENSE
-            or
-            self.n_attr_class_cols < col and self.metas_density > Storage.DENSE)
-
-    @safe_call
     def headerData(self, section, orientation, role):
-        display_role = role == QtCore.Qt.DisplayRole
-        if orientation == QtCore.Qt.Vertical:
-            return section + 1 if display_role else None
-        if self.is_sparse(section):
-            return None
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            var = self.vars[section]
+            lines = []
+            if self._header_flags & TableModel.Name:
+                lines.append(var.name)
+            if self._header_flags & TableModel.Labels:
+                lines.extend(str(var.attributes.get(label, ""))
+                             for label in self._labels)
+            return "\n".join(lines)
+        elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
+                self._header_flags & TableModel.Icon:
+            var = self.vars[section]
+            return gui.attributeIconDict[var]
+        else:
+            return super().headerData(section, orientation, role)
 
-        attr = self.all_attrs[section]
-        if role == QtCore.Qt.DisplayRole:
-            if self.show_attr_labels:
-                return attr.name + "\n".join(
-                    str(attr.attributes.get(label, ""))
-                    for label in self.attr_labels)
-            else:
-                return attr.name
-        if role == QtCore.Qt.ToolTipRole:
-            pairs = [(key, str(attr.attributes[key]))
-                     for key in self.attr_labels if key in attr.attributes]
-            tip = "<b>%s</b>" % attr.name
-            tip = "<br>".join([tip] + ["%s = %s" % pair for pair in pairs])
-            return tip
+    def setRichHeaderFlags(self, flags):
+        if flags != self._header_flags:
+            self._header_flags = flags
+            self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount())
 
-        return None
+    def richHeaderFlags(self):
+        return self._header_flags
 
-    def sort(self, column, order=QtCore.Qt.AscendingOrder):
-        if self.is_sparse(column):
-            return
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
-        attr = self.all_attrs[column]
-        values = [(ex[attr], i) for i, ex in enumerate(self.examples)]
-        values = sorted(values,
-                        key=lambda t: t[0] if not isnan(t[0]) else sys.maxsize,
-                        reverse=(order != QtCore.Qt.AscendingOrder))
-        self.sorted_map = [v[1] for v in values]
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
-                  )
 
-    def reset_sort(self):
-        self.sorted_map = range(len(self.examples))
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
-                  )
+class TableSortProxyModel(QSortFilterProxyModel):
+    def lessThan(self, left, right):
+        vleft = left.data(self.sortRole())
+        vright = right.data(self.sortRole())
+        # Sort NaN values to the end.
+        # (note: if left is NaN the comparison is always false)
+        return vleft < vright if not isnan(vright) else True
 
 
 #noinspection PyArgumentList
 class TableViewWithCopy(QtGui.QTableView):
-    def dataChanged(self, a, b):
-        super().dataChanged(a, b)
 
     def keyPressEvent(self, event):
         if event == QtGui.QKeySequence.Copy:
@@ -244,53 +97,67 @@ class TableViewWithCopy(QtGui.QTableView):
             try:
                 self.copy_selection_to_clipboard(sel_model)
             except Exception:
-                import traceback
                 traceback.print_exc(file=sys.stderr)
         else:
             return QtGui.QTableView.keyPressEvent(self, event)
 
     def copy_selection_to_clipboard(self, selection_model):
-        """Copy table selection to the clipboard.
         """
-        # TODO: html/rtf table
-        import csv
-        from io import StringIO
-        rows = selection_model.selectedRows(0)
-        csv_str = StringIO()
-        csv_writer = csv.writer(csv_str, dialect="excel")
-        tsv_str = StringIO()
-        tsv_writer = csv.writer(tsv_str, dialect="excel-tab")
-        for row in rows:
-            line = []
-            for i in range(self.model().columnCount()):
-                index = self.model().index(row.row(), i)
-                val = index.data(QtCore.Qt.DisplayRole)
-                line.append(str(val))
-            csv_writer.writerow(line)
-            tsv_writer.writerow(line)
+        Copy table selection to the clipboard.
+        """
+        mime = table_selection_to_mime_data(self)
+        QtGui.QApplication.clipboard().setMimeData(
+            mime, QtGui.QClipboard.Clipboard
+        )
 
-        csv_lines = csv_str.getvalue()
-        tsv_lines = tsv_str.getvalue()
 
-        mime = QtCore.QMimeData()
-        mime.setData("text/csv", QtCore.QByteArray(csv_lines))
-        mime.setData("text/tab-separated-values", QtCore.QByteArray(tsv_lines))
-        mime.setData("text/plain", QtCore.QByteArray(tsv_lines))
-        QtGui.QApplication.clipboard().setMimeData(mime,
-                                                   QtGui.QClipboard.Clipboard)
+def table_selection_to_mime_data(table):
+    lines = table_selection_to_list(table)
+
+    csv = lines_to_csv_string(lines, dialect="excel")
+    tsv = lines_to_csv_string(lines, dialect="excel-tab")
+
+    mime = QtCore.QMimeData()
+    mime.setData("text/csv", QtCore.QByteArray(csv))
+    mime.setData("text/tab-separated-values", QtCore.QByteArray(tsv))
+    mime.setData("text/plain", QtCore.QByteArray(tsv))
+    return mime
+
+
+def lines_to_csv_string(lines, dialect="excel"):
+    stream = io.StringIO()
+    writer = csv.writer(stream, dialect=dialect)
+    writer.writerows(lines)
+    return stream.getvalue()
+
+
+def table_selection_to_list(table):
+    model = table.model()
+    indexes = table.selectedIndexes()
+
+    rows = sorted(set(index.row() for index in indexes))
+    columns = sorted(set(index.column() for index in indexes))
+
+    lines = []
+    for row in rows:
+        line = []
+        for col in columns:
+            val = model.index(row, col).data(Qt.DisplayRole)
+            # TODO: use style item delegate displayText?
+            line.append(str(val))
+        lines.append(line)
+
+    return lines
 
 
 class OWDataTable(widget.OWWidget):
     name = "Data Table"
-    description = "Shows data in a spreadsheet."
-    long_description = """Data Table takes one or more data sets
-    on its input and shows them in a tabular format."""
+    description = "View data set in a spreadsheet."
     icon = "icons/Table.svg"
     priority = 100
-    author = "Ales Erjavec"
-    author_email = "ales.erjavec(@at@)fri.uni-lj.si"
-    inputs = [("Data", Table, "dataset", Multiple + Default)]
-    outputs = [("Selected Data", Table, Default),
+
+    inputs = [("Data", Table, "set_dataset", widget.Multiple)]
+    outputs = [("Selected Data", Table, widget.Default),
                ("Other Data", Table)]
 
     show_distributions = Setting(False)
@@ -300,15 +167,16 @@ class OWDataTable(widget.OWWidget):
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
-        self.data = {}          # key: id, value: ExampleTable
+        self.datasets = {}          # key: id, value: Table
+        self.views = {}
+
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
-        self.locale = QtCore.QLocale()
+
         self.color_settings = None
-        self.selected_schema_index = 0
-        self.color_by_class = True
+        self.selectionChangedFlag = False
 
         info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
@@ -322,8 +190,9 @@ class OWDataTable(widget.OWWidget):
 
         gui.separator(info_box)
         gui.button(info_box, self, "Restore Original Order",
-                   callback=self.reset_sort_clicked,
-                   tooltip="Show rows in the original order")
+                   callback=self.restore_order,
+                   tooltip="Show rows in the original order",
+                   autoDefault=False)
         info_box.setMinimumWidth(200)
         gui.separator(self.controlArea)
 
@@ -338,7 +207,7 @@ class OWDataTable(widget.OWWidget):
                      callback=self.cb_show_distributions)
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self.cb_show_distributions)
-        gui.button(box, self, "Set colors", self.set_colors,
+        gui.button(box, self, "Set colors", self.set_colors, autoDefault=False,
                    tooltip="Set the background color and color palette")
 
         gui.separator(self.controlArea)
@@ -357,11 +226,10 @@ class OWDataTable(widget.OWWidget):
 
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)
-        self.tabs.sizeHint = lambda: QtCore.QSize(600,500)
-        self.id2table = {}  # key: widget id, value: table
-        self.table2id = {}  # key: table, value: widget id
-        self.tabs.currentChanged.connect(self.tab_clicked)
-        self.selectionChangedFlag = False
+        self.tabs.currentChanged.connect(self._on_current_tab_changed)
+
+    def sizeHint(self):
+        return QtCore.QSize(800, 500)
 
     def create_color_dialog(self):
         c = colorpalette.ColorPaletteDlg(self, "Color Palette")
@@ -380,113 +248,96 @@ class OWDataTable(widget.OWWidget):
             self.discPalette = dlg.getDiscretePalette("discPalette")
             self.dist_color_RGB = dlg.getColor("Default")
 
-    def dataset(self, data, tid=None):
-        """Generates a new table and adds it to a new tab when new data arrives;
-        or hides the table and removes a tab when data==None;
-        or replaces the table when new data arrives together with already
-        existing id."""
-        if data is not None:  # can be an empty table!
-            if tid in self.data:
+    def set_dataset(self, data, tid=None):
+        "Set the input dataset"
+
+        if data is not None:
+            if tid in self.datasets:
                 # remove existing table
-                self.data.pop(tid)
-                self.id2table[tid].hide()
-                self.tabs.removeTab(self.tabs.indexOf(self.id2table[tid]))
-                self.table2id.pop(self.id2table.pop(tid))
-            self.data[tid] = data
+                self.datasets.pop(tid)
+                view = self.views.pop(tid)
+                self.tabs.removeTab(self.tabs.indexOf(view))
 
-            table = TableViewWithCopy()     # QTableView()
+            self.datasets[tid] = data
+
+            table = TableViewWithCopy()
             table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
-            table.setSortingEnabled(False)
+            table.setSortingEnabled(True)
             table.setHorizontalScrollMode(QtGui.QTableWidget.ScrollPerPixel)
-            table.horizontalHeader().setMovable(True)
-            table.horizontalHeader().setClickable(True)
-            table.horizontalHeader().setSortIndicatorShown(False)
 
-            option = table.viewOptions()
-            size = table.style().sizeFromContents(
-                QtGui.QStyle.CT_ItemViewItem, option,
-                QtCore.QSize(20, 20), table)
+            header = table.horizontalHeader()
+            header.setMovable(True)
+            header.setClickable(True)
+            header.setSortIndicatorShown(True)
+            header.setSortIndicator(-1, Qt.AscendingOrder)
 
-            table.verticalHeader().setDefaultSectionSize(size.height() + 2)
+            header.sortIndicatorChanged.connect(
+                lambda index, order:
+                    table.model().sort(index, order) if index == -1 else 0
+            )
+            self.views[tid] = table
+            data_name = getattr(data, "name", "")
+            self.tabs.addTab(table, data_name)
 
-            self.id2table[tid] = table
-            self.table2id[table] = tid
-            tab_name = getattr(data, "name", "")
-            self.tabs.addTab(table, tab_name)
+            self._setup_table_view(table, data)
 
-            self.progressBarInit()
-            self.set_table(table, data)
-            self.progressBarFinished()
             self.tabs.setCurrentIndex(self.tabs.indexOf(table))
             self.set_info(data)
             self.send_button.setEnabled(not self.auto_commit)
 
-        elif tid in self.data:
+        elif tid in self.datasets:
             table = self.id2table[tid]
-            self.data.pop(tid)
+            table = self.views[tid]
+            self.datasets.pop(tid)
             table.hide()
             self.tabs.removeTab(self.tabs.indexOf(table))
-            self.table2id.pop(self.id2table.pop(tid))
-            self.set_info(self.data.get(self.table2id.get(
+
+            self.set_info(self.datasets.get(self.table2id.get(
                 self.tabs.currentWidget(), None), None))
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
 
-        if not self.data:
+        if not self.datasets:
             self.send_button.setEnabled(False)
 
-    #TODO Implement
-    def send_report(self):
+    def _setup_table_view(self, view, data):
+        """Setup the `view` (QTableView) with `data` (Orange.data.Table)
         """
-        qTableInstance = self.tabs.currentWidget()
-        id = self.table2id.get(qTableInstance, None)
-        data = self.data.get(id, None)
-        self.reportData(data)
-        table = self.id2table[id]
-        import OWReport
-        self.reportRaw(OWReport.reportTable(table))
-        """
-
-    # Writes data into table, adjusts the column width.
-    def set_table(self, table, data):
         if data is None:
+            view.setModel(None)
             return
-        QtGui.qApp.setOverrideCursor(QtCore.Qt.WaitCursor)
-        table.oldSortingIndex = -1
-        table.oldSortingOrder = 1
 
-        datamodel = ExampleTableModel(data, self)
+        datamodel = TableModel(data)
         color_schema = self.discPalette if self.color_by_class else None
         if self.show_distributions:
-            table.setItemDelegate(gui.TableBarItem(
-                self, color=self.dist_color, color_schema=color_schema))
+            view.setItemDelegate(
+                gui.TableBarItem(
+                    self, color=self.dist_color, color_schema=color_schema)
+            )
         else:
-            table.setItemDelegate(QtGui.QStyledItemDelegate(self))
-        table.setModel(datamodel)
+            view.setItemDelegate(QtGui.QStyledItemDelegate(self))
 
-        def p():
-            try:
-                table.updateGeometries()
-                table.viewport().update()
-            except RuntimeError:
-                pass
+        proxy = TableSortProxyModel()
+        proxy.setSourceModel(datamodel)
+        proxy.setSortRole(TableModel.ValueRole)
+        proxy.examples = data
+        proxy.source = data
+        view.setModel(proxy)
 
-        size = table.verticalHeader().sectionSizeHint(0)
-        table.verticalHeader().setDefaultSectionSize(size)
-        self.connect(datamodel, QtCore.SIGNAL("layoutChanged()"),
-                     lambda *args: QtCore.QTimer.singleShot(50, p))
+        vheader = view.verticalHeader()
+        option = view.viewOptions()
+        size = view.style().sizeFromContents(
+            QtGui.QStyle.CT_ItemViewItem, option,
+            QtCore.QSize(20, 20), view)
 
-        # set the header (attribute names)
-        self.draw_attribute_labels(table)
+        vheader.setDefaultSectionSize(size.height() + 2)
 
-        self.connect(table.horizontalHeader(),
-                     QtCore.SIGNAL("sectionClicked(int)"), self.sort_by_column)
-        self.connect(
-            table.selectionModel(),
-            QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
-            self.update_selection)
+        # update the header (attribute names)
+        self._update_variable_labels(view)
 
-        QtGui.qApp.restoreOverrideCursor()
+        view.selectionModel().selectionChanged.connect(
+            self.update_selection
+        )
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
@@ -544,53 +395,34 @@ class OWDataTable(widget.OWWidget):
             except Exception:
                 pass
 
-    def sort_by_column(self, index):
-        table = self.tabs.currentWidget()
-        if index == table.oldSortingIndex and index != -1:
-            order = (table.oldSortingOrder == QtCore.Qt.AscendingOrder and
-                     QtCore.Qt.DescendingOrder or QtCore.Qt.AscendingOrder)
-        else:
-            order = QtCore.Qt.AscendingOrder
-        oldsel = self.get_current_selection()
-        model = table.model()
-        if index == -1:
-            table.horizontalHeader().setSortIndicatorShown(False)
-            model.reset_sort()
-        else:
-            table.horizontalHeader().setSortIndicatorShown(1)
-            table.sortByColumn(index, order)
-        newsort = sorted(enumerate(model.sorted_map), key=lambda x: x[1])
-        newsel = [ newsort[a][0] for a in oldsel ]
-        itemsel = QItemSelection()
-        for a in newsel:
-            itemsel.select(model.index(a, 0), model.index(a, 0))
-        table.selectionModel().select(itemsel, QItemSelectionModel.Rows | \
-            QItemSelectionModel.Select | QItemSelectionModel.Clear)
-        table.oldSortingIndex = index
-        table.oldSortingOrder = order
+    def _on_current_tab_changed(self, index):
+        """Update the info box on current tab change"""
+        view = self.tabs.widget(index)
+        if view is not None and view.model() is not None:
+            model = view.model().sourceModel()
+            self.set_info(model.source)
 
-    def tab_clicked(self, index):
-        """Updates the info box when a tab is clicked."""
-        qTableInstance = self.tabs.widget(index)
-        tid = self.table2id.get(qTableInstance, None)
-        self.set_info(self.data.get(tid, None))
-        self.update_selection()
+    def _update_variable_labels(self, view):
+        "Update the variable labels visibility for `view`"
+        model = view.model().sourceModel()
 
-    def draw_attribute_labels(self, table):
-        table.model().show_attr_labels = bool(self.show_attribute_labels)
+        model.setRichHeaderFlags(
+            TableModel.Labels | TableModel.Name if self.show_attribute_labels
+            else TableModel.Name
+        )
+
         if self.show_attribute_labels:
             labelnames = set()
-            for a in table.model().examples.domain:
+            for a in model.source.domain:
                 labelnames.update(a.attributes.keys())
             labelnames = sorted(list(labelnames))
-            self.set_corner_text(table, "\n".join([""] + labelnames))
+            self.set_corner_text(view, "\n".join([""] + labelnames))
         else:
-            self.set_corner_text(table, "")
-        table.repaint()
+            self.set_corner_text(view, "")
 
     def c_show_attribute_labels_clicked(self):
-        for table in self.table2id:
-            self.draw_attribute_labels(table)
+        for table in self.views.values():
+            self._update_variable_labels(table)
 
     def cb_show_distributions(self):
         for ti in range(self.tabs.count()):
@@ -606,10 +438,10 @@ class OWDataTable(widget.OWWidget):
             tab.reset()
 
     # show data in the default order
-    def reset_sort_clicked(self):
+    def restore_order(self):
         table = self.tabs.currentWidget()
-        if table:
-            self.sort_by_column(-1)
+        if table is not None:
+            table.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
     __no_missing = [""] * 3
 
@@ -695,16 +527,22 @@ class OWDataTable(widget.OWWidget):
             self.info_class.setText(out_c)
 
     def update_selection(self, *_):
-        self.send_button.setEnabled(bool(self.get_current_selection())
-                                    and not self.auto_commit)
+        view = self.tabs.currentWidget()
+
+        self.send_button.setEnabled(
+            view.selectionModel().hasSelection()
+            and not self.auto_commit
+        )
         self.commit_if()
 
     def get_current_selection(self):
         table = self.tabs.currentWidget()
         if table and table.model():
-            model = table.model()
+            proxy = table.model()
             new = table.selectionModel().selectedIndexes()
-            return sorted(set([model.sorted_map[ind.row()] for ind in new]))
+            return sorted(set([proxy.mapToSource(ind).row() for ind in new]))
+        else:
+            return []
 
     def commit_if(self):
         if self.auto_commit:
@@ -716,23 +554,23 @@ class OWDataTable(widget.OWWidget):
         selected_data = other_data = None
         table = self.tabs.currentWidget()
         if table and table.model():
-            model = table.model()
+            model = table.model().sourceModel()
             selection = self.get_current_selection()
 
             # Avoid a copy if all/none rows are selected.
             if not selection:
                 selected_data = None
-                other_data = model.examples
-            elif len(selection) == len(model.examples):
-                selected_data = model.examples
+                other_data = model.source
+            elif len(selection) == len(model.source):
+                selected_data = model.source
                 other_data = None
             else:
-                selected_data = model.examples[selection]
+                selected_data = model.source[selection]
                 selection = set(selection)
 
-                other = [i for i in range(len(model.examples))
+                other = [i for i in range(len(model.source))
                          if i not in selection]
-                other_data = model.examples[other]
+                other_data = model.source[other]
 
         self.send("Selected Data", selected_data)
         self.send("Other Data", other_data)
@@ -740,13 +578,24 @@ class OWDataTable(widget.OWWidget):
         self.selectionChangedFlag = False
 
 
-if __name__ == "__main__":
+def test_main():
     a = QtGui.QApplication(sys.argv)
     ow = OWDataTable()
 
-    data = Table("iris")
+    iris = Table("iris")
+    brown = Table("brown-selected")
+    housing = Table("housing")
 
     ow.show()
-    ow.dataset(data, data.name)
-    a.exec()
-    ow.saveSettings()
+    ow.raise_()
+
+    ow.set_dataset(iris, iris.name)
+    ow.set_dataset(brown, brown.name)
+    ow.set_dataset(housing, housing.name)
+
+    rval = a.exec()
+#     ow.saveSettings()
+    return rval
+
+if __name__ == "__main__":
+    sys.exit(test_main())

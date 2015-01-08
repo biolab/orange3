@@ -4,6 +4,8 @@ import re
 import itertools
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
+
+import Orange.data
 from Orange.widgets.utils import getdeepattr
 from Orange.data import ContinuousVariable, StringVariable, DiscreteVariable, Variable
 from Orange.widgets.utils import vartype
@@ -2500,55 +2502,36 @@ class TableBarItem(QtGui.QItemDelegate):
     BarRole = next(OrangeUserRole)
     ColorRole = next(OrangeUserRole)
 
-    def __init__(self, widget, table=None, color=QtGui.QColor(255, 170, 127),
+    def __init__(self, parent=None, color=QtGui.QColor(255, 170, 127),
                  color_schema=None):
         """
-        :param widget: OWWidget instance
-        :type widget: :class:`OWWidget.OWWidget
-        :param table: Table
-        :type table: :class:`Orange.data.Table`
-        :param color: Color of the distribution bar.
-        :type color: :class:`PyQt4.QtCore.QColor`
-        :param color_schema: If not None it must be an instance of
+        :param QObject parent: Parent object.
+        :param QColor color: Default color of the distribution bar.
+        :param color_schema:
+            If not None it must be an instance of
             :class:`OWColorPalette.ColorPaletteGenerator` (note: this
             parameter, if set, overrides the ``color``)
         :type color_schema: :class:`OWColorPalette.ColorPaletteGenerator`
-
         """
-        super().__init__(widget)
+        super().__init__(parent)
         self.color = color
         self.color_schema = color_schema
-        self.widget = widget
-        self.table = table
 
     def paint(self, painter, option, index):
-        from Orange.data import DiscreteVariable
         painter.save()
         self.drawBackground(painter, option, index)
-        if self.table is None:
-            table = getattr(index.model(), "examples", None)
-        else:
-            table = self.table
         ratio = index.data(TableBarItem.BarRole)
         if isinstance(ratio, float):
             if math.isnan(ratio):
                 ratio = None
-        elif table is not None and getattr(self.widget, "show_bars", False):
-            value = index.data(Qt.DisplayRole)
-            if isinstance(value, float):
-                col = index.column()
-                if col < len(table.normalizers):
-                    maxv, span = table.normalizers[col]
-                    ratio = (maxv - value) / span
 
         color = self.color
-        if (self.color_schema is not None and table is not None and
-                isinstance(table.domain.class_var, DiscreteVariable)):
+        if self.color_schema is not None and ratio is not None:
             class_ = index.data(TableClassValueRole)
-            if not math.isnan(class_):
+            if isinstance(class_, Orange.data.Value) and \
+                    isinstance(class_.variable, DiscreteVariable) and \
+                    not math.isnan(class_):
                 color = self.color_schema[int(class_)]
-        else:
-            color = self.color
 
         if ratio is not None:
             painter.save()
