@@ -158,8 +158,9 @@ class Table(MutableSequence, Storage):
         try:
             if isinstance(args[0], str):
                 return cls.from_file(args[0], **kwargs)
-
-            if isinstance(args[0], orange_domain.Domain):
+            elif isinstance(args[0], Table):
+                return cls.from_table(args[0].domain, args[0])
+            elif isinstance(args[0], orange_domain.Domain):
                 domain, args = args[0], args[1:]
                 if not args:
                     return cls.from_domain(domain, **kwargs)
