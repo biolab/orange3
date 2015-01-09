@@ -4,6 +4,7 @@ import math
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
+import numpy as np
 from sklearn import cross_validation
 
 from Orange.widgets import widget, gui
@@ -19,257 +20,158 @@ class OWDataSampler(widget.OWWidget):
     priority = 100
     category = "Data"
     keywords = ["data", "sample"]
-    inputs = [("Data", Table, "setData")]
+    inputs = [("Data", Table, "set_data")]
     outputs = [("Data Sample", Table), ("Remaining Data", Table)]
 
     want_main_area = False
 
-    #: Ways to specify sample sizes for RandomSampling
-    Fixed, Ratio = 0, 1
+    RandomSeed = 42
+    FixedSize, FixedProportion, CrossValidation = range(3)
 
-    stratified = Setting(False)
-    useSeed = Setting(False)
-    seed = Setting(0)
+    use_seed = Setting(False)
     replacement = Setting(False)
-    samplingType = Setting(0)
-    sampleSizeType = Setting(Ratio)
+    stratify = Setting(False)
+    sampling_type = Setting(0)
     sampleSizeNumber = Setting(1)
     sampleSizePercentage = Setting(70)
-    cvType = Setting(0)
-    numberOfFolds = Setting(10)
+    number_of_folds = Setting(10)
     selectedFold = Setting(1)
-
-    #: Sampling types
-    RandomSampling, CrossValidation = 0, 1
-
-    #: CV Type
-    KFold, LeaveOneOut = 0, 1
 
     def __init__(self):
         super().__init__()
-
         self.data = None
-
-        self.samplingBox = [None, None]
-        self.sampleSizeBox = [None, None]
-        self.cvBox = [None, None]
+        self.indices = None
 
         box = gui.widgetBox(self.controlArea, "Information")
         self.dataInfoLabel = gui.widgetLabel(box, 'No data on input.')
         self.outputInfoLabel = gui.widgetLabel(box, ' ')
 
-        form = QtGui.QGridLayout()
+        box = gui.widgetBox(self.controlArea, "Sampling Type")
+        sampling = gui.radioButtons(
+            box, self, "sampling_type", callback=self.sampling_type_changed)
 
-        box = gui.widgetBox(self.controlArea, "Options", orientation=form)
-        cb = gui.checkBox(box, self, "stratified", "Stratified (if possible)",
-                          callback=self.settingsChanged, addToLayout=False)
+        def set_sampling_type(i):
+            def f():
+                self.sampling_type = i
+                self.sampling_type_changed()
+            return f
 
-        form.addWidget(cb, 0, 0)
-
-        cb = gui.checkBox(box, self, "useSeed", "Random seed:",
-                          callback=self.settingsChanged, addToLayout=False)
-
-        spin = gui.spin(box, self, "seed", minv=0, maxv=2 ** 31 - 1,
-                        callback=self.settingsChanged, addToLayout=False)
-        spin.setEnabled(self.useSeed)
-        cb.toggled[bool].connect(spin.setEnabled)
-
-        form.addWidget(cb, 1, 0)
-        form.addWidget(spin, 1, 1)
-
-        box = gui.widgetBox(self.controlArea, self.tr("Sampling Type"))
-
-        sampling = gui.radioButtons(box, self, "samplingType",
-                                    callback=self.samplingTypeChanged)
-
-        gui.appendRadioButton(sampling, "Random Sampling:")
-
-        self.samplingBox[0] = ibox = gui.indentedBox(sampling)
-        ibox.setEnabled(self.samplingType == OWDataSampler.RandomSampling)
-
-        ibox = gui.radioButtons(ibox, self, "sampleSizeType",
-                                callback=self.sampleSizeTypeChanged)
-
-        gui.checkBox(ibox, self, "replacement", "With replacement",
-                     callback=self.settingsChanged)
-
-        gui.appendRadioButton(ibox, "Sample size:")
-
+        gui.appendRadioButton(sampling, "Fixed sample size:")
+        ibox = gui.indentedBox(sampling)
         self.sampleSizeSpin = gui.spin(
-            gui.indentedBox(ibox), self, "sampleSizeNumber",
-            minv=1, maxv=2 ** 31 - 1, callback=self.settingsChanged
-        )
-        self.sampleSizeSpin.setEnabled(self.sampleSizeType == self.Fixed)
+            ibox, self, "sampleSizeNumber", label="Instances: ",
+            minv=1, maxv=2 ** 31 - 1,
+            callback=set_sampling_type(self.FixedSize))
+        gui.checkBox(
+            ibox, self, "replacement", "Sample with replacement",
+            callback=set_sampling_type(self.FixedSize))
+        gui.separator(sampling, 12)
 
-        gui.appendRadioButton(ibox, "Sample proportions:")
-
+        gui.appendRadioButton(sampling, "Fixed proportion of data:")
         self.sampleSizePercentageSlider = gui.hSlider(
-            gui.indentedBox(ibox), self,
+            gui.indentedBox(sampling), self,
             "sampleSizePercentage",
-            minValue=1, maxValue=100, ticks=10, labelFormat="%d%%",
-            callback=self.settingsChanged
-        )
+            minValue=0, maxValue=100, ticks=10, labelFormat="%d %%",
+            callback=set_sampling_type(self.FixedProportion))
 
-        self.sampleSizePercentageSlider.setEnabled(
-            self.sampleSizeType == self.Ratio)
-
-        self.sampleSizeBox = [self.sampleSizeSpin,
-                              self.sampleSizePercentageSlider]
-
+        gui.separator(sampling, 12)
         gui.appendRadioButton(sampling, "Cross Validation:")
-        self.samplingBox[1] = ibox = gui.indentedBox(sampling, addSpace=True)
-        ibox.setEnabled(self.samplingType == OWDataSampler.CrossValidation)
-
         form = QtGui.QFormLayout(
             formAlignment=Qt.AlignLeft | Qt.AlignTop,
             labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
-        )
-        bbox = gui.radioButtons(ibox, self, "cvType", orientation=form,
-                                callback=self.cvTypeChanged)
-        bbox.setContentsMargins(1, 1, 1, 1)
+            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        ibox = gui.indentedBox(sampling, addSpace=True, orientation=form)
+        form.addRow("Number of folds",
+                    gui.spin(
+                        ibox, self, "number_of_folds", 2, 100,
+                        addToLayout=False,
+                        callback=self.number_of_folds_changed))
+        self.selected_fold_spin = gui.spin(
+            ibox, self, "selectedFold", 1, 100, addToLayout=False,
+            callback=self.fold_changed)
+        form.addRow("Selected fold", self.selected_fold_spin)
 
-        kfold_rb = gui.appendRadioButton(bbox, "K-Fold:", insertInto=None,
-                                         addToLayout=False)
-        loo_rb = gui.appendRadioButton(bbox, "Leave one out", insertInto=None,
-                                       addToLayout=False)
-        kfold_spin = gui.spin(ibox, self, "numberOfFolds", 2, 100,
-                              addToLayout=False,
-                              callback=self.numberOfFoldsChanged)
-        kfold_spin.setEnabled(self.cvType == self.KFold)
-
-        form.addRow(kfold_rb, kfold_spin)
-        form.addRow(loo_rb)
-
-        self.cvBox = [kfold_spin]
-
-        self.selectedFoldSpin = gui.spin(
-             ibox, self, "selectedFold", 1, 100,
-             addToLayout=False)
-
-        form.addRow(QtGui.QLabel("Selected fold:"), self.selectedFoldSpin)
+        box = gui.widgetBox(self.controlArea, "Options")
+        gui.checkBox(box, self, "use_seed",
+                     "Replicable (deterministic) sampling",
+                     callback=self.settings_changed)
+        gui.checkBox(box, self, "stratify",
+                     "Stratify sample (when possible)",
+                     callback=self.settings_changed)
 
         gui.button(self.controlArea, self, "Sample Data",
                    callback=self.commit)
 
         self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
-    def samplingTypeChanged(self):
-        for i, sbox in enumerate(self.samplingBox):
-            sbox.setEnabled(self.samplingType == i)
-        self.settingsChanged()
+    def sampling_type_changed(self):
+        self.settings_changed()
 
-    def sampleSizeTypeChanged(self):
-        for i, box in enumerate(self.sampleSizeBox):
-            box.setEnabled(self.sampleSizeType == i)
-        self.settingsChanged()
+    def number_of_folds_changed(self):
+        self.selected_fold_spin.setMaximum(self.number_of_folds)
+        self.sampling_type = self.CrossValidation
+        self.settings_changed()
 
-    def cvTypeChanged(self):
-        for i, box in enumerate(self.cvBox):
-            box.setEnabled(self.cvType == i)
+    def fold_changed(self):
+        # a separate callback - if we decide to cache indices
+        self.sampling_type = self.CrossValidation
 
-        if self.cvType == self.KFold:
-            self.selectedFoldSpin.setMaximum(self.numberOfFolds)
-        elif self.data is not None:
-            self.selectedFoldSpin.setMaximum(len(self.data))
-
-        self.settingsChanged()
-
-    def numberOfFoldsChanged(self):
-        self.updateSelectedFoldSpinMaximum()
-        self.settingsChanged()
-
-    def settingsChanged(self):
-        """
-        The sampling settings have changed, invalidate the indices.
-        """
+    def settings_changed(self):
         self.indices = None
 
-    def updateSelectedFoldSpinMaximum(self):
-        if self.cvType == self.KFold:
-            self.selectedFoldSpin.setMaximum(self.numberOfFolds)
-        elif self.data is not None:
-            self.selectedFoldSpin.setMaximum(len(self.data))
-
-    def setData(self, dataset):
+    def set_data(self, dataset):
         self.data = dataset
-        self.indices = None
         if dataset is not None:
-            self.dataInfoLabel.setText('%d instances in input data set.' %
-                                       len(dataset))
+            self.dataInfoLabel.setText(
+                '%d instances in input data set.' % len(dataset))
             self.sampleSizeSpin.setMaximum(len(dataset))
-            self.updateSelectedFoldSpinMaximum()
             self.updateindices()
         else:
             self.dataInfoLabel.setText('No data on input.')
             self.outputInfoLabel.setText('')
             self.indices = None
-
         self.commit()
 
     def commit(self):
-        sample = None
-        other = None
-        self.outputInfoLabel.setText("")
-        if self.data is not None:
+        if self.data is None:
+            sample = other = None
+            self.outputInfoLabel.setText("")
+        else:
             if self.indices is None:
                 self.updateindices()
-
-            assert self.indices is not None
-            if self.samplingType == OWDataSampler.RandomSampling:
-                train, test = self.indices[0]
-
-                sample = self.data[train]
-                other = self.data[test]
+            if self.sampling_type in [self.FixedProportion, self.FixedSize]:
+                remaining, sample = self.indices
                 self.outputInfoLabel.setText(
-                    'Outputting %d instances.' % len(sample)
-                )
+                    'Outputting %d instances.' % len(sample))
             else:
-                train, test = self.indices[self.selectedFold - 1]
-                sample = self.data[train]
-                other = self.data[test]
+                remaining, sample = self.indices[self.selectedFold - 1]
                 self.outputInfoLabel.setText(
-                    'Outputting fold %d.' % self.selectedFold
+                    'Outputting fold %d, %d instances.' %
+                    (self.selectedFold, len(sample))
                 )
-
+            sample = self.data[sample]
+            other = self.data[remaining]
         self.send("Data Sample", sample)
         self.send("Remaining Data", other)
 
     def updateindices(self):
-        if self.useSeed:
-            rnd = self.seed
-        else:
-            rnd = None
-
-        stratified = (self.stratified
-                      and not type(self.data) == Table
+        rnd = self.RandomSeed if self.use_seed else None
+        stratified = (self.stratify and type(self.data) == Table
                       and is_discrete(self.data.domain.class_var))
-
-        if self.samplingType == OWDataSampler.RandomSampling:
-            if self.sampleSizeType == OWDataSampler.Fixed:
-                indices = sample_random_n(
-                    self.data, self.sampleSizeNumber,
-                    stratified=stratified,
-                    replace=self.replacement,
-                    random_state=rnd
-                )
-            else:
-                p = self.sampleSizePercentage / 100.0
-                indices = sample_random_p(
-                    self.data, p,
-                    stratified=stratified,
-                    replace=self.replacement,
-                    random_state=rnd
-                )
-            indices = [indices]
+        print(stratified)
+        if self.sampling_type == self.FixedSize:
+            self.indices = sample_random_n(
+                self.data, self.sampleSizeNumber,
+                stratified=stratified, replace=self.replacement,
+                random_state=rnd)
+        elif self.sampling_type == self.FixedProportion:
+            self.indices = sample_random_p(
+                self.data, self.sampleSizePercentage / 100,
+                stratified=stratified, random_state=rnd)
         else:
-            folds = (self.numberOfFolds if self.cvType == self.KFold
-                     else len(self.data))
-            indices = sample_fold_indices(
-                self.data, folds, stratified=stratified,
-                random_state=rnd
-            )
-        self.indices = indices
+            self.indices = sample_fold_indices(
+                self.data, self.number_of_folds, stratified=stratified,
+                random_state=rnd)
 
 
 def is_discrete(var):
@@ -284,67 +186,47 @@ def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
     :param Random random_state:
     :rval tuple-of-arrays: A tuple of array indices one for each fold.
     """
-    n = len(table)
     if stratified and is_discrete(table.domain.class_var):
         # XXX: StratifiedKFold does not support random_state
         ind = cross_validation.StratifiedKFold(
-            table.Y.ravel(), folds,  # random_state=random_state
-        )
+            table.Y.ravel(), folds)  # , random_state=random_state)
     else:
         ind = cross_validation.KFold(
-            n, folds, shuffle=True, random_state=random_state
-        )
-
+            len(table), folds, shuffle=True, random_state=random_state)
     return tuple(ind)
-
-
-def sample_loo_indices(table, random_state=None):
-    """
-    :param Orange.data.Table table:
-    """
-    return sample_fold_indices(table, len(table), stratified=False,
-                               random_state=random_state)
 
 
 def sample_random_n(table, n, stratified=False, replace=False,
                     random_state=None):
-    assert n > 0
-    n = int(n)
     if replace:
-        if n == 1 and len(table):
-            # one example is needed, not the whole (100%) set
-            n = n / len(table)
-        ind = cross_validation.Bootstrap(
-            len(table), train_size=n, random_state=random_state
-        )
-    elif stratified and is_discrete(table.domain.class_var):
-        train_size = max(len(table.domain.class_var.values), n)
+        sample = np.random.random_integers(0, len(table) - 1, n)
+        o = np.ones(len(table))
+        o[sample] = 0
+        others = np.nonzero(o)[0]
+        return others, sample
+    if stratified and is_discrete(table.domain.class_var):
+        test_size = max(len(table.domain.class_var.values), n)
         ind = cross_validation.StratifiedShuffleSplit(
             table.Y.ravel(), n_iter=1,
-            train_size=train_size,
-            random_state=random_state
-        )
+            test_size=test_size, train_size=len(table) - test_size,
+            random_state=random_state)
     else:
-        train_size = n
         ind = cross_validation.ShuffleSplit(
             len(table), n_iter=1,
-            train_size=train_size, random_state=random_state
-        )
+            test_size=n, random_state=random_state)
     return next(iter(ind))
 
 
-def sample_random_p(table, p, stratified=False, replace=False,
-                    random_state=None):
-    assert 0 <= p <= 1
-    n = math.ceil(len(table) * p)
-    return sample_random_n(table, n, stratified, replace, random_state)
+def sample_random_p(table, p, stratified=False, random_state=None):
+    n = int(math.ceil(len(table) * p))
+    return sample_random_n(table, n, stratified, False, random_state)
 
 
 def test_main():
     app = QtGui.QApplication([])
     data = Table("iris")
     w = OWDataSampler()
-    w.setData(data)
+    w.set_data(data)
     w.show()
     return app.exec_()
 
