@@ -615,7 +615,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                   "Info": ("#ceceff", "black", QStyle.SP_MessageBoxInformation)}
         current_height = self.height()
         if state_type is None:
-            if self.warning_bar.isVisible():
+            if not self.warning_bar.isHidden():
                 new_height = current_height - self.warning_bar.height()
                 self.warning_bar.setVisible(False)
                 self.resize(self.width(), new_height)
@@ -630,7 +630,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             format(background, foreground))
         self.warning_label.setText(text)
         self.warning_label.setToolTip(tooltip)
-        if not self.warning_bar.isVisible():
+        if self.warning_bar.isHidden():
             self.warning_bar.setVisible(True)
             new_height = current_height + self.warning_bar.height()
             self.resize(self.width(), new_height)
