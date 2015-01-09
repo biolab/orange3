@@ -9,7 +9,6 @@ _METRICS = [
     ("Manhattan", distance.Manhattan),
     ("Cosine", distance.Cosine),
     ("Jaccard", distance.Jaccard),
-    ("Mahalanobis", distance.Mahalanobis),
     ("Spearman", distance.SpearmanR),
     ("Spearman absolute", distance.SpearmanRAbsolute),
     ("Pearson", distance.PearsonR),

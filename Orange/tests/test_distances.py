@@ -1,6 +1,6 @@
 from unittest import TestCase
 from Orange.data import Table
-from Orange.distance import Euclidean, Mahalanobis, SpearmanR, SpearmanRAbsolute, PearsonR, PearsonRAbsolute, Manhattan, Cosine, Jaccard
+from Orange.distance import Euclidean, SpearmanR, SpearmanRAbsolute, PearsonR, PearsonRAbsolute, Manhattan, Cosine, Jaccard
 from scipy.sparse import csr_matrix
 import numpy as np
 
@@ -253,61 +253,6 @@ class TestJaccard(TestCase):
                                                  [ 0. ,  0. ,  0.5]]))
 
 
-class TestMahalanobis(TestCase):
-    def setUp(self):
-        self.hilbert = Table(np.array([[ 1.        ,  0.5       ,  0.33333333],
-                                       [ 0.5       ,  0.33333333,  0.25      ],
-                                       [ 0.33333333,  0.25      ,  0.2       ]]))
-        # self.rand = Table(np.eye(5))
-        self.hilbert_cov_inv = np.linalg.inv(np.cov(self.hilbert))
-        self.dist = Mahalanobis
-
-    def test_mahalanobis_distance_one_example(self):
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], VI=self.hilbert_cov_inv).X, np.array([[0]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], VI=self.hilbert_cov_inv, axis=0).X, np.array([[0]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], self.hilbert[1], VI=self.hilbert_cov_inv).X,  np.array([[2.5819888768157]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0], self.hilbert[1], VI=self.hilbert_cov_inv, axis=0).X,  np.array([[2.5819888768157]]))
-
-    def test_mahalanobis_distance_many_examples(self):
-        np.testing.assert_almost_equal(self.dist(self.hilbert).X,
-                                       np.array([[ 0.        ,  2.82842712,  1.78885431],
-                                                 [ 2.82842712,  0.        ,  2.11344888],
-                                                 [ 1.78885431,  2.11344888,  0.        ]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert, axis=0).X,
-                                       np.array([[ 0.        ,  2.82842712,  1.78885431],
-                                                 [ 2.82842712,  0.        ,  2.11344888],
-                                                 [ 1.78885431,  2.11344888,  0.        ]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert[:2], self.hilbert[2]).X,
-                                       np.array([[ 1.78885431],
-                                                 [ 2.11344888]]))
-        # np.testing.assert_almost_equal(self.dist(self.hilbert[:2], self.hilbert[:3]).X,
-        #                                np.array([[ 0.        ,  2.34520793,  2.96647933],
-        # np.testing.assert_almost_equal(self.dist(self.rand, self.rand, axis=0).X,
-        #     np.array([[ 0.        ,  3.        ,  2.82842712,  3.        ,  3.        ],
-        #               [ 3.        ,  0.        ,  3.        ,  3.        ,  3.        ],
-        #               [ 2.82842712,  3.        ,  0.        ,  3.        ,  2.82842712],
-        #               [ 3.        ,  3.        ,  3.        ,  0.        ,  3.        ],
-        #               [ 3.        ,  3.        ,  2.82842712,  3.        ,  0.        ]]))
-
-    def test_mahalanobis_distance_inverse_given(self):
-        np.testing.assert_almost_equal(self.dist(self.hilbert, self.hilbert, VI=self.hilbert_cov_inv).X,
-                                       np.array([[ 0.        ,  2.58198888,      np.nan],
-                                                 [ 2.58198888,  0.        ,  2.26568596],
-                                                 [     np.nan,  2.26568596,  0.        ]]))
-
-    def test_mahalanobis_distance_numpy(self):
-        np.testing.assert_almost_equal(self.dist(self.hilbert[0].x, self.hilbert[1].x, VI=self.hilbert_cov_inv, axis=0).X,  np.array([[2.5819888768157]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert.X).X,
-                                       np.array([[ 0.        ,  2.82842712,  1.78885431],
-                                                 [ 2.82842712,  0.        ,  2.11344888],
-                                                 [ 1.78885431,  2.11344888,  0.        ]]))
-        np.testing.assert_almost_equal(self.dist(self.hilbert[:2].X, self.hilbert[2].x).X,
-                                       np.array([[ 1.78885431],
-                                                 [ 2.11344888]]))
-
-
-
-
 class TestSpearmanR(TestCase):
     def setUp(self):
         self.breast = Table("breast-cancer-wisconsin-cont")
@@ -383,6 +328,7 @@ class TestSpearmanR(TestCase):
                                                  [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
                                                  [ 0.25,  0.75,  0.25,  0.75,  0.75,  0.75,  1.  ,  0.75,  0.  ]]))
 
+
 class TestSpearmanRAbsolute(TestCase):
     def setUp(self):
         self.breast = Table("breast-cancer-wisconsin-cont")
@@ -454,6 +400,7 @@ class TestSpearmanRAbsolute(TestCase):
                                                  [ 0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.  ,  0.25,  0.  ],
                                                  [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.25],
                                                  [ 0.25,  0.25,  0.25,  0.25,  0.25,  0.25,  0.  ,  0.25,  0.  ]]))
+
 
 class TestPearsonR(TestCase):
     def setUp(self):

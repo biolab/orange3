@@ -34,7 +34,7 @@ class SklDistance():
         """
         self.metric = metric
 
-    def __call__(self, e1, e2=None, axis=1, **kwargs):
+    def __call__(self, e1, e2=None, axis=1):
         """
         Method for calculating distances.
 
@@ -46,7 +46,6 @@ class SklDistance():
         :param axis: if axis=1 we calculate distances between rows,
            if axis=0 we calculate distances between columns
         :type axis: int
-        :param kwargs: used just for Mahalanobis for passing inverse of covariance matrix
         :return: the matrix with distances between given examples
         :rtype: :class:`Orange.misc.DistMatrix`
         """
@@ -60,44 +59,17 @@ class SklDistance():
             x1 = np.atleast_2d(x1)
         if e2 is not None and not sparse.issparse(x2):
             x2 = np.atleast_2d(x2)
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric, **kwargs)
+        dist = metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2)
         else:
             dist = DistMatrix(dist)
         return dist
 
-
-class SklMahalanobis(SklDistance):
-    """Mahalanobis class."""
-    def __init__(self):
-        self.metric = 'mahalanobis'
-
-    def __call__(self, e1, e2=None, axis=1, VI=None):
-        """
-        Method for calculating distances.
-
-        :param e1: input data instances
-        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param e2: optional second argument for data instances
-           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows,
-           if axis=0 we calculate distances between columns
-        :type axis: int
-        :param VI: the inverse of the covariance matrix
-        :type VI: nd.array
-        :return: the matrix with distances between given examples
-        :rtype: :class:`Orange.misc.DistMatrix`
-        """
-        return super().__call__(e1, e2, axis, VI=VI)
-
-
 Euclidean = SklDistance('euclidean')
 Manhattan = SklDistance('manhattan')
 Cosine = SklDistance('cosine')
 Jaccard = SklDistance('jaccard')
-Mahalanobis = SklMahalanobis()
 
 
 class SpearmanDistance():
