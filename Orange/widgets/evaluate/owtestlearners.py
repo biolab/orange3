@@ -20,16 +20,14 @@ Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    stats = (CA(results),
+    stats = (AUC(results),
+             CA(results),
              F1(results),
              Precision(results),
              Recall(results))
-    if len(results.data.domain.class_var.values) == 2:
-        return (AUC(results),) + stats
     return stats
 
-classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
-classification_stats.headers_binary = ["AUC"]
+classification_stats.headers = ["AUC", "CA", "F1", "Precision", "Recall"]
 
 
 def regression_stats(results):
@@ -221,8 +219,6 @@ class OWTestLearners(widget.OWWidget):
         headers = ["Method"]
         if self.train_data is not None:
             if is_discrete(self.train_data.domain.class_var):
-                if len(self.train_data.domain.class_var.values) == 2:
-                    headers.extend(classification_stats.headers_binary)
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
@@ -364,9 +360,28 @@ def Precision(results):
 def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
 
-
+def multi_class_auc(results):
+    number_of_classes = len(results.data.domain.class_var.values)
+    N = results.actual.shape[0]
+    
+    class_cases = [sum(results.actual == class_) 
+               for class_ in range(number_of_classes)]
+    weights = [c*(N-c) for c in class_cases]
+    weights_norm = [w/sum(weights) for w in weights]
+    
+    auc_array = np.array([np.mean(np.fromiter(
+        (sklearn.metrics.roc_auc_score(results.actual == class_, predicted)
+        for predicted in results.predicted == class_),
+        dtype=np.float64, count=len(results.predicted))) 
+        for class_ in range(number_of_classes)])
+    
+    return np.array([np.sum(auc_array*weights_norm)])
+    
 def AUC(results):
-    return _skl_metric(results, sklearn.metrics.roc_auc_score)
+    if len(results.data.domain.class_var.values) == 2:
+        return _skl_metric(results, sklearn.metrics.roc_auc_score)
+    else:
+        return multi_class_auc(results)
 
 
 def F1(results):
