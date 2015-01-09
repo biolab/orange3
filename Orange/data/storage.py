@@ -2,6 +2,8 @@ class Storage:
 
     domain = None
 
+    name = ""
+
     MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
 
     def approx_len(self):
