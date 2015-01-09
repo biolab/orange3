@@ -188,7 +188,7 @@ def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
     if stratified and is_discrete(table.domain.class_var):
         # XXX: StratifiedKFold does not support random_state
         ind = cross_validation.StratifiedKFold(
-            table.Y.ravel(), folds)  # , random_state=random_state)
+            table.Y.ravel(), folds, random_state=random_state)
     else:
         ind = cross_validation.KFold(
             len(table), folds, shuffle=True, random_state=random_state)
@@ -198,7 +198,11 @@ def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
 def sample_random_n(table, n, stratified=False, replace=False,
                     random_state=None):
     if replace:
-        sample = np.random.random_integers(0, len(table) - 1, n)
+        if random_state is None:
+            rgen = np.random
+        else:
+            rgen = np.random.mtrand.RandomState(random_state)
+        sample = rgen.random_integers(0, len(table) - 1, n)
         o = np.ones(len(table))
         o[sample] = 0
         others = np.nonzero(o)[0]
