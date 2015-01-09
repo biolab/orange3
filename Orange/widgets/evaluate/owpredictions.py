@@ -47,8 +47,8 @@ class OWPredictions(widget.OWWidget):
     outputs = [("Predictions", Orange.data.Table),
                ("Evaluation Results", testing.Results)]
 
-    showProbabilities = Setting(True)
-    showClass = Setting(True)
+    show_probabilities = Setting(True)
+    show_class = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -61,10 +61,10 @@ class OWPredictions(widget.OWWidget):
         self.infolabel.setMinimumWidth(200)
 
         box = gui.widgetBox(self.controlArea, "Options")
-        self.checkbox_class = gui.checkBox(box, self, "showClass",
+        self.checkbox_class = gui.checkBox(box, self, "show_class",
                                            "Show predicted class",
                                            callback=self.flipClass)
-        self.checkbox_prob = gui.checkBox(box, self, "showProbabilities",
+        self.checkbox_prob = gui.checkBox(box, self, "show_probabilities",
                                           "Show predicted probabilities",
                                           callback=self.flipProb)
         QtGui.qApp.processEvents()
@@ -85,12 +85,12 @@ class OWPredictions(widget.OWWidget):
         self.setFixedSize(self.size())
 
     def flipClass(self):
-        if not self.checkbox_class.isChecked() and not self.checkbox_prob.isChecked():
+        if not self.show_class and not self.show_probabilities:
             self.checkbox_class.setChecked(True)
         self.commit()
 
     def flipProb(self):
-        if not self.checkbox_class.isChecked() and not self.checkbox_prob.isChecked():
+        if not self.show_class and not self.show_probabilities:
             self.checkbox_prob.setChecked(True)
         self.commit()
 
@@ -181,14 +181,15 @@ class OWPredictions(widget.OWWidget):
         slots = list(self.predictors.values())
 
         if classification:
-            mc = [Orange.data.DiscreteVariable(
-                      name=p.name, values=class_var.values)
-                  for p in slots]
-            newattrs.extend(mc)
-            newcolumns.extend(p.results[0].reshape((-1, 1))
-                              for p in slots)
+            if self.show_class:
+                mc = [Orange.data.DiscreteVariable(
+                          name=p.name, values=class_var.values)
+                      for p in slots]
+                newattrs.extend(mc)
+                newcolumns.extend(p.results[0].reshape((-1, 1))
+                                  for p in slots)
 
-            if self.showProbabilities:
+            if self.show_probabilities:
                 for p in slots:
                     m = [Orange.data.ContinuousVariable(
                              name="%s(%s)" % (p.name, value))
