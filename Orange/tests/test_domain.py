@@ -1,8 +1,10 @@
 import unittest
 import pickle
 
-from Orange.data import Domain
+import numpy as np
+from numpy.testing import assert_array_equal
 
+from Orange.data import Domain
 from Orange.testing import create_pickling_tests
 from Orange import data
 
@@ -384,6 +386,31 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(g_to_f.attributes, [-2])
         self.assertEqual(g_to_f.class_vars, [None, x])
         self.assertEqual(g_to_f.metas, [-1, x, -3])
+
+    def test_conversion(self):
+        domain = data.Domain([age, income], [race],
+                             [gender, education, ssn])
+
+        values, metas = domain.convert([42, 13, "White"])
+        assert_array_equal(values, np.array([42, 13, 0]))
+        assert_array_equal(metas, np.array([data.Unknown, data.Unknown, None]))
+
+        values, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
+        assert_array_equal(values, np.array([42, 13, 0]))
+        assert_array_equal(metas, np.array([0, 1, "1234567"], dtype=object))
+
+    def test_conversion_size(self):
+        domain = data.Domain([age, gender, income], [race])
+        self.assertRaises(ValueError, domain.convert, [0] * 3)
+        self.assertRaises(ValueError, domain.convert, [0] * 5)
+
+        domain = data.Domain([age, income], [race],
+                             [gender, education, ssn])
+        self.assertRaises(ValueError, domain.convert, [0] * 2)
+        self.assertRaises(ValueError, domain.convert, [0] * 4)
+        self.assertRaises(ValueError, domain.convert, [0] * 7)
+        domain.convert([0] * 3)
+        domain.convert([0] * 6)
 
     def test_unpickling_recreates_known_domains(self):
         domain = Domain([])
