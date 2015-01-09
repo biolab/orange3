@@ -19,16 +19,14 @@ Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    stats = (CA(results),
+    stats = (AUC(results),
+             CA(results),
              F1(results),
              Precision(results),
              Recall(results))
-    if len(results.data.domain.class_var.values) == 2:
-        return (AUC(results),) + stats
     return stats
 
-classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
-classification_stats.headers_binary = ["AUC"]
+classification_stats.headers = ["AUC", "CA", "F1", "Precision", "Recall"]
 
 def regression_stats(results):
     return (MSE(results),
@@ -209,8 +207,6 @@ class OWTestLearners(widget.OWWidget):
         headers = ["Method"]
         if self.train_data is not None:
             if is_discrete(self.train_data.domain.class_var):
-                if len(self.train_data.domain.class_var.values) == 2:
-                    headers.extend(classification_stats.headers_binary)
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
@@ -354,9 +350,36 @@ def Precision(results):
 def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
 
+def multi_class_auc(results):
+    numbef_of_classes = len(results.data.domain.class_var.values)
+    auc_array = np.zeros(shape=(numbef_of_classes,))
+    
+    actual_copy = np.zeros(shape=results.actual.shape)
+    predicted_copy = np.zeros(shape=results.predicted.shape)
+    for _class in range(numbef_of_classes):
+        for i in range(results.actual.shape[0]):
+            if results.actual[i] == _class:
+                actual_copy[i] = 1
+            else:
+                actual_copy[i] = 0
+        
+        for i in range(results.predicted.shape[0]):
+            for j in range(results.predicted.shape[1]):
+                if results.predicted[i,j] == _class:
+                    predicted_copy[i,j] = 1
+                else:
+                    predicted_copy[i,j] = 0
+        auc_array[_class] = np.mean(np.fromiter(
+        (sklearn.metrics.roc_auc_score(actual_copy, predicted)
+         for predicted in predicted_copy),
+        dtype=np.float64, count=len(results.predicted)))
+    return np.array([np.mean(auc_array)])
 
 def AUC(results):
-    return _skl_metric(results, sklearn.metrics.roc_auc_score)
+    if len(results.data.domain.class_var.values) == 2:
+        return _skl_metric(results, sklearn.metrics.roc_auc_score)
+    else:
+        return multi_class_auc(results)
 
 
 def F1(results):
