@@ -7,6 +7,7 @@ import pyqtgraph.graphicsItems.ScatterPlotItem
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
+from pyqtgraph.Point import Point
 from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
 from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
@@ -179,20 +180,28 @@ class InteractiveViewBox(ViewBox):
         self.graph = graph
         self.setMouseMode(self.PanMode)
 
+    def safe_update_scale_box(self, buttonDownPos, currentPos):
+        x, y = currentPos
+        if buttonDownPos[0] == x:
+            x += 1
+        if buttonDownPos[1] == y:
+            y += 1
+        self.updateScaleBox(buttonDownPos, Point(x, y))
+
     # noinspection PyPep8Naming,PyMethodOverriding
     def mouseDragEvent(self, ev):
         if self.graph.state == SELECT:
             ev.accept()
             pos = ev.pos()
             if ev.button() == Qt.LeftButton:
-                self.updateScaleBox(ev.buttonDownPos(), ev.pos())
+                self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
                 if ev.isFinish():
                     self.rbScaleBox.hide()
                     pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
                     value_rect = self.childGroup.mapRectFromParent(pixel_rect)
                     self.graph.select_by_rectangle(value_rect)
                 else:
-                    self.updateScaleBox(ev.buttonDownPos(), ev.pos())
+                    self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             ev.ignore()
             super().mouseDragEvent(ev)
