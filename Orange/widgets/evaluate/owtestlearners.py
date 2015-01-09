@@ -351,30 +351,22 @@ def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
 
 def multi_class_auc(results):
-    numbef_of_classes = len(results.data.domain.class_var.values)
-    auc_array = np.zeros(shape=(numbef_of_classes,))
+    number_of_classes = len(results.data.domain.class_var.values)
+    N = results.actual.shape[0]
     
-    actual_copy = np.zeros(shape=results.actual.shape)
-    predicted_copy = np.zeros(shape=results.predicted.shape)
-    for _class in range(numbef_of_classes):
-        for i in range(results.actual.shape[0]):
-            if results.actual[i] == _class:
-                actual_copy[i] = 1
-            else:
-                actual_copy[i] = 0
-        
-        for i in range(results.predicted.shape[0]):
-            for j in range(results.predicted.shape[1]):
-                if results.predicted[i,j] == _class:
-                    predicted_copy[i,j] = 1
-                else:
-                    predicted_copy[i,j] = 0
-        auc_array[_class] = np.mean(np.fromiter(
-        (sklearn.metrics.roc_auc_score(actual_copy, predicted)
-         for predicted in predicted_copy),
-        dtype=np.float64, count=len(results.predicted)))
-    return np.array([np.mean(auc_array)])
-
+    class_cases = [sum(results.actual == class_) 
+               for class_ in range(number_of_classes)]
+    weights = [c*(N-c) for c in class_cases]
+    weights_norm = [w/sum(weights) for w in weights]
+    
+    auc_array = np.array([np.mean(np.fromiter(
+        (sklearn.metrics.roc_auc_score(results.actual == class_, predicted)
+        for predicted in results.predicted == class_),
+        dtype=np.float64, count=len(results.predicted))) 
+        for class_ in range(number_of_classes)])
+    
+    return np.array([np.sum(auc_array*weights_norm)])
+    
 def AUC(results):
     if len(results.data.domain.class_var.values) == 2:
         return _skl_metric(results, sklearn.metrics.roc_auc_score)
