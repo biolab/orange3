@@ -47,7 +47,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race,))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices,
+        self.assertEqual(d._indices,
                          {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
 
     def test_init_class_list(self):
@@ -58,7 +58,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race,))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices,
+        self.assertEqual(d._indices,
                          {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
 
     def test_init_no_class(self):
@@ -69,7 +69,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, None)
         self.assertEqual(d.class_vars, ())
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices,
+        self.assertEqual(d._indices,
                          {"AGE": 0, "Gender": 1, "income": 2})
 
     def test_init_no_class_false(self):
@@ -80,7 +80,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, None)
         self.assertEqual(d.class_vars, ())
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices,
+        self.assertEqual(d._indices,
                          {"AGE": 0, "Gender": 1, "income": 2})
 
     def test_init_multi_class(self):
@@ -91,7 +91,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertIsNone(d.class_var)
         self.assertEqual(d.class_vars, (education, race))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d.indices,
+        self.assertEqual(d._indices,
                          {"AGE": 0, "Gender": 1, "income": 2,
                           "education": 3, "race": 4})
 
@@ -116,7 +116,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race, ))
         self.assertEqual(d.metas, metas)
-        self.assertEqual(d.indices, {"AGE": 0, "Gender": 1, "income": 2,
+        self.assertEqual(d._indices, {"AGE": 0, "Gender": 1, "income": 2,
                                      "SSN": -1, "race": -2})
 
     def test_wrong_vartypes(self):
@@ -415,7 +415,7 @@ class TestDomainInit(unittest.TestCase):
     def test_unpickling_recreates_known_domains(self):
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
-        self.assertTrue(hasattr(unpickled_domain, 'known_domains'))
+        self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
 
 
 if __name__ == "__main__":

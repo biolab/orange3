@@ -36,22 +36,21 @@ class DomainConversion:
         Indices for meta attributes
     """
 
-
     def __init__(self, source, destination):
         """
         Compute the conversion indices from the given `source` to `destination`
         """
         self.source = source
         self.attributes = [
-        source.index(var) if var in source
-        else var.get_value_from for var in destination.attributes]
+            source.index(var) if var in source
+            else var.get_value_from for var in destination.attributes]
         self.class_vars = [
-        source.index(var) if var in source
-        else var.get_value_from for var in destination.class_vars]
+            source.index(var) if var in source
+            else var.get_value_from for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
         self.metas = [
-        source.index(var) if var in source
-        else var.get_value_from for var in destination.metas]
+            source.index(var) if var in source
+            else var.get_value_from for var in destination.metas]
 
 
 class Domain:
@@ -63,10 +62,15 @@ class Domain:
         given.
 
         :param attributes: a list of attributes
-        :param class_vars: the target variable or a list of target variables
+        :type attributes: list of :class:`Variable`
+        :param class_vars: target variable or a list of target variables
+        :type class_vars: :class:`Variable` or list of :class:`Variable`
         :param metas: a list of meta attributes
+        :type metas: list of :class:`Variable`
         :param source: the source domain for attributes
-        :return: a new instance of :class:`domain`
+        :type source: Orange.data.Domain
+        :return: a new domain
+        :rtype: :class:`Domain`
         """
 
         if class_vars is None:
@@ -97,46 +101,55 @@ class Domain:
         self.class_vars = tuple(class_vars)
         self._variables = self.attributes + self.class_vars
         self._metas = tuple(metas)
-        self.class_var =\
-        self.class_vars[0] if len(self.class_vars) == 1 else None
+        self.class_var = \
+            self.class_vars[0] if len(self.class_vars) == 1 else None
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        self.indices = {var.name: idx
+        self._indices = {var.name: idx
                         for idx, var in enumerate(self._variables)}
-        self.indices.update((var.name, -1 - idx)
-            for idx, var in enumerate(metas))
+        self._indices.update((var.name, -1 - idx)
+                            for idx, var in enumerate(metas))
 
         self.anonymous = False
-        self.known_domains = weakref.WeakKeyDictionary()
-        self.last_conversion = None
+        self._known_domains = weakref.WeakKeyDictionary()
+        self._last_conversion = None
 
-
+    # noinspection PyPep8Naming
     @classmethod
     def from_numpy(cls, X, Y=None, metas=None):
         """
-        Create a domain corresponding to the given numpy arrays.
+        Create a domain corresponding to the given numpy arrays. This method
+        is usually invoked from :meth:`Orange.data.Table.from_numpy`.
 
         All attributes are assumed to be continuous and are named
-        "Feature <n>". Target variables are discrete if the all values are
-        whole numbers between 0 and 19; otherwise they are continuous. Discrete
-        classes are named "Class <n>" and continuous are named "Target <n>".
-        Domain is marked as anonymous, so data from any other domain of the
-        same shape can be converted into this one and vice-versa.
+        "Feature <n>". Target variables are discrete if all values are
+        integers between 0 and 19; otherwise they are continuous. Discrete
+        targets are named "Class <n>" and continuous are named "Target <n>".
+        Domain is marked as :attr:`anonymous`, so data from any other domain of
+        the same shape can be converted into this one and vice-versa.
 
-        :param X: attributes
-        :param Y: class variables
-        :param metas: meta attributes
+        :param `numpy.ndarray` X: 2-dimensional array with data
+        :param Y: 1- of 2- dimensional data for target
+        :type Y: `numpy.ndarray` or None
+        :param `numpy.ndarray` metas: meta attributes
+        :type metas: `numpy.ndarray` or None
         :return: a new domain
-        :rtype: Orange.data.Domain
+        :rtype: :class:`Domain`
         """
+        if X.ndim != 2:
+            raise ValueError('X must be a 2-dimensional array')
         attr_vars = [ContinuousVariable(name="Feature %i" % (a + 1))
                      for a in range(X.shape[1])]
         class_vars = []
         if Y is not None:
+            if Y.ndim == 1:
+                Y = Y.reshape(len(Y), 1)
+            elif Y.ndim != 2:
+                raise ValueError('Y has invalid shape')
             for i, class_ in enumerate(Y.T):
                 mn, mx = np.min(class_), np.max(class_)
-                if 0 <= mn and mx <= 20:
+                if 0 <= mn <= mx <= 20:
                     values = np.unique(class_)
                     if all(int(x) == x and 0 <= x <= 19 for x in values):
                         mx = int(mx)
@@ -158,24 +171,26 @@ class Domain:
         domain.anonymous = True
         return domain
 
-
     def var_from_domain(self, var, check_included=False, no_index=False):
         """
         Return a variable descriptor from the given argument, which can be
         a descriptor, index or name. If `var` is a descriptor, the function
-        returns it
+        returns this same object.
 
-        :param var: an instance of :class:`Variable`, `int` or `str`
+        :param var: index, name or descriptor
+        :type var: int, str or :class:`Variable`
         :param check_included: if `var` is an instance of :class:`Variable`,
             this flags tells whether to check that the domain contains this
             variable
         :param no_index: if `True`, `var` must not be an `int`
         :return: an instance of :class:`Variable` described by `var`
+        :rtype: :class:`Variable`
         """
         if isinstance(var, str):
-            if not var in self.indices:
-                raise IndexError("Variable '%s' is not in the domain %s" % (var, self))
-            idx = self.indices[var]
+            if not var in self._indices:
+                raise IndexError("Variable '{}' is not in the domain {}".
+                                 format(var, self))
+            idx = self._indices[var]
             return self._variables[idx] if idx >= 0 else self._metas[-1 - idx]
 
         if not no_index and isinstance(var, int):
@@ -187,40 +202,36 @@ class Domain:
                     if each is var:
                         return var
                 raise IndexError(
-                    "Variable '%s' is not in the domain %s" % (var.name, self))
+                    "Variable '{}' is not in the domain {}".
+                    format(var.name, self))
             else:
                 return var
 
         raise TypeError(
-            "Expected str, int or Variable, got '%s'" % type(var).__name__)
-
+            "Expected str, int or Variable, got '{}'".
+            format(type(var).__name__))
 
     @property
     def variables(self):
         return self._variables
 
-
     @property
     def metas(self):
         return self._metas
 
-
     def __len__(self):
-        """Return the number of variables (features and class attributes)"""
+        """The number of variables (features and class attributes)."""
         return len(self._variables)
-
 
     def __getitem__(self, index):
         """
-        Same as var_from_domain. Index can be a slice, an int, str or
-        instance of :class:`Variable`. Slices apply to variables, not meta
-        attributes.
+        Same as :meth:`var_from_domain`, except that index can also be a slice.
+        Slices apply only to variables, not meta attributes.
         """
         if isinstance(index, slice):
             return self._variables[index]
         else:
             return self.var_from_domain(index, True)
-
 
     def __contains__(self, item):
         """
@@ -228,8 +239,8 @@ class Domain:
         in the domain.
         """
         if isinstance(item, str):
-            return item in self.indices
-        if isinstance(item, Variable) and not item.name in self.indices:
+            return item in self._indices
+        if isinstance(item, Variable) and not item.name in self._indices:
             return False
             # ... but not the opposite!
             # It may just be a variable with the same name
@@ -239,18 +250,16 @@ class Domain:
         except IndexError:
             return False
 
-
     def __iter__(self):
         """
-        Return an iterator through variables (features and class attributes)
+        Return an iterator through variables (features and class attributes).
         """
         return iter(self._variables)
-
 
     def __str__(self):
         """
         Return a list-like string with the domain's features, class attributes
-        and meta attributes
+        and meta attributes.
         """
         s = "[" + ", ".join(attr.name for attr in self.attributes)
         if self.class_vars:
@@ -260,15 +269,16 @@ class Domain:
             s += " {" + ", ".join(meta.name for meta in self._metas) + "}"
         return s
 
+    __repr__ = __str__
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.pop("known_domains", None)
+        state.pop("_known_domains", None)
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.known_domains = weakref.WeakKeyDictionary()
+        self._known_domains = weakref.WeakKeyDictionary()
 
     def index(self, var):
         """
@@ -276,7 +286,7 @@ class Domain:
         with an instance of :class:`Variable`, `int` or `str`.
         """
         if isinstance(var, str):
-            idx = self.indices.get(var, None)
+            idx = self._indices.get(var, None)
             if idx is None:
                 raise ValueError("'%s' is not in domain" % var)
             else:
@@ -294,36 +304,29 @@ class Domain:
         raise TypeError("Expected str, int or Variable, got '%s'" %
                         type(var).__name__)
 
-
     def has_discrete_attributes(self, include_class=False):
         """
-        Return `True` if domain has any discrete attributes.
-
-        :param include_class: if `True` (default is `False`), the check
-            includes the class attribute(s)
+        Return `True` if domain has any discrete attributes. If `include_class`
+                is set, the check includes the class attribute(s).
         """
         if not include_class:
             return any(isinstance(var, DiscreteVariable)
-                for var in self.attributes)
+                       for var in self.attributes)
         else:
             return any(isinstance(var, DiscreteVariable)
-                for var in self.variables)
-
+                       for var in self.variables)
 
     def has_continuous_attributes(self, include_class=False):
         """
-        Return `True` if domain has any continuous attributes.
-
-        :param include_class: if `True` (default is `False`), the check
-            includes the class attribute(s)
+        Return `True` if domain has any continuous attributes. If
+        `include_class` is set, the check includes the class attribute(s).
         """
         if not include_class:
             return any(isinstance(var, ContinuousVariable)
-                for var in self.attributes)
+                       for var in self.attributes)
         else:
             return any(isinstance(var, ContinuousVariable)
-                for var in self.variables)
-
+                       for var in self.variables)
 
     def get_conversion(self, source):
         """
@@ -332,21 +335,24 @@ class Domain:
         speed-up the conversion in the common case in which the domain
         is based on another domain, for instance, when the domain contains
         discretized variables from another domain.
+
+        :param source: the source domain
+        :type source: Orange.data.Domain
         """
         # the method is thread-safe
-        c = self.last_conversion
+        c = self._last_conversion
         if c and c.source is source:
             return c
-        c = self.known_domains.get(source, None)
+        c = self._known_domains.get(source, None)
         if not c:
             c = DomainConversion(source, self)
-            self.known_domains[source] = self.last_conversion = c
+            self._known_domains[source] = self._last_conversion = c
         return c
 
-
+    # noinspection PyProtectedMember
     def convert(self, inst):
         """
-        Convert a data instance from another domain.
+        Convert a data instance from another domain to this domain.
 
         :param inst: The data instance to be converted
         :return: The data instance in this domain
