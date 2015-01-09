@@ -4,8 +4,9 @@ import functools
 import numpy
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem
-from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
+    QHeaderView, QItemDelegate
+from PyQt4.QtCore import Qt, QSize
 
 import Orange.data
 import Orange.classification
@@ -30,18 +31,24 @@ def classification_stats(results):
 classification_stats.headers = ["CA", "F1", "Precision", "Recall"]
 classification_stats.headers_binary = ["AUC"]
 
+
 def regression_stats(results):
     return (MSE(results),
             RMSE(results),
             MAE(results),
             R2(results))
 
-
 regression_stats.headers = ["MSE", "RMSE", "MAE", "R2"]
 
 
 def is_discrete(var):
     return isinstance(var, Orange.data.DiscreteVariable)
+
+
+class ItemDelegate(QItemDelegate):
+    def sizeHint(self, *args):
+        size = super().sizeHint(*args)
+        return QSize(size.width(), size.height() + 6)
 
 
 class OWTestLearners(widget.OWWidget):
@@ -111,9 +118,14 @@ class OWTestLearners(widget.OWWidget):
             wordWrap=True,
             editTriggers=QTreeView.NoEditTriggers
         )
+        header = self.view.header()
+        header.setResizeMode(QHeaderView.ResizeToContents)
+        header.setDefaultAlignment(Qt.AlignCenter)
+        header.setStretchLastSection(False)
 
         self.result_model = QStandardItemModel()
         self.view.setModel(self.result_model)
+        self.view.setItemDelegate(ItemDelegate())
         self._update_header()
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.view)
@@ -217,7 +229,7 @@ class OWTestLearners(widget.OWWidget):
         for i in reversed(range(len(headers),
                                 self.result_model.columnCount())):
             self.result_model.takeColumn(i)
-        
+
         self.result_model.setHorizontalHeaderLabels(headers)
 
     def _update_stats_model(self):
@@ -234,11 +246,9 @@ class OWTestLearners(widget.OWWidget):
             row.append(head)
             for stat in input.stats:
                 item = QStandardItem()
-                item.setData(float(stat[0]), Qt.DisplayRole)
+                item.setData(" {:.3f} ".format(stat[0]), Qt.DisplayRole)
                 row.append(item)
             model.appendRow(row)
-
-        self.view.resizeColumnToContents(0)
 
     def _invalidate(self, which=None):
         if which is None:
