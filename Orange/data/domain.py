@@ -10,7 +10,7 @@ class DomainConversion:
     Indices and functions for conversion between domains.
 
     Every list contains indices (instances of int) of variables in the
-    source domain, or the variable's get_value_from function if the source
+    source domain, or the variable's compute_value function if the source
     domain does not contain the variable.
 
     .. attribute:: source
@@ -43,14 +43,14 @@ class DomainConversion:
         self.source = source
         self.attributes = [
             source.index(var) if var in source
-            else var.get_value_from for var in destination.attributes]
+            else var.compute_value for var in destination.attributes]
         self.class_vars = [
             source.index(var) if var in source
-            else var.get_value_from for var in destination.class_vars]
+            else var.compute_value for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
         self.metas = [
             source.index(var) if var in source
-            else var.get_value_from for var in destination.metas]
+            else var.compute_value for var in destination.metas]
 
 
 class Domain:

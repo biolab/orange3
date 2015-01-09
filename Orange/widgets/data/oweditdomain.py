@@ -471,7 +471,7 @@ class OWEditDomain(widget.OWWidget):
                 newvar = variable_from_description(
                     self.domain_change_hints[vdesc]
                 )
-                newvar.get_value_from = \
+                newvar.compute_value = \
                     Orange.feature.transformation.Identity(var)
                 return newvar
             else:
@@ -531,7 +531,7 @@ class OWEditDomain(widget.OWWidget):
                     variable_description(new_var)
 
         # Make orange's domain transformation work.
-        new_var.get_value_from = \
+        new_var.compute_value = \
             Orange.feature.transformation.Identity(old_var)
 
         self._invalidate()

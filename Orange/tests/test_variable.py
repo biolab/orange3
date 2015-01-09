@@ -22,7 +22,7 @@ class DiscreteVariableTest(unittest.TestCase):
     def test_find_compatible_unordered(self):
         gend = data.DiscreteVariable("gend", values=["F", "M"])
 
-        find_comp = data.DiscreteVariable.find_compatible
+        find_comp = data.DiscreteVariable._find_compatible
         self.assertIs(find_comp("gend"), gend)
         self.assertIs(find_comp("gend", values=["F"]), gend)
         self.assertIs(find_comp("gend", values=["F", "M"]), gend)
@@ -45,7 +45,7 @@ class DiscreteVariableTest(unittest.TestCase):
     def test_find_compatible_unordered(self):
         abc = data.DiscreteVariable("abc", values="abc", ordered=True)
 
-        find_comp = data.DiscreteVariable.find_compatible
+        find_comp = data.DiscreteVariable._find_compatible
 
         self.assertIsNone(find_comp("abc"))
         self.assertIsNone(find_comp("abc", list("abc")))
@@ -71,6 +71,33 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertIsInstance(var, data.DiscreteVariable)
         self.assertEqual(var.name, "a")
         self.assertEqual(var.values, ["F", "M"])
+
+
+class ContinuousVariableTest(unittest.TestCase):
+    def test_make(self):
+        data.ContinuousVariable._clear_cache()
+        age1 = data.ContinuousVariable.make("age")
+        age2 = data.ContinuousVariable.make("age")
+        age3 = data.ContinuousVariable("age")
+        self.assertIs(age1, age2)
+        self.assertIsNot(age1, age3)
+
+    def test_decimals(self):
+        a = data.ContinuousVariable("a", 4)
+        self.assertEqual(a.str_val(4.654321), "4.6543")
+
+    def test_adjust_decimals(self):
+        a = data.ContinuousVariable("a")
+        self.assertEqual(a.str_val(4.654321), "4.654")
+        a.val_from_str_add("5")
+        self.assertEqual(a.str_val(4.654321), "5")
+        a.val_from_str_add("  5.12    ")
+        self.assertEqual(a.str_val(4.654321), "4.65")
+        a.val_from_str_add("5.1234")
+        self.assertEqual(a.str_val(4.654321), "4.6543")
+
+
+
 
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",

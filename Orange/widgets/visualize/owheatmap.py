@@ -642,7 +642,7 @@ class OWHeatMap(widget.OWWidget):
         y_disc = EqualWidth(n=self.n_bins)(data, yvar)
 
         def bins(var):
-            points = list(var.get_value_from.points)
+            points = list(var.compute_value.points)
             assert points[0] <= points[1]
             width = points[1] - points[0]
             return np.array([points[0] - width] +

@@ -22,7 +22,7 @@ class FileReader:
                 vs[col].add(lne[col])
             for col in cont_cols:
                 val = lne[col]
-                if not col in Variable.DefaultUnknownStr and "." in val:
+                if not col in Variable._DefaultUnknownStr and "." in val:
                     decs = len(val) - val.find(".") - 1
                     if decs > decimals[col]:
                         decimals[col] = decs
