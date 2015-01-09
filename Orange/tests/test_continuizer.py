@@ -6,7 +6,7 @@ import unittest
 
 class Continuizer_Test(unittest.TestCase):
     def setUp(self):
-        Variable.clear_cache()
+        Variable._clear_cache()
         self.data = Table("test4")
 
     def test_default(self):
@@ -20,7 +20,7 @@ class Continuizer_Test(unittest.TestCase):
             self.assertEqual([attr.name for attr in dom.attributes],
                              ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                               "d3=c"])
-            self.assertIsInstance(dom[2].get_value_from,
+            self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
@@ -49,8 +49,7 @@ class Continuizer_Test(unittest.TestCase):
         self.assertEqual([attr.name for attr in domZB.attributes],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
-        self.assertIsInstance(domZB[2].get_value_from,
-                              transformation.Indicator)
+        self.assertIsInstance(domZB[2].compute_value, transformation.Indicator)
 
         dat2 = Table(domZB, self.data)
         #                          c1   c2  d2    d3       cl1
@@ -64,7 +63,7 @@ class Continuizer_Test(unittest.TestCase):
         self.assertEqual([attr.name for attr in dom.attributes],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
-        self.assertIsInstance(dom[2].get_value_from,
+        self.assertIsInstance(dom[2].compute_value,
                               transformation.Indicator_1)
 
         dat3 = Table(dom, self.data)
@@ -87,7 +86,7 @@ class Continuizer_Test(unittest.TestCase):
         self.assertEqual([attr.name for attr in domZB.attributes],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
-        self.assertIsInstance(domZB[2].get_value_from,
+        self.assertIsInstance(domZB[2].compute_value,
                               transformation.Indicator)
 
         solution = [[ 0,    -1.225,  1, 0, 1, 0, 0, 0],
@@ -100,7 +99,7 @@ class Continuizer_Test(unittest.TestCase):
             for x,y in zip(rd,rs):
                 self.assertAlmostEqual(x,y, places=3)
 
-        self.assertIsInstance(dom[2].get_value_from,
+        self.assertIsInstance(dom[2].compute_value,
                               transformation.Indicator_1)
 
         dat3 = Table(dom, self.data)
@@ -119,7 +118,7 @@ class Continuizer_Test(unittest.TestCase):
             self.assertEqual([attr.name for attr in dom.attributes],
                              ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                               "d3=c"])
-            self.assertIsInstance(dom[2].get_value_from,
+            self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
@@ -136,7 +135,7 @@ class Continuizer_Test(unittest.TestCase):
             self.data,
             normalize_continuous=DomainContinuizer.NormalizeBySpan,
             transform_class=True, zero_based=False)
-        
+
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in dom))
         self.assertIsNot(dom.class_var, self.data.domain.class_var)
@@ -147,7 +146,7 @@ class Continuizer_Test(unittest.TestCase):
                           "d3=c"])
         self.assertEqual([attr.name for attr in dom.class_vars],
                          ["cl1=a", "cl1=b", "cl1=c"])
-        self.assertIsInstance(dom[2].get_value_from,
+        self.assertIsInstance(dom[2].compute_value,
                               transformation.Indicator_1)
 
         dat2 = Table(dom, self.data)
@@ -168,7 +167,7 @@ class Continuizer_Test(unittest.TestCase):
             self.assertEqual([attr.name for attr in dom.attributes],
                              ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                               "d3=c"])
-            self.assertIsInstance(dom[2].get_value_from,
+            self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
@@ -188,7 +187,7 @@ class Continuizer_Test(unittest.TestCase):
             self.assertIs(dom[1], self.data.domain[1])
             self.assertEqual([attr.name for attr in dom.attributes],
                              ["c1", "c2", "d2=b", "d3=b", "d3=c"])
-            self.assertIsInstance(dom[2].get_value_from,
+            self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
@@ -209,7 +208,7 @@ class Continuizer_Test(unittest.TestCase):
             self.assertIs(dom[1], self.data.domain[1])
             self.assertEqual([attr.name for attr in dom.attributes],
                              ["c1", "c2", "d2=b", "d3=a", "d3=c"])
-            self.assertIsInstance(dom[2].get_value_from,
+            self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)

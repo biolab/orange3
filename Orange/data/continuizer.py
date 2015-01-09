@@ -38,16 +38,16 @@ class DomainContinuizer:
                 return []
             if treat == self.AsOrdinal:
                 new_var = ContinuousVariable(var.name)
-                new_var.get_value_from = Identity(var)
+                new_var.compute_value = Identity(var)
                 return [new_var]
             if treat == self.AsNormalizedOrdinal:
                 new_var = ContinuousVariable(var.name)
                 n_values = max(1, len(var.values))
                 if self.zero_based:
-                    new_var.get_value_from = \
+                    new_var.compute_value = \
                         Normalizer(var, 0, 1 / (n_values - 1))
                 else:
-                    new_var.get_value_from = \
+                    new_var.compute_value = \
                         Normalizer(var, (n_values - 1) / 2, 2 / (n_values - 1))
                 return [new_var]
 
@@ -64,7 +64,7 @@ class DomainContinuizer:
                     continue
                 new_var = ContinuousVariable(
                     "{}={}".format(var.name, val))
-                new_var.get_value_from = IndClass(var, i)
+                new_var.compute_value = IndClass(var, i)
                 new_vars.append(new_var)
             return new_vars
 
@@ -78,16 +78,16 @@ class DomainContinuizer:
                 if diff < 1e-15:
                     diff = 1
                 if self.zero_based:
-                    new_var.get_value_from = Normalizer(var, dmi, 1 / diff)
+                    new_var.compute_value = Normalizer(var, dmi, 1 / diff)
                 else:
-                    new_var.get_value_from = Normalizer(var, (dma + dmi) / 2,
+                    new_var.compute_value = Normalizer(var, (dma + dmi) / 2,
                                                     2 / diff)
                 return new_var
             elif self.normalize_continuous == self.NormalizeBySD:
                 new_var = ContinuousVariable(var.name)
                 avg = dists[var_ptr].mean()
                 sd = dists[var_ptr].standard_deviation()
-                new_var.get_value_from = Normalizer(var, avg, 1 / sd)
+                new_var.compute_value = Normalizer(var, avg, 1 / sd)
                 return new_var
 
         def transform_list(s):

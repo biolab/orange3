@@ -380,11 +380,11 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(f_to_g.metas, [-1, 0, -3])
 
         x = lambda: 42
-        income.get_value_from = x
+        income.compute_value = x
         g_to_f = f.get_conversion(g)
         self.assertIs(g_to_f.source, g)
         self.assertEqual(g_to_f.attributes, [-2])
-        self.assertEqual(g_to_f.class_vars, [None, x])
+        self.assertEqual(g_to_f.class_vars, [data.Variable.compute_value, x])
         self.assertEqual(g_to_f.metas, [-1, x, -3])
 
     def test_conversion(self):

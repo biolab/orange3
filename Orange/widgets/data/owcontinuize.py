@@ -205,7 +205,7 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
         indicator = Indicator_1(source, value=value_ind)
     else:
         indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
-    var.get_value_from = indicator
+    var.compute_value = indicator
     return var
 
 
@@ -338,13 +338,13 @@ def _ensure_dist(var, data_or_dist):
 def normalized_var(var, translate, scale):
     new_var = Orange.data.ContinuousVariable(var.name)
     norm = Normalizer(var, translate, scale)
-    new_var.get_value_from = norm
+    new_var.compute_value = norm
     return new_var
 
 
 def ordinal_to_continuous(var):
     new_var = Orange.data.ContinuousVariable(var.name)
-    new_var.get_value_from = Identity(var)
+    new_var.compute_value = Identity(var)
     return new_var
 
 
