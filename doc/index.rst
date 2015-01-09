@@ -13,6 +13,7 @@ Orange Documentation
    modules/feature
    modules/classification
    modules/regression
+   modules/distance
    modules/evaluation
    modules/misc
 
