@@ -1,6 +1,7 @@
 
 import collections
 from collections import namedtuple
+import copy
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
@@ -590,7 +591,9 @@ from Orange.statistics import distribution
 
 def column_imputer_defaults(variable, table, default):
     transform = ReplaceUnknowns(variable, default)
-    return ColumnImputerDefaults(table.domain, (variable,),
+    var = copy.copy(variable)
+    var.compute_value = ReplaceUnknowns(variable, default)
+    return ColumnImputerDefaults(table.domain, (var,),
                                  [transform], [default])
 
 

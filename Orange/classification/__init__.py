@@ -191,7 +191,7 @@ class SklFitter(Fitter):
 
     @params.setter
     def params(self, value):
-        self._params = value
+        self._params = dict(value)
         self._params.pop("self", None)
 
     def __call__(self, data):
