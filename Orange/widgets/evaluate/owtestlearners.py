@@ -155,7 +155,8 @@ class OWTestLearners(widget.OWWidget):
         self.setStatusMessage("Running")
         if self.test_data is not None and \
                 self.resampling != OWTestLearners.TestOnTest:
-            self.warning(1, "Select 'Test on test data' to use the test data")
+            self.warning(1, "Test data is present but unused. "
+                            "Select 'Test on test data' to use it.")
 
         # TODO: Test each learner individually
 
