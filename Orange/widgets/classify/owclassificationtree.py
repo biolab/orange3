@@ -12,7 +12,7 @@ class OWClassificationTree(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [
         ("Learner", tree.ClassificationTreeLearner),
-        ("ClassificationTree", tree.ClassificationTreeClassifier)
+        ("Classification Tree", tree.ClassificationTreeClassifier)
     ]
     want_main_area = False
 
@@ -84,7 +84,7 @@ class OWClassificationTree(widget.OWWidget):
             criterion=self.scores[self.attribute_score][1],
             max_depth=self.max_depth,
             min_samples_split=self.min_internal, min_samples_leaf=self.min_leaf)
-        self.learner.name = self.name
+        self.learner.name = self.model_name
         if self.preprocessor:
             self.learner = self.preprocessor.wrapLearner(self.learner)
         self.send("Learner", self.learner)
@@ -93,14 +93,14 @@ class OWClassificationTree(widget.OWWidget):
         if self.data is not None:
             try:
                 self.classifier = self.learner(self.data)
-                self.classifier.name = self.name
+                self.classifier.name = self.model_name
                 self.classifier.instances = self.data
             except Exception as errValue:
                 self.error(1, str(errValue))
                 self.classifier = None
         else:
             self.classifier = None
-        self.send("ClassificationTree", self.classifier)
+        self.send("Classification Tree", self.classifier)
 
     def set_data(self, data):
         self.error(0)
