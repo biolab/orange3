@@ -302,7 +302,7 @@ class OWPlotGUI:
 
     _buttons = {
         Zoom: ('Zoom', 'state', ZOOMING, None, 'Dlg_zoom'),
-        ZoomReset: ('Zoom', None, None, None, 'Dlg_zoom_reset'),
+        ZoomReset: ('Reset zoom', None, None, None, 'Dlg_zoom_reset'),
         Pan: ('Pan', 'state', PANNING, None, 'Dlg_pan_hand'),
         SimpleSelect: ('Select', 'state', SELECT, None, 'Dlg_arrow'),
         Select: ('Select', 'state', SELECT, None, 'Dlg_arrow'),
