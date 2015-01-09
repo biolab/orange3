@@ -1,10 +1,14 @@
 import sys
+
+import numpy
+from numpy import argmax, zeros
+
 from Orange.widgets.classify.owtreeviewer2d import *
 
 from Orange.data import Table
 from Orange.classification.tree import ClassificationTreeClassifier
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from numpy import argmax, zeros
+
 from Orange.widgets.settings import \
     Setting, ContextSetting, ClassValuesContextHandler
 from Orange.widgets import gui
@@ -20,19 +24,20 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     color_settings = Setting(None)
     selected_color_settings_index = Setting(0)
 
-    inputs = [("ClassificationTree", ClassificationTreeClassifier, "ctree")]
-    outputs = [("Examples", Table)]
+    inputs = [("Classification Tree", ClassificationTreeClassifier, "ctree")]
+    outputs = [("Data", Table)]
 
     def __init__(self):
         super().__init__()
         self.domain = None
+        self.classifier = None
+        self.dataset = None
 
         self.scene = TreeGraphicsScene(self)
         self.scene_view = TreeGraphicsView(self.scene)
         self.scene_view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.mainArea.layout().addWidget(self.scene_view)
         self.toggle_zoom_slider()
-
         self.scene.selectionChanged.connect(self.update_selection)
 
         box = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
@@ -146,13 +151,16 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     def ctree(self, clf=None):
         self.clear()
         self.closeContext()
-        if not clf:
+        self.classifier = clf
+        if clf is None:
             self.info.setText('No tree.')
             self.tree = None
             self.root_node = None
+            self.dataset = None
         else:
             self.tree = clf.clf.tree_
             self.domain = clf.domain
+            self.dataset = getattr(clf, "instances", None)
             self.target_combo.clear()
             self.target_combo.addItem("None")
             self.target_combo.addItems(self.domain.class_vars[0].values)
@@ -193,6 +201,27 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         else:
             text = "Root"
         return text
+
+    def update_selection(self):
+        if self.dataset is None:
+            return
+
+        items = self.scene.selectedItems()
+        items = [item for item in items
+                 if isinstance(item, ClassificationTreeNode)]
+        if items:
+            indices = [self.classifier.get_items(item.i)
+                       for item in items]
+            indices = numpy.r_[indices]
+            indices = numpy.unique(indices)
+        else:
+            indices = []
+
+        if len(indices):
+            data = self.dataset[indices]
+        else:
+            data = None
+        self.send("Data", data)
 
 
 class PieChart(QGraphicsRectItem):
