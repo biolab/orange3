@@ -94,6 +94,7 @@ class OWClassificationTree(widget.OWWidget):
             try:
                 self.classifier = self.learner(self.data)
                 self.classifier.name = self.name
+                self.classifier.instances = self.data
             except Exception as errValue:
                 self.error(1, str(errValue))
                 self.classifier = None
