@@ -319,18 +319,15 @@ def sample_random_n(table, n, stratified=False, replace=False,
         )
     elif stratified and is_discrete(table.domain.class_var):
         train_size = max(len(table.domain.class_var.values), n)
-        test_size = max(len(table) - train_size, 0)
         ind = cross_validation.StratifiedShuffleSplit(
             table.Y.ravel(), n_iter=1,
-            test_size=test_size,
             train_size=train_size,
             random_state=random_state
         )
     else:
         train_size = n
-        test_size = max(len(table) - train_size, 0)
         ind = cross_validation.ShuffleSplit(
-            len(table), n_iter=1, test_size=test_size,
+            len(table), n_iter=1,
             train_size=train_size, random_state=random_state
         )
     return next(iter(ind))
