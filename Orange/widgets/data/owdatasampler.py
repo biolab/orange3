@@ -310,6 +310,9 @@ def sample_random_n(table, n, stratified=False, replace=False,
     assert n > 0
     n = int(n)
     if replace:
+        if n == 1 and len(table):
+            # one example is needed, not the whole (100%) set
+            n = n / len(table)
         ind = cross_validation.Bootstrap(
             len(table), train_size=n, random_state=random_state
         )
