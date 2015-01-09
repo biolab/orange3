@@ -199,11 +199,12 @@ class OWDataSampler(widget.OWWidget):
                                        len(dataset))
             self.sampleSizeSpin.setMaximum(len(dataset))
             self.updateSelectedFoldSpinMaximum()
+            self.updateindices()
         else:
             self.dataInfoLabel.setText('No data on input.')
             self.outputInfoLabel.setText('')
+            self.indices = None
 
-        self.updateindices()
         self.commit()
 
     def commit(self):
