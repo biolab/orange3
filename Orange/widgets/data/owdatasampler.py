@@ -137,7 +137,7 @@ class OWDataSampler(widget.OWWidget):
             sample = other = None
             self.outputInfoLabel.setText("")
         else:
-            if self.indices is None:
+            if self.indices is None or not self.use_seed:
                 self.updateindices()
             if self.sampling_type in [self.FixedProportion, self.FixedSize]:
                 remaining, sample = self.indices
@@ -158,7 +158,6 @@ class OWDataSampler(widget.OWWidget):
         rnd = self.RandomSeed if self.use_seed else None
         stratified = (self.stratify and type(self.data) == Table
                       and is_discrete(self.data.domain.class_var))
-        print(stratified)
         if self.sampling_type == self.FixedSize:
             self.indices = sample_random_n(
                 self.data, self.sampleSizeNumber,
