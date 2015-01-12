@@ -214,9 +214,14 @@ class CrossValidation(Testing):
     def __call__(self, data, fitters):
         n = len(data)
         Y = data.Y.copy().flatten()
-        indices = cross_validation.StratifiedKFold(
-            Y, self.k, shuffle=True, random_state=self.random_state
-        )
+        if is_discrete(data.domain.class_var):
+            indices = cross_validation.StratifiedKFold(
+                Y, self.k, shuffle=True, random_state=self.random_state
+            )
+        else:
+            indices = cross_validation.KFold(
+                len(Y), self.k, shuffle=True, random_state=self.random_state
+            )
         results = Results(data, len(fitters), store_data=self.store_data)
 
         results.folds = []
