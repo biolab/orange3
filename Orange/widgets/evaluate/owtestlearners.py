@@ -136,11 +136,23 @@ class OWTestLearners(widget.OWWidget):
         self._update_stats_model()
 
     def set_train_data(self, data):
+        self.error(0)
+        if data is not None:
+            if data.domain.class_var is None:
+                self.error(0, "Train data input requires a class variable")
+                data = None
+
         self.train_data = data
         self._update_header()
         self._invalidate()
 
     def set_test_data(self, data):
+        self.error(1)
+        if data is not None:
+            if data.domain.class_var is None:
+                self.error(1, "Test data input requires a class variable")
+                data = None
+
         self.test_data = data
         if self.resampling == OWTestLearners.TestOnTest:
             self._invalidate()
@@ -153,9 +165,22 @@ class OWTestLearners(widget.OWWidget):
         self._invalidate()
 
     def update_results(self):
-        self.warning(1, "")
+        self.warning([1, 2])
+        self.error(2)
+
         if self.train_data is None:
             return
+
+        if self.resampling == OWTestLearners.TestOnTest:
+            if self.test_data is None:
+                self.warning(2, "Missing separate test data input")
+                return
+
+            elif self.test_data.domain.class_var != \
+                    self.train_data.domain.class_var:
+                self.error(2, ("Inconsistent class variable between test " +
+                               "and train data sets"))
+                return
 
         # items in need of an update
         items = [(key, input) for key, input in self.learners.items()
