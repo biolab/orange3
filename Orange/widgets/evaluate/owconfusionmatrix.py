@@ -2,7 +2,7 @@ import unicodedata
 
 from PyQt4.QtGui import (
     QGridLayout, QLabel, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont
+    QItemSelectionModel, QItemSelection, QFont, QComboBox
 )
 from PyQt4.QtCore import Qt
 
@@ -60,6 +60,8 @@ class OWConfusionMatrix(widget.OWWidget):
         combo = gui.comboBox(box, self, "selected_quantity",
                              items=self.quantities,
                              callback=self._update)
+        combo.setMinimumContentsLength(20)
+        combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
 
         box = gui.widgetBox(self.controlArea, "Selection")
 
@@ -74,7 +76,7 @@ class OWConfusionMatrix(widget.OWWidget):
         gui.checkBox(box, self, "append_predictions",
                      "Append class predictions", callback=self._invalidate)
         gui.checkBox(box, self, "append_probabilities",
-                     "Append predicted class probabilities",
+                     "Append probabilities",
                      callback=self._invalidate)
 
         b = gui.button(box, self, "Commit", callback=self.commit, default=True)
@@ -331,13 +333,13 @@ class VerticalLabel(QLabel):
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
     from Orange.evaluation import testing
-    from Orange.classification import naive_bayes
+    from Orange.classification import tree
 
     app = QApplication([])
     w = OWConfusionMatrix()
     w.show()
     data = Orange.data.Table("iris")
-    res = testing.CrossValidation(data, [naive_bayes.BayesLearner()],
+    res = testing.CrossValidation(data, [tree.ClassificationTreeLearner()],
                                   store_data=True)
     w.set_results(res)
     app.exec_()
