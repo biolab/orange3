@@ -376,6 +376,7 @@ class OWROCAnalysis(widget.OWWidget):
 
         self.plot = pg.PlotItem()
         self.plot.getViewBox().setMenuEnabled(False)
+        self.plot.getViewBox().setMouseEnabled(False, False)
 
         pen = QPen(self.palette().color(QtGui.QPalette.Text))
 
