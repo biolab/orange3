@@ -155,14 +155,29 @@ def plot_curve(curve, pen=None, shadow_pen=None, symbol="+",
 
     :rtype: PlotCurve
     """
-    points = curve.points
-    item = pg.PlotDataItem(
-        points.fpr, points.tpr,
-        pen=pen, shadowPen=shadow_pen,
-        symbol=symbol, symbolSize=symbol_size, symbolPen=shadow_pen,
-        name=name, antialias=True,
+    def extend_to_origin(points):
+        "Extend ROCPoints to include coordinate origin if not already present"
+        if points.tpr.size and (points.tpr[0] > 0 or points.fpr[0] > 0):
+            points = ROCPoints(
+                numpy.r_[0, points.fpr], numpy.r_[0, points.tpr],
+                numpy.r_[points.thresholds[0] + 1, points.thresholds]
+            )
+        return points
+
+    points = extend_to_origin(curve.points)
+    item = pg.PlotCurveItem(
+        points.fpr, points.tpr, pen=pen, shadowPen=shadow_pen,
+        name=name, antialias=True
     )
-    hull = curve.hull
+    sp = pg.ScatterPlotItem(
+        curve.points.fpr, curve.points.tpr, symbol=symbol,
+        size=symbol_size, pen=shadow_pen,
+        name=name
+    )
+    sp.setParentItem(item)
+
+    hull = extend_to_origin(curve.hull)
+
     hull_item = pg.PlotDataItem(
         hull.fpr, hull.tpr, pen=pen, antialias=True
     )
