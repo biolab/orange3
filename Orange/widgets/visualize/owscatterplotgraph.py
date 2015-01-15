@@ -453,8 +453,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 c_data = c_data.copy()
                 c_data[np.isnan(c_data)] = n_colors
                 c_data = c_data.astype(int)
-                colors = palette.getRGB(np.arange(n_colors + 1))
-                colors[n_colors] = (128, 128, 128)
+                colors = np.c_[palette.getRGB(np.arange(n_colors)),
+                               [128, 128, 128]]
                 pens = np.array(
                     [make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])
