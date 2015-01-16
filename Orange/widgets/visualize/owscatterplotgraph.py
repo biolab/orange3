@@ -448,7 +448,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         c_data = self.original_data[color_index, self.valid_data]
         if isinstance(self.data_domain[color_index], ContinuousVariable):
             if self.pen_colors is None:
-                self.scale = DiscretizedScale(np.min(c_data), np.max(c_data))
+                self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
                 c_data -= self.scale.offset
                 c_data /= self.scale.width
                 c_data = np.floor(c_data) + 0.5
