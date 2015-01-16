@@ -149,6 +149,8 @@ class OWScatterPlot(OWWidget):
         dlg = self.create_color_dialog()
         self.graph.continuous_palette = dlg.getContinuousPalette("contPalette")
         self.graph.discrete_palette = dlg.getDiscretePalette("discPalette")
+        dlg.deleteLater()
+
         p = self.graph.plot_widget.palette()
         self.graph.set_palette(p)
 
