@@ -256,8 +256,8 @@ class OWScatterPlot(OWWidget):
         for attr in self.data.domain.variables:
             self.cb_attr_x.addItem(self.icons[attr], attr.name)
             self.cb_attr_y.addItem(self.icons[attr], attr.name)
-            self.cb_attr_color.addItem(self.icons[attr], attr.name)
             if isinstance(attr, DiscreteVariable):
+                self.cb_attr_color.addItem(self.icons[attr], attr.name)
                 self.cb_attr_shape.addItem(self.icons[attr], attr.name)
             else:
                 self.cb_attr_size.addItem(self.icons[attr], attr.name)
