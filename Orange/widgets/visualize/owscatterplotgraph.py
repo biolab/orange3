@@ -281,6 +281,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.view_box = InteractiveViewBox(self)
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
                                          background="w")
+        self.plot_widget.getPlotItem().buttonsHidden = True
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.sizeHint = lambda: QtCore.QSize(500,500)
 
