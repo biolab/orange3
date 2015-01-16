@@ -176,6 +176,8 @@ class DiscretizedScale:
 
 class InteractiveViewBox(ViewBox):
     def __init__(self, graph, enable_menu=False):
+        self.axHistory = []
+        self.axHistoryPointer = -1
         ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
         self.setMouseMode(self.PanMode)
@@ -208,9 +210,30 @@ class InteractiveViewBox(ViewBox):
         else:
             ev.ignore()
 
+    def updateAutoRange(self):
+        # indirectly called by the autorange button on the graph
+        super().updateAutoRange()
+        self.tag_history()
+
+    def tag_history(self):
+        self.axHistoryPointer += 1
+        self.axHistory = self.axHistory[:self.axHistoryPointer] + [ self.viewRect() ]
+
+    def init_history(self):
+        self.axHistory = []
+        self.axHistoryPointer = -1
+        self.tag_history()
+
+    def autoRange(self):
+        super().autoRange()
+        self.tag_history()
+
     def mouseClickEvent(self, ev):
-        ev.accept()
-        self.graph.unselect_all()
+        if ev.button() ==  QtCore.Qt.RightButton: # undo zoom
+            self.scaleHistory(-1)
+        else:
+            ev.accept()
+            self.graph.unselect_all()
 
 
 def _define_symbols():
@@ -352,6 +375,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.update_labels()
         self.make_legend()
         self.plot_widget.replot()
+        self.view_box.init_history()
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
