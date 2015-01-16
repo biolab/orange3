@@ -239,6 +239,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def _learner_changed(self):
         # The selected learner has changed
         self._update()
+        self._invalidate()
 
     def _update(self):
         # Update the displayed confusion matrix
