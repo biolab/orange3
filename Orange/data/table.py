@@ -861,8 +861,6 @@ class Table(MutableSequence, Storage):
         """Return a checksum over X, Y, metas and W."""
         cs = zlib.adler32(self.X)
         cs = zlib.adler32(self.Y, cs)
-        if include_metas:
-            cs = zlib.adler32(self.metas, cs)
         cs = zlib.adler32(self.W, cs)
         return cs
 
