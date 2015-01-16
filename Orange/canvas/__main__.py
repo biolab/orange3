@@ -11,6 +11,7 @@ import logging
 import optparse
 import pickle
 import shlex
+import shutil
 
 import pkg_resources
 
@@ -86,11 +87,13 @@ def main(argv=None):
                       action="store_true",
                       help="Don't run widget discovery "
                            "(use full cache instead)")
-
     parser.add_option("--force-discovery",
                       action="store_true",
                       help="Force full widget discovery "
                            "(invalidate cache)")
+    parser.add_option("--clear-settings",
+                      action="store_true",
+                      help="Remove stored widget setting")
     parser.add_option("--no-welcome",
                       action="store_true",
                       help="Don't show welcome dialog.")
@@ -150,6 +153,11 @@ def main(argv=None):
         qt_argv += shlex.split(options.qt)
 
     qt_argv += args
+
+    if options.clear_settings:
+        log.debug("Clearing widget settings")
+        widget_settings_dir = os.path.join(config.data_dir(), 'widgets')
+        shutil.rmtree(widget_settings_dir, ignore_errors=True)
 
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
