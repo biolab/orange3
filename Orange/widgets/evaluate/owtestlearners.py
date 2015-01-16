@@ -99,7 +99,7 @@ class OWTestLearners(widget.OWWidget):
                  callback=self.bootstrap_changed)
         gui.widgetLabel(ibox, "Relative training set size:")
         gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
-                    ticks=20, vertical=False,
+                    ticks=20, vertical=False, labelFormat="%d %%",
                     callback=self.bootstrap_changed)
 
         gui.appendRadioButton(rbox, "Test on train data")
