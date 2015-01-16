@@ -793,12 +793,12 @@ class OWHierarchicalClustering(widget.OWWidget):
             scene.addItem(ax.line)
             return view, ax
 
-        axview, self.top_axis = axis_view("top")
+        self.top_axis_view, self.top_axis = axis_view("top")
         self.mainArea.layout().setSpacing(1)
-        self.mainArea.layout().addWidget(axview)
+        self.mainArea.layout().addWidget(self.top_axis_view)
         self.mainArea.layout().addWidget(self.view)
-        axview, self.bottom_axis = axis_view("bottom")
-        self.mainArea.layout().addWidget(axview)
+        self.bottom_axis_view, self.bottom_axis = axis_view("bottom")
+        self.mainArea.layout().addWidget(self.bottom_axis_view)
 
         self._main_graphics = QGraphicsWidget()
         self._main_layout = QGraphicsLinearLayout(Qt.Horizontal)
@@ -833,6 +833,8 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.labels, Qt.AlignLeft | Qt.AlignVCenter)
 
         self.view.viewport().installEventFilter(self)
+        self.top_axis_view.viewport().installEventFilter(self)
+        self.bottom_axis_view.viewport().installEventFilter(self)
         self._main_graphics.installEventFilter(self)
 
         self.cut_line = SliderLine(self.dendrogram,
@@ -1051,6 +1053,16 @@ class OWHierarchicalClustering(widget.OWWidget):
             self._main_graphics.setMaximumWidth(width)
             self._main_graphics.setMinimumWidth(width)
             self._main_graphics.layout().activate()
+        elif event.type() == QEvent.MouseButtonPress and \
+                (obj is self.top_axis_view.viewport() or
+                 obj is self.bottom_axis_view.viewport()):
+            self.selection_method = 1
+            # Map click point to cut line local coordinates
+            pos = self.top_axis_view.mapToScene(event.pos())
+            cut = self.top_axis.line.mapFromScene(pos)
+            self.top_axis.line.setValue(cut.x())
+            # update the line visibility, output, ...
+            self._selection_method_changed()
 
         return super().eventFilter(obj, event)
 
