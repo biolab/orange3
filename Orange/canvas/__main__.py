@@ -91,7 +91,7 @@ def main(argv=None):
                       action="store_true",
                       help="Force full widget discovery "
                            "(invalidate cache)")
-    parser.add_option("--clear-settings",
+    parser.add_option("--clear-widget-settings",
                       action="store_true",
                       help="Remove stored widget setting")
     parser.add_option("--no-welcome",
@@ -154,10 +154,9 @@ def main(argv=None):
 
     qt_argv += args
 
-    if options.clear_settings:
+    if options.clear_widget_settings:
         log.debug("Clearing widget settings")
-        widget_settings_dir = os.path.join(config.data_dir(), 'widgets')
-        shutil.rmtree(widget_settings_dir, ignore_errors=True)
+        shutil.rmtree(config.widget_settings_dir(), ignore_errors=True)
 
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
