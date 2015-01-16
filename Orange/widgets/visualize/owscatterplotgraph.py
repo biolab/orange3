@@ -176,8 +176,7 @@ class DiscretizedScale:
 
 class InteractiveViewBox(ViewBox):
     def __init__(self, graph, enable_menu=False):
-        self.axHistory = []
-        self.axHistoryPointer = -1
+        self.init_history()
         ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
         self.setMouseMode(self.PanMode)
@@ -216,17 +215,31 @@ class InteractiveViewBox(ViewBox):
         self.tag_history()
 
     def tag_history(self):
+        #add current view to history if it differs from the last view
+        if self.axHistory:
+            currentview = self.viewRect()
+            lastview = self.axHistory[self.axHistoryPointer]
+            inters = currentview & lastview
+            united = currentview.united(lastview)
+            if inters.width()*inters.height()/(united.width()*united.height()) > 0.95:
+                return
         self.axHistoryPointer += 1
         self.axHistory = self.axHistory[:self.axHistoryPointer] + [ self.viewRect() ]
 
     def init_history(self):
         self.axHistory = []
         self.axHistoryPointer = -1
-        self.tag_history()
 
     def autoRange(self):
         super().autoRange()
         self.tag_history()
+
+    def suggestPadding(self, axis): #no padding so that undo works correcty
+        return 0.
+
+    def scaleHistory(self, d):
+        self.tag_history()
+        super().scaleHistory(d)
 
     def mouseClickEvent(self, ev):
         if ev.button() ==  QtCore.Qt.RightButton: # undo zoom
@@ -374,8 +387,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.update_labels()
         self.make_legend()
-        self.plot_widget.replot()
         self.view_box.init_history()
+        self.plot_widget.replot()
+        self.view_box.autoRange()
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
