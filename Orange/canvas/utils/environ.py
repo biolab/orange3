@@ -137,7 +137,7 @@ def _get_default_env():
     add_ons_dir_user = os.path.join(output_dir, "add-ons")
 
     orange_settings_dir = output_dir
-    widget_settings_dir = os.path.join(output_dir, "widgets")
+    widget_settings_dir = config.widget_settings_dir()
 
     buffer_dir = config.cache_dir()
 
