@@ -1,7 +1,7 @@
 import sys
 
 import numpy as np
-from PyQt4.QtCore import QSize
+from PyQt4.QtCore import QSize, Qt
 from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication, QColor
 
@@ -156,6 +156,32 @@ class OWScatterPlot(OWWidget):
 
         self.zoom_select_toolbar.buttons[OWPlotGUI.SendSelection].setEnabled(
             not self.auto_send_selection)
+
+        def zoom(s):
+            """Zoom in/out by factor `s`."""
+            viewbox = plot.getViewBox()
+            # scaleBy scales the view's bounds (the axis range)
+            viewbox.scaleBy((1 / s, 1 / s))
+
+        def fit_to_view():
+            viewbox = plot.getViewBox()
+            viewbox.autoRange()
+
+        zoom_in = QtGui.QAction(
+            "Zoom in", self, triggered=lambda: zoom(1.25)
+        )
+        zoom_in.setShortcuts([QtGui.QKeySequence(QtGui.QKeySequence.ZoomIn),
+                              QtGui.QKeySequence(self.tr("Ctrl+="))])
+        zoom_out = QtGui.QAction(
+            "Zoom out", self, shortcut=QtGui.QKeySequence.ZoomOut,
+            triggered=lambda: zoom(1 / 1.25)
+        )
+        zoom_fit = QtGui.QAction(
+            "Fit in view", self,
+            shortcut=QtGui.QKeySequence(Qt.ControlModifier | Qt.Key_0),
+            triggered=fit_to_view
+        )
+        self.addActions([zoom_in, zoom_out, zoom_fit])
 
         # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
         #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
@@ -362,8 +388,9 @@ class OWScatterPlot(OWWidget):
         self.reportSection("Graph")
         self.reportImage(self.graph.save_to_file, QSize(400, 400))
 
-#test widget appearance
-if __name__ == "__main__":
+
+def test_main():
+    import sip
     a = QApplication(sys.argv)
     ow = OWScatterPlot()
     ow.show()
@@ -375,3 +402,7 @@ if __name__ == "__main__":
     a.exec()
     #save settings
     ow.saveSettings()
+    sip.delete(ow)
+
+if __name__ == "__main__":
+    test_main()
