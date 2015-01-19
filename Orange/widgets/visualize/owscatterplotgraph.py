@@ -11,7 +11,7 @@ from pyqtgraph.Point import Point
 from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
 from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
-from PyQt4.QtGui import QStaticText, QPainterPath, QTransform
+from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture
 
 from Orange.data import DiscreteVariable, ContinuousVariable
 
@@ -180,6 +180,7 @@ class InteractiveViewBox(ViewBox):
         ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
         self.setMouseMode(self.PanMode)
+        self.grabGesture(Qt.PinchGesture)
 
     def safe_update_scale_box(self, buttonDownPos, currentPos):
         x, y = currentPos
@@ -247,6 +248,28 @@ class InteractiveViewBox(ViewBox):
         else:
             ev.accept()
             self.graph.unselect_all()
+
+    def sceneEvent(self, event):
+        if event.type() == QEvent.Gesture:
+            return self.gestureEvent(event)
+        return super().sceneEvent(event)
+
+    def gestureEvent(self, event):
+        gesture = event.gesture(Qt.PinchGesture)
+        if gesture.state() == Qt.GestureStarted:
+            event.accept(gesture)
+        elif gesture.changeFlags() & QPinchGesture.ScaleFactorChanged:
+            center = self.mapSceneToView(gesture.centerPoint())
+            scale_prev = gesture.lastScaleFactor()
+            scale = gesture.scaleFactor()
+            if scale_prev != 0:
+                scale = scale / scale_prev
+            if scale > 0:
+                self.scaleBy((1 / scale, 1 / scale), center)
+        elif gesture.state() == Qt.GestureFinished:
+            self.tag_history()
+
+        return True
 
 
 def _define_symbols():
