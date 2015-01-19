@@ -11,7 +11,7 @@ from pyqtgraph.Point import Point
 from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
 from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
-from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture
+from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture, QPainter
 
 from Orange.data import DiscreteVariable, ContinuousVariable
 
@@ -270,6 +270,12 @@ class InteractiveViewBox(ViewBox):
             self.tag_history()
 
         return True
+
+
+class ScatterPlotItem(pg.ScatterPlotItem):
+    def paint(self, painter, option, widget=None):
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        super().paint(painter, option, widget)
 
 
 def _define_symbols():
