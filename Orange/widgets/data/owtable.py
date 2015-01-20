@@ -8,9 +8,10 @@ from math import isnan
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from PyQt4.QtGui import QSortFilterProxyModel
+from PyQt4.QtGui import QSortFilterProxyModel, QIdentityProxyModel
 from PyQt4.QtCore import Qt
 
+import Orange.data
 from Orange.data import ContinuousVariable
 from Orange.data.storage import Storage
 from Orange.data.table import Table
@@ -21,51 +22,86 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import colorpalette, datacaching
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.itemmodels import TableModel, SparseTableModel
 
 
-class TableModel(itemmodels.TableModel):
-    #: header data flags
+class RichTableDecorator(QIdentityProxyModel):
     Name, Labels, Icon = 1, 2, 4
 
-    def __init__(self, data, parent=None):
-        super().__init__(data, parent)
-        self._dist = None
-        self._continuous = [isinstance(var, ContinuousVariable)
-                            for var in self.vars]
-        self._header_flags = TableModel.Name
+    def __init__(self, source, parent=None):
+        super().__init__(parent)
+
+        self._header_flags = RichTableDecorator.Name
+        self._labels = []
+        self._continuous = []
+
+        self.setSourceModel(source)
+
+    @property
+    def source(self):
+        return getattr(self.sourceModel(), "source", None)
+
+    @property
+    def vars(self):
+        return getattr(self.sourceModel(), "vars", [])
+
+    def setSourceModel(self, source):
+        if source is not None and \
+                not isinstance(source, itemmodels.TableModel):
+            raise TypeError()
+
+        if source is not None:
+            self._continuous = [isinstance(var, ContinuousVariable)
+                                for var in source.vars]
+            labels = []
+            for var in source.vars:
+                if isinstance(var, Orange.data.Variable):
+                    labels.extend(var.attributes.keys())
+            self._labels = list(sorted(set(labels)))
+        else:
+            self._continuous = []
+            self._labels = []
+
+        super().setSourceModel(source)
 
     def data(self, index, role=Qt.DisplayRole,
              # for faster local lookup
              _BarRole=gui.TableBarItem.BarRole):
         if role == _BarRole and self._continuous[index.column()]:
-            val = super().data(index, self.ValueRole)
-            if isnan(val):
+            val = super().data(index, TableModel.ValueRole)
+            if val is None or isnan(val):
                 return None
 
-            if self._dist is None:
-                self._dist = datacaching.getCached(
-                    self.source, basic_stats.DomainBasicStats,
-                    (self.source, True)
-                )
-            dist = self._dist[index.column()]
-            return (val - dist.min) / (dist.max - dist.min or 1)
+            dist = super().data(index, TableModel.VariableStatsRole)
+            if dist is not None and dist.max > dist.min:
+                return (val - dist.min) / (dist.max - dist.min)
+            else:
+                return None
         else:
             return super().data(index, role)
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            var = self.vars[section]
+            var = super().headerData(
+                section, orientation, TableModel.VariableRole)
+            if var is None:
+                return super().headerData(section, orientation, Qt.DisplayRole)
+
             lines = []
-            if self._header_flags & TableModel.Name:
+            if self._header_flags & RichTableDecorator.Name:
                 lines.append(var.name)
-            if self._header_flags & TableModel.Labels:
+            if self._header_flags & RichTableDecorator.Labels:
                 lines.extend(str(var.attributes.get(label, ""))
                              for label in self._labels)
             return "\n".join(lines)
         elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
-                self._header_flags & TableModel.Icon:
-            var = self.vars[section]
-            return gui.attributeIconDict[var]
+                self._header_flags & RichTableDecorator.Icon:
+            var = super().headerData(
+                section, orientation, TableModel.VariableRole)
+            if var is not None:
+                return gui.attributeIconDict[var]
+            else:
+                return None
         else:
             return super().headerData(section, orientation, role)
 
@@ -79,6 +115,11 @@ class TableModel(itemmodels.TableModel):
 
 
 class TableSortProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._sorted = None
+        self._sort_args = -1, -1
+
     def lessThan(self, left, right):
         vleft = left.data(self.sortRole())
         vright = right.data(self.sortRole())
@@ -86,6 +127,35 @@ class TableSortProxyModel(QSortFilterProxyModel):
         # (note: if left is NaN the comparison is always false)
         return vleft < vright if not isnan(vright) else True
 
+    def sort(self, column, order):
+        current_col, current_order = self._sort_args
+        sortind = None
+
+        if self._sorted is not None and column == current_col:
+            if current_order == Qt.AscendingOrder and \
+                    order == Qt.DescendingOrder or \
+                    current_order == Qt.DescendingOrder and \
+                    order == Qt.AscendingOrder:
+                sortind = self._sorted[::-1]
+        if sorted is None:
+            model = self.sourceModel()
+            if isinstance(model, itemmodels.TableModel):
+                sortind = self._fast_argsort(model.source, column, self.sortRole())
+            else:
+                sortind = self._argsort(model, column, self.sortRole())
+
+            if order == Qt.DescendingOrder:
+                sortind = sorted[::-1]
+        self._sorted = sortind
+
+        self._cache.clear()
+
+        def _fast_argsort(table, column, role):
+            if role == TableModel.ValueRole:
+                column_data = table.get_column(column)
+                return numpy.argsort(column_data.ravel())
+            else:
+                pass
 
 #noinspection PyArgumentList
 class TableViewWithCopy(QtGui.QTableView):
@@ -307,7 +377,12 @@ class OWDataTable(widget.OWWidget):
             view.setModel(None)
             return
 
-        datamodel = TableModel(data)
+#         datamodel = TableModel(data)
+        datamodel = itemmodels.SparseTableModel(data)
+        datamodel = RichTableDecorator(datamodel)
+#         datamodel = itemmodels.SparseTableModel(data)
+#         datamodel.setRichHeaderFlags = lambda v: None
+
         color_schema = self.discPalette if self.color_by_class else None
         if self.show_distributions:
             view.setItemDelegate(
@@ -406,18 +481,17 @@ class OWDataTable(widget.OWWidget):
         "Update the variable labels visibility for `view`"
         model = view.model().sourceModel()
 
-        model.setRichHeaderFlags(
-            TableModel.Labels | TableModel.Name if self.show_attribute_labels
-            else TableModel.Name
-        )
-
         if self.show_attribute_labels:
+            model.setRichHeaderFlags(
+                RichTableDecorator.Labels | RichTableDecorator.Name)
+
             labelnames = set()
             for a in model.source.domain:
                 labelnames.update(a.attributes.keys())
             labelnames = sorted(list(labelnames))
             self.set_corner_text(view, "\n".join([""] + labelnames))
         else:
+            model.setRichHeaderFlags(RichTableDecorator.Name)
             self.set_corner_text(view, "")
 
     def c_show_attribute_labels_clicked(self):
