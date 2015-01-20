@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QLabel, QGridLayout
+from PyQt4.QtGui import QLabel, QGridLayout, QLayout
 from PyQt4.QtCore import Qt
 
 import Orange.data
@@ -120,6 +120,7 @@ class OWRandomForest(widget.OWWidget):
             QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
                               QtGui.QSizePolicy.Fixed)
         )
+        self.layout().setSizeConstraint(QLayout.SetFixedSize)
         self.settingsChanged()
         self.apply()
 
