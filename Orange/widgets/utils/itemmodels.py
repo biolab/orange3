@@ -478,6 +478,10 @@ class ModelActionsWidget(QWidget):
         return self.insertAction(-1, action, *args)
 
 
+from . import datacaching
+from Orange.statistics import basic_stats
+
+
 class TableModel(QAbstractTableModel):
     """
     An adapter for using Orange.data.Table within Qt's Item View Framework.
@@ -491,8 +495,10 @@ class TableModel(QAbstractTableModel):
     ClassValueRole = gui.TableClassValueRole  # next(gui.OrangeUserRole)
     #: Orange.data.Variable of the column.
     VariableRole = gui.TableVariable  # next(gui.OrangeUserRole)
+    #: Basic statistics of the column
+    VariableStatsRole = next(gui.OrangeUserRole)
     #: The column's role (position) in the domain.
-    #: One of `Attribute. ClassVar, Meta
+    #: One of `Attribute, ClassVar, Meta
     DomainRole = next(gui.OrangeUserRole)
 
     #: Column domain roles
@@ -533,6 +539,9 @@ class TableModel(QAbstractTableModel):
             return self.source[index]
 
         self._row_instance = row_instance
+        # column basic statistics (VariableStatsRole), computed when
+        # first needed.
+        self._stats = None
 
     def data(self, index, role,
              # For optimizing out LOAD_GLOBAL byte code instructions in
@@ -545,6 +554,7 @@ class TableModel(QAbstractTableModel):
              _ClassValueRole=ClassValueRole,
              _VariableRole=VariableRole,
              _DomainRole=DomainRole,
+             _VariableStatsRole=VariableStatsRole,
              # Some cached local precomputed values.
              # All of the above roles we respond to
              _recognizedRoles=set([Qt.DisplayRole,
@@ -553,7 +563,8 @@ class TableModel(QAbstractTableModel):
                                    ValueRole,
                                    ClassValueRole,
                                    VariableRole,
-                                   DomainRole]),
+                                   DomainRole,
+                                   VariableStatsRole]),
              ):
 
         row, col = index.row(), index.column()
@@ -580,6 +591,8 @@ class TableModel(QAbstractTableModel):
             return var
         elif role == _DomainRole:
             return self._column_roles[col]
+        elif role == _VariableStatsRole:
+            return self._stats_for_column(col)
         else:
             return None
 
@@ -610,6 +623,22 @@ class TableModel(QAbstractTableModel):
         else:
             return len(self.vars)
 
+    def headerData(self, section, orientation, role):
+        if orientation == Qt.Vertical:
+            return section + 1 if role == Qt.DisplayRole else None
+
+        var = self.vars[section]
+        if role == Qt.DisplayRole:
+            return var.name
+        elif role == Qt.ToolTipRole:
+            return self._tooltip(var, self._labels)
+        elif role == TableModel.VariableRole:
+            return var
+        elif role == TableModel.VariableStatsRole:
+            return self._stats_for_column(section)
+        else:
+            return None
+
     def _tooltip(self, variable, labels=None):
         """
         Return an header tool tip text for an `Orange.data.Variable` instance.
@@ -624,19 +653,13 @@ class TableModel(QAbstractTableModel):
         tip = "<br/>".join([tip] + ["%s = %s" % pair for pair in pairs])
         return tip
 
-    def headerData(self, section, orientation, role):
-        if orientation == Qt.Vertical:
-            return section + 1 if role == Qt.DisplayRole else None
-
-        var = self.vars[section]
-        if role == Qt.DisplayRole:
-            return var.name
-        elif role == Qt.ToolTipRole:
-            return self._tooltip(var, self._labels)
-        elif role == TableModel.VariableRole:
-            return var
-        else:
-            return None
+    def _stats_for_column(self, column):
+        if self._stats is None:
+            self._stats = datacaching.getCached(
+                self.source, basic_stats.DomainBasicStats,
+                (self.source, True)
+            )
+        return self._stats[column]
 
 from collections import namedtuple
 from Orange.data import Storage
@@ -761,3 +784,12 @@ class SparseTableModel(TableModel):
             return self._column_roles[col]
         else:
             return None
+
+    def _stats_for_column(self, column):
+        if self._stats is None:
+            self._stats = datacaching.getCached(
+                self.source, basic_stats.DomainBasicStats,
+                (self.source, True)
+            )
+        var = self.vars[column]
+        return self._stats[var]
