@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
+
 import Orange.data
 from Orange.classification import random_forest
 from Orange.widgets import widget, settings, gui
@@ -17,6 +18,7 @@ class OWRandomForest(widget.OWWidget):
                ("Classifier", random_forest.RandomForestClassifier)]
 
     want_main_area = False
+
     learner_name = settings.Setting("Random Forest Learner")
     n_estimators = settings.Setting(10)
     max_features = settings.Setting(5)
@@ -83,9 +85,8 @@ class OWRandomForest(widget.OWWidget):
         self._max_leaf_nodes_spin = max_leaf_nodes_spin
 
         # Index on the output
-        gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1, label="Index of tree on the output")
+#         gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1, label="Index of tree on the output")
 
-        # Apply
         gui.button(self.controlArea, self, "&Apply",
                    callback=self.apply, default=True)
 
@@ -94,7 +95,6 @@ class OWRandomForest(widget.OWWidget):
                               QtGui.QSizePolicy.Fixed)
         )
 
-        self.setMinimumWidth(300)
         self.settingsChanged()
         self.apply()
 
@@ -108,17 +108,22 @@ class OWRandomForest(widget.OWWidget):
     def apply(self):
         common_args = dict()
         common_args["n_estimators"] = self.n_estimators
-        if self.use_max_features: common_args["max_features"] = self.max_features
-        if self.use_random_state: common_args["random_state"] = self.random_state
-        if self.use_max_depth: common_args["max_depth"] = self.max_depth
-        if self.use_max_leaf_nodes: common_args["max_leaf_nodes"] = self.max_leaf_nodes
-        common_args["index_output"] = self.index_output
+        if self.use_max_features:
+            common_args["max_features"] = self.max_features
+        if self.use_random_state:
+            common_args["random_state"] = self.random_state
+        if self.use_max_depth:
+            common_args["max_depth"] = self.max_depth
+        if self.use_max_leaf_nodes:
+            common_args["max_leaf_nodes"] = self.max_leaf_nodes
+
         learner = random_forest.RandomForestLearner(**common_args)
         learner.name = self.learner_name
         classifier = None
         if self.data is not None:
             classifier = learner(self.data)
             classifier.name = self.learner_name
+
         self.send("Learner", learner)
         self.send("Classifier", classifier)
 
@@ -127,7 +132,6 @@ class OWRandomForest(widget.OWWidget):
         self._random_state_spin.setEnabled(self.use_random_state)
         self._max_depth_spin.setEnabled(self.use_max_depth)
         self._max_leaf_nodes_spin.setEnabled(self.use_max_leaf_nodes)
-
 
 
 if __name__ == "__main__":
