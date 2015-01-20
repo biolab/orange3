@@ -542,6 +542,8 @@ class TableModel(QAbstractTableModel):
         # column basic statistics (VariableStatsRole), computed when
         # first needed.
         self._stats = None
+        self.__rowCount = len(sourcedata)
+        self.__columnCount = len(self.vars)
 
     def data(self, index, role,
              # For optimizing out LOAD_GLOBAL byte code instructions in
@@ -612,16 +614,10 @@ class TableModel(QAbstractTableModel):
         return QModelIndex()
 
     def rowCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        else:
-            return len(self.source)
+        return 0 if parent.isValid() else self.__rowCount
 
     def columnCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        else:
-            return len(self.vars)
+        return 0 if parent.isValid() else self.__columnCount
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Vertical:
@@ -713,12 +709,10 @@ class SparseTableModel(TableModel):
 
         self._background = background
         self._column_roles = columnroles
+        self.__columnCount = len(self.vars)
 
     def columnCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        else:
-            return len(self.vars)
+        return 0 if parent.isValid() else self.__columnCount
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Vertical:
