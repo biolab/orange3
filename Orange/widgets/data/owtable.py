@@ -112,7 +112,8 @@ class RichTableDecorator(QIdentityProxyModel):
     def setRichHeaderFlags(self, flags):
         if flags != self._header_flags:
             self._header_flags = flags
-            self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount())
+            self.headerDataChanged.emit(
+                Qt.Horizontal, 0, self.columnCount() - 1)
 
     def richHeaderFlags(self):
         return self._header_flags
@@ -651,6 +652,10 @@ class OWDataTable(widget.OWWidget):
                 table.efc = efc()
                 btn.installEventFilter(table.efc)
                 table.btn = btn
+
+                if sys.platform == "darwin":
+                    btn.setAttribute(Qt.WA_MacSmallSize)
+
             except Exception:
                 table.btnfailed = True
 
