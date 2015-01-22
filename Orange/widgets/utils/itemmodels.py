@@ -28,11 +28,11 @@ class _store(dict):
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
     if key is not None:
-        items = sorted(enumerate(seq), key=lambda i, v: key(v))
+        items = sorted(enumerate(seq), key=lambda pair: key(pair[1]))
     elif cmp is not None:
         items = sorted(enumerate(seq), cmp=lambda a, b: cmp(a[1], b[1]))
     else:
-        items = sorted(enumerate(seq), key=seq.__getitem__)
+        items = sorted(enumerate(seq), key=operator.itemgetter(1))
     if reverse:
         items = reversed(items)
     return items
