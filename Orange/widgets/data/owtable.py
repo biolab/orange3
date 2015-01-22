@@ -1,6 +1,5 @@
 import sys
 import threading
-import traceback
 import io
 import csv
 import functools
@@ -359,31 +358,9 @@ def mergeindices(indices):
         yield range(group[0], group[-1] + 1)
 
 
-#noinspection PyArgumentList
-class TableViewWithCopy(QtGui.QTableView):
-
-    def keyPressEvent(self, event):
-        if event == QtGui.QKeySequence.Copy:
-            sel_model = self.selectionModel()
-            #noinspection PyBroadException
-            try:
-                self.copy_selection_to_clipboard(sel_model)
-            except Exception:
-                traceback.print_exc(file=sys.stderr)
-        else:
-            return QtGui.QTableView.keyPressEvent(self, event)
-
-    def copy_selection_to_clipboard(self, selection_model):
-        """
-        Copy table selection to the clipboard.
-        """
-        mime = table_selection_to_mime_data(self)
-        QtGui.QApplication.clipboard().setMimeData(
-            mime, QtGui.QClipboard.Clipboard
-        )
-
-
 def table_selection_to_mime_data(table):
+    """Copy the current selection in a QTableView to the clipboard.
+    """
     lines = table_selection_to_list(table)
 
     csv = lines_to_csv_string(lines, dialect="excel")
@@ -500,6 +477,10 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
+        copy = QtGui.QAction("Copy", self, shortcut=QtGui.QKeySequence.Copy,
+                             triggered=self.copy)
+        self.addAction(copy)
+
     def sizeHint(self):
         return QtCore.QSize(800, 500)
 
@@ -532,7 +513,7 @@ class OWDataTable(widget.OWWidget):
 
             self.datasets[tid] = data
 
-            table = TableViewWithCopy()
+            table = QtGui.QTableView()
             table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
             table.setSortingEnabled(True)
             table.setHorizontalScrollMode(QtGui.QTableWidget.ScrollPerPixel)
@@ -543,13 +524,16 @@ class OWDataTable(widget.OWWidget):
             header.setSortIndicatorShown(True)
             header.setSortIndicator(-1, Qt.AscendingOrder)
 
+            # QHeaderView does not 'reset' the model sort column,
+            # because there is no guaranty (requirement) that the
+            # models understand the -1 sort column.
             header.sortIndicatorChanged.connect(
                 lambda index, order:
                     table.model().sort(index, order) if index == -1 else 0
             )
+            table.dataset = data
             self.views[tid] = table
-            data_name = getattr(data, "name", "")
-            self.tabs.addTab(table, data_name)
+            self.tabs.addTab(table, getattr(data, "name", ""))
 
             self._setup_table_view(table, data)
 
@@ -558,14 +542,15 @@ class OWDataTable(widget.OWWidget):
             self.send_button.setEnabled(not self.auto_commit)
 
         elif tid in self.datasets:
-            table = self.id2table[tid]
-            table = self.views[tid]
             self.datasets.pop(tid)
-            table.hide()
-            self.tabs.removeTab(self.tabs.indexOf(table))
+            view = self.views.pop(tid)
+            view.hide()
+            view.deleteLater()
+            self.tabs.removeTab(self.tabs.indexOf(view))
 
-            self.set_info(self.datasets.get(self.table2id.get(
-                self.tabs.currentWidget(), None), None))
+            current = self.tabs.currentWidget()
+            if current is not None:
+                self.set_info(current.dataset)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
 
@@ -604,7 +589,6 @@ class OWDataTable(widget.OWWidget):
         proxy.setSortRole(TableModel.ValueRole)
         proxy.setSourceModel(datamodel)
 
-        proxy.examples = data
         proxy.source = data
         view.setModel(proxy)
 
@@ -859,6 +843,17 @@ class OWDataTable(widget.OWWidget):
         self.send("Other Data", other_data)
 
         self.selectionChangedFlag = False
+
+    def copy(self):
+        """
+        Copy current table selection to the clipboard.
+        """
+        view = self.tabs.currentWidget()
+        if view is not None:
+            mime = table_selection_to_mime_data(view)
+            QtGui.QApplication.clipboard().setMimeData(
+                mime, QtGui.QClipboard.Clipboard
+            )
 
 
 def test_main():
