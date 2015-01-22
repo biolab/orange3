@@ -413,6 +413,8 @@ class OWDataTable(widget.OWWidget):
     dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
     auto_commit = Setting(True)
+
+    color_settings = Setting(None)
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
@@ -423,8 +425,6 @@ class OWDataTable(widget.OWWidget):
         self.views = {}
 
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
-
-        self.color_settings = None
         self.selectionChangedFlag = False
 
         info_box = gui.widgetBox(self.controlArea, "Info")
@@ -489,7 +489,7 @@ class OWDataTable(widget.OWWidget):
         c.createDiscretePalette("discPalette", "Discrete Palette")
         box = c.createBox("otherColors", "Other Colors")
         c.createColorButton(box, "Default", "Default color",
-                            QtGui.QColor(QtCore.Qt.white))
+                            QtGui.QColor(self.dist_color))
         c.setColorSchemas(self.color_settings, self.selected_schema_index)
         return c
 
@@ -499,7 +499,13 @@ class OWDataTable(widget.OWWidget):
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.discPalette = dlg.getDiscretePalette("discPalette")
-            self.dist_color_RGB = dlg.getColor("Default")
+            self.dist_color = QtGui.QColor(dlg.getColor("Default"))
+            self.dist_color_RGB = (
+                self.dist_color.red(), self.dist_color.green(),
+                self.dist_color.blue(), self.dist_color.alpha()
+            )
+            if self.show_distributions:
+                self.cb_show_distributions()
 
     def set_dataset(self, data, tid=None):
         "Set the input dataset"

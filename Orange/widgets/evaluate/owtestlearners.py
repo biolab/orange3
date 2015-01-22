@@ -91,16 +91,16 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "k_folds", 2, 50, label="Number of folds:",
-                 callback=self._param_changed)
+                 callback=self.kfold_changed)
         gui.appendRadioButton(rbox, "Leave one out")
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test",
-                 callback=self._param_changed)
+                 callback=self.bootstrap_changed)
         gui.widgetLabel(ibox, "Relative training set size:")
         gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
-                    ticks=20, vertical=False,
-                    callback=self._param_changed)
+                    ticks=20, vertical=False, labelFormat="%d %%",
+                    callback=self.bootstrap_changed)
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
@@ -160,6 +160,14 @@ class OWTestLearners(widget.OWWidget):
     def handleNewSignals(self):
         self.update_results()
         self.commit()
+
+    def kfold_changed(self):
+        self.resampling = OWTestLearners.KFold
+        self._param_changed()
+
+    def bootstrap_changed(self):
+        self.resampling = OWTestLearners.Bootstrap
+        self._param_changed()
 
     def _param_changed(self):
         self._invalidate()

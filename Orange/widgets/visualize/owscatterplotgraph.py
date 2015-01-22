@@ -11,7 +11,7 @@ from pyqtgraph.Point import Point
 from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
 from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
-from PyQt4.QtGui import QStaticText, QPainterPath, QTransform
+from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture, QPainter
 
 from Orange.data import DiscreteVariable, ContinuousVariable
 
@@ -176,9 +176,11 @@ class DiscretizedScale:
 
 class InteractiveViewBox(ViewBox):
     def __init__(self, graph, enable_menu=False):
+        self.init_history()
         ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
         self.setMouseMode(self.PanMode)
+        self.grabGesture(Qt.PinchGesture)
 
     def safe_update_scale_box(self, buttonDownPos, currentPos):
         x, y = currentPos
@@ -208,9 +210,72 @@ class InteractiveViewBox(ViewBox):
         else:
             ev.ignore()
 
+    def updateAutoRange(self):
+        # indirectly called by the autorange button on the graph
+        super().updateAutoRange()
+        self.tag_history()
+
+    def tag_history(self):
+        #add current view to history if it differs from the last view
+        if self.axHistory:
+            currentview = self.viewRect()
+            lastview = self.axHistory[self.axHistoryPointer]
+            inters = currentview & lastview
+            united = currentview.united(lastview)
+            if inters.width()*inters.height()/(united.width()*united.height()) > 0.95:
+                return
+        self.axHistoryPointer += 1
+        self.axHistory = self.axHistory[:self.axHistoryPointer] + [ self.viewRect() ]
+
+    def init_history(self):
+        self.axHistory = []
+        self.axHistoryPointer = -1
+
+    def autoRange(self):
+        super().autoRange()
+        self.tag_history()
+
+    def suggestPadding(self, axis): #no padding so that undo works correcty
+        return 0.
+
+    def scaleHistory(self, d):
+        self.tag_history()
+        super().scaleHistory(d)
+
     def mouseClickEvent(self, ev):
-        ev.accept()
-        self.graph.unselect_all()
+        if ev.button() ==  QtCore.Qt.RightButton: # undo zoom
+            self.scaleHistory(-1)
+        else:
+            ev.accept()
+            self.graph.unselect_all()
+
+    def sceneEvent(self, event):
+        if event.type() == QEvent.Gesture:
+            return self.gestureEvent(event)
+        return super().sceneEvent(event)
+
+    def gestureEvent(self, event):
+        gesture = event.gesture(Qt.PinchGesture)
+        if gesture.state() == Qt.GestureStarted:
+            event.accept(gesture)
+        elif gesture.changeFlags() & QPinchGesture.ScaleFactorChanged:
+            center = self.mapSceneToView(gesture.centerPoint())
+            scale_prev = gesture.lastScaleFactor()
+            scale = gesture.scaleFactor()
+            if scale_prev != 0:
+                scale = scale / scale_prev
+            if scale > 0:
+                self.scaleBy((1 / scale, 1 / scale), center)
+        elif gesture.state() == Qt.GestureFinished:
+            self.tag_history()
+
+        return True
+
+
+class ScatterPlotItem(pg.ScatterPlotItem):
+    def paint(self, painter, option, widget=None):
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        super().paint(painter, option, widget)
 
 
 def _define_symbols():
@@ -258,6 +323,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.view_box = InteractiveViewBox(self)
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
                                          background="w")
+        self.plot_widget.getPlotItem().buttonsHidden = True
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.sizeHint = lambda: QtCore.QSize(500,500)
 
@@ -351,7 +417,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.update_labels()
         self.make_legend()
+        self.view_box.init_history()
         self.plot_widget.replot()
+        self.view_box.autoRange()
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
@@ -424,7 +492,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         c_data = self.original_data[color_index, self.valid_data]
         if isinstance(self.data_domain[color_index], ContinuousVariable):
             if self.pen_colors is None:
-                self.scale = DiscretizedScale(np.min(c_data), np.max(c_data))
+                self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
                 c_data -= self.scale.offset
                 c_data /= self.scale.width
                 c_data = np.floor(c_data) + 0.5
@@ -453,8 +521,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 c_data = c_data.copy()
                 c_data[np.isnan(c_data)] = n_colors
                 c_data = c_data.astype(int)
-                colors = palette.getRGB(np.arange(n_colors + 1))
-                colors[n_colors] = (128, 128, 128)
+                colors = np.r_[palette.getRGB(np.arange(n_colors)),
+                               [[128, 128, 128]]]
                 pens = np.array(
                     [make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])

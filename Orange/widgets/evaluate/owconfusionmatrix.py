@@ -144,10 +144,12 @@ class OWConfusionMatrix(widget.OWWidget):
             self._update()
 
     def clear(self):
-        self.learners = []
         self.results = None
         self.data = None
         self.tablemodel.clear()
+        # Clear learners last. This action will invoke `_learner_changed`
+        # method
+        self.learners = []
 
     def select_correct(self):
         selection = QItemSelection()
@@ -179,7 +181,8 @@ class OWConfusionMatrix(widget.OWWidget):
         self.tableview.selectionModel().clear()
 
     def commit(self):
-        if self.results and self.data:
+        if self.results is not None and self.data is not None \
+                and self.selected_learner:
             indices = self.tableview.selectedIndexes()
             indices = {(ind.row(), ind.column()) for ind in indices}
             actual = self.results.actual
@@ -239,6 +242,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def _learner_changed(self):
         # The selected learner has changed
         self._update()
+        self._invalidate()
 
     def _update(self):
         # Update the displayed confusion matrix
