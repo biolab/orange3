@@ -423,7 +423,7 @@ class Table(MutableSequence, Storage):
             data = io.BasketReader().read_file(absolute_filename, cls)
         else:
             raise IOError(
-                'Extension "{}" is not recognized'.format(filename))
+                'Extension "{}" is not recognized'.format(ext))
 
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         return data
