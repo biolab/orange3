@@ -61,7 +61,7 @@ class OWTestLearners(widget.OWWidget):
               ("Test Data", Orange.data.Table, "set_test_data")]
 
     outputs = [("Evaluation Results", testing.Results)]
-
+    
     #: Resampling/testing types
     KFold, LeaveOneOut, Bootstrap, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
 
@@ -73,6 +73,8 @@ class OWTestLearners(widget.OWWidget):
     n_repeat = settings.Setting(10)
     #: Bootstrap sampling p
     sample_p = settings.Setting(75)
+    #: Class selection
+    class_selection = settings.Setting(0)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -104,7 +106,18 @@ class OWTestLearners(widget.OWWidget):
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
-
+        
+        self.attrClassSelectionCombo = gui.comboBox(rbox, 
+            self, 
+            value="class_selection", 
+            box="Select class",
+            orientation="horizontal", 
+            callback = self._select_class, 
+            sendSelectedValue = 1, 
+            valueType = str, 
+            labelWidth = 70)
+        
+        self.class_selection = '(All)'
         rbox.layout().addSpacing(5)
         gui.button(rbox, self, "Apply", callback=self.apply)
 
@@ -229,9 +242,19 @@ class OWTestLearners(widget.OWWidget):
             )
         else:
             assert False
-
-        results = list(split_by_model(results))
+        
         class_var = self.train_data.domain.class_var
+
+        if is_discrete(class_var) and self.class_selection != "(All)":
+            class_values = class_var.values
+            class_indexes = np.where(np.array(class_values) == self.class_selection)[0]
+            if len(class_indexes) > 0:
+                class_ = class_indexes[0]
+                results = list(split_by_model_class(results, class_))
+            else:
+                results = list(split_by_model(results))
+        else:
+            results = list(split_by_model(results))
         
         if is_discrete(class_var):
             test_stats = classification_stats
@@ -239,6 +262,7 @@ class OWTestLearners(widget.OWWidget):
             test_stats = regression_stats
         
         self._update_header()
+        self._update_class_selector()
         
         stats = [test_stats(res) for res in results]
         for (key, input), res, stat in zip(items, results, stats):
@@ -279,6 +303,25 @@ class OWTestLearners(widget.OWWidget):
                 row.append(item)
             model.appendRow(row)
 
+    def _update_class_selector(self):
+        previous_class_selection = self.class_selection
+        self.attrClassSelectionCombo.clear()
+        
+        if self.train_data != None:
+            class_var = self.train_data.domain.class_var
+            class_values = None
+            
+            if is_discrete(class_var):
+                class_values = class_var.values
+                self.attrClassSelectionCombo.addItem('(All)')
+                for val in class_values:
+                    self.attrClassSelectionCombo.addItem(val)
+            
+            self.class_selection = previous_class_selection
+    
+    def _select_class(self):
+        self.update_results()
+    
     def _invalidate(self, which=None):
         if which is None:
             which = self.learners.keys()
@@ -316,6 +359,31 @@ class OWTestLearners(widget.OWWidget):
 def learner_name(learner):
     return getattr(learner, "name", type(learner).__name__)
 
+
+def split_by_model_class(results, class_):
+    """
+    Split evaluation results by models
+    """
+    data = results.data
+    nmethods = len(results.predicted)
+    for i in range(nmethods):
+        res = testing.Results()
+        res.data = data
+        res.row_indices = results.row_indices
+        
+        res.actual = (results.actual == class_).astype(int)
+        res.predicted = (results.predicted[(i,), :] == class_).astype(int)
+        
+        if results.probabilities is not None:
+            res.probabilities = results.probabilities[(i,), :, :]
+
+        if results.models:
+            res.models = [mf[i] for mf in results.models]
+
+        if results.folds:
+            res.folds = results.folds
+
+        yield res
 
 def split_by_model(results):
     """
@@ -393,6 +461,7 @@ def Precision(results):
 def Recall(results):
     return _skl_metric(results, sklearn.metrics.recall_score)
 
+
 def multi_class_auc(results):
     number_of_classes = len(results.data.domain.class_var.values)
     N = results.actual.shape[0]
@@ -405,8 +474,8 @@ def multi_class_auc(results):
     auc_array = np.array([np.mean(np.fromiter(
         (sklearn.metrics.roc_auc_score(results.actual == class_, predicted)
         for predicted in results.predicted == class_),
-        dtype=np.float64, count=len(results.predicted))) 
-        for class_ in range(number_of_classes)])
+        dtype=np.float64, count=len(results.predicted))) if class_count > 0 else 0.0 
+        for class_, class_count in enumerate(class_cases)])
     
     return np.array([np.sum(auc_array*weights_norm)])
     
@@ -415,7 +484,6 @@ def AUC(results):
         return _skl_metric(results, sklearn.metrics.roc_auc_score)
     else:
         return multi_class_auc(results)
-
 
 def F1(results):
     return _skl_metric(results, sklearn.metrics.f1_score)
