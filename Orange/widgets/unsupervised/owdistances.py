@@ -60,12 +60,19 @@ class OWDistances(widget.OWWidget):
         self.commit()
 
     def commit(self):
+        self.warning(1)
+        self.error(1)
+
         distances = None
         if self.data is not None:
             metric = _METRICS[self.metric_idx][1]
-            X = self.data
-            X = distance._impute(X)
-            distances = metric(X, X, 1-self.axis)
+            X = distance._preprocess(self.data)
+            if len(X.domain.attributes) == 0:
+                self.error(1, "No continuous features")
+            elif len(self.data.domain.attributes) - len(X.domain.attributes) > 0:
+                self.warning(1, "Ignoring categoric features")
+            if len(X.domain.attributes) != 0:
+                distances = metric(X, X, 1-self.axis)
 
         self.send("Distances", distances)
 
