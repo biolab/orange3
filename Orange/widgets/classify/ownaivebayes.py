@@ -11,7 +11,9 @@ from Orange.widgets import widget, gui, settings
 class OWNaiveBayes(widget.OWWidget):
     name = "Naive Bayes"
     icon = "icons/NaiveBayes.svg"
-    inputs = [("Data", Orange.data.Table, "setData")]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.data.preprocess.Preprocess,
+               "set_preprocessor")]
     outputs = [
        ("Learner", Orange.classification.naive_bayes.BayesLearner),
        ("Classifier", Orange.classification.naive_bayes.BayesClassifier)
@@ -34,6 +36,7 @@ class OWNaiveBayes(widget.OWWidget):
                    callback=self.apply)
 
         self.data = None
+        self.preprocessors = None
 
         self.initialize()
 
@@ -46,7 +49,7 @@ class OWNaiveBayes(widget.OWWidget):
         self.send("Learner", learner)
         self.send("Classifier", None)
 
-    def setData(self, data):
+    def set_data(self, data):
         self.data = data
         if data is not None:
             self.apply()
@@ -55,7 +58,9 @@ class OWNaiveBayes(widget.OWWidget):
 
     def apply(self):
         classifier = None
-        learner = Orange.classification.naive_bayes.BayesLearner()
+        learner = Orange.classification.naive_bayes.BayesLearner(
+            preprocessors=self.preprocessors)
+
         learner.name = self.learner_name
 
         if self.data is not None:
@@ -64,3 +69,10 @@ class OWNaiveBayes(widget.OWWidget):
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()

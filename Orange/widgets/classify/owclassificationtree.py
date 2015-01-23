@@ -9,7 +9,11 @@ class OWClassificationTree(widget.OWWidget):
     name = "Classification Tree"
     icon = "icons/ClassificationTree.svg"
     priority = 30
-    inputs = [("Data", Orange.data.Table, "set_data")]
+
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.data.preprocess.Preprocess,
+               "set_preprocessor")]
+
     outputs = [
         ("Learner", tree.ClassificationTreeLearner),
         ("Classification Tree", tree.ClassificationTreeClassifier)
@@ -24,7 +28,7 @@ class OWClassificationTree(widget.OWWidget):
     min_internal = Setting(5)
     limit_depth = Setting(True)
     max_depth = Setting(100)
-    
+
     scores = (("Entropy", "entropy"), ("Gini Index", "gini"))
 
     def __init__(self):
@@ -32,7 +36,7 @@ class OWClassificationTree(widget.OWWidget):
 
         self.data = None
         self.learner = None
-        self.preprocessor = None
+        self.preprocessors = None
         self.classifier = None
 
         gui.lineEdit(self.controlArea, self, 'model_name', box='Name',
@@ -74,19 +78,16 @@ class OWClassificationTree(widget.OWWidget):
               or ": None")])
         self.reportData(self.data)
 
-    def set_preprocessor(self, preprocessor):
-        self.preprocessor = preprocessor
-        self.set_learner()
-
     def set_learner(self):
-        self.btn_apply.setFocus()
         self.learner = tree.ClassificationTreeLearner(
             criterion=self.scores[self.attribute_score][1],
             max_depth=self.max_depth,
-            min_samples_split=self.min_internal, min_samples_leaf=self.min_leaf)
+            min_samples_split=self.min_internal,
+            min_samples_leaf=self.min_leaf,
+            preprocessors=self.preprocessors)
+
         self.learner.name = self.model_name
-        if self.preprocessor:
-            self.learner = self.preprocessor.wrapLearner(self.learner)
+
         self.send("Learner", self.learner)
 
         self.error(1)
@@ -110,6 +111,12 @@ class OWClassificationTree(widget.OWWidget):
             self.data = None
         self.set_learner()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.set_learner()
 
 if __name__ == "__main__":
     import sys

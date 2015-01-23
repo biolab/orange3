@@ -16,7 +16,10 @@ class OWSGDRegression(widget.OWWidget):
 
     inputs = [{"name": "Data",
                "type": Orange.data.Table,
-               "handler": "set_data"}]
+               "handler": "set_data"},
+              {"name": "Preprocessor",
+               "type": Orange.data.preprocess.Preprocess,
+               "handler": "set_preprocessor"}]
     outputs = [{"name": "Learner",
                 "type": linear.SGDRegressionLearner},
                {"name": "Predictor",
@@ -47,6 +50,7 @@ class OWSGDRegression(widget.OWWidget):
         super().__init__(parent)
 
         self.data = None
+        self.preprocessors = None
 
         box = gui.widgetBox(self.controlArea, self.tr("Name"))
         gui.lineEdit(box, self, "learner_name")
@@ -150,6 +154,13 @@ class OWSGDRegression(widget.OWWidget):
         if data is not None:
             self.apply()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()
+
     def apply(self):
         loss = ["squared_loss", "huber", "epsilon_insensitive", "squared_epsilon_insensitive"][self.loss_function]
         penalty = ["l1", "l2", "elasticnet"][self.penalty_type]
@@ -166,7 +177,8 @@ class OWSGDRegression(widget.OWWidget):
             n_iter=self.n_iter,
         )
 
-        learner = linear.SGDRegressionLearner(**common_args)
+        learner = linear.SGDRegressionLearner(
+            preprocessors=self.preprocessors, **common_args)
         learner.name = self.learner_name
 
         predictor = None

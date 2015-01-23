@@ -5,6 +5,7 @@ import scipy
 import bottlechest as bn
 
 import Orange.data
+import Orange.data.preprocess
 
 
 class Fitter:
