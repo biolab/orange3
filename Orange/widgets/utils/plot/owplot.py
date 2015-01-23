@@ -838,7 +838,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
         c.set_point_symbols(shape_data)
         if len(marked_data):
             c.set_points_marked(marked_data)
-            self.emit(SIGNAL('marked_points_changed()'))
+            self.marked_points_changed.emit()
         c.name = 'Main Curve'
 
         self.replot()
@@ -1255,7 +1255,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
         point = self.mapToScene(event.pos())
         if not self._pressed_mouse_button:
             if self.receivers(SIGNAL('point_hovered(Point*)')) > 0:
-                self.emit(SIGNAL('point_hovered(Point*)'), self.nearest_point(point))
+                self.point_hovered.emit(self.nearest_point(point))
 
         ## We implement a workaround here, because sometimes mouseMoveEvents are not fast enough
         ## so the moving legend gets left behind while dragging, and it's left in a pressed state
@@ -1355,11 +1355,11 @@ class OWPlot(orangeqt.Plot, OWComponent):
 
             if point_item:
                 point_item.set_selected(b == self.AddSelection or (b == self.ToggleSelection and not point_item.is_selected()))
-            self.emit(SIGNAL('selection_changed()'))
+            self.selection_changed.emit()
         elif a == SELECT and b == Qt.RightButton:
             point_item = self.nearest_point(point)
             if point_item:
-                self.emit(SIGNAL('point_rightclicked(Point*)'), self.nearest_point(point))
+                self.point_rightclicked.emit(self.nearest_point(point))
             else:
                 self.unselect_all_points()
         else:

@@ -31,7 +31,7 @@ from Orange.widgets import gui
 from .owconstants import *
 
 from PyQt4.QtGui import QWidget, QToolButton, QGroupBox, QVBoxLayout, QHBoxLayout, QIcon, QMenu, QAction
-from PyQt4.QtCore import Qt, pyqtSignal, QObject, SIGNAL, SLOT
+from PyQt4.QtCore import Qt, pyqtSignal, QObject, SLOT
 
 
 class OrientedWidget(QWidget):
@@ -193,8 +193,9 @@ class OWButton(QToolButton):
 
     def setDown(self, down):
         if self.isDown() != down:
-            self.emit(SIGNAL("downChanged(bool)"), down)
+            self.downChanged[bool].emit(down)
         QToolButton.setDown(self, down)
+
 
 class OWPlotGUI:
     '''

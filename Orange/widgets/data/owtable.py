@@ -7,6 +7,7 @@ from functools import reduce
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtGui import QItemSelectionModel, QItemSelection
+from PyQt4.QtCore import QModelIndex
 
 from Orange.data import ContinuousVariable
 from Orange.data.storage import Storage
@@ -75,14 +76,14 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
         return self._show_attr_labels
 
     def set_show_attr_labels(self, val):
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.layoutAboutToBeChanged.emit()
         self._show_attr_labels = val
-        self.emit(QtCore.SIGNAL("headerDataChanged(Qt::Orientation, int, int)"),
-                  QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
+        self.headerDataChanged[QtCore.Qt.Orientation, int, int].emit(
+            QtCore.Qt.Horizontal, 0, len(self.all_attrs) - 1)
+        self.layoutChanged.emit()
+        self.dataChanged[QModelIndex, QModelIndex].emit(
+            self.index(0, 0),
+            self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
 
     show_attr_labels = QtCore.pyqtProperty("bool",
                                            fget=get_show_attr_labels,
@@ -154,23 +155,22 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
 
     def setData(self, index, variant, role):
         self._other_data[index.row(), index.column(), role] = variant
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  index, index)
+        self.dataChanged[QModelIndex, QModelIndex].emit(index, index)
 
-    def index(self, row, col, parent=QtCore.QModelIndex()):
+    def index(self, row, col, parent=QModelIndex()):
         return self.createIndex(row, col, 0)
 
     def parent(self, index):
-        return QtCore.QModelIndex()
+        return QModelIndex()
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
+    def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
             return 0
         else:
             return max([len(self.examples)] +
                        [row for row, _, _ in self._other_data.keys()])
 
-    def columnCount(self, index=QtCore.QModelIndex()):
+    def columnCount(self, index=QModelIndex()):
         return self.n_cols
 
     def is_sparse(self, col):
@@ -210,26 +210,24 @@ class ExampleTableModel(QtCore.QAbstractItemModel):
     def sort(self, column, order=QtCore.Qt.AscendingOrder):
         if self.is_sparse(column):
             return
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.layoutAboutToBeChanged.emit()
         attr = self.all_attrs[column]
         values = [(ex[attr], i) for i, ex in enumerate(self.examples)]
         values = sorted(values,
                         key=lambda t: t[0] if not isnan(t[0]) else sys.maxsize,
                         reverse=(order != QtCore.Qt.AscendingOrder))
         self.sorted_map = [v[1] for v in values]
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
-                  )
+        self.layoutChanged.emit()
+        self.dataChanged[QModelIndex, QModelIndex].emit(
+            self.index(0, 0),
+            self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
 
     def reset_sort(self):
         self.sorted_map = range(len(self.examples))
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
-        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0),
-                  self.index(len(self.examples) - 1, len(self.all_attrs) - 1)
-                  )
+        self.layoutChanged.emit()
+        self.dataChanged[QModelIndex, QModelIndex].emit(
+            self.index(0, 0),
+            self.index(len(self.examples) - 1, len(self.all_attrs) - 1))
 
 
 #noinspection PyArgumentList

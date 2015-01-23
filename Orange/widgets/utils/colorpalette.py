@@ -348,7 +348,7 @@ class ColorPaletteDlg(QDialog):
     # this function is called if one of the color buttons was pressed or there was any other change of the color palette
     def colorSchemaChange(self):
         self.setCurrentState(self.getCurrentState())
-        self.emit(QtCore.SIGNAL("shemaChanged"))
+        self.shemaChanged.emit()
 
 
 class ColorPalleteListing(QDialog):

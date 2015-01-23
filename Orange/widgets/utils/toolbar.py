@@ -1,6 +1,6 @@
 import os.path
 
-from PyQt4.QtCore import SIGNAL, Qt
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout
 
 from Orange.canvas.utils import environ
