@@ -136,7 +136,7 @@ class StateButtonContainer(OrientedWidget):
         self._clicked_button = None
         for i in buttons:
             b = gui.tool_button(i, self)
-            QObject.connect(b, SIGNAL("triggered(QAction*)"), self.button_clicked)
+            b.triggered.connect(self.button_clicked)
             self.buttons[i] = b
             self.layout().addWidget(b)
 
@@ -165,14 +165,16 @@ class OWAction(QAction):
         if type(callback) == str:
             callback = getattr(plot, callback, None)
         if callback:
-            QObject.connect(self, SIGNAL("triggered(bool)"), callback)
+            self.triggered.connect(callback)
         if attr_name:
             self._plot = plot
             self.attr_name = attr_name
             self.attr_value = attr_value
-            QObject.connect(self, SIGNAL("triggered(bool)"), self.set_attribute)
+            self.triggered.connect(self.set_attribute)
         if icon_name:
-            self.setIcon(QIcon(os.path.dirname(__file__) + "/../../icons/" + icon_name + '.png'))
+            self.setIcon(
+                QIcon(os.path.join(os.path.dirname(__file__),
+                      "../../icons", icon_name + '.png')))
             self.setIconVisibleInMenu(True)
 
     def set_attribute(self, clicked):
@@ -468,11 +470,11 @@ class OWPlotGUI:
         b.setMenu(m)
         b._actions = {}
 
-        QObject.connect(m, SIGNAL("triggered(QAction*)"), b, SLOT("setDefaultAction(QAction*)"))
+        m.triggered.connect(b, SLOT("setDefaultAction(QAction*)"))
 
         if main_action_id:
             main_action = OWAction(self._plot, icon_name, attr_name, attr_value, callback, parent=b)
-            QObject.connect(m, SIGNAL("triggered(QAction*)"), main_action, SLOT("trigger()"))
+            m.triggered.connect(main_action, SLOT("trigger()"))
 
         for id in ids:
             id, name, attr_name, attr_value, callback, icon_name = self._expand_id(id)
