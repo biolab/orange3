@@ -638,7 +638,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     cfront, sbox.cback, sbox.cfunc = connectControl(
         master, value, callback,
         not (callback and callbackOnReturn) and
-        sbox.valueChanged((int, float)[isDouble]),
+        sbox.valueChanged[(int, float)[isDouble]],
         (CallFrontSpin, CallFrontDoubleSpin)[isDouble](sbox))
     if checked:
         cbox.disables = [sbox]
