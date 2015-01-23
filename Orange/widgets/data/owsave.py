@@ -54,6 +54,11 @@ class OWSave(widget.OWWidget):
         if not filename:
             return
         self.filename = filename
+        if not os.path.splitext(filename)[1]:
+            self.error(0, "Selected filename is missing an extension.")
+            return
+        else:
+            self.error(0)
         self.last_dir, file_name = os.path.split(filename)
         self.save.setText("Save as '%s'" % file_name)
         self.save.setDisabled(False)
