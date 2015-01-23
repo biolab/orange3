@@ -1,8 +1,10 @@
 """
 Preprocess
 ----------
+
 """
 import Orange.data
+import Orange.data.impute
 
 from . import continuizer
 from ..feature import discretization
@@ -53,9 +55,31 @@ class Discretize(Preprocess):
                     return None
             else:
                 return var
+
         newattrs = [transform(var) for var in data.domain.attributes]
         newattrs = [var for var in newattrs if var is not None]
         domain = Orange.data.Domain(
             newattrs, data.domain.class_vars, data.domain.metas)
 
         return data.from_table(domain, data)
+
+
+class Impute(Preprocess):
+    def __init__(self, method=Orange.data.impute.Average()):
+        self.method = method
+
+    def __call__(self, data):
+        newattrs = [self.method(data, var) for var in data.domain.attributes]
+        domain = Orange.data.Domain(
+            newattrs, data.domain.class_vars, data.domain.metas)
+        return data.from_table(domain, data)
+
+
+class PreprocessorList(object):
+    def __init__(self, preprocessors):
+        self.preprocessors = tuple(preprocessors)
+
+    def __call__(self, data):
+        for pp in self.preprocessors:
+            data = pp(data)
+        return data
