@@ -478,19 +478,16 @@ class OWDataTable(widget.OWWidget):
 
         size = table.verticalHeader().sectionSizeHint(0)
         table.verticalHeader().setDefaultSectionSize(size)
-        self.connect(datamodel, QtCore.SIGNAL("layoutChanged()"),
-                     lambda *args: QtCore.QTimer.singleShot(50, p))
+        datamodel.layoutChanged.connect(
+            lambda *args: QtCore.QTimer.singleShot(50, p))
 
         # set the header (attribute names)
         self.draw_attribute_labels(table)
 
-        self.connect(table.horizontalHeader(),
-                     QtCore.SIGNAL("sectionClicked(int)"), self.sort_by_column)
-        self.connect(
-            table.selectionModel(),
-            QtCore.SIGNAL("selectionChanged(QItemSelection, QItemSelection)"),
-            self.update_selection)
-
+        table.horizontalHeader().sectionClicked[int].connect(
+            self.sort_by_column)
+        table.selectionModel().selectionChanged[QItemSelection, QItemSelection
+                                                ].connect(self.update_selection)
         QtGui.qApp.restoreOverrideCursor()
 
     #noinspection PyBroadException

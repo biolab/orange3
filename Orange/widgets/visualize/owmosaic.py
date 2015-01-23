@@ -233,7 +233,7 @@ class OWMosaicDisplay(OWWidget):
         #self.box6.setSizePolicy(QSizePolicy(QSizePolicy.Minimum , QSizePolicy.Fixed ))
         self.controlArea.layout().addStretch(1)
 
-        # self.connect(self.graphButton, SIGNAL("clicked()"), self.saveToFileCanvas)
+        # self.graphButton.clicked.connect(saveToFileCanvas)
         self.icons = gui.attributeIconDict
         self.resize(830, 550)
 
