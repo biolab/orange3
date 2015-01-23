@@ -62,17 +62,13 @@ class OWSave(widget.OWWidget):
     def saveFile(self):
         if not self.filename:
             self.saveFileAs()
-        else:
-            self.error()
-            if self.data is not None:
-                file_ext = os.path.splitext(self.filename)[1].lower() or ".tab"
-                try:
-
-                    self.savers[file_ext](self.filename, self.data)
-                except Exception as errValue:
-                    self.error(str(errValue))
-                    return
+        elif self.data is not None:
+            file_ext = os.path.splitext(self.filename)[1].lower() or ".tab"
+            try:
+                self.savers[file_ext](self.filename, self.data)
                 self.error()
+            except Exception as errValue:
+                self.error(str(errValue))
 
 
 if __name__ == "__main__":
