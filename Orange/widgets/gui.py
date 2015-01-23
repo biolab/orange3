@@ -636,9 +636,9 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         sbox.setValue(getdeepattr(master, value))
 
     cfront, sbox.cback, sbox.cfunc = connectControl(
-        sbox, master, value, callback,
+        master, value, callback,
         not (callback and callbackOnReturn) and
-        ("valueChanged(int)", "valueChanged(double)")[isDouble],
+        sbox.valueChanged((int, float)[isDouble]),
         (CallFrontSpin, CallFrontDoubleSpin)[isDouble](sbox))
     if checked:
         cbox.disables = [sbox]
@@ -729,7 +729,7 @@ def checkBox(widget, master, value, label, box=None,
         cbox.setFixedSize(labelWidth, cbox.sizeHint().height())
     cbox.setChecked(getdeepattr(master, value))
 
-    connectControl(cbox, master, value, None, "toggled(bool)",
+    connectControl(master, value, None, cbox.toggled[bool],
                    CallFrontCheckBox(cbox),
                    cfunc=callback and FunctionCallback(
                        master, callback, widget=cbox, getwidget=getwidget,
@@ -902,8 +902,8 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
         ledit.setValidator(validator)
     if value:
         ledit.cback = connectControl(
-            ledit, master, value,
-            callbackOnType and callback, "textChanged(const QString &)",
+            master, value,
+            callbackOnType and callback, ledit.textChanged[str],
             CallFrontLineEdit(ledit), fvcb=value and valueType)[1]
 
     miscellanea(ledit, b, widget, **misc)
@@ -964,7 +964,7 @@ def button(widget, master, label, callback=None, width=None, height=None,
     if value:
         button.setChecked(getdeepattr(master, value))
         connectControl(
-            button, master, value, None, "toggled(bool)",
+            master, value, None, button.toggled[bool],
             CallFrontButton(button),
             cfunc=callback and FunctionCallback(master, callback,
                                                 widget=button))
@@ -1125,7 +1125,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
             getattr(master, CONTROLLED_ATTRIBUTES)[labels] = CallFrontListBoxLabels(lb)
     if value is not None:
         setattr(master, value, getdeepattr(master, value))
-    connectControl(lb, master, value, callback, "itemSelectionChanged()",
+    connectControl(master, value, callback, lb.itemSelectionChanged,
                    CallFrontListBox(lb), CallBackListBox(lb, master))
 
     misc.setdefault('addSpace', True)
@@ -1174,9 +1174,8 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     bg.ogMaster = master
     for i, lab in enumerate(btnLabels):
         appendRadioButton(bg, lab, tooltip=tooltips and tooltips[i])
-    connectControl(bg.group, master, value, callback, "buttonClicked(int)",
+    connectControl(master, value, callback, bg.group.buttonClicked[int],
                    CallFrontRadioButtons(bg), CallBackRadioButton(bg, master))
-
     misc.setdefault('addSpace', bool(box))
     miscellanea(bg.group, bg, widget, **misc)
     return bg
@@ -1288,10 +1287,10 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
             slider.setSingleStep(step)
             slider.setPageStep(step)
             slider.setTickInterval(step)
-        signal_signature = "valueChanged(int)"
+        signal = slider.valueChanged[int]
     else:
         slider = FloatSlider(sliderOrient, minValue, maxValue, step)
-        signal_signature = "valueChangedFloat(double)"
+        signal = slider.valueChangedFloat[float]
     sliderBox.layout().addWidget(slider)
     slider.setValue(getdeepattr(master, value))
     if width:
@@ -1312,11 +1311,9 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
         label.setText(txt)
         label.setLbl = lambda x: \
             label.setText(labelFormat % (x / divideFactor))
-        QtCore.QObject.connect(slider, QtCore.SIGNAL(signal_signature),
-                               label.setLbl)
+        signal.connect(label.setLbl)
 
-    connectControl(slider, master, value, callback, signal_signature,
-                   CallFrontHSlider(slider))
+    connectControl(master, value, callback, signal, CallFrontHSlider(slider))
 
     miscellanea(slider, sliderBox, widget, **misc)
     return slider
@@ -1384,10 +1381,9 @@ def labeledSlider(widget, master, value, box=None,
             value_label.setText(labelFormat % x)
     else:
         value_label.set_label = lambda x: value_label.setText(labelFormat(x))
-    QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
-                           value_label.set_label)
+    slider.valueChanged[int].connect(value_label.set_label)
 
-    connectControl(slider, master, value, callback, "valueChanged(int)",
+    connectControl(master, value, callback, slider.valueChanged[int],
                    CallFrontLabeledSlider(slider, labels),
                    CallBackLabeledSlider(slider, master, labels))
 
@@ -1458,10 +1454,9 @@ def valueSlider(widget, master, value, box=None, label=None,
     value_label.setFixedSize(max_label_size, value_label.sizeHint().height())
     value_label.setText(labelFormat(getdeepattr(master, value)))
     value_label.set_label = lambda x: value_label.setText(labelFormat(values[x]))
-    QtCore.QObject.connect(slider, QtCore.SIGNAL("valueChanged(int)"),
-                           value_label.set_label)
+    slider.valueChanged[int].connect(value_label.set_label)
 
-    connectControl(slider, master, value, callback, "valueChanged(int)",
+    connectControl(master, value, callback, slider.valueChanged[int],
                    CallFrontLabeledSlider(slider, values),
                    CallBackLabeledSlider(slider, master, values))
 
@@ -1551,16 +1546,15 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
                 control2attributeDict = {}
             if emptyString:
                 control2attributeDict[emptyString] = ""
-            connectControl(combo, master, value, callback,
-                           "activated(const QString &)",
-                           CallFrontComboBox(combo, valueType,
-                                             control2attributeDict),
-                           ValueCallbackCombo(master, value, valueType,
-                                              control2attributeDict))
+            connectControl(
+                master, value, callback, combo.activated[str],
+                CallFrontComboBox(combo, valueType, control2attributeDict),
+                ValueCallbackCombo(master, value, valueType,
+                                   control2attributeDict))
         else:
-            connectControl(combo, master, value, callback, "activated(int)",
-                           CallFrontComboBox(combo, None,
-                                             control2attributeDict))
+            connectControl(
+                master, value, callback, combo.activated[int],
+                CallFrontComboBox(combo, None, control2attributeDict))
     miscellanea(combo, hb, widget, **misc)
     return combo
 
@@ -2051,30 +2045,20 @@ class ControlledList(list):
         super().remove(item)
 
 
-def connectControlSignal(control, signal, f):
-    if type(signal) is tuple:
-        control, signal = signal
-    QtCore.QObject.connect(control, QtCore.SIGNAL(signal), f)
-
-
-def connectControl(control, master, value, f, signal,
+def connectControl(master, value, f, signal,
                    cfront, cback=None, cfunc=None, fvcb=None):
     cback = cback or value and ValueCallback(master, value, fvcb)
     if cback:
         if signal:
-            connectControlSignal(control, signal, cback)
+            signal.connect(cback)
         cback.opposite = cfront
         if value and cfront and hasattr(master, CONTROLLED_ATTRIBUTES):
             getattr(master, CONTROLLED_ATTRIBUTES)[value] = cfront
-
     cfunc = cfunc or f and FunctionCallback(master, f)
     if cfunc:
         if signal:
-            connectControlSignal(control, signal, cfunc)
-        cfront.opposite = cback, cfunc
-    else:
-        cfront.opposite = (cback,)
-
+            signal.connect(cfunc)
+        cfront.opposite = tuple(filter(None, (cback, cfunc)))
     return cfront, cback, cfunc
 
 
