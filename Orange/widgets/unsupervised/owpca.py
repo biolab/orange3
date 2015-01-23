@@ -127,7 +127,7 @@ class OWPCA(widget.OWWidget):
         current = self._nselected_components()
         components = int(numpy.floor(value)) + 1
 
-        if not (self.max_components == 0 and \
+        if not (self.max_components == 0 and
                 components == len(self._variance_ratio)):
             self.max_components = components
 
