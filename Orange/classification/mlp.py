@@ -10,7 +10,8 @@ def sigmoid(x):
 
 
 class MLPLearner(classification.Fitter):
-    def __init__(self, layers, lambda_=1.0, dropout=None, **opt_args):
+    def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
+                 **opt_args):
         '''Multilayer perceptron (A.K.A. feedforward neural network)
 
         This model uses stochastic gradient descent and the
@@ -57,7 +58,7 @@ class MLPLearner(classification.Fitter):
         :param batch_size: The batch size of stochastic gradient descent
         :type batch_size: int
         '''
-
+        super().__init__(preprocessors=preprocessors)
         if dropout is None:
             dropout = [0] * (len(layers) - 1)
         assert len(dropout) == len(layers) - 1

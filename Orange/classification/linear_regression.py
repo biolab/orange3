@@ -6,7 +6,7 @@ from Orange import classification
 
 
 class LinearRegressionLearner(classification.Fitter):
-    def __init__(self, lambda_=1.0, **fmin_args):
+    def __init__(self, lambda_=1.0, preprocessors=None, **fmin_args):
         '''L2 regularized linear regression (a.k.a Ridge regression)
 
         This model uses the L-BFGS algorithm to minimize the linear least
@@ -36,7 +36,7 @@ class LinearRegressionLearner(classification.Fitter):
             c = m(data) # fit
             print(c(data)) # predict
         '''
-
+        super().__init__(preprocessors=preprocessors)
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 

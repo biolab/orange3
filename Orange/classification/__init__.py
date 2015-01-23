@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 import scipy
 import bottlechest as bn
@@ -211,9 +213,19 @@ class SklFitter(Fitter):
 
     @params.setter
     def params(self, value):
-        self._params = dict(value)
-        self._params.pop("self", None)
-        self._params.pop("preprocessors", None)
+        self._params = self._get_sklparams(value)
+
+    def _get_sklparams(self, values):
+        sklfitter = self.__wraps__
+        if sklfitter is not None:
+            spec = inspect.getargs(sklfitter.__init__.__code__)
+            # first argument is 'self'
+            assert spec.args[0] == "self"
+            params = {name: values[name] for name in spec.args[1:]
+                      if name in values}
+        else:
+            raise TypeError("Wrapper does not define '__wraps__'")
+        return params
 
     def preprocess(self, data):
         data = super().preprocess(data)

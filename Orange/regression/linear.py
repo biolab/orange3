@@ -32,12 +32,17 @@ class LassoRegressionLearner(Fitter):
         sk.fit(X, Y)
         return LinearModel(sk)
 
+
 class SGDRegressionLearner(classification.SklFitter):
-    def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1, 
-        eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25, 
-        learning_rate='invscaling', n_iter=5, fit_intercept=True):
+    __wraps__ = sklearn.linear_model.SGDRegressor
+
+    def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,
+                 eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25,
+                 learning_rate='invscaling', n_iter=5, fit_intercept=True,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.params = vars()
-    
+
     def fit(self, X, Y, W):
         sk = sklearn.linear_model.SGDRegressor(**self.params)
         clf = sklearn.pipeline.Pipeline([('scaler', sklearn.preprocessing.StandardScaler()), ('sgd', sk)])
