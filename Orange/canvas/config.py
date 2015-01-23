@@ -192,6 +192,13 @@ def log_dir():
     return logdir
 
 
+def widget_settings_dir():
+    """
+    Return the widget settings directory.
+    """
+    return os.path.join(data_dir(), 'widgets')
+
+
 def open_config():
     global rc
     app_dir = data_dir()
