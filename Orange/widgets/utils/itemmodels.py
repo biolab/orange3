@@ -16,6 +16,8 @@ from PyQt4.QtGui import (
     QWidget, QBoxLayout, QToolButton, QAbstractButton, QAction
 )
 
+import numpy
+
 from Orange.data import (
     Variable, DiscreteVariable, ContinuousVariable, StringVariable
 )
@@ -536,7 +538,7 @@ class TableModel(QAbstractTableModel):
 
         @lru_cache(maxsize=1000)
         def row_instance(index):
-            return self.source[index]
+            return self.source[int(index)]
 
         self._row_instance = row_instance
         # column basic statistics (VariableStatsRole), computed when
@@ -545,9 +547,58 @@ class TableModel(QAbstractTableModel):
         self.__rowCount = len(sourcedata)
         self.__columnCount = len(self.vars)
 
+        self.__sortColumn = -1
+        self.__sortOrder = Qt.AscendingOrder
+        self.__sortInd = numpy.arange(0, len(self.source))
+        self.__sortIndInv = self.__sortInd
+
+    def sort(self, column, order):
+        self.layoutAboutToBeChanged.emit()
+        persistent = [(pind, self.__sortInd[pind.row()])
+                      for pind in self.persistentIndexList()]
+
+        self.__sortColumn = column
+        self.__sortOrder = order
+
+        if column < 0:
+            indices = numpy.arange(0, self.__rowCount)
+        else:
+            keydata = self.columnSortKeyData(column, TableModel.ValueRole)
+            if keydata is not None:
+                if keydata.dtype == object:
+                    indices = sorted(range(self.__rowCount),
+                                     key=lambda i: str(keydata[i]))
+                    indices = numpy.array(indices)
+                else:
+                    indices = numpy.argsort(keydata, kind="mergesort")
+            else:
+                indices = numpy.arange(0, self.__rowCount)
+
+            if order == Qt.DescendingOrder:
+                indices = indices[::-1]
+
+            indices = self.__sortInd[indices]
+        self.__sortInd = indices
+        self.__sortIndInv = numpy.argsort(indices)
+        for pind, sourcerow in persistent:
+            self.changePersistentIndex(
+                pind, self.index(self.__sortIndInv[sourcerow], pind.column())
+            )
+        self.layoutChanged.emit()
+
+    def columnSortKeyData(self, column, role):
+        var = self.vars[column]
+        if isinstance(var, Variable) and role == TableModel.ValueRole:
+            col_view, _ = self.source.get_column_view(var)
+            coldata = numpy.asarray(col_view)[self.__sortInd]
+            return coldata
+        else:
+            return [self.index(i, column).data(role)
+                    for i in range(self.__rowCount)]
+
     def data(self, index, role,
              # For optimizing out LOAD_GLOBAL byte code instructions in
-             # the item role tests (goes from 14 us to 9 us average).
+             # the item role tests.
              _str=str,
              _Qt_DisplayRole=Qt.DisplayRole,
              _Qt_EditRole=Qt.EditRole,
@@ -569,7 +620,7 @@ class TableModel(QAbstractTableModel):
                                    VariableStatsRole]),
              ):
 
-        row, col = index.row(), index.column()
+        row, col = self.__sortInd[index.row()], index.column()
         if role not in _recognizedRoles:
             return self._extra_data.get((row, col, role), None)
 
@@ -599,13 +650,14 @@ class TableModel(QAbstractTableModel):
             return None
 
     def setData(self, index, value, role):
+        row, col = self.__sortIndInv[index.row()], index.column()
         if role == Qt.EditRole:
             try:
-                self.source[index.row(), index.column()] = value
+                self.source[row, col] = value
             except (TypeError, IndexError):
                 return False
         else:
-            self._other_data[index.row(), index.column(), role] = value
+            self._other_data[row, col, role] = value
 
         self.dataChanged.emit(index, index)
         return True
@@ -621,7 +673,10 @@ class TableModel(QAbstractTableModel):
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Vertical:
-            return section + 1 if role == Qt.DisplayRole else None
+            if role == Qt.DisplayRole:
+                return int(self.__sortInd[section] + 1)
+            else:
+                return None
 
         var = self.vars[section]
         if role == Qt.DisplayRole:
@@ -666,7 +721,7 @@ class SparseTableModel(TableModel):
     Basket = namedtuple("Basket", ["vars"])
 
     def __init__(self, sourcedata, parent=None):
-        super().__init__(sourcedata)
+        super().__init__(sourcedata, parent=parent)
 
         self.X_density = sourcedata.X_density()
         self.Y_density = sourcedata.Y_density()

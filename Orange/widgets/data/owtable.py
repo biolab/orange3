@@ -118,6 +118,9 @@ class RichTableDecorator(QIdentityProxyModel):
     def richHeaderFlags(self):
         return self._header_flags
 
+    def sort(self, column, order):
+        return self.sourceModel().sort(column, order)
+
 
 class SortProxyTableModel(QAbstractProxyModel):
     """
@@ -592,12 +595,7 @@ class OWDataTable(widget.OWWidget):
         else:
             view.setItemDelegate(QtGui.QStyledItemDelegate(self))
 
-        proxy = SortProxyTableModel()
-        proxy.setSortRole(TableModel.ValueRole)
-        proxy.setSourceModel(datamodel)
-
-        proxy.source = data
-        view.setModel(proxy)
+        view.setModel(datamodel)
 
         vheader = view.verticalHeader()
         option = view.viewOptions()
@@ -683,7 +681,7 @@ class OWDataTable(widget.OWWidget):
 
     def _update_variable_labels(self, view):
         "Update the variable labels visibility for `view`"
-        model = view.model().sourceModel()
+        model = view.model()
 
         if self.show_attribute_labels:
             model.setRichHeaderFlags(
@@ -817,8 +815,12 @@ class OWDataTable(widget.OWWidget):
         table = self.tabs.currentWidget()
         if table and table.model():
             proxy = table.model()
-            new = table.selectionModel().selectedIndexes()
-            return sorted(set([proxy.mapToSource(ind).row() for ind in new]))
+            rows = table.selectionModel().selectedRows()
+            rows = sorted([proxy.mapToSource(ind).row() for ind in rows])
+            source = proxy.sourceModel()
+            rows = [source.headerData(row, Qt.Vertical, Qt.DisplayRole) - 1
+                    for row in rows]
+            return rows
         else:
             return []
 
