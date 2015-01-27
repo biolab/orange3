@@ -12,6 +12,7 @@ from PyQt4 import QtGui
 
 from PyQt4.QtGui import QAbstractProxyModel, QIdentityProxyModel
 from PyQt4.QtCore import Qt, QModelIndex, QPersistentModelIndex
+from PyQt4.QtCore import QT_VERSION
 
 import numpy
 
@@ -118,8 +119,19 @@ class RichTableDecorator(QIdentityProxyModel):
     def richHeaderFlags(self):
         return self._header_flags
 
-    def sort(self, column, order):
-        return self.sourceModel().sort(column, order)
+    if QT_VERSION < 0xFFFFF:  # when QTBUG-44143 is fixed
+        def sort(self, column, order):
+            self.layoutAboutToBeChanged.emit()
+            self.blockSignals(True)
+            try:
+                rval = self.sourceModel().sort(column, order)
+            finally:
+                self.blockSignals(False)
+            self.layoutChanged.emit()
+            return rval
+    else:
+        def sort(self, column, order):
+            return self.sourceModel().sort(column, order)
 
 
 class SortProxyTableModel(QAbstractProxyModel):
