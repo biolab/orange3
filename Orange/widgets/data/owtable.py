@@ -2,19 +2,14 @@ import sys
 import threading
 import io
 import csv
-import functools
-import itertools
 
 from math import isnan
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from PyQt4.QtGui import QAbstractProxyModel, QIdentityProxyModel
-from PyQt4.QtCore import Qt, QModelIndex, QPersistentModelIndex
-from PyQt4.QtCore import QT_VERSION
-
-import numpy
+from PyQt4.QtGui import  QIdentityProxyModel
+from PyQt4.QtCore import Qt, QT_VERSION
 
 import Orange.data
 from Orange.data import ContinuousVariable
@@ -142,246 +137,6 @@ class RichTableDecorator(QIdentityProxyModel):
     else:
         def sort(self, column, order):
             return self.sourceModel().sort(column, order)
-
-
-class SortProxyTableModel(QAbstractProxyModel):
-    """
-    A simpler/faster sort proxy model.
-    """
-    @functools.total_ordering
-    class _forgiving_compare(object):
-        __slots__ = ["obj"]
-
-        def __init__(self, obj):
-            self.obj = obj
-
-        def __lt__(self, other):
-            try:
-                return self.obj < other.obj
-            except TypeError:
-                if other.obj is None:
-                    return True
-                elif self.obj is None:
-                    return False
-                else:
-                    return str(self.obj) < str(other.obj)
-
-        def __eq__(self, other):
-            try:
-                return self.obj == other.obj
-            except TypeError:
-                return str(self.obj) == str(other.obj)
-
-    def __init__(self, parent=None, **kwargs):
-        QAbstractProxyModel.__init__(self, parent, **kwargs)
-
-        self.__sortRole = Qt.DisplayRole
-        self.__sortColumn = -1
-        self.__sortOrder = Qt.AscendingOrder
-
-        self.__source_row = []
-        self.__model_row = []
-        self.__rows = 0
-        self.__cols = 0
-
-    def columnCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else self.__cols
-
-    def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else self.__rows
-
-    def index(self, row, column, parent=QModelIndex()):
-        if row < 0 or column < 0 or parent.isValid():
-            return QModelIndex()
-        return self.createIndex(row, column)
-
-    def parent(self, index):
-        return QModelIndex()
-
-    def sortRole(self):
-        return self.__sortRole
-
-    def setSortRole(self, role):
-        if self.__sortRole != role:
-            self.__sortRole = role
-            self.sort(self.sortColumn(), self.sortOrder())
-
-    def sortColumn(self):
-        return self.__sortColumn
-
-    def sortOrder(self):
-        return self.__sortOrder
-
-    def setSourceModel(self, model):
-        m = self.sourceModel()
-        if m is not None:
-            m.dataChanged.disconnect(self._sourceDataChanged)
-            m.headerDataChanged.disconnect(self._sourceHeaderDataChanged)
-            m.columnsInserted.disconnect(self._sourceColumnsInserted)
-            m.columnsRemoved.disconnect(self._sourceColumnsRemoved)
-            m.columnsMoved.disconnect(self._sourceColumnsMoved)
-
-            m.rowsInserted.disconnect(self._sourceRowsInserted)
-            m.rowsRemoved.disconnect(self._sourceRowsRemoved)
-            m.rowsMoved.disconnect(self._sourceRowsMoved)
-
-            self.__rows = 0
-            self.__cols = 0
-
-        super().setSourceModel(model)
-
-        if model is not None:
-            model.dataChanged.connect(self._sourceDataChanged)
-            model.headerDataChanged.connect(self._sourceHeaderDataChanged)
-            model.columnsInserted.connect(self._sourceColumnsInserted)
-            model.columnsRemoved.connect(self._sourceColumnsRemoved)
-            model.columnsMoved.connect(self._sourceColumnsMoved)
-
-            model.rowsInserted.connect(self._sourceRowsInserted)
-            model.rowsRemoved.connect(self._sourceRowsRemoved)
-            model.rowsMoved.connect(self._sourceRowsMoved)
-
-            self.__rows = model.rowCount()
-            self.__cols = model.columnCount()
-
-        self.__sortColumn = -1
-        self.__source_row = list(range(self.rowCount()))
-        self.__model_row = list(range(self.rowCount()))
-        self.reset()
-
-    def mapToSource(self, proxy):
-        if not proxy.isValid():
-            return QModelIndex()
-        try:
-            row = self.__source_row[proxy.row()]
-        except IndexError:
-            print("to source error", proxy.row(), proxy.column(),
-                  file=sys.stderr)
-            return QModelIndex()
-        else:
-            return self.sourceModel().index(row, proxy.column())
-
-    def mapFromSource(self, source):
-        if not source.isValid():
-            return QModelIndex()
-
-        try:
-            row = self.__model_row[source.row()]
-        except IndexError:
-            print("from source error", source.row(), source.column(),
-                  file=sys.stderr)
-            return QModelIndex()
-        else:
-            return self.index(row, source.column())
-
-    def sort(self, column, order):
-        self.layoutAboutToBeChanged.emit()
-
-        self.__sortColumn = column
-        self.__sortOrder = order
-
-        persistant = [(ind, QPersistentModelIndex(self.mapToSource(ind)))
-                      for ind in self.persistentIndexList()]
-
-        if 0 <= column < self.columnCount():
-            role = self.sortRole()
-            sortkey = numpy.asarray(self.columnSortKey(column, role))
-            if sortkey.dtype != object:
-                indices = numpy.argsort(sortkey, kind="mergesort")
-            else:
-                indices = itemmodels._argsort(
-                    sortkey, key=SortProxyTableModel._forgiving_compare)
-                indices = [i for i, _ in indices]
-
-            if order == Qt.DescendingOrder:
-                indices = indices[::-1]
-        else:
-            self.__sortColumn = -1
-            indices = range(self.rowCount())
-
-        self.__source_row = indices
-        self.__model_row = numpy.argsort(indices)
-
-        fromlist = []
-        tolist = []
-        for oldproxy, source in persistant:
-            proxy = self.mapFromSource(QModelIndex(source))
-            fromlist.append(oldproxy)
-            tolist.append(proxy)
-        self.changePersistentIndexList(fromlist, tolist)
-
-        self.layoutChanged.emit()
-
-    def columnSortKey(self, column, role):
-        source = self.sourceModel()
-        if isinstance(source, RichTableDecorator):
-            source = source.sourceModel()
-
-        if isinstance(source, TableModel) and role == TableModel.ValueRole:
-            var = source.headerData(
-                column, Qt.Horizontal, TableModel.VariableRole)
-            if isinstance(var, Orange.data.Variable):
-                col_view, _ = source.source.get_column_view(var)
-                return col_view
-
-        nrows = source.rowCount()
-        return [source.index(i, column).data(role) for i in range(nrows)]
-
-    def _sourceDataChanged(self, topleft, bottomright):
-        colrange = topleft.column(), bottomright.column()
-        rowrange = topleft.row(), bottomright.row()
-        rows = self.__model_row[slice(*rowrange)]
-
-        for span in mergeindices(sorted(rows)):
-            self.dataChanged.emit(self.index(span.start, colrange[0]),
-                                  self.index(span.stop - 1, colrange[1]))
-
-    def _sourceHeaderDataChanged(self, orientation, first, last):
-        if orientation is Qt.Vertical:
-            rows = [self.__model_row[i] for i in range(first, last + 1)]
-            for range_ in mergeindices(sorted(rows)):
-                self.headerDataChanged.emit(
-                    Qt.Vertical, range_.start, range_.stop - 1
-                )
-        else:
-            self.headerDataChanged.emit(orientation, first, last)
-
-    def _sourceColumnsInserted(self, parent, start, end):
-        self.__cols = self.sourceModel().columnCount()
-        self.columnsInserted.emit(QModelIndex(), start, end)
-
-    def _sourceColumnsRemoved(self, parent, start, end):
-        self.__cols = self.sourceModel().columnCount()
-        self.columnsRemoved.emit(QModelIndex(), start, end)
-
-    def _sourceColumnsMoved(self, sourceParent, sourceStart, sourceEnd,
-                            destParent, destStart, destEnd):
-        self.columnsMoved.emit(QModelIndex(), sourceStart, sourceEnd,
-                               QModelIndex(), destStart, destEnd)
-
-    def _sourceRowsInserted(self, parent, start, end):
-        self.__rows = self.sourceModel().rowCount()
-        self.__insert(start, end)
-
-    def _sourceRowsRemoved(self, parent, start, end):
-        self.__rows = self.sourceModel().rowCount()
-        self.__remove(start, end)
-
-    def _sourceRowsMoved(self, sourceParent, sourceStart, sourceEnd,
-                        destParent, destStart, destEnd):
-        self.__source_row[destStart:destEnd + 1] = \
-             self.__source_row[sourceStart:sourceEnd + 1]
-
-
-def mergeindices(indices):
-    """
-    Merge contiguous runs of indices into a sequence of `range` objects.
-    """
-    count = itertools.count()
-    groups = itertools.groupby(indices, key=lambda index: index - next(count))
-    for _, group in groups:
-        group = list(group)
-        yield range(group[0], group[-1] + 1)
 
 
 def table_selection_to_mime_data(table):
@@ -917,24 +672,12 @@ def test_model():
     )
     data = Orange.data.Table("lenses")
     model = TableModel(data)
-    proxy = SortProxyTableModel()
-    proxy.setSourceModel(model)
 
-    view.setModel(proxy)
-    indices = []
+    view.setModel(model)
 
-    def selection():
-        nonlocal indices
-#         indices = [QPersistentModelIndex(ind) for ind in view.selectedIndexes()]
-        indices = view.selectedIndexes()
-        print([ind.row() for ind in indices])
-
-    view.selectionModel().selectionChanged.connect(selection)
     view.show()
     view.raise_()
-    app.exec()
-    print([ind.row() for ind in indices])
-    return 0
+    return app.exec()
 
 if __name__ == "__main__":
     sys.exit(test_main())
