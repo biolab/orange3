@@ -1,5 +1,4 @@
 import os.path
-import re
 
 from PyQt4 import QtGui
 
@@ -21,16 +20,20 @@ class OWSave(widget.OWWidget):
 
     want_main_area = False
 
+    format_index = Setting(0)
     last_dir = Setting("")
 
-    savers = {".tab": save_tab_delimited, ".csv": save_csv}
-    dlgFormats = 'Tab-delimited files (*.tab)\nComma separated (*.csv)'
-    re_filterExtension = re.compile(r"\(\*(?P<ext>\.[^ )]+)")
+    formats = (('.tab', 'Tab-delimited file', save_tab_delimited),
+               ('.csv', 'Comma-separated values', save_csv))
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(self, parent, signalManager, settings, "Save")
         self.data = None
         self.filename = ""
+        self.comboBoxFormat = gui.comboBox(
+            self.controlArea, self, value='format_index',
+            items=['{} (*{})'.format(f[1], f[0]) for f in self.formats],
+            box='File Format', callback=self.reset_filename)
         box = gui.widgetBox(self.controlArea)
         self.save = gui.button(box, self, "Save", callback=self.saveFile,
                                default=True, disabled=True)
@@ -40,26 +43,29 @@ class OWSave(widget.OWWidget):
         self.setMinimumWidth(320)
         self.adjustSize()
 
+    def reset_filename(self):
+        if self.filename[-4:] in {f[0] for f in self.formats}:
+            self.filename = self.filename[:-4] + self.formats[self.format_index][0]
+            self.save.setText("Save as '%s'" % os.path.split(self.filename)[1])
+
     def dataset(self, data):
         self.data = data
         self.save.setDisabled(data is None)
         self.saveAs.setDisabled(data is None)
 
     def saveFileAs(self):
+        f = self.formats[self.format_index]
         home_dir = os.path.expanduser("~")
         filename = QtGui.QFileDialog.getSaveFileName(
             self, 'Save Orange Data File',
             self.filename or self.last_dir or home_dir,
-            self.dlgFormats)
+            '{} (*{})'.format(f[1], f[0]))
         if not filename:
             return
         self.filename = filename
-        if not os.path.splitext(filename)[1]:
-            self.error(0, "Selected filename is missing an extension.")
-            return
-        else:
-            self.error(0)
-        self.last_dir, file_name = os.path.split(filename)
+        if os.path.splitext(filename)[1] != f[0]:
+            self.filename += f[0]
+        self.last_dir, file_name = os.path.split(self.filename)
         self.save.setText("Save as '%s'" % file_name)
         self.save.setDisabled(False)
         self.saveFile()
@@ -68,9 +74,8 @@ class OWSave(widget.OWWidget):
         if not self.filename:
             self.saveFileAs()
         elif self.data is not None:
-            file_ext = os.path.splitext(self.filename)[1].lower() or ".tab"
             try:
-                self.savers[file_ext](self.filename, self.data)
+                self.formats[self.format_index][2](self.filename, self.data)
                 self.error()
             except Exception as errValue:
                 self.error(str(errValue))
