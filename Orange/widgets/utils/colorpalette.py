@@ -348,7 +348,7 @@ class ColorPaletteDlg(QDialog):
     # this function is called if one of the color buttons was pressed or there was any other change of the color palette
     def colorSchemaChange(self):
         self.setCurrentState(self.getCurrentState())
-        self.emit(QtCore.SIGNAL("shemaChanged"))
+        self.shemaChanged.emit()
 
 
 class ColorPalleteListing(QDialog):
@@ -465,8 +465,7 @@ class PaletteEditor(QDialog):
         buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
         buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         buttonDOWNAttr.setMaximumWidth(30)
-        self.connect(self.discListbox, QtCore.SIGNAL("itemDoubleClicked ( QListWidgetItem *)"),
-                     self.changeDiscreteColor)
+        self.discListbox.itemDoubleClicked.connect(self.changeDiscreteColor)
 
         box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
                                accepted=self.accept, rejected=self.reject)

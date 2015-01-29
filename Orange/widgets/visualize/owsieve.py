@@ -82,7 +82,7 @@ class OWSieveDiagram(OWWidget):
         gui.rubber(self.controlArea)
 
         # self.wdChildDialogs = [self.optimizationDlg]        # used when running widget debugging
-        # self.connect(self.graphButton, SIGNAL("clicked()"), self.saveToFileCanvas)
+        # self.graphButton.clicked.connect(self.saveToFileCanvas)
         self.icons = gui.attributeIconDict
         self.resize(800, 550)
         random.seed()

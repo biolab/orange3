@@ -1,6 +1,6 @@
 import os.path
 
-from PyQt4.QtCore import SIGNAL, Qt
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout
 
 from Orange.canvas.utils import environ
@@ -131,7 +131,7 @@ class ZoomSelectToolbar(QGroupBox):
             self.layout().addWidget(btn)
         btn.setCheckable(button.selectable)
         if action:
-            self.connect(btn, SIGNAL("clicked()"), action)
+            btn.clicked.connect(action)
         if button.icon:
             btn.setIcon(button.icon)
         btn.setToolTip(button.text)
