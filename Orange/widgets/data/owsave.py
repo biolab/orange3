@@ -35,11 +35,11 @@ class OWSave(widget.OWWidget):
             items=['{} (*{})'.format(f[1], f[0]) for f in self.formats],
             box='File Format', callback=self.reset_filename)
         box = gui.widgetBox(self.controlArea)
-        self.save = gui.button(box, self, "Save", callback=self.saveFile,
+        self.save = gui.button(box, self, "Save", callback=self.save_file,
                                default=True, disabled=True)
         gui.separator(box)
         self.saveAs = gui.button(box, self, "Save as ...",
-                                 callback=self.saveFileAs, disabled=True)
+                                 callback=self.save_file_as, disabled=True)
         self.setMinimumWidth(320)
         self.adjustSize()
 
@@ -53,7 +53,7 @@ class OWSave(widget.OWWidget):
         self.save.setDisabled(data is None)
         self.saveAs.setDisabled(data is None)
 
-    def saveFileAs(self):
+    def save_file_as(self):
         f = self.formats[self.format_index]
         home_dir = os.path.expanduser("~")
         filename = QtGui.QFileDialog.getSaveFileName(
@@ -68,11 +68,11 @@ class OWSave(widget.OWWidget):
         self.last_dir, file_name = os.path.split(self.filename)
         self.save.setText("Save as '%s'" % file_name)
         self.save.setDisabled(False)
-        self.saveFile()
+        self.save_file()
 
-    def saveFile(self):
+    def save_file(self):
         if not self.filename:
-            self.saveFileAs()
+            self.save_file_as()
         elif self.data is not None:
             try:
                 self.formats[self.format_index][2](self.filename, self.data)
