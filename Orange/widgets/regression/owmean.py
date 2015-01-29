@@ -9,7 +9,9 @@ class OWMean(widget.OWWidget):
     description = ""
     icon = "icons/Mean.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.data.preprocess.Preprocess,
+               "set_preprocessor")]
     outputs = [("Learner", mean.MeanFitter), ("Predictor", mean.MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")
@@ -18,6 +20,7 @@ class OWMean(widget.OWWidget):
         super().__init__(parent)
 
         self.data = None
+        self.preprocessors = None
 
         box = gui.widgetBox(self.controlArea, "Learner Name")
         gui.lineEdit(box, self, "learner_name")
@@ -36,8 +39,15 @@ class OWMean(widget.OWWidget):
         self.data = data
         self.apply()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()
+
     def apply(self):
-        learner = mean.MeanFitter()
+        learner = mean.MeanFitter(preprocessors=self.preprocessors)
         learner.name = self.learner_name
         if self.data is not None:
             predictor = learner(self.data)

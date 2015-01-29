@@ -6,7 +6,8 @@ from Orange import classification
 
 
 class SoftmaxRegressionLearner(classification.Fitter):
-    def __init__(self, lambda_=1.0, normalize=True, **fmin_args):
+    def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
+                 **fmin_args):
         '''L2 regularized softmax regression
 
         This model uses the L-BFGS algorithm to minimize the categorical
@@ -25,7 +26,7 @@ class SoftmaxRegressionLearner(classification.Fitter):
         force the coefficients to be small.
         :type lambda_: float
         '''
-
+        super().__init__(preprocessors=preprocessors)
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 

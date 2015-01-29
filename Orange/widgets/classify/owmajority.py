@@ -11,7 +11,9 @@ class OWMajority(widget.OWWidget):
     priority = 20
     icon = "icons/Majority.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.data.preprocess.Preprocess,
+               "set_preprocessor")]
     outputs = [("Learner", Orange.classification.majority.MajorityFitter),
                ("Classifier", Orange.classification.majority.ConstantClassifier)]
 
@@ -20,6 +22,7 @@ class OWMajority(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data = None
+        self.preprocessors = None
         gui.lineEdit(
             gui.widgetBox(self.controlArea, "Learner/Classifier Name"),
             self, "learner_name"
@@ -40,8 +43,17 @@ class OWMajority(widget.OWWidget):
         self.data = data
         self.apply()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()
+
     def apply(self):
-        learner = Orange.classification.majority.MajorityFitter()
+        learner = Orange.classification.majority.MajorityFitter(
+            preprocessors=self.preprocessors)
+
         learner.name = self.learner_name
         if self.data is not None:
             classifier = learner(self.data)

@@ -15,8 +15,11 @@ def replace_nan(X, imp_model):
                 X = imp_model.transform(X)
         return X
 
+
 class KNNLearner(Orange.classification.Fitter):
-    def __init__(self, n_neighbors=5, metric="euclidean", normalize=True):
+    def __init__(self, n_neighbors=5, metric="euclidean", normalize=True,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.n_neighbors = n_neighbors
         self.metric = metric
         self.normalize = normalize

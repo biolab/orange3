@@ -1,12 +1,23 @@
+import inspect
+
 import numpy as np
 import scipy
 import bottlechest as bn
 
 import Orange.data
+import Orange.data.preprocess
 
 
 class Fitter:
     supports_multiclass = False
+    #: A sequence of data preprocessors to apply on data prior to
+    #: fitting the model
+    preprocessors = ()
+
+    def __init__(self, preprocessors=None):
+        if preprocessors is None:
+            preprocessors = type(self).preprocessors
+        self.preprocessors = tuple(preprocessors)
 
     def fit(self, X, Y, W=None):
         raise NotImplementedError(
@@ -16,9 +27,13 @@ class Fitter:
         return self.fit(data.X, data.Y, data.W)
 
     def __call__(self, data):
+        data = self.preprocess(data)
+
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
             raise TypeError("fitter doesn't support multiple class variables")
+
         self.domain = data.domain
+
         if type(self).fit is Fitter.fit:
             clf = self.fit_storage(data)
         else:
@@ -27,6 +42,14 @@ class Fitter:
         clf.domain = data.domain
         clf.supports_multiclass = self.supports_multiclass
         return clf
+
+    def preprocess(self, data):
+        """
+        Apply the `preprocessors` to the data.
+        """
+        for pp in self.preprocessors:
+            data = pp(data)
+        return data
 
 
 class Model:
@@ -191,14 +214,31 @@ class SklFitter(Fitter):
 
     @params.setter
     def params(self, value):
-        self._params = dict(value)
-        self._params.pop("self", None)
+        self._params = self._get_sklparams(value)
 
-    def __call__(self, data):
+    def _get_sklparams(self, values):
+        sklfitter = self.__wraps__
+        if sklfitter is not None:
+            spec = inspect.getargs(sklfitter.__init__.__code__)
+            # first argument is 'self'
+            assert spec.args[0] == "self"
+            params = {name: values[name] for name in spec.args[1:]
+                      if name in values}
+        else:
+            raise TypeError("Wrapper does not define '__wraps__'")
+        return params
+
+    def preprocess(self, data):
+        data = super().preprocess(data)
+
         if any(isinstance(v, Orange.data.DiscreteVariable) and len(v.values) > 2
                for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support " +
                              "multinomial variables.")
+
+        return data
+
+    def __call__(self, data):
         clf = super().__call__(data)
         clf.used_vals = [np.unique(y) for y in data.Y.T]
         return clf
