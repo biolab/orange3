@@ -31,6 +31,12 @@ from Orange.widgets.utils.itemmodels import TableModel, SparseTableModel
 
 
 class RichTableDecorator(QIdentityProxyModel):
+    """A proxy model for a TableModel with some bells and whistles
+
+    (adds support for gui.BarRole, include variable labels and icons
+    in the header)
+    """
+    #: Rich header data flags.
     Name, Labels, Icon = 1, 2, 4
 
     def __init__(self, source, parent=None):
@@ -119,14 +125,18 @@ class RichTableDecorator(QIdentityProxyModel):
     def richHeaderFlags(self):
         return self._header_flags
 
-    if QT_VERSION < 0xFFFFF:  # when QTBUG-44143 is fixed
+    if QT_VERSION < 0xFFFFFF:  # TODO: change when QTBUG-44143 is fixed
         def sort(self, column, order):
+            # Preempt the layout change notification
             self.layoutAboutToBeChanged.emit()
+            # Block signals to suppress repeated layout[AboutToBe]Changed
+            # TODO: Are any other signals emitted during a sort?
             self.blockSignals(True)
             try:
                 rval = self.sourceModel().sort(column, order)
             finally:
                 self.blockSignals(False)
+            # Tidy up.
             self.layoutChanged.emit()
             return rval
     else:

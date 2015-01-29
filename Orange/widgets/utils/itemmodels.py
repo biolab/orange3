@@ -553,6 +553,19 @@ class TableModel(QAbstractTableModel):
         self.__sortIndInv = self.__sortInd
 
     def sort(self, column, order):
+        """
+        Sort the data by `column` index into `order`
+
+        :param int column:
+        :param Qt.SortOrder order:
+
+        Reimplemented from QAbstractItemModel.sort
+
+        .. note::
+            This only affects the model's data presentation, the
+            underlying data table is left unmodified.
+
+        """
         self.layoutAboutToBeChanged.emit()
         persistent = [(pind, self.__sortInd[pind.row()])
                       for pind in self.persistentIndexList()]
@@ -587,6 +600,13 @@ class TableModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def columnSortKeyData(self, column, role):
+        """
+        Return a sequence of objects which can be used as `keys` for sorting.
+
+        :param int column: Sort column.
+        :param Qt.ItemRole role: Sort item role.
+
+        """
         var = self.vars[column]
         if isinstance(var, Variable) and role == TableModel.ValueRole:
             col_view, _ = self.source.get_column_view(var)
@@ -619,7 +639,7 @@ class TableModel(QAbstractTableModel):
                                    DomainRole,
                                    VariableStatsRole]),
              ):
-
+        """Reimplemented from `QAbstractItemModel.data`"""
         row, col = self.__sortInd[index.row()], index.column()
         if role not in _recognizedRoles:
             return self._extra_data.get((row, col, role), None)
