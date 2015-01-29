@@ -185,6 +185,8 @@ class OWButton(QToolButton):
     '''
         A custom tool button which signal when its down state changes
     '''
+    downChanged = pyqtSignal(bool)
+
     def __init__(self, action=None, parent=None):
         QToolButton.__init__(self, parent)
         self.setMinimumSize(30, 30)
