@@ -16,7 +16,7 @@ def is_continuous(var):
 
 class Results:
     """
-    Class for storing predicted in model testing.
+    Class for storing predictions in model testing.
 
     .. attribute:: data
 
@@ -65,7 +65,7 @@ class Results:
     # noinspection PyBroadException
     # noinspection PyNoneFunctionAssignment
     def __init__(self, data=None, nmethods=0, nrows=None, nclasses=None,
-                 store_data=False):
+                 store_data=False, store_models=False):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -87,7 +87,17 @@ class Results:
         :type nmethods: int
         :param nrows: The number of test instances (including duplicates)
         :type nrows: int
+        :param nclasses: The number of class values
+        :type nclasses: int
+        :param store_data: A flag that tells whether to store the data;
+            this argument can be given only as keyword argument
+        :type store_data: bool
+        :param store_models: A flag that tells whether to store the models;
+            this argument can be given only as keyword argument
+        :type store_models: bool
         """
+        self.store_data = store_data
+        self.store_models = store_models
         self.data = data if store_data else None
         self.models = None
         self.folds = None
@@ -135,62 +145,7 @@ class Results:
         return results
 
 
-class Testing:
-    """
-    Abstract base class for various sampling procedures like cross-validation,
-    leave one out or bootstrap. Derived classes define a `__call__` operator
-    that executes the testing procedure and returns an instance of
-    :obj:`Results`.
-
-    .. attribute:: store_data
-
-        A flag that tells whether to store the data used for test.
-
-    .. attribute:: store_models
-
-        A flag that tells whether to store the constructed models
-    """
-
-    def __new__(cls, data=None, fitters=None, **kwargs):
-        """
-        Construct an instance and store the values of keyword arguments
-        `store_data` and `store_models`, if given. If `data` and
-        `learners` are given, the constructor also calls the testing
-        procedure. For instance, CrossValidation(data, learners) will return
-        an instance of `Results` with results of cross validating `learners` on
-        `data`.
-
-        :param data: Data instances used for testing procedures
-        :type data: Orange.data.Storage
-        :param learners: A list of learning algorithms to be tested
-        :type fitters: list of Orange.classification.Fitter
-        :param store_data: A flag that tells whether to store the data;
-            this argument can be given only as keyword argument
-        :type store_data: bool
-        :param store_models: A flag that tells whether to store the models;
-            this argument can be given only as keyword argument
-        :type store_models: bool
-        """
-        self = super().__new__(cls)
-
-        if (data is not None) ^ (fitters is not None):
-            raise TypeError(
-                "Either none or both of 'data' and 'fitters' required.")
-        if fitters is not None:
-            self.__init__(**kwargs)
-            return self(data, fitters)
-        return self
-
-    def __init__(self, store_data=False, store_models=False):
-        self.store_data = store_data
-        self.store_models = store_models
-
-    def __call__(self, data, fitters):
-        raise TypeError("{}.__call__ is not implemented".
-                        format(type(self).__name__))
-
-
-class CrossValidation(Testing):
+class CrossValidation(Results):
     """
     K-fold cross validation.
 
@@ -205,14 +160,12 @@ class CrossValidation(Testing):
     .. attribute:: random_state
 
     """
-    def __init__(self, k=10, random_state=0, store_data=False,
+    def __init__(self, data, fitters, k=10, random_state=0, store_data=False,
                  store_models=False):
-        super().__init__(store_data=store_data, store_models=store_models)
+        super().__init__(data, len(fitters), store_data=store_data,
+                         store_models=store_models)
         self.k = k
         self.random_state = random_state
-
-    def __call__(self, data, fitters):
-        n = len(data)
         Y = data.Y.copy().flatten()
         if is_discrete(data.domain.class_var):
             indices = cross_validation.StratifiedKFold(
@@ -222,22 +175,22 @@ class CrossValidation(Testing):
             indices = cross_validation.KFold(
                 len(Y), self.k, shuffle=True, random_state=self.random_state
             )
-        results = Results(data, len(fitters), store_data=self.store_data)
 
-        results.folds = []
+
+        self.folds = []
         if self.store_models:
-            results.models = []
+            self.models = []
         ptr = 0
         class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
             fold_slice = slice(ptr, ptr + len(test))
-            results.folds.append(fold_slice)
-            results.row_indices[fold_slice] = test
-            results.actual[fold_slice] = test_data.Y.flatten()
+            self.folds.append(fold_slice)
+            self.row_indices[fold_slice] = test
+            self.actual[fold_slice] = test_data.Y.flatten()
             if self.store_models:
                 fold_models = []
-                results.models.append(fold_models)
+                self.models.append(fold_models)
             for i, fitter in enumerate(fitters):
                 model = fitter(train_data)
                 if self.store_models:
@@ -245,21 +198,21 @@ class CrossValidation(Testing):
 
                 if is_discrete(class_var):
                     values, probs = model(test_data, model.ValueProbs)
-                    results.predicted[i][fold_slice] = values
-                    results.probabilities[i][fold_slice, :] = probs
+                    self.predicted[i][fold_slice] = values
+                    self.probabilities[i][fold_slice, :] = probs
                 elif is_continuous(class_var):
                     values = model(test_data, model.Value)
-                    results.predicted[i][fold_slice] = values
+                    self.predicted[i][fold_slice] = values
 
             ptr += len(test)
-        return results
 
 
-class LeaveOneOut(Testing):
-    """Leave-one-out testing
-    """
-    def __call__(self, data, fitters):
-        results = Results(data, len(fitters), store_data=self.store_data)
+class LeaveOneOut(Results):
+    """Leave-one-out testing"""
+
+    def __init__(self, data, fitters, store_data=False, store_models=False):
+        super().__init__(data, len(fitters), store_data=store_data,
+                         store_models=store_models)
 
         domain = data.domain
         X = data.X.copy()
@@ -275,12 +228,12 @@ class LeaveOneOut(Testing):
         else:
             W = teW = trW = None
 
-        results.row_indices = np.arange(len(data))
+        self.row_indices = np.arange(len(data))
         if self.store_models:
-            results.models = []
-        results.actual = Y.flatten()
+            self.models = []
+        self.actual = Y.flatten()
         class_var = data.domain.class_var
-        for test_idx in results.row_indices:
+        for test_idx in self.row_indices:
             X[[0, test_idx]] = X[[test_idx, 0]]
             Y[[0, test_idx]] = Y[[test_idx, 0]]
             metas[[0, test_idx]] = metas[[test_idx, 0]]
@@ -290,7 +243,7 @@ class LeaveOneOut(Testing):
             train_data = Table.from_numpy(domain, trX, trY, tr_metas, trW)
             if self.store_models:
                 fold_models = []
-                results.models.append(fold_models)
+                self.models.append(fold_models)
             for i, fitter in enumerate(fitters):
                 model = fitter(train_data)
                 if self.store_models:
@@ -298,25 +251,24 @@ class LeaveOneOut(Testing):
 
                 if is_discrete(class_var):
                     values, probs = model(test_data, model.ValueProbs)
-                    results.predicted[i][test_idx] = values
-                    results.probabilities[i][test_idx, :] = probs
+                    self.predicted[i][test_idx] = values
+                    self.probabilities[i][test_idx, :] = probs
                 elif is_continuous(class_var):
                     values = model(test_data, model.Value)
-                    results.predicted[i][test_idx] = values
-
-        return results
+                    self.predicted[i][test_idx] = values
 
 
-class TestOnTrainingData(Testing):
-    """Trains and test on the same data
-    """
-    def __call__(self, data, fitters):
-        results = Results(data, len(fitters), store_data=self.store_data)
-        results.row_indices = np.arange(len(data))
+class TestOnTrainingData(Results):
+    """Trains and test on the same data"""
+
+    def __init__(self, data, fitters, store_data=False, store_models=False):
+        super().__init__(data, len(fitters), store_data=store_data,
+                         store_models=store_models)
+        self.row_indices = np.arange(len(data))
         if self.store_models:
             models = []
-            results.models = [models]
-        results.actual = data.Y.flatten()
+            self.models = [models]
+        self.actual = data.Y.flatten()
         class_var = data.domain.class_var
         for i, fitter in enumerate(fitters):
             model = fitter(data)
@@ -325,34 +277,31 @@ class TestOnTrainingData(Testing):
 
             if is_discrete(class_var):
                 values, probs = model(data, model.ValueProbs)
-                results.predicted[i] = values
-                results.probabilities[i] = probs
+                self.predicted[i] = values
+                self.probabilities[i] = probs
             elif is_continuous(class_var):
                 values = model(data, model.Value)
-                results.predicted[i] = values
-
-        return results
+                self.predicted[i] = values
 
 
-class Bootstrap(Testing):
-    def __init__(self, n_resamples=10, p=0.75, random_state=0,
+class Bootstrap(Results):
+    def __init__(self, data, fitters, n_resamples=10, p=0.75, random_state=0,
                  store_data=False, store_models=False):
-        super().__init__(store_data=store_data, store_models=store_models)
+        super().__init__(data, len(fitters), store_data=store_data,
+                         store_models=store_models)
+        self.store_models = store_models
         self.n_resamples = n_resamples
         self.p = p
         self.random_state = random_state
 
-    def __call__(self, data, fitters):
         indices = cross_validation.Bootstrap(
             len(data), n_iter=self.n_resamples, train_size=self.p,
             random_state=self.random_state
         )
 
-        results = Results(data, len(fitters), store_data=self.store_data)
-
-        results.folds = []
+        self.folds = []
         if self.store_models:
-            results.models = []
+            self.models = []
 
         row_indices = []
         actual = []
@@ -362,12 +311,12 @@ class Bootstrap(Testing):
         class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
-            results.folds.append(slice(fold_start, fold_start + len(test)))
+            self.folds.append(slice(fold_start, fold_start + len(test)))
             row_indices.append(test)
             actual.append(test_data.Y.flatten())
             if self.store_models:
                 fold_models = []
-                results.models.append(fold_models)
+                self.models.append(fold_models)
 
             for i, fitter in enumerate(fitters):
                 model = fitter(train_data)
@@ -392,53 +341,41 @@ class Bootstrap(Testing):
         nrows = len(actual)
         nmodels = len(predicted)
 
-        results.nrows = len(actual)
-        results.row_indices = row_indices
-        results.actual = actual
-        results.predicted = predicted.reshape(nmodels, nrows)
+        self.nrows = len(actual)
+        self.row_indices = row_indices
+        self.actual = actual
+        self.predicted = predicted.reshape(nmodels, nrows)
         if is_discrete(class_var):
-            results.probabilities = probabilities
-        return results
+            self.probabilities = probabilities
 
 
-class TestOnTestData(Testing):
+class TestOnTestData(Results):
     """
     Test on a separate test data set.
     """
-    def __new__(cls, train_data=None, test_data=None, fitters=None, **kwargs):
-        self = super().__new__(cls)
-
-        if train_data is None and test_data is None and fitters is None:
-            return self
-        elif train_data is not None and test_data is not None and \
-                fitters is not None:
-            self.__init__(**kwargs)
-            return self(train_data, test_data, fitters)
-        else:
-            raise TypeError("Expected 3 positional arguments")
-
-    def __call__(self, train_data, test_data, fitters):
-        results = Results(test_data, len(fitters), store_data=self.store_data)
-        models = []
+    def __init__(self, train_data, test_data, fitters, store_data=False,
+                 store_models=False):
+        super().__init__(test_data, len(fitters), store_data=store_data,
+                         store_models=store_models)
         if self.store_models:
-            results.models = [models]
+            self.models = []
 
-        results.row_indices = np.arange(len(test_data))
-        results.actual = test_data.Y.flatten()
+        self.row_indices = np.arange(len(test_data))
+        self.actual = test_data.Y.flatten()
 
         class_var = train_data.domain.class_var
         for i, fitter in enumerate(fitters):
             model = fitter(train_data)
             if is_discrete(class_var):
                 values, probs = model(test_data, model.ValueProbs)
-                results.predicted[i] = values
-                results.probabilities[i][:, :] = probs
+                self.predicted[i] = values
+                self.probabilities[i][:, :] = probs
             elif is_continuous(class_var):
                 values = model(test_data, model.Value)
-                results.predicted[i] = values
+                self.predicted[i] = values
 
-            models.append(model)
+            if self.store_models:
+                self.models.append(model)
 
-        results.nrows = len(test_data)
-        results.folds = [slice(0, len(test_data))]
-        return results
+        self.nrows = len(test_data)
+        self.folds = [slice(0, len(test_data))]
