@@ -43,7 +43,7 @@ class TestEqualWidth(TestCase):
         disc = Orange.preprocess.discretization.EqualWidth(n=4)
         dvar = disc(data, data.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
-        self.assertEqual(dvar.compute_value.points, [0.25, 0.75, 0.5])
+        self.assertEqual(dvar.compute_value.points, [0.25, 0.5, 0.75])
 
     def test_equalwidth_100_to_4(self):
         X = np.arange(101).reshape((101, 1))

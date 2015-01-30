@@ -284,6 +284,8 @@ def _entropy_discretize_sorted(C, force=False):
     # entropy_cuts_sorted,
 
     # Note the + 1
+    if len(E) == 0:
+        return []
     cut_index = np.argmin(E) + 1
 
     # Distribution of classed in S1, S2 and S
