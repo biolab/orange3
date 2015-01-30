@@ -447,7 +447,7 @@ def main():
     w.set_train_data(data)
     w.set_test_data(data)
     w.set_learner(lr.LogisticRegressionLearner(), 1)
-    w.set_learner(nb.BayesLearner(), 2)
+    w.set_learner(nb.NaiveBayesLearner(), 2)
     w.handleNewSignals()
     return app.exec_()
 

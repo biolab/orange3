@@ -49,7 +49,7 @@ class ModelTest(unittest.TestCase):
 
     def test_predict_single_instance(self):
         table = data.Table("titanic")
-        learn = nb.BayesLearner()
+        learn = nb.NaiveBayesLearner()
         clf = learn(table)
         pred = []
         for row in table:

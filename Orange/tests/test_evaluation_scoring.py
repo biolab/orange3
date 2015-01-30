@@ -41,10 +41,10 @@ class Scoring_CA_Test(unittest.TestCase):
         t = Table(x, y)
         t = discretization.DiscretizeTable(t, method=EqualWidth(n=3))
 
-        res = testing.TestOnTrainingData(t, [naive_bayes.BayesLearner()])
+        res = testing.TestOnTrainingData(t, [naive_bayes.NaiveBayesLearner()])
         np.testing.assert_almost_equal(scoring.CA(res), [1])
 
         t.Y[-20:] = 4 - t.Y[-20:]
-        res = testing.TestOnTrainingData(t, [naive_bayes.BayesLearner()])
+        res = testing.TestOnTrainingData(t, [naive_bayes.NaiveBayesLearner()])
         self.assertGreaterEqual(scoring.CA(res)[0], 0.75)
         self.assertLess(scoring.CA(res)[0], 1)

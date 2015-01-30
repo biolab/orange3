@@ -20,14 +20,14 @@ def random_data(nrows, ncols):
 class TestingTestCase(unittest.TestCase):
     def test_no_data(self):
         self.assertRaises(TypeError, testing.CrossValidation,
-                          learners=[naive_bayes.BayesLearner()])
+                          learners=[naive_bayes.NaiveBayesLearner()])
 
 
 class CrossValidationTestCase(unittest.TestCase):
     def test_results(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        res = testing.CrossValidation(t, [naive_bayes.BayesLearner()])
+        res = testing.CrossValidation(t, [naive_bayes.NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -42,7 +42,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_folds(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        res = testing.CrossValidation(t, [naive_bayes.BayesLearner()], k=5)
+        res = testing.CrossValidation(t, [naive_bayes.NaiveBayesLearner()], k=5)
         self.assertEqual(len(res.folds), 5)
         for i, fold in enumerate(res.folds):
             self.assertAlmostEqual(fold.start, i * 200, delta=3)
@@ -51,7 +51,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_call_5(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        res = testing.CrossValidation(t, [naive_bayes.BayesLearner()], k=5)
+        res = testing.CrossValidation(t, [naive_bayes.NaiveBayesLearner()], k=5)
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -66,7 +66,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_store_data(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.BayesLearner()]
+        learners = [naive_bayes.NaiveBayesLearner()]
 
         res = testing.CrossValidation(t, learners)
         self.assertIsNone(res.data)
@@ -83,7 +83,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_store_models(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.BayesLearner(), majority.MajorityLearner()]
+        learners = [naive_bayes.NaiveBayesLearner(), majority.MajorityLearner()]
 
         res = testing.CrossValidation(t, learners, k=5)
         self.assertIsNone(res.models)
@@ -92,7 +92,7 @@ class CrossValidationTestCase(unittest.TestCase):
         self.assertEqual(len(res.models), 5)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.BayesModel)
+            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
             self.assertIsInstance(models[1], majority.ConstantModel)
 
         res = testing.CrossValidation(t, learners, k=5)
@@ -102,7 +102,7 @@ class CrossValidationTestCase(unittest.TestCase):
         self.assertEqual(len(res.models), 5)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.BayesModel)
+            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
             self.assertIsInstance(models[1], majority.ConstantModel)
 
     def test_10_fold_probs(self):
@@ -134,7 +134,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_results(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
-        res = testing.LeaveOneOut(t, [naive_bayes.BayesLearner()])
+        res = testing.LeaveOneOut(t, [naive_bayes.NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -146,7 +146,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_call(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
-        res = testing.LeaveOneOut(t, [naive_bayes.BayesLearner()])
+        res = testing.LeaveOneOut(t, [naive_bayes.NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -157,7 +157,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_store_data(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.BayesLearner()]
+        learners = [naive_bayes.NaiveBayesLearner()]
 
         res = testing.LeaveOneOut(t, learners)
         self.assertIsNone(res.data)
@@ -174,7 +174,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.BayesLearner(), majority.MajorityLearner()]
+        learners = [naive_bayes.NaiveBayesLearner(), majority.MajorityLearner()]
 
         res = testing.LeaveOneOut(t, learners)
         self.assertIsNone(res.models)
@@ -183,7 +183,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
         self.assertEqual(len(res.models), 50)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.BayesModel)
+            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
             self.assertIsInstance(models[1], majority.ConstantModel)
 
         res = testing.LeaveOneOut(t, learners)
@@ -193,7 +193,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
         self.assertEqual(len(res.models), 50)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.BayesModel)
+            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
             self.assertIsInstance(models[1], majority.ConstantModel)
 
     def test_probs(self):
@@ -233,7 +233,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
     def test_results(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        res = testing.TestOnTrainingData(t, [naive_bayes.BayesLearner()])
+        res = testing.TestOnTrainingData(t, [naive_bayes.NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -245,7 +245,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
     def test_store_data(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.BayesLearner()]
+        learners = [naive_bayes.NaiveBayesLearner()]
 
         res = testing.TestOnTrainingData(t, learners)
         self.assertIsNone(res.data)
@@ -262,7 +262,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.BayesLearner(), majority.MajorityLearner()]
+        learners = [naive_bayes.NaiveBayesLearner(), majority.MajorityLearner()]
 
         res = testing.TestOnTrainingData(t, learners)
         self.assertIsNone(res.models)
@@ -271,7 +271,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
         self.assertEqual(len(res.models), 1)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.BayesModel)
+            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
             self.assertIsInstance(models[1], majority.ConstantModel)
 
         res = testing.TestOnTrainingData(t, learners)
@@ -281,7 +281,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
         self.assertEqual(len(res.models), 1)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.BayesModel)
+            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
             self.assertIsInstance(models[1], majority.ConstantModel)
 
     def test_probs(self):

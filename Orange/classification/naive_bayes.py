@@ -4,10 +4,10 @@ from Orange.classification import Learner, Model
 from Orange.data import Instance, Storage, Table, DiscreteVariable
 from Orange.statistics import contingency
 
-__all__ = ["BayesLearner", "BayesModel"]
+__all__ = ["NaiveBayesLearner", "NaiveBayesModel"]
 
 
-class BayesLearner(Learner):
+class NaiveBayesLearner(Learner):
     def fit_storage(self, table):
         if not isinstance(table, Storage):
             raise TypeError("Data is not a subclass of Orange.data.Storage.")
@@ -18,10 +18,10 @@ class BayesLearner(Learner):
         cont = contingency.get_contingencies(table)
         class_freq = np.diag(
             contingency.get_contingency(table, table.domain.class_var))
-        return BayesModel(cont, class_freq, table.domain)
+        return NaiveBayesModel(cont, class_freq, table.domain)
 
 
-class BayesModel(Model):
+class NaiveBayesModel(Model):
     def __init__(self, cont, class_freq, domain):
         super().__init__(domain)
         self.cont = cont

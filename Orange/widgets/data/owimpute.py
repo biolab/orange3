@@ -558,10 +558,10 @@ def learn_model_for(learner, variable, data):
     return learner(data)
 
 
-from Orange.classification.naive_bayes import BayesLearner
+from Orange.classification.naive_bayes import NaiveBayesLearner
 
 
-def column_imputer_by_model(variable, table, *, learner=BayesLearner()):
+def column_imputer_by_model(variable, table, *, learner=NaiveBayesLearner()):
     model = learn_model_for(learner, variable, table)
     assert model.domain.class_vars == (variable,)
     return ColumnImputerFromModel(table.domain, model.domain.class_vars, model)
