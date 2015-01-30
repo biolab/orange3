@@ -1,6 +1,5 @@
 from math import isnan, floor
-from numbers import Real
-import types
+import numpy as np
 
 from ..data.value import Value, Unknown
 import collections
@@ -316,7 +315,7 @@ class DiscreteVariable(Variable):
 
         if isinstance(s, int):
             return s
-        if isinstance(s, Real):
+        if np.isreal(s):
             return s if isnan(s) else floor(s + 0.25)
         if s in self.unknown_str:
             return ValueUnknown
