@@ -233,7 +233,7 @@ class OWPredictions(widget.OWWidget):
             if classification:
                 results.probabilities = numpy.array(
                     [p.results[1] for p in slots])
-            results.fitter_names = [pname(p.predictor) for p in slots]
+            results.learner_names = [pname(p.predictor) for p in slots]
 
         self.send("Predictions", predictions)
         self.send("Evaluation Results", results)

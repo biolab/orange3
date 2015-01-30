@@ -16,7 +16,7 @@ class OWKNNLearner(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Orange.data.preprocess.Preprocess,
                "set_preprocessor")]
-    outputs = [("Learner", knn.KNNLearner), ("Classifier", knn.KNNClassifier)]
+    outputs = [("Learner", knn.KNNLearner), ("Classifier", knn.KNNModel)]
 
     want_main_area = False
     learner_name = Setting("kNN")

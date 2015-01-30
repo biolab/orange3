@@ -160,9 +160,9 @@ class CrossValidation(Results):
     .. attribute:: random_state
 
     """
-    def __init__(self, data, fitters, k=10, random_state=0, store_data=False,
+    def __init__(self, data, learners, k=10, random_state=0, store_data=False,
                  store_models=False):
-        super().__init__(data, len(fitters), store_data=store_data,
+        super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models)
         self.k = k
         self.random_state = random_state
@@ -191,8 +191,8 @@ class CrossValidation(Results):
             if self.store_models:
                 fold_models = []
                 self.models.append(fold_models)
-            for i, fitter in enumerate(fitters):
-                model = fitter(train_data)
+            for i, learner in enumerate(learners):
+                model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
 
@@ -210,8 +210,8 @@ class CrossValidation(Results):
 class LeaveOneOut(Results):
     """Leave-one-out testing"""
 
-    def __init__(self, data, fitters, store_data=False, store_models=False):
-        super().__init__(data, len(fitters), store_data=store_data,
+    def __init__(self, data, learners, store_data=False, store_models=False):
+        super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models)
 
         domain = data.domain
@@ -244,8 +244,8 @@ class LeaveOneOut(Results):
             if self.store_models:
                 fold_models = []
                 self.models.append(fold_models)
-            for i, fitter in enumerate(fitters):
-                model = fitter(train_data)
+            for i, learner in enumerate(learners):
+                model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
 
@@ -261,8 +261,8 @@ class LeaveOneOut(Results):
 class TestOnTrainingData(Results):
     """Trains and test on the same data"""
 
-    def __init__(self, data, fitters, store_data=False, store_models=False):
-        super().__init__(data, len(fitters), store_data=store_data,
+    def __init__(self, data, learners, store_data=False, store_models=False):
+        super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models)
         self.row_indices = np.arange(len(data))
         if self.store_models:
@@ -270,8 +270,8 @@ class TestOnTrainingData(Results):
             self.models = [models]
         self.actual = data.Y.flatten()
         class_var = data.domain.class_var
-        for i, fitter in enumerate(fitters):
-            model = fitter(data)
+        for i, learner in enumerate(learners):
+            model = learner(data)
             if self.store_models:
                 models.append(model)
 
@@ -285,9 +285,9 @@ class TestOnTrainingData(Results):
 
 
 class Bootstrap(Results):
-    def __init__(self, data, fitters, n_resamples=10, p=0.75, random_state=0,
+    def __init__(self, data, learners, n_resamples=10, p=0.75, random_state=0,
                  store_data=False, store_models=False):
-        super().__init__(data, len(fitters), store_data=store_data,
+        super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models)
         self.store_models = store_models
         self.n_resamples = n_resamples
@@ -305,8 +305,8 @@ class Bootstrap(Results):
 
         row_indices = []
         actual = []
-        predicted = [[] for _ in fitters]
-        probabilities = [[] for _ in fitters]
+        predicted = [[] for _ in learners]
+        probabilities = [[] for _ in learners]
         fold_start = 0
         class_var = data.domain.class_var
         for train, test in indices:
@@ -318,8 +318,8 @@ class Bootstrap(Results):
                 fold_models = []
                 self.models.append(fold_models)
 
-            for i, fitter in enumerate(fitters):
-                model = fitter(train_data)
+            for i, learner in enumerate(learners):
+                model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
 
@@ -353,9 +353,9 @@ class TestOnTestData(Results):
     """
     Test on a separate test data set.
     """
-    def __init__(self, train_data, test_data, fitters, store_data=False,
+    def __init__(self, train_data, test_data, learners, store_data=False,
                  store_models=False):
-        super().__init__(test_data, len(fitters), store_data=store_data,
+        super().__init__(test_data, len(learners), store_data=store_data,
                          store_models=store_models)
         if self.store_models:
             self.models = []
@@ -364,8 +364,8 @@ class TestOnTestData(Results):
         self.actual = test_data.Y.flatten()
 
         class_var = train_data.domain.class_var
-        for i, fitter in enumerate(fitters):
-            model = fitter(train_data)
+        for i, learner in enumerate(learners):
+            model = learner(train_data)
             if is_discrete(class_var):
                 values, probs = model(test_data, model.ValueProbs)
                 self.predicted[i] = values

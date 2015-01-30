@@ -2,12 +2,12 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange.classification import Fitter, Model
+from Orange.classification import Learner, Model
 
-__all__ = ["SoftmaxRegressionLearner", "SoftmaxRegressionClassifier"]
+__all__ = ["SoftmaxRegressionLearner", "SoftmaxRegressionModel"]
 
 
-class SoftmaxRegressionLearner(Fitter):
+class SoftmaxRegressionLearner(Learner):
     def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
                  **fmin_args):
         '''L2 regularized softmax regression
@@ -66,10 +66,10 @@ class SoftmaxRegressionLearner(Fitter):
                                       args=(X, Y), **self.fmin_args)
         Theta = theta.reshape((self.num_classes, X.shape[1]))
 
-        return SoftmaxRegressionClassifier(Theta)
+        return SoftmaxRegressionModel(Theta)
 
 
-class SoftmaxRegressionClassifier(Model):
+class SoftmaxRegressionModel(Model):
     def __init__(self, Theta):
         self.Theta = Theta
 

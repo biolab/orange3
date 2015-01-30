@@ -1,6 +1,6 @@
 import sklearn.svm as skl_svm
 
-from Orange.classification import SklFitter, SklModel
+from Orange.classification import SklLearner, SklModel
 
 __all__ = ["SVMLearner", "SVMClassifier", "LinearSVMLearner", "NuSVMLearner",
            "NuSVMClassifier", "SVRLearner", "NuSVRLearner",
@@ -17,7 +17,7 @@ class SVMClassifier(SklModel):
         return value
 
 
-class SVMLearner(SklFitter):
+class SVMLearner(SklLearner):
     __wraps__ = skl_svm.SVC
     __returns__ = SVMClassifier
 
@@ -31,7 +31,7 @@ class SVMLearner(SklFitter):
         self.supports_weights = True
 
 
-class LinearSVMLearner(SklFitter):
+class LinearSVMLearner(SklLearner):
     __wraps__ = skl_svm.LinearSVC
 
     def __init__(self, penalty='l2', loss='l2', dual=True, tol=0.0001,
@@ -53,7 +53,7 @@ class NuSVMClassifier(SklModel):
         return value
 
 
-class NuSVMLearner(SklFitter):
+class NuSVMLearner(SklLearner):
     __wraps__ = skl_svm.NuSVC
     __returns__ = NuSVMClassifier
 
@@ -66,7 +66,7 @@ class NuSVMLearner(SklFitter):
         self.supports_weights = True
 
 
-class SVRLearner(SklFitter):
+class SVRLearner(SklLearner):
     __wraps__ = skl_svm.SVR
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
@@ -77,7 +77,7 @@ class SVRLearner(SklFitter):
         self.supports_weights = True
 
 
-class NuSVRLearner(SklFitter):
+class NuSVRLearner(SklLearner):
     __wraps__ = skl_svm.NuSVR
 
     def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma=0.0,
@@ -88,7 +88,7 @@ class NuSVRLearner(SklFitter):
         self.supports_weights = True
 
 
-class OneClassSVMLearner(SklFitter):
+class OneClassSVMLearner(SklLearner):
     __wraps__ = skl_svm.OneClassSVM
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,

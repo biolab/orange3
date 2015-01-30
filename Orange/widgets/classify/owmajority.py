@@ -14,8 +14,8 @@ class OWMajority(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Orange.data.preprocess.Preprocess,
                "set_preprocessor")]
-    outputs = [("Learner", Orange.classification.majority.MajorityFitter),
-               ("Classifier", Orange.classification.majority.ConstantClassifier)]
+    outputs = [("Learner", Orange.classification.majority.MajorityLearner),
+               ("Classifier", Orange.classification.majority.ConstantModel)]
 
     learner_name = Setting("Majority")
 
@@ -51,7 +51,7 @@ class OWMajority(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        learner = Orange.classification.majority.MajorityFitter(
+        learner = Orange.classification.majority.MajorityLearner(
             preprocessors=self.preprocessors)
 
         learner.name = self.learner_name

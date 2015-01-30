@@ -6,7 +6,7 @@ import numpy as np
 
 from Orange import data
 import Orange.classification
-from Orange.classification import Fitter
+from Orange.classification import Learner
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 import Orange.classification.naive_bayes as nb
 from Orange.data.io import BasketReader
@@ -187,7 +187,7 @@ class LearnerAccessibility(unittest.TestCase):
             module = pkgutil.importlib.import_module(modname)
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if issubclass(class_, Fitter):
+                if issubclass(class_, Learner):
                     if not hasattr(Orange.classification, class_.__name__):
                         self.fail("%s is not visible in Orange.classification"
                                   " namespace" % class_.__name__)

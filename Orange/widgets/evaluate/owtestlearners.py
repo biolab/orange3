@@ -57,7 +57,7 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Orange.classification.Fitter,
+    inputs = [("Learner", Orange.classification.Learner,
                "set_learner", widget.Multiple),
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
               ("Test Data", Orange.data.Table, "set_test_data")]
@@ -308,7 +308,7 @@ class OWTestLearners(widget.OWWidget):
                    if val.results is not None]
         if results:
             combined = results_merge(results)
-            combined.fitter_names = [learner_name(val.learner)
+            combined.learner_names = [learner_name(val.learner)
                                      for val in self.learners.values()]
         else:
             combined = None

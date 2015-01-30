@@ -16,7 +16,7 @@ class OWNaiveBayes(widget.OWWidget):
                "set_preprocessor")]
     outputs = [
        ("Learner", Orange.classification.naive_bayes.BayesLearner),
-       ("Classifier", Orange.classification.naive_bayes.BayesClassifier)
+       ("Classifier", Orange.classification.naive_bayes.BayesModel)
     ]
 
     want_main_area = False
