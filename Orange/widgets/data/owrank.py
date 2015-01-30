@@ -14,6 +14,7 @@ from PyQt4.QtCore import Qt
 
 import Orange
 from Orange.feature import scoring
+import Orange.preprocess.discretization
 
 from Orange.widgets import widget, settings, gui
 
@@ -426,7 +427,7 @@ class OWRank(widget.OWWidget):
 
     def getDiscretizedData(self):
         if not self.discretizedData:
-            discretizer = Orange.feature.discretization.EqualFreq(n=4)
+            discretizer = Orange.preprocess.discretization.EqualFreq(n=4)
             contAttrs = [attr for attr in self.data.domain.attributes
                          if is_continuous(attr)]
             at = []

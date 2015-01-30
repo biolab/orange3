@@ -153,7 +153,7 @@ class OWContinuize(widget.OWWidget):
              ("Value range", self.value_ranges[self.zero_based])])
 
 
-from Orange.feature.transformation import \
+from Orange.preprocess.transformation import \
     Identity, Indicator, Indicator_1, Normalizer
 
 from functools import partial, wraps, reduce
