@@ -1,10 +1,10 @@
 import unittest
 
+
 class TestOrange(unittest.TestCase):
-    def test_import_all(self):
+    def test_orange_has_modules(self):
         import pkgutil
         import Orange
-        Orange.import_all()
         unimported = ['canvas', 'datasets', 'testing', 'tests', 'setup',
                       'widgets']
         for _, name, __ in pkgutil.iter_modules(Orange.__path__):
