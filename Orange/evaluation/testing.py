@@ -16,7 +16,7 @@ def is_continuous(var):
 
 class Results:
     """
-    Class for storing predicted in model testing.
+    Class for storing predictions in model testing.
 
     .. attribute:: data
 
