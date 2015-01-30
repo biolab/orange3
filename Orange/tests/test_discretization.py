@@ -5,7 +5,7 @@ from mock import Mock
 import numpy as np
 
 from Orange import preprocess
-from Orange.data import ContinuousVariable, Table
+from Orange import data
 
 
 # noinspection PyPep8Naming
@@ -14,25 +14,25 @@ class TestEqualFreq(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        data = Table(X)
+        table = data.Table(X)
         disc = preprocess.EqualFreq(n=4)
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
 
     def test_equifreq_100_to_4(self):
         X = np.arange(100).reshape((100, 1))
-        data = Table(X)
+        table = data.Table(X)
         disc = preprocess.EqualFreq(n=4)
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [24.5, 49.5, 74.5])
 
     def test_equifreq_with_k_instances(self):
         X = np.array([[1], [2], [3], [4]])
-        data = Table(X)
+        table = data.Table(X)
         disc = preprocess.EqualFreq(n=4)
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [1.5, 2.5, 3.5])
 
@@ -43,25 +43,25 @@ class TestEqualWidth(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        data = Table(X)
+        table = data.Table(X)
         disc = preprocess.EqualWidth(n=4)
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [0.25, 0.5, 0.75])
 
     def test_equalwidth_100_to_4(self):
         X = np.arange(101).reshape((101, 1))
-        data = Table(X)
+        table = data.Table(X)
         disc = preprocess.EqualWidth(n=4)
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [25, 50, 75])
 
     def test_equalwidth_const_value(self):
         X = np.ones((100, 1))
-        data = Table(X)
+        table = data.Table(X)
         disc = preprocess.EqualFreq(n=4)
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
 
@@ -72,26 +72,26 @@ class TestEntropyMDL(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        data = Table(X, X)
+        table = data.Table(X, X)
         disc = preprocess.EntropyMDL()
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
 
     def test_entropy_with_two_values_useless(self):
         X = np.array([0] * 50 + [1] * 50).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 50 + [0] * 25)
-        data = Table(X, Y)
+        table = data.Table(X, Y)
         disc = preprocess.EntropyMDL()
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
 
     def test_entropy_constant(self):
         X = np.ones((100, 1))
-        data = Table(X, X)
+        table = data.Table(X, X)
         disc = preprocess.EntropyMDL()
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
 
@@ -99,9 +99,9 @@ class TestEntropyMDL(TestCase):
         X = np.array([0] * 25 + [1] * 25 + [2] * 25 + [3] * 25
                      ).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 75)
-        data = Table(X, Y)
+        table = data.Table(X, Y)
         disc = preprocess.EntropyMDL()
-        dvar = disc(data, data.domain.variables[0])
+        dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
 
@@ -109,7 +109,7 @@ class TestEntropyMDL(TestCase):
 # noinspection PyPep8Naming
 class TestDiscretizer(TestCase):
     def setUp(self):
-        self.var = Mock(ContinuousVariable, number_of_decimals=1)
+        self.var = Mock(data.ContinuousVariable, number_of_decimals=1)
         self.var.name = "x"
 
     def test_create_discretized_var(self):
@@ -130,13 +130,12 @@ class TestDiscretizer(TestCase):
 class TestDiscretizeTable(TestCase):
     def setUp(self):
         s = [0] * 50 + [1] * 50
-        random.shuffle(s)
         X1 = np.array(s).reshape((100, 1))
         X2 = np.arange(100).reshape((100, 1))
         X3 = np.ones((100, 1))
         X = np.hstack([X1, X2, X3])
-        self.table_no_class = Table(X)
-        self.table_class = Table(X, X1)
+        self.table_no_class = data.Table(X)
+        self.table_class = data.Table(X, X1)
 
     def test_discretize_exclude_constant(self):
         dt = preprocess.DiscretizeTable(self.table_no_class)
@@ -181,3 +180,34 @@ class TestDiscretizeTable(TestCase):
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [6])
+
+    def test_leave_discrete(self):
+        s = [0] * 50 + [1] * 50
+        X1 = np.array(s).reshape((100, 1))
+        X2 = np.arange(100).reshape((100, 1))
+        X3 = np.ones((100, 1))
+        X = np.hstack([X1, X2, X3])
+        domain = data.Domain([data.DiscreteVariable("a", values="MF"),
+                              data.ContinuousVariable("b"),
+                              data.DiscreteVariable("c", values="AB")],
+                             data.ContinuousVariable("d"))
+        table = data.Table(domain, X, X1)
+        dt = preprocess.DiscretizeTable(table)
+        dom = dt.domain
+        self.assertIs(dom[0], table.domain[0])
+        self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
+        self.assertIs(dom[2], table.domain[2])
+        self.assertIs(dom.class_var, table.domain.class_var)
+
+        domain = data.Domain([data.DiscreteVariable("a", values="MF"),
+                              data.ContinuousVariable("b"),
+                              data.DiscreteVariable("c", values="AB")],
+                             data.DiscreteVariable("d"))
+        table = data.Table(domain, X, X1)
+        dt = preprocess.DiscretizeTable(table)
+        dom = dt.domain
+        self.assertIs(dom[0], table.domain[0])
+        self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
+        self.assertIs(dom[2], table.domain[2])
+        self.assertIs(dom.class_var, table.domain.class_var)
+
