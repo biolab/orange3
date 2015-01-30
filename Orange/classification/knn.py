@@ -5,7 +5,7 @@ import Orange.data
 from Orange.classification import Learner, Model
 from Orange.data.continuizer import DomainContinuizer
 
-__all__ = ["KNNLearner", "KNNModel"]
+__all__ = ["KNNLearner"]
 
 
 def is_discrete(var):

@@ -4,7 +4,7 @@ import sklearn.tree as skl_tree
 import numpy as np
 from collections import Counter
 
-__all__ = ["ClassificationTreeLearner", "ClassificationTreeClassifier"]
+__all__ = ["ClassificationTreeLearner"]
 
 
 class ClassificationTreeLearner(SklLearner):

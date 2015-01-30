@@ -4,7 +4,7 @@ from Orange import data
 from Orange.classification.base import Learner, Model
 from Orange.statistics import distribution
 
-__all__ = ["MajorityLearner", "ConstantModel"]
+__all__ = ["MajorityLearner"]
 
 
 class MajorityLearner(Learner):

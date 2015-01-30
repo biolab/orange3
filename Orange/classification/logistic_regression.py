@@ -5,7 +5,7 @@ import sklearn.linear_model as skl_linear_model
 import Orange.data.preprocess
 from Orange.classification import SklLearner, SklModel
 
-__all__ = ["LogisticRegressionLearner", "LogisticRegressionClassifier"]
+__all__ = ["LogisticRegressionLearner"]
 
 
 def _np_replace_nan(A, value=0.0):

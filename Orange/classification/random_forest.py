@@ -6,7 +6,7 @@ from numpy import isnan
 import Orange.data
 from Orange.classification import SklLearner, SklModel
 
-__all__ = ["RandomForestLearner", "RandomForestClassifier"]
+__all__ = ["RandomForestLearner"]
 
 
 def replace_nan(X, imp_model):

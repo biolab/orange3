@@ -4,7 +4,7 @@ from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
 
-__all__ = ["SoftmaxRegressionLearner", "SoftmaxRegressionModel"]
+__all__ = ["SoftmaxRegressionLearner"]
 
 
 class SoftmaxRegressionLearner(Learner):

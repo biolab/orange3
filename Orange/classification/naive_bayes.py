@@ -4,7 +4,7 @@ from Orange.classification import Learner, Model
 from Orange.data import Instance, Storage, Table, DiscreteVariable
 from Orange.statistics import contingency
 
-__all__ = ["NaiveBayesLearner", "NaiveBayesModel"]
+__all__ = ["NaiveBayesLearner"]
 
 
 class NaiveBayesLearner(Learner):
