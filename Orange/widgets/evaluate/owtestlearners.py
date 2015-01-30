@@ -3,6 +3,9 @@ import functools
 
 import numpy
 
+import sklearn.metrics as skl_metrics
+import numpy as np
+
 from PyQt4 import QtGui
 from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
     QHeaderView, QItemDelegate
@@ -14,7 +17,6 @@ import Orange.classification
 from Orange.evaluation import testing, scoring
 
 from Orange.widgets import widget, gui, settings
-
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
@@ -371,9 +373,6 @@ def results_add_by_model(x, y):
 def results_merge(results):
     return functools.reduce(results_add_by_model, results, testing.Results())
 
-import sklearn.metrics
-import numpy as np
-
 
 def _skl_metric(results, metric):
     return np.fromiter(
@@ -383,15 +382,15 @@ def _skl_metric(results, metric):
 
 
 def CA(results):
-    return _skl_metric(results, sklearn.metrics.accuracy_score)
+    return _skl_metric(results, skl_metrics.accuracy_score)
 
 
 def Precision(results):
-    return _skl_metric(results, sklearn.metrics.precision_score)
+    return _skl_metric(results, skl_metrics.precision_score)
 
 
 def Recall(results):
-    return _skl_metric(results, sklearn.metrics.recall_score)
+    return _skl_metric(results, skl_metrics.recall_score)
 
 def multi_class_auc(results):
     number_of_classes = len(results.data.domain.class_var.values)
@@ -403,7 +402,7 @@ def multi_class_auc(results):
     weights_norm = [w/sum(weights) for w in weights]
     
     auc_array = np.array([np.mean(np.fromiter(
-        (sklearn.metrics.roc_auc_score(results.actual == class_, predicted)
+        (skl_metrics.roc_auc_score(results.actual == class_, predicted)
         for predicted in results.predicted == class_),
         dtype=np.float64, count=len(results.predicted))) 
         for class_ in range(number_of_classes)])
@@ -412,17 +411,17 @@ def multi_class_auc(results):
     
 def AUC(results):
     if len(results.data.domain.class_var.values) == 2:
-        return _skl_metric(results, sklearn.metrics.roc_auc_score)
+        return _skl_metric(results, skl_metrics.roc_auc_score)
     else:
         return multi_class_auc(results)
 
 
 def F1(results):
-    return _skl_metric(results, sklearn.metrics.f1_score)
+    return _skl_metric(results, skl_metrics.f1_score)
 
 
 def MSE(results):
-    return _skl_metric(results, sklearn.metrics.mean_squared_error)
+    return _skl_metric(results, skl_metrics.mean_squared_error)
 
 
 def RMSE(results):
@@ -430,11 +429,11 @@ def RMSE(results):
 
 
 def MAE(results):
-    return _skl_metric(results, sklearn.metrics.mean_absolute_error)
+    return _skl_metric(results, skl_metrics.mean_absolute_error)
 
 
 def R2(results):
-    return _skl_metric(results, sklearn.metrics.r2_score)
+    return _skl_metric(results, skl_metrics.r2_score)
 
 
 def main():

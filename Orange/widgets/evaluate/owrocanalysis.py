@@ -15,7 +15,7 @@ from PyQt4.QtCore import Qt
 
 import pyqtgraph as pg
 
-import sklearn.metrics
+import sklearn.metrics as skl_metrics
 
 import Orange.data
 import Orange.evaluation.testing
@@ -664,7 +664,7 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
         return numpy.array([]), numpy.array([]), numpy.array([])
 
     fold_probs = res.probabilities[clf_idx][fold][:, target]
-    return sklearn.metrics.roc_curve(
+    return skl_metrics.roc_curve(
         fold_actual, fold_probs, pos_label=target
     )
 

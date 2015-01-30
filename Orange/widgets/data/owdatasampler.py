@@ -5,7 +5,7 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import numpy as np
-from sklearn import cross_validation
+import sklearn.cross_validation as skl_cross_validation
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -187,10 +187,10 @@ def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
     """
     if stratified and is_discrete(table.domain.class_var):
         # XXX: StratifiedKFold does not support random_state
-        ind = cross_validation.StratifiedKFold(
+        ind = skl_cross_validation.StratifiedKFold(
             table.Y.ravel(), folds, random_state=random_state)
     else:
-        ind = cross_validation.KFold(
+        ind = skl_cross_validation.KFold(
             len(table), folds, shuffle=True, random_state=random_state)
     return tuple(ind)
 
@@ -209,12 +209,12 @@ def sample_random_n(table, n, stratified=False, replace=False,
         return others, sample
     if stratified and is_discrete(table.domain.class_var):
         test_size = max(len(table.domain.class_var.values), n)
-        ind = cross_validation.StratifiedShuffleSplit(
+        ind = skl_cross_validation.StratifiedShuffleSplit(
             table.Y.ravel(), n_iter=1,
             test_size=test_size, train_size=len(table) - test_size,
             random_state=random_state)
     else:
-        ind = cross_validation.ShuffleSplit(
+        ind = skl_cross_validation.ShuffleSplit(
             len(table), n_iter=1,
             test_size=n, random_state=random_state)
     return next(iter(ind))

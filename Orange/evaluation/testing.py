@@ -1,6 +1,6 @@
 import numpy as np
 
-from sklearn import cross_validation
+import sklearn.cross_validation as skl_cross_validation
 
 import Orange.data
 from Orange.data import Domain, Table
@@ -168,11 +168,11 @@ class CrossValidation(Results):
         self.random_state = random_state
         Y = data.Y.copy().flatten()
         if is_discrete(data.domain.class_var):
-            indices = cross_validation.StratifiedKFold(
+            indices = skl_cross_validation.StratifiedKFold(
                 Y, self.k, shuffle=True, random_state=self.random_state
             )
         else:
-            indices = cross_validation.KFold(
+            indices = skl_cross_validation.KFold(
                 len(Y), self.k, shuffle=True, random_state=self.random_state
             )
 
@@ -294,7 +294,7 @@ class Bootstrap(Results):
         self.p = p
         self.random_state = random_state
 
-        indices = cross_validation.Bootstrap(
+        indices = skl_cross_validation.Bootstrap(
             len(data), n_iter=self.n_resamples, train_size=self.p,
             random_state=self.random_state
         )
