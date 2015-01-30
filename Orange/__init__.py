@@ -50,8 +50,9 @@ class LazyModule:
     def __getattr__(self, key):
         return getattr(self.do_import(), key)
 
-    def _getAttributeNames(self):
+    def __dir__(self):
         return list(self.do_import().__dict__)
+
 
 classification = LazyModule('classification')
 
