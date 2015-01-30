@@ -3,7 +3,7 @@ import numpy
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
-from Orange.feature.transformation import ColumnTransformation
+from .transformation import ColumnTransformation
 
 
 def is_continuous(var):

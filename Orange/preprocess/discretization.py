@@ -3,11 +3,14 @@ import itertools
 import numpy as np
 import Orange.statistics.distribution
 
-from Orange.feature.transformation import ColumnTransformation
+import Orange
+from .transformation import ColumnTransformation
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
+from . import _discretization
 
-from ..feature import _discretization
+from Orange.data import ContinuousVariable, Domain
+
 
 def _split_eq_width(dist, n):
     min = dist[0][0]
@@ -15,13 +18,14 @@ def _split_eq_width(dist, n):
     if min == max:
         return []
     dif = (max-min)/n
-    return [ min + (i+1)*dif for i in range(n-1) ]
+    return [min + (i + 1) * dif for i in range(n - 1)]
+
 
 def _split_eq_width_fixed(min, max, n):
     if min == max:
         return []
     dif = (max-min)/n
-    return [ min + (i+1)*dif for i in range(n-1) ]
+    return [min + (i + 1) * dif for i in range(n - 1)]
 
 
 class Discretizer(ColumnTransformation):
@@ -63,7 +67,7 @@ def _discretized_var(data, var, points):
     var = data.domain[var]
 
     def pairwise(iterable):
-        "Iterator over neighboring pairs of `iterable`"
+        """Iterator over neighboring pairs of `iterable`"""
         first, second = itertools.tee(iterable, 2)
         next(second)
         yield from zip(first, second)
@@ -107,7 +111,8 @@ class EqualFreq(Discretization):
         if type(data) == Orange.data.sql.table.SqlTable:
             att = attribute.to_sql()
             quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
-            query = data._sql_query(['quantile(%s, ARRAY%s)' % (att, str(quantiles))])
+            query = data._sql_query(['quantile(%s, ARRAY%s)' %
+                                     (att, str(quantiles))])
             with data._execute_sql_query(query) as cur:
                 points = sorted(set(cur.fetchone()[0]))
         else:
@@ -140,8 +145,10 @@ class EqualWidth(Discretization):
                 dif = (max - min) / self.n
                 points = [min + (i + 1) * dif for i in range(self.n - 1)]
             else:
-                # TODO: why is the whole distribution computed instead of just min/max
-                d = Orange.statistics.distribution.get_distribution(data, attribute)
+                # TODO: why is the whole distribution computed instead of
+                # just min/max
+                d = Orange.statistics.distribution.get_distribution(
+                    data, attribute)
                 points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
 
@@ -346,3 +353,71 @@ class EntropyMDL(Discretization):
         else:
             return None
 
+
+class DiscretizeTable:
+    """Discretizes all continuous features in the data.
+
+    .. attribute:: method
+
+        Feature discretization method (instance of
+        :obj:`Orange.feature.discretization.Discretization`). If left `None`,
+        :class:`Orange.feature.discretization.EqualFreq` with 4 intervals is
+        used.
+
+    .. attribute:: clean
+
+        If `True`, features discretized into a single interval constant are
+        removed. This is useful for discretization methods that infer the
+        number of intervals from the data, such as
+        :class:`Orange.feature.discretization.Entropy` (default: `True`).
+
+    .. attribute:: discretize_class
+
+        Determines whether a target is also discretized if it is continuous.
+        (default: `False`)
+    """
+    def __new__(cls, data=None,
+                discretize_class=False, method=None, clean=True, fixed=None):
+        self = super().__new__(cls)
+        self.discretize_class = discretize_class
+        self.method = method
+        self.clean = clean
+        if data is None:
+            return self
+        else:
+            return self(data, fixed)
+
+
+    def __call__(self, data, fixed=None):
+        """
+        Return the discretized data set.
+
+        :param data: Data to discretize.
+        """
+
+        def transform_list(s, fixed=None):
+            new_vars = []
+            for var in s:
+                if isinstance(var, ContinuousVariable):
+                    if fixed and var.name in fixed.keys():
+                        nv = method(data, var, fixed)
+                    else:
+                        nv = method(data, var)
+                    if not self.clean or len(nv.values) > 1:
+                        new_vars.append(nv)
+                else:
+                    new_vars.append(var)
+            return new_vars
+
+        if self.method is None:
+            method = Orange.feature.discretization.EqualFreq(n=4)
+        else:
+            method = self.method
+        domain = data.domain
+        new_attrs = transform_list(domain.attributes, fixed)
+        if self.discretize_class:
+            new_classes = transform_list(domain.class_vars)
+        else:
+            new_classes = domain.class_vars
+        nd = Domain(new_attrs, new_classes)
+        return data.from_table(nd, data)

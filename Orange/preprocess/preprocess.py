@@ -4,10 +4,7 @@ Preprocess
 
 """
 import Orange.data
-import Orange.data.impute
-
-from . import continuizer
-from ..feature import discretization
+from . import impute, discretization, continuizer
 
 __all__ = ["Preprocess", "Continuize", "Discretize"]
 
@@ -28,7 +25,8 @@ class Preprocess(object):
 class Continuize(Preprocess):
     def __init__(self, zero_based=True,
                  multinomial_treatment=continuizer.DomainContinuizer.NValues,
-                 normalize_continuous=continuizer.DomainContinuizer.NormalizeBySD):
+                 normalize_continuous=
+                 continuizer.DomainContinuizer.NormalizeBySD):
         self.zero_based = zero_based
         self.multinimial_treatment = multinomial_treatment
 
@@ -49,7 +47,7 @@ class Discretize(Preprocess):
         def transform(var):
             if is_continuous(var):
                 newvar = self.method(data, var)
-                if newvar is not None  and len(newvar.values) >= 2:
+                if newvar is not None and len(newvar.values) >= 2:
                     return newvar
                 else:
                     return None
@@ -65,7 +63,7 @@ class Discretize(Preprocess):
 
 
 class Impute(Preprocess):
-    def __init__(self, method=Orange.data.impute.Average()):
+    def __init__(self, method=impute.Average()):
         self.method = method
 
     def __call__(self, data):
