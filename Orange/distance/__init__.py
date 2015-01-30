@@ -2,17 +2,17 @@ import numpy as np
 from scipy import stats, sparse
 from sklearn import metrics, preprocessing
 
-import Orange
 from Orange import data
 from Orange.misc import DistMatrix
 
 
-def _impute(data):
-    """Imputation transformer for completing missing values."""
-    imp_data = Orange.data.Table(data)
-    imp_data.X = preprocessing.Imputer().fit_transform(imp_data.X)
-    imp_data.X = imp_data.X if sparse.issparse(imp_data.X) else np.squeeze(imp_data.X)
-    return imp_data
+def _preprocess(x):
+    """Remove categorical attributes and impute missing values."""
+    new_domain = data.Domain([i for i in x.domain.attributes if isinstance(i, data.ContinuousVariable)], x.domain.class_var)
+    new_data = data.Table(new_domain, x)
+    new_data.X = preprocessing.Imputer().fit_transform(new_data.X)
+    new_data.X = new_data.X if sparse.issparse(new_data.X) else np.squeeze(new_data.X)
+    return new_data
 
 
 def _orange_to_numpy(x):
