@@ -5,7 +5,9 @@ from sklearn.preprocessing import Imputer
 from numpy import isnan
 
 import Orange.data
-import Orange.classification
+from Orange.classification import SklFitter, SklModel
+
+__all__ = ["RandomForestLearner", "RandomForestClassifier"]
 
 
 def replace_nan(X, imp_model):
@@ -16,7 +18,7 @@ def replace_nan(X, imp_model):
     return X
 
 
-class RandomForestLearner(Orange.classification.SklFitter):
+class RandomForestLearner(SklFitter):
     __wraps__ = RandomForest
     def __init__(self, n_estimators=10, max_features="auto",
                  random_state=None, max_depth=3, max_leaf_nodes=5,
@@ -40,7 +42,7 @@ class RandomForestLearner(Orange.classification.SklFitter):
         return RandomForestClassifier(rf_model, self.imputer)
 
 
-class RandomForestClassifier(Orange.classification.SklModel):
+class RandomForestClassifier(SklModel):
     def __init__(self, clf, imp):
         self.clf = clf
         self.imputer = imp

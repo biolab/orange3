@@ -2,14 +2,16 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange import classification
+from Orange.classification import Fitter, Model
+
+__all__ = ["MLPLearner", "MLPClassifier"]
 
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-class MLPLearner(classification.Fitter):
+class MLPLearner(Fitter):
     def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
                  **opt_args):
         '''Multilayer perceptron (A.K.A. feedforward neural network)
@@ -193,7 +195,7 @@ class MLPLearner(classification.Fitter):
         return MLPClassifier(T, b, self.dropout)
 
 
-class MLPClassifier(classification.Model):
+class MLPClassifier(Model):
     def __init__(self, T, b, dropout):
         self.T = T
         self.b = b

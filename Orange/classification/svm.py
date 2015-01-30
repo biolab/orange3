@@ -2,6 +2,10 @@ import sklearn.svm as sklsvm
 
 from Orange.classification import SklFitter, SklModel
 
+__all__ = ["SVMLearner", "SVMClassifier", "LinearSVMLearner", "NuSVMLearner",
+           "NuSVMClassifier", "SVRLearner", "NuSVRLearner",
+           "OneClassSVMLearner"]
+
 
 class SVMClassifier(SklModel):
 

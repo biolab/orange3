@@ -1,9 +1,12 @@
+import inspect
 import os
+import pkgutil
 import unittest
 import numpy as np
 
 from Orange import data
 import Orange.classification
+from Orange.classification import Fitter
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 import Orange.classification.naive_bayes as nb
 from Orange.data.io import BasketReader
@@ -172,3 +175,19 @@ class SparseTest(unittest.TestCase):
         self.assertEqual(p.shape, test.Y.shape)
         p = clf(test.X)
         self.assertEqual(p.shape, test.Y.shape)
+
+
+class LearnerAccessibility(unittest.TestCase):
+    def test_all_learners_accessible_in_Orange_classification_namespace(self):
+        classification_modules = pkgutil.walk_packages(
+            path=Orange.classification.__path__,
+            prefix="Orange.classification.",
+            onerror=lambda x: None)
+        for importer, modname, ispkg in classification_modules:
+            module = pkgutil.importlib.import_module(modname)
+
+            for name, class_ in inspect.getmembers(module, inspect.isclass):
+                if issubclass(class_, Fitter):
+                    if not hasattr(Orange.classification, class_.__name__):
+                        self.fail("%s is not visible in Orange.classification"
+                                  " namespace" % class_.__name__)

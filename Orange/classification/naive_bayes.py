@@ -4,6 +4,8 @@ from Orange.classification import Fitter, Model
 from Orange.data import Instance, Storage, Table, DiscreteVariable
 from Orange.statistics import contingency
 
+__all__ = ["BayesLearner", "BayesClassifier"]
+
 
 class BayesLearner(Fitter):
     def fit_storage(self, table):

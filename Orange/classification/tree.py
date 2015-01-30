@@ -4,6 +4,8 @@ import sklearn.tree as skltree
 import numpy as np
 from collections import Counter
 
+__all__ = ["ClassificationTreeLearner", "ClassificationTreeClassifier"]
+
 
 class ClassificationTreeLearner(SklFitter):
     __wraps__ = skltree.DecisionTreeClassifier
