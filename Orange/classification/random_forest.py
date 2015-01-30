@@ -16,7 +16,7 @@ def replace_nan(X, imp_model):
 
 
 class RandomForestLearner(Orange.classification.SklFitter):
-    __wraps__ = RandomForest
+    __wraps__ = skl_ensemble.RandomForestClassifier
     def __init__(self, n_estimators=10, max_features="auto",
                  random_state=None, max_depth=3, max_leaf_nodes=5,
                  preprocessors=None):
