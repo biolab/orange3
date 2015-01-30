@@ -44,10 +44,6 @@ def import_all():
     #     globals()['clasification'] = classification
 
 _import(".data")
-_import(".distance")
-_import(".feature")
-_import(".feature.discretization")
-_import(".data.discretization")
 
 del _import
 del alreadyWarned
