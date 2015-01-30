@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import stats, sparse
-from sklearn import metrics, preprocessing
+import sklearn.metrics as skl_metrics
+import sklearn.preprocessing as skl_preprocessing
 
 import Orange
 from Orange import data
@@ -10,7 +11,7 @@ from Orange.misc import DistMatrix
 def _impute(data):
     """Imputation transformer for completing missing values."""
     imp_data = Orange.data.Table(data)
-    imp_data.X = preprocessing.Imputer().fit_transform(imp_data.X)
+    imp_data.X = skl_preprocessing.Imputer().fit_transform(imp_data.X)
     imp_data.X = imp_data.X if sparse.issparse(imp_data.X) else np.squeeze(imp_data.X)
     return imp_data
 
@@ -59,7 +60,7 @@ class SklDistance():
             x1 = np.atleast_2d(x1)
         if e2 is not None and not sparse.issparse(x2):
             x2 = np.atleast_2d(x2)
-        dist = metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
+        dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2)
         else:

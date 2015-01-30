@@ -1,7 +1,6 @@
 import numbers
-
-from sklearn.ensemble import RandomForestClassifier as RandomForest
-from sklearn.preprocessing import Imputer
+import sklearn.ensemble as skl_ensemble
+import sklearn.preprocessing as skl_preprocessing
 from numpy import isnan
 
 import Orange.data
@@ -19,7 +18,7 @@ def replace_nan(X, imp_model):
 
 
 class RandomForestLearner(SklFitter):
-    __wraps__ = RandomForest
+    __wraps__ = skl_ensemble.RandomForestClassifier
     def __init__(self, n_estimators=10, max_features="auto",
                  random_state=None, max_depth=3, max_leaf_nodes=5,
                  preprocessors=None):
@@ -27,7 +26,7 @@ class RandomForestLearner(SklFitter):
         self.params = vars()
 
     def fit(self, X, Y, W):
-        self.imputer = Imputer()
+        self.imputer = skl_preprocessing.Imputer()
         self.imputer.fit(X)
         X = replace_nan(X, self.imputer)
 
@@ -37,7 +36,7 @@ class RandomForestLearner(SklFitter):
                 X.shape[1] < max_features:
             params["max_features"] = X.shape[1]
 
-        rf_model = RandomForest(**params)
+        rf_model = skl_ensemble.RandomForestClassifier(**params)
         rf_model.fit(X, Y.ravel())
         return RandomForestClassifier(rf_model, self.imputer)
 

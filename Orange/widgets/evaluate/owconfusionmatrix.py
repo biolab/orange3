@@ -7,7 +7,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt
 
 import numpy
-import sklearn.metrics
+import sklearn.metrics as skl_metrics
 
 import Orange.data
 import Orange.evaluation.testing
@@ -15,7 +15,7 @@ from Orange.widgets import widget, settings, gui
 
 
 def confusion_matrix(res, index):
-    return sklearn.metrics.confusion_matrix(
+    return skl_metrics.confusion_matrix(
         res.actual, res.predicted[index])
 
 

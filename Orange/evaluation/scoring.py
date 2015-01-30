@@ -1,5 +1,5 @@
 import numpy as np
-import sklearn.metrics
+import sklearn.metrics as skl_metrics
 from Orange.data import DiscreteVariable
 
 
@@ -52,22 +52,22 @@ class Score:
 
 class CA(Score):
     def compute_score(self, results):
-        return self.from_predicted(results, sklearn.metrics.accuracy_score)
+        return self.from_predicted(results, skl_metrics.accuracy_score)
 
 
 class Precision(Score):
     def compute_score(self, results):
-        return self.from_predicted(results, sklearn.metrics.precision_score)
+        return self.from_predicted(results, skl_metrics.precision_score)
 
 
 class Recall(Score):
     def compute_score(self, results):
-        return self.from_predicted(results, sklearn.metrics.recall_score)
+        return self.from_predicted(results, skl_metrics.recall_score)
 
 
 class F1(Score):
     def compute_score(self, results):
-        return self.from_predicted(results, sklearn.metrics.f1_score)
+        return self.from_predicted(results, skl_metrics.f1_score)
 
 
 class PrecisionRecallFSupport(Score):
@@ -75,7 +75,7 @@ class PrecisionRecallFSupport(Score):
 
     def compute_score(self, results):
         return self.from_predicted(
-            results, sklearn.metrics.precision_recall_fscore_support)
+            results, skl_metrics.precision_recall_fscore_support)
 
 
 class AUC(Score):
@@ -99,6 +99,6 @@ class AUC(Score):
         y = np.array(results.actual == target, dtype=int)
 
         return np.fromiter(
-            (sklearn.metrics.roc_auc_score(y, probabilities[:, target])
+            (skl_metrics.roc_auc_score(y, probabilities[:, target])
              for probabilities in results.probabilities),
             dtype=np.float64, count=len(results.predicted))

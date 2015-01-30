@@ -6,7 +6,7 @@ Lift Curve Widget
 from collections import namedtuple
 
 import numpy
-import sklearn.metrics
+import sklearn.metrics as skl_metrics
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import QColor, QPen
@@ -234,7 +234,7 @@ def lift_curve_from_results(results, target, clf_idx, subset=slice(0, -1)):
 def lift_curve(ytrue, ypred, target=1):
     P = numpy.sum(ytrue == target)
     N = ytrue.size - P
-    fpr, tpr, thresholds = sklearn.metrics.roc_curve(ytrue, ypred, target)
+    fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, target)
     rpp = fpr * (N / (P + N)) + tpr * (P / (P + N))
     return rpp, tpr, thresholds
 

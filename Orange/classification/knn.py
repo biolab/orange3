@@ -1,5 +1,5 @@
-from sklearn import neighbors
-from sklearn.preprocessing import Imputer
+import sklearn.neighbors as skl_neighbors
+import sklearn.preprocessing as skl_preprocessing
 from numpy import isnan, cov
 import Orange.data
 from Orange.classification import Fitter, Model
@@ -48,15 +48,15 @@ class KNNLearner(Fitter):
         return super().__call__(data)
 
     def fit(self, X, Y, W):
-        self.imputer = Imputer()
+        self.imputer = skl_preprocessing.Imputer()
         self.imputer.fit(X)
         X = replace_nan(X, self.imputer)
         if self.metric == "mahalanobis":
-            skclf = neighbors.KNeighborsClassifier(
+            skclf = skl_neighbors.KNeighborsClassifier(
                 n_neighbors=self.n_neighbors, metric=self.metric, V = cov(X.T)
             )
         else:
-            skclf = neighbors.KNeighborsClassifier(
+            skclf = skl_neighbors.KNeighborsClassifier(
                 n_neighbors=self.n_neighbors, metric=self.metric
             )
         skclf.fit(X, Y.ravel())

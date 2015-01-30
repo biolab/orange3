@@ -3,7 +3,7 @@ import numpy
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
-import sklearn.manifold
+import sklearn.manifold as skl_manifold
 
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -232,7 +232,7 @@ class OWMDS(widget.OWWidget):
 
         dissim = "precomputed"
 
-        mds = sklearn.manifold.MDS(
+        mds = skl_manifold.MDS(
             dissimilarity=dissim, n_components=2,
             n_init=n_init, max_iter=self.max_iter
         )

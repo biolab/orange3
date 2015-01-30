@@ -82,8 +82,7 @@ class SoftmaxRegressionClassifier(Model):
 
 if __name__ == '__main__':
     import Orange.data
-    from sklearn.cross_validation import StratifiedKFold
-
+    
     def numerical_grad(f, params, e=1e-4):
         grad = np.zeros_like(params)
         perturb = np.zeros_like(params)
