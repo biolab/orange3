@@ -1,10 +1,11 @@
 import unittest
 import numpy as np
 
-from Orange.data import discretization, Table
+from Orange.preprocess import discretization
+from Orange.data import Table
 from Orange.evaluation import testing, scoring
 from Orange.classification import naive_bayes
-from Orange.feature.discretization import EqualWidth
+from Orange.preprocess.discretization import EqualWidth
 
 class Scoring_CA_Test(unittest.TestCase):
     def test_init(self):

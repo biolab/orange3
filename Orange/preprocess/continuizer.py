@@ -1,8 +1,7 @@
 from ..misc.enum import Enum
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.statistics import distribution
-from ..feature.transformation import \
-    Identity, Indicator, Indicator_1, Normalizer
+from .transformation import Identity, Indicator, Indicator_1, Normalizer
 
 
 class DomainContinuizer:
@@ -58,13 +57,13 @@ class DomainContinuizer:
                 base = max(var.base_value, 0)
             else:
                 base = dists[var_ptr].modus()
-            IndClass = [Indicator_1, Indicator][self.zero_based]
+            ind_class = [Indicator_1, Indicator][self.zero_based]
             for i, val in enumerate(var.values):
                 if i == base:
                     continue
                 new_var = ContinuousVariable(
                     "{}={}".format(var.name, val))
-                new_var.compute_value = IndClass(var, i)
+                new_var.compute_value = ind_class(var, i)
                 new_vars.append(new_var)
             return new_vars
 
@@ -81,7 +80,7 @@ class DomainContinuizer:
                     new_var.compute_value = Normalizer(var, dmi, 1 / diff)
                 else:
                     new_var.compute_value = Normalizer(var, (dma + dmi) / 2,
-                                                    2 / diff)
+                                                       2 / diff)
                 return new_var
             elif self.normalize_continuous == self.NormalizeBySD:
                 new_var = ContinuousVariable(var.name)
