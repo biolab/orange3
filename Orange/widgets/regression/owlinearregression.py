@@ -10,7 +10,7 @@ class OWLinearRegression(widget.OWWidget):
     icon = "icons/LinearRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", linear.RidgeRegressionLearner),
                ("Predictor", linear.LinearModel)]

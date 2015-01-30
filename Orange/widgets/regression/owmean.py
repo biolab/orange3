@@ -10,7 +10,7 @@ class OWMean(widget.OWWidget):
     icon = "icons/Mean.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", mean.MeanFitter), ("Predictor", mean.MeanModel)]
 

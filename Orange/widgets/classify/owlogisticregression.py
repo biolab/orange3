@@ -14,7 +14,7 @@ class OWLogisticRegression(widget.OWWidget):
     icon = "icons/LogisticRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", lr.LogisticRegressionLearner),
                ("Classifier", lr.LogisticRegressionClassifier)]

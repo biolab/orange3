@@ -12,7 +12,7 @@ class OWNaiveBayes(widget.OWWidget):
     name = "Naive Bayes"
     icon = "icons/NaiveBayes.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [
        ("Learner", Orange.classification.naive_bayes.BayesLearner),

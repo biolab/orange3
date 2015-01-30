@@ -18,7 +18,7 @@ class OWSVMRegression(widget.OWWidget):
                "type": Orange.data.Table,
                "handler": "set_data"},
               {"name": "Preprocessor",
-               "type": Orange.data.preprocess.Preprocess,
+               "type": Orange.preprocess.Preprocess,
                "handler": "set_preprocessor"}]
     outputs = [{"name": "Learner",
                 "type": svm.SVRLearner},

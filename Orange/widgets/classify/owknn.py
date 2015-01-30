@@ -14,7 +14,7 @@ class OWKNNLearner(widget.OWWidget):
     description = "K Nearest Neighbors"
     icon = "icons/KNN.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", knn.KNNLearner), ("Classifier", knn.KNNClassifier)]
 
