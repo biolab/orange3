@@ -18,7 +18,7 @@ class NaiveBayesTest(unittest.TestCase):
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))
         table = DiscretizeTable(table)
-        bayes = nb.BayesLearner()
+        bayes = nb.NaiveBayesLearner()
         clf = bayes(table)
         # Single instance prediction
         self.assertEqual(clf(table[0]), table[0].get_class())

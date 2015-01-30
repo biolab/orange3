@@ -2,12 +2,12 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange.classification import Fitter, Model
+from Orange.classification import Learner, Model
 
-__all__ = ["LinearRegressionLearner", "LinearRegressionClassifier"]
+__all__ = ["LinearRegressionLearner"]
 
 
-class LinearRegressionLearner(Fitter):
+class LinearRegressionLearner(Learner):
     def __init__(self, lambda_=1.0, preprocessors=None, **fmin_args):
         '''L2 regularized linear regression (a.k.a Ridge regression)
 
@@ -68,10 +68,10 @@ class LinearRegressionLearner(Fitter):
         theta, cost, ret = fmin_l_bfgs_b(self.cost_grad, theta,
                                          args=(X, Y.ravel()), **self.fmin_args)
 
-        return LinearRegressionClassifier(theta)
+        return LinearRegressionModel(theta)
 
 
-class LinearRegressionClassifier(Model):
+class LinearRegressionModel(Model):
     def __init__(self, theta):
         self.theta = theta
 

@@ -2,16 +2,16 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange.classification import Fitter, Model
+from Orange.classification import Learner, Model
 
-__all__ = ["MLPLearner", "MLPClassifier"]
+__all__ = ["MLPLearner"]
 
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-class MLPLearner(Fitter):
+class MLPLearner(Learner):
     def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
                  **opt_args):
         '''Multilayer perceptron (A.K.A. feedforward neural network)
@@ -157,7 +157,7 @@ class MLPLearner(Fitter):
 
             # test on validation set
             T, b = self.unfold_params(params)
-            P_va = MLPClassifier(T, b, self.dropout).predict(X_va)
+            P_va = MLPModel(T, b, self.dropout).predict(X_va)
             cost = -np.sum(np.log(P_va + 1e-15) * Y_va)
 
             if cost < best_cost:
@@ -192,10 +192,10 @@ class MLPLearner(Fitter):
         params = self.fit_sgd(params, X, Y, **self.opt_args)
 
         T, b = self.unfold_params(params)
-        return MLPClassifier(T, b, self.dropout)
+        return MLPModel(T, b, self.dropout)
 
 
-class MLPClassifier(Model):
+class MLPModel(Model):
     def __init__(self, T, b, dropout):
         self.T = T
         self.b = b

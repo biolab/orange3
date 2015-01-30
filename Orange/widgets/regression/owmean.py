@@ -12,7 +12,7 @@ class OWMean(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Orange.data.preprocess.Preprocess,
                "set_preprocessor")]
-    outputs = [("Learner", mean.MeanFitter), ("Predictor", mean.MeanModel)]
+    outputs = [("Learner", mean.MeanLearner), ("Predictor", mean.MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")
 
@@ -47,7 +47,7 @@ class OWMean(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        learner = mean.MeanFitter(preprocessors=self.preprocessors)
+        learner = mean.MeanLearner(preprocessors=self.preprocessors)
         learner.name = self.learner_name
         if self.data is not None:
             predictor = learner(self.data)

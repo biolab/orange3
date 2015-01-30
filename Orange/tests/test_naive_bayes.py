@@ -8,7 +8,7 @@ from Orange.evaluation import scoring, testing
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
         table = Orange.data.Table('titanic')
-        bayes = nb.BayesLearner()
+        bayes = nb.NaiveBayesLearner()
         results = testing.CrossValidation(table[::20], [bayes], k=10)
         ca = scoring.CA(results)
         self.assertGreater(ca, 0.7)
@@ -16,7 +16,7 @@ class NaiveBayesTest(unittest.TestCase):
 
     def test_predict_single_instance(self):
         table = Orange.data.Table('titanic')
-        bayes = nb.BayesLearner()
+        bayes = nb.NaiveBayesLearner()
         c = bayes(table)
         for ins in table[::20]:
             c(ins)
@@ -24,7 +24,7 @@ class NaiveBayesTest(unittest.TestCase):
 
     def test_predict_table(self):
         table = Orange.data.Table('titanic')
-        bayes = nb.BayesLearner()
+        bayes = nb.NaiveBayesLearner()
         c = bayes(table)
         table = table[::20]
         c(table)
@@ -32,7 +32,7 @@ class NaiveBayesTest(unittest.TestCase):
 
     def test_predict_numpy(self):
         table = Orange.data.Table('titanic')
-        bayes = nb.BayesLearner()
+        bayes = nb.NaiveBayesLearner()
         c = bayes(table)
         X = table.X[::20]
         c(X)

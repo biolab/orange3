@@ -7,10 +7,10 @@ import bottlechest as bn
 import Orange.data
 import Orange.data.preprocess
 
-__all__ = ["Fitter", "Model", "SklFitter", "SklModel"]
+__all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
-class Fitter:
+class Learner:
     supports_multiclass = False
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
@@ -23,7 +23,7 @@ class Fitter:
 
     def fit(self, X, Y, W=None):
         raise NotImplementedError(
-            "Descendants of Fitter must overload method fit")
+            "Descendants of Learner must overload method fit")
 
     def fit_storage(self, data):
         return self.fit(data.X, data.Y, data.W)
@@ -32,11 +32,12 @@ class Fitter:
         data = self.preprocess(data)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
-            raise TypeError("fitter doesn't support multiple class variables")
+            raise TypeError("%s doesn't support multiple class variables" %
+                            self.__class__.__name__)
 
         self.domain = data.domain
 
-        if type(self).fit is Fitter.fit:
+        if type(self).fit is Learner.fit:
             clf = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
@@ -62,7 +63,7 @@ class Model:
     ValueProbs = 2
 
     def __init__(self, domain=None):
-        if isinstance(self, Fitter):
+        if isinstance(self, Learner):
             domain = None
         elif not domain:
             raise ValueError("unspecified domain")
@@ -204,7 +205,7 @@ class SklModel(Model):
             return value, probs
 
 
-class SklFitter(Fitter):
+class SklLearner(Learner):
 
     __wraps__ = None
     __returns__ = SklModel
@@ -219,9 +220,9 @@ class SklFitter(Fitter):
         self._params = self._get_sklparams(value)
 
     def _get_sklparams(self, values):
-        sklfitter = self.__wraps__
-        if sklfitter is not None:
-            spec = inspect.getargs(sklfitter.__init__.__code__)
+        skllearner = self.__wraps__
+        if skllearner is not None:
+            spec = inspect.getargs(skllearner.__init__.__code__)
             # first argument is 'self'
             assert spec.args[0] == "self"
             params = {name: values[name] for name in spec.args[1:]

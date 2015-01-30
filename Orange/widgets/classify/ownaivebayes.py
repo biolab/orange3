@@ -15,8 +15,8 @@ class OWNaiveBayes(widget.OWWidget):
               ("Preprocessor", Orange.data.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [
-       ("Learner", Orange.classification.naive_bayes.BayesLearner),
-       ("Classifier", Orange.classification.naive_bayes.BayesClassifier)
+       ("Learner", Orange.classification.naive_bayes.NaiveBayesLearner),
+       ("Classifier", Orange.classification.naive_bayes.NaiveBayesModel)
     ]
 
     want_main_area = False
@@ -44,7 +44,7 @@ class OWNaiveBayes(widget.OWWidget):
         """
         Initialize the widget's state.
         """
-        learner = Orange.classification.naive_bayes.BayesLearner()
+        learner = Orange.classification.naive_bayes.NaiveBayesLearner()
         learner.name = self.learner_name
         self.send("Learner", learner)
         self.send("Classifier", None)
@@ -58,7 +58,7 @@ class OWNaiveBayes(widget.OWWidget):
 
     def apply(self):
         classifier = None
-        learner = Orange.classification.naive_bayes.BayesLearner(
+        learner = Orange.classification.naive_bayes.NaiveBayesLearner(
             preprocessors=self.preprocessors)
 
         learner.name = self.learner_name

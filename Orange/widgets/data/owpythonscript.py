@@ -357,7 +357,7 @@ class OWPythonScript(widget.OWWidget):
                widget.Default),
 #               ("in_distance", Orange.misc.SymMatrix, "setDistanceMatrix",
 #                widget.Default),
-              ("in_learner", Orange.classification.Fitter, "setLearner",
+              ("in_learner", Orange.classification.Learner, "setLearner",
                widget.Default),
               ("in_classifier", Orange.classification.Model, "setClassifier",
                widget.Default),
@@ -365,7 +365,7 @@ class OWPythonScript(widget.OWWidget):
 
     outputs = [("out_data", Orange.data.Table, ),
 #                ("out_distance", Orange.misc.SymMatrix, ),
-               ("out_learner", Orange.classification.Fitter, ),
+               ("out_learner", Orange.classification.Learner, ),
                ("out_classifier", Orange.classification.Model, widget.Dynamic),
                ("out_object", object, widget.Dynamic)]
 

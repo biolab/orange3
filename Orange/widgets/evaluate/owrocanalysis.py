@@ -81,7 +81,7 @@ def ROCData_from_results(results, clf_index, target):
     :param Orange.evaluation.Results results:
         Evaluation results.
     :param int clf_index:
-        Learner/Fitter index in the `results`.
+        Learner index in the `results`.
     :param int target:
         Target class index (i.e. positive class).
     :rval ROCData:
@@ -434,7 +434,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._perf_line = None
 
     def _initialize(self, results):
-        names = getattr(results, "fitter_names", None)
+        names = getattr(results, "learner_names", None)
 
         if names is None:
             names = ["#{}".format(i + 1)
@@ -849,7 +849,7 @@ def main():
         k=5,
         store_data=True,
     )
-    results.fitter_names = ["Logistic", "Logistic (L1 reg.)", "SVM", "NuSVM"]
+    results.learner_names = ["Logistic", "Logistic (L1 reg.)", "SVM", "NuSVM"]
     w.set_results(results)
 
     rval = app.exec_()

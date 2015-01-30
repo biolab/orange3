@@ -2,10 +2,10 @@ import sklearn.neighbors as skl_neighbors
 import sklearn.preprocessing as skl_preprocessing
 from numpy import isnan, cov
 import Orange.data
-from Orange.classification import Fitter, Model
+from Orange.classification import Learner, Model
 from Orange.data.continuizer import DomainContinuizer
 
-__all__ = ["KNNLearner", "KNNClassifier"]
+__all__ = ["KNNLearner"]
 
 
 def is_discrete(var):
@@ -19,7 +19,7 @@ def replace_nan(X, imp_model):
         return X
 
 
-class KNNLearner(Fitter):
+class KNNLearner(Learner):
     def __init__(self, n_neighbors=5, metric="euclidean", normalize=True,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -60,10 +60,10 @@ class KNNLearner(Fitter):
                 n_neighbors=self.n_neighbors, metric=self.metric
             )
         skclf.fit(X, Y.ravel())
-        return KNNClassifier(skclf, self.imputer)
+        return KNNModel(skclf, self.imputer)
 
 
-class KNNClassifier(Model):
+class KNNModel(Model):
     def __init__(self, clf, imp):
         self.clf = clf
         self.imputer = imp

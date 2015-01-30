@@ -158,7 +158,7 @@ class OWLiftCurve(widget.OWWidget):
     def _initialize(self, results):
         N = len(results.predicted)
 
-        names = getattr(results, "fitter_names", None)
+        names = getattr(results, "learner_names", None)
         if names is None:
             names = ["#{}".format(i + 1) for i in range(N)]
 
@@ -260,7 +260,7 @@ def main():
          ],
         store_data=True
     )
-    results.fitter_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
+    results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
     w.set_results(results)
     rval = app.exec_()
 
