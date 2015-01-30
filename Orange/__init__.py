@@ -33,14 +33,7 @@ def import_all():
     import Orange
     for name in ["classification", "clustering", "data", "distance",
                  "evaluation", "feature", "misc", "regression", "statistics"]:
-        Orange.__dict__[name] = import_module('Orange.' + name, package='Orange')
-
-    # Alternatives:
-    #     global classification
-    #     import Orange.classification as classification
-    # or
-    #     import Orange.classification as classification
-    #     globals()['clasification'] = classification
+        setattr(Orange, name, import_module('Orange.' + name, package='Orange'))
 
 _import(".data")
 
