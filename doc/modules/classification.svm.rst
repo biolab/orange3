@@ -28,7 +28,8 @@ Example
 
     >>> from Orange import data
     >>> from Orange.classification import svm
-    >>> from Orange.evaluation import testing, CA
+    >>> from Orange.evaluation import testing
+    >>> from Orange.evaluation.scoring import CA
     >>> iris = data.Table('iris')
     >>> results = testing.CrossValidation(iris, [svm.SVMLearner()], k=10)
     >>> CA(results)
