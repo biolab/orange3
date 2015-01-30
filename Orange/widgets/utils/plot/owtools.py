@@ -47,7 +47,7 @@ from .owpalette import OWPalette
 import orangeqt
 import Orange
 
-#from Orange.data.preprocess.scaling import get_variable_values_sorted
+#from Orange.preprocess.scaling import get_variable_values_sorted
 #from Orange import orangeom
 #import ColorPalette
 

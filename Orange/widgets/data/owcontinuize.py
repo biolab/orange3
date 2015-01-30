@@ -4,7 +4,7 @@ from PyQt4 import QtGui
 
 import Orange.data
 from Orange.statistics import distribution
-from Orange.data.continuizer import DomainContinuizer
+from Orange.preprocess import DomainContinuizer
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting

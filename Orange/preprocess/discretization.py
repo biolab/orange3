@@ -354,8 +354,8 @@ class DiscretizeTable:
     .. attribute:: method
 
         Feature discretization method (instance of
-        :obj:`Orange.feature.discretization.Discretization`). If left `None`,
-        :class:`Orange.feature.discretization.EqualFreq` with 4 intervals is
+        :obj:`Orange.preprocess.Discretization`). If left `None`,
+        :class:`Orange.preprocess.EqualFreq` with 4 intervals is
         used.
 
     .. attribute:: clean
@@ -363,7 +363,7 @@ class DiscretizeTable:
         If `True`, features discretized into a single interval constant are
         removed. This is useful for discretization methods that infer the
         number of intervals from the data, such as
-        :class:`Orange.feature.discretization.Entropy` (default: `True`).
+        :class:`Orange.preprocess.EntropyMDL` (default: `True`).
 
     .. attribute:: discretize_class
 

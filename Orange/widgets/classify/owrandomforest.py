@@ -15,7 +15,7 @@ class OWRandomForest(widget.OWWidget):
     icon = "icons/RandomForest.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", random_forest.RandomForestLearner),
                ("Classifier", random_forest.RandomForestClassifier)]
