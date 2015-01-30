@@ -1,10 +1,11 @@
 from numpy import tile, array
 
-from Orange import classification, data
+from Orange import data
+from Orange.classification.base import Fitter, Model
 from Orange.statistics import distribution
 
 
-class MajorityFitter(classification.Fitter):
+class MajorityFitter(Fitter):
     def fit_storage(self, dat):
         """
         Constructs `Orange.classification.majority.ConstantClassifier` from given data.
@@ -26,7 +27,7 @@ class MajorityFitter(classification.Fitter):
             dist.fill(1 / len(dist))
         return ConstantClassifier(dist=dist)
 
-class ConstantClassifier(classification.Model):
+class ConstantClassifier(Model):
     """
     A classification model that returns a given class value.
     """

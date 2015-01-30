@@ -3,7 +3,7 @@ from scipy import sparse
 from sklearn import linear_model
 
 import Orange.data.preprocess
-from Orange import classification
+from Orange.classification import SklFitter, SklModel
 
 
 def _np_replace_nan(A, value=0.0):
@@ -108,7 +108,7 @@ def contains_nan(A, axis=0):
         return _np_contains_nan(A, axis=axis)
 
 
-class LogisticRegressionLearner(classification.SklFitter):
+class LogisticRegressionLearner(SklFitter):
     def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
                  fit_intercept=True, intercept_scaling=1, class_weight=None,
                  random_state=None, preprocessors=None):
@@ -138,7 +138,7 @@ class LogisticRegressionLearner(classification.SklFitter):
         return LogisticRegressionClassifier(clsf)
 
 
-class LogisticRegressionClassifier(classification.SklModel):
+class LogisticRegressionClassifier(SklModel):
     def __init__(self, clf):
         self.clf = clf
 

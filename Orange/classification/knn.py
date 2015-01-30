@@ -2,7 +2,7 @@ from sklearn import neighbors
 from sklearn.preprocessing import Imputer
 from numpy import isnan, cov
 import Orange.data
-import Orange.classification
+from Orange.classification import Fitter, Model
 from Orange.data.continuizer import DomainContinuizer
 
 def is_discrete(var):
@@ -16,7 +16,7 @@ def replace_nan(X, imp_model):
         return X
 
 
-class KNNLearner(Orange.classification.Fitter):
+class KNNLearner(Fitter):
     def __init__(self, n_neighbors=5, metric="euclidean", normalize=True,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -60,7 +60,7 @@ class KNNLearner(Orange.classification.Fitter):
         return KNNClassifier(skclf, self.imputer)
 
 
-class KNNClassifier(Orange.classification.Model):
+class KNNClassifier(Model):
     def __init__(self, clf, imp):
         self.clf = clf
         self.imputer = imp
