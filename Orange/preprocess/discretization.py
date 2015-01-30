@@ -1,15 +1,13 @@
 import itertools
 
 import numpy as np
-import Orange.statistics.distribution
 
 import Orange
-from .transformation import ColumnTransformation
-from Orange.data.sql.table import SqlTable
-from Orange.statistics import contingency
-from . import _discretization
-
 from Orange.data import ContinuousVariable, Domain
+from Orange.data.sql.table import SqlTable
+from Orange.statistics import distribution, contingency
+from .transformation import ColumnTransformation
+from . import _discretization
 
 
 def _split_eq_width(dist, n):
@@ -17,7 +15,7 @@ def _split_eq_width(dist, n):
     max = dist[0][-1]
     if min == max:
         return []
-    dif = (max-min)/n
+    dif = (max - min) / n
     return [min + (i + 1) * dif for i in range(n - 1)]
 
 
@@ -116,7 +114,7 @@ class EqualFreq(Discretization):
             with data._execute_sql_query(query) as cur:
                 points = sorted(set(cur.fetchone()[0]))
         else:
-            d = Orange.statistics.distribution.get_distribution(data, attribute)
+            d = distribution.get_distribution(data, attribute)
             points = _discretization.split_eq_freq(d, n=self.n)
         return _discretized_var(data, attribute, points)
 
@@ -147,8 +145,7 @@ class EqualWidth(Discretization):
             else:
                 # TODO: why is the whole distribution computed instead of
                 # just min/max
-                d = Orange.statistics.distribution.get_distribution(
-                    data, attribute)
+                d = distribution.get_distribution(data, attribute)
                 points = _split_eq_width(d, n=self.n)
         return _discretized_var(data, attribute, points)
 
@@ -349,9 +346,9 @@ class EntropyMDL(Discretization):
         if len(cut_ind) > 0:
             #"the midpoint between each successive pair of examples" (FI p.1)
             points = (values[cut_ind] + values[cut_ind - 1])/2.
-            return _discretized_var(data, attribute, points)
         else:
-            return None
+            points = []
+        return _discretized_var(data, attribute, points)
 
 
 class DiscretizeTable:
