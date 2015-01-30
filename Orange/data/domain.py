@@ -43,7 +43,7 @@ class DomainConversion:
         self.source = source
         self.features = [
             source.index(var) if var in source
-            else var.compute_value for var in destination.attributes]
+            else var.compute_value for var in destination.features]
         self.class_vars = [
             source.index(var) if var in source
             else var.compute_value for var in destination.class_vars]

@@ -18,12 +18,12 @@ class TestInstance(unittest.TestCase):
              StringVariable("Meta 3")]
 
     def mock_domain(self, with_classes=False, with_metas=False):
-        attributes = self.features
+        features = self.features
         class_vars = self.class_vars if with_classes else []
         metas = self.metas if with_metas else []
-        variables = attributes + class_vars
+        variables = features + class_vars
         return MagicMock(Domain,
-                         attributes=attributes,
+                         features=features,
                          class_vars=class_vars,
                          metas=metas,
                          variables=variables)

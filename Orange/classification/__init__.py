@@ -232,7 +232,7 @@ class SklLearner(Learner):
         data = super().preprocess(data)
 
         if any(isinstance(v, Orange.data.DiscreteVariable) and len(v.values) > 2
-               for v in data.domain.attributes):
+               for v in data.domain.features):
             raise ValueError("Wrapped scikit-learn methods do not support " +
                              "multinomial variables.")
 

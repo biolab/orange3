@@ -13,11 +13,11 @@ class Continuizer_Test(unittest.TestCase):
         for inp in (self.data, self.data.domain):
             dom = DomainContinuizer(inp)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom.attributes],
+            self.assertEqual([attr.name for attr in dom.features],
                              ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                               "d3=c"])
             self.assertIsInstance(dom[2].compute_value,
@@ -42,11 +42,11 @@ class Continuizer_Test(unittest.TestCase):
                                 zero_based=False)
 
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                            for attr in domZB.attributes))
+                            for attr in domZB.features))
         self.assertIs(domZB.class_var, self.data.domain.class_var)
         self.assertIsNot(domZB[0], self.data.domain[0])
         self.assertIsNot(domZB[1], self.data.domain[1])
-        self.assertEqual([attr.name for attr in domZB.attributes],
+        self.assertEqual([attr.name for attr in domZB.features],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
         self.assertIsInstance(domZB[2].compute_value, transformation.Indicator)
@@ -60,7 +60,7 @@ class Continuizer_Test(unittest.TestCase):
         self.assertIs(dom.class_var, self.data.domain.class_var)
         self.assertIsNot(dom[0], self.data.domain[0])
         self.assertIsNot(dom[1], self.data.domain[1])
-        self.assertEqual([attr.name for attr in dom.attributes],
+        self.assertEqual([attr.name for attr in dom.features],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
         self.assertIsInstance(dom[2].compute_value,
@@ -79,11 +79,11 @@ class Continuizer_Test(unittest.TestCase):
         domZB = DomainContinuizer(self.data, normalize_continuous=DomainContinuizer.NormalizeBySD, zero_based=True)
         dom = DomainContinuizer(self.data, normalize_continuous=DomainContinuizer.NormalizeBySD, zero_based=False)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                            for attr in domZB.attributes))
+                            for attr in domZB.features))
         self.assertIs(domZB.class_var, self.data.domain.class_var)
         self.assertIsNot(domZB[0], self.data.domain[0])
         self.assertIsNot(domZB[1], self.data.domain[1])
-        self.assertEqual([attr.name for attr in domZB.attributes],
+        self.assertEqual([attr.name for attr in domZB.features],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
         self.assertIsInstance(domZB[2].compute_value,
@@ -115,7 +115,7 @@ class Continuizer_Test(unittest.TestCase):
             self.assertIsNot(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom.attributes],
+            self.assertEqual([attr.name for attr in dom.features],
                              ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                               "d3=c"])
             self.assertIsInstance(dom[2].compute_value,
@@ -141,7 +141,7 @@ class Continuizer_Test(unittest.TestCase):
         self.assertIsNot(dom.class_var, self.data.domain.class_var)
         self.assertIsNot(dom[0], self.data.domain[0])
         self.assertIsNot(dom[1], self.data.domain[1])
-        self.assertEqual([attr.name for attr in dom.attributes],
+        self.assertEqual([attr.name for attr in dom.features],
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
         self.assertEqual([attr.name for attr in dom.class_vars],
@@ -160,11 +160,11 @@ class Continuizer_Test(unittest.TestCase):
             dom = DomainContinuizer(inp, multinomial_treatment=
                                     DomainContinuizer.NValues)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom.attributes],
+            self.assertEqual([attr.name for attr in dom.features],
                              ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                               "d3=c"])
             self.assertIsInstance(dom[2].compute_value,
@@ -181,11 +181,11 @@ class Continuizer_Test(unittest.TestCase):
             dom = DomainContinuizer(inp, multinomial_treatment=
                                     DomainContinuizer.LowestIsBase)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom.attributes],
+            self.assertEqual([attr.name for attr in dom.features],
                              ["c1", "c2", "d2=b", "d3=b", "d3=c"])
             self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
@@ -202,11 +202,11 @@ class Continuizer_Test(unittest.TestCase):
             dom = DomainContinuizer(inp, multinomial_treatment=
                                     DomainContinuizer.LowestIsBase)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom.attributes],
+            self.assertEqual([attr.name for attr in dom.features],
                              ["c1", "c2", "d2=b", "d3=a", "d3=c"])
             self.assertIsInstance(dom[2].compute_value,
                                   transformation.Indicator)
@@ -221,8 +221,8 @@ class Continuizer_Test(unittest.TestCase):
         dom = DomainContinuizer(self.data.domain, multinomial_treatment=
                                 DomainContinuizer.Ignore)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                            for attr in dom.attributes))
-        self.assertEqual([attr.name for attr in dom.attributes],
+                            for attr in dom.features))
+        self.assertEqual([attr.name for attr in dom.features],
                          ["c1", "c2"])
 
     def test_multi_ignore_class(self):
@@ -230,8 +230,8 @@ class Continuizer_Test(unittest.TestCase):
                                 DomainContinuizer.Ignore,
                                 transform_class=True)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                            for attr in dom.attributes))
-        self.assertEqual([attr.name for attr in dom.attributes],
+                            for attr in dom.features))
+        self.assertEqual([attr.name for attr in dom.features],
                          ["c1", "c2"])
         self.assertEqual(len(dom.class_vars), 0)
         self.assertIsNone(dom.class_var)
@@ -240,7 +240,7 @@ class Continuizer_Test(unittest.TestCase):
         dom = DomainContinuizer(self.data.domain, multinomial_treatment=
                                 DomainContinuizer.IgnoreMulti)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                            for attr in dom.attributes))
+                            for attr in dom.features))
         self.assertEqual([attr.name for attr in dom],
                          ["c1", "c2", "d2=b", "cl1"])
 
@@ -249,8 +249,8 @@ class Continuizer_Test(unittest.TestCase):
                                 DomainContinuizer.IgnoreMulti,
                                 transform_class=True)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                            for attr in dom.attributes))
-        self.assertEqual([attr.name for attr in dom.attributes],
+                            for attr in dom.features))
+        self.assertEqual([attr.name for attr in dom.features],
                          ["c1", "c2", "d2=b"])
         self.assertEqual(len(dom.class_vars), 0)
         self.assertIsNone(dom.class_var)
@@ -265,7 +265,7 @@ class Continuizer_Test(unittest.TestCase):
             dom = DomainContinuizer(inp, multinomial_treatment=
                                     DomainContinuizer.AsOrdinal)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
@@ -284,7 +284,7 @@ class Continuizer_Test(unittest.TestCase):
                                     DomainContinuizer.AsOrdinal,
                                     transform_class=True)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIsInstance(dom.class_var, ContinuousVariable)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
@@ -302,7 +302,7 @@ class Continuizer_Test(unittest.TestCase):
             dom = DomainContinuizer(inp, multinomial_treatment=
                                     DomainContinuizer.AsNormalizedOrdinal)
             self.assertTrue(all(isinstance(attr, ContinuousVariable)
-                                for attr in dom.attributes))
+                                for attr in dom.features))
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])

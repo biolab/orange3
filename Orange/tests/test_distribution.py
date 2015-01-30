@@ -29,7 +29,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertIs(disc2.variable, d.domain.class_var)
         self.assertEqual(disc, disc2)
 
-        disc3 = distribution.Discrete(d, len(d.domain.attributes))
+        disc3 = distribution.Discrete(d, len(d.domain.features))
         self.assertIsInstance(disc3, np.ndarray)
         self.assertIs(disc3.variable, d.domain.class_var)
         self.assertEqual(disc, disc3)

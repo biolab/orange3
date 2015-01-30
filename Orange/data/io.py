@@ -94,7 +94,7 @@ class TabDelimReader:
             var.fix_order = (isinstance(var, DiscreteVariable)
                              and not var.values)
 
-            var.attributes.update(attrs)
+            var.features.update(attrs)
 
             if is_class:
                 if is_meta:
@@ -158,7 +158,7 @@ class TabDelimReader:
             line_count += 1
         if line_count != len(X):
             del Xr, X, Y, W, metas
-            table.X.resize(line_count, len(table.domain.attributes))
+            table.X.resize(line_count, len(table.domain.features))
             table.Y.resize(line_count, len(table.domain.class_vars))
             if table.W.ndim == 1:
                 table.W.resize(line_count)
@@ -180,7 +180,7 @@ class TabDelimReader:
             delattr(var, "fix_order")
 
     def reorder_values(self, table):
-        self.reorder_values_array(table.X, table.domain.attributes)
+        self.reorder_values_array(table.X, table.domain.features)
         self.reorder_values_array(table.Y, table.domain.class_vars)
 
     def read_file(self, filename, cls=None):
@@ -265,13 +265,13 @@ def csv_saver(filename, data, delimiter='\t'):
         all_vars = data.domain.variables + data.domain.metas
         writer.writerow([v.name for v in all_vars])  # write variable names
         if delimiter == '\t':
-            flags = ([''] * len(data.domain.attributes)) + \
+            flags = ([''] * len(data.domain.features)) + \
                     (['class'] * len(data.domain.class_vars)) + \
                     (['m'] * len(data.domain.metas))
 
             for i, var in enumerate(all_vars):
                 attrs = ["{0!s}={1!s}".format(*item).replace(" ", "\\ ")
-                         for item in var.attributes.items()]
+                         for item in var.features.items()]
                 if attrs:
                     flags[i] += (" " if flags[i] else "") + (" ".join(attrs))
 

@@ -124,7 +124,7 @@ class DomainContinuizer:
             dists = distribution.get_distributions(
                 data, not needs_discrete, not needs_continuous)
         var_ptr = 0
-        new_attrs = transform_list(domain.attributes)
+        new_attrs = transform_list(domain.features)
         if transform_class:
             new_classes = transform_list(domain.class_vars)
         else:

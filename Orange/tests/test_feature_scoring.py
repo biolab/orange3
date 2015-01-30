@@ -26,7 +26,7 @@ class FeatureScoringTest(unittest.TestCase):
         np.testing.assert_almost_equal([scorer(a, self.zoo) for a in range(5)], correct, decimal=5)
 
     def test_classless(self):
-        classless = Table(Domain(self.zoo.domain.attributes), self.zoo[:, 0:-1])
+        classless = Table(Domain(self.zoo.domain.features), self.zoo[:, 0:-1])
         scorers = [scoring.Gini(), scoring.InfoGain(), scoring.GainRatio()]
         for scorer in scorers:
             with self.assertRaises(ValueError):

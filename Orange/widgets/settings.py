@@ -570,7 +570,7 @@ class DomainContextHandler(ContextHandler):
         match = self.match_values
         if self.has_ordinary_features:
             if match == self.MATCH_VALUES_CLASS:
-                attributes = encode(domain.attributes, False)
+                attributes = encode(domain.features, False)
                 attributes.update(encode(domain.class_vars, True))
             else:
                 attributes = encode(domain, match == self.MATCH_VALUES_ALL)
@@ -587,7 +587,7 @@ class DomainContextHandler(ContextHandler):
     def new_context(self):
         """Create a new context."""
         context = super().new_context()
-        context.attributes = {}
+        context.features = {}
         context.metas = {}
         context.ordered_domain = []
         context.values = {}
@@ -606,7 +606,7 @@ class DomainContextHandler(ContextHandler):
         context, is_new = \
             super().find_or_create_context(widget, domain, *encoded_domain)
 
-        context.attributes, context.metas = encoded_domain
+        context.features, context.metas = encoded_domain
 
         if self.has_ordinary_features:
             context.ordered_domain = [(v.name, vartype(v)) for v in domain]
@@ -647,7 +647,7 @@ class DomainContextHandler(ContextHandler):
                 # noinspection PyShadowingNames
                 def is_attribute(value):
                     return (not setting.exclude_attributes
-                            and value in context.attributes)
+                            and value in context.features)
 
                 # noinspection PyShadowingNames
                 def is_meta(value):
@@ -668,7 +668,7 @@ class DomainContextHandler(ContextHandler):
                 setattr(instance, setting.selected, new_selected)
 
         if self.reservoir is not None:
-            get_attribute = lambda name: context.attributes.get(name, None)
+            get_attribute = lambda name: context.features.get(name, None)
             get_meta = lambda name: context.metas.get(name, None)
             ll = [a for a in context.ordered_domain if a not in excluded and (
                 self.features_in_res and get_attribute(a[0]) == a[1] or
@@ -711,8 +711,8 @@ class DomainContextHandler(ContextHandler):
         if isinstance(value, list):
             return value
         elif isinstance(setting, ContextSetting) and isinstance(value, str):
-            if not setting.exclude_attributes and value in context.attributes:
-                return value, context.attributes[value]
+            if not setting.exclude_attributes and value in context.features:
+                return value, context.features[value]
             if not setting.exclude_metas and value in context.metas:
                 return value, context.metas[value]
         return value, -2
@@ -737,7 +737,7 @@ class DomainContextHandler(ContextHandler):
 
     #noinspection PyMethodOverriding
     def match(self, context, domain, attrs, metas):
-        if (attrs, metas) == (context.attributes, context.metas):
+        if (attrs, metas) == (context.features, context.metas):
             return 2
 
         matches = []
@@ -829,7 +829,7 @@ class DomainContextHandler(ContextHandler):
                         not self._var_exists(setting, value, attrs, metas)):
                     del data[setting.name]
 
-        context.attributes, context.metas = attrs, metas
+        context.features, context.metas = attrs, metas
         context.ordered_domain = [(attr.name, vartype(attr)) for attr in
                                   itertools.chain(domain, domain.metas)]
         return context
@@ -840,7 +840,7 @@ class DomainContextHandler(ContextHandler):
         if widget.context_settings is not glob:
             ids = {id(c) for c in glob}
             glob += (c for c in widget.context_settings if id(c) not in ids and
-                                                           ((c.attributes and len(c.attributes) or 0) +
+                                                           ((c.features and len(c.features) or 0) +
                                                             (c.class_vars and len(c.class_vars) or 0) +
                                                             (c.metas and len(c.metas) or 0)) <= mp)
             glob.sort(key=lambda context: -context.time)
@@ -848,7 +848,7 @@ class DomainContextHandler(ContextHandler):
         else:
             for i in range(len(glob) - 1, -1, -1):
                 c = glob[i]
-                n_attrs = ((c.attributes and len(c.attributes) or 0) +
+                n_attrs = ((c.features and len(c.features) or 0) +
                            (c.class_vars and len(c.class_vars) or 0) +
                            (c.metas and len(c.metas) or 0))
                 if n_attrs >= mp:
@@ -919,26 +919,26 @@ class PerfectDomainContextHandler(DomainContextHandler):
         else:
             def encode(attrs):
                 return tuple((v.name, vartype(v)) for v in attrs)
-        return (encode(domain.attributes),
+        return (encode(domain.features),
                 encode(domain.class_vars),
                 encode(domain.metas))
 
     #noinspection PyMethodOverriding
     def match(self, context, domain, attributes, class_vars, metas):
         return (attributes, class_vars, metas) == (
-            context.attributes, context.class_vars, context.metas) and 2
+            context.features, context.class_vars, context.metas) and 2
 
     def encode_setting(self, widget, setting, value):
         context = widget.current_context
         if isinstance(value, str):
             atype = -1
             if not setting.exclude_attributes:
-                for aname, atype in itertools.chain(context.attributes,
+                for aname, atype in itertools.chain(context.features,
                                                     context.class_vars):
                     if aname == value:
                         break
             if atype == -1 and not setting.exclude_metas:
-                for aname, values in itertools.chain(context.attributes,
+                for aname, values in itertools.chain(context.features,
                                                      context.class_vars):
                     if aname == value:
                         break

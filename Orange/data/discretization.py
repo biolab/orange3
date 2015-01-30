@@ -63,7 +63,7 @@ class DiscretizeTable:
         else:
             method = self.method
         domain = data.domain
-        new_attrs = transform_list(domain.attributes, fixed)
+        new_attrs = transform_list(domain.features, fixed)
         if self.discretize_class:
             new_classes = transform_list(domain.class_vars)
         else:

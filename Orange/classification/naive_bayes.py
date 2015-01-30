@@ -34,7 +34,7 @@ class BayesClassifier(Model):
             for c in range(ncv):
                 py = (1 + self.class_freq[c]) / (ncv + sum(self.class_freq))
                 log_prob = np.log(py)
-                for ai, a in enumerate(self.domain.attributes):
+                for ai, a in enumerate(self.domain.features):
                     relevant = 1 + self.cont[ai][c][a.to_val(ins[a])]
                     total = len(a.values) + self.class_freq[c]
                     log_prob += np.log(relevant / total)

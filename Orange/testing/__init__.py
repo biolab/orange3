@@ -16,7 +16,7 @@ class PickleTest(unittest.TestCase):
         self.add_comparator(data.StringVariable,
                             compare_members=("name",))
         self.add_comparator(data.Domain,
-                            compare_members=("attributes", "class_vars",
+                            compare_members=("features", "class_vars",
                                              "class_var", "variables",
                                              "metas", "anonymous"))
 

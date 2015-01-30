@@ -70,7 +70,7 @@ class RowInstance(Instance):
         self._check_single_class()
         if not isinstance(value, Real):
             value = self.table.domain.class_var.to_val(value)
-        self._values[len(self.table.domain.attributes)] = self._y[0] = value
+        self._values[len(self.table.domain.features)] = self._y[0] = value
         if self.sparse_y:
             self.table.Y[self.row_index, 0] = value
 
@@ -119,7 +119,7 @@ class RowInstance(Instance):
         table = self.table
         domain = table.domain
         row = self.row_index
-        s = "[" + self.sp_values(table.X, row, domain.attributes)
+        s = "[" + self.sp_values(table.X, row, domain.features)
         if domain.class_vars:
             s += " | " + self.sp_values(table.Y, row, domain.class_vars)
         s += "]"
@@ -228,7 +228,8 @@ class Table(MutableSequence, Storage):
             if not len(src_cols):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
-            n_src_attrs = len(source.domain.attributes)
+
+            n_src_attrs = len(source.domain.features)
             if all(isinstance(x, int) and 0 <= x < n_src_attrs
                    for x in src_cols):
                 return source.X[row_indices, src_cols]
@@ -278,7 +279,7 @@ class Table(MutableSequence, Storage):
         self = cls.__new__(Table)
         self.domain = domain
         conversion = domain.get_conversion(source.domain)
-        self.X = get_columns(row_indices, conversion.attributes, n_rows)
+        self.X = get_columns(row_indices, conversion.features, n_rows)
         self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
         self.metas = get_columns(row_indices, conversion.metas, n_rows)
         self.W = np.array(source.W[row_indices])
@@ -438,14 +439,14 @@ class Table(MutableSequence, Storage):
                     self.X[row] = example._x
                     self.Y[row] = example._y
                 else:
-                    self.X[row] = example._values[:len(domain.attributes)]
-                    self.Y[row] = example._values[len(domain.attributes):]
+                    self.X[row] = example._values[:len(domain.features)]
+                    self.Y[row] = example._values[len(domain.features):]
                 self.metas[row] = example._metas
                 return
             c = self.domain.get_conversion(example.domain)
             self.X[row] = [example._values[i] if isinstance(i, int) else
                            (Unknown if not i else i(example))
-                           for i in c.attributes]
+                           for i in c.features]
             self.Y[row] = [example._values[i] if isinstance(i, int) else
                            (Unknown if not i else i(example))
                            for i in c.class_vars]
@@ -454,11 +455,11 @@ class Table(MutableSequence, Storage):
                                for i, var in zip(c.metas, domain.metas)]
         else:
             self.X[row] = [var.to_val(val)
-                           for var, val in zip(domain.attributes, example)]
+                           for var, val in zip(domain.features, example)]
             self.Y[row] = [var.to_val(val)
                            for var, val in
                            zip(domain.class_vars,
-                               example[len(domain.attributes):])]
+                               example[len(domain.features):])]
             self.metas[row] = np.array([var.Unknown for var in domain.metas],
                                        dtype=object)
 
@@ -482,7 +483,7 @@ class Table(MutableSequence, Storage):
                         np.arange(start, end, stride))
         elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self.domain[col] for col in col_idx]
-            if attributes == self.domain.attributes:
+            if attributes == self.domain.features:
                 return None, None
             return attributes, np.fromiter(
                 (self.domain.index(attr) for attr in attributes), int)
@@ -537,13 +538,13 @@ class Table(MutableSequence, Storage):
             try:
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                if 0 <= col_idx < len(self.domain.attributes):
+                if 0 <= col_idx < len(self.domain.features):
                     return Value(var, self.X[row_idx, col_idx])
-                elif col_idx >= len(self.domain.attributes):
+                elif col_idx >= len(self.domain.features):
                     return Value(
                         var,
                         self.Y[row_idx,
-                                col_idx - len(self.domain.attributes)])
+                                col_idx - len(self.domain.features)])
                 elif col_idx < 0:
                     return Value(var, self.metas[row_idx, -1 - col_idx])
             except TypeError:
@@ -553,7 +554,7 @@ class Table(MutableSequence, Storage):
         # construct a new table
         attributes, col_indices = self._compute_col_indices(col_idx)
         if attributes is not None:
-            n_attrs = len(self.domain.attributes)
+            n_attrs = len(self.domain.features)
             r_attrs = [attributes[i]
                        for i, col in enumerate(col_indices)
                        if 0 <= col < n_attrs]
@@ -618,7 +619,7 @@ class Table(MutableSequence, Storage):
         n_attrs = self.X.shape[1]
         if isinstance(value, str):
             if not attributes:
-                attributes = self.domain.attributes
+                attributes = self.domain.features
             for var, col in zip(attributes, col_indices):
                 if 0 <= col < n_attrs:
                     self.X[row_idx, col] = var.to_val(value)
@@ -1071,7 +1072,7 @@ class Table(MutableSequence, Storage):
         W = self.W if self.has_weights() else None
         rr = []
         if not columns:
-            if self.domain.attributes:
+            if self.domain.features:
                 rr.append(bn.stats(self.X, W))
             if self.domain.class_vars:
                 rr.append(bn.stats(self.Y, W))
@@ -1080,7 +1081,7 @@ class Table(MutableSequence, Storage):
             stats = np.vstack(tuple(rr))
         else:
             columns = [self.domain.index(c) for c in columns]
-            nattrs = len(self.domain.attributes)
+            nattrs = len(self.domain.features)
             Xs = any(0 <= c < nattrs for c in columns) and bn.stats(self.X, W)
             Ys = any(c >= nattrs for c in columns) and bn.stats(self.Y, W)
             ms = any(c < 0 for c in columns) and bn.stats(self.metas, W)

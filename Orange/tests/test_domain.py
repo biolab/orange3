@@ -345,37 +345,37 @@ class TestDomainInit(unittest.TestCase):
 
         d_to_e = e.get_conversion(d)
         self.assertIs(d_to_e.source, d)
-        self.assertEqual(d_to_e.attributes, [1, -2])
+        self.assertEqual(d_to_e.features, [1, -2])
         self.assertEqual(d_to_e.class_vars, [])
         self.assertEqual(d_to_e.metas, [0, 1, -1])
 
         d_to_e = e.get_conversion(d)
         self.assertIs(d_to_e.source, d)
-        self.assertEqual(d_to_e.attributes, [1, -2])
+        self.assertEqual(d_to_e.features, [1, -2])
         self.assertEqual(d_to_e.class_vars, [])
         self.assertEqual(d_to_e.metas, [0, 1, -1])
 
         d_to_f = f.get_conversion(d)
         self.assertIs(d_to_f.source, d)
-        self.assertEqual(d_to_f.attributes, [1])
+        self.assertEqual(d_to_f.features, [1])
         self.assertEqual(d_to_f.class_vars, [-2, 2])
         self.assertEqual(d_to_f.metas, [0, 2, -1])
 
         d_to_e = e.get_conversion(d)
         self.assertIs(d_to_e.source, d)
-        self.assertEqual(d_to_e.attributes, [1, -2])
+        self.assertEqual(d_to_e.features, [1, -2])
         self.assertEqual(d_to_e.class_vars, [])
         self.assertEqual(d_to_e.metas, [0, 1, -1])
 
         d_to_f = f.get_conversion(d)
         self.assertIs(d_to_f.source, d)
-        self.assertEqual(d_to_f.attributes, [1])
+        self.assertEqual(d_to_f.features, [1])
         self.assertEqual(d_to_f.class_vars, [-2, 2])
         self.assertEqual(d_to_f.metas, [0, 2, -1])
 
         f_to_g = g.get_conversion(f)
         self.assertIs(f_to_g.source, f)
-        self.assertEqual(f_to_g.attributes, [])
+        self.assertEqual(f_to_g.features, [])
         self.assertEqual(f_to_g.class_vars, [])
         self.assertEqual(f_to_g.metas, [-1, 0, -3])
 
@@ -383,7 +383,7 @@ class TestDomainInit(unittest.TestCase):
         income.compute_value = x
         g_to_f = f.get_conversion(g)
         self.assertIs(g_to_f.source, g)
-        self.assertEqual(g_to_f.attributes, [-2])
+        self.assertEqual(g_to_f.features, [-2])
         self.assertEqual(g_to_f.class_vars, [data.Variable.compute_value, x])
         self.assertEqual(g_to_f.metas, [-1, x, -3])
 

@@ -244,7 +244,7 @@ def get_contingency(dat, col_variable, row_variable=None, unknowns=None):
 
 
 def get_contingencies(dat, skipDiscrete=False, skipContinuous=False):
-    vars = dat.domain.attributes
+    vars = dat.domain.features
     row_var = dat.domain.class_var
     if row_var is None:
         raise ValueError("data has no target variable")

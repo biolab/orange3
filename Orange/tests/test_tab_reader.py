@@ -31,6 +31,6 @@ class TestTabReader(unittest.TestCase):
         self.assertIsInstance(c2, DiscreteVariable)
         self.assertEqual(c2.name, "Class 42")
 
-        print(table.domain.attributes[1].values)
+        print(table.domain.features[1].values)
         np.testing.assert_almost_equal(table.X, np.array([[1, 0], [np.nan, 1], [2, 0]]))
         np.testing.assert_almost_equal(table.Y, np.array([[5, 1], [7, 0], [4, np.nan]]))

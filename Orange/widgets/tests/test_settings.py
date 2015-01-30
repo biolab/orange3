@@ -49,10 +49,10 @@ class DomainEncodingTests(unittest.TestCase):
             match_values=DomainContextHandler.MATCH_VALUES_NONE,
             metas_in_res=True)
 
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
+        encoded_features, encoded_metas = handler.encode_domain(domain)
 
         self.assertEqual(
-            encoded_attributes,
+            encoded_features,
             {CONTINOUS_ATTR: Continuous,
              DISCRETE_ATTR_ABC: Discrete,
              DISCRETE_ATTR_DEF: Discrete,
@@ -67,9 +67,9 @@ class DomainEncodingTests(unittest.TestCase):
             match_values=DomainContextHandler.MATCH_VALUES_CLASS,
             metas_in_res=True)
 
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
+        encoded_features, encoded_metas = handler.encode_domain(domain)
 
-        self.assertEqual(encoded_attributes, {
+        self.assertEqual(encoded_features, {
             CONTINOUS_ATTR: Continuous,
             DISCRETE_ATTR_ABC: Discrete,
             DISCRETE_ATTR_DEF: Discrete,
@@ -85,9 +85,9 @@ class DomainEncodingTests(unittest.TestCase):
             match_values=DomainContextHandler.MATCH_VALUES_ALL,
             metas_in_res=True)
 
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
+        encoded_features, encoded_metas = handler.encode_domain(domain)
 
-        self.assertEqual(encoded_attributes, {
+        self.assertEqual(encoded_features, {
             CONTINOUS_ATTR: Continuous,
             DISCRETE_ATTR_ABC: ["a", "b", "c"],
             DISCRETE_ATTR_DEF: ["d", "e", "f"],
@@ -98,12 +98,12 @@ class DomainEncodingTests(unittest.TestCase):
             DISCRETE_META_JKL: ["j", "k", "l"],
         })
 
-    def test_encode_domain_with_false_attributes_in_res(self):
+    def test_encode_domain_with_false_features_in_res(self):
         handler = DomainContextHandler(features_in_res=False,
                                        metas_in_res=True)
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
+        encoded_features, encoded_metas = handler.encode_domain(domain)
 
-        self.assertEqual(encoded_attributes, {})
+        self.assertEqual(encoded_features, {})
         self.assertEqual(encoded_metas, {
             CONTINUOUS_META: Continuous,
             DISCRETE_META_JKL: Discrete,
@@ -112,9 +112,9 @@ class DomainEncodingTests(unittest.TestCase):
     def test_encode_domain_with_false_metas_in_res(self):
         handler = DomainContextHandler(features_in_res=True,
                                        metas_in_res=False)
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
+        encoded_features, encoded_metas = handler.encode_domain(domain)
 
-        self.assertEqual(encoded_attributes, {
+        self.assertEqual(encoded_features, {
             CONTINOUS_ATTR: Continuous,
             DISCRETE_ATTR_ABC: Discrete,
             DISCRETE_ATTR_DEF: Discrete,
@@ -166,8 +166,8 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         self.handler.read_defaults = lambda: None  # Disable reading settings from disk
         self.handler.bind(MockWidget)
         self.widget = MockWidget()
-        encoded_attributes, encoded_metas = self.handler.encode_domain(domain)
-        self.widget.current_context.attributes = encoded_attributes
+        encoded_features, encoded_metas = self.handler.encode_domain(domain)
+        self.widget.current_context.features = encoded_features
         self.widget.current_context.metas = encoded_metas
         self.handler.initialize(self.widget)
         self.handler.initialize(self.widget.subprovider)
@@ -237,7 +237,7 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
 
     def test_perfect_match_returns_2(self):
         attrs, metas = self.handler.encode_domain(domain)
-        mock_context = Mock(attributes=attrs, metas=metas, values={})
+        mock_context = Mock(features=attrs, metas=metas, values={})
 
         self.assertEqual(self.match(mock_context), 2.)
 

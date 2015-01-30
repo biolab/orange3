@@ -610,7 +610,7 @@ class TableTestCase(unittest.TestCase):
         d.save("test-save.tab")
         try:
             d2 = data.Table("test-save.tab")
-            self.assertEqual(len(d.domain.attributes), 1)
+            self.assertEqual(len(d.domain.features), 1)
             self.assertEqual(d.domain.class_var, None)
             for i in range(3):
                 self.assertEqual(d2[i], [i])
@@ -623,7 +623,7 @@ class TableTestCase(unittest.TestCase):
         d.save("test-save.tab")
         try:
             d2 = data.Table("test-save.tab")
-            self.assertEqual(len(d.domain.attributes), 1)
+            self.assertEqual(len(d.domain.features), 1)
             for i in range(3):
                 self.assertEqual(d2[i], [i])
         finally:
@@ -709,7 +709,7 @@ class TableTestCase(unittest.TestCase):
         lind = d.domain["legs"].to_val("4")
         gind = d.domain["name"].to_val("girl")
         for pos, val, r in (("type", "mammal", mind),
-                            (len(d.domain.attributes), mind, mind),
+                            (len(d.domain.features), mind, mind),
                             ("legs", lind, lind),
                             ("name", "girl", gind)):
             e = filter.SameValue(pos, val)(d)
@@ -988,7 +988,7 @@ class TableTestCase(unittest.TestCase):
 
 
 def column_sizes(table):
-    return (len(table.domain.attributes),
+    return (len(table.domain.features),
             len(table.domain.class_vars),
             len(table.domain.metas))
 
@@ -1013,12 +1013,12 @@ class TableTests(unittest.TestCase):
         self.weight_data = np.random.random((self.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
-        attributes = self.features
+        features = self.features
         class_vars = self.class_vars if with_classes else []
         metas = self.metas if with_metas else []
-        variables = attributes + class_vars
+        variables = features + class_vars
         return MagicMock(data.Domain,
-                         attributes=attributes,
+                         features=features,
                          class_vars=class_vars,
                          metas=metas,
                          variables=variables)
@@ -1091,7 +1091,7 @@ class CreateTableWithDomain(TableTests):
         domain = self.mock_domain()
         table = data.Table.from_domain(domain, self.nrows)
 
-        self.assertEqual(table.X.shape, (self.nrows, len(domain.attributes)))
+        self.assertEqual(table.X.shape, (self.nrows, len(domain.features)))
         self.assertFalse(table.X.any())
 
     def test_creates_zero_filled_rows_in_Y_if_domain_contains_class_vars(self):
@@ -1650,9 +1650,9 @@ class TestRowInstance(unittest.TestCase):
         self.assertEqual(table[2, 1], 1)
 
         inst.set_class("mammal")
-        self.assertEqual(table[2, len(table.domain.attributes)], "mammal")
+        self.assertEqual(table[2, len(table.domain.features)], "mammal")
         inst.set_class("fish")
-        self.assertEqual(table[2, len(table.domain.attributes)], "fish")
+        self.assertEqual(table[2, len(table.domain.features)], "fish")
 
         inst[-1] = "Foo"
         self.assertEqual(table[2, -1], "Foo")
