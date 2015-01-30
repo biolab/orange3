@@ -195,7 +195,7 @@ class OWImpute(OWWidget):
     priority = 2130
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Learner", Orange.classification.Fitter, "set_fitter")]
+              ("Learner", Orange.classification.Learner, "set_fitter")]
     outputs = [("Data", Orange.data.Table)]
 
     METHODS = METHODS
@@ -368,7 +368,7 @@ class OWImpute(OWWidget):
         elif method.short == "avg":
             return column_imputer_average(var, data)
         elif method.short == "model":
-            fitter = self.fitter if self.fitter is not None else MeanFitter()
+            fitter = self.fitter if self.fitter is not None else MeanLearner()
             return column_imputer_by_model(var, data, fitter=fitter)
         elif method.short == "random":
             return column_imputer_random(var, data)
@@ -896,10 +896,10 @@ Imputation:
 
 """
 
-from Orange.classification import Fitter, Model
+from Orange.classification import Learner, Model
 
 
-class MeanFitter(Fitter):
+class MeanLearner(Learner):
     def fit_storage(self, data):
         dist = distribution.get_distribution(data, data.domain.class_var)
         domain = Orange.data.Domain((), (data.domain.class_var,))
@@ -1014,7 +1014,7 @@ class Test(unittest.TestCase):
         )
 
     def test_impute_by_model(self):
-        from Orange.classification.majority import MajorityFitter
+        from Orange.classification.majority import MajorityLearner
 
         nan = numpy.nan
         data = [
@@ -1030,11 +1030,11 @@ class Test(unittest.TestCase):
         data = Orange.data.Table.from_numpy(domain, numpy.array(data))
 
         cimp1 = column_imputer_by_model(domain[0], data,
-                                        fitter=MajorityFitter())
+                                        fitter=MajorityLearner())
         self.assertEqual(tuple(cimp1.codomain), (domain[0],))
 
-        cimp2 = column_imputer_by_model(domain[1], data, fitter=MeanFitter())
-        cimp3 = column_imputer_by_model(domain[2], data, fitter=MeanFitter())
+        cimp2 = column_imputer_by_model(domain[1], data, fitter=MeanLearner())
+        cimp3 = column_imputer_by_model(domain[2], data, fitter=MeanLearner())
 
         imputer = ImputerModel(
             data.domain,

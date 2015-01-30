@@ -55,7 +55,7 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Orange.classification.Fitter,
+    inputs = [("Learner", Orange.classification.Learner,
                "set_learner", widget.Multiple),
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
               ("Test Data", Orange.data.Table, "set_test_data")]

@@ -8,7 +8,7 @@ import Orange.data
 import Orange.data.preprocess
 
 
-class Fitter:
+class Learner:
     supports_multiclass = False
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
@@ -21,7 +21,7 @@ class Fitter:
 
     def fit(self, X, Y, W=None):
         raise NotImplementedError(
-            "Descendants of Fitter must overload method fit")
+            "Descendants of Learner must overload method fit")
 
     def fit_storage(self, data):
         return self.fit(data.X, data.Y, data.W)
@@ -34,7 +34,7 @@ class Fitter:
 
         self.domain = data.domain
 
-        if type(self).fit is Fitter.fit:
+        if type(self).fit is Learner.fit:
             clf = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
@@ -60,7 +60,7 @@ class Model:
     ValueProbs = 2
 
     def __init__(self, domain=None):
-        if isinstance(self, Fitter):
+        if isinstance(self, Learner):
             domain = None
         elif not domain:
             raise ValueError("unspecified domain")
@@ -202,7 +202,7 @@ class SklModel(Model):
             return value, probs
 
 
-class SklFitter(Fitter):
+class SklLearner(Learner):
 
     __wraps__ = None
     __returns__ = SklModel

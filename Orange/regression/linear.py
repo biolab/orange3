@@ -3,17 +3,17 @@ import sklearn.linear_model
 import sklearn.pipeline
 import sklearn.preprocessing
 
-from ..classification import Fitter, Model
+from ..classification import Learner, Model
 from Orange import classification
 
-class LinearRegressionLearner(Fitter):
+class LinearRegressionLearner(Learner):
     def fit(self, X, Y, W):
         sk = sklearn.linear_model.LinearRegression()
         sk.fit(X, Y)
         return LinearModel(sk)
 
 
-class RidgeRegressionLearner(Fitter):
+class RidgeRegressionLearner(Learner):
     def __init__(self, alpha=1.0):
         self.alpha = alpha
 
@@ -23,7 +23,7 @@ class RidgeRegressionLearner(Fitter):
         return LinearModel(sk)
 
 
-class LassoRegressionLearner(Fitter):
+class LassoRegressionLearner(Learner):
     def __init__(self, alpha=1.0):
         self.alpha = alpha
 
@@ -33,7 +33,7 @@ class LassoRegressionLearner(Fitter):
         return LinearModel(sk)
 
 
-class SGDRegressionLearner(classification.SklFitter):
+class SGDRegressionLearner(classification.SklLearner):
     __wraps__ = sklearn.linear_model.SGDRegressor
 
     def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,

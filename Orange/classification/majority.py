@@ -4,7 +4,7 @@ from Orange import classification, data
 from Orange.statistics import distribution
 
 
-class MajorityFitter(classification.Fitter):
+class MajorityLearner(classification.Learner):
     def fit_storage(self, dat):
         """
         Constructs `Orange.classification.majority.ConstantClassifier` from given data.
@@ -16,7 +16,7 @@ class MajorityFitter(classification.Fitter):
         """
 
         if not isinstance(dat.domain.class_var, data.DiscreteVariable):
-            raise ValueError("classification.MajorityFitter expects a domain with a "
+            raise ValueError("classification.MajorityLearner expects a domain with a "
                              "(single) discrete variable")
         dist = distribution.get_distribution(dat, dat.domain.class_var)
         N = dist.sum()

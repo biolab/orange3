@@ -10,7 +10,7 @@ class CrossValidation:
 
     def __init__(self, tab, fit):
         assert(isinstance(tab, data.Table))
-        assert(isinstance(fit, classification.Fitter))
+        assert(isinstance(fit, classification.Learner))
         self.tab = tab
         self.learner = fit
 

@@ -5,7 +5,7 @@ from scipy.optimize import fmin_l_bfgs_b
 from Orange import classification
 
 
-class SoftmaxRegressionLearner(classification.Fitter):
+class SoftmaxRegressionLearner(classification.Learner):
     def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
                  **fmin_args):
         '''L2 regularized softmax regression

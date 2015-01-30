@@ -9,7 +9,7 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-class MLPLearner(classification.Fitter):
+class MLPLearner(classification.Learner):
     def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
                  **opt_args):
         '''Multilayer perceptron (A.K.A. feedforward neural network)

@@ -86,7 +86,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_store_models(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        fitters = [naive_bayes.BayesLearner(), majority.MajorityFitter()]
+        fitters = [naive_bayes.BayesLearner(), majority.MajorityLearner()]
 
         cv = testing.CrossValidation(k=5)
         res = cv(t, fitters)
@@ -113,7 +113,7 @@ class CrossValidationTestCase(unittest.TestCase):
 
     def test_10_fold_probs(self):
         data = Table('iris')[30:130]
-        fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
+        fitters = [majority.MajorityLearner(), majority.MajorityLearner()]
 
         results = testing.CrossValidation(k=10)(data, fitters)
 
@@ -128,11 +128,11 @@ class CrossValidationTestCase(unittest.TestCase):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = testing.CrossValidation(data, [majority.MajorityFitter()])
+        res = testing.CrossValidation(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = testing.CrossValidation(data, [majority.MajorityFitter()])
+        res = testing.CrossValidation(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
 
@@ -183,7 +183,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        fitters = [naive_bayes.BayesLearner(), majority.MajorityFitter()]
+        fitters = [naive_bayes.BayesLearner(), majority.MajorityLearner()]
 
         cv = testing.LeaveOneOut()
         res = cv(t, fitters)
@@ -210,7 +210,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
 
     def test_probs(self):
         data = Table('iris')[30:130]
-        fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
+        fitters = [majority.MajorityLearner(), majority.MajorityLearner()]
 
         results = testing.LeaveOneOut()(data, fitters)
 
@@ -225,17 +225,17 @@ class LeaveOneOutTestCase(unittest.TestCase):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = testing.LeaveOneOut(data, [majority.MajorityFitter()])
+        res = testing.LeaveOneOut(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = testing.LeaveOneOut(data, [majority.MajorityFitter()])
+        res = testing.LeaveOneOut(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         y = x[:, -1]
         data = Table(x, y)
-        res = testing.LeaveOneOut(data, [majority.MajorityFitter()])
+        res = testing.LeaveOneOut(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0],
                                 1 - data.Y[res.row_indices].flatten())
 
@@ -276,7 +276,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        fitters = [naive_bayes.BayesLearner(), majority.MajorityFitter()]
+        fitters = [naive_bayes.BayesLearner(), majority.MajorityLearner()]
 
         cv = testing.TestOnTrainingData()
         res = cv(t, fitters)
@@ -303,7 +303,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
 
     def test_probs(self):
         data = Table('iris')[30:130]
-        fitters = [majority.MajorityFitter(), majority.MajorityFitter()]
+        fitters = [majority.MajorityLearner(), majority.MajorityLearner()]
 
         results = testing.TestOnTrainingData()(data, fitters)
 
@@ -318,15 +318,15 @@ class TestOnTrainingTestCase(unittest.TestCase):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = testing.TestOnTrainingData(data, [majority.MajorityFitter()])
+        res = testing.TestOnTrainingData(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = testing.TestOnTrainingData(data, [majority.MajorityFitter()])
+        res = testing.TestOnTrainingData(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         y = x[:, -1]
         data = Table(x, y)
-        res = testing.TestOnTrainingData(data, [majority.MajorityFitter()])
+        res = testing.TestOnTrainingData(data, [majority.MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])

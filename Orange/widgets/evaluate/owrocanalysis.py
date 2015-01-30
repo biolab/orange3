@@ -81,7 +81,7 @@ def ROCData_from_results(results, clf_index, target):
     :param Orange.evaluation.Results results:
         Evaluation results.
     :param int clf_index:
-        Learner/Fitter index in the `results`.
+        Learner index in the `results`.
     :param int target:
         Target class index (i.e. positive class).
     :rval ROCData:

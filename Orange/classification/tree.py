@@ -1,11 +1,11 @@
-from Orange.classification import SklFitter, SklModel
+from Orange.classification import SklLearner, SklModel
 import sklearn.tree as skltree
 
 import numpy as np
 from collections import Counter
 
 
-class ClassificationTreeLearner(SklFitter):
+class ClassificationTreeLearner(SklLearner):
     __wraps__ = skltree.DecisionTreeClassifier
 
     def __init__(self, criterion="gini", splitter="best", max_depth=None,

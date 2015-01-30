@@ -12,7 +12,7 @@ class MeanTest(unittest.TestCase):
         x = np.random.random_integers(1, 3, (nrows, ncols))
         y = np.random.random_integers(0, 4, (nrows, 1)) / 3.0
         t = data.Table(x, y)
-        learn = mean_.MeanFitter()
+        learn = mean_.MeanLearner()
         clf = learn(t)
 
         true_mean = np.average(y)
@@ -28,7 +28,7 @@ class MeanTest(unittest.TestCase):
         heavy = 1
         w = ((y == heavy) * 123 + 1.0 ) / 124.0
         t = data.Table(x, y, W=w)
-        learn = mean_.MeanFitter()
+        learn = mean_.MeanLearner()
         clf = learn(t)
 
         expected_mean = np.average(y, weights=w)
@@ -38,12 +38,12 @@ class MeanTest(unittest.TestCase):
 
     def test_empty(self):
         autompg = data.Table('auto-mpg')
-        learn = mean_.MeanFitter()
+        learn = mean_.MeanLearner()
         clf = learn(autompg[:0])
         y = clf(autompg[0])
         self.assertTrue(y == 0)
 
     def test_discrete(self):
         iris = data.Table('iris')
-        learn = mean_.MeanFitter()
+        learn = mean_.MeanLearner()
         self.assertRaises(ValueError, learn, iris)

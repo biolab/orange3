@@ -163,7 +163,7 @@ class Testing:
         :param data: Data instances used for testing procedures
         :type data: Orange.data.Storage
         :param learners: A list of learning algorithms to be tested
-        :type fitters: list of Orange.classification.Fitter
+        :type fitters: list of Orange.classification.Learner
         :param store_data: A flag that tells whether to store the data;
             this argument can be given only as keyword argument
         :type store_data: bool
