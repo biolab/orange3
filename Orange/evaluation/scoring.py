@@ -24,7 +24,7 @@ class Score:
 
     def average(self, scores):
         if self.is_scalar:
-            return np.mean(scores)
+            return np.mean(scores, axis=0)
         return NotImplementedError
 
     def scores_by_folds(self, results, **kwargs):
@@ -82,11 +82,10 @@ class AUC(Score):
     separate_folds = True
 
     def compute_score(self, results, target=None):
-        domain = results.data.domain
-        if not isinstance(domain.class_var, DiscreteVariable):
+        if not isinstance(results.domain.class_var, DiscreteVariable):
             raise ValueError("AUC.compute_score expects a domain with a "
                              "(single) discrete variable")
-        n_classes = len(domain.class_var.values)
+        n_classes = len(results.domain.class_var.values)
         if n_classes < 2:
             raise ValueError("Class variable has less than two values")
         if target is None:
