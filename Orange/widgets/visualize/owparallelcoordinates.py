@@ -156,7 +156,7 @@ class OWParallelCoordinates(OWVisWidget):
         if (M - m) == 0:
             return # we have not yet updated the axes (self.graph.updateAxes())
 
-        self.graph.setAxisScale(xBottom, m, min(len(self.graph.attributes) - 1, M + (M - m) / 10.), 1)
+        self.graph.setAxisScale(xBottom, m, min(len(self.graph.features) - 1, M + (M - m) / 10.), 1)
         self.graph.replot()
 
     # ------------- SIGNALS --------------------------

@@ -661,12 +661,12 @@ def copy_descriptor(descriptor, newname=None):
             base_value=descriptor.base_value,
             ordered=descriptor.ordered,
         )
-        newf.attributes = dict(descriptor.attributes)
+        newf.features = dict(descriptor.features)
 
     elif isinstance(descriptor, Orange.data.ContinuousVariable):
         newf = Orange.data.ContinuousVariable(newname)
         newf.number_of_decimals = descriptor.number_of_decimals
-        newf.attributes = dict(descriptor.attributes)
+        newf.features = dict(descriptor.features)
 
     else:
         newf = type(descriptor)(newname)

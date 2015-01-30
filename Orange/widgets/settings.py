@@ -529,16 +529,16 @@ class DomainContextHandler(ContextHandler):
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
     def __init__(self, max_vars_to_pickle=100, match_values=0,
-                 reservoir=None, attributes_in_res=True, metas_in_res=False):
+                 reservoir=None, features_in_res=True, metas_in_res=False):
         super().__init__()
         self.max_vars_to_pickle = max_vars_to_pickle
         self.match_values = match_values
         self.reservoir = reservoir
-        self.attributes_in_res = attributes_in_res
+        self.features_in_res = features_in_res
         self.metas_in_res = metas_in_res
 
-        self.has_ordinary_attributes = attributes_in_res
-        self.has_meta_attributes = metas_in_res
+        self.has_ordinary_features = features_in_res
+        self.has_meta_features = metas_in_res
 
         self.known_settings = {}
 
@@ -546,9 +546,9 @@ class DomainContextHandler(ContextHandler):
         super().analyze_setting(prefix, setting)
         if isinstance(setting, ContextSetting) and not setting.not_attribute:
             if not setting.exclude_attributes:
-                self.has_ordinary_attributes = True
+                self.has_ordinary_features = True
             if not setting.exclude_metas:
-                self.has_meta_attributes = True
+                self.has_meta_features = True
 
     def encode_domain(self, domain):
         """
@@ -568,7 +568,7 @@ class DomainContextHandler(ContextHandler):
                     for v in attributes}
 
         match = self.match_values
-        if self.has_ordinary_attributes:
+        if self.has_ordinary_features:
             if match == self.MATCH_VALUES_CLASS:
                 attributes = encode(domain.attributes, False)
                 attributes.update(encode(domain.class_vars, True))
@@ -577,7 +577,7 @@ class DomainContextHandler(ContextHandler):
         else:
             attributes = {}
 
-        if self.has_meta_attributes:
+        if self.has_meta_features:
             metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
         else:
             metas = {}
@@ -608,11 +608,11 @@ class DomainContextHandler(ContextHandler):
 
         context.attributes, context.metas = encoded_domain
 
-        if self.has_ordinary_attributes:
+        if self.has_ordinary_features:
             context.ordered_domain = [(v.name, vartype(v)) for v in domain]
         else:
             context.ordered_domain = []
-        if self.has_meta_attributes:
+        if self.has_meta_features:
             context.ordered_domain += [(v.name, vartype(v))
                                        for v in domain.metas]
         return context, is_new
@@ -671,7 +671,7 @@ class DomainContextHandler(ContextHandler):
             get_attribute = lambda name: context.attributes.get(name, None)
             get_meta = lambda name: context.metas.get(name, None)
             ll = [a for a in context.ordered_domain if a not in excluded and (
-                self.attributes_in_res and get_attribute(a[0]) == a[1] or
+                self.features_in_res and get_attribute(a[0]) == a[1] or
                 self.metas_in_res and get_meta(a[0]) == a[1])]
             setattr(widget, self.reservoir, ll)
 

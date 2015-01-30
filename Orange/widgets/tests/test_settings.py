@@ -24,7 +24,7 @@ Continuous = vartype(ContinuousVariable())
 Discrete = vartype(DiscreteVariable())
 
 domain = Domain(
-    attributes=[
+    features=[
         ContinuousVariable(name=CONTINOUS_ATTR),
         DiscreteVariable(name=DISCRETE_ATTR_ABC, values=["a", "b", "c"]),
         DiscreteVariable(name=DISCRETE_ATTR_DEF, values=["d", "e", "f"])
@@ -41,7 +41,7 @@ domain = Domain(
 
 class DomainEncodingTests(unittest.TestCase):
     def setUp(self):
-        self.handler = DomainContextHandler(attributes_in_res=True,
+        self.handler = DomainContextHandler(features_in_res=True,
                                             metas_in_res=True)
 
     def test_encode_domain_with_match_none(self):
@@ -99,7 +99,7 @@ class DomainEncodingTests(unittest.TestCase):
         })
 
     def test_encode_domain_with_false_attributes_in_res(self):
-        handler = DomainContextHandler(attributes_in_res=False,
+        handler = DomainContextHandler(features_in_res=False,
                                        metas_in_res=True)
         encoded_attributes, encoded_metas = handler.encode_domain(domain)
 
@@ -110,7 +110,7 @@ class DomainEncodingTests(unittest.TestCase):
         })
 
     def test_encode_domain_with_false_metas_in_res(self):
-        handler = DomainContextHandler(attributes_in_res=True,
+        handler = DomainContextHandler(features_in_res=True,
                                        metas_in_res=False)
         encoded_attributes, encoded_metas = handler.encode_domain(domain)
 
@@ -161,7 +161,7 @@ class MockWidget:
 
 class DomainContextSettingsHandlerTests(unittest.TestCase):
     def setUp(self):
-        self.handler = DomainContextHandler(attributes_in_res=True,
+        self.handler = DomainContextHandler(features_in_res=True,
                                             metas_in_res=True)
         self.handler.read_defaults = lambda: None  # Disable reading settings from disk
         self.handler.bind(MockWidget)

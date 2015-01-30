@@ -55,7 +55,7 @@ class Variable:
             self.compute_value = compute_value
         self.unknown_str = set(Variable._DefaultUnknownStr)
         self.source_variable = None
-        self.attributes = {}
+        self.features = {}
 
     @staticmethod
     def is_primitive():

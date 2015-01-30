@@ -32,8 +32,8 @@ class Instance:
         else:
             self._values, self._metas = domain.convert(data)
             self._weight = 1
-        self._x = self._values[:len(domain.attributes)]
-        self._y = self._values[len(domain.attributes):]
+        self._x = self._values[:len(domain.features)]
+        self._y = self._values[len(domain.features):]
 
     @property
     def domain(self):
@@ -110,7 +110,7 @@ class Instance:
         return s
 
     def __str__(self):
-        s = "[" + self.str_values(self._x, self._domain.attributes)
+        s = "[" + self.str_values(self._x, self._domain.features)
         if self._domain.class_vars:
             s += " | " + self.str_values(self._y, self._domain.class_vars)
         s += "]"
@@ -139,7 +139,7 @@ class Instance:
 
     def attributes(self):
         """Return iterator over the instance's attributes"""
-        return iter(self._values[:len(self._domain.attributes)])
+        return iter(self._values[:len(self._domain.features)])
 
     def classes(self):
         """Return iterator over the instance's class attributes"""
@@ -178,4 +178,4 @@ class Instance:
             self._y[0] = self._domain.class_var.to_val(value)
         else:
             self._y[0] = value
-        self._values[len(self._domain.attributes)] = self._y[0]
+        self._values[len(self._domain.features)] = self._y[0]

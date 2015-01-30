@@ -158,9 +158,9 @@ class OWLegend(QGraphicsObject):
     """
         A legend for :obj:`.OWPlot`.
 
-        Its items are arranged into a hierarchy by `category`. This is useful when points differ in more than one attribute.
+        Its items are arranged into a hierarchy by `category`. This is useful when points differ in more than one feature.
         In such a case, there can be one category for point color and one for point shape. Usually the category name
-        will be the name of the attribute, while the item's title will be the value.
+        will be the name of the feature, while the item's title will be the value.
 
         Arbitrary categories can be created, for an example see :meth:`.OWPlot.update_axes`, which creates a special category
         for unused axes.
@@ -177,7 +177,7 @@ class OWLegend(QGraphicsObject):
         self.graph = graph
         self.curves = []
         self.items = {}
-        self.attributes = []
+        self.features = []
         self.point_attrs = {}
         self.point_vals = {}
         self.default_values = {

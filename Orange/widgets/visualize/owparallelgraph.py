@@ -58,9 +58,9 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.auto_update_axes = 1
         self.old_legend_keys = []
         self.selection_conditions = {}
-        self.attributes = []
+        self.features = []
         self.visualized_mid_labels = []
-        self.attribute_indices = []
+        self.feature_indices = []
         self.valid_data = []
         self.groups = {}
 
@@ -81,14 +81,14 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.end_progress()
 
 
-    def update_data(self, attributes, mid_labels=None):
+    def update_data(self, features, mid_labels=None):
         old_selection_conditions = self.selection_conditions
 
         self.clear()
 
         if not (self.have_data or self.have_subset_data):
             return
-        if len(attributes) < 2:
+        if len(features) < 2:
             return
 
         if self.show_statistics:
@@ -98,9 +98,9 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.alpha_value = VISIBLE
             self.alpha_value_2 = TRANSPARENT
 
-        self.attributes = attributes
-        self.attribute_indices = [self.attribute_name_index[name] for name in self.attributes]
-        self.valid_data = self.get_valid_list(self.attribute_indices)
+        self.features = features
+        self.feature_indices = [self.attribute_name_index[name] for name in self.features]
+        self.valid_data = self.get_valid_list(self.feature_indices)
 
         self.visualized_mid_labels = mid_labels
         self.add_relevant_selections(old_selection_conditions)
@@ -123,14 +123,14 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.replot()
 
     def add_relevant_selections(self, old_selection_conditions):
-        """Keep only conditions related to the currently visualized attributes"""
+        """Keep only conditions related to the currently visualized features"""
         for name, value in old_selection_conditions.items():
-            if name in self.attributes:
+            if name in self.features:
                 self.selection_conditions[name] = value
 
     def draw_axes(self):
         self.remove_all_axes()
-        for i in range(len(self.attributes)):
+        for i in range(len(self.features)):
             axis_id = UserAxis + i
             a = self.add_axis(axis_id, line=QLineF(i, 0, i, 1), arrows=AxisStart | AxisEnd,
                               zoomable=True)
@@ -139,21 +139,21 @@ class OWParallelGraph(OWPlot, ScaleData):
             a.title_margin = -10
             a.text_margin = 0
             a.setZValue(5)
-            self.set_axis_title(axis_id, self.data_domain[self.attributes[i]].name)
+            self.set_axis_title(axis_id, self.data_domain[self.features[i]].name)
             self.set_show_axis_title(axis_id, self.show_attr_values)
             if self.show_attr_values:
-                attr = self.data_domain[self.attributes[i]]
+                attr = self.data_domain[self.features[i]]
                 if isinstance(attr, ContinuousVariable):
                     self.set_axis_scale(axis_id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
                 elif isinstance(attr, DiscreteVariable):
-                    attribute_values = get_variable_values_sorted(self.data_domain[self.attributes[i]])
+                    attribute_values = get_variable_values_sorted(self.data_domain[self.features[i]])
                     attr_len = len(attribute_values)
                     values = [float(1.0 + 2.0 * j) / float(2 * attr_len) for j in range(len(attribute_values))]
                     a.set_bounds((0, 1))
                     self.set_axis_labels(axis_id, labels=attribute_values, values=values)
 
     def draw_curves(self):
-        conditions = {name: self.attributes.index(name) for name in self.selection_conditions.keys()}
+        conditions = {name: self.features.index(name) for name in self.selection_conditions.keys()}
 
         def is_selected(example):
             return all(self.selection_conditions[name][0] <= example[index] <= self.selection_conditions[name][1]
@@ -163,7 +163,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         background_curves = defaultdict(list)
 
         diff, mins = [], []
-        for i in self.attribute_indices:
+        for i in self.feature_indices:
             var = self.data_domain[i]
             if isinstance(var, DiscreteVariable):
                 diff.append(len(var.values))
@@ -175,7 +175,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         def scale_row(row):
             return [(x - m) / d for x, m, d in zip(row, mins, diff)]
 
-        for row_idx, row in enumerate(self.data[:, self.attribute_indices]):
+        for row_idx, row in enumerate(self.data[:, self.feature_indices]):
             if any(np.isnan(v) for v in row.x):
                 continue
 
@@ -203,7 +203,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             return 0, 0, 0
 
     def _draw_curves(self, selected_curves):
-        n_attr = len(self.attributes)
+        n_attr = len(self.features)
         for color, y_values in sorted(selected_curves.items()):
             n_rows = int(len(y_values) / n_attr)
             x_values = list(range(n_attr)) * n_rows
@@ -218,7 +218,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         phis, mus, sigmas = self.compute_groups()
 
         diff, mins = [], []
-        for i in self.attribute_indices:
+        for i in self.feature_indices:
             var = self.data_domain[i]
             if isinstance(var, DiscreteVariable):
                 diff.append(len(var.values))
@@ -242,12 +242,12 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.replot()
 
     def compute_groups(self):
-        key = (tuple(self.attributes), self.number_of_groups, self.number_of_steps)
+        key = (tuple(self.features), self.number_of_groups, self.number_of_steps)
         if key not in self.groups:
             def callback(i, n):
                 self.set_progress(i, 2*n)
 
-            conts = create_contingencies(self.data[:, self.attribute_indices], callback=callback)
+            conts = create_contingencies(self.data[:, self.feature_indices], callback=callback)
             self.set_progress(50, 100)
             w, mu, sigma, phi = lac(conts, self.number_of_groups, self.number_of_steps)
             self.set_progress(100, 100)
@@ -284,7 +284,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             for attr_idx in self.attribute_indices:
                 if not isinstance(self.data_domain[attr_idx], ContinuousVariable):
                     data.append([()])
-                    continue  # only for continuous attributes
+                    continue  # only for continuous features
 
                 if not self.data_has_class or self.data_has_continuous_class:    # no class
                     if self.show_statistics == MEANS:
@@ -367,7 +367,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                                OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
 
     def draw_distributions(self):
-        """Draw distributions with discrete attributes"""
+        """Draw distributions with discrete features"""
         if not (self.show_distributions and self.have_data and self.data_has_discrete_class):
             return
         class_count = len(self.data_domain.class_var.values)
@@ -383,7 +383,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         max_count = max([contingency.max() for contingency in self.domain_contingencies.values()] or [1])
         sorted_class_values = get_variable_values_sorted(self.data_domain.class_var)
 
-        for axis_idx, attr_idx in enumerate(self.attribute_indices):
+        for axis_idx, attr_idx in enumerate(self.feature_indices):
             attr = self.data_domain[attr_idx]
             if isinstance(attr, DiscreteVariable):
                 continue
@@ -430,7 +430,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             contact, (index, pos) = self.testArrowContact(int(round(x_float)), canvas_position.x(),
                                                           canvas_position.y())
             if contact:
-                attr = self.data_domain[self.attributes[index]]
+                attr = self.data_domain[self.features[index]]
                 if isinstance(attr, ContinuousVariable):
                     condition = self.selection_conditions.get(attr.name, [0, 1])
                     val = self.attr_values[attr.name][0] + condition[pos] * (
@@ -463,17 +463,17 @@ class OWParallelGraph(OWPlot, ScaleData):
     def testArrowContact(self, indices, x, y):
         if type(indices) != list: indices = [indices]
         for index in indices:
-            if index >= len(self.attributes) or index < 0:
+            if index >= len(self.features) or index < 0:
                 continue
             int_x = self.transform(xBottom, index)
             bottom = self.transform(yLeft,
-                                    self.selection_conditions.get(self.attributes[index], [0, 1])[0])
+                                    self.selection_conditions.get(self.features[index], [0, 1])[0])
             bottom_rect = QRect(int_x - self.bottom_pixmap.width() / 2, bottom, self.bottom_pixmap.width(),
                                 self.bottom_pixmap.height())
             if bottom_rect.contains(QPoint(x, y)):
                 return 1, (index, 0)
             top = self.transform(yLeft,
-                                 self.selection_conditions.get(self.attributes[index], [0, 1])[1])
+                                 self.selection_conditions.get(self.features[index], [0, 1])[1])
             top_rect = QRect(int_x - self.top_pixmap.width() / 2, top - self.top_pixmap.height(),
                              self.top_pixmap.width(),
                              self.top_pixmap.height())
@@ -496,11 +496,11 @@ class OWParallelGraph(OWPlot, ScaleData):
             canvas_position = self.mapToScene(e.pos())
             y = min(1, max(0, self.inv_transform(yLeft, canvas_position.y())))
             index, pos = self.pressed_arrow
-            attr = self.data_domain[self.attributes[index]]
+            attr = self.data_domain[self.features[index]]
             old_condition = self.selection_conditions.get(attr.name, [0, 1])
             old_condition[pos] = y
             self.selection_conditions[attr.name] = old_condition
-            self.update_data(self.attributes, self.visualized_mid_labels)
+            self.update_data(self.features, self.visualized_mid_labels)
 
             if isinstance(attr, ContinuousVariable):
                 val = self.attr_values[attr.name][0] + old_condition[pos] * (
@@ -526,16 +526,16 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def removeAllSelections(self, send=1):
         self.selection_conditions = {}
-        self.update_data(self.attributes, self.visualized_mid_labels)
+        self.update_data(self.features, self.visualized_mid_labels)
 
     # draw the curves and the selection conditions
     def drawCanvas(self, painter):
         OWPlot.drawCanvas(self, painter)
         for i in range(
                 int(max(0, math.floor(self.axisScaleDiv(xBottom).interval().minValue()))),
-                int(min(len(self.attributes),
+                int(min(len(self.features),
                         math.ceil(self.axisScaleDiv(xBottom).interval().maxValue()) + 1))):
-            bottom, top = self.selection_conditions.get(self.attributes[i], (0, 1))
+            bottom, top = self.selection_conditions.get(self.features[i], (0, 1))
             painter.drawPixmap(self.transform(xBottom, i) - self.bottom_pixmap.width() / 2,
                                self.transform(yLeft, bottom), self.bottom_pixmap)
             painter.drawPixmap(self.transform(xBottom, i) - self.top_pixmap.width() / 2,
@@ -547,7 +547,7 @@ class OWParallelGraph(OWPlot, ScaleData):
     def clear(self):
         super().clear()
 
-        self.attributes = []
+        self.features = []
         self.visualized_mid_labels = []
         self.selected_examples = []
         self.unselected_examples = []
@@ -557,14 +557,14 @@ class OWParallelGraph(OWPlot, ScaleData):
 # ####################################################################
 # a curve that is able to draw several series of lines
 class ParallelCoordinatesCurve(OWCurve):
-    def __init__(self, n_attributes, y_values, color, name=""):
+    def __init__(self, n_features, y_values, color, name=""):
         OWCurve.__init__(self, tooltip=name)
         self._item = QGraphicsPathItem(self)
         self.path = QPainterPath()
         self.fitted = False
 
-        self.n_attributes = n_attributes
-        self.n_rows = int(len(y_values) / n_attributes)
+        self.n_features = n_features
+        self.n_rows = int(len(y_values) / n_features)
 
         self.set_style(OWCurve.Lines)
         if isinstance(color, tuple):
@@ -572,7 +572,7 @@ class ParallelCoordinatesCurve(OWCurve):
         else:
             self.set_pen(QPen(QColor(color)))
 
-        x_values = list(range(n_attributes)) * self.n_rows
+        x_values = list(range(n_features)) * self.n_rows
         self.set_data(x_values, y_values)
 
     def update_properties(self):
@@ -590,7 +590,7 @@ class ParallelCoordinatesCurve(OWCurve):
 
     def segment(self, data):
         for i in range(self.n_rows):
-            yield data[i * self.n_attributes:(i + 1) * self.n_attributes]
+            yield data[i * self.n_features:(i + 1) * self.n_features]
 
     def draw_cubic_path(self, segment):
         for (x1, y1), (x2, y2) in zip(segment, segment[1:]):

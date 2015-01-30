@@ -247,7 +247,7 @@ def continuize_domain(data_or_domain,
     # Compute the column indices which need a distribution.
     attr_needs_dist = [needs_dist(var, multinomial_treatment,
                                   continuous_treatment)
-                       for var in domain.attributes]
+                       for var in domain.features]
     cls_needs_dist = [needs_dist(var, class_treatment, DomainContinuizer.Leave)
                       for var in domain.class_vars]
 
@@ -266,7 +266,7 @@ def continuize_domain(data_or_domain,
     newattrs = [continuize_var(var, next(dist_iter) if needs_dist else None,
                                multinomial_treatment, continuous_treatment,
                                zero_based)
-                for var, needs_dist in zip(domain.attributes, attr_needs_dist)]
+                for var, needs_dist in zip(domain.features, attr_needs_dist)]
 
     newclass = [continuize_var(var, next(dist_iter) if needs_dist else None,
                                class_treatment, DomainContinuizer.Ignore,

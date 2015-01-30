@@ -41,28 +41,28 @@ class DomainConversion:
         Compute the conversion indices from the given `source` to `destination`
         """
         self.source = source
-        self.attributes = [
+        self.features = [
             source.index(var) if var in source
             else var.compute_value for var in destination.attributes]
         self.class_vars = [
             source.index(var) if var in source
             else var.compute_value for var in destination.class_vars]
-        self.variables = self.attributes + self.class_vars
+        self.variables = self.features + self.class_vars
         self.metas = [
             source.index(var) if var in source
             else var.compute_value for var in destination.metas]
 
 
 class Domain:
-    def __init__(self, attributes, class_vars=None, metas=None, source=None):
+    def __init__(self, features, class_vars=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
         the class attribute(s). They can be described by descriptors (instances
         of :class:`Variable`), or by indices or names if the source domain is
         given.
 
-        :param attributes: a list of attributes
-        :type attributes: list of :class:`Variable`
+        :param features: a list of attributes
+        :type features: list of :class:`Variable`
         :param class_vars: target variable or a list of target variables
         :type class_vars: :class:`Variable` or list of :class:`Variable`
         :param metas: a list of meta attributes
@@ -80,13 +80,13 @@ class Domain:
         elif isinstance(class_vars, Iterable):
             class_vars = list(class_vars)
 
-        if not isinstance(attributes, list):
-            attributes = list(attributes)
+        if not isinstance(features, list):
+            features = list(features)
         metas = list(metas) if metas else []
 
         # Replace str's and int's with descriptors if 'source' is given;
         # complain otherwise
-        for lst in (attributes, class_vars, metas):
+        for lst in (features, class_vars, metas):
             for i, var in enumerate(lst):
                 if not isinstance(var, Variable):
                     if source and isinstance(var, (str, int)):
@@ -97,9 +97,9 @@ class Domain:
                             "not '%s'" % type(var).__name__)
 
         # Store everything
-        self.attributes = tuple(attributes)
+        self.features = tuple(features)
         self.class_vars = tuple(class_vars)
-        self._variables = self.attributes + self.class_vars
+        self._variables = self.features + self.class_vars
         self._metas = tuple(metas)
         self.class_var = \
             self.class_vars[0] if len(self.class_vars) == 1 else None
@@ -261,7 +261,7 @@ class Domain:
         Return a list-like string with the domain's features, class attributes
         and meta attributes.
         """
-        s = "[" + ", ".join(attr.name for attr in self.attributes)
+        s = "[" + ", ".join(attr.name for attr in self.features)
         if self.class_vars:
             s += " | " + ", ".join(cls.name for cls in self.class_vars)
         s += "]"
@@ -311,7 +311,7 @@ class Domain:
         """
         if not include_class:
             return any(isinstance(var, DiscreteVariable)
-                       for var in self.attributes)
+                       for var in self.features)
         else:
             return any(isinstance(var, DiscreteVariable)
                        for var in self.variables)
@@ -323,7 +323,7 @@ class Domain:
         """
         if not include_class:
             return any(isinstance(var, ContinuousVariable)
-                       for var in self.attributes)
+                       for var in self.features)
         else:
             return any(isinstance(var, ContinuousVariable)
                        for var in self.variables)
@@ -387,7 +387,7 @@ class Domain:
     def select_columns(self, col_idx):
         attributes, col_indices = self._compute_col_indices(col_idx)
         if attributes is not None:
-            n_attrs = len(self.attributes)
+            n_attrs = len(self.features)
             r_attrs = [attributes[i]
                        for i, col in enumerate(col_indices)
                        if 0 <= col < n_attrs]
@@ -416,7 +416,7 @@ class Domain:
                         np.arange(start, end, stride))
         elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self[col] for col in col_idx]
-            if attributes == self.attributes:
+            if attributes == self.features:
                 return None, None
             return attributes, np.fromiter(
                 (self.index(attr) for attr in attributes), int)

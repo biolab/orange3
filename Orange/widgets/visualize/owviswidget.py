@@ -13,19 +13,19 @@ ICON_DOWN = os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")
 
 
 class OWVisWidget(OWWidget):
-    _shown_attributes = ContextSetting(default=[], required=ContextSetting.REQUIRED,
-                                       selected='selected_shown', reservoir="_hidden_attributes")
+    _shown_features = ContextSetting(default=[], required=ContextSetting.REQUIRED,
+                                       selected='selected_shown', reservoir="_hidden_features")
     # Setting above will override these fields
-    _hidden_attributes = ()
+    _hidden_features = ()
     selected_shown = ()
     selected_hidden = ()
 
     @property
-    def shown_attributes(self):
-        return [a[0] for a in self._shown_attributes]
+    def shown_features(self):
+        return [a[0] for a in self._shown_features]
 
-    @shown_attributes.setter
-    def shown_attributes(self, value):
+    @shown_features.setter
+    def shown_features(self, value):
         shown = []
         hidden = []
 
@@ -34,51 +34,51 @@ class OWVisWidget(OWWidget):
         if domain:
             if value:
                 shown = value if isinstance(value[0], tuple) else [attr_info(domain[a]) for a in value]
-                hidden = [x for x in [attr_info(domain[a]) for a in domain.attributes] if x not in shown]
+                hidden = [x for x in [attr_info(domain[a]) for a in domain.features] if x not in shown]
             else:
-                shown = [attr_info(a) for a in domain.attributes]
-                if not self.show_all_attributes:
+                shown = [attr_info(a) for a in domain.features]
+                if not self.show_all_features:
                     hidden = shown[10:]
                     shown = shown[:10]
 
             if domain.class_var and attr_info(domain.class_var) not in shown:
                 hidden += [attr_info(domain.class_var)]
 
-        self._shown_attributes = shown
-        self._hidden_attributes = hidden
+        self._shown_features = shown
+        self._hidden_features = hidden
         self.selected_hidden = []
         self.selected_shown = []
 
-        self.trigger_attributes_changed()
+        self.trigger_features_changed()
 
     @property
-    def hidden_attributes(self):
-        return [a[0] for a in self._hidden_attributes]
+    def hidden_features(self):
+        return [a[0] for a in self._hidden_features]
 
     __attribute_selection_area_initialized = False
 
     #noinspection PyAttributeOutsideInit
     def add_attribute_selection_area(self, parent):
-        self.add_shown_attributes(parent)
-        self.add_hidden_attributes(parent)
+        self.add_shown_features(parent)
+        self.add_hidden_features(parent)
         self.__attribute_selection_area_initialized = True
 
-        self.trigger_attributes_changed()
+        self.trigger_features_changed()
 
     #noinspection PyAttributeOutsideInit
-    def add_shown_attributes(self, parent):
-        self.shown_attributes_area = gui.widgetBox(parent, " Shown attributes ")
-        self.shown_attributes_listbox = gui.listBox(
-            self.shown_attributes_area, self, "selected_shown", "_shown_attributes",
-            dragDropCallback=self.trigger_attributes_changed,
+    def add_shown_features(self, parent):
+        self.shown_features_area = gui.widgetBox(parent, " Shown features ")
+        self.shown_features_listbox = gui.listBox(
+            self.shown_features_area, self, "selected_shown", "_shown_features",
+            dragDropCallback=self.trigger_features_changed,
             enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
 
     #noinspection PyAttributeOutsideInit
-    def add_hidden_attributes(self, parent):
-        self.hidden_attributes_area = gui.widgetBox(parent, " Hidden attributes ")
-        self.hidden_attributes_listbox = gui.listBox(self.hidden_attributes_area, self, "selected_hidden",
-                                                     "_hidden_attributes",
-                                                     dragDropCallback=self.trigger_attributes_changed,
+    def add_hidden_features(self, parent):
+        self.hidden_features_area = gui.widgetBox(parent, " Hidden features ")
+        self.hidden_features_listbox = gui.listBox(self.hidden_features_area, self, "selected_hidden",
+                                                     "_hidden_features",
+                                                     dragDropCallback=self.trigger_features_changed,
                                                      enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
 
     def get_data_domain(self):
@@ -87,21 +87,21 @@ class OWVisWidget(OWWidget):
         else:
             return None
 
-    def trigger_attributes_changed(self):
+    def trigger_features_changed(self):
         if not self.__attribute_selection_area_initialized:
             # Some components trigger this event during the initialization.
             # We ignore those requests, a separate event will be triggered
             # manually when everything is initialized.
             return
 
-        self.attributes_changed()
+        self.features_changed()
 
     def closeContext(self):
         super().closeContext()
 
         self.data = None
-        self.shown_attributes = None
+        self.shown_features = None
 
     # "Events"
-    def attributes_changed(self):
+    def features_changed(self):
         pass

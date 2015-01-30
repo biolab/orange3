@@ -193,7 +193,7 @@ class Table(MutableSequence, Storage):
         self = cls.__new__(Table)
         self.domain = domain
         self.n_rows = n_rows
-        self.X = np.zeros((n_rows, len(domain.attributes)))
+        self.X = np.zeros((n_rows, len(domain.features)))
         self.Y = np.zeros((n_rows, len(domain.class_vars)))
         if weights:
             self.W = np.ones(n_rows)
@@ -339,8 +339,8 @@ class Table(MutableSequence, Storage):
             if sp.issparse(X):
                 Y = np.empty((X.shape[0], 0), object)
             else:
-                Y = X[:, len(domain.attributes):]
-                X = X[:, :len(domain.attributes)]
+                Y = X[:, len(domain.features):]
+                X = X[:, :len(domain.features)]
         if metas is None:
             metas = np.empty((X.shape[0], 0), object)
         if W is None:
@@ -348,10 +348,10 @@ class Table(MutableSequence, Storage):
         else:
             W = W.reshape(W.size, 1)
 
-        if X.shape[1] != len(domain.attributes):
+        if X.shape[1] != len(domain.features):
             raise ValueError(
                 "Invalid number of variable columns ({} != {})".format(
-                    X.shape[1], len(domain.attributes))
+                    X.shape[1], len(domain.features))
             )
         if Y.shape[1] != len(domain.class_vars):
             raise ValueError(

@@ -11,14 +11,14 @@ from Orange.data import \
     DiscreteVariable, ContinuousVariable, StringVariable
 
 class TestInstance(unittest.TestCase):
-    attributes = ["Feature %i" % i for i in range(10)]
+    features = ["Feature %i" % i for i in range(10)]
     class_vars = ["Class %i" % i for i in range(1)]
     metas = [DiscreteVariable("Meta 1", values="XYZ"),
              ContinuousVariable("Meta 2"),
              StringVariable("Meta 3")]
 
     def mock_domain(self, with_classes=False, with_metas=False):
-        attributes = self.attributes
+        attributes = self.features
         class_vars = self.class_vars if with_classes else []
         metas = self.metas if with_metas else []
         variables = attributes + class_vars
@@ -44,8 +44,8 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain)
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
-        self.assertEqual(inst._values.shape, (len(self.attributes), ))
-        self.assertEqual(inst._x.shape, (len(self.attributes), ))
+        self.assertEqual(inst._values.shape, (len(self.features), ))
+        self.assertEqual(inst._x.shape, (len(self.features), ))
         self.assertEqual(inst._y.shape, (0, ))
         self.assertEqual(inst._metas.shape, (0, ))
         self.assertTrue(all(isnan(x) for x in inst._values))
@@ -57,8 +57,8 @@ class TestInstance(unittest.TestCase):
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
         self.assertEqual(inst._values.shape,
-                         (len(self.attributes) + len(self.class_vars), ))
-        self.assertEqual(inst._x.shape, (len(self.attributes), ))
+                         (len(self.features) + len(self.class_vars), ))
+        self.assertEqual(inst._x.shape, (len(self.features), ))
         self.assertEqual(inst._y.shape, (len(self.class_vars), ))
         self.assertEqual(inst._metas.shape, (0, ))
         self.assertTrue(all(isnan(x) for x in inst._values))
@@ -71,8 +71,8 @@ class TestInstance(unittest.TestCase):
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
         self.assertEqual(inst._values.shape,
-                         (len(self.attributes) + len(self.class_vars), ))
-        self.assertEqual(inst._x.shape, (len(self.attributes), ))
+                         (len(self.features) + len(self.class_vars), ))
+        self.assertEqual(inst._x.shape, (len(self.features), ))
         self.assertEqual(inst._y.shape, (len(self.class_vars), ))
         self.assertEqual(inst._metas.shape, (3, ))
         self.assertTrue(all(isnan(x) for x in inst._values))
@@ -297,8 +297,8 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain, ["X", 43, "Foo"])
         self.assertEqual(str(inst), "[] {X, 43.000, Foo}")
 
-        domain = self.create_domain(self.attributes)
-        inst = Instance(domain, range(len(self.attributes)))
+        domain = self.create_domain(self.features)
+        inst = Instance(domain, range(len(self.features)))
         self.assertEqual(str(inst), "[0.000, 1.000, 2.000, 3.000, 4.000, ...]")
 
         for attr in domain:

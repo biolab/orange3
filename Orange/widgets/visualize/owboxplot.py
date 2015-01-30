@@ -80,10 +80,10 @@ class OWBoxPlot(widget.OWWidget):
 
     - `display_changed` puts the elements corresponding to the current display
     settings on the scene. It is called when the elements are reconstructed
-    (layout is changed due to selection of attributes or resize event), or
+    (layout is changed due to selection of features or resize event), or
     when the user changes display settings or colors.
 
-    For discrete attributes, the flow is a bit simpler: the elements are not
+    For discrete features, the flow is a bit simpler: the elements are not
     constructed in advance (by layout_changed). Instead, layout_changed and
     display_changed call display_changed_disc that draws everything.
     """
@@ -100,7 +100,7 @@ class OWBoxPlot(widget.OWWidget):
     settingsHandler = DomainContextHandler()
     display = Setting(0)
     grouping_select = ContextSetting([0])
-    attributes_select = ContextSetting([0])
+    features_select = ContextSetting([0])
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
     stretched = Setting(True)
@@ -136,7 +136,7 @@ class OWBoxPlot(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.grouping = []
-        self.attributes = []
+        self.features = []
         self.stats = []
         self.ddataset = None
 
@@ -147,7 +147,7 @@ class OWBoxPlot(widget.OWWidget):
             = 0
 
         self.attr_list_box = gui.listBox(
-            self.controlArea, self, "attributes_select", "attributes",
+            self.controlArea, self, "features_select", "features",
             box="Variable", callback=self.attr_changed)
         self.attrCombo = gui.listBox(
             self.controlArea, self, 'grouping_select', "grouping",
@@ -213,17 +213,17 @@ class OWBoxPlot(widget.OWWidget):
         self.closeContext()
         self.ddataset = dataset
         self.grouping_select = []
-        self.attributes_select = []
+        self.features_select = []
         self.attr_list_box.clear()
         self.attrCombo.clear()
         if dataset:
             self.openContext(self.ddataset)
-            self.attributes = [(a.name, vartype(a)) for a in dataset.domain]
+            self.features = [(a.name, vartype(a)) for a in dataset.domain]
             self.grouping = ["None"] + [(a.name, vartype(a))
                                         for a in dataset.domain
                                         if isinstance(a, DiscreteVariable)]
             self.grouping_select = [0]
-            self.attributes_select = [0]
+            self.features_select = [0]
             self.attr_changed()
         else:
             self.reset_all_data()
@@ -245,7 +245,7 @@ class OWBoxPlot(widget.OWWidget):
         if dataset is None:
             self.stats = self.dist = self.conts = []
             return
-        attr_ind = self.attributes_select[0]
+        attr_ind = self.features_select[0]
         attr = dataset.domain[attr_ind]
         self.is_continuous = isinstance(attr, ContinuousVariable)
         group_by = self.grouping_select[0]
@@ -288,7 +288,7 @@ class OWBoxPlot(widget.OWWidget):
         if not self.is_continuous:
             return self.display_changed_disc()
 
-        attr = self.attributes[self.attributes_select[0]][0]
+        attr = self.features[self.features_select[0]][0]
         attr = self.ddataset.domain[attr]
 
         self.mean_labels = [self.mean_label(stat, attr, lab)
@@ -480,7 +480,7 @@ class OWBoxPlot(widget.OWWidget):
         self.scene_width = (gtop - gbottom) * scale_x
 
         val = first_val
-        attr = self.attributes[self.attributes_select[0]][0]
+        attr = self.features[self.features_select[0]][0]
         attr_desc = self.ddataset.domain[attr]
         while True:
             l = self.boxScene.addLine(val * scale_x, -1, val * scale_x, 1,
@@ -500,7 +500,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def draw_axis_disc(self):
         """
-        Draw the horizontal axis and sets self.scale_x for discrete attributes
+        Draw the horizontal axis and sets self.scale_x for discrete features
         """
         if self.stretched:
             step = steps = 10

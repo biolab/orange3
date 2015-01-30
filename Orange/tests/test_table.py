@@ -994,26 +994,26 @@ def column_sizes(table):
 
 
 class TableTests(unittest.TestCase):
-    attributes = ["Feature %i" % i for i in range(10)]
+    features = ["Feature %i" % i for i in range(10)]
     class_vars = ["Class %i" % i for i in range(1)]
     metas = ["Meta %i" % i for i in range(5)]
     nrows = 10
     row_indices = (1, 5, 7, 9)
 
-    data = np.random.random((nrows, len(attributes)))
+    data = np.random.random((nrows, len(features)))
     class_data = np.random.random((nrows, len(class_vars)))
     meta_data = np.random.random((nrows, len(metas)))
     weight_data = np.random.random((nrows, 1))
 
     def setUp(self):
-        self.data = np.random.random((self.nrows, len(self.attributes)))
+        self.data = np.random.random((self.nrows, len(self.features)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
         self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas))
                                            ).astype(object)
         self.weight_data = np.random.random((self.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
-        attributes = self.attributes
+        attributes = self.features
         class_vars = self.class_vars if with_classes else []
         metas = self.metas if with_metas else []
         variables = attributes + class_vars
@@ -1244,7 +1244,7 @@ class CreateTableWithData(TableTests):
         domain = self.mock_domain(with_classes=True, with_metas=True)
 
         with self.assertRaises(ValueError):
-            data_ = np.vstack((self.data, np.zeros((1, len(self.attributes)))))
+            data_ = np.vstack((self.data, np.zeros((1, len(self.features)))))
             data.Table(domain, data_, self.class_data, self.meta_data)
 
         with self.assertRaises(ValueError):
@@ -1295,7 +1295,7 @@ class CreateTableWithDomainAndTable(TableTests):
 
     def setUp(self):
         self.domain = self.create_domain(
-            self.attributes, self.class_vars, self.metas)
+            self.features, self.class_vars, self.metas)
         self.table = data.Table(
             self.domain, self.data, self.class_data, self.meta_data)
 
@@ -1326,8 +1326,8 @@ class CreateTableWithDomainAndTable(TableTests):
 
     def test_can_use_attributes_as_new_columns(self):
         a, c, m = column_sizes(self.table)
-        order = [random.randrange(a) for _ in self.domain.attributes]
-        new_attributes = [self.domain.attributes[i] for i in order]
+        order = [random.randrange(a) for _ in self.domain.features]
+        new_attributes = [self.domain.features[i] for i in order]
         new_domain = self.create_domain(
             new_attributes, new_attributes, new_attributes)
         new_table = data.Table.from_table(new_domain, self.table)
@@ -1357,7 +1357,7 @@ class CreateTableWithDomainAndTable(TableTests):
 
     def test_can_use_combination_of_all_as_new_columns(self):
         a, c, m = column_sizes(self.table)
-        order = ([random.randrange(a) for _ in self.domain.attributes] +
+        order = ([random.randrange(a) for _ in self.domain.features] +
                  [random.randrange(a, a + c) for _ in self.domain.class_vars] +
                  [random.randrange(-m + 1, 0) for _ in self.domain.metas])
         random.shuffle(order)
@@ -1417,7 +1417,7 @@ class TableIndexingTests(TableTests):
     def setUp(self):
         super().setUp()
         d = self.domain = \
-            self.create_domain(self.attributes, self.class_vars, self.metas)
+            self.create_domain(self.features, self.class_vars, self.metas)
         t = self.table = \
             data.Table(self.domain, self.data, self.class_data, self.meta_data)
         self.magic_table = \
@@ -1432,9 +1432,9 @@ class TableIndexingTests(TableTests):
                              map(lambda x: d[x].name, columns))
         self.multiple_columns = chain(
             self.multiple_rows,
-            [d.attributes, d.class_vars, d.metas, [0, a, -1]],
-            [self.attributes, self.class_vars, self.metas],
-            [self.attributes + self.class_vars + self.metas])
+            [d.features, d.class_vars, d.metas, [0, a, -1]],
+            [self.features, self.class_vars, self.metas],
+            [self.features + self.class_vars + self.metas])
 
         # TODO: indexing with [[0,1], [0,1]] produces weird results
         # TODO: what should be the results of table[1, :]
@@ -1485,7 +1485,7 @@ class TableElementAssignmentTest(TableTests):
     def setUp(self):
         super().setUp()
         self.domain = \
-            self.create_domain(self.attributes, self.class_vars, self.metas)
+            self.create_domain(self.features, self.class_vars, self.metas)
         self.table = \
             data.Table(self.domain, self.data, self.class_data, self.meta_data)
 
@@ -1514,7 +1514,7 @@ class TableElementAssignmentTest(TableTests):
     def test_can_assign_lists(self):
         a, c, m = column_sizes(self.table)
         new_example = [float(i)
-                       for i in range(len(self.attributes + self.class_vars))]
+                       for i in range(len(self.features + self.class_vars))]
         self.table[0] = new_example
         np.testing.assert_almost_equal(
             self.table.X[0], np.array(new_example[:a]))
@@ -1525,7 +1525,7 @@ class TableElementAssignmentTest(TableTests):
         a, c, m = column_sizes(self.table)
         new_example = \
             np.array([float(i)
-                      for i in range(len(self.attributes + self.class_vars))])
+                      for i in range(len(self.features + self.class_vars))])
         self.table[0] = new_example
         np.testing.assert_almost_equal(self.table.X[0], new_example[:a])
         np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
@@ -1565,7 +1565,7 @@ class InterfaceTest(unittest.TestCase):
     nrows = 4
 
     def setUp(self):
-        self.domain = data.Domain(attributes=self.features, class_vars=self.class_vars)
+        self.domain = data.Domain(features=self.features, class_vars=self.class_vars)
         self.table = data.Table.from_numpy(
             self.domain,
             np.array(self.feature_data),
