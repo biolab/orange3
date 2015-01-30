@@ -12,8 +12,7 @@ from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
 from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
 
 from Orange.canvas.utils import environ
-from Orange.data.discretization import DiscretizeTable
-from Orange.feature.discretization import EqualFreq
+from Orange.preprocess.discretization import EqualFreq, DiscretizeTable
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.widgets.settings import Setting

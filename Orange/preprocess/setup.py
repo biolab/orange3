@@ -12,7 +12,7 @@ def configuration(parent_package='', top_path=None):
     if os.name == 'posix':
         libraries.append('m')
 
-    config = Configuration('feature', parent_package, top_path)
+    config = Configuration('preprocess', parent_package, top_path)
     config.add_extension('_discretization',
                          sources=['_discretization.c'],
                          include_dirs=[numpy.get_include()],

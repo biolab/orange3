@@ -712,7 +712,7 @@ class NullColumnImputer(ColumnImputerModel):
 
 from functools import reduce
 import numpy
-from Orange.feature.transformation import \
+from Orange.preprocess.transformation import \
     ColumnTransformation, Lookup, Identity
 
 
