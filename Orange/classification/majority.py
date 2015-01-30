@@ -4,6 +4,8 @@ from Orange import data
 from Orange.classification.base import Fitter, Model
 from Orange.statistics import distribution
 
+__all__ = ["MajorityFitter", "ConstantClassifier"]
+
 
 class MajorityFitter(Fitter):
     def fit_storage(self, dat):

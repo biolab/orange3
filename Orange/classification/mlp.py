@@ -4,6 +4,8 @@ from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Fitter, Model
 
+__all__ = ["MLPLearner", "MLPClassifier"]
+
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))

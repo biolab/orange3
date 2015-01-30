@@ -7,6 +7,8 @@ import bottlechest as bn
 import Orange.data
 import Orange.data.preprocess
 
+__all__ = ["Fitter", "Model", "SklFitter", "SklModel"]
+
 
 class Fitter:
     supports_multiclass = False

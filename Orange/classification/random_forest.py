@@ -7,6 +7,8 @@ from numpy import isnan
 import Orange.data
 from Orange.classification import SklFitter, SklModel
 
+__all__ = ["RandomForestLearner", "RandomForestClassifier"]
+
 
 def replace_nan(X, imp_model):
     # Default scikit Imputer

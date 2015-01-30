@@ -5,6 +5,9 @@ import Orange.data
 from Orange.classification import Fitter, Model
 from Orange.data.continuizer import DomainContinuizer
 
+__all__ = ["KNNLearner", "KNNClassifier"]
+
+
 def is_discrete(var):
     return isinstance(var, Orange.data.DiscreteVariable)
 

@@ -4,6 +4,8 @@ from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Fitter, Model
 
+__all__ = ["LinearRegressionLearner", "LinearRegressionClassifier"]
+
 
 class LinearRegressionLearner(Fitter):
     def __init__(self, lambda_=1.0, preprocessors=None, **fmin_args):

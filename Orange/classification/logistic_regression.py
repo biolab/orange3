@@ -5,6 +5,8 @@ from sklearn import linear_model
 import Orange.data.preprocess
 from Orange.classification import SklFitter, SklModel
 
+__all__ = ["LogisticRegressionLearner", "LogisticRegressionClassifier"]
+
 
 def _np_replace_nan(A, value=0.0):
     """
