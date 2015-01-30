@@ -26,15 +26,14 @@ libraries. It provides several learning algorithms:
 Example
 =======
 
-    >>> from Orange.data import Table
-    >>> from Orange.classification.svm import SVMLearner
-    >>> from Orange.evaluation import CrossValidation, CA
-    >>> iris = Table('iris')
-    >>> fitter = SVMLearner()
-    >>> cross = CrossValidation(iris, fitter)
-    >>> prediction = cross.KFold(10)
-    >>> CA(iris, prediction[0])
-    0.9533
+    >>> from Orange import data
+    >>> from Orange.classification import svm
+    >>> from Orange.evaluation import testing, CA
+    >>> iris = data.Table('iris')
+    >>> results = testing.CrossValidation(iris, [svm.SVMLearner()], k=10)
+    >>> CA(results)
+    0.9866
+
 
 .. _`Support Vector Machine`: http://en.wikipedia.org/wiki/Support_vector_machine
 .. _`LibSVM`: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
