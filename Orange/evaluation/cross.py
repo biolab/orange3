@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn import cross_validation
+import sklearn.cross_validation as skl_cross_validation
 from Orange import data
 from Orange import classification
 from Orange.classification import Model
@@ -21,7 +21,7 @@ class CrossValidation:
                                data.DiscreteVariable)
         if get_probs:
             probs = np.empty((n, len(self.tab.domain.class_var.values)))
-        kf = cross_validation.KFold(n, k)
+        kf = skl_cross_validation.KFold(n, k)
         for train_index, test_index in kf:
             train = self.tab.from_table_rows(self.tab, train_index)
             test = self.tab.from_table_rows(self.tab, test_index)

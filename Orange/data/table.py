@@ -10,7 +10,6 @@ from warnings import warn
 import numpy as np
 import bottlechest as bn
 from scipy import sparse as sp
-from sklearn.utils import validation
 
 from .instance import *
 from Orange.data import (domain as orange_domain,

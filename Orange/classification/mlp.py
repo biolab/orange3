@@ -211,8 +211,8 @@ class MLPClassifier(classification.Model):
 
 if __name__ == '__main__':
     import Orange.data
-    from sklearn.cross_validation import StratifiedKFold
-
+    import sklearn.cross_validation as skl_cross_validation
+    
     np.random.seed(42)
 
     def numerical_grad(f, params, e=1e-4):
@@ -245,7 +245,7 @@ if __name__ == '__main__':
         m = MLPLearner([4, 20, 20, 3], lambda_=lambda_, num_epochs=1000,
                        learning_rate=0.1)
         scores = []
-        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
+        for tr_ind, te_ind in skl_cross_validation.StratifiedKFold(d.Y.ravel()):
             s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
             scores.append(s)
         print(np.mean(scores), lambda_)

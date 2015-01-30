@@ -683,8 +683,8 @@ def initialize_kmeans(conts, k):
 
     X = np.array([y[0] for y in x])
 
-    import sklearn.cluster
-    kmeans = sklearn.cluster.KMeans(n_clusters=k)
+    import sklearn.cluster as skl_cluster
+    kmeans = skl_cluster.KMeans(n_clusters=k)
     Y = kmeans.fit_predict(X)
     means = kmeans.cluster_centers_
     covars = np.zeros((k, len(conts)))

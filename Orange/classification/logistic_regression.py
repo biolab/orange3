@@ -1,6 +1,6 @@
 import numpy
 from scipy import sparse
-from sklearn import linear_model
+import sklearn.linear_model as skl_linear_model
 
 import Orange.data.preprocess
 from Orange import classification
@@ -124,7 +124,7 @@ class LogisticRegressionLearner(classification.SklFitter):
     def fit(self, X, Y, W):
         X = replace_nan(X, value=0.0)
 
-        lr = linear_model.LogisticRegression(
+        lr = skl_linear_model.LogisticRegression(
             penalty=self.penalty,
             dual=self.dual,
             tol=self.tol,

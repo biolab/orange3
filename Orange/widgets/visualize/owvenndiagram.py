@@ -1545,14 +1545,14 @@ def drop_columns(data, columns):
 
 
 def test():
-    import sklearn.cross_validation
+    import sklearn.cross_validation as skl_cross_validation
     app = QApplication([])
     w = OWVennDiagram()
     data = Orange.data.Table("brown-selected")
     data = append_column(data, "M", Orange.data.StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
 
-    indices = sklearn.cross_validation.ShuffleSplit(
+    indices = skl_cross_validation.ShuffleSplit(
         len(data), n_iter=5, test_size=0.7
     )
 
