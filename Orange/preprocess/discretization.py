@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 
 import Orange
-from Orange.data import ContinuousVariable, Domain
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from .transformation import ColumnTransformation
@@ -26,8 +26,7 @@ class Discretizer(ColumnTransformation):
 
     @staticmethod
     def _fmt_interval(low, high, decimals):
-        assert (low if low is not None else -np.inf) < \
-               (high if high is not None else np.inf)
+        assert low is None or high is None or low < high
         assert decimals >= 0
 
         def fmt_value(value, decimals):
@@ -44,30 +43,22 @@ class Discretizer(ColumnTransformation):
                                      fmt_value(high, decimals))
 
     @classmethod
-    def create_discretized_var(cls, data, var, points):
-        name = "D_" + data.domain[var].name
-        var = data.domain[var]
-
-        def pairwise(iterable):
-            """Iterator over neighboring pairs of `iterable`"""
-            first, second = itertools.tee(iterable, 2)
-            next(second)
-            yield from zip(first, second)
-
-        if len(points) >= 1:
-            values = [cls._fmt_interval(low, high, var.number_of_decimals)
-                      for low, high in pairwise([-np.inf] + list(points) +
-                                                [np.inf])]
+    def create_discretized_var(cls, var, points):
+        lpoints = list(points)
+        if points:
+            values = [
+                cls._fmt_interval(low, high, var.number_of_decimals)
+                for low, high in zip([-np.inf] + lpoints, lpoints + [np.inf])]
 
             def discretized_attribute():
-                return 'bin(%s, ARRAY%s)' % (var.to_sql(), str(list(points)))
+                return 'bin(%s, ARRAY%s)' % (var.to_sql(), str(lpoints))
         else:
             values = ["single_value"]
 
             def discretized_attribute():
                 return "'%s'" % values[0]
 
-        dvar = Orange.data.variable.DiscreteVariable(name=name, values=values)
+        dvar = DiscreteVariable(name="D_" + var.name, values=values)
         dvar.compute_value = cls(var, points)
         dvar.source_variable = var
         dvar.to_sql = discretized_attribute
@@ -102,7 +93,8 @@ class EqualFreq(Discretization):
         else:
             d = distribution.get_distribution(data, attribute)
             points = _discretization.split_eq_freq(d, n=self.n)
-        return Discretizer.create_discretized_var(data, attribute, points)
+        return Discretizer.create_discretized_var(
+            data.domain[attribute], points)
 
 
 class EqualWidth(Discretization):
@@ -134,7 +126,8 @@ class EqualWidth(Discretization):
                 # just min/max
                 d = distribution.get_distribution(data, attribute)
                 points = self._split_eq_width(d, n=self.n)
-        return Discretizer.create_discretized_var(data, attribute, points)
+        return Discretizer.create_discretized_var(
+            data.domain[attribute], points)
 
     @staticmethod
     def _split_eq_width(dist, n):
@@ -182,7 +175,8 @@ class EntropyMDL(Discretization):
             points = (values[cut_ind] + values[cut_ind - 1]) / 2.
         else:
             points = []
-        return Discretizer.create_discretized_var(data, attribute, points)
+        return Discretizer.create_discretized_var(
+            data.domain[attribute], points)
 
     @classmethod
     def _normalize(cls, X, axis=None, out=None):
