@@ -81,7 +81,7 @@ class Results:
         rows and of methods is given; :obj:`probabilities` also requires
         knowing the number of classes.
 
-        :param data: Data or domain; the data is not stored
+        :param data: Data or domain
         :type data: Orange.data.Table or Orange.data.Domain
         :param nmethods: The number of methods that will be tested
         :type nmethods: int
@@ -107,9 +107,9 @@ class Results:
         self.probabilities = None
         dtype = np.float32
         if data:
-            domain = data if isinstance(data, Domain) else data.domain
-            if nclasses is None and is_discrete(domain.class_var):
-                nclasses = len(domain.class_var.values)
+            self.domain = data if isinstance(data, Domain) else data.domain
+            if nclasses is None and is_discrete(self.domain.class_var):
+                nclasses = len(self.domain.class_var.values)
             if nrows is None:
                 nrows = len(data)
             try:
@@ -138,6 +138,7 @@ class Results:
         results.row_indices = self.row_indices[self.folds[fold]]
         results.actual = self.actual[self.folds[fold]]
         results.predicted = self.predicted[:, self.folds[fold]]
+        results.domain = self.domain
 
         if self.probabilities is not None:
             results.probabilities = self.probabilities[:, self.folds[fold]]
