@@ -260,7 +260,7 @@ if __name__ == "__main__":
     ow.graph.group_lines = True
     ow.graph.number_of_groups = 10
     ow.graph.number_of_steps = 30
-    data = Orange.data.Table("edt-all-vs-zero")
+    data = Orange.data.Table("iris")
     ow.set_data(data)
     ow.handleNewSignals()
 

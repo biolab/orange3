@@ -77,7 +77,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.domain_contingencies = None
         self.groups = {}
         OWPlot.setData(self, data)
-        ScaleData.set_data(self, data, subset_data, no_data=True, **args)
+        ScaleData.set_data(self, data, no_data=True, **args)
         self.end_progress()
 
 
