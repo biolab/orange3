@@ -6,6 +6,9 @@ from Orange import data
 
 
 class DiscreteVariableTest(unittest.TestCase):
+    def setUp(self):
+        data.DiscreteVariable._clear_cache()
+
     def test_to_val(self):
         values = ["F", "M"]
         var = data.DiscreteVariable(name="Feature 0", values=values)
