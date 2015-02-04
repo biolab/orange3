@@ -236,7 +236,7 @@ class OWScatterPlot(OWWidget):
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.set_data(self.data, self.subset_data)
+        self.graph.new_data(self.data, self.subset_data)
         # self.vizrank.resetDialog()
         if self.attribute_selection_list and \
                 all(attr.name in self.graph.attribute_name_index
@@ -397,6 +397,7 @@ def test_main():
     ow.raise_()
     data = Orange.data.Table(r"iris.tab")
     ow.set_data(data)
+    ow.set_subset_data(data[:30])
     #ow.setData(orange.ExampleTable("wine.tab"))
     ow.handleNewSignals()
     a.exec()

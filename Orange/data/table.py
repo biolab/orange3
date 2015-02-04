@@ -18,6 +18,8 @@ from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
 
+from threading import Lock
+
 
 def get_sample_datasets_dir():
     orange_data_table = os.path.dirname(__file__)
@@ -47,6 +49,7 @@ class RowInstance(Instance):
             self._metas = np.asarray(self._metas.todense())[0]
         self._values = np.hstack((self._x, self._y))
         self.row_index = row_index
+        self.id = table.ids[row_index]
         self.table = table
 
 
@@ -146,6 +149,8 @@ class Table(MutableSequence, Storage):
         """
         return Columns(self.domain)
 
+    _next_instance_id = 0
+    _next_instance_lock = Lock()
 
     def __new__(cls, *args, **kwargs):
         if not args and not kwargs:
@@ -199,6 +204,7 @@ class Table(MutableSequence, Storage):
         else:
             self.W = np.empty((n_rows, 0))
         self.metas = np.empty((n_rows, len(self.domain.metas)), object)
+        cls._init_ids(self)
         return self
 
 
@@ -282,6 +288,7 @@ class Table(MutableSequence, Storage):
         self.metas = get_columns(row_indices, conversion.metas, n_rows)
         self.W = np.array(source.W[row_indices])
         self.name = getattr(source, 'name', '')
+        self.ids = np.array(source.ids[row_indices])
         return self
 
 
@@ -304,6 +311,7 @@ class Table(MutableSequence, Storage):
         self.metas = source.metas[row_indices]
         self.W = source.W[row_indices]
         self.name = getattr(source, 'name', '')
+        self.ids = np.array(source.ids[row_indices])
         return self
 
 
@@ -373,7 +381,14 @@ class Table(MutableSequence, Storage):
         self.metas = metas
         self.W = W
         self.n_rows = self.X.shape[0]
+        cls._init_ids(self)
         return self
+
+    @classmethod
+    def _init_ids(cls, obj):
+        with cls._next_instance_lock:
+            obj.ids = np.array(range(cls._next_instance_id, cls._next_instance_id + obj.X.shape[0]))
+            cls._next_instance_id += obj.X.shape[0]
 
     def save(self, filename):
         """
@@ -425,6 +440,9 @@ class Table(MutableSequence, Storage):
                 'Extension "{}" is not recognized'.format(filename))
 
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
+        # no need to call _init_ids as fuctions from .io already 
+        # construct a table with .ids
+
         return data
 
     # Helper function for __setitem__ and insert:
@@ -451,6 +469,13 @@ class Table(MutableSequence, Storage):
             self.metas[row] = [example._values[i] if isinstance(i, int) else
                                (var.Unknown if not i else i(example))
                                for i, var in zip(c.metas, domain.metas)]
+            try:
+                self.ids[row] = example.id
+            except:
+                with type(self)._next_instance_lock:
+                    self.ids[row] = type(self)._next_instance_id
+                    type(self)._next_instance_id += 1
+                
         else:
             self.X[row] = [var.to_val(val)
                            for var, val in zip(domain.attributes, example)]
@@ -460,7 +485,6 @@ class Table(MutableSequence, Storage):
                                example[len(domain.attributes):])]
             self.metas[row] = np.array([var.Unknown for var in domain.metas],
                                        dtype=object)
-
 
     # Helper function for __setitem__ and insert:
     # Return a list of new attributes and column indices,
@@ -507,6 +531,7 @@ class Table(MutableSequence, Storage):
                 self.W.resize((new_length, 0))
             else:
                 self.W.resize(new_length)
+            self.ids.resize(new_length)
         except Exception:
             if self.X.shape[0] == new_length:
                 self.X.resize(old_length, self.X.shape[1])
@@ -519,6 +544,8 @@ class Table(MutableSequence, Storage):
                     self.W.resize((old_length, 0))
                 else:
                     self.W.resize(old_length)
+            if self.ids.shape[0] == new_length:
+                self.ids.resize(old_length)
             raise
 
 
@@ -708,6 +735,7 @@ class Table(MutableSequence, Storage):
             self.Y[row + 1:] = self.Y[row:-1]
             self.metas[row + 1:] = self.metas[row:-1]
             self.W[row + 1:] = self.W[row:-1]
+            self.ids[row + 1:] = self.ids[row:-1]
         try:
             self._set_row(instance, row)
             if self.W.shape[-1]:
@@ -717,6 +745,7 @@ class Table(MutableSequence, Storage):
             self.Y[row:-1] = self.Y[row + 1:]
             self.metas[row:-1] = self.metas[row + 1:]
             self.W[row:-1] = self.W[row + 1:]
+            self.ids[row:-1] = self.ids[row + 1:]
             self._resize_all(len(self) - 1)
             raise
 
@@ -744,9 +773,16 @@ class Table(MutableSequence, Storage):
                         self.W[old_length:] = instances.W
                     else:
                         self.W[old_length:] = 1
+                self.ids[old_length:] = instances.ids
             else:
                 for i, example in enumerate(instances):
                     self[old_length + i] = example
+                try:
+                    self[old_length + i] = example.id
+                except:
+                    with type(self)._next_instance_lock:
+                        self.ids[old_length+i] = type(self)._next_instance_id
+                        type(self)._next_instance_id += 1
         except Exception:
             self._resize_all(old_length)
             raise

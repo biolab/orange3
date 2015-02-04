@@ -26,6 +26,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 
 # TODO Move utility classes to another module, so they can be used elsewhere
 
+SELECTION_WIDTH = 5
 
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
@@ -330,6 +331,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
         self.scatterplot_item = None
+        self.scatterplot_item_sel = None
 
         self.labels = []
 
@@ -353,6 +355,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.legend = self.color_legend = None
         self.scale = None  # DiscretizedScale
 
+        self.subset_indices = None
+
         # self.setMouseTracking(True)
         # self.grabGesture(QPinchGesture)
         # self.grabGesture(QPanGesture)
@@ -362,9 +366,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self._tooltip_delegate = HelpEventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
 
-    def set_data(self, data, subset_data=None, **args):
+    def new_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
-        ScaleScatterPlotData.set_data(self, data, subset_data, **args)
+        self.subset_indices = set(e.id for e in subset_data) if subset_data else None
+        self.set_data(data, **args)
 
     def update_data(self, attr_x, attr_y):
         self.shown_x = attr_x
@@ -373,6 +378,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.remove_legend()
         if self.scatterplot_item:
             self.plot_widget.removeItem(self.scatterplot_item)
+        if self.scatterplot_item_sel:
+            self.plot_widget.removeItem(self.scatterplot_item_sel)
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
@@ -403,13 +410,19 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.set_labels(axis, None)
 
         color_data, brush_data = self.compute_colors()
+        color_data_sel, brush_data_sel = self.compute_colors_sel()
         size_data = self.compute_sizes()
         shape_data = self.compute_symbols()
         self.scatterplot_item = ScatterPlotItem(
             x=x_data, y=y_data, data=np.arange(self.n_points),
             symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
         )
-
+        self.scatterplot_item_sel = ScatterPlotItem(
+            x=x_data, y=y_data, data=np.arange(self.n_points),
+            symbol=shape_data, size=size_data+SELECTION_WIDTH, 
+            pen=color_data_sel, brush=brush_data_sel
+        )
+        self.plot_widget.addItem(self.scatterplot_item_sel)
         self.plot_widget.addItem(self.scatterplot_item)
 
         self.scatterplot_item.selected_points = []
@@ -454,6 +467,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item:
             size_data = self.compute_sizes()
             self.scatterplot_item.setSize(size_data)
+            self.scatterplot_item_sel.setSize(size_data+SELECTION_WIDTH)
 
     update_point_size = update_sizes
 
@@ -468,23 +482,46 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     len(color_var.values))
         return color_index
 
-    def compute_colors(self, keep_colors=False):
+    def compute_colors_sel(self, keep_colors=False):
         if not keep_colors:
-            self.pen_colors = self.brush_colors = None
-        color_index = self.get_color_index()
+            self.pen_colors_sel = self.brush_colors_sel = None
 
         def make_pen(color, width):
             p = QPen(color, width)
             p.setCosmetic(True)
             return p
 
-        if color_index == -1:
+        pens = [ make_pen(QColor(255, 190, 0, 0), SELECTION_WIDTH+1.),
+                 make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH+1.) ]
+        if self.selection is not None:
+            pen = [ pens[a] for a in self.selection ]
+        else:
+            pen = [pens[0]] * self.n_points
+        brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
+        return pen, brush
+
+    def compute_colors(self, keep_colors=False):
+        if not keep_colors:
+            self.pen_colors = self.brush_colors = None
+        color_index = self.get_color_index()
+        
+        def make_pen(color, width):
+            p = QPen(color, width)
+            p.setCosmetic(True)
+            return p
+
+        subset = None
+        if self.subset_indices:
+            subset = np.array([ ex.id in self.subset_indices 
+                for ex in self.raw_data[self.valid_data] ])
+
+        if color_index == -1: #color = "Same color"
             color = self.plot_widget.palette().color(OWPalette.Data)
             pen = [make_pen(color, 1.5)] * self.n_points
-            if self.selection is not None:
-                brush = [(QBrush(QColor(128, 128, 128, 255)),
-                          QBrush(QColor(128, 128, 128)))[s]
-                         for s in self.selection]
+            if subset is not None:
+                brush = [(QBrush(QColor(128, 128, 128, 0)),
+                          QBrush(QColor(128, 128, 128, self.alpha_value)))[s]
+                         for s in subset]
             else:
                 brush = [QBrush(QColor(128, 128, 128))] * self.n_points
             return pen, brush
@@ -506,9 +543,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.pen_colors *= 100 / self.DarkerValue
                 self.pen_colors = [make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
-            if self.selection is not None:
+            if subset is not None:
                 self.brush_colors[:, 3] = 0
-                self.brush_colors[self.selection, 3] = self.alpha_value
+                self.brush_colors[subset, 3] = self.alpha_value
             else:
                 self.brush_colors[:, 3] = self.alpha_value
             pen = self.pen_colors
@@ -532,9 +569,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                      QBrush(QColor(col[0], col[1], col[2], self.alpha_value))]
                     for col in colors])
                 self.brush_colors = self.brush_colors[c_data]
-            if self.selection is not None:
+            if subset is not None:
                 brush = np.where(
-                    self.selection,
+                    subset,
                     self.brush_colors[:, 1], self.brush_colors[:, 0])
             else:
                 brush = self.brush_colors[:, 1]
@@ -544,8 +581,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def update_colors(self, keep_colors=False):
         if self.scatterplot_item:
             pen_data, brush_data = self.compute_colors(keep_colors)
+            pen_data_sel, brush_data_sel = self.compute_colors_sel(keep_colors)
             self.scatterplot_item.setPen(pen_data, update=False, mask=None)
             self.scatterplot_item.setBrush(brush_data, mask=None)
+            self.scatterplot_item_sel.setPen(pen_data_sel, update=False, mask=None)
+            self.scatterplot_item_sel.setBrush(brush_data_sel, mask=None)
             if not keep_colors:
                 self.make_legend()
 
