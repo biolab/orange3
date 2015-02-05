@@ -25,6 +25,14 @@ class TableTestCase(unittest.TestCase):
         cvar = d.domain.class_var
         self.assertEqual([e[cvar] for e in d], ["t", "t", "f"])
 
+    def test_filename(self):
+        dir = data.table.get_sample_datasets_dir()
+        d = data.Table("iris")
+        self.assertEqual(d.__file__, os.path.join(dir, "iris.tab"))
+
+        d = data.Table("test2.tab")
+        self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
+
     def test_indexing(self):
         import warnings
 
@@ -1040,6 +1048,9 @@ class CreateEmptyTable(TableTests):
         table = data.Table()
         self.assertIsInstance(table, data.Table)
 
+    def test_table_has_file(self):
+        table = data.Table()
+        self.assertIsNone(table.__file__)
 
 class CreateTableWithFilename(TableTests):
     filename = "data.tab"
