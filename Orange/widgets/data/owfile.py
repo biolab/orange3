@@ -46,7 +46,7 @@ class OWFile(widget.OWWidget):
         "Text file (*.txt)\n"
         "Basket files (*.basket)\n" +
         "".join("{0} ({1})\n".format(*ft) for ft in registered_file_types) +
-        "All files(*.*)")
+        "All files (*)")
     formats = {".tab": "Tab-delimited file", ".txt": "Text file",
                ".basket": "Basket file"}
     formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
