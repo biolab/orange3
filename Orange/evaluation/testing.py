@@ -220,7 +220,7 @@ class LeaveOneOut(Results):
 
         domain = data.domain
         X = data.X.copy()
-        Y = data.Y.copy()
+        Y = data._Y.copy()
         metas = data.metas.copy()
 
         teX, trX = X[:1], X[1:]
