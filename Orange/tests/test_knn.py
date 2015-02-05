@@ -6,6 +6,7 @@ import Orange.classification.knn as knn
 from Orange.evaluation.testing import CrossValidation
 from Orange.evaluation.scoring import CA
 
+
 class KNNTest(unittest.TestCase):
     def test_KNN(self):
         table = Orange.data.Table('iris')

@@ -4,6 +4,7 @@ from Orange.classification import SklLearner, SklModel
 
 __all__ = ["KNNLearner"]
 
+
 class KNNLearner(SklLearner):
     __wraps__ = skl_neighbors.KNeighborsClassifier
 
