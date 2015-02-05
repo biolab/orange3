@@ -100,36 +100,37 @@ class RowInstance(Instance):
             if self.sparse_metas:
                 self.table.metas[self.row_index, -1 - key] = value
 
-
-    @staticmethod
-    def sp_values(matrix, row, variables):
-        if sp.issparse(matrix):
+    def _str(self, limit):
+        def sp_values(matrix, variables):
+            if not sp.issparse(matrix):
+                return Instance.str_values(matrix[row], variables)
             begptr, endptr = matrix.indptr[row:row + 2]
-            rendptr = min(endptr, begptr + 5)
+            rendptr = endptr if not limit else min(endptr, begptr + 5)
             variables = [variables[var]
                          for var in matrix.indices[begptr:rendptr]]
-            s = ", ".join("{}={}".format(var.name, var.str_val(val))
+            s = ", ".join(
+                "{}={}".format(var.name, var.str_val(val))
                 for var, val in zip(variables, matrix.data[begptr:rendptr]))
-            if rendptr != endptr:
+            if limit and rendptr != endptr:
                 s += ", ..."
             return s
-        else:
-            return Instance.str_values(matrix[row], variables)
 
-
-    def __str__(self):
         table = self.table
         domain = table.domain
         row = self.row_index
-        s = "[" + self.sp_values(table.X, row, domain.attributes)
+        s = "[" + sp_values(table.X, domain.attributes)
         if domain.class_vars:
-            s += " | " + self.sp_values(table.Y, row, domain.class_vars)
+            s += " | " + sp_values(table.Y, domain.class_vars)
         s += "]"
         if self._domain.metas:
-            s += " {" + self.sp_values(table.metas, row, domain.metas) + "}"
+            s += " {" + sp_values(table.metas, domain.metas) + "}"
         return s
 
-    __repr__ = __str__
+    def __str__(self):
+        return self._str(False)
+
+    def __repr__(self):
+        return self._str(True)
 
 
 class Columns:
@@ -688,23 +689,22 @@ class Table(MutableSequence, Storage):
         self.metas = np.delete(self.metas, key, axis=0)
         self.W = np.delete(self.W, key, axis=0)
 
-
     def __len__(self):
         return self.X.shape[0]
 
-
     def __str__(self):
-        s = "[" + ",\n ".join(str(ex) for ex in self[:5])
+        return "[" + ",\n ".join(str(ex) for ex in self)
+
+    def __repr__(self):
+        s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
         if len(self) > 5:
             s += ",\n ..."
         s += "\n]"
         return s
 
-
     def clear(self):
         """Remove all rows from the table."""
         del self[...]
-
 
     def append(self, instance):
         """
