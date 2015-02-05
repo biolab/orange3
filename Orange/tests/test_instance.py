@@ -299,11 +299,26 @@ class TestInstance(unittest.TestCase):
 
         domain = self.create_domain(self.attributes)
         inst = Instance(domain, range(len(self.attributes)))
-        self.assertEqual(str(inst), "[0.000, 1.000, 2.000, 3.000, 4.000, ...]")
+        self.assertEqual(
+            str(inst),
+            "[{}]".format(", ".join("{:.3f}".format(x)
+                                    for x in range(len(self.attributes)))))
 
         for attr in domain:
             attr.number_of_decimals = 0
-        self.assertEqual(str(inst), "[0, 1, 2, 3, 4, ...]")
+        self.assertEqual(
+            str(inst),
+            "[{}]".format(", ".join("{}".format(x)
+                                    for x in range(len(self.attributes)))))
+
+    def test_repr(self):
+        domain = self.create_domain(self.attributes)
+        inst = Instance(domain, range(len(self.attributes)))
+        self.assertEqual(repr(inst), "[0.000, 1.000, 2.000, 3.000, 4.000, ...]")
+
+        for attr in domain:
+            attr.number_of_decimals = 0
+        self.assertEqual(repr(inst), "[0, 1, 2, 3, 4, ...]")
 
     def test_eq(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
