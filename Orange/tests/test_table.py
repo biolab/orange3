@@ -1091,6 +1091,14 @@ class CreateTableWithFilename(TableTests):
         read_data.assert_called_with(self.filename)
 
 
+class CreateTableWithUrl(TableTests):
+    def test_load_from_url(self):
+        d1 = data.Table('iris')
+        d2 = data.Table('https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab')
+        np.testing.assert_array_equal(d1.X, d2.X)
+        np.testing.assert_array_equal(d1.Y, d2.Y)
+
+
 class CreateTableWithDomain(TableTests):
     def test_creates_an_empty_table_with_given_domain(self):
         domain = self.mock_domain()
