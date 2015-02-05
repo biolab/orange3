@@ -5,6 +5,9 @@ import sklearn.cross_validation as skl_cross_validation
 import Orange.data
 from Orange.data import Domain, Table
 
+__all__ = ["CrossValidation", "LeaveOneOut", "TestOnTrainingData",
+           "Bootstrap", "TestOnTestData"]
+
 
 def is_discrete(var):
     return isinstance(var, Orange.data.DiscreteVariable)

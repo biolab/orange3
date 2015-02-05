@@ -2,6 +2,8 @@ import numpy as np
 import sklearn.metrics as skl_metrics
 from Orange.data import DiscreteVariable
 
+__all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC"]
+
 
 class Score:
     separate_folds = False
