@@ -2,9 +2,9 @@ import unittest
 import numpy as np
 
 from Orange.classification import naive_bayes, majority
-from Orange.data import discretization, Table
+from Orange.data import Table
 from Orange.evaluation import testing
-from Orange.feature.discretization import EqualWidth
+from Orange.preprocess import discretization
 
 
 def random_data(nrows, ncols):
@@ -13,7 +13,8 @@ def random_data(nrows, ncols):
     col = np.random.randint(ncols)
     y = x[:nrows, col].reshape(nrows, 1)
     table = Table(x, y)
-    table = discretization.DiscretizeTable(table, method=EqualWidth(n=3))
+    table = discretization.DiscretizeTable(
+        table, method=discretization.EqualWidth(n=3))
     return table
 
 

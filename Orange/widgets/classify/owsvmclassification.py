@@ -16,7 +16,7 @@ class OWSVMClassification(widget.OWWidget):
     icon = "icons/SVM.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", svm.SVMLearner),
                ("Classifier", svm.SVMClassifier)]

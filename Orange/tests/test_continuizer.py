@@ -1,6 +1,6 @@
 from Orange.data import Table, Variable, DiscreteVariable, ContinuousVariable
-from Orange.data.continuizer import DomainContinuizer
-from Orange.feature import transformation
+from Orange.preprocess.continuizer import DomainContinuizer
+from Orange.preprocess import transformation
 import unittest
 
 

@@ -12,7 +12,7 @@ class OWMajority(widget.OWWidget):
     icon = "icons/Majority.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.data.preprocess.Preprocess,
+              ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
     outputs = [("Learner", Orange.classification.majority.MajorityLearner),
                ("Classifier", Orange.classification.majority.ConstantModel)]

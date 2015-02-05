@@ -2,7 +2,6 @@ import numpy
 from scipy import sparse
 import sklearn.linear_model as skl_linear_model
 
-import Orange.data.preprocess
 from Orange.classification import SklLearner, SklModel
 
 __all__ = ["LogisticRegressionLearner"]

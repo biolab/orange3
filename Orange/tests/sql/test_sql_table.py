@@ -10,7 +10,6 @@ from Orange.data.sql.table import SqlTable
 from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2, \
     server_version
 
-
 @unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
 class SqlTableTests(PostgresTest):
     def test_constructs_correct_attributes(self):

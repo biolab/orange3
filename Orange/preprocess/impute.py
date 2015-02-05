@@ -3,7 +3,7 @@ import numpy
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
-from Orange.feature.transformation import ColumnTransformation
+from .transformation import ColumnTransformation
 
 
 def is_continuous(var):
@@ -25,6 +25,7 @@ class ReplaceUnknowns(ColumnTransformation):
 
 class Average(object):
     def __call__(self, data, variable):
+        variable = data.domain[variable]
         if is_continuous(variable):
             stats = basic_stats.BasicStats(data, variable)
             value = stats.mean
@@ -32,7 +33,7 @@ class Average(object):
             dist = distribution.get_distribution(data, variable)
             value = dist.modus()
         else:
-            raise TypeError
+            raise TypeError("Variable must be continuous or discrete")
 
         var = copy.copy(variable)
         var.compute_value = ReplaceUnknowns(variable, value)

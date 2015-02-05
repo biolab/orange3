@@ -3,7 +3,7 @@ import sklearn.preprocessing as skl_preprocessing
 from numpy import isnan, cov
 import Orange.data
 from Orange.classification import Learner, Model
-from Orange.data.continuizer import DomainContinuizer
+from Orange.preprocess.continuizer import DomainContinuizer
 
 __all__ = ["KNNLearner"]
 

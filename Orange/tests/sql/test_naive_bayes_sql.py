@@ -3,7 +3,7 @@ import unittest
 from numpy import array
 
 import Orange.classification.naive_bayes as nb
-from Orange.data.discretization import DiscretizeTable
+from Orange.preprocess.discretization import DiscretizeTable
 from Orange.data.sql.table import SqlTable
 from Orange.data import Domain
 from Orange.data.variable import DiscreteVariable
@@ -14,7 +14,7 @@ from Orange.tests.sql.base import has_psycopg2
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
         table = SqlTable(dict(host='localhost', database='test'), 'iris',
-                         type_hints=Domain([], DiscreteVariable("iris", 
+                         type_hints=Domain([], DiscreteVariable("iris",
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))
         table = DiscretizeTable(table)

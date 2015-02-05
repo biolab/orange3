@@ -376,7 +376,7 @@ def sort_var_values(var):
     newvar.compute_value = Lookup(var, translation_table)
     return newvar
 
-from Orange.feature.transformation import Lookup
+from Orange.preprocess.transformation import Lookup
 
 
 class Lookup(Lookup):

@@ -18,7 +18,7 @@ from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
-import Orange.feature.transformation
+import Orange.preprocess.transformation
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
@@ -472,7 +472,7 @@ class OWEditDomain(widget.OWWidget):
                     self.domain_change_hints[vdesc]
                 )
                 newvar.compute_value = \
-                    Orange.feature.transformation.Identity(var)
+                    Orange.preprocess.transformation.Identity(var)
                 return newvar
             else:
                 return var
@@ -532,7 +532,7 @@ class OWEditDomain(widget.OWWidget):
 
         # Make orange's domain transformation work.
         new_var.compute_value = \
-            Orange.feature.transformation.Identity(old_var)
+            Orange.preprocess.transformation.Identity(old_var)
 
         self._invalidate()
 
