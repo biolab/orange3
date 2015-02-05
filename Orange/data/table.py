@@ -2,12 +2,14 @@ import os
 import zlib
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
-from numbers import Real
 import operator
 from functools import reduce
 from warnings import warn
+from threading import Lock
+import tempfile
+import urllib.parse
+import urllib.request
 
-import numpy as np
 import bottlechest as bn
 from scipy import sparse as sp
 
@@ -17,8 +19,6 @@ from Orange.data import (domain as orange_domain,
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
-
-from threading import Lock
 
 
 def get_sample_datasets_dir():
@@ -159,7 +159,10 @@ class Table(MutableSequence, Storage):
 
         try:
             if isinstance(args[0], str):
-                return cls.from_file(args[0], **kwargs)
+                if args[0].startswith('https://') or args[0].startswith('http://'):
+                    return cls.from_url(args[0], **kwargs)
+                else:
+                    return cls.from_file(args[0], **kwargs)
             elif isinstance(args[0], Table):
                 return cls.from_table(args[0].domain, args[0])
             elif isinstance(args[0], orange_domain.Domain):
@@ -435,6 +438,13 @@ class Table(MutableSequence, Storage):
         # construct a table with .ids
 
         return data
+
+    @classmethod
+    def from_url(cls, url):
+        name = os.path.basename(urllib.parse.urlparse(url)[2])
+        f = tempfile.NamedTemporaryFile(suffix=name)
+        urllib.request.urlretrieve(url, f.name)
+        return cls.from_file(f.name)
 
     # Helper function for __setitem__ and insert:
     # Set the row of table data matrices
