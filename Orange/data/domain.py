@@ -429,3 +429,14 @@ class Domain:
 
     def checksum(self):
         return hash(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, Domain):
+            return False
+
+        return (self.attributes == other.attributes and
+                self.class_vars == other.class_vars and
+                self.metas == other.metas)
+
+    def __hash__(self):
+        return hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
