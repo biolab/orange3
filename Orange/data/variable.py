@@ -117,14 +117,15 @@ class Variable:
         return self.to_val(s)
 
     def __str__(self):
+        return self.name
+
+    def __repr__(self):
         """
         Return a representation of the variable, like,
         `'DiscreteVariable("gender")'`. Derived classes may overload this
         method to provide a more informative representation.
         """
         return "{}('{}')".format(self.__class__.__name__, self.name)
-
-    __repr__ = __str__
 
     @staticmethod
     def compute_value(_):
@@ -280,13 +281,14 @@ class DiscreteVariable(Variable):
         self.base_value = base_value
         DiscreteVariable.all_discrete_vars[name].add(self)
 
-    def __str__(self):
+    def __repr__(self):
         """
         Give a string representation of the variable, for instance,
         `"DiscreteVariable('Gender', values=['male', 'female'])"`.
         """
-        args = "values=[" + ", ".join(self.values[:5]) +\
-               "..." * (len(self.values) > 5) + "]"
+        args = "values=[{}]".format(
+            ", ".join([repr(x) for x in self.values[:5]] +
+                      ["..."] *  (len(self.values) > 5)))
         if self.ordered:
             args += ", ordered=True"
         if self.base_value >= 0:
