@@ -31,7 +31,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d.__file__, os.path.join(dir, "iris.tab"))
 
         d = data.Table("test2.tab")
-        self.assertEqual(d.__file__, "test2.tab")
+        self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
 
     def test_indexing(self):
         import warnings
