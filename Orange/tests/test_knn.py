@@ -37,11 +37,3 @@ class KNNTest(unittest.TestCase):
         correct = (z == y2.flatten())
         ca = sum(correct)/len(correct)
         self.assertTrue(0.1 < ca < 0.3)
-
-    def test_mahalanobis(self):
-        table = Orange.data.Table('iris')
-        learn = knn.KNNLearner(metric='mahalanobis')
-        results = CrossValidation(table, [learn], k=10)
-        ca = CA(results)
-        self.assertGreater(ca, 0.8)
-        self.assertLess(ca, 0.99)
