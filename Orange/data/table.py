@@ -137,6 +137,8 @@ class Columns:
 
 # noinspection PyPep8Naming
 class Table(MutableSequence, Storage):
+    __file__ = None
+
     @property
     def columns(self):
         """
@@ -434,6 +436,7 @@ class Table(MutableSequence, Storage):
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
 
+        data.__file__ = absolute_filename
         return data
 
     # Helper function for __setitem__ and insert:
