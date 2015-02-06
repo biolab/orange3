@@ -8,20 +8,16 @@ from functools import reduce, wraps
 from collections import namedtuple, deque
 
 import numpy
-
+import sklearn.metrics as skl_metrics
 from PyQt4 import QtGui
 from PyQt4.QtGui import QColor, QPen, QBrush
 from PyQt4.QtCore import Qt
-
 import pyqtgraph as pg
 
-import sklearn.metrics as skl_metrics
-
-import Orange.data
-import Orange.evaluation.testing
-
+import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
+
 
 #: Points on a ROC curve
 ROCPoints = namedtuple(
@@ -283,7 +279,7 @@ class OWROCAnalysis(widget.OWWidget):
 
     inputs = [
         {"name": "Evaluation Results",
-         "type": Orange.evaluation.testing.Results,
+         "type": Orange.evaluation.Results,
          "handler": "set_results"}
     ]
 
@@ -831,7 +827,8 @@ def main():
     import gc
     import sip
     from PyQt4.QtGui import QApplication
-    from Orange.classification import logistic_regression, svm
+    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
+                                       NuSVMLearner)
 
     app = QApplication([])
     w = OWROCAnalysis()
@@ -840,12 +837,12 @@ def main():
 
 #     data = Orange.data.Table("iris")
     data = Orange.data.Table("ionosphere")
-    results = Orange.evaluation.testing.CrossValidation(
+    results = Orange.evaluation.CrossValidation(
         data,
-        [logistic_regression.LogisticRegressionLearner(),
-         logistic_regression.LogisticRegressionLearner(penalty="l1"),
-         svm.SVMLearner(probability=True),
-         svm.NuSVMLearner(probability=True)],
+        [LogisticRegressionLearner(),
+         LogisticRegressionLearner(penalty="l1"),
+         SVMLearner(probability=True),
+         NuSVMLearner(probability=True)],
         k=5,
         store_data=True,
     )

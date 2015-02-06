@@ -3,7 +3,6 @@ import sklearn.ensemble as skl_ensemble
 import sklearn.preprocessing as skl_preprocessing
 from numpy import isnan
 
-import Orange.data
 from Orange.classification import SklLearner, SklModel
 
 __all__ = ["RandomForestLearner"]

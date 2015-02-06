@@ -7,14 +7,9 @@ from collections import OrderedDict, namedtuple
 
 import numpy
 from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
-from PyQt4.QtCore import pyqtSignal as Signal
 
-import Orange.data
-import Orange.classification
-from Orange.classification import Model
-from Orange.evaluation import testing
-
+import Orange
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
@@ -45,7 +40,7 @@ class OWPredictions(widget.OWWidget):
               ("Predictors", Orange.classification.Model,
                "setPredictor", widget.Multiple)]
     outputs = [("Predictions", Orange.data.Table),
-               ("Evaluation Results", testing.Results)]
+               ("Evaluation Results", Orange.evaluation.Results)]
 
     show_probabilities = Setting(True)
     show_class = Setting(True)
@@ -182,8 +177,7 @@ class OWPredictions(widget.OWWidget):
 
         if classification:
             if self.show_class:
-                mc = [Orange.data.DiscreteVariable(
-                          name=p.name, values=class_var.values)
+                mc = [DiscreteVariable(name=p.name, values=class_var.values)
                       for p in slots]
                 newattrs.extend(mc)
                 newcolumns.extend(p.results[0].reshape((-1, 1))
@@ -191,15 +185,14 @@ class OWPredictions(widget.OWWidget):
 
             if self.show_probabilities:
                 for p in slots:
-                    m = [Orange.data.ContinuousVariable(
-                             name="%s(%s)" % (p.name, value))
+                    m = [ContinuousVariable(name="%s(%s)" % (p.name, value))
                          for value in class_var.values]
                     newattrs.extend(m)
                 newcolumns.extend(p.results[1] for p in slots)
 
         else:
             # regression
-            mc = [Orange.data.ContinuousVariable(name=p.name)
+            mc = [ContinuousVariable(name=p.name)
                   for p in self.predictors.values()]
             newattrs.extend(mc)
             newcolumns.extend(p.results[0].reshape((-1, 1))
@@ -224,7 +217,7 @@ class OWPredictions(widget.OWWidget):
         results = None
         if self.data.domain.class_var == class_var:
             N = len(self.data)
-            results = testing.Results(self.data, store_data=True)
+            results = Orange.evaluation.Results(self.data, store_data=True)
             results.folds = None
             results.row_indices = numpy.arange(N)
             results.actual = self.data.Y.ravel()
@@ -240,20 +233,18 @@ class OWPredictions(widget.OWWidget):
 
 
 def predict(predictor, data):
-    if isinstance(predictor.domain.class_var,
-                  Orange.data.DiscreteVariable):
+    if isinstance(predictor.domain.class_var, DiscreteVariable):
         return predict_discrete(predictor, data)
-    elif isinstance(predictor.domain.class_var,
-                   Orange.data.ContinuousVariable):
+    elif isinstance(predictor.domain.class_var, ContinuousVariable):
         return predict_continuous(predictor, data)
 
 
 def predict_discrete(predictor, data):
-    return predictor(data, Model.ValueProbs)
+    return predictor(data, Orange.classification.Model.ValueProbs)
 
 
 def predict_continuous(predictor, data):
-    values = predictor(data, Model.Value)
+    values = predictor(data, Orange.classification.Model.Value)
     return values, [None] * len(data)
 
 
@@ -262,13 +253,11 @@ def is_discrete(var):
 
 
 if __name__ == "__main__":
-    import Orange.classification.svm as svm
-    import Orange.classification.logistic_regression as lr
     app = QtGui.QApplication([])
     w = OWPredictions()
     data = Orange.data.Table("iris")
-    svm_clf = svm.SVMLearner(probability=True)(data)
-    lr_clf = lr.LogisticRegressionLearner()(data)
+    svm_clf = Orange.classification.SVMLearner(probability=True)(data)
+    lr_clf = Orange.classification.LogisticRegressionLearner()(data)
     w.setData(data)
     w.setPredictor(svm_clf, 0)
     w.setPredictor(lr_clf, 1)

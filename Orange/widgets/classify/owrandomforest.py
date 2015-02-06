@@ -4,8 +4,7 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QLabel, QGridLayout, QLayout
 from PyQt4.QtCore import Qt
 
-import Orange.data
-from Orange.classification import random_forest
+import Orange
 from Orange.widgets import widget, settings, gui
 
 
@@ -17,8 +16,8 @@ class OWRandomForest(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
-    outputs = [("Learner", random_forest.RandomForestLearner),
-               ("Classifier", random_forest.RandomForestClassifier)]
+    outputs = [("Learner", Orange.classification.RandomForestLearner),
+               ("Classifier", Orange.classification.RandomForestClassifier)]
 
     want_main_area = False
 
@@ -153,7 +152,7 @@ class OWRandomForest(widget.OWWidget):
         if self.use_max_leaf_nodes:
             common_args["max_leaf_nodes"] = self.max_leaf_nodes
 
-        learner = random_forest.RandomForestLearner(
+        learner = Orange.classification.RandomForestLearner(
             preprocessors=self.preprocessors, **common_args)
 
         learner.name = self.learner_name

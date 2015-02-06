@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import scipy.sparse as sp
+
 from Orange.statistics import contingency
 from Orange import data
 

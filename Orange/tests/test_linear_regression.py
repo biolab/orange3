@@ -1,8 +1,8 @@
 import unittest
+
 import numpy as np
 
-from Orange import data
-import Orange.classification.linear_regression as lr
+import Orange
 
 
 class LinearRegressionTest(unittest.TestCase):
@@ -16,8 +16,8 @@ class LinearRegressionTest(unittest.TestCase):
 
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
-        t = data.Table(x1, y1)
-        learn = lr.LinearRegressionLearner()
+        t = Orange.data.Table(x1, y1)
+        learn = Orange.classification.LinearRegressionLearner()
         clf = learn(t)
         z = clf(x2)
         self.assertTrue((abs(z.reshape(-1, 1) - y2) < 2.0).all())
