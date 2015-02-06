@@ -1,11 +1,13 @@
 import numpy
 
-from Orange import classification
+from Orange.classification import Learner, Model
 from Orange.data import ContinuousVariable
 from Orange.statistics import distribution
 
+__all__ = ["MeanLearner"]
 
-class MeanLearner(classification.Learner):
+
+class MeanLearner(Learner):
     """
     Fit a regression model that returns the average response (class) value.
     """
@@ -27,7 +29,7 @@ class MeanLearner(classification.Learner):
 
 
 # noinspection PyMissingConstructor
-class MeanModel(classification.Model):
+class MeanModel(Model):
     """
     A regression model that returns the average response (class) value.
     Instances can be constructed directly, by passing a distribution to the

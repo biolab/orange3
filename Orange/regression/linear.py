@@ -1,10 +1,12 @@
-
 import sklearn.linear_model as skl_linear_model
 import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
 
-from ..classification import Learner, Model
-from Orange import classification
+from Orange.classification import Learner, Model, SklLearner
+
+__all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
+           "LassoRegressionLearner", "SGDRegressionLearner"]
+
 
 class LinearRegressionLearner(Learner):
     def fit(self, X, Y, W):
@@ -33,7 +35,7 @@ class LassoRegressionLearner(Learner):
         return LinearModel(sk)
 
 
-class SGDRegressionLearner(classification.SklLearner):
+class SGDRegressionLearner(SklLearner):
     __wraps__ = skl_linear_model.SGDRegressor
 
     def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,
@@ -45,7 +47,8 @@ class SGDRegressionLearner(classification.SklLearner):
 
     def fit(self, X, Y, W):
         sk = skl_linear_model.SGDRegressor(**self.params)
-        clf = skl_pipeline.Pipeline([('scaler', skl_preprocessing.StandardScaler()), ('sgd', sk)])
+        clf = skl_pipeline.Pipeline(
+            [('scaler', skl_preprocessing.StandardScaler()), ('sgd', sk)])
         clf.fit(X,Y.ravel())
         return LinearModel(clf)
 

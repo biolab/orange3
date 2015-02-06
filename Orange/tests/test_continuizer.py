@@ -1,7 +1,8 @@
-from Orange.data import Table, Variable, DiscreteVariable, ContinuousVariable
+import unittest
+
+from Orange.data import Table, Variable, ContinuousVariable
 from Orange.preprocess.continuizer import DomainContinuizer
 from Orange.preprocess import transformation
-import unittest
 
 
 class Continuizer_Test(unittest.TestCase):
@@ -33,13 +34,13 @@ class Continuizer_Test(unittest.TestCase):
         self.assertRaises(TypeError, DomainContinuizer, self.data.domain,
                           normalize_continuous=DomainContinuizer.NormalizeBySpan)
 
-        domZB = DomainContinuizer(self.data,
-                                  normalize_continuous=DomainContinuizer.NormalizeBySpan,
-                                  zero_based=True)
+        domZB = DomainContinuizer(
+            self.data, normalize_continuous=DomainContinuizer.NormalizeBySpan,
+            zero_based=True)
 
-        dom = DomainContinuizer(self.data,
-                                normalize_continuous=DomainContinuizer.NormalizeBySpan,
-                                zero_based=False)
+        dom = DomainContinuizer(
+            self.data, normalize_continuous=DomainContinuizer.NormalizeBySpan,
+            zero_based=False)
 
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in domZB.attributes))
@@ -76,8 +77,12 @@ class Continuizer_Test(unittest.TestCase):
         self.assertRaises(TypeError, DomainContinuizer, self.data.domain,
                           normalize_continuous=DomainContinuizer.NormalizeBySD)
 
-        domZB = DomainContinuizer(self.data, normalize_continuous=DomainContinuizer.NormalizeBySD, zero_based=True)
-        dom = DomainContinuizer(self.data, normalize_continuous=DomainContinuizer.NormalizeBySD, zero_based=False)
+        domZB = DomainContinuizer(
+            self.data, normalize_continuous=DomainContinuizer.NormalizeBySD,
+            zero_based=True)
+        dom = DomainContinuizer(
+            self.data, normalize_continuous=DomainContinuizer.NormalizeBySD,
+            zero_based=False)
         self.assertTrue(all(isinstance(attr, ContinuousVariable)
                             for attr in domZB.attributes))
         self.assertIs(domZB.class_var, self.data.domain.class_var)

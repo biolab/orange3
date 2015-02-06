@@ -9,8 +9,7 @@ from PyQt4.QtCore import Qt
 import numpy
 import sklearn.metrics as skl_metrics
 
-import Orange.data
-import Orange.evaluation.testing
+import Orange
 from Orange.widgets import widget, settings, gui
 
 
@@ -26,7 +25,7 @@ class OWConfusionMatrix(widget.OWWidget):
     priority = 1001
 
     inputs = [{"name": "Evaluation Results",
-               "type": Orange.evaluation.testing.Results,
+               "type": Orange.evaluation.Results,
                "handler": "set_results"}]
     outputs = [{"name": "Selected Data",
                 "type": Orange.data.Table}]
@@ -336,14 +335,13 @@ class VerticalLabel(QLabel):
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
-    from Orange.evaluation import testing
-    from Orange.classification import tree
 
     app = QApplication([])
     w = OWConfusionMatrix()
     w.show()
     data = Orange.data.Table("iris")
-    res = testing.CrossValidation(data, [tree.ClassificationTreeLearner()],
-                                  store_data=True)
+    res = Orange.evaluation.CrossValidation(
+        data, [Orange.classification.ClassificationTreeLearner()],
+        store_data=True)
     w.set_results(res)
     app.exec_()

@@ -1,9 +1,12 @@
 import unittest
+
 import numpy as np
 
-from Orange.classification import naive_bayes, majority
+from Orange.classification import NaiveBayesLearner, MajorityLearner
+from Orange.classification.majority import ConstantModel
+from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.data import Table
-from Orange.evaluation import testing
+from Orange.evaluation import *
 from Orange.preprocess import discretization
 
 
@@ -20,15 +23,15 @@ def random_data(nrows, ncols):
 
 class TestingTestCase(unittest.TestCase):
     def test_no_data(self):
-        self.assertRaises(TypeError, testing.CrossValidation,
-                          learners=[naive_bayes.NaiveBayesLearner()])
+        self.assertRaises(TypeError, CrossValidation,
+                          learners=[NaiveBayesLearner()])
 
 
 class CrossValidationTestCase(unittest.TestCase):
     def test_results(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        res = testing.CrossValidation(t, [naive_bayes.NaiveBayesLearner()])
+        res = CrossValidation(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -43,7 +46,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_folds(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        res = testing.CrossValidation(t, [naive_bayes.NaiveBayesLearner()], k=5)
+        res = CrossValidation(t, [NaiveBayesLearner()], k=5)
         self.assertEqual(len(res.folds), 5)
         for i, fold in enumerate(res.folds):
             self.assertAlmostEqual(fold.start, i * 200, delta=3)
@@ -52,7 +55,7 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_call_5(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        res = testing.CrossValidation(t, [naive_bayes.NaiveBayesLearner()], k=5)
+        res = CrossValidation(t, [NaiveBayesLearner()], k=5)
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -67,50 +70,50 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_store_data(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.NaiveBayesLearner()]
+        learners = [NaiveBayesLearner()]
 
-        res = testing.CrossValidation(t, learners)
+        res = CrossValidation(t, learners)
         self.assertIsNone(res.data)
 
-        res = testing.CrossValidation(t, learners, store_data=True)
+        res = CrossValidation(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = testing.CrossValidation(t, learners)
+        res = CrossValidation(t, learners)
         self.assertIsNone(res.data)
 
-        res = testing.CrossValidation(t, learners, store_data=True)
+        res = CrossValidation(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
     def test_store_models(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.NaiveBayesLearner(), majority.MajorityLearner()]
+        learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = testing.CrossValidation(t, learners, k=5)
+        res = CrossValidation(t, learners, k=5)
         self.assertIsNone(res.models)
 
-        res = testing.CrossValidation(t, learners, k=5, store_models=True)
+        res = CrossValidation(t, learners, k=5, store_models=True)
         self.assertEqual(len(res.models), 5)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
-            self.assertIsInstance(models[1], majority.ConstantModel)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
 
-        res = testing.CrossValidation(t, learners, k=5)
+        res = CrossValidation(t, learners, k=5)
         self.assertIsNone(res.models)
 
-        res = testing.CrossValidation(t, learners, k=5, store_models=True)
+        res = CrossValidation(t, learners, k=5, store_models=True)
         self.assertEqual(len(res.models), 5)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
-            self.assertIsInstance(models[1], majority.ConstantModel)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
 
     def test_10_fold_probs(self):
         data = Table('iris')[30:130]
-        learners = [majority.MajorityLearner(), majority.MajorityLearner()]
+        learners = [MajorityLearner(), MajorityLearner()]
 
-        results = testing.CrossValidation(data, learners, k=10)
+        results = CrossValidation(data, learners, k=10)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -123,11 +126,11 @@ class CrossValidationTestCase(unittest.TestCase):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = testing.CrossValidation(data, [majority.MajorityLearner()])
+        res = CrossValidation(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = testing.CrossValidation(data, [majority.MajorityLearner()])
+        res = CrossValidation(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
 
@@ -135,7 +138,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_results(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
-        res = testing.LeaveOneOut(t, [naive_bayes.NaiveBayesLearner()])
+        res = LeaveOneOut(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -147,7 +150,7 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_call(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
-        res = testing.LeaveOneOut(t, [naive_bayes.NaiveBayesLearner()])
+        res = LeaveOneOut(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -158,50 +161,50 @@ class LeaveOneOutTestCase(unittest.TestCase):
     def test_store_data(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.NaiveBayesLearner()]
+        learners = [NaiveBayesLearner()]
 
-        res = testing.LeaveOneOut(t, learners)
+        res = LeaveOneOut(t, learners)
         self.assertIsNone(res.data)
 
-        res = testing.LeaveOneOut(t, learners, store_data=True)
+        res = LeaveOneOut(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = testing.LeaveOneOut(t, learners)
+        res = LeaveOneOut(t, learners)
         self.assertIsNone(res.data)
 
-        res = testing.LeaveOneOut(t, learners, store_data=True)
+        res = LeaveOneOut(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.NaiveBayesLearner(), majority.MajorityLearner()]
+        learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = testing.LeaveOneOut(t, learners)
+        res = LeaveOneOut(t, learners)
         self.assertIsNone(res.models)
 
-        res = testing.LeaveOneOut(t, learners, store_models=True)
+        res = LeaveOneOut(t, learners, store_models=True)
         self.assertEqual(len(res.models), 50)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
-            self.assertIsInstance(models[1], majority.ConstantModel)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
 
-        res = testing.LeaveOneOut(t, learners)
+        res = LeaveOneOut(t, learners)
         self.assertIsNone(res.models)
 
-        res = testing.LeaveOneOut(t, learners, store_models=True)
+        res = LeaveOneOut(t, learners, store_models=True)
         self.assertEqual(len(res.models), 50)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
-            self.assertIsInstance(models[1], majority.ConstantModel)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
 
     def test_probs(self):
         data = Table('iris')[30:130]
-        learners = [majority.MajorityLearner(), majority.MajorityLearner()]
+        learners = [MajorityLearner(), MajorityLearner()]
 
-        results = testing.LeaveOneOut(data, learners)
+        results = LeaveOneOut(data, learners)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -214,17 +217,17 @@ class LeaveOneOutTestCase(unittest.TestCase):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = testing.LeaveOneOut(data, [majority.MajorityLearner()])
+        res = LeaveOneOut(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = testing.LeaveOneOut(data, [majority.MajorityLearner()])
+        res = LeaveOneOut(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         y = x[:, -1]
         data = Table(x, y)
-        res = testing.LeaveOneOut(data, [majority.MajorityLearner()])
+        res = LeaveOneOut(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0],
                                 1 - data.Y[res.row_indices].flatten())
 
@@ -234,7 +237,7 @@ class TestOnTrainingTestCase(unittest.TestCase):
     def test_results(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        res = testing.TestOnTrainingData(t, [naive_bayes.NaiveBayesLearner()])
+        res = TestOnTrainingData(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -246,50 +249,50 @@ class TestOnTrainingTestCase(unittest.TestCase):
     def test_store_data(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.NaiveBayesLearner()]
+        learners = [NaiveBayesLearner()]
 
-        res = testing.TestOnTrainingData(t, learners)
+        res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.data)
 
-        res = testing.TestOnTrainingData(t, learners, store_data=True)
+        res = TestOnTrainingData(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = testing.TestOnTrainingData(t, learners)
+        res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.data)
 
-        res = testing.TestOnTrainingData(t, learners, store_data=True)
+        res = TestOnTrainingData(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
-        learners = [naive_bayes.NaiveBayesLearner(), majority.MajorityLearner()]
+        learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = testing.TestOnTrainingData(t, learners)
+        res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.models)
 
-        res = testing.TestOnTrainingData(t, learners, store_models=True)
+        res = TestOnTrainingData(t, learners, store_models=True)
         self.assertEqual(len(res.models), 1)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
-            self.assertIsInstance(models[1], majority.ConstantModel)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
 
-        res = testing.TestOnTrainingData(t, learners)
+        res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.models)
 
-        res = testing.TestOnTrainingData(t, learners, store_models=True)
+        res = TestOnTrainingData(t, learners, store_models=True)
         self.assertEqual(len(res.models), 1)
         for models in res.models:
             self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], naive_bayes.NaiveBayesModel)
-            self.assertIsInstance(models[1], majority.ConstantModel)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
 
     def test_probs(self):
         data = Table('iris')[30:130]
-        learners = [majority.MajorityLearner(), majority.MajorityLearner()]
+        learners = [MajorityLearner(), MajorityLearner()]
 
-        results = testing.TestOnTrainingData(data, learners)
+        results = TestOnTrainingData(data, learners)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -302,15 +305,15 @@ class TestOnTrainingTestCase(unittest.TestCase):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = testing.TestOnTrainingData(data, [majority.MajorityLearner()])
+        res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = testing.TestOnTrainingData(data, [majority.MajorityLearner()])
+        res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         y = x[:, -1]
         data = Table(x, y)
-        res = testing.TestOnTrainingData(data, [majority.MajorityLearner()])
+        res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])

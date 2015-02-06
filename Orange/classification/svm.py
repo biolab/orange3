@@ -106,8 +106,7 @@ class OneClassSVMLearner(SklLearner):
 
 
 if __name__ == '__main__':
-    import Orange.data
-    import Orange.evaluation
+    import Orange
     import numpy as np
 
     d1 = Orange.data.Table('iris')

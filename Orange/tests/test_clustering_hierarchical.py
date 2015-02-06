@@ -1,12 +1,10 @@
 import unittest
-
 from itertools import chain
 
 import numpy
-from scipy.spatial import distance
 
-import Orange.data
 from Orange.clustering import hierarchical
+import Orange.misc
 
 
 def flatten(seq):

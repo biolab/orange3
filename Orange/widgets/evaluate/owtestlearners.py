@@ -1,8 +1,6 @@
 from collections import OrderedDict, namedtuple
 import functools
 
-import numpy
-
 import sklearn.metrics as skl_metrics
 import numpy as np
 
@@ -11,23 +9,18 @@ from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
     QHeaderView, QItemDelegate
 from PyQt4.QtCore import Qt, QSize
 
-import Orange.data
-import Orange.classification
-
-from Orange.evaluation import testing, scoring
-
+import Orange
 from Orange.widgets import widget, gui, settings
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    stats = (AUC(results),
-             CA(results),
-             F1(results),
-             Precision(results),
-             Recall(results))
-    return stats
+    return (AUC(results),
+            CA(results),
+            F1(results),
+            Precision(results),
+            Recall(results))
 
 classification_stats.headers = ["AUC", "CA", "F1", "Precision", "Recall"]
 
@@ -62,7 +55,7 @@ class OWTestLearners(widget.OWWidget):
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
               ("Test Data", Orange.data.Table, "set_test_data")]
 
-    outputs = [("Evaluation Results", testing.Results)]
+    outputs = [("Evaluation Results", Orange.evaluation.Results)]
 
     #: Resampling/testing types
     KFold, LeaveOneOut, Bootstrap, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
@@ -206,27 +199,27 @@ class OWTestLearners(widget.OWWidget):
         # TODO: Test each learner individually
 
         if self.resampling == OWTestLearners.KFold:
-            results = testing.CrossValidation(
+            results = Orange.evaluation.CrossValidation(
                 self.train_data, learners, k=self.k_folds, store_data=True
             )
         elif self.resampling == OWTestLearners.LeaveOneOut:
-            results = testing.LeaveOneOut(
+            results = Orange.evaluation.LeaveOneOut(
                 self.train_data, learners, store_data=True
             )
         elif self.resampling == OWTestLearners.Bootstrap:
             p = self.sample_p / 100.0
-            results = testing.Bootstrap(
+            results = Orange.evaluation.Bootstrap(
                 self.train_data, learners, n_resamples=self.n_repeat, p=p,
                 store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTrain:
-            results = testing.TestOnTrainingData(
+            results = Orange.evaluation.TestOnTrainingData(
                 self.train_data, learners, store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
                 return
-            results = testing.TestOnTestData(
+            results = Orange.evaluation.TestOnTestData(
                 self.train_data, self.test_data, learners, store_data=True
             )
         else:
@@ -326,7 +319,7 @@ def split_by_model(results):
     data = results.data
     nmethods = len(results.predicted)
     for i in range(nmethods):
-        res = testing.Results()
+        res = Orange.evaluation.Results()
         res.data = data
         res.row_indices = results.row_indices
         res.actual = results.actual
@@ -356,14 +349,14 @@ def results_add_by_model(x, y):
     assert (x.row_indices == y.row_indices).all()
     assert (x.actual == y.actual).all()
 
-    res = testing.Results()
+    res = Orange.evaluation.Results()
     res.data = x.data
     res.row_indices = x.row_indices
     res.folds = x.folds
     res.actual = x.actual
-    res.predicted = numpy.vstack((x.predicted, y.predicted))
+    res.predicted = np.vstack((x.predicted, y.predicted))
     if x.probabilities is not None and y.probabilities is not None:
-        res.probabilities = numpy.vstack((x.probabilities, y.probabilities))
+        res.probabilities = np.vstack((x.probabilities, y.probabilities))
 
     if x.models is not None:
         res.models = [xm + ym for xm, ym in zip(x.models, y.models)]
@@ -371,7 +364,8 @@ def results_add_by_model(x, y):
 
 
 def results_merge(results):
-    return functools.reduce(results_add_by_model, results, testing.Results())
+    return functools.reduce(results_add_by_model, results,
+                            Orange.evaluation.Results())
 
 
 def _skl_metric(results, metric):
@@ -437,17 +431,14 @@ def R2(results):
 
 
 def main():
-    from Orange.classification import \
-        logistic_regression as lr, naive_bayes as nb
-
     app = QtGui.QApplication([])
     data = Orange.data.Table("iris")
     w = OWTestLearners()
     w.show()
     w.set_train_data(data)
     w.set_test_data(data)
-    w.set_learner(lr.LogisticRegressionLearner(), 1)
-    w.set_learner(nb.NaiveBayesLearner(), 2)
+    w.set_learner(Orange.classification.LogisticRegressionLearner(), 1)
+    w.set_learner(Orange.classification.MajorityLearner(), 2)
     w.handleNewSignals()
     return app.exec_()
 

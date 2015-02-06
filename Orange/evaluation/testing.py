@@ -5,7 +5,7 @@ import sklearn.cross_validation as skl_cross_validation
 import Orange.data
 from Orange.data import Domain, Table
 
-__all__ = ["CrossValidation", "LeaveOneOut", "TestOnTrainingData",
+__all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "Bootstrap", "TestOnTestData"]
 
 

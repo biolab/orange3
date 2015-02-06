@@ -9,9 +9,7 @@ from PyQt4 import QtGui
 
 import pyqtgraph as pg
 
-import Orange.data
-import Orange.evaluation.testing
-
+import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
 
@@ -37,7 +35,7 @@ class OWCalibrationPlot(widget.OWWidget):
 
     inputs = [
         {"name": "Evaluation Results",
-         "type": Orange.evaluation.testing.Results,
+         "type": Orange.evaluation.Results,
          "handler": "set_results"}
     ]
 
@@ -205,8 +203,8 @@ def gaussian_smoother(x, y, sigma=1.0):
 def main():
     import sip
     from PyQt4.QtGui import QApplication
-    from Orange.classification import logistic_regression, svm
-    from Orange.evaluation import testing
+    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
+                                       NuSVMLearner)
 
     app = QApplication([])
     w = OWCalibrationPlot()
@@ -214,12 +212,12 @@ def main():
     w.raise_()
 
     data = Orange.data.Table("ionosphere")
-    results = testing.CrossValidation(
+    results = Orange.evaluation.CrossValidation(
         data,
-        [logistic_regression.LogisticRegressionLearner(penalty="l2"),
-         logistic_regression.LogisticRegressionLearner(penalty="l1"),
-         svm.SVMLearner(probability=True),
-         svm.NuSVMLearner(probability=True)
+        [LogisticRegressionLearner(penalty="l2"),
+         LogisticRegressionLearner(penalty="l1"),
+         SVMLearner(probability=True),
+         NuSVMLearner(probability=True)
          ],
         store_data=True
     )

@@ -1,8 +1,11 @@
 from unittest import TestCase
-from Orange.data import Table
-from Orange.distance import Euclidean, SpearmanR, SpearmanRAbsolute, PearsonR, PearsonRAbsolute, Manhattan, Cosine, Jaccard
-from scipy.sparse import csr_matrix
+
 import numpy as np
+from scipy.sparse import csr_matrix
+
+from Orange.data import Table
+from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute, PearsonR,
+                             PearsonRAbsolute, Manhattan, Cosine, Jaccard)
 
 
 class TestEuclidean(TestCase):

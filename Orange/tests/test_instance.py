@@ -10,6 +10,7 @@ from Orange.data import \
     Instance, Domain, Unknown, Value, \
     DiscreteVariable, ContinuousVariable, StringVariable
 
+
 class TestInstance(unittest.TestCase):
     attributes = ["Feature %i" % i for i in range(10)]
     class_vars = ["Class %i" % i for i in range(1)]
