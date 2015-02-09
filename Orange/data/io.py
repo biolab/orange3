@@ -529,7 +529,7 @@ class ExcelReader:
 
     # noinspection PyPep8Naming
     def read_data(self, worksheet, table):
-        X, Y = table.X, table.Y
+        X, Y = table.X, table._Y
         W = table.W if table.W.shape[-1] else None
         if self.basket_column >= 0:
             # TODO how many columns?!
@@ -564,7 +564,7 @@ class ExcelReader:
         if line_count != len(X):
             del Xr, X, Y, W, metas
             table.X.resize(line_count, len(table.domain.attributes))
-            table.Y.resize(line_count, len(table.domain.class_vars))
+            table._Y.resize(line_count, len(table.domain.class_vars))
             if table.W.ndim == 1:
                 table.W.resize(line_count)
             else:
@@ -588,7 +588,8 @@ class ExcelReader:
 
     def reorder_values(self, table):
         self.reorder_values_array(table.X, table.domain.attributes)
-        self.reorder_values_array(table.Y, table.domain.class_vars)
+        self.reorder_values_array(table._Y, table.domain.class_vars)
+        self.reorder_values_array(table.metas, table.domain.metas)
 
     def read_file(self, file, cls=None):
         from Orange.data import Table
