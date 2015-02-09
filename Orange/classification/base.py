@@ -329,7 +329,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def __call__(self, data):
         clf = super().__call__(data)
-        clf.used_vals = [np.unique(y) for y in data.Y.T]
+        clf.used_vals = [np.unique(y) for y in data.Y[:, None].T]
         return clf
 
     def fit(self, X, Y, W):
