@@ -3,8 +3,7 @@ import os
 
 import numpy as np
 
-from Orange.data import table, io, \
-    ContinuousVariable, DiscreteVariable, StringVariable
+from Orange.data import io, ContinuousVariable, DiscreteVariable, StringVariable
 
 
 def read_file(name):
