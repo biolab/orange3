@@ -1,16 +1,16 @@
 import unittest
+
 import numpy as np
 
 import Orange
-import Orange.classification.knn as knn
-from Orange.evaluation.testing import CrossValidation
-from Orange.evaluation.scoring import CA
+from Orange.classification import KNNLearner
+from Orange.evaluation import CA, CrossValidation
 
 
 class KNNTest(unittest.TestCase):
     def test_KNN(self):
         table = Orange.data.Table('iris')
-        learn = knn.KNNLearner()
+        learn = KNNLearner()
         results = CrossValidation(table, [learn], k=10)
         ca = CA(results)
         self.assertGreater(ca, 0.8)
@@ -18,7 +18,7 @@ class KNNTest(unittest.TestCase):
 
     def test_predict_single_instance(self):
         data = Orange.data.Table('iris')
-        learn = knn.KNNLearner()
+        learn = KNNLearner()
         clf = learn(data)
         for ins in data[::20]:
             clf(ins)
@@ -31,7 +31,7 @@ class KNNTest(unittest.TestCase):
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
         t = Orange.data.Table(x1, y1)
-        learn = knn.KNNLearner()
+        learn = KNNLearner()
         clf = learn(t)
         z = clf(x2)
         correct = (z == y2.flatten())
