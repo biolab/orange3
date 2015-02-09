@@ -322,6 +322,7 @@ def split_by_model(results):
     for i in range(nmethods):
         res = Orange.evaluation.Results()
         res.data = data
+        res.domain = results.domain
         res.row_indices = results.row_indices
         res.actual = results.actual
         res.predicted = results.predicted[(i,), :]
@@ -352,6 +353,7 @@ def results_add_by_model(x, y):
 
     res = Orange.evaluation.Results()
     res.data = x.data
+    res.domain = x.domain
     res.row_indices = x.row_indices
     res.folds = x.folds
     res.actual = x.actual
