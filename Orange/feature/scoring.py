@@ -4,12 +4,6 @@ from Orange.data.variable import DiscreteVariable
 
 
 class ClassificationScorer:
-    def __new__(cls, *args):
-        self = super().__new__(cls)
-        if args:
-            return self(*args)
-        else:
-            return self
 
     def __call__(self, feature, data):
         if not data.domain.class_var:

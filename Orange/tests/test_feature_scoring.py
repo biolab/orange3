@@ -9,8 +9,8 @@ from Orange.feature import scoring
 class FeatureScoringTest(unittest.TestCase):
 
     def setUp(self):
-        self.zoo = Table("zoo")
-        self.housing = Table("housing")
+        self.zoo = Table("zoo")  # discrete features, discrete class
+        self.housing = Table("housing")  # continuous features, continuous class
 
     def test_info_gain(self):
         scorer = scoring.InfoGain()
