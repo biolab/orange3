@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import pickle
 
 import Orange
 from Orange.projection import PCA, SparsePCA, RandomizedPCA
@@ -50,3 +51,24 @@ class TestPCA(unittest.TestCase):
         self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
         np.testing.assert_almost_equal(pca_model(data).X, proj)
+
+    def test_compute_value(self):
+        iris = Orange.data.Table('iris')
+        pca = PCA(n_components=2)(iris)
+        pca_iris = pca(iris)
+        pca_iris2 = Orange.data.Table(pca_iris.domain, iris)
+        np.testing.assert_almost_equal(pca_iris.X, pca_iris2.X)
+        np.testing.assert_equal(pca_iris.Y, pca_iris2.Y)
+
+        pca_iris3 = pickle.loads(pickle.dumps(pca_iris))
+        np.testing.assert_almost_equal(pca_iris.X, pca_iris3.X)
+        np.testing.assert_equal(pca_iris.Y, pca_iris3.Y)
+
+    def test_transformed_domain_does_not_pickle_data(self):
+        iris = Orange.data.Table('iris')
+        pca = PCA(n_components=2)(iris)
+        pca_iris = pca(iris)
+        pca_iris2 = Orange.data.Table(pca_iris.domain, iris)
+
+        pca_iris2 = pickle.loads(pickle.dumps(pca_iris))
+        self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)

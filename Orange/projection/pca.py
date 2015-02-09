@@ -58,9 +58,31 @@ class PCAModel(ProjectionModel):
 
     def __call__(self, data):
         data = self.preprocess(data)
-        X, Y = data.X, data.Y
-        Xt = self.transform(X)
-        feat = [Orange.data.ContinuousVariable('PC %d' % i)
-                for i in range(self.n_components)]
-        domain = Orange.data.Domain(feat, class_vars=data.domain.class_vars)
-        return Orange.data.Table(domain, Xt, Y)
+        Xt = self.transform(data.X)
+
+        def pca_variable(i):
+            v = Orange.data.ContinuousVariable('PC %d' % i)
+            v.compute_value = Projector(self, i)
+            return v
+
+        domain = Orange.data.Domain(
+            [pca_variable(i) for i in range(self.n_components)],
+            class_vars=data.domain.class_vars)
+        return Orange.data.Table(domain, Xt, data.Y)
+
+
+class Projector:
+    def __init__(self, projection, feature):
+        self.projection = projection
+        self.feature = feature
+        self.transformed = None
+
+    def __call__(self, data):
+        if data is not self.transformed:
+            self.transformed = self.projection.transform(data.X)
+        return self.transformed[:, self.feature]
+
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        d['transformed'] = None
+        return d
