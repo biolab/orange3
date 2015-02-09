@@ -17,7 +17,7 @@ class TestPCA(unittest.TestCase):
         pca = PCA(n_components=n_com)
         pca_model = pca(data)
         pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
-        self.assertGreaterEqual(pca_xpl_var, min_xpl_var)
+        self.assertGreaterEqual(pca_xpl_var + 1e-6, min_xpl_var)
         self.assertEquals(n_com, pca_model.n_components)
         self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
