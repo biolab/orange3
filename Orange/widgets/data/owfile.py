@@ -42,6 +42,7 @@ class OWFile(widget.OWWidget):
 #                           if len(ft)>2 and ft[2]]
     registered_file_types = []
     dlgFormats = (
+        "All readable files (*.tab *.xlsx *.txt *.basket)\n"
         "Tab-delimited files (*.tab)\n"
         "Excel files (*.xlsx)\n"
         "Text file (*.txt)\n"
