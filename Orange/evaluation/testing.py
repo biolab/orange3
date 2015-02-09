@@ -152,8 +152,8 @@ class Results:
 
         if row_indices is not None:
             self.row_indices = row_indices
-        else:
-            self.row_indices = np.empty(nrows, dtype=np.int32)
+        elif nrows is not None:
+                self.row_indices = np.empty(nrows, dtype=np.int32)
 
         if predicted is not None:
             self.predicted = predicted

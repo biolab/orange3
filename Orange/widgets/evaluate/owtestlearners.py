@@ -1,7 +1,6 @@
 from collections import OrderedDict, namedtuple
 import functools
 
-import sklearn.metrics as skl_metrics
 import numpy as np
 
 from PyQt4 import QtGui
@@ -10,7 +9,9 @@ from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
 from PyQt4.QtCore import Qt, QSize
 
 import Orange
+from Orange.evaluation import *
 from Orange.widgets import widget, gui, settings
+
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
 
@@ -321,6 +322,7 @@ def split_by_model(results):
     for i in range(nmethods):
         res = Orange.evaluation.Results()
         res.data = data
+        res.domain = results.domain
         res.row_indices = results.row_indices
         res.actual = results.actual
         res.predicted = results.predicted[(i,), :]
@@ -351,6 +353,7 @@ def results_add_by_model(x, y):
 
     res = Orange.evaluation.Results()
     res.data = x.data
+    res.domain = x.domain
     res.row_indices = x.row_indices
     res.folds = x.folds
     res.actual = x.actual
@@ -366,68 +369,6 @@ def results_add_by_model(x, y):
 def results_merge(results):
     return functools.reduce(results_add_by_model, results,
                             Orange.evaluation.Results())
-
-
-def _skl_metric(results, metric):
-    return np.fromiter(
-        (metric(results.actual, predicted)
-         for predicted in results.predicted),
-        dtype=np.float64, count=len(results.predicted))
-
-
-def CA(results):
-    return _skl_metric(results, skl_metrics.accuracy_score)
-
-
-def Precision(results):
-    return _skl_metric(results, skl_metrics.precision_score)
-
-
-def Recall(results):
-    return _skl_metric(results, skl_metrics.recall_score)
-
-def multi_class_auc(results):
-    number_of_classes = len(results.data.domain.class_var.values)
-    N = results.actual.shape[0]
-    
-    class_cases = [sum(results.actual == class_) 
-               for class_ in range(number_of_classes)]
-    weights = [c*(N-c) for c in class_cases]
-    weights_norm = [w/sum(weights) for w in weights]
-    
-    auc_array = np.array([np.mean(np.fromiter(
-        (skl_metrics.roc_auc_score(results.actual == class_, predicted)
-        for predicted in results.predicted == class_),
-        dtype=np.float64, count=len(results.predicted))) 
-        for class_ in range(number_of_classes)])
-    
-    return np.array([np.sum(auc_array*weights_norm)])
-    
-def AUC(results):
-    if len(results.data.domain.class_var.values) == 2:
-        return _skl_metric(results, skl_metrics.roc_auc_score)
-    else:
-        return multi_class_auc(results)
-
-
-def F1(results):
-    return _skl_metric(results, skl_metrics.f1_score)
-
-
-def MSE(results):
-    return _skl_metric(results, skl_metrics.mean_squared_error)
-
-
-def RMSE(results):
-    return np.sqrt(MSE(results))
-
-
-def MAE(results):
-    return _skl_metric(results, skl_metrics.mean_absolute_error)
-
-
-def R2(results):
-    return _skl_metric(results, skl_metrics.r2_score)
 
 
 def main():

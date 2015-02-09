@@ -1495,14 +1495,18 @@ class TableIndexingTests(TableTests):
                 table = self.table[r, c]
 
                 attr, cls, metas = split_columns(c, self.table)
-                np.testing.assert_almost_equal(table.X,
-                                               self.table.X[[r], attr])
+                X = self.table.X[[r], attr]
+                if X.ndim == 1:
+                    X = X.reshape(-1, len(table.domain.attributes))
+                np.testing.assert_almost_equal(table.X, X)
                 Y = self.table.Y[:, None][[r], cls]
                 if len(Y.shape) == 1 or Y.shape[1] == 1:
                     Y = Y.flatten()
                 np.testing.assert_almost_equal(table.Y, Y)
-                np.testing.assert_almost_equal(table.metas,
-                                               self.table.metas[[r], metas])
+                metas_ = self.table.metas[[r], metas]
+                if metas_.ndim == 1:
+                    metas_ = metas_.reshape(-1, len(table.domain.metas))
+                np.testing.assert_almost_equal(table.metas, metas_)
 
         for r in self.multiple_rows:
             for c in chain(self.columns, self.multiple_rows):

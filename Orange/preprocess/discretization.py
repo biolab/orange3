@@ -1,13 +1,13 @@
-import itertools
-
 import numpy as np
 
-import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from .transformation import ColumnTransformation
 from . import _discretization
+
+__all__ = ["Discretizer", "EqualFreq", "EqualWidth", "EntropyMDL",
+           "DiscretizeTable"]
 
 
 class Discretizer(ColumnTransformation):
@@ -83,7 +83,7 @@ class EqualFreq(Discretization):
 
     # noinspection PyProtectedMember
     def __call__(self, data, attribute):
-        if type(data) == Orange.data.sql.table.SqlTable:
+        if type(data) == SqlTable:
             att = attribute.to_sql()
             quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
             query = data._sql_query(['quantile(%s, ARRAY%s)' %
@@ -113,7 +113,7 @@ class EqualWidth(Discretization):
             min, max = fixed[attribute.name]
             points = self._split_eq_width_fixed(min, max, n=self.n)
         else:
-            if type(data) == Orange.data.sql.table.SqlTable:
+            if type(data) == SqlTable:
                 att = attribute.to_sql()
                 query = data._sql_query(['min(%s)::double precision' % att,
                                          'max(%s)::double precision' % att])
