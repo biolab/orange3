@@ -3,7 +3,7 @@ import inspect
 import Orange.data
 import Orange.preprocess
 
-__all__ = ["Projection", "SklProjection"]
+__all__ = ["Projection", "ProjectionModel", "SklProjection"]
 
 
 class Projection:
@@ -29,9 +29,24 @@ class Projection:
         return clf
 
     def preprocess(self, data):
-        """
-        Apply the `preprocessors` to the data.
-        """
+        for pp in self.preprocessors:
+            data = pp(data)
+        return data
+
+
+class ProjectionModel:
+    def __init__(self, proj, preprocessors=None):
+        if preprocessors is None:
+            preprocessors = type(self).preprocessors
+        self.preprocessors = tuple(preprocessors)
+        self.__dict__.update(proj.__dict__)
+        self.proj = proj
+
+    def transform(self, X):
+        trns = self.proj.transform(X)
+        return trns
+
+    def preprocess(self, data):
         for pp in self.preprocessors:
             data = pp(data)
         return data

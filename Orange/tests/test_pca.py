@@ -14,13 +14,13 @@ class TestPCA(unittest.TestCase):
 
     def __pca_test_helper(self, data, n_com, min_xpl_var):
         pca = PCA(n_components=n_com)
-        pca = pca(data)
-        pca_xpl_var = np.sum(pca.explained_variance_ratio_)
+        pca_model = pca(data)
+        pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
         self.assertGreaterEqual(pca_xpl_var, min_xpl_var)
-        self.assertEquals(n_com, pca.n_components)
-        self.assertEquals((n_com, data.X.shape[1]), pca.components_.shape)
-        proj = np.dot(data.X - pca.mean_, pca.components_.T)
-        np.testing.assert_almost_equal(pca.transform(data.X), proj)
+        self.assertEquals(n_com, pca_model.n_components)
+        self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
+        proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
+        np.testing.assert_almost_equal(pca_model(data).X, proj)
 
     def test_sparse_pca(self):
         data = Orange.data.Table('ionosphere')
@@ -30,10 +30,10 @@ class TestPCA(unittest.TestCase):
 
     def __sparse_pca_test_helper(self, data, n_com, max_err):
         sparse_pca = SparsePCA(n_components=n_com, ridge_alpha=0.001, random_state=0)
-        sparse_pca = sparse_pca(data)
-        self.assertEquals(n_com, sparse_pca.n_components)
-        self.assertEquals((n_com, data.X.shape[1]), sparse_pca.components_.shape)
-        self.assertLessEqual(sparse_pca.error_[-1], max_err)
+        pca_model = sparse_pca(data)
+        self.assertEquals(n_com, pca_model.n_components)
+        self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
+        self.assertLessEqual(pca_model.error_[-1], max_err)
 
     def test_randomized_pca(self):
         data = Orange.data.Table('ionosphere')
@@ -43,10 +43,10 @@ class TestPCA(unittest.TestCase):
 
     def __rnd_pca_test_helper(self, data, n_com, min_xpl_var):
         rnd_pca = RandomizedPCA(n_components=n_com)
-        rnd_pca = rnd_pca(data)
-        pca_xpl_var = np.sum(rnd_pca.explained_variance_ratio_)
+        pca_model = rnd_pca(data)
+        pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
         self.assertGreaterEqual(pca_xpl_var, min_xpl_var)
-        self.assertEquals(n_com, rnd_pca.n_components)
-        self.assertEquals((n_com, data.X.shape[1]), rnd_pca.components_.shape)
-        proj = np.dot(data.X - rnd_pca.mean_, rnd_pca.components_.T)
-        np.testing.assert_almost_equal(rnd_pca.transform(data.X), proj)
+        self.assertEquals(n_com, pca_model.n_components)
+        self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
+        proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
+        np.testing.assert_almost_equal(pca_model(data).X, proj)
