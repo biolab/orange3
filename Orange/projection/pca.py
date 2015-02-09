@@ -2,6 +2,8 @@ import sklearn.decomposition as skl_decomposition
 
 from Orange.projection import SklProjection
 
+__all__ = ["PCA", "SparsePCA", "RandomizedPCA"]
+
 
 class PCA(SklProjection):
 

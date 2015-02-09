@@ -3,6 +3,8 @@ import sklearn.manifold as skl_manifold
 import Orange
 from Orange.projection import SklProjection
 
+__all__ = ["MDS", "Isomap", "LocallyLinearEmbedding"]
+
 
 class MDS(SklProjection):
 

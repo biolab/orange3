@@ -7,12 +7,7 @@ from Orange.distance import Euclidean
 
 
 class TestManifold(unittest.TestCase):
-    def test_manifold(self):
-        self._test_mds()
-        self._test_isomap()
-        self._test_lle()
-
-    def _test_mds(self):
+    def test_mds(self):
         data = Orange.data.Table('ionosphere')
         self.__mds_test_helper(data, n_com=1)
         self.__mds_test_helper(data, n_com=2)
@@ -28,7 +23,7 @@ class TestManifold(unittest.TestCase):
         self.assertEquals(eshape, mds_fit.embedding_.shape)
         self.assertEquals(eshape, mds_dist.embedding_.shape)
 
-    def _test_isomap(self):
+    def test_isomap(self):
         data = Orange.data.Table('ionosphere')
         self.__isomap_test_helper(data, n_com=1)
         self.__isomap_test_helper(data, n_com=2)
@@ -40,7 +35,7 @@ class TestManifold(unittest.TestCase):
         eshape = data.X.shape[0], n_com
         self.assertEquals(eshape, isomap_fit.embedding_.shape)
 
-    def _test_lle(self):
+    def test_lle(self):
         data = Orange.data.Table('ionosphere')
         self.__lle_test_helper(data, n_com=1)
         self.__lle_test_helper(data, n_com=2)
