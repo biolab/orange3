@@ -20,8 +20,8 @@ class TestManifold(unittest.TestCase):
         mds_dist = mds_dist(Euclidean(data))
         eshape = data.X.shape[0], n_com
         self.assertTrue(np.allclose(mds_fit.embedding_, mds_dist.embedding_))
-        self.assertEquals(eshape, mds_fit.embedding_.shape)
-        self.assertEquals(eshape, mds_dist.embedding_.shape)
+        self.assertEqual(eshape, mds_fit.embedding_.shape)
+        self.assertEqual(eshape, mds_dist.embedding_.shape)
 
     def test_isomap(self):
         data = Orange.data.Table('ionosphere')
@@ -33,7 +33,7 @@ class TestManifold(unittest.TestCase):
         isomap_fit = Isomap(n_neighbors=5, n_components=n_com)
         isomap_fit = isomap_fit(data)
         eshape = data.X.shape[0], n_com
-        self.assertEquals(eshape, isomap_fit.embedding_.shape)
+        self.assertEqual(eshape, isomap_fit.embedding_.shape)
 
     def test_lle(self):
         data = Orange.data.Table('ionosphere')
@@ -45,4 +45,4 @@ class TestManifold(unittest.TestCase):
         isomap_fit = Isomap(n_neighbors=5, n_components=n_com)
         isomap_fit = isomap_fit(data)
         eshape = data.X.shape[0], n_com
-        self.assertEquals(eshape, isomap_fit.embedding_.shape)
+        self.assertEqual(eshape, isomap_fit.embedding_.shape)

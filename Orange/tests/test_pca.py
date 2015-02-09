@@ -18,8 +18,8 @@ class TestPCA(unittest.TestCase):
         pca_model = pca(data)
         pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
         self.assertGreaterEqual(pca_xpl_var, min_xpl_var)
-        self.assertEquals(n_com, pca_model.n_components)
-        self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
+        self.assertEqual(n_com, pca_model.n_components)
+        self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
@@ -32,8 +32,8 @@ class TestPCA(unittest.TestCase):
     def __sparse_pca_test_helper(self, data, n_com, max_err):
         sparse_pca = SparsePCA(n_components=n_com, ridge_alpha=0.001, random_state=0)
         pca_model = sparse_pca(data)
-        self.assertEquals(n_com, pca_model.n_components)
-        self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
+        self.assertEqual(n_com, pca_model.n_components)
+        self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         self.assertLessEqual(pca_model.error_[-1], max_err)
 
     def test_randomized_pca(self):
@@ -47,8 +47,8 @@ class TestPCA(unittest.TestCase):
         pca_model = rnd_pca(data)
         pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
         self.assertGreaterEqual(pca_xpl_var, min_xpl_var)
-        self.assertEquals(n_com, pca_model.n_components)
-        self.assertEquals((n_com, data.X.shape[1]), pca_model.components_.shape)
+        self.assertEqual(n_com, pca_model.n_components)
+        self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
