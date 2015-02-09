@@ -2,9 +2,13 @@ import unittest
 
 import numpy as np
 
-from Orange.data import io, ContinuousVariable, DiscreteVariable, StringVariable
+from Orange.data import table, io, \
+    ContinuousVariable, DiscreteVariable, StringVariable
 
 class TestExcelHeader0(unittest.TestCase):
+    def setUp(self):
+        table.dataset_dirs.append("Orange/xlsx_files")
+
     def test_read(self):
         table = io.ExcelReader().read_file("xlsx_files/header_0.xlsx")
         domain = table.domain
