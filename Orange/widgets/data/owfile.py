@@ -43,12 +43,13 @@ class OWFile(widget.OWWidget):
     registered_file_types = []
     dlgFormats = (
         "Tab-delimited files (*.tab)\n"
+        "Excel files (*.xlsx)\n"
         "Text file (*.txt)\n"
         "Basket files (*.basket)\n" +
         "".join("{0} ({1})\n".format(*ft) for ft in registered_file_types) +
         "All files (*)")
-    formats = {".tab": "Tab-delimited file", ".txt": "Text file",
-               ".basket": "Basket file"}
+    formats = {".tab": "Tab-delimited file", ".xlsx": "Excel file",
+               ".txt": "Text file", ".basket": "Basket file"}
     formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
 
     def __init__(self):
