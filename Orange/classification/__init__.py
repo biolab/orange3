@@ -9,3 +9,5 @@ from .random_forest import *
 from .softmax_regression import *
 from .svm import *
 from .tree import *
+from .simple_tree import *
+from .simple_random_forest import *
