@@ -529,7 +529,7 @@ class ExcelReader:
             raise ValueError("Invalid header")
         return domain
 
-    # noinspection PyPep8Naming
+    # noinspection PyPep8Naming,PyProtectedMember
     def read_data(self, worksheet, table):
         X, Y = table.X, table._Y
         W = table.W if table.W.shape[-1] else None
@@ -588,6 +588,7 @@ class ExcelReader:
                 var.values = new_order
                 delattr(var, "fix_order")
 
+    # noinspection PyProtectedMember
     def reorder_values(self, table):
         self.reorder_values_array(table.X, table.domain.attributes)
         self.reorder_values_array(table._Y, table.domain.class_vars)
