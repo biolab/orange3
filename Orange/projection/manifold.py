@@ -27,13 +27,13 @@ class MDS(SklProjection):
         else:
             dist_matrix, Y, domain = data.X, None, None
         self.params['dissimilarity'] = 'precomputed'
-        clf = self.fit(dist_matrix, Y)
+        clf = self.fit(dist_matrix, Y=Y)
         clf.domain = domain
         return clf
 
-    def fit(self, X, Y=None):
+    def fit(self, X, init=None, Y=None):
         proj = self.__wraps__(**self.params)
-        return proj.fit(X, y=Y)
+        return proj.fit(X, init=init, y=Y)
 
 
 class Isomap(SklProjection):

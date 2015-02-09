@@ -5,9 +5,9 @@ from PyQt4.QtCore import Qt
 
 import numpy
 import pyqtgraph as pg
-import sklearn.decomposition as skl_decomposition
 
 import Orange.data
+import Orange.projection
 from Orange.widgets import widget, gui, settings
 
 
@@ -80,7 +80,7 @@ class OWPCA(widget.OWWidget):
         self.data = data
 
         if data is not None:
-            pca = skl_decomposition.PCA()
+            pca = Orange.projection.PCA()
             self._pca = pca.fit(self.data.X)
             self._variance_ratio = self._pca.explained_variance_ratio_
             self._cumulative = numpy.cumsum(self._variance_ratio)
