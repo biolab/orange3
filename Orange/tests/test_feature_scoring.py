@@ -42,3 +42,8 @@ class FeatureScoringTest(unittest.TestCase):
         for scorer in scorers:
             with self.assertRaises(ValueError):
                 scorer(0, self.housing)
+
+    def test_chi2(self):
+        scorer = scoring.Chi2()
+        sc = [scorer(a, self.zoo) for a in range(5)]
+        self.assertTrue(np.argmax(sc) == 1)

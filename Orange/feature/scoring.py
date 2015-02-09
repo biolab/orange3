@@ -1,6 +1,22 @@
 import numpy as np
+from sklearn.feature_selection import chi2 as skl_chi2
 from Orange.statistics import contingency, distribution
 from Orange.data.variable import DiscreteVariable
+
+
+class SklScorer:
+
+    def __call__(self, feature, data):
+        if not data.domain.class_var:
+            raise ValueError("Data with class labels required.")
+        X = data.X[:, [data.domain.index(feature)]]
+        y = data.Y.flatten()
+        return self.score(X, y)
+
+class Chi2(SklScorer):
+    def score(self, X, y):
+        f, p = skl_chi2(X, y)
+        return f[0]
 
 
 class ClassificationScorer:
