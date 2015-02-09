@@ -1,9 +1,12 @@
 import copy
+
 import numpy
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
 from .transformation import ColumnTransformation
+
+__all__ = ["ReplaceUnknowns", "Average"]
 
 
 def is_continuous(var):
@@ -23,7 +26,7 @@ class ReplaceUnknowns(ColumnTransformation):
         return numpy.where(numpy.isnan(c), self.value, c)
 
 
-class Average(object):
+class Average:
     def __call__(self, data, variable):
         variable = data.domain[variable]
         if is_continuous(variable):
