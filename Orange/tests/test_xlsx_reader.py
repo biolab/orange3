@@ -1,16 +1,20 @@
 import unittest
+import os
 
 import numpy as np
 
 from Orange.data import table, io, \
     ContinuousVariable, DiscreteVariable, StringVariable
 
-class TestExcelHeader0(unittest.TestCase):
-    def setUp(self):
-        table.dataset_dirs.append("Orange/xlsx_files")
 
+def read_file(name):
+    return io.ExcelReader().read_file(
+        os.path.join(os.path.dirname(__file__), "xlsx_files", name))
+
+
+class TestExcelHeader0(unittest.TestCase):
     def test_read(self):
-        table = io.ExcelReader().read_file("xlsx_files/header_0.xlsx")
+        table = read_file("header_0.xlsx")
         domain = table.domain
         self.assertEqual(len(domain.class_vars), 0)
         self.assertIsNone(domain.class_var)
@@ -24,9 +28,16 @@ class TestExcelHeader0(unittest.TestCase):
                                                  [0.2, 0.1, 2.5, 123],
                                                  [0, 0, 0, 0]]))
 
+
+class TextExcelSheets(unittest.TestCase):
+    def test_named_sheet(self):
+        table = read_file("header_0_sheet.xlsx:my_sheet")
+        self.assertEqual(len(table.domain.attributes), 4)
+
+
 class TestExcelHeader1(unittest.TestCase):
     def test_no_flags(self):
-        table = io.ExcelReader().read_file("xlsx_files/header_1_no_flags.xlsx")
+        table = read_file("header_1_no_flags.xlsx")
         domain = table.domain
         self.assertEqual(len(domain.class_vars), 1)
         self.assertEqual(len(domain.metas), 0)
@@ -43,7 +54,7 @@ class TestExcelHeader1(unittest.TestCase):
         np.testing.assert_almost_equal(table.Y, np.array([21, 123, 0]))
 
     def test_flags(self):
-        table = io.ExcelReader().read_file("xlsx_files/header_1_flags.xlsx")
+        table = read_file("header_1_flags.xlsx")
         domain = table.domain
 
         self.assertEqual(len(domain.attributes), 1)
@@ -75,7 +86,7 @@ class TestExcelHeader1(unittest.TestCase):
 
 class TestExcelHeader3(unittest.TestCase):
     def test_read(self):
-        table = io.ExcelReader().read_file("xlsx_files/header_3.xlsx")
+        table = read_file("header_3.xlsx")
         domain = table.domain
 
         self.assertEqual(len(domain.attributes), 2)

@@ -362,6 +362,7 @@ class ExcelReader:
             f, sheet = f.split(":")
         else:
             sheet = None
+        print(f, sheet)
         wb = load_workbook(f, use_iterators=True,
                            read_only=True, data_only=True)
         ws = wb.get_sheet_by_name(sheet) if sheet else wb.get_active_sheet()
@@ -605,8 +606,3 @@ class ExcelReader:
         self.read_data(worksheet, table)
         self.reorder_values(table)
         return table
-
-if __name__ == "__main__":
-    table = ExcelReader().read_file("/Users/janezdemsar/Desktop/iris2.xlsx")
-    print(table.domain)
-    print(table)
