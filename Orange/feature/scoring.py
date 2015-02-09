@@ -1,8 +1,10 @@
 import numpy as np
 from sklearn.feature_selection import chi2 as skl_chi2
+from sklearn.feature_selection import f_classif as skl_f_classif
+from sklearn.feature_selection import f_regression as skl_f_regression
 
 from Orange.statistics import contingency, distribution
-from Orange.data.variable import DiscreteVariable
+from Orange.data.variable import DiscreteVariable, ContinuousVariable
 
 
 class SklScorer:
@@ -14,9 +16,46 @@ class SklScorer:
         y = data.Y.flatten()
         return self.score(X, y)
 
+
 class Chi2(SklScorer):
+
+    def __call__(self, feature, data):
+        if not isinstance(data.domain[feature], DiscreteVariable):
+            raise ValueError("Discrete feature required.")
+        if not isinstance(data.domain.class_var, DiscreteVariable):
+            raise ValueError("Data with discrete class labels required.")
+        return super().__call__(feature, data)
+
     def score(self, X, y):
         f, p = skl_chi2(X, y)
+        return f[0]
+
+
+class ANOVA(SklScorer):
+
+    def __call__(self, feature, data):
+        if not isinstance(data.domain[feature], ContinuousVariable):
+            raise ValueError("Continuous feature required.")
+        if not isinstance(data.domain.class_var, DiscreteVariable):
+            raise ValueError("Data with discrete class labels required.")
+        return super().__call__(feature, data)
+
+    def score(self, X, y):
+        f, p = skl_f_classif(X, y)
+        return f[0]
+
+
+class UnivariateLinearRegression(SklScorer):
+
+    def __call__(self, feature, data):
+        if not isinstance(data.domain[feature], ContinuousVariable):
+            raise ValueError("Continuous feature required.")
+        if not isinstance(data.domain.class_var, ContinuousVariable):
+            raise ValueError("Regression problem required.")
+        return super().__call__(feature, data)
+
+    def score(self, X, y):
+        f, p = skl_f_regression(X, y)
         return f[0]
 
 
