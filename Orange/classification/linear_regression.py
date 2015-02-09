@@ -56,7 +56,7 @@ class LinearRegressionLearner(Learner):
         return cost, grad
 
     def fit(self, X, Y, W):
-        if Y.shape[1] > 1:
+        if len(Y.shape) > 1 and Y.shape[1] > 1:
             raise ValueError('Linear regression does not support '
                              'multi-target classification')
 

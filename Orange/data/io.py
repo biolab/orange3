@@ -121,7 +121,7 @@ class TabDelimReader:
         return i
 
     def read_data(self, f, table):
-        X, Y = table.X, table.Y
+        X, Y = table.X, table._Y
         W = table.W if table.W.shape[-1] else None
         f.seek(0)
         f.readline()
@@ -159,7 +159,7 @@ class TabDelimReader:
         if line_count != len(X):
             del Xr, X, Y, W, metas
             table.X.resize(line_count, len(table.domain.attributes))
-            table.Y.resize(line_count, len(table.domain.class_vars))
+            table._Y.resize(line_count, len(table.domain.class_vars))
             if table.W.ndim == 1:
                 table.W.resize(line_count)
             else:
@@ -181,7 +181,7 @@ class TabDelimReader:
 
     def reorder_values(self, table):
         self.reorder_values_array(table.X, table.domain.attributes)
-        self.reorder_values_array(table.Y, table.domain.class_vars)
+        self.reorder_values_array(table._Y, table.domain.class_vars)
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:
@@ -288,7 +288,7 @@ def save_csv(filename, data):
 
 def _save_tab_fast(f, data):
     wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
-    for Xi, Yi, Mi in zip(data.X, data.Y, data.metas):
+    for Xi, Yi, Mi in zip(data.X, data._Y, data.metas):
         f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
         f.write("\n")
 

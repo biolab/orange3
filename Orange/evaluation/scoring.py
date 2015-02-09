@@ -2,7 +2,8 @@ import numpy as np
 import sklearn.metrics as skl_metrics
 from Orange.data import DiscreteVariable
 
-__all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC"]
+__all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
+           "MSE", "RMSE", "MAE", "R2"]
 
 
 class Score:
@@ -52,6 +53,8 @@ class Score:
             dtype=np.float64, count=len(results.predicted))
 
 
+## Classification scores
+
 class CA(Score):
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.accuracy_score)
@@ -83,23 +86,47 @@ class PrecisionRecallFSupport(Score):
 class AUC(Score):
     separate_folds = True
 
-    def compute_score(self, results, target=None):
-        if not isinstance(results.domain.class_var, DiscreteVariable):
-            raise ValueError("AUC.compute_score expects a domain with a "
-                             "(single) discrete variable")
-        n_classes = len(results.domain.class_var.values)
-        if n_classes < 2:
-            raise ValueError("Class variable has less than two values")
-        if target is None:
-            if n_classes > 2:
-                raise ValueError("Class variable has more than two values and "
-                                 "target class is not specified")
-            else:
-                target = 1
+    def multi_class_auc(self, results):
+        number_of_classes = len(results.data.domain.class_var.values)
+        N = results.actual.shape[0]
 
-        y = np.array(results.actual == target, dtype=int)
+        class_cases = [sum(results.actual == class_)
+                   for class_ in range(number_of_classes)]
+        weights = [c * (N - c) for c in class_cases]
+        weights_norm = [w / sum(weights) for w in weights]
 
-        return np.fromiter(
-            (skl_metrics.roc_auc_score(y, probabilities[:, target])
-             for probabilities in results.probabilities),
-            dtype=np.float64, count=len(results.predicted))
+        auc_array = np.array([np.mean(np.fromiter(
+            (skl_metrics.roc_auc_score(results.actual == class_, predicted)
+            for predicted in results.predicted == class_),
+            dtype=np.float64, count=len(results.predicted)))
+            for class_ in range(number_of_classes)])
+
+        return np.array([np.sum(auc_array * weights_norm)])
+
+    def compute_score(self, results):
+        if len(results.data.domain.class_var.values) == 2:
+            return self.from_predicted(results, skl_metrics.roc_auc_score)
+        else:
+            return self.multi_class_auc(results)
+
+
+## Regression scores
+
+class MSE(Score):
+    def compute_score(self, results):
+        return self.from_predicted(results, skl_metrics.mean_squared_error)
+
+
+class RMSE(Score):
+    def compute_score(self, results):
+        return np.sqrt(MSE(results))
+
+
+class MAE(Score):
+    def compute_score(self, results):
+        return self.from_predicted(results, skl_metrics.mean_absolute_error)
+
+
+class R2(Score):
+    def compute_score(self, results):
+        return self.from_predicted(results, skl_metrics.r2_score)

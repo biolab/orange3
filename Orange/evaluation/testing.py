@@ -68,7 +68,9 @@ class Results:
     # noinspection PyBroadException
     # noinspection PyNoneFunctionAssignment
     def __init__(self, data=None, nmethods=0, nrows=None, nclasses=None,
-                 store_data=False, store_models=False):
+                 store_data=False, store_models=False, domain=None,
+                 actual=None, row_indices=None,
+                 predicted=None, probabilities=None):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -104,29 +106,66 @@ class Results:
         self.data = data if store_data else None
         self.models = None
         self.folds = None
-        self.row_indices = None
-        self.actual = None
-        self.predicted = None
-        self.probabilities = None
         dtype = np.float32
-        if data:
-            self.domain = data if isinstance(data, Domain) else data.domain
-            if nclasses is None and is_discrete(self.domain.class_var):
-                nclasses = len(self.domain.class_var.values)
-            if nrows is None:
-                nrows = len(data)
-            try:
-                dtype = data.Y.dtype
-            except AttributeError:
-                pass
-        if nrows is not None:
+
+        def set_or_raise(value, exp_values, msg):
+            for exp_value in exp_values:
+                if exp_value is False:
+                    continue
+                if value is None:
+                    value = exp_value
+                elif value != exp_value:
+                    raise ValueError(msg)
+            return value
+
+        domain = self.domain = set_or_raise(
+            domain, [data is not None and data.domain],
+            "mismatching domain")
+        nrows = set_or_raise(
+            nrows, [data is not None and len(data),
+                    actual is not None and len(actual),
+                    row_indices is not None and len(row_indices),
+                    predicted is not None and predicted.shape[1],
+                    probabilities is not None and probabilities.shape[1]],
+            "mismatching number of rows")
+        nclasses = set_or_raise(
+            nclasses, [domain is not None and (len(domain.class_var.values)
+                                               if is_discrete(domain.class_var)
+                                               else None),
+                       probabilities is not None and probabilities.shape[2]],
+            "mismatching number of class values")
+        if nclasses is not None and probabilities is not None:
+            raise ValueError("regression results cannot have 'probabilities'")
+        nmethods = set_or_raise(
+            nmethods, [predicted is not None and predicted.shape[0],
+                       probabilities is not None and probabilities.shape[0]],
+            "mismatching number of methods")
+        try:
+            dtype = data.Y.dtype
+        except AttributeError:  # no data or no Y or not numpy
+            pass
+
+        if actual is not None:
+            self.actual = actual
+        elif nrows is not None:
             self.actual = np.empty(nrows, dtype=dtype)
-            self.row_indices = np.empty(nrows, dtype=np.int32)
-            if nmethods is not None:
-                self.predicted = np.empty((nmethods, nrows), dtype=dtype)
-                if nclasses is not None:
-                    self.probabilities = \
-                        np.empty((nmethods, nrows, nclasses), dtype=np.float32)
+
+        if row_indices is not None:
+            self.row_indices = row_indices
+        elif nrows is not None:
+                self.row_indices = np.empty(nrows, dtype=np.int32)
+
+        if predicted is not None:
+            self.predicted = predicted
+        elif nmethods is not None and nrows is not None:
+            self.predicted = np.empty((nmethods, nrows), dtype=dtype)
+
+        if probabilities is not None:
+            self.probabilities = probabilities
+        elif nmethods is not None and nrows is not None and \
+                nclasses is not None:
+            self.probabilities = \
+                np.empty((nmethods, nrows, nclasses), dtype=np.float32)
 
     def get_fold(self, fold):
         results = Results()
@@ -220,7 +259,7 @@ class LeaveOneOut(Results):
 
         domain = data.domain
         X = data.X.copy()
-        Y = data.Y.copy()
+        Y = data._Y.copy()
         metas = data.metas.copy()
 
         teX, trX = X[:1], X[1:]
