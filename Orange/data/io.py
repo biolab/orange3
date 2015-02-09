@@ -168,7 +168,7 @@ class TabDelimReader:
 
     def reorder_values_array(self, arr, variables):
         for col, var in enumerate(variables):
-            if var.fix_order and len(var.values) < 1000:
+            if getattr(var, "fix_order", False) and len(var.values) < 1000:
                 new_order = var.ordered_values(var.values)
                 if new_order == var.values:
                     continue
@@ -176,11 +176,12 @@ class TabDelimReader:
                 for i, val in enumerate(var.values):
                     bn.replace(arr[:, col], 1000 + i, new_order.index(val))
                 var.values = new_order
-            delattr(var, "fix_order")
+                delattr(var, "fix_order")
 
     def reorder_values(self, table):
         self.reorder_values_array(table.X, table.domain.attributes)
         self.reorder_values_array(table._Y, table.domain.class_vars)
+        self.reorder_values_array(table.metas, table.domain.metas)
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:
