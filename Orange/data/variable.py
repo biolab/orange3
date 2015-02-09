@@ -490,7 +490,7 @@ class DiscreteVariable(Variable):
         return self.name == other.name and self.values == other.values
 
     def __hash__(self):
-        return hash(self.name) ^ hash(self.name)
+        return hash(self.name) ^ hash(tuple(self.values))
 
 
 class StringVariable(Variable):
