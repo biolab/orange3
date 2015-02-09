@@ -81,7 +81,7 @@ def _entropy(D):
 def _gini(D):
     """Gini index of class-distribution matrix"""
     P = D / np.sum(D, axis=0)
-    return sum((np.ones(1 if len(D.shape) == 1 else D.shape[1]) - np.sum(np.square(P), axis=0)) \
+    return sum((np.ones(1 if len(D.shape) == 1 else D.shape[1]) - np.sum(np.square(P), axis=0))
                * 0.5 * np.sum(D, axis=0) / np.sum(D))
 
 
