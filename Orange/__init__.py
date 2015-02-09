@@ -8,7 +8,7 @@ from Orange import data
 
 for mod_name in ['classification', 'clustering', 'distance', 'evaluation',
                  'feature', 'misc', 'regression', 'statistics', 'widgets',
-                 'preprocess']:
+                 'preprocess', 'projection']:
     globals()[mod_name] = LazyModule(mod_name)
 
 del mod_name
