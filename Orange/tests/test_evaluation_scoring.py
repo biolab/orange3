@@ -3,8 +3,7 @@ import unittest
 import numpy as np
 
 import Orange
-from Orange.preprocess import discretization
-from Orange.evaluation import Results, CA, TestOnTrainingData
+from Orange.evaluation import AUC, CA, Results
 
 
 class Scoring_CA_Test(unittest.TestCase):
@@ -40,13 +39,27 @@ class Scoring_CA_Test(unittest.TestCase):
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
         t = Orange.data.Table(x, y)
-        t = discretization.DiscretizeTable(
-            t, method=Orange.preprocess.discretization.EqualWidth(n=3))
-
-        res = TestOnTrainingData(t, [Orange.classification.NaiveBayesLearner()])
+        t = Orange.preprocess.DiscretizeTable(
+            t, method=Orange.preprocess.EqualWidth(n=3))
+        nb = Orange.classification.NaiveBayesLearner()
+        res = Orange.evaluation.TestOnTrainingData(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
 
         t.Y[-20:] = 4 - t.Y[-20:]
-        res = TestOnTrainingData(t, [Orange.classification.NaiveBayesLearner()])
+        res = Orange.evaluation.TestOnTrainingData(t, [nb])
         self.assertGreaterEqual(CA(res)[0], 0.75)
         self.assertLess(CA(res)[0], 1)
+
+
+class Scoring_AUC_Test(unittest.TestCase):
+    def test_tree(self):
+        data = Orange.data.Table('iris')
+        tree = Orange.classification.ClassificationTreeLearner()
+        res = Orange.evaluation.CrossValidation(data, [tree], k=2)
+        self.assertTrue(0.8 < AUC(res)[0] < 1.)
+
+    def test_constant_prob(self):
+        data = Orange.data.Table('iris')
+        maj = Orange.classification.MajorityLearner()
+        res = Orange.evaluation.TestOnTrainingData(data, [maj])
+        self.assertEqual(AUC(res)[0], 0.5)
