@@ -15,8 +15,8 @@ class OWClassificationTree(widget.OWWidget):
                "set_preprocessor")]
 
     outputs = [
-        ("Learner", tree.ClassificationTreeLearner),
-        ("Classification Tree", tree.ClassificationTreeClassifier)
+        ("Learner", tree.TreeLearner),
+        ("Classification Tree", tree.TreeClassifier)
     ]
     want_main_area = False
 
@@ -79,7 +79,7 @@ class OWClassificationTree(widget.OWWidget):
         self.reportData(self.data)
 
     def set_learner(self):
-        self.learner = tree.ClassificationTreeLearner(
+        self.learner = tree.TreeLearner(
             criterion=self.scores[self.attribute_score][1],
             max_depth=self.max_depth,
             min_samples_split=self.min_internal,

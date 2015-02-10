@@ -13,12 +13,6 @@ Naive Bayes
 .. autoclass:: NaiveBayesLearner
    :members:
 
-Classification Tree
--------------------
-
-.. autoclass:: ClassificationTreeLearner
-   :members:
-
 :obj:`Orange.classification.NaiveBayesLearner` is based on
 the `scikit-learn`_ package. Continuous attributes are discretized
 with default discretizer (see TODO), for alternative discretization
@@ -42,3 +36,9 @@ For data sets that include continuous attributes,
 
 .. _`Naive Bayes`: http://en.wikipedia.org/wiki/Naive_Bayes_classifier
 .. _`scikit-learn`: http://scikit-learn.org
+
+Classification Tree
+-------------------
+
+.. autoclass:: TreeLearner
+   :members:
