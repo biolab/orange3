@@ -210,9 +210,10 @@ class WrapperMeta(type):
 
         if docstring is None and skl_wrapped is not None:
             docstring = """
-            A wrapper for `${sklname}`
+            A wrapper for `${sklname}`. The following is the documentation
+            from `scikit-learn <http://scikit-learn.org>`_.
 
-            .. seealso: ${sklname}
+            ${skldoc}
 
         """
 
