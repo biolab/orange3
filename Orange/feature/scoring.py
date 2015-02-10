@@ -23,7 +23,7 @@ class SklScorer:
             raise ValueError("Scoring method %s requires a feature of type %s." %
                              (type(self).__name__, self.featureType.__name__))
         if not isinstance(data.domain.class_var, self.classType):
-            raise ValueError("Scoring method %s requires a class value of type %s." %
+            raise ValueError("Scoring method %s requires a class variable of type %s." %
                              (type(self).__name__, self.classType.__name__))
 
         X = data.X[:, [data.domain.index(feature)]]
