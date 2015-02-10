@@ -215,6 +215,11 @@ class WrapperMeta(type):
 
             ${skldoc}
 
+            Additional Orange parameters:
+
+            preprocessors : list, optional (default="[]")
+                An ordered list of preprocessors applied to data before
+                training or testing.
         """
 
         if docstring is not None and skl_wrapped is not None:
