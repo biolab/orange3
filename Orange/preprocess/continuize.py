@@ -8,18 +8,19 @@ __all__ = ["DomainContinuizer", "MultinomialTreatment"]
 
 class DomainContinuizer:
     MultinomialTreatment = Enum(
-        "NValues", "LowestIsBase", "FrequentIsBase",
-        "Ignore", "IgnoreMulti", "ReportError", "AsOrdinal",
+        "Indicators", "FirstAsBase", "FrequentAsBase",
+        "Remove", "RemoveMultinomial", "ReportError", "AsOrdinal",
         "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
         "NormalizeBySD"
     )
 
-    (NValues, LowestIsBase, FrequentIsBase, Ignore, IgnoreMulti,
+    (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
      ReportError, AsOrdinal, AsNormalizedOrdinal, Leave,
      NormalizeBySpan, NormalizeBySD) = MultinomialTreatment
 
-    def __new__(cls, data=None, zero_based=True, multinomial_treatment=NValues,
-                normalize_continuous=None, transform_class=False):
+    def __new__(cls, data=None, zero_based=True,
+                multinomial_treatment=Indicators, normalize_continuous=None,
+                transform_class=False):
         self = super().__new__(cls)
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
@@ -34,8 +35,8 @@ class DomainContinuizer:
     def __call__(self, data):
         def transform_discrete(var):
             if (len(var.values) < 2 or
-                    treat == self.Ignore or
-                    treat == self.IgnoreMulti and len(var.values) > 2):
+                    treat == self.Remove or
+                    treat == self.RemoveMultinomial and len(var.values) > 2):
                 return []
             if treat == self.AsOrdinal:
                 new_var = ContinuousVariable(var.name)
@@ -53,9 +54,9 @@ class DomainContinuizer:
                 return [new_var]
 
             new_vars = []
-            if treat == self.NValues:
+            if treat == self.Indicators:
                 base = -1
-            elif treat == self.LowestIsBase or treat == self.IgnoreMulti:
+            elif treat == self.FirstAsBase or treat == self.RemoveMultinomial:
                 base = max(var.base_value, 0)
             else:
                 base = dists[var_ptr].modus()
@@ -115,7 +116,7 @@ class DomainContinuizer:
                 isinstance(var, DiscreteVariable) and len(var.values) > 2
                 for var in domain):
             raise ValueError("data has multinomial attributes")
-        needs_discrete = (treat == self.FrequentIsBase and
+        needs_discrete = (treat == self.FrequentAsBase and
                           domain.has_discrete_attributes(transform_class))
         needs_continuous = (not self.normalize_continuous == self.Leave and
                             domain.has_continuous_attributes(transform_class))
