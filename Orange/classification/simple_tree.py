@@ -57,7 +57,7 @@ class SimpleTreeLearner(Learner):
 
     def __init__(self, min_instances=2, max_depth=1024, max_majority=1.0,
                  skip_prob=0.0, bootstrap=False, seed=42):
-        '''
+        """
         Parameters
         ----------
 
@@ -79,7 +79,7 @@ class SimpleTreeLearner(Learner):
         bootstrap : Bootstrap dataset.
 
         seed : Random seed.
-        '''
+        """
 
         self.min_instances = min_instances
         self.max_depth = max_depth
