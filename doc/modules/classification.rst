@@ -4,16 +4,21 @@ Classification (``classification``)
 
 .. automodule:: Orange.classification
 
-.. toctree::
-   :maxdepth: 2
+Logistic Regression
+-------------------
 
-   classification.majority
-   classification.svm
 
 Naive Bayes
 -----------
-
 .. index:: Naive Bayes classifier
+.. autoclass:: NaiveBayesLearner
+   :members:
+
+Classification Tree
+-------------------
+
+.. autoclass:: ClassificationTreeLearner
+   :members:
 
 :obj:`Orange.classification.NaiveBayesLearner` is based on
 the `scikit-learn`_ package. Continuous attributes are discretized
