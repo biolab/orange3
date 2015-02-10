@@ -67,8 +67,10 @@ class PCAModel(ProjectionModel):
 
         domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
-            class_vars=data.domain.class_vars)
-        return Orange.data.Table(domain, Xt, data.Y)
+            data.domain.class_vars, data.domain.metas)
+        transformed = Orange.data.Table.from_numpy(
+                domain, Xt, Y=data.Y, metas=data.metas)
+        return transformed
 
 
 class Projector:
