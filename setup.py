@@ -178,7 +178,6 @@ PACKAGES = [
     "Orange.data.sql",
     "Orange.distance",
     "Orange.evaluation",
-    "Orange.feature",
     "Orange.misc",
     "Orange.regression",
     "Orange.statistics",
