@@ -1,61 +1,60 @@
 import numpy as np
-from sklearn.feature_selection import chi2 as skl_chi2
-from sklearn.feature_selection import f_classif as skl_f_classif
-from sklearn.feature_selection import f_regression as skl_f_regression
+from sklearn import feature_selection as skl_fss
 
 from Orange.statistics import contingency, distribution
 from Orange.data.variable import DiscreteVariable, ContinuousVariable
 
 
 class SklScorer:
+    featureType = None
+    classType = None
+
+    def __new__(cls, *args):
+        self = super().__new__(cls)
+        if args:
+            return self(*args)
+        else:
+            return self
 
     def __call__(self, feature, data):
         if not data.domain.class_var:
             raise ValueError("Data with class labels required.")
+        if not isinstance(data.domain[feature], self.featureType):
+            raise ValueError("Scoring method %s requires a feature of type %s." %
+                             (type(self).__name__, self.featureType.__name__))
+        if not isinstance(data.domain.class_var, self.classType):
+            raise ValueError("Scoring method %s requires a class value of type %s." %
+                             (type(self).__name__, self.classType.__name__))
+
         X = data.X[:, [data.domain.index(feature)]]
         y = data.Y.flatten()
         return self.score(X, y)
 
 
 class Chi2(SklScorer):
-
-    def __call__(self, feature, data):
-        if not isinstance(data.domain[feature], DiscreteVariable):
-            raise ValueError("Discrete feature required.")
-        if not isinstance(data.domain.class_var, DiscreteVariable):
-            raise ValueError("Data with discrete class labels required.")
-        return super().__call__(feature, data)
+    featureType = DiscreteVariable
+    classType = DiscreteVariable
 
     def score(self, X, y):
-        f, p = skl_chi2(X, y)
+        f, p = skl_fss.chi2(X, y)
         return f[0]
 
 
 class ANOVA(SklScorer):
-
-    def __call__(self, feature, data):
-        if not isinstance(data.domain[feature], ContinuousVariable):
-            raise ValueError("Continuous feature required.")
-        if not isinstance(data.domain.class_var, DiscreteVariable):
-            raise ValueError("Data with discrete class labels required.")
-        return super().__call__(feature, data)
+    featureType = ContinuousVariable
+    classType = DiscreteVariable
 
     def score(self, X, y):
-        f, p = skl_f_classif(X, y)
+        f, p = skl_fss.f_classif(X, y)
         return f[0]
 
 
 class UnivariateLinearRegression(SklScorer):
-
-    def __call__(self, feature, data):
-        if not isinstance(data.domain[feature], ContinuousVariable):
-            raise ValueError("Continuous feature required.")
-        if not isinstance(data.domain.class_var, ContinuousVariable):
-            raise ValueError("Regression problem required.")
-        return super().__call__(feature, data)
+    featureType = ContinuousVariable
+    classType = ContinuousVariable
 
     def score(self, X, y):
-        f, p = skl_f_regression(X, y)
+        f, p = skl_fss.f_regression(X, y)
         return f[0]
 
 

@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 
-import Orange
 from Orange.data import Table, Domain
 from Orange.feature import scoring
 from Orange import preprocess
@@ -46,13 +45,19 @@ class FeatureScoringTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 scorer(0, self.housing)
 
+        with self.assertRaises(ValueError):
+            scoring.Chi2(2, self.housing)
+        with self.assertRaises(ValueError):
+            scoring.ANOVA(2, self.housing)
+        scoring.UnivariateLinearRegression(2, self.housing)
+
     def test_chi2(self):
         nrows, ncols = 500, 5
         X = np.random.randint(4, size=(nrows, ncols))
         y = 10 + (-3*X[:, 1] + X[:, 3]) // 2
         data = preprocess.DiscretizeTable(Table(X, y))
         scorer = scoring.Chi2()
-        sc = [scorer(a, data) for a in range(5)]
+        sc = [scorer(a, data) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
 
     def test_anova(self):
@@ -61,7 +66,7 @@ class FeatureScoringTest(unittest.TestCase):
         y = 4 + (-3*X[:, 1] + X[:, 3]) // 2
         data = Table(X, y)
         scorer = scoring.ANOVA()
-        sc = [scorer(a, data) for a in range(5)]
+        sc = [scorer(a, data) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
 
     def test_regression(self):
@@ -70,5 +75,5 @@ class FeatureScoringTest(unittest.TestCase):
         y = (-3*X[:, 1] + X[:, 3]) / 2
         data = Table(X, y)
         scorer = scoring.UnivariateLinearRegression()
-        sc = [scorer(a, data) for a in range(5)]
+        sc = [scorer(a, data) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
