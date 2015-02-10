@@ -99,7 +99,7 @@ class RowInstance(Instance):
     def _str(self, limit):
         def sp_values(matrix, variables):
             if not sp.issparse(matrix):
-                return Instance.str_values(matrix[row], variables)
+                return Instance.str_values(matrix[row], variables, limit)
             begptr, endptr = matrix.indptr[row:row + 2]
             rendptr = endptr if not limit else min(endptr, begptr + 5)
             variables = [variables[var]
