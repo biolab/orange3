@@ -11,20 +11,20 @@ Mean (``mean``)
 data instances. Its accuracy can serve as a baseline for other regression
 models.
 
-The model fitter (:class:`MeanFitter`) computes the mean of the given data or
+The model learner (:class:`MeanLearner`) computes the mean of the given data or
 distribution. The model is stored as an instance of :class:`MeanModel`. ::
 
     >>> from Orange.data import Table
-    >>> from Orange.regression.mean import MeanFitter
-    >>> mpg = Table('auto-mpg')
-    >>> fitter = MeanFitter()
-    >>> model = fitter(mpg)
+    >>> from Orange.regression import MeanLearner
+    >>> data = Table('auto-mpg')
+    >>> learner = MeanLearner()
+    >>> model = learner(data)
     >>> print(model)
     MeanModel(23.51457286432161)
-    >>> model(mpg[:4])
+    >>> model(data[:4])
     array([ 23.51457286,  23.51457286,  23.51457286,  23.51457286])
 
-.. autoclass:: MeanFitter
+.. autoclass:: MeanLearner
    :members:
 
 .. autoclass:: MeanModel
