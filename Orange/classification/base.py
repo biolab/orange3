@@ -230,6 +230,8 @@ class WrapperMeta(type):
         # a higher level and included in __all__, like ipython's help)
         sklname = "{}.{}".format(module.__name__, sklclass.__name__)
         skldoc = inspect.getdoc(sklclass)
+        if "Attributes\n---------" in skldoc:
+            skldoc = skldoc[:skldoc.index('Attributes\n---------')]
 
         mapping = {"sklname": sklname}
         if skldoc is not None:
