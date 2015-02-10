@@ -39,4 +39,4 @@ class KMeansModel(ProjectionModel):
             domain = Orange.data.Domain([c])
             return Orange.data.Table(domain, atleast_2d(self.proj.predict(data._x)).astype(int))
         else:
-            return atleast_2d(self.proj.predict(data)).reshape((len(data), 1))
+            return self.proj.predict(data).reshape((len(data), 1))
