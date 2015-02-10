@@ -15,7 +15,7 @@ class NaiveBayesLearner(Learner):
 
     Parameters
     ----------
-    preprocessor : list, optional (default="[Orange.preprocess.Discretize]")
+    preprocessors : list, optional (default="[Orange.preprocess.Discretize]")
         An ordered list of preprocessors applied to data before training
         or testing.
     """
