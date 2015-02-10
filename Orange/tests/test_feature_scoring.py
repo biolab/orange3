@@ -55,7 +55,7 @@ class FeatureScoringTest(unittest.TestCase):
         sc = [scorer(a, data) for a in range(5)]
         self.assertTrue(np.argmax(sc) == 1)
 
-    def test_annova(self):
+    def test_anova(self):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
         y = 4 + (-3*X[:, 1] + X[:, 3]) // 2
