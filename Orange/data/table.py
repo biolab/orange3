@@ -467,9 +467,13 @@ class Table(MutableSequence, Storage):
     @classmethod
     def from_url(cls, url):
         name = os.path.basename(urllib.parse.urlparse(url)[2])
-        f = tempfile.NamedTemporaryFile(suffix=name)
-        urllib.request.urlretrieve(url, f.name)
-        return cls.from_file(f.name)
+        f = tempfile.NamedTemporaryFile(suffix=name, delete=False)
+        fname = f.name
+        f.close()
+        urllib.request.urlretrieve(url, fname)
+        data = cls.from_file(f.name)
+        os.remove(fname)
+        return data
 
     # Helper function for __setitem__ and insert:
     # Set the row of table data matrices
