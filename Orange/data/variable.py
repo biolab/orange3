@@ -136,6 +136,14 @@ class Variable:
         for tpe in cls._variable_types:
             tpe._clear_cache()
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
 
 class ContinuousVariable(Variable):
     """
@@ -475,6 +483,14 @@ class DiscreteVariable(Variable):
             if values == set(presorted):
                 return presorted
         return sorted(values)
+
+    def __eq__(self, other):
+        if not isinstance(other, DiscreteVariable):
+            return False
+        return self.name == other.name and self.values == other.values
+
+    def __hash__(self):
+        return hash(self.name) ^ hash(tuple(self.values))
 
 
 class StringVariable(Variable):

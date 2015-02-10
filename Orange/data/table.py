@@ -295,8 +295,12 @@ class Table(MutableSequence, Storage):
         self.domain = domain
         conversion = domain.get_conversion(source.domain)
         self.X = get_columns(row_indices, conversion.attributes, n_rows)
+        if self.X.ndim == 1:
+            self.X = self.X.reshape(-1, len(self.domain.attributes))
         self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
         self.metas = get_columns(row_indices, conversion.metas, n_rows)
+        if self.metas.ndim == 1:
+            self.metas = self.metas.reshape(-1, len(self.domain.metas))
         self.W = np.array(source.W[row_indices])
         self.name = getattr(source, 'name', '')
         self.ids = np.array(source.ids[row_indices])
@@ -317,8 +321,12 @@ class Table(MutableSequence, Storage):
         self = cls.__new__(Table)
         self.domain = source.domain
         self.X = source.X[row_indices]
+        if self.X.ndim == 1:
+            self.X = self.X.reshape(-1, len(self.domain.attributes))
         self.Y = source._Y[row_indices]
         self.metas = source.metas[row_indices]
+        if self.metas.ndim == 1:
+            self.metas = self.metas.reshape(-1, len(self.domain.metas))
         self.W = source.W[row_indices]
         self.name = getattr(source, 'name', '')
         self.ids = np.array(source.ids[row_indices])

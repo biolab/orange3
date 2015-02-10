@@ -3,6 +3,8 @@ from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.statistics import distribution
 from .transformation import Identity, Indicator, Indicator_1, Normalizer
 
+__all__ = ["DomainContinuizer", "MultinomialTreatment"]
+
 
 class DomainContinuizer:
     MultinomialTreatment = Enum(

@@ -11,7 +11,7 @@ from Orange.testing import create_pickling_tests
 
 age = ContinuousVariable(name="AGE")
 gender = DiscreteVariable(name="Gender", values=["M", "F"])
-incomeA = ContinuousVariable(name="AGE")
+incomeA = ContinuousVariable(name="incomeA")
 income = ContinuousVariable(name="income")
 education = DiscreteVariable(name="education", values=["GS", "HS", "C"])
 ssn = StringVariable(name="SSN")
@@ -385,6 +385,29 @@ class TestDomainInit(unittest.TestCase):
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
         self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
+
+    def test_different_domains_with_same_attributes_are_equal(self):
+        domain1 = Domain([])
+        domain2 = Domain([])
+        self.assertEqual(domain1, domain2)
+
+        domain1.attributes = (ContinuousVariable('var1'),)
+        self.assertNotEqual(domain1, domain2)
+
+        domain2.attributes = (ContinuousVariable('var1'),)
+        self.assertEqual(domain1, domain2)
+
+        domain1.class_vars = (ContinuousVariable('var1'),)
+        self.assertNotEqual(domain1, domain2)
+
+        domain2.class_vars = (ContinuousVariable('var1'),)
+        self.assertEqual(domain1, domain2)
+
+        domain1._metas = (ContinuousVariable('var1'),)
+        self.assertNotEqual(domain1, domain2)
+
+        domain2._metas = (ContinuousVariable('var1'),)
+        self.assertEqual(domain1, domain2)
 
 
 if __name__ == "__main__":
