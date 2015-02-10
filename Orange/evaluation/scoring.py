@@ -45,8 +45,7 @@ class Score:
         if not (self.separate_folds and results.folds):
             return self.compute_score(results, **kwargs)
 
-        scores = self.scores_by_folds(results, **kwargs)
-        return self.average(scores)
+        return self.scores_by_folds(results, **kwargs)
 
     def average(self, scores):
         if self.is_scalar:
@@ -58,16 +57,24 @@ class Score:
         nmodels = len(results.predicted)
         if self.is_scalar:
             scores = np.empty((nfolds, nmodels), dtype=np.float64)
+            fold_weights = np.empty((nfolds, nmodels), dtype=np.float64)
         else:
             scores = [None] * nfolds
+            fold_weights = [None] * nfolds
+        
         for fold in range(nfolds):
             fold_results = results.get_fold(fold)
             scores[fold] = self.compute_score(fold_results, **kwargs)
+            fold_weights[fold] = calculate_fold_weights(fold_results)
         
         if any(np.isnan(scores)):
+            fold_weights = np.array(fold_weights[~np.isnan(scores)]).reshape((-1,nmodels))
             scores = np.array(scores[~np.isnan(scores)]).reshape((-1,nmodels))
-            
-        return scores
+        
+        fsum = np.sum(fold_weights)
+        if fsum > 0:
+            fold_weights /= fsum
+        return np.array([np.sum(scores * fold_weights)])
 
     def compute_score(self, results):
         return NotImplementedError
