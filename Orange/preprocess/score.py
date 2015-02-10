@@ -9,8 +9,8 @@ __all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
 
 
 class SklScorer:
-    featureType = None
-    classType = None
+    feature_type = None
+    class_type = None
 
     def __new__(cls, *args):
         self = super().__new__(cls)
@@ -22,12 +22,12 @@ class SklScorer:
     def __call__(self, feature, data):
         if not data.domain.class_var:
             raise ValueError("Data with class labels required.")
-        if not isinstance(data.domain[feature], self.featureType):
+        if not isinstance(data.domain[feature], self.feature_type):
             raise ValueError("Scoring method %s requires a feature of type %s." %
-                             (type(self).__name__, self.featureType.__name__))
-        if not isinstance(data.domain.class_var, self.classType):
+                             (type(self).__name__, self.feature_type.__name__))
+        if not isinstance(data.domain.class_var, self.class_type):
             raise ValueError("Scoring method %s requires a class variable of type %s." %
-                             (type(self).__name__, self.classType.__name__))
+                             (type(self).__name__, self.class_type.__name__))
 
         X = data.X[:, [data.domain.index(feature)]]
         y = data.Y.flatten()
@@ -35,8 +35,8 @@ class SklScorer:
 
 
 class Chi2(SklScorer):
-    featureType = DiscreteVariable
-    classType = DiscreteVariable
+    feature_type = DiscreteVariable
+    class_type = DiscreteVariable
 
     def score(self, X, y):
         f, p = skl_fss.chi2(X, y)
@@ -44,8 +44,8 @@ class Chi2(SklScorer):
 
 
 class ANOVA(SklScorer):
-    featureType = ContinuousVariable
-    classType = DiscreteVariable
+    feature_type = ContinuousVariable
+    class_type = DiscreteVariable
 
     def score(self, X, y):
         f, p = skl_fss.f_classif(X, y)
@@ -53,8 +53,8 @@ class ANOVA(SklScorer):
 
 
 class UnivariateLinearRegression(SklScorer):
-    featureType = ContinuousVariable
-    classType = ContinuousVariable
+    feature_type = ContinuousVariable
+    class_type = ContinuousVariable
 
     def score(self, X, y):
         f, p = skl_fss.f_regression(X, y)
@@ -62,6 +62,9 @@ class UnivariateLinearRegression(SklScorer):
 
 
 class ClassificationScorer:
+    feature_type = DiscreteVariable
+    class_type = DiscreteVariable
+
     def __new__(cls, *args):
         self = super().__new__(cls)
         if args:
