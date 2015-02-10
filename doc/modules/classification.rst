@@ -7,7 +7,6 @@ Classification (``classification``)
 Logistic Regression
 -------------------
 
-
 Naive Bayes
 -----------
 .. index:: Naive Bayes classifier

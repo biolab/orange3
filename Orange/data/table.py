@@ -434,7 +434,7 @@ class Table(MutableSequence, Storage):
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
             if not ext:
-                for ext in [".tab", ".txt", ".basket"]:
+                for ext in [".tab", ".txt", ".basket", ".xlsx"]:
                     if os.path.exists(absolute_filename + ext):
                         absolute_filename += ext
                         break
@@ -449,6 +449,8 @@ class Table(MutableSequence, Storage):
             data = io.TabDelimReader().read_file(absolute_filename, cls)
         elif ext == ".txt":
             data = io.TxtReader().read_file(absolute_filename, cls)
+        elif ext == ".xlsx":
+            data = io.ExcelReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
             data = io.BasketReader().read_file(absolute_filename, cls)
         else:

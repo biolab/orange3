@@ -3,7 +3,7 @@ import unittest
 from numpy import array
 
 import Orange.classification.naive_bayes as nb
-from Orange.preprocess.discretization import DiscretizeTable
+from Orange.preprocess.discretize import DiscretizeTable
 from Orange.data.sql.table import SqlTable
 from Orange.data import Domain
 from Orange.data.variable import DiscreteVariable

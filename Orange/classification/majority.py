@@ -58,4 +58,4 @@ class ConstantModel(Model):
         return tile(self.dist, (len(X), 1))
 
     def __str__(self):
-        return 'ConstantClassifier {}'.format(self.dist)
+        return 'ConstantModel {}'.format(self.dist)

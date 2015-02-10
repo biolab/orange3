@@ -12,34 +12,34 @@ that is, the accuracy of a model which classifies all instances
 to the majority class.
 
 Fitting a majority model consists of computing the class distribution
-nd its modus. The model is represented as an instance of
-:obj:`Orange.classification.majority.ConstantClassifier`, which
+and its modus. The model is represented as an instance of
+:obj:`Orange.classification.ConstantModel`, which
 classifies all instances to the majority class.
 
-Accuracy of majority model servers as a baseline when evaluating other
+Accuracy of majority model serves as a baseline when evaluating other
 classification models.
 
 
 Example
 =======
 
-    >>> from Orange.classificiation.majority import MajorityFitter
-    >>> mpg = Orange.data.Table('auto-mpg')
-    >>> majority = MajorityFitter()
-    >>> model = majority(mpg[30:110])
+    >>> import Orange
+    >>> data = Orange.data.Table('titanic')
+    >>> majority = Orange.classification.MajorityLearner()
+    >>> model = majority(data)
     >>> print(model)
-    ConstantClassifier [ 0.25   0.625  0.125]
-    >>> iris[0].get_class()
-    Value('iris', Iris-setosa)
-    >>> model(iris[0])
-    Value('iris', Iris-versicolor)
+    ConstantModel [ 0.67696502  0.32303498]
+    >>> data[0].get_class()
+    Value('survived', yes)
+    >>> model(data[0])
+    Value('survived', no)
 
 
-MajorityFitter and ConstantClassifier
--------------------------------------
+MajorityLearner and ConstantModel
+---------------------------------
 
-.. autoclass:: MajorityFitter
+.. autoclass:: MajorityLearner
    :members:
 
-.. autoclass:: ConstantClassifier
+.. autoclass:: ConstantModel
    :members:

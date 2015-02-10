@@ -1,6 +1,64 @@
 import numpy as np
+from sklearn import feature_selection as skl_fss
+
 from Orange.statistics import contingency, distribution
-from Orange.data.variable import DiscreteVariable
+from Orange.data.variable import DiscreteVariable, ContinuousVariable
+
+__all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
+           "InfoGain", "GainRatio", "Gini"]
+
+
+class SklScorer:
+    featureType = None
+    classType = None
+
+    def __new__(cls, *args):
+        self = super().__new__(cls)
+        if args:
+            return self(*args)
+        else:
+            return self
+
+    def __call__(self, feature, data):
+        if not data.domain.class_var:
+            raise ValueError("Data with class labels required.")
+        if not isinstance(data.domain[feature], self.featureType):
+            raise ValueError("Scoring method %s requires a feature of type %s." %
+                             (type(self).__name__, self.featureType.__name__))
+        if not isinstance(data.domain.class_var, self.classType):
+            raise ValueError("Scoring method %s requires a class variable of type %s." %
+                             (type(self).__name__, self.classType.__name__))
+
+        X = data.X[:, [data.domain.index(feature)]]
+        y = data.Y.flatten()
+        return self.score(X, y)
+
+
+class Chi2(SklScorer):
+    featureType = DiscreteVariable
+    classType = DiscreteVariable
+
+    def score(self, X, y):
+        f, p = skl_fss.chi2(X, y)
+        return f[0]
+
+
+class ANOVA(SklScorer):
+    featureType = ContinuousVariable
+    classType = DiscreteVariable
+
+    def score(self, X, y):
+        f, p = skl_fss.f_classif(X, y)
+        return f[0]
+
+
+class UnivariateLinearRegression(SklScorer):
+    featureType = ContinuousVariable
+    classType = ContinuousVariable
+
+    def score(self, X, y):
+        f, p = skl_fss.f_regression(X, y)
+        return f[0]
 
 
 class ClassificationScorer:
@@ -31,7 +89,7 @@ def _entropy(D):
 def _gini(D):
     """Gini index of class-distribution matrix"""
     P = D / np.sum(D, axis=0)
-    return sum((np.ones(1 if len(D.shape) == 1 else D.shape[1]) - np.sum(np.square(P), axis=0)) \
+    return sum((np.ones(1 if len(D.shape) == 1 else D.shape[1]) - np.sum(np.square(P), axis=0))
                * 0.5 * np.sum(D, axis=0) / np.sum(D))
 
 

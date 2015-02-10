@@ -1,5 +1,3 @@
-# Author: Alexandre Gramfort <alexandre.gramfort@inria.fr>
-# License: BSD Style.
 import os
 
 import numpy
@@ -12,13 +10,13 @@ def configuration(parent_package='', top_path=None):
     if os.name == 'posix':
         libraries.append('m')
 
-    config = Configuration('preprocess', parent_package, top_path)
-    config.add_extension('_discretize',
-                         sources=['_discretize.c'],
-                         include_dirs=[numpy.get_include()],
+    config = Configuration('classification', parent_package, top_path)
+    config.add_extension('_simple_tree',
+                         sources=['_simple_tree.c'],
+                         include_dirs=[],
                          libraries=libraries)
-
     return config
+
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup

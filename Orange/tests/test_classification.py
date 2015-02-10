@@ -182,7 +182,10 @@ class LearnerAccessibility(unittest.TestCase):
             prefix="Orange.classification.",
             onerror=lambda x: None)
         for importer, modname, ispkg in classification_modules:
-            module = pkgutil.importlib.import_module(modname)
+            try:
+                module = pkgutil.importlib.import_module(modname)
+            except ImportError:
+                continue
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
                 if issubclass(class_, Learner):
