@@ -9,6 +9,8 @@ Classification (``classification``)
 
    classification.majority
    classification.svm
+   classification.simple_tree
+   classification.simple_random_forest
 
 Naive Bayes
 -----------
