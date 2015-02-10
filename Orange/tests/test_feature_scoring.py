@@ -4,13 +4,14 @@ import numpy as np
 
 from Orange.data import Table, Domain
 from Orange.feature import scoring
+from Orange import preprocess
 
 
 class FeatureScoringTest(unittest.TestCase):
 
     def setUp(self):
-        self.zoo = Table("zoo")
-        self.housing = Table("housing")
+        self.zoo = Table("zoo")  # disc. features, disc. class
+        self.housing = Table("housing")  # cont. features, cont. class
 
     def test_info_gain(self):
         scorer = scoring.InfoGain()
@@ -31,7 +32,8 @@ class FeatureScoringTest(unittest.TestCase):
                                        correct, decimal=5)
 
     def test_classless(self):
-        classless = Table(Domain(self.zoo.domain.attributes), self.zoo[:, 0:-1])
+        classless = Table(Domain(self.zoo.domain.attributes),
+                          self.zoo[:, 0:-1])
         scorers = [scoring.Gini(), scoring.InfoGain(), scoring.GainRatio()]
         for scorer in scorers:
             with self.assertRaises(ValueError):
@@ -42,3 +44,36 @@ class FeatureScoringTest(unittest.TestCase):
         for scorer in scorers:
             with self.assertRaises(ValueError):
                 scorer(0, self.housing)
+
+        with self.assertRaises(ValueError):
+            scoring.Chi2(2, self.housing)
+        with self.assertRaises(ValueError):
+            scoring.ANOVA(2, self.housing)
+        scoring.UnivariateLinearRegression(2, self.housing)
+
+    def test_chi2(self):
+        nrows, ncols = 500, 5
+        X = np.random.randint(4, size=(nrows, ncols))
+        y = 10 + (-3*X[:, 1] + X[:, 3]) // 2
+        data = preprocess.DiscretizeTable(Table(X, y))
+        scorer = scoring.Chi2()
+        sc = [scorer(a, data) for a in range(ncols)]
+        self.assertTrue(np.argmax(sc) == 1)
+
+    def test_anova(self):
+        nrows, ncols = 500, 5
+        X = np.random.rand(nrows, ncols)
+        y = 4 + (-3*X[:, 1] + X[:, 3]) // 2
+        data = Table(X, y)
+        scorer = scoring.ANOVA()
+        sc = [scorer(a, data) for a in range(ncols)]
+        self.assertTrue(np.argmax(sc) == 1)
+
+    def test_regression(self):
+        nrows, ncols = 500, 5
+        X = np.random.rand(nrows, ncols)
+        y = (-3*X[:, 1] + X[:, 3]) / 2
+        data = Table(X, y)
+        scorer = scoring.UnivariateLinearRegression()
+        sc = [scorer(a, data) for a in range(ncols)]
+        self.assertTrue(np.argmax(sc) == 1)
