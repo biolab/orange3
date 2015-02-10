@@ -63,3 +63,13 @@ class Scoring_AUC_Test(unittest.TestCase):
         maj = Orange.classification.MajorityLearner()
         res = Orange.evaluation.TestOnTrainingData(data, [maj])
         self.assertEqual(AUC(res)[0], 0.5)
+
+
+class Scoring_CD_Test(unittest.TestCase):
+    def test_cd_score(self):
+        avranks = [1.9, 3.2, 2.8, 3.3]
+        cd = Orange.evaluation.scoring.compute_CD(avranks, 30)
+        np.testing.assert_almost_equal(cd, 0.856344)
+
+        cd = Orange.evaluation.scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
+        np.testing.assert_almost_equal(cd, 0.798)
