@@ -3,8 +3,8 @@ import platform
 import ctypes as ct
 
 import numpy as np
-
-import Orange
+from Orange.classification import Learner, Model
+from Orange.data import DiscreteVariable, ContinuousVariable
 
 __all__ = ['SimpleTreeLearner']
 
@@ -53,7 +53,7 @@ class SimpleTreeNode:
     pass
 
 
-class SimpleTreeLearner(Orange.classification.base.Learner):
+class SimpleTreeLearner(Learner):
 
     def __init__(self, min_instances=2, max_depth=1024, max_majority=1.0,
                  skip_prob=0.0, bootstrap=False, seed=42):
@@ -92,7 +92,7 @@ class SimpleTreeLearner(Orange.classification.base.Learner):
         return SimpleTreeModel(self, data)
 
 
-class SimpleTreeModel(Orange.classification.base.Model):
+class SimpleTreeModel(Model):
 
     def __init__(self, learner, data):
         self.num_attrs = data.X.shape[1]
@@ -101,10 +101,10 @@ class SimpleTreeModel(Orange.classification.base.Model):
             n_cls = len(data.domain.class_vars)
             raise ValueError("Number of classes should be 1: {}".format(n_cls))
 
-        if isinstance(data.domain.class_var, Orange.data.DiscreteVariable):
+        if isinstance(data.domain.class_var, DiscreteVariable):
             self.type = Classification
             self.cls_vals = len(data.domain.class_var.values)
-        elif isinstance(data.domain.class_var, Orange.data.ContinuousVariable):
+        elif isinstance(data.domain.class_var, ContinuousVariable):
             self.type = Regression
             self.cls_vals = 0
         else:
@@ -123,10 +123,10 @@ class SimpleTreeModel(Orange.classification.base.Model):
         attr_vals = []
         domain = []
         for attr in data.domain.attributes:
-            if isinstance(attr, Orange.data.DiscreteVariable):
+            if isinstance(attr, DiscreteVariable):
                 attr_vals.append(len(attr.values))
                 domain.append(IntVar)
-            elif isinstance(attr, Orange.data.ContinuousVariable):
+            elif isinstance(attr, ContinuousVariable):
                 attr_vals.append(0)
                 domain.append(FloatVar)
             else:
