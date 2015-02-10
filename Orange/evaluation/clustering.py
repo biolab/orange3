@@ -97,18 +97,3 @@ class ClusteringEvaluation(ClusteringResults):
 
                 labels = model(data)
                 self.predicted[i, k, :] = labels.X.flatten()
-
-
-if __name__ == "__main__":
-    import Orange
-    from Orange.clustering.kmeans import KMeans
-    table = Orange.data.Table('iris')
-    kmeans = KMeans()
-    c = kmeans(table)
-    table = table
-    p = c(table)
-    cr = ClusteringEvaluation(table, learners=[KMeans(n_clusters=2), KMeans(n_clusters=3), KMeans(n_clusters=5)],  k=3)
-    s = Silhouette(cr)
-    a = AdjustedMutualInfoScore(cr)
-    print(s)
-    print(a)
