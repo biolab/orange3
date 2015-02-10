@@ -6,16 +6,14 @@ Rank (score) features for prediction.
 
 """
 
-
 from collections import namedtuple
 
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import Orange
-from Orange.feature import scoring
-import Orange.preprocess.discretization
-
+from Orange.preprocess import score
+import Orange.preprocess.discretize
 from Orange.widgets import widget, settings, gui
 
 
@@ -67,18 +65,18 @@ class score_meta(_score_meta):
 # Default scores.
 SCORES = [
     score_meta(
-        "Information Gain", "Inf. gain", scoring.InfoGain,
+        "Information Gain", "Inf. gain", score.InfoGain,
         supports_regression=False,
         supports_classification=True,
         handles_continuous=False,
         handles_discrete=True),
     score_meta(
-        "Gain Ratio", "Gain Ratio", scoring.GainRatio,
+        "Gain Ratio", "Gain Ratio", score.GainRatio,
         supports_regression=False,
         handles_continuous=False,
         handles_discrete=True),
     score_meta(
-        "Gini Gain", "Gini", scoring.Gini,
+        "Gini Gain", "Gini", score.Gini,
         supports_regression=False,
         supports_classification=True,
         handles_continuous=False),
@@ -427,7 +425,7 @@ class OWRank(widget.OWWidget):
 
     def getDiscretizedData(self):
         if not self.discretizedData:
-            discretizer = Orange.preprocess.discretization.EqualFreq(n=4)
+            discretizer = Orange.preprocess.discretize.EqualFreq(n=4)
             contAttrs = [attr for attr in self.data.domain.attributes
                          if is_continuous(attr)]
             at = []

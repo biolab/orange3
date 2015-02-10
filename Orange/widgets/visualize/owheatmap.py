@@ -14,7 +14,7 @@ from PyQt4.QtCore import Qt, QRectF, QPointF
 import Orange.data
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import contingency
-from Orange.preprocess.discretization import EqualWidth, Discretizer
+from Orange.preprocess.discretize import EqualWidth, Discretizer
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette

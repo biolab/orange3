@@ -4,7 +4,7 @@ from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from .transformation import ColumnTransformation
-from . import _discretization
+from . import _discretize
 
 __all__ = ["Discretizer", "EqualFreq", "EqualWidth", "EntropyMDL",
            "DiscretizeTable"]
@@ -92,7 +92,7 @@ class EqualFreq(Discretization):
                 points = sorted(set(cur.fetchone()[0]))
         else:
             d = distribution.get_distribution(data, attribute)
-            points = _discretization.split_eq_freq(d, n=self.n)
+            points = _discretize.split_eq_freq(d, n=self.n)
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
 
@@ -249,7 +249,7 @@ class EntropyMDL(Discretization):
         (one per each row).
         """
         D = cls._normalize(D)
-        return _discretization.entropy_normalized1(D)
+        return _discretize.entropy_normalized1(D)
 
     @classmethod
     def _entropy2(cls, D):
@@ -258,7 +258,7 @@ class EntropyMDL(Discretization):
         (one per each row).
         """
         D = cls._normalize(D, axis=1)
-        return _discretization.entropy_normalized2(D)
+        return _discretize.entropy_normalized2(D)
 
     @classmethod
     def _entropy_cuts_sorted(cls, CS):

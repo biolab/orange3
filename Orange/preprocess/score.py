@@ -4,6 +4,9 @@ from sklearn import feature_selection as skl_fss
 from Orange.statistics import contingency, distribution
 from Orange.data.variable import DiscreteVariable, ContinuousVariable
 
+__all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
+           "InfoGain", "GainRatio", "Gini"]
+
 
 class SklScorer:
     featureType = None

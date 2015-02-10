@@ -13,8 +13,8 @@ def configuration(parent_package='', top_path=None):
         libraries.append('m')
 
     config = Configuration('preprocess', parent_package, top_path)
-    config.add_extension('_discretization',
-                         sources=['_discretization.c'],
+    config.add_extension('_discretize',
+                         sources=['_discretize.c'],
                          include_dirs=[numpy.get_include()],
                          libraries=libraries)
 
