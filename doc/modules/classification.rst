@@ -4,19 +4,64 @@ Classification (``classification``)
 
 .. automodule:: Orange.classification
 
+
+.. index:: logistic regression
+   pair: classification; logistic regression
+
 Logistic Regression
 -------------------
+.. autoclass:: LogisticRegressionLearner
+   :members:
+
+
+
+.. index:: random forest
+   pair: classification; random forest
+
+Random Forest
+-------------
+.. autoclass:: RandomForestLearner
+   :members:
+
+
+
+.. index:: random forest (simple)
+   pair: classification; simple random forest
+
+Simple Random Forest
+--------------------
+
+.. autoclass:: SimpleRandomForestLearner
+   :members:
+
+
+
+.. index:: softmax regression classifier
+   pair: classification; softmax regression
+
+Softmax Regression Classifier
+-----------------------------
+
+.. autoclass:: SoftmaxRegressionLearner
+   :members:
+
+
+.. index:: k-nearest neighbors classifier
+   pair: classification; k-nearest neighbors
+
+k-Nearest Neighbors
+-------------------
+.. autoclass:: KNNLearner
+   :members:
+
+
+.. index:: naive Bayes classifier
+   pair: classification; naive Bayes
 
 Naive Bayes
 -----------
-.. index:: Naive Bayes classifier
 .. autoclass:: NaiveBayesLearner
    :members:
-
-:obj:`Orange.classification.NaiveBayesLearner` is based on
-the `scikit-learn`_ package. Continuous attributes are discretized
-with default discretizer (see TODO), for alternative discretization
-technique use discretization preprocessor.
 
 The following code loads lenses data set (four discrete attributes and discrete
 class), constructs naive Bayesian learner, uses it on the entire data set
@@ -37,8 +82,68 @@ For data sets that include continuous attributes,
 .. _`Naive Bayes`: http://en.wikipedia.org/wiki/Naive_Bayes_classifier
 .. _`scikit-learn`: http://scikit-learn.org
 
+
+.. index:: multilayer perceptron
+   pair: classification; multilayer perceptron
+
+Multilayer perceptron (feed-forward neural network)
+--------------------------------------------------
+.. autoclass:: MLPLearner
+   :members:
+
+
+.. index:: SVM
+   pair: classification; SVM
+
+Support Vector Machines
+-----------------------
+.. autoclass:: SVMLearner
+   :members:
+
+
+.. index:: SVM, linear
+   pair: classification; linear SVM
+
+Linear Support Vector Machines
+------------------------------
+.. autoclass:: LinearSVMLearner
+   :members:
+
+
+
+.. index:: Nu-SVM
+   pair: classification; Nu-SVM
+
+Nu-Support Vector Machines
+------------------------------
+.. autoclass:: NuSVMLearner
+   :members:
+
+
+.. index:: classification tree
+   pair: classification; tree
+
 Classification Tree
 -------------------
-
 .. autoclass:: TreeLearner
+   :members:
+
+
+.. index:: classification tree (simple)
+   pair: classification; simple tree
+
+Simple Tree
+-----------
+.. autoclass:: SimpleTreeLearner
+   :members:
+
+
+
+.. index:: majority classifier
+   pair: classification; majority
+
+Majority Classifier
+-------------------
+
+.. autoclass:: MajorityLearner
    :members:

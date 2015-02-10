@@ -54,32 +54,40 @@ class SimpleTreeNode:
 
 
 class SimpleTreeLearner(Learner):
+    """
+    Classification or regression tree learner.
+    Uses gain ratio for classification and mean square error for
+    regression. This learner was developed to speed-up random
+    forest construction, but can also be used as a standalone tree learner.
+
+    min_instances : int, optional (default = 2)
+        Minimal number of data instances in leaves. When growing the three,
+        new nodes are not introduced if they would result in leaves
+        with fewer instances than min_instances. Instance count is weighed.
+
+    max_depth : int, optional (default = 1024)
+        Maximal depth of tree.
+
+    max_majority : float, optional (default = 1.0)
+        Maximal proportion of majority class. When this is
+        exceeded, induction stops (only used for classification).
+
+    skip_prob : string, optional (default = "sqrt")
+        Data attribute will be skipped with probability ``skip_prob``.
+
+        - if float, then skip attribute with this probability.
+        - if "sqrt", then `skip_prob = 1 - sqrt(n_features) / n_features`
+        - if "log2", then `skip_prob = 1 - log2(n_features) / n_features`
+
+    bootstrap : data table, optional (default = False)
+        A bootstrap data set.
+
+    seed : int, optional (default = 42)
+        Random seed.
+    """
 
     def __init__(self, min_instances=2, max_depth=1024, max_majority=1.0,
                  skip_prob=0.0, bootstrap=False, seed=42):
-        """
-        Parameters
-        ----------
-
-        min_instance : Minimal number of instances in leaves.  Instance count
-        is weighed.
-
-        max_depth : Maximal depth of tree.
-
-        max_majority : Maximal proportion of majority class. When this is
-        exceeded, induction stops (only used for classification).
-
-        skip_prob : an attribute will be skipped with probability
-        ``skip_prob``.
-
-          - if float, then skip attribute with this probability.
-          - if "sqrt", then `skip_prob = 1 - sqrt(n_features) / n_features`
-          - if "log2", then `skip_prob = 1 - log2(n_features) / n_features`
-
-        bootstrap : Bootstrap dataset.
-
-        seed : Random seed.
-        """
 
         self.min_instances = min_instances
         self.max_depth = max_depth
