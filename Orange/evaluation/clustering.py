@@ -5,8 +5,11 @@ from sklearn.metrics import silhouette_score, adjusted_mutual_info_score
 
 
 class ClusteringResults(Results):
+    def __init__(self, store_data=True, **kwargs):
+        super().__init__(store_data=True, **kwargs)
+
     def get_fold(self, fold):
-        results = Results()
+        results = ClusteringResults()
         results.data = self.data
 
         if self.folds is None:
@@ -67,7 +70,7 @@ class ClusteringEvaluation(ClusteringResults):
     """
     def __init__(self, data, learners, k=1,
                  store_models=False):
-        super().__init__(data, len(learners), store_data=True,
+        super().__init__(data=data, nmethods=len(learners), store_data=True,
                          store_models=store_models, predicted=None)
 
         self.k = k
