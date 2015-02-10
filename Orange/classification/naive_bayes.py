@@ -3,11 +3,25 @@ import numpy as np
 from Orange.classification import Learner, Model
 from Orange.data import Instance, Storage, Table, DiscreteVariable
 from Orange.statistics import contingency
+from Orange.preprocess import Discretize
 
 __all__ = ["NaiveBayesLearner"]
 
 
 class NaiveBayesLearner(Learner):
+    """
+    Naive Bayes classifier. Works only with discrete attributes. By default,
+    continuous attributes are discretized.
+
+    Parameters
+    ----------
+    preprocessor : list, optional (default="[Orange.preprocess.Discretize]")
+        An ordered list of preprocessors applied to data before training
+        or testing.
+    """
+
+    preprocessors = [Discretize()]
+
     def fit_storage(self, table):
         if not isinstance(table, Storage):
             raise TypeError("Data is not a subclass of Orange.data.Storage.")
