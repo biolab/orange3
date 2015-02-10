@@ -6,27 +6,27 @@ import sklearn.tree as skl_tree
 from sklearn.tree._tree import TREE_LEAF
 
 from Orange.data import Table
-from Orange.classification import ClassificationTreeLearner
+from Orange.classification import TreeLearner
 
 
 class TreeTest(unittest.TestCase):
 
     def test_classification(self):
         table = Table('iris')
-        learn = ClassificationTreeLearner()
+        learn = TreeLearner()
         clf = learn(table)
         Z = clf(table)
         self.assertTrue(np.all(table.Y.flatten() == Z))
 
     def test_items_in_nodes(self):
         table = Table('iris')
-        learn = ClassificationTreeLearner()
+        learn = TreeLearner()
         clf = learn(table)
         self.assertTrue(len(clf.get_items(0))==len(table))
 
     def test_distr_in_nodes(self):
         table = Table('iris')
-        learn = ClassificationTreeLearner()
+        learn = TreeLearner()
         clf = learn(table)
         self.assertTrue(clf.get_distr(0)==Counter(table.Y.flatten()))
 

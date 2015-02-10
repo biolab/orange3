@@ -6,7 +6,7 @@ from numpy import argmax, zeros
 from Orange.widgets.classify.owtreeviewer2d import *
 
 from Orange.data import Table
-from Orange.classification.tree import ClassificationTreeClassifier
+from Orange.classification.tree import TreeClassifier
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 
 from Orange.widgets.settings import \
@@ -24,7 +24,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     color_settings = Setting(None)
     selected_color_settings_index = Setting(0)
 
-    inputs = [("Classification Tree", ClassificationTreeClassifier, "ctree")]
+    inputs = [("Classification Tree", TreeClassifier, "ctree")]
     outputs = [("Data", Table)]
 
     def __init__(self):
@@ -451,10 +451,10 @@ class ClassificationTreeNode(GraphicsNode):
         return QGraphicsTextItem.paint(self, painter, option, widget)
 
 if __name__ == "__main__":
-    from Orange.classification.tree import ClassificationTreeLearner
+    from Orange.classification.tree import TreeLearner
     a = QApplication(sys.argv)
     ow = OWClassificationTreeGraph()
-    ow.ctree(ClassificationTreeLearner(max_depth=3)(Table('iris')))
+    ow.ctree(TreeLearner(max_depth=3)(Table('iris')))
     ow.show()
     a.exec_()
     ow.saveSettings()
