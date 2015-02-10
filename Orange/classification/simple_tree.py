@@ -108,7 +108,8 @@ class SimpleTreeModel(Model):
             self.type = Regression
             self.cls_vals = 0
         else:
-            assert(False)
+            raise ValueError("Only Continuous and Discrete "
+                             "variables are supported")
 
         if isinstance(learner.skip_prob, float):
             skip_prob = learner.skip_prob
@@ -130,7 +131,8 @@ class SimpleTreeModel(Model):
                 attr_vals.append(0)
                 domain.append(FloatVar)
             else:
-                assert(False)
+                raise ValueError("Only Continuous and Discrete "
+                                 "variables are supported")
         attr_vals = np.array(attr_vals, dtype=np.int32)
         domain = np.array(domain, dtype=np.int32)
 
@@ -173,7 +175,7 @@ class SimpleTreeModel(Model):
                 p.ctypes.data_as(c_double_p))
             return p
         else:
-            assert(False)
+            assert False, "Invalid prediction type"
 
     def __del__(self):
         _tree.destroy_tree(self.node, self.type)
