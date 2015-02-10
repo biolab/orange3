@@ -3,6 +3,7 @@ sudo apt-get install -qq libblas-dev liblapack-dev postgresql-server-dev-9.1
 pip install -U setuptools pip wheel pgxnclient
 git clone https://github.com/astaric/orange3-requirements wheelhouse
 pip install wheelhouse/*.whl
+pip install -r requirements.txt
 
 python setup.py build_ext -i
 

@@ -1069,6 +1069,18 @@ class CreateTableWithFilename(TableTests):
         reader_instance.read_file.assert_called_with(self.filename, data.Table)
         self.assertEqual(table, table_mock)
 
+    @patch("os.path.exists", Mock(return_value=True))
+    @patch("Orange.data.io.ExcelReader")
+    def test_read_data_calls_reader(self, reader_mock):
+        table_mock = Mock(data.Table)
+        reader_instance = reader_mock.return_value = \
+            Mock(read_file=Mock(return_value=table_mock))
+
+        table = data.Table.from_file("test.xlsx")
+
+        reader_instance.read_file.assert_called_with("test.xlsx", data.Table)
+        self.assertEqual(table, table_mock)
+
     @patch("os.path.exists", Mock(return_value=False))
     def test_raises_error_if_file_does_not_exist(self):
         with self.assertRaises(IOError):
