@@ -54,7 +54,7 @@ class Scoring_CA_Test(unittest.TestCase):
 class Scoring_AUC_Test(unittest.TestCase):
     def test_tree(self):
         data = Orange.data.Table('iris')
-        tree = Orange.classification.ClassificationTreeLearner()
+        tree = Orange.classification.TreeLearner()
         res = Orange.evaluation.CrossValidation(data, [tree], k=2)
         self.assertTrue(0.8 < AUC(res)[0] < 1.)
 
