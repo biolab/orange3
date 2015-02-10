@@ -7,7 +7,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt
 
 import Orange.data
-import Orange.preprocess.discretization as disc
+import Orange.preprocess.discretize as disc
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype

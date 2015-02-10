@@ -4,7 +4,7 @@ Preprocess
 
 """
 import Orange.data
-from . import impute, discretization, continuizer
+from . import impute, discretize, continuize
 
 __all__ = ["Preprocess", "Continuize", "Discretize"]
 
@@ -24,14 +24,14 @@ class Preprocess(object):
 
 class Continuize(Preprocess):
     def __init__(self, zero_based=True,
-                 multinomial_treatment=continuizer.DomainContinuizer.NValues,
+                 multinomial_treatment=continuize.DomainContinuizer.NValues,
                  normalize_continuous=
-                 continuizer.DomainContinuizer.NormalizeBySD):
+                 continuize.DomainContinuizer.NormalizeBySD):
         self.zero_based = zero_based
         self.multinimial_treatment = multinomial_treatment
 
     def __call__(self, data):
-        dc = continuizer.DomainContinuizer(
+        dc = continuize.DomainContinuizer(
             zero_based=self.zero_based,
             multinomial_treatment=self.multinimial_treatment,
         )
@@ -40,7 +40,7 @@ class Continuize(Preprocess):
 
 
 class Discretize(Preprocess):
-    def __init__(self, method=discretization.EqualFreq()):
+    def __init__(self, method=discretize.EqualFreq()):
         self.method = method
 
     def __call__(self, data):
