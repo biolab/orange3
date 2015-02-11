@@ -124,13 +124,13 @@ class CrossValidationTestCase(unittest.TestCase):
     def test_miss_majority(self):
         x = np.zeros((50, 3))
         y = x[:, -1]
-        x[49] = 1
+        x[-4:] = np.ones((4, 3))
         data = Table(x, y)
-        res = CrossValidation(data, [MajorityLearner()])
+        res = CrossValidation(data, [MajorityLearner()], k=3)
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[49] = 0
-        res = CrossValidation(data, [MajorityLearner()])
+        x[-4:] = np.zeros((4, 3))
+        res = CrossValidation(data, [MajorityLearner()], k=3)
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
 

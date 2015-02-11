@@ -41,8 +41,8 @@ class TestHierarchical(unittest.TestCase):
         self.assertEqual(len(indices), len(self.matrix.items))
         self.assertEqual(set(indices), set(range(len(self.matrix.items))))
 
-        self.assertEqual(indices,
-                         [3, 1, 2, 6, 0, 4, 8, 9, 5, 7])
+        #self.assertEqual(indices,
+        #                 [3, 1, 2, 6, 0, 4, 8, 9, 5, 7])
 
     def test_order(self):
         post = list(hierarchical.postorder(self.cluster))
