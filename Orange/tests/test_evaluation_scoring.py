@@ -64,6 +64,11 @@ class Scoring_AUC_Test(unittest.TestCase):
         res = Orange.evaluation.TestOnTrainingData(data, [maj])
         self.assertEqual(AUC(res)[0], 0.5)
 
+    def test_multiclass_auc_multi_learners(self):
+        data = Orange.data.Table('iris')
+        learners = [ Orange.classification.LogisticRegressionLearner(), Orange.classification.MajorityLearner() ]
+        res = Orange.evaluation.testing.CrossValidation(data, learners, k=10)
+        self.assertTrue(AUC(res)[0] > 0.6 > AUC(res)[1] > 0.4)
 
 class Scoring_CD_Test(unittest.TestCase):
     def test_cd_score(self):
