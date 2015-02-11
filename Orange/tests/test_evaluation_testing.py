@@ -7,7 +7,7 @@ from Orange.classification.majority import ConstantModel
 from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.data import Table
 from Orange.evaluation import *
-from Orange.preprocess import discretize
+from Orange.preprocess import discretize, preprocess
 
 
 def random_data(nrows, ncols):
@@ -16,8 +16,7 @@ def random_data(nrows, ncols):
     col = np.random.randint(ncols)
     y = x[:nrows, col].reshape(nrows, 1)
     table = Table(x, y)
-    table = discretize.DiscretizeTable(
-        table, method=discretize.EqualWidth(n=3))
+    table = preprocess.Discretize(discretize.EqualWidth(n=3))(table)
     return table
 
 

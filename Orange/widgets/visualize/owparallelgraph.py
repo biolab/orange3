@@ -12,7 +12,8 @@ from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
 from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
 
 from Orange.canvas.utils import environ
-from Orange.preprocess.discretize import EqualFreq, DiscretizeTable
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.widgets.settings import Setting
@@ -776,7 +777,7 @@ def create_contingencies(X, callback=None):
     window_size = 1
     dim = len(X.domain)
 
-    X_ = DiscretizeTable(X, method=EqualFreq(n=10))
+    X_ = Discretize(X, method=EqualFreq(n=10))
     m = []
     for i, var in enumerate(X_.domain):
         cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=').split(',')))

@@ -37,10 +37,10 @@ variable gives a new, discrete variable. The new variable can compute its
 values from the original one.
 
     >>> from Orange.data import discretization
-    >>> d_iris = discretization.DiscretizeTable(iris)
-    >>> d_iris.domain[0]
+    >>> d_iris = discretization.DomainDiscretizer(iris)
+    >>> d_iris[0]
     DiscreteVariable('D_sepal length')
-    >>> d_iris.domain[0].values
+    >>> d_iris[0].values
     ['<5.2', '[5.2, 5.8)', '[5.8, 6.5)', '>=6.5']
 
 See :obj:`Variable.compute_value` for a detailed example.
@@ -88,21 +88,21 @@ Base class
     .. automethod:: val_from_str_add
     .. automethod:: compute_value
 
-    Method `compute_value` is usually invoked behind the scenes in the
+    Method `compute_value` is usually invoked behind the scenes in
     conversion of domains::
 
         >>> from Orange.data import Table
-        >>> from Orange.data.discretization import DiscretizeTable
+        >>> from Orange.preprocess import DomainDiscretizer
 
         >>> iris = Table("iris")
         >>> iris_1 = iris[::2]
-        >>> d_iris_1 = DiscretizeTable(iris_1)
+        >>> d_iris_1 = DomainDiscretizer(iris_1)
 
-        >>> d_iris_1.domain[0]
+        >>> d_iris_1[0]
         DiscreteVariable('D_sepal length')
-        >>> d_iris_1.domain[0].source_variable
+        >>> d_iris_1[0].source_variable
         ContinuousVariable('sepal length')
-        >>> d_iris_1.domain[0].compute_value
+        >>> d_iris_1[0].compute_value
         <Orange.feature.discretization.Discretizer at 0x10d5108d0>
 
     The data is loaded and the instances on even places are put into a new

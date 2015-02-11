@@ -39,8 +39,8 @@ class Scoring_CA_Test(unittest.TestCase):
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
         t = Orange.data.Table(x, y)
-        t = Orange.preprocess.DiscretizeTable(
-            t, method=Orange.preprocess.EqualWidth(n=3))
+        t = Orange.preprocess.Discretize(
+            method=Orange.preprocess.EqualWidth(n=3))(t)
         nb = Orange.classification.NaiveBayesLearner()
         res = Orange.evaluation.TestOnTrainingData(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])

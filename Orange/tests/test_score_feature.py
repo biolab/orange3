@@ -55,7 +55,7 @@ class FeatureScoringTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.randint(4, size=(nrows, ncols))
         y = 10 + (-3*X[:, 1] + X[:, 3]) // 2
-        data = preprocess.DiscretizeTable(Table(X, y))
+        data = preprocess.Discretize()(Table(X, y))
         scorer = score.Chi2()
         sc = [scorer(a, data) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
