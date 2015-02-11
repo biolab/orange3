@@ -12,54 +12,55 @@ def sigmoid(x):
 
 
 class MLPLearner(Learner):
-    def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
-                 **opt_args):
-        '''Multilayer perceptron (A.K.A. feedforward neural network)
+    """Multilayer perceptron (feedforward neural network)
 
-        This model uses stochastic gradient descent and the
-        backpropagation algorithm to train the weights of a feedforward
-        neural network.  The network uses the sigmoid activation
-        functions, except for the last layer which computes the softmax
-        activation function. The network can be used for binary and
-        multiclass classification. Stochastic gradient descent minimizes
-        the L2 regularize categorical crossentropy cost function. The
-        topology of the network can be customized by setting the layers
-        attribute. When using this model you should:
+    This model uses stochastic gradient descent and the
+    backpropagation algorithm to train the weights of a feedforward
+    neural network.  The network uses the sigmoid activation
+    functions, except for the last layer which computes the softmax
+    activation function. The network can be used for binary and
+    multiclass classification. Stochastic gradient descent minimizes
+    the L2 regularize categorical crossentropy cost function. The
+    topology of the network can be customized by setting the layers
+    attribute. When using this model you should:
 
-        - Choose a suitable:
-            * topology (layers)
-            * regularization parameter (lambda_)
-            * dropout (values of 0.2 for the input layer and 0.5 for the hidden layers
-              usually work well)
-            * The number of epochs of stochastic gradient descent (num_epochs)
-            * The learning rate of stochastic gradient descent (learning_rate)
-        - Continuize all discrete attributes
-        - Transform the dataset so that the columns are on a similar scale
+    - Choose a suitable:
+        * topology (layers)
+        * regularization parameter (lambda_)
+        * dropout (values of 0.2 for the input layer and 0.5 for the hidden
+          layers usually work well)
+        * The number of epochs of stochastic gradient descent (num_epochs)
+        * The learning rate of stochastic gradient descent (learning_rate)
+    - Continuize all discrete attributes
+    - Transform the data set so that the columns are on a similar scale
 
-        :param layers: The topology of the network. A network with 
-        layer=[10, 100, 100, 3] has two hidden layers with 100 neurons each, 10 features
-        and a class value with 3 distinct values.
-        :type layers: list
+    layers : list
+        The topology of the network. A network with
+        layer=[10, 100, 100, 3] has two hidden layers with 100 neurons each,
+        10 features and a class value with 3 distinct values.
 
-        :param lambda_: the regularization parameter. Higher values of lambda_
+    lambda_ : float, optional (default = 1.0)
+        The regularization parameter. Higher values of lambda_
         force the coefficients to be small.
-        :type lambda_: float
 
-        :param dropout: The dropout rate for each, but the last,
+    dropout : list, optional (default = None)
+        The dropout rate for each, but the last,
         layer. The list should have one element less then the parameter layers.
         Values of 0.2 for the input layer and 0.5 for the hidden layers usually
         work well.
-        :type dropout: list
 
-        :param num_epochs: The number of epochs of stochastic gradient descent
-        :type num_epochs: int
+    num_epochs : int, optional
+        The number of epochs of stochastic gradient descent
 
-        :param learning_rate: The learning rate of stochastic gradient descent
-        :type learning_rate: float
+    learning_rate : float, optional
+        The learning rate of stochastic gradient descent
 
-        :param batch_size: The batch size of stochastic gradient descent
-        :type batch_size: int
-        '''
+    batch_size : int, optional
+        The batch size of stochastic gradient descent
+    """
+
+    def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
+                 **opt_args):
         super().__init__(preprocessors=preprocessors)
         if dropout is None:
             dropout = [0] * (len(layers) - 1)

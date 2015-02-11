@@ -8,26 +8,27 @@ __all__ = ["SoftmaxRegressionLearner"]
 
 
 class SoftmaxRegressionLearner(Learner):
+    """L2 regularized softmax regression classifier.
+    Uses the L-BFGS algorithm to minimize the categorical
+    cross entropy cost with L2 regularization. This model is suitable
+    when dealing with a multi-class classification problem
+
+    When using this learner you should:
+
+    - choose a suitable regularization parameter lambda_,
+    - continuize all discrete attributes,
+    - consider appending a column of ones to the data set (intercept term),
+    - transform the data set so that the columns are on a similar scale,
+    - consider using many logistic regression models (one for each
+      value of the class variable) instead of softmax regression.
+
+    lambda_ : float, optional (default=1.0)
+       the regularization parameter. Higher values of lambda_
+       force the coefficients to be smaller
+    """
+
     def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
                  **fmin_args):
-        '''L2 regularized softmax regression
-
-        This model uses the L-BFGS algorithm to minimize the categorical
-        cross entropy cost with L2 regularization. This model is suitable
-        when dealing with a multiclass classification problem
-        When using this model you should:
-
-        - Choose a suitable regularization parameter lambda_
-        - Continuize all discrete attributes
-        - Consider appending a column of ones to the dataset (intercept term)
-        - Transform the dataset so that the columns are on a similar scale
-        - Consider using many logistic regression models (one for each
-          value of the class variable) instead of softmax regression
-
-        :param lambda_: the regularization parameter. Higher values of lambda_
-        force the coefficients to be small.
-        :type lambda_: float
-        '''
         super().__init__(preprocessors=preprocessors)
         self.lambda_ = lambda_
         self.fmin_args = fmin_args

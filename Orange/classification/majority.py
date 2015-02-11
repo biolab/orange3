@@ -8,15 +8,14 @@ __all__ = ["MajorityLearner"]
 
 
 class MajorityLearner(Learner):
-    def fit_storage(self, dat):
-        """
-        Constructs `Orange.classification.majority.ConstantClassifier` from given data.
+    """
+    A majority classifier. Always returns most frequent class from the
+    training set, regardless of the attribute values from the test data
+    instance. Returns class value distribution if class probabilities
+    are requested. Can be used as a baseline when comparing classifiers.
+    """
 
-        :param dat: table of data
-        :type dat: Orange.data.Table
-        :return: classification model, which always returns majority value
-        :rtype: Orange.classification.majority.ConstantModel
-        """
+    def fit_storage(self, dat):
 
         if not isinstance(dat.domain.class_var, data.DiscreteVariable):
             raise ValueError("classification.MajorityLearner expects a domain with a "
