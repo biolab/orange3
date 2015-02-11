@@ -10,8 +10,65 @@ __all__ = ["CUR"]
 
 
 class CUR(Projection):
-    def __init__(self, rank=3, max_error=1, random_state=None,
-                 compute_U=False, preprocessors=None):
+    """CUR matrix decomposition
+
+    Parameters
+    ----------
+    rank : boolean, optional, default: True
+        number of most significant right singular vectors considered
+        for computing feature statistical leverage scores
+
+    max_error : float, optional, default: 1
+        relative error w.r.t. optimal `rank`-rank SVD approximation
+
+    compute_U : boolean, optional, default: False
+        Compute matrix U in the CUR decomposition or set it to None.
+
+        If True matrix U is computed from C and R through Moore-Penrose
+        generalized inverse as U = pinv(C) * X * pin(R).
+
+    random_state : integer or numpy.RandomState, optional
+        The generator used in importance sampling. If an integer is
+        given, it fixes the seed. Defaults to the global numpy random
+        number generator.
+
+    preprocessors : list, optional (default="[]")
+        An ordered list of preprocessors applied to data before
+        training or testing.
+
+    Attributes
+    ----------
+    lev_features_ : array-like, shape [n_features]
+        Stores normalized statistical leverage scores of features
+
+    features_ : array-like, shape [O(k log(k) / max_error^2)]
+        Stores indices of features selected by the CUR algorithm
+
+    lev_samples_ : array-like, shape [n_samples]
+        Stores normalized statistical leverage scores of samples
+
+    samples_ : array-like, shape [O(k log(k) / max_error^2)]
+        Stores indices of samples selected by the CUR algorithm
+
+    C_ : array-like, shape [n_samples, O(k log(k) / max_error^2)]
+        Stores matrix C as defined in the CUR, a small number of
+        columns from the data
+
+    U_ : array-like, shape [O(k log(k) / max_error^2), O(k log(k) / max_error^2)]
+        Stores matrix U as defined in the CUR
+
+    R__ : array-like, shape [O(k log(k) / max_error^2), n_features]
+        Stores matrix R as defined in the CUR, a small number of rows from the
+        data
+
+    References
+    ----------
+    "CUR matrix decompositions for improved data analysis" Mahoney, M.W;
+    Drineas P. PNAS (2009)
+
+    """
+    def __init__(self, rank=3, max_error=1, compute_U=False,
+                 random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.rank = rank
         self.compute_U = compute_U
@@ -25,10 +82,10 @@ class CUR(Projection):
 
     def fit(self, X, Y=None):
         U, s, V = sla.svds(X, self.rank)
-        self.lev_cols_, self.cols_ = self._select_columns(X, [U.T, s, V.T])
-        self.lev_rows_, self.rows_ = self._select_columns(X.T, [V.T, s, U])
-        self.C_ = X[:, self.cols_]
-        self.R_ = X.T[:, self.rows_].T
+        self.lev_features_, self.features_ = self._select_columns(X, [U.T, s, V.T])
+        self.lev_samples_, self.samples_ = self._select_columns(X.T, [V.T, s, U])
+        self.C_ = X[:, self.features_]
+        self.R_ = X.T[:, self.samples_].T
         if self.compute_U:
             pinvC = np.linalg.pinv(self.C_)
             pinvR = np.linalg.pinv(self.R_)
@@ -39,9 +96,9 @@ class CUR(Projection):
 
     def transform(self, X, axis):
         if axis == 0:
-            return X[:, self.cols_]
+            return X[:, self.features_]
         else:
-            return X[self.rows_, :]
+            return X[self.samples_, :]
 
     def _select_columns(self, X, UsV):
         U, s, V = UsV
@@ -71,11 +128,11 @@ class CURModel(ProjectionModel):
                 return v
 
             domain = Orange.data.Domain(
-                [cur_variable(org_idx) for org_idx in self.cols_],
+                [cur_variable(org_idx) for org_idx in self.features_],
                 class_vars=data.domain.class_vars)
             transformed_data = Orange.data.Table(domain, Xt, data.Y)
         elif axis == 1:
-            Y = data.Y[self.proj.rows_]
+            Y = data.Y[self.proj.samples_]
             transformed_data = Orange.data.Table(data.domain, Xt, Y)
         else:
             raise TypeError('CUR can select either columns '

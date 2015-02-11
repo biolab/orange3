@@ -44,9 +44,9 @@ class TestCUR(unittest.TestCase):
         cur_model = cur(data1)
 
         data2_trans1 = cur_model(data2)
-        data2_trans2 = data2.X[:, cur_model.cols_]
+        data2_trans2 = data2.X[:, cur_model.features_]
         np.testing.assert_array_equal(data2_trans1.X, data2_trans2)
 
         data1_trans1 = cur_model(data1, axis=1)
-        data1_trans2 = data1.X[cur_model.rows_, :]
+        data1_trans2 = data1.X[cur_model.samples_, :]
         np.testing.assert_array_equal(data1_trans1.X, data1_trans2)

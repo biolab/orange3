@@ -8,7 +8,7 @@ from Orange.distance import Euclidean
 
 class TestManifold(unittest.TestCase):
     def test_mds(self):
-        data = Orange.data.Table('ionosphere')
+        data = Orange.data.Table('ionosphere')[:50]
         self.__mds_test_helper(data, n_com=1)
         self.__mds_test_helper(data, n_com=2)
         self.__mds_test_helper(data, n_com=3)

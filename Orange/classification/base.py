@@ -8,7 +8,7 @@ import bottlechest as bn
 import Orange.data
 import Orange.preprocess.preprocess
 
-__all__ = ["Learner", "Model", "SklLearner", "SklModel"]
+__all__ = ["Learner", "Model", "SklLearner", "SklModel", "WrapperMeta"]
 
 
 class Learner:

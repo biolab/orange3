@@ -2,6 +2,7 @@ import inspect
 
 import Orange.data
 import Orange.preprocess
+from Orange.classification import WrapperMeta
 
 __all__ = ["Projection", "ProjectionModel", "SklProjection"]
 
@@ -52,7 +53,7 @@ class ProjectionModel:
         return data
 
 
-class SklProjection(Projection):
+class SklProjection(Projection, metaclass=WrapperMeta):
 
     __wraps__ = None
     _params = {}

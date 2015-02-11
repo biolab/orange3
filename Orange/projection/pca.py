@@ -2,6 +2,7 @@ import sklearn.decomposition as skl_decomposition
 
 import Orange.data
 from Orange.projection import SklProjection, ProjectionModel
+from Orange.classification import WrapperMeta
 
 __all__ = ["PCA", "SparsePCA", "RandomizedPCA"]
 
@@ -10,7 +11,7 @@ class PCA(SklProjection):
 
     __wraps__ = skl_decomposition.PCA
 
-    def __init__(self, n_components=None, whiten=False, preprocessors=None):
+    def __init__(self, n_components=None, copy=True, whiten=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -26,7 +27,7 @@ class SparsePCA(SklProjection):
 
     def __init__(self, n_components=None, alpha=1, ridge_alpha=0.01,
                  max_iter=1000, tol=1e-8, method='lars', n_jobs=1, U_init=None,
-                 V_init=None, random_state=None, preprocessors=None):
+                 V_init=None, verbose=False, random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -40,8 +41,8 @@ class RandomizedPCA(SklProjection):
 
     __wraps__ = skl_decomposition.RandomizedPCA
 
-    def __init__(self, n_components=None, iterated_power=3, whiten=False,
-                 random_state=None, preprocessors=None):
+    def __init__(self, n_components=None, copy=True, iterated_power=3,
+                 whiten=False, random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -51,7 +52,7 @@ class RandomizedPCA(SklProjection):
         return PCAModel(proj, self.preprocessors)
 
 
-class PCAModel(ProjectionModel):
+class PCAModel(ProjectionModel, metaclass=WrapperMeta):
     def __init__(self, proj, preprocessors=None):
         super().__init__(proj=proj, preprocessors=preprocessors)
         self.n_components = self.components_.shape[0]
