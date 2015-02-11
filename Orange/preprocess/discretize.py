@@ -3,14 +3,14 @@ import numpy as np
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
-from .transformation import ColumnTransformation
+from .transformation import Transformation
 from . import _discretize
 
 __all__ = ["Discretizer", "EqualFreq", "EqualWidth", "EntropyMDL",
            "DiscretizeTable"]
 
 
-class Discretizer(ColumnTransformation):
+class Discretizer(Transformation):
     """Interval discretizer.
     The lower limits are inclusive, the upper exclusive.
     """
@@ -18,7 +18,7 @@ class Discretizer(ColumnTransformation):
         super().__init__(variable)
         self.points = points
 
-    def _transform(self, c):
+    def transform(self, c):
         if c.size:
             return np.where(np.isnan(c), np.NaN, np.digitize(c, self.points))
         else:

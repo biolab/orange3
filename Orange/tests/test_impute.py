@@ -11,11 +11,11 @@ class TestReplaceUnknowns(unittest.TestCase):
     def test_replacement(self):
         a = np.arange(10, dtype=float)
         a[1] = a[5] = Unknown
-        ia = preprocess.ReplaceUnknowns(None)._transform(a)
+        ia = preprocess.ReplaceUnknowns(None).transform(a)
         np.testing.assert_equal(ia, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9])
 
         a[1] = a[5] = Unknown
-        ia = preprocess.ReplaceUnknowns(None, value=42)._transform(a)
+        ia = preprocess.ReplaceUnknowns(None, value=42).transform(a)
         np.testing.assert_equal(ia, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
 
 

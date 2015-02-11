@@ -65,7 +65,7 @@ class Continuizer_Test(unittest.TestCase):
                          ["c1", "c2", "d2=a", "d2=b", "d3=a", "d3=b",
                           "d3=c"])
         self.assertIsInstance(dom[2].compute_value,
-                              transformation.Indicator_1)
+                              transformation.Indicator1)
 
         dat3 = Table(dom, self.data)
         #                          c1   c2  d2      d3          cl1
@@ -105,7 +105,7 @@ class Continuizer_Test(unittest.TestCase):
                 self.assertAlmostEqual(x,y, places=3)
 
         self.assertIsInstance(dom[2].compute_value,
-                              transformation.Indicator_1)
+                              transformation.Indicator1)
 
         dat3 = Table(dom, self.data)
         self.assertEqual(list(dat2.X[0,:2]),list(dat3.X[0,:2]))
@@ -152,7 +152,7 @@ class Continuizer_Test(unittest.TestCase):
         self.assertEqual([attr.name for attr in dom.class_vars],
                          ["cl1=a", "cl1=b", "cl1=c"])
         self.assertIsInstance(dom[2].compute_value,
-                              transformation.Indicator_1)
+                              transformation.Indicator1)
 
         dat2 = Table(dom, self.data)
         #                          c1   c2  d2      d3         cl1

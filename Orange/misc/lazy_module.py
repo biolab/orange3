@@ -2,7 +2,7 @@ class LazyModule:
     def __init__(self, name):
         self.__name = name
 
-    def do_import(self):
+    def _do_import(self):
         import Orange
         from importlib import import_module
         mod = import_module('Orange.' + self.__name, package='Orange')
@@ -10,8 +10,8 @@ class LazyModule:
         return mod
 
     def __getattr__(self, key):
-        return getattr(self.do_import(), key)
+        return getattr(self._do_import(), key)
 
     def __dir__(self):
-        return list(self.do_import().__dict__)
+        return list(self._do_import().__dict__)
 

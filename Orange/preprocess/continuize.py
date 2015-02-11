@@ -1,7 +1,7 @@
 from ..misc.enum import Enum
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.statistics import distribution
-from .transformation import Identity, Indicator, Indicator_1, Normalizer
+from .transformation import Identity, Indicator, Indicator1, Normalizer
 
 __all__ = ["DomainContinuizer", "MultinomialTreatment"]
 
@@ -60,7 +60,7 @@ class DomainContinuizer:
                 base = max(var.base_value, 0)
             else:
                 base = dists[var_ptr].modus()
-            ind_class = [Indicator_1, Indicator][self.zero_based]
+            ind_class = [Indicator1, Indicator][self.zero_based]
             for i, val in enumerate(var.values):
                 if i == base:
                     continue

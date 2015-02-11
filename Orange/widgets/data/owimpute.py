@@ -713,11 +713,11 @@ class NullColumnImputer(ColumnImputerModel):
 from functools import reduce
 import numpy
 from Orange.preprocess.transformation import \
-    ColumnTransformation, Lookup, Identity
+    Transformation, Lookup, Identity
 
 
-class IsDefined(ColumnTransformation):
-    def _transform(self, c):
+class IsDefined(Transformation):
+    def transform(self, c):
         return ~numpy.isnan(c)
 
 
@@ -726,7 +726,7 @@ class Lookup(Lookup):
         super().__init__(variable, lookup_table)
         self.unknown = unknown
 
-    def _transform(self, column):
+    def transform(self, column):
         if self.unknown is None:
             unknown = numpy.nan
         else:
@@ -738,21 +738,21 @@ class Lookup(Lookup):
         return numpy.where(mask, unknown, values)
 
 
-class ReplaceUnknowns(ColumnTransformation):
+class ReplaceUnknowns(Transformation):
     def __init__(self, variable, value=0):
         super().__init__(variable)
         self.value = value
 
-    def _transform(self, c):
+    def transform(self, c):
         return numpy.where(numpy.isnan(c), self.value, c)
 
 
-class RandomTransform(ColumnTransformation):
+class RandomTransform(Transformation):
     def __init__(self, variable, dist=None):
         super().__init__(variable)
         self.dist = dist
 
-    def _transform(self, c):
+    def transform(self, c):
         if isinstance(self.variable, Orange.data.DiscreteVariable):
             if self.dist is not None:
                 pass
@@ -767,7 +767,7 @@ class RandomTransform(ColumnTransformation):
         return c
 
 
-class ModelTransform(ColumnTransformation):
+class ModelTransform(Transformation):
     def __init__(self, variable, model):
         super().__init__(variable)
         self.model = model
