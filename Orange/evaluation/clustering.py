@@ -45,6 +45,7 @@ class ClusteringScore(Score):
 
 class Silhouette(ClusteringScore):
     separate_folds = True
+
     def compute_score(self, results):
         return self.from_predicted(results, silhouette_score)
 
@@ -52,6 +53,7 @@ class Silhouette(ClusteringScore):
 class AdjustedMutualInfoScore(ClusteringScore):
     separate_folds = True
     considers_actual = True
+
     def compute_score(self, results):
         return self.from_predicted(results, adjusted_mutual_info_score)
 
