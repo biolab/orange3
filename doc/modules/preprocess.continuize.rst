@@ -17,9 +17,9 @@
 
     The typical use of the class is as follows::
 
-        from Orange import preprocess
-        titanic = data.Table("titanic")
-        continuizer = preprocess.DomainContinuizer()
+        import Orange
+        titanic = Orange.data.Table("titanic")
+        continuizer = Orange.preprocess.DomainContinuizer()
         continuizer.multinomial_treatment = continuizer.FirstAsBase
         domain1 = continuizer(titanic)
         titanic1 = Orange.data.Table(domain1, titanic)
@@ -33,7 +33,7 @@
     continuizer is immediately applied and the constructor returns a transformed
     domain instead of the continuizer instance::
 
-        domain1 = preprocess.DomainContinuizer(titanic)
+        domain1 = Orange.preprocess.DomainContinuizer(titanic)
 
     By default, the class does not change continuous and class attributes,
     discrete attributes are replaced with N attributes (``Indicators``) with
@@ -73,9 +73,9 @@
            variable with variables "status=crew", "status=first",
            "status=second" and "status=third". After ::
 
-               continuizer = preprocess.DomainContinuizer()
+               continuizer = Orange.preprocess.DomainContinuizer()
                domain1 = continuizer(titanic)
-               titanic1 = data.Table(domain1, titanic)
+               titanic1 = Orange.data.Table(domain1, titanic)
 
            we have ::
 
@@ -164,7 +164,7 @@
            range 0 to 1, e.g. 0, 0.333, 0.667, 1 for a four-valued variable::
 
                 >>> continuizer.multinomial_treatment = continuizer.AsNormalizedOrdinal
-                >>> titanic1 = data.Table(continuizer(titanic), titanic)
+                >>> titanic1 = Orange.data.Table(continuizer(titanic), titanic)
                 >>> titanic1[700]
                 [1.000, 0.000, 1.000 | no]
                 >>> titanic1[15]
