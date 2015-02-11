@@ -72,7 +72,7 @@ class SimpleTreeLearner(Learner):
         Maximal proportion of majority class. When this is
         exceeded, induction stops (only used for classification).
 
-    skip_prob : string, optional (default = "sqrt")
+    skip_prob : string, optional (default = 0.0)
         Data attribute will be skipped with probability ``skip_prob``.
 
         - if float, then skip attribute with this probability.
@@ -119,7 +119,7 @@ class SimpleTreeModel(Model):
             raise ValueError("Only Continuous and Discrete "
                              "variables are supported")
 
-        if isinstance(learner.skip_prob, float):
+        if isinstance(learner.skip_prob, (float, int)):
             skip_prob = learner.skip_prob
         elif learner.skip_prob == 'sqrt':
             skip_prob = 1.0 - np.sqrt(data.X.shape[1]) / data.X.shape[1]
@@ -186,7 +186,8 @@ class SimpleTreeModel(Model):
             assert False, "Invalid prediction type"
 
     def __del__(self):
-        _tree.destroy_tree(self.node, self.type)
+        if hasattr(self, "node"):
+            _tree.destroy_tree(self.node, self.type)
 
     def __getstate__(self):
         dict = self.__dict__.copy()
