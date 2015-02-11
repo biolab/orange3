@@ -1,4 +1,4 @@
-.. class:: Orange.preprocess.continuize.DomainContinuizer
+.. class:: Orange.preprocess.DomainContinuizer
 
     Construct a domain in which discrete attributes are replaced by
     continuous. Existing continuous attributes can be normalized.
@@ -17,22 +17,23 @@
 
     The typical use of the class is as follows::
 
-        from Orange.preprocess import continuize
-        continuizer = continuize.DomainContinuizer()
+        from Orange import preprocess
+        titanic = data.Table("titanic")
+        continuizer = preprocess.DomainContinuizer()
         continuizer.multinomial_treatment = continuizer.FirstAsBase
-        domain0 = continuizer(data)
-        data0 = Orange.data.Table(domain0, data)
+        domain1 = continuizer(titanic)
+        titanic1 = Orange.data.Table(domain1, titanic)
 
     Domain continuizers can be given either a data set or a domain, and return
     a new domain. When given only the domain, they cannot normalize continuous
     attributes or use the most frequent value as the base value.
 
-    The class can also behave as a function:
+    The class can also behave like a function:
     if the constructor is given the data or a domain, the constructed
     continuizer is immediately applied and the constructor returns a transformed
     domain instead of the continuizer instance::
 
-        domain0 = continuize.DomainContinuizer(data)
+        domain1 = preprocess.DomainContinuizer(titanic)
 
     By default, the class does not change continuous and class attributes,
     discrete attributes are replaced with N attributes (``Indicators``) with
@@ -70,28 +71,26 @@
            values "crew", "first", "second" and "third", in that order. Its
            value for the 15th row is "first". Continuization replaces the
            variable with variables "status=crew", "status=first",
-           "status=second" and "status=third". ::
+           "status=second" and "status=third". After ::
 
-               >>> from Orange import data
-               >>> from Orange.preprocess import continuize
-               >>> titanic = data.Table("titanic")
-               >>> continuizer = continuize.DomainContinuizer()
-               >>> domain0 = continuizer(titanic)
+               continuizer = preprocess.DomainContinuizer()
+               domain1 = continuizer(titanic)
+               titanic1 = data.Table(domain1, titanic)
+
+           we have ::
+
                >>> titanic.domain
                [status, age, sex | survived]
-               >>> domain0
+               >>> domain1
                [status=crew, status=first, status=second, status=third,
                 age=adult, age=child, sex=female, sex=male | survived]
 
            For the 15th row, the variable "status=first" has value 1 and the
            values of the other three variables are 0::
 
-               >>> titanic0 = data.Table(domain0, titanic)
                >>> print(titanic[15])
                [first, adult, male | yes]
-               >>> print(titanic[15])
-               [first, adult, male | yes]
-               >>> print(titanic0[15])
+               >>> print(titanic1[15])
                [0.000, 1.000, 0.000, 0.000, 1.000, 0.000, 0.000, 1.000 | yes]
 
 
@@ -154,21 +153,21 @@
            :obj:`~Orange.data.DiscreteVariable.values`, e.g. 0, 1, 2, 3...
 
                 >>> continuizer.multinomial_treatment = continuizer.AsOrdinal
-                >>> titanic0 = data.Table(continuizer(titanic), titanic)
-                >>> titanic0[700]
-                [3.000, 0.000, 1.000 | no]
+                >>> titanic1 = data.Table(continuizer(titanic), titanic)
                 >>> titanic[700]
                 [third, adult, male | no]
+                >>> titanic1[700]
+                [3.000, 0.000, 1.000 | no]
 
        ``DomainContinuizer.AsNormalizedOrdinal``
            As above, except that the resulting continuous value will be from
            range 0 to 1, e.g. 0, 0.333, 0.667, 1 for a four-valued variable::
 
                 >>> continuizer.multinomial_treatment = continuizer.AsNormalizedOrdinal
-                >>> titanic0 = data.Table(continuizer(titanic), titanic)
-                >>> titanic0[700]
+                >>> titanic1 = data.Table(continuizer(titanic), titanic)
+                >>> titanic1[700]
                 [1.000, 0.000, 1.000 | no]
-                >>> titanic0[15]
+                >>> titanic1[15]
                 [0.333, 0.000, 1.000 | yes]
 
     .. attribute:: normalize_continuous
