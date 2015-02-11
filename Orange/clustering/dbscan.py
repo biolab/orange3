@@ -9,8 +9,9 @@ __all__ = ["DBSCAN"]
 class DBSCAN(SklProjection):
     __wraps__ = skl_cluster.DBSCAN
 
-    def __init__(self, eps=0.5, min_samples=5, metric='euclidean', algorithm='auto',
-                 leaf_size=30, p=None, random_state=None, preprocessors=None):
+    def __init__(self, eps=0.5, min_samples=5, metric='euclidean',
+                 algorithm='auto', leaf_size=30, p=None, random_state=None,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -42,4 +43,5 @@ class DBSCANModel(ProjectionModel):
 
         elif isinstance(data, Instance):
             # Instances-by-Instance classification is not defined;
-            raise Exception("Core sample assignment is not supported for single instances.")
+            raise Exception("Core sample assignment is not supported "
+                            "for single instances.")
