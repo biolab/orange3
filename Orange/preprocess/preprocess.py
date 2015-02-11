@@ -4,7 +4,8 @@ Preprocess
 
 """
 import Orange.data
-from . import impute, discretize, continuize
+from . import impute, discretize
+from ..misc.enum import Enum
 
 __all__ = ["Preprocess", "Continuize", "Discretize"]
 
@@ -23,19 +24,30 @@ class Preprocess(object):
 
 
 class Continuize(Preprocess):
-    def __init__(self, zero_based=True,
-                 multinomial_treatment=continuize.DomainContinuizer.Indicators,
-                 normalize_continuous=
-                 continuize.DomainContinuizer.NormalizeBySD):
+    MultinomialTreatment = Enum(
+        "Indicators", "FirstAsBase", "FrequentAsBase",
+        "Remove", "RemoveMultinomial", "ReportError", "AsOrdinal",
+        "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
+        "NormalizeBySD"
+    )
+
+    (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
+     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave,
+     NormalizeBySpan, NormalizeBySD) = MultinomialTreatment
+
+    def __init__(self, zero_based=True, multinomial_treatment=Indicators,
+                 normalize_continuous=NormalizeBySD):
         self.zero_based = zero_based
-        self.multinimial_treatment = multinomial_treatment
+        self.multinomial_treatment = multinomial_treatment
+        self.normalize_continuous = normalize_continuous
 
     def __call__(self, data):
-        dc = continuize.DomainContinuizer(
+        from . import continuize
+        continuizer = continuize.DomainContinuizer(
             zero_based=self.zero_based,
-            multinomial_treatment=self.multinimial_treatment,
-        )
-        domain = dc(data)
+            multinomial_treatment=self.multinomial_treatment,
+            normalize_continuous=self.normalize_continuous)
+        domain = continuizer(data)
         return data.from_table(domain, data)
 
 

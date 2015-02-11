@@ -1,43 +1,24 @@
-.. class:: Orange.preprocess.DomainContinuizer
+.. class:: Orange.preprocess.Continuize
 
-    Construct a domain in which discrete attributes are replaced by
-    continuous. Existing continuous attributes can be normalized.
-
-    The attributes are treated according to their types:
+    Given a data table, return a new table in which the discretize attributes
+    are replaced with continuous or removed.
 
     * binary variables are transformed into 0.0/1.0 or -1.0/1.0
-      indicator variables
+      indicator variables, depending upon the argument ``zero_based``.
 
-    * multinomial variables are treated according to the flag
+    * multinomial variables are treated according to the argument
       ``multinomial_treatment``.
 
     * discrete attribute with only one possible value are removed;
 
-    * continuous variables can be normalized or left unchanged.
-
-    The typical use of the class is as follows::
+    * continuous variables can be normalized or left as they are, as determined
+      by the argument ``normalize_continuous``.
+    ::
 
         import Orange
         titanic = Orange.data.Table("titanic")
-        continuizer = Orange.preprocess.DomainContinuizer()
-        continuizer.multinomial_treatment = continuizer.FirstAsBase
-        domain1 = continuizer(titanic)
-        titanic1 = Orange.data.Table(domain1, titanic)
-
-    Domain continuizers can be given either a data set or a domain, and return
-    a new domain. When given only the domain, they cannot normalize continuous
-    attributes or use the most frequent value as the base value.
-
-    The class can also behave like a function:
-    if the constructor is given the data or a domain, the constructed
-    continuizer is immediately applied and the constructor returns a transformed
-    domain instead of the continuizer instance::
-
-        domain1 = Orange.preprocess.DomainContinuizer(titanic)
-
-    By default, the class does not change continuous and class attributes,
-    discrete attributes are replaced with N attributes (``Indicators``) with
-    values 0 and 1.
+        continuizer = Orange.preprocess.Continuize()
+        titanic1 = continuizer(titanic)
 
     The class has a number of attributes that can be set either in constructor
     or, later, as attributes.
@@ -56,7 +37,7 @@
 
        Defines the treatment of multinomial variables.
 
-       ``DomainContinuizer.Indicators``
+       ``Continuize.Indicators``
 
            The variable is replaced by indicator variables, each
            corresponding to one value of the original variable.
@@ -73,15 +54,14 @@
            variable with variables "status=crew", "status=first",
            "status=second" and "status=third". After ::
 
-               continuizer = Orange.preprocess.DomainContinuizer()
-               domain1 = continuizer(titanic)
-               titanic1 = Orange.data.Table(domain1, titanic)
+               continuizer = Orange.preprocess.Continuize()
+               titanic1 = continuizer(titanic)
 
            we have ::
 
                >>> titanic.domain
                [status, age, sex | survived]
-               >>> domain1
+               >>> titanic1.domain
                [status=crew, status=first, status=second, status=third,
                 age=adult, age=child, sex=female, sex=male | survived]
 
@@ -94,7 +74,7 @@
                [0.000, 1.000, 0.000, 0.000, 1.000, 0.000, 0.000, 1.000 | yes]
 
 
-       ``DomainContinuizer.FirstAsBase``
+       ``Continuize.FirstAsBase``
            Similar to the above, except that it creates indicators for all
            values except the first one, according to the order in the variable's
            :obj:`~Orange.data.DiscreteVariable.values` attribute. If all
@@ -110,10 +90,10 @@
            were 0, the status of the original data instance was "crew".
 
                >>> continuizer.multinomial_treatment = continuizer.FirstAsBase
-               >>> continuizer(titanic.domain)
+               >>> continuizer(titanic).domain
                [status=first, status=second, status=third, age=child, sex=male | survived]
 
-       ``DomainContinuizer.FrequentAsBase``
+       ``Continuize.FrequentAsBase``
            Like above, except that the most frequent value is used as the
            base. If there are multiple most frequent values, the
            one with the lowest index in
@@ -126,45 +106,45 @@
            since there were more females than males on Titanic. ::
 
                 >>> continuizer.multinomial_treatment = continuizer.FrequentAsBase
-                >>> continuizer(titanic)
+                >>> continuizer(titanic).domain
                 [status=first, status=second, status=third, age=child, sex=female | survived]
 
-       ``DomainContinuizer.Remove``
+       ``Continuize.Remove``
            Discrete variables are removed. ::
 
                >>> continuizer.multinomial_treatment = continuizer.Remove
-               >>> continuizer(titanic)
+               >>> continuizer(titanic).domain
                [ | survived]
 
-       ``DomainContinuizer.RemoveMultinomial``
+       ``Continuize.RemoveMultinomial``
            Discrete variables with more than two values are removed. Binary
            variables are treated the same as in `FirstAsBase`.
 
             >>> continuizer.multinomial_treatment = continuizer.RemoveMultinomial
-            >>> continuizer(titanic)
+            >>> continuizer(titanic).domain
             [age=child, sex=male | survived]
 
-       ``DomainContinuizer.ReportError``
+       ``Continuize.ReportError``
            Raise an error if there are any multinomial variables in the data.
 
-       ``DomainContinuizer.AsOrdinal``
+       ``Continuize.AsOrdinal``
            Multinomial variables are treated as ordinal and replaced by
            continuous variables with indices within
            :obj:`~Orange.data.DiscreteVariable.values`, e.g. 0, 1, 2, 3...
 
                 >>> continuizer.multinomial_treatment = continuizer.AsOrdinal
-                >>> titanic1 = data.Table(continuizer(titanic), titanic)
+                >>> titanic1 = continuizer(titanic)
                 >>> titanic[700]
                 [third, adult, male | no]
                 >>> titanic1[700]
                 [3.000, 0.000, 1.000 | no]
 
-       ``DomainContinuizer.AsNormalizedOrdinal``
+       ``Continuize.AsNormalizedOrdinal``
            As above, except that the resulting continuous value will be from
            range 0 to 1, e.g. 0, 0.333, 0.667, 1 for a four-valued variable::
 
                 >>> continuizer.multinomial_treatment = continuizer.AsNormalizedOrdinal
-                >>> titanic1 = Orange.data.Table(continuizer(titanic), titanic)
+                >>> titanic1 = continuizer(titanic)
                 >>> titanic1[700]
                 [1.000, 0.000, 1.000 | no]
                 >>> titanic1[15]
@@ -173,10 +153,10 @@
     .. attribute:: normalize_continuous
 
         If ``None``, continuous variables are left unchanged. If
-        ``DomainContinuizer.NormalizeBySD``, they are replaced with
+        ``Continuize.NormalizeBySD``, they are replaced with
         standardized values by subtracting the average value and dividing by
         the standard deviation. Attribute ``zero_based`` has no effect on this
-        standardization. If ``DomainContinuizer.NormalizeBySpan``, they are
+        standardization. If ``Continuize.NormalizeBySpan``, they are
         replaced with normalized values by subtracting min value of the data
         and dividing by span (max - min). Statistics are computed from the data,
         so constructor must be given data, not just domain. (Default: ``None``)
@@ -186,3 +166,32 @@
         If ``True`` the class is replaced by continuous
         attributes or normalized as well. Multiclass problems are thus
         transformed to multitarget ones. (Default: ``False``)
+
+
+
+.. class:: Orange.preprocess.DomainContinuizer
+
+    Construct a domain in which discrete attributes are replaced by
+    continuous. Existing continuous attributes can be normalized. ::
+
+        domain_continuizer = Orange.preprocess.DomainContinuizer()
+        domain1 = domain_continuizer(titanic)
+
+    :obj:`Orange.preprocess.Continuize` calls `DomainContinuizer` to construct
+    the domain.
+
+    Domain continuizers can be given either a data set or a domain, and return
+    a new domain. When given only the domain, they cannot normalize continuous
+    attributes or use the most frequent value as the base value.
+
+    The class can also behave like a function: if the constructor is given the
+    data or a domain, the constructed continuizer is immediately applied and
+    the constructor returns a transformed domain instead of the continuizer
+    instance::
+
+        domain1 = Orange.preprocess.DomainContinuizer(titanic)
+
+    By default, the class does not change continuous and class attributes,
+    discrete attributes are replaced with N attributes (``Indicators``) with
+    values 0 and 1.
+

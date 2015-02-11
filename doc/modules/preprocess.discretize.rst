@@ -57,7 +57,7 @@
 
        Defines the treatment of multinomial variables.
 
-       ``DomainContinuizer.Indicators``
+       ``Continuize.Indicators``
 
            The variable is replaced by indicator variables, each
            corresponding to one value of the original variable.
@@ -95,7 +95,7 @@
                [0.000, 1.000, 0.000, 0.000, 1.000, 0.000, 0.000, 1.000 | yes]
 
 
-       ``DomainContinuizer.FirstAsBase``
+       ``Continuize.FirstAsBase``
            Similar to the above, except that it creates indicators for all
            values except the first one, according to the order in the variable's
            :obj:`~Orange.data.DiscreteVariable.values` attribute. If all
@@ -114,7 +114,7 @@
                >>> continuizer(titanic.domain)
                [status=first, status=second, status=third, age=child, sex=male | survived]
 
-       ``DomainContinuizer.FrequentAsBase``
+       ``Continuize.FrequentAsBase``
            Like above, except that the most frequent value is used as the
            base. If there are multiple most frequent values, the
            one with the lowest index in
@@ -130,14 +130,14 @@
                 >>> continuizer(titanic)
                 [status=first, status=second, status=third, age=child, sex=female | survived]
 
-       ``DomainContinuizer.Remove``
+       ``Continuize.Remove``
            Discrete variables are removed. ::
 
                >>> continuizer.multinomial_treatment = continuizer.Remove
                >>> continuizer(titanic)
                [ | survived]
 
-       ``DomainContinuizer.RemoveMultinomial``
+       ``Continuize.RemoveMultinomial``
            Discrete variables with more than two values are removed. Binary
            variables are treated the same as in `FirstAsBase`.
 
@@ -145,10 +145,10 @@
             >>> continuizer(titanic)
             [age=child, sex=male | survived]
 
-       ``DomainContinuizer.ReportError``
+       ``Continuize.ReportError``
            Raise an error if there are any multinomial variables in the data.
 
-       ``DomainContinuizer.AsOrdinal``
+       ``Continuize.AsOrdinal``
            Multinomial variables are treated as ordinal and replaced by
            continuous variables with indices within
            :obj:`~Orange.data.DiscreteVariable.values`, e.g. 0, 1, 2, 3...
