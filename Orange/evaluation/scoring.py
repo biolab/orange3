@@ -3,9 +3,33 @@ import sys
 
 import numpy as np
 import sklearn.metrics as skl_metrics
+from Orange.data import DiscreteVariable
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks"]
+
+def calculate_weights(results):
+    number_of_classes = len(results.domain.class_var.values)
+    class_cases = [sum(results.actual == class_)
+               for class_ in range(number_of_classes)]
+    N = results.actual.shape[0]
+    weights = [c * (N - c) for c in class_cases]
+    wsum = sum(weights)
+    if wsum == 0:
+        return None
+    else:
+        weights_norm = [w / wsum for w in weights]
+        return weights_norm
+
+
+def calculate_fold_weights(results):
+    number_of_classes = len(results.domain.class_var.values)
+    class_cases = [sum(results.actual == class_)
+               for class_ in range(number_of_classes)]
+    w = float(class_cases[0])
+    for c in class_cases[1:]:
+        w *= c
+    return w
 
 
 class Score:
@@ -24,8 +48,7 @@ class Score:
         if not (self.separate_folds and results.folds):
             return self.compute_score(results, **kwargs)
 
-        scores = self.scores_by_folds(results, **kwargs)
-        return self.average(scores)
+        return self.scores_by_folds(results, **kwargs)
 
     def average(self, scores):
         if self.is_scalar:
@@ -37,12 +60,24 @@ class Score:
         nmodels = len(results.predicted)
         if self.is_scalar:
             scores = np.empty((nfolds, nmodels), dtype=np.float64)
+            fold_weights = np.empty((nfolds, nmodels), dtype=np.float64)
         else:
             scores = [None] * nfolds
+            fold_weights = [None] * nfolds
+        
         for fold in range(nfolds):
             fold_results = results.get_fold(fold)
             scores[fold] = self.compute_score(fold_results, **kwargs)
-        return scores
+            fold_weights[fold] = calculate_fold_weights(fold_results)
+        
+        if any(np.isnan(scores)):
+            fold_weights = np.array(fold_weights[~np.isnan(scores)]).reshape((-1,nmodels))
+            scores = np.array(scores[~np.isnan(scores)]).reshape((-1,nmodels))
+        
+        fsum = np.sum(fold_weights)
+        if fsum > 0:
+            fold_weights /= fsum
+        return np.array([np.sum(scores * fold_weights)])
 
     def compute_score(self, results):
         return NotImplementedError
@@ -90,26 +125,48 @@ class AUC(Score):
 
     def multi_class_auc(self, results):
         number_of_classes = len(results.domain.class_var.values)
-        N = results.actual.shape[0]
+        weights = calculate_weights(results)
+        if weights == None:
+            return np.array([np.nan])
+        
+        auc_array = np.zeros(shape=(number_of_classes))
+        for class_ in range(number_of_classes):
+            nclass = len(set(results.actual == class_))
+            if nclass == 1:
+                weights[class_] = 0.0
+                wsum = sum(weights)
+                if wsum > 0.0:
+                    weights = [w/wsum for w in weights]
+                else:
+                    return np.array([np.nan])
+            else:
+                auc_array[class_] = np.mean(np.fromiter(
+                (skl_metrics.roc_auc_score(results.actual == class_, predicted)
+                for predicted in results.predicted == class_),
+                dtype=np.float64, count=len(results.predicted)))
 
-        class_cases = [sum(results.actual == class_)
-                   for class_ in range(number_of_classes)]
-        weights = [c * (N - c) for c in class_cases]
-        weights_norm = [w / sum(weights) for w in weights]
+        return np.array([np.sum(auc_array * weights)])
 
-        auc_array = np.array([np.mean(np.fromiter(
-            (skl_metrics.roc_auc_score(results.actual == class_, predicted)
-            for predicted in results.predicted == class_),
-            dtype=np.float64, count=len(results.predicted)))
-            for class_ in range(number_of_classes)])
-
-        return np.array([np.sum(auc_array * weights_norm)])
-
-    def compute_score(self, results):
-        if len(results.domain.class_var.values) == 2:
+    def compute_score(self, results, target=None):
+        domain = results.domain
+        if not isinstance(domain.class_var, DiscreteVariable):
+            raise ValueError("AUC.compute_score expects a domain with a "
+                             "(single) discrete variable")
+        n_classes = len(domain.class_var.values)
+        if n_classes < 2:
+            raise ValueError("Class variable has less than two values")
+        
+        if len(domain.class_var.values) == 2:
             return self.from_predicted(results, skl_metrics.roc_auc_score)
         else:
-            return self.multi_class_auc(results)
+            if target is None:
+                return self.multi_class_auc(results)
+            else:
+                y = np.array(results.actual == target, dtype=int)
+                return np.fromiter(
+                    (sklearn.metrics.roc_auc_score(y, probabilities[:, target])
+                     for probabilities in results.probabilities),
+                    dtype=np.float64, count=len(results.predicted))
 
 
 ## Regression scores
