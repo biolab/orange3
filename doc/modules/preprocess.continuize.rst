@@ -1,9 +1,3 @@
-.. currentmodule:: Orange.preprocess.continuize
-
-##################################################
-Continuization and normalization (``continuizer``)
-##################################################
-
 .. class:: Orange.preprocess.continuize.DomainContinuizer
 
     Construct a domain in which discrete attributes are replaced by
@@ -34,15 +28,18 @@ Continuization and normalization (``continuizer``)
     attributes or use the most frequent value as the base value.
 
     The class can also behave as a function:
-    If the constructor is given the data or a domain, the constructed
+    if the constructor is given the data or a domain, the constructed
     continuizer is immediately applied and the constructor returns a transformed
-    domain is returned instead of the continuizer instance::
+    domain instead of the continuizer instance::
 
-        domain0 = Orange.data.continuization.DomainContinuizer(data)
+        domain0 = continuize.DomainContinuizer(data)
 
     By default, the class does not change continuous and class attributes,
-    discrete attributes are replaced with N attributes (``NValues``) with values
-    0 and 1.
+    discrete attributes are replaced with N attributes (``Indicators``) with
+    values 0 and 1.
+
+    The class has a number of attributes that can be set either in constructor
+    or, later, as attributes.
 
     .. attribute:: zero_based
 
@@ -56,86 +53,133 @@ Continuization and normalization (``continuizer``)
 
     .. attribute:: multinomial_treatment
 
-       Decides the treatment of multinomial variables. Let N be the
-       number of the variables's values. (Default: ``NValues``)
+       Defines the treatment of multinomial variables.
 
-       ``DomainContinuizer.NValues``
+       ``DomainContinuizer.Indicators``
 
-           The variable is replaced by N indicator variables, each
+           The variable is replaced by indicator variables, each
            corresponding to one value of the original variable.
            For each value of the original attribute, only the
            corresponding new attribute will have a value of one and others
-           will be zero.
+           will be zero. This is the default behaviour.
 
            Note that these variables are not independent, so they cannot be
            used (directly) in, for instance, linear or logistic regression.
 
-           For example, data set "bridges" has feature "RIVER" with
-           values "M", "A", "O" and "Y", in that order. Its value for
-           the 15th row is "M". Continuization replaces the variable
-           with variables "RIVER=M", "RIVER=A", "RIVER=O" and
-           "RIVER=Y". For the 15th row, the first has value 1 and
-           others are 0.::
+           For example, data set "titanic" has feature "status" with
+           values "crew", "first", "second" and "third", in that order. Its
+           value for the 15th row is "first". Continuization replaces the
+           variable with variables "status=crew", "status=first",
+           "status=second" and "status=third". ::
 
-               >>> domain0 = continuize.DomainContinuizer(bridges)
+               >>> from Orange import data
+               >>> from Orange.preprocess import continuize
+               >>> titanic = data.Table("titanic")
+               >>> continuizer = continuize.DomainContinuizer()
+               >>> domain0 = continuizer(titanic)
+               >>> titanic.domain
+               [status, age, sex | survived]
                >>> domain0
-               [RIVER=A, RIVER=M, RIVER=O, RIVER=Y, ERECTED, PURPOSE=AQUEDUCT,
-                PURPOSE=HIGHWAY, PURPOSE=RR, PURPOSE=WALK, LENGTH, LANES,
-                CLEAR-G=G, CLEAR-G=N, T-OR-D=DECK, T-OR-D=THROUGH,
-                MATERIAL=IRON, MATERIAL=STEEL, MATERIAL=WOOD, SPAN=LONG,
-                SPAN=MEDIUM, SPAN=SHORT, REL-L=F, REL-L=S, REL-L=S-F,
-                TYPE=ARCH, TYPE=CANTILEV, TYPE=CONT-T, TYPE=NIL, TYPE=SIMPLE-T,
-                TYPE=SUSPEN, TYPE=WOOD]
+               [status=crew, status=first, status=second, status=third,
+                age=adult, age=child, sex=female, sex=male | survived]
 
-       ``DomainContinuizer.LowestIsBase``
-           Similar to the above except that it creates only N-1
-           variables. The missing indicator belongs to the lowest value:
-           when the original variable has the lowest value all indicators
-           are 0.
+           For the 15th row, the variable "status=first" has value 1 and the
+           values of the other three variables are 0::
 
-           If the variable descriptor has the ``base_value`` defined, the
-           specified value is used as base instead of the lowest one.
+               >>> titanic0 = data.Table(domain0, titanic)
+               >>> print(titanic[15])
+               [first, adult, male | yes]
+               >>> print(titanic[15])
+               [first, adult, male | yes]
+               >>> print(titanic0[15])
+               [0.000, 1.000, 0.000, 0.000, 1.000, 0.000, 0.000, 1.000 | yes]
 
-           Continuizing the variable "RIVER" gives similar results as
-           above except that it would omit "RIVER=M"; all three
-           variables would be zero for the 15th data instance.
 
-       ``DomainContinuizer.FrequentIsBase``
+       ``DomainContinuizer.FirstAsBase``
+           Similar to the above, except that it creates indicators for all
+           values except the first one, according to the order in the variable's
+           :obj:`~Orange.data.DiscreteVariable.values` attribute. If all
+           indicators in the transformed data instance are 0, the original
+           instance had the first value of the corresponding variable.
+
+           If the variable descriptor defines the
+           :obj:`~Orange.data.DiscreteVariable.base_value`, the
+           specified value is used as base instead of the first one.
+
+           Continuizing the variable "status" with this setting gives variables
+           "status=first", "status=second" and "status=third". If all of them
+           were 0, the status of the original data instance was "crew".
+
+               >>> continuizer.multinomial_treatment = continuizer.FirstAsBase
+               >>> continuizer(titanic.domain)
+               [status=first, status=second, status=third, age=child, sex=male | survived]
+
+       ``DomainContinuizer.FrequentAsBase``
            Like above, except that the most frequent value is used as the
            base. If there are multiple most frequent values, the
-           one with the lowest index is used. The frequency of values is
-           extracted from data, so this option cannot be used if constructor
-           is given only a domain.
+           one with the lowest index in
+           :obj:`~Orange.data.DiscreteVariable.values` is used. The frequency
+           of values is extracted from data, so this option does not work if
+           only the domain is given.
 
-           Variable "RIVER" would be continuized similarly to above
-           except that it omits "RIVER=A", which is the most frequent value.
+           Continuizing the Titanic data in this way differs from the above by
+           the attributes sex: instead of "sex=male" it constructs "sex=female"
+           since there were more females than males on Titanic. ::
 
-       ``DomainContinuizer.Ignore``
-           Discrete variables are omitted.
+                >>> continuizer.multinomial_treatment = continuizer.FrequentAsBase
+                >>> continuizer(titanic)
+                [status=first, status=second, status=third, age=child, sex=female | survived]
 
-       ``DomainContinuizer.IgnoreMulti``
-           Discrete variables with more than two values are omitted; two-valued
-           are treated the same as in LowestIsBase.
+       ``DomainContinuizer.Remove``
+           Discrete variables are removed. ::
+
+               >>> continuizer.multinomial_treatment = continuizer.Remove
+               >>> continuizer(titanic)
+               [ | survived]
+
+       ``DomainContinuizer.RemoveMultinomial``
+           Discrete variables with more than two values are removed. Binary
+           variables are treated the same as in `FirstAsBase`.
+
+            >>> continuizer.multinomial_treatment = continuizer.RemoveMultinomial
+            >>> continuizer(titanic)
+            [age=child, sex=male | survived]
 
        ``DomainContinuizer.ReportError``
-           Raise an error if there are any multinominal variables in the data.
+           Raise an error if there are any multinomial variables in the data.
 
        ``DomainContinuizer.AsOrdinal``
-           Multivalued variables are treated as ordinal and replaced by a
-           continuous variables with the values' index, e.g. 0, 1, 2, 3...
+           Multinomial variables are treated as ordinal and replaced by
+           continuous variables with indices within
+           :obj:`~Orange.data.DiscreteVariable.values`, e.g. 0, 1, 2, 3...
+
+                >>> continuizer.multinomial_treatment = continuizer.AsOrdinal
+                >>> titanic0 = data.Table(continuizer(titanic), titanic)
+                >>> titanic0[700]
+                [3.000, 0.000, 1.000 | no]
+                >>> titanic[700]
+                [third, adult, male | no]
 
        ``DomainContinuizer.AsNormalizedOrdinal``
            As above, except that the resulting continuous value will be from
-           range 0 to 1, e.g. 0, 0.25, 0.5, 0.75, 1 for a five-valued
-           variable.
+           range 0 to 1, e.g. 0, 0.333, 0.667, 1 for a four-valued variable::
+
+                >>> continuizer.multinomial_treatment = continuizer.AsNormalizedOrdinal
+                >>> titanic0 = data.Table(continuizer(titanic), titanic)
+                >>> titanic0[700]
+                [1.000, 0.000, 1.000 | no]
+                >>> titanic0[15]
+                [0.333, 0.000, 1.000 | yes]
 
     .. attribute:: normalize_continuous
 
         If ``None``, continuous variables are left unchanged. If
-        ``DomainContinuizer.NormalizeBySD``, they are replaced with standardized values by subtracting
-        the average value and dividing by the standard deviation. Attribute ``zero_based`` has no effect on this
-        standardization. If ``DomainContinuizer.NormalizeBySpan``, they are replaced with normalized values by
-        subtracting min value of the data and dividing by span (max - min). Statistics are computed from the data,
+        ``DomainContinuizer.NormalizeBySD``, they are replaced with
+        standardized values by subtracting the average value and dividing by
+        the standard deviation. Attribute ``zero_based`` has no effect on this
+        standardization. If ``DomainContinuizer.NormalizeBySpan``, they are
+        replaced with normalized values by subtracting min value of the data
+        and dividing by span (max - min). Statistics are computed from the data,
         so constructor must be given data, not just domain. (Default: ``None``)
 
     .. attribute:: transform_class
