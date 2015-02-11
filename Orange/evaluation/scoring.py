@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import sklearn.metrics as skl_metrics
+from Orange.data import DiscreteVariable
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks"]
@@ -88,28 +89,47 @@ class PrecisionRecallFSupport(Score):
 class AUC(Score):
     separate_folds = True
 
-    def multi_class_auc(self, results):
+    def calculate_weights(self, results):
         number_of_classes = len(results.domain.class_var.values)
-        N = results.actual.shape[0]
-
         class_cases = [sum(results.actual == class_)
                    for class_ in range(number_of_classes)]
-        weights = [c * (N - c) for c in class_cases]
-        weights_norm = [w / sum(weights) for w in weights]
+        N = results.actual.shape[0]
+        weights = np.array([c * (N - c) for c in class_cases])
+        wsum = np.sum(weights)
+        if wsum == 0:
+            raise ValueError("Class variable has less than two values")
+        else:
+            return weights / wsum
 
+    def multi_class_auc(self, results):
+        number_of_classes = len(results.domain.class_var.values)
+        weights = self.calculate_weights(results)
+        
         auc_array = np.array([np.fromiter(
             (skl_metrics.roc_auc_score(results.actual == class_, predicted)
             for predicted in results.predicted == class_),
             dtype=np.float64, count=len(results.predicted))
             for class_ in range(number_of_classes)])
 
-        return np.array([np.sum(auc_array.T * weights_norm, axis=1)])
+        return np.array([np.sum(auc_array.T * weights, axis=1)])
 
-    def compute_score(self, results):
-        if len(results.domain.class_var.values) == 2:
+    def compute_score(self, results, target=None):
+        domain = results.domain
+        n_classes = len(domain.class_var.values)
+        
+        if n_classes < 2:
+            raise ValueError("Class variable has less than two values")
+        elif n_classes == 2:
             return self.from_predicted(results, skl_metrics.roc_auc_score)
         else:
-            return self.multi_class_auc(results)
+            if target is None:
+                return self.multi_class_auc(results)
+            else:
+                y = np.array(results.actual == target, dtype=int)
+                return np.fromiter(
+                    (sklearn.metrics.roc_auc_score(y, probabilities[:, target])
+                     for probabilities in results.probabilities),
+                    dtype=np.float64, count=len(results.predicted))
 
 
 ## Regression scores
