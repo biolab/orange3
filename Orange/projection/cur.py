@@ -6,7 +6,7 @@ import scipy.sparse.linalg as sla
 import Orange.data
 from Orange.projection import Projection, ProjectionModel
 
-__all__ = ["CUR", "CURModel"]
+__all__ = ["CUR"]
 
 
 class CUR(Projection):
