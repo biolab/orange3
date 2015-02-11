@@ -4,9 +4,8 @@ from itertools import chain, count
 import heapq
 import numpy
 
-import Orange.distance
-
 import scipy.cluster.hierarchy
+from Orange.distance import Euclidean, PearsonR
 
 __all__ = ['HierarchicalClustering']
 
@@ -52,7 +51,7 @@ def squareform(X, mode="upper"):
     return matrix
 
 
-def data_clustering(data, distance=Orange.distance.Euclidean,
+def data_clustering(data, distance=Euclidean,
                     linkage=AVERAGE):
     """
     Return the hierarchical clustering of the data set's rows.
@@ -65,7 +64,7 @@ def data_clustering(data, distance=Orange.distance.Euclidean,
     return dist_matrix_clustering(matrix, linkage=linkage)
 
 
-def feature_clustering(data, distance=Orange.distance.PearsonR,
+def feature_clustering(data, distance=PearsonR,
                        linkage=AVERAGE):
     """
     Return the hierarchical clustering of the data set's columns.
