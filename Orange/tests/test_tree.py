@@ -18,17 +18,6 @@ class TreeTest(unittest.TestCase):
         Z = clf(table)
         self.assertTrue(np.all(table.Y.flatten() == Z))
 
-    def test_items_in_nodes(self):
-        table = Table('iris')
-        learn = TreeLearner()
-        clf = learn(table)
-        self.assertTrue(len(clf.get_items(0))==len(table))
-
-    def test_distr_in_nodes(self):
-        table = Table('iris')
-        learn = TreeLearner()
-        clf = learn(table)
-        self.assertTrue(clf.get_distr(0)==Counter(table.Y.flatten()))
 
 class SklearnTreeTest(unittest.TestCase):
 
