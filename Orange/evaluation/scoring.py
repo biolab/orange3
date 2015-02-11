@@ -97,13 +97,13 @@ class AUC(Score):
         weights = [c * (N - c) for c in class_cases]
         weights_norm = [w / sum(weights) for w in weights]
 
-        auc_array = np.array([np.mean(np.fromiter(
+        auc_array = np.array([np.fromiter(
             (skl_metrics.roc_auc_score(results.actual == class_, predicted)
             for predicted in results.predicted == class_),
-            dtype=np.float64, count=len(results.predicted)))
+            dtype=np.float64, count=len(results.predicted))
             for class_ in range(number_of_classes)])
 
-        return np.array([np.sum(auc_array * weights_norm)])
+        return np.array([np.sum(auc_array.T * weights_norm, axis=1)])
 
     def compute_score(self, results):
         if len(results.domain.class_var.values) == 2:
