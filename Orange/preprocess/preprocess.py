@@ -24,7 +24,7 @@ class Preprocess(object):
 
 class Continuize(Preprocess):
     def __init__(self, zero_based=True,
-                 multinomial_treatment=continuize.DomainContinuizer.NValues,
+                 multinomial_treatment=continuize.DomainContinuizer.Indicators,
                  normalize_continuous=
                  continuize.DomainContinuizer.NormalizeBySD):
         self.zero_based = zero_based
