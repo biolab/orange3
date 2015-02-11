@@ -8,6 +8,8 @@ import Orange.distance
 
 import scipy.cluster.hierarchy
 
+__all__ = ['HierarchicalClustering']
+
 SINGLE = "single"
 AVERAGE = "average"
 COMPLETE = "complete"
@@ -541,7 +543,7 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
     return optimal_swap(tree, M)
 
 
-class HierarchicalClustering(object):
+class HierarchicalClustering:
     def __init__(self, n_clusters=2, linkage=AVERAGE):
         self.n_clusters = n_clusters
         self.linkage = linkage
