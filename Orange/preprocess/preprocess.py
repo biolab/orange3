@@ -53,9 +53,23 @@ class Continuize(Preprocess):
 
 class Discretize(Preprocess):
     def __init__(self, method=None):
+        """
+        Construct a discretizer.
+
+        :param method: discretization method
+        :type method: Orange.preprocess.discretiza.Discretization
+        """
         self.method = method
 
     def __call__(self, data):
+        """
+        Compute and apply discretization of the given data. Returns a new
+        data table.
+
+        :param data: data
+        :type data: Orange.data.Table
+        :return: Orange.data.Table
+        """
         def transform(var):
             if is_continuous(var):
                 newvar = method(data, var)
@@ -71,7 +85,6 @@ class Discretize(Preprocess):
         newattrs = [var for var in newattrs if var is not None]
         domain = Orange.data.Domain(
             newattrs, data.domain.class_vars, data.domain.metas)
-
         return data.from_table(domain, data)
 
 

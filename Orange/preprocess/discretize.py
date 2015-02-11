@@ -64,8 +64,15 @@ class Discretizer(Transformation):
 
 
 class Discretization:
-    """Base class for discretization classes."""
-    pass
+    """Abstract base class for discretization classes."""
+    def __call__(self, data, variable):
+        """
+        Compute discretization of the given variable on the given data.
+        Return a new variable with the appropriate domain
+        (:obj:`Orange.data.DiscreteVariable.values`) and transformer
+        (:obj:`Orange.data.Variable.compute_value`).
+        """
+        raise SystemError("Missing call operator")
 
 
 class EqualFreq(Discretization):
