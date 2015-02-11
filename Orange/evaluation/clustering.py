@@ -3,6 +3,8 @@ from Orange.evaluation.testing import Results
 from Orange.evaluation.scoring import Score
 from sklearn.metrics import silhouette_score, adjusted_mutual_info_score
 
+__all__ = ['ClusteringEvaluation']
+
 
 class ClusteringResults(Results):
     def __init__(self, store_data=True, **kwargs):
