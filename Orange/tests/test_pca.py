@@ -24,7 +24,7 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
     def test_sparse_pca(self):
-        data = Orange.data.Table('ionosphere')
+        data = Orange.data.Table('ionosphere')[:100]
         self.__sparse_pca_test_helper(data, n_com=3, max_err=1500)
         self.__sparse_pca_test_helper(data, n_com=10, max_err=1000)
         self.__sparse_pca_test_helper(data, n_com=32, max_err=500)
