@@ -34,9 +34,9 @@ class LinearSVMLearner(SklLearner):
     __wraps__ = skl_svm.LinearSVC
 
     def __init__(self, penalty='l2', loss='l2', dual=True, tol=0.0001,
-                C=1.0, multi_class='ovr', fit_intercept=True,
-                intercept_scaling=True, random_state=None,
-                preprocessors=None):
+                 C=1.0, multi_class='ovr', fit_intercept=True,
+                 intercept_scaling=True, random_state=None,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
         self.supports_multiclass = True
@@ -102,7 +102,6 @@ class OneClassSVMLearner(SklLearner):
         if W is not None:
             return self.__returns__(clf.fit(X, W.reshape(-1)))
         return self.__returns__(clf.fit(X))
-
 
 
 if __name__ == '__main__':

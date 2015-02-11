@@ -253,7 +253,6 @@ class SklModel(Model, metaclass=WrapperMeta):
     def __init__(self, clf):
         self.clf = clf
 
-
     def predict(self, X):
         value = self.clf.predict(X)
         if hasattr(self.clf, "predict_proba"):
