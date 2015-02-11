@@ -1,5 +1,4 @@
 import sklearn.neighbors as skl_neighbors
-from numpy import cov
 from Orange.classification import SklLearner, SklModel
 
 __all__ = ["KNNLearner"]

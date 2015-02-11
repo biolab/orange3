@@ -1,6 +1,4 @@
-import numbers
 import sklearn.ensemble as skl_ensemble
-import sklearn.preprocessing as skl_preprocessing
 
 from Orange.classification import SklLearner, SklModel
 

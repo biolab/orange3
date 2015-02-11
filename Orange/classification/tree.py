@@ -1,9 +1,6 @@
 from Orange.classification import SklLearner, SklModel
 import sklearn.tree as skl_tree
 
-import numpy as np
-from collections import Counter
-
 __all__ = ["TreeLearner"]
 
 

@@ -28,6 +28,7 @@ class MajorityLearner(Learner):
             dist.fill(1 / len(dist))
         return ConstantModel(dist=dist)
 
+
 class ConstantModel(Model):
     """
     A classification model that returns a given class value.

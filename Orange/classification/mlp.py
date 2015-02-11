@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
@@ -92,8 +91,9 @@ class MLPLearner(Learner):
             if self.dropout is None or self.dropout[0] < 1e-7:
                 dropout_mask.append(1)
             else:
-                dropout_mask.append(np.random.binomial(1, 1 - self.dropout[0],
-                                   (X.shape[0], self.layers[i])))
+                dropout_mask.append(
+                    np.random.binomial(1, 1 - self.dropout[0],
+                                       (X.shape[0], self.layers[i])))
 
         a.append(X * dropout_mask[0])
         for i in range(len(self.layers) - 2):
@@ -215,7 +215,7 @@ class MLPModel(Model):
 if __name__ == '__main__':
     import Orange.data
     import sklearn.cross_validation as skl_cross_validation
-    
+
     np.random.seed(42)
 
     def numerical_grad(f, params, e=1e-4):

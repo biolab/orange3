@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
@@ -83,7 +82,7 @@ class SoftmaxRegressionModel(Model):
 
 if __name__ == '__main__':
     import Orange.data
-    
+
     def numerical_grad(f, params, e=1e-4):
         grad = np.zeros_like(params)
         perturb = np.zeros_like(params)
