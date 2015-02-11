@@ -6,7 +6,7 @@ import Orange.data
 from Orange.data import Domain, Table
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
-           "Bootstrap", "TestOnTestData"]
+           "Bootstrap", "TestOnTestData", "sample"]
 
 
 def is_discrete(var):
@@ -422,3 +422,60 @@ class TestOnTestData(Results):
 
         self.nrows = len(test_data)
         self.folds = [slice(0, len(test_data))]
+
+
+def sample(table, n=0.7, stratified=False, replace=False,
+                    random_state=None):
+    """
+    Samples data instances from a data table. Returns the sample and
+    a data set from input data table that are not in the sample. Also
+    uses several sampling functions from
+    `scikit-learn <http://scikit-learn.org>`_.
+
+    table : data table
+        A data table from which to sample.
+
+    n : float, int (default = 0.7)
+        If float, should be between 0.0 and 1.0 and represents
+        the proportion of data instances in the resulting sample. If
+        int, n is the number of data instances in the resulting sample.
+
+    stratified : bool, optional (default = False)
+        If true, sampling will try to consider class values and
+        match distribution of class values
+        in train and test subsets.
+
+    replace : bool, optional (default = False)
+        sample with replacement
+
+    random_state : int or RandomState
+        Pseudo-random number generator state used for random sampling.
+    """
+
+    if type(n) == float:
+        n = int(n * len(table))
+
+    if replace:
+        if random_state is None:
+            rgen = np.random
+        else:
+            rgen = np.random.mtrand.RandomState(random_state)
+        sample = rgen.random_integers(0, len(table) - 1, n)
+        o = np.ones(len(table))
+        o[sample] = 0
+        others = np.nonzero(o)[0]
+        return table[sample], table[others]
+
+    n = len(table) - n
+    if stratified and is_discrete(table.domain.class_var):
+        test_size = max(len(table.domain.class_var.values), n)
+        ind = skl_cross_validation.StratifiedShuffleSplit(
+            table.Y.ravel(), n_iter=1,
+            test_size=test_size, train_size=len(table) - test_size,
+            random_state=random_state)
+    else:
+        ind = skl_cross_validation.ShuffleSplit(
+            len(table), n_iter=1,
+            test_size=n, random_state=random_state)
+    ind = next(iter(ind))
+    return table[ind[0]], table[ind[1]]
