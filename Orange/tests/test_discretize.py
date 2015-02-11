@@ -123,7 +123,7 @@ class TestDiscretizer(TestCase):
         dvar = preprocess.Discretizer.create_discretized_var(
             self.var, [1, 2, 3])
         X = np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5])
-        np.testing.assert_equal(dvar.compute_value._transform(X), np.floor(X))
+        np.testing.assert_equal(dvar.compute_value.transform(X), np.floor(X))
 
 
 # noinspection PyPep8Naming

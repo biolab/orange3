@@ -154,7 +154,7 @@ class OWContinuize(widget.OWWidget):
 
 
 from Orange.preprocess.transformation import \
-    Identity, Indicator, Indicator_1, Normalizer
+    Identity, Indicator, Indicator1, Normalizer
 
 from functools import partial, wraps, reduce
 
@@ -174,20 +174,20 @@ class WeightedIndicator(Indicator):
         super().__init__(variable, value)
         self.weight = weight
 
-    def _transform(self, c):
-        t = super()._transform(c) * self.weight
+    def transform(self, c):
+        t = super().transform(c) * self.weight
         if self.weight != 1.0:
             t *= self.weight
         return t
 
 
-class WeightedIndicator_1(Indicator_1):
+class WeightedIndicator_1(Indicator1):
     def __init__(self, variable, value, weight=1.0):
         super().__init__(variable, value)
         self.weight = weight
 
-    def _transform(self, c):
-        t = super()._transform(c) * self.weight
+    def transform(self, c):
+        t = super().transform(c) * self.weight
         if self.weight != 1.0:
             t *= self.weight
         return t
@@ -202,7 +202,7 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
     elif zero_based:
         indicator = WeightedIndicator(source, value=value_ind, weight=weight)
     elif weight is None:
-        indicator = Indicator_1(source, value=value_ind)
+        indicator = Indicator1(source, value=value_ind)
     else:
         indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
     var.compute_value = indicator
