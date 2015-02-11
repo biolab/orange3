@@ -358,11 +358,10 @@ class ExcelReader:
 
     def open_workbook(self, f):
         from openpyxl import load_workbook
-        if isinstance(f, str) and ":" in f:
-            f, sheet = f.split(":")
+        if isinstance(f, str) and ":" in f[2:]:
+            f, sheet = f.rsplit(":",1)
         else:
             sheet = None
-        print(f, sheet)
         wb = load_workbook(f, use_iterators=True,
                            read_only=True, data_only=True)
         ws = wb.get_sheet_by_name(sheet) if sheet else wb.get_active_sheet()
