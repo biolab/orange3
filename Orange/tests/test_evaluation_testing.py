@@ -68,7 +68,7 @@ class CrossValidationTestCase(unittest.TestCase):
             self.assertAlmostEqual(fold.stop, (i + 1) * 200, delta=3)
 
     def test_store_data(self):
-        nrows, ncols = 1000, 10
+        nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner()]
 
@@ -85,7 +85,7 @@ class CrossValidationTestCase(unittest.TestCase):
         self.assertIs(res.data, t)
 
     def test_store_models(self):
-        nrows, ncols = 1000, 10
+        nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
