@@ -52,13 +52,13 @@ class Continuize(Preprocess):
 
 
 class Discretize(Preprocess):
-    def __init__(self, method=discretize.EqualFreq()):
+    def __init__(self, method=None):
         self.method = method
 
     def __call__(self, data):
         def transform(var):
             if is_continuous(var):
-                newvar = self.method(data, var)
+                newvar = method(data, var)
                 if newvar is not None and len(newvar.values) >= 2:
                     return newvar
                 else:
@@ -66,6 +66,7 @@ class Discretize(Preprocess):
             else:
                 return var
 
+        method = self.method or discretize.EqualFreq()
         newattrs = [transform(var) for var in data.domain.attributes]
         newattrs = [var for var in newattrs if var is not None]
         domain = Orange.data.Domain(
@@ -75,11 +76,12 @@ class Discretize(Preprocess):
 
 
 class Impute(Preprocess):
-    def __init__(self, method=impute.Average()):
+    def __init__(self, method=None):
         self.method = method
 
     def __call__(self, data):
-        newattrs = [self.method(data, var) for var in data.domain.attributes]
+        method = self.method or impute.Average()
+        newattrs = [method(data, var) for var in data.domain.attributes]
         domain = Orange.data.Domain(
             newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
