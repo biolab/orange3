@@ -1,5 +1,5 @@
 import unittest
-
+import Orange
 import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
@@ -317,3 +317,26 @@ class TestOnTrainingTestCase(unittest.TestCase):
         data = Table(x, y)
         res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
+
+
+class TestTrainTestSplit(unittest.TestCase):
+    def test_fixed_training_size(self):
+        data = Orange.data.Table("iris")
+        train, test = Orange.evaluation.sample(data, 100)
+        self.assertEqual(len(train), 100)
+        self.assertEqual(len(train) + len(test), len(data))
+
+        train, test = Orange.evaluation.sample(data, 0.1)
+        self.assertEqual(len(train), 15)
+        self.assertEqual(len(train) + len(test), len(data))
+
+        train, test = Orange.evaluation.sample(data, 0.1, stratified=True)
+        self.assertEqual(len(train), 15)
+        self.assertEqual(len(train) + len(test), len(data))
+
+        train, test = Orange.evaluation.sample(data, 0.2, replace=True)
+        self.assertEqual(len(train), 30)
+
+        train, test = Orange.evaluation.sample(data, 0.9, replace=True)
+        self.assertEqual(len(train), 135)
+        self.assertGreater(len(train) + len(test), len(data))
