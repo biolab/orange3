@@ -35,9 +35,9 @@ class TabDelimReader:
 
     def read_header(self, f):
         f.seek(0)
-        names = f.readline().strip("\n\r").split("\t")
-        types = f.readline().strip("\n\r").split("\t")
-        flags = f.readline().strip("\n\r").split("\t")
+        names = [x.strip() for x in f.readline().strip("\n\r").split("\t")]
+        types = [x.strip() for x in f.readline().strip("\n\r").split("\t")]
+        flags = [x.strip() for x in f.readline().strip("\n\r").split("\t")]
         self.n_columns = len(names)
         if len(types) != self.n_columns:
             raise ValueError("File contains %i variable names and %i types" %
