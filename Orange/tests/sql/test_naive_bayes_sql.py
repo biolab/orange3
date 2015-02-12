@@ -3,7 +3,7 @@ import unittest
 from numpy import array
 
 import Orange.classification.naive_bayes as nb
-from Orange.preprocess.discretize import DiscretizeTable
+from Orange import preprocess
 from Orange.data.sql.table import SqlTable
 from Orange.data import Domain
 from Orange.data.variable import DiscreteVariable
@@ -17,7 +17,7 @@ class NaiveBayesTest(unittest.TestCase):
                          type_hints=Domain([], DiscreteVariable("iris",
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))
-        table = DiscretizeTable(table)
+        table = preprocess.Discretize(table)
         bayes = nb.NaiveBayesLearner()
         clf = bayes(table)
         # Single instance prediction

@@ -58,8 +58,8 @@ Other utility functions provide for easier access to the instances data. ::
     When the instance is not from the given domain, Orange converts it.
 
         >>> from Orange.data import discretization
-        >>> d_iris = discretization.DiscretizeTable(iris)
-        >>> d_inst = Instance(d_iris.domain, inst)
+        >>> d_iris = discretization.DomainDiscretizer(iris)
+        >>> d_inst = Instance(d_iris, inst)
 
 
 

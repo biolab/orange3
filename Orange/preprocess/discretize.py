@@ -6,13 +6,11 @@ from Orange.statistics import distribution, contingency
 from .transformation import Transformation
 from . import _discretize
 
-__all__ = ["Discretizer", "EqualFreq", "EqualWidth", "EntropyMDL",
-           "DiscretizeTable"]
+__all__ = ["EqualFreq", "EqualWidth", "EntropyMDL", "DomainDiscretizer"]
 
 
 class Discretizer(Transformation):
-    """Interval discretizer.
-    The lower limits are inclusive, the upper exclusive.
+    """Value transformer that returns an index of the bin for the given value.
     """
     def __init__(self, variable, points):
         super().__init__(variable)
@@ -66,17 +64,25 @@ class Discretizer(Transformation):
 
 
 class Discretization:
-    """Base class for discretization classes."""
-    pass
+    """Abstract base class for discretization classes."""
+    def __call__(self, data, variable):
+        """
+        Compute discretization of the given variable on the given data.
+        Return a new variable with the appropriate domain
+        (:obj:`Orange.data.DiscreteVariable.values`) and transformer
+        (:obj:`Orange.data.Variable.compute_value`).
+        """
+        raise SystemError("Missing call operator")
 
 
 class EqualFreq(Discretization):
-    """Discretization into intervals that contain
-    an approximately equal number of data instances.
+    """Discretization into bins with approximately equal number of data
+    instances.
 
     .. attribute:: n
 
-        Maximum number of discretization intervals (default: 4).
+        Number of bins (default: 4). The actual number may be lower if the
+        variable has less than n distinct values.
     """
     def __init__(self, n=4):
         self.n = n
@@ -86,23 +92,23 @@ class EqualFreq(Discretization):
         if type(data) == SqlTable:
             att = attribute.to_sql()
             quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
-            query = data._sql_query(['quantile(%s, ARRAY%s)' %
-                                     (att, str(quantiles))])
+            query = data._sql_query(
+                ['quantile(%s, ARRAY%s)' % (att, str(quantiles))])
             with data._execute_sql_query(query) as cur:
                 points = sorted(set(cur.fetchone()[0]))
         else:
             d = distribution.get_distribution(data, attribute)
-            points = _discretize.split_eq_freq(d, n=self.n)
+            points = _discretize.split_eq_freq(d, self.n)
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
 
 
 class EqualWidth(Discretization):
-    """Discretization into a fixed number of equal-width intervals.
+    """Discretization into a fixed number of bins with equal widths.
 
     .. attribute:: n
 
-        Number of discretization intervals (default: 4).
+        Number of bins (default: 4).
     """
     def __init__(self, n=4):
         self.n = n
@@ -148,14 +154,14 @@ class EqualWidth(Discretization):
 
 # noinspection PyPep8Naming
 class EntropyMDL(Discretization):
-    """ Infers the intervals by recursively splitting the feature to
-    minimize the class-entropy of training examples until the entropy
-    decrease is smaller than the increase of minimal description length
-    (MDL) induced by the new cut-off point [FayyadIrani93].
+    """
+    Discretization into bins inferred by recursively splitting the values to
+    minimize the class-entropy. The procedure stops when further splits would
+    decrease the entropy for less than the corresponding increase of minimal
+    description length (MDL). [FayyadIrani93].
 
-    Discretization intervals contain approximately equal number of
-    training data instances. If no suitable cut-off points are found,
-    the new feature is constant and can be removed.
+    If there are no suitable cut-off points, the procedure returns a single bin,
+    which means that the new feature is constant and can be removed.
 
     .. attribute:: force
 
@@ -348,13 +354,13 @@ class EntropyMDL(Discretization):
             return []
 
 
-class DiscretizeTable:
+class DomainDiscretizer:
     """Discretizes all continuous features in the data.
 
     .. attribute:: method
 
         Feature discretization method (instance of
-        :obj:`Orange.preprocess.Discretization`). If left `None`,
+        :obj:`Orange.preprocess.Discretization`). If `None` (default),
         :class:`Orange.preprocess.EqualFreq` with 4 intervals is
         used.
 
@@ -383,7 +389,7 @@ class DiscretizeTable:
 
     def __call__(self, data, fixed=None):
         """
-        Return the discretized data set.
+        Compute and return discretized domain.
 
         :param data: Data to discretize.
         """
@@ -401,7 +407,6 @@ class DiscretizeTable:
                 else:
                     new_vars.append(var)
             return new_vars
-
         if self.method is None:
             method = EqualFreq(n=4)
         else:
@@ -412,5 +417,4 @@ class DiscretizeTable:
             new_classes = transform_list(domain.class_vars)
         else:
             new_classes = domain.class_vars
-        nd = Domain(new_attrs, new_classes)
-        return data.from_table(nd, data)
+        return Domain(new_attrs, new_classes)
