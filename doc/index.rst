@@ -11,7 +11,6 @@ Orange Documentation
 
    modules/data
    modules/preprocess
-   modules/feature
    modules/classification
    modules/regression
    modules/clustering
