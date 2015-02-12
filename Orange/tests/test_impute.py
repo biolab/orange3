@@ -1,12 +1,10 @@
 import unittest
-import Orange
 
 import numpy as np
 
 from Orange import preprocess
 from Orange import data
 from Orange.data import Unknown
-from Orange.preprocess.preprocess import Impute
 
 
 class TestReplaceUnknowns(unittest.TestCase):
@@ -42,6 +40,6 @@ class TestAverage(unittest.TestCase):
 
 class TestImputer(unittest.TestCase):
     def test_imputer(self):
-        auto = Orange.data.Table('auto-mpg')
-        auto2 = Impute(auto)
+        auto = data.Table('auto-mpg')
+        auto2 = preprocess.Impute(auto)
         self.assertFalse(np.isnan(auto2.X).any())
