@@ -13,6 +13,7 @@
 
     * continuous variables can be normalized or left as they are, as determined
       by the argument ``normalize_continuous``.
+
     ::
 
         import Orange
