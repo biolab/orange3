@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
