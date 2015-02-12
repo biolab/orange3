@@ -19,6 +19,14 @@ def is_discrete(var):
 
 
 class Preprocess(object):
+    def __new__(cls, data=None, *args, **kwargs):
+        self = super().__new__(cls)
+        if isinstance(data, Orange.data.Storage):
+            self.__init__(*args, **kwargs)
+            return self(data)
+        else:
+            return self
+
     def __call__(self, data):
         raise NotImplementedError("Subclasses need to implement __call__")
 
