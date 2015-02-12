@@ -14,15 +14,15 @@ class SoftmaxRegressionLearner(Learner):
 
     When using this learner you should:
 
-    - choose a suitable regularization parameter lambda_,
+    - choose a suitable regularization parameter lambda\_,
     - continuize all discrete attributes,
     - consider appending a column of ones to the data set (intercept term),
     - transform the data set so that the columns are on a similar scale,
     - consider using many logistic regression models (one for each
       value of the class variable) instead of softmax regression.
 
-    lambda_ : float, optional (default=1.0)
-       the regularization parameter. Higher values of lambda_
+    lambda\_ : float, optional (default=1.0)
+       the regularization parameter. Higher values of lambda\_
        force the coefficients to be smaller
     """
 
