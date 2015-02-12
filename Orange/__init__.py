@@ -1,4 +1,4 @@
-from .misc.lazy_module import LazyModule
+from .misc.lazy_module import _LazyModule
 from .version import \
     short_version as __version__, git_revision as __git_version__
 
@@ -9,7 +9,6 @@ from Orange import data
 for mod_name in ['classification', 'clustering', 'distance', 'evaluation',
                  'misc', 'preprocess', 'projection', 'regression',
                  'statistics', 'widgets']:
-    globals()[mod_name] = LazyModule(mod_name)
+    globals()[mod_name] = _LazyModule(mod_name)
 
 del mod_name
-del LazyModule
