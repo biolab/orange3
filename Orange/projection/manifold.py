@@ -1,6 +1,6 @@
 import sklearn.manifold as skl_manifold
 
-import Orange
+from Orange.distance import SklDistance, SpearmanDistance, PearsonDistance
 from Orange.projection import SklProjection
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding"]
@@ -12,22 +12,27 @@ class MDS(SklProjection):
 
     def __init__(self, n_components=2, metric=True, n_init=4, max_iter=300,
                  eps=0.001, n_jobs=1, random_state=None,
-                 dissimilarity=Orange.distance.Euclidean,
+                 dissimilarity='euclidean',
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
         self._metric = dissimilarity
 
     def __call__(self, data):
-        if self._metric is not 'precomputed':
+        distances = SklDistance, SpearmanDistance, PearsonDistance
+        if isinstance(self._metric, distances):
             data = self.preprocess(data)
-            self.domain = data.domain
             X, Y, domain = data.X, data.Y, data.domain
             dist_matrix = self._metric(X).X
-        else:
+            self.params['dissimilarity'] = 'precomputed'
+            clf = self.fit(dist_matrix, Y=Y)
+        elif self._metric is 'precomputed':
             dist_matrix, Y, domain = data.X, None, None
-        self.params['dissimilarity'] = 'precomputed'
-        clf = self.fit(dist_matrix, Y=Y)
+            clf = self.fit(dist_matrix, Y=Y)
+        else:
+            data = self.preprocess(data)
+            X, Y, domain = data.X, data.Y, data.domain
+            clf = self.fit(X, Y=Y)
         clf.domain = domain
         return clf
 
