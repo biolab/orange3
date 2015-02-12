@@ -46,7 +46,6 @@ class MultiClassTest(unittest.TestCase):
 
 
 class ModelTest(unittest.TestCase):
-
     def test_predict_single_instance(self):
         table = Table("titanic")
         learn = NaiveBayesLearner()
@@ -157,6 +156,15 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         z, p = clf(self.x, ret=Model.ValueProbs)
         self.assertEqual(p.shape, (rows, vars, class_var_domain))
         self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
+
+
+class SklTest(unittest.TestCase):
+    def test_multinomial(self):
+        table = Table("titanic")
+        lr = Orange.classification.LogisticRegressionLearner()
+        assert isinstance(lr, Orange.classification.SklLearner)
+        res = Orange.evaluation.CrossValidation(table, [lr], k=3)
+        self.assertTrue(0.7 < Orange.evaluation.AUC(res)[0] < 0.9)
 
 
 class SparseTest(unittest.TestCase):

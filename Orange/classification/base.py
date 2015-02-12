@@ -5,8 +5,7 @@ import numpy as np
 import scipy
 import bottlechest as bn
 
-import Orange.data
-import Orange.preprocess.preprocess
+import Orange
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -303,6 +302,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     __wraps__ = None
     __returns__ = SklModel
     _params = None
+
+    preprocessors = [Orange.preprocess.Continuize()]
 
     @property
     def params(self):
