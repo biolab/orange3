@@ -303,7 +303,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     __returns__ = SklModel
     _params = None
 
-    preprocessors = [Orange.preprocess.Continuize()]
+    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None)]
 
     @property
     def params(self):
