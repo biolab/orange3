@@ -139,10 +139,11 @@ class Variable:
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
-        return self.name == other.name
+        return self.name == other.name \
+            and self.compute_value == other.compute_value
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.name) ^ hash(self.compute_value)
 
 
 class ContinuousVariable(Variable):
@@ -485,12 +486,10 @@ class DiscreteVariable(Variable):
         return sorted(values)
 
     def __eq__(self, other):
-        if not isinstance(other, DiscreteVariable):
-            return False
-        return self.name == other.name and self.values == other.values
+        return super().__eq__(other) and self.values == other.values
 
     def __hash__(self):
-        return hash(self.name) ^ hash(tuple(self.values))
+        return super().__hash__() ^ hash(tuple(self.values))
 
 
 class StringVariable(Variable):
