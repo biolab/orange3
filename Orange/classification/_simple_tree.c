@@ -648,12 +648,13 @@ predict_classification(double *x, int size, struct SimpleTreeNode *node, int num
 {
 	int i, j;
 	double *xx, *pp;
+	double sum;
 
 	for (i = 0; i < size; i++) {
 		xx = x + i * num_attrs;
 		pp = p + i * cls_vals;
 		predict_classification_(xx, node, cls_vals, pp);
-		double sum = 0;
+		sum = 0;
 		for (j = 0; j < cls_vals; j++) {
 			sum += pp[j];
 		}
