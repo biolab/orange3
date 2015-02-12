@@ -352,7 +352,8 @@ class Table(MutableSequence, Storage):
         :type W: np.array
         :return:
         """
-        X, Y, metas, W = _check_arrays(X, Y, metas, W)
+        X, Y, W = _check_arrays(X, Y, W, dtype='float64')
+        metas, = _check_arrays(metas)
 
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
@@ -1278,7 +1279,7 @@ class Table(MutableSequence, Storage):
         return contingencies
 
 
-def _check_arrays(*arrays):
+def _check_arrays(*arrays, dtype=None):
     checked = []
     if not len(arrays):
         return checked
@@ -1287,7 +1288,7 @@ def _check_arrays(*arrays):
         if hasattr(array, "shape"):
             return array.shape[0]
         else:
-            return len(array)
+            return len(array) if array is not None else 0
 
     shape_1 = ninstances(arrays[0])
 
@@ -1304,7 +1305,10 @@ def _check_arrays(*arrays):
             array.data = np.asarray(array.data)
             has_inf = _check_inf(array.data)
         else:
-            array = np.asarray(array)
+            if dtype is not None:
+                array = np.asarray(array, dtype=dtype)
+            else:
+                array = np.asarray(array)
             has_inf = _check_inf(array)
 
         if has_inf:
