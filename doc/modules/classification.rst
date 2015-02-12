@@ -87,7 +87,7 @@ For data sets that include continuous attributes,
    pair: classification; multilayer perceptron
 
 Multilayer perceptron (feed-forward neural network)
---------------------------------------------------
+---------------------------------------------------
 .. autoclass:: MLPLearner
    :members:
 
@@ -115,7 +115,7 @@ Linear Support Vector Machines
    pair: classification; Nu-SVM
 
 Nu-Support Vector Machines
-------------------------------
+--------------------------
 .. autoclass:: NuSVMLearner
    :members:
 
