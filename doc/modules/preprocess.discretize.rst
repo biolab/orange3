@@ -74,4 +74,4 @@ _`Discretization Algorithms`
 
 To add a new discretization, derive it from ``Discretization``.
 
-.. autoclass:: Orange.preprocess.discretize.Discretization.
+.. autoclass:: Orange.preprocess.discretize.Discretization
