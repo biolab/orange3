@@ -17,7 +17,7 @@ class LinearRegressionTest(unittest.TestCase):
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
         t = Orange.data.Table(x1, y1)
-        learn = Orange.classification.LinearRegressionLearner()
+        learn = Orange.regression.LinearRegressionLearner()
         clf = learn(t)
         z = clf(x2)
         self.assertTrue((abs(z.reshape(-1, 1) - y2) < 2.0).all())
