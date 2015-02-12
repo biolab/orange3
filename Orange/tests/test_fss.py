@@ -3,8 +3,8 @@ import unittest
 from sklearn.preprocessing import Imputer
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Table
-from Orange.preprocess import (ANOVA, Gini, UnivariateLinearRegression,
-                               SelectBestFeatures)
+from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression
+from Orange.preprocess import SelectBestFeatures
 
 
 class TestFSS(unittest.TestCase):

@@ -66,11 +66,11 @@ data instances) can be replaced with other methods.
 _`Discretization Algorithms`
 ----------------------------
 
-.. autoclass:: Orange.preprocess.EqualWidth
+.. autoclass:: Orange.preprocess.discretize.EqualWidth
 
-.. autoclass:: Orange.preprocess.EqualFreq
+.. autoclass:: Orange.preprocess.discretize.EqualFreq
 
-.. autoclass:: Orange.preprocess.EntropyMDL
+.. autoclass:: Orange.preprocess.discretize.EntropyMDL
 
 To add a new discretization, derive it from ``Discretization``.
 

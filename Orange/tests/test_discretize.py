@@ -4,7 +4,7 @@ from mock import Mock
 
 import numpy as np
 
-from Orange import preprocess
+from Orange.preprocess import discretize
 from Orange import data
 
 
@@ -15,7 +15,7 @@ class TestEqualFreq(TestCase):
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
         table = data.Table(X)
-        disc = preprocess.EqualFreq(n=4)
+        disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
@@ -23,7 +23,7 @@ class TestEqualFreq(TestCase):
     def test_equifreq_100_to_4(self):
         X = np.arange(100).reshape((100, 1))
         table = data.Table(X)
-        disc = preprocess.EqualFreq(n=4)
+        disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [24.5, 49.5, 74.5])
@@ -31,7 +31,7 @@ class TestEqualFreq(TestCase):
     def test_equifreq_with_k_instances(self):
         X = np.array([[1], [2], [3], [4]])
         table = data.Table(X)
-        disc = preprocess.EqualFreq(n=4)
+        disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [1.5, 2.5, 3.5])
@@ -44,7 +44,7 @@ class TestEqualWidth(TestCase):
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
         table = data.Table(X)
-        disc = preprocess.EqualWidth(n=4)
+        disc = discretize.EqualWidth(n=4)
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [0.25, 0.5, 0.75])
@@ -52,7 +52,7 @@ class TestEqualWidth(TestCase):
     def test_equalwidth_100_to_4(self):
         X = np.arange(101).reshape((101, 1))
         table = data.Table(X)
-        disc = preprocess.EqualWidth(n=4)
+        disc = discretize.EqualWidth(n=4)
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [25, 50, 75])
@@ -60,7 +60,7 @@ class TestEqualWidth(TestCase):
     def test_equalwidth_const_value(self):
         X = np.ones((100, 1))
         table = data.Table(X)
-        disc = preprocess.EqualFreq(n=4)
+        disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
@@ -73,7 +73,7 @@ class TestEntropyMDL(TestCase):
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
         table = data.Table(X, X)
-        disc = preprocess.EntropyMDL()
+        disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
@@ -82,7 +82,7 @@ class TestEntropyMDL(TestCase):
         X = np.array([0] * 50 + [1] * 50).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 50 + [0] * 25)
         table = data.Table(X, Y)
-        disc = preprocess.EntropyMDL()
+        disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
@@ -90,7 +90,7 @@ class TestEntropyMDL(TestCase):
     def test_entropy_constant(self):
         X = np.ones((100, 1))
         table = data.Table(X, X)
-        disc = preprocess.EntropyMDL()
+        disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
@@ -100,7 +100,7 @@ class TestEntropyMDL(TestCase):
                      ).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 75)
         table = data.Table(X, Y)
-        disc = preprocess.EntropyMDL()
+        disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
@@ -113,15 +113,15 @@ class TestDiscretizer(TestCase):
         self.var.name = "x"
 
     def test_create_discretized_var(self):
-        dvar = preprocess.discretize.Discretizer.create_discretized_var(
+        dvar = discretize.Discretizer.create_discretized_var(
             self.var, [1, 2, 3])
         self.assertEqual(dvar.values, ["<1", "[1, 2)", "[2, 3)", ">=3"])
         self.assertIsInstance(dvar.compute_value,
-                              preprocess.discretize.Discretizer)
+                              discretize.Discretizer)
         self.assertEqual(dvar.compute_value.points, [1, 2, 3])
 
     def test_discretizer_computation(self):
-        dvar = preprocess.discretize.Discretizer.create_discretized_var(
+        dvar = discretize.Discretizer.create_discretized_var(
             self.var, [1, 2, 3])
         X = np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5])
         np.testing.assert_equal(dvar.compute_value.transform(X), np.floor(X))
@@ -139,41 +139,41 @@ class TestDiscretizeTable(TestCase):
         self.table_class = data.Table(X, X1)
 
     def test_discretize_exclude_constant(self):
-        dom = preprocess.DomainDiscretizer(self.table_no_class)
+        dom = discretize.DomainDiscretizer(self.table_no_class)
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
 
-        dom = preprocess.DomainDiscretizer(self.table_no_class, clean=False)
+        dom = discretize.DomainDiscretizer(self.table_no_class, clean=False)
         self.assertEqual(len(dom.attributes), 3)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertEqual(dom[2].compute_value.points, [])
 
-        dom = preprocess.DomainDiscretizer(self.table_class)
+        dom = discretize.DomainDiscretizer(self.table_class)
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
 
     def test_discretize_class(self):
-        dom = preprocess.DomainDiscretizer(self.table_class)
+        dom = discretize.DomainDiscretizer(self.table_class)
         self.assertIs(dom.class_var, self.table_class.domain.class_var)
 
-        dom = preprocess.DomainDiscretizer(self.table_class,
+        dom = discretize.DomainDiscretizer(self.table_class,
                                            discretize_class=True)
         self.assertIs(dom.class_var, self.table_class.domain.class_var)
 
     def test_method(self):
-        dom = preprocess.DomainDiscretizer(self.table_class)
+        dom = discretize.DomainDiscretizer(self.table_class)
         self.assertEqual(len(dom[1].values), 4)
 
-        dom = preprocess.DomainDiscretizer(self.table_class,
-                                           method=preprocess.EqualWidth(n=2))
+        dom = discretize.DomainDiscretizer(self.table_class,
+                                           method=discretize.EqualWidth(n=2))
         self.assertEqual(len(dom[1].values), 2)
 
     def test_fixed(self):
-        dom = preprocess.DomainDiscretizer(self.table_no_class,
-                                           method=preprocess.EqualWidth(n=2),
+        dom = discretize.DomainDiscretizer(self.table_no_class,
+                                           method=discretize.EqualWidth(n=2),
                                            fixed={"Feature 2": [1, 11]})
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
@@ -190,7 +190,7 @@ class TestDiscretizeTable(TestCase):
                               data.DiscreteVariable("c", values="AB")],
                              data.ContinuousVariable("d"))
         table = data.Table(domain, X, X1)
-        dom = preprocess.DomainDiscretizer(table)
+        dom = discretize.DomainDiscretizer(table)
         self.assertIs(dom[0], table.domain[0])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertIs(dom[2], table.domain[2])
@@ -201,7 +201,7 @@ class TestDiscretizeTable(TestCase):
                               data.DiscreteVariable("c", values="AB")],
                              data.DiscreteVariable("d"))
         table = data.Table(domain, X, X1)
-        dom = preprocess.DomainDiscretizer(table)
+        dom = discretize.DomainDiscretizer(table)
         self.assertIs(dom[0], table.domain[0])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertIs(dom[2], table.domain[2])

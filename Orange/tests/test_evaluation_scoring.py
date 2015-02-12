@@ -4,6 +4,7 @@ import numpy as np
 
 import Orange
 from Orange.evaluation import AUC, CA, Results
+from Orange.preprocess import discretize
 
 
 class Scoring_CA_Test(unittest.TestCase):
@@ -40,7 +41,7 @@ class Scoring_CA_Test(unittest.TestCase):
         y = x[:, col].copy().reshape(100, 1)
         t = Orange.data.Table(x, y)
         t = Orange.preprocess.Discretize(
-            method=Orange.preprocess.EqualWidth(n=3))(t)
+            method=discretize.EqualWidth(n=3))(t)
         nb = Orange.classification.NaiveBayesLearner()
         res = Orange.evaluation.TestOnTrainingData(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
