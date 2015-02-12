@@ -81,9 +81,9 @@ def fix_win_pythonw_std_stream():
     """
     if sys.platform == "win32" and \
             os.path.basename(sys.executable) == "pythonw.exe":
-        if sys.stdout.fileno() < 0:
+        if sys.stdout is not None and sys.stdout.fileno() < 0:
             sys.stdout = open(os.devnull, "wb")
-        if sys.stderr.fileno() < 0:
+        if sys.stdout is not None and sys.stderr.fileno() < 0:
             sys.stderr = open(os.devnull, "wb")
 
 
@@ -338,8 +338,9 @@ def main(argv=None):
     if stdout_redirect:
         stdout = TextStream()
         stdout.stream.connect(output_view.write)
-        # also connect to original fd
-        stdout.stream.connect(sys.stdout.write)
+        if sys.stdout is not None:
+            # also connect to original fd
+            stdout.stream.connect(sys.stdout.write)
     else:
         stdout = sys.stdout
 
@@ -347,8 +348,9 @@ def main(argv=None):
         error_writer = output_view.formated(color=Qt.red)
         stderr = TextStream()
         stderr.stream.connect(error_writer.write)
-        # also connect to original fd
-        stderr.stream.connect(sys.stderr.write)
+        if sys.stderr is not None:
+            # also connect to original fd
+            stderr.stream.connect(sys.stderr.write)
     else:
         stderr = sys.stderr
 
