@@ -25,7 +25,7 @@ class MLPLearner(Learner):
 
     - Choose a suitable:
         * topology (layers)
-        * regularization parameter (lambda_)
+        * regularization parameter (lambda\_)
         * dropout (values of 0.2 for the input layer and 0.5 for the hidden
           layers usually work well)
         * The number of epochs of stochastic gradient descent (num_epochs)
@@ -38,8 +38,8 @@ class MLPLearner(Learner):
         layer=[10, 100, 100, 3] has two hidden layers with 100 neurons each,
         10 features and a class value with 3 distinct values.
 
-    lambda_ : float, optional (default = 1.0)
-        The regularization parameter. Higher values of lambda_
+    lambda\_ : float, optional (default = 1.0)
+        The regularization parameter. Higher values of lambda\_
         force the coefficients to be small.
 
     dropout : list, optional (default = None)

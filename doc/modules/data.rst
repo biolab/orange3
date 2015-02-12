@@ -58,7 +58,5 @@ represented by whole numbers.
     data.value
     data.instance
     data.filters
-    data.continuizer
-    data.discretization
 
 .. index:: Data

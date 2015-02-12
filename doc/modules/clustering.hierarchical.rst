@@ -39,5 +39,5 @@ and clustering using average linkage.
 Hierarchical Clustering
 -----------------------
 
-.. autoclass:: Hierarchical Clustering
+.. autoclass:: HierarchicalClustering
    :members:
