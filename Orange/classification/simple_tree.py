@@ -103,8 +103,10 @@ class SimpleTreeLearner(Learner):
 class SimpleTreeModel(Model):
 
     def __init__(self, learner, data):
-        self.num_attrs = data.X.shape[1]
-
+        X = np.ascontiguousarray(data.X)
+        Y = np.ascontiguousarray(data.Y)
+        W = np.ascontiguousarray(data.W)
+        self.num_attrs = X.shape[1]
         if len(data.domain.class_vars) != 1:
             n_cls = len(data.domain.class_vars)
             raise ValueError("Number of classes should be 1: {}".format(n_cls))
@@ -122,9 +124,9 @@ class SimpleTreeModel(Model):
         if isinstance(learner.skip_prob, (float, int)):
             skip_prob = learner.skip_prob
         elif learner.skip_prob == 'sqrt':
-            skip_prob = 1.0 - np.sqrt(data.X.shape[1]) / data.X.shape[1]
+            skip_prob = 1.0 - np.sqrt(X.shape[1]) / X.shape[1]
         elif learner.skip_prob == 'log2':
-            skip_prob = 1.0 - np.log2(data.X.shape[1]) / data.X.shape[1]
+            skip_prob = 1.0 - np.log2(X.shape[1]) / X.shape[1]
         else:
             raise ValueError(
                 "skip_prob not valid: {}".format(learner.skip_prob))
@@ -145,11 +147,11 @@ class SimpleTreeModel(Model):
         domain = np.array(domain, dtype=np.int32)
 
         self.node = _tree.build_tree(
-            data.X.ctypes.data_as(c_double_p),
-            data.Y.ctypes.data_as(c_double_p),
-            data.W.ctypes.data_as(c_double_p),
-            data.X.shape[0],
-            data.W.size,
+            X.ctypes.data_as(c_double_p),
+            Y.ctypes.data_as(c_double_p),
+            W.ctypes.data_as(c_double_p),
+            X.shape[0],
+            W.size,
             learner.min_instances,
             learner.max_depth,
             ct.c_float(learner.max_majority),
@@ -163,21 +165,22 @@ class SimpleTreeModel(Model):
             learner.seed)
 
     def predict_storage(self, data):
+        X = np.ascontiguousarray(data.X)
         if self.type == Classification:
-            p = np.zeros((data.X.shape[0], self.cls_vals))
+            p = np.zeros((X.shape[0], self.cls_vals))
             _tree.predict_classification(
-                data.X.ctypes.data_as(c_double_p),
-                data.X.shape[0],
+                X.ctypes.data_as(c_double_p),
+                X.shape[0],
                 self.node,
                 self.num_attrs,
                 self.cls_vals,
                 p.ctypes.data_as(c_double_p))
             return p.argmax(axis=1), p
         elif self.type == Regression:
-            p = np.zeros(data.X.shape[0])
+            p = np.zeros(X.shape[0])
             _tree.predict_regression(
-                data.X.ctypes.data_as(c_double_p),
-                data.X.shape[0],
+                X.ctypes.data_as(c_double_p),
+                X.shape[0],
                 self.node,
                 self.num_attrs,
                 p.ctypes.data_as(c_double_p))
