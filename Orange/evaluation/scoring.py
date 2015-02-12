@@ -181,15 +181,14 @@ def compute_CD(avranks, N, alpha="0.05", test="nemenyi"):
     return cd
 
 
-def graph_ranks(filename, avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, width=6, textspace=1,
-                reverse=False, **kwargs):
+def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, width=6, textspace=1,
+                reverse=False, filename=None, **kwargs):
     """
     Draws a CD graph, which is used to display  the differences in methods' performance.
     See Janez Demsar, Statistical Comparisons of Classifiers over Multiple Data Sets, 7(Jan):1--30, 2006.
 
     Needs matplotlib to work.
 
-    :param filename: Output file name (with extension). Formats supported by matplotlib can be used.
     :param avranks: List of average methods' ranks.
     :param names: List of methods' names.
     :param cd: Critical difference. Used for marking methods whose
@@ -203,10 +202,13 @@ def graph_ranks(filename, avranks, names, cd=None, cdmethod=None, lowv=None, hig
     :param textspace: Space on figure sides left for the description
                       of methods, default 1 in.
     :param reverse:  If True, the lowest rank is on the right. Default\: False.
+    :param filename: Output file name (with extension). Formats supported by matplotlib can be used.
+    :type filename: str or None.
+    :rtype: :class:`matplotlib.figure.Figure` if filename is None; else None.
     """
     try:
         import matplotlib
-        from matplotlib.figure import Figure
+        import matplotlib.pyplot as plt
         from matplotlib.backends.backend_agg import FigureCanvasAgg
     except ImportError:
         print("Function requires matplotlib. Please install it.", file=sys.stderr)
@@ -324,7 +326,8 @@ def graph_ranks(filename, avranks, names, cd=None, cdmethod=None, lowv=None, hig
     minnotsignificant = max(2 * 0.2, linesblank)
     height = cline + ((k + 1) / 2) * 0.2 + minnotsignificant
 
-    fig = Figure(figsize=(width, height))
+    fig = plt.figure(figsize=(width, height))
+    fig.set_facecolor('white')
     ax = fig.add_axes([0, 0, 1, 1]) #reverse y axis
     ax.set_axis_off()
 
@@ -408,4 +411,7 @@ def graph_ranks(filename, avranks, names, cd=None, cdmethod=None, lowv=None, hig
         line([(begin, cline + bigtick / 2), (begin, cline - bigtick / 2)], linewidth=2.5)
         line([(end, cline + bigtick / 2), (end, cline - bigtick / 2)], linewidth=2.5)
 
-    print_figure(fig, filename, **kwargs)
+    if filename is None:
+        return fig
+    else:
+        print_figure(fig, filename, **kwargs)

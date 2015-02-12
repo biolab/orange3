@@ -16,8 +16,8 @@ Example
     >>> names = ["first", "third", "second", "fourth" ]
     >>> avranks =  [1.9, 3.2, 2.8, 3.3 ]
     >>> cd = Orange.evaluation.compute_CD(avranks, 30) #tested on 30 datasets
-    >>> Orange.evaluation.graph_ranks("statExamples-graph_ranks1.png", avranks, names, \
-    >>>     cd=cd, width=6, textspace=1.5)
+    >>> fig = Orange.evaluation.graph_ranks(avranks, names, cd=cd, width=6, textspace=1.5)
+    >>> fig.show()
 
 The code produces the following graph:
 
