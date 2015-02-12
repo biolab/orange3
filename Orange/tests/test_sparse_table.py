@@ -17,23 +17,25 @@ class InterfaceTest(tabletests.InterfaceTest):
         )
 
     def test_append_rows(self):
-        self.assertRaises(ValueError,
-                          self.table.append, [2] * len(self.data[0]))
+        with self.assertRaises(ValueError):
+            super().test_value_assignment()
 
     def test_insert_rows(self):
-        self.assertRaises(ValueError,
-                          self.table.insert, 0, [2] * len(self.data[0]))
+        with self.assertRaises(ValueError):
+            super().test_value_assignment()
 
     def test_delete_rows(self):
         with self.assertRaises(ValueError):
-            del self.table[0]
+            super().test_value_assignment()
 
     def test_clear(self):
-        self.assertRaises(ValueError, self.table.clear)
+        with self.assertRaises(ValueError):
+            super().test_value_assignment()
 
     def test_row_assignment(self):
-        new_value = 2.
-        for i in range(self.nrows):
-            new_row = [new_value] * len(self.data[i])
-            self.table[i] = np.array(new_row)
-            self.assertEqual(list(self.table[i]), new_row)
+        with self.assertRaises(ValueError):
+            super().test_value_assignment()
+
+    def test_value_assignment(self):
+        with self.assertRaises(ValueError):
+            super().test_value_assignment()

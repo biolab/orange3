@@ -630,6 +630,9 @@ class Table(MutableSequence, Storage):
         return Table.from_table(domain, self, row_idx)
 
     def __setitem__(self, key, value):
+        if not self._check_all_dense():
+            raise ValueError(
+                "Assignment to rows of sparse data is not supported")
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self.X[key, :] = value
