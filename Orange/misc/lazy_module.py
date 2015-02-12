@@ -1,4 +1,4 @@
-class LazyModule:
+class _LazyModule:
     def __init__(self, name):
         self.__name = name
 
