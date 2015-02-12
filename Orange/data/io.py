@@ -305,7 +305,10 @@ def save_tab_delimited(filename, data):
     :param data: the data to be saved
     :type data: Orange.data.Storage
     """
-    f = open(filename, "w")
+    if isinstance(filename, str):
+        f = open(filename, "w")
+    else:
+        f = filename
     domain_vars = data.domain.variables + data.domain.metas
     # first line
     f.write("\t".join([str(j.name) for j in domain_vars]))
@@ -324,12 +327,13 @@ def save_tab_delimited(filename, data):
     c = list(data.domain.class_vars)
     r = []
     for i in domain_vars:
+        r1 = ["{}={}".format(k, v).replace(" ", "\\ ")
+              for k, v in i.attributes.items()]
         if i in m:
-            r.append("m")
+            r1.append("m")
         elif i in c:
-            r.append("class")
-        else:
-            r.append("")
+            r1.append("class")
+        r.append(" ".join(r1))
     f.write("\t".join(r))
     f.write("\n")
 

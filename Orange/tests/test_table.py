@@ -598,10 +598,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d_ref.X.shape, (10, 2))
         self.assertEqual(d_ref.Y.shape, (10,))
 
-    @unittest.skip("We need first to implement basket column.")
-    def test_saveTabBasket(self):
-        pass
-
     def test_saveTab(self):
         d = data.Table("iris")[:3]
         d.save("test-save.tab")
