@@ -18,23 +18,23 @@ class InterfaceTest(tabletests.InterfaceTest):
 
     def test_append_rows(self):
         with self.assertRaises(ValueError):
-            super().test_value_assignment()
+            super().test_append_rows()
 
     def test_insert_rows(self):
         with self.assertRaises(ValueError):
-            super().test_value_assignment()
+            super().test_insert_rows()
 
     def test_delete_rows(self):
         with self.assertRaises(ValueError):
-            super().test_value_assignment()
+            super().test_delete_rows()
 
     def test_clear(self):
         with self.assertRaises(ValueError):
-            super().test_value_assignment()
+            super().test_clear()
 
     def test_row_assignment(self):
         with self.assertRaises(ValueError):
-            super().test_value_assignment()
+            super().test_row_assignment()
 
     def test_value_assignment(self):
         with self.assertRaises(ValueError):
