@@ -1,5 +1,8 @@
 import unittest
 
+import numpy as np
+import Orange
+
 from sklearn.preprocessing import Imputer
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Table
@@ -40,3 +43,19 @@ class TestFSS(unittest.TestCase):
                              if isinstance(f, DiscreteVariable)),
                          sum(1 for f in data.domain.attributes
                              if isinstance(f, DiscreteVariable)))
+
+
+class TestRemoveNaNColumns(unittest.TestCase):
+    def test_column_filtering(self):
+        data = Orange.data.Table("iris")
+        data.X[:, (1, 3)] = np.NaN
+
+        new_data = Orange.preprocess.RemoveNaNColumns(data)
+        self.assertEqual(len(new_data.domain.attributes),
+                         len(data.domain.attributes) - 2)
+
+        data = Orange.data.Table("iris")
+        data.X[0, 0] = np.NaN
+        new_data = Orange.preprocess.RemoveNaNColumns(data)
+        self.assertEqual(len(new_data.domain.attributes),
+                         len(data.domain.attributes))
