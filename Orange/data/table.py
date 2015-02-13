@@ -548,12 +548,19 @@ class Table(MutableSequence, Storage):
             col_idx = self.domain.index(attr)
         return [attr], np.array([col_idx])
 
+    def _check_all_dense(self):
+        return all(x in (Storage.DENSE, Storage.MISSING)
+                   for x in (self.X_density(), self.Y_density(),
+                             self.metas_density()))
+
     # A helper function for extend and insert
     # Resize X, Y, metas and W.
     def _resize_all(self, new_length):
         old_length = self.X.shape[0]
         if old_length == new_length:
             return
+        if not self._check_all_dense():
+            raise ValueError("Tables with sparse data cannot be resized")
         try:
             self.X.resize(new_length, self.X.shape[1])
             self._Y.resize(new_length, self._Y.shape[1])
@@ -624,6 +631,9 @@ class Table(MutableSequence, Storage):
         return Table.from_table(domain, self, row_idx)
 
     def __setitem__(self, key, value):
+        if not self._check_all_dense():
+            raise ValueError(
+                "Assignment to rows of sparse data is not supported")
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self.X[key, :] = value
@@ -709,6 +719,8 @@ class Table(MutableSequence, Storage):
                 self.metas[row_idx, meta_cols] = value
 
     def __delitem__(self, key):
+        if not self._check_all_dense():
+            raise ValueError("Rows of sparse data cannot be deleted")
         if key is ...:
             key = range(len(self))
         self.X = np.delete(self.X, key, axis=0)
@@ -731,6 +743,8 @@ class Table(MutableSequence, Storage):
 
     def clear(self):
         """Remove all rows from the table."""
+        if not self._check_all_dense():
+            raise ValueError("Tables with sparse data cannot be cleared")
         del self[...]
 
     def append(self, instance):
@@ -916,6 +930,8 @@ class Table(MutableSequence, Storage):
 
     def shuffle(self):
         """Randomly shuffle the rows of the table."""
+        if not self._check_all_dense():
+            raise ValueError("Rows of sparse data cannot be shuffled")
         ind = np.arange(self.X.shape[0])
         np.random.shuffle(ind)
         self.X = self.X[ind]

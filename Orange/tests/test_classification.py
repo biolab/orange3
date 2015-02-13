@@ -167,22 +167,6 @@ class SklTest(unittest.TestCase):
         self.assertTrue(0.7 < Orange.evaluation.AUC(res)[0] < 0.9)
 
 
-class SparseTest(unittest.TestCase):
-    @unittest.skip("TODO: learner for sparse multiclass data.")
-    def test_sparse_basket(self):
-        current_dir = os.path.dirname(__file__)
-        dataset = os.path.join(current_dir, "iris_basket.basket")
-        table = BasketReader().read_file(dataset)
-        test = Table.from_table_rows(table, range(0, len(table), 2))
-        train = Table.from_table_rows(table, range(1, len(table), 2))
-        learn = DummyMulticlassLearner()
-        clf = learn(train)
-        p = clf(test)
-        self.assertEqual(p.shape, test.Y.shape)
-        p = clf(test.X)
-        self.assertEqual(p.shape, test.Y.shape)
-
-
 class LearnerAccessibility(unittest.TestCase):
     def test_all_learners_accessible_in_Orange_classification_namespace(self):
         classification_modules = pkgutil.walk_packages(
