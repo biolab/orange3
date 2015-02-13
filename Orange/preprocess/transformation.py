@@ -26,7 +26,7 @@ class Transformation:
         Return the transformed value of the argument `c`, which can be a number
         of a vector view.
         """
-        raise SystemError(
+        raise NotImplementedError(
             "ColumnTransformations must implement method 'transform'.")
 
 

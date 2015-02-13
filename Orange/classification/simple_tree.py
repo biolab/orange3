@@ -1,5 +1,5 @@
 import os
-import platform
+import sysconfig
 import ctypes as ct
 
 import numpy as np
@@ -9,15 +9,9 @@ from Orange.data import DiscreteVariable, ContinuousVariable
 __all__ = ['SimpleTreeLearner']
 
 path = os.path.dirname(os.path.abspath(__file__))
-if platform.system() == 'Linux':
-    _tree = ct.cdll.LoadLibrary(
-        os.path.join(path, '_simple_tree.cpython-34m.so'))
-elif platform.system() == 'Darwin':
-    _tree = ct.cdll.LoadLibrary(os.path.join(path, '_simple_tree.so'))
-elif platform.system() == 'Windows':
-    _tree = ct.pydll.LoadLibrary(os.path.join(path, '_simple_tree.pyd'))
-else:
-    raise SystemError('System not supported: {}'.format(platform.system()))
+
+_tree = ct.pydll.LoadLibrary(
+    os.path.join(path, "_simple_tree" + sysconfig.get_config_var("SO")))
 
 DiscreteNode = 0
 ContinuousNode = 1

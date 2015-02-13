@@ -72,7 +72,9 @@ class Discretization:
         (:obj:`Orange.data.DiscreteVariable.values`) and transformer
         (:obj:`Orange.data.Variable.compute_value`).
         """
-        raise SystemError("Missing call operator")
+        raise NotImplementedError(
+            "Subclasses of 'Discretization' need to implement "
+            "the call operator")
 
 
 class EqualFreq(Discretization):
