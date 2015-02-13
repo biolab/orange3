@@ -1,9 +1,6 @@
-import unittest
+from scipy.sparse import csr_matrix
 
-import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
 from Orange import data
-
 from Orange.tests import test_table as tabletests
 
 
