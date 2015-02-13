@@ -1,10 +1,20 @@
 #include <math.h>
+#include <float.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+#ifndef INFINITY
+#define INFINITY (DBL_MAX + DBL_MAX)
+#endif
+
+#ifdef _MSC_VER
+#define isnan _isnan
+#define log2f(x) (logf(x) / logf(2.0))
+#endif
 #define ASSERT(x) if(!(x)) exit(1)
+
 #define log2(x) log((double) (x)) / log(2.0)
 
 struct Args {
@@ -714,4 +724,25 @@ new_node(int children_size, int type, int cls_vals)
 		ASSERT(node->dist = (float *)calloc(cls_vals, sizeof(float)));
 	}
 	return node;
+}
+
+
+// Empty python module definition
+#include "Python.h"
+
+static PyModuleDef _simple_tree_module = {
+	PyModuleDef_HEAD_INIT,
+	"_simple_tree",
+	NULL,
+	-1,
+};
+
+
+PyMODINIT_FUNC
+PyInit__simple_tree(void) {
+	PyObject * mod;
+	mod = PyModule_Create(&_simple_tree_module);
+	if (mod == NULL)
+		return NULL;
+	return mod;
 }
