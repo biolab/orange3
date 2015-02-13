@@ -5,7 +5,7 @@ import Orange
 __all__ = ['SimpleRandomForestLearner']
 
 
-class SimpleRandomForestLearner(Orange.classification.base.Learner):
+class SimpleRandomForestLearner(Orange.classification.Learner):
     """
     A random forest classifier, optimized for speed. Trees in the forest
     are constructed with :obj:`SimpleTreeLearner` classification trees.
@@ -35,6 +35,8 @@ class SimpleRandomForestLearner(Orange.classification.base.Learner):
     seed : int, optional (default = 42)
         Random seed.
     """
+
+    name = 'simple rf'
 
     def __init__(self, n_estimators=10, min_instances=2, max_depth=1024,
                  max_majority=1.0, skip_prob='sqrt', seed=42):

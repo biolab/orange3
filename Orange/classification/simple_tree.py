@@ -86,6 +86,8 @@ class SimpleTreeLearner(Learner):
         Random seed.
     """
 
+    name = 'simple tree'
+
     def __init__(self, min_instances=2, max_depth=1024, max_majority=1.0,
                  skip_prob=0.0, bootstrap=False, seed=42):
 

@@ -14,6 +14,7 @@ class Learner:
     supports_multiclass = False
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
+    name = 'learner'
     preprocessors = ()
 
     def __init__(self, preprocessors=None):
@@ -44,6 +45,7 @@ class Learner:
             clf = self.fit(X, Y, W)
         clf.domain = data.domain
         clf.supports_multiclass = self.supports_multiclass
+        clf.name = self.name
         return clf
 
     def preprocess(self, data):
@@ -53,6 +55,9 @@ class Learner:
         for pp in self.preprocessors:
             data = pp(data)
         return data
+
+    def __repr__(self):
+        return self.name
 
 
 class Model:
@@ -151,6 +156,9 @@ class Model:
             return value
         else:  # ret == Model.ValueProbs
             return value, probs
+
+    def __repr__(self):
+        return self.name
 
 
 class WrapperMeta(type):
@@ -296,14 +304,18 @@ class SklModel(Model, metaclass=WrapperMeta):
         else:  # ret == Model.ValueProbs
             return value, probs
 
+    def __repr__(self):
+        return '{} {}'.format(self.name, self.params)
+
 
 class SklLearner(Learner, metaclass=WrapperMeta):
-
     __wraps__ = None
     __returns__ = SklModel
     _params = None
 
-    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None)]
+    name = 'skl learner'
+    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None),
+                     Orange.preprocess.RemoveNaNColumns()]
 
     @property
     def params(self):
@@ -336,9 +348,10 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return data
 
     def __call__(self, data):
-        clf = super().__call__(data)
-        clf.used_vals = [np.unique(y) for y in data.Y[:, None].T]
-        return clf
+        m = super().__call__(data)
+        m.used_vals = [np.unique(y) for y in data.Y[:, None].T]
+        m.params = self.params
+        return m
 
     def fit(self, X, Y, W):
         clf = self.__wraps__(**self.params)
@@ -346,3 +359,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
+
+    def __repr__(self):
+        return '{} {}'.format(self.name, self.params)

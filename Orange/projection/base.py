@@ -10,6 +10,7 @@ __all__ = ["Projection", "ProjectionModel", "SklProjection"]
 class Projection:
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
+    name = 'projection'
     preprocessors = ()
 
     def __init__(self, preprocessors=None):
@@ -27,6 +28,7 @@ class Projection:
         X, Y = data.X, data.Y
         clf = self.fit(X, Y)
         clf.domain = data.domain
+        clf.name = self.name
         return clf
 
     def preprocess(self, data):
@@ -52,11 +54,15 @@ class ProjectionModel:
             data = pp(data)
         return data
 
+    def __repr__(self):
+        return self.name
+
 
 class SklProjection(Projection, metaclass=WrapperMeta):
 
     __wraps__ = None
     _params = {}
+    name = 'skl projection'
 
     @property
     def params(self):
@@ -95,3 +101,6 @@ class SklProjection(Projection, metaclass=WrapperMeta):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         return proj.fit(X, Y)
+
+    def __repr__(self):
+        return '{} {}'.format(self.name, self.params)

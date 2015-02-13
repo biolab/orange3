@@ -1,9 +1,12 @@
+import Orange
+import numpy as np
+
 from itertools import takewhile
 from operator import itemgetter
 
-import Orange
+from Orange.preprocess.preprocess import Preprocess
 
-__all__ = ["SelectBestFeatures"]
+__all__ = ["SelectBestFeatures", "RemoveNaNColumns"]
 
 
 class SelectBestFeatures:
@@ -62,3 +65,19 @@ class SelectBestFeatures:
         domain = Orange.data.Domain([f for s, f in best] + other,
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
+
+
+class RemoveNaNColumns(Preprocess):
+    """
+    Removes data columns that contain only unknown values. Returns the
+    resulting data set. Does not check optional class attribute(s).
+
+    data : data table
+        an input data table
+    """
+    def __call__(self, data):
+        nan_col = np.all(np.isnan(data.X), axis=0)
+        att = [a for a, nan in zip(data.domain.attributes, nan_col) if not nan]
+        domain = Orange.data.Domain(att, data.domain.class_vars,
+                                    data.domain.metas)
+        return Orange.data.Table(domain, data)

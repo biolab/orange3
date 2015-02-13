@@ -411,7 +411,5 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         line([(begin, cline + bigtick / 2), (begin, cline - bigtick / 2)], linewidth=2.5)
         line([(end, cline + bigtick / 2), (end, cline - bigtick / 2)], linewidth=2.5)
 
-    if filename is None:
-        return fig
-    else:
+    if filename:
         print_figure(fig, filename, **kwargs)

@@ -15,8 +15,9 @@ class MajorityLearner(Learner):
     are requested. Can be used as a baseline when comparing classifiers.
     """
 
-    def fit_storage(self, dat):
+    name = 'majority'
 
+    def fit_storage(self, dat):
         if not isinstance(dat.domain.class_var, data.DiscreteVariable):
             raise ValueError("classification.MajorityLearner expects a domain with a "
                              "(single) discrete variable")
