@@ -303,8 +303,72 @@ Continuization
 
 
 
-Score
-=====
+Feature selection
+=================
+
+`Feature scoring`
+-----------------
+
+Feature score is an assessment of the usefulness of the feature for
+prediction of the dependant (class) variable. Orange provides classes
+that compute the common feature scores for classification and regression.
+
+The code below computes the information gain of feature "tear_rate"
+in the Lenses data set:
+
+    >>> data = Orange.data.Table("lenses")
+    >>> Orange.preprocess.score.InfoGain("tear_rate", data)
+    0.54879494069539858
+
+An alternative way of invoking the scorers is to construct the scoring
+object, like in the following example:
+
+    >>> gain = Orange.preprocess.score.InfoGain()
+    >>> for att in data.domain.attributes:
+    ...     print("%s %.3f" % (att.name, gain(att, data)))
+    age 0.039
+    prescription 0.040
+    astigmatic 0.377
+    tear_rate 0.549
+
+Feature scoring methods work on different feature types (continuous or discrete)
+and different types of target variables (classification or regression problem).
+Refer to method's `feature_type` and `class_type` attributes for intended type
+or employ preprocessing methods (e.g. discretization) for conversion between
+data types.
+
+.. autoclass:: Orange.preprocess.score.ANOVA
+
+.. autoclass:: Orange.preprocess.score.Chi2
+
+.. autoclass:: Orange.preprocess.score.GainRatio
+
+.. autoclass:: Orange.preprocess.score.Gini
+
+.. autoclass:: Orange.preprocess.score.InfoGain
+
+.. autoclass:: Orange.preprocess.score.UnivariateLinearRegression
+
+`Feature selection`
+-------------------
+
+We can use feature selection to limit the analysis to only the most relevant
+or informative features in the data set.
+
+Feature selection with a scoring method that works on continuous features will
+retain all discrete features and vice versa.
+
+The code below constructs a new data set consisting of two best features
+according to the ANOVA method:
+
+    >>> data = Orange.data.Table("wine")
+    >>> anova = Orange.preprocess.score.ANOVA()
+    >>> selector = Orange.preprocess.SelectBestFeatures(method=anova, k=2)
+    >>> data2 = selector(data)
+    >>> data2.domain
+    [Flavanoids, Proline | Wine]
+
+.. autoclass:: Orange.preprocess.SelectBestFeatures
 
 Preprocessors
 =============

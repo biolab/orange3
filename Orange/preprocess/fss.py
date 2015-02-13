@@ -10,6 +10,30 @@ __all__ = ["SelectBestFeatures", "RemoveNaNColumns"]
 
 
 class SelectBestFeatures:
+    """
+    A feature selector that builds a new data set consisting of either the top
+    `k` features or all those that exceed a given `threshold`. Features are
+    scored using the provided feature scoring `method`. By default it is
+    assumed that feature importance diminishes with decreasing scores.
+
+    If both `k` and `threshold` are set, only features satisfying both
+    conditions will be selected.
+
+    Parameters
+    ----------
+    method : Orange.preprocess.score.ClassificationScorer, Orange.preprocess.score.SklScorer
+        Univariate feature scoring method.
+
+    k : int
+        The number of top features to select.
+
+    threshold : float
+        A threshold that a feature should meet according to the provided method.
+
+    decreasing : boolean
+        The order of feature importance when sorted from the most to the least
+        important feature.
+    """
     def __init__(self, method=None, k=None, threshold=None, decreasing=True):
         self.method = method
         self.k = k
