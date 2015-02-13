@@ -30,7 +30,7 @@ class Learner:
         return self.fit(data.X, data.Y, data.W)
 
     def __call__(self, data):
-        data = self.preprocess(data)
+        data, domains = self.preprocess(data)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
             raise TypeError("%s doesn't support multiple class variables" %
@@ -46,15 +46,18 @@ class Learner:
         clf.domain = data.domain
         clf.supports_multiclass = self.supports_multiclass
         clf.name = self.name
+        clf.domains = domains
         return clf
 
     def preprocess(self, data):
         """
         Apply the `preprocessors` to the data.
         """
+        domains = [data.domain]
         for pp in self.preprocessors:
             data = pp(data)
-        return data
+            domains.append(data.domain)
+        return data, domains
 
     def __repr__(self):
         return self.name
@@ -67,12 +70,13 @@ class Model:
     Probs = 1
     ValueProbs = 2
 
-    def __init__(self, domain=None):
+    def __init__(self, domain=None, domains=None):
         if isinstance(self, Learner):
             domain = None
         elif not domain:
             raise ValueError("unspecified domain")
         self.domain = domain
+        self.domains = domains
 
     def predict(self, X):
         if self.predict_storage == Model.predict_storage:
@@ -106,11 +110,13 @@ class Model:
             prediction = self.predict(data)
         elif isinstance(data, Orange.data.Instance):
             if data.domain != self.domain:
-                data = Orange.data.Instance(self.domain, data)
+                for domain in self.domains:
+                    data = Orange.data.Instance(domain, data)
             prediction = self.predict_storage(data)
         elif isinstance(data, Orange.data.Table):
             if data.domain != self.domain:
-                data = data.from_table(self.domain, data)
+                for domain in self.domains:
+                    data = data.from_table(domain, data)
             prediction = self.predict_storage(data)
         else:
             raise TypeError("Unrecognized argument (instance of '{}')".format(
@@ -315,7 +321,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     name = 'skl learner'
     preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None),
-                     Orange.preprocess.RemoveNaNColumns()]
+                     Orange.preprocess.Impute()]
 
     @property
     def params(self):
@@ -338,14 +344,14 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return params
 
     def preprocess(self, data):
-        data = super().preprocess(data)
+        data, domain = super().preprocess(data)
 
         if any(isinstance(v, Orange.data.DiscreteVariable) and len(v.values) > 2
                for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support " +
                              "multinomial variables.")
 
-        return data
+        return data, domain
 
     def __call__(self, data):
         m = super().__call__(data)

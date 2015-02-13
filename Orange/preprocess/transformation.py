@@ -1,3 +1,5 @@
+import Orange
+
 class Transformation:
     """
     Base class for simple transformations of individual variables. Derived
@@ -19,7 +21,10 @@ class Transformation:
         if self._last_domain != data.domain:
             self._last_domain = data.domain
             self.attr_index = data.domain.index(self.variable)
-        return self.transform(data.get_column_view(self.attr_index)[0])
+        if isinstance(data, Orange.data.Table):
+            return self.transform(data.get_column_view(self.attr_index)[0])
+        else:
+            return self.transform(data[self.attr_index])
 
     def transform(self, c):
         """

@@ -168,6 +168,7 @@ class SklTest(unittest.TestCase):
         res = CrossValidation(table, [lr], k=2)
         self.assertTrue(0.7 < Orange.evaluation.AUC(res)[0] < 0.9)
 
+    @unittest.skip("Are discrete attributes represented as python strings?")
     def test_nan_columns(self):
         data = Orange.data.Table("iris")
         data.X[:, (1, 3)] = np.NaN
