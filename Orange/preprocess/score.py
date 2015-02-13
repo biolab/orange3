@@ -3,12 +3,13 @@ from sklearn import feature_selection as skl_fss
 
 from Orange.statistics import contingency, distribution
 from Orange.data.variable import DiscreteVariable, ContinuousVariable
+from Orange.classification.base import WrapperMeta
 
 __all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
            "InfoGain", "GainRatio", "Gini"]
 
 
-class SklScorer:
+class SklScorer(metaclass=WrapperMeta):
     feature_type = None
     class_type = None
 
@@ -35,6 +36,13 @@ class SklScorer:
 
 
 class Chi2(SklScorer):
+    """
+    A wrapper for `${sklname}`. The following is the documentation
+    from `scikit-learn <http://scikit-learn.org>`_.
+
+    ${skldoc}
+    """
+    __wraps__ = skl_fss.chi2
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
 
@@ -44,6 +52,13 @@ class Chi2(SklScorer):
 
 
 class ANOVA(SklScorer):
+    """
+    A wrapper for `${sklname}`. The following is the documentation
+    from `scikit-learn <http://scikit-learn.org>`_.
+
+    ${skldoc}
+    """
+    __wraps__ = skl_fss.f_classif
     feature_type = ContinuousVariable
     class_type = DiscreteVariable
 
@@ -53,6 +68,13 @@ class ANOVA(SklScorer):
 
 
 class UnivariateLinearRegression(SklScorer):
+    """
+    A wrapper for `${sklname}`. The following is the documentation
+    from `scikit-learn <http://scikit-learn.org>`_.
+
+    ${skldoc}
+    """
+    __wraps__ = skl_fss.f_regression
     feature_type = ContinuousVariable
     class_type = ContinuousVariable
 
@@ -62,6 +84,14 @@ class UnivariateLinearRegression(SklScorer):
 
 
 class ClassificationScorer:
+    """
+    Base class for feature scores in a class-labeled data set.
+
+    :param feature: feature id
+    :param data: data set
+    :type data: Orange.data.Table
+    :return: float
+    """
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
 
@@ -98,27 +128,24 @@ def _gini(D):
 
 class InfoGain(ClassificationScorer):
     """
-    Information gain of a feature in class-labeled data set.
-
-    :param feature: feature id
-    :param data: data set
-    :type data: Orange.data.Table
-    :return: float
+    Information gain is the expected decrease of entropy. See `Wikipedia entry on information gain
+    <http://en.wikipedia.org/wiki/Information_gain_ratio>`_.
     """
     def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
         h_residual = _entropy(cont)
-        return (h_class - h_residual) * nan_adjustment
+        return nan_adjustment * (h_class - h_residual)
 
 
 class GainRatio(ClassificationScorer):
     """
-    Gain ratio score of a feature in class-labeled data set.
+    Information gain ratio is the ratio between information gain and
+    the entropy of the feature's
+    value distribution. The score was introduced in [Quinlan1986]_
+    to alleviate overestimation for multi-valued features. See `Wikipedia entry on gain ratio
+    <http://en.wikipedia.org/wiki/Information_gain_ratio>`_.
 
-    :param feature: feature id
-    :param data: data set
-    :type data: Orange.data.Table
-    :return: float
+    .. [Quinlan1986] J R Quinlan: Induction of Decision Trees, Machine Learning, 1986.
     """
     def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
@@ -129,12 +156,8 @@ class GainRatio(ClassificationScorer):
 
 class Gini(ClassificationScorer):
     """
-    Gini score of a feature in class-labeled data set.
-
-    :param feature: feature id
-    :param data: data set
-    :type data: Orange.data.Table
-    :return: float
+    Gini index is the probability that two randomly chosen instances will have different
+    classes. See `Wikipedia entry on gini index <http://en.wikipedia.org/wiki/Gini_coefficient>`_.
     """
     def from_contingency(self, cont, nan_adjustment):
         return (_gini(np.sum(cont, axis=1)) - _gini(cont)) * nan_adjustment
