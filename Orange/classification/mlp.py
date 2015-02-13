@@ -58,6 +58,8 @@ class MLPLearner(Learner):
         The batch size of stochastic gradient descent
     """
 
+    name = 'mlp'
+
     def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
                  **opt_args):
         super().__init__(preprocessors=preprocessors)

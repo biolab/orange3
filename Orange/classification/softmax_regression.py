@@ -26,6 +26,8 @@ class SoftmaxRegressionLearner(Learner):
        force the coefficients to be smaller
     """
 
+    name = 'softmax'
+
     def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
                  **fmin_args):
         super().__init__(preprocessors=preprocessors)

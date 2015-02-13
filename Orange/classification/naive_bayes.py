@@ -20,6 +20,8 @@ class NaiveBayesLearner(Learner):
         or testing.
     """
 
+    name = 'naive bayes'
+
     preprocessors = [Discretize()]
 
     def fit_storage(self, table):
