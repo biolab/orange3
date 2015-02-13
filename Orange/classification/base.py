@@ -303,7 +303,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     __returns__ = SklModel
     _params = None
 
-    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None)]
+    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None),
+                     Orange.preprocess.RemoveNaNColumns()]
 
     @property
     def params(self):
