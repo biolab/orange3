@@ -10,7 +10,7 @@ __all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
            "InfoGain", "GainRatio", "Gini"]
 
 
-class SklScorer(metaclass=WrapperMeta):
+class Scorer:
     feature_type = None
     class_type = None
     preprocessors = ()
@@ -41,6 +41,14 @@ class SklScorer(metaclass=WrapperMeta):
                for a in data.domain.attributes):
             raise ValueError('Only %ss are supported' % self.feature_type)
 
+        return self.score_data(data, feature)
+
+    def score_data(self, data, feature):
+        raise NotImplementedError
+
+
+class SklScorer(Scorer, metaclass=WrapperMeta):
+    def score_data(self, data, feature):
         score = self.score(data.X, data.Y)
         if feature is not None:
             return score[0]
@@ -98,7 +106,7 @@ class UnivariateLinearRegression(SklScorer):
         return f
 
 
-class ClassificationScorer:
+class ClassificationScorer(Scorer):
     """
     Base class for feature scores in a class-labeled data set.
 
@@ -123,31 +131,7 @@ class ClassificationScorer:
         Discretize()
     ]
 
-    def __new__(cls, *args):
-        self = super().__new__(cls)
-        self.preprocessors = list(self.preprocessors)
-        if args:
-            return self(*args)
-        else:
-            return self
-
-    def __call__(self, data, feature=None):
-        if not data.domain.class_var:
-            raise ValueError("Data with class labels required.")
-        elif not isinstance(data.domain.class_var, DiscreteVariable):
-            raise ValueError("Data with discrete class labels required.")
-
-        if feature is not None:
-            f = data.domain[feature]
-            data = data.from_table(Domain([f], data.domain.class_vars), data)
-
-        for pp in self.preprocessors:
-            data = pp(data)
-
-        if any(not isinstance(a, self.feature_type)
-               for a in data.domain.attributes):
-            raise ValueError('Only %ss are supported' % self.feature_type)
-
+    def score_data(self, data, feature):
         instances_with_class = \
             np.sum(distribution.Discrete(data, data.domain.class_var))
 
