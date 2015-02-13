@@ -37,14 +37,6 @@ class SklScorer(metaclass=WrapperMeta):
 
 class Chi2(SklScorer):
     """
-    Attributes
-    ----------
-    feature_type : Orange.data.Variable
-        Required type of features.
-
-    class_type : Orange.data.Variable
-        Required type of class variable.
-
     A wrapper for `${sklname}`. The following is the documentation
     from `scikit-learn <http://scikit-learn.org>`_.
 
@@ -61,14 +53,6 @@ class Chi2(SklScorer):
 
 class ANOVA(SklScorer):
     """
-    Attributes
-    ----------
-    feature_type : Orange.data.Variable
-        Required type of features.
-
-    class_type : Orange.data.Variable
-        Required type of class variable.
-
     A wrapper for `${sklname}`. The following is the documentation
     from `scikit-learn <http://scikit-learn.org>`_.
 
@@ -85,14 +69,6 @@ class ANOVA(SklScorer):
 
 class UnivariateLinearRegression(SklScorer):
     """
-    Attributes
-    ----------
-    feature_type : Orange.data.Variable
-        Required type of features.
-
-    class_type : Orange.data.Variable
-        Required type of class variable.
-
     A wrapper for `${sklname}`. The following is the documentation
     from `scikit-learn <http://scikit-learn.org>`_.
 
