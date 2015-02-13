@@ -7,8 +7,8 @@ __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding"]
 
 
 class MDS(SklProjection):
-
     __wraps__ = skl_manifold.MDS
+    name = 'mds'
 
     def __init__(self, n_components=2, metric=True, n_init=4, max_iter=300,
                  eps=0.001, n_jobs=1, random_state=None,
@@ -42,8 +42,8 @@ class MDS(SklProjection):
 
 
 class Isomap(SklProjection):
-
     __wraps__ = skl_manifold.Isomap
+    name = 'isomap'
 
     def __init__(self, n_neighbors=5, n_components=2, eigen_solver='auto',
                  max_iter=None, path_method='auto',
@@ -53,8 +53,8 @@ class Isomap(SklProjection):
 
 
 class LocallyLinearEmbedding(SklProjection):
-
     __wraps__ = skl_manifold.LocallyLinearEmbedding
+    name = 'lle'
 
     def __init__(self, n_neighbors=5, n_components=2, reg=0.001,
                  eigen_solver='auto', tol=1e-06 , max_iter=100,

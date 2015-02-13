@@ -11,6 +11,7 @@ class TreeClassifier(SklModel):
 class TreeLearner(SklLearner):
     __wraps__ = skl_tree.DecisionTreeClassifier
     __returns__ = TreeClassifier
+    name = 'tree'
 
     def __init__(self, criterion="gini", splitter="best", max_depth=None,
                  min_samples_split=2, min_samples_leaf=1,

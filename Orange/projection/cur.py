@@ -67,6 +67,9 @@ class CUR(Projection):
     Drineas P. PNAS (2009)
 
     """
+
+    name = 'cur'
+
     def __init__(self, rank=3, max_error=1, compute_U=False,
                  random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)

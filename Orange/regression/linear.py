@@ -9,6 +9,7 @@ __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
 
 
 class LinearRegressionLearner(Learner):
+    name = 'linreg'
     def fit(self, X, Y, W):
         sk = skl_linear_model.LinearRegression()
         sk.fit(X, Y)
@@ -16,6 +17,8 @@ class LinearRegressionLearner(Learner):
 
 
 class RidgeRegressionLearner(Learner):
+    name = 'ridge'
+
     def __init__(self, alpha=1.0):
         self.alpha = alpha
 
@@ -26,6 +29,8 @@ class RidgeRegressionLearner(Learner):
 
 
 class LassoRegressionLearner(Learner):
+    name = 'lasso'
+
     def __init__(self, alpha=1.0):
         self.alpha = alpha
 
@@ -37,6 +42,7 @@ class LassoRegressionLearner(Learner):
 
 class SGDRegressionLearner(SklLearner):
     __wraps__ = skl_linear_model.SGDRegressor
+    name = 'sgd'
 
     def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,
                  eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25,

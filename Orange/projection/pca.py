@@ -8,8 +8,8 @@ __all__ = ["PCA", "SparsePCA", "RandomizedPCA"]
 
 
 class PCA(SklProjection):
-
     __wraps__ = skl_decomposition.PCA
+    name = 'pca'
 
     def __init__(self, n_components=None, copy=True, whiten=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -22,8 +22,8 @@ class PCA(SklProjection):
 
 
 class SparsePCA(SklProjection):
-
     __wraps__ = skl_decomposition.SparsePCA
+    name = 'sparse pca'
 
     def __init__(self, n_components=None, alpha=1, ridge_alpha=0.01,
                  max_iter=1000, tol=1e-8, method='lars', n_jobs=1, U_init=None,
@@ -38,8 +38,8 @@ class SparsePCA(SklProjection):
 
 
 class RandomizedPCA(SklProjection):
-
     __wraps__ = skl_decomposition.RandomizedPCA
+    name = 'randomized pca'
 
     def __init__(self, n_components=None, copy=True, iterated_power=3,
                  whiten=False, random_state=None, preprocessors=None):
