@@ -12,7 +12,11 @@ def configuration(parent_package='', top_path=None):
     config.add_extension('_simple_tree',
                          sources=['_simple_tree.c'],
                          include_dirs=[],
-                         libraries=libraries)
+                         libraries=libraries,
+                         export_symbols=[
+                             "build_tree", "destroy_tree", "new_node",
+                             "predict_classification", "predict_regression"]
+                         )
     return config
 
 
