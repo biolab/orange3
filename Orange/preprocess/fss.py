@@ -19,23 +19,20 @@ class SelectBestFeatures:
     If both `k` and `threshold` are set, only features satisfying both
     conditions will be selected.
 
-    .. attribute:: method
-
+    Parameters
+    ----------
+    method : Orange.preprocess.score.ClassificationScorer, Orange.preprocess.score.SklScorer
         Univariate feature scoring method.
 
-    .. attribute:: k
-
+    k : int
         The number of top features to select.
 
-    .. attribute:: threshold
-
+    threshold : float
         A threshold that a feature should meet according to the provided method.
 
-    .. attribute:: decreasing
-
+    decreasing : boolean
         The order of feature importance when sorted from the most to the least
         important feature.
-
     """
     def __init__(self, method=None, k=None, threshold=None, decreasing=True):
         self.method = method

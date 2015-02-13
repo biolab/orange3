@@ -37,6 +37,14 @@ class SklScorer(metaclass=WrapperMeta):
 
 class Chi2(SklScorer):
     """
+    Attributes
+    ----------
+    feature_type : Orange.data.Variable
+        Required type of features.
+
+    class_type : Orange.data.Variable
+        Required type of class variable.
+
     A wrapper for `${sklname}`. The following is the documentation
     from `scikit-learn <http://scikit-learn.org>`_.
 
@@ -53,6 +61,14 @@ class Chi2(SklScorer):
 
 class ANOVA(SklScorer):
     """
+    Attributes
+    ----------
+    feature_type : Orange.data.Variable
+        Required type of features.
+
+    class_type : Orange.data.Variable
+        Required type of class variable.
+
     A wrapper for `${sklname}`. The following is the documentation
     from `scikit-learn <http://scikit-learn.org>`_.
 
@@ -69,6 +85,14 @@ class ANOVA(SklScorer):
 
 class UnivariateLinearRegression(SklScorer):
     """
+    Attributes
+    ----------
+    feature_type : Orange.data.Variable
+        Required type of features.
+
+    class_type : Orange.data.Variable
+        Required type of class variable.
+
     A wrapper for `${sklname}`. The following is the documentation
     from `scikit-learn <http://scikit-learn.org>`_.
 
@@ -87,10 +111,20 @@ class ClassificationScorer:
     """
     Base class for feature scores in a class-labeled data set.
 
-    :param feature: feature id
-    :param data: data set
-    :type data: Orange.data.Table
-    :return: float
+    Parameters
+    ----------
+    feature : int, string, Orange.data.Variable
+        Feature id
+    data : Orange.data.Table
+        Data set
+
+    Attributes
+    ----------
+    feature_type : Orange.data.Variable
+        Required type of features.
+
+    class_type : Orange.data.Variable
+        Required type of class variable.
     """
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
