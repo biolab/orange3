@@ -5,6 +5,7 @@ import cython
 
 from libc.stdio cimport *
 from libc.string cimport *
+from libc.stdlib cimport malloc, free
 
 cdef extern from "stdio.h" nogil:
     int fgetc(FILE *STREAM)
@@ -81,6 +82,27 @@ cpdef sparse_prescan_fast(fname):
     return n_attributes, n_classes, n_metas, n_lines
 
 
+cpdef check_csr_matrix(np.ndarray[np.int32_t, ndim=1] indptr,
+                       np.ndarray[np.int32_t, ndim=1] indices, int n_attrs):
+    cdef:
+        int row, col, j
+        char *used = <char *>malloc(n_attrs)
+
+    try:
+        for row in range(len(indptr) - 1):
+            for j in range(n_attrs):
+                used[j] = 0
+            for j in range(indptr[row], indptr[row + 1]):
+                col = indices[j]
+                if used[col]:
+                    return row, col
+                else:
+                    used[col] = 1
+        return -1, -1
+    finally:
+        free(used)
+
+
 cdef inline void resize_if_needed(np.ndarray a, size):
     cdef np.npy_intp *dim
     dim = np.PyArray_DIMS(a)
@@ -101,28 +123,30 @@ def sparse_read_float(fname):
         char *not_in_atom = "#,|;\n\r\x00"
         int col, line, cur_line
         int in_line
-        char atom[10240], *atomp
+        char atom[10240]
+        char *atomp
         char *atome = atom + 10240
         char *endc
         char f_eof = 0
         int ii
         int attr_index
+        int row_err
         float value, decs
         char col_kind
 
         # n_lines + 2 -- +2 instead of +1 is needed for the empty last line
         # it is removed in the end
         np.ndarray[np.float_t, ndim=1] X_data = np.empty(n_attrs, float)
-        np.ndarray[int, ndim=1] X_indices = np.empty(n_attrs, np.intc)
-        np.ndarray[int, ndim=1] X_indptr = np.empty(n_lines + 2, np.intc)
+        np.ndarray[np.int32_t, ndim=1] X_indices = np.empty(n_attrs, np.int32)
+        np.ndarray[np.int32_t, ndim=1] X_indptr = np.empty(n_lines + 2, np.int32)
 
         np.ndarray[np.float_t, ndim=1] Y_data = np.empty(n_classes, float)
-        np.ndarray[int, ndim=1] Y_indices = np.empty(n_classes, np.intc)
-        np.ndarray[int, ndim=1] Y_indptr = np.empty(n_lines + 2, np.intc)
+        np.ndarray[np.int32_t, ndim=1] Y_indices = np.empty(n_classes, np.int32)
+        np.ndarray[np.int32_t, ndim=1] Y_indptr = np.empty(n_lines + 2, np.int32)
 
         np.ndarray[np.float_t, ndim=1] metas_data = np.empty(n_metas, float)
-        np.ndarray[int, ndim=1] metas_indices = np.empty(n_metas, np.intc)
-        np.ndarray[int, ndim=1] metas_indptr = np.empty(n_lines + 2, np.intc)
+        np.ndarray[np.int32_t, ndim=1] metas_indices = np.empty(n_metas, np.int32)
+        np.ndarray[np.int32_t, ndim=1] metas_indptr = np.empty(n_lines + 2, np.int32)
 
         dict attr_indices = {}
         dict class_indices = {}
@@ -308,17 +332,17 @@ def sparse_read_float(fname):
                     ii = X_indptr[line]
                     X_data[ii] = value
                     X_indices[ii] = attr_index
-                    X_indptr[line] += 1
+                    X_indptr[line] = X_indptr[line] + 1
                 elif col_kind == CLASS:
                     ii = Y_indptr[line]
                     Y_data[ii] = value
                     Y_indices[ii] = attr_index
-                    Y_indptr[line] += 1
+                    Y_indptr[line] = Y_indptr[line] + 1
                 else:
                     ii = metas_indptr[line]
                     metas_data[ii] = value
                     metas_indices[ii] = attr_index
-                    metas_indptr[line] += 1
+                    metas_indptr[line] = metas_indptr[line] + 1
                 in_line += 1
                 state = TO_NEXT
 
@@ -377,6 +401,13 @@ def sparse_read_float(fname):
             resize_if_needed(t_indptr, line + 1)
             resize_if_needed(t_indices, t_indptr[line])
             resize_if_needed(t_data, t_indptr[line])
+            row_err, col = check_csr_matrix(t_indptr, t_indices, len(t_names))
+            if row_err >= 0:
+                for name, attr_col in t_names.items():
+                    if col == attr_col:
+                        break
+                raise ValueError("Duplicate values of '{}' in row {}".
+                                 format(name.decode("utf-8"), row_err + 1))
             mat = sp.csr_matrix((t_data, t_indices, t_indptr), (line, len(ll)))
             mat.sort_indices()
         else:
