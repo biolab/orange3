@@ -6,9 +6,11 @@ import unittest
 import numpy as np
 
 import Orange.classification
-from Orange.classification import Learner, Model, NaiveBayesLearner
+from Orange.classification import (
+    Learner, Model, NaiveBayesLearner, LogisticRegressionLearner)
 from Orange.data import DiscreteVariable, Domain, Table
 from Orange.data.io import BasketReader
+from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 
 
@@ -161,10 +163,18 @@ class ExpandProbabilitiesTest(unittest.TestCase):
 class SklTest(unittest.TestCase):
     def test_multinomial(self):
         table = Table("titanic")
-        lr = Orange.classification.LogisticRegressionLearner()
+        lr = LogisticRegressionLearner()
         assert isinstance(lr, Orange.classification.SklLearner)
-        res = Orange.evaluation.CrossValidation(table, [lr], k=3)
+        res = CrossValidation(table, [lr], k=2)
         self.assertTrue(0.7 < Orange.evaluation.AUC(res)[0] < 0.9)
+
+    def test_nan_columns(self):
+        data = Orange.data.Table("iris")
+        data.X[:, (1, 3)] = np.NaN
+        lr = LogisticRegressionLearner()
+        res = CrossValidation(data, [lr], k=2, store_models=True)
+        self.assertEqual(len(res.models[0][0].domain.attributes), 2)
+        self.assertGreater(Orange.evaluation.CA(res)[0], 0.8)
 
 
 class SparseTest(unittest.TestCase):
