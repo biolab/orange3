@@ -7,7 +7,7 @@ import Orange.data
 from . import impute, discretize
 from ..misc.enum import Enum
 
-__all__ = ["Continuize", "Discretize", "Impute", "Preprocess"]
+__all__ = ["Continuize", "Discretize", "Impute"]
 
 
 def is_continuous(var):

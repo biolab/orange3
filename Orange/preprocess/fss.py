@@ -49,8 +49,7 @@ class RemoveNaNColumns(Preprocess):
         an input data table
     """
     def __call__(self, data):
-        nan_col = [np.all(np.isnan(data.X[:, i]))
-                   for i in range(len(data.domain.attributes))]
+        nan_col = np.all(np.isnan(data.X), axis=0)
         att = [a for a, nan in zip(data.domain.attributes, nan_col) if not nan]
         domain = Orange.data.Domain(att, data.domain.class_var,
                                     data.domain.metas)

@@ -1,10 +1,10 @@
 import unittest
 
 import numpy as np
-import Orange
 
 from sklearn.preprocessing import Imputer
 
+import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable, Table
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression
 from Orange.preprocess import SelectBestFeatures
