@@ -145,6 +145,10 @@ class Instance:
     def __iter__(self):
         return iter(self._values)
 
+    def values(self):
+        return (Value(var, val)
+                for var, val in zip(self.domain.variables, self._values))
+
     def __len__(self):
         return len(self._values)
 

@@ -214,8 +214,11 @@ class TableTestCase(unittest.TestCase):
                 del d[-100]
             self.assertEqual(len(d), initlen - 5)
 
-    @unittest.skip("Are discrete attributes represented as python strings?")
     def test_indexing_assign_example(self):
+        def almost_equal_list(s, t):
+            for e, f in zip(s, t):
+                self.assertAlmostEqual(e, f)
+
         import warnings
 
         with warnings.catch_warnings():
@@ -227,22 +230,22 @@ class TableTestCase(unittest.TestCase):
 
             self.assertFalse(isnan(d[0, "a"]))
             d[0] = ["3.14", "1", "f"]
-            self.assertEqual(list(d[0]), [3.14, "1", "f"])
+            almost_equal_list(d[0].values(), [3.14, "1", "f"])
             self.assertTrue(isnan(d[0, "a"]))
             d[0] = [3.15, 1, "t"]
-            self.assertEqual(list(d[0]), [3.15, "0", "t"])
+            almost_equal_list(d[0].values(), [3.15, "0", "t"])
 
             with self.assertRaises(ValueError):
                 d[0] = ["3.14", "1"]
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             d[0] = ex
-            self.assertEqual(list(d[0]), [3.16, "1", "f"])
+            almost_equal_list(d[0].values(), [3.16, "1", "f"])
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             ex["e"] = "mmmapp"
             d[0] = ex
-            self.assertEqual(list(d[0]), [3.16, "1", "f"])
+            almost_equal_list(d[0].values(), [3.16, "1", "f"])
             self.assertEqual(d[0, "e"], "mmmapp")
 
     def test_slice(self):
