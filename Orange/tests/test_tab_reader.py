@@ -70,3 +70,15 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
 
+    def test_reuse_variables(self):
+        file1 = io.StringIO("\n".join("xd dbac"))
+        t1 = TabDelimReader()._read_file(file1)
+
+        self.assertSequenceEqual(t1.domain['x'].values, 'abcd')
+        np.testing.assert_almost_equal(t1.X.ravel(), [3, 1, 0, 2])
+
+        file2 = io.StringIO("\n".join("xd hgacb"))
+        t2 = TabDelimReader()._read_file(file2)
+
+        self.assertSequenceEqual(t2.domain['x'].values, 'abcdhg')
+        np.testing.assert_almost_equal(t2.X.ravel(), [4, 5, 0, 2, 1])
