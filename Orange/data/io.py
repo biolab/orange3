@@ -86,7 +86,8 @@ class TabDelimReader:
                 var = None
             elif tpe in ["d", "discrete"]:
                 var = DiscreteVariable.make(name)
-                var.fix_order = True
+                if not var.values:
+                    var.fix_order = True
             elif tpe in ["s", "string"]:
                 var = StringVariable.make(name)
             else:
