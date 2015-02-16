@@ -1,5 +1,6 @@
 import math
 import unittest
+import pickle
 
 from Orange.testing import create_pickling_tests
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable
@@ -75,6 +76,10 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertEqual(var.name, "a")
         self.assertEqual(var.values, ["F", "M"])
 
+    def dont_pickle_anonymous_variables(self):
+        self.assertRaises(pickle.PickleError,
+                          pickle.dumps, DiscreteVariable())
+
 
 class ContinuousVariableTest(unittest.TestCase):
     def test_make(self):
@@ -99,16 +104,24 @@ class ContinuousVariableTest(unittest.TestCase):
         a.val_from_str_add("5.1234")
         self.assertEqual(a.str_val(4.654321), "4.6543")
 
+    def dont_pickle_anonymous_variables(self):
+        self.assertRaises(pickle.PickleError,
+                          pickle.dumps, ContinuousVariable())
+
+
+class StringVariableTest(unittest.TestCase):
+    def dont_pickle_anonymous_variables(self):
+        self.assertRaises(pickle.PickleError,
+                          pickle.dumps, StringVariable())
+
 
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",
-    ("variable", lambda: ContinuousVariable()),
     ("with_name", lambda: ContinuousVariable(name="Feature 0")),
 )
 
 PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
-    ("variable", lambda: DiscreteVariable()),
     ("with_name", lambda: DiscreteVariable(name="Feature 0")),
     ("with_int_values", lambda: DiscreteVariable(name="Feature 0",
                                                  values=[1, 2, 3])),
@@ -119,14 +132,13 @@ PickleDiscreteVariable = create_pickling_tests(
                                          ordered=True)),
     ("with_base_value", lambda: DiscreteVariable(name="Feature 0",
                                                  values=["F", "M"],
-                                                 base_value=0)),
+                                                 base_value=0))
 )
 
 
 PickleStringVariable = create_pickling_tests(
     "PickleStringVariable",
-    ("variable", lambda: StringVariable()),
-    ("with_name", lambda: StringVariable(name="Feature 0")),
+    ("with_name", lambda: StringVariable(name="Feature 0"))
 )
 
 

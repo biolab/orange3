@@ -1,5 +1,6 @@
 from math import isnan, floor
 import numpy as np
+from pickle import PickleError
 
 from ..data.value import Value, Unknown
 import collections
@@ -140,6 +141,8 @@ class Variable:
             tpe._clear_cache()
 
     def __reduce__(self):
+        if not self.name:
+            raise PickleError("Variables without names cannot be pickled")
         return make_variable, (self.__class__, self.name), self.__dict__
 
     def __copy__(self):
@@ -382,6 +385,8 @@ class DiscreteVariable(Variable):
     str_val = repr_val
 
     def __reduce__(self):
+        if not self.name:
+            raise PickleError("Variables without names cannot be pickled")
         return make_variable, (self.__class__, self.name,
                                self.values, self.ordered, self.base_value), \
             self.__dict__
