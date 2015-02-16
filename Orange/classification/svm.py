@@ -123,25 +123,15 @@ class OneClassSVMLearner(SklLearner):
 
 if __name__ == '__main__':
     import Orange
-    import numpy as np
 
-    d1 = Orange.data.Table('iris')
-    d1.shuffle()
-    for learner in [SVMLearner, NuSVMLearner, LinearSVMLearner]:
-        m = learner()
-        print(m)
-        cross = Orange.evaluation.CrossValidation(d1, m)
-        prediction = cross.KFold(10)
-        print(Orange.evaluation.CA(d1, prediction[0]))
-        clf = m(d1)
-        print(clf(d1[0].x, ret=clf.ValueProbs))
+    data = Orange.data.Table('iris')
+    learners = [SVMLearner(), NuSVMLearner(), LinearSVMLearner()]
+    res = Orange.evaluation.CrossValidation(data, learners)
+    for l, ca in zip(learners, Orange.evaluation.CA(res)):
+        print("learner: {}\nCA: {}\n".format(l, ca))
 
-    d2 = Orange.data.Table('iris')
-    d2.shuffle()
-    n = int(0.7*d2.X.shape[0])
-    train, test = d2[:n], d2[n:]
-    for learner in [SVRLearner, NuSVRLearner]:
-        m = learner()
-        print(m)
-        clf = m(train)
-        print(1./test.Y.shape[0]*np.sum((clf(test)-test.Y.reshape(-1))**2))
+    data = Orange.data.Table('housing')
+    learners = [SVRLearner(), NuSVRLearner()]
+    res = Orange.evaluation.CrossValidation(data, learners)
+    for l, ca in zip(learners, Orange.evaluation.RMSE(res)):
+        print("learner: {}\nRMSE: {}\n".format(l, ca))
