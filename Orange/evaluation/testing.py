@@ -227,6 +227,8 @@ class CrossValidation(Results):
         class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
+            if len(test_data) == 0:
+                raise RuntimeError("One of the test folds is empty.")
             fold_slice = slice(ptr, ptr + len(test))
             self.folds.append(fold_slice)
             self.row_indices[fold_slice] = test
