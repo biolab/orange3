@@ -1,17 +1,11 @@
 import numpy as np
-from Orange.data.table import Table
-from Orange.evaluation.testing import Results
-from Orange.evaluation.scoring import Score
 from sklearn.metrics import silhouette_score, adjusted_mutual_info_score, silhouette_samples
 
-try:
-    import matplotlib
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    HAS_MATPLOTLIB = True
-except ImportError:
-    plt = None
-    HAS_MATPLOTLIB = False
+from Orange.data import Table
+from Orange.evaluation.testing import Results
+from Orange.evaluation.scoring import Score
+
+
 
 
 __all__ = ['ClusteringEvaluation']
@@ -115,7 +109,7 @@ class ClusteringEvaluation(ClusteringResults):
 
 
 
-def graph_silhouette(X, y, **kwargs):
+def graph_silhouette(X, y, xlim=None, colors=None, figsize=None, filename=None):
     """
     Silhouette plot.
     :param filename:
@@ -124,23 +118,14 @@ def graph_silhouette(X, y, **kwargs):
         Data table.
     :param y Orange.data.Table or numpy.ndarray:
         Cluster labels (integers).
-    :param kwargs:
-        'colors' list, optional (default = None)
+    :param colors list, optional (default = None):
             List of colors. If provided, it must equal the number of clusters.
-        'figsize' tuple (float, float)
+    :param figsize tuple (float, float):
             Figure size (width, height) in inches.
-        'xlim' tuple (float, float)
+    :param xlim tuple (float, float):
             Limit x-axis values.
     """
-    xlim = kwargs.get("xlim", None)
-    colors = kwargs.get("colors", None)
-    figsize = kwargs.get("figsize", None)
-    filename = kwargs.get("filename", None)
-
-    if not HAS_MATPLOTLIB:
-        import sys
-        sys.stderr.write("Function requires matplotlib. Please install it.\n")
-        return
+    import matplotlib.pyplot as plt
 
     if isinstance(X, Table):
         X = X.X
