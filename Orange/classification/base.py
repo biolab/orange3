@@ -20,7 +20,7 @@ class Learner:
     def __init__(self, preprocessors=None):
         if preprocessors is None:
             preprocessors = type(self).preprocessors
-        self.preprocessors = tuple(preprocessors)
+        self.preprocessors = list(preprocessors)
 
     def fit(self, X, Y, W=None):
         raise NotImplementedError(
