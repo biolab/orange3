@@ -1,3 +1,4 @@
+import random
 import Orange
 import numpy as np
 
@@ -6,7 +7,7 @@ from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
 
-__all__ = ["SelectBestFeatures", "RemoveNaNColumns"]
+__all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
 
 class SelectBestFeatures:
@@ -61,6 +62,32 @@ class SelectBestFeatures:
 
         domain = Orange.data.Domain([f for s, f in best] + other,
                                     data.domain.class_vars, data.domain.metas)
+        return data.from_table(domain, data)
+
+
+class SelectRandomFeatures:
+    """
+    A feature selector that selects random `k` features from an input
+    data set and returns a data set with selected features. Parameter
+    `k` is either an integer (number of feature) or float (from 0.0 to
+    1.0, proportion of retained features).
+
+    Parameters
+    ----------
+
+    k : int or float (default = 0.1)
+        The number or proportion of features to retain.
+    """
+
+    def __init__(self, k=0.1):
+        self.k = k
+
+    def __call__(self, data):
+        if type(self.k) == float:
+            self.k = int(len(data.domain.attributes) * self.k)
+        domain = Orange.data.Domain(
+            random.sample(data.domain.attributes, self.k),
+            data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 

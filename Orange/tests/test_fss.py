@@ -59,3 +59,15 @@ class TestRemoveNaNColumns(unittest.TestCase):
         new_data = Orange.preprocess.RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
+
+
+class TestSelectRandomFeatures(unittest.TestCase):
+    def test_select_random_features(self):
+        data = Orange.data.Table("voting")
+        srf = Orange.preprocess.SelectRandomFeatures(k=3)
+        new_data = srf(data)
+        self.assertEqual(len(new_data.domain.attributes), 3)
+
+        srf = Orange.preprocess.SelectRandomFeatures(k=0.25)
+        new_data = srf(data)
+        self.assertEqual(len(new_data.domain.attributes), 4)
