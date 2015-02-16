@@ -26,9 +26,9 @@ class SimpleTreeTest(unittest.TestCase):
         y_reg[np.random.random(self.N) < 0.1] = np.nan
 
         di = [Orange.data.domain.DiscreteVariable(
-            '', [0, 1]) for _ in range(self.Mi)]
+            'd{}'.format(i), [0, 1]) for i in range(self.Mi)]
         df = [Orange.data.domain.ContinuousVariable(
-            '') for _ in range(self.Mf)]
+            'c{}'.format(i)) for i in range(self.Mf)]
         dcls = Orange.data.domain.DiscreteVariable('', [0, 1, 2])
         dreg = Orange.data.domain.ContinuousVariable('')
         domain_cls = Orange.data.domain.Domain(di + df, dcls)
@@ -46,7 +46,6 @@ class SimpleTreeTest(unittest.TestCase):
         self.assertAlmostEqual(p.max(), 1)
         np.testing.assert_almost_equal(p.sum(axis=1), np.ones(self.N))
 
-    @unittest.skip("test pickles anonymous variables")
     def test_SimpleTree_classification_pickle(self):
         lrn = SimpleTreeLearner()
         clf = lrn(self.data_cls)
