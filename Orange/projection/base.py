@@ -1,8 +1,8 @@
 import inspect
 
 import Orange.data
+from Orange.misc.wrapper_meta import WrapperMeta
 import Orange.preprocess
-from Orange.classification.base import WrapperMeta
 
 __all__ = ["Projection", "ProjectionModel", "SklProjection"]
 
