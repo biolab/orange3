@@ -179,6 +179,8 @@ PACKAGES = [
     "Orange.distance",
     "Orange.evaluation",
     "Orange.misc",
+    "Orange.preprocess",
+    "Orange.projection",
     "Orange.regression",
     "Orange.statistics",
     "Orange.testing",
