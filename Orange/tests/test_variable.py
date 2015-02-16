@@ -6,10 +6,30 @@ from Orange.testing import create_pickling_tests
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable
 
 
-class DiscreteVariableTest(unittest.TestCase):
+# noinspection PyPep8Naming,PyUnresolvedReferences
+class VariableTest:
     def setUp(self):
-        DiscreteVariable._clear_cache()
+        self.varcls._clear_all_caches()
 
+    def test_dont_pickle_anonymous_variables(self):
+        self.assertRaises(pickle.PickleError, pickle.dumps, self.varcls())
+
+    def test_dont_store_anonymous_variables(self):
+        self.varcls()
+        self.assertEqual(len(self.varcls._all_vars), 0)
+
+    def test_dont_make_anonymous_variables(self):
+        self.assertRaises(ValueError, self.varcls.make, "")
+
+
+def variabletest(varcls):
+    def decorate(cls):
+        return type(cls.__name__, (cls, unittest.TestCase), {'varcls': varcls})
+    return decorate
+
+
+@variabletest(DiscreteVariable)
+class DiscreteVariableTest(VariableTest):
     def test_to_val(self):
         values = ["F", "M"]
         var = DiscreteVariable(name="Feature 0", values=values)
@@ -46,7 +66,7 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertIs(find_comp("gend", values=["F", "N", "R"]), gend)
         self.assertEqual(gend.values, ["F", "M", "N", "R"])
 
-    def test_find_compatible_unordered(self):
+    def test_find_compatible_ordered(self):
         abc = DiscreteVariable("abc", values="abc", ordered=True)
 
         find_comp = DiscreteVariable._find_compatible
@@ -76,12 +96,9 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertEqual(var.name, "a")
         self.assertEqual(var.values, ["F", "M"])
 
-    def dont_pickle_anonymous_variables(self):
-        self.assertRaises(pickle.PickleError,
-                          pickle.dumps, DiscreteVariable())
 
-
-class ContinuousVariableTest(unittest.TestCase):
+@variabletest(ContinuousVariable)
+class ContinuousVariableTest(VariableTest):
     def test_make(self):
         ContinuousVariable._clear_cache()
         age1 = ContinuousVariable.make("age")
@@ -109,10 +126,9 @@ class ContinuousVariableTest(unittest.TestCase):
                           pickle.dumps, ContinuousVariable())
 
 
-class StringVariableTest(unittest.TestCase):
-    def dont_pickle_anonymous_variables(self):
-        self.assertRaises(pickle.PickleError,
-                          pickle.dumps, StringVariable())
+@variabletest(StringVariable)
+class StringVariableTest(VariableTest):
+    pass
 
 
 PickleContinuousVariable = create_pickling_tests(
