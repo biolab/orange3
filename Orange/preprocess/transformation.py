@@ -1,4 +1,7 @@
-import Orange
+import numpy as np
+
+from Orange.data import Instance, Table
+
 
 class Transformation:
     """
@@ -21,10 +24,12 @@ class Transformation:
         if self._last_domain != data.domain:
             self._last_domain = data.domain
             self.attr_index = data.domain.index(self.variable)
-        if isinstance(data, Orange.data.Table):
+        if isinstance(data, Instance):
+            return self.transform(np.array([float(data[self.attr_index])]))[0]
+        elif isinstance(data, Table):
             return self.transform(data.get_column_view(self.attr_index)[0])
         else:
-            return self.transform(data[self.attr_index])
+            raise TypeError("{} is not an Instance or a Table.".format(data))
 
     def transform(self, c):
         """
