@@ -18,6 +18,7 @@ Options:
 
     -b --build-base PATH    Build directory (default build/win-installer)
     -d --dist-dir           Distribution dir
+    -r --requirements       Extra requirements file
     -h --help               Print this help
 '
 }
@@ -31,6 +32,10 @@ while [[ ${1:0:1} = "-" ]]; do
             ;;
         -d|--dist-dir)
             DISTDIR=$2
+            shift 2
+            ;;
+        -r|--requirements)
+            REQUIREMENT=$2
             shift 2
             ;;
         -h|--help)
@@ -106,6 +111,18 @@ ipython==2.4.1
 #:wheel: pyzmq https://pypi.python.org/packages/3.4/p/pyzmq/pyzmq-14.5.0-cp34-none-win32.whl#md5=333bc2f02d24aa2455ce4208b9d8666e
 pyzmq==14.5.0
 
+#:source: Markupsafe
+Markupsafe==0.23
+
+#:source: certifi
+certifi==14.05.14
+
+#:source: Jinja2
+jinja2==2.7.3
+
+#:source: tornado
+tornado==4.1
+
 #:wheel: pygments https://pypi.python.org/packages/3.3/P/Pygments/Pygments-2.0.2-py3-none-any.whl#md5=b38281817abc47c82cf3533b8c6608f6
 pygments==2.0.2
 
@@ -124,7 +141,6 @@ Bottlechest==0.7.1
 #:source: pyqtgraph
 pyqtgraph==0.9.10
 " > "$BUILDBASE"/requirements.txt
-
 
 function __download_url {
     local url=${1:?}
@@ -273,6 +289,18 @@ function prepare_orange {
     echo "Orange==$version" >> "$BUILDBASE/requirements.txt"
 }
 
+function prepare_extra {
+    python -m pip wheel \
+        -w "$BUILDBASE/wheelhouse" \
+        -f "$BUILDBASE/wheelhouse" \
+        -f "$BUILDBASE/wheelhouse/nosse" \
+        --no-deps \
+        --no-index \
+        -r "$1"
+
+    echo "Inserting extra requirements"
+    cat "$1" | grep -v -E '(--find-links)|(-f)' >> "$BUILDBASE"/requirements.txt
+}
 
 function prepare_all {
     prepare_python
@@ -280,6 +308,10 @@ function prepare_all {
     prepare_pyqt4
     prepare_req -r "$BUILDBASE/requirements.txt"
     prepare_orange
+
+    if [[ "$REQUIREMENT" ]]; then
+        prepare_extra "$REQUIREMENT"
+    fi
 }
 
 
