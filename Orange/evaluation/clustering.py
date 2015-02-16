@@ -1,7 +1,16 @@
 import numpy as np
+from Orange.data.table import Table
 from Orange.evaluation.testing import Results
 from Orange.evaluation.scoring import Score
-from sklearn.metrics import silhouette_score, adjusted_mutual_info_score
+from sklearn.metrics import silhouette_score, adjusted_mutual_info_score, silhouette_samples
+
+try:
+    import matplotlib.pyplot as plt
+    HAS_MATPLOTLIB = True
+except ImportError:
+    plt = None
+    HAS_MATPLOTLIB = False
+
 
 __all__ = ['ClusteringEvaluation']
 
@@ -101,3 +110,77 @@ class ClusteringEvaluation(ClusteringResults):
 
                 labels = model(data)
                 self.predicted[i, k, :] = labels.X.flatten()
+
+
+
+def graph_silhouette(filename, X, y, **kwargs):
+    """
+    Silhouette plot.
+    :param filename:
+        Output file name.
+    :param X Orange.data.Table or numpy.ndarray
+        Data table.
+    :param y Orange.data.Table or numpy.ndarray:
+        Cluster labels (integers).
+    :param kwargs:
+        'colors' list, optional (default = None)
+            List of colors. If provided, it must equal the number of clusters.
+        'figsize' tuple (float, float)
+            Figure size (width, height) in inches.
+        'xlim' tuple (float, float)
+            Limit x-axis values.
+    """
+    xlim = kwargs.get("xlim", None)
+    colors = kwargs.get("colors", None)
+    figsize = kwargs.get("figsize", None)
+
+    if not HAS_MATPLOTLIB:
+        import sys
+        sys.stderr.write("Function requires matplotlib. Please install it.\n")
+        return
+
+    if isinstance(X, Table):
+        X = X.X
+    if isinstance(y, Table):
+        y = y.X
+    y = y.ravel()
+
+    # Detect number of clusters and set colors
+    N = len(set(y))
+    if isinstance(colors, type(None)) :
+        colors = ["g" if i % 2 else "b" for i in range(N)]
+    elif len(colors) != N:
+        import sys
+        sys.stderr.write("Number of colors does not match the number of clusters. \n")
+        return
+
+    # Silhouette coefficients
+    s = silhouette_samples(X, y)
+    s = s[np.argsort(y)]  # Sort by clusters
+    parts = []
+    # Within clusters sort by silhouette scores
+    for label, (i, j) in enumerate([(sum(y == c1), sum(y == c1) + sum(y == c2))
+                                    for c1, c2 in zip(range(-1, N-1), range(0, N))]):
+        scores = sorted(s[i:j])
+        parts.append((scores, label))
+
+    # Plot data
+    if figsize:
+        plt.figure(figsize=figsize)
+    else:
+        plt.figure()
+    plt.title("Silhouette score")
+    total = 0
+    centers = []
+    for i, (scores, label) in enumerate(parts):
+        plt.barh(range(total, total + len(scores)),
+                 scores, color=colors[i], edgecolor=colors[i])
+        centers.append(total+len(scores)/2)
+        total += len(scores)
+    if not isinstance(xlim, type(None)):
+        plt.xlim(xlim)
+    plt.yticks(centers)
+    plt.gca().set_yticklabels(range(N))
+    plt.ylabel("Cluster label")
+    plt.savefig(filename)
+    plt.close()
