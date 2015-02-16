@@ -1,3 +1,8 @@
+import numpy as np
+
+from Orange.data import Instance, Table
+
+
 class Transformation:
     """
     Base class for simple transformations of individual variables. Derived
@@ -19,7 +24,12 @@ class Transformation:
         if self._last_domain != data.domain:
             self._last_domain = data.domain
             self.attr_index = data.domain.index(self.variable)
-        return self.transform(data.get_column_view(self.attr_index)[0])
+        if isinstance(data, Instance):
+            return self.transform(np.array([float(data[self.attr_index])]))[0]
+        elif isinstance(data, Table):
+            return self.transform(data.get_column_view(self.attr_index)[0])
+        else:
+            raise TypeError("{} is not an Instance or a Table.".format(data))
 
     def transform(self, c):
         """
