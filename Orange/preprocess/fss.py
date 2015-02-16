@@ -21,6 +21,10 @@ class SelectBestFeatures:
     If both `k` and `threshold` are set, only features satisfying both
     conditions will be selected.
 
+    If `method` is not set, it is automatically selected when presented with
+    the data set. Data sets with both continuous and discrete features are
+    scored using a method suitable for the majority of features.
+
     Parameters
     ----------
     method : Orange.preprocess.score.ClassificationScorer, Orange.preprocess.score.SklScorer
@@ -44,27 +48,28 @@ class SelectBestFeatures:
         self.decreasing = decreasing
 
     def __call__(self, data):
+        method = self.method
         # select default method according to the provided data
-        if self.method is None:
+        if method is None:
+            autoMethod = True
             discr_ratio = sum(isinstance(a, DiscreteVariable)
                               for a in data.domain.attributes) / len(data.domain.attributes)
             if isinstance(data.domain.class_var, DiscreteVariable):
                 if discr_ratio >= 0.5:
-                    self.method = GainRatio()
+                    method = GainRatio()
                 else:
-                    self.method = ANOVA()
+                    method = ANOVA()
             else:
-                self.method = UnivariateLinearRegression()
+                method = UnivariateLinearRegression()
 
-        if not isinstance(data.domain.class_var, self.method.class_type):
+        if not isinstance(data.domain.class_var, method.class_type):
             raise ValueError(("Scoring method {} requires a class variable " +
-                              "of type {}.").format(
-                type(self.method), self.method.class_type))
+                              "of type {}.").format(type(method), method.class_type))
         features = data.domain.attributes
         try:
-            scores = self.method(data)
+            scores = method(data)
         except ValueError:
-            scores = self.score_only_nice_features(data)
+            scores = self.score_only_nice_features(data, method)
         best = sorted(zip(scores, features), key=itemgetter(0),
                       reverse=self.decreasing)
         if self.k:
@@ -78,12 +83,12 @@ class SelectBestFeatures:
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
-    def score_only_nice_features(self, data):
-        mask = np.array([isinstance(a, self.method.feature_type)
+    def score_only_nice_features(self, data, method):
+        mask = np.array([isinstance(a, method.feature_type)
                          for a in data.domain.attributes])
         features = [f for f in data.domain.attributes
-                    if isinstance(f, self.method.feature_type)]
-        scores = [self.method(data, f) for f in features]
+                    if isinstance(f, method.feature_type)]
+        scores = [method(data, f) for f in features]
         bad = float('-inf') if self.decreasing else float('inf')
         all_scores = np.array([bad] * len(data.domain.attributes))
         all_scores[mask] = scores

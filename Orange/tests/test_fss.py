@@ -55,22 +55,12 @@ class TestFSS(unittest.TestCase):
         self.assertEqual(len(d1.domain), len(data.domain))
 
     def test_defaults(self):
-        data = Impute(Table('auto-mpg'))
         fs = SelectBestFeatures(k=3)
-        data2 = fs(data)
-        self.assertIsInstance(fs.method, UnivariateLinearRegression)
+        data2 = fs(Impute(Table('auto-mpg')))
         self.assertTrue(all(isinstance(a, ContinuousVariable) for a in data2.domain.attributes))
-
-        data = Table('wine')
-        fs = SelectBestFeatures(k=5)
-        data2 = fs(data)
-        self.assertIsInstance(fs.method, ANOVA)
+        data2 = fs(Table('wine'))
         self.assertTrue(all(isinstance(a, ContinuousVariable) for a in data2.domain.attributes))
-
-        data = Table('titanic')
-        fs = SelectBestFeatures(k=3)
-        data2 = fs(data)
-        self.assertIsInstance(fs.method, GainRatio)
+        data2 = fs(Table('titanic'))
         self.assertTrue(all(isinstance(a, DiscreteVariable) for a in data2.domain.attributes))
 
 
