@@ -88,6 +88,9 @@ Section ""
 
 	${EndIf}
 
+	# Ensure pip is installed in case of pre-existing python install
+	${PythonExec} "-m ensurepip"
+
 	${ExtractTempRec} "${BASEDIR}\wheelhouse\*.*" ${TEMPDIR}\wheelhouse\
 
 	${ExtractTemp} "${BASEDIR}\requirements.txt" ${TEMPDIR}\
@@ -102,10 +105,12 @@ Section ""
 		Abort "Could not install scipy stack"
 	${EndIf}
 
+	# Install other packages.
+	# Note we also add the numpy/scipy --find-links path.
 	DetailPrint "Installing required packages"
-
 	${Pip} 'install --no-index \
 			-f "${TEMPDIR}\wheelhouse" \
+			-f "${TEMPDIR}\wheelhouse\nosse" \
 			-r "${TEMPDIR}\requirements.txt'
 	Pop $0
 	${If} $0 != 0
@@ -128,6 +133,7 @@ Section ""
 	DetailPrint "Installing Orange"
 	${Pip} 'install --no-deps --no-index \
 			-f "${TEMPDIR}\wheelhouse" Orange'
+
 	Pop $0
 	${If} $0 != 0
 		Abort "Could not install Orange"

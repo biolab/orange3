@@ -209,7 +209,6 @@ Var PythonDir
 #  Run python -m pip COMMAND_STRING
 #
 !macro _PIP_MACRO COMMAND_STRING
-	${PipExec} '${COMMAND_STRING}'
-#	${PythonExec} '-m pip ${COMMAND_STRING}'
+	${PythonExec} '-m pip ${COMMAND_STRING}'
 !macroend
 !define Pip "!insertmacro _PIP_MACRO"
