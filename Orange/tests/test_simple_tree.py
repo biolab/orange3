@@ -46,6 +46,7 @@ class SimpleTreeTest(unittest.TestCase):
         self.assertAlmostEqual(p.max(), 1)
         np.testing.assert_almost_equal(p.sum(axis=1), np.ones(self.N))
 
+    @unittest.skip("test pickles anonymous variables")
     def test_SimpleTree_classification_pickle(self):
         lrn = SimpleTreeLearner()
         clf = lrn(self.data_cls)
