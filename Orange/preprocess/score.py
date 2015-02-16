@@ -1,9 +1,9 @@
 import numpy as np
 from sklearn import feature_selection as skl_fss
+from Orange.misc.wrapper_meta import WrapperMeta
 
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, DiscreteVariable, ContinuousVariable
-from Orange.classification.base import WrapperMeta
 from Orange.preprocess.preprocess import Discretize, Continuize
 
 __all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",

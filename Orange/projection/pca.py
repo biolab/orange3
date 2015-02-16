@@ -1,8 +1,8 @@
 import sklearn.decomposition as skl_decomposition
 
 import Orange.data
+from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.projection import SklProjection, ProjectionModel
-from Orange.classification.base import WrapperMeta
 
 __all__ = ["PCA", "SparsePCA", "RandomizedPCA"]
 

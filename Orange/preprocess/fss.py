@@ -5,6 +5,8 @@ from itertools import takewhile
 from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
+from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
+from Orange.data import Domain, DiscreteVariable, ContinuousVariable
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns"]
 
@@ -34,6 +36,7 @@ class SelectBestFeatures:
         The order of feature importance when sorted from the most to the least
         important feature.
     """
+
     def __init__(self, method=None, k=None, threshold=None, decreasing=True):
         self.method = method
         self.k = k
@@ -41,6 +44,18 @@ class SelectBestFeatures:
         self.decreasing = decreasing
 
     def __call__(self, data):
+        # select default method according to the provided data
+        if self.method is None:
+            discr_ratio = sum(isinstance(a, DiscreteVariable)
+                              for a in data.domain.attributes) / len(data.domain.attributes)
+            if isinstance(data.domain.class_var, DiscreteVariable):
+                if discr_ratio >= 0.5:
+                    self.method = GainRatio()
+                else:
+                    self.method = ANOVA()
+            else:
+                self.method = UnivariateLinearRegression()
+
         if not isinstance(data.domain.class_var, self.method.class_type):
             raise ValueError(("Scoring method {} requires a class variable " +
                               "of type {}.").format(
@@ -64,12 +79,13 @@ class SelectBestFeatures:
         return data.from_table(domain, data)
 
     def score_only_nice_features(self, data):
-        mask = [1 if isinstance(a, self.method.feature_type) else 0
-                for a in data.domain.attributes]
+        mask = np.array([isinstance(a, self.method.feature_type)
+                         for a in data.domain.attributes])
         features = [f for f in data.domain.attributes
                     if isinstance(f, self.method.feature_type)]
         scores = [self.method(data, f) for f in features]
-        all_scores = np.array([float('-inf')] * len(data.domain.attributes))
+        bad = float('-inf') if self.decreasing else float('inf')
+        all_scores = np.array([bad] * len(data.domain.attributes))
         all_scores[mask] = scores
         return all_scores
 

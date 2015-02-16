@@ -5,7 +5,7 @@ import numpy as np
 import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable, Table
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
-    Chi2
+    Chi2, GainRatio
 from Orange.preprocess import SelectBestFeatures, Impute
 
 
@@ -53,6 +53,25 @@ class TestFSS(unittest.TestCase):
 
         d1 = SelectBestFeatures(method=UnivariateLinearRegression)(data)
         self.assertEqual(len(d1.domain), len(data.domain))
+
+    def test_defaults(self):
+        data = Impute(Table('auto-mpg'))
+        fs = SelectBestFeatures(k=3)
+        data2 = fs(data)
+        self.assertIsInstance(fs.method, UnivariateLinearRegression)
+        self.assertTrue(all(isinstance(a, ContinuousVariable) for a in data2.domain.attributes))
+
+        data = Table('wine')
+        fs = SelectBestFeatures(k=5)
+        data2 = fs(data)
+        self.assertIsInstance(fs.method, ANOVA)
+        self.assertTrue(all(isinstance(a, ContinuousVariable) for a in data2.domain.attributes))
+
+        data = Table('titanic')
+        fs = SelectBestFeatures(k=3)
+        data2 = fs(data)
+        self.assertIsInstance(fs.method, GainRatio)
+        self.assertTrue(all(isinstance(a, DiscreteVariable) for a in data2.domain.attributes))
 
 
 class TestRemoveNaNColumns(unittest.TestCase):
