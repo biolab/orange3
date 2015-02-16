@@ -5,7 +5,9 @@ from Orange.evaluation.scoring import Score
 from sklearn.metrics import silhouette_score, adjusted_mutual_info_score, silhouette_samples
 
 try:
+    import matplotlib
     import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
     HAS_MATPLOTLIB = True
 except ImportError:
     plt = None
@@ -113,7 +115,7 @@ class ClusteringEvaluation(ClusteringResults):
 
 
 
-def graph_silhouette(filename, X, y, **kwargs):
+def graph_silhouette(X, y, **kwargs):
     """
     Silhouette plot.
     :param filename:
@@ -133,6 +135,7 @@ def graph_silhouette(filename, X, y, **kwargs):
     xlim = kwargs.get("xlim", None)
     colors = kwargs.get("colors", None)
     figsize = kwargs.get("figsize", None)
+    filename = kwargs.get("filename", None)
 
     if not HAS_MATPLOTLIB:
         import sys
@@ -182,5 +185,8 @@ def graph_silhouette(filename, X, y, **kwargs):
     plt.yticks(centers)
     plt.gca().set_yticklabels(range(N))
     plt.ylabel("Cluster label")
-    plt.savefig(filename)
-    plt.close()
+    if filename:
+        plt.savefig(filename)
+        plt.close()
+    else:
+        plt.show()
