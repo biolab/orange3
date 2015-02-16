@@ -8,31 +8,44 @@ from Orange.data import (ContinuousVariable, DiscreteVariable, Domain,
                          StringVariable, Unknown, Variable)
 from Orange.testing import create_pickling_tests
 
+def create_domain(*ss):
+    Variable._clear_all_caches()
+    vars=dict(
+        age=ContinuousVariable(name="AGE"),
+        gender=DiscreteVariable(name="Gender", values=["M", "F"]),
+        incomeA=ContinuousVariable(name="incomeA"),
+        income=ContinuousVariable(name="income"),
+        education=DiscreteVariable(name="education", values=["GS", "HS", "C"]),
+        ssn=StringVariable(name="SSN"),
+        race=DiscreteVariable(name="race",
+                              values=["White", "Hypsanic", "African", "Other"]))
 
-age = ContinuousVariable(name="AGE")
-gender = DiscreteVariable(name="Gender", values=["M", "F"])
-incomeA = ContinuousVariable(name="incomeA")
-income = ContinuousVariable(name="income")
-education = DiscreteVariable(name="education", values=["GS", "HS", "C"])
-ssn = StringVariable(name="SSN")
-race = DiscreteVariable(name="race",
-                        values=["White", "Hypsanic", "African", "Other"])
+    def map_vars(s):
+        return [vars[x] for x in s]
+    return Domain(*[map_vars(s) for s in ss])
+
 
 PickleDomain = create_pickling_tests(
     "PickleDomain",
-    ("empty_domain", lambda: Domain([])),
-    ("with_continuous_variable", lambda: Domain([age])),
-    ("with_discrete_variable", lambda: Domain([gender])),
-    ("with_mixed_variables", lambda: Domain([age, gender])),
-    ("with_continuous_class", lambda: Domain([age, gender], [incomeA])),
-    ("with_discrete_class", lambda: Domain([age, gender], [education])),
-    ("with_multiple_classes", lambda: Domain([age, gender],
-                                             [incomeA, education])),
-    ("with_metas", lambda: Domain([age, gender], metas=[ssn])),
-    ("with_class_and_metas", lambda: Domain([age, gender],
-                                            [incomeA, education],
-                                            [ssn])),
+    ("empty_domain", lambda: create_domain([])),
+    ("with_continuous_variable", lambda: create_domain(["age"])),
+    ("with_discrete_variable", lambda: create_domain(["gender"])),
+    ("with_mixed_variables", lambda: create_domain(["age", "gender"])),
+    ("with_continuous_class", lambda: create_domain(["age", "gender"], ["incomeA"])),
+    ("with_discrete_class", lambda: create_domain(["age", "gender"], ["education"])),
+    ("with_multiple_classes", lambda: create_domain(["age", "gender"],
+                                             ["incomeA", "education"])),
+    ("with_metas", lambda: create_domain(["age", "gender"], [], ["ssn"])),
+    ("with_class_and_metas", lambda: create_domain(["age", "gender"],
+                                            ["incomeA", "education"],
+                                            ["ssn"])),
 )
+
+
+age, gender, incomeA, income, education, ssn, race = \
+    create_domain([], [],
+                  ["age", "gender", "incomeA", "income", "education", "ssn",
+                   "race"]).metas
 
 
 class TestDomainInit(unittest.TestCase):
@@ -382,6 +395,7 @@ class TestDomainInit(unittest.TestCase):
         domain.convert([0] * 6)
 
     def test_unpickling_recreates_known_domains(self):
+        Variable._clear_all_caches()
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
         self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
@@ -391,22 +405,23 @@ class TestDomainInit(unittest.TestCase):
         domain2 = Domain([])
         self.assertEqual(domain1, domain2)
 
-        domain1.attributes = (ContinuousVariable('var1'),)
+        var1 = ContinuousVariable('var1')
+        domain1.attributes = (var1,)
         self.assertNotEqual(domain1, domain2)
 
-        domain2.attributes = (ContinuousVariable('var1'),)
+        domain2.attributes = (var1,)
         self.assertEqual(domain1, domain2)
 
-        domain1.class_vars = (ContinuousVariable('var1'),)
+        domain1.class_vars = (var1,)
         self.assertNotEqual(domain1, domain2)
 
-        domain2.class_vars = (ContinuousVariable('var1'),)
+        domain2.class_vars = (var1,)
         self.assertEqual(domain1, domain2)
 
-        domain1._metas = (ContinuousVariable('var1'),)
+        domain1._metas = (var1,)
         self.assertNotEqual(domain1, domain2)
 
-        domain2._metas = (ContinuousVariable('var1'),)
+        domain2._metas = (var1,)
         self.assertEqual(domain1, domain2)
 
 

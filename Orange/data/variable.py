@@ -8,6 +8,10 @@ import collections
 ValueUnknown = Unknown  # Shadowing within classes
 
 
+def make_variable(cls, *args):
+    return cls.make(*args)
+
+
 class Variable:
     """
     The base class for variable descriptors contains the variable's
@@ -43,7 +47,6 @@ class Variable:
 
     _variable_types = []
     Unknown = ValueUnknown
-
 
     def __init__(self, name="", compute_value=None):
         """
@@ -136,14 +139,21 @@ class Variable:
         for tpe in cls._variable_types:
             tpe._clear_cache()
 
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return False
-        return self.name == other.name \
-            and self.compute_value == other.compute_value
+    def __reduce__(self):
+        return make_variable, (self.__class__, self.name), self.__dict__
 
-    def __hash__(self):
-        return hash(self.name) ^ hash(self.compute_value)
+    def __copy__(self):
+        """
+        __copy__ is needed since function copy.copy would otherwise use
+        pickling and returns the same instance."""
+        newvar = type(self)()
+        newvar.__dict__.update(self.__dict__)
+        return newvar
+
+    @classmethod
+    def _clear_all_caches(cls):
+        for cls0 in cls._variable_types:
+            cls0._clear_cache()
 
 
 class ContinuousVariable(Variable):
@@ -169,7 +179,7 @@ class ContinuousVariable(Variable):
     If the `number_of_decimals` is set manually, `adjust_decimals` is
     set to 0 to prevent changes by `to_val`.
     """
-    all_continuous_vars = {}
+    all_vars = {}
 
     def __init__(self, name="", number_of_decimals=None):
         """
@@ -182,7 +192,7 @@ class ContinuousVariable(Variable):
             self.adjust_decimals = 2
         else:
             self.number_of_decimals = number_of_decimals
-        ContinuousVariable.all_continuous_vars[name] = self
+        ContinuousVariable.all_vars[name] = self
 
     @property
     def number_of_decimals(self):
@@ -201,7 +211,7 @@ class ContinuousVariable(Variable):
         Return an existing continuous variable with the given name, or
         construct and return a new one.
         """
-        existing_var = ContinuousVariable.all_continuous_vars.get(name)
+        existing_var = ContinuousVariable.all_vars.get(name)
         return existing_var or ContinuousVariable(name)
 
     @classmethod
@@ -209,7 +219,7 @@ class ContinuousVariable(Variable):
         """
         Clears the list of variables for reuse by :obj:`make`.
         """
-        cls.all_continuous_vars.clear()
+        cls.all_vars.clear()
 
     @staticmethod
     def is_primitive():
@@ -279,7 +289,7 @@ class DiscreteVariable(Variable):
         used in some methods like, for instance, when creating dummy variables
         for regression.
     """
-    all_discrete_vars = collections.defaultdict(set)
+    all_vars = collections.defaultdict(set)
     presorted_values = []
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1):
@@ -288,7 +298,7 @@ class DiscreteVariable(Variable):
         self.ordered = ordered
         self.values = list(values)
         self.base_value = base_value
-        DiscreteVariable.all_discrete_vars[name].add(self)
+        DiscreteVariable.all_vars[name].add(self)
 
     def __repr__(self):
         """
@@ -297,7 +307,7 @@ class DiscreteVariable(Variable):
         """
         args = "values=[{}]".format(
             ", ".join([repr(x) for x in self.values[:5]] +
-                      ["..."] *  (len(self.values) > 5)))
+                      ["..."] * (len(self.values) > 5)))
         if self.ordered:
             args += ", ordered=True"
         if self.base_value >= 0:
@@ -371,6 +381,11 @@ class DiscreteVariable(Variable):
 
     str_val = repr_val
 
+    def __reduce__(self):
+        return make_variable, (self.__class__, self.name,
+                               self.values, self.ordered, self.base_value), \
+            self.__dict__
+
     @staticmethod
     def make(name, values=(), ordered=False, base_value=-1):
         """
@@ -427,7 +442,7 @@ class DiscreteVariable(Variable):
         :returns: an existing compatible variable or `None`
         """
         base_rep = base_value != -1 and values[base_value]
-        existing = DiscreteVariable.all_discrete_vars.get(name)
+        existing = DiscreteVariable.all_vars.get(name)
         if existing is None:
             return None
         if not ordered:
@@ -471,7 +486,7 @@ class DiscreteVariable(Variable):
         """
         Clears the list of variables for reuse by :obj:`make`.
         """
-        cls.all_discrete_vars.clear()
+        cls.all_vars.clear()
 
     @staticmethod
     def ordered_values(values):
@@ -485,25 +500,19 @@ class DiscreteVariable(Variable):
                 return presorted
         return sorted(values)
 
-    def __eq__(self, other):
-        return super().__eq__(other) and self.values == other.values
-
-    def __hash__(self):
-        return super().__hash__() ^ hash(tuple(self.values))
-
 
 class StringVariable(Variable):
     """
     Descriptor for string variables. String variables can only appear as
     meta attributes.
     """
-    all_string_vars = {}
+    all_vars = {}
     Unknown = None
 
     def __init__(self, name="", default_col=-1):
         """Construct a new descriptor."""
         super().__init__(name)
-        StringVariable.all_string_vars[name] = self
+        StringVariable.all_vars[name] = self
 
     @staticmethod
     def is_primitive():
@@ -545,7 +554,7 @@ class StringVariable(Variable):
         Return an existing string variable with the given name, or construct
         and return a new one.
         """
-        existing_var = StringVariable.all_string_vars.get(name)
+        existing_var = StringVariable.all_vars.get(name)
         return existing_var or StringVariable(name)
 
     @classmethod
@@ -553,7 +562,8 @@ class StringVariable(Variable):
         """
         Clears the list of variables for reuse by :obj:`make`.
         """
-        cls.all_string_vars.clear()
+        cls.all_vars.clear()
 
-Variable._variable_types += [DiscreteVariable, ContinuousVariable, StringVariable
-    ]
+Variable._variable_types += [
+    DiscreteVariable, ContinuousVariable, StringVariable
+]

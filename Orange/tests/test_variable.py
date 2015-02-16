@@ -122,11 +122,13 @@ PickleDiscreteVariable = create_pickling_tests(
                                                  base_value=0)),
 )
 
+
 PickleStringVariable = create_pickling_tests(
     "PickleStringVariable",
     ("variable", lambda: StringVariable()),
     ("with_name", lambda: StringVariable(name="Feature 0")),
 )
+
 
 if __name__ == "__main__":
     unittest.main()

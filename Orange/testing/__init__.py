@@ -7,18 +7,11 @@ from Orange import data
 class PickleTest(unittest.TestCase):
     def setUp(self):
         """ Override __eq__ for Orange objects that do not implement it"""
-
-        self.add_comparator(data.DiscreteVariable,
-                            compare_members=("name", "values",
-                                             "ordered", "base_value"))
-        self.add_comparator(data.ContinuousVariable,
-                            compare_members=("name",))
-        self.add_comparator(data.StringVariable,
-                            compare_members=("name",))
         self.add_comparator(data.Domain,
                             compare_members=("attributes", "class_vars",
                                              "class_var", "variables",
                                              "metas", "anonymous"))
+        data.Variable._clear_all_caches()
 
     old_comparators = {}
 
