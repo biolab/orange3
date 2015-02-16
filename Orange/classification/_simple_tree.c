@@ -17,6 +17,12 @@
 
 #define log2(x) log((double) (x)) / log(2.0)
 
+#ifdef _WIN32
+#define SIMPLE_TREE_EXPORT __declspec(dllexport)
+#else
+#define SIMPLE_TREE_EXPORT
+#endif // _WIN32
+
 struct Args {
 	int min_instances, max_depth;
 	float max_majority, skip_prob;
@@ -577,6 +583,7 @@ build_tree_(struct Example *examples, int size, int depth, struct SimpleTreeNode
 	return node;
 }
 
+SIMPLE_TREE_EXPORT
 struct SimpleTreeNode *
 build_tree(double *x, double *y, double *w, int size, int size_w, int min_instances, int max_depth, float max_majority, float skip_prob, int type, int num_attrs, int cls_vals, int *attr_vals, int *domain, int bootstrap, int seed)
 {
@@ -615,6 +622,7 @@ build_tree(double *x, double *y, double *w, int size, int size_w, int min_instan
 	return tree;
 }
 
+SIMPLE_TREE_EXPORT
 void
 destroy_tree(struct SimpleTreeNode *node, int type)
 {
@@ -653,6 +661,7 @@ predict_classification_(double *x, struct SimpleTreeNode *node, int cls_vals, do
 	}
 }
 
+SIMPLE_TREE_EXPORT
 void
 predict_classification(double *x, int size, struct SimpleTreeNode *node, int num_attrs, int cls_vals, double *p)
 {
@@ -698,6 +707,7 @@ predict_regression_(double *x, struct SimpleTreeNode *node, double *sum, double 
     *n += node->n;
 }
 
+SIMPLE_TREE_EXPORT
 void
 predict_regression(double *x, int size, struct SimpleTreeNode *node, int num_attrs, double *p)
 {
@@ -711,6 +721,7 @@ predict_regression(double *x, int size, struct SimpleTreeNode *node, int num_att
 	}
 }
 
+SIMPLE_TREE_EXPORT
 struct SimpleTreeNode *
 new_node(int children_size, int type, int cls_vals)
 {
