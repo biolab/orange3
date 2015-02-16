@@ -1,6 +1,7 @@
 import sklearn.svm as skl_svm
 
 from Orange.classification import SklLearner, SklModel
+from Orange.preprocess import Continuize
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner",
            "SVRLearner", "NuSVRLearner", "OneClassSVMLearner"]
@@ -20,6 +21,8 @@ class SVMLearner(SklLearner):
     __wraps__ = skl_svm.SVC
     __returns__ = SVMClassifier
     name = 'svm'
+    preprocessors = SklLearner.preprocessors + \
+                    [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, probability=False,
@@ -34,6 +37,8 @@ class SVMLearner(SklLearner):
 class LinearSVMLearner(SklLearner):
     __wraps__ = skl_svm.LinearSVC
     name = 'linear svm'
+    preprocessors = SklLearner.preprocessors + \
+                    [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
 
     def __init__(self, penalty='l2', loss='l2', dual=True, tol=0.0001,
                  C=1.0, multi_class='ovr', fit_intercept=True,
@@ -58,6 +63,8 @@ class NuSVMLearner(SklLearner):
     __wraps__ = skl_svm.NuSVC
     __returns__ = NuSVMClassifier
     name = 'nu svm'
+    preprocessors = SklLearner.preprocessors + \
+                    [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
 
     def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  shrinking=True, probability=False, tol=0.001, cache_size=200,
@@ -71,6 +78,8 @@ class NuSVMLearner(SklLearner):
 class SVRLearner(SklLearner):
     __wraps__ = skl_svm.SVR
     name = 'svr'
+    preprocessors = SklLearner.preprocessors + \
+                    [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, C=1.0, epsilon=0.1, shrinking=True,
@@ -83,6 +92,8 @@ class SVRLearner(SklLearner):
 class NuSVRLearner(SklLearner):
     __wraps__ = skl_svm.NuSVR
     name = 'nu svr'
+    preprocessors = SklLearner.preprocessors + \
+                    [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
 
     def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma=0.0,
                  coef0=0.0, shrinking=True, tol=0.001,
@@ -95,6 +106,8 @@ class NuSVRLearner(SklLearner):
 class OneClassSVMLearner(SklLearner):
     __wraps__ = skl_svm.OneClassSVM
     name = 'one class svm'
+    preprocessors = SklLearner.preprocessors + \
+                    [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
 
     def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
                  tol=0.001, nu=0.5, shrinking=True, cache_size=200,
