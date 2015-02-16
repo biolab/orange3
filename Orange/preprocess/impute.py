@@ -27,16 +27,17 @@ class ReplaceUnknowns(Transformation):
 
 
 class Average:
-    def __call__(self, data, variable):
+    def __call__(self, data, variable, value=None):
         variable = data.domain[variable]
-        if is_continuous(variable):
-            stats = basic_stats.BasicStats(data, variable)
-            value = stats.mean
-        elif is_discrete(variable):
-            dist = distribution.get_distribution(data, variable)
-            value = dist.modus()
-        else:
-            raise TypeError("Variable must be continuous or discrete")
+        if value is None:
+            if is_continuous(variable):
+                stats = basic_stats.BasicStats(data, variable)
+                value = stats.mean
+            elif is_discrete(variable):
+                dist = distribution.get_distribution(data, variable)
+                value = dist.modus()
+            else:
+                raise TypeError("Variable must be continuous or discrete")
 
         var = copy.copy(variable)
         var.compute_value = ReplaceUnknowns(variable, value)
