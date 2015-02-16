@@ -4,7 +4,7 @@ from mock import Mock
 
 import numpy as np
 
-from Orange.preprocess import discretize
+from Orange.preprocess import discretize, Discretize
 from Orange import data
 
 
@@ -125,6 +125,13 @@ class TestDiscretizer(TestCase):
             self.var, [1, 2, 3])
         X = np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5])
         np.testing.assert_equal(dvar.compute_value.transform(X), np.floor(X))
+
+    def test_transform(self):
+        table = data.Table('iris')
+        table2 = Discretize(table)
+        ins = data.Instance(table2.domain, table[0])
+        table3 = data.Table(table2.domain, table[:10])
+        self.assertEqual(ins, table3[0])
 
 
 # noinspection PyPep8Naming
