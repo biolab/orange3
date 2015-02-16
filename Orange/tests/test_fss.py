@@ -2,12 +2,11 @@ import unittest
 
 import numpy as np
 
-from sklearn.preprocessing import Imputer
-
 import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable, Table
-from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression
-from Orange.preprocess import SelectBestFeatures
+from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
+    Chi2
+from Orange.preprocess import SelectBestFeatures, Impute
 
 
 class TestFSS(unittest.TestCase):
@@ -16,7 +15,7 @@ class TestFSS(unittest.TestCase):
         gini = Gini()
         s = SelectBestFeatures(method=gini, k=1)
         data2 = s(data)
-        best = max((gini(f, data), f) for f in data.domain.attributes)[1]
+        best = max((gini(data, f), f) for f in data.domain.attributes)[1]
         self.assertEqual(data2.domain.attributes[0], best)
 
     def test_select_threshold(self):
@@ -24,25 +23,36 @@ class TestFSS(unittest.TestCase):
         anova = ANOVA()
         t = 30
         data2 = SelectBestFeatures(method=anova, threshold=t)(data)
-        self.assertTrue(all(anova(f, data) >= t for f in data2.domain.attributes))
+        self.assertTrue(all(anova(data, f) >= t for f in data2.domain.attributes))
 
-    def test_error(self):
+    def test_error_when_using_regression_score_on_classification_data(self):
         data = Table('wine')
         s = SelectBestFeatures(method=UnivariateLinearRegression(), k=3)
         with self.assertRaises(ValueError):
             s(data)
 
-    def test_mixed_features(self):
-        data = Table('auto-mpg')
-        data.X = Imputer().fit_transform(data.X)
-        s = SelectBestFeatures(method=UnivariateLinearRegression(), k=2)
-        data2 = s(data)
-        self.assertEqual(sum(1 for f in data2.domain.attributes
-                             if isinstance(f, ContinuousVariable)), 2)
-        self.assertEqual(sum(1 for f in data2.domain.attributes
-                             if isinstance(f, DiscreteVariable)),
-                         sum(1 for f in data.domain.attributes
-                             if isinstance(f, DiscreteVariable)))
+    def test_discrete_scores_on_continuous_features(self):
+        data = Table('iris')
+        c = data.columns
+        for method in (Gini, Chi2):
+            d1 = SelectBestFeatures(method=method)(data)
+            expected = \
+                (c.petal_length, c.petal_width, c.sepal_length, c.sepal_width)
+            self.assertSequenceEqual(d1.domain.attributes, expected)
+
+            scores = method(d1)
+            self.assertEqual(len(scores), 4)
+
+            score = method(d1, c.petal_length)
+            self.assertIsInstance(score, float)
+
+    def test_continuous_scores_on_discrete_features(self):
+        data = Impute(Table('auto-mpg'))
+        with self.assertRaises(ValueError):
+            UnivariateLinearRegression(data)
+
+        d1 = SelectBestFeatures(method=UnivariateLinearRegression)(data)
+        self.assertEqual(len(d1.domain), len(data.domain))
 
 
 class TestRemoveNaNColumns(unittest.TestCase):

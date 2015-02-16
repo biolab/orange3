@@ -45,11 +45,11 @@ class SelectBestFeatures:
             raise ValueError(("Scoring method {} requires a class variable " +
                               "of type {}.").format(
                 type(self.method), self.method.class_type))
-        features = [f for f in data.domain.attributes
-                    if isinstance(f, self.method.feature_type)]
-        other = [f for f in data.domain.attributes
-                 if not isinstance(f, self.method.feature_type)]
-        scores = [self.method(f, data) for f in features]
+        features = data.domain.attributes
+        try:
+            scores = self.method(data)
+        except ValueError:
+            scores = self.score_only_nice_features(data)
         best = sorted(zip(scores, features), key=itemgetter(0),
                       reverse=self.decreasing)
         if self.k:
@@ -59,9 +59,19 @@ class SelectBestFeatures:
                     (lambda x: x[0] <= self.threshold))
             best = takewhile(pred, best)
 
-        domain = Orange.data.Domain([f for s, f in best] + other,
+        domain = Orange.data.Domain([f for s, f in best],
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
+
+    def score_only_nice_features(self, data):
+        mask = [1 if isinstance(a, self.method.feature_type) else 0
+                for a in data.domain.attributes]
+        features = [f for f in data.domain.attributes
+                    if isinstance(f, self.method.feature_type)]
+        scores = [self.method(data, f) for f in features]
+        all_scores = np.array([float('-inf')] * len(data.domain.attributes))
+        all_scores[mask] = scores
+        return all_scores
 
 
 class RemoveNaNColumns(Preprocess):

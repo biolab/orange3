@@ -2,37 +2,57 @@ import numpy as np
 from sklearn import feature_selection as skl_fss
 
 from Orange.statistics import contingency, distribution
-from Orange.data.variable import DiscreteVariable, ContinuousVariable
+from Orange.data import Domain, DiscreteVariable, ContinuousVariable
 from Orange.classification.base import WrapperMeta
+from Orange.preprocess.preprocess import Discretize, Continuize
 
 __all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
            "InfoGain", "GainRatio", "Gini"]
 
 
-class SklScorer(metaclass=WrapperMeta):
+class Scorer:
     feature_type = None
     class_type = None
+    preprocessors = ()
 
     def __new__(cls, *args):
         self = super().__new__(cls)
+        self.preprocessors = list(self.preprocessors)
         if args:
             return self(*args)
         else:
             return self
 
-    def __call__(self, feature, data):
+    def __call__(self, data, feature=None):
         if not data.domain.class_var:
             raise ValueError("Data with class labels required.")
-        if not isinstance(data.domain[feature], self.feature_type):
-            raise ValueError("Scoring method %s requires a feature of type %s." %
-                             (type(self).__name__, self.feature_type.__name__))
         if not isinstance(data.domain.class_var, self.class_type):
             raise ValueError("Scoring method %s requires a class variable of type %s." %
                              (type(self).__name__, self.class_type.__name__))
 
-        X = data.X[:, [data.domain.index(feature)]]
-        y = data.Y.flatten()
-        return self.score(X, y)
+        if feature is not None:
+            f = data.domain[feature]
+            data = data.from_table(Domain([f], data.domain.class_vars), data)
+
+        for pp in self.preprocessors:
+            data = pp(data)
+
+        if any(not isinstance(a, self.feature_type)
+               for a in data.domain.attributes):
+            raise ValueError('Only %ss are supported' % self.feature_type)
+
+        return self.score_data(data, feature)
+
+    def score_data(self, data, feature):
+        raise NotImplementedError
+
+
+class SklScorer(Scorer, metaclass=WrapperMeta):
+    def score_data(self, data, feature):
+        score = self.score(data.X, data.Y)
+        if feature is not None:
+            return score[0]
+        return score
 
 
 class Chi2(SklScorer):
@@ -45,10 +65,13 @@ class Chi2(SklScorer):
     __wraps__ = skl_fss.chi2
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
+    preprocessors = [
+        Discretize()
+    ]
 
     def score(self, X, y):
         f, p = skl_fss.chi2(X, y)
-        return f[0]
+        return f
 
 
 class ANOVA(SklScorer):
@@ -64,7 +87,7 @@ class ANOVA(SklScorer):
 
     def score(self, X, y):
         f, p = skl_fss.f_classif(X, y)
-        return f[0]
+        return f
 
 
 class UnivariateLinearRegression(SklScorer):
@@ -80,10 +103,10 @@ class UnivariateLinearRegression(SklScorer):
 
     def score(self, X, y):
         f, p = skl_fss.f_regression(X, y)
-        return f[0]
+        return f
 
 
-class ClassificationScorer:
+class ClassificationScorer(Scorer):
     """
     Base class for feature scores in a class-labeled data set.
 
@@ -104,22 +127,24 @@ class ClassificationScorer:
     """
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
+    preprocessors = [
+        Discretize()
+    ]
 
-    def __new__(cls, *args):
-        self = super().__new__(cls)
-        if args:
-            return self(*args)
-        else:
-            return self
+    def score_data(self, data, feature):
+        instances_with_class = \
+            np.sum(distribution.Discrete(data, data.domain.class_var))
 
-    def __call__(self, feature, data):
-        if not data.domain.class_var:
-            raise ValueError("Data with class labels required.")
-        elif not isinstance(data.domain.class_var, DiscreteVariable):
-            raise ValueError("Data with discrete class labels required.")
-        cont = contingency.Discrete(data, feature)
-        instances_with_class = np.sum(distribution.Discrete(data, data.domain.class_var))
-        return self.from_contingency(cont, 1. - np.sum(cont.unknowns)/instances_with_class)
+        def score_from_contingency(f):
+            cont = contingency.Discrete(data, f)
+            return self.from_contingency(
+                cont, 1. - np.sum(cont.unknowns)/instances_with_class)
+
+        scores = [score_from_contingency(f) for f in data.domain.attributes]
+
+        if feature is not None:
+            return scores[0]
+        return scores
 
 
 def _entropy(D):
