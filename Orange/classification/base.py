@@ -321,6 +321,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     name = 'skl learner'
     preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None),
+                     Orange.preprocess.RemoveNaNColumns(),
                      Orange.preprocess.Impute()]
 
     @property
