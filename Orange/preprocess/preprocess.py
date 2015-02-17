@@ -112,7 +112,7 @@ class Impute(Preprocess):
 
 
 class SklImpute(Preprocess):
-    def __init__(self, strategy='mean', force=False):
+    def __init__(self, strategy='mean', force=True):
         self.strategy = strategy
         self.force = force
 
