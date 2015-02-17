@@ -3,11 +3,14 @@ Preprocess
 ----------
 
 """
+import numpy as np
+import sklearn.preprocessing as skl_preprocessing
+
 import Orange.data
 from . import impute, discretize
 from ..misc.enum import Enum
 
-__all__ = ["Continuize", "Discretize", "Impute"]
+__all__ = ["Continuize", "Discretize", "Impute", "SklImpute"]
 
 
 def is_continuous(var):
@@ -106,6 +109,23 @@ class Impute(Preprocess):
         domain = Orange.data.Domain(
             newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
+
+
+class SklImpute(Preprocess):
+    def __init__(self, strategy='mean', force=True):
+        self.strategy = strategy
+        self.force = force
+
+    def __call__(self, data):
+        if not self.force and not np.isnan(data.X).any():
+            return data
+        self.imputer = skl_preprocessing.Imputer(strategy=self.strategy)
+        X = self.imputer.fit_transform(data.X)
+        features = [impute.Average()(data, var, value) for var, value in
+                    zip(data.domain.attributes, self.imputer.statistics_)]
+        domain = Orange.data.Domain(features, data.domain.class_vars,
+                                    data.domain.metas)
+        return Orange.data.Table(domain, X, data.Y, data.metas)
 
 
 class PreprocessorList(object):
