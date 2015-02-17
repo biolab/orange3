@@ -182,7 +182,7 @@ class OWConcatenate(widget.OWWidget):
 
 def concat(tables):
     Xs = [table.X for table in tables]
-    Ys = [table.Y for table in tables]
+    Ys = [numpy.c_[table.Y] for table in tables]
     metas = [table.metas for table in tables]
 
     domain = tables[0].domain
