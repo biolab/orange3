@@ -11,6 +11,7 @@ import logging
 import optparse
 import pickle
 import shlex
+import shutil
 
 import pkg_resources
 
@@ -53,11 +54,22 @@ def fix_osx_10_9_private_font():
     from PyQt4.QtCore import QSysInfo, QT_VERSION
     if sys.platform == "darwin":
         try:
+            QFont.insertSubstitution(".Helvetica Neue DeskInterface",
+                                     "Helvetica Neue")
             if QSysInfo.MacintoshVersion > QSysInfo.MV_10_8 and \
-                    QT_VERSION < 0x40806:
-                QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
+                            QT_VERSION < 0x40806:
+                QFont.insertSubstitution(".Lucida Grande UI",
+                                         "Lucida Grande")
         except AttributeError:
             pass
+
+
+def fix_osx_spacing(app):
+    if sys.platform == "darwin":
+        app.setStyleSheet("""
+            QCheckBox, QRadioButton { padding-top: 2px; padding-bottom: 1px; vertical-align: bottom;}
+            QCheckBoxLabel { padding:20px;}
+            """)
 
 
 def fix_win_pythonw_std_stream():
@@ -69,9 +81,9 @@ def fix_win_pythonw_std_stream():
     """
     if sys.platform == "win32" and \
             os.path.basename(sys.executable) == "pythonw.exe":
-        if sys.stdout.fileno() < 0:
+        if sys.stdout is not None and sys.stdout.fileno() < 0:
             sys.stdout = open(os.devnull, "wb")
-        if sys.stderr.fileno() < 0:
+        if sys.stdout is not None and sys.stderr.fileno() < 0:
             sys.stderr = open(os.devnull, "wb")
 
 
@@ -86,11 +98,13 @@ def main(argv=None):
                       action="store_true",
                       help="Don't run widget discovery "
                            "(use full cache instead)")
-
     parser.add_option("--force-discovery",
                       action="store_true",
                       help="Force full widget discovery "
                            "(invalidate cache)")
+    parser.add_option("--clear-widget-settings",
+                      action="store_true",
+                      help="Remove stored widget setting")
     parser.add_option("--no-welcome",
                       action="store_true",
                       help="Don't show welcome dialog.")
@@ -151,8 +165,13 @@ def main(argv=None):
 
     qt_argv += args
 
+    if options.clear_widget_settings:
+        log.debug("Clearing widget settings")
+        shutil.rmtree(config.widget_settings_dir(), ignore_errors=True)
+
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
+    fix_osx_spacing(app)
 
     # NOTE: config.init() must be called after the QApplication constructor
     config.init()
@@ -319,8 +338,9 @@ def main(argv=None):
     if stdout_redirect:
         stdout = TextStream()
         stdout.stream.connect(output_view.write)
-        # also connect to original fd
-        stdout.stream.connect(sys.stdout.write)
+        if sys.stdout is not None:
+            # also connect to original fd
+            stdout.stream.connect(sys.stdout.write)
     else:
         stdout = sys.stdout
 
@@ -328,8 +348,9 @@ def main(argv=None):
         error_writer = output_view.formated(color=Qt.red)
         stderr = TextStream()
         stderr.stream.connect(error_writer.write)
-        # also connect to original fd
-        stderr.stream.connect(sys.stderr.write)
+        if sys.stderr is not None:
+            # also connect to original fd
+            stderr.stream.connect(sys.stderr.write)
     else:
         stderr = sys.stderr
 

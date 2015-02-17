@@ -49,21 +49,13 @@ class TestBasketReader(unittest.TestCase):
         self.assertEqual(len(table.domain.variables), 3)
         self.assertEqual(set(x for x in table[0]), {1, 2, 3})
 
-    @unittest.skip("Issuing warnings in basket reader is too expensive")
     @with_file("""a=1, b=2, a=3""")
     def test_handles_duplicate_variables(self, fname):
-        table = BasketReader().read_file(fname)
-        self.assertEqual(len(table.domain.variables), 2)
-        np.testing.assert_almost_equal(table.X.todense(),
-                                       np.array([[3, 2]]))
+        self.assertRaises(ValueError, BasketReader().read_file, fname)
 
-    @unittest.skip("Issuing warnings in basket reader is too expensive")
     @with_file("""a, b, b, a, a, c, c, d, e""")
     def test_handles_duplicate_variables2(self, fname):
-        table = BasketReader().read_file(fname)
-        self.assertEqual(len(table.domain.variables), 5)
-        np.testing.assert_almost_equal(table.X.todense(),
-                                       np.array([[1, 1, 1, 1, 1]]))
+        self.assertRaises(ValueError, BasketReader().read_file, fname)
 
     @with_file("""a=1, b=2\na=1, b=4""")
     def test_variables_can_be_listed_in_any_order(self, fname):

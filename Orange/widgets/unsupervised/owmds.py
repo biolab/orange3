@@ -3,8 +3,6 @@ import numpy
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
-import sklearn.manifold
-
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
 
@@ -14,6 +12,7 @@ from Orange.widgets.utils import colorpalette
 from Orange.widgets.utils import itemmodels
 
 import Orange.data
+import Orange.projection
 import Orange.distance
 import Orange.misc
 
@@ -75,14 +74,14 @@ class OWMDS(widget.OWWidget):
     initialization = settings.Setting(PCA)
     n_init = settings.Setting(1)
 
-    output_embeding_role = settings.Setting(1)
+    output_embedding_role = settings.Setting(1)
     autocommit = settings.Setting(True)
 
     color_var = settings.ContextSetting(0, not_variable=True)
     shape_var = settings.ContextSetting(0, not_variable=True)
     size_var = settings.ContextSetting(0, not_variable=True)
 
-    # output embeding role.
+    # output embedding role.
     NoRole, AttrRole, MetaRole = 0, 1, 2
 
     def __init__(self, parent=None):
@@ -120,7 +119,7 @@ class OWMDS(widget.OWWidget):
 #                     gui.spin(box, self, "n_init", 1, 10, step=1))
 
         box.layout().addLayout(form)
-        gui.button(box, self, "Apply", callback=self._invalidate_embeding)
+        gui.button(box, self, "Apply", callback=self._invalidate_embedding)
 
         box = gui.widgetBox(self.controlArea, "Graph")
         self.colorvar_model = itemmodels.VariableListModel()
@@ -143,7 +142,7 @@ class OWMDS(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         box = gui.widgetBox(self.controlArea, "Output")
-        cb = gui.comboBox(box, self, "output_embeding_role",
+        cb = gui.comboBox(box, self, "output_embedding_role",
                           box="Append coordinates",
                           items=["Do not append", "As attributes", "As metas"],
                           callback=self._invalidate_output)
@@ -211,7 +210,7 @@ class OWMDS(widget.OWWidget):
 
     def apply(self):
         if self.data is None and self.matrix is None:
-            self.embeding = None
+            self.embedding = None
             self._update_plot()
             return
 
@@ -232,13 +231,13 @@ class OWMDS(widget.OWWidget):
 
         dissim = "precomputed"
 
-        mds = sklearn.manifold.MDS(
+        mds = Orange.projection.MDS(
             dissimilarity=dissim, n_components=2,
             n_init=n_init, max_iter=self.max_iter
         )
-        embeding = mds.fit_transform(X, init=init)
-        self.embeding = embeding
-        self.stress = mds.stress_
+        mds_fit = mds.fit(X, init=init)
+        self.embedding = mds_fit.embedding_
+        self.stress = mds_fit.stress_
 
     def handleNewSignals(self):
         if self._invalidated:
@@ -248,7 +247,7 @@ class OWMDS(widget.OWWidget):
         self._update_plot()
         self.commit()
 
-    def _invalidate_embeding(self):
+    def _invalidate_embedding(self):
         self.apply()
         self._update_plot()
         self._invalidate_output()
@@ -273,7 +272,7 @@ class OWMDS(widget.OWWidget):
 
     def _update_plot(self):
         self.plot.clear()
-        if self.embeding is not None:
+        if self.embedding is not None:
             self._setup_plot()
 
     def _setup_plot(self):
@@ -325,7 +324,7 @@ class OWMDS(widget.OWWidget):
                 size_data = point_size
 
         item = pg.ScatterPlotItem(
-            x=self.embeding[:, 0], y=self.embeding[:, 1],
+            x=self.embedding[:, 0], y=self.embedding[:, 1],
             pen=self._pen_data, symbol=self._shape_data,
             brush=QtGui.QBrush(Qt.transparent),
             size=size_data,
@@ -338,30 +337,30 @@ class OWMDS(widget.OWWidget):
         self.plot.addItem(item)
 
     def commit(self):
-        if self.embeding is not None:
-            output = embeding = Orange.data.Table.from_numpy(
+        if self.embedding is not None:
+            output = embedding = Orange.data.Table.from_numpy(
                 Orange.data.Domain([Orange.data.ContinuousVariable("X"),
                                     Orange.data.ContinuousVariable("Y")]),
-                self.embeding
+                self.embedding
             )
         else:
-            output = embeding = None
+            output = embedding = None
 
-        if self.embeding is not None and self.data is not None:
+        if self.embedding is not None and self.data is not None:
             X, Y, M = self.data.X, self.data.Y, self.data.metas
             domain = self.data.domain
             attrs = domain.attributes
             class_vars = domain.class_vars
             metas = domain.metas
 
-            if self.output_embeding_role == OWMDS.NoRole:
+            if self.output_embedding_role == OWMDS.NoRole:
                 pass
-            elif self.output_embeding_role == OWMDS.AttrRole:
-                attrs = attrs + embeding.domain.attributes
-                X = numpy.c_[X, embeding.X]
-            elif self.output_embeding_role == OWMDS.MetaRole:
-                metas = metas + embeding.domain.attributes
-                M = numpy.c_[M, embeding.X]
+            elif self.output_embedding_role == OWMDS.AttrRole:
+                attrs = attrs + embedding.domain.attributes
+                X = numpy.c_[X, embedding.X]
+            elif self.output_embedding_role == OWMDS.MetaRole:
+                metas = metas + embedding.domain.attributes
+                M = numpy.c_[M, embedding.X]
 
             domain = Orange.data.Domain(attrs, class_vars, metas)
             output = Orange.data.Table.from_numpy(domain, X, Y, M)

@@ -7,15 +7,14 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt
 
 import numpy
-import sklearn.metrics
+import sklearn.metrics as skl_metrics
 
-import Orange.data
-import Orange.evaluation.testing
+import Orange
 from Orange.widgets import widget, settings, gui
 
 
 def confusion_matrix(res, index):
-    return sklearn.metrics.confusion_matrix(
+    return skl_metrics.confusion_matrix(
         res.actual, res.predicted[index])
 
 
@@ -26,7 +25,7 @@ class OWConfusionMatrix(widget.OWWidget):
     priority = 1001
 
     inputs = [{"name": "Evaluation Results",
-               "type": Orange.evaluation.testing.Results,
+               "type": Orange.evaluation.Results,
                "handler": "set_results"}]
     outputs = [{"name": "Selected Data",
                 "type": Orange.data.Table}]
@@ -130,9 +129,9 @@ class OWConfusionMatrix(widget.OWWidget):
             nmodels, ntests = results.predicted.shape
             headers = class_values + [unicodedata.lookup("N-ARY SUMMATION")]
 
-            # NOTE: The 'fitter_names' is set in 'Test Learners' widget.
-            if hasattr(results, "fitter_names"):
-                self.learners = results.fitter_names
+            # NOTE: The 'learner_names' is set in 'Test Learners' widget.
+            if hasattr(results, "learner_names"):
+                self.learners = results.learner_names
             else:
                 self.learners = ["L %i" % (i + 1) for i in range(nmodels)]
 
@@ -336,14 +335,13 @@ class VerticalLabel(QLabel):
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
-    from Orange.evaluation import testing
-    from Orange.classification import tree
 
     app = QApplication([])
     w = OWConfusionMatrix()
     w.show()
     data = Orange.data.Table("iris")
-    res = testing.CrossValidation(data, [tree.ClassificationTreeLearner()],
-                                  store_data=True)
+    res = Orange.evaluation.CrossValidation(
+        data, [Orange.classification.ClassificationTreeLearner()],
+        store_data=True)
     w.set_results(res)
     app.exec_()

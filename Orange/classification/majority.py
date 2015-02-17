@@ -1,22 +1,25 @@
 from numpy import tile, array
 
-from Orange import classification, data
+from Orange import data
+from Orange.classification.base import Learner, Model
 from Orange.statistics import distribution
 
+__all__ = ["MajorityLearner"]
 
-class MajorityFitter(classification.Fitter):
+
+class MajorityLearner(Learner):
+    """
+    A majority classifier. Always returns most frequent class from the
+    training set, regardless of the attribute values from the test data
+    instance. Returns class value distribution if class probabilities
+    are requested. Can be used as a baseline when comparing classifiers.
+    """
+
+    name = 'majority'
+
     def fit_storage(self, dat):
-        """
-        Constructs `Orange.classification.majority.ConstantClassifier` from given data.
-
-        :param dat: table of data
-        :type dat: Orange.data.Table
-        :return: classification model, which always returns majority value
-        :rtype: Orange.classification.majority.ConstantClassifier
-        """
-
         if not isinstance(dat.domain.class_var, data.DiscreteVariable):
-            raise ValueError("classification.MajorityFitter expects a domain with a "
+            raise ValueError("classification.MajorityLearner expects a domain with a "
                              "(single) discrete variable")
         dist = distribution.get_distribution(dat, dat.domain.class_var)
         N = dist.sum()
@@ -24,9 +27,10 @@ class MajorityFitter(classification.Fitter):
             dist /= N
         else:
             dist.fill(1 / len(dist))
-        return ConstantClassifier(dist=dist)
+        return ConstantModel(dist=dist)
 
-class ConstantClassifier(classification.Model):
+
+class ConstantModel(Model):
     """
     A classification model that returns a given class value.
     """
@@ -55,4 +59,4 @@ class ConstantClassifier(classification.Model):
         return tile(self.dist, (len(X), 1))
 
     def __str__(self):
-        return 'ConstantClassifier {}'.format(self.dist)
+        return 'ConstantModel {}'.format(self.dist)

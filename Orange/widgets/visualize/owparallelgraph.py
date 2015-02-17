@@ -12,8 +12,8 @@ from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
 from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
 
 from Orange.canvas.utils import environ
-from Orange.data.discretization import DiscretizeTable
-from Orange.feature.discretization import EqualFreq
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.widgets.settings import Setting
@@ -77,7 +77,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.domain_contingencies = None
         self.groups = {}
         OWPlot.setData(self, data)
-        ScaleData.set_data(self, data, subset_data, no_data=True, **args)
+        ScaleData.set_data(self, data, no_data=True, **args)
         self.end_progress()
 
 
@@ -683,8 +683,8 @@ def initialize_kmeans(conts, k):
 
     X = np.array([y[0] for y in x])
 
-    import sklearn.cluster
-    kmeans = sklearn.cluster.KMeans(n_clusters=k)
+    import sklearn.cluster as skl_cluster
+    kmeans = skl_cluster.KMeans(n_clusters=k)
     Y = kmeans.fit_predict(X)
     means = kmeans.cluster_centers_
     covars = np.zeros((k, len(conts)))
@@ -777,7 +777,7 @@ def create_contingencies(X, callback=None):
     window_size = 1
     dim = len(X.domain)
 
-    X_ = DiscretizeTable(X, method=EqualFreq(n=10))
+    X_ = Discretize(method=EqualFreq(n=10))(X)
     m = []
     for i, var in enumerate(X_.domain):
         cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=').split(',')))

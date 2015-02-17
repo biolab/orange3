@@ -1,8 +1,9 @@
 import Orange
 iris = Orange.data.Table("iris.tab")
-disc = Orange.data.discretization.DiscretizeTable()
-disc.method = Orange.feature.discretization.EqualFreq(n=2)
-disc_iris = disc(iris)
+disc = Orange.preprocess.Discretize()
+disc.method = Orange.preprocess.discretize.EqualFreq(n=2)
+d_disc_iris = disc(iris)
+disc_iris = Orange.data.Table(d_disc_iris, iris)
 
 print("Original data set:")
 for e in iris[:3]:

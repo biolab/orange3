@@ -2,13 +2,16 @@ import math
 import unittest
 
 from Orange.testing import create_pickling_tests
-from Orange import data
+from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable
 
 
 class DiscreteVariableTest(unittest.TestCase):
+    def setUp(self):
+        DiscreteVariable._clear_cache()
+
     def test_to_val(self):
         values = ["F", "M"]
-        var = data.DiscreteVariable(name="Feature 0", values=values)
+        var = DiscreteVariable(name="Feature 0", values=values)
 
         self.assertEqual(var.to_val(0), 0)
         self.assertEqual(var.to_val("F"), 0)
@@ -20,9 +23,9 @@ class DiscreteVariableTest(unittest.TestCase):
             var.to_val("G")
 
     def test_find_compatible_unordered(self):
-        gend = data.DiscreteVariable("gend", values=["F", "M"])
+        gend = DiscreteVariable("gend", values=["F", "M"])
 
-        find_comp = data.DiscreteVariable._find_compatible
+        find_comp = DiscreteVariable._find_compatible
         self.assertIs(find_comp("gend"), gend)
         self.assertIs(find_comp("gend", values=["F"]), gend)
         self.assertIs(find_comp("gend", values=["F", "M"]), gend)
@@ -43,9 +46,9 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertEqual(gend.values, ["F", "M", "N", "R"])
 
     def test_find_compatible_unordered(self):
-        abc = data.DiscreteVariable("abc", values="abc", ordered=True)
+        abc = DiscreteVariable("abc", values="abc", ordered=True)
 
-        find_comp = data.DiscreteVariable._find_compatible
+        find_comp = DiscreteVariable._find_compatible
 
         self.assertIsNone(find_comp("abc"))
         self.assertIsNone(find_comp("abc", list("abc")))
@@ -55,11 +58,11 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertIs(find_comp("abc", ["a", "b", "c"], ordered=True), abc)
         self.assertIs(find_comp("abc", ["a", "b", "c", "d"], ordered=True), abc)
 
-        abd = data.DiscreteVariable.make(
+        abd = DiscreteVariable.make(
             "abc", values=["a", "d", "b"], ordered=True)
         self.assertIsNot(abc, abd)
 
-        abc_un = data.DiscreteVariable.make("abc", values=["a", "b", "c"])
+        abc_un = DiscreteVariable.make("abc", values=["a", "b", "c"])
         self.assertIsNot(abc_un, abc)
 
         self.assertIs(
@@ -67,27 +70,27 @@ class DiscreteVariableTest(unittest.TestCase):
         self.assertIs(find_comp("abc", values=["a", "b", "c"]), abc_un)
 
     def test_make(self):
-        var = data.DiscreteVariable.make("a", values=["F", "M"])
-        self.assertIsInstance(var, data.DiscreteVariable)
+        var = DiscreteVariable.make("a", values=["F", "M"])
+        self.assertIsInstance(var, DiscreteVariable)
         self.assertEqual(var.name, "a")
         self.assertEqual(var.values, ["F", "M"])
 
 
 class ContinuousVariableTest(unittest.TestCase):
     def test_make(self):
-        data.ContinuousVariable._clear_cache()
-        age1 = data.ContinuousVariable.make("age")
-        age2 = data.ContinuousVariable.make("age")
-        age3 = data.ContinuousVariable("age")
+        ContinuousVariable._clear_cache()
+        age1 = ContinuousVariable.make("age")
+        age2 = ContinuousVariable.make("age")
+        age3 = ContinuousVariable("age")
         self.assertIs(age1, age2)
         self.assertIsNot(age1, age3)
 
     def test_decimals(self):
-        a = data.ContinuousVariable("a", 4)
+        a = ContinuousVariable("a", 4)
         self.assertEqual(a.str_val(4.654321), "4.6543")
 
     def test_adjust_decimals(self):
-        a = data.ContinuousVariable("a")
+        a = ContinuousVariable("a")
         self.assertEqual(a.str_val(4.654321), "4.654")
         a.val_from_str_add("5")
         self.assertEqual(a.str_val(4.654321), "5")
@@ -97,34 +100,32 @@ class ContinuousVariableTest(unittest.TestCase):
         self.assertEqual(a.str_val(4.654321), "4.6543")
 
 
-
-
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",
-    ("variable", lambda: data.ContinuousVariable()),
-    ("with_name", lambda: data.ContinuousVariable(name="Feature 0")),
+    ("variable", lambda: ContinuousVariable()),
+    ("with_name", lambda: ContinuousVariable(name="Feature 0")),
 )
 
 PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
-    ("variable", lambda: data.DiscreteVariable()),
-    ("with_name", lambda: data.DiscreteVariable(name="Feature 0")),
-    ("with_int_values", lambda: data.DiscreteVariable(name="Feature 0",
-                                                      values=[1, 2, 3])),
-    ("with_str_value", lambda: data.DiscreteVariable(name="Feature 0",
-                                                     values=["F", "M"])),
-    ("ordered", lambda: data.DiscreteVariable(name="Feature 0",
-                                              values=["F", "M"],
-                                              ordered=True)),
-    ("with_base_value", lambda: data.DiscreteVariable(name="Feature 0",
-                                                      values=["F", "M"],
-                                                      base_value=0)),
+    ("variable", lambda: DiscreteVariable()),
+    ("with_name", lambda: DiscreteVariable(name="Feature 0")),
+    ("with_int_values", lambda: DiscreteVariable(name="Feature 0",
+                                                 values=[1, 2, 3])),
+    ("with_str_value", lambda: DiscreteVariable(name="Feature 0",
+                                                values=["F", "M"])),
+    ("ordered", lambda: DiscreteVariable(name="Feature 0",
+                                         values=["F", "M"],
+                                         ordered=True)),
+    ("with_base_value", lambda: DiscreteVariable(name="Feature 0",
+                                                 values=["F", "M"],
+                                                 base_value=0)),
 )
 
 PickleStringVariable = create_pickling_tests(
     "PickleStringVariable",
-    ("variable", lambda: data.StringVariable()),
-    ("with_name", lambda: data.StringVariable(name="Feature 0")),
+    ("variable", lambda: StringVariable()),
+    ("with_name", lambda: StringVariable(name="Feature 0")),
 )
 
 if __name__ == "__main__":

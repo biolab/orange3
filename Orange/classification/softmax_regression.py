@@ -1,31 +1,36 @@
 import numpy as np
-import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange import classification
+from Orange.classification import Learner, Model
+
+__all__ = ["SoftmaxRegressionLearner"]
 
 
-class SoftmaxRegressionLearner(classification.Fitter):
-    def __init__(self, lambda_=1.0, normalize=True, **fmin_args):
-        '''L2 regularized softmax regression
+class SoftmaxRegressionLearner(Learner):
+    """L2 regularized softmax regression classifier.
+    Uses the L-BFGS algorithm to minimize the categorical
+    cross entropy cost with L2 regularization. This model is suitable
+    when dealing with a multi-class classification problem
 
-        This model uses the L-BFGS algorithm to minimize the categorical
-        cross entropy cost with L2 regularization. This model is suitable
-        when dealing with a multiclass classification problem
-        When using this model you should:
+    When using this learner you should:
 
-        - Choose a suitable regularization parameter lambda_
-        - Continuize all discrete attributes
-        - Consider appending a column of ones to the dataset (intercept term)
-        - Transform the dataset so that the columns are on a similar scale
-        - Consider using many logistic regression models (one for each
-          value of the class variable) instead of softmax regression
+    - choose a suitable regularization parameter lambda\_,
+    - continuize all discrete attributes,
+    - consider appending a column of ones to the data set (intercept term),
+    - transform the data set so that the columns are on a similar scale,
+    - consider using many logistic regression models (one for each
+      value of the class variable) instead of softmax regression.
 
-        :param lambda_: the regularization parameter. Higher values of lambda_
-        force the coefficients to be small.
-        :type lambda_: float
-        '''
+    lambda\_ : float, optional (default=1.0)
+       the regularization parameter. Higher values of lambda\_
+       force the coefficients to be smaller
+    """
 
+    name = 'softmax'
+
+    def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
+                 **fmin_args):
+        super().__init__(preprocessors=preprocessors)
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
 
@@ -63,10 +68,10 @@ class SoftmaxRegressionLearner(classification.Fitter):
                                       args=(X, Y), **self.fmin_args)
         Theta = theta.reshape((self.num_classes, X.shape[1]))
 
-        return SoftmaxRegressionClassifier(Theta)
+        return SoftmaxRegressionModel(Theta)
 
 
-class SoftmaxRegressionClassifier(classification.Model):
+class SoftmaxRegressionModel(Model):
     def __init__(self, Theta):
         self.Theta = Theta
 
@@ -79,7 +84,6 @@ class SoftmaxRegressionClassifier(classification.Model):
 
 if __name__ == '__main__':
     import Orange.data
-    from sklearn.cross_validation import StratifiedKFold
 
     def numerical_grad(f, params, e=1e-4):
         grad = np.zeros_like(params)

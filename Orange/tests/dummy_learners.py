@@ -2,10 +2,10 @@ from Orange import classification
 import numpy as np
 
 
-class DummyLearner(classification.SklFitter):
+class DummyLearner(classification.SklLearner):
     def fit(self, X, Y, W):
         rows = Y.shape[0]
-        value = Y[np.random.randint(0, rows), 0]
+        value = Y[np.random.randint(0, rows)]
         class_vals = np.unique(Y)
         prob = (class_vals == value) * 0.8 + 0.1
         return DummyPredictor(value, prob)
@@ -29,7 +29,7 @@ class DummyPredictor(classification.SklModel):
             return value, probs
 
 
-class DummyMulticlassLearner(classification.SklFitter):
+class DummyMulticlassLearner(classification.SklLearner):
     supports_multiclass = True
 
     def fit(self, X, Y, W):

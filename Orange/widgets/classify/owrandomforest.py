@@ -4,8 +4,7 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QLabel, QGridLayout, QLayout
 from PyQt4.QtCore import Qt
 
-import Orange.data
-from Orange.classification import random_forest
+import Orange
 from Orange.widgets import widget, settings, gui
 
 
@@ -14,9 +13,11 @@ class OWRandomForest(widget.OWWidget):
     description = "Random Forest Classifier"
     icon = "icons/RandomForest.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Learner", random_forest.RandomForestLearner),
-               ("Classifier", random_forest.RandomForestClassifier)]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.preprocess.Preprocess,
+               "set_preprocessor")]
+    outputs = [("Learner", Orange.classification.RandomForestLearner),
+               ("Classifier", Orange.classification.RandomForestClassifier)]
 
     want_main_area = False
 
@@ -36,6 +37,7 @@ class OWRandomForest(widget.OWWidget):
         super().__init__(parent)
 
         self.data = None
+        self.preprocessors = None
 
         # Learner name
         box = gui.widgetBox(self.controlArea, self.tr("Name"))
@@ -131,6 +133,13 @@ class OWRandomForest(widget.OWWidget):
         if data is not None:
             self.apply()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()
+
     def apply(self):
         common_args = dict()
         common_args["n_estimators"] = self.n_estimators
@@ -143,7 +152,9 @@ class OWRandomForest(widget.OWWidget):
         if self.use_max_leaf_nodes:
             common_args["max_leaf_nodes"] = self.max_leaf_nodes
 
-        learner = random_forest.RandomForestLearner(**common_args)
+        learner = Orange.classification.RandomForestLearner(
+            preprocessors=self.preprocessors, **common_args)
+
         learner.name = self.learner_name
         classifier = None
         if self.data is not None:

@@ -1,6 +1,5 @@
 from math import isnan, floor
-from numbers import Real
-import types
+import numpy as np
 
 from ..data.value import Value, Unknown
 import collections
@@ -118,14 +117,15 @@ class Variable:
         return self.to_val(s)
 
     def __str__(self):
+        return self.name
+
+    def __repr__(self):
         """
         Return a representation of the variable, like,
         `'DiscreteVariable("gender")'`. Derived classes may overload this
         method to provide a more informative representation.
         """
         return "{}('{}')".format(self.__class__.__name__, self.name)
-
-    __repr__ = __str__
 
     @staticmethod
     def compute_value(_):
@@ -135,6 +135,15 @@ class Variable:
     def _clear_cache(cls):
         for tpe in cls._variable_types:
             tpe._clear_cache()
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.name == other.name \
+            and self.compute_value == other.compute_value
+
+    def __hash__(self):
+        return hash(self.name) ^ hash(self.compute_value)
 
 
 class ContinuousVariable(Variable):
@@ -281,13 +290,14 @@ class DiscreteVariable(Variable):
         self.base_value = base_value
         DiscreteVariable.all_discrete_vars[name].add(self)
 
-    def __str__(self):
+    def __repr__(self):
         """
         Give a string representation of the variable, for instance,
         `"DiscreteVariable('Gender', values=['male', 'female'])"`.
         """
-        args = "values=[" + ", ".join(self.values[:5]) +\
-               "..." * (len(self.values) > 5) + "]"
+        args = "values=[{}]".format(
+            ", ".join([repr(x) for x in self.values[:5]] +
+                      ["..."] *  (len(self.values) > 5)))
         if self.ordered:
             args += ", ordered=True"
         if self.base_value >= 0:
@@ -316,7 +326,7 @@ class DiscreteVariable(Variable):
 
         if isinstance(s, int):
             return s
-        if isinstance(s, Real):
+        if np.isreal(s):
             return s if isnan(s) else floor(s + 0.25)
         if s in self.unknown_str:
             return ValueUnknown
@@ -474,6 +484,12 @@ class DiscreteVariable(Variable):
             if values == set(presorted):
                 return presorted
         return sorted(values)
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.values == other.values
+
+    def __hash__(self):
+        return super().__hash__() ^ hash(tuple(self.values))
 
 
 class StringVariable(Variable):

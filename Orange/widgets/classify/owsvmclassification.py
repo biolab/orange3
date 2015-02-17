@@ -15,7 +15,9 @@ class OWSVMClassification(widget.OWWidget):
     description = "Support Vector Machine Classification."
     icon = "icons/SVM.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.preprocess.Preprocess,
+               "set_preprocessor")]
     outputs = [("Learner", svm.SVMLearner),
                ("Classifier", svm.SVMClassifier)]
 
@@ -40,6 +42,7 @@ class OWSVMClassification(widget.OWWidget):
         super().__init__(parent)
 
         self.data = None
+        self.preprocessors = None
 
         box = gui.widgetBox(self.controlArea, self.tr("Name"))
         gui.lineEdit(box, self, "learner_name")
@@ -132,6 +135,13 @@ class OWSVMClassification(widget.OWWidget):
         if data is not None:
             self.apply()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()
+
     def apply(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
         common_args = dict(
@@ -141,6 +151,7 @@ class OWSVMClassification(widget.OWWidget):
             coef0=self.coef0,
             tol=self.tol,
             probability=True,
+            preprocessors=self.preprocessors
         )
         if self.svmtype == 0:
             learner = svm.SVMLearner(C=self.C, **common_args)

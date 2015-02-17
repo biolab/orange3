@@ -31,9 +31,8 @@ class TestTabReader(unittest.TestCase):
         f = tempfile.NamedTemporaryFile(delete=False)
         f.write(simple_file.encode("ascii"))
         f.close()
-        fname = f.name.encode("utf-8")
         try:
-            n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(fname)
+            n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(f.name.encode("ascii"))
             # allow for up to one extra occurrence per line
             self.assertGreaterEqual(n_attrs, 13)
             self.assertLessEqual(n_attrs, 20)
@@ -42,15 +41,14 @@ class TestTabReader(unittest.TestCase):
             self.assertGreaterEqual(n_lines, 3)
             self.assertLessEqual(n_lines, 5)
         finally:
-            os.remove(fname)
+            os.remove(f.name)
 
     def test_scan_fast_complex(self):
         f = tempfile.NamedTemporaryFile(delete=False)
         f.write(complex_file.encode("ascii"))
         f.close()
-        fname = f.name.encode("utf-8")
         try:
-            n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(fname)
+            n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(f.name.encode("ascii"))
             # allow for up to one extra occurrence per line
             self.assertGreaterEqual(n_attrs, 7)
             self.assertLessEqual(n_attrs, 7 + n_lines)
@@ -61,17 +59,16 @@ class TestTabReader(unittest.TestCase):
             self.assertGreaterEqual(n_lines, 3)
             self.assertLessEqual(n_lines, 5)
         finally:
-            os.remove(fname)
+            os.remove(f.name)
 
 
     def test_read_simple(self):
         f = tempfile.NamedTemporaryFile(delete=False)
         f.write(simple_file.encode("ascii"))
         f.close()
-        fname = f.name.encode("utf-8")
         try:
             X, Y, metas, attr_indices, class_indices, meta_indices = \
-                _io.sparse_read_float(fname)
+                _io.sparse_read_float(f.name.encode("ascii"))
 
             self.assertEqual(attr_indices,
                 {b"abc": 0, b"def": 1, b"g": 2, b"h": 3, b"ij k": 4, b"t": 5,
@@ -90,17 +87,16 @@ class TestTabReader(unittest.TestCase):
             self.assertEqual(meta_indices, {})
             self.assertIsNone(metas)
         finally:
-            os.remove(fname)
+            os.remove(f.name)
 
 
     def test_read_complex(self):
         f = tempfile.NamedTemporaryFile(delete=False)
         f.write(complex_file.encode("ascii"))
         f.close()
-        fname = f.name.encode("utf-8")
         try:
             X, Y, metas, attr_indices, class_indices, meta_indices = \
-                _io.sparse_read_float(fname)
+                _io.sparse_read_float(f.name.encode("ascii"))
 
             self.assertEqual(attr_indices,
                 {b"abc": 0, b"g": 1, b"h": 2, b"ij": 3})
@@ -119,7 +115,7 @@ class TestTabReader(unittest.TestCase):
             np.testing.assert_equal(metas.indices, [   0, 1])
             np.testing.assert_equal(metas.indptr,  [0, 0, 1, 2])
         finally:
-            os.remove(fname)
+            os.remove(f.name)
 
 
     # TODO checks for quotes, escapes, error checking

@@ -54,7 +54,6 @@ class ScaleData:
 
     def __init__(self):
         self.raw_data = None           # input data
-        self.raw_subset_data = None
         self.attribute_names = []    # list of attribute names from self.raw_data
         self.attribute_name_index = {}  # dict with indices to attributes
         self.attribute_flip_info = {}   # dictionary with attrName: 0/1 attribute is flipped or not
@@ -66,58 +65,37 @@ class ScaleData:
         self.data_domain = None
         self.data_class_index = None
         self.have_data = False
-        self.have_subset_data = False
 
         self.jitter_seed = 0
 
         self.attr_values = {}
         self.domain_data_stat = []
-        self.original_data = self.original_subset_data = None    # input (nonscaled) data in a numpy array
-        self.scaled_data = self.scaled_subset_data = None        # scaled data to the interval 0-1
-        self.no_jittering_scaled_data = self.no_jittering_scaled_subset_data = None
-        self.valid_data_array = self.valid_subset_data_array = None
-
-    def merge_data_sets(self, data, subset_data):
-        """
-        Take examples from data and subset_data and merge them into one
-        dataset.
-
-        """
-        if data is None and subset_data is None:
-            return None
-        if subset_data is None:
-            return data
-        elif data is None:
-            return subset_data
-        else:
-            full_data = Table(data)
-            full_data.extend(subset_data)
-            return full_data
+        self.original_data = None    # input (nonscaled) data in a numpy array
+        self.scaled_data = None        # scaled data to the interval 0-1
+        self.no_jittering_scaled_data = None
+        self.valid_data_array = None
 
     def rescale_data(self):
         """
         Force the existing data to be rescaled due to changes like
         jitter_continuous, jitter_size, ...
         """
-        self.set_data(self.raw_data, self.raw_subset_data, skipIfSame=0)
+        self.set_data(self.raw_data, skipIfSame=0)
 
-    def set_data(self, data, subset_data=None, **args):
+    def set_data(self, data, **args):
         if args.get("skipIfSame", 1):
-            if checksum(data) == checksum(self.raw_data) and \
-               checksum(subset_data) == checksum(self.raw_subset_data):
+            if checksum(data) == checksum(self.raw_data):
                 return
 
         self.domain_data_stat = []
         self.attr_values = {}
-        self.original_data = self.original_subset_data = None
-        self.scaled_data = self.scaled_subset_data = None
-        self.no_jittering_scaled_data = self.no_jittering_scaled_subset_data = None
-        self.valid_data_array = self.valid_subset_data_array = None
+        self.original_data = None
+        self.scaled_data = None
+        self.no_jittering_scaled_data = None
+        self.valid_data_array = None
 
         self.raw_data = None
-        self.raw_subset_data = None
         self.have_data = False
-        self.have_subset_data = False
         self.data_has_class = False
         self.data_has_continuous_class = False
         self.data_has_discrete_class = False
@@ -127,10 +105,8 @@ class ScaleData:
 
         if data is None:
             return
-        full_data = self.merge_data_sets(data, subset_data)
-
+        full_data = data
         self.raw_data = data
-        self.raw_subset_data = subset_data
 
         len_data = data and len(data) or 0
 
@@ -150,8 +126,6 @@ class ScaleData:
         if self.data_has_class:
             self.data_class_index = self.attribute_name_index[self.data_class_name]
         self.have_data = bool(self.raw_data and len(self.raw_data) > 0)
-        self.have_subset_data = bool(self.raw_subset_data and
-                                     len(self.raw_subset_data) > 0)
 
         self.domain_data_stat = getCached(full_data,
                                           DomainBasicStats,
@@ -176,11 +150,9 @@ class ScaleData:
         # compute it. The scaled_data on the other hand has to be computed for
         # each widget separately because of different
         # jitter_continuous and jitter_size values
-        if getCached(data, "visualizationData") and subset_data == None:
+        if getCached(data, "visualizationData"):
             self.original_data, self.no_jittering_scaled_data, self.valid_data_array = getCached(data,
                                                                                                  "visualizationData")
-            self.original_subset_data = self.no_jittering_scaled_subset_data = self.valid_subset_data_array = np.array(
-                []).reshape([len(self.original_data), 0])
         else:
             no_jittering_data = np.hstack((full_data.X, full_data.Y)).T
             valid_data_array = no_jittering_data != np.NaN
@@ -213,27 +185,17 @@ class ScaleData:
                     no_jittering_data[index] = (no_jittering_data[index] -
                                                 self.domain_data_stat[index].min) / diff
 
-            self.original_data = original_data[:, :len_data]
-            self.original_subset_data = original_data[:, len_data:]
-            self.no_jittering_scaled_data = no_jittering_data[:, :len_data]
-            self.no_jittering_scaled_subset_data = no_jittering_data[:, len_data:]
-            self.valid_data_array = valid_data_array[:, :len_data]
-            self.valid_subset_data_array = valid_data_array[:, len_data:]
+            self.original_data = original_data
+            self.no_jittering_scaled_data = no_jittering_data
+            self.valid_data_array = valid_data_array
 
         if data:
             setCached(data, "visualizationData",
                       (self.original_data, self.no_jittering_scaled_data,
                        self.valid_data_array))
-        if subset_data:
-            setCached(subset_data, "visualizationData",
-                      (self.original_subset_data,
-                       self.no_jittering_scaled_subset_data,
-                       self.valid_subset_data_array))
 
         # compute the scaled_data arrays
-        scaled_data = np.concatenate([self.no_jittering_scaled_data,
-                                         self.no_jittering_scaled_subset_data],
-                                        axis=1)
+        scaled_data = self.no_jittering_scaled_data
 
         # Random generators for jittering
         random = np.random.RandomState(seed=self.jitter_seed)
@@ -253,23 +215,7 @@ class ScaleData:
                 ind = np.where(scaled_data[index] > 1.0, 1, 0)     # fix values above 1
                 np.putmask(scaled_data[index], ind, 2.0 - np.compress(ind, scaled_data[index]))
 
-        if self.have_subset_data:
-            # Fix all subset instances which are also in the main data
-            # to have the same jittered values
-            ids_to_indices = dict((inst.id, i)
-                                  for i, inst in enumerate(self.raw_data))
-
-            subset_ids_map = [[i, ids_to_indices[s.id]]
-                              for i, s in enumerate(self.raw_subset_data)
-                              if s.id in ids_to_indices]
-            if len(subset_ids_map):
-                subset_ids_map = np.array(subset_ids_map)
-                subset_ids_map[:, 0] += len_data
-                scaled_data[:, subset_ids_map[:, 0]] = \
-                    scaled_data[:, subset_ids_map[:, 1]]
-
         self.scaled_data = scaled_data[:, :len_data]
-        self.scaled_subset_data = scaled_data[:, len_data:]
 
     def scale_example_value(self, instance, index):
         """
@@ -306,9 +252,7 @@ class ScaleData:
             self.attr_values[attr_name] = [-self.attr_values[attr_name][1], -self.attr_values[attr_name][0]]
 
         self.scaled_data[index] = 1 - self.scaled_data[index]
-        self.scaled_subset_data[index] = 1 - self.scaled_subset_data[index]
         self.no_jittering_scaled_data[index] = 1 - self.no_jittering_scaled_data[index]
-        self.no_jittering_scaled_subset_data[index] = 1 - self.no_jittering_scaled_subset_data[index]
         return 1
 
     def get_min_max_val(self, attr):
@@ -332,34 +276,12 @@ class ScaleData:
         arr = np.add.reduce(selected_array)
         return np.equal(arr, len(inds))
 
-    def get_valid_subset_list(self, indices, also_class_if_exists=1):
-        """
-        Get array of 0 and 1 of len = len(self.raw_subset_data). if there is a
-        missing value at any attribute in indices return 0 for that instance.
-        """
-        if self.valid_subset_data_array is None or len(self.valid_subset_data_array) == 0:
-            return np.array([], np.bool)
-        inds = indices[:]
-        if also_class_if_exists and self.data_class_index:
-            inds.append(self.data_class_index)
-        selected_array = self.valid_subset_data_array.take(inds, axis=0)
-        arr = np.add.reduce(selected_array)
-        return np.equal(arr, len(inds))
-
     def get_valid_indices(self, indices):
         """
         Get array with numbers that represent the instance indices that have a
         valid data value.
         """
         valid_list = self.get_valid_list(indices)
-        return np.nonzero(valid_list)[0]
-
-    def get_valid_subset_indices(self, indices):
-        """
-        Get array with numbers that represent the instance indices that have a
-        valid data value.
-        """
-        valid_list = self.get_valid_subset_list(indices)
         return np.nonzero(valid_list)[0]
 
     def rnd_correction(self, max):
@@ -381,18 +303,6 @@ class ScaleScatterPlotData(ScaleData):
         return data
 
     getOriginalData = get_original_data
-
-    def get_original_subset_data(self, indices):
-        data = self.original_subset_data.take(indices, axis = 0)
-        for i, ind in enumerate(indices):
-            [minVal, maxVal] = self.attr_values[self.raw_subset_data.domain[ind].name]
-            if isinstance(self.data_domain[ind], DiscreteVariable):
-                data[i] += (self.jitter_size/(50.0*max(1, maxVal)))*(np.random.random(len(self.raw_subset_data)) - 0.5)
-            elif isinstance(self.data_domain[ind], ContinuousVariable) and self.jitter_continuous:
-                data[i] += (self.jitter_size/(50.0*(maxVal-minVal or 1)))*(np.random.random(len(self.raw_subset_data)) - 0.5)
-        return data
-
-    getOriginalSubsetData = get_original_subset_data
 
     # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
     def get_xy_data_positions(self, xattr, yattr, filter_valid=False,
@@ -433,26 +343,6 @@ class ScaleScatterPlotData(ScaleData):
         return xdata, ydata
 
     getXYDataPositions = get_xy_data_positions
-
-    # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
-    def get_xy_subset_data_positions(self, xattr, yattr):
-        """
-        Create x-y projection of attributes in attr_list.
-
-        """
-        xattr_index, yattr_index = self.attribute_name_index[xattr], self.attribute_name_index[yattr]
-
-        xdata = self.scaled_subset_data[xattr_index].copy()
-        ydata = self.scaled_subset_data[yattr_index].copy()
-
-        if isinstance(self.data_domain[xattr_index], DiscreteVariable): xdata = ((xdata * 2*len(self.data_domain[xattr_index].values)) - 1.0) / 2.0
-        else:  xdata = xdata * (self.attr_values[xattr][1] - self.attr_values[xattr][0]) + float(self.attr_values[xattr][0])
-
-        if isinstance(self.data_domain[yattr_index], DiscreteVariable): ydata = ((ydata * 2*len(self.data_domain[yattr_index].values)) - 1.0) / 2.0
-        else:  ydata = ydata * (self.attr_values[yattr][1] - self.attr_values[yattr][0]) + float(self.attr_values[yattr][0])
-        return (xdata, ydata)
-
-    getXYSubsetDataPositions = get_xy_subset_data_positions
 
     # @deprecated_keywords({"attrIndices": "attr_indices",
     #                       "settingsDict": "settings_dict"})

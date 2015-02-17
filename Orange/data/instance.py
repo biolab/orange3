@@ -102,23 +102,34 @@ class Instance:
     #     Same in Table.__getitem__
 
     @staticmethod
-    def str_values(data, variables):
-        s = ", ".join(var.str_val(val)
-            for var, val in zip(variables, data[:5]))
-        if len(data) > 5:
-            s += ", ..."
+    def str_values(data, variables, limit=True):
+        if limit:
+            s = ", ".join(var.str_val(val)
+                for var, val in zip(variables, data[:5]))
+            if len(data) > 5:
+                s += ", ..."
+            return s
+        else:
+            return ", ".join(var.str_val(val)
+                             for var, val in zip(variables, data))
+
+    def _str(self, limit):
+        s = "[" + self.str_values(self._x, self._domain.attributes, limit)
+        if self._domain.class_vars:
+            s += " | " + \
+                 self.str_values(self._y, self._domain.class_vars, limit)
+        s += "]"
+        if self._domain.metas:
+            s += " {" + \
+                 self.str_values(self._metas, self._domain.metas, limit) + \
+                 "}"
         return s
 
     def __str__(self):
-        s = "[" + self.str_values(self._x, self._domain.attributes)
-        if self._domain.class_vars:
-            s += " | " + self.str_values(self._y, self._domain.class_vars)
-        s += "]"
-        if self._domain.metas:
-            s += " {" + self.str_values(self._metas, self._domain.metas) + "}"
-        return s
+        return self._str(False)
 
-    __repr__ = __str__
+    def __repr__(self):
+        return self._str(True)
 
     def __eq__(self, other):
         if not isinstance(other, Instance):
@@ -133,6 +144,10 @@ class Instance:
 
     def __iter__(self):
         return iter(self._values)
+
+    def values(self):
+        return (Value(var, val)
+                for var, val in zip(self.domain.variables, self._values))
 
     def __len__(self):
         return len(self._values)

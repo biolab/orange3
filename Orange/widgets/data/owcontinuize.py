@@ -1,10 +1,8 @@
-#from orngWrap import PreprocessedLearner
-from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 import Orange.data
 from Orange.statistics import distribution
-from Orange.data.continuizer import DomainContinuizer
+from Orange.preprocess import Continuize
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -34,24 +32,24 @@ class OWContinuize(widget.OWWidget):
     autosend = Setting(True)
 
     multinomial_treats = (
-        ("Target or First value as base", DomainContinuizer.LowestIsBase),
-        ("Most frequent value as base", DomainContinuizer.FrequentIsBase),
-        ("One attribute per value", DomainContinuizer.NValues),
-        ("Ignore multinomial attributes", DomainContinuizer.IgnoreMulti),
-        ("Ignore all discrete attributes", DomainContinuizer.Ignore),
-        ("Treat as ordinal", DomainContinuizer.AsOrdinal),
-        ("Divide by number of values", DomainContinuizer.AsNormalizedOrdinal))
+        ("Target or First value as base", Continuize.FirstAsBase),
+        ("Most frequent value as base", Continuize.FrequentAsBase),
+        ("One attribute per value", Continuize.Indicators),
+        ("Ignore multinomial attributes", Continuize.RemoveMultinomial),
+        ("Remove all discrete attributes", Continuize.Remove),
+        ("Treat as ordinal", Continuize.AsOrdinal),
+        ("Divide by number of values", Continuize.AsNormalizedOrdinal))
 
     continuous_treats = (
-        ("Leave them as they are", DomainContinuizer.Leave),
-        ("Normalize by span", DomainContinuizer.NormalizeBySpan),
-        ("Normalize by standard deviation", DomainContinuizer.NormalizeBySD))
+        ("Leave them as they are", Continuize.Leave),
+        ("Normalize by span", Continuize.NormalizeBySpan),
+        ("Normalize by standard deviation", Continuize.NormalizeBySD))
 
     class_treats = (
-        ("Leave it as it is", DomainContinuizer.Leave),
-        ("Treat as ordinal", DomainContinuizer.AsOrdinal),
-        ("Divide by number of values", DomainContinuizer.AsNormalizedOrdinal),
-        ("One class per value", DomainContinuizer.NValues),
+        ("Leave it as it is", Continuize.Leave),
+        ("Treat as ordinal", Continuize.AsOrdinal),
+        ("Divide by number of values", Continuize.AsNormalizedOrdinal),
+        ("One class per value", Continuize.Indicators),
     )
 
     value_ranges = ["from -1 to 1", "from 0 to 1"]
@@ -120,7 +118,6 @@ class OWContinuize(widget.OWWidget):
             continuous_treatment=self.continuous_treats[self.continuous_treatment][1],
             class_treatment=self.class_treats[self.class_treatment][1]
         )
-
         return conzer
 
     # def sendPreprocessor(self):
@@ -153,15 +150,15 @@ class OWContinuize(widget.OWWidget):
              ("Value range", self.value_ranges[self.zero_based])])
 
 
-from Orange.feature.transformation import \
-    Identity, Indicator, Indicator_1, Normalizer
+from Orange.preprocess.transformation import \
+    Identity, Indicator, Indicator1, Normalizer
 
 from functools import partial, wraps, reduce
 
 
 # flip:: (a * b -> c) -> (b * a -> c)
 def flip(func):
-    "Flip parameter order"
+    """Flip parameter order"""
     return wraps(func)(lambda a, b: func(b, a))
 
 
@@ -174,20 +171,20 @@ class WeightedIndicator(Indicator):
         super().__init__(variable, value)
         self.weight = weight
 
-    def _transform(self, c):
-        t = super()._transform(c) * self.weight
+    def transform(self, c):
+        t = super().transform(c) * self.weight
         if self.weight != 1.0:
             t *= self.weight
         return t
 
 
-class WeightedIndicator_1(Indicator_1):
+class WeightedIndicator_1(Indicator1):
     def __init__(self, variable, value, weight=1.0):
         super().__init__(variable, value)
         self.weight = weight
 
-    def _transform(self, c):
-        t = super()._transform(c) * self.weight
+    def transform(self, c):
+        t = super().transform(c) * self.weight
         if self.weight != 1.0:
             t *= self.weight
         return t
@@ -202,7 +199,7 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
     elif zero_based:
         indicator = WeightedIndicator(source, value=value_ind, weight=weight)
     elif weight is None:
-        indicator = Indicator_1(source, value=value_ind)
+        indicator = Indicator1(source, value=value_ind)
     else:
         indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
     var.compute_value = indicator
@@ -225,9 +222,9 @@ def one_hot_coding(var, zero_based=True):
 
 
 def continuize_domain(data_or_domain,
-                      multinomial_treatment=DomainContinuizer.NValues,
-                      continuous_treatment=DomainContinuizer.Leave,
-                      class_treatment=DomainContinuizer.Leave,
+                      multinomial_treatment=Continuize.Indicators,
+                      continuous_treatment=Continuize.Leave,
+                      class_treatment=Continuize.Leave,
                       zero_based=True):
 
     if isinstance(data_or_domain, Orange.data.Domain):
@@ -238,9 +235,9 @@ def continuize_domain(data_or_domain,
     def needs_dist(var, mtreat, ctreat):
         "Does the `var` need a distribution given specified flags"
         if isinstance(var, Orange.data.DiscreteVariable):
-            return mtreat == DomainContinuizer.FrequentIsBase
+            return mtreat == Continuize.FrequentAsBase
         elif isinstance(var, Orange.data.ContinuousVariable):
-            return ctreat != DomainContinuizer.Leave
+            return ctreat != Continuize.Leave
         else:
             raise ValueError
 
@@ -248,7 +245,7 @@ def continuize_domain(data_or_domain,
     attr_needs_dist = [needs_dist(var, multinomial_treatment,
                                   continuous_treatment)
                        for var in domain.attributes]
-    cls_needs_dist = [needs_dist(var, class_treatment, DomainContinuizer.Leave)
+    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave)
                       for var in domain.class_vars]
 
     columns = [i for i, needs in enumerate(attr_needs_dist + cls_needs_dist)
@@ -268,8 +265,9 @@ def continuize_domain(data_or_domain,
                                zero_based)
                 for var, needs_dist in zip(domain.attributes, attr_needs_dist)]
 
-    newclass = [continuize_var(var, next(dist_iter) if needs_dist else None,
-                               class_treatment, DomainContinuizer.Ignore,
+    newclass = [continuize_var(var,
+                               next(dist_iter) if needs_dist else None,
+                               class_treatment, Continuize.Remove,
                                zero_based)
                 for var, needs_dist in zip(domain.class_vars, cls_needs_dist)]
 
@@ -280,41 +278,41 @@ def continuize_domain(data_or_domain,
 
 def continuize_var(var,
                    data_or_dist=None,
-                   multinomial_treatment=DomainContinuizer.NValues,
-                   continuous_treatment=DomainContinuizer.Leave,
+                   multinomial_treatment=Continuize.Indicators,
+                   continuous_treatment=Continuize.Leave,
                    zero_based=True):
 
     if isinstance(var, Orange.data.ContinuousVariable):
-        if continuous_treatment == DomainContinuizer.NormalizeBySpan:
+        if continuous_treatment == Continuize.NormalizeBySpan:
             return [normalize_by_span(var, data_or_dist, zero_based)]
-        elif continuous_treatment == DomainContinuizer.NormalizeBySD:
+        elif continuous_treatment == Continuize.NormalizeBySD:
             return [normalize_by_sd(var, data_or_dist)]
         else:
             return [var]
 
     elif isinstance(var, Orange.data.DiscreteVariable):
         if len(var.values) > 2 and \
-                multinomial_treatment == DomainContinuizer.ReportError:
+                multinomial_treatment == Continuize.ReportError:
             raise ValueError("{0.name} is a multinomial variable".format(var))
         if len(var.values) < 2 or \
-                multinomial_treatment == DomainContinuizer.Ignore or \
-                (multinomial_treatment == DomainContinuizer.IgnoreMulti and \
-                 len(var.values) > 2):
+                multinomial_treatment == Continuize.Remove or \
+                (multinomial_treatment == Continuize.RemoveMultinomial
+                 and len(var.values) > 2):
             return []
-        elif multinomial_treatment == DomainContinuizer.AsOrdinal:
+        elif multinomial_treatment == Continuize.AsOrdinal:
             return [ordinal_to_continuous(var)]
-        elif multinomial_treatment == DomainContinuizer.AsNormalizedOrdinal:
+        elif multinomial_treatment == Continuize.AsNormalizedOrdinal:
             return [ordinal_to_normalized_continuous(var, zero_based)]
-        elif multinomial_treatment == DomainContinuizer.NValues:
+        elif multinomial_treatment == Continuize.Indicators:
             return one_hot_coding(var, zero_based)
-        elif multinomial_treatment == DomainContinuizer.LowestIsBase or \
-                multinomial_treatment == DomainContinuizer.IgnoreMulti:
+        elif multinomial_treatment == Continuize.FirstAsBase or \
+                multinomial_treatment == Continuize.RemoveMultinomial:
             return dummy_coding(var, zero_based=zero_based)
-        elif multinomial_treatment == DomainContinuizer.FrequentIsBase:
+        elif multinomial_treatment == Continuize.FrequentAsBase:
             dist = _ensure_dist(var, data_or_dist)
             modus = dist.modus()
             return dummy_coding(var, base_value=modus, zero_based=zero_based)
-        elif multinomial_treatment == DomainContinuizer.Leave:
+        elif multinomial_treatment == Continuize.Leave:
             return [var]
         else:
             raise NotImplementedError  # ValueError??
@@ -376,12 +374,10 @@ def normalize_by_sd(var, data_or_dist):
 
 
 class DomainContinuizer:
-    (NValues, LowestIsBase, FrequentIsBase, Ignore, IgnoreMulti,
-     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave,
-     NormalizeBySpan, NormalizeBySD) = DomainContinuizer.MultinomialTreatment
-
-    def __new__(cls, data=None, zero_based=True, multinomial_treatment=NValues,
-                continuous_treatment=Leave, class_treatment=Leave):
+    def __new__(cls, data=None, zero_based=True,
+                multinomial_treatment=Continuize.Indicators,
+                continuous_treatment=Continuize.Leave,
+                class_treatment=Continuize.Leave):
         self = super().__new__(cls)
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
@@ -396,7 +392,7 @@ class DomainContinuizer:
         else:
             domain = data.domain
 
-        if treat == DomainContinuizer.ReportError and \
+        if treat == Continuize.ReportError and \
                 any(isinstance(var, Orange.data.DiscreteVariable) and
                     len(var.values) > 2
                     for var in domain):

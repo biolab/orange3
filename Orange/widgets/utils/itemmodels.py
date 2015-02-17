@@ -44,8 +44,10 @@ def _argsort(seq, cmp=None, key=None, reverse=False):
 def signal_blocking(obj):
     blocked = obj.signalsBlocked()
     obj.blockSignals(True)
-    yield
-    obj.blockSignals(blocked)
+    try:
+        yield
+    finally:
+        obj.blockSignals(blocked)
 
 
 def _as_contiguous_range(start, stop, step):

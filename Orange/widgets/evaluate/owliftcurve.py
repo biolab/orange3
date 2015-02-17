@@ -6,7 +6,7 @@ Lift Curve Widget
 from collections import namedtuple
 
 import numpy
-import sklearn.metrics
+import sklearn.metrics as skl_metrics
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import QColor, QPen
@@ -14,13 +14,11 @@ from PyQt4.QtCore import Qt
 
 import pyqtgraph as pg
 
-import Orange.data
-import Orange.evaluation.testing
-
+import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
+from Orange.widgets.evaluate.owrocanalysis import convex_hull
 
-from .owrocanalysis import convex_hull
 
 CurvePoints = namedtuple(
     "CurvePoints",
@@ -59,7 +57,7 @@ class OWLiftCurve(widget.OWWidget):
 
     inputs = [
         {"name": "Evaluation Results",
-         "type": Orange.evaluation.testing.Results,
+         "type": Orange.evaluation.Results,
          "handler": "set_results"}
     ]
 
@@ -158,7 +156,7 @@ class OWLiftCurve(widget.OWWidget):
     def _initialize(self, results):
         N = len(results.predicted)
 
-        names = getattr(results, "fitter_names", None)
+        names = getattr(results, "learner_names", None)
         if names is None:
             names = ["#{}".format(i + 1) for i in range(N)]
 
@@ -234,7 +232,7 @@ def lift_curve_from_results(results, target, clf_idx, subset=slice(0, -1)):
 def lift_curve(ytrue, ypred, target=1):
     P = numpy.sum(ytrue == target)
     N = ytrue.size - P
-    fpr, tpr, thresholds = sklearn.metrics.roc_curve(ytrue, ypred, target)
+    fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, target)
     rpp = fpr * (N / (P + N)) + tpr * (P / (P + N))
     return rpp, tpr, thresholds
 
@@ -242,8 +240,8 @@ def lift_curve(ytrue, ypred, target=1):
 def main():
     import sip
     from PyQt4.QtGui import QApplication
-    from Orange.classification import logistic_regression, svm
-    from Orange.evaluation import testing
+    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
+                                       NuSVMLearner)
 
     app = QApplication([])
     w = OWLiftCurve()
@@ -251,16 +249,16 @@ def main():
     w.raise_()
 
     data = Orange.data.Table("ionosphere")
-    results = testing.CrossValidation(
+    results = Orange.evaluation.CrossValidation(
         data,
-        [logistic_regression.LogisticRegressionLearner(penalty="l2"),
-         logistic_regression.LogisticRegressionLearner(penalty="l1"),
-         svm.SVMLearner(probability=True),
-         svm.NuSVMLearner(probability=True)
+        [LogisticRegressionLearner(penalty="l2"),
+         LogisticRegressionLearner(penalty="l1"),
+         SVMLearner(probability=True),
+         NuSVMLearner(probability=True)
          ],
         store_data=True
     )
-    results.fitter_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
+    results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
     w.set_results(results)
     rval = app.exec_()
 

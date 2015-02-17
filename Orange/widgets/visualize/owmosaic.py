@@ -16,11 +16,9 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.canvas.utils import environ
-from Orange.classification import Fitter
-from Orange.data import Table, Variable, filter, DiscreteVariable, ContinuousVariable
-from Orange.data.discretization import DiscretizeTable
+from Orange.classification import Learner
+from Orange.data import Table, filter, DiscreteVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
-from Orange.feature.discretization import EqualFreq
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler
@@ -103,7 +101,7 @@ class OWMosaicDisplay(OWWidget):
 
     inputs = [("Data", Table, "setData", Default),
               ("Data Subset", Table, "setSubsetData")]
-    outputs = [("Selected Data", Table), ("Learner", Fitter)]
+    outputs = [("Selected Data", Table), ("Learner", Learner)]
 
     settingsHandler = DomainContextHandler()
     show_apriori_distribution_lines = Setting(False)
@@ -233,7 +231,7 @@ class OWMosaicDisplay(OWWidget):
         #self.box6.setSizePolicy(QSizePolicy(QSizePolicy.Minimum , QSizePolicy.Fixed ))
         self.controlArea.layout().addStretch(1)
 
-        # self.connect(self.graphButton, SIGNAL("clicked()"), self.saveToFileCanvas)
+        # self.graphButton.clicked.connect(saveToFileCanvas)
         self.icons = gui.attributeIconDict
         self.resize(830, 550)
 

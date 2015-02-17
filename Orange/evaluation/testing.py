@@ -1,9 +1,12 @@
 import numpy as np
 
-from sklearn import cross_validation
+import sklearn.cross_validation as skl_cross_validation
 
 import Orange.data
 from Orange.data import Domain, Table
+
+__all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
+           "Bootstrap", "TestOnTestData", "sample"]
 
 
 def is_discrete(var):
@@ -16,7 +19,7 @@ def is_continuous(var):
 
 class Results:
     """
-    Class for storing predicted in model testing.
+    Class for storing predictions in model testing.
 
     .. attribute:: data
 
@@ -65,7 +68,9 @@ class Results:
     # noinspection PyBroadException
     # noinspection PyNoneFunctionAssignment
     def __init__(self, data=None, nmethods=0, nrows=None, nclasses=None,
-                 store_data=False):
+                 store_data=False, store_models=False, domain=None,
+                 actual=None, row_indices=None,
+                 predicted=None, probabilities=None):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -81,39 +86,86 @@ class Results:
         rows and of methods is given; :obj:`probabilities` also requires
         knowing the number of classes.
 
-        :param data: Data or domain; the data is not stored
+        :param data: Data or domain
         :type data: Orange.data.Table or Orange.data.Domain
         :param nmethods: The number of methods that will be tested
         :type nmethods: int
         :param nrows: The number of test instances (including duplicates)
         :type nrows: int
+        :param nclasses: The number of class values
+        :type nclasses: int
+        :param store_data: A flag that tells whether to store the data;
+            this argument can be given only as keyword argument
+        :type store_data: bool
+        :param store_models: A flag that tells whether to store the models;
+            this argument can be given only as keyword argument
+        :type store_models: bool
         """
+        self.store_data = store_data
+        self.store_models = store_models
         self.data = data if store_data else None
         self.models = None
         self.folds = None
-        self.row_indices = None
-        self.actual = None
-        self.predicted = None
-        self.probabilities = None
         dtype = np.float32
-        if data:
-            domain = data if isinstance(data, Domain) else data.domain
-            if nclasses is None and is_discrete(domain.class_var):
-                nclasses = len(domain.class_var.values)
-            if nrows is None:
-                nrows = len(data)
-            try:
-                dtype = data.Y.dtype
-            except AttributeError:
-                pass
-        if nrows is not None:
+
+        def set_or_raise(value, exp_values, msg):
+            for exp_value in exp_values:
+                if exp_value is False:
+                    continue
+                if value is None:
+                    value = exp_value
+                elif value != exp_value:
+                    raise ValueError(msg)
+            return value
+
+        domain = self.domain = set_or_raise(
+            domain, [data is not None and data.domain],
+            "mismatching domain")
+        nrows = set_or_raise(
+            nrows, [data is not None and len(data),
+                    actual is not None and len(actual),
+                    row_indices is not None and len(row_indices),
+                    predicted is not None and predicted.shape[1],
+                    probabilities is not None and probabilities.shape[1]],
+            "mismatching number of rows")
+        nclasses = set_or_raise(
+            nclasses, [domain is not None and (len(domain.class_var.values)
+                                               if is_discrete(domain.class_var)
+                                               else None),
+                       probabilities is not None and probabilities.shape[2]],
+            "mismatching number of class values")
+        if nclasses is not None and probabilities is not None:
+            raise ValueError("regression results cannot have 'probabilities'")
+        nmethods = set_or_raise(
+            nmethods, [predicted is not None and predicted.shape[0],
+                       probabilities is not None and probabilities.shape[0]],
+            "mismatching number of methods")
+        try:
+            dtype = data.Y.dtype
+        except AttributeError:  # no data or no Y or not numpy
+            pass
+
+        if actual is not None:
+            self.actual = actual
+        elif nrows is not None:
             self.actual = np.empty(nrows, dtype=dtype)
-            self.row_indices = np.empty(nrows, dtype=np.int32)
-            if nmethods is not None:
-                self.predicted = np.empty((nmethods, nrows), dtype=dtype)
-                if nclasses is not None:
-                    self.probabilities = \
-                        np.empty((nmethods, nrows, nclasses), dtype=np.float32)
+
+        if row_indices is not None:
+            self.row_indices = row_indices
+        elif nrows is not None:
+                self.row_indices = np.empty(nrows, dtype=np.int32)
+
+        if predicted is not None:
+            self.predicted = predicted
+        elif nmethods is not None and nrows is not None:
+            self.predicted = np.empty((nmethods, nrows), dtype=dtype)
+
+        if probabilities is not None:
+            self.probabilities = probabilities
+        elif nmethods is not None and nrows is not None and \
+                nclasses is not None:
+            self.probabilities = \
+                np.empty((nmethods, nrows, nclasses), dtype=np.float32)
 
     def get_fold(self, fold):
         results = Results()
@@ -128,6 +180,7 @@ class Results:
         results.row_indices = self.row_indices[self.folds[fold]]
         results.actual = self.actual[self.folds[fold]]
         results.predicted = self.predicted[:, self.folds[fold]]
+        results.domain = self.domain
 
         if self.probabilities is not None:
             results.probabilities = self.probabilities[:, self.folds[fold]]
@@ -135,62 +188,7 @@ class Results:
         return results
 
 
-class Testing:
-    """
-    Abstract base class for various sampling procedures like cross-validation,
-    leave one out or bootstrap. Derived classes define a `__call__` operator
-    that executes the testing procedure and returns an instance of
-    :obj:`Results`.
-
-    .. attribute:: store_data
-
-        A flag that tells whether to store the data used for test.
-
-    .. attribute:: store_models
-
-        A flag that tells whether to store the constructed models
-    """
-
-    def __new__(cls, data=None, fitters=None, **kwargs):
-        """
-        Construct an instance and store the values of keyword arguments
-        `store_data` and `store_models`, if given. If `data` and
-        `learners` are given, the constructor also calls the testing
-        procedure. For instance, CrossValidation(data, learners) will return
-        an instance of `Results` with results of cross validating `learners` on
-        `data`.
-
-        :param data: Data instances used for testing procedures
-        :type data: Orange.data.Storage
-        :param learners: A list of learning algorithms to be tested
-        :type fitters: list of Orange.classification.Fitter
-        :param store_data: A flag that tells whether to store the data;
-            this argument can be given only as keyword argument
-        :type store_data: bool
-        :param store_models: A flag that tells whether to store the models;
-            this argument can be given only as keyword argument
-        :type store_models: bool
-        """
-        self = super().__new__(cls)
-
-        if (data is not None) ^ (fitters is not None):
-            raise TypeError(
-                "Either none or both of 'data' and 'fitters' required.")
-        if fitters is not None:
-            self.__init__(**kwargs)
-            return self(data, fitters)
-        return self
-
-    def __init__(self, store_data=False, store_models=False):
-        self.store_data = store_data
-        self.store_models = store_models
-
-    def __call__(self, data, fitters):
-        raise TypeError("{}.__call__ is not implemented".
-                        format(type(self).__name__))
-
-
-class CrossValidation(Testing):
+class CrossValidation(Results):
     """
     K-fold cross validation.
 
@@ -205,65 +203,65 @@ class CrossValidation(Testing):
     .. attribute:: random_state
 
     """
-    def __init__(self, k=10, random_state=0, store_data=False,
+    def __init__(self, data, learners, k=10, random_state=0, store_data=False,
                  store_models=False):
-        super().__init__(store_data=store_data, store_models=store_models)
+        super().__init__(data, len(learners), store_data=store_data,
+                         store_models=store_models)
         self.k = k
         self.random_state = random_state
-
-    def __call__(self, data, fitters):
-        n = len(data)
         Y = data.Y.copy().flatten()
         if is_discrete(data.domain.class_var):
-            indices = cross_validation.StratifiedKFold(
+            indices = skl_cross_validation.StratifiedKFold(
                 Y, self.k, shuffle=True, random_state=self.random_state
             )
         else:
-            indices = cross_validation.KFold(
+            indices = skl_cross_validation.KFold(
                 len(Y), self.k, shuffle=True, random_state=self.random_state
             )
-        results = Results(data, len(fitters), store_data=self.store_data)
 
-        results.folds = []
+
+        self.folds = []
         if self.store_models:
-            results.models = []
+            self.models = []
         ptr = 0
         class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
+            if len(test_data) == 0:
+                raise RuntimeError("One of the test folds is empty.")
             fold_slice = slice(ptr, ptr + len(test))
-            results.folds.append(fold_slice)
-            results.row_indices[fold_slice] = test
-            results.actual[fold_slice] = test_data.Y.flatten()
+            self.folds.append(fold_slice)
+            self.row_indices[fold_slice] = test
+            self.actual[fold_slice] = test_data.Y.flatten()
             if self.store_models:
                 fold_models = []
-                results.models.append(fold_models)
-            for i, fitter in enumerate(fitters):
-                model = fitter(train_data)
+                self.models.append(fold_models)
+            for i, learner in enumerate(learners):
+                model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
 
                 if is_discrete(class_var):
                     values, probs = model(test_data, model.ValueProbs)
-                    results.predicted[i][fold_slice] = values
-                    results.probabilities[i][fold_slice, :] = probs
+                    self.predicted[i][fold_slice] = values
+                    self.probabilities[i][fold_slice, :] = probs
                 elif is_continuous(class_var):
                     values = model(test_data, model.Value)
-                    results.predicted[i][fold_slice] = values
+                    self.predicted[i][fold_slice] = values
 
             ptr += len(test)
-        return results
 
 
-class LeaveOneOut(Testing):
-    """Leave-one-out testing
-    """
-    def __call__(self, data, fitters):
-        results = Results(data, len(fitters), store_data=self.store_data)
+class LeaveOneOut(Results):
+    """Leave-one-out testing"""
+
+    def __init__(self, data, learners, store_data=False, store_models=False):
+        super().__init__(data, len(learners), store_data=store_data,
+                         store_models=store_models)
 
         domain = data.domain
         X = data.X.copy()
-        Y = data.Y.copy()
+        Y = data._Y.copy()
         metas = data.metas.copy()
 
         teX, trX = X[:1], X[1:]
@@ -275,12 +273,12 @@ class LeaveOneOut(Testing):
         else:
             W = teW = trW = None
 
-        results.row_indices = np.arange(len(data))
+        self.row_indices = np.arange(len(data))
         if self.store_models:
-            results.models = []
-        results.actual = Y.flatten()
+            self.models = []
+        self.actual = Y.flatten()
         class_var = data.domain.class_var
-        for test_idx in results.row_indices:
+        for test_idx in self.row_indices:
             X[[0, test_idx]] = X[[test_idx, 0]]
             Y[[0, test_idx]] = Y[[test_idx, 0]]
             metas[[0, test_idx]] = metas[[test_idx, 0]]
@@ -290,87 +288,83 @@ class LeaveOneOut(Testing):
             train_data = Table.from_numpy(domain, trX, trY, tr_metas, trW)
             if self.store_models:
                 fold_models = []
-                results.models.append(fold_models)
-            for i, fitter in enumerate(fitters):
-                model = fitter(train_data)
+                self.models.append(fold_models)
+            for i, learner in enumerate(learners):
+                model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
 
                 if is_discrete(class_var):
                     values, probs = model(test_data, model.ValueProbs)
-                    results.predicted[i][test_idx] = values
-                    results.probabilities[i][test_idx, :] = probs
+                    self.predicted[i][test_idx] = values
+                    self.probabilities[i][test_idx, :] = probs
                 elif is_continuous(class_var):
                     values = model(test_data, model.Value)
-                    results.predicted[i][test_idx] = values
-
-        return results
+                    self.predicted[i][test_idx] = values
 
 
-class TestOnTrainingData(Testing):
-    """Trains and test on the same data
-    """
-    def __call__(self, data, fitters):
-        results = Results(data, len(fitters), store_data=self.store_data)
-        results.row_indices = np.arange(len(data))
+class TestOnTrainingData(Results):
+    """Trains and test on the same data"""
+
+    def __init__(self, data, learners, store_data=False, store_models=False):
+        super().__init__(data, len(learners), store_data=store_data,
+                         store_models=store_models)
+        self.row_indices = np.arange(len(data))
         if self.store_models:
             models = []
-            results.models = [models]
-        results.actual = data.Y.flatten()
+            self.models = [models]
+        self.actual = data.Y.flatten()
         class_var = data.domain.class_var
-        for i, fitter in enumerate(fitters):
-            model = fitter(data)
+        for i, learner in enumerate(learners):
+            model = learner(data)
             if self.store_models:
                 models.append(model)
 
             if is_discrete(class_var):
                 values, probs = model(data, model.ValueProbs)
-                results.predicted[i] = values
-                results.probabilities[i] = probs
+                self.predicted[i] = values
+                self.probabilities[i] = probs
             elif is_continuous(class_var):
                 values = model(data, model.Value)
-                results.predicted[i] = values
-
-        return results
+                self.predicted[i] = values
 
 
-class Bootstrap(Testing):
-    def __init__(self, n_resamples=10, p=0.75, random_state=0,
+class Bootstrap(Results):
+    def __init__(self, data, learners, n_resamples=10, p=0.75, random_state=0,
                  store_data=False, store_models=False):
-        super().__init__(store_data=store_data, store_models=store_models)
+        super().__init__(data, len(learners), store_data=store_data,
+                         store_models=store_models)
+        self.store_models = store_models
         self.n_resamples = n_resamples
         self.p = p
         self.random_state = random_state
 
-    def __call__(self, data, fitters):
-        indices = cross_validation.Bootstrap(
+        indices = skl_cross_validation.Bootstrap(
             len(data), n_iter=self.n_resamples, train_size=self.p,
             random_state=self.random_state
         )
 
-        results = Results(data, len(fitters), store_data=self.store_data)
-
-        results.folds = []
+        self.folds = []
         if self.store_models:
-            results.models = []
+            self.models = []
 
         row_indices = []
         actual = []
-        predicted = [[] for _ in fitters]
-        probabilities = [[] for _ in fitters]
+        predicted = [[] for _ in learners]
+        probabilities = [[] for _ in learners]
         fold_start = 0
         class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
-            results.folds.append(slice(fold_start, fold_start + len(test)))
+            self.folds.append(slice(fold_start, fold_start + len(test)))
             row_indices.append(test)
             actual.append(test_data.Y.flatten())
             if self.store_models:
                 fold_models = []
-                results.models.append(fold_models)
+                self.models.append(fold_models)
 
-            for i, fitter in enumerate(fitters):
-                model = fitter(train_data)
+            for i, learner in enumerate(learners):
+                model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
 
@@ -392,53 +386,98 @@ class Bootstrap(Testing):
         nrows = len(actual)
         nmodels = len(predicted)
 
-        results.nrows = len(actual)
-        results.row_indices = row_indices
-        results.actual = actual
-        results.predicted = predicted.reshape(nmodels, nrows)
+        self.nrows = len(actual)
+        self.row_indices = row_indices
+        self.actual = actual
+        self.predicted = predicted.reshape(nmodels, nrows)
         if is_discrete(class_var):
-            results.probabilities = probabilities
-        return results
+            self.probabilities = probabilities
 
 
-class TestOnTestData(Testing):
+class TestOnTestData(Results):
     """
     Test on a separate test data set.
     """
-    def __new__(cls, train_data=None, test_data=None, fitters=None, **kwargs):
-        self = super().__new__(cls)
-
-        if train_data is None and test_data is None and fitters is None:
-            return self
-        elif train_data is not None and test_data is not None and \
-                fitters is not None:
-            self.__init__(**kwargs)
-            return self(train_data, test_data, fitters)
-        else:
-            raise TypeError("Expected 3 positional arguments")
-
-    def __call__(self, train_data, test_data, fitters):
-        results = Results(test_data, len(fitters), store_data=self.store_data)
-        models = []
+    def __init__(self, train_data, test_data, learners, store_data=False,
+                 store_models=False):
+        super().__init__(test_data, len(learners), store_data=store_data,
+                         store_models=store_models)
         if self.store_models:
-            results.models = [models]
+            self.models = []
 
-        results.row_indices = np.arange(len(test_data))
-        results.actual = test_data.Y.flatten()
+        self.row_indices = np.arange(len(test_data))
+        self.actual = test_data.Y.flatten()
 
         class_var = train_data.domain.class_var
-        for i, fitter in enumerate(fitters):
-            model = fitter(train_data)
+        for i, learner in enumerate(learners):
+            model = learner(train_data)
             if is_discrete(class_var):
                 values, probs = model(test_data, model.ValueProbs)
-                results.predicted[i] = values
-                results.probabilities[i][:, :] = probs
+                self.predicted[i] = values
+                self.probabilities[i][:, :] = probs
             elif is_continuous(class_var):
                 values = model(test_data, model.Value)
-                results.predicted[i] = values
+                self.predicted[i] = values
 
-            models.append(model)
+            if self.store_models:
+                self.models.append(model)
 
-        results.nrows = len(test_data)
-        results.folds = [slice(0, len(test_data))]
-        return results
+        self.nrows = len(test_data)
+        self.folds = [slice(0, len(test_data))]
+
+
+def sample(table, n=0.7, stratified=False, replace=False,
+                    random_state=None):
+    """
+    Samples data instances from a data table. Returns the sample and
+    a data set from input data table that are not in the sample. Also
+    uses several sampling functions from
+    `scikit-learn <http://scikit-learn.org>`_.
+
+    table : data table
+        A data table from which to sample.
+
+    n : float, int (default = 0.7)
+        If float, should be between 0.0 and 1.0 and represents
+        the proportion of data instances in the resulting sample. If
+        int, n is the number of data instances in the resulting sample.
+
+    stratified : bool, optional (default = False)
+        If true, sampling will try to consider class values and
+        match distribution of class values
+        in train and test subsets.
+
+    replace : bool, optional (default = False)
+        sample with replacement
+
+    random_state : int or RandomState
+        Pseudo-random number generator state used for random sampling.
+    """
+
+    if type(n) == float:
+        n = int(n * len(table))
+
+    if replace:
+        if random_state is None:
+            rgen = np.random
+        else:
+            rgen = np.random.mtrand.RandomState(random_state)
+        sample = rgen.random_integers(0, len(table) - 1, n)
+        o = np.ones(len(table))
+        o[sample] = 0
+        others = np.nonzero(o)[0]
+        return table[sample], table[others]
+
+    n = len(table) - n
+    if stratified and is_discrete(table.domain.class_var):
+        test_size = max(len(table.domain.class_var.values), n)
+        ind = skl_cross_validation.StratifiedShuffleSplit(
+            table.Y.ravel(), n_iter=1,
+            test_size=test_size, train_size=len(table) - test_size,
+            random_state=random_state)
+    else:
+        ind = skl_cross_validation.ShuffleSplit(
+            len(table), n_iter=1,
+            test_size=n, random_state=random_state)
+    ind = next(iter(ind))
+    return table[ind[0]], table[ind[1]]

@@ -7,13 +7,16 @@ from Orange.widgets.settings import Setting
 def is_discrete(var):
     return isinstance(var, Orange.data.DiscreteVariable)
 
+
 class OWKNNLearner(widget.OWWidget):
 
     name = "K Nearest Neighbors"
     description = "K Nearest Neighbors"
     icon = "icons/KNN.svg"
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Learner", knn.KNNLearner), ("Classifier", knn.KNNClassifier)]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Orange.preprocess.Preprocess,
+               "set_preprocessor")]
+    outputs = [("Learner", knn.KNNLearner), ("Classifier", knn.KNNModel)]
 
     want_main_area = False
     learner_name = Setting("kNN")
@@ -23,6 +26,7 @@ class OWKNNLearner(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data = None
+        self.preprocessors = None
 
         box = gui.widgetBox(self.controlArea, "Learner/Classifier Name")
         gui.lineEdit(box, self, "learner_name")
@@ -51,10 +55,18 @@ class OWKNNLearner(widget.OWWidget):
         if data is not None:
             self.apply()
 
+    def set_preprocessor(self, preproc):
+        if preproc is None:
+            self.preprocessors = None
+        else:
+            self.preprocessors = (preproc,)
+        self.apply()
+
     def apply(self):
         learner = knn.KNNLearner(
             n_neighbors=self.n_neighbors,
-            metric=self.metrics[self.metric_index]
+            metric=self.metrics[self.metric_index],
+            preprocessors=self.preprocessors
         )
         learner.name = self.learner_name
         classifier = None

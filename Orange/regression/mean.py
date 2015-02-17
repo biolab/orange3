@@ -1,14 +1,19 @@
 import numpy
 
-from Orange import classification
+from Orange.classification import Learner, Model
 from Orange.data import ContinuousVariable
 from Orange.statistics import distribution
 
+__all__ = ["MeanLearner"]
 
-class MeanFitter(classification.Fitter):
+
+class MeanLearner(Learner):
     """
     Fit a regression model that returns the average response (class) value.
     """
+
+    name = 'mean'
+
     def fit_storage(self, data):
         """
         Construct a :obj:`MeanModel` by computing the mean value of the given
@@ -20,18 +25,18 @@ class MeanFitter(classification.Fitter):
         :rtype: :obj:`MeanModel`
         """
         if not isinstance(data.domain.class_var, ContinuousVariable):
-            raise ValueError("regression.MeanFitter expects a domain with a "
+            raise ValueError("regression.MeanLearner expects a domain with a "
                              "(single) continuous variable")
         dist = distribution.get_distribution(data, data.domain.class_var)
         return MeanModel(dist)
 
 
 # noinspection PyMissingConstructor
-class MeanModel(classification.Model):
+class MeanModel(Model):
     """
     A regression model that returns the average response (class) value.
     Instances can be constructed directly, by passing a distribution to the
-    constructor, or by calling the :obj:`MeanFitter`.
+    constructor, or by calling the :obj:`MeanLearner`.
 
     .. automethod:: __init__
 

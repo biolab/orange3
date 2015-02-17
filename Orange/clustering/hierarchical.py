@@ -4,9 +4,10 @@ from itertools import chain, count
 import heapq
 import numpy
 
-import Orange.distance
-
 import scipy.cluster.hierarchy
+from Orange.distance import Euclidean, PearsonR
+
+__all__ = ['HierarchicalClustering']
 
 SINGLE = "single"
 AVERAGE = "average"
@@ -50,7 +51,7 @@ def squareform(X, mode="upper"):
     return matrix
 
 
-def data_clustering(data, distance=Orange.distance.Euclidean,
+def data_clustering(data, distance=Euclidean,
                     linkage=AVERAGE):
     """
     Return the hierarchical clustering of the data set's rows.
@@ -63,7 +64,7 @@ def data_clustering(data, distance=Orange.distance.Euclidean,
     return dist_matrix_clustering(matrix, linkage=linkage)
 
 
-def feature_clustering(data, distance=Orange.distance.PearsonR,
+def feature_clustering(data, distance=PearsonR,
                        linkage=AVERAGE):
     """
     Return the hierarchical clustering of the data set's columns.
@@ -74,6 +75,19 @@ def feature_clustering(data, distance=Orange.distance.PearsonR,
     """
     matrix = distance(data, axis=0)
     return dist_matrix_clustering(matrix, linkage=linkage)
+
+
+
+def dist_matrix_linkage(matrix, linkage=AVERAGE):
+    """
+    Return linkage using a precomputed distance matrix.
+
+    :param Orange.misc.DistMatrix matrix:
+    :param str linkage:
+    """
+    # Extract compressed upper triangular distance matrix.
+    distances = condensedform(matrix.X)
+    return scipy.cluster.hierarchy.linkage(distances, method=linkage)
 
 
 def dist_matrix_clustering(matrix, linkage=AVERAGE):
@@ -541,7 +555,7 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
     return optimal_swap(tree, M)
 
 
-class HierarchicalClustering(object):
+class HierarchicalClustering:
     def __init__(self, n_clusters=2, linkage=AVERAGE):
         self.n_clusters = n_clusters
         self.linkage = linkage

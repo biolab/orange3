@@ -376,11 +376,11 @@ def sort_var_values(var):
     newvar.compute_value = Lookup(var, translation_table)
     return newvar
 
-from Orange.feature.transformation import Lookup
+from Orange.preprocess.transformation import Lookup
 
 
 class Lookup(Lookup):
-    def _transform(self, column):
+    def transform(self, column):
         mask = numpy.isnan(column)
         column_valid = numpy.where(mask, 0, column)
         values = self.lookup_table[numpy.array(column_valid, dtype=int)]

@@ -1,63 +1,68 @@
 import numpy as np
-import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange import classification
+from Orange.classification import Learner, Model
+
+__all__ = ["MLPLearner"]
 
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-class MLPLearner(classification.Fitter):
-    def __init__(self, layers, lambda_=1.0, dropout=None, **opt_args):
-        '''Multilayer perceptron (A.K.A. feedforward neural network)
+class MLPLearner(Learner):
+    """Multilayer perceptron (feedforward neural network)
 
-        This model uses stochastic gradient descent and the
-        backpropagation algorithm to train the weights of a feedforward
-        neural network.  The network uses the sigmoid activation
-        functions, except for the last layer which computes the softmax
-        activation function. The network can be used for binary and
-        multiclass classification. Stochastic gradient descent minimizes
-        the L2 regularize categorical crossentropy cost function. The
-        topology of the network can be customized by setting the layers
-        attribute. When using this model you should:
+    This model uses stochastic gradient descent and the
+    backpropagation algorithm to train the weights of a feedforward
+    neural network.  The network uses the sigmoid activation
+    functions, except for the last layer which computes the softmax
+    activation function. The network can be used for binary and
+    multiclass classification. Stochastic gradient descent minimizes
+    the L2 regularize categorical crossentropy cost function. The
+    topology of the network can be customized by setting the layers
+    attribute. When using this model you should:
 
-        - Choose a suitable:
-            * topology (layers)
-            * regularization parameter (lambda_)
-            * dropout (values of 0.2 for the input layer and 0.5 for the hidden layers
-              usually work well)
-            * The number of epochs of stochastic gradient descent (num_epochs)
-            * The learning rate of stochastic gradient descent (learning_rate)
-        - Continuize all discrete attributes
-        - Transform the dataset so that the columns are on a similar scale
+    - Choose a suitable:
+        * topology (layers)
+        * regularization parameter (lambda\_)
+        * dropout (values of 0.2 for the input layer and 0.5 for the hidden
+          layers usually work well)
+        * The number of epochs of stochastic gradient descent (num_epochs)
+        * The learning rate of stochastic gradient descent (learning_rate)
+    - Continuize all discrete attributes
+    - Transform the data set so that the columns are on a similar scale
 
-        :param layers: The topology of the network. A network with 
-        layer=[10, 100, 100, 3] has two hidden layers with 100 neurons each, 10 features
-        and a class value with 3 distinct values.
-        :type layers: list
+    layers : list
+        The topology of the network. A network with
+        layer=[10, 100, 100, 3] has two hidden layers with 100 neurons each,
+        10 features and a class value with 3 distinct values.
 
-        :param lambda_: the regularization parameter. Higher values of lambda_
+    lambda\_ : float, optional (default = 1.0)
+        The regularization parameter. Higher values of lambda\_
         force the coefficients to be small.
-        :type lambda_: float
 
-        :param dropout: The dropout rate for each, but the last,
+    dropout : list, optional (default = None)
+        The dropout rate for each, but the last,
         layer. The list should have one element less then the parameter layers.
         Values of 0.2 for the input layer and 0.5 for the hidden layers usually
         work well.
-        :type dropout: list
 
-        :param num_epochs: The number of epochs of stochastic gradient descent
-        :type num_epochs: int
+    num_epochs : int, optional
+        The number of epochs of stochastic gradient descent
 
-        :param learning_rate: The learning rate of stochastic gradient descent
-        :type learning_rate: float
+    learning_rate : float, optional
+        The learning rate of stochastic gradient descent
 
-        :param batch_size: The batch size of stochastic gradient descent
-        :type batch_size: int
-        '''
+    batch_size : int, optional
+        The batch size of stochastic gradient descent
+    """
 
+    name = 'mlp'
+
+    def __init__(self, layers, lambda_=1.0, dropout=None, preprocessors=None,
+                 **opt_args):
+        super().__init__(preprocessors=preprocessors)
         if dropout is None:
             dropout = [0] * (len(layers) - 1)
         assert len(dropout) == len(layers) - 1
@@ -88,8 +93,9 @@ class MLPLearner(classification.Fitter):
             if self.dropout is None or self.dropout[0] < 1e-7:
                 dropout_mask.append(1)
             else:
-                dropout_mask.append(np.random.binomial(1, 1 - self.dropout[0],
-                                   (X.shape[0], self.layers[i])))
+                dropout_mask.append(
+                    np.random.binomial(1, 1 - self.dropout[0],
+                                       (X.shape[0], self.layers[i])))
 
         a.append(X * dropout_mask[0])
         for i in range(len(self.layers) - 2):
@@ -154,7 +160,7 @@ class MLPLearner(classification.Fitter):
 
             # test on validation set
             T, b = self.unfold_params(params)
-            P_va = MLPClassifier(T, b, self.dropout).predict(X_va)
+            P_va = MLPModel(T, b, self.dropout).predict(X_va)
             cost = -np.sum(np.log(P_va + 1e-15) * Y_va)
 
             if cost < best_cost:
@@ -189,10 +195,10 @@ class MLPLearner(classification.Fitter):
         params = self.fit_sgd(params, X, Y, **self.opt_args)
 
         T, b = self.unfold_params(params)
-        return MLPClassifier(T, b, self.dropout)
+        return MLPModel(T, b, self.dropout)
 
 
-class MLPClassifier(classification.Model):
+class MLPModel(Model):
     def __init__(self, T, b, dropout):
         self.T = T
         self.b = b
@@ -210,7 +216,7 @@ class MLPClassifier(classification.Model):
 
 if __name__ == '__main__':
     import Orange.data
-    from sklearn.cross_validation import StratifiedKFold
+    import sklearn.cross_validation as skl_cross_validation
 
     np.random.seed(42)
 
@@ -244,7 +250,7 @@ if __name__ == '__main__':
         m = MLPLearner([4, 20, 20, 3], lambda_=lambda_, num_epochs=1000,
                        learning_rate=0.1)
         scores = []
-        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
+        for tr_ind, te_ind in skl_cross_validation.StratifiedKFold(d.Y.ravel()):
             s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
             scores.append(s)
         print(np.mean(scores), lambda_)

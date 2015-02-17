@@ -8,20 +8,16 @@ from functools import reduce, wraps
 from collections import namedtuple, deque
 
 import numpy
-
+import sklearn.metrics as skl_metrics
 from PyQt4 import QtGui
 from PyQt4.QtGui import QColor, QPen, QBrush
 from PyQt4.QtCore import Qt
-
 import pyqtgraph as pg
 
-import sklearn.metrics
-
-import Orange.data
-import Orange.evaluation.testing
-
+import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
+
 
 #: Points on a ROC curve
 ROCPoints = namedtuple(
@@ -81,7 +77,7 @@ def ROCData_from_results(results, clf_index, target):
     :param Orange.evaluation.Results results:
         Evaluation results.
     :param int clf_index:
-        Learner/Fitter index in the `results`.
+        Learner index in the `results`.
     :param int target:
         Target class index (i.e. positive class).
     :rval ROCData:
@@ -283,7 +279,7 @@ class OWROCAnalysis(widget.OWWidget):
 
     inputs = [
         {"name": "Evaluation Results",
-         "type": Orange.evaluation.testing.Results,
+         "type": Orange.evaluation.Results,
          "handler": "set_results"}
     ]
 
@@ -434,7 +430,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._perf_line = None
 
     def _initialize(self, results):
-        names = getattr(results, "fitter_names", None)
+        names = getattr(results, "learner_names", None)
 
         if names is None:
             names = ["#{}".format(i + 1)
@@ -664,7 +660,7 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
         return numpy.array([]), numpy.array([]), numpy.array([])
 
     fold_probs = res.probabilities[clf_idx][fold][:, target]
-    return sklearn.metrics.roc_curve(
+    return skl_metrics.roc_curve(
         fold_actual, fold_probs, pos_label=target
     )
 
@@ -831,7 +827,8 @@ def main():
     import gc
     import sip
     from PyQt4.QtGui import QApplication
-    from Orange.classification import logistic_regression, svm
+    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
+                                       NuSVMLearner)
 
     app = QApplication([])
     w = OWROCAnalysis()
@@ -840,16 +837,16 @@ def main():
 
 #     data = Orange.data.Table("iris")
     data = Orange.data.Table("ionosphere")
-    results = Orange.evaluation.testing.CrossValidation(
+    results = Orange.evaluation.CrossValidation(
         data,
-        [logistic_regression.LogisticRegressionLearner(),
-         logistic_regression.LogisticRegressionLearner(penalty="l1"),
-         svm.SVMLearner(probability=True),
-         svm.NuSVMLearner(probability=True)],
+        [LogisticRegressionLearner(),
+         LogisticRegressionLearner(penalty="l1"),
+         SVMLearner(probability=True),
+         NuSVMLearner(probability=True)],
         k=5,
         store_data=True,
     )
-    results.fitter_names = ["Logistic", "Logistic (L1 reg.)", "SVM", "NuSVM"]
+    results.learner_names = ["Logistic", "Logistic (L1 reg.)", "SVM", "NuSVM"]
     w.set_results(results)
 
     rval = app.exec_()

@@ -10,9 +10,10 @@ Orange Documentation
    :maxdepth: 2
 
    modules/data
-   modules/feature
+   modules/preprocess
    modules/classification
    modules/regression
+   modules/clustering
    modules/distance
    modules/evaluation
    modules/misc

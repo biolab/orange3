@@ -25,6 +25,14 @@ class TableTestCase(unittest.TestCase):
         cvar = d.domain.class_var
         self.assertEqual([e[cvar] for e in d], ["t", "t", "f"])
 
+    def test_filename(self):
+        dir = data.table.get_sample_datasets_dir()
+        d = data.Table("iris")
+        self.assertEqual(d.__file__, os.path.join(dir, "iris.tab"))
+
+        d = data.Table("test2.tab")
+        self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
+
     def test_indexing(self):
         import warnings
 
@@ -206,8 +214,11 @@ class TableTestCase(unittest.TestCase):
                 del d[-100]
             self.assertEqual(len(d), initlen - 5)
 
-    @unittest.skip("Are discrete attributes represented as python strings?")
     def test_indexing_assign_example(self):
+        def almost_equal_list(s, t):
+            for e, f in zip(s, t):
+                self.assertAlmostEqual(e, f)
+
         import warnings
 
         with warnings.catch_warnings():
@@ -219,22 +230,22 @@ class TableTestCase(unittest.TestCase):
 
             self.assertFalse(isnan(d[0, "a"]))
             d[0] = ["3.14", "1", "f"]
-            self.assertEqual(list(d[0]), [3.14, "1", "f"])
+            almost_equal_list(d[0].values(), [3.14, "1", "f"])
             self.assertTrue(isnan(d[0, "a"]))
             d[0] = [3.15, 1, "t"]
-            self.assertEqual(list(d[0]), [3.15, "0", "t"])
+            almost_equal_list(d[0].values(), [3.15, "0", "t"])
 
             with self.assertRaises(ValueError):
                 d[0] = ["3.14", "1"]
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             d[0] = ex
-            self.assertEqual(list(d[0]), [3.16, "1", "f"])
+            almost_equal_list(d[0].values(), [3.16, "1", "f"])
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             ex["e"] = "mmmapp"
             d[0] = ex
-            self.assertEqual(list(d[0]), [3.16, "1", "f"])
+            almost_equal_list(d[0].values(), [3.16, "1", "f"])
             self.assertEqual(d[0, "e"], "mmmapp")
 
     def test_slice(self):
@@ -314,7 +325,7 @@ class TableTestCase(unittest.TestCase):
 
             d[2:5] = 42
             self.assertTrue(np.all(d.X[2:5] == 42))
-            self.assertEqual(d.Y[2, 0], 0)
+            self.assertEqual(d.Y[2], 0)
 
 
     def test_multiple_indices(self):
@@ -588,11 +599,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d_ref[0, "petal length"], d[0, "petal length"])
         self.assertEqual(d_ref[0, "sepal length"], d[0, "sepal length"])
         self.assertEqual(d_ref.X.shape, (10, 2))
-        self.assertEqual(d_ref.Y.shape, (10, 1))
-
-    @unittest.skip("We need first to implement basket column.")
-    def test_saveTabBasket(self):
-        pass
+        self.assertEqual(d_ref.Y.shape, (10,))
 
     def test_saveTab(self):
         d = data.Table("iris")[:3]
@@ -697,7 +704,7 @@ class TableTestCase(unittest.TestCase):
         for i in range(5):
             e = filter.Random(0.2)(d)
             self.assertEqual(len(e), 30)
-            bc = np.bincount(np.array(e.Y[:, 0], dtype=int))
+            bc = np.bincount(np.array(e.Y[:], dtype=int))
             if min(bc) > 7:
                 break
         else:
@@ -1008,6 +1015,8 @@ class TableTests(unittest.TestCase):
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
+        if len(self.class_vars) == 1:
+            self.class_data = self.class_data.flatten()
         self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas))
                                            ).astype(object)
         self.weight_data = np.random.random((self.nrows, 1))
@@ -1040,6 +1049,9 @@ class CreateEmptyTable(TableTests):
         table = data.Table()
         self.assertIsInstance(table, data.Table)
 
+    def test_table_has_file(self):
+        table = data.Table()
+        self.assertIsNone(table.__file__)
 
 class CreateTableWithFilename(TableTests):
     filename = "data.tab"
@@ -1054,6 +1066,18 @@ class CreateTableWithFilename(TableTests):
         table = data.Table.from_file(self.filename)
 
         reader_instance.read_file.assert_called_with(self.filename, data.Table)
+        self.assertEqual(table, table_mock)
+
+    @patch("os.path.exists", Mock(return_value=True))
+    @patch("Orange.data.io.ExcelReader")
+    def test_read_data_calls_reader(self, reader_mock):
+        table_mock = Mock(data.Table)
+        reader_instance = reader_mock.return_value = \
+            Mock(read_file=Mock(return_value=table_mock))
+
+        table = data.Table.from_file("test.xlsx")
+
+        reader_instance.read_file.assert_called_with("test.xlsx", data.Table)
         self.assertEqual(table, table_mock)
 
     @patch("os.path.exists", Mock(return_value=False))
@@ -1080,6 +1104,14 @@ class CreateTableWithFilename(TableTests):
         read_data.assert_called_with(self.filename)
 
 
+class CreateTableWithUrl(TableTests):
+    def test_load_from_url(self):
+        d1 = data.Table('iris')
+        d2 = data.Table('https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab')
+        np.testing.assert_array_equal(d1.X, d2.X)
+        np.testing.assert_array_equal(d1.Y, d2.Y)
+
+
 class CreateTableWithDomain(TableTests):
     def test_creates_an_empty_table_with_given_domain(self):
         domain = self.mock_domain()
@@ -1098,7 +1130,11 @@ class CreateTableWithDomain(TableTests):
         domain = self.mock_domain(with_classes=True)
         table = data.Table.from_domain(domain, self.nrows)
 
-        self.assertEqual(table.Y.shape, (self.nrows, len(domain.class_vars)))
+        if len(domain.class_vars) != 1:
+            self.assertEqual(table.Y.shape,
+                             (self.nrows, len(domain.class_vars)))
+        else:
+            self.assertEqual(table.Y.shape, (self.nrows,))
         self.assertFalse(table.Y.any())
 
     def test_creates_zero_filled_rows_in_metas_if_domain_contains_metas(self):
@@ -1172,8 +1208,7 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.metas, self.meta_data)
 
     def test_creates_a_discrete_class_if_Y_has_few_distinct_values(self):
-        Y = np.array([float(np.random.randint(0, 2))
-                      for i in self.data]).reshape(len(self.data), 1)
+        Y = np.array([float(np.random.randint(0, 2)) for i in self.data])
         table = data.Table(self.data, Y, self.meta_data)
 
         np.testing.assert_almost_equal(table.Y, Y)
@@ -1206,7 +1241,7 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.W, self.weight_data)
 
     def test_splits_X_and_Y_if_given_in_same_array(self):
-        joined_data = np.hstack((self.data, self.class_data))
+        joined_data = np.column_stack((self.data, self.class_data))
         domain = self.mock_domain(with_classes=True)
         table = data.Table.from_numpy(domain, joined_data)
 
@@ -1381,9 +1416,13 @@ class CreateTableWithDomainAndTable(TableTests):
         # and classes (classes come after attributes) and negative indices for
         # meta features. This is equivalent to ordinary indexing in a magic
         # table below.
-        magic = np.hstack((old_table.X, old_table.Y, old_table.metas[:, ::-1]))
+        magic = np.hstack((old_table.X, old_table.Y[:, None],
+                           old_table.metas[:, ::-1]))
         np.testing.assert_almost_equal(new_table.X, magic[rows, xcols])
-        np.testing.assert_almost_equal(new_table.Y, magic[rows, ycols])
+        Y = magic[rows, ycols]
+        if Y.shape[1] == 1:
+            Y = Y.flatten()
+        np.testing.assert_almost_equal(new_table.Y, Y)
         np.testing.assert_almost_equal(new_table.metas, magic[rows, mcols])
         np.testing.assert_almost_equal(new_table.W, self.table.W[rows])
 
@@ -1421,7 +1460,8 @@ class TableIndexingTests(TableTests):
         t = self.table = \
             data.Table(self.domain, self.data, self.class_data, self.meta_data)
         self.magic_table = \
-            np.hstack((self.table.X, self.table.Y, self.table.metas[:, ::-1]))
+            np.column_stack((self.table.X, self.table.Y,
+                             self.table.metas[:, ::-1]))
 
         self.rows = [0, -1]
         self.multiple_rows = [slice(0, 0), ..., slice(1, -1, -1)]
@@ -1453,9 +1493,12 @@ class TableIndexingTests(TableTests):
     def test_can_select_a_single_row(self):
         for r in self.rows:
             row = self.table[r]
+            new_row = np.hstack(
+                (self.data[r, :],
+                 self.class_data[r, None]))
             np.testing.assert_almost_equal(
-                np.array(list(row)),
-                np.hstack((self.data[r, :], self.class_data[r, :])))
+                np.array(list(row)), new_row)
+
 
     def test_can_select_a_subset_of_rows_and_columns(self):
         for r in self.rows:
@@ -1463,12 +1506,18 @@ class TableIndexingTests(TableTests):
                 table = self.table[r, c]
 
                 attr, cls, metas = split_columns(c, self.table)
-                np.testing.assert_almost_equal(table.X,
-                                               self.table.X[[r], attr])
-                np.testing.assert_almost_equal(table.Y,
-                                               self.table.Y[[r], cls])
-                np.testing.assert_almost_equal(table.metas,
-                                               self.table.metas[[r], metas])
+                X = self.table.X[[r], attr]
+                if X.ndim == 1:
+                    X = X.reshape(-1, len(table.domain.attributes))
+                np.testing.assert_almost_equal(table.X, X)
+                Y = self.table.Y[:, None][[r], cls]
+                if len(Y.shape) == 1 or Y.shape[1] == 1:
+                    Y = Y.flatten()
+                np.testing.assert_almost_equal(table.Y, Y)
+                metas_ = self.table.metas[[r], metas]
+                if metas_.ndim == 1:
+                    metas_ = metas_.reshape(-1, len(table.domain.metas))
+                np.testing.assert_almost_equal(table.metas, metas_)
 
         for r in self.multiple_rows:
             for c in chain(self.columns, self.multiple_rows):
@@ -1476,7 +1525,10 @@ class TableIndexingTests(TableTests):
 
                 attr, cls, metas = split_columns(c, self.table)
                 np.testing.assert_almost_equal(table.X, self.table.X[r, attr])
-                np.testing.assert_almost_equal(table.Y, self.table.Y[r, cls])
+                Y = self.table.Y[:, None][r, cls]
+                if len(Y.shape) > 1 and Y.shape[1] == 1:
+                    Y = Y.flatten()
+                np.testing.assert_almost_equal(table.Y, Y)
                 np.testing.assert_almost_equal(table.metas,
                                                self.table.metas[r, metas])
 
@@ -1496,7 +1548,7 @@ class TableElementAssignmentTest(TableTests):
     def test_can_assign_values_to_classes(self):
         a, c, m = column_sizes(self.table)
         self.table[0, a] = 42.
-        self.assertAlmostEqual(self.table.Y[0, 0], 42.)
+        self.assertAlmostEqual(self.table.Y[0], 42.)
 
     def test_can_assign_values_to_metas(self):
         self.table[0, -1] = 42.

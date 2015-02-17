@@ -1,49 +1,21 @@
-import numbers
+import sklearn.ensemble as skl_ensemble
 
-from sklearn.ensemble import RandomForestClassifier as RandomForest
-from sklearn.preprocessing import Imputer
-from numpy import isnan
+from Orange.classification import SklLearner, SklModel
 
-import Orange.data
-import Orange.classification
+__all__ = ["RandomForestLearner"]
 
 
-def replace_nan(X, imp_model):
-    # Default scikit Imputer
-    # Use Orange imputer when implemented
-    if isnan(X).sum():
-        X = imp_model.transform(X)
-    return X
+class RandomForestClassifier(SklModel):
+    pass
 
 
-class RandomForestLearner(Orange.classification.SklFitter):
+class RandomForestLearner(SklLearner):
+    __wraps__ = skl_ensemble.RandomForestClassifier
+    __returns__ = RandomForestClassifier
+    name = 'random forest'
+
     def __init__(self, n_estimators=10, max_features="auto",
-                 random_state=None, max_depth=3, max_leaf_nodes=5):
+                 random_state=None, max_depth=3, max_leaf_nodes=5,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-    def fit(self, X, Y, W):
-        self.imputer = Imputer()
-        self.imputer.fit(X)
-        X = replace_nan(X, self.imputer)
-
-        params = dict(self.params)
-        max_features = params["max_features"]
-        if isinstance(max_features, numbers.Integral) and \
-                X.shape[1] < max_features:
-            params["max_features"] = X.shape[1]
-
-        rf_model = RandomForest(**params)
-        rf_model.fit(X, Y.ravel())
-        return RandomForestClassifier(rf_model, self.imputer)
-
-
-class RandomForestClassifier(Orange.classification.SklModel):
-    def __init__(self, clf, imp):
-        self.clf = clf
-        self.imputer = imp
-
-    def predict(self, X):
-        X = replace_nan(X, imp_model=self.imputer)
-        value = self.clf.predict(X)
-        prob = self.clf.predict_proba(X)
-        return value, prob

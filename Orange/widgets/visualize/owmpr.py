@@ -90,7 +90,7 @@ class OWMPR(OWWidget):
         if self.progress:
             return
 
-        disc = Orange.feature.discretization.EqualWidth(n=10)
+        disc = Orange.preprocess.discretize.EqualWidth(n=10)
 
         ndomain = Orange.data.Domain(
                 [disc(self.data, attr) if type(attr) == Orange.data.variable.ContinuousVariable

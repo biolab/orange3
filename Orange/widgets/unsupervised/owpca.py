@@ -5,9 +5,9 @@ from PyQt4.QtCore import Qt
 
 import numpy
 import pyqtgraph as pg
-import sklearn.decomposition
 
 import Orange.data
+import Orange.projection
 from Orange.widgets import widget, gui, settings
 
 
@@ -80,7 +80,7 @@ class OWPCA(widget.OWWidget):
         self.data = data
 
         if data is not None:
-            pca = sklearn.decomposition.PCA()
+            pca = Orange.projection.PCA()
             self._pca = pca.fit(self.data.X)
             self._variance_ratio = self._pca.explained_variance_ratio_
             self._cumulative = numpy.cumsum(self._variance_ratio)
@@ -127,7 +127,7 @@ class OWPCA(widget.OWWidget):
         current = self._nselected_components()
         components = int(numpy.floor(value)) + 1
 
-        if not (self.max_components == 0 and \
+        if not (self.max_components == 0 and
                 components == len(self._variance_ratio)):
             self.max_components = components
 
@@ -181,11 +181,14 @@ class OWPCA(widget.OWWidget):
             pca = copy.copy(self._pca)
             pca.components_ = components[:ncomponents]
             transformed = pca.transform(self.data.X)
-            transformed = Orange.data.Table(transformed)
             features = [Orange.data.ContinuousVariable("C%i" % (i + 1))
                         for i in range(components.shape[1])]
-            domain = Orange.data.Domain(features)
-            components = Orange.data.Table.from_numpy(domain, components)
+            domain1 = Orange.data.Domain(features, self.data.domain.class_vars,
+                                         self.data.domain.metas)
+            transformed = Orange.data.Table.from_numpy(
+                domain1, transformed, Y=self.data.Y, metas=self.data.metas)
+            domain2 = Orange.data.Domain(features)
+            components = Orange.data.Table.from_numpy(domain2, components)
 
         self.send("Transformed data", transformed)
         self.send("Components", components)

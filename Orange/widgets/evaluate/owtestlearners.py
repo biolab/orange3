@@ -1,18 +1,15 @@
 from collections import OrderedDict, namedtuple
 import functools
 
-import numpy
+import numpy as np
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
     QHeaderView, QItemDelegate
 from PyQt4.QtCore import Qt, QSize
 
-import Orange.data
-import Orange.classification
-
-from Orange.evaluation import testing, scoring
-
+import Orange
+from Orange.evaluation import *
 from Orange.widgets import widget, gui, settings
 
 
@@ -20,12 +17,11 @@ Input = namedtuple("Input", ["learner", "results", "stats"])
 
 
 def classification_stats(results):
-    stats = (AUC(results),
-             CA(results),
-             F1(results),
-             Precision(results),
-             Recall(results))
-    return stats
+    return (AUC(results),
+            CA(results),
+            F1(results),
+            Precision(results),
+            Recall(results))
 
 classification_stats.headers = ["AUC", "CA", "F1", "Precision", "Recall"]
 
@@ -55,12 +51,12 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Orange.classification.Fitter,
+    inputs = [("Learner", Orange.classification.Learner,
                "set_learner", widget.Multiple),
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
               ("Test Data", Orange.data.Table, "set_test_data")]
 
-    outputs = [("Evaluation Results", testing.Results)]
+    outputs = [("Evaluation Results", Orange.evaluation.Results)]
 
     #: Resampling/testing types
     KFold, LeaveOneOut, Bootstrap, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
@@ -204,27 +200,27 @@ class OWTestLearners(widget.OWWidget):
         # TODO: Test each learner individually
 
         if self.resampling == OWTestLearners.KFold:
-            results = testing.CrossValidation(
+            results = Orange.evaluation.CrossValidation(
                 self.train_data, learners, k=self.k_folds, store_data=True
             )
         elif self.resampling == OWTestLearners.LeaveOneOut:
-            results = testing.LeaveOneOut(
+            results = Orange.evaluation.LeaveOneOut(
                 self.train_data, learners, store_data=True
             )
         elif self.resampling == OWTestLearners.Bootstrap:
             p = self.sample_p / 100.0
-            results = testing.Bootstrap(
+            results = Orange.evaluation.Bootstrap(
                 self.train_data, learners, n_resamples=self.n_repeat, p=p,
                 store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTrain:
-            results = testing.TestOnTrainingData(
+            results = Orange.evaluation.TestOnTrainingData(
                 self.train_data, learners, store_data=True
             )
         elif self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
                 return
-            results = testing.TestOnTestData(
+            results = Orange.evaluation.TestOnTestData(
                 self.train_data, self.test_data, learners, store_data=True
             )
         else:
@@ -306,7 +302,7 @@ class OWTestLearners(widget.OWWidget):
                    if val.results is not None]
         if results:
             combined = results_merge(results)
-            combined.fitter_names = [learner_name(val.learner)
+            combined.learner_names = [learner_name(val.learner)
                                      for val in self.learners.values()]
         else:
             combined = None
@@ -324,8 +320,9 @@ def split_by_model(results):
     data = results.data
     nmethods = len(results.predicted)
     for i in range(nmethods):
-        res = testing.Results()
+        res = Orange.evaluation.Results()
         res.data = data
+        res.domain = results.domain
         res.row_indices = results.row_indices
         res.actual = results.actual
         res.predicted = results.predicted[(i,), :]
@@ -354,14 +351,15 @@ def results_add_by_model(x, y):
     assert (x.row_indices == y.row_indices).all()
     assert (x.actual == y.actual).all()
 
-    res = testing.Results()
+    res = Orange.evaluation.Results()
     res.data = x.data
+    res.domain = x.domain
     res.row_indices = x.row_indices
     res.folds = x.folds
     res.actual = x.actual
-    res.predicted = numpy.vstack((x.predicted, y.predicted))
+    res.predicted = np.vstack((x.predicted, y.predicted))
     if x.probabilities is not None and y.probabilities is not None:
-        res.probabilities = numpy.vstack((x.probabilities, y.probabilities))
+        res.probabilities = np.vstack((x.probabilities, y.probabilities))
 
     if x.models is not None:
         res.models = [xm + ym for xm, ym in zip(x.models, y.models)]
@@ -369,86 +367,19 @@ def results_add_by_model(x, y):
 
 
 def results_merge(results):
-    return functools.reduce(results_add_by_model, results, testing.Results())
-
-import sklearn.metrics
-import numpy as np
-
-
-def _skl_metric(results, metric):
-    return np.fromiter(
-        (metric(results.actual, predicted)
-         for predicted in results.predicted),
-        dtype=np.float64, count=len(results.predicted))
-
-
-def CA(results):
-    return _skl_metric(results, sklearn.metrics.accuracy_score)
-
-
-def Precision(results):
-    return _skl_metric(results, sklearn.metrics.precision_score)
-
-
-def Recall(results):
-    return _skl_metric(results, sklearn.metrics.recall_score)
-
-def multi_class_auc(results):
-    number_of_classes = len(results.data.domain.class_var.values)
-    N = results.actual.shape[0]
-    
-    class_cases = [sum(results.actual == class_) 
-               for class_ in range(number_of_classes)]
-    weights = [c*(N-c) for c in class_cases]
-    weights_norm = [w/sum(weights) for w in weights]
-    
-    auc_array = np.array([np.mean(np.fromiter(
-        (sklearn.metrics.roc_auc_score(results.actual == class_, predicted)
-        for predicted in results.predicted == class_),
-        dtype=np.float64, count=len(results.predicted))) 
-        for class_ in range(number_of_classes)])
-    
-    return np.array([np.sum(auc_array*weights_norm)])
-    
-def AUC(results):
-    if len(results.data.domain.class_var.values) == 2:
-        return _skl_metric(results, sklearn.metrics.roc_auc_score)
-    else:
-        return multi_class_auc(results)
-
-
-def F1(results):
-    return _skl_metric(results, sklearn.metrics.f1_score)
-
-
-def MSE(results):
-    return _skl_metric(results, sklearn.metrics.mean_squared_error)
-
-
-def RMSE(results):
-    return np.sqrt(MSE(results))
-
-
-def MAE(results):
-    return _skl_metric(results, sklearn.metrics.mean_absolute_error)
-
-
-def R2(results):
-    return _skl_metric(results, sklearn.metrics.r2_score)
+    return functools.reduce(results_add_by_model, results,
+                            Orange.evaluation.Results())
 
 
 def main():
-    from Orange.classification import \
-        logistic_regression as lr, naive_bayes as nb
-
     app = QtGui.QApplication([])
     data = Orange.data.Table("iris")
     w = OWTestLearners()
     w.show()
     w.set_train_data(data)
     w.set_test_data(data)
-    w.set_learner(lr.LogisticRegressionLearner(), 1)
-    w.set_learner(nb.BayesLearner(), 2)
+    w.set_learner(Orange.classification.LogisticRegressionLearner(), 1)
+    w.set_learner(Orange.classification.MajorityLearner(), 2)
     w.handleNewSignals()
     return app.exec_()
 
