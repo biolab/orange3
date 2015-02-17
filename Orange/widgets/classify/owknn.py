@@ -1,5 +1,5 @@
 import Orange.data
-from Orange.classification import knn
+from Orange.classification import KNNLearner, SklModel
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
@@ -16,7 +16,7 @@ class OWKNNLearner(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Orange.preprocess.Preprocess,
                "set_preprocessor")]
-    outputs = [("Learner", knn.KNNLearner), ("Classifier", knn.KNNModel)]
+    outputs = [("Learner", KNNLearner), ("Classifier", SklModel)]
 
     want_main_area = False
     learner_name = Setting("kNN")
@@ -63,7 +63,7 @@ class OWKNNLearner(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        learner = knn.KNNLearner(
+        learner = KNNLearner(
             n_neighbors=self.n_neighbors,
             metric=self.metrics[self.metric_index],
             preprocessors=self.preprocessors
