@@ -121,10 +121,6 @@ class ContinuousVariableTest(VariableTest):
         a.val_from_str_add("5.1234")
         self.assertEqual(a.str_val(4.654321), "4.6543")
 
-    def dont_pickle_anonymous_variables(self):
-        self.assertRaises(pickle.PickleError,
-                          pickle.dumps, ContinuousVariable())
-
 
 @variabletest(StringVariable)
 class StringVariableTest(VariableTest):
