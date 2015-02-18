@@ -205,17 +205,29 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         return text
 
     def update_selection(self):
-        if self.dataset is None:
+        if self.dataset is None or self.classifier is None:
             return
+        data = self.dataset
+        if data.domain != self.classifier.domain:
+            for domain in self.classifier.domains:
+                data = data.from_table(domain, data)
 
-        items = self.scene.selectedItems()
-        items = [item for item in items
+        items = [item for item in self.scene.selectedItems()
                  if isinstance(item, ClassificationTreeNode)]
-        if items:
-            indices = [self.classifier.get_items(item.i)
-                       for item in items]
-            indices = numpy.r_[indices]
-            indices = numpy.unique(indices)
+
+        selected_leaves = [_leaf_indices(self.tree, item.node_id)
+                           for item in items]
+
+        if selected_leaves:
+            selected_leaves = numpy.unique(numpy.hstack(selected_leaves))
+
+        all_leaves = _leaf_indices(self.tree, 0)
+
+        if len(selected_leaves) > 0:
+            ind = numpy.searchsorted(all_leaves, selected_leaves, side="left")
+            leaf_samples = _assign_samples(self.tree, self.dataset.X)
+            leaf_samples = [leaf_samples[i] for i in ind]
+            indices = numpy.hstack(leaf_samples)
         else:
             indices = []
 
@@ -260,26 +272,48 @@ class PieChart(QGraphicsRectItem):
 
 def _subnode_range(tree, node_id):
     right = left = node_id
-    if tree.children_left[left] != TREE_LEAF:
-        left = tree.children_left[left]
-    else:
+    if tree.children_left[left] == TREE_LEAF:
         assert tree.children_right[node_id] == TREE_LEAF
+        return node_id, node_id
+    else:
+        left = tree.children_left[left]
+        # run down to the right most node
+        while tree.children_right[right] != TREE_LEAF:
+            right = tree.children_right[right]
 
-    while tree.children_right[right] != TREE_LEAF:
-        right = tree.children_right[right]
-
-    return left, right
+        return left, right + 1
 
 
 def _leaf_indices(tree, node_id):
-    left, right = _subnode_range(tree, node_id)
-    if left == right:
+    start, stop = _subnode_range(tree, node_id)
+    if start == stop:
         # leaf
         return numpy.array([node_id], dtype=int)
     else:
-        isleaf = tree.children_left[left: right + 1] == TREE_LEAF
+        isleaf = tree.children_left[start: stop] == TREE_LEAF
         assert numpy.flatnonzero(isleaf).size > 0
-        return left + numpy.flatnonzero(isleaf)
+        return start + numpy.flatnonzero(isleaf)
+
+
+def _assign_samples(tree, X):
+    def assign(node_id, indices):
+        if tree.children_left[node_id] == TREE_LEAF:
+            return [indices]
+        else:
+            feature_idx = tree.feature[node_id]
+            thresh = tree.threshold[node_id]
+
+            column = X[indices, feature_idx]
+            leftmask = column <= thresh
+            leftind = assign(tree.children_left[node_id], indices[leftmask])
+            rightind = assign(tree.children_right[node_id], indices[~leftmask])
+            return list.__iadd__(leftind, rightind)
+
+    N, _ = X.shape
+
+    items = numpy.arange(N, dtype=int)
+    leaf_indices = assign(0, items)
+    return leaf_indices
 
 
 class ClassificationTreeNode(GraphicsNode):
@@ -446,7 +480,11 @@ if __name__ == "__main__":
     from Orange.classification.tree import TreeLearner
     a = QApplication(sys.argv)
     ow = OWClassificationTreeGraph()
-    ow.ctree(TreeLearner(max_depth=3)(Table('iris')))
+    data = Table("iris")
+    clf = TreeLearner(max_depth=3)(data)
+    clf.instances = data
+
+    ow.ctree(clf)
     ow.show()
     ow.raise_()
     a.exec_()
