@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, Domain,
-                         StringVariable, Unknown, Variable)
+                         StringVariable, Unknown, Variable, DomainConversion)
 from Orange.testing import create_pickling_tests
 
 
@@ -408,6 +408,28 @@ class TestDomainInit(unittest.TestCase):
 
         domain2._metas = (ContinuousVariable('var1'),)
         self.assertEqual(domain1, domain2)
+
+    def test_domain_conversion_is_fast_enough(self):
+        attrs = [ContinuousVariable("f%i" % i) for i in range(10000)]
+        class_vars = [ContinuousVariable("c%i" % i) for i in range(10)]
+        metas = [ContinuousVariable("m%i" % i) for i in range(10)]
+        source = Domain(attrs, class_vars, metas)
+
+        # This should take less than a second
+        c1 = DomainConversion(source, Domain(attrs[:1000], class_vars, metas))
+        self.assertEqual(c1.attributes, list(range(1000)))
+        self.assertEqual(c1.class_vars, list(range(10000, 10010)))
+        self.assertEqual(c1.metas, list(range(-1, -11, -1)))
+
+        c2 = DomainConversion(source, Domain(metas, attrs[:1000], class_vars))
+        self.assertEqual(c2.attributes, list(range(-1, -11, -1)))
+        self.assertEqual(c2.class_vars, list(range(1000)))
+        self.assertEqual(c2.metas, list(range(10000, 10010)))
+
+        c3 = DomainConversion(source, Domain(class_vars, metas, attrs[:1000]))
+        self.assertEqual(c3.attributes, list(range(10000, 10010)))
+        self.assertEqual(c3.class_vars, list(range(-1, -11, -1)))
+        self.assertEqual(c3.metas, list(range(1000)))
 
 
 if __name__ == "__main__":
