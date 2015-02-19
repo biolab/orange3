@@ -43,8 +43,9 @@ OutFile ${OUTFILENAME}
 
 
 Function .onInit
-	!insertmacro GET_ACCOUNT_TYPE
-	!insertmacro GET_PYTHON_DIR
+	# Initialize AdminInstall and PythonDir global variables.
+	${InitAdminInstall}
+	${InitPythonDir}
 FunctionEnd
 
 

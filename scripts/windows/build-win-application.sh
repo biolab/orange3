@@ -5,7 +5,7 @@
 #
 # Example:
 #
-#     $ build-win-application.sh dist/Orange-installer.exe
+#     $ build-win-application.sh
 #
 
 function print_usage {
@@ -68,15 +68,9 @@ NUMPY_MD5=1402e7689bebbd7b69630bdcdc58a492
 SCIPY_VER=0.15.1
 SCIPY_MD5=e24c435e96dc7fbde8eac62ca8c969c8
 
-IPYTHON_VER=2.4.0
-
-MATPLOTLIB_VER=1.4.1
-
-SCIKIT_LEARN_VER=0.15.2
-
 DISTDIR=${DISTDIR:-dist}
 
-BUILDBASE=${BUILDBASE:-build}/temp.$PLATTAG-installer
+BUILDBASE=${BUILDBASE:-build}/temp.$PLATTAG-py$PYTHON_VER_SHORT-installer
 
 # BUILDBASE/
 #   core/
@@ -267,7 +261,6 @@ function prepare_scipy_stack {
 
 }
 
-
 function prepare_req {
     python -m pip wheel \
         -w "$BUILDBASE/wheelhouse" \
@@ -275,7 +268,6 @@ function prepare_req {
         -f "$BUILDBASE/wheelhouse/nosse" \
         "$@"
 }
-
 
 function prepare_orange {
     python setup.py egg_info
@@ -314,9 +306,6 @@ function prepare_all {
     fi
 }
 
-
-
-
 function abs_dir_path {
     echo $(cd "$1"; pwd)
 }
@@ -335,14 +324,6 @@ function create_installer {
              -DPYVER=$PYTHON_VER_SHORT \
 			 -DBASEDIR="$basedir_abs" \
              scripts/windows/install.nsi
-}
-
-function install_all {
-    install_python
-    install_pip
-    install_scipy_stack
-    install_ipython
-    install_matplotlib
 }
 
 # Prepare prerequisites
