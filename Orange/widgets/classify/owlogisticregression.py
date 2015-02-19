@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.classification import logistic_regression as lr
-
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
 
@@ -14,8 +14,7 @@ class OWLogisticRegression(widget.OWWidget):
     icon = "icons/LogisticRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", lr.LogisticRegressionLearner),
                ("Classifier", lr.LogisticRegressionClassifier)]
 

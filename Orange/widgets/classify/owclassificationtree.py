@@ -1,5 +1,6 @@
 from PyQt4.QtGui import QApplication
 import Orange.data
+from Orange.preprocess.preprocess import Preprocess
 from Orange.classification import tree
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -11,8 +12,7 @@ class OWClassificationTree(widget.OWWidget):
     priority = 30
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
 
     outputs = [
         ("Learner", tree.TreeLearner),

@@ -1,5 +1,6 @@
 import Orange.data
 from Orange.classification import KNNLearner, SklModel
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
@@ -14,8 +15,7 @@ class OWKNNLearner(widget.OWWidget):
     description = "K Nearest Neighbors"
     icon = "icons/KNN.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", KNNLearner), ("Classifier", SklModel)]
 
     want_main_area = False
