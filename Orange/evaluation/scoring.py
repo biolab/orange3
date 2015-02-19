@@ -90,9 +90,9 @@ class AUC(Score):
     separate_folds = True
 
     def calculate_weights(self, results):
-        number_of_classes = len(results.domain.class_var.values)
+        classes = np.unique(results.actual)
         class_cases = [sum(results.actual == class_)
-                   for class_ in range(number_of_classes)]
+                       for class_ in classes]
         N = results.actual.shape[0]
         weights = np.array([c * (N - c) for c in class_cases])
         wsum = np.sum(weights)
@@ -102,14 +102,14 @@ class AUC(Score):
             return weights / wsum
 
     def multi_class_auc(self, results):
-        number_of_classes = len(results.domain.class_var.values)
+        classes = np.unique(results.actual)
         weights = self.calculate_weights(results)
         
         auc_array = np.array([np.fromiter(
             (skl_metrics.roc_auc_score(results.actual == class_, predicted)
             for predicted in results.predicted == class_),
             dtype=np.float64, count=len(results.predicted))
-            for class_ in range(number_of_classes)])
+            for class_ in classes])
 
         return np.array([np.sum(auc_array.T * weights, axis=1)])
 
