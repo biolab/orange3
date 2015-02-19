@@ -1,6 +1,7 @@
 from PyQt4.QtGui import QSizePolicy, QLayout
 import Orange.data
 from Orange.regression import linear
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
 
@@ -10,8 +11,7 @@ class OWLinearRegression(widget.OWWidget):
     icon = "icons/LinearRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", linear.RidgeRegressionLearner),
                ("Predictor", linear.LinearModel)]
 

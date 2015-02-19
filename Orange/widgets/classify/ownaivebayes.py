@@ -5,6 +5,7 @@ Naive Bayes Learner
 
 import Orange.data
 import Orange.classification.naive_bayes
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui, settings
 
 
@@ -12,8 +13,7 @@ class OWNaiveBayes(widget.OWWidget):
     name = "Naive Bayes"
     icon = "icons/NaiveBayes.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [
        ("Learner", Orange.classification.naive_bayes.NaiveBayesLearner),
        ("Classifier", Orange.classification.naive_bayes.NaiveBayesModel)

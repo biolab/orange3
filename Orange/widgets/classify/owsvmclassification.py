@@ -6,7 +6,7 @@ from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.classification import svm
-
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
 
@@ -16,8 +16,7 @@ class OWSVMClassification(widget.OWWidget):
     icon = "icons/SVM.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", svm.SVMLearner),
                ("Classifier", svm.SVMClassifier)]
 

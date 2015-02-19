@@ -2,6 +2,7 @@ from Orange.widgets import widget, settings, gui
 
 import Orange.data
 from Orange.regression import mean
+from Orange.preprocess.preprocess import Preprocess
 
 
 class OWMean(widget.OWWidget):
@@ -10,8 +11,7 @@ class OWMean(widget.OWWidget):
     icon = "icons/Mean.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", mean.MeanLearner), ("Predictor", mean.MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")

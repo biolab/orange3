@@ -43,7 +43,7 @@ class Discretizer(Transformation):
     @classmethod
     def create_discretized_var(cls, var, points):
         lpoints = list(points)
-        if points:
+        if lpoints:
             values = [
                 cls._fmt_interval(low, high, var.number_of_decimals)
                 for low, high in zip([-np.inf] + lpoints, lpoints + [np.inf])]

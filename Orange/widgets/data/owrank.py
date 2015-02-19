@@ -343,7 +343,7 @@ class OWRank(widget.OWWidget):
                 s = None
                 if attr is not None:
                     try:
-                        s = float(estimator(attr, data))
+                        s = float(estimator(data, attr))
                     except Exception as ex:
                         self.warning(index, "Error evaluating %r: %r" %
                                      (meas.name, str(ex)))
