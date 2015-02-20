@@ -8,3 +8,4 @@ Miscellaneous (``misc``)
    :maxdepth: 2
 
    misc.enum
+   misc.distmatrix

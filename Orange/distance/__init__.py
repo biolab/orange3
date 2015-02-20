@@ -27,7 +27,24 @@ def _orange_to_numpy(x):
         return x
 
 
-class SklDistance():
+class Distance():
+    def __call__(self, e1, e2=None, axis=1):
+        """
+        :param e1: input data instances, we calculate distances between all pairs
+        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances
+           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows,
+           if axis=0 we calculate distances between columns
+        :type axis: int
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.distmatrix.DistMatrix`
+        """
+        raise NotImplementedError('Distance is an abstract class and should not be used directly.')
+
+
+class SklDistance(Distance):
     """Generic scikit-learn distance."""
     def __init__(self, metric):
         """
@@ -37,20 +54,6 @@ class SklDistance():
         self.metric = metric
 
     def __call__(self, e1, e2=None, axis=1):
-        """
-        Method for calculating distances.
-
-        :param e1: input data instances
-        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param e2: optional second argument for data instances
-           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows,
-           if axis=0 we calculate distances between columns
-        :type axis: int
-        :return: the matrix with distances between given examples
-        :rtype: :class:`Orange.misc.DistMatrix`
-        """
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if axis == 0:
@@ -74,31 +77,18 @@ Cosine = SklDistance('cosine')
 Jaccard = SklDistance('jaccard')
 
 
-class SpearmanDistance():
+class SpearmanDistance(Distance):
     """ Generic Spearman's rank correlation coefficient. """
     def __init__(self, absolute):
+        """
+        Constructor for Spearman's and Absolute Spearman's distances.
+
+        :param absolute: Whether to use absolute values or not.
+        :return: If absolute=True return Spearman's Absolute rank class else return Spearman's rank class.
+        """
         self.absolute = absolute
 
     def __call__(self, e1, e2=None, axis=1):
-        """
-        :param e1: input data instances
-        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param e2: optional second argument for data instances
-           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows,
-           if axis=0 we calculate distances between columns
-        :type axis: int
-        :return: the matrix with distances between given examples
-        :rtype: :class:`Orange.misc.DistMatrix`
-
-        Returns Spearman's dissimilarity between e1 and e2,
-        i.e.
-
-        .. math:: (1-r)/2
-
-        where r is Spearman's rank coefficient.
-        """
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if x2 is None:
@@ -136,31 +126,18 @@ SpearmanR = SpearmanDistance(absolute=False)
 SpearmanRAbsolute = SpearmanDistance(absolute=True)
 
 
-class PearsonDistance():
+class PearsonDistance(Distance):
     """ Generic Pearson's rank correlation coefficient. """
     def __init__(self, absolute):
+        """
+        Constructor for Pearson's and Absolute Pearson's distances.
+
+        :param absolute: Whether to use absolute values or not.
+        :return: If absolute=True return Pearson's Absolute rank class else return Pearson's rank class.
+        """
         self.absolute = absolute
 
     def __call__(self, e1, e2=None, axis=1):
-        """
-        :param e1: input data instances
-        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param e2: optional second argument for data instances
-           if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows,
-           if axis=0 we calculate distances between columns
-        :type axis: int
-        :return: the matrix with distances between given examples
-        :rtype: :class:`Orange.misc.DistMatrix`
-
-        Returns Pearson's dissimilarity between e1 and e2,
-        i.e.
-
-        .. math:: (1-r)/2
-
-        where r is Pearson's rank coefficient.
-        """
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if x2 is None:
