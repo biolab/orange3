@@ -29,7 +29,6 @@ class SqlTableTests(PostgresTest):
 
             self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
-            print(discrete_attr.to_sql())
             self.assertTrue('"col1"' in discrete_attr.to_sql())
             self.assertEqual(discrete_attr.values, ['f', 'm'])
 

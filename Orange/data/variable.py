@@ -1,5 +1,6 @@
 from math import isnan, floor
 import numpy as np
+from pickle import PickleError
 
 from ..data.value import Value, Unknown
 import collections
@@ -8,7 +9,22 @@ import collections
 ValueUnknown = Unknown  # Shadowing within classes
 
 
-class Variable:
+def make_variable(cls, *args):
+    return cls.make(*args)
+
+
+class VariableMeta(type):
+    # noinspection PyMethodParameters
+    def __new__(mcs, name, *args):
+        cls = type.__new__(mcs, name, *args)
+        if not hasattr(cls, '_all_vars'):
+            cls._all_vars = {}
+        if name != "Variable":
+            Variable._variable_types.append(cls)
+        return cls
+
+
+class Variable(metaclass=VariableMeta):
     """
     The base class for variable descriptors contains the variable's
     name and some basic properties.
@@ -44,7 +60,6 @@ class Variable:
     _variable_types = []
     Unknown = ValueUnknown
 
-
     def __init__(self, name="", compute_value=None):
         """
         Construct a variable descriptor.
@@ -55,6 +70,36 @@ class Variable:
         self.unknown_str = set(Variable._DefaultUnknownStr)
         self.source_variable = None
         self.attributes = {}
+        if name:
+            if isinstance(self._all_vars, collections.defaultdict):
+                self._all_vars[name].append(self)
+            else:
+                self._all_vars[name] = self
+
+    @classmethod
+    def make(cls, name):
+        """
+        Return an existing continuous variable with the given name, or
+        construct and return a new one.
+        """
+        if not name:
+            raise ValueError("Variables without names cannot be stored or made")
+        return cls._all_vars.get(name) or cls(name)
+
+    @classmethod
+    def _clear_cache(cls):
+        """
+        Clear the list of variables for reuse by :obj:`make`.
+        """
+        cls._all_vars.clear()
+
+    @classmethod
+    def _clear_all_caches(cls):
+        """
+        Clears list of stored variables for all subclasses
+        """
+        for cls0 in cls._variable_types:
+            cls0._clear_cache()
 
     @staticmethod
     def is_primitive():
@@ -131,19 +176,18 @@ class Variable:
     def compute_value(_):
         return Unknown
 
-    @classmethod
-    def _clear_cache(cls):
-        for tpe in cls._variable_types:
-            tpe._clear_cache()
+    def __reduce__(self):
+        if not self.name:
+            raise PickleError("Variables without names cannot be pickled")
+        return make_variable, (self.__class__, self.name), self.__dict__
 
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return False
-        return self.name == other.name \
-            and self.compute_value == other.compute_value
-
-    def __hash__(self):
-        return hash(self.name) ^ hash(self.compute_value)
+    def __copy__(self):
+        """
+        __copy__ is needed since function copy.copy would otherwise use
+        pickling and returns the same instance."""
+        newvar = type(self)()
+        newvar.__dict__.update(self.__dict__)
+        return newvar
 
 
 class ContinuousVariable(Variable):
@@ -169,7 +213,6 @@ class ContinuousVariable(Variable):
     If the `number_of_decimals` is set manually, `adjust_decimals` is
     set to 0 to prevent changes by `to_val`.
     """
-    all_continuous_vars = {}
 
     def __init__(self, name="", number_of_decimals=None):
         """
@@ -182,7 +225,6 @@ class ContinuousVariable(Variable):
             self.adjust_decimals = 2
         else:
             self.number_of_decimals = number_of_decimals
-        ContinuousVariable.all_continuous_vars[name] = self
 
     @property
     def number_of_decimals(self):
@@ -194,22 +236,6 @@ class ContinuousVariable(Variable):
         self._number_of_decimals = x
         self.adjust_decimals = 0
         self._out_format = "%.{}f".format(self.number_of_decimals)
-
-    @staticmethod
-    def make(name):
-        """
-        Return an existing continuous variable with the given name, or
-        construct and return a new one.
-        """
-        existing_var = ContinuousVariable.all_continuous_vars.get(name)
-        return existing_var or ContinuousVariable(name)
-
-    @classmethod
-    def _clear_cache(cls):
-        """
-        Clears the list of variables for reuse by :obj:`make`.
-        """
-        cls.all_continuous_vars.clear()
 
     @staticmethod
     def is_primitive():
@@ -279,7 +305,7 @@ class DiscreteVariable(Variable):
         used in some methods like, for instance, when creating dummy variables
         for regression.
     """
-    all_discrete_vars = collections.defaultdict(set)
+    _all_vars = collections.defaultdict(list)
     presorted_values = []
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1):
@@ -288,7 +314,6 @@ class DiscreteVariable(Variable):
         self.ordered = ordered
         self.values = list(values)
         self.base_value = base_value
-        DiscreteVariable.all_discrete_vars[name].add(self)
 
     def __repr__(self):
         """
@@ -297,7 +322,7 @@ class DiscreteVariable(Variable):
         """
         args = "values=[{}]".format(
             ", ".join([repr(x) for x in self.values[:5]] +
-                      ["..."] *  (len(self.values) > 5)))
+                      ["..."] * (len(self.values) > 5)))
         if self.ordered:
             args += ", ordered=True"
         if self.base_value >= 0:
@@ -371,8 +396,15 @@ class DiscreteVariable(Variable):
 
     str_val = repr_val
 
-    @staticmethod
-    def make(name, values=(), ordered=False, base_value=-1):
+    def __reduce__(self):
+        if not self.name:
+            raise PickleError("Variables without names cannot be pickled")
+        return make_variable, (self.__class__, self.name,
+                               self.values, self.ordered, self.base_value), \
+            self.__dict__
+
+    @classmethod
+    def make(cls, name, values=(), ordered=False, base_value=-1):
         """
         Return a variable with the given name and other properties. The method
         first looks for a compatible existing variable: the existing
@@ -397,19 +429,21 @@ class DiscreteVariable(Variable):
         :type base_value: int
         :returns: an existing compatible variable or `None`
         """
-        var = DiscreteVariable._find_compatible(
+        if not name:
+            raise ValueError("Variables without names cannot be stored or made")
+        var = cls._find_compatible(
             name, values, ordered, base_value)
         if var:
             return var
         if not ordered:
             base_value_rep = base_value != -1 and values[base_value]
-            values = DiscreteVariable.ordered_values(values)
+            values = cls.ordered_values(values)
             if base_value != -1:
                 base_value = values.index(base_value_rep)
-        return DiscreteVariable(name, values, ordered, base_value)
+        return cls(name, values, ordered, base_value)
 
-    @staticmethod
-    def _find_compatible(name, values=(), ordered=False, base_value=-1):
+    @classmethod
+    def _find_compatible(cls, name, values=(), ordered=False, base_value=-1):
         """
         Return a compatible existing value, or `None` if there is None.
         See :obj:`make` for details; this function differs by returning `None`
@@ -427,11 +461,11 @@ class DiscreteVariable(Variable):
         :returns: an existing compatible variable or `None`
         """
         base_rep = base_value != -1 and values[base_value]
-        existing = DiscreteVariable.all_discrete_vars.get(name)
+        existing = cls._all_vars.get(name)
         if existing is None:
             return None
         if not ordered:
-            values = DiscreteVariable.ordered_values(values)
+            values = cls.ordered_values(values)
         for var in existing:
             if (var.ordered != ordered or
                     var.base_value != -1
@@ -466,13 +500,6 @@ class DiscreteVariable(Variable):
             var.base_value = var.values.index(base_rep)
         return var
 
-    @classmethod
-    def _clear_cache(cls):
-        """
-        Clears the list of variables for reuse by :obj:`make`.
-        """
-        cls.all_discrete_vars.clear()
-
     @staticmethod
     def ordered_values(values):
         """
@@ -485,25 +512,13 @@ class DiscreteVariable(Variable):
                 return presorted
         return sorted(values)
 
-    def __eq__(self, other):
-        return super().__eq__(other) and self.values == other.values
-
-    def __hash__(self):
-        return super().__hash__() ^ hash(tuple(self.values))
-
 
 class StringVariable(Variable):
     """
     Descriptor for string variables. String variables can only appear as
     meta attributes.
     """
-    all_string_vars = {}
     Unknown = None
-
-    def __init__(self, name="", default_col=-1):
-        """Construct a new descriptor."""
-        super().__init__(name)
-        StringVariable.all_string_vars[name] = self
 
     @staticmethod
     def is_primitive():
@@ -527,7 +542,8 @@ class StringVariable(Variable):
 
     val_from_str_add = to_val
 
-    def str_val(self, val):
+    @staticmethod
+    def str_val(val):
         """Return a string representation of the value."""
         if isinstance(val, Value):
             if val.value is None:
@@ -538,22 +554,3 @@ class StringVariable(Variable):
     def repr_val(self, val):
         """Return a string representation of the value."""
         return '"{}"'.format(self.str_val(val))
-
-    @staticmethod
-    def make(name):
-        """
-        Return an existing string variable with the given name, or construct
-        and return a new one.
-        """
-        existing_var = StringVariable.all_string_vars.get(name)
-        return existing_var or StringVariable(name)
-
-    @classmethod
-    def _clear_cache(cls):
-        """
-        Clears the list of variables for reuse by :obj:`make`.
-        """
-        cls.all_string_vars.clear()
-
-Variable._variable_types += [DiscreteVariable, ContinuousVariable, StringVariable
-    ]
