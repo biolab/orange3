@@ -70,6 +70,38 @@ class Scoring_AUC_Test(unittest.TestCase):
         learners = [ Orange.classification.LogisticRegressionLearner(), Orange.classification.MajorityLearner() ]
         res = Orange.evaluation.testing.CrossValidation(data, learners, k=10)
         self.assertTrue(AUC(res)[0] > 0.6 > AUC(res)[1] > 0.4)
+    
+    def test_synthetic_auc(self):
+        X = np.zeros(shape=(6,1))
+        Y = np.zeros(shape=(6,1))
+        Y[:3] = 1
+
+        data = Orange.data.Table(X,Y)
+
+        majority = Orange.classification.MajorityLearner()
+        res = Orange.evaluation.testing.LeaveOneOut(data, [majority])
+        auc = Orange.evaluation.scoring.AUC(res)
+
+        prob_0 = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+        prob_1 = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 0.0]])
+        prob_2 = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 1.0]])
+        prob_3 = np.array([[1.0, 1.0, 0.0, 0.0, 0.0, 0.0]])
+        prob_4 = np.array([[1.0, 1.0, 1.0, 0.0, 1.0, 1.0]])
+        prob_5 = np.array([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+        prob_6 = np.array([[1.0, 1.0, 0.0, 0.0, 1.0, 1.0]])
+
+        prob_list = {'zeros': prob_0, 'ones': prob_0+1, 'correct': prob_1, 'inverse': 1-prob_1, 'one_fp': prob_2, 'one_fn': prob_3, 'two_fp': prob_4, 'two_fn': prob_5, 'two_two': prob_6}
+        example_keys = ['zeros', 'ones', 'correct', 'inverse', 'one_fp', 'one_fn', 'two_fp', 'two_fn', 'two_two']
+        correct_auc = [0.5, 0.5, 1.0, 0.0, 5.0/6, 5.0/6, 4.0/6, 4.0/6, 0.5]
+        result_auc = []
+
+        for prob_name in example_keys:
+            res.predicted = prob_list[prob_name]
+            auc = Orange.evaluation.scoring.AUC(res)[0]
+            result_auc.append(auc)
+        
+        epsilon = 0.0001
+        self.assertTrue(all([abs(result_auc[i] - correct_auc[i]) < epsilon for i in range(len(correct_auc))]))
 
 class Scoring_CD_Test(unittest.TestCase):
     def test_cd_score(self):
