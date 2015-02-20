@@ -119,11 +119,10 @@ class Lookup(Transformation):
         :param variable: The variable whose transformed value is returned.
         :type variable: int or str or :obj:`~Orange.data.DiscreteVariable`
         :param lookup_table: transformations for each value of `self.variable`
-        :type offset: np.array or list or tuple
+        :type lookup_table: np.array or list or tuple
         """
         super().__init__(variable)
         self.lookup_table = lookup_table
 
     def transform(self, c):
         return self.lookup_table[c]
-
