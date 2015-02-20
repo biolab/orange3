@@ -174,46 +174,6 @@ class Domain:
         domain.anonymous = True
         return domain
 
-    def var_from_domain(self, var, check_included=False, no_index=False):
-        """
-        Return a variable descriptor from the given argument, which can be
-        a descriptor, index or name. If `var` is a descriptor, the function
-        returns this same object.
-
-        :param var: index, name or descriptor
-        :type var: int, str or :class:`Variable`
-        :param check_included: if `var` is an instance of :class:`Variable`,
-            this flags tells whether to check that the domain contains this
-            variable
-        :param no_index: if `True`, `var` must not be an `int`
-        :return: an instance of :class:`Variable` described by `var`
-        :rtype: :class:`Variable`
-        """
-        if isinstance(var, str):
-            if not var in self._indices:
-                raise IndexError("Variable '{}' is not in the domain {}".
-                                 format(var, self))
-            idx = self._indices[var]
-            return self._variables[idx] if idx >= 0 else self._metas[-1 - idx]
-
-        if not no_index and isinstance(var, int):
-            return self._variables[var] if var >= 0 else self._metas[-1 - var]
-
-        if isinstance(var, Variable):
-            if check_included:
-                for each in chain(self.variables, self.metas):
-                    if each is var:
-                        return var
-                raise IndexError(
-                    "Variable '{}' is not in the domain {}".
-                    format(var.name, self))
-            else:
-                return var
-
-        raise TypeError(
-            "Expected str, int or Variable, got '{}'".
-            format(type(var).__name__))
-
     @property
     def variables(self):
         return self._variables

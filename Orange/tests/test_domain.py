@@ -209,17 +209,6 @@ class TestDomainInit(unittest.TestCase):
         with self.assertRaises(TypeError):
             d.index([2])
 
-    def test_var_from_domain(self):
-        d = Domain((age, gender, income), metas=(ssn, race))
-        self.assertEqual(d.var_from_domain(incomeA), incomeA)
-        self.assertEqual(d.var_from_domain(incomeA, False), incomeA)
-        with self.assertRaises(IndexError):
-            d.var_from_domain(incomeA, True)
-        with self.assertRaises(TypeError):
-            d.var_from_domain(1, no_index=True)
-        with self.assertRaises(TypeError):
-            d.var_from_domain(-1, no_index=True)
-
     def test_contains(self):
         d = Domain((age, gender, income), metas=(ssn,))
         self.assertTrue("AGE" in d)
