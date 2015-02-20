@@ -1,7 +1,15 @@
 language: python
 python:
-  - "3.4"
-# command to install dependencies
-install: "source install.sh"
-# # command to run tests
-script: python setup.py test
+- '3.4'
+before_install:
+- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ]; then source $TRAVIS_BUILD_DIR/travis/decrypt_upload_doc_id.sh; fi;
+install:
+- source $TRAVIS_BUILD_DIR/travis/install.sh
+- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh; fi;
+before_script:
+script:
+- cd $TRAVIS_BUILD_DIR
+- python setup.py test
+- cd $TRAVIS_BUILD_DIR/doc && make html
+after_success:
+- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/upload_doc.sh; fi;
