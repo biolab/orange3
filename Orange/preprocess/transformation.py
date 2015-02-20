@@ -25,7 +25,7 @@ class Transformation:
         if self._last_domain != data.domain:
             try:
                 self.attr_index = data.domain.index(self.variable)
-            except (KeyError, ValueError):
+            except ValueError:
                 if self.variable.compute_value is None:
                     raise ValueError("{} is not in domain".
                                      format(self.variable.name))
