@@ -41,19 +41,16 @@ class DomainConversion:
         Compute the conversion indices from the given `source` to `destination`
         """
         self.source = source
-        indices = {var: i for i, var in enumerate(source.variables)}
-        indices.update(
-            {var: -1-i for i, var in enumerate(source.metas)}
-        )
+
         self.attributes = [
-            indices[var] if var in indices
+            source.index(var) if var in source
             else var.compute_value for var in destination.attributes]
         self.class_vars = [
-            indices[var] if var in source
+            source.index(var) if var in source
             else var.compute_value for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
         self.metas = [
-            indices[var] if var in source
+            source.index(var) if var in source
             else var.compute_value for var in destination.metas]
 
 
@@ -110,10 +107,12 @@ class Domain:
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        self._indices = {var.name: idx
-                        for idx, var in enumerate(self._variables)}
-        self._indices.update((var.name, -1 - idx)
-                            for idx, var in enumerate(metas))
+        self._indices = dict(chain.from_iterable(
+            ((var, idx), (var.name, idx), (idx, idx))
+            for idx, var in enumerate(self._variables)))
+        self._indices.update(chain.from_iterable(
+            ((var, -1-idx), (var.name, -1-idx), (-1-idx, -1-idx))
+            for idx, var in enumerate(self.metas)))
 
         self.anonymous = False
         self._known_domains = weakref.WeakKeyDictionary()
@@ -175,46 +174,6 @@ class Domain:
         domain.anonymous = True
         return domain
 
-    def var_from_domain(self, var, check_included=False, no_index=False):
-        """
-        Return a variable descriptor from the given argument, which can be
-        a descriptor, index or name. If `var` is a descriptor, the function
-        returns this same object.
-
-        :param var: index, name or descriptor
-        :type var: int, str or :class:`Variable`
-        :param check_included: if `var` is an instance of :class:`Variable`,
-            this flags tells whether to check that the domain contains this
-            variable
-        :param no_index: if `True`, `var` must not be an `int`
-        :return: an instance of :class:`Variable` described by `var`
-        :rtype: :class:`Variable`
-        """
-        if isinstance(var, str):
-            if not var in self._indices:
-                raise IndexError("Variable '{}' is not in the domain {}".
-                                 format(var, self))
-            idx = self._indices[var]
-            return self._variables[idx] if idx >= 0 else self._metas[-1 - idx]
-
-        if not no_index and isinstance(var, int):
-            return self._variables[var] if var >= 0 else self._metas[-1 - var]
-
-        if isinstance(var, Variable):
-            if check_included:
-                for each in chain(self.variables, self.metas):
-                    if each is var:
-                        return var
-                raise IndexError(
-                    "Variable '{}' is not in the domain {}".
-                    format(var.name, self))
-            else:
-                return var
-
-        raise TypeError(
-            "Expected str, int or Variable, got '{}'".
-            format(type(var).__name__))
-
     @property
     def variables(self):
         return self._variables
@@ -227,32 +186,32 @@ class Domain:
         """The number of variables (features and class attributes)."""
         return len(self._variables)
 
-    def __getitem__(self, index):
+    def __getitem__(self, idx):
         """
-        Same as :meth:`var_from_domain`, except that index can also be a slice.
-        Slices apply only to variables, not meta attributes.
+        Return a variable descriptor from the given argument, which can be
+        a descriptor, index or name. If `var` is a descriptor, the function
+        returns this same object.
+
+        :param idx: index, name or descriptor
+        :type idx: int, str or :class:`Variable`
+        :return: an instance of :class:`Variable` described by `var`
+        :rtype: :class:`Variable`
         """
-        if isinstance(index, slice):
-            return self._variables[index]
+        if isinstance(idx, slice):
+            return self._variables[idx]
+
+        idx = self._indices[idx]
+        if idx >= 0:
+            return self.variables[idx]
         else:
-            return self.var_from_domain(index, True)
+            return self.metas[-1-idx]
 
     def __contains__(self, item):
         """
         Return `True` if the item (`str`, `int`, :class:`Variable`) is
         in the domain.
         """
-        if isinstance(item, str):
-            return item in self._indices
-        if isinstance(item, Variable) and not item.name in self._indices:
-            return False
-            # ... but not the opposite!
-            # It may just be a variable with the same name
-        try:
-            self.var_from_domain(item, True)
-            return True
-        except IndexError:
-            return False
+        return item in self._indices
 
     def __iter__(self):
         """
@@ -289,24 +248,11 @@ class Domain:
         Return the index of the given variable or meta attribute, represented
         with an instance of :class:`Variable`, `int` or `str`.
         """
-        if isinstance(var, str):
-            idx = self._indices.get(var, None)
-            if idx is None:
-                raise ValueError("'%s' is not in domain" % var)
-            else:
-                return idx
-        if isinstance(var, Variable):
-            if var in self._variables:
-                return self._variables.index(var)
-            if var in self._metas:
-                return -1 - self._metas.index(var)
-            raise ValueError("'%s' is not in domain" % var.name)
-        if isinstance(var, int):
-            if -len(self._metas) <= var < len(self._variables):
-                return var
-            raise ValueError("there is no variable with index '%i'" % var)
-        raise TypeError("Expected str, int or Variable, got '%s'" %
-                        type(var).__name__)
+
+        try:
+            return self._indices[var]
+        except KeyError:
+            raise ValueError("'%s' is not in domain" % var)
 
     def has_discrete_attributes(self, include_class=False):
         """
