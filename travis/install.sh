@@ -2,7 +2,7 @@ sudo apt-get update
 sudo apt-get install -qq libblas-dev liblapack-dev postgresql-server-dev-9.1 libqt4-dev
 
 pip install -U setuptools pip wheel pgxnclient
- git clone -b pyqt --depth=1 https://github.com/astaric/orange3-requirements wheelhouse
+git clone -b pyqt --depth=1 https://github.com/astaric/orange3-requirements wheelhouse
 
 pip install wheelhouse/*.whl
 pip install -r requirements.txt
