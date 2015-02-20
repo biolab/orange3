@@ -21,15 +21,26 @@ class Transformation:
         Return transformed column from the data by extracting the column view
         from the data and passing it to the `transform` method.
         """
+        inst = isinstance(data, Instance)
         if self._last_domain != data.domain:
+            try:
+                self.attr_index = data.domain.index(self.variable)
+            except (KeyError, ValueError):
+                if self.variable.compute_value is None:
+                    raise ValueError("{} is not in domain".
+                                     format(self.variable.name))
+                self.attr_index = None
             self._last_domain = data.domain
-            self.attr_index = data.domain.index(self.variable)
-        if isinstance(data, Instance):
-            return self.transform(np.array([float(data[self.attr_index])]))[0]
-        elif isinstance(data, Table):
-            return self.transform(data.get_column_view(self.attr_index)[0])
+        if self.attr_index is None:
+            data = self.variable.compute_value(data)
+        elif inst:
+            data = np.array([float(data[self.attr_index])])
         else:
-            raise TypeError("{} is not an Instance or a Table.".format(data))
+            data = data.get_column_view(self.attr_index)[0]
+        transformed = self.transform(data)
+        if inst and isinstance(transformed, np.ndarray):
+            transformed = transformed[0]
+        return transformed
 
     def transform(self, c):
         """

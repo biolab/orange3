@@ -4,8 +4,9 @@ import pickle
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from Orange.data import (ContinuousVariable, DiscreteVariable, Domain,
+from Orange.data import (ContinuousVariable, DiscreteVariable, Domain, Table,
                          StringVariable, Unknown, Variable, DomainConversion)
+from Orange.preprocess import Continuize, Impute
 from Orange.testing import create_pickling_tests
 
 def create_domain(*ss):
@@ -393,6 +394,15 @@ class TestDomainInit(unittest.TestCase):
         self.assertRaises(ValueError, domain.convert, [0] * 7)
         domain.convert([0] * 3)
         domain.convert([0] * 6)
+
+    def test_preprocessor_chaining(self):
+        domain = Domain([DiscreteVariable("a", values="01"),
+                         DiscreteVariable("b", values="01")],
+                        DiscreteVariable("y", values="01"))
+        table = Table(domain, [[0, 1], [1, np.NaN]], [0, 1])
+        pre1 = Continuize(Impute(table))
+        pre2 = Table(pre1.domain, table)
+        np.testing.assert_almost_equal(pre1.X, pre2.X)
 
     def test_unpickling_recreates_known_domains(self):
         Variable._clear_all_caches()
