@@ -230,13 +230,13 @@ class OWDataTable(widget.OWWidget):
         self.c_show_attribute_labels = gui.checkBox(
             box, self, "show_attribute_labels",
             "Show variable labels (if present)",
-            callback=self.c_show_attribute_labels_clicked)
-        self.c_show_attribute_labels.setEnabled(True)
+            callback=self._on_show_variable_labels_changed)
+
         gui.checkBox(box, self, "show_distributions",
                      'Visualize continuous values',
-                     callback=self.cb_show_distributions)
+                     callback=self._on_distribution_color_changed)
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
-                     callback=self.cb_show_distributions)
+                     callback=self._on_distribution_color_changed)
         gui.button(box, self, "Set colors", self.set_colors, autoDefault=False,
                    tooltip="Set the background color and color palette")
 
@@ -286,10 +286,10 @@ class OWDataTable(widget.OWWidget):
                 self.dist_color.blue(), self.dist_color.alpha()
             )
             if self.show_distributions:
-                self.cb_show_distributions()
+                self._on_distribution_color_changed()
 
     def set_dataset(self, data, tid=None):
-        "Set the input dataset"
+        """Set the input dataset."""
 
         if data is not None:
             if tid in self.datasets:
@@ -391,10 +391,9 @@ class OWDataTable(widget.OWWidget):
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
-        """
-        Set table corner text. As this is an ugly hack, do everything in
-        try - except blocks, as it may stop working in newer Qt.
-        """
+        """Set table corner text."""
+        # As this is an ugly hack, do everything in
+        # try - except blocks, as it may stop working in newer Qt.
 
         if not hasattr(table, "btn") and not hasattr(table, "btnfailed"):
             try:
@@ -473,11 +472,12 @@ class OWDataTable(widget.OWWidget):
             model.setRichHeaderFlags(RichTableDecorator.Name)
             self.set_corner_text(view, "")
 
-    def c_show_attribute_labels_clicked(self):
+    def _on_show_variable_labels_changed(self):
+        """The variable labels (var.attribues) visibility was changed."""
         for table in self.views.values():
             self._update_variable_labels(table)
 
-    def cb_show_distributions(self):
+    def _on_distribution_color_changed(self):
         for ti in range(self.tabs.count()):
             color_schema = self.discPalette if self.color_by_class else None
             if self.show_distributions:
@@ -492,6 +492,7 @@ class OWDataTable(widget.OWWidget):
 
     # show data in the default order
     def restore_order(self):
+        """Restore the original data order of the current view."""
         table = self.tabs.currentWidget()
         if table is not None:
             table.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
