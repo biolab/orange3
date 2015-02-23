@@ -2,14 +2,19 @@ import sys
 import threading
 import io
 import csv
+import concurrent.futures
 
+from collections import OrderedDict, namedtuple
 from math import isnan
+
+import numpy
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from PyQt4.QtGui import  QIdentityProxyModel
-from PyQt4.QtCore import Qt, QT_VERSION
+from PyQt4.QtGui import QIdentityProxyModel, QTableView
+from PyQt4.QtCore import Qt, QMetaObject, QT_VERSION
+from PyQt4.QtCore import pyqtSlot as Slot
 
 import Orange.data
 from Orange.data import ContinuousVariable
@@ -180,6 +185,9 @@ def table_selection_to_list(table):
     return lines
 
 
+TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
+
+
 class OWDataTable(widget.OWWidget):
     name = "Data Table"
     description = "View data set in a spreadsheet."
@@ -202,8 +210,7 @@ class OWDataTable(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.datasets = {}          # key: id, value: Table
-        self.views = {}
+        self.inputs = OrderedDict()
 
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
         self.selectionChangedFlag = False
@@ -292,56 +299,70 @@ class OWDataTable(widget.OWWidget):
         """Set the input dataset."""
 
         if data is not None:
-            if tid in self.datasets:
-                # remove existing table
-                self.datasets.pop(tid)
-                view = self.views.pop(tid)
-                self.tabs.removeTab(self.tabs.indexOf(view))
+            if tid in self.inputs:
+                # update existing input slot
+                slot = self.inputs[tid]
+                view = slot.view
+                # reset the (header) view state.
+                view.setModel(None)
+                view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+            else:
+                view = QTableView()
+                view.setSelectionBehavior(QTableView.SelectRows)
+                view.setSortingEnabled(True)
+                view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
 
-            self.datasets[tid] = data
+                header = view.horizontalHeader()
+                header.setMovable(True)
+                header.setClickable(True)
+                header.setSortIndicatorShown(True)
+                header.setSortIndicator(-1, Qt.AscendingOrder)
 
-            table = QtGui.QTableView()
-            table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
-            table.setSortingEnabled(True)
-            table.setHorizontalScrollMode(QtGui.QTableWidget.ScrollPerPixel)
+                # QHeaderView does not 'reset' the model sort column,
+                # because there is no guaranty (requirement) that the
+                # models understand the -1 sort column.
+                def sort_reset(index, order):
+                    if view.model() is not None and index == -1:
+                        view.model().sort(index, order)
 
-            header = table.horizontalHeader()
-            header.setMovable(True)
-            header.setClickable(True)
-            header.setSortIndicatorShown(True)
-            header.setSortIndicator(-1, Qt.AscendingOrder)
+                header.sortIndicatorChanged.connect(sort_reset)
 
-            # QHeaderView does not 'reset' the model sort column,
-            # because there is no guaranty (requirement) that the
-            # models understand the -1 sort column.
-            header.sortIndicatorChanged.connect(
-                lambda index, order:
-                    table.model().sort(index, order) if index == -1 else 0
-            )
-            table.dataset = data
-            self.views[tid] = table
-            self.tabs.addTab(table, getattr(data, "name", ""))
+            view.dataset = data
+            self.tabs.addTab(view, getattr(data, "name", ""))
 
-            self._setup_table_view(table, data)
+            self._setup_table_view(view, data)
+            slot = TableSlot(tid, data, table_summary(data), view)
+            view._input_slot = slot
+            self.inputs[tid] = slot
 
-            self.tabs.setCurrentIndex(self.tabs.indexOf(table))
-            self.set_info(data)
+            self.tabs.setCurrentIndex(self.tabs.indexOf(view))
+
+            self.set_info(slot.summary)
             self.send_button.setEnabled(not self.auto_commit)
 
-        elif tid in self.datasets:
-            self.datasets.pop(tid)
-            view = self.views.pop(tid)
+            if isinstance(slot.summary.len, concurrent.futures.Future):
+                def update(f):
+                    QMetaObject.invokeMethod(
+                        self, "_update_info", Qt.QueuedConnection)
+
+                slot.summary.len.add_done_callback(update)
+
+        elif tid in self.inputs:
+            slot = self.inputs.pop(tid)
+            view = slot.view
             view.hide()
             view.deleteLater()
             self.tabs.removeTab(self.tabs.indexOf(view))
 
             current = self.tabs.currentWidget()
             if current is not None:
-                self.set_info(current.dataset)
+                self.set_info(current._input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
 
-        if not self.datasets:
+        if self.inputs:
+            self.send_button.setEnabled(not self.auto_commit)
+        else:
             self.send_button.setEnabled(False)
 
     def _setup_table_view(self, view, data):
@@ -354,7 +375,7 @@ class OWDataTable(widget.OWWidget):
         def has_sparse_store(data):
             return any(dens in {Storage.SPARSE, Storage.SPARSE_BOOL}
                        for dens in [data.X_density(), data.Y_density(),
-                                    data.metas_density])
+                                    data.metas_density()])
 
         if has_sparse_store(data):
             datamodel = SparseTableModel(data)
@@ -403,7 +424,7 @@ class OWDataTable(widget.OWWidget):
                     def eventFilter(self, o, e):
                         if (isinstance(o, QtGui.QAbstractButton) and
                                 e.type() == QtCore.QEvent.Paint):
-                        #paint by hand (borrowed from QTableCornerButton)
+                            # paint by hand (borrowed from QTableCornerButton)
                             btn = o
                             opt = QtGui.QStyleOptionHeader()
                             opt.init(btn)
@@ -452,8 +473,9 @@ class OWDataTable(widget.OWWidget):
         """Update the info box on current tab change"""
         view = self.tabs.widget(index)
         if view is not None and view.model() is not None:
-            model = view.model().sourceModel()
-            self.set_info(model.source)
+            self.set_info(view._input_slot.summary)
+        else:
+            self.set_info(None)
 
     def _update_variable_labels(self, view):
         "Update the variable labels visibility for `view`"
@@ -474,8 +496,8 @@ class OWDataTable(widget.OWWidget):
 
     def _on_show_variable_labels_changed(self):
         """The variable labels (var.attribues) visibility was changed."""
-        for table in self.views.values():
-            self._update_variable_labels(table)
+        for slot in self.inputs.values():
+            self._update_variable_labels(slot.view)
 
     def _on_distribution_color_changed(self):
         for ti in range(self.tabs.count()):
@@ -490,95 +512,32 @@ class OWDataTable(widget.OWWidget):
         if tab:
             tab.reset()
 
-    # show data in the default order
     def restore_order(self):
         """Restore the original data order of the current view."""
         table = self.tabs.currentWidget()
         if table is not None:
             table.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
-    __no_missing = [""] * 3
-
-    def __compute_density(self, data):
-        def desc(part, frm, to):
-            nans = sum(dist[i].nans for i in range(frm, to))
-            non_nans = sum(dist[i].non_nans for i in range(frm, to))
-            tot = nans + non_nans
-            if tot == 0:
-                return ""
-            density = getattr(data, part + "_density")()
-            if density == Storage.DENSE:
-                dp = "%.1f%%" % (100 * nans / tot) if nans > 0 else "no"
-                return " (%s missing values)" % dp
-            s = " (sparse" if density == Storage.SPARSE else " (tags"
-            return s + ", density %.2f %%)" % (100 * non_nans / tot)
-
-        dist = datacaching.getCached(data,
-                                     basic_stats.DomainBasicStats, (data, True))
-        domain = data.domain
-        descriptions = [desc(part, frm, to)
-                        for part, frm, to in [
-                            ("X", 0, len(domain.attributes)),
-                            ("Y", len(domain.attributes), len(domain)),
-                            ("metas", len(domain),
-                             len(domain) + len(domain.metas))]]
-        if all(not d or d == " (no missing values)" for d in descriptions):
-            descriptions = self.__no_missing
-        return descriptions
-
-    def set_info(self, data):
-        """Updates data info."""
-        def sp(n):
-            if n == 0:
-                return "No", "s"
-            elif n == 1:
-                return str(n), ''
-            else:
-                return str(n), 's'
-
-        if data is None:
-            self.info_ex.setText('No data on input.')
-            self.info_attr.setText('')
-            self.info_meta.setText('')
-            self.info_class.setText('')
+    def set_info(self, summary):
+        if summary is None:
+            self.info_ex.setText("No data on input.")
+            self.info_attr.setText("")
+            self.info_class.setText("")
+            self.info_meta.setText("")
         else:
-            if isinstance(data, SqlTable):
-                descriptions = ['', '', '']
-            else:
-                descriptions = datacaching.getCached(
-                    data, self.__compute_density, (data, ))
-            out_i = "~%s instance%s" % sp(data.approx_len())
-            if descriptions is self.__no_missing:
-                out_i += " (no missing values)"
-            self.info_ex.setText(out_i)
+            info_len, info_attr, info_class, info_meta = \
+                format_summary(summary)
 
-            def update_num_inst():
-                out_i = "%s instance%s" % sp(len(data))
-                if descriptions is self.__no_missing:
-                    out_i += " (no missing values)"
-                self.info_ex.setText(out_i)
+            self.info_ex.setText(info_len)
+            self.info_attr.setText(info_attr)
+            self.info_class.setText(info_class)
+            self.info_meta.setText(info_meta)
 
-            threading.Thread(target=update_num_inst).start()
-
-            self.info_attr.setText("%s feature%s" %
-                                   sp(len(data.domain.attributes)) +
-                                   descriptions[0])
-
-            self.info_meta.setText("%s meta attribute%s" %
-                                   sp(len(data.domain.metas)) + descriptions[2])
-
-            if not data.domain.class_vars:
-                out_c = 'No target variable.'
-            else:
-                if len(data.domain.class_vars) > 1:
-                    out_c = "%s outcome%s" % sp(len(data.domain.class_vars))
-                elif isinstance(data.domain.class_var, ContinuousVariable):
-                    out_c = 'Continuous target variable'
-                else:
-                    out_c = 'Discrete class with %s value%s' % sp(
-                        len(data.domain.class_var.values))
-                out_c += descriptions[1]
-            self.info_class.setText(out_c)
+    @Slot()
+    def _update_info(self):
+        current = self.tabs.currentWidget()
+        if current is not None and current.model() is not None:
+            self.set_info(current._input_slot.summary)
 
     def update_selection(self, *_):
         view = self.tabs.currentWidget()
@@ -645,6 +604,136 @@ class OWDataTable(widget.OWWidget):
             QtGui.QApplication.clipboard().setMimeData(
                 mime, QtGui.QClipboard.Clipboard
             )
+
+# Table Summary
+
+# Basic statistics for X/Y/metas arrays
+DenseArray = namedtuple(
+    "DenseArray", ["nans", "non_nans", "stats"])
+SparseArray = namedtuple(
+    "SparseArray", ["nans", "non_nans", "stats"])
+SparseBoolArray = namedtuple(
+    "SparseBoolArray", ["nans", "non_nans", "stats"])
+NotAvailable = namedtuple("NotAvailable", [])
+
+#: Orange.data.Table summary
+Summary = namedtuple(
+    "Summary",
+    ["len", "domain", "X", "Y", "M"])
+
+#: Orange.data.sql.table.SqlTable summary
+ApproxSummary = namedtuple(
+    "ApproxSummary",
+    ["approx_len", "len", "domain", "X", "Y", "M"])
+
+
+def table_summary(table):
+    if isinstance(table, SqlTable):
+        approx_len = table.approx_len()
+        len_future = concurrent.futures.Future()
+
+        def _len():
+            len_future.set_result(len(table))
+        threading.Thread(target=_len).start()  # KILL ME !!!
+
+        return ApproxSummary(approx_len, len_future, table.domain,
+                             NotAvailable(), NotAvailable(), NotAvailable())
+    else:
+        domain = table.domain
+        n_instances = len(table)
+        # dist = basic_stats.DomainBasicStats(table, include_metas=True)
+        bstats = datacaching.getCached(
+            table, basic_stats.DomainBasicStats, (table, True)
+        )
+
+        dist = bstats.stats
+        X_dist, Y_dist, M_dist = numpy.split(
+            dist, numpy.cumsum([len(domain.attributes),
+                                len(domain.class_vars)]))
+
+        def parts(array, density, col_dist):
+            array = numpy.atleast_2d(array)
+            nans = sum([dist.nans for dist in col_dist])
+            non_nans = sum([dist.non_nans for dist in col_dist])
+            if density == Storage.DENSE:
+                return DenseArray(nans, non_nans, col_dist)
+            elif density == Storage.SPARSE:
+                return SparseArray(nans, non_nans, col_dist)
+            elif density == Storage.SPARSE_BOOL:
+                return SparseBoolArray(nans, non_nans, col_dist)
+            elif density == Storage.MISSING:
+                return NotAvailable()
+            else:
+                assert False
+
+        X_part = parts(table.X, table.X_density(), X_dist)
+        Y_part = parts(table.Y, table.Y_density(), Y_dist)
+        M_part = parts(table.metas, table.metas_density(), M_dist)
+        return Summary(n_instances, domain, X_part, Y_part, M_part)
+
+
+def format_summary(summary):
+    text = []
+    if isinstance(summary, ApproxSummary):
+        if summary.len.done():
+            text += ["{} instances".format(summary.len.result())]
+        else:
+            text += ["~{} instances".format(summary.approx_len)]
+
+    elif isinstance(summary, Summary):
+        text += ["{} instances".format(summary.len)]
+
+        if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
+            text[-1] += " (no missing values)"
+
+    def format_part(part):
+        if isinstance(part, NotAvailable):
+            return ""
+        elif part.nans + part.non_nans == 0:
+            return ""
+
+        if isinstance(part, DenseArray):
+            total = part.nans + part.non_nans
+            miss = ("%.1f%%" % (100 * part.nans / total) if part.nans > 0
+                    else "no")
+            return " (%s missing values)" % miss
+        elif isinstance(part, (SparseArray, SparseBoolArray)):
+            text = " ({}, density {:.2f}%)"
+            tag = "sparse" if isinstance(part, SparseArray) else "tags"
+            total = part.nans + part.non_nans
+            return text.format(tag, 100 * part.non_nans / total)
+        else:
+            # MISSING, N/A
+            return ""
+
+    def sp(n):
+        if n == 0:
+            return "No", "s"
+        elif n == 1:
+            return str(n), ''
+        else:
+            return str(n), 's'
+
+    text += [("%s feature%s" % sp(len(summary.domain.attributes)))
+             + format_part(summary.X)]
+
+    if not summary.domain.class_vars:
+        text += ["No target variable."]
+    else:
+        if len(summary.domain.class_vars) > 1:
+            c_text = "%s outcome%s" % sp(len(summary.domain.class_vars))
+        elif isinstance(summary.domain.class_var, ContinuousVariable):
+            c_text = "Continuous target variable"
+        else:
+            c_text = "Discrete class with %s value%s" % sp(
+                len(summary.domain.class_var.values))
+        c_text += format_part(summary.Y)
+        text += [c_text]
+
+    text += [("%s meta attributes%s" % sp(len(summary.domain.metas)))
+             + format_part(summary.M)]
+
+    return text
 
 
 def test_main():
