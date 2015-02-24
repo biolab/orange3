@@ -393,6 +393,12 @@ class OWDataTable(widget.OWWidget):
         else:
             view.setItemDelegate(QtGui.QStyledItemDelegate(self))
 
+        # Enable/disable view sorting based on data's type
+        view.setSortingEnabled(is_sortable(data))
+        header = view.horizontalHeader()
+        header.setClickable(is_sortable(data))
+        header.setSortIndicatorShown(is_sortable(data))
+
         view.setModel(datamodel)
 
         vheader = view.verticalHeader()
@@ -734,6 +740,15 @@ def format_summary(summary):
              + format_part(summary.M)]
 
     return text
+
+
+def is_sortable(table):
+    if isinstance(table, SqlTable):
+        return False
+    elif isinstance(table, Orange.data.Table):
+        return True
+    else:
+        return False
 
 
 def test_main():
