@@ -27,7 +27,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import colorpalette, datacaching
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.utils.itemmodels import TableModel, SparseTableModel
+from Orange.widgets.utils.itemmodels import TableModel
 
 
 class RichTableDecorator(QIdentityProxyModel):
@@ -372,15 +372,7 @@ class OWDataTable(widget.OWWidget):
             view.setModel(None)
             return
 
-        def has_sparse_store(data):
-            return any(dens in {Storage.SPARSE, Storage.SPARSE_BOOL}
-                       for dens in [data.X_density(), data.Y_density(),
-                                    data.metas_density()])
-
-        if has_sparse_store(data):
-            datamodel = SparseTableModel(data)
-        else:
-            datamodel = TableModel(data)
+        datamodel = TableModel(data)
 
         datamodel = RichTableDecorator(datamodel)
 
