@@ -255,7 +255,7 @@ def join_table_by_indices(left, right, indices):
         left.domain.metas + right.domain.metas
     )
     X = join_array_by_indices(left.X, right.X, indices)
-    Y = join_array_by_indices(left.Y, right.Y, indices)
+    Y = join_array_by_indices(numpy.c_[left.Y], numpy.c_[right.Y], indices)
     metas = join_array_by_indices(left.metas, right.metas, indices)
 
     return Orange.data.Table.from_numpy(domain, X, Y, metas)

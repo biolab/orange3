@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class DistMatrix():
     """
     Distance matrix.

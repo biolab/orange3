@@ -8,7 +8,7 @@ from Orange.preprocess import transformation
 
 class ContinuizerTest(unittest.TestCase):
     def setUp(self):
-        Variable._clear_cache()
+        Variable._clear_all_caches()
         self.data = Table("test4")
 
     def test_default(self):

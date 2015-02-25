@@ -15,7 +15,7 @@ from scipy import sparse as sp
 
 from .instance import *
 from Orange.data import (domain as orange_domain,
-                         io, DiscreteVariable, ContinuousVariable)
+                         io, DiscreteVariable, ContinuousVariable, Variable)
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -597,7 +597,7 @@ class Table(MutableSequence, Storage):
 
         row_idx, col_idx = key
         if isinstance(row_idx, int):
-            try:
+            if isinstance(col_idx, (str, int, Variable)):
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
                 if 0 <= col_idx < len(self.domain.attributes):
@@ -609,7 +609,7 @@ class Table(MutableSequence, Storage):
                                 col_idx - len(self.domain.attributes)])
                 elif col_idx < 0:
                     return Value(var, self.metas[row_idx, -1 - col_idx])
-            except TypeError:
+            else:
                 row_idx = [row_idx]
 
         # multiple rows OR single row but multiple columns:

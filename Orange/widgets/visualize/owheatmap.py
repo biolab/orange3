@@ -908,8 +908,8 @@ class OWHeatMap(widget.OWWidget):
 
 
 def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
-    x_disc = Discretizer.create_discretized_var(data, xvar, xbins[1:-1])
-    y_disc = Discretizer.create_discretized_var(data, yvar, ybins[1:-1])
+    x_disc = Discretizer.create_discretized_var(xvar, xbins[1:-1])
+    y_disc = Discretizer.create_discretized_var(yvar, ybins[1:-1])
 
     x_min, x_max = xbins[0], xbins[-1]
     y_min, y_max = ybins[0], ybins[-1]

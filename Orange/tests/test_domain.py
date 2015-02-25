@@ -1,38 +1,53 @@
+from time import time
 import unittest
 import pickle
 
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from Orange.data import (ContinuousVariable, DiscreteVariable, Domain,
-                         StringVariable, Unknown, Variable)
+from Orange.data import (ContinuousVariable, DiscreteVariable, Domain, Table,
+                         StringVariable, Unknown, Variable, DomainConversion)
+from Orange.preprocess import Continuize, Impute
 from Orange.testing import create_pickling_tests
 
+def create_domain(*ss):
+    Variable._clear_all_caches()
+    vars=dict(
+        age=ContinuousVariable(name="AGE"),
+        gender=DiscreteVariable(name="Gender", values=["M", "F"]),
+        incomeA=ContinuousVariable(name="incomeA"),
+        income=ContinuousVariable(name="income"),
+        education=DiscreteVariable(name="education", values=["GS", "HS", "C"]),
+        ssn=StringVariable(name="SSN"),
+        race=DiscreteVariable(name="race",
+                              values=["White", "Hypsanic", "African", "Other"]))
 
-age = ContinuousVariable(name="AGE")
-gender = DiscreteVariable(name="Gender", values=["M", "F"])
-incomeA = ContinuousVariable(name="incomeA")
-income = ContinuousVariable(name="income")
-education = DiscreteVariable(name="education", values=["GS", "HS", "C"])
-ssn = StringVariable(name="SSN")
-race = DiscreteVariable(name="race",
-                        values=["White", "Hypsanic", "African", "Other"])
+    def map_vars(s):
+        return [vars[x] for x in s]
+    return Domain(*[map_vars(s) for s in ss])
+
 
 PickleDomain = create_pickling_tests(
     "PickleDomain",
-    ("empty_domain", lambda: Domain([])),
-    ("with_continuous_variable", lambda: Domain([age])),
-    ("with_discrete_variable", lambda: Domain([gender])),
-    ("with_mixed_variables", lambda: Domain([age, gender])),
-    ("with_continuous_class", lambda: Domain([age, gender], [incomeA])),
-    ("with_discrete_class", lambda: Domain([age, gender], [education])),
-    ("with_multiple_classes", lambda: Domain([age, gender],
-                                             [incomeA, education])),
-    ("with_metas", lambda: Domain([age, gender], metas=[ssn])),
-    ("with_class_and_metas", lambda: Domain([age, gender],
-                                            [incomeA, education],
-                                            [ssn])),
+    ("empty_domain", lambda: create_domain([])),
+    ("with_continuous_variable", lambda: create_domain(["age"])),
+    ("with_discrete_variable", lambda: create_domain(["gender"])),
+    ("with_mixed_variables", lambda: create_domain(["age", "gender"])),
+    ("with_continuous_class", lambda: create_domain(["age", "gender"], ["incomeA"])),
+    ("with_discrete_class", lambda: create_domain(["age", "gender"], ["education"])),
+    ("with_multiple_classes", lambda: create_domain(["age", "gender"],
+                                             ["incomeA", "education"])),
+    ("with_metas", lambda: create_domain(["age", "gender"], [], ["ssn"])),
+    ("with_class_and_metas", lambda: create_domain(["age", "gender"],
+                                            ["incomeA", "education"],
+                                            ["ssn"])),
 )
+
+
+age, gender, incomeA, income, education, ssn, race = \
+    create_domain([], [],
+                  ["age", "gender", "incomeA", "income", "education", "ssn",
+                   "race"]).metas
 
 
 class TestDomainInit(unittest.TestCase):
@@ -44,8 +59,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race,))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d._indices,
-                         {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
 
     def test_init_class_list(self):
         attributes = (age, gender, income)
@@ -55,8 +68,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race,))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d._indices,
-                         {"AGE": 0, "Gender": 1, "income": 2, "race": 3})
 
     def test_init_no_class(self):
         attributes = (age, gender, income)
@@ -66,8 +77,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, None)
         self.assertEqual(d.class_vars, ())
         self.assertEqual(d.metas, ())
-        self.assertEqual(d._indices,
-                         {"AGE": 0, "Gender": 1, "income": 2})
 
     def test_init_no_class_false(self):
         attributes = (age, gender, income)
@@ -77,8 +86,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, None)
         self.assertEqual(d.class_vars, ())
         self.assertEqual(d.metas, ())
-        self.assertEqual(d._indices,
-                         {"AGE": 0, "Gender": 1, "income": 2})
 
     def test_init_multi_class(self):
         attributes = (age, gender, income)
@@ -88,9 +95,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertIsNone(d.class_var)
         self.assertEqual(d.class_vars, (education, race))
         self.assertEqual(d.metas, ())
-        self.assertEqual(d._indices,
-                         {"AGE": 0, "Gender": 1, "income": 2,
-                          "education": 3, "race": 4})
 
     def test_init_source(self):
         attributes = (age, gender, income)
@@ -113,8 +117,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_var, race)
         self.assertEqual(d.class_vars, (race, ))
         self.assertEqual(d.metas, metas)
-        self.assertEqual(d._indices, {"AGE": 0, "Gender": 1, "income": 2,
-                                     "SSN": -1, "race": -2})
 
     def test_wrong_vartypes(self):
         attributes = (age, gender, income)
@@ -184,13 +186,13 @@ class TestDomainInit(unittest.TestCase):
 
     def test_get_item_error(self):
         d = Domain((age, gender, income), metas=(ssn, race))
-        with self.assertRaises(IndexError):
+        with self.assertRaises(KeyError):
             _ = d[3]
-        with self.assertRaises(IndexError):
+        with self.assertRaises(KeyError):
             _ = d[-3]
-        with self.assertRaises(IndexError):
+        with self.assertRaises(KeyError):
             _ = d[incomeA]
-        with self.assertRaises(IndexError):
+        with self.assertRaises(KeyError):
             _ = d["no_such_thing"]
         with self.assertRaises(TypeError):
             _ = d[[2]]
@@ -207,17 +209,6 @@ class TestDomainInit(unittest.TestCase):
             d.index("no_such_thing")
         with self.assertRaises(TypeError):
             d.index([2])
-
-    def test_var_from_domain(self):
-        d = Domain((age, gender, income), metas=(ssn, race))
-        self.assertEqual(d.var_from_domain(incomeA), incomeA)
-        self.assertEqual(d.var_from_domain(incomeA, False), incomeA)
-        with self.assertRaises(IndexError):
-            d.var_from_domain(incomeA, True)
-        with self.assertRaises(TypeError):
-            d.var_from_domain(1, no_index=True)
-        with self.assertRaises(TypeError):
-            d.var_from_domain(-1, no_index=True)
 
     def test_contains(self):
         d = Domain((age, gender, income), metas=(ssn,))
@@ -381,7 +372,17 @@ class TestDomainInit(unittest.TestCase):
         domain.convert([0] * 3)
         domain.convert([0] * 6)
 
+    def test_preprocessor_chaining(self):
+        domain = Domain([DiscreteVariable("a", values="01"),
+                         DiscreteVariable("b", values="01")],
+                        DiscreteVariable("y", values="01"))
+        table = Table(domain, [[0, 1], [1, np.NaN]], [0, 1])
+        pre1 = Continuize(Impute(table))
+        pre2 = Table(pre1.domain, table)
+        np.testing.assert_almost_equal(pre1.X, pre2.X)
+
     def test_unpickling_recreates_known_domains(self):
+        Variable._clear_all_caches()
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
         self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
@@ -391,23 +392,47 @@ class TestDomainInit(unittest.TestCase):
         domain2 = Domain([])
         self.assertEqual(domain1, domain2)
 
-        domain1.attributes = (ContinuousVariable('var1'),)
+        var1 = ContinuousVariable('var1')
+        domain1.attributes = (var1,)
         self.assertNotEqual(domain1, domain2)
 
-        domain2.attributes = (ContinuousVariable('var1'),)
+        domain2.attributes = (var1,)
         self.assertEqual(domain1, domain2)
 
-        domain1.class_vars = (ContinuousVariable('var1'),)
+        domain1.class_vars = (var1,)
         self.assertNotEqual(domain1, domain2)
 
-        domain2.class_vars = (ContinuousVariable('var1'),)
+        domain2.class_vars = (var1,)
         self.assertEqual(domain1, domain2)
 
-        domain1._metas = (ContinuousVariable('var1'),)
+        domain1._metas = (var1,)
         self.assertNotEqual(domain1, domain2)
 
-        domain2._metas = (ContinuousVariable('var1'),)
+        domain2._metas = (var1,)
         self.assertEqual(domain1, domain2)
+
+    def test_domain_conversion_is_fast_enough(self):
+        attrs = [ContinuousVariable("f%i" % i) for i in range(10000)]
+        class_vars = [ContinuousVariable("c%i" % i) for i in range(10)]
+        metas = [ContinuousVariable("m%i" % i) for i in range(10)]
+        source = Domain(attrs, class_vars, metas)
+
+        start = time()
+        c1 = DomainConversion(source, Domain(attrs[:1000], class_vars, metas))
+        self.assertEqual(c1.attributes, list(range(1000)))
+        self.assertEqual(c1.class_vars, list(range(10000, 10010)))
+        self.assertEqual(c1.metas, list(range(-1, -11, -1)))
+
+        c2 = DomainConversion(source, Domain(metas, attrs[:1000], class_vars))
+        self.assertEqual(c2.attributes, list(range(-1, -11, -1)))
+        self.assertEqual(c2.class_vars, list(range(1000)))
+        self.assertEqual(c2.metas, list(range(10000, 10010)))
+
+        c3 = DomainConversion(source, Domain(class_vars, metas, attrs[:1000]))
+        self.assertEqual(c3.attributes, list(range(10000, 10010)))
+        self.assertEqual(c3.class_vars, list(range(-1, -11, -1)))
+        self.assertEqual(c3.metas, list(range(1000)))
+        self.assertLessEqual(time() - start, 1)
 
 
 if __name__ == "__main__":

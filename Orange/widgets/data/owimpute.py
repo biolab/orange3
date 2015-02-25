@@ -581,7 +581,8 @@ class ColumnImputerFromModel(ColumnImputerModel):
 
         domain = Orange.data.Domain([trans.variable])
         X = Orange.data.Table.from_table(domain, data)
-        X.X[numpy.isnan(X), :] = values
+        mask = numpy.isnan(X.X[:, 0])
+        X.X[mask, 0] = values
         return X
 
 
@@ -833,7 +834,7 @@ class ImputerModel(object):
         Xp = translate_domain(X, self.codomain)
 
         if Xp is X:
-            Xp = Xp.copy()
+            Xp = Orange.data.Table(Xp)
 
         nattrs = len(Xp.domain.attributes)
         for var in X.domain:
@@ -848,7 +849,12 @@ class ImputerModel(object):
                     if cvindex < len(Xp.domain.attributes):
                         Xp.X[:, cvindex] = cols.X[:, i]
                     else:
-                        Xp.Y[:, nattrs - cvindex] = cols.X[:, i]
+                        if Xp.Y.ndim == 2:
+                            Xp.Y[:, cvindex - nattrs] = cols.X[:, i]
+                        elif Xp.Y.ndim == 1:
+                            Xp.Y[:] = cols.X[:, i]
+                        else:
+                            raise ValueError
 
         return Xp
 
@@ -861,7 +867,7 @@ class ImputerModel(object):
                 pass
             else:
                 return False
-        return False
+        return True
 
 
 """

@@ -154,7 +154,7 @@ class ScaleData:
             self.original_data, self.no_jittering_scaled_data, self.valid_data_array = getCached(data,
                                                                                                  "visualizationData")
         else:
-            no_jittering_data = np.hstack((full_data.X, full_data.Y)).T
+            no_jittering_data = np.c_[full_data.X, full_data.Y].T
             valid_data_array = no_jittering_data != np.NaN
             original_data = no_jittering_data.copy()
 

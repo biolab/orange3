@@ -5,6 +5,8 @@ from PyQt4.QtGui import QLabel, QGridLayout, QLayout
 from PyQt4.QtCore import Qt
 
 import Orange
+from Orange.preprocess.preprocess import Preprocess
+from Orange.classification import random_forest
 from Orange.widgets import widget, settings, gui
 
 
@@ -14,10 +16,9 @@ class OWRandomForest(widget.OWWidget):
     icon = "icons/RandomForest.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Preprocessor", Orange.preprocess.Preprocess,
-               "set_preprocessor")]
-    outputs = [("Learner", Orange.classification.RandomForestLearner),
-               ("Classifier", Orange.classification.RandomForestClassifier)]
+              ("Preprocessor", Preprocess, "set_preprocessor")]
+    outputs = [("Learner", random_forest.RandomForestLearner),
+               ("Classifier", random_forest.RandomForestClassifier)]
 
     want_main_area = False
 

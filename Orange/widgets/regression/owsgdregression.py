@@ -6,6 +6,7 @@ from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.regression import linear
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
 
@@ -18,7 +19,7 @@ class OWSGDRegression(widget.OWWidget):
                "type": Orange.data.Table,
                "handler": "set_data"},
               {"name": "Preprocessor",
-               "type": Orange.preprocess.Preprocess,
+               "type": Preprocess,
                "handler": "set_preprocessor"}]
     outputs = [{"name": "Learner",
                 "type": linear.SGDRegressionLearner},
