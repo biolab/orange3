@@ -2,6 +2,7 @@ import os
 import zlib
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
+from numbers import Real, Integral
 import operator
 from functools import reduce
 from warnings import warn
@@ -587,7 +588,7 @@ class Table(MutableSequence, Storage):
             raise
 
     def __getitem__(self, key):
-        if isinstance(key, int):
+        if isinstance(key, Integral):
             return RowInstance(self, key)
         if not isinstance(key, tuple):
             return Table.from_table_rows(self, key)
