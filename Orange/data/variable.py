@@ -1,3 +1,4 @@
+from numbers import Real, Integral
 from math import isnan, floor
 import numpy as np
 from pickle import PickleError
@@ -349,9 +350,9 @@ class DiscreteVariable(Variable):
         if s is None:
             return ValueUnknown
 
-        if isinstance(s, int):
+        if isinstance(s, Integral):
             return s
-        if np.isreal(s):
+        if isinstance(s, Real):
             return s if isnan(s) else floor(s + 0.25)
         if s in self.unknown_str:
             return ValueUnknown

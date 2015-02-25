@@ -1,4 +1,4 @@
-from numbers import Real
+from numbers import Real, Integral
 from ..data.value import Value, Unknown
 from math import isnan
 import numpy as np
@@ -74,7 +74,7 @@ class Instance:
         self._weight = weight
 
     def __setitem__(self, key, value):
-        if not isinstance(key, int):
+        if not isinstance(key, Integral):
             key = self._domain.index(key)
         value = self._domain[key].to_val(value)
         if key >= 0:
@@ -86,7 +86,7 @@ class Instance:
             self._metas[-1 - key] = value
 
     def __getitem__(self, key):
-        if not isinstance(key, int):
+        if not isinstance(key, Integral):
             key = self._domain.index(key)
         if key >= 0:
             value = self._values[key]

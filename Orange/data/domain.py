@@ -1,5 +1,7 @@
 from collections import Iterable
 from itertools import chain
+from numbers import Integral
+
 import weakref
 from .variable import *
 import numpy as np
@@ -76,7 +78,7 @@ class Domain:
 
         if class_vars is None:
             class_vars = []
-        elif isinstance(class_vars, (Variable, int, str)):
+        elif isinstance(class_vars, (Variable, Integral, str)):
             class_vars = [class_vars]
         elif isinstance(class_vars, Iterable):
             class_vars = list(class_vars)
@@ -370,7 +372,7 @@ class Domain:
                 return None, None
             return attributes, np.fromiter(
                 (self.index(attr) for attr in attributes), int)
-        elif isinstance(col_idx, int):
+        elif isinstance(col_idx, Integral):
             attr = self[col_idx]
         else:
             attr = self[col_idx]
