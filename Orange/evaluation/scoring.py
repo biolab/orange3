@@ -111,7 +111,7 @@ class AUC(Score):
             dtype=np.float64, count=len(results.predicted))
             for class_ in classes])
 
-        return np.array([np.sum(auc_array.T * weights, axis=1)])
+        return np.sum(auc_array.T * weights, axis=1)
 
     def compute_score(self, results, target=None):
         domain = results.domain

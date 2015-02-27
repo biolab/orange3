@@ -71,6 +71,20 @@ class Scoring_AUC_Test(unittest.TestCase):
         res = Orange.evaluation.testing.CrossValidation(data, learners, k=10)
         self.assertTrue(AUC(res)[0] > 0.6 > AUC(res)[1] > 0.4)
 
+    def test_auc_on_multiclass_data_returns_1d_array(self):
+        titanic = Orange.data.Table('titanic')[:100]
+        lenses = Orange.data.Table('lenses')[:100]
+        majority = Orange.classification.MajorityLearner()
+
+        results = Orange.evaluation.TestOnTrainingData(lenses, [majority])
+        auc = Orange.evaluation.AUC(results)
+        self.assertEqual(auc.ndim, 1)
+
+        results = Orange.evaluation.TestOnTrainingData(titanic, [majority])
+        auc = Orange.evaluation.AUC(results)
+        self.assertEqual(auc.ndim, 1)
+
+
 class Scoring_CD_Test(unittest.TestCase):
     def test_cd_score(self):
         avranks = [1.9, 3.2, 2.8, 3.3]
