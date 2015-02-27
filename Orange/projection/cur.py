@@ -4,12 +4,12 @@ import numpy as np
 import scipy.sparse.linalg as sla
 
 import Orange.data
-from Orange.projection import Projection, ProjectionModel
+from Orange.projection import Projector, Projection
 
 __all__ = ["CUR"]
 
 
-class CUR(Projection):
+class CUR(Projector):
     """CUR matrix decomposition
 
     Parameters
@@ -116,7 +116,7 @@ class CUR(Projection):
         return np.array(1. / self.rank * np.sum(np.power(V, 2), 1))
 
 
-class CURModel(ProjectionModel):
+class CURModel(Projection):
     def __init__(self, proj):
         super().__init__(proj=proj)
 

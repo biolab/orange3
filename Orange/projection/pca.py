@@ -2,12 +2,12 @@ import sklearn.decomposition as skl_decomposition
 
 import Orange.data
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.projection import SklProjection, ProjectionModel
+from Orange.projection import SklProjector, Projection
 
 __all__ = ["PCA", "SparsePCA", "RandomizedPCA"]
 
 
-class PCA(SklProjection):
+class PCA(SklProjector):
     __wraps__ = skl_decomposition.PCA
     name = 'pca'
 
@@ -18,10 +18,10 @@ class PCA(SklProjection):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj)
+        return PCAModel(proj, self.domain)
 
 
-class SparsePCA(SklProjection):
+class SparsePCA(SklProjector):
     __wraps__ = skl_decomposition.SparsePCA
     name = 'sparse pca'
 
@@ -34,10 +34,10 @@ class SparsePCA(SklProjection):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj)
+        return PCAModel(proj, self.domain)
 
 
-class RandomizedPCA(SklProjection):
+class RandomizedPCA(SklProjector):
     __wraps__ = skl_decomposition.RandomizedPCA
     name = 'randomized pca'
 
@@ -49,11 +49,11 @@ class RandomizedPCA(SklProjection):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj)
+        return PCAModel(proj, self.domain)
 
 
-class PCAModel(ProjectionModel, metaclass=WrapperMeta):
-    def __init__(self, proj):
+class PCAModel(Projection, metaclass=WrapperMeta):
+    def __init__(self, proj, domain):
         def pca_variable(i):
             v = Orange.data.ContinuousVariable('PC %d' % i)
             v.compute_value = Projector(self, i)
@@ -61,17 +61,9 @@ class PCAModel(ProjectionModel, metaclass=WrapperMeta):
 
         super().__init__(proj=proj)
         self.n_components = self.components_.shape[0]
-        self.projected_domain = Orange.data.Domain(
+        self.domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
-             self.domain.class_vars, self.domain.metas)
-
-    def __call__(self, data):
-        if data.domain is not self.domain:
-            data = Orange.data.Table(self.domain, data)
-        Xt = self.transform(data.X)
-        transformed = Orange.data.Table.from_numpy(
-                self.projected_domain, Xt, Y=data.Y, metas=data.metas)
-        return transformed
+             domain.class_vars, domain.metas)
 
 
 class Projector:
@@ -81,6 +73,8 @@ class Projector:
         self.transformed = None
 
     def __call__(self, data):
+        if data.domain != self.projection.pre_domain:
+            data = data.from_table(self.projection.pre_domain, data)
         self.transformed = self.projection.transform(data.X)
         return self.transformed[:, self.feature]
 
