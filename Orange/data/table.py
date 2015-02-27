@@ -222,6 +222,8 @@ class Table(MutableSequence, Storage):
         cls._init_ids(self)
         return self
 
+    conversion_cache = None
+
     @classmethod
     def from_table(cls, domain, source, row_indices=...):
         """
@@ -281,33 +283,45 @@ class Table(MutableSequence, Storage):
                     a[:, i] = source._Y[row_indices, col - n_src_attrs]
             return a
 
-        if domain == source.domain:
-            return Table.from_table_rows(source, row_indices)
+        new_cache = Table.conversion_cache is None
+        try:
+            if new_cache:
+                Table.conversion_cache = {}
+            else:
+                cached = Table.conversion_cache.get((id(domain), id(source)))
+                if cached:
+                    return cached
+            if domain == source.domain:
+                return Table.from_table_rows(source, row_indices)
 
-        if isinstance(row_indices, slice):
-            start, stop, stride = row_indices.indices(source.X.shape[0])
-            n_rows = (stop - start) // stride
-            if n_rows < 0:
-                n_rows = 0
-        elif row_indices is ...:
-            n_rows = len(source.X)
-        else:
-            n_rows = len(row_indices)
+            if isinstance(row_indices, slice):
+                start, stop, stride = row_indices.indices(source.X.shape[0])
+                n_rows = (stop - start) // stride
+                if n_rows < 0:
+                    n_rows = 0
+            elif row_indices is ...:
+                n_rows = len(source.X)
+            else:
+                n_rows = len(row_indices)
 
-        self = cls.__new__(Table)
-        self.domain = domain
-        conversion = domain.get_conversion(source.domain)
-        self.X = get_columns(row_indices, conversion.attributes, n_rows)
-        if self.X.ndim == 1:
-            self.X = self.X.reshape(-1, len(self.domain.attributes))
-        self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
-        self.metas = get_columns(row_indices, conversion.metas, n_rows)
-        if self.metas.ndim == 1:
-            self.metas = self.metas.reshape(-1, len(self.domain.metas))
-        self.W = np.array(source.W[row_indices])
-        self.name = getattr(source, 'name', '')
-        self.ids = np.array(source.ids[row_indices])
-        return self
+            self = cls.__new__(Table)
+            self.domain = domain
+            conversion = domain.get_conversion(source.domain)
+            self.X = get_columns(row_indices, conversion.attributes, n_rows)
+            if self.X.ndim == 1:
+                self.X = self.X.reshape(-1, len(self.domain.attributes))
+            self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
+            self.metas = get_columns(row_indices, conversion.metas, n_rows)
+            if self.metas.ndim == 1:
+                self.metas = self.metas.reshape(-1, len(self.domain.metas))
+            self.W = np.array(source.W[row_indices])
+            self.name = getattr(source, 'name', '')
+            self.ids = np.array(source.ids[row_indices])
+            Table.conversion_cache[(id(domain), id(source))] = self
+            return self
+        finally:
+            if new_cache:
+                Table.conversion_cache = None
 
     @classmethod
     def from_table_rows(cls, source, row_indices):

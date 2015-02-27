@@ -1,13 +1,13 @@
 import sklearn.cluster as skl_cluster
 from Orange.data import Table, DiscreteVariable, Domain, Instance
-from Orange.projection import SklProjection, ProjectionModel
+from Orange.projection import SklProjector, Projection
 from numpy import atleast_2d
 
 
 __all__ = ["KMeans"]
 
 
-class KMeans(SklProjection):
+class KMeans(SklProjector):
     __wraps__ = skl_cluster.KMeans
 
     def __init__(self, n_clusters=8, init='k-means++', n_init=10, max_iter=300, tol=0.0001,
@@ -24,17 +24,20 @@ class KMeans(SklProjection):
         return KMeansModel(proj, self.preprocessors)
 
 
-class KMeansModel(ProjectionModel):
+class KMeansModel(Projection):
     def __init__(self, proj, preprocessors=None):
-        super().__init__(proj=proj, preprocessors=preprocessors)
+        super().__init__(proj=proj)
 
     def __call__(self, data):
-        data = self.preprocess(data)
         if isinstance(data, Table):
+            if data.domain is not self.pre_domain:
+                data = Table(self.pre_domain, data)
             c = DiscreteVariable(name='Cluster id', values=range(self.proj.get_params()["n_clusters"]))
             domain = Domain([c])
             return Table(domain, self.proj.predict(data.X).astype(int).reshape((len(data), 1)))
         elif isinstance(data, Instance):
+            if data.domain is not self.pre_domain:
+                data = Instance(self.pre_domain, data)
             c = DiscreteVariable(name='Cluster id', values=range(self.proj.get_params()["n_clusters"]))
             domain = Domain([c])
             return Table(domain, atleast_2d(self.proj.predict(data._x)).astype(int))
