@@ -5,7 +5,8 @@ def single_cache(f):
 
     def cached(*args, **kwargs):
         nonlocal last_args, last_kwargs, last_result
-        if not all(x == y for x, y in zip(args, last_args)) or \
+        if len(last_args) != len(args) or \
+                not all(x is y for x, y in zip(args, last_args)) or \
                 last_kwargs != set(kwargs) or \
                 any(last_kwargs[k] != kwargs[k] for k in last_kwargs):
             last_result = f(*args, **kwargs)
