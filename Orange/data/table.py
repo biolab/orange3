@@ -31,11 +31,19 @@ dataset_dirs = ['', get_sample_datasets_dir()]
 
 
 class RowInstance(Instance):
+    sparse_x = None
+    sparse_y = None
+    sparse_metas = None
+    _weight = None
+
     def __init__(self, table, row_index):
         """
         Construct a data instance representing the given row of the table.
         """
-        super().__init__(table.domain)
+        self.table = table
+        self._domain = table.domain
+        self.row_index = row_index
+        self.id = table.ids[row_index]
         self._x = table.X[row_index]
         if sp.issparse(self._x):
             self.sparse_x = self._x
@@ -48,10 +56,6 @@ class RowInstance(Instance):
         if sp.issparse(self._metas):
             self.sparse_metas = self._metas
             self._metas = np.asarray(self._metas.todense())[0]
-        self._values = np.hstack((self._x, self._y))
-        self.row_index = row_index
-        self.id = table.ids[row_index]
-        self.table = table
 
     @property
     def weight(self):
@@ -69,7 +73,7 @@ class RowInstance(Instance):
         self._check_single_class()
         if not isinstance(value, Real):
             value = self.table.domain.class_var.to_val(value)
-        self._values[len(self.table.domain.attributes)] = self._y[0] = value
+        self._y[0] = value
         if self.sparse_y:
             self.table._Y[self.row_index, 0] = value
 
@@ -84,11 +88,11 @@ class RowInstance(Instance):
                 raise TypeError("Expected primitive value, got '%s'" %
                                 type(value).__name__)
             if key < len(self._x):
-                self._values[key] = self._x[key] = value
+                self._x[key] = value
                 if self.sparse_x:
                     self.table.X[self.row_index, key] = value
             else:
-                self._values[key] = self._y[key - len(self._x)] = value
+                self._y[key - len(self._x)] = value
                 if self.sparse_y:
                     self.table._Y[self.row_index, key - len(self._x)] = value
         else:

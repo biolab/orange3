@@ -20,7 +20,6 @@ class Instance:
             domain = data.domain
 
         self._domain = domain
-        self.sparse_x = self.sparse_y = self.sparse_metas = None
         if data is None:
             self._x = np.repeat(Unknown, len(domain.attributes))
             self._y = np.repeat(Unknown, len(domain.class_vars))
