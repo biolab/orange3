@@ -7,10 +7,10 @@ from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
-from Orange.tests.sql.base import PostgresTest, get_dburi, has_psycopg2, \
+from Orange.tests.sql.base import PostgresTest, get_dburi, postgres_running, \
     server_version
 
-@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
+@unittest.skipIf(not postgres_running, "Psycopg2 is required for sql tests.")
 class SqlTableTests(PostgresTest):
     def test_constructs_correct_attributes(self):
         data = list(zip(self.float_variable(21),

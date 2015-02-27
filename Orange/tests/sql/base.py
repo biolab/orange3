@@ -4,15 +4,9 @@ import string
 import unittest
 from urllib import parse
 import uuid
-from Orange.data.sql.table import SqlTable
-
-try:
-    import psycopg2
-    has_psycopg2 = True
-except ImportError:
-    has_psycopg2 = False
 
 import Orange
+from Orange.data.sql.table import SqlTable
 from Orange.data.sql import table as sql_table
 
 
@@ -53,12 +47,23 @@ def parse_uri(uri):
     return params
 
 
+try:
+    import psycopg2
+    has_psycopg2 = True
+    try:
+        psycopg2.connect(**connection_params())
+        postgres_running = True
+    except:
+        postgres_running = False
+except ImportError:
+    has_psycopg2 = False
+
+
 def server_version():
-    if has_psycopg2:
+    if postgres_running:
         with psycopg2.connect(**connection_params()) as conn:
             return conn.server_version
-    else:
-        return 0
+    return 0
 
 
 def create_iris():
@@ -142,7 +147,7 @@ class ParseUriTests(unittest.TestCase):
         self.fail(self._formatMessage(msg, standardMsg))
 
 
-@unittest.skipIf(not has_psycopg2, "Psycopg2 is required for sql tests.")
+@unittest.skipIf(not postgres_running, "Psycopg2 is required for sql tests.")
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
