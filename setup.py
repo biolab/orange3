@@ -46,7 +46,7 @@ CLASSIFIERS = (
 
 INSTALL_REQUIRES = (
     'setuptools',
-    'numpy',
+    'numpy>=1.9.0',
     'scipy',
     'bottlechest',
     "sqlparse"

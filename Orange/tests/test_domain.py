@@ -167,16 +167,20 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.index(age), 0)
         self.assertEqual(d.index("AGE"), 0)
         self.assertEqual(d.index(0), 0)
+        self.assertEqual(d.index(np.int_(0)), 0)
 
         self.assertEqual(d.index(income), 2)
         self.assertEqual(d.index("income"), 2)
         self.assertEqual(d.index(2), 2)
+        self.assertEqual(d.index(np.int_(2)), 2)
 
         self.assertEqual(d.index(ssn), -1)
         self.assertEqual(d.index("SSN"), -1)
         self.assertEqual(d.index(-1), -1)
+        self.assertEqual(d.index(np.int_(-1)), -1)
 
         self.assertEqual(d.index(-2), -2)
+        self.assertEqual(d.index(np.int_(-2)), -2)
 
     def test_get_item_slices(self):
         d = Domain((age, gender, income, race), metas=(ssn, race))
@@ -202,7 +206,11 @@ class TestDomainInit(unittest.TestCase):
         with self.assertRaises(ValueError):
             d.index(3)
         with self.assertRaises(ValueError):
+            d.index(np.int_(3))
+        with self.assertRaises(ValueError):
             d.index(-3)
+        with self.assertRaises(ValueError):
+            d.index(np.int_(-3))
         with self.assertRaises(ValueError):
             d.index(incomeA)
         with self.assertRaises(ValueError):
@@ -215,17 +223,22 @@ class TestDomainInit(unittest.TestCase):
         self.assertTrue("AGE" in d)
         self.assertTrue(age in d)
         self.assertTrue(0 in d)
+        self.assertTrue(np.int_(0) in d)
         self.assertTrue("income" in d)
         self.assertTrue(income in d)
         self.assertTrue(2 in d)
+        self.assertTrue(np.int_(2) in d)
         self.assertTrue("SSN" in d)
         self.assertTrue(ssn in d)
         self.assertTrue(-1 in d)
+        self.assertTrue(np.int_(-1) in d)
 
         self.assertFalse("no_such_thing" in d)
         self.assertFalse(race in d)
         self.assertFalse(3 in d)
+        self.assertFalse(np.int_(3) in d)
         self.assertFalse(-2 in d)
+        self.assertFalse(np.int_(-2) in d)
 
         with self.assertRaises(TypeError):
             {} in d
