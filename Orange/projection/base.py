@@ -2,6 +2,7 @@ import inspect
 
 import Orange.data
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.misc.cache import single_cache
 import Orange.preprocess
 
 __all__ = ["Projection", "ProjectionModel", "SklProjection"]
@@ -38,21 +39,14 @@ class Projection:
 
 
 class ProjectionModel:
-    def __init__(self, proj, preprocessors=None):
-        if preprocessors is None:
-            preprocessors = type(self).preprocessors
-        self.preprocessors = tuple(preprocessors)
+    def __init__(self, proj):
         self.__dict__.update(proj.__dict__)
         self.proj = proj
 
+    @single_cache
     def transform(self, X):
         trns = self.proj.transform(X)
         return trns
-
-    def preprocess(self, data):
-        for pp in self.preprocessors:
-            data = pp(data)
-        return data
 
     def __repr__(self):
         return self.name

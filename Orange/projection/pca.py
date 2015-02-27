@@ -18,7 +18,7 @@ class PCA(SklProjection):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.preprocessors)
+        return PCAModel(proj)
 
 
 class SparsePCA(SklProjection):
@@ -34,7 +34,7 @@ class SparsePCA(SklProjection):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.preprocessors)
+        return PCAModel(proj)
 
 
 class RandomizedPCA(SklProjection):
@@ -49,28 +49,28 @@ class RandomizedPCA(SklProjection):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.preprocessors)
+        return PCAModel(proj)
 
 
 class PCAModel(ProjectionModel, metaclass=WrapperMeta):
-    def __init__(self, proj, preprocessors=None):
-        super().__init__(proj=proj, preprocessors=preprocessors)
-        self.n_components = self.components_.shape[0]
-
-    def __call__(self, data):
-        data = self.preprocess(data)
-        Xt = self.transform(data.X)
-
+    def __init__(self, proj):
         def pca_variable(i):
             v = Orange.data.ContinuousVariable('PC %d' % i)
             v.compute_value = Projector(self, i)
             return v
 
-        domain = Orange.data.Domain(
+        super().__init__(proj=proj)
+        self.n_components = self.components_.shape[0]
+        self.projected_domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
-            data.domain.class_vars, data.domain.metas)
+             self.domain.class_vars, self.domain.metas)
+
+    def __call__(self, data):
+        if data.domain is not self.domain:
+            data = Orange.data.Table(self.domain, data)
+        Xt = self.transform(data.X)
         transformed = Orange.data.Table.from_numpy(
-                domain, Xt, Y=data.Y, metas=data.metas)
+                self.projected_domain, Xt, Y=data.Y, metas=data.metas)
         return transformed
 
 
@@ -81,8 +81,7 @@ class Projector:
         self.transformed = None
 
     def __call__(self, data):
-        if data is not self.transformed:
-            self.transformed = self.projection.transform(data.X)
+        self.transformed = self.projection.transform(data.X)
         return self.transformed[:, self.feature]
 
     def __getstate__(self):

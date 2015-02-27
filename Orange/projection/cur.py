@@ -95,7 +95,7 @@ class CUR(Projection):
             self.U_ = np.dot(np.dot(pinvC, X), pinvR)
         else:
             self.U_ = None
-        return CURModel(self, self.preprocessors)
+        return CURModel(self)
 
     def transform(self, X, axis):
         if axis == 0:
@@ -117,11 +117,12 @@ class CUR(Projection):
 
 
 class CURModel(ProjectionModel):
-    def __init__(self, proj, preprocessors=None):
-        super().__init__(proj=proj, preprocessors=preprocessors)
+    def __init__(self, proj):
+        super().__init__(proj=proj)
 
     def __call__(self, data, axis=0):
-        data = self.preprocess(data)
+        if data.domain is not self.domain:
+            data = Orange.data.Table(self.domain, data)
         Xt = self.proj.transform(data.X, axis)
 
         if axis == 0:
