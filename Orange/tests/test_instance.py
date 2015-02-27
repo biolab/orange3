@@ -45,11 +45,9 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain)
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
-        self.assertEqual(inst._values.shape, (len(self.attributes), ))
         self.assertEqual(inst._x.shape, (len(self.attributes), ))
         self.assertEqual(inst._y.shape, (0, ))
         self.assertEqual(inst._metas.shape, (0, ))
-        self.assertTrue(all(isnan(x) for x in inst._values))
         self.assertTrue(all(isnan(x) for x in inst._x))
 
     def test_init_xy_no_data(self):
@@ -57,12 +55,9 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain)
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
-        self.assertEqual(inst._values.shape,
-                         (len(self.attributes) + len(self.class_vars), ))
         self.assertEqual(inst._x.shape, (len(self.attributes), ))
         self.assertEqual(inst._y.shape, (len(self.class_vars), ))
         self.assertEqual(inst._metas.shape, (0, ))
-        self.assertTrue(all(isnan(x) for x in inst._values))
         self.assertTrue(all(isnan(x) for x in inst._x))
         self.assertTrue(all(isnan(x) for x in inst._y))
 
@@ -71,12 +66,9 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain)
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
-        self.assertEqual(inst._values.shape,
-                         (len(self.attributes) + len(self.class_vars), ))
         self.assertEqual(inst._x.shape, (len(self.attributes), ))
         self.assertEqual(inst._y.shape, (len(self.class_vars), ))
         self.assertEqual(inst._metas.shape, (3, ))
-        self.assertTrue(all(isnan(x) for x in inst._values))
         self.assertTrue(all(isnan(x) for x in inst._x))
         self.assertTrue(all(isnan(x) for x in inst._y))
         with warnings.catch_warnings():
@@ -87,7 +79,6 @@ class TestInstance(unittest.TestCase):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")])
         vals = np.array([42, 0])
         inst = Instance(domain, vals)
-        assert_array_equal(inst._values, vals)
         assert_array_equal(inst._x, vals)
         self.assertEqual(inst._y.shape, (0, ))
         self.assertEqual(inst._metas.shape, (0, ))
@@ -104,7 +95,6 @@ class TestInstance(unittest.TestCase):
         lst = [42, 0]
         vals = np.array(lst)
         inst = Instance(domain, vals)
-        assert_array_equal(inst._values, vals)
         assert_array_equal(inst._x, vals)
         self.assertEqual(inst._y.shape, (0, ))
         self.assertEqual(inst._metas.shape, (0, ))
@@ -120,7 +110,6 @@ class TestInstance(unittest.TestCase):
                                     [DiscreteVariable("y", values="ABC")])
         vals = np.array([42, 0, 1])
         inst = Instance(domain, vals)
-        assert_array_equal(inst._values, vals)
         assert_array_equal(inst._x, vals[:2])
         self.assertEqual(inst._y.shape, (1, ))
         self.assertEqual(inst._y[0], 1)
@@ -132,7 +121,6 @@ class TestInstance(unittest.TestCase):
         lst = [42, "M", "C"]
         vals = np.array([42, 0, 2])
         inst = Instance(domain, vals)
-        assert_array_equal(inst._values, vals)
         assert_array_equal(inst._x, vals[:2])
         self.assertEqual(inst._y.shape, (1, ))
         self.assertEqual(inst._y[0], 2)
@@ -146,11 +134,9 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain, vals)
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
-        self.assertEqual(inst._values.shape, (3, ))
         self.assertEqual(inst._x.shape, (2, ))
         self.assertEqual(inst._y.shape, (1, ))
         self.assertEqual(inst._metas.shape, (3, ))
-        assert_array_equal(inst._values, np.array([42, 0, 1]))
         assert_array_equal(inst._x, np.array([42, 0]))
         self.assertEqual(inst._y[0], 1)
         assert_array_equal(inst._metas, np.array([0, 43, "Foo"], dtype=object))
@@ -163,11 +149,9 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain, vals)
         self.assertIsInstance(inst, Instance)
         self.assertIs(inst.domain, domain)
-        self.assertEqual(inst._values.shape, (3, ))
         self.assertEqual(inst._x.shape, (2, ))
         self.assertEqual(inst._y.shape, (1, ))
         self.assertEqual(inst._metas.shape, (3, ))
-        assert_array_equal(inst._values, np.array([42, 0, 1]))
         assert_array_equal(inst._x, np.array([42, 0]))
         self.assertEqual(inst._y[0], 1)
         assert_array_equal(inst._metas, np.array([0, 43, "Foo"], dtype=object))
@@ -180,7 +164,6 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain, vals)
 
         inst2 = Instance(domain, inst)
-        assert_array_equal(inst2._values, np.array([42, 0, 1]))
         assert_array_equal(inst2._x, np.array([42, 0]))
         self.assertEqual(inst2._y[0], 1)
         assert_array_equal(inst2._metas, np.array([0, 43, "Foo"], dtype=object))
@@ -191,7 +174,6 @@ class TestInstance(unittest.TestCase):
         inst2 = Instance(domain2, inst)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
-            assert_array_equal(inst2._values, np.array([Unknown, 0, 43, 1]))
             assert_array_equal(inst2._x, np.array([Unknown, 0, 43]))
             self.assertEqual(inst2._y[0], 1)
             assert_array_equal(inst2._metas, np.array([0, Unknown, 42],

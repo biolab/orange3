@@ -59,7 +59,6 @@ class RowInstance(Instance):
             return 1
         return self.table.W[self.row_index]
 
-    #noinspection PyMethodOverriding
     @weight.setter
     def weight(self, weight):
         if not self.table.has_weights():
@@ -490,20 +489,14 @@ class Table(MutableSequence, Storage):
                     self.X[row] = example._x
                     self._Y[row] = example._y
                 else:
-                    self.X[row] = example._values[:len(domain.attributes)]
-                    self._Y[row] = example._values[len(domain.attributes):]
+                    self.X[row] = example._x
+                    self._Y[row] = example._y
                 self.metas[row] = example._metas
                 return
             c = self.domain.get_conversion(example.domain)
-            self.X[row] = [example._values[i] if isinstance(i, Integral) else
-                           (Unknown if not i else i(example))
-                           for i in c.attributes]
-            self._Y[row] = [example._values[i] if isinstance(i, Integral) else
-                           (Unknown if not i else i(example))
-                           for i in c.class_vars]
-            self.metas[row] = [example._values[i] if isinstance(i, Integral) else
-                               (var.Unknown if not i else i(example))
-                               for i, var in zip(c.metas, domain.metas)]
+
+            self.X[row], self._Y[row], self.metas[row] = \
+                self.domain.convert(example)
             try:
                 self.ids[row] = example.id
             except:

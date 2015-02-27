@@ -364,12 +364,14 @@ class TestDomainInit(unittest.TestCase):
         domain = Domain([age, income], [race],
                         [gender, education, ssn])
 
-        values, metas = domain.convert([42, 13, "White"])
-        assert_array_equal(values, np.array([42, 13, 0]))
+        x, y, metas = domain.convert([42, 13, "White"])
+        assert_array_equal(x, np.array([42, 13]))
+        assert_array_equal(y, np.array([0]))
         assert_array_equal(metas, np.array([Unknown, Unknown, None]))
 
-        values, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
-        assert_array_equal(values, np.array([42, 13, 0]))
+        x, y, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
+        assert_array_equal(x, np.array([42, 13]))
+        assert_array_equal(y, np.array([0]))
         assert_array_equal(metas, np.array([0, 1, "1234567"], dtype=object))
 
     def test_conversion_size(self):
