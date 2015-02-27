@@ -288,7 +288,7 @@ class Table(MutableSequence, Storage):
             if new_cache:
                 Table.conversion_cache = {}
             else:
-                cached = new_cache.get((id(domain), id(source)))
+                cached = Table.conversion_cache.get((id(domain), id(source)))
                 if cached:
                     return cached
             if domain == source.domain:

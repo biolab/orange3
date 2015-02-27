@@ -3,6 +3,8 @@ import numpy as np
 import pickle
 
 import Orange
+from Orange.data import Variable
+from Orange.preprocess import Continuize
 from Orange.projection import PCA, SparsePCA, RandomizedPCA
 
 
@@ -72,3 +74,8 @@ class TestPCA(unittest.TestCase):
 
         pca_iris2 = pickle.loads(pickle.dumps(pca_iris))
         self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)
+
+    def test_chain(self):
+        zoo = Orange.data.Table('zoo')
+        pca = PCA(preprocessors=[Continuize()])(zoo)(zoo)
+        
