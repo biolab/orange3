@@ -1,4 +1,5 @@
 import unittest
+from Orange.data import DiscreteVariable, Domain
 
 import numpy as np
 
@@ -84,6 +85,35 @@ class Scoring_AUC_Test(unittest.TestCase):
         auc = Orange.evaluation.AUC(results)
         self.assertEqual(auc.ndim, 1)
 
+    def test_auc_scores(self):
+        actual = np.array([0., 0., 0., 1., 1., 1.])
+
+        # All wrong
+        self.assertAlmostEqual(
+            self.compute_auc(actual, [1., 1., 1., 0., 0., 0.]), 0.)
+        # All with same probability
+        self.assertAlmostEqual(
+            self.compute_auc(actual, [0., 0., 0., 0., 0., 0.]), 0.5)
+        # All correct
+        self.assertAlmostEqual(
+            self.compute_auc(actual, [0., 0., 0., 1., 1., 1.]), 1.)
+
+        # One wrong
+        self.assertAlmostEqual(
+            self.compute_auc(actual, [0., 0., 0., 1., 1., 0.]), 5/6)
+        # Two wrong
+        self.assertAlmostEqual(
+            self.compute_auc(actual, [1., 1., 0., 1., 1., 1.]), 4/6)
+        # Three wrong
+        self.assertAlmostEqual(
+            self.compute_auc(actual, [1., 1., 0., 1., 1., 0.]), 3/6)
+
+    def compute_auc(self, actual, predicted):
+        predicted = np.array(predicted).reshape(1, -1)
+        results = Orange.evaluation.Results(
+            nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
+            actual=actual, predicted=predicted)
+        return AUC(results)[0]
 
 class Scoring_CD_Test(unittest.TestCase):
     def test_cd_score(self):
