@@ -10,6 +10,14 @@ from Orange.data.sql.table import SqlTable
 from Orange.data.sql import table as sql_table
 
 
+def sql_test(f):
+    try:
+        import psycopg2
+        return unittest.skipIf(not sql_version, "Database is not running.")(f)
+    except:
+        return unittest.skip("Psycopg2 is required for sql tests.")(f)
+
+
 def connection_params():
     return parse_uri(get_dburi())
 
@@ -49,21 +57,10 @@ def parse_uri(uri):
 
 try:
     import psycopg2
-    has_psycopg2 = True
-    try:
-        psycopg2.connect(**connection_params())
-        postgres_running = True
-    except:
-        postgres_running = False
-except ImportError:
-    has_psycopg2 = False
-
-
-def server_version():
-    if postgres_running:
-        with psycopg2.connect(**connection_params()) as conn:
-            return conn.server_version
-    return 0
+    with psycopg2.connect(**connection_params()) as conn:
+        sql_version = conn.server_version
+except:
+    sql_version = 0
 
 
 def create_iris():
@@ -147,7 +144,7 @@ class ParseUriTests(unittest.TestCase):
         self.fail(self._formatMessage(msg, standardMsg))
 
 
-@unittest.skipIf(not postgres_running, "Psycopg2 is required for sql tests.")
+@sql_test
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

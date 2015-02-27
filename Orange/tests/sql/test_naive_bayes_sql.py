@@ -7,10 +7,10 @@ from Orange import preprocess
 from Orange.data.sql.table import SqlTable
 from Orange.data import Domain
 from Orange.data.variable import DiscreteVariable
-from Orange.tests.sql.base import postgres_running
+from Orange.tests.sql.base import sql_test
 
 
-@unittest.skipIf(not postgres_running, "Psycopg2 is required for sql tests.")
+@sql_test
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
         table = SqlTable(dict(host='localhost', database='test'), 'iris',
