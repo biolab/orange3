@@ -362,7 +362,7 @@ class Domain:
             return self
 
     def _compute_col_indices(self, col_idx):
-        if col_idx is Ellipsis:
+        if col_idx is ...:
             return None, None
         if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
             return ([attr for attr, c in zip(self, col_idx) if c],

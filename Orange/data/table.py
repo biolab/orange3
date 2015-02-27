@@ -514,36 +514,6 @@ class Table(MutableSequence, Storage):
             self.metas[row] = np.array([var.Unknown for var in domain.metas],
                                        dtype=object)
 
-    # Helper function for __setitem__ and insert:
-    # Return a list of new attributes and column indices,
-    #  or (None, self.col_indices) if no new domain needs to be constructed
-    def _compute_col_indices(self, col_idx):
-        if col_idx is ...:
-            return None, None
-        if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
-            return ([attr for attr, c in zip(self.domain, col_idx) if c],
-                    np.nonzero(col_idx))
-        elif isinstance(col_idx, slice):
-            s = len(self.domain.variables)
-            start, end, stride = col_idx.indices(s)
-            if col_idx.indices(s) == (0, s, 1):
-                return None, None
-            else:
-                return (self.domain.variables[col_idx],
-                        np.arange(start, end, stride))
-        elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
-            attributes = [self.domain[col] for col in col_idx]
-            if attributes == self.domain.attributes:
-                return None, None
-            return attributes, np.fromiter(
-                (self.domain.index(attr) for attr in attributes), int)
-        elif isinstance(col_idx, Integral):
-            attr = self.domain[col_idx]
-        else:
-            attr = self.domain[col_idx]
-            col_idx = self.domain.index(attr)
-        return [attr], np.array([col_idx])
-
     def _check_all_dense(self):
         return all(x in (Storage.DENSE, Storage.MISSING)
                    for x in (self.X_density(), self.Y_density(),
@@ -610,7 +580,7 @@ class Table(MutableSequence, Storage):
 
         # multiple rows OR single row but multiple columns:
         # construct a new table
-        attributes, col_indices = self._compute_col_indices(col_idx)
+        attributes, col_indices = self.domain._compute_col_indices(col_idx)
         if attributes is not None:
             n_attrs = len(self.domain.attributes)
             r_attrs = [attributes[i]
@@ -673,7 +643,7 @@ class Table(MutableSequence, Storage):
                     self.metas[row_idx, -1 - col_idx] = value
 
         # multiple rows, multiple columns
-        attributes, col_indices = self._compute_col_indices(col_idx)
+        attributes, col_indices = self.domain._compute_col_indices(col_idx)
         if col_indices is ...:
             col_indices = range(len(self.domain))
         n_attrs = self.X.shape[1]
