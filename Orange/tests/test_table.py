@@ -1351,6 +1351,35 @@ class CreateTableWithData(TableTests):
         new_from_numpy.assert_called_with(domain, self.data, self.class_data,
                                           self.meta_data, self.weight_data)
 
+    def test_from_numpy_reconstructable(self):
+        def assert_equal(T1, T2):
+            np.testing.assert_array_equal(T1.X, T2.X)
+            np.testing.assert_array_equal(T1.Y, T2.Y)
+            np.testing.assert_array_equal(T1.metas, T2.metas)
+            np.testing.assert_array_equal(T1.W, T2.W)
+
+        nullcol = np.empty((self.nrows, 0))
+        domain = self.create_domain(self.attributes)
+        table = data.Table(domain, self.data)
+
+        table_1 = data.Table.from_numpy(
+            domain, table.X, table.Y, table.metas, table.W)
+        assert_equal(table, table_1)
+
+        domain = self.create_domain(classes=self.class_vars)
+        table = data.Table(domain, nullcol, self.class_data)
+
+        table_1 = data.Table.from_numpy(
+            domain, table.X, table.Y, table.metas, table.W)
+        assert_equal(table, table_1)
+
+        domain = self.create_domain(metas=self.metas)
+        table = data.Table(domain, nullcol, nullcol, self.meta_data)
+
+        table_1 = data.Table.from_numpy(
+            domain, table.X, table.Y, table.metas, table.W)
+        assert_equal(table, table_1)
+
 
 class CreateTableWithDomainAndTable(TableTests):
     interesting_slices = [

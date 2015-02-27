@@ -175,27 +175,27 @@ class Table(MutableSequence, Storage):
         if 'filename' in kwargs:
             args = [kwargs.pop('filename')]
 
-        try:
-            if isinstance(args[0], str):
-                if args[0].startswith('https://') or args[0].startswith('http://'):
-                    return cls.from_url(args[0], **kwargs)
-                else:
-                    return cls.from_file(args[0], **kwargs)
-            elif isinstance(args[0], Table):
-                return cls.from_table(args[0].domain, args[0])
-            elif isinstance(args[0], orange_domain.Domain):
-                domain, args = args[0], args[1:]
-                if not args:
-                    return cls.from_domain(domain, **kwargs)
-                if isinstance(args[0], Table):
-                    return cls.from_table(domain, args[0])
-            else:
-                domain = None
+        if not args:
+            raise TypeError(
+                "Table takes at least 1 positional argument (0 given))")
 
-            return cls.from_numpy(domain, *args, **kwargs)
-        except IndexError:
-            pass
-        raise ValueError("Invalid arguments for Table.__new__")
+        if isinstance(args[0], str):
+            if args[0].startswith('https://') or args[0].startswith('http://'):
+                return cls.from_url(args[0], **kwargs)
+            else:
+                return cls.from_file(args[0], **kwargs)
+        elif isinstance(args[0], Table):
+            return cls.from_table(args[0].domain, args[0])
+        elif isinstance(args[0], orange_domain.Domain):
+            domain, args = args[0], args[1:]
+            if not args:
+                return cls.from_domain(domain, **kwargs)
+            if isinstance(args[0], Table):
+                return cls.from_table(domain, args[0])
+        else:
+            domain = None
+
+        return cls.from_numpy(domain, *args, **kwargs)
 
     @classmethod
     def from_domain(cls, domain, n_rows=0, weights=False):
@@ -388,7 +388,7 @@ class Table(MutableSequence, Storage):
                 X = X[:, :len(domain.attributes)]
         if metas is None:
             metas = np.empty((X.shape[0], 0), object)
-        if W is None:
+        if W is None or W.size == 0:
             W = np.empty((X.shape[0], 0))
         else:
             W = W.reshape(W.size, 1)
