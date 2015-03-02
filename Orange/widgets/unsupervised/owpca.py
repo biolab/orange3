@@ -1,4 +1,3 @@
-import copy
 
 from PyQt4.QtGui import QFormLayout, QColor, QApplication
 from PyQt4.QtCore import Qt
@@ -30,6 +29,7 @@ class OWPCA(widget.OWWidget):
 
         self._invalidated = False
         self._pca = None
+        self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
         self._line = False
@@ -81,7 +81,8 @@ class OWPCA(widget.OWWidget):
 
         if data is not None:
             pca = Orange.projection.PCA()
-            self._pca = pca.fit(self.data.X)
+            self._pca = pca(self.data)
+            self._transformed = None
             self._variance_ratio = self._pca.explained_variance_ratio_
             self._cumulative = numpy.cumsum(self._variance_ratio)
             self.components_spin.setRange(0, len(self._cumulative))
@@ -92,6 +93,7 @@ class OWPCA(widget.OWWidget):
     def clear(self):
         self.data = None
         self._pca = None
+        self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
         self._line = None
@@ -123,6 +125,7 @@ class OWPCA(widget.OWWidget):
         axis.setTicks([[(i, "C{}".format(i + 1)) for i in range(p)]])
 
     def _on_cut_changed(self, line):
+        # cut changed by means of a cut line over the scree plot.
         value = line.value()
         current = self._nselected_components()
         components = int(numpy.floor(value)) + 1
@@ -138,16 +141,18 @@ class OWPCA(widget.OWWidget):
             self._invalidate_selection()
 
     def _update_selection(self):
+        # cut changed by "max comp./max variance" spin.
         if self._pca is None:
             return
 
         cut = self._nselected_components()
-        if numpy.floor(self._line.value()) != cut:
-            self._line.setValue(cut)
+        if numpy.floor(self._line.value()) + 1 != cut:
+            self._line.setValue(cut - 1)
 
         self._invalidate_selection()
 
     def _nselected_components(self):
+        """Return the number of selected components."""
         if self._pca is None:
             return 0
 
@@ -177,18 +182,24 @@ class OWPCA(widget.OWWidget):
         transformed = components = None
         if self._pca is not None:
             components = self._pca.components_
+            if self._transformed is None:
+                # Compute the full transform (all components) only once.
+                transformed = self._transformed = self._pca(self.data)
+            else:
+                transformed = self._transformed
+
             ncomponents = self._nselected_components()
-            pca = copy.copy(self._pca)
-            pca.components_ = components[:ncomponents]
-            transformed = pca.transform(self.data.X)
-            features = [Orange.data.ContinuousVariable("C%i" % (i + 1))
-                        for i in range(components.shape[1])]
-            domain1 = Orange.data.Domain(features, self.data.domain.class_vars,
-                                         self.data.domain.metas)
+
+            domain = Orange.data.Domain(
+                transformed.domain.attributes[:ncomponents],
+                self.data.domain.class_vars,
+                self.data.domain.metas
+            )
             transformed = Orange.data.Table.from_numpy(
-                domain1, transformed, Y=self.data.Y, metas=self.data.metas)
-            domain2 = Orange.data.Domain(features)
-            components = Orange.data.Table.from_numpy(domain2, components)
+                domain, transformed.X[:, :ncomponents], Y=transformed.Y,
+                metas=transformed.metas, W=transformed.W
+            )
+            components = Orange.data.Table.from_numpy(None, components)
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
