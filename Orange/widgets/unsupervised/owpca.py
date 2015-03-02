@@ -81,12 +81,17 @@ class OWPCA(widget.OWWidget):
         self.data = data
 
         if data is not None:
-            pca = Orange.projection.PCA()
-            self._pca = pca(self.data)
             self._transformed = None
-            self._variance_ratio = self._pca.explained_variance_ratio_
-            self._cumulative = numpy.cumsum(self._variance_ratio)
-            self.components_spin.setRange(0, len(self._cumulative))
+
+            pca = Orange.projection.PCA()
+            pca = pca(self.data)
+            variance_ratio = pca.explained_variance_ratio_
+            cumulative = numpy.cumsum(variance_ratio)
+            self.components_spin.setRange(0, len(cumulative))
+
+            self._pca = pca
+            self._variance_ratio = variance_ratio
+            self._cumulative = cumulative
             self._setup_plot()
 
         self.commit()
@@ -115,7 +120,9 @@ class OWPCA(widget.OWWidget):
                        name="Cumulative Variance")
 
         self._line = pg.InfiniteLine(
-            angle=90, pos=1, movable=True, bounds=(0, p - 1))
+            angle=90, pos=self._nselected_components() - 1, movable=True,
+            bounds=(0, p - 1)
+        )
         self._line.setCursor(Qt.SizeHorCursor)
         self._line.setPen(pg.mkPen(QColor(Qt.darkGray), width=1.5))
         self._line.sigPositionChanged.connect(self._on_cut_changed)
