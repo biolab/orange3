@@ -70,6 +70,7 @@ class OWPCA(widget.OWWidget):
         axis.setLabel("Proportion of variance")
 
         self.plot.getViewBox().setMenuEnabled(False)
+        self.plot.getViewBox().setMouseEnabled(False, False)
         self.plot.showGrid(True, True, alpha=0.5)
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
 
