@@ -7,7 +7,7 @@
 	<key>CFBundleIconFile</key>
 	<string>orange.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>si.ailab.Orange</string>
+	<string>si.biolab.Orange</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
