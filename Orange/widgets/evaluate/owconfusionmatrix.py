@@ -220,8 +220,6 @@ class OWConfusionMatrix(widget.OWWidget):
                 self.data.domain.class_vars,
                 metas
             )
-
-
             data = Orange.data.Table.from_numpy(domain, X, Y, M)
             data.ids = row_ids
             data.name = learner_name
