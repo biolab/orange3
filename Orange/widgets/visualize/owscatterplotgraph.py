@@ -422,8 +422,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
-        self.plot_widget.addItem(self.scatterplot_item_sel)
         self.plot_widget.addItem(self.scatterplot_item)
+        self.plot_widget.addItem(self.scatterplot_item_sel)
 
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
