@@ -216,6 +216,7 @@ class OWConfusionMatrix(widget.OWWidget):
             X = self.data.X[row_indices]
             Y = self.data.Y[row_indices]
             M = self.data.metas[row_indices]
+            row_ids = self.data.ids[row_indices]
 
             M = numpy.hstack((M,) + tuple(extra))
             domain = Orange.data.Domain(
@@ -224,7 +225,10 @@ class OWConfusionMatrix(widget.OWWidget):
                 metas
             )
 
+
             data = Orange.data.Table.from_numpy(domain, X, Y, M)
+            data.ids = row_ids
+            data.name = learner_name
 
         else:
             data = None
