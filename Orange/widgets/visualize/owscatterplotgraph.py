@@ -770,7 +770,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             for i, p in enumerate(points):
                 index = p.data()
                 text += "Attributes:\n"
-                if self.tooltip_shows_all:
+                if self.tooltip_shows_all and \
+                        len(self.data_domain.attributes) < 30:
                     text += "".join(
                         '   {} = {}\n'.format(attr.name,
                                               self.raw_data[index][attr])
@@ -779,6 +780,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     text += '   {} = {}\n   {} = {}\n'.format(
                         self.shown_x, self.raw_data[index][self.shown_x],
                         self.shown_y, self.raw_data[index][self.shown_y])
+                    if self.tooltip_shows_all:
+                        text += "   ... and {} others\n\n".format(
+                            len(self.data_domain.attributes) - 2)
                 if self.data_domain.class_var:
                     text += 'Class:\n   {} = {}\n'.format(
                         self.data_domain.class_var.name,
