@@ -26,7 +26,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 
 # TODO Move utility classes to another module, so they can be used elsewhere
 
-SELECTION_WIDTH = 5
+SELECTION_WIDTH = 4
 
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
@@ -419,7 +419,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         )
         self.scatterplot_item_sel = ScatterPlotItem(
             x=x_data, y=y_data, data=np.arange(self.n_points),
-            symbol=shape_data, size=size_data+SELECTION_WIDTH, 
+            symbol=shape_data, size=size_data+SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
         self.plot_widget.addItem(self.scatterplot_item_sel)
@@ -504,7 +504,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not keep_colors:
             self.pen_colors = self.brush_colors = None
         color_index = self.get_color_index()
-        
+
         def make_pen(color, width):
             p = QPen(color, width)
             p.setCosmetic(True)
@@ -512,7 +512,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         subset = None
         if self.subset_indices:
-            subset = np.array([ ex.id in self.subset_indices 
+            subset = np.array([ ex.id in self.subset_indices
                 for ex in self.raw_data[self.valid_data] ])
 
         if color_index == -1: #color = "Same color"
