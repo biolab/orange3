@@ -142,12 +142,13 @@ class OWDataSampler(widget.OWWidget):
             if self.sampling_type in [self.FixedProportion, self.FixedSize]:
                 remaining, sample = self.indices
                 self.outputInfoLabel.setText(
-                    'Outputting %d instances.' % len(sample))
+                    'Outputting %d instance%s.' %
+                    (len(sample), "s" * (len(sample) != 1)))
             else:
                 remaining, sample = self.indices[self.selectedFold - 1]
                 self.outputInfoLabel.setText(
-                    'Outputting fold %d, %d instances.' %
-                    (self.selectedFold, len(sample))
+                    'Outputting fold %d, %d instance%s.' %
+                    (self.selectedFold, len(sample), "s" * (len(sample) != 1))
                 )
             sample = self.data[sample]
             other = self.data[remaining]
