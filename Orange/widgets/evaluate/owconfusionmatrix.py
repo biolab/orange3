@@ -2,7 +2,7 @@ import unicodedata
 
 from PyQt4.QtGui import (
     QGridLayout, QLabel, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont, QComboBox
+    QItemSelectionModel, QItemSelection, QFont
 )
 from PyQt4.QtCore import Qt
 
@@ -31,9 +31,8 @@ class OWConfusionMatrix(widget.OWWidget):
                 "type": Orange.data.Table}]
 
     quantities = ["Number of instances",
-                  "Observed and expected instances",
                   "Proportion of predicted",
-                  "Proportion of true"]
+                  "Proportion of actual"]
 
     selected_learner = settings.Setting([])
     selected_quantity = settings.Setting(0)
@@ -44,6 +43,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.data = None
         self.results = None
         self.learners = []
         self._invalidated = False
@@ -56,13 +56,10 @@ class OWConfusionMatrix(widget.OWWidget):
         )
         box = gui.widgetBox(self.controlArea, "Show")
 
-        combo = gui.comboBox(box, self, "selected_quantity",
-                             items=self.quantities,
-                             callback=self._update)
-        combo.setMinimumContentsLength(20)
-        combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
+        gui.comboBox(box, self, "selected_quantity", items=self.quantities,
+                     callback=self._update)
 
-        box = gui.widgetBox(self.controlArea, "Selection")
+        box = gui.widgetBox(self.controlArea, "Select")
 
         gui.button(box, self, "Correct",
                    callback=self.select_correct, autoDefault=False)
@@ -73,9 +70,9 @@ class OWConfusionMatrix(widget.OWWidget):
 
         self.outputbox = box = gui.widgetBox(self.controlArea, "Output")
         gui.checkBox(box, self, "append_predictions",
-                     "Append class predictions", callback=self._invalidate)
+                     "Predictions", callback=self._invalidate)
         gui.checkBox(box, self, "append_probabilities",
-                     "Append probabilities",
+                     "Probabilities",
                      callback=self._invalidate)
 
         b = gui.button(box, self, "Commit", callback=self.commit, default=True)
@@ -85,12 +82,10 @@ class OWConfusionMatrix(widget.OWWidget):
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.addWidget(QLabel("Predicted"), 0, 1, Qt.AlignCenter)
-        grid.addWidget(VerticalLabel("Correct Class"), 1, 0, Qt.AlignCenter)
+        grid.addWidget(VerticalLabel("Actual Class"), 1, 0, Qt.AlignCenter)
 
         self.tablemodel = QStandardItemModel()
-        self.tableview = QTableView(
-            editTriggers=QTableView.NoEditTriggers,
-        )
+        self.tableview = QTableView(editTriggers=QTableView.NoEditTriggers)
         self.tableview.setModel(self.tablemodel)
         self.tableview.selectionModel().selectionChanged.connect(
             self._invalidate
@@ -224,8 +219,6 @@ class OWConfusionMatrix(widget.OWWidget):
                 self.data.domain.class_vars,
                 metas
             )
-
-
             data = Orange.data.Table.from_numpy(domain, X, Y, M)
             data.ids = row_ids
             data.name = learner_name
@@ -259,14 +252,10 @@ class OWConfusionMatrix(widget.OWWidget):
             if self.selected_quantity == 0:
                 value = lambda i, j: int(cmatrix[i, j])
             elif self.selected_quantity == 1:
-                priors = numpy.outer(rowsum, colsum) / total
-                value = lambda i, j: \
-                    "{} / {:5.3f}".format(cmatrix[i, j], priors[i, j])
-            elif self.selected_quantity == 2:
                 value = lambda i, j: \
                     ("{:2.1f} %".format(100 * cmatrix[i, j] / colsum[i])
                      if colsum[i] else "N/A")
-            elif self.selected_quantity == 3:
+            elif self.selected_quantity == 2:
                 value = lambda i, j: \
                     ("{:2.1f} %".format(100 * cmatrix[i, j] / rowsum[i])
                      if colsum[i] else "N/A")
@@ -327,9 +316,9 @@ class VerticalLabel(QLabel):
     def paintEvent(self, event):
         painter = QPainter(self)
         rect = self.geometry()
-        textRect = QRect(0, 0, rect.width(), rect.height())
+        text_rect = QRect(0, 0, rect.width(), rect.height())
 
-        painter.translate(textRect.bottomLeft())
+        painter.translate(text_rect.bottomLeft())
         painter.rotate(-90)
         painter.drawText(QRect(QPoint(0, 0),
                                QSize(rect.height(), rect.width())),
