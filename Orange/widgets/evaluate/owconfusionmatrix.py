@@ -31,9 +31,8 @@ class OWConfusionMatrix(widget.OWWidget):
                 "type": Orange.data.Table}]
 
     quantities = ["Number of instances",
-                  "Observed and expected instances",
                   "Proportion of predicted",
-                  "Proportion of true"]
+                  "Proportion of actual"]
 
     selected_learner = settings.Setting([])
     selected_quantity = settings.Setting(0)
@@ -56,13 +55,10 @@ class OWConfusionMatrix(widget.OWWidget):
         )
         box = gui.widgetBox(self.controlArea, "Show")
 
-        combo = gui.comboBox(box, self, "selected_quantity",
-                             items=self.quantities,
+        gui.comboBox(box, self, "selected_quantity", items=self.quantities,
                              callback=self._update)
-        combo.setMinimumContentsLength(20)
-        combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
 
-        box = gui.widgetBox(self.controlArea, "Selection")
+        box = gui.widgetBox(self.controlArea, "Select")
 
         gui.button(box, self, "Correct",
                    callback=self.select_correct, autoDefault=False)
@@ -73,9 +69,9 @@ class OWConfusionMatrix(widget.OWWidget):
 
         self.outputbox = box = gui.widgetBox(self.controlArea, "Output")
         gui.checkBox(box, self, "append_predictions",
-                     "Append class predictions", callback=self._invalidate)
+                     "Predictions", callback=self._invalidate)
         gui.checkBox(box, self, "append_probabilities",
-                     "Append probabilities",
+                     "Probabilities",
                      callback=self._invalidate)
 
         b = gui.button(box, self, "Commit", callback=self.commit, default=True)
@@ -85,7 +81,7 @@ class OWConfusionMatrix(widget.OWWidget):
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.addWidget(QLabel("Predicted"), 0, 1, Qt.AlignCenter)
-        grid.addWidget(VerticalLabel("Correct Class"), 1, 0, Qt.AlignCenter)
+        grid.addWidget(VerticalLabel("Actual Class"), 1, 0, Qt.AlignCenter)
 
         self.tablemodel = QStandardItemModel()
         self.tableview = QTableView(
@@ -259,14 +255,10 @@ class OWConfusionMatrix(widget.OWWidget):
             if self.selected_quantity == 0:
                 value = lambda i, j: int(cmatrix[i, j])
             elif self.selected_quantity == 1:
-                priors = numpy.outer(rowsum, colsum) / total
-                value = lambda i, j: \
-                    "{} / {:5.3f}".format(cmatrix[i, j], priors[i, j])
-            elif self.selected_quantity == 2:
                 value = lambda i, j: \
                     ("{:2.1f} %".format(100 * cmatrix[i, j] / colsum[i])
                      if colsum[i] else "N/A")
-            elif self.selected_quantity == 3:
+            elif self.selected_quantity == 2:
                 value = lambda i, j: \
                     ("{:2.1f} %".format(100 * cmatrix[i, j] / rowsum[i])
                      if colsum[i] else "N/A")
