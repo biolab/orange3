@@ -525,6 +525,7 @@ class OWVennDiagram(widget.OWWidget):
             mask = numpy.array(mask, dtype=bool)
             subset = Orange.data.Table(input.table.domain,
                                        input.table[mask])
+            subset.ids = input.table.ids[mask]
             if len(subset) == 0:
                 continue
 
@@ -1529,7 +1530,9 @@ def append_column(data, where, variable, column):
     else:
         raise ValueError
     domain = Orange.data.Domain(attr, class_vars, metas)
-    return Orange.data.Table.from_numpy(domain, X, Y, M, W if W.size else None)
+    table = Orange.data.Table.from_numpy(domain, X, Y, M, W if W.size else None)
+    table.ids = data.ids
+    return table
 
 
 def drop_columns(data, columns):
