@@ -26,12 +26,12 @@ class OWDataSampler(widget.OWWidget):
     want_main_area = False
 
     RandomSeed = 42
-    FixedSize, FixedProportion, CrossValidation = range(3)
+    FixedProportion, FixedSize, CrossValidation = range(3)
 
     use_seed = Setting(False)
     replacement = Setting(False)
     stratify = Setting(False)
-    sampling_type = Setting(0)
+    sampling_type = Setting(FixedProportion)
     sampleSizeNumber = Setting(1)
     sampleSizePercentage = Setting(70)
     number_of_folds = Setting(10)
@@ -56,6 +56,13 @@ class OWDataSampler(widget.OWWidget):
                 self.sampling_type_changed()
             return f
 
+        gui.appendRadioButton(sampling, "Fixed proportion of data:")
+        self.sampleSizePercentageSlider = gui.hSlider(
+            gui.indentedBox(sampling), self,
+            "sampleSizePercentage",
+            minValue=0, maxValue=100, ticks=10, labelFormat="%d %%",
+            callback=set_sampling_type(self.FixedProportion))
+
         gui.appendRadioButton(sampling, "Fixed sample size:")
         ibox = gui.indentedBox(sampling)
         self.sampleSizeSpin = gui.spin(
@@ -66,13 +73,6 @@ class OWDataSampler(widget.OWWidget):
             ibox, self, "replacement", "Sample with replacement",
             callback=set_sampling_type(self.FixedSize))
         gui.separator(sampling, 12)
-
-        gui.appendRadioButton(sampling, "Fixed proportion of data:")
-        self.sampleSizePercentageSlider = gui.hSlider(
-            gui.indentedBox(sampling), self,
-            "sampleSizePercentage",
-            minValue=0, maxValue=100, ticks=10, labelFormat="%d %%",
-            callback=set_sampling_type(self.FixedProportion))
 
         gui.separator(sampling, 12)
         gui.appendRadioButton(sampling, "Cross Validation:")
