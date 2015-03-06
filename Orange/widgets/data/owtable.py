@@ -328,7 +328,7 @@ class OWDataTable(widget.OWWidget):
                 header.sortIndicatorChanged.connect(sort_reset)
 
             view.dataset = data
-            self.tabs.addTab(view, getattr(data, "name", ""))
+            self.tabs.addTab(view, getattr(data, "name", "Data"))
 
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
