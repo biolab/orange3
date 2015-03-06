@@ -42,6 +42,7 @@ class OWPredictions(widget.OWWidget):
     outputs = [("Predictions", Orange.data.Table),
                ("Evaluation Results", Orange.evaluation.Results)]
 
+    show_orig_attrs = Setting(True)
     show_probabilities = Setting(True)
     show_class = Setting(True)
 
@@ -55,13 +56,15 @@ class OWPredictions(widget.OWWidget):
         )
         self.infolabel.setMinimumWidth(200)
 
-        box = gui.widgetBox(self.controlArea, "Options")
-        self.checkbox_class = gui.checkBox(box, self, "show_class",
-                                           "Show predicted class",
-                                           callback=self.flipClass)
-        self.checkbox_prob = gui.checkBox(box, self, "show_probabilities",
-                                          "Show predicted probabilities",
-                                          callback=self.flipProb)
+        box = gui.widgetBox(self.controlArea, "Output")
+        self.checkbox_class = gui.checkBox(
+            box, self, "show_orig_attrs", "Original attributes",
+            callback=self.commit)
+        self.checkbox_class = gui.checkBox(
+            box, self, "show_class", "Predictions", callback=self.commit)
+        self.checkbox_prob = gui.checkBox(
+            box, self, "show_probabilities", "Predicted probabilities",
+            callback=self.commit)
         QtGui.qApp.processEvents()
         QtCore.QTimer.singleShot(0, self.fix_size)
 
@@ -198,20 +201,25 @@ class OWPredictions(widget.OWWidget):
             newcolumns.extend(p.results[0].reshape((-1, 1))
                               for p in slots)
 
-        domain = Orange.data.Domain(self.data.domain.attributes,
-                                    self.data.domain.class_var,
-                                    metas=tuple(newattrs))
+        if self.show_orig_attrs:
+            X = [self.data.X]
+            attrs = list(self.data.domain.attributes) + newattrs
+        else:
+            X = []
+            attrs = newattrs
+        domain = Orange.data.Domain(attrs, self.data.domain.class_var,
+                                    metas=self.data.domain.metas)
 
         if newcolumns:
-            newcolumns = [numpy.atleast_2d(cols) for cols in newcolumns]
-            newcolumns = numpy.hstack(tuple(newcolumns))
+            X.extend(numpy.atleast_2d(cols) for cols in newcolumns)
+        if X:
+            X = numpy.hstack(tuple(X))
         else:
-            newcolumns = None
+            X = numpy.zeros((len(self.data), 0))
 
+        print("XXX", X.shape)
         predictions = Orange.data.Table.from_numpy(
-            domain, self.data.X, self.data.Y, metas=newcolumns
-        )
-
+            domain, X, self.data.Y, metas=self.data.metas)
         predictions.name = self.data.name
 
         results = None
