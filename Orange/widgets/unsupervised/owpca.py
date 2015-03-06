@@ -19,7 +19,7 @@ class OWPCA(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Transformed data", Orange.data.Table),
                ("Components", Orange.data.Table)]
-    max_components = settings.Setting(0)
+    ncomponents = settings.Setting(0)
     variance_covered = settings.Setting(100)
     auto_commit = settings.Setting(True)
 
@@ -39,20 +39,20 @@ class OWPCA(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.components_spin = gui.spin(
-            box, self, "max_components", 0, 1000,
-            callback=self._update_selection,
+            box, self, "ncomponents", 0, 1000,
+            callback=self._update_selection_component_spin,
             keyboardTracking=False
         )
         self.components_spin.setSpecialValueText("All")
 
         self.variance_spin = gui.spin(
             box, self, "variance_covered", 1, 100,
-            callback=self._update_selection,
+            callback=self._update_selection_variance_spin,
             keyboardTracking=False
         )
         self.variance_spin.setSuffix("%")
 
-        form.addRow("Max components", self.components_spin)
+        form.addRow("Components", self.components_spin)
         form.addRow("Variance covered", self.variance_spin)
 
         self.controlArea.layout().addStretch()
@@ -138,9 +138,9 @@ class OWPCA(widget.OWWidget):
         current = self._nselected_components()
         components = int(numpy.floor(value)) + 1
 
-        if not (self.max_components == 0 and
+        if not (self.ncomponents == 0 and
                 components == len(self._variance_ratio)):
-            self.max_components = components
+            self.ncomponents = components
 
         if self._pca is not None:
             self.variance_covered = self._cumulative[components - 1] * 100
@@ -148,12 +148,31 @@ class OWPCA(widget.OWWidget):
         if current != self._nselected_components():
             self._invalidate_selection()
 
-    def _update_selection(self):
-        # cut changed by "max comp./max variance" spin.
+    def _update_selection_component_spin(self):
+        # cut changed by "ncomponents" spin.
         if self._pca is None:
             return
 
-        cut = self._nselected_components()
+        if self.ncomponents == 0:
+            # Special "All" value
+            cut = len(self._variance_ratio)
+        else:
+            cut = self.ncomponents
+        self.variance_covered = self._cumulative[cut - 1] * 100
+
+        if numpy.floor(self._line.value()) + 1 != cut:
+            self._line.setValue(cut - 1)
+
+        self._invalidate_selection()
+
+    def _update_selection_variance_spin(self):
+        # cut changed by "max variance" spin.
+        if self._pca is None:
+            return
+
+        cut = numpy.searchsorted(self._cumulative, self.variance_covered / 100.0)
+        self.ncomponents = cut
+
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
 
@@ -164,19 +183,21 @@ class OWPCA(widget.OWWidget):
         if self._pca is None:
             return 0
 
-        if self.max_components == 0:
+        if self.ncomponents == 0:
             # Special "All" value
             max_comp = len(self._variance_ratio)
         else:
-            max_comp = self.max_components
+            max_comp = self.ncomponents
 
         var_max = self._cumulative[max_comp - 1]
-        if var_max < self.variance_covered:
+        if var_max != numpy.floor(self.variance_covered / 100.0):
             cut = max_comp
+            self.variance_covered = var_max * 100
         else:
             cut = numpy.searchsorted(
                 self._cumulative, self.variance_covered / 100.0
             )
+            self.ncomponents = cut
         return cut
 
     def _invalidate_selection(self):
@@ -196,15 +217,13 @@ class OWPCA(widget.OWWidget):
             else:
                 transformed = self._transformed
 
-            ncomponents = self._nselected_components()
-
             domain = Orange.data.Domain(
-                transformed.domain.attributes[:ncomponents],
+                transformed.domain.attributes[:self.ncomponents],
                 self.data.domain.class_vars,
                 self.data.domain.metas
             )
             transformed = Orange.data.Table.from_numpy(
-                domain, transformed.X[:, :ncomponents], Y=transformed.Y,
+                domain, transformed.X[:, :self.ncomponents], Y=transformed.Y,
                 metas=transformed.metas, W=transformed.W
             )
             components = Orange.data.Table.from_numpy(None, components)
