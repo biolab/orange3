@@ -783,6 +783,8 @@ from Orange.widgets.data.owmergedata import group_table_indices
 
 
 def unique_non_nan(ar):
+    # metas have sometimes object dtype, but values are numpy floats
+    ar = ar.astype('float64')
     uniq = numpy.unique(ar)
     return uniq[~numpy.isnan(uniq)]
 
