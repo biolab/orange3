@@ -205,12 +205,11 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         return text
 
     def update_selection(self):
-        if self.dataset is None or self.classifier is None:
+        if self.dataset is None or self.classifier is None or self.tree is None:
             return
         data = self.dataset
         if data.domain != self.classifier.domain:
-            for domain in self.classifier.domains:
-                data = data.from_table(domain, data)
+            self.dataset = data.from_table(self.classifier.domain, data)
 
         items = [item for item in self.scene.selectedItems()
                  if isinstance(item, ClassificationTreeNode)]
