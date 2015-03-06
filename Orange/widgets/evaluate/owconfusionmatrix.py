@@ -2,7 +2,7 @@ import unicodedata
 
 from PyQt4.QtGui import (
     QGridLayout, QLabel, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont, QComboBox
+    QItemSelectionModel, QItemSelection, QFont
 )
 from PyQt4.QtCore import Qt
 
@@ -43,6 +43,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.data = None
         self.results = None
         self.learners = []
         self._invalidated = False
@@ -56,7 +57,7 @@ class OWConfusionMatrix(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Show")
 
         gui.comboBox(box, self, "selected_quantity", items=self.quantities,
-                             callback=self._update)
+                     callback=self._update)
 
         box = gui.widgetBox(self.controlArea, "Select")
 
@@ -84,9 +85,7 @@ class OWConfusionMatrix(widget.OWWidget):
         grid.addWidget(VerticalLabel("Actual Class"), 1, 0, Qt.AlignCenter)
 
         self.tablemodel = QStandardItemModel()
-        self.tableview = QTableView(
-            editTriggers=QTableView.NoEditTriggers,
-        )
+        self.tableview = QTableView(editTriggers=QTableView.NoEditTriggers)
         self.tableview.setModel(self.tablemodel)
         self.tableview.selectionModel().selectionChanged.connect(
             self._invalidate
@@ -317,9 +316,9 @@ class VerticalLabel(QLabel):
     def paintEvent(self, event):
         painter = QPainter(self)
         rect = self.geometry()
-        textRect = QRect(0, 0, rect.width(), rect.height())
+        text_rect = QRect(0, 0, rect.width(), rect.height())
 
-        painter.translate(textRect.bottomLeft())
+        painter.translate(text_rect.bottomLeft())
         painter.rotate(-90)
         painter.drawText(QRect(QPoint(0, 0),
                                QSize(rect.height(), rect.width())),
