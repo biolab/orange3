@@ -474,6 +474,8 @@ class DiscreteVariable(Variable):
                 continue
             if not values:
                 break  # we have the variable - any existing values are OK
+            if not set(var.values) & set(values):
+                continue  # empty intersection of values; not compatible
             if ordered:
                 i = 0
                 for val in var.values:
@@ -488,8 +490,6 @@ class DiscreteVariable(Variable):
                         var.add_value(val)
                 break  # we have the variable
             else:  # not ordered
-                if var.values and not set(var.values) & set(values):
-                    continue  # empty intersection of values; not compatible
                 vv = set(var.values)
                 for val in values:
                     if val not in vv:
