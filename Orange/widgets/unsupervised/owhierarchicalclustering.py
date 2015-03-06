@@ -1012,27 +1012,25 @@ class OWHierarchicalClustering(widget.OWWidget):
                     str(self.cluster_name),
                     values=["Cluster {}".format(i + 1)
                             for i in range(len(maps))] +
-                           ["Other"]
+                           ["Other"], ordered=True
                 )
                 data, domain = items, items.domain
 
                 attrs = domain.attributes
                 class_ = domain.class_vars
                 metas = domain.metas
+                modify = None
 
-                X, Y, M = data.X, data.Y, data.metas
                 if self.cluster_role == self.AttributeRole:
                     attrs = attrs + (clust_var,)
-                    X = numpy.c_[X, c]
                 elif self.cluster_role == self.ClassRole:
                     class_ = class_ + (clust_var,)
-                    Y = numpy.c_[Y, c]
                 elif self.cluster_role == self.MetaRole:
                     metas = metas + (clust_var,)
-                    M = numpy.c_[M, c]
 
                 domain = Orange.data.Domain(attrs, class_, metas)
-                data = Orange.data.Table(domain, X, Y, M)
+                data = Orange.data.Table(domain, data)
+                data.get_column_view(domain.index(clust_var))[0][:] = c
             else:
                 data = items
 
