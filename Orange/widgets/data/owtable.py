@@ -92,6 +92,10 @@ class RichTableDecorator(QIdentityProxyModel):
             return super().data(index, role)
 
     def headerData(self, section, orientation, role):
+        # QIdentityProxyModel doesn’t show headers for empty models
+        if self.sourceModel:
+            return self.sourceModel().headerData(section, orientation, role)
+        
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             var = super().headerData(
                 section, orientation, TableModel.VariableRole)
