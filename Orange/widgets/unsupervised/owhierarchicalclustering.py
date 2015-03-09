@@ -1019,7 +1019,6 @@ class OWHierarchicalClustering(widget.OWWidget):
                 attrs = domain.attributes
                 class_ = domain.class_vars
                 metas = domain.metas
-                modify = None
 
                 if self.cluster_role == self.AttributeRole:
                     attrs = attrs + (clust_var,)
@@ -1030,7 +1029,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
                 domain = Orange.data.Domain(attrs, class_, metas)
                 data = Orange.data.Table(domain, data)
-                data.get_column_view(domain.index(clust_var))[0][:] = c
+                data.get_column_view(clust_var)[0][:] = c
             else:
                 data = items
 
