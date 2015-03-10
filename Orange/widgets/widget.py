@@ -5,10 +5,9 @@ import os
 import warnings
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
-    QDir
+    QDir, QEvent, QSize, QPoint, QTimer
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
-    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget, QStyle,\
-    QApplication
+    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QStyle, QPushButton
 
 from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
@@ -165,14 +164,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.setLayout(QVBoxLayout())
         self.layout().setMargin(2)
 
-        self.warning_bar = gui.widgetBox(self, orientation="horizontal",
-                                         margin=0, spacing=0)
-        self.warning_icon = gui.widgetLabel(self.warning_bar, "")
-        self.warning_label = gui.widgetLabel(self.warning_bar, "")
-        self.warning_label.setStyleSheet("padding-top: 5px")
-        self.warning_bar.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        gui.rubber(self.warning_bar)
-        self.warning_bar.setVisible(False)
+        self.__warningwidget = None
 
         self.topWidgetPart = gui.widgetBox(self,
                                            orientation="horizontal", margin=0)
@@ -610,30 +602,33 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return changed
 
     def set_warning_bar(self, state_type, text=None, tooltip=None):
-        colors = {"Error": ("#ffc6c6", "black", QStyle.SP_MessageBoxCritical),
-                  "Warning": ("#ffffc9", "black", QStyle.SP_MessageBoxWarning),
-                  "Info": ("#ceceff", "black", QStyle.SP_MessageBoxInformation)}
-        current_height = self.height()
-        if state_type is None:
-            if not self.warning_bar.isHidden():
-                new_height = current_height - self.warning_bar.height()
-                self.warning_bar.setVisible(False)
-                self.resize(self.width(), new_height)
-            return
+        colors = {"Error": ("rgba(255, 198, 198, 230)", "black", QStyle.SP_MessageBoxCritical),
+                  "Warning": ("rgba(255, 255, 201, 230)", "black", QStyle.SP_MessageBoxWarning),
+                  "Info": ("rgba(206, 206, 255, 230)", "black", QStyle.SP_MessageBoxInformation),
+                  None: (None, None, None)}
         background, foreground, icon = colors[state_type]
-        style = QApplication.instance().style()
-        self.warning_icon.setPixmap(style.standardIcon(icon).pixmap(14, 14))
 
-        self.warning_bar.setStyleSheet(
-            "background-color: {}; color: {};"
-            "padding: 3px; padding-left: 6px; vertical-align: center".
-            format(background, foreground))
-        self.warning_label.setText(text)
-        self.warning_label.setToolTip(tooltip)
-        if self.warning_bar.isHidden():
-            self.warning_bar.setVisible(True)
-            new_height = current_height + self.warning_bar.height()
-            self.resize(self.width(), new_height)
+        if self.__warningwidget is None and state_type is not None:
+            self.__warningwidget = MessageOverlayWidget(self)
+            self.__warningwidget.setWidget(self)
+
+        if state_type is not None:
+            stylesheet = (
+                "MessageOverlayWidget {{ "
+                "background-color: {}; "  # color: {};"
+                # "padding: 3px; padding-left: 6px; vertical-align: center; "
+                "}}".format(background)
+            )
+        else:
+            stylesheet = ""
+
+        if self.__warningwidget is not None:
+#             self.__warningwidget.setTimeout(5 * 1000)
+#             self.__warningwidget.setAnchor(Qt.AnchorBottom)
+            self.__warningwidget.setIcon(icon)
+            self.__warningwidget.showMessage(text)
+            self.__warningwidget.setToolTip(tooltip)
+            self.__warningwidget.setStyleSheet(stylesheet)
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
         pixmaps = self.getWidgetStateIcons()
@@ -704,6 +699,230 @@ def blocking(method):
             return method(self, *args, **kwargs)
         finally:
             self.setBlocking(old)
+
+
+class MessageOverlayWidget(QFrame):
+    """
+    Overlay message widget.
+    """
+    def __init__(self, parent=None, message=None, timeout=None, icon=QIcon(),
+                 anchor=Qt.AnchorTop, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setFocusPolicy(Qt.NoFocus)
+        layout = QHBoxLayout()
+
+        self.iconlabel = QLabel()
+        self.messagelabel = QLabel()
+        self.messagelabel.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Fixed
+        )
+
+        button = QPushButton("Dismiss", self, default=False, autoDefault=False)
+        button.pressed.connect(self.__hide)
+
+        if sys.platform == "darwin":
+            button.setAttribute(Qt.WA_MacSmallSize)
+            self.messagelabel.setAttribute(Qt.WA_MacSmallSize)
+        layout.addWidget(self.iconlabel)
+        layout.addWidget(self.messagelabel)
+        layout.addWidget(button)
+
+        layout.setContentsMargins(8, 0, 8, 0)
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        self.autohidetimer = QTimer(self, singleShot=True)
+        self.autohidetimer.timeout.connect(self.__hide)
+
+        self.__widget = None
+
+        self.__message = None
+        if message is not None:
+            self.setMessage(message)
+
+        self.__timeout = None
+        if timeout is not None:
+            self.setTimeout(timeout)
+
+        self.__icon = QIcon()
+        if not icon.isNull():
+            self.setIcon(icon)
+
+        self.__anchor = anchor
+        self.__showpending = False
+
+    def setWidget(self, widget):
+        """
+        Set the widget over which this overlay should be displayed.
+        """
+        if widget is self.__widget:
+            return
+
+        if self.__widget is not None:
+            self.__widget.removeEventFilter(self)
+            self.__widget.destroyed.disconnect(self.__destroyed)
+
+        self.__widget = widget
+        if self.__widget is not None:
+            self.__widget.installEventFilter(self)
+            self.__widget.destroyed.connect(self.__destroyed)
+            self.__updateGeometry()
+
+    def widget(self):
+        """
+        Return the overlaid widget.
+        """
+        return self.__widget
+
+    def showMessage(self, message):
+        """
+        Set the displayed message to `message` then show/hide the overlay.
+
+        The widget is hidden if the message is empty.
+        """
+        self.setMessage(message)
+        if message:
+            self.__show()
+        else:
+            self.__hide()
+
+    def setMessage(self, message):
+        """
+        Set the current message text.
+
+        Does not affect the widget visibility, use `showMessage` to force
+        """
+        if message != self.__message:
+            self.__message = message
+            self.messagelabel.setText(message)
+
+    def message(self):
+        """
+        Return the current message text
+        """
+        return self.__message
+
+    def setTimeout(self, timeout):
+        """
+        Set the message timeout.
+        """
+        if self.__timeout != timeout:
+            self.__timeout = timeout
+            if timeout is None:
+                self.autohidetimer.stop()
+            else:
+                self.autohidetimer.setInterval(timeout)
+
+    def timeout(self):
+        """
+        Return the current message timeout.
+        """
+        return self.__timeout
+
+    def setIcon(self, icon):
+        """
+        Set the message icon.
+        """
+        if isinstance(icon, QStyle.StandardPixmap):
+            icon = self.style().standardIcon(icon)
+        icon = QIcon(icon)
+        if icon != self.__icon:
+            self.__icon = icon
+            size = self.style().pixelMetric(
+                QStyle.PM_SmallIconSize, None, self)
+            self.iconlabel.setPixmap(icon.pixmap(QSize(size, size)))
+
+    def icon(self):
+        """
+        Return the message icon.
+        """
+        return QIcon(self.__icon)
+
+    def setAnchor(self, anchor):
+        """
+        Set the overlay anchor position over widget.
+
+        Can be Qt.AnchorTop or Qt.AnchorBottom.
+        """
+        if anchor not in [Qt.AnchorTop, Qt.AnchorBottom]:
+            raise ValueError
+        if self.__anchor != anchor:
+            self.__anchor = anchor
+            if self.__widget:
+                self.__updateGeometry()
+
+    def anchor(self):
+        """
+        Return the overlay anchor position.
+        """
+        return self.__anchor
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.__showpending = False
+        if self.__timeout:
+            self.autohidetimer.start(self.__timeout)
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        if self.autohidetimer.isActive():
+            self.autohidetimer.stop()
+
+    def eventFilter(self, recv, event):
+        if recv is self.__widget:
+            etype = event.type()
+            if etype == QEvent.Move or etype == QEvent.Resize:
+                self.__updateGeometry()
+            elif etype == QEvent.Show:
+                if self.__showpending:
+                    # The widget was hidden when showMessage was called.
+                    # Call __show again to show and reset the autohide timer.
+                    self.__show()
+            elif etype == QEvent.Hide:
+                self.__hide()
+        return super().eventFilter(recv, event)
+
+    def __updateGeometry(self):
+        widget = self.__widget
+
+        if widget.isWindow():
+            anchor = widget.geometry().topLeft()
+        else:
+            anchor = widget.parent().mapToGlobal(widget.pos())
+
+        if self.isWindow():
+            widgetpos = anchor
+        else:
+            widgetpos = self.parent().mapFromGlobal(anchor)
+
+        if self.__anchor == Qt.AnchorBottom:
+            dh = widget.height() - self.height()
+            widgetpos = QPoint(widgetpos.x(), widgetpos.y() + dh)
+
+        self.move(widgetpos)
+
+        width = widget.width()
+        self.setFixedWidth(width)
+
+    def __hide(self):
+        if self.__widget is not None and self.__widget.isVisible():
+            self.__showpending = False
+        self.setVisible(False)
+        self.autohidetimer.stop()
+
+    def __show(self):
+        self.__showpending = True
+        self.setVisible(True)
+        self.raise_()
+
+        if self.__timeout is not None:
+            self.autohidetimer.start(self.__timeout)
+
+    def __destroyed(self):
+        self.__widget = None
+        if self.isVisible():
+            self.hide()
+            self.autohidetimer.stop()
 
 
 # Pull signal constants from canvas to widget namespace
