@@ -232,8 +232,8 @@ class InteractiveViewBox(ViewBox):
         self.axHistory = []
         self.axHistoryPointer = -1
 
-    def autoRange(self):
-        super().autoRange()
+    def autoRange(self, padding=None, items=None, item=None):
+        super().autoRange(padding=padding, items=items, item=item)
         self.tag_history()
 
     def suggestPadding(self, axis): #no padding so that undo works correcty
@@ -419,11 +419,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         )
         self.scatterplot_item_sel = ScatterPlotItem(
             x=x_data, y=y_data, data=np.arange(self.n_points),
-            symbol=shape_data, size=size_data+SELECTION_WIDTH,
+            symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
-        self.plot_widget.addItem(self.scatterplot_item_sel)
         self.plot_widget.addItem(self.scatterplot_item)
+        self.plot_widget.addItem(self.scatterplot_item_sel)
 
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
@@ -432,7 +432,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.make_legend()
         self.view_box.init_history()
         self.plot_widget.replot()
-        self.view_box.autoRange()
+
+        min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
+        min_y, max_y = np.nanmin(y_data), np.nanmax(y_data)
+        self.view_box.setRange(
+            QRectF(min_x, min_y, max_x - min_x, max_y - min_y),
+            padding=0.025)
+        self.view_box.tag_history()
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
@@ -467,7 +473,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item:
             size_data = self.compute_sizes()
             self.scatterplot_item.setSize(size_data)
-            self.scatterplot_item_sel.setSize(size_data+SELECTION_WIDTH)
+            self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
     update_point_size = update_sizes
 
@@ -491,13 +497,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             p.setCosmetic(True)
             return p
 
-        pens = [ make_pen(QColor(255, 190, 0, 0), SELECTION_WIDTH+1.),
-                 make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH+1.) ]
+        pens = [ QPen(Qt.NoPen),
+                 make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1.) ]
         if self.selection is not None:
             pen = [ pens[a] for a in self.selection ]
         else:
             pen = [pens[0]] * self.n_points
-        brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
+        brush = [QBrush(Qt.NoBrush)] * self.n_points
         return pen, brush
 
     def compute_colors(self, keep_colors=False):
