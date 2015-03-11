@@ -21,7 +21,6 @@ from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
 
-
 def get_sample_datasets_dir():
     orange_data_table = os.path.dirname(__file__)
     dataset_dir = os.path.join(orange_data_table, '..', 'datasets')
@@ -905,11 +904,11 @@ class Table(MutableSequence, Storage):
         # (after pickling and unpickling such arrays, checksum changes)
         # Why, and should we fix it or remove it?
         """Return a checksum over X, Y, metas and W."""
-        cs = zlib.adler32(self.X)
-        cs = zlib.adler32(self._Y, cs)
+        cs = zlib.adler32(np.ascontiguousarray(self.X))
+        cs = zlib.adler32(np.ascontiguousarray(self._Y), cs)
         if include_metas:
-            cs = zlib.adler32(self.metas, cs)
-        cs = zlib.adler32(self.W, cs)
+            cs = zlib.adler32(np.ascontiguousarray(self.metas), cs)
+        cs = zlib.adler32(np.ascontiguousarray(self.W), cs)
         return cs
 
     def shuffle(self):
