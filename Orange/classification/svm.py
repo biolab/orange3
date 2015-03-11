@@ -14,9 +14,9 @@ svm_pps = SklLearner.preprocessors + \
 class SVMClassifier(SklModel):
 
     def predict(self, X):
-        value = self.clf.predict(X)
-        if self.clf.probability:
-            prob = self.clf.predict_proba(X)
+        value = self.skl_model.predict(X)
+        if self.skl_model.probability:
+            prob = self.skl_model.predict_proba(X)
             return value, prob
         return value
 
@@ -54,9 +54,9 @@ class LinearSVMLearner(SklLearner):
 class NuSVMClassifier(SklModel):
 
     def predict(self, X):
-        value = self.clf.predict(X)
-        if self.clf.probability:
-            prob = self.clf.predict_proba(X)
+        value = self.skl_model.predict(X)
+        if self.skl_model.probability:
+            prob = self.skl_model.predict_proba(X)
             return value, prob
         return value
 
