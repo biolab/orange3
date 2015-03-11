@@ -1,10 +1,11 @@
+import itertools
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 import pyqtgraph.graphicsItems.ScatterPlotItem
-from pyqtgraph.graphicsItems.LegendItem import ItemSample
+from pyqtgraph.graphicsItems.LegendItem import LegendItem, ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 from pyqtgraph.Point import Point
@@ -69,49 +70,92 @@ class PaletteItemSample(ItemSample):
             p.drawStaticText(20, i * 15 + 1, label)
 
 
-class PositionedLegendItem(pg.graphicsItems.LegendItem.LegendItem):
-    """
-    LegendItem that remembers its last position. The position is related to the
-    actual widget (it is not retained over sessions). If the widget has multiple
-    legends, they can be assigned different appendices to the id.
+class LegendItem(LegendItem):
+    def __init__(self, size=None, offset=None):
+        super().__init__(size, offset)
 
-    The id of the legend is computed from the widget's id and the optional
-    additional id.
-    """
-    positions = {}
-
-    def __init__(self, plot_item, widget, legend_id="", at_bottom=False):
-        """
-        Construct a legend and insert it into a plot item.
-
-        :param plot_item: PlotItem into which the legend is inserted
-        :type: plot_item: PlotItem
-        :param widget: the widget with which the legend is associated; used
-          only for constructing the id
-        :type widget: object
-        :param legend_id: appendix used to distinguish between multiple legends
-          in the same widget
-        :type legend_id: str
-        :param at_bottom: if `True` (default is `False`) the default legend
-          position is at the bottom
-        :type at_bottom: bool
-        """
-        super().__init__()
-        self.id = "{}-{}".format(id(widget), legend_id)
-        self.layout.setHorizontalSpacing(15)
         self.layout.setVerticalSpacing(0)
-        self.setParentItem(plot_item)
-        position = PositionedLegendItem.positions.get(self.id)
-        if position:
-            self.anchor(itemPos=(0, 0), parentPos=(0, 0), offset=position)
-        elif at_bottom:
-            self.anchor(itemPos=(1, 1), parentPos=(1, 1), offset=(-10, -50))
-        else:
-            self.anchor(itemPos=(1, 0), parentPos=(1, 0), offset=(-10, 10))
+        self.layout.setHorizontalSpacing(15)
 
-    def setParent(self, parent):
-        super().setParent(parent)
-        PositionedLegendItem.positions[self.id] = self.pos()
+
+ANCHORS = {
+    Qt.TopLeftCorner: (0, 0),
+    Qt.TopRightCorner: (1, 0),
+    Qt.BottomLeftCorner: (0, 1),
+    Qt.BottomRightCorner: (1, 1)
+}
+
+
+def corner_anchor(corner):
+    """Return the relative corner coordinates for Qt.Corner
+    """
+    return ANCHORS[corner]
+
+
+def legend_anchor_pos(legend):
+    """
+    Return the legend's anchor positions relative to it's parent.
+
+    .. seealso:: LegendItem.anchor
+
+    """
+    parent = legend.parentItem()
+    rect = legend.geometry()  # in parent coordinates.
+    parent_rect = QRectF(QPointF(0, 0), parent.size())
+
+    # Find the closest corner of rect to parent rect
+    c1, c2, *parentPos = rect_anchor_pos(rect, parent_rect)
+    return corner_anchor(c1), parentPos
+
+
+def rect_anchor_pos(rect, parent_rect):
+    """
+    Find the 'best' anchor corners of rect within parent_rect.
+
+    Returns a tuple of (rect_corner, parent_corner, rx, ry),
+    where rect/parent_corners are Qt.Corners which are closest and
+    rx, ry are the relative positions of the rect_corner within
+    parent_rect
+
+    """
+    # Find the closest corner of rect to parent rect
+    corners = (Qt.TopLeftCorner, Qt.TopRightCorner,
+               Qt.BottomRightCorner, Qt.BottomLeftCorner)
+
+    def rect_corner(rect, corner):
+        if corner == Qt.TopLeftCorner:
+            return rect.topLeft()
+        elif corner == Qt.TopRightCorner:
+            return rect.topRight()
+        elif corner == Qt.BottomLeftCorner:
+            return rect.bottomLeft()
+        elif corner == Qt.BottomRightCorner:
+            return rect.bottomRight()
+        else:
+            assert False
+
+    def corner_dist(c1, c2):
+        d = (rect_corner(rect, c1) - rect_corner(parent_rect, c2))
+        return d.x() ** 2 + d.y() ** 2
+
+    if parent_rect.contains(rect):
+        closest = min(corners,
+                      key=lambda corner: corner_dist(corner, corner))
+        p = rect_corner(rect, closest)
+
+        return (closest, closest,
+                (p.x() - parent_rect.left()) / parent_rect.width(),
+                (p.y() - parent_rect.top()) / parent_rect.height())
+    else:
+
+        c1, c2 = min(itertools.product(corners, corners),
+                     key=lambda pair: corner_dist(*pair))
+
+        p = rect_corner(rect, c1)
+
+        return (c1, c2,
+                (p.x() - parent_rect.left()) / parent_rect.width(),
+                (p.y() - parent_rect.top()) / parent_rect.height())
 
 
 class DiscretizedScale:
@@ -353,6 +397,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.selection_behavior = 0
 
         self.legend = self.color_legend = None
+        self.__legend_anchor = (1, 0), (1, 0)
+        self.__color_legend_anchor = (1, 1), (1, 1)
+
         self.scale = None  # DiscretizedScale
 
         self.subset_indices = None
@@ -651,13 +698,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.legend.setVisible(self.show_legend)
 
     def create_legend(self):
-        self.legend = PositionedLegendItem(self.plot_widget.plotItem, self)
+        self.legend = LegendItem()
+        self.legend.setParentItem(self.plot_widget.getViewBox())
+        self.legend.anchor(*self.__legend_anchor)
 
     def remove_legend(self):
         if self.legend:
+            self.__legend_anchor = legend_anchor_pos(self.legend)
             self.legend.setParent(None)
             self.legend = None
         if self.color_legend:
+            self.__color_legend_anchor = legend_anchor_pos(self.color_legend)
             self.color_legend.setParent(None)
             self.color_legend = None
 
@@ -686,9 +737,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     value)
         else:
-            legend = self.color_legend = PositionedLegendItem(
-                self.plot_widget.plotItem,
-                self, legend_id="colors", at_bottom=True)
+            legend = self.color_legend = LegendItem()
+            legend.setParentItem(self.plot_widget.getViewBox())
+            legend.anchor(*self.__color_legend_anchor)
+
             label = PaletteItemSample(self.continuous_palette, self.scale)
             legend.addItem(label, "")
             legend.setGeometry(label.boundingRect())
