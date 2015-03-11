@@ -130,6 +130,7 @@ decorator==3.4.0
 sqlparse==0.1.13
 
 #:wheel: Bottlecheset https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl#md5=629ba2a148dfa784d0e6817497d42e97
+--find-links https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl
 Bottlechest==0.7.1
 
 #:source: pyqtgraph
