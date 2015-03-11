@@ -1,9 +1,6 @@
 import unittest
-
 import numpy as np
-
 import Orange
-
 
 class LinearRegressionTest(unittest.TestCase):
     def test_LinearRegression(self):
@@ -21,3 +18,16 @@ class LinearRegressionTest(unittest.TestCase):
         clf = learn(t)
         z = clf(x2)
         self.assertTrue((abs(z.reshape(-1, 1) - y2) < 2.0).all())
+
+    def test_Regression(self):
+        data = Orange.data.Table("housing")
+        ridge = Orange.regression.RidgeRegressionLearner()
+        lasso = Orange.regression.LassoRegressionLearner()
+        elastic = Orange.regression.ElasticNetLearner()
+        elasticCV = Orange.regression.ElasticNetCVLearner()
+        mean = Orange.regression.MeanLearner()
+        learners = [ridge, lasso, elastic, elasticCV, mean]
+        res = Orange.evaluation.CrossValidation(data, learners, k=2)
+        rmse = Orange.evaluation.RMSE(res)
+        for i in range(len(learners)-1):
+            self.assertTrue(rmse[i] < rmse[-1])

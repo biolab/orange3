@@ -39,14 +39,14 @@ class Learner:
         self.domain = data.domain
 
         if type(self).fit is Learner.fit:
-            clf = self.fit_storage(data)
+            model = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            clf = self.fit(X, Y, W)
-        clf.domain = data.domain
-        clf.supports_multiclass = self.supports_multiclass
-        clf.name = self.name
-        return clf
+            model = self.fit(X, Y, W)
+        model.domain = data.domain
+        model.supports_multiclass = self.supports_multiclass
+        model.name = self.name
+        return model
 
     def preprocess(self, data):
         """
@@ -164,13 +164,13 @@ class Model:
 class SklModel(Model, metaclass=WrapperMeta):
     used_vals = None
 
-    def __init__(self, clf):
-        self.clf = clf
+    def __init__(self, skl_model):
+        self.skl_model = skl_model
 
     def predict(self, X):
-        value = self.clf.predict(X)
-        if hasattr(self.clf, "predict_proba"):
-            probs = self.clf.predict_proba(X)
+        value = self.skl_model.predict(X)
+        if hasattr(self.skl_model, "predict_proba"):
+            probs = self.skl_model.predict_proba(X)
             return value, probs
         return value
 
