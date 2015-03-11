@@ -5,7 +5,7 @@
 #
 # Example:
 #
-#     $ build-win-application.sh dist/Orange-installer.exe
+#     $ build-win-application.sh
 #
 
 function print_usage {
@@ -18,6 +18,7 @@ Options:
 
     -b --build-base PATH    Build directory (default build/win-installer)
     -d --dist-dir           Distribution dir
+    -r --requirements       Extra requirements file
     -h --help               Print this help
 '
 }
@@ -31,6 +32,10 @@ while [[ ${1:0:1} = "-" ]]; do
             ;;
         -d|--dist-dir)
             DISTDIR=$2
+            shift 2
+            ;;
+        -r|--requirements)
+            REQUIREMENT=$2
             shift 2
             ;;
         -h|--help)
@@ -57,21 +62,15 @@ PYTHON_MSI=python-$PYTHON_VER.msi
 PYQT_VER=4.11.3
 PYQT_MD5=10f15f41d30152a71590709563499dbe
 
-NUMPY_VER=1.9.1
-NUMPY_MD5=1402e7689bebbd7b69630bdcdc58a492
+NUMPY_VER=1.9.2
+NUMPY_MD5=0c06b7beabdc053ef63699ada0ee5e98
 
 SCIPY_VER=0.15.1
 SCIPY_MD5=e24c435e96dc7fbde8eac62ca8c969c8
 
-IPYTHON_VER=2.4.0
-
-MATPLOTLIB_VER=1.4.1
-
-SCIKIT_LEARN_VER=0.15.2
-
 DISTDIR=${DISTDIR:-dist}
 
-BUILDBASE=${BUILDBASE:-build}/temp.$PLATTAG-installer
+BUILDBASE=${BUILDBASE:-build}/temp.$PLATTAG-py$PYTHON_VER_SHORT-installer
 
 # BUILDBASE/
 #   core/
@@ -106,6 +105,18 @@ ipython==2.4.1
 #:wheel: pyzmq https://pypi.python.org/packages/3.4/p/pyzmq/pyzmq-14.5.0-cp34-none-win32.whl#md5=333bc2f02d24aa2455ce4208b9d8666e
 pyzmq==14.5.0
 
+#:source: Markupsafe
+Markupsafe==0.23
+
+#:source: certifi
+certifi==14.05.14
+
+#:source: Jinja2
+jinja2==2.7.3
+
+#:source: tornado
+tornado==4.1
+
 #:wheel: pygments https://pypi.python.org/packages/3.3/P/Pygments/Pygments-2.0.2-py3-none-any.whl#md5=b38281817abc47c82cf3533b8c6608f6
 pygments==2.0.2
 
@@ -119,12 +130,12 @@ decorator==3.4.0
 sqlparse==0.1.13
 
 #:wheel: Bottlecheset https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl#md5=629ba2a148dfa784d0e6817497d42e97
+--find-links https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl
 Bottlechest==0.7.1
 
 #:source: pyqtgraph
 pyqtgraph==0.9.10
 " > "$BUILDBASE"/requirements.txt
-
 
 function __download_url {
     local url=${1:?}
@@ -251,7 +262,6 @@ function prepare_scipy_stack {
 
 }
 
-
 function prepare_req {
     python -m pip wheel \
         -w "$BUILDBASE/wheelhouse" \
@@ -259,7 +269,6 @@ function prepare_req {
         -f "$BUILDBASE/wheelhouse/nosse" \
         "$@"
 }
-
 
 function prepare_orange {
     python setup.py egg_info
@@ -273,6 +282,18 @@ function prepare_orange {
     echo "Orange==$version" >> "$BUILDBASE/requirements.txt"
 }
 
+function prepare_extra {
+    python -m pip wheel \
+        -w "$BUILDBASE/wheelhouse" \
+        -f "$BUILDBASE/wheelhouse" \
+        -f "$BUILDBASE/wheelhouse/nosse" \
+        --no-deps \
+        --no-index \
+        -r "$1"
+
+    echo "Inserting extra requirements"
+    cat "$1" | grep -v -E '(--find-links)|(-f)' >> "$BUILDBASE"/requirements.txt
+}
 
 function prepare_all {
     prepare_python
@@ -280,10 +301,11 @@ function prepare_all {
     prepare_pyqt4
     prepare_req -r "$BUILDBASE/requirements.txt"
     prepare_orange
+
+    if [[ "$REQUIREMENT" ]]; then
+        prepare_extra "$REQUIREMENT"
+    fi
 }
-
-
-
 
 function abs_dir_path {
     echo $(cd "$1"; pwd)
@@ -303,14 +325,6 @@ function create_installer {
              -DPYVER=$PYTHON_VER_SHORT \
 			 -DBASEDIR="$basedir_abs" \
              scripts/windows/install.nsi
-}
-
-function install_all {
-    install_python
-    install_pip
-    install_scipy_stack
-    install_ipython
-    install_matplotlib
 }
 
 # Prepare prerequisites

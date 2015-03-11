@@ -1,17 +1,18 @@
-;
-; Common install macros
-;
+#
+# Common install macros
+#
 
-; 1 if this is an admin install 0 otherwise
+# 1 if this is an admin install 0 otherwise
 Var AdminInstall
 
-; Directory of an existing Python installation if/when available
+# Directory of an existing Python installation if/when available
 Var PythonDir
 
-;
-; Initialize the $AdminInstall variable
-;
-
+#
+# ${InitAdminInstall}
+#
+#     Initialize the $AdminInstall variable
+#
 !macro GET_ACCOUNT_TYPE
 	StrCpy $AdminInstall 1
 	UserInfo::GetAccountType
@@ -27,9 +28,11 @@ Var PythonDir
 !macroend
 !define InitAdminInstall "!insertmacro GET_ACCOUNT_TYPE"
 
-;
-; Initialize Python installation directory ($PythonDir variable)
-;
+#
+# ${InitPythonDir}
+#
+#     Initialize Python installation directory ($PythonDir variable)
+#
 !macro GET_PYTHON_DIR
     ${If} $AdminInstall == 0
 	    ReadRegStr $PythonDir HKCU Software\Python\PythonCore\${PYVER}\InstallPath ""
@@ -70,14 +73,16 @@ Var PythonDir
 !macroend
 !define PythonExec "!insertmacro PYTHON_EXEC_MACRO"
 
-;
-; Check if a python package dist_name is present in the python's
-; site-packages directory (the result is stored in $0)
-; (example  ${IsInstalled} Orange )
-;
-!define IsDistInstalled '!insertmacro IS_INSTALLED'
-!macro IS_INSTALLED DIST_NAME
-	${If} ${FileExists} ${DIST_NAME}.egg-info ${OrIf} $FileExists ${DIST_NAME}*.egg ${OrIf} ${FileExists} ${DIST_NAME}.dist-info
+#
+# Check if a python package dist_name is present in the python's
+# site-packages directory (the result is stored in $0)
+# (example  ${IsInstalled} Orange )
+#
+!define IsDistInstalled '!insertmacro IS_DIST_INSTALLED_MACRO'
+!macro IS_DIST_INSTALLED_MACRO DIST_NAME
+	${If} ${FileExists} ${DIST_NAME}.egg-info
+	${OrIf} $FileExists ${DIST_NAME}*.egg
+	${OrIf} ${FileExists} ${DIST_NAME}.dist-info
 		StrCpy $0 1
 	${Else}
 		StrCpy $0 0
@@ -110,27 +115,27 @@ Var PythonDir
 !macroend
 !define InstallPython "!insertmacro INSTALL_PYTHON"
 
-;
-; Install PyWin32 from a bdist_wininst .exe installer
-; (INSTALLER must point to an existing file at install time)
+#
+# Install PyWin32 from a bdist_wininst .exe installer
+# (INSTALLER must point to an existing file at install time)
 
 !macro INSTALL_PYWIN32 INSTALLER
-;	${If} ${FileExists} "$SysDir\${NAME_MFC}"
-;		SetOutPath $SysDir
-;		File ${PARTY}\${NAME_MFC}
-;	${EndIf}
+#	${If} ${FileExists} "$SysDir\${NAME_MFC}"
+#		SetOutPath $SysDir
+#		File ${PARTY}\${NAME_MFC}
+#	${EndIf}
 
-;	SetOutPath $DESKTOP
-;	File ${PARTY}\${INSTALLER}
+#	SetOutPath $DESKTOP
+#	File ${PARTY}\${INSTALLER}
 
 	${If} ${Silent}
 		${PythonExec} '-m easy_install "${INSTALLER}"'
 		${PythonExec} '$PythonDir\Scripts\pywin32_postinstall.py'
-;		ExecWait "$EASY_INSTALL $DESKTOP\${INSTALLER}"
-;		ExecWait "$PYTHON $PYTHON_BIN\pywin32_postinstall.py"
+#		ExecWait "$EASY_INSTALL $DESKTOP\${INSTALLER}"
+#		ExecWait "$PYTHON $PYTHON_BIN\pywin32_postinstall.py"
 	${Else}
 		ExecWait "${INSTALLER}
-;		ExecWait "$DESKTOP\${INSTALLER}"
+#		ExecWait "$DESKTOP\${INSTALLER}"
 	${EndIf}
 	Delete "$DESKTOP\${INSTALLER}"
 !macroend
@@ -172,10 +177,10 @@ Var PythonDir
 
 
 
-;
-; Install a portable python interpreter from a python msi installer
-; into TARGETDIR, including msvc redistrib
-; (The installer is not registered with windows)
+#
+# Install a portable python interpreter from a python msi installer
+# into TARGETDIR, including msvc redistrib
+# (The installer is not registered with windows)
 
 !macro INSTALL_PYTHON_PORTABLE INSTALLER MSVREDIST TARGETDIR
 	ExecWait 'msiexec -qn -a "${INSTALLER}" TARGETDIR="${TARGETDIR}" ' $0
@@ -184,12 +189,13 @@ Var PythonDir
 !macroend
 
 
-;
-; Ensure pip is installed
-;
+#
+# Ensure pip is installed
+#
 !macro PIP_BOOTSTRAP
 	${PythonExec} '-m ensurepip'
 !macroend
+!define PipBootstrap "!insertmacro PIP_BOOTSTRAP"
 
 
 #
@@ -209,7 +215,6 @@ Var PythonDir
 #  Run python -m pip COMMAND_STRING
 #
 !macro _PIP_MACRO COMMAND_STRING
-	${PipExec} '${COMMAND_STRING}'
-#	${PythonExec} '-m pip ${COMMAND_STRING}'
+	${PythonExec} '-m pip ${COMMAND_STRING}'
 !macroend
 !define Pip "!insertmacro _PIP_MACRO"
