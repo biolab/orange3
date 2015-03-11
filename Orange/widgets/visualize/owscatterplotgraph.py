@@ -26,7 +26,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 
 # TODO Move utility classes to another module, so they can be used elsewhere
 
-SELECTION_WIDTH = 5
+SELECTION_WIDTH = 4
 
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
@@ -232,8 +232,8 @@ class InteractiveViewBox(ViewBox):
         self.axHistory = []
         self.axHistoryPointer = -1
 
-    def autoRange(self):
-        super().autoRange()
+    def autoRange(self, padding=None, items=None, item=None):
+        super().autoRange(padding=padding, items=items, item=item)
         self.tag_history()
 
     def suggestPadding(self, axis): #no padding so that undo works correcty
@@ -419,11 +419,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         )
         self.scatterplot_item_sel = ScatterPlotItem(
             x=x_data, y=y_data, data=np.arange(self.n_points),
-            symbol=shape_data, size=size_data+SELECTION_WIDTH, 
+            symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
-        self.plot_widget.addItem(self.scatterplot_item_sel)
         self.plot_widget.addItem(self.scatterplot_item)
+        self.plot_widget.addItem(self.scatterplot_item_sel)
 
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
@@ -432,7 +432,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.make_legend()
         self.view_box.init_history()
         self.plot_widget.replot()
-        self.view_box.autoRange()
+
+        min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
+        min_y, max_y = np.nanmin(y_data), np.nanmax(y_data)
+        self.view_box.setRange(
+            QRectF(min_x, min_y, max_x - min_x, max_y - min_y),
+            padding=0.025)
+        self.view_box.tag_history()
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
@@ -467,7 +473,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item:
             size_data = self.compute_sizes()
             self.scatterplot_item.setSize(size_data)
-            self.scatterplot_item_sel.setSize(size_data+SELECTION_WIDTH)
+            self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
     update_point_size = update_sizes
 
@@ -491,20 +497,20 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             p.setCosmetic(True)
             return p
 
-        pens = [ make_pen(QColor(255, 190, 0, 0), SELECTION_WIDTH+1.),
-                 make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH+1.) ]
+        pens = [ QPen(Qt.NoPen),
+                 make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1.) ]
         if self.selection is not None:
             pen = [ pens[a] for a in self.selection ]
         else:
             pen = [pens[0]] * self.n_points
-        brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
+        brush = [QBrush(Qt.NoBrush)] * self.n_points
         return pen, brush
 
     def compute_colors(self, keep_colors=False):
         if not keep_colors:
             self.pen_colors = self.brush_colors = None
         color_index = self.get_color_index()
-        
+
         def make_pen(color, width):
             p = QPen(color, width)
             p.setCosmetic(True)
@@ -512,7 +518,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         subset = None
         if self.subset_indices:
-            subset = np.array([ ex.id in self.subset_indices 
+            subset = np.array([ ex.id in self.subset_indices
                 for ex in self.raw_data[self.valid_data] ])
 
         if color_index == -1: #color = "Same color"
@@ -770,7 +776,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             for i, p in enumerate(points):
                 index = p.data()
                 text += "Attributes:\n"
-                if self.tooltip_shows_all:
+                if self.tooltip_shows_all and \
+                        len(self.data_domain.attributes) < 30:
                     text += "".join(
                         '   {} = {}\n'.format(attr.name,
                                               self.raw_data[index][attr])
@@ -779,6 +786,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     text += '   {} = {}\n   {} = {}\n'.format(
                         self.shown_x, self.raw_data[index][self.shown_x],
                         self.shown_y, self.raw_data[index][self.shown_y])
+                    if self.tooltip_shows_all:
+                        text += "   ... and {} others\n\n".format(
+                            len(self.data_domain.attributes) - 2)
                 if self.data_domain.class_var:
                     text += 'Class:\n   {} = {}\n'.format(
                         self.data_domain.class_var.name,

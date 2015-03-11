@@ -85,9 +85,9 @@ class TabDelimReader:
             elif tpe in ["w", "weight"]:
                 var = None
             elif tpe in ["d", "discrete"]:
-                var = DiscreteVariable.make(name)
-                if not var.values:
-                    var.fix_order = True
+                var = DiscreteVariable() # no name to bypass caching
+                var.name = name
+                var.fix_order = True
             elif tpe in ["s", "string"]:
                 var = StringVariable.make(name)
             else:
@@ -168,21 +168,25 @@ class TabDelimReader:
         table.n_rows = line_count
 
     def reorder_values_array(self, arr, variables):
+        newvars = []
         for col, var in enumerate(variables):
-            if getattr(var, "fix_order", False) and len(var.values) < 1000:
-                new_order = var.ordered_values(var.values)
-                if new_order == var.values:
-                    continue
-                arr[:, col] += 1000
-                for i, val in enumerate(var.values):
-                    bn.replace(arr[:, col], 1000 + i, new_order.index(val))
-                var.values = new_order
-                delattr(var, "fix_order")
+            if getattr(var, "fix_order", False):
+                nvar = var.make(var.name, var.values, var.ordered)
+                nvar.attributes = var.attributes
+                move = len(var.values)
+                if nvar.values != var.values:
+                    arr[:, col] += move
+                    for i, val in enumerate(var.values):
+                        bn.replace(arr[:, col], move + i, nvar.values.index(val))
+                var = nvar
+            newvars.append(var)
+        return newvars
 
     def reorder_values(self, table):
-        self.reorder_values_array(table.X, table.domain.attributes)
-        self.reorder_values_array(table._Y, table.domain.class_vars)
-        self.reorder_values_array(table.metas, table.domain.metas)
+        attrs = self.reorder_values_array(table.X, table.domain.attributes)
+        classes = self.reorder_values_array(table._Y, table.domain.class_vars)
+        metas = self.reorder_values_array(table.metas, table.domain.metas)
+        table.domain = Domain(attrs, classes, metas=metas)
 
     def read_file(self, filename, cls=None):
         with open(filename) as file:

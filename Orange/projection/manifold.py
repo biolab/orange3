@@ -1,12 +1,12 @@
 import sklearn.manifold as skl_manifold
 
 from Orange.distance import SklDistance, SpearmanDistance, PearsonDistance
-from Orange.projection import SklProjection
+from Orange.projection import SklProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding"]
 
 
-class MDS(SklProjection):
+class MDS(SklProjector):
     __wraps__ = skl_manifold.MDS
     name = 'mds'
 
@@ -41,7 +41,7 @@ class MDS(SklProjection):
         return proj.fit(X, init=init, y=Y)
 
 
-class Isomap(SklProjection):
+class Isomap(SklProjector):
     __wraps__ = skl_manifold.Isomap
     name = 'isomap'
 
@@ -52,7 +52,7 @@ class Isomap(SklProjection):
         self.params = vars()
 
 
-class LocallyLinearEmbedding(SklProjection):
+class LocallyLinearEmbedding(SklProjector):
     __wraps__ = skl_manifold.LocallyLinearEmbedding
     name = 'lle'
 

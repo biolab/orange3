@@ -1,4 +1,5 @@
-from numbers import Real
+from itertools import chain
+from numbers import Real, Integral
 from ..data.value import Value, Unknown
 from math import isnan
 import numpy as np
@@ -19,21 +20,20 @@ class Instance:
             domain = data.domain
 
         self._domain = domain
-        self.sparse_x = self.sparse_y = self.sparse_metas = None
         if data is None:
-            self._values = np.repeat(Unknown, len(domain.variables))
+            self._x = np.repeat(Unknown, len(domain.attributes))
+            self._y = np.repeat(Unknown, len(domain.class_vars))
             self._metas = np.array([var.Unknown for var in domain.metas],
                                    dtype=object)
             self._weight = 1
         elif isinstance(data, Instance) and data.domain == domain:
-            self._values = np.array(data._values)
+            self._x = np.array(data._x)
+            self._y = np.array(data._y)
             self._metas = np.array(data._metas)
             self._weight = data._weight
         else:
-            self._values, self._metas = domain.convert(data)
+            self._x, self._y, self._metas = domain.convert(data)
             self._weight = 1
-        self._x = self._values[:len(domain.attributes)]
-        self._y = self._values[len(domain.attributes):]
 
     @property
     def domain(self):
@@ -74,22 +74,27 @@ class Instance:
         self._weight = weight
 
     def __setitem__(self, key, value):
-        if not isinstance(key, int):
+        if not isinstance(key, Integral):
             key = self._domain.index(key)
         value = self._domain[key].to_val(value)
-        if key >= 0:
-            if not isinstance(value, (int, float)):
-                raise TypeError("Expected primitive value, got '%s'" %
-                                type(value).__name__)
-            self._values[key] = value
+        if key >= 0 and not isinstance(value, (int, float)):
+            raise TypeError("Expected primitive value, got '%s'" %
+                            type(value).__name__)
+
+        if 0 <= key < len(self._domain.attributes):
+            self._x[key] = value
+        elif len(self._domain.attributes) <= key:
+            self._y[key - len(self.domain.attributes)] = value
         else:
             self._metas[-1 - key] = value
 
     def __getitem__(self, key):
-        if not isinstance(key, int):
+        if not isinstance(key, Integral):
             key = self._domain.index(key)
-        if key >= 0:
-            value = self._values[key]
+        if 0 <= key < len(self._domain.attributes):
+            value = self._x[key]
+        elif key >= len(self._domain.attributes):
+            value = self._y[key - len(self.domain.attributes)]
         else:
             value = self._metas[-1 - key]
         return Value(self._domain[key], value)
@@ -134,27 +139,31 @@ class Instance:
     def __eq__(self, other):
         if not isinstance(other, Instance):
             other = Instance(self._domain, other)
-        nan1 = np.isnan(self._values)
-        nan2 = np.isnan(other._values)
-        return np.array_equal(nan1, nan2) and \
-            np.array_equal(self._values[~nan1], other._values[~nan2]) \
+
+        def same(x1, x2):
+            nan1 = np.isnan(x1)
+            nan2 = np.isnan(x2)
+            return np.array_equal(nan1, nan2) and \
+                np.array_equal(x1[~nan1], x2[~nan2])
+
+        return same(self._x, other._x) and same(self._y, other._y) \
             and all(m1 == m2 or
                     type(m1) == type(m2) == float and isnan(m1) and isnan(m2)
                     for m1, m2 in zip(self._metas, other._metas))
 
     def __iter__(self):
-        return iter(self._values)
+        return chain(iter(self._x), iter(self._y))
 
     def values(self):
         return (Value(var, val)
-                for var, val in zip(self.domain.variables, self._values))
+                for var, val in zip(self.domain.variables, self))
 
     def __len__(self):
-        return len(self._values)
+        return len(self._x) + len(self._y)
 
     def attributes(self):
         """Return iterator over the instance's attributes"""
-        return iter(self._values[:len(self._domain.attributes)])
+        return iter(self._x)
 
     def classes(self):
         """Return iterator over the instance's class attributes"""
@@ -193,4 +202,3 @@ class Instance:
             self._y[0] = self._domain.class_var.to_val(value)
         else:
             self._y[0] = value
-        self._values[len(self._domain.attributes)] = self._y[0]

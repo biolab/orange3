@@ -111,7 +111,7 @@ class AUC(Score):
             dtype=np.float64, count=len(results.predicted))
             for class_ in classes])
 
-        return np.array([np.sum(auc_array.T * weights, axis=1)])
+        return np.sum(auc_array.T * weights, axis=1)
 
     def compute_score(self, results, target=None):
         domain = results.domain
@@ -189,6 +189,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
 
     Needs matplotlib to work.
 
+    The image is ploted on *plt* which should be imported using *import matplotlib.pyplot as plt*.
+
     :param avranks: List of average methods' ranks.
     :param names: List of methods' names.
     :param cd: Critical difference. Used for marking methods whose
@@ -202,9 +204,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
     :param textspace: Space on figure sides left for the description
                       of methods, default 1 in.
     :param reverse:  If True, the lowest rank is on the right. Default\: False.
-    :param filename: Output file name (with extension). Formats supported by matplotlib can be used.
-    :type filename: str or None.
-    :rtype: :class:`matplotlib.figure.Figure` if filename is None; else None.
+    :param filename: Output file name (with extension). If not None, the image is also saved to a file.
+                    Formats supported by matplotlib can be used.
     """
     try:
         import matplotlib

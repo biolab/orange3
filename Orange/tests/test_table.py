@@ -48,6 +48,8 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0][1], "0")
             self.assertEqual(d[0][varc], "0")
             self.assertEqual(d[0]["c"], "0")
+            self.assertEqual(d[np.int_(0), np.int_(1)], "0")
+            self.assertEqual(d[np.int_(0)][np.int_(1)], "0")
 
             # regular, continuous
             varb = d.domain["b"]
@@ -57,6 +59,8 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0][0], 0)
             self.assertEqual(d[0][varb], 0)
             self.assertEqual(d[0]["b"], 0)
+            self.assertEqual(d[np.int_(0), np.int_(0)], 0)
+            self.assertEqual(d[np.int_(0)][np.int_(0)], 0)
 
             # negative
             varb = d.domain["b"]
@@ -66,6 +70,8 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[-2][0], 3.333)
             self.assertEqual(d[-2][varb], 3.333)
             self.assertEqual(d[-2]["b"], 3.333)
+            self.assertEqual(d[np.int_(-2), np.int_(0)], 3.333)
+            self.assertEqual(d[np.int_(-2)][np.int_(0)], 3.333)
 
             # meta, discrete
             vara = d.domain["a"]
@@ -76,6 +82,8 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0][metaa], "A")
             self.assertEqual(d[0][vara], "A")
             self.assertEqual(d[0]["a"], "A")
+            self.assertEqual(d[np.int_(0), np.int_(metaa)], "A")
+            self.assertEqual(d[np.int_(0)][np.int_(metaa)], "A")
 
             # meta, string
             vare = d.domain["e"]
@@ -86,6 +94,8 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[0][metae], "i")
             self.assertEqual(d[0][vare], "i")
             self.assertEqual(d[0]["e"], "i")
+            self.assertEqual(d[np.int_(0), np.int_(metae)], "i")
+            self.assertEqual(d[np.int_(0)][np.int_(metae)], "i")
 
     def test_indexing_example(self):
         import warnings
@@ -100,12 +110,14 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[1], "0")
             self.assertEqual(e[varc], "0")
             self.assertEqual(e["c"], "0")
+            self.assertEqual(e[np.int_(1)], "0")
 
             # regular, continuous
             varb = d.domain["b"]
             self.assertEqual(e[0], 0)
             self.assertEqual(e[varb], 0)
             self.assertEqual(e["b"], 0)
+            self.assertEqual(e[np.int_(0)], 0)
 
             # meta, discrete
             vara = d.domain["a"]
@@ -113,6 +125,7 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[metaa], "A")
             self.assertEqual(e[vara], "A")
             self.assertEqual(e["a"], "A")
+            self.assertEqual(e[np.int_(metaa)], "A")
 
             # meta, string
             vare = d.domain["e"]
@@ -120,6 +133,7 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[metae], "i")
             self.assertEqual(e[vare], "i")
             self.assertEqual(e["e"], "i")
+            self.assertEqual(e[np.int_(metae)], "i")
 
     def test_indexing_assign_value(self):
         import warnings
@@ -148,6 +162,11 @@ class TableTestCase(unittest.TestCase):
             d[0][metaa] = "A"
             self.assertEqual(d[0, "a"], "A")
 
+            d[0, np.int_(metaa)] = "B"
+            self.assertEqual(d[0, "a"], "B")
+            d[0][np.int_(metaa)] = "A"
+            self.assertEqual(d[0, "a"], "A")
+
             # regular
             varb = d.domain["b"]
 
@@ -165,6 +184,11 @@ class TableTestCase(unittest.TestCase):
             d[0, 0] = 42
             self.assertEqual(d[0, "b"], 42)
             d[0][0] = 0
+            self.assertEqual(d[0, "b"], 0)
+
+            d[0, np.int_(0)] = 42
+            self.assertEqual(d[0, "b"], 42)
+            d[0][np.int_(0)] = 0
             self.assertEqual(d[0, "b"], 0)
 
     def test_indexing_del_example(self):
@@ -206,13 +230,18 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[2, "e"], "4ex")
             self.assertEqual(d[-1, "e"], "was last")
 
+            d[np.int_(2), "e"] = "2ex"
+            del d[np.int_(2)]
+            self.assertEqual(len(d), initlen - 6)
+            self.assertNotEqual(d[2, "e"], "2ex")
+
             with self.assertRaises(IndexError):
                 del d[100]
-            self.assertEqual(len(d), initlen - 5)
+            self.assertEqual(len(d), initlen - 6)
 
             with self.assertRaises(IndexError):
                 del d[-100]
-            self.assertEqual(len(d), initlen - 5)
+            self.assertEqual(len(d), initlen - 6)
 
     def test_indexing_assign_example(self):
         def almost_equal_list(s, t):
@@ -234,13 +263,22 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue(isnan(d[0, "a"]))
             d[0] = [3.15, 1, "t"]
             almost_equal_list(d[0].values(), [3.15, "0", "t"])
+            d[np.int_(0)] = [3.15, 2, "f"]
+            almost_equal_list(d[0].values(), [3.15, 2, "f"])
 
             with self.assertRaises(ValueError):
                 d[0] = ["3.14", "1"]
 
+            with self.assertRaises(ValueError):
+                d[np.int_(0)] = ["3.14", "1"]
+
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             d[0] = ex
             almost_equal_list(d[0].values(), [3.16, "1", "f"])
+
+            ex = data.Instance(d.domain, ["3.16", 2, "t"])
+            d[np.int_(0)] = ex
+            almost_equal_list(d[0].values(), [3.16, 2, "t"])
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             ex["e"] = "mmmapp"
@@ -1312,6 +1350,35 @@ class CreateTableWithData(TableTests):
                    self.meta_data, self.weight_data)
         new_from_numpy.assert_called_with(domain, self.data, self.class_data,
                                           self.meta_data, self.weight_data)
+
+    def test_from_numpy_reconstructable(self):
+        def assert_equal(T1, T2):
+            np.testing.assert_array_equal(T1.X, T2.X)
+            np.testing.assert_array_equal(T1.Y, T2.Y)
+            np.testing.assert_array_equal(T1.metas, T2.metas)
+            np.testing.assert_array_equal(T1.W, T2.W)
+
+        nullcol = np.empty((self.nrows, 0))
+        domain = self.create_domain(self.attributes)
+        table = data.Table(domain, self.data)
+
+        table_1 = data.Table.from_numpy(
+            domain, table.X, table.Y, table.metas, table.W)
+        assert_equal(table, table_1)
+
+        domain = self.create_domain(classes=self.class_vars)
+        table = data.Table(domain, nullcol, self.class_data)
+
+        table_1 = data.Table.from_numpy(
+            domain, table.X, table.Y, table.metas, table.W)
+        assert_equal(table, table_1)
+
+        domain = self.create_domain(metas=self.metas)
+        table = data.Table(domain, nullcol, nullcol, self.meta_data)
+
+        table_1 = data.Table.from_numpy(
+            domain, table.X, table.Y, table.metas, table.W)
+        assert_equal(table, table_1)
 
 
 class CreateTableWithDomainAndTable(TableTests):

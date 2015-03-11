@@ -3,13 +3,16 @@ import unittest
 import numpy as np
 
 import Orange
-from Orange.data import ContinuousVariable, DiscreteVariable, Table
+from Orange.data import ContinuousVariable, DiscreteVariable, Table, Variable
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
     Chi2, GainRatio
 from Orange.preprocess import SelectBestFeatures, Impute
 
 
 class TestFSS(unittest.TestCase):
+    def setUp(self):
+        Variable._clear_all_caches()
+
     def test_select_1(self):
         data = Table('titanic')
         gini = Gini()

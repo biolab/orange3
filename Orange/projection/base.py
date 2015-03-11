@@ -2,14 +2,14 @@ import inspect
 
 import Orange.data
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.misc.cache import single_cache
 import Orange.preprocess
 
-__all__ = ["Projection", "ProjectionModel", "SklProjection"]
+__all__ = ["Projector", "Projection", "SklProjector"]
 
 
-class Projection:
-    #: A sequence of data preprocessors to apply on data prior to
-    #: fitting the model
+class Projector:
+    #: A sequence of data preprocessors to apply on data prior to projecting
     name = 'projection'
     preprocessors = ()
 
@@ -20,14 +20,13 @@ class Projection:
 
     def fit(self, X, Y=None):
         raise NotImplementedError(
-            "Descendants of Projection must overload method fit")
+            "Classes derived from Projector must overload method fit")
 
     def __call__(self, data):
         data = self.preprocess(data)
         self.domain = data.domain
-        X, Y = data.X, data.Y
-        clf = self.fit(X, Y)
-        clf.domain = data.domain
+        clf = self.fit(data.X, data.Y)
+        clf.pre_domain = self.domain
         clf.name = self.name
         return clf
 
@@ -37,29 +36,24 @@ class Projection:
         return data
 
 
-class ProjectionModel:
-    def __init__(self, proj, preprocessors=None):
-        if preprocessors is None:
-            preprocessors = type(self).preprocessors
-        self.preprocessors = tuple(preprocessors)
+class Projection:
+    def __init__(self, proj):
         self.__dict__.update(proj.__dict__)
         self.proj = proj
 
+    @single_cache
     def transform(self, X):
         trns = self.proj.transform(X)
         return trns
 
-    def preprocess(self, data):
-        for pp in self.preprocessors:
-            data = pp(data)
-        return data
+    def __call__(self, data):
+        return Orange.data.Table(self.domain, data)
 
     def __repr__(self):
         return self.name
 
 
-class SklProjection(Projection, metaclass=WrapperMeta):
-
+class SklProjector(Projector, metaclass=WrapperMeta):
     __wraps__ = None
     _params = {}
     name = 'skl projection'
@@ -86,17 +80,11 @@ class SklProjection(Projection, metaclass=WrapperMeta):
 
     def preprocess(self, data):
         data = super().preprocess(data)
-
         if any(isinstance(v, Orange.data.DiscreteVariable) and len(v.values) > 2
                for v in data.domain.attributes):
-            raise ValueError("Wrapped scikit-learn methods do not support " +
+            raise ValueError("Wrapped scikit-learn methods do not support "
                              "multinomial variables.")
-
         return data
-
-    def __call__(self, data):
-        proj = super().__call__(data)
-        return proj
 
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)

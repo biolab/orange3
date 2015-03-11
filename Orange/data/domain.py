@@ -1,5 +1,7 @@
 from collections import Iterable
 from itertools import chain
+from numbers import Integral
+
 import weakref
 from .variable import *
 import numpy as np
@@ -76,7 +78,7 @@ class Domain:
 
         if class_vars is None:
             class_vars = []
-        elif isinstance(class_vars, (Variable, int, str)):
+        elif isinstance(class_vars, (Variable, Integral, str)):
             class_vars = [class_vars]
         elif isinstance(class_vars, Iterable):
             class_vars = list(class_vars)
@@ -311,14 +313,21 @@ class Domain:
 
         if isinstance(inst, Instance):
             if inst.domain == self:
-                return inst._values, inst._metas
+                return inst._x, inst._y, inst._metas
             c = self.get_conversion(inst.domain)
-            values = [(inst._values[i] if i >= 0 else inst._metas[-i - 1])
-                      if isinstance(i, int) else
-                      (Unknown if not i else i(inst)) for i in c.variables]
-            metas = [(inst._values[i] if i >= 0 else inst._metas[-i - 1])
-                     if isinstance(i, int) else
-                     (Unknown if not i else i(inst)) for i in c.metas]
+            l = len(inst.domain.attributes)
+            values = [(inst._x[i] if 0 <= i < l
+                       else inst._y[i - l] if i >= l
+                       else inst._metas[-i - 1])
+                      if isinstance(i, int)
+                      else (Unknown if not i else i(inst))
+                      for i in c.variables]
+            metas = [(inst._x[i] if 0 <= i < l
+                      else inst._y[i - l] if i >= l
+                      else inst._metas[-i - 1])
+                     if isinstance(i, int)
+                     else (Unknown if not i else i(inst))
+                     for i in c.metas]
         else:
             nvars = len(self._variables)
             nmetas = len(self._metas)
@@ -331,8 +340,10 @@ class Domain:
                          for var, val in zip(self._metas, inst[nvars:])]
             else:
                 metas = [var.Unknown for var in self._metas]
-            # Let np.array decide dtype for values
-        return np.array(values), np.array(metas, dtype=object)
+        nattrs = len(self.attributes)
+        # Let np.array decide dtype for values
+        return np.array(values[:nattrs]), np.array(values[nattrs:]),\
+               np.array(metas, dtype=object)
 
     def select_columns(self, col_idx):
         attributes, col_indices = self._compute_col_indices(col_idx)
@@ -351,7 +362,7 @@ class Domain:
             return self
 
     def _compute_col_indices(self, col_idx):
-        if col_idx is Ellipsis:
+        if col_idx is ...:
             return None, None
         if isinstance(col_idx, np.ndarray) and col_idx.dtype == bool:
             return ([attr for attr, c in zip(self, col_idx) if c],
@@ -370,7 +381,7 @@ class Domain:
                 return None, None
             return attributes, np.fromiter(
                 (self.index(attr) for attr in attributes), int)
-        elif isinstance(col_idx, int):
+        elif isinstance(col_idx, Integral):
             attr = self[col_idx]
         else:
             attr = self[col_idx]

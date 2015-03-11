@@ -1,4 +1,3 @@
-import copy
 
 from PyQt4.QtGui import QFormLayout, QColor, QApplication
 from PyQt4.QtCore import Qt
@@ -20,7 +19,7 @@ class OWPCA(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Transformed data", Orange.data.Table),
                ("Components", Orange.data.Table)]
-    max_components = settings.Setting(0)
+    ncomponents = settings.Setting(0)
     variance_covered = settings.Setting(100)
     auto_commit = settings.Setting(True)
 
@@ -30,6 +29,7 @@ class OWPCA(widget.OWWidget):
 
         self._invalidated = False
         self._pca = None
+        self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
         self._line = False
@@ -39,20 +39,20 @@ class OWPCA(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.components_spin = gui.spin(
-            box, self, "max_components", 0, 1000,
-            callback=self._update_selection,
+            box, self, "ncomponents", 0, 1000,
+            callback=self._update_selection_component_spin,
             keyboardTracking=False
         )
         self.components_spin.setSpecialValueText("All")
 
         self.variance_spin = gui.spin(
             box, self, "variance_covered", 1, 100,
-            callback=self._update_selection,
+            callback=self._update_selection_variance_spin,
             keyboardTracking=False
         )
         self.variance_spin.setSuffix("%")
 
-        form.addRow("Max components", self.components_spin)
+        form.addRow("Components", self.components_spin)
         form.addRow("Variance covered", self.variance_spin)
 
         self.controlArea.layout().addStretch()
@@ -70,6 +70,7 @@ class OWPCA(widget.OWWidget):
         axis.setLabel("Proportion of variance")
 
         self.plot.getViewBox().setMenuEnabled(False)
+        self.plot.getViewBox().setMouseEnabled(False, False)
         self.plot.showGrid(True, True, alpha=0.5)
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
 
@@ -80,11 +81,17 @@ class OWPCA(widget.OWWidget):
         self.data = data
 
         if data is not None:
+            self._transformed = None
+
             pca = Orange.projection.PCA()
-            self._pca = pca.fit(self.data.X)
-            self._variance_ratio = self._pca.explained_variance_ratio_
-            self._cumulative = numpy.cumsum(self._variance_ratio)
-            self.components_spin.setRange(0, len(self._cumulative))
+            pca = pca(self.data)
+            variance_ratio = pca.explained_variance_ratio_
+            cumulative = numpy.cumsum(variance_ratio)
+            self.components_spin.setRange(0, len(cumulative))
+
+            self._pca = pca
+            self._variance_ratio = variance_ratio
+            self._cumulative = cumulative
             self._setup_plot()
 
         self.commit()
@@ -92,6 +99,7 @@ class OWPCA(widget.OWWidget):
     def clear(self):
         self.data = None
         self._pca = None
+        self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
         self._line = None
@@ -112,7 +120,9 @@ class OWPCA(widget.OWWidget):
                        name="Cumulative Variance")
 
         self._line = pg.InfiniteLine(
-            angle=90, pos=1, movable=True, bounds=(0, p - 1))
+            angle=90, pos=self._nselected_components() - 1, movable=True,
+            bounds=(0, p - 1)
+        )
         self._line.setCursor(Qt.SizeHorCursor)
         self._line.setPen(pg.mkPen(QColor(Qt.darkGray), width=1.5))
         self._line.sigPositionChanged.connect(self._on_cut_changed)
@@ -123,13 +133,14 @@ class OWPCA(widget.OWWidget):
         axis.setTicks([[(i, "C{}".format(i + 1)) for i in range(p)]])
 
     def _on_cut_changed(self, line):
+        # cut changed by means of a cut line over the scree plot.
         value = line.value()
         current = self._nselected_components()
         components = int(numpy.floor(value)) + 1
 
-        if not (self.max_components == 0 and
+        if not (self.ncomponents == 0 and
                 components == len(self._variance_ratio)):
-            self.max_components = components
+            self.ncomponents = components
 
         if self._pca is not None:
             self.variance_covered = self._cumulative[components - 1] * 100
@@ -137,33 +148,56 @@ class OWPCA(widget.OWWidget):
         if current != self._nselected_components():
             self._invalidate_selection()
 
-    def _update_selection(self):
+    def _update_selection_component_spin(self):
+        # cut changed by "ncomponents" spin.
         if self._pca is None:
             return
 
-        cut = self._nselected_components()
-        if numpy.floor(self._line.value()) != cut:
-            self._line.setValue(cut)
+        if self.ncomponents == 0:
+            # Special "All" value
+            cut = len(self._variance_ratio)
+        else:
+            cut = self.ncomponents
+        self.variance_covered = self._cumulative[cut - 1] * 100
+
+        if numpy.floor(self._line.value()) + 1 != cut:
+            self._line.setValue(cut - 1)
+
+        self._invalidate_selection()
+
+    def _update_selection_variance_spin(self):
+        # cut changed by "max variance" spin.
+        if self._pca is None:
+            return
+
+        cut = numpy.searchsorted(self._cumulative, self.variance_covered / 100.0)
+        self.ncomponents = cut
+
+        if numpy.floor(self._line.value()) + 1 != cut:
+            self._line.setValue(cut - 1)
 
         self._invalidate_selection()
 
     def _nselected_components(self):
+        """Return the number of selected components."""
         if self._pca is None:
             return 0
 
-        if self.max_components == 0:
+        if self.ncomponents == 0:
             # Special "All" value
             max_comp = len(self._variance_ratio)
         else:
-            max_comp = self.max_components
+            max_comp = self.ncomponents
 
         var_max = self._cumulative[max_comp - 1]
-        if var_max < self.variance_covered:
+        if var_max != numpy.floor(self.variance_covered / 100.0):
             cut = max_comp
+            self.variance_covered = var_max * 100
         else:
             cut = numpy.searchsorted(
                 self._cumulative, self.variance_covered / 100.0
             )
+            self.ncomponents = cut
         return cut
 
     def _invalidate_selection(self):
@@ -177,18 +211,22 @@ class OWPCA(widget.OWWidget):
         transformed = components = None
         if self._pca is not None:
             components = self._pca.components_
-            ncomponents = self._nselected_components()
-            pca = copy.copy(self._pca)
-            pca.components_ = components[:ncomponents]
-            transformed = pca.transform(self.data.X)
-            features = [Orange.data.ContinuousVariable("C%i" % (i + 1))
-                        for i in range(components.shape[1])]
-            domain1 = Orange.data.Domain(features, self.data.domain.class_vars,
-                                         self.data.domain.metas)
+            if self._transformed is None:
+                # Compute the full transform (all components) only once.
+                transformed = self._transformed = self._pca(self.data)
+            else:
+                transformed = self._transformed
+
+            domain = Orange.data.Domain(
+                transformed.domain.attributes[:self.ncomponents],
+                self.data.domain.class_vars,
+                self.data.domain.metas
+            )
             transformed = Orange.data.Table.from_numpy(
-                domain1, transformed, Y=self.data.Y, metas=self.data.metas)
-            domain2 = Orange.data.Domain(features)
-            components = Orange.data.Table.from_numpy(domain2, components)
+                domain, transformed.X[:, :self.ncomponents], Y=transformed.Y,
+                metas=transformed.metas, W=transformed.W
+            )
+            components = Orange.data.Table.from_numpy(None, components)
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
