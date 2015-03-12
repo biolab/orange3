@@ -1,13 +1,5 @@
 #!/bin/bash -e
 
-# Build an Windows applicaiton installer for Orange Canvas
-# (needs makensis and 7z on PATH)
-#
-# Example:
-#
-#     $ build-win-application.sh
-#
-
 function print_usage {
     echo 'build-win-application.sh
 Build an Windows applicaiton installer for Orange Canvas
@@ -18,6 +10,7 @@ Options:
 
     -b --build-base PATH    Build directory (default build/win-installer)
     -d --dist-dir           Distribution dir
+    --download-cache DIR    Cache downloaded packages in DIR
     -r --requirements       Extra requirements file
     -h --help               Print this help
 '
@@ -32,6 +25,10 @@ while [[ ${1:0:1} = "-" ]]; do
             ;;
         -d|--dist-dir)
             DISTDIR=$2
+            shift 2
+            ;;
+        --download-cache)
+            DOWNLOADDIR=$2
             shift 2
             ;;
         -r|--requirements)
@@ -71,6 +68,7 @@ SCIPY_MD5=e24c435e96dc7fbde8eac62ca8c969c8
 DISTDIR=${DISTDIR:-dist}
 
 BUILDBASE=${BUILDBASE:-build}/temp.$PLATTAG-py$PYTHON_VER_SHORT-installer
+DOWNLOADDIR=${DOWNLOADDIR:-build/temp.download-cache}
 
 # BUILDBASE/
 #   core/
@@ -80,15 +78,20 @@ BUILDBASE=${BUILDBASE:-build}/temp.$PLATTAG-py$PYTHON_VER_SHORT-installer
 #       [no]sse[2|3]/
 #   pyqt4/
 #   requirements.txt
-#   download/
 
-DOWNLOADDIR="$BUILDBASE"/download
+# Clean any leftovers from previous runs
+if [[ -d "$BUILDBASE" ]]; then
+    rm -r "$BUILDBASE"
+fi
+
 
 mkdir -p "$BUILDBASE"/core/python
 mkdir -p "$BUILDBASE"/core/msvredist
 mkdir -p "$BUILDBASE"/wheelhouse
 mkdir -p "$BUILDBASE"/pyqt4
+
 mkdir -p "$DOWNLOADDIR"
+mkdir -p "$DISTDIR"
 
 touch "$BUILDBASE"/requirements.txt
 
@@ -146,6 +149,7 @@ function __download_url {
 function md5sum_check {
     local filepath=${1:?}
     local checksum=${2:?}
+    local md5=
 
     if [[ -x $(which md5) ]]; then
         md5=$(md5 -q "$filepath")

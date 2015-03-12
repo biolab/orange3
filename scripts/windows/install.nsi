@@ -25,7 +25,7 @@ UninstallIcon OrangeInstall.ico
 
 # ShowInstDetails nevershow
 
-AutoCloseWindow true
+AutoCloseWindow false
 
 OutFile ${OUTFILENAME}
 
