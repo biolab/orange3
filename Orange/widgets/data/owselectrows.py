@@ -264,7 +264,7 @@ class OWSelectRows(widget.OWWidget):
             attrs = [a.name for a in domain.variables + domain.metas]
             if attr in attrs:
                 self.add_row(attrs.index(attr), cond_type, cond_value)
-        self.commit()
+        self.unconditional_commit()
 
     def on_purge_change(self):
         if self.purge_attributes:
