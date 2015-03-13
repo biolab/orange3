@@ -25,7 +25,10 @@ def configuration(parent_package='', top_path=None):
                          sources=['_io.c'],
                          include_dirs=[numpy.get_include()],
                          libraries=libraries)
-
+    config.add_extension('_variable',
+                         sources=['_variable.c'],
+                         include_dirs=[numpy.get_include()],
+                         libraries=libraries)
     return config
 
 if __name__ == '__main__':
