@@ -1923,59 +1923,6 @@ class widgetHider(QtGui.QWidget):
 ##############################################################################
 # callback handlers
 
-def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
-    """
-    Arrange the mechanics needed for a typical combination of the check box
-    "Commit on change" and push button "Commit".
-
-    The function tells the check box to disable the send button when the box is
-    checked (this is done by adding `(-1, sendButton)` to the checkbox's list
-    `disables`; the already disables the button if the box is checked now.
-
-    The function connects a new callback to the checkbox's signal `toggled`
-    to call the `callback` when the box is checked and the data has been
-    changed, as indicated by the value of `changedFlag`.
-
-    To set up the Commit-on-change---Commit interface, do the following. In
-    the widget add something like::
-
-        commitButton = gui.button(box, self, "Commit", callback=self.apply)
-        autoCommit = gui.checkBox(box, self, "autoCommit", "Commit on change")
-        gui.setStopper(self, commitButton, autoCommit, "dataDirty", self.apply)
-
-    Whenever the data is changed and could be commited, call a method like::
-
-        def applyIf(self):
-        if self.autoApply:
-            self.apply()
-        else:
-            self.dataDirty = True
-
-    The method can have any name, not necessarily `applyIf`. Method `apply`
-    sends the necessary data to signal manager.
-
-    Used like this, `setStopper` tells `autoCommit` checkbox to disable the
-    `commitButton`, and when the check box is checked, it will call
-    `self.apply` if `dataDirty` is `True`.
-
-    :param master: the master widget (used only to get the `changedFlag`)
-    :type master: OWWidget or OWComponent
-    :param sendButton: the button for committing the data
-    :type sendButton: PyQt4.QtGui.QPushButton
-    :param stopCheckbox: the check box
-    :type stopCheckbox: PyQt4.QtGui.QCheckBox
-    :param changedFlag: the name of the flag in the master that tells whether
-        the data is changed
-    :type changedFlag: str
-    :param callback: the method (typically of the `master`) that commits the
-        data
-    :type callback: function
-    """
-    stopCheckbox.disables.append((-1, sendButton))
-    sendButton.setDisabled(stopCheckbox.isChecked())
-    stopCheckbox.toggled.connect(
-        lambda x: x and getdeepattr(master, changedFlag, True) and callback())
-
 
 def auto_commit(widget, master, value, label, auto_label=None, box=True,
                 checkbox_label=None, orientation=None, **misc):
