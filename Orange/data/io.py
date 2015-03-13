@@ -462,12 +462,14 @@ class ExcelReader:
 
     def read_header_1(self, worksheet):
         import openpyxl.cell.cell
-        if worksheet.get_highest_column() < 2:
+        if worksheet.get_highest_column() < 2 or \
+                worksheet.get_highest_row() < 2:
             return False
         cols = self.n_columns
         names = [cell.value.strip() if cell.value is not None else ""
                  for cell in
                  worksheet.get_squared_range(1, 1, cols, 3).__next__()]
+        row2 = list(worksheet.get_squared_range(1, 2, cols, 3).__next__())
         attributes = []
         class_vars = []
         metas = []
@@ -499,7 +501,7 @@ class ExcelReader:
                 var.fix_order = True
             elif "S" in flags:
                 var = StringVariable.make(name)
-            elif worksheet.cell(row=2, column=col + 1).data_type == "n":
+            elif row2[col].data_type == "n":
                 var = ContinuousVariable.make(name)
             else:
                 if len(set(row[col].value for row in worksheet.rows)) > 20:
