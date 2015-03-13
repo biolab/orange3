@@ -96,10 +96,8 @@ class OWSelectRows(widget.OWWidget):
             gui.indentedBox(box_setting, sep=gui.checkButtonOffsetHint(cb)),
             self, "purge_classes", "Remove unused classes",
             callback=self.on_purge_change)
-        gui.auto_commit(box, self, "auto_commit", label="Commit", checkbox_label="Commit on change")
-#        box_commit = gui.widgetBox(box, 'Commit')
-#        gui.checkBox(box_commit, self, "update_on_change", "Commit on change")
-#        gui.button(box_commit, self, "Commit", self.output_data, default=True)
+        gui.auto_commit(box, self, "auto_commit", label="Commit",
+                        checkbox_label="Commit on change")
         self.set_data(None)
         self.resize(600, 400)
 
