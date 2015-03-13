@@ -138,7 +138,6 @@ class OWMDS(widget.OWWidget):
 
         self._invalidated = False
         self._effective_matrix = None
-        self._output_changed = False
 
         box = gui.widgetBox(self.controlArea, "MDS Optimization")
         form = QtGui.QFormLayout(
@@ -206,9 +205,9 @@ class OWMDS(widget.OWWidget):
                           callback=self._invalidate_output)
         cb.box.setFlat(True)
 
-        cb = gui.checkBox(box, self, "autocommit", "Auto commit")
-        b = gui.button(box, self, "Commit", callback=self.commit, default=True)
-        gui.setStopper(self, b, cb, "_output_changed", callback=self.commit)
+        gui.auto_commit(box, self, "autocommit", "Send data",
+                        checkbox_label="Send after any change",
+                        box=None)
 
         self.plot = pg.PlotWidget(background="w")
         self.mainArea.layout().addWidget(self.plot)
@@ -311,7 +310,7 @@ class OWMDS(widget.OWWidget):
             self.apply()
 
         self._update_plot()
-        self.commit()
+        self.unconditional_commit()
 
     def _invalidate_embedding(self):
         self.apply()
@@ -319,10 +318,7 @@ class OWMDS(widget.OWWidget):
         self._invalidate_output()
 
     def _invalidate_output(self):
-        if self.autocommit:
-            self.commit()
-        else:
-            self._output_changed = True
+        self.commit()
 
     def _on_color_index_changed(self):
         self._pen_data = None
@@ -462,7 +458,6 @@ class OWMDS(widget.OWWidget):
             output = Orange.data.Table.from_numpy(domain, X, Y, M)
 
         self.send("Data", output)
-        self._output_changed = False
 
     def onDeleteWidget(self):
         self.plot.clear()
