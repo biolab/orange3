@@ -329,8 +329,8 @@ class OWROCAnalysis(widget.OWWidget):
         abox = gui.widgetBox(box, "Combine ROC Curves From Folds")
         abox.setFlat(True)
         gui.comboBox(abox, self, "roc_averaging",
-                     items=["Merge predictions from folds", "Average TP rate (at FP rate)",
-                            "Average TP and FP rates at threshold", "Show individual curves"],
+                     items=["Merge predictions from folds", "Mean TP rate",
+                            "Mean TP and FP at threshold", "Show individual curves"],
                      callback=self._replot)
 
         hbox = gui.widgetBox(box, "ROC Convex Hull")
