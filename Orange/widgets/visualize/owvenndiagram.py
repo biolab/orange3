@@ -54,8 +54,6 @@ class OWVennDiagram(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # Output changed flag
-        self._changed = False
         # Diagram update is in progress
         self._updating = False
         # Input update is in progress
@@ -102,11 +100,8 @@ class OWVennDiagram(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = gui.widgetBox(self.controlArea, "Output")
-        cb = gui.checkBox(box, self, "autocommit", "Commit on any change")
-        b = gui.button(box, self, "Commit", callback=self.commit,
-                       default=True)
-        gui.setStopper(self, b, cb, "_changed", callback=self.commit)
+        gui.auto_commit(self.controlArea, self, "autocommit",
+                        "Commit", "Auto commit")
 
         # Main area view
         self.scene = QGraphicsScene()
@@ -480,10 +475,7 @@ class OWVennDiagram(widget.OWWidget):
         self.itemsets[key] = self.itemsets[key]._replace(title=text)
 
     def invalidateOutput(self):
-        if self.autocommit:
-            self.commit()
-        else:
-            self._changed = True
+        self.commit()
 
     def commit(self):
         selected_subsets = []
