@@ -229,6 +229,13 @@ class OWMDS(widget.OWWidget):
         self.matrix = matrix
         self._effective_matrix = matrix
         self._invalidated = True
+        # if calculating distances between rows the 'matrix.row_items' should also be set as data
+        if matrix and matrix.axis:
+            self.set_data(matrix.row_items)
+        else:
+            self.set_data(None)
+            self._clear()
+            self._initialize_matrix_transposed(matrix)
 
     def _clear(self):
         self._pen_data = None
@@ -239,6 +246,7 @@ class OWMDS(widget.OWWidget):
         self.colorvar_model[:] = ["Same color"]
         self.shapevar_model[:] = ["Same shape"]
         self.sizevar_model[:] = ["Same size"]
+        self.labelvar_model[:] = ["No labels"]
 
         self.color_index = 0
         self.shape_index = 0
@@ -274,6 +282,16 @@ class OWMDS(widget.OWWidget):
 
         if domain.class_var is not None:
             self.color_index = list(self.colorvar_model).index(domain.class_var)
+
+    def _initialize_matrix_transposed(self, matrix):
+        # initialize the graph state for the transposed matrix
+        attr = "Attribute names"
+        self.labelvar_model[:] = ["No labels", attr]
+        self.shapevar_model[:] = ["Same shape", attr]
+        self.colorvar_model[:] = ["Same color", attr]
+
+        self.color_index = list(self.colorvar_model).index(attr)
+        self.shape_index = list(self.shapevar_model).index(attr)
 
     def apply(self):
         if self.data is None and self.matrix is None:
@@ -347,10 +365,14 @@ class OWMDS(widget.OWWidget):
 
     def _setup_plot(self):
         have_data = self.data is not None
+        have_matrix_transposed = self.matrix is not None and not self.matrix.axis
 
         def column(data, variable):
             a, _ = data.get_column_view(variable)
             return a.ravel()
+
+        def attributes(matrix):
+            return matrix.row_items.domain.attributes
 
         def scale(a):
             dmin, dmax = numpy.nanmin(a), numpy.nanmax(a)
@@ -373,6 +395,13 @@ class OWMDS(widget.OWWidget):
                 pen_data = [make_pen(QtGui.QColor(r, g, b, self.symbol_opacity),
                                      cosmetic=True)
                             for r, g, b in color_data]
+            elif have_matrix_transposed and self.colorvar_model[self.color_index] == 'Attribute names':
+                attr = attributes(self.matrix)
+                palette = colorpalette.ColorPaletteGenerator(len(attr))
+                color_data = [palette.getRGB(i) for i in range(len(attr))]
+                pen_data = [make_pen(QtGui.QColor(r, g, b, self.symbol_opacity),
+                                     cosmetic=True)
+                            for r, g, b in color_data]
             else:
                 pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
             self._pen_data = pen_data
@@ -387,6 +416,11 @@ class OWMDS(widget.OWWidget):
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
+            elif have_matrix_transposed and self.shapevar_model[self.shape_index] == 'Attribute names':
+                Symbols = ScatterPlotItem.Symbols
+                symbols = numpy.array(list(Symbols.keys()))
+                attr = [i % (len(Symbols) - 1) for i, _ in enumerate(attributes(self.matrix))]
+                shape_data = symbols[attr]
             else:
                 shape_data = "o"
             self._shape_data = shape_data
@@ -414,6 +448,10 @@ class OWMDS(widget.OWWidget):
                 label_data = [label_var.repr_val(val) for val in label_data]
                 label_items = [pg.TextItem(text, anchor=(0.5, 0))
                                for text in label_data]
+            elif have_matrix_transposed and self.labelvar_model[self.label_index] == 'Attribute names':
+                attr = attributes(self.matrix)
+                label_items = [pg.TextItem(str(text), anchor=(0.5, 0))
+                               for text in attr]
             else:
                 label_items = None
             self._label_data = label_items
