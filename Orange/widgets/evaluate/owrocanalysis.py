@@ -326,11 +326,11 @@ class OWROCAnalysis(widget.OWWidget):
             selectionMode=QtGui.QListView.MultiSelection,
             callback=self._on_classifiers_changed)
 
-        abox = gui.widgetBox(box, "Average ROC Curves")
+        abox = gui.widgetBox(box, "Combine ROC Curves From Folds")
         abox.setFlat(True)
         gui.comboBox(abox, self, "roc_averaging",
-                     items=["Merge (expected ROC perf.)", "Vertical",
-                            "Threshold", "None"],
+                     items=["Merge predictions from folds", "Average TP rate (at FP rate)",
+                            "Average TP and FP rates at threshold", "Show individual curves"],
                      callback=self._replot)
 
         hbox = gui.widgetBox(box, "ROC Convex Hull")
