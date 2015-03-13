@@ -629,7 +629,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             "padding: 3px; padding-left: 6px; vertical-align: center".
             format(background, foreground))
         self.warning_label.setText(text)
-        self.warning_label.setToolTip(tooltip)
+        self.warning_bar.setToolTip(tooltip)
         if self.warning_bar.isHidden():
             self.warning_bar.setVisible(True)
             new_height = current_height + self.warning_bar.height()
