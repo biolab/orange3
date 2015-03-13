@@ -1978,7 +1978,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
 
 
 def auto_commit(widget, master, value, label, auto_label=None, box=True,
-                checkbox_label=None, **misc):
+                checkbox_label=None, orientation=None, **misc):
     """
     Add a commit button with auto-commit check box.
 
@@ -2044,7 +2044,9 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     if isinstance(box, QtGui.QWidget):
         b = box
     else:
-        b = widgetBox(widget, box=box, orientation=bool(checkbox_label),
+        if orientation is None:
+            orientation = bool(checkbox_label)
+        b = widgetBox(widget, box=box, orientation=orientation,
                       addToLayout=False)
     b.checkbox = cb = checkBox(b, master, value, checkbox_label or " ",
                                callback=u, tooltip=auto_label)
