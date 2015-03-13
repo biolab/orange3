@@ -239,7 +239,7 @@ class OWScatterPlot(OWWidget):
             self.attr_y = self.attribute_selection_list[1].name
         self.attribute_selection_list = None
         self.update_graph()
-        self.commit()
+        self.unconditional_commit()
 
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:

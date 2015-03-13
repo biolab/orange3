@@ -519,7 +519,7 @@ class OWPythonScript(widget.OWWidget):
         self.in_object = obj
 
     def handleNewSignals(self):
-        self.commit()
+        self.unconditional_commit()
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()

@@ -394,7 +394,7 @@ class OWDistanceMap(widget.OWWidget):
             self._update_ordering()
             self._setup_scene()
             self._update_labels()
-        self.commit()
+        self.unconditional_commit()
 
     def _clear_plot(self):
         def remove(item):
