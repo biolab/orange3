@@ -1027,13 +1027,13 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
 class __AttributeIconDict(dict):
     def __getitem__(self, key):
         if not self:
-            for tpe, char, col in ((vartype(ContinuousVariable()), 
-                                        "C", (202, 0, 32)),
-                                  (vartype(DiscreteVariable()), 
-                                        "D", (26, 150, 65)),
-                                  (vartype(StringVariable()), 
-                                        "S", (0, 0, 0)),
-                                  (-1, "?", (128, 128, 128))):
+            for tpe, char, col in ((vartype(ContinuousVariable()),
+                                    "C", (202, 0, 32)),
+                                   (vartype(DiscreteVariable()),
+                                    "D", (26, 150, 65)),
+                                   (vartype(StringVariable()),
+                                    "S", (0, 0, 0)),
+                                   (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))
         if key not in self:
             key = vartype(key) if isinstance(key, Variable) else -1
@@ -1975,6 +1975,71 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
     sendButton.setDisabled(stopCheckbox.isChecked())
     stopCheckbox.toggled.connect(
         lambda x: x and getdeepattr(master, changedFlag, True) and callback())
+
+
+def auto_commit(widget, master, label, value, auto_label=None, box=True,
+                **misc):
+    """
+    Add a commit button with auto-commit check box.
+
+    The widget must have a commit method and a setting that stores whether
+    auto-commit is on.
+
+    The function replaces the commit method with with a new commit method that
+    checks whether auto-commit is on. If it is, it passes the call to the
+    original commit, otherwise it sets the dirty flag.
+
+    The checkbox controls the auto-commit. When auto-commit is switched on, the
+    checkbox callback checks whether the dirty flag is on and calls the original
+    commit.
+
+    :param widget: the widget into which the box with the button is inserted
+    :type widget: PyQt4.QtGui.QWidget
+    :param master: master widget
+    :type master: OWWidget or OWComponent
+    :param value: the master's attribute which stores whether the auto-commit
+        is on
+    :type value:  str
+    :param label: The button label
+    :type label: str
+    :param label: The label used when auto-commit is on; default is
+        `"Auto " + label`
+    :type label: str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :return: the box
+    """
+    def u():
+        nonlocal dirty
+        if getattr(master, value):
+            btn.setText(auto_label)
+            btn.setEnabled(False)
+            if dirty:
+                orig_commit()
+                dirty = False
+        else:
+            btn.setText(label)
+            btn.setEnabled(True)
+
+    def commit():
+        nonlocal dirty
+        if getattr(master, value):
+            orig_commit()
+        else:
+            dirty = True
+
+    dirty = False
+    orig_commit = master.commit
+    auto_label = auto_label or ("Auto " + label)
+    b = widgetBox(widget, box=box, orientation='horizontal', addToLayout=False)
+    cb = checkBox(b, master, value, " ", callback=u, tooltip=auto_label)
+    cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+    btn = button(b, master, label, callback=orig_commit)
+    btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+    u()
+    master.commit = commit
+    miscellanea(b, widget, widget, **misc)
+    return b
 
 
 class ControlledList(list):
