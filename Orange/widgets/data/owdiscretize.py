@@ -222,10 +222,8 @@ class OWDiscretize(widget.OWWidget):
 
         self.controlbox = controlbox
 
-        gui.auto_commit(None, self,
-                        "autosend", "Apply",
-                        box=gui.widgetBox(self.controlArea,
-                                          orientation="horizontal"),
+        gui.auto_commit(self.controlArea, self, "autosend", "Apply",
+                        orientation="horizontal",
                         checkbox_label="Send data after every change")
 
     def set_data(self, data):
