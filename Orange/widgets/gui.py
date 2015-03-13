@@ -1993,6 +1993,9 @@ def auto_commit(widget, master, value ,label, auto_label=None, box=True,
     checkbox callback checks whether the dirty flag is on and calls the original
     commit.
 
+    Important! Do not connect any signals to the commit before calling
+    auto_commit.
+
     :param widget: the widget into which the box with the button is inserted
     :type widget: PyQt4.QtGui.QWidget
     :param value: the master's attribute which stores whether the auto-commit
@@ -2036,10 +2039,10 @@ def auto_commit(widget, master, value ,label, auto_label=None, box=True,
     auto_label = auto_label or (label if checkbox_label else "Auto " + label)
     b = widgetBox(widget, box=box, orientation=bool(checkbox_label),
                   addToLayout=False)
-    cb = checkBox(b, master, value, checkbox_label or " ",
-                  callback=u, tooltip=auto_label)
+    b.checkbox = cb = checkBox(b, master, value, checkbox_label or " ",
+                               callback=u, tooltip=auto_label)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-    btn = button(b, master, label, callback=do_commit)
+    b.button = btn = button(b, master, label, callback=do_commit)
     if not checkbox_label:
         btn.setSizePolicy(QtGui.QSizePolicy.Expanding,
                           QtGui.QSizePolicy.Preferred)
