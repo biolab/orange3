@@ -139,6 +139,7 @@ class OWDiscretize(widget.OWWidget):
 
     default_method = settings.Setting(0)
     default_k = settings.Setting(5)
+    autosend = settings.Setting(True)
 
     # Discretization methods
     Default, Leave, MDL, EqualFreq, EqualWidth, Remove, Custom = range(7)
@@ -175,10 +176,11 @@ class OWDiscretize(widget.OWWidget):
         for opt in options[1:5]:
             gui.appendRadioButton(rbox, opt)
 
-        gui.hSlider(gui.indentedBox(rbox),
-                    self, "default_k", minValue=2, maxValue=10,
-                    label="Num. of intervals:",
-                    callback=self._default_disc_changed)
+        s = gui.hSlider(gui.indentedBox(rbox),
+                        self, "default_k", minValue=2, maxValue=10,
+                        label="Num. of intervals:",
+                        callback=self._default_disc_changed)
+        s.setTracking(False)
 
         gui.appendRadioButton(rbox, options[-1])
 
@@ -189,9 +191,7 @@ class OWDiscretize(widget.OWWidget):
         )
 
         # List view with all attributes
-        self.varview = QListView(
-            selectionMode=QListView.ExtendedSelection
-        )
+        self.varview = QListView(selectionMode=QListView.ExtendedSelection)
         self.varview.setItemDelegate(DiscDelegate())
         self.varmodel = itemmodels.VariableListModel()
         self.varview.setModel(self.varmodel)
@@ -209,23 +209,24 @@ class OWDiscretize(widget.OWWidget):
         for opt in options[:5]:
             gui.appendRadioButton(controlbox, opt)
 
-        gui.hSlider(gui.indentedBox(controlbox),
-                    self, "k", minValue=2, maxValue=10,
-                    label="Num. of intervals:",
-                    callback=self._disc_method_changed)
+        s = gui.hSlider(gui.indentedBox(controlbox),
+                        self, "k", minValue=2, maxValue=10,
+                        label="Num. of intervals:",
+                        callback=self._disc_method_changed)
+        s.setTracking(False)
 
-        gui.appendRadioButton(controlbox, options[-1])
+        gui.appendRadioButton(controlbox, "Remove attribute")
 
         gui.rubber(controlbox)
         controlbox.setEnabled(False)
 
         self.controlbox = controlbox
 
-        bbox = QDialogButtonBox(QDialogButtonBox.Apply)
-        self.controlArea.layout().addWidget(bbox)
-        bbox.accepted.connect(self.commit)
-        button = bbox.button(QDialogButtonBox.Apply)
-        button.clicked.connect(self.commit)
+        gui.auto_commit(None, self,
+                        "autosend", "Apply",
+                        box=gui.widgetBox(self.controlArea,
+                                          orientation="horizontal"),
+                        checkbox_label="Send data after every change")
 
     def set_data(self, data):
         self.closeContext()
@@ -239,8 +240,7 @@ class OWDiscretize(widget.OWWidget):
             self._update_points()
         else:
             self._clear()
-
-        self.commit()
+        self.unconditional_commit()
 
     def _initialize(self, data):
         # Initialize the default variable states for new data.
@@ -309,13 +309,13 @@ class OWDiscretize(widget.OWWidget):
                 return dvar.compute_value.points, dvar
             else:
                 assert False
-
         for i, var in enumerate(self.varmodel):
             state = self.var_state[i]
             if state.points is None and state.disc_var is None:
                 points, dvar = induce_cuts(state.method, self.data, var)
                 new_state = state._replace(points=points, disc_var=dvar)
                 self._set_var_state(i, new_state)
+        self.commit()
 
     def _method_index(self, method):
         return METHODS.index((type(method), ))
@@ -362,17 +362,14 @@ class OWDiscretize(widget.OWWidget):
         for i, _ in enumerate(self.varmodel):
             if isinstance(self.var_state[i].method, Default):
                 self._set_var_state(i, state)
-
         self._update_points()
 
     def _disc_method_changed(self):
         indices = self.selected_indices()
         method = self._current_method()
         state = DState(method, None, None)
-
         for idx in indices:
             self._set_var_state(idx, state)
-
         self._update_points()
 
     def _var_selection_changed(self, *args):
@@ -384,12 +381,10 @@ class OWDiscretize(widget.OWWidget):
         if len(mset) == 1:
             method = mset.pop()
             self.method = self._method_index(method)
-
             if isinstance(method, (EqualFreq, EqualWidth)):
                 self.k = method.k
             elif isinstance(method, Custom):
                 self.cutpoints = method.points
-
         else:
             # deselect the current button
             self.method = -1
