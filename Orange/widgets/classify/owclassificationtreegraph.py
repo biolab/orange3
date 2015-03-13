@@ -159,7 +159,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.root_node = None
             self.dataset = None
         else:
-            self.tree = clf.clf.tree_
+            self.tree = clf.skl_model.tree_
             self.domain = clf.domain
             self.dataset = getattr(clf, "instances", None)
             self.target_combo.clear()
