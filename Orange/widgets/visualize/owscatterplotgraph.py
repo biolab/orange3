@@ -282,8 +282,8 @@ class InteractiveViewBox(ViewBox):
         self.updateScaleBox(buttonDownPos, Point(x, y))
 
     # noinspection PyPep8Naming,PyMethodOverriding
-    def mouseDragEvent(self, ev):
-        if self.graph.state == SELECT:
+    def mouseDragEvent(self, ev, axis=None):
+        if self.graph.state == SELECT and axis is None:
             ev.accept()
             pos = ev.pos()
             if ev.button() == Qt.LeftButton:
@@ -297,7 +297,7 @@ class InteractiveViewBox(ViewBox):
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             ev.ignore()
-            super().mouseDragEvent(ev)
+            super().mouseDragEvent(ev, axis=axis)
         else:
             ev.ignore()
 
