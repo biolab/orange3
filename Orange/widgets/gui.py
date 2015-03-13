@@ -1977,7 +1977,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
         lambda x: x and getdeepattr(master, changedFlag, True) and callback())
 
 
-def auto_commit(widget, master, value ,label, auto_label=None, box=True,
+def auto_commit(widget, master, value, label, auto_label=None, box=True,
                 checkbox_label=None, **misc):
     """
     Add a commit button with auto-commit check box.
@@ -2031,14 +2031,17 @@ def auto_commit(widget, master, value ,label, auto_label=None, box=True,
 
     def do_commit():
         nonlocal dirty
-        orig_commit()
+        master.unconditional_commit()
         dirty = False
 
     dirty = False
-    orig_commit = master.commit
+    master.unconditional_commit = master.commit
     auto_label = auto_label or (label if checkbox_label else "Auto " + label)
-    b = widgetBox(widget, box=box, orientation=bool(checkbox_label),
-                  addToLayout=False)
+    if isinstance(box, QtGui.QWidget):
+        b = box
+    else:
+        b = widgetBox(widget, box=box, orientation=bool(checkbox_label),
+                      addToLayout=False)
     b.checkbox = cb = checkBox(b, master, value, checkbox_label or " ",
                                callback=u, tooltip=auto_label)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
@@ -2048,7 +2051,8 @@ def auto_commit(widget, master, value ,label, auto_label=None, box=True,
                           QtGui.QSizePolicy.Preferred)
     u()
     master.commit = commit
-    miscellanea(b, widget, widget, **misc)
+    miscellanea(b, widget, widget,
+                addToLayout=not isinstance(box, QtGui.QWidget), **misc)
     return b
 
 
