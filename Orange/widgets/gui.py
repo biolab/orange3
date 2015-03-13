@@ -1978,7 +1978,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
 
 
 def auto_commit(widget, master, value ,label, auto_label=None, box=True,
-                **misc):
+                checkbox_label=None, **misc):
     """
     Add a commit button with auto-commit check box.
 
@@ -2010,13 +2010,11 @@ def auto_commit(widget, master, value ,label, auto_label=None, box=True,
     :return: the box
     """
     def u():
-        nonlocal dirty
         if getattr(master, value):
             btn.setText(auto_label)
             btn.setEnabled(False)
             if dirty:
-                orig_commit()
-                dirty = False
+                do_commit()
         else:
             btn.setText(label)
             btn.setEnabled(True)
@@ -2024,18 +2022,27 @@ def auto_commit(widget, master, value ,label, auto_label=None, box=True,
     def commit():
         nonlocal dirty
         if getattr(master, value):
-            orig_commit()
+            do_commit()
         else:
             dirty = True
 
+    def do_commit():
+        nonlocal dirty
+        orig_commit()
+        dirty = False
+
     dirty = False
     orig_commit = master.commit
-    auto_label = auto_label or ("Auto " + label)
-    b = widgetBox(widget, box=box, orientation='horizontal', addToLayout=False)
-    cb = checkBox(b, master, value, " ", callback=u, tooltip=auto_label)
+    auto_label = auto_label or (label if checkbox_label else "Auto " + label)
+    b = widgetBox(widget, box=box, orientation=bool(checkbox_label),
+                  addToLayout=False)
+    cb = checkBox(b, master, value, checkbox_label or " ",
+                  callback=u, tooltip=auto_label)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-    btn = button(b, master, label, callback=orig_commit)
-    btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+    btn = button(b, master, label, callback=do_commit)
+    if not checkbox_label:
+        btn.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                          QtGui.QSizePolicy.Preferred)
     u()
     master.commit = commit
     miscellanea(b, widget, widget, **misc)
