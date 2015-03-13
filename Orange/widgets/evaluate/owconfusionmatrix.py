@@ -46,7 +46,6 @@ class OWConfusionMatrix(widget.OWWidget):
         self.data = None
         self.results = None
         self.learners = []
-        self._invalidated = False
 
         box = gui.widgetBox(self.controlArea, "Learners")
 
@@ -75,9 +74,8 @@ class OWConfusionMatrix(widget.OWWidget):
                      "Probabilities",
                      callback=self._invalidate)
 
-        b = gui.button(box, self, "Commit", callback=self.commit, default=True)
-        cb = gui.checkBox(box, self, "autocommit", "Commit automatically")
-        gui.setStopper(self, b, cb, "_invalidated", callback=self.commit)
+        gui.auto_commit(self.controlArea, self, "autocommit",
+                        "Send Data", "Auto send is on")
 
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
@@ -227,13 +225,9 @@ class OWConfusionMatrix(widget.OWWidget):
             data = None
 
         self.send("Selected Data", data)
-        self._invalidated = False
 
     def _invalidate(self):
-        if self.autocommit:
-            self.commit()
-        else:
-            self._invalidated = True
+        self.commit()
 
     def _learner_changed(self):
         # The selected learner has changed
