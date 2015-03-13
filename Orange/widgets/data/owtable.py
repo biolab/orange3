@@ -95,7 +95,7 @@ class RichTableDecorator(QIdentityProxyModel):
         # QIdentityProxyModel doesn’t show headers for empty models
         if self.sourceModel:
             return self.sourceModel().headerData(section, orientation, role)
-        
+
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             var = super().headerData(
                 section, orientation, TableModel.VariableRole)
@@ -251,16 +251,10 @@ class OWDataTable(widget.OWWidget):
         gui.button(box, self, "Set colors", self.set_colors, autoDefault=False,
                    tooltip="Set the background color and color palette")
 
-        gui.separator(self.controlArea)
-        selection_box = gui.widgetBox(self.controlArea, "Selection")
-        self.send_button = gui.button(selection_box, self, "Send selections",
-                                      self.commit, default=True)
-        cb = gui.checkBox(selection_box, self, "auto_commit",
-                          "Commit on any change", callback=self.commit_if)
-        gui.setStopper(self, self.send_button, cb, "selectionChangedFlag",
-                       self.commit)
-
         gui.rubber(self.controlArea)
+
+        gui.auto_commit(self.controlArea, self, "auto_commit",
+                        "Send Selected Rows", "Auto send is on")
 
         dlg = self.create_color_dialog()
         self.discPalette = dlg.getDiscretePalette("discPalette")
@@ -342,7 +336,6 @@ class OWDataTable(widget.OWWidget):
             self.tabs.setCurrentIndex(self.tabs.indexOf(view))
 
             self.set_info(slot.summary)
-            self.send_button.setEnabled(not self.auto_commit)
 
             if isinstance(slot.summary.len, concurrent.futures.Future):
                 def update(f):
@@ -363,11 +356,6 @@ class OWDataTable(widget.OWWidget):
                 self.set_info(current._input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
-
-        if self.inputs:
-            self.send_button.setEnabled(not self.auto_commit)
-        else:
-            self.send_button.setEnabled(False)
 
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
@@ -408,9 +396,7 @@ class OWDataTable(widget.OWWidget):
         # update the header (attribute names)
         self._update_variable_labels(view)
 
-        view.selectionModel().selectionChanged.connect(
-            self.update_selection
-        )
+        view.selectionModel().selectionChanged.connect(self.update_selection)
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
@@ -542,13 +528,7 @@ class OWDataTable(widget.OWWidget):
             self.set_info(current._input_slot.summary)
 
     def update_selection(self, *_):
-        view = self.tabs.currentWidget()
-
-        self.send_button.setEnabled(
-            view.selectionModel().hasSelection()
-            and not self.auto_commit
-        )
-        self.commit_if()
+        self.commit()
 
     def get_current_selection(self):
         table = self.tabs.currentWidget()
@@ -562,12 +542,6 @@ class OWDataTable(widget.OWWidget):
             return rows
         else:
             return []
-
-    def commit_if(self):
-        if self.auto_commit:
-            self.commit()
-        else:
-            self.selectionChangedFlag = True
 
     def commit(self):
         selected_data = other_data = None
