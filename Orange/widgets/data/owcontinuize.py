@@ -82,15 +82,14 @@ class OWContinuize(widget.OWWidget):
             btnLabels=self.value_ranges,
             callback=self.settings_changed)
 
-        gui.auto_commit(self.controlArea, self, "autosend",
-                        "Send data", "Auto send is on")
+        gui.auto_commit(self.controlArea, self, "autosend", "Apply")
 
         self.data = None
         self.resize(150, 300)
 
     def settings_changed(self):
         self.commit()
-        
+
     def setData(self, data):
         self.data = data
         if data is None:
