@@ -148,7 +148,8 @@ class OWScatterPlot(OWWidget):
         p = self.graph.plot_widget.palette()
         self.graph.set_palette(p)
 
-        gui.auto_commit(self.controlArea, self, "Send Selection", "auto_send_selection")
+        gui.auto_commit(self.controlArea, self, "auto_send_selection",
+                        "Send Selection")
 
         def zoom(s):
             """Zoom in/out by factor `s`."""

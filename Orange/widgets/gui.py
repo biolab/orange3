@@ -1977,7 +1977,7 @@ def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
         lambda x: x and getdeepattr(master, changedFlag, True) and callback())
 
 
-def auto_commit(widget, master, label, value, auto_label=None, box=True,
+def auto_commit(widget, master, value ,label, auto_label=None, box=True,
                 **misc):
     """
     Add a commit button with auto-commit check box.
@@ -1995,11 +1995,11 @@ def auto_commit(widget, master, label, value, auto_label=None, box=True,
 
     :param widget: the widget into which the box with the button is inserted
     :type widget: PyQt4.QtGui.QWidget
-    :param master: master widget
-    :type master: OWWidget or OWComponent
     :param value: the master's attribute which stores whether the auto-commit
         is on
     :type value:  str
+    :param master: master widget
+    :type master: OWWidget or OWComponent
     :param label: The button label
     :type label: str
     :param label: The label used when auto-commit is on; default is
