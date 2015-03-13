@@ -18,13 +18,15 @@ companion :class:`WidgetsSignalManager` class.
 """
 import sys
 import logging
+import concurrent.futures
+from collections import namedtuple
 
 import sip
 from PyQt4.QtGui import (
     QShortcut, QKeySequence, QWhatsThisClickedEvent, QWidget
 )
 
-from PyQt4.QtCore import Qt, QObject, QCoreApplication, QEvent
+from PyQt4.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
@@ -111,13 +113,31 @@ class WidgetManager(QObject):
     #:   * ProcessingUpdate - widget has entered processing state
     InputUpdate, BlockingUpdate, ProcessingUpdate = 1, 2, 4
 
+    #: Widget initialization states
+    Delayed = namedtuple("Delayed", ["node", "future"])
+    Materialized = namedtuple("Materialized", ["node", "widget"])
+
+    class WidgetInitEvent(QEvent):
+        DelayedInit = QEvent.registerEventType()
+
+        def __init__(self, initstate):
+            super().__init__(WidgetManager.WidgetInitEvent.DelayedInit)
+            self._initstate = initstate
+
+        def initstate(self):
+            return self._initstate
+
     def __init__(self, parent=None):
         QObject.__init__(self, parent)
         self.__scheme = None
         self.__signal_manager = None
         self.__widgets = []
+        self.__initstate_for_node = {}
         self.__widget_for_node = {}
         self.__node_for_widget = {}
+        # If True then the initialization of the OWWidget instance
+        # will be delayed (scheduled to run from the event loop)
+        self.__delayed_init = True
 
         # Widgets that were 'removed' from the scheme but were at
         # the time in an input update loop and could not be deleted
@@ -164,7 +184,16 @@ class WidgetManager(QObject):
         """
         Return the OWWidget instance for the scheme node.
         """
-        return self.__widget_for_node[node]
+        state = self.__initstate_for_node[node]
+        if isinstance(state, WidgetManager.Delayed):
+            # Create the widget now if it is still in the event queue.
+            state = self.__materialize(state)
+            self.__initstate_for_node[node] = state
+            return state.widget
+        elif isinstance(state, WidgetManager.Materialized):
+            return state.widget
+        else:
+            assert False
 
     def node_for_widget(self, widget):
         """
@@ -178,33 +207,56 @@ class WidgetManager(QObject):
         """
         Create a new OWWidget instance for the corresponding scheme node.
         """
-        widget = self.create_widget_instance(node)
+        future = concurrent.futures.Future()
+        state = WidgetManager.Delayed(node, future)
+        self.__initstate_for_node[node] = state
 
+        event = WidgetManager.WidgetInitEvent(state)
+        if self.__delayed_init:
+            def schedule_later():
+                QCoreApplication.postEvent(
+                    self, event, Qt.LowEventPriority - 10)
+            QTimer.singleShot(int(1000 / 30) + 10, schedule_later)
+        else:
+            QCoreApplication.sendEvent(self, event)
+
+    def __materialize(self, state):
+        # Initialize an OWWidget for a Delayed widget initialization.
+        assert isinstance(state, WidgetManager.Delayed)
+        node, future = state.node, state.future
+
+        widget = self.create_widget_instance(node)
         self.__widgets.append(widget)
         self.__widget_for_node[node] = widget
         self.__node_for_widget[widget] = node
 
         self.__initialize_widget_state(node, widget)
 
+        state = WidgetManager.Materialized(node, widget)
+        self.__initstate_for_node[node] = state
+
+        future.set_result(widget)
         self.widget_for_node_added.emit(node, widget)
+
+        return state
 
     def remove_widget_for_node(self, node):
         """
         Remove the OWWidget instance for node.
         """
-        widget = self.widget_for_node(node)
+        state = self.__initstate_for_node[node]
+        if isinstance(state, WidgetManager.Delayed):
+            state.future.cancel()
+            del self.__initstate_for_node[node]
+        else:
+            self.__widgets.remove(state.widget)
+            del self.__initstate_for_node[node]
+            del self.__widget_for_node[node]
+            node.title_changed.disconnect(state.widget.setCaption)
+            state.widget.progressBarValueChanged.disconnect(node.set_progress)
 
-        self.__widgets.remove(widget)
-
-        del self.__widget_for_node[node]
-        del self.__node_for_widget[widget]
-
-        node.title_changed.disconnect(widget.setCaption)
-        widget.progressBarValueChanged.disconnect(node.set_progress)
-
-        self.widget_for_node_removed.emit(node, widget)
-
-        self._delete_widget(widget)
+            self.widget_for_node_removed.emit(node, state.widget)
+            self._delete_widget(state.widget)
 
     def _delete_widget(self, widget):
         """
@@ -303,7 +355,7 @@ class WidgetManager(QObject):
         """
         Return the processing state flags for the node.
 
-        Same as `manager.node_processing_state(manger.widget_for_node(node))`
+        Same as `manager.widget_processing_state(manger.widget_for_node(node))`
 
         """
         widget = self.widget_for_node(node)
@@ -317,6 +369,17 @@ class WidgetManager(QObject):
 
         """
         return self.__widget_processing_state[widget]
+
+    def customEvent(self, event):
+        if event.type() == WidgetManager.WidgetInitEvent.DelayedInit:
+            state = event.initstate()
+            node, future = state.node, state.future
+            if not (future.cancelled() or future.done()):
+                QCoreApplication.flush()
+                self.__initstate_for_node[node] = self.__materialize(state)
+            event.accept()
+        else:
+            super().customEvent(event)
 
     def eventFilter(self, receiver, event):
         if event.type() == QEvent.Close and receiver is self.__scheme:
