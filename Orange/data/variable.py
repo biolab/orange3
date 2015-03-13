@@ -18,7 +18,7 @@ class VariableMeta(type):
     # noinspection PyMethodParameters
     def __new__(mcs, name, *args):
         cls = type.__new__(mcs, name, *args)
-        if not hasattr(cls, '_all_vars'):
+        if not hasattr(cls, '_all_vars') or cls._all_vars is Variable._all_vars:
             cls._all_vars = {}
         if name != "Variable":
             Variable._variable_types.append(cls)
