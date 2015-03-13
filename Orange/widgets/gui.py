@@ -2036,7 +2036,11 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
 
     dirty = False
     master.unconditional_commit = master.commit
-    auto_label = auto_label or (label if checkbox_label else "Auto " + label)
+    if not auto_label:
+        if checkbox_label:
+            auto_label = label
+        else:
+            auto_label = "Auto " + label.lower() + " is on"
     if isinstance(box, QtGui.QWidget):
         b = box
     else:
