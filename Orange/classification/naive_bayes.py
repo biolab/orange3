@@ -53,9 +53,10 @@ class NaiveBayesModel(Model):
                 py = (1 + self.class_freq[c]) / (ncv + sum(self.class_freq))
                 log_prob = np.log(py)
                 for ai, a in enumerate(self.domain.attributes):
-                    relevant = 1 + self.cont[ai][c][a.to_val(ins[a])]
-                    total = len(a.values) + self.class_freq[c]
-                    log_prob += np.log(relevant / total)
+                    if not np.isnan(ins[a]):
+                        relevant = 1 + self.cont[ai][c][a.to_val(ins[a])]
+                        total = len(a.values) + self.class_freq[c]
+                        log_prob += np.log(relevant / total)
                 probs[i, c] = log_prob
         np.exp(probs, out=probs)
         probs /= probs.sum(axis=1)[:, None]
