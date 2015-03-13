@@ -284,7 +284,7 @@ class LinksEditWidget(QGraphicsWidget):
                 line.setLine(start.x(), start.y(),
                              event.pos().x(), event.pos().y())
 
-                pen = QPen(Qt.green, 4)
+                pen = QPen(Qt.black, 4)
                 pen.setCapStyle(Qt.RoundCap)
                 line.setPen(pen)
                 line.show()
@@ -362,7 +362,7 @@ class LinksEditWidget(QGraphicsWidget):
         sink_pos = self.mapFromItem(sink_anchor, sink_pos)
         line.setLine(source_pos.x(), source_pos.y(),
                      sink_pos.x(), sink_pos.y())
-        pen = QPen(Qt.green, 4)
+        pen = QPen(Qt.black, 4)
         pen.setCapStyle(Qt.RoundCap)
         line.setPen(pen)
 
