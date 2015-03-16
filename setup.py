@@ -94,7 +94,6 @@ def git_version():
         GIT_REVISION = out.strip().decode('ascii')
     except OSError:
         GIT_REVISION = "Unknown"
-
     return GIT_REVISION
 
 
@@ -123,7 +122,7 @@ if not release:
         GIT_REVISION = "Unknown"
 
     if not ISRELEASED:
-        FULLVERSION += '.dev-' + GIT_REVISION[:7]
+        FULLVERSION += '.dev0+' + GIT_REVISION[:7]
 
     a = open(filename, 'w')
     try:
