@@ -8,6 +8,10 @@ Var AdminInstall
 # Directory of an existing Python installation if/when available
 Var PythonDir
 
+# Cpu's SSE capabilities (nosse|sse2|sse3)
+Var SSE
+
+
 #
 # ${InitAdminInstall}
 #
@@ -60,6 +64,37 @@ Var PythonDir
 	return:
 !macroend
 !define InitPythonDir "!insertmacro GET_PYTHON_DIR"
+
+#
+# ${InitSSE}
+#
+# Initialize the SSE global variable with nosse|sse2|sse3 string
+# depending on the executing Cpu sse support
+# (requires CpuCaps.dll nsis plugin)
+#
+!define InitSSE "!insertmacro __INIT_SSE"
+!macro __INIT_SSE
+	!ifdef NSIS_PLUGINS_PATH
+		!addplugindir ${NSIS_PLUGINS_PATH}
+	!endif
+	Push $0
+
+	CpuCaps::hasSSE3
+	Pop $0
+	${If} $0 == "Y"
+		StrCpy $SSE "sse3"
+	${Else}
+		CpuCaps::hasSSE2
+		Pop $0
+		${If} $0 == "Y"
+			StrCpy $SSE "sse2"
+		${Else}
+			StrCpy $SSE "nosse"
+		${EndIf}
+	${EndIf}
+
+	Pop $0
+!macroend
 
 #
 # ${PythonExec} COMMAND_STR

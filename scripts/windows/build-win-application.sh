@@ -76,7 +76,7 @@ DOWNLOADDIR=${DOWNLOADDIR:-build/temp.download-cache}
 #     msvredist/
 #   wheelhouse/
 #       [no]sse[2|3]/
-#   pyqt4/
+#   nsisplugins/cpucaps.dll
 #   requirements.txt
 
 # Clean any leftovers from previous runs
@@ -88,6 +88,8 @@ fi
 mkdir -p "$BUILDBASE"/core/python
 mkdir -p "$BUILDBASE"/core/msvredist
 mkdir -p "$BUILDBASE"/wheelhouse
+mkdir -p "$BUILDBASE"/nsisplugins
+
 
 mkdir -p "$DOWNLOADDIR"
 mkdir -p "$DISTDIR"
@@ -244,6 +246,10 @@ function prepare_scipy_stack {
         mv "$wheeldir"/scipy-$SCIPY_VER-*$SSE.whl \
 		   "$wheeldir"/scipy-$SCIPY_VER-$wheeltag.whl
     done
+
+    # copy the CpuCaps.dll nsis plugin into place
+    cp "$DOWNLOADDIR"/numpy/cpucaps.dll \
+       "$BUILDBASE"/nsisplugins
 }
 
 function prepare_req {
@@ -311,6 +317,7 @@ function create_installer {
              -DPYTHON_VERSION=$PYTHON_VER \
              -DPYVER=$PYTHON_VER_SHORT \
 			 -DBASEDIR="$basedir_abs" \
+             -DNSIS_PLUGINS_PATH="$basedir_abs"/nsisplugins \
              scripts/windows/install.nsi
 }
 

@@ -46,6 +46,7 @@ Function .onInit
 	# Initialize AdminInstall and PythonDir global variables.
 	${InitAdminInstall}
 	${InitPythonDir}
+	${InitSSE}
 FunctionEnd
 
 
@@ -96,11 +97,9 @@ Section ""
 
 	${ExtractTemp} "${BASEDIR}\requirements.txt" ${TEMPDIR}\
 
-	# TODO: get supported sse instruction set (see numpy.dist...)
-
-	DetailPrint "Installing scipy stack"
+	DetailPrint "Installing scipy stack ($SSE)"
 	${Pip} 'install --no-deps --no-index \
-			-f "${TEMPDIR}\wheelhouse\nosse" numpy scipy'
+			-f "${TEMPDIR}\wheelhouse\$SSE" numpy scipy'
 	Pop $0
 	${If} $0 != 0
 		Abort "Could not install scipy stack"
@@ -111,7 +110,7 @@ Section ""
 	DetailPrint "Installing required packages"
 	${Pip} 'install --no-index \
 			-f "${TEMPDIR}\wheelhouse" \
-			-f "${TEMPDIR}\wheelhouse\nosse" \
+			-f "${TEMPDIR}\wheelhouse\$SSE" \
 			-r "${TEMPDIR}\requirements.txt'
 	Pop $0
 	${If} $0 != 0
