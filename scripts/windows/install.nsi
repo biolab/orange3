@@ -118,17 +118,11 @@ Section ""
 		Abort "Could not install all requirements"
 	${EndIf}
 
-	${IfNot} ${FileExists} $PythonDir\Lib\site-packages\PyQt4
+	${IfNot} ${FileExists} $PythonDir\Lib\site-packages\PyQt4\QtCore.pyd
 		DetailPrint "Installing PyQt4"
-		SetOutPath $PythonDir\Lib\site-packages
-		File /r ${BASEDIR}\pyqt4\*
-
-		# This qt.conf ensures Qt4 can find plugins.
-		Push $9
-		FileOpen $9 "$PythonDir\qt.conf" w
-		FileWrite $9 "[PATHS]$\r$\nPrefix = Lib\\site-packages\\PyQt4"
-		FileClose $9
-		Pop $9
+		${Pip} 'install --no-deps --no-index \
+				-f ${TEMPDIR}\wheelhouse \
+				PyQt4'
 	${EndIf}
 
 	DetailPrint "Installing Orange"

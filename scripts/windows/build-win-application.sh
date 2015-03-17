@@ -57,7 +57,7 @@ PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
 PYTHON_MSI=python-$PYTHON_VER.msi
 
 PYQT_VER=4.11.3
-PYQT_MD5=10f15f41d30152a71590709563499dbe
+PYQT_MD5=7f0e53bbae9b8d39ae2dbe90fb8104cd
 
 NUMPY_VER=1.9.2
 NUMPY_MD5=0c06b7beabdc053ef63699ada0ee5e98
@@ -88,7 +88,6 @@ fi
 mkdir -p "$BUILDBASE"/core/python
 mkdir -p "$BUILDBASE"/core/msvredist
 mkdir -p "$BUILDBASE"/wheelhouse
-mkdir -p "$BUILDBASE"/pyqt4
 
 mkdir -p "$DOWNLOADDIR"
 mkdir -p "$DISTDIR"
@@ -201,32 +200,14 @@ function prepare_msvredist {
                  b88228d5fef4b6dc019d69d4471f23ec
 }
 
+
 function prepare_pyqt4 {
-    local filename=PyQt4-${PYQT_VER}-gpl-Py${PYTHON_VER_SHORT}-Qt4.8.6-x32.exe
-    local url="http://sourceforge.net/projects/pyqt/files/PyQt4/PyQt-${PYQT_VER}/$filename"
-    local installer="$DOWNLOADDIR"/$filename
-    local extractdir="$DOWNLOADDIR/PyQt4_extr"
-	local pyqtdir="$BUILDBASE"/pyqt4
+    download_url \
+        https://dl.dropboxusercontent.com/u/100248799/PyQt4-${PYQT_VER}-cp34-none-win32.whl \
+        "$DOWNLOADDIR"/PyQt4-${PYQT_VER}-cp34-none-win32.whl \
+        7f0e53bbae9b8d39ae2dbe90fb8104cd
 
-    download_url "$url" "$installer" $PYQT_MD5
-
-    7z -o"$extractdir" -y x "$installer"
-
-    if [[ -d "$pyqtdir" ]]; then
-        rm -r "$pyqtdir"
-    fi
-    mkdir -p "$pyqtdir"
-
-    cp -a -f "$extractdir"/Lib/site-packages/* "$pyqtdir"/
-
-	if [[ -d "$extractdir"/'$_OUTDIR' ]]; then
-		# * .pyd, doc/, examples/, mkspecs/, qsci/, include/, uic/
-		cp -a -f "$extractdir"/'$_OUTDIR'/*.pyd "$pyqtdir"/PyQt4
-        cp -a -f "$extractdir"/'$_OUTDIR'/uic "$pyqtdir"/PyQt4/
-        # ignore the rest
-	fi
-    echo '[PATHS]' > "$pyqtdir"/PyQt4/qt.conf
-    echo 'Prefix = .' >> "$pyqtdir"/PyQt4/qt.conf
+    cp "$DOWNLOADDIR"/PyQt4-${PYQT_VER}-cp34-none-win32.whl "$BUILDBASE"/wheelhouse
 }
 
 function prepare_scipy_stack {
@@ -263,7 +244,6 @@ function prepare_scipy_stack {
         mv "$wheeldir"/scipy-$SCIPY_VER-*$SSE.whl \
 		   "$wheeldir"/scipy-$SCIPY_VER-$wheeltag.whl
     done
-
 }
 
 function prepare_req {
@@ -303,7 +283,10 @@ function prepare_all {
     prepare_python
     prepare_scipy_stack
     prepare_pyqt4
-    prepare_req -r "$BUILDBASE/requirements.txt"
+    # Need to specifically restrict the numpy/scipy versions, otherwise
+    # pip wheel will try to download/build them as soon as there is a newer
+    # version available on pip.
+    prepare_req numpy==$NUMPY_VER scipy==$SCIPY_VER -r "$BUILDBASE/requirements.txt"
     prepare_orange
 
     if [[ "$REQUIREMENT" ]]; then
