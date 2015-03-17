@@ -5,7 +5,7 @@ import math
 import numpy as np
 from PyQt4 import QtCore
 from PyQt4.QtGui import *
-from PyQt4.QtCore import Qt, QSize
+from PyQt4.QtCore import Qt, QSize, pyqtSignal
 
 from Orange.canvas.utils import environ
 from Orange.widgets import gui
@@ -43,6 +43,8 @@ class ColorPixmap(QIcon):
 
 # a widget for selecting the colors to be used
 class ColorPaletteDlg(QDialog):
+    shemaChanged = pyqtSignal()
+
     def __init__(self, parent, windowTitle="Color Palette"):
         super().__init__(parent, windowTitle=windowTitle)
         self.setLayout(QVBoxLayout())

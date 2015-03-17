@@ -71,11 +71,57 @@ class PaletteItemSample(ItemSample):
 
 
 class LegendItem(LegendItem):
-    def __init__(self, size=None, offset=None):
+    def __init__(self, size=None, offset=None, pen=None, brush=None):
         super().__init__(size, offset)
 
+        self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setVerticalSpacing(0)
         self.layout.setHorizontalSpacing(15)
+        self.layout.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
+
+        if pen is None:
+            pen = QPen(QColor(196, 197, 193, 200), 1)
+            pen.setCosmetic(True)
+        self.__pen = pen
+
+        if brush is None:
+            brush = QBrush(QColor(232, 232, 232, 100))
+        self.__brush = brush
+
+    def setPen(self, pen):
+        """Set the legend frame pen."""
+        pen = QPen(pen)
+        if pen != self.__pen:
+            self.prepareGeometryChange()
+            self.__pen = pen
+            self.updateGeometry()
+
+    def pen(self):
+        """Pen used to draw the legend frame."""
+        return QPen(self.__pen)
+
+    def setBrush(self, brush):
+        """Set background brush"""
+        brush = QBrush(brush)
+        if brush != self.__brush:
+            self.__brush = brush
+            self.update()
+
+    def brush(self):
+        """Background brush."""
+        return QBrush(self._brush)
+
+    def paint(self, painter, option, widget=None):
+        painter.setPen(self.__pen)
+        painter.setBrush(self.__brush)
+        rect = self.contentsRect()
+        painter.drawRoundedRect(rect, 2, 2)
+
+    def addItem(self, item, name):
+        super().addItem(item, name)
+        # Fix-up the label alignment
+        _, label = self.items[-1]
+        label.setText(name, justify="left")
 
 
 ANCHORS = {
@@ -236,8 +282,8 @@ class InteractiveViewBox(ViewBox):
         self.updateScaleBox(buttonDownPos, Point(x, y))
 
     # noinspection PyPep8Naming,PyMethodOverriding
-    def mouseDragEvent(self, ev):
-        if self.graph.state == SELECT:
+    def mouseDragEvent(self, ev, axis=None):
+        if self.graph.state == SELECT and axis is None:
             ev.accept()
             pos = ev.pos()
             if ev.button() == Qt.LeftButton:
@@ -251,7 +297,7 @@ class InteractiveViewBox(ViewBox):
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             ev.ignore()
-            super().mouseDragEvent(ev)
+            super().mouseDragEvent(ev, axis=axis)
         else:
             ev.ignore()
 
