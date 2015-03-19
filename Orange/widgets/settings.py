@@ -191,7 +191,11 @@ class SettingsHandler:
     @staticmethod
     def create(widget_class, template=None):
         """Create a new settings handler based on the template and bind it to
-        widget_class."""
+        widget_class.
+
+        :type template: SettingsHandler
+        :rtype: SettingsHandler
+        """
 
         if template is None:
             template = SettingsHandler()
@@ -200,17 +204,18 @@ class SettingsHandler:
         setting_handler.bind(widget_class)
         return setting_handler
 
-    def get_settings_filename(self):
-        """Return the name of the file with default settings for the widget"""
-        return os.path.join(environ.widget_settings_dir,
-                            self.widget_class.name + ".ini")
+    def bind(self, widget_class):
+        """Bind settings handler instance to widget_class."""
+        self.widget_class = widget_class
+        self.provider = SettingProvider(widget_class)
+        self.read_defaults()
 
     # noinspection PyBroadException
     def read_defaults(self):
         """Read (global) defaults for this widget class from a file.
         Opens a file and calls :obj:`read_defaults_file`. Derived classes
         should overload the latter."""
-        filename = self.get_settings_filename()
+        filename = self._get_settings_filename()
         if os.path.exists(filename):
             settings_file = open(filename, "rb")
             try:
@@ -234,7 +239,7 @@ class SettingsHandler:
         """Write (global) defaults for this widget class to a file.
         Opens a file and calls :obj:`write_defaults_file`. Derived classes
         should overload the latter."""
-        filename = self.get_settings_filename()
+        filename = self._get_settings_filename()
         settings_file = open(filename, "wb")
         try:
             self.write_defaults_file(settings_file)
@@ -247,6 +252,11 @@ class SettingsHandler:
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
         pickle.dump(self.defaults, settings_file, -1)
+
+    def _get_settings_filename(self):
+        """Return the name of the file with default settings for the widget"""
+        return os.path.join(environ.widget_settings_dir,
+                            self.widget_class.name + ".ini")
 
     def initialize(self, instance, data=None):
         """
@@ -323,12 +333,6 @@ class SettingsHandler:
         for prefix in prefixes:
             data = data.setdefault(prefix, {})
         data[name] = value
-
-    def bind(self, widget_class):
-        """Bind settings handler instance to widget_class."""
-        self.widget_class = widget_class
-        self.provider = SettingProvider(widget_class)
-        self.read_defaults()
 
     def reset_settings(self, instance):
         for setting, data, instance in self.provider.traverse_settings(instance=instance):

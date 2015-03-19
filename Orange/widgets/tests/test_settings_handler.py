@@ -42,7 +42,7 @@ class SettingHandlerTestCase(unittest.TestCase):
             pickle.dump(default_settings, f)
 
         handler = SettingsHandler()
-        handler.get_settings_filename = lambda: settings_file
+        handler._get_settings_filename = lambda: settings_file
         handler.read_defaults()
 
         self.assertEqual(handler.defaults, default_settings)
@@ -54,7 +54,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         handler = SettingsHandler()
         handler.defaults = {'a': 5, 'b': {1: 5}}
-        handler.get_settings_filename = lambda: settings_file
+        handler._get_settings_filename = lambda: settings_file
         handler.write_defaults()
 
         with open(settings_file, 'rb') as f:
