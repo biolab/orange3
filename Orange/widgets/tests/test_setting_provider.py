@@ -124,7 +124,7 @@ class SettingProviderTestCase(unittest.TestCase):
         self.assertEqual(widget.graph.show_y_axis, False)
         self.assertEqual(widget.zoom_toolbar.allow_zooming, True)
 
-    def test_all_settings_works_without_instance_or_data(self):
+    def test_traverse_settings_works_without_instance_or_data(self):
         settings = set()
 
         for setting, data, instance in default_provider.traverse_settings():
@@ -135,7 +135,7 @@ class SettingProviderTestCase(unittest.TestCase):
             SHOW_LABELS, SHOW_X_AXIS, SHOW_Y_AXIS,
             ALLOW_ZOOMING})
 
-    def test_all_settings_selects_correct_data(self):
+    def test_traverse_settings_selects_correct_data(self):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4, SHOW_Y_AXIS: 5}
         zoom_data = {ALLOW_ZOOMING: 6}
@@ -157,7 +157,7 @@ class SettingProviderTestCase(unittest.TestCase):
             }
         )
 
-    def test_all_settings_with_partial_data(self):
+    def test_traverse_settings_with_partial_data(self):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4}
         all_data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2, GRAPH: graph_data}
@@ -177,7 +177,7 @@ class SettingProviderTestCase(unittest.TestCase):
             }
         )
 
-    def test_all_settings_selects_correct_instance(self):
+    def test_traverse_settings_selects_correct_instance(self):
         settings = {}
         widget = Widget()
 
@@ -196,7 +196,7 @@ class SettingProviderTestCase(unittest.TestCase):
             settings
         )
 
-    def test_all_settings_with_partial_instance(self):
+    def test_traverse_settings_with_partial_instance(self):
         settings = {}
         widget = Widget()
         widget.graph = None
