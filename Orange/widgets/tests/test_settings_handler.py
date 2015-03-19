@@ -64,12 +64,40 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         os.remove(settings_file)
 
-    def test_initialize(self):
+    def test_initialize_widget(self):
         handler = SettingsHandler()
+        handler.defaults = {'default': 42, 'setting': 1}
+        handler.provider = provider = Mock()
+        provider.get_provider.return_value = provider
+        widget = SimpleWidget()
+
+        def reset_provider():
+            provider.get_provider.return_value = None
+            provider.reset_mock()
+            provider.get_provider.return_value = provider
+
+        # No data
+        handler.initialize(widget)
+        provider.initialize.assert_called_once_with(widget, {'default': 42,
+                                                             'setting': 1})
+
+        # Dictionary data
+        reset_provider()
+        handler.initialize(widget, {'setting': 5})
+        provider.initialize.assert_called_once_with(widget, {'default': 42,
+                                                             'setting': 5})
+
+        # Pickled data
+        reset_provider()
+        handler.initialize(widget, pickle.dumps({'setting': 5}))
+        provider.initialize.assert_called_once_with(widget, {'default': 42,
+                                                             'setting': 5})
+
+    def test_initialize_component(self):
+        handler = SettingsHandler()
+        handler.defaults = {'default': 42}
         provider = Mock()
-        handler.provider = Mock(
-            get_provider=Mock(return_value=provider)
-        )
+        handler.provider = Mock(get_provider=Mock(return_value=provider))
         widget = SimpleWidget()
 
         # No data
@@ -81,7 +109,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler.initialize(widget, {'setting': 5})
         provider.initialize.assert_called_once_with(widget, {'setting': 5})
 
-        # Picked data
+        # Pickled data
         provider.reset_mock()
         handler.initialize(widget, pickle.dumps({'setting': 5}))
         provider.initialize.assert_called_once_with(widget, {'setting': 5})
@@ -115,8 +143,6 @@ class WidgetWithNoProviderDeclared:
     name = "WidgetWithNoProviderDeclared"
 
     def __init__(self):
-        super().__init__()
-
         self.undeclared_component = UndeclaredComponent()
 
 
