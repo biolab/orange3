@@ -5,7 +5,7 @@ before_install:
 - if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ]; then source $TRAVIS_BUILD_DIR/travis/decrypt_upload_doc_id.sh; fi;
 install:
 - source $TRAVIS_BUILD_DIR/travis/install.sh
-- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh; fi;
+- source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh
 before_script:
 script:
 - cd $TRAVIS_BUILD_DIR
