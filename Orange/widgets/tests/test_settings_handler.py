@@ -1,88 +1,114 @@
 from io import BytesIO
+import os
 import pickle
+from tempfile import mkstemp
 import unittest
+from unittest.mock import patch, Mock
 import warnings
 from Orange.widgets.settings import SettingsHandler, Setting
-from Orange.widgets.tests.test_settings import MockWidget, MockComponent
-
-
-class TestSettingsHandler(SettingsHandler):
-    def __init__(self, saved_defaults={}):
-        """
-        Setting handler that overrides default settings with the values passed
-        in the parameter saved_defaults (and not from disk).
-
-        :param saved_defaults: a dict of default values that will override the
-        defaults defined on settings.
-        """
-
-        super().__init__()
-        self.saved_defaults = saved_defaults
-
-    def read_defaults(self):
-        settings_file = BytesIO(pickle.dumps(self.saved_defaults))
-        self.read_defaults_file(settings_file)
-
-    def write_defaults(self):
-        settings_file = BytesIO()
-        self.write_defaults_file(settings_file)
-        settings_file.seek(0)
-        self.saved_defaults = pickle.load(settings_file)
 
 
 class SettingHandlerTestCase(unittest.TestCase):
-    def test_initialization_of_not_declared_provider(self):
-        widget = WidgetWithNoProviderDeclared()
-        handler = SettingsHandler.create(WidgetWithNoProviderDeclared)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+    @patch('Orange.widgets.settings.SettingProvider', create=True)
+    def test_create(self, SettingProvider):
+        """:type SettingProvider: unittest.mock.Mock"""
 
-            handler.initialize(widget)
-            handler.initialize(widget.undeclared_component)
+        with patch.object(SettingsHandler, 'read_defaults'):
+            handler = SettingsHandler.create(SimpleWidget)
 
-        self.assertIsInstance(widget.undeclared_component.int_setting, int)
+            self.assertEqual(handler.widget_class, SimpleWidget)
+            # create needs to create a SettingProvider which traverses
+            # the widget definition and collects all settings and read
+            # all settings and for widget class
+            SettingProvider.assert_called_once_with(SimpleWidget)
+            SettingsHandler.read_defaults.assert_called_once_with()
 
-    def test_initialization_of_child_provider_with_default_data(self):
-        handler = self.handler_with_defaults({'subprovider': {'setting': "12345"}})
+    def test_create_uses_template_if_provided(self):
+        template = SettingsHandler()
+        template.a = 'a'
+        template.b = 'b'
+        handler = SettingsHandler.create(SimpleWidget, template)
+        self.assertEqual(handler.a, 'a')
+        self.assertEqual(handler.b, 'b')
 
-        widget = MockWidget()
-        handler.initialize(widget)
+        # create should copy the template
+        handler.b = 'B'
+        self.assertEqual(template.b, 'b')
 
-        self.assertEqual(widget.subprovider.setting, "12345")
+    def test_read_defaults(self):
+        default_settings = {'a': 5, 'b': {1: 5}}
+        f, settings_file = mkstemp(suffix='.ini')
+        with open(settings_file, 'wb') as f:
+            pickle.dump(default_settings, f)
 
-    def test_delayed_initialization_of_child_provider_with_default_data(self):
-        handler = self.handler_with_defaults({'subprovider': {'setting': "12345"}})
+        handler = SettingsHandler()
+        handler.get_settings_filename = lambda: settings_file
+        handler.read_defaults()
 
-        widget = MockWidget.__new__(MockWidget)
-        handler.initialize(widget)
-        widget.subprovider = MockComponent()
-        handler.initialize(widget.subprovider)
+        self.assertEqual(handler.defaults, default_settings)
 
-        self.assertEqual(widget.subprovider.setting, "12345")
+        os.remove(settings_file)
 
-    def test_reading_defaults(self):
-        handler = self.handler_with_defaults({"string_setting": "12345"})
+    def test_write_defaults(self):
+        f, settings_file = mkstemp(suffix='.ini')
 
-        widget = MockWidget()
-        handler.initialize(widget)
-        self.assertEqual(widget.string_setting, "12345")
-
-    def test_writing_defaults(self):
-        handler = self.handler_with_defaults({})
-
-        widget = MockWidget()
-        handler.initialize(widget)
-        handler.initialize(widget.subprovider)
-        widget.string_setting = "12345"
-        handler.update_defaults(widget)
+        handler = SettingsHandler()
+        handler.defaults = {'a': 5, 'b': {1: 5}}
+        handler.get_settings_filename = lambda: settings_file
         handler.write_defaults()
-        self.assertEqual(handler.saved_defaults["string_setting"], "12345")
 
-    def handler_with_defaults(self, defaults):
-        handler = TestSettingsHandler()
-        handler.saved_defaults = defaults
-        handler.bind(MockWidget)
-        return handler
+        with open(settings_file, 'rb') as f:
+            default_settings = pickle.load(f)
+
+        self.assertEqual(handler.defaults, default_settings)
+
+        os.remove(settings_file)
+
+    def test_initialize(self):
+        handler = SettingsHandler()
+        provider = Mock()
+        handler.provider = Mock(
+            get_provider=Mock(return_value=provider)
+        )
+        widget = SimpleWidget()
+
+        # No data
+        handler.initialize(widget)
+        provider.initialize.assert_called_once_with(widget, None)
+
+        # Dictionary data
+        provider.reset_mock()
+        handler.initialize(widget, {'setting': 5})
+        provider.initialize.assert_called_once_with(widget, {'setting': 5})
+
+        # Picked data
+        provider.reset_mock()
+        handler.initialize(widget, pickle.dumps({'setting': 5}))
+        provider.initialize.assert_called_once_with(widget, {'setting': 5})
+
+    @patch('Orange.widgets.settings.SettingProvider', create=True)
+    def test_initialize_with_no_provider(self, SettingProvider):
+        """:type SettingProvider: unittest.mock.Mock"""
+        handler = SettingsHandler()
+        handler.provider = Mock(get_provider=Mock(return_value=None))
+        provider = Mock()
+        SettingProvider.return_value = provider
+        widget = SimpleWidget()
+
+        # initializing an undeclared provider should display a warning
+        with warnings.catch_warnings(record=True) as w:
+            handler.initialize(widget)
+
+            self.assertEqual(1, len(w))
+
+        SettingProvider.assert_called_once_with(SimpleWidget)
+        provider.initialize.assert_called_once_with(widget, None)
+
+
+class SimpleWidget:
+    name = "Simple Widget"
+
+    setting = Setting(42)
 
 
 class WidgetWithNoProviderDeclared:
