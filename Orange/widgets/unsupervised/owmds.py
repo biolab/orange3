@@ -130,6 +130,7 @@ class OWMDS(widget.OWWidget):
         super().__init__(parent)
         self.matrix = None
         self.data = None
+        self.dataOverwrittenByMatrix = False
 
         self._pen_data = None
         self._shape_data = None
@@ -220,22 +221,40 @@ class OWMDS(widget.OWWidget):
         if data is not None:
             self._initialize(data)
             self.openContext(data)
+            if self.matrix:
+                self.warning(1, "Ignoring distances when data is present")
+            self.dataOverwrittenByMatrix = False
+        else:
+            # clear the warning and reinitialize the matrix if transposed
+            self.warning(1, "")
+            if self.matrix and not self.matrix.axis:
+                self._initialize_matrix_transposed(self.matrix)
 
-        if self.matrix is None:
-            self._effective_matrix = None
-            self._invalidated = True
+        self._effective_matrix = None
+        self._invalidated = True
 
     def set_disimilarity(self, matrix):
         self.matrix = matrix
-        self._effective_matrix = matrix
-        self._invalidated = True
-        # if calculating distances between rows the 'matrix.row_items' should also be set as data
-        if matrix and matrix.axis:
-            self.set_data(matrix.row_items)
+        if not matrix:
+            # when removing matrix, clear the warning
+            self.warning(1, "")
         else:
-            self.set_data(None)
-            self._clear()
-            self._initialize_matrix_transposed(matrix)
+            if not self.data or self.dataOverwrittenByMatrix:
+                # use the provided matrix
+                self._effective_matrix = matrix
+                self._invalidated = True
+                # if calculating distances between rows the 'matrix.row_items' should also be set as data
+                if matrix and matrix.axis:
+                    self._clear()
+                    self.data = matrix.row_items
+                    self._initialize(matrix.row_items)
+                    self.dataOverwrittenByMatrix = True
+                else:
+                    self.set_data(None)
+                    self.dataOverwrittenByMatrix = False
+                    self._initialize_matrix_transposed(matrix)
+            if self.data and not self.dataOverwrittenByMatrix:
+                self.warning(1, "Ignoring distances when data is present")
 
     def _clear(self):
         self._pen_data = None
@@ -300,10 +319,10 @@ class OWMDS(widget.OWWidget):
             return
 
         if self._effective_matrix is None:
-            if self.matrix is not None:
-                self._effective_matrix = self.matrix
-            elif self.data is not None:
+            if self.data is not None:
                 self._effective_matrix = Orange.distance.Euclidean(self.data)
+            elif self.matrix is not None:
+                self._effective_matrix = self.matrix
 
         X = self._effective_matrix.X
 
