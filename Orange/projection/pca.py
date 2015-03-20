@@ -4,7 +4,7 @@ import Orange.data
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.projection import SklProjector, Projection
 
-__all__ = ["PCA", "SparsePCA", "RandomizedPCA"]
+__all__ = ["PCA", "SparsePCA", "RandomizedPCA", "IncrementalPCA"]
 
 
 class PCA(SklProjector):
@@ -64,6 +64,31 @@ class PCAModel(Projection, metaclass=WrapperMeta):
         self.domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
              domain.class_vars, domain.metas)
+
+
+class IncrementalPCA(SklProjector):
+    __wraps__ = skl_decomposition.IncrementalPCA
+    name = 'incremental pca'
+
+    def __init__(self, n_components=None, whiten=False, copy=True,
+                 batch_size=None, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
+
+    def fit(self, X, Y=None):
+        proj = self.__wraps__(**self.params)
+        proj = proj.fit(X, Y)
+        return IncrementalPCAModel(proj, self.domain)
+
+
+class IncrementalPCAModel(PCAModel):
+    def partial_fit(self, data):
+        if isinstance(data, Orange.data.Storage):
+            self.proj.partial_fit(data.X)
+        else:
+            self.proj.partial_fit(data)
+        self.__dict__.update(self.proj.__dict__)
+        return self
 
 
 class Projector:
