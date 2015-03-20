@@ -59,6 +59,8 @@ class OWTestLearners(widget.OWWidget):
 
     outputs = [("Evaluation Results", Orange.evaluation.Results)]
 
+    settingsHandler = settings.ClassValuesContextHandler()
+
     #: Resampling/testing types
     KFold, LeaveOneOut, Bootstrap, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
 
@@ -71,7 +73,7 @@ class OWTestLearners(widget.OWWidget):
     #: Bootstrap sampling p
     sample_p = settings.Setting(75)
 
-    class_selection = settings.Setting("(None)")
+    class_selection = settings.ContextSetting("(None)")
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -149,6 +151,10 @@ class OWTestLearners(widget.OWWidget):
                 data = None
 
         self.train_data = data
+        self.closeContext()
+        self.class_selection = "(None)"
+        self.openContext(data.domain.class_var)
+        self._update_class_selection()
         self._update_header()
         self._invalidate()
 
@@ -164,7 +170,6 @@ class OWTestLearners(widget.OWWidget):
             self._invalidate()
 
     def handleNewSignals(self):
-        self._update_class_selection()
         self.update_results()
         self.commit()
 
@@ -243,13 +248,13 @@ class OWTestLearners(widget.OWWidget):
         
         if is_discrete(class_var):
             test_stats = classification_stats
+            stats = [test_stats(self.one_vs_rest(res)) for res in results]
         else:
             test_stats = regression_stats
-        
+            stats = [test_stats(res) for res in results]
+
         self._update_header()
         
-        stats = [test_stats(res) for res in results]
-
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
@@ -296,12 +301,19 @@ class OWTestLearners(widget.OWWidget):
             self.class_selection_combo.clear()
             self.class_selection_combo.addItem("(None)")
             self.class_selection_combo.addItems(values)
+
+            class_index = 0
+            if self.class_selection != '(None)' and self.class_selection != 0:
+                class_map = {val: i for i, val in enumerate(self.train_data.domain.class_var.values)}
+                class_index = class_map[self.class_selection]+1
+
+            self.class_selection_combo.setCurrentIndex(class_index)
             self.previous_class_selection = "(None)"
         else:
             self.cbox.setVisible(False)
 
     def one_vs_rest(self, res):
-        if self.class_selection != "(None)" and self.class_selection != "" and self.class_selection != 0:
+        if self.class_selection != '(None)' and self.class_selection != 0:
             class_map = {val: i for i, val in enumerate(self.train_data.domain.class_var.values)}
             class_ = class_map[self.class_selection]
             actual = res.actual == class_
@@ -313,14 +325,10 @@ class OWTestLearners(widget.OWWidget):
             return res
 
     def _select_class(self):
-        self.class_selection = self.class_selection_combo.currentText()
         if self.previous_class_selection == self.class_selection:
-            print("Already at his class")
             return
         
-        results = self.results
-
-        result_list = list(split_by_model(self.results))
+        results = list(split_by_model(self.results))
 
         items = [(key, input) for key, input in self.learners.items()]
         learners = [input.learner for _, input in items]
@@ -328,12 +336,12 @@ class OWTestLearners(widget.OWWidget):
         class_var = self.train_data.domain.class_var
         if is_discrete(class_var):
             test_stats = classification_stats
-            stats = [test_stats(self.one_vs_rest(res)) for res in result_list]
+            stats = [test_stats(self.one_vs_rest(res)) for res in results]
         else:
             test_stats = regression_stats
-            stats = [test_stats(res) for res in result_list]
+            stats = [test_stats(res) for res in results]
 
-        for (key, input), res, stat in zip(items, result_list, stats):
+        for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
         self.setStatusMessage("")
