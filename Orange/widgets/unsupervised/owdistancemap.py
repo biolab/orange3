@@ -260,8 +260,6 @@ class OWDistanceMap(widget.OWWidget):
         self._sort_indices = None
         self._selection = None
 
-        self._output_invalidated = False
-
         box = gui.widgetBox(self.controlArea, "Element sorting", margin=0)
         gui.comboBox(box, self, "sorting",
                      items=["None", "Clustering",
@@ -311,10 +309,8 @@ class OWDistanceMap(widget.OWWidget):
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         self.controlArea.layout().addStretch()
 
-        box = gui.widgetBox(self.controlArea, "Output")
-        cb = gui.checkBox(box, self, "autocommit", "Commit on any change")
-        b = gui.button(box, self, "Commit", callback=self.commit)
-        gui.setStopper(self, b, cb, "_output_invalidated", callback=self.commit)
+        gui.auto_commit(self.controlArea, self, "autocommit",
+                        "Send data", "Auto send is on")
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)
@@ -398,7 +394,7 @@ class OWDistanceMap(widget.OWWidget):
             self._update_ordering()
             self._setup_scene()
             self._update_labels()
-        self.commit()
+        self.unconditional_commit()
 
     def _clear_plot(self):
         def remove(item):
@@ -532,17 +528,11 @@ class OWDistanceMap(widget.OWWidget):
         ranges = self.matrix_item.selections()
         ranges = reduce(iadd, ranges, [])
         indices = reduce(iadd, ranges, [])
-
         if self.sorting:
             sortind = self._sort_indices
             indices = [sortind[i] for i in indices]
-
         self._selection = list(sorted(set(indices)))
-
-        if self.autocommit:
-            self.commit()
-        else:
-            self._output_invalidated = True
+        self.commit()
 
     def commit(self):
         datasubset = None
@@ -559,7 +549,6 @@ class OWDistanceMap(widget.OWWidget):
 
         self.send("Data", datasubset)
         self.send("Features", featuresubset)
-        self._output_invalidated = False
 
 
 class TextList(GraphicsSimpleTextList):

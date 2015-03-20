@@ -27,7 +27,6 @@ class OWPCA(widget.OWWidget):
         super().__init__(parent)
         self.data = None
 
-        self._invalidated = False
         self._pca = None
         self._transformed = None
         self._variance_ratio = None
@@ -57,10 +56,8 @@ class OWPCA(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        box = gui.widgetBox(self.controlArea, "Commit")
-        cb = gui.checkBox(box, self, "auto_commit", "Commit on any change")
-        b = gui.button(box, self, "Commit", callback=self.commit, default=True)
-        gui.setStopper(self, b, cb, "_invalidated", callback=self.commit)
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send data",
+                        checkbox_label="Auto send on change")
 
         self.plot = pg.PlotWidget(background="w")
 
@@ -94,7 +91,7 @@ class OWPCA(widget.OWWidget):
             self._cumulative = cumulative
             self._setup_plot()
 
-        self.commit()
+        self.unconditional_commit()
 
     def clear(self):
         self.data = None
@@ -201,13 +198,9 @@ class OWPCA(widget.OWWidget):
         return cut
 
     def _invalidate_selection(self):
-        self._invalidated = True
-        if self.auto_commit:
-            self.commit()
+        self.commit()
 
     def commit(self):
-        self._invalidated = False
-
         transformed = components = None
         if self._pca is not None:
             components = self._pca.components_

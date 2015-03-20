@@ -34,7 +34,6 @@ class OWDistances(widget.OWWidget):
         super().__init__(parent)
 
         self.data = None
-        self._invalidated = False
 
         box = gui.widgetBox(self.controlArea, self.tr("Distances Between"))
         gui.radioButtons(
@@ -48,16 +47,14 @@ class OWDistances(widget.OWWidget):
                      items=list(zip(*_METRICS))[0],
                      callback=self._invalidate)
 
-        box = gui.widgetBox(self.controlArea, self.tr("Commit"))
-        cb = gui.checkBox(box, self, "autocommit", "Commit on any change")
-        b = gui.button(box, self, "Apply", callback=self.commit)
-        gui.setStopper(self, b, cb, "_invalidated", callback=self.commit)
+        gui.auto_commit(self.controlArea, self, "autocommit", "Apply",
+                        checkbox_label="Apply on any change")
 
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
     def set_data(self, data):
         self.data = data
-        self.commit()
+        self.unconditional_commit()
 
     def commit(self):
         self.warning(1)
@@ -77,7 +74,4 @@ class OWDistances(widget.OWWidget):
         self.send("Distances", distances)
 
     def _invalidate(self):
-        if self.autocommit:
-            self.commit()
-        else:
-            self._invalidated = True
+        self.commit()

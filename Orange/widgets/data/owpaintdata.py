@@ -812,7 +812,6 @@ class OWPaintData(widget.OWWidget):
         self.data = None
         self.current_tool = None
         self._selected_indices = None
-        self._invalidated = False
         self._scatter_item = None
 
         self.labels = ["Class-1", "Class-2"]
@@ -936,10 +935,8 @@ class OWPaintData(widget.OWWidget):
         form.addRow("Intensity", slider)
 
         gui.rubber(self.controlArea)
-        commitBox = gui.widgetBox(self.controlArea, "Commit")
-        gui.checkBox(commitBox, self, "autocommit", "Commit on change",
-                     tooltip="Send the data on any change.")
-        gui.button(commitBox, self, "Commit", callback=self.commit)
+        gui.auto_commit(self.controlArea, self, "autocommit",
+                        "Send", "Send on change")
 
         # main area GUI
         viewbox = PaintViewBox()
@@ -1023,7 +1020,6 @@ class OWPaintData(widget.OWWidget):
 #                 lambda: self.class_model.__setitem__(index, oldvalue),
 #             )
 #             self.undo_stack.push(command)
-            self.invalidate()
 
     def selected_class_label(self):
         rows = self.classValuesView.selectedIndexes()
@@ -1153,9 +1149,7 @@ class OWPaintData(widget.OWWidget):
         self.invalidate()
 
     def invalidate(self):
-        self._invalidated = True
-        if self.autocommit:
-            self.commit()
+        self.commit()
 
     def commit(self):
         X, Y = self.data[:, :2], self.data[:, 2]
@@ -1173,7 +1167,6 @@ class OWPaintData(widget.OWWidget):
             data = Orange.data.Table.from_numpy(domain, X)
 
         self.send("Data", data)
-        self._invalidated = False
 
     def sizeHint(self):
         sh = super().sizeHint()

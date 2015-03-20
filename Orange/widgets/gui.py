@@ -1027,13 +1027,13 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
 class __AttributeIconDict(dict):
     def __getitem__(self, key):
         if not self:
-            for tpe, char, col in ((vartype(ContinuousVariable()), 
-                                        "C", (202, 0, 32)),
-                                  (vartype(DiscreteVariable()), 
-                                        "D", (26, 150, 65)),
-                                  (vartype(StringVariable()), 
-                                        "S", (0, 0, 0)),
-                                  (-1, "?", (128, 128, 128))):
+            for tpe, char, col in ((vartype(ContinuousVariable()),
+                                    "C", (202, 0, 32)),
+                                   (vartype(DiscreteVariable()),
+                                    "D", (26, 150, 65)),
+                                   (vartype(StringVariable()),
+                                    "S", (0, 0, 0)),
+                                   (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))
         if key not in self:
             key = vartype(key) if isinstance(key, Variable) else -1
@@ -1923,58 +1923,90 @@ class widgetHider(QtGui.QWidget):
 ##############################################################################
 # callback handlers
 
-def setStopper(master, sendButton, stopCheckbox, changedFlag, callback):
+
+def auto_commit(widget, master, value, label, auto_label=None, box=True,
+                checkbox_label=None, orientation=None, **misc):
     """
-    Arrange the mechanics needed for a typical combination of the check box
-    "Commit on change" and push button "Commit".
+    Add a commit button with auto-commit check box.
 
-    The function tells the check box to disable the send button when the box is
-    checked (this is done by adding `(-1, sendButton)` to the checkbox's list
-    `disables`; the already disables the button if the box is checked now.
+    The widget must have a commit method and a setting that stores whether
+    auto-commit is on.
 
-    The function connects a new callback to the checkbox's signal `toggled`
-    to call the `callback` when the box is checked and the data has been
-    changed, as indicated by the value of `changedFlag`.
+    The function replaces the commit method with a new commit method that
+    checks whether auto-commit is on. If it is, it passes the call to the
+    original commit, otherwise it sets the dirty flag.
 
-    To set up the Commit-on-change---Commit interface, do the following. In
-    the widget add something like::
+    The checkbox controls the auto-commit. When auto-commit is switched on, the
+    checkbox callback checks whether the dirty flag is on and calls the original
+    commit.
 
-        commitButton = gui.button(box, self, "Commit", callback=self.apply)
-        autoCommit = gui.checkBox(box, self, "autoCommit", "Commit on change")
-        gui.setStopper(self, commitButton, autoCommit, "dataDirty", self.apply)
+    Important! Do not connect any signals to the commit before calling
+    auto_commit.
 
-    Whenever the data is changed and could be commited, call a method like::
-
-        def applyIf(self):
-        if self.autoApply:
-            self.apply()
-        else:
-            self.dataDirty = True
-
-    The method can have any name, not necessarily `applyIf`. Method `apply`
-    sends the necessary data to signal manager.
-
-    Used like this, `setStopper` tells `autoCommit` checkbox to disable the
-    `commitButton`, and when the check box is checked, it will call
-    `self.apply` if `dataDirty` is `True`.
-
-    :param master: the master widget (used only to get the `changedFlag`)
+    :param widget: the widget into which the box with the button is inserted
+    :type widget: PyQt4.QtGui.QWidget
+    :param value: the master's attribute which stores whether the auto-commit
+        is on
+    :type value:  str
+    :param master: master widget
     :type master: OWWidget or OWComponent
-    :param sendButton: the button for committing the data
-    :type sendButton: PyQt4.QtGui.QPushButton
-    :param stopCheckbox: the check box
-    :type stopCheckbox: PyQt4.QtGui.QCheckBox
-    :param changedFlag: the name of the flag in the master that tells whether
-        the data is changed
-    :type changedFlag: str
-    :param callback: the method (typically of the `master`) that commits the
-        data
-    :type callback: function
+    :param label: The button label
+    :type label: str
+    :param label: The label used when auto-commit is on; default is
+        `"Auto " + label`
+    :type label: str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :return: the box
     """
-    stopCheckbox.disables.append((-1, sendButton))
-    sendButton.setDisabled(stopCheckbox.isChecked())
-    stopCheckbox.toggled.connect(
-        lambda x: x and getdeepattr(master, changedFlag, True) and callback())
+    def u():
+        if getattr(master, value):
+            btn.setText(auto_label)
+            btn.setEnabled(False)
+            if dirty:
+                do_commit()
+        else:
+            btn.setText(label)
+            btn.setEnabled(True)
+
+    def commit():
+        nonlocal dirty
+        if getattr(master, value):
+            do_commit()
+        else:
+            dirty = True
+
+    def do_commit():
+        nonlocal dirty
+        master.unconditional_commit()
+        dirty = False
+
+    dirty = False
+    master.unconditional_commit = master.commit
+    if not auto_label:
+        if checkbox_label:
+            auto_label = label
+        else:
+            auto_label = "Auto " + label.lower() + " is on"
+    if isinstance(box, QtGui.QWidget):
+        b = box
+    else:
+        if orientation is None:
+            orientation = bool(checkbox_label)
+        b = widgetBox(widget, box=box, orientation=orientation,
+                      addToLayout=False)
+    b.checkbox = cb = checkBox(b, master, value, checkbox_label or " ",
+                               callback=u, tooltip=auto_label)
+    cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+    b.button = btn = button(b, master, label, callback=do_commit)
+    if not checkbox_label:
+        btn.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                          QtGui.QSizePolicy.Preferred)
+    u()
+    master.commit = commit
+    miscellanea(b, widget, widget,
+                addToLayout=not isinstance(box, QtGui.QWidget), **misc)
+    return b
 
 
 class ControlledList(list):

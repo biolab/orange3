@@ -28,6 +28,7 @@ class OWSelectRows(widget.OWWidget):
     update_on_change = Setting(True)
     purge_attributes = Setting(True)
     purge_classes = Setting(True)
+    auto_commit = Setting(True)
 
     operator_names = {
         ContinuousVariable: ["equals", "is not",
@@ -50,6 +51,7 @@ class OWSelectRows(widget.OWWidget):
 
         self.conditions = []
         self.last_output_conditions = None
+        self.data = None
 
         box = gui.widgetBox(self.controlArea, 'Conditions', stretch=100)
         self.cond_list = QtGui.QTableWidget(box)
@@ -94,10 +96,8 @@ class OWSelectRows(widget.OWWidget):
             gui.indentedBox(box_setting, sep=gui.checkButtonOffsetHint(cb)),
             self, "purge_classes", "Remove unused classes",
             callback=self.on_purge_change)
-        box_commit = gui.widgetBox(box, 'Commit')
-        gui.checkBox(box_commit, self, "update_on_change", "Commit on change")
-        gui.button(box_commit, self, "Commit", self.output_data, default=True)
-
+        gui.auto_commit(box, self, "auto_commit", label="Commit",
+                        checkbox_label="Commit on change")
         self.set_data(None)
         self.resize(600, 400)
 
@@ -252,7 +252,7 @@ class OWSelectRows(widget.OWWidget):
             data is None or
             len(domain.variables) + len(domain.metas) > 100)
         if not data:
-            self.output_data()
+            self.commit()
             return
         self.openContext(data)
         if not self.conditions and len(domain.variables):
@@ -262,7 +262,7 @@ class OWSelectRows(widget.OWWidget):
             attrs = [a.name for a in domain.variables + domain.metas]
             if attr in attrs:
                 self.add_row(attrs.index(attr), cond_type, cond_value)
-        self.output_data()
+        self.unconditional_commit()
 
     def on_purge_change(self):
         if self.purge_attributes:
@@ -287,13 +287,13 @@ class OWSelectRows(widget.OWWidget):
             if self.update_on_change and (
                     self.last_output_conditions is None or
                     self.last_output_conditions != self.conditions):
-                self.output_data()
+                self.commit()
         except AttributeError:
             # Attribute error appears if the signal is triggered when the
             # controls are being constructed
             pass
 
-    def output_data(self):
+    def commit(self):
         matching_output = self.data
         non_matching_output = None
         if self.data:

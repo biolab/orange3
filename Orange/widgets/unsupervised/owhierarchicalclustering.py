@@ -671,7 +671,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.root = None
         self._displayed_root = None
         self.cutoff_height = 0.0
-        self._invalidated = False
 
         gui.comboBox(gui.widgetBox(self.controlArea, "Linkage"),
                      self, "linkage", items=LINKAGE,
@@ -765,9 +764,8 @@ class OWHierarchicalClustering(widget.OWWidget):
         ibox.layout().addLayout(form)
         ibox.layout().addSpacing(5)
 
-        cb = gui.checkBox(box, self, "autocommit", "Commit automatically")
-        b = gui.button(box, self, "Commit", callback=self.commit, default=True)
-        gui.setStopper(self, b, cb, "_invalidated", callback=self.commit)
+        gui.auto_commit(box, self, "autocommit", "Send data", "Auto send is on",
+                        box=False)
 
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(
@@ -949,9 +947,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._update_labels()
 
     def _invalidate_output(self):
-        self._invalidated = True
-        if self.autocommit:
-            self.commit()
+        self.commit()
 
     def _invalidate_pruning(self):
         if self.root:
@@ -970,8 +966,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._apply_selection()
 
     def commit(self):
-        self._invalidated = False
-
         items = getattr(self.matrix, "items", self.items)
         if not items:
             # nothing to commit

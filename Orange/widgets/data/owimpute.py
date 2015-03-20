@@ -84,29 +84,6 @@ def push_button(text="", checked=False, checkable=False,
     return button
 
 
-def commit_widget(button_text="Commit", button_default=True,
-                  check_text="Commit on any change", checked=False,
-                  modified=False, clicked=None):
-    w = widget(layout=layout(margins=0))
-    button = push_button(button_text, clicked=clicked,
-                         default=button_default)
-    button.setDefault(button_default)
-
-    check = QtGui.QCheckBox(check_text, checked=checked)
-    action = QtGui.QAction(
-        button_text, w,
-        objectName="action-commit",
-    )
-    button.clicked.connect(action.trigger)
-    w.commit_action = action
-    w.commit_button = button
-    w.auto_commit_check = check
-
-    w.layout().addWidget(check)
-    w.layout().addWidget(button)
-    return w
-
-
 class DisplayFormatDelegate(QtGui.QStyledItemDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
@@ -276,27 +253,9 @@ class OWImpute(OWWidget):
         self.varmethodbox = methodbox
         self.varbgroup = bgroup
 
-        commitbox = group_box("Commit", layout=layout(margins=0))
-
-        cwidget = commit_widget(
-            button_text="Commit",
-            button_default=True,
-            check_text="Commit on any change",
-            checked=self.autocommit,
-            clicked=self.commit
-        )
-
-        def toggle_auto_commit(b):
-            self.autocommit = b
-            if self.modified:
-                self.commit()
-
-        cwidget.auto_commit_check.toggled[bool].connect(toggle_auto_commit)
-        commitbox.layout().addWidget(cwidget)
-
-        self.addAction(cwidget.commit_action)
-        self.controlArea.layout().addWidget(commitbox)
-
+        gui.auto_commit(self.controlArea, self, "autocommit", "Commit",
+                        orientation="horizontal",
+                        checkbox_label="Commit on any change")
         self.data = None
         self.learner = None
 
@@ -318,8 +277,7 @@ class OWImpute(OWWidget):
             self.openContext(data.domain)
             self.restore_state(self.variable_methods)
             itemmodels.select_row(self.varview, 0)
-
-        self.commit()
+        self.unconditional_commit()
 
     def set_learner(self, learner):
         self.learner = learner
@@ -411,8 +369,7 @@ class OWImpute(OWWidget):
 
     def _invalidate(self):
         self.modified = True
-        if self.autocommit:
-            self.commit()
+        self.commit()
 
     def _on_var_selection_changed(self):
         indexes = self.selection.selectedIndexes()

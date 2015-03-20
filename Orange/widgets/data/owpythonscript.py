@@ -461,11 +461,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        self.runBox = gui.widgetBox(self.controlArea, 'Run')
-        gui.button(self.runBox, self, "Execute", callback=self.execute)
-        gui.checkBox(self.runBox, self, "auto_execute", "Auto execute",
-                       tooltip="Run the script automatically whenever " +
-                               "the inputs to the widget change.")
+        gui.auto_commit(self.controlArea, self, "auto_execute", "Execute")
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -523,8 +519,7 @@ class OWPythonScript(widget.OWWidget):
         self.in_object = obj
 
     def handleNewSignals(self):
-        if self.auto_execute:
-            self.execute()
+        self.unconditional_commit()
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
@@ -641,7 +636,7 @@ class OWPythonScript(widget.OWWidget):
             f.write(self.text.toPlainText())
             f.close()
 
-    def execute(self):
+    def commit(self):
         self._script = str(self.text.toPlainText())
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")

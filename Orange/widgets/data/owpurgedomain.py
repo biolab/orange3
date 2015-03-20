@@ -35,7 +35,6 @@ class OWPurgeDomain(widget.OWWidget):
 
         self.preRemoveValues = 1
         self.preRemoveClasses = 1
-        self.dataChanged = False
 
         self.removedAttrs = "-"
         self.reducedAttrs = "-"
@@ -85,20 +84,15 @@ class OWPurgeDomain(widget.OWWidget):
         gui.label(box3, self, "Resorted attributes: %(resortedAttrs)s")
         gui.label(box3, self, "Class attribute: %(classAttr)s")
 
-        box2 = gui.widgetBox(self.controlArea, "Send")
-        btSend = gui.button(box2, self, "Send data",
-                            callback=self.process,
-                            default=True)
-        cbAutoSend = gui.checkBox(box2, self, "autoSend", "Send automatically")
-
-        gui.setStopper(self, btSend, cbAutoSend, "dataChanged", self.process)
-
+        gui.auto_commit(self.controlArea, self, "autoSend", "Send Data",
+                        checkbox_label="Send automatically",
+                        orientation="horizontal")
         gui.rubber(self.controlArea)
 
     def setData(self, dataset):
         if dataset is not None:
             self.data = dataset
-            self.process()
+            self.unconditional_commit()
         else:
             self.removedAttrs = "-"
             self.reducedAttrs = "-"
@@ -106,7 +100,6 @@ class OWPurgeDomain(widget.OWWidget):
             self.classAttr = "-"
             self.send("Data", None)
             self.data = None
-        self.dataChanged = False
 
     def removeAttributesChanged(self):
         if not self.removeAttributes:
@@ -125,12 +118,9 @@ class OWPurgeDomain(widget.OWWidget):
         self.optionsChanged()
 
     def optionsChanged(self):
-        if self.autoSend:
-            self.process()
-        else:
-            self.dataChanged = True
+        self.commit()
 
-    def process(self):
+    def commit(self):
         if self.data is None:
             return
 
@@ -190,8 +180,6 @@ class OWPurgeDomain(widget.OWWidget):
             data = self.data
 
         self.send("Data", data)
-
-        self.dataChanged = False
 
 
 import numpy

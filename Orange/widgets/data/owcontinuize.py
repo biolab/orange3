@@ -57,59 +57,45 @@ class OWContinuize(widget.OWWidget):
     def __init__(self, parent=None):
         widget.OWWidget.__init__(self, parent)
 
-        self.data_changed = False
-
         box = gui.widgetBox(self.controlArea, "Multinomial attributes")
         gui.radioButtonsInBox(
             box, self, "multinomial_treatment",
             btnLabels=[x[0] for x in self.multinomial_treats],
-            callback=self.sendDataIf)
+            callback=self.settings_changed)
 
         box = gui.widgetBox(self.controlArea, "Continuous attributes")
         gui.radioButtonsInBox(
             box, self, "continuous_treatment",
             btnLabels=[x[0] for x in self.continuous_treats],
-            callback=self.sendDataIf)
+            callback=self.settings_changed)
 
         box = gui.widgetBox(self.controlArea, "Discrete class attribute")
         gui.radioButtonsInBox(
             box, self, "class_treatment",
             btnLabels=[t[0] for t in self.class_treats],
-            callback=self.sendDataIf
-        )
+            callback=self.settings_changed)
 
         zbbox = gui.widgetBox(self.controlArea, "Value range")
 
         gui.radioButtonsInBox(
             zbbox, self, "zero_based",
             btnLabels=self.value_ranges,
-            callback=self.sendDataIf)
+            callback=self.settings_changed)
 
-        snbox = gui.widgetBox(self.controlArea, "Send data")
-        gui.button(snbox, self, "Send data", callback=self.sendData,
-                   default=True)
-
-        gui.checkBox(snbox, self, "autosend", "Send automatically",
-                     callback=self.enableAuto)
+        gui.auto_commit(self.controlArea, self, "autosend", "Apply")
 
         self.data = None
         self.resize(150, 300)
+
+    def settings_changed(self):
+        self.commit()
 
     def setData(self, data):
         self.data = data
         if data is None:
             self.send("Data", None)
         else:
-            self.sendData()
-
-    def sendDataIf(self):
-        self.data_changed = True
-        if self.autosend:
-            self.sendData()
-
-    def enableAuto(self):
-        if self.data_changed:
-            self.sendData()
+            self.unconditional_commit()
 
     def constructContinuizer(self):
         conzer = DomainContinuizer(
@@ -128,15 +114,14 @@ class OWContinuize(widget.OWWidget):
     #                 if data.domain.class_var and isinstance(self.data.domain.class_var, DiscreteVariable)
     #                 else continuizer(data, weightId), data)))
 
-    def sendData(self):
+    def commit(self):
         continuizer = self.constructContinuizer()
         if self.data is not None:
             domain = continuizer(self.data)
             data = Table.from_table(domain, self.data)
             self.send("Data", data)
         else:
-            self.sendData("Data", None)
-        self.data_changed = False
+            self.send("Data", None)
 
     def sendReport(self):
         self.reportData(self.data, "Input data")
