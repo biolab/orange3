@@ -37,89 +37,6 @@ domain = Domain(
 )
 
 
-class DomainEncodingTests(unittest.TestCase):
-    def setUp(self):
-        self.handler = DomainContextHandler(attributes_in_res=True,
-                                            metas_in_res=True)
-
-    def test_encode_domain_with_match_none(self):
-        handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_NONE,
-            metas_in_res=True)
-
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
-
-        self.assertEqual(
-            encoded_attributes,
-            {CONTINOUS_ATTR: Continuous,
-             DISCRETE_ATTR_ABC: Discrete,
-             DISCRETE_ATTR_DEF: Discrete,
-             DISCRETE_CLASS_GHI: Discrete, })
-        self.assertEqual(
-            encoded_metas,
-            {CONTINUOUS_META: Continuous,
-             DISCRETE_META_JKL: Discrete, })
-
-    def test_encode_domain_with_match_class(self):
-        handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_CLASS,
-            metas_in_res=True)
-
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
-
-        self.assertEqual(encoded_attributes, {
-            CONTINOUS_ATTR: Continuous,
-            DISCRETE_ATTR_ABC: Discrete,
-            DISCRETE_ATTR_DEF: Discrete,
-            DISCRETE_CLASS_GHI: ["g", "h", "i"],
-        })
-        self.assertEqual(encoded_metas, {
-            CONTINUOUS_META: Continuous,
-            DISCRETE_META_JKL: Discrete,
-        })
-
-    def test_encode_domain_with_match_all(self):
-        handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_ALL,
-            metas_in_res=True)
-
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
-
-        self.assertEqual(encoded_attributes, {
-            CONTINOUS_ATTR: Continuous,
-            DISCRETE_ATTR_ABC: ["a", "b", "c"],
-            DISCRETE_ATTR_DEF: ["d", "e", "f"],
-            DISCRETE_CLASS_GHI: ["g", "h", "i"],
-        })
-        self.assertEqual(encoded_metas, {
-            CONTINUOUS_META: Continuous,
-            DISCRETE_META_JKL: ["j", "k", "l"],
-        })
-
-    def test_encode_domain_with_false_attributes_in_res(self):
-        handler = DomainContextHandler(attributes_in_res=False,
-                                       metas_in_res=True)
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
-
-        self.assertEqual(encoded_attributes, {})
-        self.assertEqual(encoded_metas, {
-            CONTINUOUS_META: Continuous,
-            DISCRETE_META_JKL: Discrete,
-        })
-
-    def test_encode_domain_with_false_metas_in_res(self):
-        handler = DomainContextHandler(attributes_in_res=True,
-                                       metas_in_res=False)
-        encoded_attributes, encoded_metas = handler.encode_domain(domain)
-
-        self.assertEqual(encoded_attributes, {
-            CONTINOUS_ATTR: Continuous,
-            DISCRETE_ATTR_ABC: Discrete,
-            DISCRETE_ATTR_DEF: Discrete,
-            DISCRETE_CLASS_GHI: Discrete,
-        })
-        self.assertEqual(encoded_metas, {})
-
 
 class MockComponent():
     setting = Setting("")
@@ -232,39 +149,6 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
 
         self.assertEqual(self.widget.attr_list_setting, [DISCRETE_ATTR_ABC, DISCRETE_CLASS_GHI])
         self.assertEqual(self.widget.selection1, [0])
-
-    def test_perfect_match_returns_2(self):
-        attrs, metas = self.handler.encode_domain(domain)
-        mock_context = Mock(attributes=attrs, metas=metas, values={})
-
-        self.assertEqual(self.match(mock_context), 2.)
-
-    def test_match_when_nothing_to_match_returns_point_1(self):
-        attrs, metas = self.handler.encode_domain(domain)
-        mock_context = Mock(values={})
-
-        self.assertEqual(self.match(mock_context), 0.1)
-
-    def test_match_if_all_values_match_returns_1(self):
-        mock_context = Mock(values=dict(
-            discrete_setting=(DISCRETE_ATTR_ABC, Discrete),
-            required_setting=(DISCRETE_ATTR_ABC, Discrete),
-        ))
-
-        self.assertEqual(self.match(mock_context), 1.)
-
-    def test_match_if_all_list_values_match_returns_1(self):
-        mock_context = Mock(values=dict(
-            discrete_setting=("df1", Discrete)
-        ))
-        self.assertEqual(self.match(mock_context), 1.)
-
-    def test_match_if_all_required_list_values_match_returns_1(self):
-        mock_context = Mock(values=dict(
-            required_setting=(DISCRETE_ATTR_ABC, Discrete)
-        ))
-
-        self.assertEqual(self.match(mock_context), 1.)
 
     def test_clone_context(self):
         mock_context = Mock(values=dict(
