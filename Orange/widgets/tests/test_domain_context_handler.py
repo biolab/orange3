@@ -24,6 +24,7 @@ class DomainContextHandlerTestCase(TestCase):
                       'd2': Discrete, 'd3': Discrete},
                      {'c2': Continuous, 'd4': Discrete, })
         self.handler = DomainContextHandler(metas_in_res=True)
+        self.handler.read_defaults = lambda: None
 
     def test_encode_domain_with_match_none(self):
         handler = DomainContextHandler(
@@ -167,10 +168,7 @@ class DomainContextHandlerTestCase(TestCase):
         self.assertNotIn('required', new_values)
 
 
-
 class SimpleWidget:
-    name = "Simple Widget"
-
     text = ContextSetting("", not_attribute=True)
     with_metas = ContextSetting("", exclude_metas=False)
     required = ContextSetting("", required=ContextSetting.REQUIRED)

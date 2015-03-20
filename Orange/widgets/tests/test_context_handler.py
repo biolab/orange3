@@ -6,8 +6,6 @@ __author__ = 'anze'
 
 
 class SimpleWidget:
-    name = "Simple Widget"
-
     setting = Setting(42)
 
 

@@ -25,6 +25,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_create_uses_template_if_provided(self):
         template = SettingsHandler()
+        template.read_defaults = lambda: None
         template.a = 'a'
         template.b = 'b'
         handler = SettingsHandler.create(SimpleWidget, template)
@@ -134,14 +135,10 @@ class SettingHandlerTestCase(unittest.TestCase):
 
 
 class SimpleWidget:
-    name = "Simple Widget"
-
     setting = Setting(42)
 
 
 class WidgetWithNoProviderDeclared:
-    name = "WidgetWithNoProviderDeclared"
-
     def __init__(self):
         self.undeclared_component = UndeclaredComponent()
 
