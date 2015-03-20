@@ -1932,7 +1932,7 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     The widget must have a commit method and a setting that stores whether
     auto-commit is on.
 
-    The function replaces the commit method with with a new commit method that
+    The function replaces the commit method with a new commit method that
     checks whether auto-commit is on. If it is, it passes the call to the
     original commit, otherwise it sets the dirty flag.
 
