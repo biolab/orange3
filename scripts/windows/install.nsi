@@ -25,7 +25,7 @@ UninstallIcon OrangeInstall.ico
 
 # ShowInstDetails nevershow
 
-AutoCloseWindow true
+AutoCloseWindow false
 
 OutFile ${OUTFILENAME}
 
@@ -46,6 +46,7 @@ Function .onInit
 	# Initialize AdminInstall and PythonDir global variables.
 	${InitAdminInstall}
 	${InitPythonDir}
+	${InitSSE}
 FunctionEnd
 
 
@@ -96,11 +97,9 @@ Section ""
 
 	${ExtractTemp} "${BASEDIR}\requirements.txt" ${TEMPDIR}\
 
-	# TODO: get supported sse instruction set (see numpy.dist...)
-
-	DetailPrint "Installing scipy stack"
+	DetailPrint "Installing scipy stack ($SSE)"
 	${Pip} 'install --no-deps --no-index \
-			-f "${TEMPDIR}\wheelhouse\nosse" numpy scipy'
+			-f "${TEMPDIR}\wheelhouse\$SSE" numpy scipy'
 	Pop $0
 	${If} $0 != 0
 		Abort "Could not install scipy stack"
@@ -111,24 +110,18 @@ Section ""
 	DetailPrint "Installing required packages"
 	${Pip} 'install --no-index \
 			-f "${TEMPDIR}\wheelhouse" \
-			-f "${TEMPDIR}\wheelhouse\nosse" \
+			-f "${TEMPDIR}\wheelhouse\$SSE" \
 			-r "${TEMPDIR}\requirements.txt'
 	Pop $0
 	${If} $0 != 0
 		Abort "Could not install all requirements"
 	${EndIf}
 
-	${IfNot} ${FileExists} $PythonDir\Lib\site-packages\PyQt4
+	${IfNot} ${FileExists} $PythonDir\Lib\site-packages\PyQt4\QtCore.pyd
 		DetailPrint "Installing PyQt4"
-		SetOutPath $PythonDir\Lib\site-packages
-		File /r ${BASEDIR}\pyqt4\*
-
-		# This qt.conf ensures Qt4 can find plugins.
-		Push $9
-		FileOpen $9 "$PythonDir\qt.conf" w
-		FileWrite $9 "[PATHS]$\r$\nPrefix = Lib\\site-packages\\PyQt4"
-		FileClose $9
-		Pop $9
+		${Pip} 'install --no-deps --no-index \
+				-f ${TEMPDIR}\wheelhouse \
+				PyQt4'
 	${EndIf}
 
 	DetailPrint "Installing Orange"
