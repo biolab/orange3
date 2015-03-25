@@ -1471,6 +1471,28 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assert_table_with_filter_matches(
             new_table, self.table, xcols=order, ycols=order, mcols=order)
 
+    def test_creates_table_with_given_domain_and_row_filter(self):
+        a, c, m = column_sizes(self.table)
+        order = ([random.randrange(a) for _ in self.domain.attributes] +
+                 [random.randrange(a, a + c) for _ in self.domain.class_vars] +
+                 [random.randrange(-m + 1, 0) for _ in self.domain.metas])
+        random.shuffle(order)
+        vars = list(self.domain.variables) + list(self.domain.metas[::-1])
+        vars = [vars[i] for i in order]
+
+        new_domain = self.create_domain(vars, vars, vars)
+        new_table = data.Table.from_table(new_domain, self.table, [0])
+        self.assert_table_with_filter_matches(
+            new_table, self.table[:1], xcols=order, ycols=order, mcols=order)
+
+        new_table = data.Table.from_table(new_domain, self.table, [2, 1, 0])
+        self.assert_table_with_filter_matches(
+            new_table, self.table[2::-1], xcols=order, ycols=order, mcols=order)
+
+        new_table = data.Table.from_table(new_domain, self.table, [])
+        self.assert_table_with_filter_matches(
+            new_table, self.table[:0], xcols=order, ycols=order, mcols=order)
+
     def assert_table_with_filter_matches(
             self, new_table, old_table,
             rows=..., xcols=..., ycols=..., mcols=...):
@@ -1491,7 +1513,7 @@ class CreateTableWithDomainAndTable(TableTests):
             Y = Y.flatten()
         np.testing.assert_almost_equal(new_table.Y, Y)
         np.testing.assert_almost_equal(new_table.metas, magic[rows, mcols])
-        np.testing.assert_almost_equal(new_table.W, self.table.W[rows])
+        np.testing.assert_almost_equal(new_table.W, old_table.W[rows])
 
 
 def isspecial(s):
