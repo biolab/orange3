@@ -1,31 +1,25 @@
-"""
-<name>k-Means Clustering</name>
-<description>k-means clustering.</description>
-<icon>icons/kMeansClustering.svg</icon>
-<contact>Blaz Zupan (blaz.zupan(@at@)fri.uni-lj.si)</contact>
-<priority>2300</priority>
-"""
-
 import math
 import random
+import numpy as np
 
-from PyQt4.QtGui import QGridLayout, QSizePolicy
+from PyQt4.QtGui import QGridLayout, QSizePolicy, \
+    QTableView, QStandardItemModel, QStandardItem, QIntValidator
 from PyQt4.QtCore import Qt, QTimer
 
 import Orange
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import colorpalette, itemmodels
+
 
 class OWKMeans(widget.OWWidget):
     name = "K Means"
-    description = ("K Means clustering.")
+    description = "K Means clustering."
     icon = "icons/KMeans.svg"
     priority = 2100
 
-    inputs = [("Data", Orange.data.table, "set_data")]
+    inputs = [("Data", Orange.data.Table, "set_data")]
 
-    outputs = [("Annotated Data", Orange.data.Table),
+    outputs = [("Annotated Data", Orange.data.Table, widget.Default),
                ("Centroids", Orange.data.Table)]
 
     INIT_KMEANS, INIT_RANDOM = range(2)
@@ -33,12 +27,10 @@ class OWKMeans(widget.OWWidget):
 
     SILHOUETTE_H, SILHOUETTE, INTERCLUSTER, DISTANCES = range(4)
     SCORING_METHODS = ("Silhouette (heuristic)", "Silhouette",
-                       "Between cluster distance", "Distance to centroids")
+                       "Intercluster distance", "Distance to centroids")
 
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
-    OUTPUT_METHODS = ("Append cluster id as class",
-                      "Append cluster id as feature",
-                      "Append cluster id as meta")
+    OUTPUT_METHODS = ("Class", "Feature", "Meta")
 
     k = Setting(8)
     k_from = Setting(2)
@@ -51,40 +43,43 @@ class OWKMeans(widget.OWWidget):
     append_cluster_ids = Setting(True)
     place_cluster_ids = Setting(OUTPUT_CLASS)
     output_name = Setting("Cluster")
-    auto_run = Setting(True)
-
+    auto_run = Setting(False)
 
     def __init__(self):
         super().__init__()
 
         self.data = None
         self.km = None
+        self.optimization_runs = []
 
         box = gui.widgetBox(self.controlArea, "Number of Clusters")
-        layout =QGridLayout()
+        layout = QGridLayout()
         bg = gui.radioButtonsInBox(
             box, self, "optimize_k", [], orientation=layout,
-            callback=self.set_optimization)
-
+            callback=self.update)
         layout.addWidget(
             gui.appendRadioButton(bg, "Fixed", addToLayout=False),
             1, 1)
+        sb = gui.widgetBox(None, margin=0, orientation="horizontal")
         self.fixedSpinBox = gui.spin(
-            None, self, "k", minv=2, maxv=30,
-            callback=self.update, callbackOnReturn=True)
-        layout.addWidget(self.fixedSpinBox, 1, 2)
+            sb, self, "k", minv=2, maxv=30,
+            controlWidth=60, alignment=Qt.AlignRight, callback=self.update_k)
+        gui.rubber(sb)
+        layout.addWidget(sb, 1, 2)
 
         layout.addWidget(
             gui.appendRadioButton(bg, "Optimized", addToLayout=False), 2, 1)
-        layout.addWidget(gui.widgetLabel(None, "From: "), 3, 1, Qt.AlignRight)
-        layout.addWidget(gui.spin(
-            None, self, "k_from", minv=2, maxv=30,
-            callback=self.update, callbackOnReturn=True), 3, 2)
-        layout.addWidget(gui.widgetLabel(None, "To: "), 4, 1, Qt.AlignRight)
+        ftobox = gui.widgetBox(None, orientation="horizontal")
+        ftobox.layout().setMargin(0)
+        layout.addWidget(ftobox)
+        gui.spin(
+            ftobox, self, "k_from", minv=2, maxv=29,
+            controlWidth=60, alignment=Qt.AlignRight, callback=self.update_from)
+        gui.widgetLabel(ftobox, "  To: ")
         self.fixedSpinBox = gui.spin(
-            None, self, "k_to", minv=2, maxv=30,
-            callback=self.update, callbackOnReturn=True)
-        layout.addWidget(self.fixedSpinBox, 4, 2)
+            ftobox, self, "k_to", minv=3, maxv=30,
+            controlWidth=60, alignment=Qt.AlignRight, callback=self.update_to)
+        gui.rubber(ftobox)
 
         layout.addWidget(gui.widgetLabel(None, "Scoring: "),
                          5, 1, Qt.AlignRight)
@@ -98,329 +93,258 @@ class OWKMeans(widget.OWWidget):
             box, self, "smart_init", items=self.INIT_METHODS,
             callback=self.update)
 
-        gui.spin(box, self, "n_init", label="Re-runs", minv=1, maxv=100,
-                   callback=self.update, callbackOnReturn=True)
-        gui.spin(box, self, "max_iterations", label="Maximal iterations",
-                 minv=100, maxv=1000, step=100,
-                 callback=self.update, callbackOnReturn=True)
+        layout = QGridLayout()
+        box2 = gui.widgetBox(box, orientation=layout)
+        box2.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        layout.addWidget(gui.widgetLabel(None, "Re-runs: "), 0, 0, Qt.AlignLeft)
+        sb = gui.widgetBox(None, margin=0, orientation="horizontal")
+        layout.addWidget(sb, 0, 1)
+        gui.lineEdit(
+            sb, self, "n_init", controlWidth=60,
+            valueType=int, validator=QIntValidator(),
+            callback=self.update)
+        layout.addWidget(gui.widgetLabel(None, "Maximal iterations: "),
+                         1, 0, Qt.AlignLeft)
+        sb = gui.widgetBox(None, margin=0, orientation="horizontal")
+        layout.addWidget(sb, 1, 1)
+        gui.lineEdit(sb, self, "max_iterations",
+            controlWidth=60, valueType=int, validator=QIntValidator(),
+            callback=self.update)
 
         box = gui.widgetBox(self.controlArea, "Output")
-        gui.comboBox(box, self, "place_cluster_ids", items=self.OUTPUT_METHODS)
-        gui.lineEdit(box, self, "output_name", orientation="horizontal")
+        gui.comboBox(box, self, "place_cluster_ids",
+                     label="Append cluster id as ", orientation="horizontal",
+                     callback=self.send_data, items=self.OUTPUT_METHODS)
+        gui.lineEdit(box, self, "output_name",
+                     label="Name ", orientation="horizontal",
+                     callback=self.send_data)
 
         gui.auto_commit(self.controlArea, self, "auto_run", "Run",
-                        checkbox_label="Run after any change")
+                        checkbox_label="Run after any change  ",
+                        orientation="horizontal")
         gui.rubber(self.controlArea)
 
-        # display of clustering results
-        self.optimizationReportBox = gui.widgetBox(self.mainArea)
-        self.tableBox = gui.widgetBox(
-            self.optimizationReportBox, "Optimization Report")
-        """
-        self.table = QTableView(
-            self.tableBox, selectionMode=QTableWidget.SingleSelection)
+        self.table_model = QStandardItemModel()
+        self.table_model.setHorizontalHeaderLabels(["k", "Score"])
+        self.table_model.setColumnCount(2)
 
-        self.table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
-        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["k", "Best", "Score"])
-        self.table.verticalHeader().hide()
-        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table_box = gui.widgetBox(
+            self.mainArea, "Optimization Report", addSpace=0)
+        table = self.table_view = QTableView(self.table_box)
+        table.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        table.setSelectionMode(QTableView.SingleSelection)
+        table.setSelectionBehavior(QTableView.SelectRows)
+        table.verticalHeader().hide()
+        table.setItemDelegateForColumn(1, gui.TableBarItem(self))
+        table.setModel(self.table_model)
+        table.selectionModel().selectionChanged.connect(
+            self.table_item_selected)
+        table.setColumnWidth(0, 40)
+        table.setColumnWidth(1, 120)
+        table.horizontalHeader().setStretchLastSection(True)
 
-        self.table.setItemDelegateForColumn(
-            2, OWGUI.TableBarItem(self, self.table))
-
-        self.table.setItemDelegateForColumn(
-            1, OWGUI.IndicatorItemDelegate(self))
-
-        self.table.setSizePolicy(QSizePolicy.MinimumExpanding,
-                                 QSizePolicy.MinimumExpanding)
-
-        self.connect(self.table,
-                     SIGNAL("itemSelectionChanged()"),
-                     self.tableItemSelected)
-
-        self.setSizePolicy(QSizePolicy.Preferred,
-                           QSizePolicy.Preferred)
-        """
-        self.mainArea.setSizePolicy(QSizePolicy.MinimumExpanding,
-                                    QSizePolicy.MinimumExpanding)
-
-        gui.rubber(self.topWidgetPart)
-        self.update_optimization_gui()
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.mainArea.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+        self.table_box.setSizePolicy(QSizePolicy.Fixed,
+                                     QSizePolicy.MinimumExpanding)
+        self.table_view.setSizePolicy(QSizePolicy.Preferred,
+                                      QSizePolicy.MinimumExpanding)
+        self.table_box.layout().addWidget(self.table_view)
+        self.hide_show_opt_results()
 
     def adjustSize(self):
         self.ensurePolished()
         s = self.sizeHint()
         self.resize(s)
 
-    def hideOptResults(self):
-        self.mainArea.hide()
-        QTimer.singleShot(100, self.adjustSize)
-
-    def showOptResults(self):
-        self.mainArea.show()
+    def hide_show_opt_results(self):
+        [self.mainArea.hide, self.mainArea.show][self.optimize_k]()
         QTimer.singleShot(100, self.adjustSize)
 
     def sizeHint(self):
         s = self.leftWidgetPart.sizeHint()
-        if self.optimized and not self.mainArea.isHidden():
-            s.setWidth(s.width() + self.mainArea.sizeHint().width() + \
-                       self.childrenRect().x() * 4)
+        if self.optimize_k and not self.mainArea.isHidden():
+            s.setWidth(s.width() + self.mainArea.sizeHint().width() +
+                       4 * self.childrenRect().x())
         return s
 
-    def update_optimization_gui(self):
-        self.fixedSpinBox.setDisabled(bool(self.optimized))
-        self.optimizationBox.setDisabled(not bool(self.optimized))
-        if self.optimized:
-            self.showOptResults()
-        else:
-            self.hideOptResults()
-
-    def updateOptimizationFrom(self):
-        self.optimizationTo = max([self.optimizationFrom + 1,
-                                   self.optimizationTo])
+    def update_k(self):
+        self.optimize_k = False
         self.update()
 
-    def updateOptimizationTo(self):
-        self.optimizationFrom = min([self.optimizationFrom,
-                                     self.optimizationTo - 1])
+    def update_from(self):
+        self.k_to = max(self.k_from + 1, self.k_to)
+        self.optimize_k = True
+        self.update()
+
+    def update_to(self):
+        self.k_from = min(self.k_from, self.k_to - 1)
+        self.optimize_k = True
         self.update()
 
     def set_optimization(self):
         self.updateOptimizationGui()
         self.update()
 
-    def runOptimization(self):
-        if self.optimizationTo > len(set(self.data)):
-            self.error("Not enough unique data instances (%d) for given "
-                       "number of clusters (%d)." % \
-                       (len(set(self.data)), self.optimizationTo))
-            return
+    def check_data_size(self, n):
+        if n > len(self.data):
+            self.error("Not enough unique data instances ({}) for given "
+                       "number of clusters ({}).".format(len(self.data), n))
+            return False
+        return True
 
-        random.seed(0)
-        data = self.data
-        nstart = self.restarts
-        initialization = self.initializations[self.initializationType][1]
-        distance = self.distanceMeasures[self.distanceMeasure][1]
-        scoring = self.scoringMethods[self.scoring][1]
+    def run_optimization(self):
+        # Disabling is needed since this function is not reentrant
+        # Fast clicking on, say, "To: " causes multiple calls
         try:
-            self.progressBarInit()
-            Ks = range(self.optimizationFrom, self.optimizationTo + 1)
-            outer_callback_count = len(Ks) * self.restarts
-            outer_callback_state = {"restart": 0}
-            optimizationRun = []
-            for k in Ks:
-                def outer_progress(km):
-                    outer_callback_state["restart"] += 1
-                    self.progressBarSet(
-                        100.0 * outer_callback_state["restart"] \
-                        / outer_callback_count
-                    )
+            self.controlArea.setDisabled(True)
+            self.optimization_runs = []
+            if self.check_data_size(self.k_to):
+                self.progressBarInit()
+                progress_steps = self.k_to - self.k_from + 1
+                self.optimization_runs = []
+                kmeans = Orange.clustering.kmeans.KMeans(
+                    init=['random', 'k-means++'][self.smart_init],
+                    n_init=self.n_init,
+                    max_iter=self.max_iterations)
+                for k in range(self.k_from, self.k_to + 1):
+                    self.progressBarSet(100.0 * (k - self.k_from) /
+                                        progress_steps)
+                    kmeans.params["n_clusters"] = k
+                    self.optimization_runs.append((k, kmeans(self.data)))
+                self.progressBarFinished()
+        finally:
+            self.controlArea.setDisabled(False)
+        self.show_results()
+        self.send_data()
 
-                def inner_progress(km):
-                    estimate = self.progressEstimate(km)
-                    self.progressBarSet(min(estimate / outer_callback_count + \
-                                            outer_callback_state["restart"] * \
-                                            100.0 / outer_callback_count,
-                                            100.0))
-
-                kmeans = orngClustering.KMeans(
-                    data,
-                    centroids=k,
-                    minscorechange=0,
-                    nstart=nstart,
-                    initialization=initialization,
-                    distance=distance,
-                    scoring=scoring,
-                    outer_callback=outer_progress,
-                    inner_callback=inner_progress
-                    )
-                optimizationRun.append((k, kmeans))
-
-                if nstart == 1:
-                    outer_progress(None)
-
-            self.optimizationRun = optimizationRun
-            minimize = getattr(scoring, "minimize", False)
-            self.optimizationRunSorted = \
-                    sorted(optimizationRun,
-                           key=lambda item: item[1].score,
-                           reverse=minimize)
-
-            self.progressBarFinished()
-
-            self.bestRun = self.optimizationRunSorted[-1]
-            self.showResults()
-            self.sendData()
-        except Exception as ex:
-            self.error(0, "An error occurred while running optimization. "
-                          "Reason: " + str(ex))
-            raise
 
     def cluster(self):
-        if self.K > len(set(self.data)):
-            self.error("Not enough unique data instances (%d) for given "
-                       "number of clusters (%d)." % \
-                       (len(set(self.data)), self.K))
+        if not self.check_data_size(self.k):
             return
-        random.seed(0)
-
-        self.km = orngClustering.KMeans(
-            centroids=self.K,
-            minscorechange=0,
-            nstart=self.restarts,
-            initialization=self.initializations[self.initializationType][1],
-            distance=self.distanceMeasures[self.distanceMeasure][1],
-            scoring=self.scoringMethods[self.scoring][1],
-            inner_callback=self.clusterCallback,
-            )
-        self.progressBarInit()
-        self.km(self.data)
-        self.sendData()
-        self.progressBarFinished()
-
-    def clusterCallback(self, km):
-        norm = math.log(len(self.data), 10)
-        if km.iteration < norm:
-            self.progressBarSet(80.0 * km.iteration / norm)
-        else:
-            self.progressBarSet(80.0 + 0.15 * \
-                                (1.0 - math.exp(norm - km.iteration)))
-
-    def progressEstimate(self, km):
-        norm = math.log(len(km.data), 10)
-        if km.iteration < norm:
-            return min(80.0 * km.iteration / norm, 90.0)
-        else:
-            return min(80.0 + 0.15 * (1.0 - math.exp(norm - km.iteration)),
-                       90.0)
-
-    def scoreFmt(self, score, max_decimals=10):
-        if score > 0 and score < 1:
-            fmt = "%%.%if" % min(int(abs(math.log(max(score, 1e-10)))) + 2,
-                                 max_decimals)
-        else:
-            fmt = "%.1f"
-        return fmt
-
-    def showResults(self):
-        self.table.setRowCount(len(self.optimizationRun))
-        scoring = self.scoringMethods[self.scoring][1]
-        minimize = getattr(scoring, "minimize", False)
-
-        bestScore = self.bestRun[1].score
-        worstScore = self.optimizationRunSorted[0][1].score
-
-        if minimize:
-            bestScore, worstScore = worstScore, bestScore
-
-        scoreSpan = (bestScore - worstScore) or 1
-
-        for i, (k, run) in enumerate(self.optimizationRun):
-            item = OWGUI.tableItem(self.table, i, 0, k)
-            item.setData(Qt.TextAlignmentRole, QVariant(Qt.AlignCenter))
-
-            item = OWGUI.tableItem(self.table, i, 1, None)
-            item.setData(OWGUI.IndicatorItemDelegate.IndicatorRole,
-                         QVariant((k, run) == self.bestRun))
-
-            item.setData(Qt.TextAlignmentRole, QVariant(Qt.AlignCenter))
-
-            fmt = self.scoreFmt(run.score)
-            item = OWGUI.tableItem(self.table, i, 2, fmt % run.score)
-            barRatio = 0.95 * (run.score - worstScore) / scoreSpan
-
-            item.setData(OWGUI.TableBarItem.BarRole, QVariant(barRatio))
-            if (k, run) == self.bestRun:
-                self.table.selectRow(i)
-
-        for i in range(2):
-            self.table.resizeColumnToContents(i)
-
-        self.table.show()
-
-        if minimize:
-            self.tableBox.setTitle("Optimization Report (smaller is better)")
-        else:
-            self.tableBox.setTitle("Optimization Report (bigger is better)")
-
-        QTimer.singleShot(0, self.adjustSize)
+        self.km = Orange.clustering.kmeans.KMeans(
+            n_clusters=self.k,
+            init=['random', 'k-means++'][self.smart_init],
+            n_init=self.n_init,
+            max_iter=self.max_iterations)(self.data)
+        self.send_data()
 
     def run(self):
-        self.error(0)
+        self.error()
         if not self.data:
             return
-        if self.optimized:
-            self.runOptimization()
+        if self.optimize_k:
+            self.run_optimization()
         else:
             self.cluster()
 
-    def update(self):
-        if self.runAnyChange:
-            self.run()
+    commit = run
+
+    def show_results(self):
+        minimize = True
+        scores = [run[1].score for run in self.optimization_runs]
+        if minimize:
+            best_score, worst_score = min(scores), max(scores)
         else:
-            self.settingsChanged = True
+            best_score, worst_score = max(scores), min(scores)
 
-    def tableItemSelected(self):
-        selectedItems = self.table.selectedItems()
-        rows = set([item.row() for item in selectedItems])
+        best_run = scores.index(best_score)
+        score_span = (best_score - worst_score) or 1
+        max_score = max(scores)
+        nplaces = min(
+            5,
+            0 < max_score < 1 and int(abs(math.log(max(max_score, 1e-10)))) + 2)
+        fmt = "{{:.{}}}".format(nplaces)
+        model = self.table_model
+        model.setRowCount(len(self.optimization_runs))
+        for i, (k, run) in enumerate(self.optimization_runs):
+            item = model.item(i, 0)
+            if item is None:
+                item = QStandardItem()
+            item.setData(k, Qt.DisplayRole)
+            item.setTextAlignment(Qt.AlignCenter)
+            model.setItem(i, 0, item)
+            item = model.item(i, 1)
+            if item is None:
+                item = QStandardItem()
+            item.setData(fmt.format(run.score), Qt.DisplayRole)
+            bar_ratio = 0.95 * (run.score - worst_score) / score_span
+            item.setData(bar_ratio, gui.TableBarItem.BarRole)
+            model.setItem(i, 1, item)
+        self.table_view.resizeRowsToContents()
+
+        self.table_view.selectRow(best_run)
+        self.table_view.show()
+        if minimize:
+            self.table_box.setTitle("Scoring (smaller is better)")
+        else:
+            self.table_box.setTitle("Scoring (bigger is better)")
+        QTimer.singleShot(0, self.adjustSize)
+
+    def update(self):
+        self.hide_show_opt_results()
+        self.run()
+
+    def selected_row(self):
+        indices = self.table_view.selectedIndexes()
+        rows = {ind.row() for ind in indices}
         if len(rows) == 1:
-            row = rows.pop()
-            self.sendData(self.optimizationRun[row][1])
+            return rows.pop()
 
-    def sendData(self, km=None):
-        if km is None:
-            km = self.bestRun[1] if self.optimized else self.km
+    def table_item_selected(self):
+        row = self.selected_row()
+        if row is not None:
+            self.send_data(row)
+
+    def send_data(self, row=None):
+        if self.optimize_k:
+            if row is None:
+                row = self.selected_row()
+            km = self.optimization_runs[row][1]
+        else:
+            km = self.km
         if not self.data or not km:
             self.send("Data", None)
             self.send("Centroids", None)
             return
 
-        clustVar = orange.EnumVariable(self.classifyName,
-                                       values=["C%d" % (x + 1) \
-                                               for x in range(km.k)])
-
-        origDomain = self.data.domain
-        if self.addIdAs == 0:
-            domain = orange.Domain(origDomain.attributes, clustVar)
-            if origDomain.classVar:
-                domain.addmeta(orange.newmetaid(), origDomain.classVar)
-            aid = -1
-        elif self.addIdAs == 1:
-            domain = orange.Domain(origDomain.attributes + [clustVar],
-                                   origDomain.classVar)
-            aid = len(origDomain.attributes)
+        clust_var = Orange.data.DiscreteVariable(
+            self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
+        clust_ids = self.km.proj.predict(self.data.X).\
+            astype(int).reshape((len(self.data), 1))
+        print("ZZZ", clust_var.values)
+        print(clust_ids)
+        domain = self.data.domain
+        attributes, classes = domain.attributes, domain.class_vars
+        meta_attrs = domain.metas
+        X, Y, metas = self.data.X, self.data.Y, self.data.metas
+        if self.place_cluster_ids == self.OUTPUT_CLASS:
+            if classes:
+                meta_attrs += classes
+                metas = np.hstack((metas, Y.reshape(150, 1)))
+            classes = [clust_var]
+            Y = clust_ids
+        elif self.place_cluster_ids == self.OUTPUT_ATTRIBUTE:
+            attributes += (clust_var, )
+            X = np.hstack((X, clust_ids))
         else:
-            domain = orange.Domain(origDomain.attributes,
-                                   origDomain.classVar)
-            aid = orange.newmetaid()
-            domain.addmeta(aid, clustVar)
+            meta_attrs += (clust_var, )
+            metas = np.hstack((metas, clust_ids))
 
-        domain.addmetas(origDomain.getmetas())
+        domain = Orange.data.Domain(attributes, classes, meta_attrs)
+        new_table = Orange.data.Table(domain, X, Y, metas, self.data.W)
 
-        # construct a new data set, with a class as assigned by
-        # k-means clustering
-        new = orange.ExampleTable(domain, self.data)
-        for ex, midx in izip(new, km.clusters):
-            ex[aid] = midx
+        centroids = Orange.data.Table(
+            Orange.data.Domain(self.data.domain.attributes), km.centroids)
 
-        centroids = orange.ExampleTable(domain, km.centroids)
-        for i, c in enumerate(centroids):
-            c[aid] = i
-            if origDomain.classVar:
-                c[origDomain.classVar] = "?"
-
-        self.send("Data", new)
+        self.send("Annotated Data", new_table)
         self.send("Centroids", centroids)
 
-    def setData(self, data):
-        "Handle data from the input signal."
-        self.runButton.setEnabled(bool(data))
-        if not data:
-            self.data = None
-            self.table.setRowCount(0)
+    def set_data(self, data):
+        self.data = data
+        if data is None:
+            self.table_view.setRowCount(0)
         else:
             self.data = data
             self.run()
@@ -450,7 +374,7 @@ class OWKMeans(widget.OWWidget):
         if self.optimized:
             import OWReport
             self.reportSection("Cluster size optimization report")
-            self.reportRaw(OWReport.reportTable(self.table))
+            self.reportRaw(OWReport.reportTable(self.table_view))
 
 
 if __name__ == "__main__":
@@ -458,8 +382,8 @@ if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
     a = QApplication(sys.argv)
     ow = OWKMeans()
-#    d = orange.ExampleTable("iris.tab")
-#    ow.setData(d)
+    d = Orange.data.Table("iris.tab")
+    ow.set_data(d)
     ow.show()
     a.exec()
     ow.saveSettings()
