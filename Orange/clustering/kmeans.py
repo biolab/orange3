@@ -10,8 +10,8 @@ __all__ = ["KMeans"]
 class KMeans(SklProjector):
     __wraps__ = skl_cluster.KMeans
 
-    def __init__(self, n_clusters=8, init='k-means++', n_init=10, max_iter=300, tol=0.0001,
-                  random_state=None, preprocessors=None):
+    def __init__(self, n_clusters=8, init='k-means++', n_init=10, max_iter=300,
+                 tol=0.0001, random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -27,19 +27,27 @@ class KMeans(SklProjector):
 class KMeansModel(Projection):
     def __init__(self, proj, preprocessors=None):
         super().__init__(proj=proj)
+        self.k = self.proj.get_params()["n_clusters"]
+        self.centroids = self.proj.cluster_centers_
+        import random
+        self.score = random.random()
 
     def __call__(self, data):
         if isinstance(data, Table):
             if data.domain is not self.pre_domain:
-                data = Table(self.pre_domain, data)
-            c = DiscreteVariable(name='Cluster id', values=range(self.proj.get_params()["n_clusters"]))
+                data = Table(self.pkmre_domain, data)
+            c = DiscreteVariable(name='Cluster id', values=range(self.k))
             domain = Domain([c])
-            return Table(domain, self.proj.predict(data.X).astype(int).reshape((len(data), 1)))
+            return Table(
+                domain,
+                self.proj.predict(data.X).astype(int).reshape((len(data), 1)))
         elif isinstance(data, Instance):
             if data.domain is not self.pre_domain:
                 data = Instance(self.pre_domain, data)
-            c = DiscreteVariable(name='Cluster id', values=range(self.proj.get_params()["n_clusters"]))
+            c = DiscreteVariable(name='Cluster id', values=range(self.k))
             domain = Domain([c])
-            return Table(domain, atleast_2d(self.proj.predict(data._x)).astype(int))
+            return Table(
+                domain,
+                atleast_2d(self.proj.predict(data._x)).astype(int))
         else:
             return self.proj.predict(data).reshape((len(data), 1))
