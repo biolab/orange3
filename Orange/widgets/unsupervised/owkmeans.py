@@ -25,9 +25,10 @@ class OWKMeans(widget.OWWidget):
     INIT_KMEANS, INIT_RANDOM = range(2)
     INIT_METHODS = "Initialize with KMeans++", "Random initialization"
 
-    SILHOUETTE_H, SILHOUETTE, INTERCLUSTER, DISTANCES = range(4)
-    SCORING_METHODS = ("Silhouette (heuristic)", "Silhouette",
-                       "Intercluster distance", "Distance to centroids")
+    SILHOUETTE, INTERCLUSTER, DISTANCES = range(3)
+    SCORING_METHODS = [("Silhouette", lambda km: km.silhouette, False),
+                       ("Inter-cluster distance", lambda km: km.inter_cluster, True),
+                       ("Distance to centroids", lambda km: km.inertia, True)]
 
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
     OUTPUT_METHODS = ("Class", "Feature", "Meta")
@@ -39,7 +40,7 @@ class OWKMeans(widget.OWWidget):
     max_iterations = Setting(300)
     n_init = Setting(10)
     smart_init = Setting(INIT_KMEANS)
-    scoring = Setting(SILHOUETTE_H)
+    scoring = Setting(SILHOUETTE)
     append_cluster_ids = Setting(True)
     place_cluster_ids = Setting(OUTPUT_CLASS)
     output_name = Setting("Cluster")
@@ -86,7 +87,8 @@ class OWKMeans(widget.OWWidget):
         layout.addWidget(
             gui.comboBox(
                 None, self, "scoring", label="Scoring",
-                items=self.SCORING_METHODS, callback=self.update), 5, 2)
+                items=list(zip(*self.SCORING_METHODS))[0],
+                callback=self.update), 5, 2)
 
         box = gui.widgetBox(self.controlArea, "Initialization")
         gui.comboBox(
@@ -242,8 +244,10 @@ class OWKMeans(widget.OWWidget):
     commit = run
 
     def show_results(self):
-        minimize = True
-        scores = [run[1].score for run in self.optimization_runs]
+        minimize = self.SCORING_METHODS[self.scoring][2]
+        k_scores = [(k, self.SCORING_METHODS[self.scoring][1](run)) for
+                  k, run in self.optimization_runs]
+        scores = list(zip(*k_scores))[1]
         if minimize:
             best_score, worst_score = min(scores), max(scores)
         else:
@@ -252,13 +256,11 @@ class OWKMeans(widget.OWWidget):
         best_run = scores.index(best_score)
         score_span = (best_score - worst_score) or 1
         max_score = max(scores)
-        nplaces = min(
-            5,
-            0 < max_score < 1 and int(abs(math.log(max(max_score, 1e-10)))) + 2)
+        nplaces = min(5, int(abs(math.log(max(max_score, 1e-10)))) + 2)
         fmt = "{{:.{}}}".format(nplaces)
         model = self.table_model
-        model.setRowCount(len(self.optimization_runs))
-        for i, (k, run) in enumerate(self.optimization_runs):
+        model.setRowCount(len(k_scores))
+        for i, (k, score) in enumerate(k_scores):
             item = model.item(i, 0)
             if item is None:
                 item = QStandardItem()
@@ -268,8 +270,8 @@ class OWKMeans(widget.OWWidget):
             item = model.item(i, 1)
             if item is None:
                 item = QStandardItem()
-            item.setData(fmt.format(run.score), Qt.DisplayRole)
-            bar_ratio = 0.95 * (run.score - worst_score) / score_span
+            item.setData(fmt.format(score), Qt.DisplayRole)
+            bar_ratio = 0.95 * (score - worst_score) / score_span
             item.setData(bar_ratio, gui.TableBarItem.BarRole)
             model.setItem(i, 1, item)
         self.table_view.resizeRowsToContents()
@@ -311,10 +313,8 @@ class OWKMeans(widget.OWWidget):
 
         clust_var = Orange.data.DiscreteVariable(
             self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
-        clust_ids = self.km.proj.predict(self.data.X).\
+        clust_ids = km.proj.predict(self.data.X).\
             astype(int).reshape((len(self.data), 1))
-        print("ZZZ", clust_var.values)
-        print(clust_ids)
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
         meta_attrs = domain.metas

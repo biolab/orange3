@@ -6,8 +6,6 @@ from Orange.evaluation.testing import Results
 from Orange.evaluation.scoring import Score
 
 
-
-
 __all__ = ['ClusteringEvaluation']
 
 

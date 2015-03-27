@@ -1,7 +1,10 @@
+import numpy as np
 import sklearn.cluster as skl_cluster
+from sklearn.metrics import silhouette_score
+
 from Orange.data import Table, DiscreteVariable, Domain, Instance
 from Orange.projection import SklProjector, Projection
-from numpy import atleast_2d
+from Orange.distance import Euclidean
 
 
 __all__ = ["KMeans"]
@@ -19,8 +22,13 @@ class KMeans(SklProjector):
         proj = skl_cluster.KMeans(**self.params)
         if isinstance(X, Table):
             proj = proj.fit(X.X, Y)
+            proj.silhouette = silhouette_score(X.X, proj.labels_)
         else:
             proj = proj.fit(X, Y)
+            proj.silhouette = silhouette_score(X, proj.labels_)
+        proj.inertia = proj.inertia_ / len(X)
+        cluster_dist = Euclidean(proj.cluster_centers_).X
+        proj.inter_cluster = np.mean(cluster_dist[np.triu_indices_from(cluster_dist, 1)])
         return KMeansModel(proj, self.preprocessors)
 
 
@@ -29,8 +37,6 @@ class KMeansModel(Projection):
         super().__init__(proj=proj)
         self.k = self.proj.get_params()["n_clusters"]
         self.centroids = self.proj.cluster_centers_
-        import random
-        self.score = random.random()
 
     def __call__(self, data):
         if isinstance(data, Table):
@@ -48,6 +54,6 @@ class KMeansModel(Projection):
             domain = Domain([c])
             return Table(
                 domain,
-                atleast_2d(self.proj.predict(data._x)).astype(int))
+                np.atleast_2d(self.proj.predict(data._x)).astype(int))
         else:
             return self.proj.predict(data).reshape((len(data), 1))
