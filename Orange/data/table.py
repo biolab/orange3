@@ -253,13 +253,14 @@ class Table(MutableSequence, Storage):
             n_src_attrs = len(source.domain.attributes)
             if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
                    for x in src_cols):
-                return source.X[row_indices, src_cols]
+                return _subarray(source.X, row_indices, src_cols)
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                return source.metas[row_indices, [-1 - x for x in src_cols]]
+                return _subarray(source.metas, row_indices,
+                                 [-1 - x for x in src_cols])
             if all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
-                return source._Y[row_indices, [x - n_src_attrs for x in
-                                              src_cols]]
+                return _subarray(source._Y, row_indices,
+                                 [x - n_src_attrs for x in src_cols])
 
             types = []
             if any(isinstance(x, Integral) and 0 <= x < n_src_attrs
@@ -276,7 +277,10 @@ class Table(MutableSequence, Storage):
                 if col is None:
                     a[:, i] = Unknown
                 elif not isinstance(col, Integral):
-                    a[:, i] = col(source)
+                    if row_indices is not ...:
+                        a[:, i] = col(source)[row_indices]
+                    else:
+                        a[:, i] = col(source)
                 elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
                 elif col < n_src_attrs:
@@ -1320,3 +1324,51 @@ def _check_arrays(*arrays, dtype=None):
 def _check_inf(array):
     return array.dtype.char in np.typecodes['AllFloat'] and \
             np.isinf(array.data).any()
+
+
+def _subarray(arr, rows, cols):
+    return arr[_rxc_ix(rows, cols)]
+
+
+def _rxc_ix(rows, cols):
+    """
+    Construct an index object to index the `rows` x `cols` cross product.
+
+    Rows and columns can be a 1d bool or int sequence, a slice or an
+    Ellipsis (`...`). The later is a convenience and is interpreted the same
+    as `slice(None, None, -1)`
+
+    Parameters
+    ----------
+    rows : 1D sequence, slice or Ellipsis
+        Row indices.
+    cols : 1D sequence, slice or Ellipsis
+        Column indices.
+
+    See Also
+    --------
+    numpy.ix_
+
+    Examples
+    --------
+    >>> a = np.arange(10).reshape(2, 5)
+    >>> a[_rxc_ix([0, 1], [3, 4])]
+    array([[3, 4],
+           [8, 9]])
+    >>> a[_rxc_ix([False, True], ...)]
+    array([[5, 6, 7, 8, 9]])
+
+    """
+    rows = slice(None, None, 1) if rows is ... else rows
+    cols = slice(None, None, 1) if cols is ... else cols
+
+    isslice = (isinstance(rows, slice), isinstance(cols, slice))
+    if isslice == (True, True):
+        return rows, cols
+    elif isslice == (True, False):
+        return rows, np.asarray(np.ix_(cols), int).ravel()
+    elif isslice == (False, True):
+        return np.asarray(np.ix_(rows), int).ravel(), cols
+    else:
+        r, c = np.ix_(rows, cols)
+        return np.asarray(r, int), np.asarray(c, int)
