@@ -373,9 +373,9 @@ class OWHeatMap(widget.OWWidget):
 
     settingsHandler = settings.DomainContextHandler()
 
-    x_var_index = settings.Setting(0)
-    y_var_index = settings.Setting(1)
-    z_var_index = settings.Setting(0)
+    x_var_index = settings.ContextSetting(0)
+    y_var_index = settings.ContextSetting(1)
+    z_var_index = settings.ContextSetting(0)
     selected_z_values = settings.Setting([])
     color_scale = settings.Setting(1)
     sample_level = settings.Setting(0)
@@ -509,6 +509,7 @@ class OWHeatMap(widget.OWWidget):
             self.set_sampled_data(self.dataset)
 
     def update_sample(self):
+        self.closeContext()
         self.clear()
 
         if self.sample_level < len(self.sample_times):
