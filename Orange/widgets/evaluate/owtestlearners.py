@@ -109,7 +109,7 @@ class OWTestLearners(widget.OWWidget):
         rbox.layout().addSpacing(5)
         gui.button(rbox, self, "Apply", callback=self.apply)
 
-        self.cbox = gui.widgetBox(self.controlArea, "Class selection")
+        self.cbox = gui.widgetBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(self.cbox, self, "class_selection",
              items=[],
              callback=self._select_class,
@@ -247,11 +247,9 @@ class OWTestLearners(widget.OWWidget):
         class_var = self.train_data.domain.class_var
         
         if is_discrete(class_var):
-            test_stats = classification_stats
-            stats = [test_stats(self.one_vs_rest(res)) for res in results]
+            stats = [classification_stats(self.one_vs_rest(res)) for res in results]
         else:
-            test_stats = regression_stats
-            stats = [test_stats(res) for res in results]
+            stats = [regression_stats(res) for res in results]
 
         self._update_header()
         
@@ -304,8 +302,7 @@ class OWTestLearners(widget.OWWidget):
 
             class_index = 0
             if self.class_selection != '(None)' and self.class_selection != 0:
-                class_map = {val: i for i, val in enumerate(self.train_data.domain.class_var.values)}
-                class_index = class_map[self.class_selection]+1
+                class_index = self.train_data.domain.class_var.values.index(self.class_selection)+1
 
             self.class_selection_combo.setCurrentIndex(class_index)
             self.previous_class_selection = "(None)"
@@ -314,8 +311,7 @@ class OWTestLearners(widget.OWWidget):
 
     def one_vs_rest(self, res):
         if self.class_selection != '(None)' and self.class_selection != 0:
-            class_map = {val: i for i, val in enumerate(self.train_data.domain.class_var.values)}
-            class_ = class_map[self.class_selection]
+            class_ = self.train_data.domain.class_var.values.index(self.class_selection)
             actual = res.actual == class_
             predicted = res.predicted == class_
             return Results(
@@ -335,11 +331,9 @@ class OWTestLearners(widget.OWWidget):
 
         class_var = self.train_data.domain.class_var
         if is_discrete(class_var):
-            test_stats = classification_stats
-            stats = [test_stats(self.one_vs_rest(res)) for res in results]
+            stats = [classification_stats(self.one_vs_rest(res)) for res in results]
         else:
-            test_stats = regression_stats
-            stats = [test_stats(res) for res in results]
+            stats = [regression_stats(res) for res in results]
 
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
