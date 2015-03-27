@@ -3,7 +3,7 @@ import pickle
 import unittest
 import warnings
 
-from mock import Mock
+from unittest.mock import Mock
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, Setting, SettingsHandler, SettingProvider

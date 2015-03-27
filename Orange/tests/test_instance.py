@@ -1,7 +1,7 @@
 from math import isnan
 import warnings
 import unittest
-from mock import MagicMock
+from unittest.mock import MagicMock
 
 import numpy as np
 from numpy.testing import assert_array_equal
