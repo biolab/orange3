@@ -688,6 +688,17 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("test-zoo.tab")
 
+    def test_save_pickle(self):
+        table = data.Table("iris")
+        try:
+            table.save("iris.pickle")
+            table2 = data.Table.from_file("iris.pickle")
+            np.testing.assert_almost_equal(table.X, table2.X)
+            np.testing.assert_almost_equal(table.Y, table2.Y)
+            self.assertIs(table.domain[0], table2.domain[0])
+        finally:
+            os.remove("iris.pickle")
+
     def test_from_numpy(self):
         import random
 

@@ -1,6 +1,7 @@
 import csv
 import re
 import sys
+import pickle
 from itertools import chain
 
 import bottlechest as bn
@@ -617,3 +618,12 @@ class ExcelReader:
         self.read_data(worksheet, table)
         self.reorder_values(table)
         return table
+
+
+class PickleReader:
+    def read_file(self, file, _=None):
+        return pickle.load(open(file, "rb"))
+
+
+def save_pickle(filename, table):
+    pickle.dump(table, open(filename, "wb"))

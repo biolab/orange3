@@ -441,6 +441,8 @@ class Table(MutableSequence, Storage):
         ext = os.path.splitext(filename)[1]
         if ext == ".tab":
             io.save_tab_delimited(filename, self)
+        if ext == ".pickle":
+            io.save_pickle(filename, self)
         else:
             raise IOError("Unknown file name extension.")
 
@@ -458,7 +460,7 @@ class Table(MutableSequence, Storage):
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
             if not ext:
-                for ext in [".tab", ".txt", ".basket", ".xlsx"]:
+                for ext in [".tab", ".txt", ".basket", ".xlsx", ".pickle"]:
                     if os.path.exists(absolute_filename + ext):
                         absolute_filename += ext
                         break
@@ -477,6 +479,8 @@ class Table(MutableSequence, Storage):
             data = io.ExcelReader().read_file(absolute_filename, cls)
         elif ext == ".basket":
             data = io.BasketReader().read_file(absolute_filename, cls)
+        elif ext == ".pickle":
+            data = io.PickleReader().read_file(absolute_filename, cls)
         else:
             raise IOError(
                 'Extension "{}" is not recognized'.format(ext))
