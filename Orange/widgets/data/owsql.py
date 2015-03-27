@@ -204,6 +204,7 @@ class OWSql(widget.OWWidget):
             elif confirm.clickedButton() == sample_button:
                 sample = True
 
+        self.information(1)
         if self.guess_values:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             if sample:
