@@ -651,3 +651,4 @@ FILE_FORMATS = (TabDelimFormat, TxtFormat, BasketFormat, ExcelFormat,
 FILE_WRITERS = {c.EXT: c for c in FILE_FORMATS if hasattr(c, "write_file")}
 FILE_READERS = {c.EXT: c for c in FILE_FORMATS if hasattr(c, "read_file")}
 FORMAT_NAMES = {c.EXT: c.NAME for c in FILE_FORMATS}
+
