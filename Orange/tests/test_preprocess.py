@@ -1,5 +1,5 @@
 import unittest
-from mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 import Orange
 

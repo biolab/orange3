@@ -9,7 +9,7 @@ from Orange.data import filter
 from Orange.data import Unknown
 
 import numpy as np
-from mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 
 class TableTestCase(unittest.TestCase):
