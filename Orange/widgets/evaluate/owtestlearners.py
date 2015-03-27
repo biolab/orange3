@@ -11,6 +11,7 @@ from PyQt4.QtCore import Qt, QSize
 import Orange
 from Orange.evaluation import *
 from Orange.widgets import widget, gui, settings
+from Orange.data import DiscreteVariable, Domain
 
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
@@ -58,6 +59,8 @@ class OWTestLearners(widget.OWWidget):
 
     outputs = [("Evaluation Results", Orange.evaluation.Results)]
 
+    settingsHandler = settings.ClassValuesContextHandler()
+
     #: Resampling/testing types
     KFold, LeaveOneOut, Bootstrap, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
 
@@ -69,6 +72,8 @@ class OWTestLearners(widget.OWWidget):
     n_repeat = settings.Setting(10)
     #: Bootstrap sampling p
     sample_p = settings.Setting(75)
+
+    class_selection = settings.ContextSetting("(None)")
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -104,7 +109,14 @@ class OWTestLearners(widget.OWWidget):
         rbox.layout().addSpacing(5)
         gui.button(rbox, self, "Apply", callback=self.apply)
 
+        self.cbox = gui.widgetBox(self.controlArea, "Target class")
+        self.class_selection_combo = gui.comboBox(self.cbox, self, "class_selection",
+             items=[],
+             callback=self._select_class,
+             sendSelectedValue=True, valueType=str)
+
         gui.rubber(self.controlArea)
+
 
         self.view = QTreeView(
             rootIsDecorated=False,
@@ -139,6 +151,10 @@ class OWTestLearners(widget.OWWidget):
                 data = None
 
         self.train_data = data
+        self.closeContext()
+        self.class_selection = "(None)"
+        self.openContext(data.domain.class_var)
+        self._update_class_selection()
         self._update_header()
         self._invalidate()
 
@@ -198,7 +214,6 @@ class OWTestLearners(widget.OWWidget):
                             "Select 'Test on test data' to use it.")
 
         # TODO: Test each learner individually
-
         if self.resampling == OWTestLearners.KFold:
             results = Orange.evaluation.CrossValidation(
                 self.train_data, learners, k=self.k_folds, store_data=True
@@ -226,23 +241,25 @@ class OWTestLearners(widget.OWWidget):
         else:
             assert False
 
+        self.results = results
         results = list(split_by_model(results))
+
         class_var = self.train_data.domain.class_var
         
         if is_discrete(class_var):
-            test_stats = classification_stats
+            stats = [classification_stats(self.one_vs_rest(res)) for res in results]
         else:
-            test_stats = regression_stats
-        
+            stats = [regression_stats(res) for res in results]
+
         self._update_header()
         
-        stats = [test_stats(res) for res in results]
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
         self.setStatusMessage("")
         
         self._update_stats_model()
+
 
     def _update_header(self):
         headers = ["Method"]
@@ -274,6 +291,57 @@ class OWTestLearners(widget.OWWidget):
                 item.setData(" {:.3f} ".format(stat[0]), Qt.DisplayRole)
                 row.append(item)
             model.appendRow(row)
+
+    def _update_class_selection(self):
+        if is_discrete(self.train_data.domain.class_var):
+            self.cbox.setVisible(True)
+            values = self.train_data.domain.class_var.values
+            self.class_selection_combo.clear()
+            self.class_selection_combo.addItem("(None)")
+            self.class_selection_combo.addItems(values)
+
+            class_index = 0
+            if self.class_selection != '(None)' and self.class_selection != 0:
+                class_index = self.train_data.domain.class_var.values.index(self.class_selection)+1
+
+            self.class_selection_combo.setCurrentIndex(class_index)
+            self.previous_class_selection = "(None)"
+        else:
+            self.cbox.setVisible(False)
+
+    def one_vs_rest(self, res):
+        if self.class_selection != '(None)' and self.class_selection != 0:
+            class_ = self.train_data.domain.class_var.values.index(self.class_selection)
+            actual = res.actual == class_
+            predicted = res.predicted == class_
+            return Results(
+                nmethods=1, domain=self.train_data.domain,
+                actual=actual, predicted=predicted)
+        else:
+            return res
+
+    def _select_class(self):
+        if self.previous_class_selection == self.class_selection:
+            return
+        
+        results = list(split_by_model(self.results))
+
+        items = [(key, input) for key, input in self.learners.items()]
+        learners = [input.learner for _, input in items]
+
+        class_var = self.train_data.domain.class_var
+        if is_discrete(class_var):
+            stats = [classification_stats(self.one_vs_rest(res)) for res in results]
+        else:
+            stats = [regression_stats(res) for res in results]
+
+        for (key, input), res, stat in zip(items, results, stats):
+            self.learners[key] = input._replace(results=res, stats=stat)
+
+        self.setStatusMessage("")
+
+        self._update_stats_model()
+        self.previous_class_selection = self.class_selection
 
     def _invalidate(self, which=None):
         if which is None:
