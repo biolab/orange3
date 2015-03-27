@@ -2,7 +2,7 @@ import os.path
 
 from PyQt4 import QtGui
 
-from Orange.data.io import save_csv, save_tab_delimited
+from Orange import data
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting

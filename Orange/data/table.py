@@ -431,6 +431,9 @@ class Table(MutableSequence, Storage):
             obj.ids = np.array(range(cls._next_instance_id, cls._next_instance_id + obj.X.shape[0]))
             cls._next_instance_id += obj.X.shape[0]
 
+    FILE_FORMATS = {
+        ".tab": (io.TabDelimFormat, )
+    }
     def save(self, filename):
         """
         Save a data table to a file. The path can be absolute or relative.
@@ -439,12 +442,15 @@ class Table(MutableSequence, Storage):
         :type filename: str
         """
         ext = os.path.splitext(filename)[1]
-        if ext == ".tab":
-            io.save_tab_delimited(filename, self)
-        if ext == ".pickle":
-            io.save_pickle(filename, self)
-        else:
-            raise IOError("Unknown file name extension.")
+        writer = io.FILE_WRITERS.get(ext)
+        if not writer:
+            desc = io.FORMAT_NAMES.get(ext)
+            if desc:
+                raise IOError("Writing of {}s is not supported".
+                              format(desc.lower()))
+            else:
+                raise IOError("Unknown file name extension.")
+        writer().write_file(filename, self)
 
     @classmethod
     def from_file(cls, filename):
@@ -460,7 +466,7 @@ class Table(MutableSequence, Storage):
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
             if not ext:
-                for ext in [".tab", ".txt", ".basket", ".xlsx", ".pickle"]:
+                for ext in io.FILE_READERS:
                     if os.path.exists(absolute_filename + ext):
                         absolute_filename += ext
                         break
@@ -471,20 +477,16 @@ class Table(MutableSequence, Storage):
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
-        if ext == ".tab":
-            data = io.TabDelimReader().read_file(absolute_filename, cls)
-        elif ext == ".txt":
-            data = io.TxtReader().read_file(absolute_filename, cls)
-        elif ext == ".xlsx":
-            data = io.ExcelReader().read_file(absolute_filename, cls)
-        elif ext == ".basket":
-            data = io.BasketReader().read_file(absolute_filename, cls)
-        elif ext == ".pickle":
-            data = io.PickleReader().read_file(absolute_filename, cls)
-        else:
-            raise IOError(
-                'Extension "{}" is not recognized'.format(ext))
-
+        reader = io.FILE_READERS.get(ext)
+        if not reader:
+            desc = io.FORMAT_NAMES.get(ext)
+            if desc:
+                raise IOError("Reading {}s is not supported".
+                              format(desc.lower()))
+            else:
+                raise IOError("Unknown file name extension.")
+        print(absolute_filename)
+        data = reader().read_file(absolute_filename, cls)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids

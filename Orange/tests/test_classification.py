@@ -9,7 +9,7 @@ import Orange.classification
 from Orange.classification import (
     Learner, Model, NaiveBayesLearner, LogisticRegressionLearner)
 from Orange.data import DiscreteVariable, Domain, Table
-from Orange.data.io import BasketReader
+from Orange.data.io import BasketFormat
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 

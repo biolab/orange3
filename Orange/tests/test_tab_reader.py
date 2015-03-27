@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from Orange.data import ContinuousVariable, DiscreteVariable
-from Orange.data.io import TabDelimReader, save_tab_delimited
+from Orange.data.io import TabDelimFormat
 
 
 class TestTabReader(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestTabReader(unittest.TestCase):
         """
 
         file = io.StringIO(simplefile)
-        table = TabDelimReader()._read_file(file)
+        table = TabDelimFormat()._read_file(file)
 
         f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f1, ContinuousVariable)
@@ -46,7 +46,7 @@ class TestTabReader(unittest.TestCase):
         1.0      \tM        \t5      \trich
         """
         file = io.StringIO(samplefile)
-        table = TabDelimReader()._read_file(file)
+        table = TabDelimFormat()._read_file(file)
 
         f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
@@ -59,11 +59,11 @@ class TestTabReader(unittest.TestCase):
 
         outf = io.StringIO()
         outf.close = lambda: None
-        save_tab_delimited(outf, table)
+        TabDelimFormat.write_file(outf, table)
         saved = outf.getvalue()
 
         file = io.StringIO(saved)
-        table = TabDelimReader()._read_file(file)
+        table = TabDelimFormat()._read_file(file)
 
         f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
@@ -76,13 +76,13 @@ class TestTabReader(unittest.TestCase):
 
     def test_reuse_variables(self):
         file1 = io.StringIO("\n".join("xd dbac"))
-        t1 = TabDelimReader()._read_file(file1)
+        t1 = TabDelimFormat()._read_file(file1)
 
         self.assertSequenceEqual(t1.domain['x'].values, 'abcd')
         np.testing.assert_almost_equal(t1.X.ravel(), [3, 1, 0, 2])
 
         file2 = io.StringIO("\n".join("xd hgacb"))
-        t2 = TabDelimReader()._read_file(file2)
+        t2 = TabDelimFormat()._read_file(file2)
 
         self.assertSequenceEqual(t2.domain['x'].values, 'abcdgh')
         np.testing.assert_almost_equal(t2.X.ravel(), [5, 4, 0, 2, 1])

@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from Orange.data import ContinuousVariable, DiscreteVariable
-from Orange.data.io import TxtReader
+from Orange.data.io import TxtFormat
 
 tab_file = """\
 Feature 1\tFeature 2\tFeature 3
@@ -48,7 +48,7 @@ class TestTabReader(unittest.TestCase):
         try:
             file.write(s)
             file.close()
-            table = TxtReader().read_file(filename)
+            table = TxtFormat().read_file(filename)
 
             f1, f2, f3 = table.domain.variables
             self.assertIsInstance(f1, ContinuousVariable)
