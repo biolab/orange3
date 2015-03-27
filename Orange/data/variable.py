@@ -6,6 +6,7 @@ from pickle import PickleError
 from ..data.value import Value, Unknown
 import collections
 
+from . import _variable
 
 ValueUnknown = Unknown  # Shadowing within classes
 
@@ -256,21 +257,7 @@ class ContinuousVariable(Variable):
         Convert a value from a string and adjust the number of decimals if
         `adjust_decimals` is non-zero.
         """
-        if s in self.unknown_str:
-            return Unknown
-        val = float(s)  # raise exception before setting the number of decimals
-        if self.adjust_decimals and isinstance(s, str):
-            #TODO: This may significantly slow down file reading.
-            #      Is there something we can do about it?
-            s = s.strip()
-            i = s.find(".")
-            ndec = len(s) - i - 1 if i > 0 else 0
-            if self.adjust_decimals == 2:
-                self.number_of_decimals = ndec
-            elif ndec > self.number_of_decimals:
-                self.number_of_decimals = ndec
-            self.adjust_decimals = 1
-        return val
+        return _variable.val_from_str_add_cont(self, s)
 
     def repr_val(self, val):
         """
