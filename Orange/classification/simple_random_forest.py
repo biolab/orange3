@@ -10,6 +10,10 @@ class SimpleRandomForestLearner(Orange.classification.Learner):
     A random forest classifier, optimized for speed. Trees in the forest
     are constructed with :obj:`SimpleTreeLearner` classification trees.
 
+
+    Parameters
+    ----------
+
     n_estimators : int, optional (default = 10)
         Number of trees in the forest.
 
