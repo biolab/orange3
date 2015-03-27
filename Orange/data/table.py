@@ -190,7 +190,9 @@ class Table(MutableSequence, Storage):
             if not args:
                 return cls.from_domain(domain, **kwargs)
             if isinstance(args[0], Table):
-                return cls.from_table(domain, args[0])
+                return cls.from_table(domain, *args)
+            elif isinstance(args[0], list):
+                return cls.from_list(domain, *args)
         else:
             domain = None
 
@@ -423,6 +425,21 @@ class Table(MutableSequence, Storage):
         self.W = W
         self.n_rows = self.X.shape[0]
         cls._init_ids(self)
+        return self
+
+    @classmethod
+    def from_list(cls, domain, rows, weights=None):
+        if weights is not None and len(rows) != len(weights):
+            raise ValueError("mismatching number of instances and weights")
+        self = cls.from_domain(domain, len(rows), weights is not None)
+        attrs, classes = domain.attributes, domain.class_vars
+        nattrs = len(domain.attributes)
+        for i, row in enumerate(rows):
+            for j, (var, val) in enumerate(zip(attrs, row)):
+                self.X[i, j] = var.to_val(val)
+            for j, (var, val) in enumerate(zip(classes, row[nattrs:])):
+                self._Y[i, j] = var.to_val(val)
+        self.W = np.array(weights)
         return self
 
     @classmethod
