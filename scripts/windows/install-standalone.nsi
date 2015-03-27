@@ -1,6 +1,7 @@
 #
-# Standard Orange installer
+# Installer script for a stand-alone Orange3 installation
 #
+
 # Required definitions need to be passed to the makensis call
 #  - BASEDIR base location of all required binaries, ... (see below)
 #  - PYTHON_VERSION (major.minor.micro) python version e.g 3.4.2
@@ -19,22 +20,28 @@
 #       [sse-flags]/
 #   requirements.txt
 
-Name "Orange3"
+OutFile ${OUTFILENAME}
+
+Name Orange3
 Icon OrangeInstall.ico
 UninstallIcon OrangeInstall.ico
 
-# ShowInstDetails nevershow
+# Default installation directory
+InstallDir $PROGRAMFILES\Orange3\
+
+# Ask the user for a target install dir.
+Page directory
+DirText "Choose a folder in which to install Orange3"
+Page instfiles
+
 
 AutoCloseWindow false
 
-OutFile ${OUTFILENAME}
-
-#
 # Temporary folder where temp data is extracted
-#
 !define TEMPDIR $TEMP\orange-installer
 
 !include "LogicLib.nsh"
+
 !include "install-common.nsi"
 
 !define SHELLFOLDERS \
@@ -44,10 +51,8 @@ OutFile ${OUTFILENAME}
 Function .onInit
 	# Initialize AdminInstall and PythonDir global variables.
 	${InitAdminInstall}
-	${InitPythonDir}
 	${InitSSE}
 FunctionEnd
-
 
 Function .onInstSuccess
 	MessageBox MB_OK "Orange3 has been successfully installed." /SD IDOK
@@ -55,39 +60,22 @@ FunctionEnd
 
 
 Section ""
-	# First install python if not already installed
-	${If} $PythonDir == ""
-		askpython:
 
-		MessageBox MB_OKCANCEL \
-			"Orange installer will first launch installation of Python ${PYTHON_VERSION}." \
-			/SD IDOK \
-			IDOK installpython \
-			IDCANCEL askpythonretry
+	DetailPrint "Extracting installers"
+	${ExtractTemp} "${BASEDIR}\core\python\python-${PYTHON_VERSION}.msi" "${TEMPDIR}\core\python"
 
-		askpythonretry:
+	# Install python inside the application directory
+	StrCpy $PythonDir "$INSTDIR\Python${PYVER}"
 
-		MessageBox MB_YESNO "Orange cannot run without Python.$\r$\nAbort the installation?" \
-			IDNO askpython
-		Quit
+	DetailPrint "Installing Python"
+	${InstallPythonStandalone} \
+		"${TEMPDIR}\core\python\python-${PYTHON_VERSION}.msi" \
+		"$PythonDir"
 
-		installpython:
-
-		DetailPrint "Extracting installers"
-		${ExtractTemp} "${BASEDIR}\core\python\python-${PYTHON_VERSION}.msi" "${TEMPDIR}\core\python"
-
-		DetailPrint "Installing Python"
-		${InstallPython} "${TEMPDIR}\core\python\python-${PYTHON_VERSION}.msi"
-
-		# Get the location of the interpreter from registry
-		${InitPythonDir}
-
-		${If} $PythonDir == ""
-			MessageBox MB_OK "Python installation failed.$\r$\nOrange installation cannot continue."
-			Quit
-		${EndIf}
-
-	${EndIf}
+	# Install/copy Microsoft Visual Studio redistributable dll in python's
+	# libs dir.
+	${ExtractTempRec} "${BASEDIR}\core\msvredist\*.*" "${TEMPDIR}\core\msvredist"
+	CopyFiles "${TEMPDIR}\core\msvredist\*.dll" "$PythonDir"
 
 	# Ensure pip is installed in case of pre-existing python install
 	${PythonExec} "-m ensurepip"
@@ -116,12 +104,10 @@ Section ""
 		Abort "Could not install all requirements"
 	${EndIf}
 
-	${IfNot} ${FileExists} $PythonDir\Lib\site-packages\PyQt4\QtCore.pyd
-		DetailPrint "Installing PyQt4"
-		${Pip} 'install --no-deps --no-index \
-				-f ${TEMPDIR}\wheelhouse \
-				PyQt4'
-	${EndIf}
+	DetailPrint "Installing PyQt4"
+	${Pip} 'install --no-deps --no-index \
+			-f ${TEMPDIR}\wheelhouse \
+			PyQt4'
 
 	DetailPrint "Installing Orange"
 	${Pip} 'install --no-deps --no-index \
@@ -140,21 +126,29 @@ Section ""
 
 	DetailPrint "Creating shortcuts"
 
-	# $OUTDIR is set as working directory for the shortcuts
+	# $OUTDIR is used to set the working directory for the shortcuts
+	# created using CreateShortCut
 	SetOutPath $PythonDir
 
-	CreateDirectory "$SMPROGRAMS\Orange3"
-
-	CreateShortCut "$SMPROGRAMS\Orange3\Orange Canvas.lnk" \
+	# Create shortcut at the root install directory
+	CreateShortCut "$INSTDIR\Orange Canvas.lnk" \
 					"$PythonDir\pythonw.exe" "-m Orange.canvas" \
 					"$PythonDir\share\Orange\canvas\icons\orange.ico" 0
 
-	CreateShortCut "$DESKTOP\Orange Canvas.lnk" \
+	# Start Menu
+	CreateDirectory "$SMPROGRAMS\Orange3"
+	CreateShortCut "$SMPROGRAMS\Orange3\Orange Canvas.lnk" \
 					"$PythonDir\pythonw.exe" "-m Orange.canvas" \
 					"$PythonDir\share\Orange\canvas\icons\orange.ico" 0
 
 	CreateShortCut "$SMPROGRAMS\Orange3\Uninstall Orange.lnk" \
 					"$PythonDir\share\Orange\canvas\uninst.exe"
+
+	# Desktop shortcut
+	CreateShortCut "$DESKTOP\Orange Canvas.lnk" \
+					"$PythonDir\pythonw.exe" "-m Orange.canvas" \
+					"$PythonDir\share\Orange\canvas\icons\orange.ico" 0
+
 
 	WriteRegStr SHELL_CONTEXT \
 				"Software\Microsoft\Windows\CurrentVersion\Uninstall\Orange3" \
@@ -165,7 +159,11 @@ Section ""
 				"UninstallString" '$PythonDir\share\Orange\canvas\uninst.exe'
 
 	WriteRegStr SHELL_CONTEXT \
-				"Software\OrangeCanvas\Current" "PythonDir" \
+				"Software\OrangeCanvas\Standalone\Current" "InstallDir" \
+				"$INSTDIR"
+
+	WriteRegStr SHELL_CONTEXT \
+				"Software\OrangeCanvas\Standalone\Current" "PythonDir" \
 				"$PythonDir"
 
 	WriteRegStr HKEY_CLASSES_ROOT ".ows" "" "OrangeCanvas"
@@ -176,12 +174,10 @@ Section ""
 
 	DetailPrint "Cleanup"
 	RmDir /R ${TEMPDIR}
-
 SectionEnd
 
 
 Section Uninstall
-	MessageBox MB_YESNO "Are you sure you want to remove Orange?" /SD IDYES IDNO abort
 
 	${If} $AdminInstall = 0
 	    SetShellVarContext all
@@ -189,11 +185,19 @@ Section Uninstall
 	    SetShellVarContext current
 	${EndIf}
 
-	ReadRegStr $PythonDir SHELL_CONTEXT Software\OrangeCanvas\Current "PythonDir"
+	MessageBox MB_YESNO "Are you sure you want to remove Orange?" /SD IDYES IDNO abort
 
-	${PythonExec} "-m pip uninstall -y Orange"
+	ReadRegStr $PythonDir SHELL_CONTEXT Software\OrangeCanvas\Standalone\Current PythonDir
 
-	RmDir /R $PythonDir\share\Orange
+	${If} ${FileExists} "$PythonDir\python.exe"
+		RmDir /R $PythonDir
+	${EndIf}
+
+	ReadRegStr $0 SHELL_CONTEXT Software\OrangeCanvas\Standalone\Current InstallDir
+
+	${If} ${FileExists} "$0"
+		RmDir "$0"
+	${EndIf}
 
 	RmDir /R "$SMPROGRAMS\Orange3"
 
@@ -209,9 +213,9 @@ Section Uninstall
 	${EndIf}
 
 	${If} $AdminInstall == 1
-		DeleteRegKey HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Orange3"
+		DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Orange3"
 	${Else}
-		DeleteRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Orange3"
+		DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Orange3"
 	${Endif}
 
 	Delete "$DESKTOP\Orange Canvas.lnk"
@@ -219,8 +223,11 @@ Section Uninstall
 	DeleteRegKey HKEY_CLASSES_ROOT ".ows"
 	DeleteRegKey HKEY_CLASSES_ROOT "OrangeCanvas"
 
+	DeleteRegKey SHELL_CONTEXT Software\OrangeCanvas\Standalone\Current
+
 	MessageBox MB_OK "Orange has been succesfully removed from your system." /SD IDOK
 
   abort:
+
 
 SectionEnd
