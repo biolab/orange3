@@ -41,14 +41,14 @@ def blocked(qobj):
         qobj.blockSignals(state)
 
 
-# Preprocessor item editor widgets
 class BaseEditor(QWidget):
     """
-    Base widget for editing preprocessor parameters.
+    Base widget for editing preprocessor's parameters.
     """
-    #: Parameters changed.
+    #: Emitted when parameters have changed.
     changed = Signal()
-    #: Parameters were edited by user.
+    #: Emitted when parameters were edited/changed  as a result of
+    #: user interaction.
     edited = Signal()
 
     def setParameters(self, parameters):
@@ -71,17 +71,33 @@ class BaseEditor(QWidget):
 
     @staticmethod
     def createinstance(params):
+        """
+        Create the Preprocessor instance given the stored parameters dict.
+
+        Parameters
+        ----------
+        params : dict
+            Parameters as returned by `parameters`.
+        """
         raise NotImplementedError
 
 
 class _NoneDisc(preprocess.discretize.Discretization):
     """Discretize all variables into None.
+
+    Used in combination with preprocess.Discretize to remove
+    all discrete features from the domain.
+
     """
     def __call__(self, data, variable):
         return None
 
 
 class DiscretizeEditor(BaseEditor):
+    """
+    Editor for preprocess.Discretize.
+    """
+    #: Discretize methods
     NoDisc, EqualWidth, EqualFreq, Drop, EntropyMDL = 0, 1, 2, 3, 4
     Discretizers = {
         NoDisc: (None, {}),
@@ -158,6 +174,9 @@ class DiscretizeEditor(BaseEditor):
         n = int(n)
         if self.__nintervals != n:
             self.__nintervals = n
+            # blocking signals in order to differentiate between
+            # changed by user (notified through __on_valueChanged) or
+            # changed programmatically (this)
             with blocked(self.__slider):
                 self.__slider.setValue(n)
             self.changed.emit()
@@ -176,12 +195,14 @@ class DiscretizeEditor(BaseEditor):
             return {"method": self.__method}
 
     def __on_buttonClicked(self):
+        # on user 'method' button click
         method = self.__group.checkedId()
         if method != self.__method:
             self.setMethod(self.__group.checkedId())
             self.edited.emit()
 
     def __on_valueChanged(self):
+        # on user n intervals slider change.
         self.__nintervals = self.__slider.value()
         self.changed.emit()
         self.edited.emit()
@@ -669,8 +690,16 @@ class Scale(BaseEditor):
         return _Scaling(center=center, scale=scale)
 
 
-# YAGNI overload!
+# This is intended for future improvements.
+# I.e. it should be possible to add/register preprocessor actions
+# through entry points (for use by add-ons). Maybe it should be a
+# general framework (this is not the only place where such
+# functionality is desired (for instance in Orange v2.* Rank widget
+# already defines its own entry point).
 class Description(object):
+    """
+    A description of an action/function.
+    """
     def __init__(self, title, icon=None, summary=None, input=None, output=None,
                  requires=None, note=None, related=None, keywords=None,
                  helptopic=None):
@@ -732,20 +761,27 @@ PREPROCESSORS = [
     )
 ]
 
+# TODO: Extend with entry points here
+# PREPROCESSORS += iter_entry_points("Orange.widgets.data.owpreprocess")
 
-"""
-The preprocessors are drag/dropped onto a sequence widget, where
-they can be reordered/removed/edited.
+# ####
+# The actual owwidget (with helper classes)
+# ####
 
-Model <-> Adapter/Controler <-> View
+# Note:
+# The preprocessors are drag/dropped onto a sequence widget, where
+# they can be reordered/removed/edited.
+#
+# Model <-> Adapter/Controller <-> View
+#
+# * `Model`: the current constructed preprocessor model.
+# * the source (of drag/drop) is an item model displayed in a list
+#   view (source list).
+# * the drag/drop is controlled by the controller/adapter,
 
- * the current constructed preprocessor model
- * the drag/drop must be controlled by a model controller,
- * the source is an abstract actions model displayed in a list view
-
-"""
-
+#: Qt.ItemRole holding the PreprocessAction instance
 DescriptionRole = Qt.UserRole
+#: Qt.ItemRole storing the preprocess parameters
 ParametersRole = Qt.UserRole + 1
 
 
@@ -753,6 +789,18 @@ class Controller(QObject):
     """
     Controller for displaying/editing QAbstractItemModel using SequenceFlow.
 
+    It creates/deletes updates the widgets in the view when the model
+    changes, as well as interprets drop events (with appropriate mime data)
+    onto the view, modifying the model appropriately.
+
+    Parameters
+    ----------
+    view : SeqeunceFlow
+        The view to control (required).
+    model : QAbstarctItemModel
+        A list model
+    parent : QObject
+        The controller's parent.
     """
     MimeType = "application/x-qwidget-ref"
 
@@ -942,17 +990,26 @@ class Controller(QObject):
         widget.deleteLater()
 
     def createWidgetFor(self, index):
+        """
+        Create a QWidget instance for the index (:class:`QModelIndex`)
+        """
         definition = index.data(DescriptionRole)
         widget = definition.viewclass()
         return widget
 
     def setWidgetData(self, widget, index):
+        """
+        Set/update the widget state from the model at index.
+        """
         params = index.data(ParametersRole)
         if not isinstance(params, dict):
             params = {}
         widget.setParameters(params)
 
     def setModelData(self, widget, index):
+        """
+        Get the data from the widget state and set/update the model at index.
+        """
         params = widget.parameters()
         assert isinstance(params, dict)
         self._model.setData(index, params, ParametersRole)
@@ -969,7 +1026,9 @@ class SequenceFlow(QWidget):
     """
     A re-orderable list of widgets.
     """
+    #: Emitted when the user clicks the Close button in the header
     widgetCloseRequested = Signal(int)
+    #: Emitted when the user moves/drags a widget to a new location.
     widgetMoved = Signal(int, int)
 
     class Frame(QtGui.QDockWidget):
