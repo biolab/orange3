@@ -442,9 +442,9 @@ class Table(MutableSequence, Storage):
         :type filename: str
         """
         ext = os.path.splitext(filename)[1]
-        writer = io.FILE_WRITERS.get(ext)
+        writer = io.FileFormats.writers.get(ext)
         if not writer:
-            desc = io.FORMAT_NAMES.get(ext)
+            desc = io.FileFormats.names.get(ext)
             if desc:
                 raise IOError("Writing of {}s is not supported".
                               format(desc.lower()))
@@ -466,7 +466,7 @@ class Table(MutableSequence, Storage):
             ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
             if not ext:
-                for ext in io.FILE_READERS:
+                for ext in io.FileFormats.readers:
                     if os.path.exists(absolute_filename + ext):
                         absolute_filename += ext
                         break
@@ -477,9 +477,9 @@ class Table(MutableSequence, Storage):
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
-        reader = io.FILE_READERS.get(ext)
+        reader = io.FileFormats.readers.get(ext)
         if not reader:
-            desc = io.FORMAT_NAMES.get(ext)
+            desc = io.FileFormats.names.get(ext)
             if desc:
                 raise IOError("Reading {}s is not supported".
                               format(desc.lower()))

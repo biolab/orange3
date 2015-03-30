@@ -40,8 +40,9 @@ class OWFile(widget.OWWidget):
 
     dlgFormats = (
         "All readable files ({})\n".format(
-            " ".join("*" + c.EXT for c in io.FILE_WRITERS.values())) +
-        "\n".join("{c.NAME} (*{c.EXT})".format(c=c) for c in io.FILE_FORMATS))
+            " ".join("*" + c for c in io.FileFormats.readers)) +
+        "\n".join("{} (*{})".format(name, ext)
+                  for ext, name in io.FileFormats.readers.values()))
 
     def __init__(self):
         super().__init__()

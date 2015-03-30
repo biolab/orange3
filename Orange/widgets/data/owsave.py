@@ -23,7 +23,8 @@ class OWSave(widget.OWWidget):
     format_index = Setting(0)
     last_dir = Setting("")
 
-    formats = tuple((c.NAME, c.EXT) for c in data.io.FILE_WRITERS.values())
+    formats = tuple((name, ext)
+                    for ext, name in data.io.FileFormats.writers.values())
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(self, parent, signalManager, settings, "Save")
@@ -44,7 +45,7 @@ class OWSave(widget.OWWidget):
 
     def reset_filename(self):
         base, ext = os.path.splitext(self.filename)
-        if ext in data.io.FILE_WRITERS:
+        if ext in data.io.FileFormats.writers:
             self.filename = base + self.formats[self.format_index][1]
             self.save.setText("Save as '%s'" % os.path.split(self.filename)[1])
 
@@ -76,7 +77,7 @@ class OWSave(widget.OWWidget):
         elif self.data is not None:
             try:
                 ext = self.formats[self.format_index][1]
-                format = data.io.FILE_WRITERS[ext]
+                format = data.io.FileFormats.writers[ext]
                 format().write_file(self.filename, self.data)
                 self.error()
             except Exception as errValue:

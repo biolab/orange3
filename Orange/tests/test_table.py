@@ -1122,7 +1122,8 @@ class CreateTableWithFilename(TableTests):
         table_mock = Mock(data.Table)
         reader_instance = Mock(read_file=Mock(return_value=table_mock))
 
-        with patch.dict(data.io.FILE_READERS, {'.xlsx': lambda: reader_instance}):
+        with patch.dict(data.io.FileFormats.readers,
+                        {'.xlsx': lambda: reader_instance}):
             table = data.Table.from_file("test.xlsx")
 
         reader_instance.read_file.assert_called_with("test.xlsx", data.Table)

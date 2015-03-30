@@ -14,6 +14,26 @@ from Orange.data import Domain
 from Orange.data.variable import *
 
 
+# A singleton simulated with a class
+class FileFormats:
+    formats = []
+    names = {}
+    writers = {}
+    readers = {}
+
+    @classmethod
+    def register(cls, name, extension):
+        def f(format):
+            cls.formats.append(format)
+            cls.names[extension] = name
+            if hasattr(format, "write_file"):
+                cls.writers[extension] = format
+            if hasattr(format, "read_file"):
+                cls.readers[extension] = format
+            return format
+        return f
+
+
 class FileReader:
     def prescan_file(self, f, delim, nvars, disc_cols, cont_cols):
         values = [set() for _ in range(nvars)]
@@ -31,10 +51,8 @@ class FileReader:
         return values, decimals
 
 
+@FileFormats.register("Tab-delimited file", ".tab")
 class TabDelimFormat:
-    NAME = "Tab-delimited file"
-    EXT = ".tab"
-
     non_escaped_spaces = re.compile(r"(?<!\\) +")
 
     def read_header(self, f):
@@ -270,10 +288,8 @@ class TabDelimFormat:
         f.close()
 
 
+@FileFormats.register("Comma-separated file", ".txt")
 class TxtFormat:
-    NAME = "Comma-separated file"
-    EXT = ".txt"
-
     MISSING_VALUES = frozenset({"", "NA", "?"})
 
     @staticmethod
@@ -340,10 +356,8 @@ class TxtFormat:
         cls.csv_saver(filename, data, ',')
 
 
+@FileFormats.register("Basket file", ".basket")
 class BasketFormat:
-    NAME = "Basket file"
-    EXT = ".basket"
-
     @classmethod
     def read_file(cls, filename, storage_class=None):
         if storage_class is None:
@@ -364,10 +378,8 @@ class BasketFormat:
             domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
+@FileFormats.register("Excel file", ".xlsx")
 class ExcelFormat:
-    NAME = "Excel file"
-    EXT = ".xlsx"
-
     non_escaped_spaces = re.compile(r"(?<!\\) +")
 
     def __init__(self):
@@ -633,10 +645,8 @@ class ExcelFormat:
         return table
 
 
+@FileFormats.register("Pickled table", ".pickle")
 class PickleFormat:
-    NAME = "Pickled table"
-    EXT = ".pickle"
-
     @classmethod
     def read_file(cls, file, _=None):
         return pickle.load(open(file, "rb"))
@@ -644,11 +654,4 @@ class PickleFormat:
     @classmethod
     def write_file(cls, filename, table):
         pickle.dump(table, open(filename, "wb"))
-
-
-FILE_FORMATS = (TabDelimFormat, TxtFormat, BasketFormat, ExcelFormat,
-                PickleFormat)
-FILE_WRITERS = {c.EXT: c for c in FILE_FORMATS if hasattr(c, "write_file")}
-FILE_READERS = {c.EXT: c for c in FILE_FORMATS if hasattr(c, "read_file")}
-FORMAT_NAMES = {c.EXT: c.NAME for c in FILE_FORMATS}
 
