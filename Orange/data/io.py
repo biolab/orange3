@@ -340,14 +340,14 @@ class TxtFormat:
         cls.csv_saver(filename, data, ',')
 
 
-
 class BasketFormat:
     NAME = "Basket file"
     EXT = ".basket"
 
-    def read_file(self, filename, cls=None):
-        if cls is None:
-            from ..data import Table as cls
+    @classmethod
+    def read_file(cls, filename, storage_class=None):
+        if storage_class is None:
+            from ..data import Table as storage_class
         def constr_vars(inds):
             if inds:
                 return [ContinuousVariable(x.decode("utf-8")) for _, x in
@@ -360,8 +360,8 @@ class BasketFormat:
         classes = constr_vars(class_indices)
         meta_attrs = constr_vars(meta_indices)
         domain = Domain(attrs, classes, meta_attrs)
-        return cls.from_numpy(domain,
-                              attrs and X, classes and Y, metas and meta_attrs)
+        return storage_class.from_numpy(
+            domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
 class ExcelFormat:
@@ -637,12 +637,12 @@ class PickleFormat:
     NAME = "Pickled table"
     EXT = ".pickle"
 
-    @staticmethod
-    def read_file(file, _=None):
+    @classmethod
+    def read_file(cls, file, _=None):
         return pickle.load(open(file, "rb"))
 
-    @staticmethod
-    def write_file(filename, table):
+    @classmethod
+    def write_file(cls, filename, table):
         pickle.dump(table, open(filename, "wb"))
 
 
