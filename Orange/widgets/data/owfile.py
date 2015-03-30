@@ -1,10 +1,10 @@
 import os, sys
-from PyQt4 import QtCore
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable, io
+from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
+from Orange.data.io import FileFormats
 
 
 def add_origin(examples, filename):
@@ -40,9 +40,9 @@ class OWFile(widget.OWWidget):
 
     dlgFormats = (
         "All readable files ({})\n".format(
-            " ".join("*" + c for c in io.FileFormats.readers)) +
-        "\n".join("{} (*{})".format(name, ext)
-                  for ext, name in io.FileFormats.readers.values()))
+            " ".join("*" + c for c in FileFormats.readers)) +
+        "\n".join("{} (*{})".format(FileFormats.names[ext], ext)
+                  for ext in FileFormats.readers))
 
     def __init__(self):
         super().__init__()
@@ -226,9 +226,11 @@ class OWFile(widget.OWWidget):
     def sendReport(self):
         dataReport = getattr(self, "dataReport", None)
         if dataReport:
-            self.reportSettings("File",
-                                [("File name", self.loaded_file),
-                                 ("Format", self.formats.get(os.path.splitext(self.loaded_file)[1], "unknown format"))])
+            self.reportSettings(
+                "File",
+                [("File name", self.loaded_file),
+                 ("Format", self.formats.get(os.path.splitext(
+                     self.loaded_file)[1], "unknown format"))])
             self.reportData(self.dataReport)
 
 if __name__ == "__main__":

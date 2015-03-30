@@ -24,6 +24,7 @@ class FileFormats:
     @classmethod
     def register(cls, name, extension):
         def f(format):
+            cls.NAME = name
             cls.formats.append(format)
             cls.names[extension] = name
             if hasattr(format, "write_file"):
