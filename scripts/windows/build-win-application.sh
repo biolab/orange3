@@ -82,6 +82,7 @@ DOWNLOADDIR=${DOWNLOADDIR:-build/temp.download-cache}
 #   wheelhouse/
 #       [no]sse[2|3]/
 #   nsisplugins/cpucaps.dll
+#   startupscripts/
 #   requirements.txt
 
 # Clean any leftovers from previous runs
@@ -94,7 +95,7 @@ mkdir -p "$BUILDBASE"/core/python
 mkdir -p "$BUILDBASE"/core/msvredist
 mkdir -p "$BUILDBASE"/wheelhouse
 mkdir -p "$BUILDBASE"/nsisplugins
-
+mkdir -p "$BUILDBASE"/startupscripts
 
 mkdir -p "$DOWNLOADDIR"
 mkdir -p "$DISTDIR"
@@ -304,6 +305,43 @@ function prepare_extra {
     cat "$1" | grep -v -E '(--find-links)|(-f)' >> "$BUILDBASE"/requirements.txt
 }
 
+
+function create_startupscript {
+    local template="@echo off
+set __DIRNAME=%~dp0
+set PATH=\"%__DIRNAME%\Python${PYVER}\";%PATH%
+shift
+start \"__TITLE__\" /B /D \"%__DIRNAME%\Python${PYVER}\" \"%__DIRNAME%\Python${PYVER}\python.exe\" __ARGS__ %*
+"
+    local title=${1:?}
+    local args=${2}
+
+    local script=$(echo "$template" | sed "s/__TITLE__/$title/g" | sed "s/__ARGS__/$args/g")
+    echo "$script"
+}
+
+function create_aliasscript {
+    local template="@echo off
+set __DIRNAME=%~dp0
+set PATH=\"%__DIRNAME%\Python${PYVER}\";%PATH%
+shift
+\"%__DIRNAME%\Python${PYVER}\python.exe\" __ARGS__ %*
+"
+    local args=${2}
+
+    local script=$(echo "$template" | sed "s/__ARGS__/$args/g")
+    echo "$script"
+}
+
+function prepare_startupscripts {
+    local dir="$BUILDBASE"/startupscripts
+    create_aliasscript "ipython" "-m IPython" > "$dir"/ipython.bat
+    create_startupscript "ipython-qtconsole" "-m IPython qtconsole" > "$dir"/ipython-qtconsole.bat
+    create_startupscript "ipython-notebook" "-m IPython notebook" > "$dir"/ipython-notebook.bat
+    create_aliasscript "pip" "-m pip" > "$dir"/pip.bat
+    create_startupscript "Orange Canvas" "-m Orange.canvas" > "$dir"/orange-canvas.bat
+}
+
 function prepare_all {
     prepare_python
     prepare_msvcr100
@@ -314,6 +352,10 @@ function prepare_all {
     # version available on pip.
     prepare_req numpy==$NUMPY_VER scipy==$SCIPY_VER -r "$BUILDBASE/requirements.txt"
     prepare_orange
+
+    if [[ "$STANDALONE" ]]; then
+        prepare_startupscripts
+    fi
 
     if [[ "$REQUIREMENT" ]]; then
         prepare_extra "$REQUIREMENT"

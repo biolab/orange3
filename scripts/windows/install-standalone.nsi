@@ -18,6 +18,7 @@
 #     msvredist/
 #   wheelhouse/
 #       [sse-flags]/
+#   startupscripts/
 #   requirements.txt
 
 OutFile ${OUTFILENAME}
@@ -126,9 +127,12 @@ Section ""
 
 	DetailPrint "Creating shortcuts"
 
+	SetOutPath "$INSTDIR"
+	File "${BASEDIR}\startupscripts\*.bat"
+
 	# $OUTDIR is used to set the working directory for the shortcuts
-	# created using CreateShortCut
-	SetOutPath $PythonDir
+	# created using CreateShortCut (it needs to be PythonDir)
+	SetOutPath "$PythonDir"
 
 	# Create shortcut at the root install directory
 	CreateShortCut "$INSTDIR\Orange Canvas.lnk" \
@@ -196,6 +200,8 @@ Section Uninstall
 	ReadRegStr $0 SHELL_CONTEXT Software\OrangeCanvas\Standalone\Current InstallDir
 
 	${If} ${FileExists} "$0"
+		Delete "$0\*.bat"
+		Delete "$0\Orange Canvas.lnk"
 		RmDir "$0"
 	${EndIf}
 
