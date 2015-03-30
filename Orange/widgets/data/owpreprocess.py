@@ -1,6 +1,7 @@
 import sys
 import bisect
 import copy
+import contextlib
 
 import pkg_resources
 
@@ -28,6 +29,16 @@ from Orange.preprocess import Continuize
 
 from Orange.widgets import widget, gui, settings
 from .owimpute import RandomTransform
+
+
+@contextlib.contextmanager
+def blocked(qobj):
+    state = qobj.signalsBlocked()
+    qobj.blockSignals(True)
+    try:
+        yield qobj
+    finally:
+        qobj.blockSignals(state)
 
 
 # Preprocessor item editor widgets
@@ -94,7 +105,7 @@ class DiscretizeEditor(BaseEditor):
 
         layout = QVBoxLayout()
         self.setLayout(layout)
-        self.__group = group = QButtonGroup(exclusive=True)
+        self.__group = group = QButtonGroup(self, exclusive=True)
 
         for method in [self.EntropyMDL, self.EqualFreq, self.EqualWidth,
                        self.Drop]:
@@ -114,7 +125,8 @@ class DiscretizeEditor(BaseEditor):
         slbox.setLayout(QVBoxLayout())
         self.__slider = slider = QSlider(
             orientation=Qt.Horizontal,
-            minimum=2, maximum=10,
+            minimum=2, maximum=10, value=self.__nintervals,
+            enabled=self.__method in [self.EqualFreq, self.EqualWidth],
         )
         slider.valueChanged.connect(self.__on_valueChanged)
         slbox.layout().addWidget(slider)
@@ -128,8 +140,11 @@ class DiscretizeEditor(BaseEditor):
     def setMethod(self, method):
         if self.__method != method:
             self.__method = method
+            b = self.__group.button(method)
+            b.setChecked(True)
             self.__slider.setEnabled(
-                method in [self.EqualFreq, self.EqualWidth])
+                method in [self.EqualFreq, self.EqualWidth]
+            )
             self.changed.emit()
 
     def method(self):
@@ -139,8 +154,13 @@ class DiscretizeEditor(BaseEditor):
         return self.__nintervals
 
     def setIntervals(self, n):
-        self.__slider.setValue(n)
-        self.__nintervals = self.__slider.value()
+        n = numpy.clip(n, self.__slider.minimum(), self.__slider.maximum())
+        n = int(n)
+        if self.__nintervals != n:
+            self.__nintervals = n
+            with blocked(self.__slider):
+                self.__slider.setValue(n)
+            self.changed.emit()
 
     def setParameters(self, params):
         method = params.get("method", self.EqualFreq)
@@ -214,12 +234,15 @@ class ContinuizeEditor(BaseEditor):
             self.__treatment = treatment
             self.changed.emit()
 
-    def parameters(self):
-        return {"multinomial_treatment": self.__treatment}
+    def treatment(self):
+        return self.__treatment
 
     def setParameters(self, params):
         treatment = params.get("multinomial_treatment", Continuize.Indicators)
         self.setTreatment(treatment)
+
+    def parameters(self):
+        return {"multinomial_treatment": self.__treatment}
 
     def __on_buttonClicked(self):
         self.__treatment = self.__group.checkedId()
@@ -288,7 +311,7 @@ class ImputeEditor(BaseEditor):
         self.setLayout(QVBoxLayout())
 
         self.__method = ImputeEditor.Average
-        self.__group = group = QButtonGroup(self)
+        self.__group = group = QButtonGroup(self, exclusive=True)
         group.buttonClicked.connect(self.__on_buttonClicked)
 
         for methodid in [self.Average, self.Random, self.DropRows]:
@@ -363,7 +386,7 @@ class UnivariateFeatureSelect(QWidget):
         self.layout().addWidget(box)
 
         box = QGroupBox(title="Strategy", flat=True)
-        self.__group = group = QButtonGroup()
+        self.__group = group = QButtonGroup(self, exclusive=True)
         self.__spins = {}
 
         form = QFormLayout()
@@ -371,7 +394,8 @@ class UnivariateFeatureSelect(QWidget):
         group.addButton(fixedrb, UnivariateFeatureSelect.Fixed)
         kspin = QSpinBox(
             minimum=1, value=self.__k,
-            enabled=self.__strategy == UnivariateFeatureSelect.Fixed)
+            enabled=self.__strategy == UnivariateFeatureSelect.Fixed
+        )
         kspin.valueChanged[int].connect(self.setK)
         kspin.editingFinished.connect(self.edited)
         self.__spins[UnivariateFeatureSelect.Fixed] = kspin
@@ -382,7 +406,8 @@ class UnivariateFeatureSelect(QWidget):
         pspin = QDoubleSpinBox(
             minimum=0.0, maximum=100.0, singleStep=0.5,
             value=self.__p, suffix="%",
-            enabled=self.__strategy == UnivariateFeatureSelect.Percentile)
+            enabled=self.__strategy == UnivariateFeatureSelect.Percentile
+        )
 
         pspin.valueChanged[float].connect(self.setP)
         pspin.editingFinished.connect(self.edited)
@@ -404,6 +429,7 @@ class UnivariateFeatureSelect(QWidget):
         if self.__scoreidx != scoreindex:
             self.__scoreidx = scoreindex
             self.__cb.setCurrentIndex(scoreindex)
+            self.changed.emit()
 
     def scoreIndex(self):
         return self.__scoreidx
@@ -411,6 +437,8 @@ class UnivariateFeatureSelect(QWidget):
     def setStrategy(self, strategy):
         if self.__strategy != strategy:
             self.__strategy = strategy
+            b = self.__group.button(strategy)
+            b.setChecked(True)
             for st, rb in self.__spins.items():
                 rb.setEnabled(st == strategy)
             self.changed.emit()
@@ -442,10 +470,10 @@ class UnivariateFeatureSelect(QWidget):
 
     def setParameters(self, params):
         score = params.get("score", 0)
-        strategy = params.get("strategy")
+        strategy = params.get("strategy", UnivariateFeatureSelect.Fixed)
         self.setScoreIndex(score)
         self.setStrategy(strategy)
-        if strategy == self.Fixed:
+        if strategy == UnivariateFeatureSelect.Fixed:
             self.setK(params.get("k", 10))
         else:
             self.setP(params.get("p", 75))
@@ -1281,12 +1309,12 @@ class OWPreprocess(widget.OWWidget):
                ("Preprocessed Data", Orange.data.Table)]
 
     storedsettings = settings.Setting({})
+    autocommit = settings.Setting(False)
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.data = None
-        self.autocommit = False
         self._invalidated = False
 
         # List of available preprocessors (DescriptionRole : Description)
@@ -1469,6 +1497,8 @@ class OWPreprocess(widget.OWWidget):
         self.send("Preprocessed Data", data)
 
     def commit(self):
+        # Sync the model into storedsettings on every change commit.
+        self.storeSpecificSettings()
         if not self._invalidated:
             self._invalidated = True
             QApplication.postEvent(self, QEvent(QEvent.User))
