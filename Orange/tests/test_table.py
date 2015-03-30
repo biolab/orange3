@@ -1118,15 +1118,12 @@ class CreateTableWithFilename(TableTests):
         self.assertEqual(table, table_mock)
 
     @patch("os.path.exists", Mock(return_value=True))
-    @patch("Orange.data.io.ExcelFormat")
-    @unittest.skip("Mocking no longer works here: Table.from_file calls"
-                   " classes collected in io.FILE_READERS")
-    def test_read_data_calls_reader(self, reader_mock):
+    def test_read_data_calls_reader(self):
         table_mock = Mock(data.Table)
-        reader_instance = reader_mock.return_value = \
-            Mock(read_file=Mock(return_value=table_mock))
+        reader_instance = Mock(read_file=Mock(return_value=table_mock))
 
-        table = data.Table.from_file("test.xlsx")
+        with patch.dict(data.io.FILE_READERS, {'.xlsx': lambda: reader_instance}):
+            table = data.Table.from_file("test.xlsx")
 
         reader_instance.read_file.assert_called_with("test.xlsx", data.Table)
         self.assertEqual(table, table_mock)
