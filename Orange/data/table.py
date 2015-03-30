@@ -485,7 +485,6 @@ class Table(MutableSequence, Storage):
                               format(desc.lower()))
             else:
                 raise IOError("Unknown file name extension.")
-        print(absolute_filename)
         data = reader().read_file(absolute_filename, cls)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
