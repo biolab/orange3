@@ -12,6 +12,7 @@ Options:
     -d --dist-dir           Distribution dir
     --download-cache DIR    Cache downloaded packages in DIR
     -r --requirements       Extra requirements file
+    --standalone            Build a standalone application.
     -h --help               Print this help
 '
 }
@@ -34,6 +35,10 @@ while [[ ${1:0:1} = "-" ]]; do
         -r|--requirements)
             REQUIREMENT=$2
             shift 2
+            ;;
+        --standalone)
+            STANDALONE=1
+            shift 1
             ;;
         -h|--help)
             print_usage
@@ -77,6 +82,7 @@ DOWNLOADDIR=${DOWNLOADDIR:-build/temp.download-cache}
 #   wheelhouse/
 #       [no]sse[2|3]/
 #   nsisplugins/cpucaps.dll
+#   startupscripts/
 #   requirements.txt
 
 # Clean any leftovers from previous runs
@@ -89,7 +95,7 @@ mkdir -p "$BUILDBASE"/core/python
 mkdir -p "$BUILDBASE"/core/msvredist
 mkdir -p "$BUILDBASE"/wheelhouse
 mkdir -p "$BUILDBASE"/nsisplugins
-
+mkdir -p "$BUILDBASE"/startupscripts
 
 mkdir -p "$DOWNLOADDIR"
 mkdir -p "$DISTDIR"
@@ -202,6 +208,20 @@ function prepare_msvredist {
                  b88228d5fef4b6dc019d69d4471f23ec
 }
 
+function prepare_msvcr100 {
+    download_url "https://dl.dropboxusercontent.com/u/100248799/msvcr100.dll" \
+                 "$DOWNLOADDIR/msvcr100.dll" \
+                 bf38660a9125935658cfa3e53fdc7d65
+
+    cp "$DOWNLOADDIR/msvcr100.dll" "$BUILDBASE/core/msvredist/msvcr100.dll"
+
+    download_url "https://dl.dropboxusercontent.com/u/100248799/msvcp100.dll" \
+                 "$DOWNLOADDIR/msvcp100.dll" \
+                 e3c817f7fe44cc870ecdbcbc3ea36132
+
+    cp "$DOWNLOADDIR/msvcp100.dll" "$BUILDBASE/core/msvredist/msvcp100.dll"
+}
+
 
 function prepare_pyqt4 {
     download_url \
@@ -285,8 +305,46 @@ function prepare_extra {
     cat "$1" | grep -v -E '(--find-links)|(-f)' >> "$BUILDBASE"/requirements.txt
 }
 
+
+function create_startupscript {
+    local template="@echo off
+set __DIRNAME=%~dp0
+set PATH=\"%__DIRNAME%\Python${PYVER}\";%PATH%
+shift
+start \"__TITLE__\" /B /D \"%__DIRNAME%\Python${PYVER}\" \"%__DIRNAME%\Python${PYVER}\python.exe\" __ARGS__ %*
+"
+    local title=${1:?}
+    local args=${2}
+
+    local script=$(echo "$template" | sed "s/__TITLE__/$title/g" | sed "s/__ARGS__/$args/g")
+    echo "$script"
+}
+
+function create_aliasscript {
+    local template="@echo off
+set __DIRNAME=%~dp0
+set PATH=\"%__DIRNAME%\Python${PYVER}\";%PATH%
+shift
+\"%__DIRNAME%\Python${PYVER}\python.exe\" __ARGS__ %*
+"
+    local args=${2}
+
+    local script=$(echo "$template" | sed "s/__ARGS__/$args/g")
+    echo "$script"
+}
+
+function prepare_startupscripts {
+    local dir="$BUILDBASE"/startupscripts
+    create_aliasscript "ipython" "-m IPython" > "$dir"/ipython.bat
+    create_startupscript "ipython-qtconsole" "-m IPython qtconsole" > "$dir"/ipython-qtconsole.bat
+    create_startupscript "ipython-notebook" "-m IPython notebook" > "$dir"/ipython-notebook.bat
+    create_aliasscript "pip" "-m pip" > "$dir"/pip.bat
+    create_startupscript "Orange Canvas" "-m Orange.canvas" > "$dir"/orange-canvas.bat
+}
+
 function prepare_all {
     prepare_python
+    prepare_msvcr100
     prepare_scipy_stack
     prepare_pyqt4
     # Need to specifically restrict the numpy/scipy versions, otherwise
@@ -294,6 +352,10 @@ function prepare_all {
     # version available on pip.
     prepare_req numpy==$NUMPY_VER scipy==$SCIPY_VER -r "$BUILDBASE/requirements.txt"
     prepare_orange
+
+    if [[ "$STANDALONE" ]]; then
+        prepare_startupscripts
+    fi
 
     if [[ "$REQUIREMENT" ]]; then
         prepare_extra "$REQUIREMENT"
@@ -306,19 +368,22 @@ function abs_dir_path {
 
 function create_installer {
     local basedir=${1:?}
-    local installer_path=${2:?}
+    local output_path=${2:?}
+    local nsis_script=${3:?}
     local basedir_abs=$(cd "$basedir"; pwd)
 
-    if [[ ${installer_path:0:1} != "/" ]]; then
-        installer_path="$(pwd)/$installer_path"
+    # output path must be absolute.
+    if [[ ${output_path:0:1} != "/" ]]; then
+        output_path="$(pwd)/$output_path"
     fi
 
-    makensis -DOUTFILENAME="$installer_path" \
+    makensis -DOUTFILENAME="$output_path" \
              -DPYTHON_VERSION=$PYTHON_VER \
-             -DPYVER=$PYTHON_VER_SHORT \
+             -DPYTHON_VERSION_SHORT=$PYTHON_VER_SHORT \
+             -DPYVER=$PYVER \
 			 -DBASEDIR="$basedir_abs" \
              -DNSIS_PLUGINS_PATH="$basedir_abs"/nsisplugins \
-             scripts/windows/install.nsi
+             "$nsis_script"
 }
 
 # Prepare prerequisites
@@ -327,5 +392,12 @@ prepare_all
 VERSION=$(grep -E "^Orange==" "$BUILDBASE/requirements.txt" | sed s/^Orange==//g)
 
 # Package everything in an installer
-create_installer "$BUILDBASE" \
-    "$DISTDIR"/Orange3-${VERSION:?}.$PLATTAG-py$PYTHON_VER_SHORT-install.exe
+if [[ $STANDALONE ]]; then
+    NSIS_SCRIPT=scripts/windows/install-standalone.nsi
+    INSTALLER=Orange3-${VERSION:?}.$PLATTAG-py$PYTHON_VER_SHORT-install-standalone.exe
+else
+    NSIS_SCRIPT=scripts/windows/install.nsi
+    INSTALLER=Orange3-${VERSION:?}.$PLATTAG-py$PYTHON_VER_SHORT-install.exe
+fi
+
+create_installer "$BUILDBASE" "$DISTDIR/$INSTALLER" "$NSIS_SCRIPT"

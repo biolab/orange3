@@ -38,17 +38,18 @@ Var SSE
 #     Initialize Python installation directory ($PythonDir variable)
 #
 !macro GET_PYTHON_DIR
+
     ${If} $AdminInstall == 0
-	    ReadRegStr $PythonDir HKCU Software\Python\PythonCore\${PYVER}\InstallPath ""
+	    ReadRegStr $PythonDir HKCU Software\Python\PythonCore\${PYTHON_VERSION_SHORT}\InstallPath ""
 		StrCmp $PythonDir "" 0 trim_backslash
-		ReadRegStr $PythonDir HKLM Software\Python\PythonCore\${PYVER}\InstallPath ""
+		ReadRegStr $PythonDir HKLM Software\Python\PythonCore\${PYTHON_VERSION_SHORT}\InstallPath ""
 		StrCmp $PythonDir "" return
 		MessageBox MB_OK "Please ask the administrator to install Orange$\r$\n(this is because Python was installed by him, too)."
 		Quit
 	${Else}
-	    ReadRegStr $PythonDir HKLM Software\Python\PythonCore\${PYVER}\InstallPath ""
+	    ReadRegStr $PythonDir HKLM Software\Python\PythonCore\${PYTHON_VERSION_SHORT}\InstallPath ""
 		StrCmp $PythonDir "" 0 trim_backslash
-		ReadRegStr $PythonDir HKCU Software\Python\PythonCore\${PYVER}\InstallPath ""
+		ReadRegStr $PythonDir HKCU Software\Python\PythonCore\${PYTHON_VERSION_SHORT}\InstallPath ""
 		StrCmp $PythonDir "" return
 		StrCpy $AdminInstall 0
 	${EndIf}
@@ -150,7 +151,25 @@ Var SSE
 !macroend
 !define InstallPython "!insertmacro INSTALL_PYTHON"
 
+
+# ${InstallPythonStandalone} INSTALLER TARGETDIR
 #
+#	Install python from a msi installer into TARGETDIR but do not
+#	register it with Windows.
+#
+!macro INSTALL_PYTHON_STANDALONE INSTALLER TARGETDIR
+	Push $0
+
+	ExecWait 'msiexec.exe -qn -a "${INSTALLER}" TARGETDIR="${TARGETDIR}"' $0
+
+	${If} $0 != 0
+		Abort "Error. Could not install required package Python."
+	${EndIF}
+	Pop $0
+!macroend
+!define InstallPythonStandalone "!insertmacro INSTALL_PYTHON_STANDALONE"
+
+
 # Install PyWin32 from a bdist_wininst .exe installer
 # (INSTALLER must point to an existing file at install time)
 
@@ -209,19 +228,6 @@ Var SSE
 	File /r ${RESOURCE}
 !macroend
 !define ExtractTempRec "!insertmacro _EXTRACT_TEMP_MACRO_REC"
-
-
-
-#
-# Install a portable python interpreter from a python msi installer
-# into TARGETDIR, including msvc redistrib
-# (The installer is not registered with windows)
-
-!macro INSTALL_PYTHON_PORTABLE INSTALLER MSVREDIST TARGETDIR
-	ExecWait 'msiexec -qn -a "${INSTALLER}" TARGETDIR="${TARGETDIR}" ' $0
-	SetOutPath ${TARGETDIR}
-	File "${MSVREDIST}\*"
-!macroend
 
 
 #
