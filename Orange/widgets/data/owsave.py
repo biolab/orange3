@@ -2,10 +2,11 @@ import os.path
 
 from PyQt4 import QtGui
 
-from Orange.data.io import save_csv, save_tab_delimited
+from Orange import data
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
+from Orange.data.io import FileFormats
 
 
 class OWSave(widget.OWWidget):
@@ -23,8 +24,8 @@ class OWSave(widget.OWWidget):
     format_index = Setting(0)
     last_dir = Setting("")
 
-    formats = (('.tab', 'Tab-delimited file', save_tab_delimited),
-               ('.csv', 'Comma-separated values', save_csv))
+    formats = tuple((FileFormats.names[ext], ext)
+                    for ext in FileFormats.writers)
 
     def __init__(self, parent=None, signalManager=None, settings=None):
         super().__init__(self, parent, signalManager, settings, "Save")
@@ -32,7 +33,7 @@ class OWSave(widget.OWWidget):
         self.filename = ""
         self.comboBoxFormat = gui.comboBox(
             self.controlArea, self, value='format_index',
-            items=['{} (*{})'.format(f[1], f[0]) for f in self.formats],
+            items=['{} (*{})'.format(*x) for x in self.formats],
             box='File Format', callback=self.reset_filename)
         box = gui.widgetBox(self.controlArea)
         self.save = gui.button(box, self, "Save", callback=self.save_file,
@@ -44,8 +45,9 @@ class OWSave(widget.OWWidget):
         self.adjustSize()
 
     def reset_filename(self):
-        if self.filename[-4:] in {f[0] for f in self.formats}:
-            self.filename = self.filename[:-4] + self.formats[self.format_index][0]
+        base, ext = os.path.splitext(self.filename)
+        if ext in FileFormats.writers:
+            self.filename = base + self.formats[self.format_index][1]
             self.save.setText("Save as '%s'" % os.path.split(self.filename)[1])
 
     def dataset(self, data):
@@ -59,12 +61,12 @@ class OWSave(widget.OWWidget):
         filename = QtGui.QFileDialog.getSaveFileName(
             self, 'Save Orange Data File',
             self.filename or self.last_dir or home_dir,
-            '{} (*{})'.format(f[1], f[0]))
+            '{} (*{})'.format(*f))
         if not filename:
             return
         self.filename = filename
-        if os.path.splitext(filename)[1] != f[0]:
-            self.filename += f[0]
+        if os.path.splitext(filename)[1] != f[1]:
+            self.filename += f[1]
         self.last_dir, file_name = os.path.split(self.filename)
         self.save.setText("Save as '%s'" % file_name)
         self.save.setDisabled(False)
@@ -75,7 +77,9 @@ class OWSave(widget.OWWidget):
             self.save_file_as()
         elif self.data is not None:
             try:
-                self.formats[self.format_index][2](self.filename, self.data)
+                ext = self.formats[self.format_index][1]
+                format = FileFormats.writers[ext]
+                format().write_file(self.filename, self.data)
                 self.error()
             except Exception as errValue:
                 self.error(str(errValue))
@@ -84,9 +88,9 @@ class OWSave(widget.OWWidget):
 if __name__ == "__main__":
     import sys
     a = QtGui.QApplication(sys.argv)
-    data = Table("iris")
+    table = Table("iris")
     ow = OWSave()
     ow.show()
-    ow.dataset(data)
+    ow.dataset(table)
     a.exec()
     ow.saveSettings()

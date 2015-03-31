@@ -688,6 +688,17 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("test-zoo.tab")
 
+    def test_save_pickle(self):
+        table = data.Table("iris")
+        try:
+            table.save("iris.pickle")
+            table2 = data.Table.from_file("iris.pickle")
+            np.testing.assert_almost_equal(table.X, table2.X)
+            np.testing.assert_almost_equal(table.Y, table2.Y)
+            self.assertIs(table.domain[0], table2.domain[0])
+        finally:
+            os.remove("iris.pickle")
+
     def test_from_numpy(self):
         import random
 
@@ -1095,7 +1106,7 @@ class CreateTableWithFilename(TableTests):
     filename = "data.tab"
 
     @patch("os.path.exists", Mock(return_value=True))
-    @patch("Orange.data.io.TabDelimReader")
+    @patch("Orange.data.io.TabDelimFormat")
     def test_read_data_calls_reader(self, reader_mock):
         table_mock = Mock(data.Table)
         reader_instance = reader_mock.return_value = \
@@ -1107,13 +1118,13 @@ class CreateTableWithFilename(TableTests):
         self.assertEqual(table, table_mock)
 
     @patch("os.path.exists", Mock(return_value=True))
-    @patch("Orange.data.io.ExcelReader")
-    def test_read_data_calls_reader(self, reader_mock):
+    def test_read_data_calls_reader(self):
         table_mock = Mock(data.Table)
-        reader_instance = reader_mock.return_value = \
-            Mock(read_file=Mock(return_value=table_mock))
+        reader_instance = Mock(read_file=Mock(return_value=table_mock))
 
-        table = data.Table.from_file("test.xlsx")
+        with patch.dict(data.io.FileFormats.readers,
+                        {'.xlsx': lambda: reader_instance}):
+            table = data.Table.from_file("test.xlsx")
 
         reader_instance.read_file.assert_called_with("test.xlsx", data.Table)
         self.assertEqual(table, table_mock)

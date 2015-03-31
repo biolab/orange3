@@ -7,7 +7,7 @@ from Orange.data import io, ContinuousVariable, DiscreteVariable, StringVariable
 
 
 def read_file(name):
-    return io.ExcelReader().read_file(
+    return io.ExcelFormat().read_file(
         os.path.join(os.path.dirname(__file__), "xlsx_files", name))
 
 

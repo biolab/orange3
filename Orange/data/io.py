@@ -1,6 +1,7 @@
 import csv
 import re
 import sys
+import pickle
 from itertools import chain
 
 import bottlechest as bn
@@ -11,6 +12,27 @@ from scipy import sparse
 from Orange.data import _io
 from Orange.data import Domain
 from Orange.data.variable import *
+
+
+# A singleton simulated with a class
+class FileFormats:
+    formats = []
+    names = {}
+    writers = {}
+    readers = {}
+
+    @classmethod
+    def register(cls, name, extension):
+        def f(format):
+            cls.NAME = name
+            cls.formats.append(format)
+            cls.names[extension] = name
+            if hasattr(format, "write_file"):
+                cls.writers[extension] = format
+            if hasattr(format, "read_file"):
+                cls.readers[extension] = format
+            return format
+        return f
 
 
 class FileReader:
@@ -30,7 +52,8 @@ class FileReader:
         return values, decimals
 
 
-class TabDelimReader:
+@FileFormats.register("Tab-delimited file", ".tab")
+class TabDelimFormat:
     non_escaped_spaces = re.compile(r"(?<!\\) +")
 
     def read_header(self, f):
@@ -203,8 +226,71 @@ class TabDelimReader:
         self.reorder_values(table)
         return table
 
+    @classmethod
+    def _write_fast(cls, f, data):
+        wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
+        for Xi, Yi, Mi in zip(data.X, data._Y, data.metas):
+            f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
+            f.write("\n")
 
-class TxtReader:
+    @classmethod
+    def write_file(cls, filename, data):
+        """
+        Save data to file.
+
+        Function uses fast implementation in case of numpy data, and slower
+        fall-back for general storage.
+
+        :param filename: the name of the file
+        :type filename: str
+        :param data: the data to be saved
+        :type data: Orange.data.Storage
+        """
+        if isinstance(filename, str):
+            f = open(filename, "w")
+        else:
+            f = filename
+        domain_vars = data.domain.variables + data.domain.metas
+        # first line
+        f.write("\t".join([str(j.name) for j in domain_vars]))
+        f.write("\n")
+
+        # second line
+        # TODO Basket column.
+        t = {"ContinuousVariable": "c", "DiscreteVariable": "d",
+             "StringVariable": "string", "Basket": "basket"}
+
+        f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
+        f.write("\n")
+
+        # third line
+        m = list(data.domain.metas)
+        c = list(data.domain.class_vars)
+        r = []
+        for i in domain_vars:
+            r1 = ["{}={}".format(k, v).replace(" ", "\\ ")
+                  for k, v in i.attributes.items()]
+            if i in m:
+                r1.append("m")
+            elif i in c:
+                r1.append("class")
+            r.append(" ".join(r1))
+        f.write("\t".join(r))
+        f.write("\n")
+
+        # data
+        # noinspection PyBroadException
+        try:
+            cls._write_fast(f, data)
+        except:
+            domain_vars = [data.domain.index(var) for var in domain_vars]
+            for i in data:
+                f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
+        f.close()
+
+
+@FileFormats.register("Comma-separated file", ".txt")
+class TxtFormat:
     MISSING_VALUES = frozenset({"", "NA", "?"})
 
     @staticmethod
@@ -221,7 +307,7 @@ class TxtReader:
             delimiter = None
         atoms = first_line.split(delimiter)
         try:
-            [float(atom) for atom in set(atoms) - TxtReader.MISSING_VALUES]
+            [float(atom) for atom in set(atoms) - TxtFormat.MISSING_VALUES]
             header_lines = 0
             names = ["Var{:04}".format(i + 1) for i in range(len(atoms))]
         except ValueError:
@@ -243,11 +329,40 @@ class TxtReader:
         table = cls.from_numpy(domain, arr)
         return table
 
+    @classmethod
+    def csv_saver(cls, filename, data, delimiter='\t'):
+        with open(filename, 'w') as csvfile:
+            writer = csv.writer(csvfile, delimiter=delimiter)
+            all_vars = data.domain.variables + data.domain.metas
+            writer.writerow([v.name for v in all_vars])  # write variable names
+            if delimiter == '\t':
+                flags = ([''] * len(data.domain.attributes)) + \
+                        (['class'] * len(data.domain.class_vars)) + \
+                        (['m'] * len(data.domain.metas))
 
-class BasketReader():
-    def read_file(self, filename, cls=None):
-        if cls is None:
-            from ..data import Table as cls
+                for i, var in enumerate(all_vars):
+                    attrs = ["{0!s}={1!s}".format(*item).replace(" ", "\\ ")
+                             for item in var.attributes.items()]
+                    if attrs:
+                        flags[i] += (" " if flags[i] else "") + (" ".join(attrs))
+
+                writer.writerow([type(v).__name__.replace("Variable", "").lower()
+                                 for v in all_vars])  # write variable types
+                writer.writerow(flags) # write flags
+            for ex in data: # write examples
+                writer.writerow(ex)
+
+    @classmethod
+    def write_file(cls, filename, data):
+        cls.csv_saver(filename, data, ',')
+
+
+@FileFormats.register("Basket file", ".basket")
+class BasketFormat:
+    @classmethod
+    def read_file(cls, filename, storage_class=None):
+        if storage_class is None:
+            from ..data import Table as storage_class
         def constr_vars(inds):
             if inds:
                 return [ContinuousVariable(x.decode("utf-8")) for _, x in
@@ -260,100 +375,12 @@ class BasketReader():
         classes = constr_vars(class_indices)
         meta_attrs = constr_vars(meta_indices)
         domain = Domain(attrs, classes, meta_attrs)
-        return cls.from_numpy(domain,
-                              attrs and X, classes and Y, metas and meta_attrs)
+        return storage_class.from_numpy(
+            domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
-def csv_saver(filename, data, delimiter='\t'):
-    with open(filename, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter=delimiter)
-        all_vars = data.domain.variables + data.domain.metas
-        writer.writerow([v.name for v in all_vars])  # write variable names
-        if delimiter == '\t':
-            flags = ([''] * len(data.domain.attributes)) + \
-                    (['class'] * len(data.domain.class_vars)) + \
-                    (['m'] * len(data.domain.metas))
-
-            for i, var in enumerate(all_vars):
-                attrs = ["{0!s}={1!s}".format(*item).replace(" ", "\\ ")
-                         for item in var.attributes.items()]
-                if attrs:
-                    flags[i] += (" " if flags[i] else "") + (" ".join(attrs))
-
-            writer.writerow([type(v).__name__.replace("Variable", "").lower()
-                             for v in all_vars])  # write variable types
-            writer.writerow(flags) # write flags
-        for ex in data: # write examples
-            writer.writerow(ex)
-
-
-def save_csv(filename, data):
-    csv_saver(filename, data, ',')
-
-
-def _save_tab_fast(f, data):
-    wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
-    for Xi, Yi, Mi in zip(data.X, data._Y, data.metas):
-        f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
-        f.write("\n")
-
-
-def save_tab_delimited(filename, data):
-    """
-    Save data to tab-delimited file.
-
-    Function uses fast implementation in case of numpy data, and slower
-    fall-back for general storage.
-
-    :param filename: the name of the file
-    :type filename: str
-    :param data: the data to be saved
-    :type data: Orange.data.Storage
-    """
-    if isinstance(filename, str):
-        f = open(filename, "w")
-    else:
-        f = filename
-    domain_vars = data.domain.variables + data.domain.metas
-    # first line
-    f.write("\t".join([str(j.name) for j in domain_vars]))
-    f.write("\n")
-
-    # second line
-    #TODO Basket column.
-    t = {"ContinuousVariable": "c", "DiscreteVariable": "d",
-         "StringVariable": "string", "Basket": "basket"}
-
-    f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
-    f.write("\n")
-
-    # third line
-    m = list(data.domain.metas)
-    c = list(data.domain.class_vars)
-    r = []
-    for i in domain_vars:
-        r1 = ["{}={}".format(k, v).replace(" ", "\\ ")
-              for k, v in i.attributes.items()]
-        if i in m:
-            r1.append("m")
-        elif i in c:
-            r1.append("class")
-        r.append(" ".join(r1))
-    f.write("\t".join(r))
-    f.write("\n")
-
-    # data
-    # noinspection PyBroadException
-    try:
-        _save_tab_fast(f, data)
-    except:
-        domain_vars = [data.domain.index(var) for var in domain_vars]
-        for i in data:
-            f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
-    f.close()
-
-
-class ExcelReader:
+@FileFormats.register("Excel file", ".xlsx")
+class ExcelFormat:
     non_escaped_spaces = re.compile(r"(?<!\\) +")
 
     def __init__(self):
@@ -617,3 +644,15 @@ class ExcelReader:
         self.read_data(worksheet, table)
         self.reorder_values(table)
         return table
+
+
+@FileFormats.register("Pickled table", ".pickle")
+class PickleFormat:
+    @classmethod
+    def read_file(cls, file, _=None):
+        return pickle.load(open(file, "rb"))
+
+    @classmethod
+    def write_file(cls, filename, table):
+        pickle.dump(table, open(filename, "wb"))
+

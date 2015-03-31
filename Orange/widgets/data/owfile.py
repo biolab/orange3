@@ -1,10 +1,10 @@
 import os, sys
-from PyQt4 import QtCore
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
+from Orange.data.io import FileFormats
 
 
 def add_origin(examples, filename):
@@ -38,20 +38,11 @@ class OWFile(widget.OWWidget):
     recent_files = Setting(["(none)"])
     new_variables = Setting(False)
 
-#    registeredFileTypes = [ft for ft in orange.getRegisteredFileTypes()
-#                           if len(ft)>2 and ft[2]]
-    registered_file_types = []
     dlgFormats = (
-        "All readable files (*.tab *.xlsx *.txt *.basket)\n"
-        "Tab-delimited files (*.tab)\n"
-        "Excel files (*.xlsx)\n"
-        "Text file (*.txt)\n"
-        "Basket files (*.basket)\n" +
-        "".join("{0} ({1})\n".format(*ft) for ft in registered_file_types) +
-        "All files (*)")
-    formats = {".tab": "Tab-delimited file", ".xlsx": "Excel file",
-               ".txt": "Text file", ".basket": "Basket file"}
-    formats.update(dict((ft[1][2:], ft[0]) for ft in registered_file_types))
+        "All readable files ({})\n".format(
+            " ".join("*" + c for c in FileFormats.readers)) +
+        "\n".join("{} (*{})".format(FileFormats.names[ext], ext)
+                  for ext in FileFormats.readers))
 
     def __init__(self):
         super().__init__()
@@ -87,7 +78,7 @@ class OWFile(widget.OWWidget):
         self.infoa = gui.widgetLabel(box, 'No data loaded.')
         self.infob = gui.widgetLabel(box, ' ')
         self.warnings = gui.widgetLabel(box, ' ')
-        #Set word wrap so long warnings won't expand the widget
+        #Set word wrap, so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
         self.warnings.setSizePolicy(
             QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
@@ -139,7 +130,8 @@ class OWFile(widget.OWWidget):
                     d = os.path.dirname(d)
                 start_file = os.path.join(os.path.dirname(d), "doc", "datasets")
             if not os.path.exists(start_file):
-                QtGui.QMessageBox.information(None, "File",
+                QtGui.QMessageBox.information(
+                    None, "File",
                     "Cannot find the directory with example data sets")
                 return
         else:
@@ -234,9 +226,11 @@ class OWFile(widget.OWWidget):
     def sendReport(self):
         dataReport = getattr(self, "dataReport", None)
         if dataReport:
-            self.reportSettings("File",
-                                [("File name", self.loaded_file),
-                                 ("Format", self.formats.get(os.path.splitext(self.loaded_file)[1], "unknown format"))])
+            self.reportSettings(
+                "File",
+                [("File name", self.loaded_file),
+                 ("Format", self.formats.get(os.path.splitext(
+                     self.loaded_file)[1], "unknown format"))])
             self.reportData(self.dataReport)
 
 if __name__ == "__main__":
