@@ -424,21 +424,21 @@ class ContextHandler(SettingsHandler):
             globs.sort(key=lambda c: -c.time)
             del globs[self.MAX_SAVED_CONTEXTS:]
 
-    def new_context(self):
+    def new_context(self, *args):
         """Create a new context."""
         return Context()
 
-    def open_context(self, widget, *args, **kwargs):
+    def open_context(self, widget, *args):
         """Open a context by finding one and setting the widget data or
         creating one and fill with the data from the widget."""
         widget.current_context, is_new = \
-            self.find_or_create_context(widget, *args, **kwargs)
+            self.find_or_create_context(widget, *args)
         if is_new:
             self.settings_from_widget(widget)
         else:
             self.settings_to_widget(widget)
 
-    def match(self, context, *args, **kwargs):
+    def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
          passed in additional arguments). A match of 0 zero indicates that
          the context cannot be used and 2 means a perfect match, so no further
@@ -447,13 +447,13 @@ class ContextHandler(SettingsHandler):
          Derived classes must overload this method."""
         raise TypeError(self.__class__.__name__ + " does not overload match")
 
-    def find_or_create_context(self, widget, *args, **kwargs):
+    def find_or_create_context(self, widget, *args):
         """Find the best matching context or create a new one if nothing
         useful is found. The returned context is moved to or added to the top
         of the context list."""
         best_context, best_score = None, 0
         for i, context in enumerate(widget.context_settings):
-            score = self.match(context, *args, **kwargs)
+            score = self.match(context, *args)
             if score == 2:
                 self.move_context_up(widget, i)
                 return context, False
@@ -483,7 +483,7 @@ class ContextHandler(SettingsHandler):
         s.insert(0, setting)
         del s[len(s):]
 
-    def clone_context(self, context, *arg):
+    def clone_context(self, context, *args):
         """Construct a copy of the context settings suitable for the context
         described by additional arguments. The method is called by
         find_or_create_context with the same arguments. A class that overloads
