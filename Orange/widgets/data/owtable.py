@@ -2,6 +2,7 @@ import sys
 import threading
 import io
 import csv
+import itertools
 import concurrent.futures
 
 from collections import OrderedDict, namedtuple
@@ -12,8 +13,8 @@ import numpy
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from PyQt4.QtGui import QIdentityProxyModel, QTableView
-from PyQt4.QtCore import Qt, QMetaObject, QT_VERSION
+from PyQt4.QtGui import QIdentityProxyModel, QTableView, QItemSelectionModel
+from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -148,6 +149,114 @@ class RichTableDecorator(QIdentityProxyModel):
             return self.sourceModel().sort(column, order)
 
 
+class BlockSelectionModel(QItemSelectionModel):
+    """
+    Item selection model ensuring the selection maintains a simple block
+    like structure.
+
+    e.g.
+
+        [a b] c [d e]
+        [f g] h [i j]
+
+    is allowed but this is not
+
+        [a] b  c  d e
+        [f  g] h [i j]
+
+    I.e. select the Cartesian product of row and column indices.
+
+    """
+    def __init__(self, model, parent=None, selectBlocks=True, **kwargs):
+        super().__init__(model, parent, **kwargs)
+        self.__selectBlocks = selectBlocks
+
+    def select(self, selection, flags):
+        """Reimplemented."""
+        if isinstance(selection, QModelIndex):
+            selection = QtGui.QItemSelection(selection, selection)
+
+        model = self.model()
+        indexes = self.selectedIndexes()
+
+        rows = set(ind.row() for ind in indexes)
+        cols = set(ind.column() for ind in indexes)
+
+        if flags & QItemSelectionModel.Select and \
+                not flags & QItemSelectionModel.Clear and self.__selectBlocks:
+            indexes = selection.indexes()
+            sel_rows = set(ind.row() for ind in indexes).union(rows)
+            sel_cols = set(ind.column() for ind in indexes).union(cols)
+
+            selection = QtGui.QItemSelection()
+
+            for r_start, r_end in ranges(sorted(sel_rows)):
+                for c_start, c_end in ranges(sorted(sel_cols)):
+                    top_left = model.index(r_start, c_start)
+                    bottom_right = model.index(r_end - 1, c_end - 1)
+                    selection.select(top_left, bottom_right)
+        elif self.__selectBlocks and flags & QItemSelectionModel.Deselect:
+            indexes = selection.indexes()
+
+            def to_ranges(indices):
+                return list(range(*r) for r in ranges(indices))
+
+            selected_rows = to_ranges(sorted(rows))
+            selected_cols = to_ranges(sorted(cols))
+
+            desel_rows = to_ranges(set(ind.row() for ind in indexes))
+            desel_cols = to_ranges(set(ind.column() for ind in indexes))
+
+            selection = QtGui.QItemSelection()
+
+            # deselection extended vertically
+            for row_range, col_range in \
+                    itertools.product(selected_rows, desel_cols):
+                selection.select(
+                    model.index(row_range.start, col_range.start),
+                    model.index(row_range.stop - 1, col_range.stop - 1)
+                )
+            # deselection extended horizontally
+            for row_range, col_range in \
+                    itertools.product(desel_rows, selected_cols):
+                selection.select(
+                    model.index(row_range.start, col_range.start),
+                    model.index(row_range.stop - 1, col_range.stop - 1)
+                )
+
+        QItemSelectionModel.select(self, selection, flags)
+
+    def selectBlocks(self):
+        """Is the block selection in effect."""
+        return self.__selectBlocks
+
+    def setSelectBlocks(self, state):
+        """Set the block selection state.
+
+        If set to False, the selection model behaves as the base
+        QItemSelectionModel
+
+        """
+        self.__selectBlocks = state
+
+
+def ranges(indices):
+    """
+    Group consecutive indices into `(start, stop)` tuple 'ranges'.
+
+    >>> list(ranges([1, 2, 3, 5, 3, 4]))
+    >>> [(1, 4), (5, 6), (3, 5)]
+
+    """
+    g = itertools.groupby(enumerate(indices),
+                          key=lambda t: t[1] - t[0])
+    for _, range_ind in g:
+        range_ind = list(range_ind)
+        _, start = range_ind[0]
+        _, end = range_ind[-1]
+        yield start, end + 1
+
+
 def table_selection_to_mime_data(table):
     """Copy the current selection in a QTableView to the clipboard.
     """
@@ -205,6 +314,7 @@ class OWDataTable(widget.OWWidget):
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
+    select_rows = Setting(True)
     auto_commit = Setting(True)
 
     color_settings = Setting(None)
@@ -217,7 +327,6 @@ class OWDataTable(widget.OWWidget):
         self.inputs = OrderedDict()
 
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
-        self.selectionChangedFlag = False
 
         info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
@@ -250,6 +359,11 @@ class OWDataTable(widget.OWWidget):
                      callback=self._on_distribution_color_changed)
         gui.button(box, self, "Set colors", self.set_colors, autoDefault=False,
                    tooltip="Set the background color and color palette")
+
+        box = gui.widgetBox(self.controlArea, "Selection")
+
+        gui.checkBox(box, self, "select_rows", "Select full rows",
+                     callback=self._on_select_rows_changed)
 
         gui.rubber(self.controlArea)
 
@@ -306,9 +420,11 @@ class OWDataTable(widget.OWWidget):
                 view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             else:
                 view = QTableView()
-                view.setSelectionBehavior(QTableView.SelectRows)
                 view.setSortingEnabled(True)
                 view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+
+                if self.select_rows:
+                    view.setSelectionBehavior(QTableView.SelectRows)
 
                 header = view.horizontalHeader()
                 header.setMovable(True)
@@ -395,6 +511,10 @@ class OWDataTable(widget.OWWidget):
 
         # update the header (attribute names)
         self._update_variable_labels(view)
+
+        selmodel = BlockSelectionModel(
+            datamodel, parent=view, selectBlocks=not self.select_rows)
+        view.setSelectionModel(selmodel)
 
         view.selectionModel().selectionChanged.connect(self.update_selection)
 
@@ -500,6 +620,20 @@ class OWDataTable(widget.OWWidget):
         if tab:
             tab.reset()
 
+    def _on_select_rows_changed(self):
+        for slot in self.inputs.values():
+            selection_model = slot.view.selectionModel()
+            selection_model.setSelectBlocks(not self.select_rows)
+            if self.select_rows:
+                slot.view.setSelectionBehavior(QTableView.SelectRows)
+                # Expand the current selection to full row selection.
+                selection_model.select(
+                    selection_model.selection(),
+                    QItemSelectionModel.Select | QItemSelectionModel.Rows
+                )
+            else:
+                slot.view.setSelectionBehavior(QTableView.SelectItems)
+
     def restore_order(self):
         """Restore the original data order of the current view."""
         table = self.tabs.currentWidget()
@@ -530,45 +664,86 @@ class OWDataTable(widget.OWWidget):
     def update_selection(self, *_):
         self.commit()
 
-    def get_current_selection(self):
-        table = self.tabs.currentWidget()
-        if table and table.model():
-            proxy = table.model()
-            rows = table.selectionModel().selectedRows()
-            rows = sorted([proxy.mapToSource(ind).row() for ind in rows])
-            source = proxy.sourceModel()
-            rows = [source.headerData(row, Qt.Vertical, Qt.DisplayRole) - 1
-                    for row in rows]
-            return rows
-        else:
-            return []
+    def get_selection(self, view):
+        """
+        Return the selected row and column indices of the selection in view.
+        """
+        proxymodel = view.model()
+        sourcemodel = proxymodel.sourceModel()
+        assert isinstance(sourcemodel, TableModel)
+        selection = view.selectionModel().selection()
+        # map through the proxy into input table.
+        selection = proxymodel.mapSelectionToSource(selection)
+
+        indexes = selection.indexes()
+
+        rows = list(set(ind.row() for ind in indexes))
+        # map the rows through the applied sorting (if any)
+        rows = sorted(sourcemodel.mapToTableRows(rows))
+        cols = sorted(set(ind.column() for ind in indexes))
+        return rows, cols
 
     def commit(self):
+        """
+        Commit/send the current selected row/column selection.
+        """
         selected_data = other_data = None
-        table = self.tabs.currentWidget()
-        if table and table.model():
-            model = table.model().sourceModel()
-            selection = self.get_current_selection()
+        view = self.tabs.currentWidget()
+        if view and view.model():
+            model = view.model().sourceModel()
+            table = model.source  # The input data table
+            rowsel, colsel = self.get_selection(view)
+
+            def select(data, rows, domain):
+                """
+                Select the data subset with specified rows and domain subsets.
+
+                If either rows or domain is None they mean select all.
+                """
+                if rows is not None and domain is not None:
+                    return data.from_table(domain, data, rows)
+                elif rows is not None:
+                    return data.from_table(data.domain, rows)
+                elif domain is not None:
+                    return data.from_table(domain, data)
+                else:
+                    return data
+
+            domain = table.domain
+
+            if len(colsel) < len(domain) + len(domain.metas):
+                # only a subset of the columns is selected
+                allvars = domain.variables + domain.metas
+                columns = [(c, model.headerData(c, Qt.Horizontal,
+                                                TableModel.DomainRole))
+                           for c in colsel]
+                assert all(role is not None for _, role in columns)
+
+                def select_vars(role):
+                    """select variables for role (TableModel.DomainRole)"""
+                    return [allvars[c] for c, r in columns if r == role]
+
+                attrs = select_vars(TableModel.Attribute)
+                class_vars = select_vars(TableModel.ClassVar)
+                metas = select_vars(TableModel.Meta)
+                domain = Orange.data.Domain(attrs, class_vars, metas)
 
             # Avoid a copy if all/none rows are selected.
-            if not selection:
+            if not rowsel:
                 selected_data = None
-                other_data = model.source
-            elif len(selection) == len(model.source):
-                selected_data = model.source
+                other_data = select(table, None, domain)
+            elif len(rowsel) == len(table):
+                selected_data = select(table, None, domain)
                 other_data = None
             else:
-                selected_data = model.source[selection]
-                selection = set(selection)
+                selected_data = select(table, rowsel, domain)
+                selmask = numpy.ones((len(table),), dtype=bool)
+                selmask[rowsel] = False
 
-                other = [i for i in range(len(model.source))
-                         if i not in selection]
-                other_data = model.source[other]
+                other_data = select(table, numpy.flatnonzero(selmask), domain)
 
         self.send("Selected Data", selected_data)
         self.send("Other Data", other_data)
-
-        self.selectionChangedFlag = False
 
     def copy(self):
         """

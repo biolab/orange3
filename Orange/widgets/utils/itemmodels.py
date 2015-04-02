@@ -820,6 +820,8 @@ class TableModel(QAbstractTableModel):
             return coldesc.var
         elif role == TableModel.VariableStatsRole:
             return self._stats_for_column(section)
+        elif role == TableModel.DomainRole:
+            return coldesc.role
         else:
             return None
 
