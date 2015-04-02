@@ -1231,6 +1231,33 @@ class CreateTableWithData(TableTests):
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
 
+    def test_creates_a_table_from_domain_and_list(self):
+        domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
+                              data.ContinuousVariable(name="b")],
+                             data.DiscreteVariable(name="y", values="abc"))
+        table = data.Table(domain, [[0, 1, 2],
+                                    [1, 2, "?"],
+                                    ["m", 3, "a"],
+                                    ["?", "?", "c"]])
+        self.assertIs(table.domain, domain)
+        np.testing.assert_almost_equal(
+            table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
+        np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
+
+    def test_creates_a_table_from_domain_and_list_and_weights(self):
+        domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
+                              data.ContinuousVariable(name="b")],
+                             data.DiscreteVariable(name="y", values="abc"))
+        table = data.Table(domain, [[0, 1, 2],
+                                    [1, 2, "?"],
+                                    ["m", 3, "a"],
+                                    ["?", "?", "c"]], [1, 2, 3, 4])
+        self.assertIs(table.domain, domain)
+        np.testing.assert_almost_equal(
+            table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
+        np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
+        np.testing.assert_almost_equal(table.W, np.array([1, 2, 3, 4]))
+
     def test_creates_a_table_with_domain_and_given_X(self):
         domain = self.mock_domain()
 
