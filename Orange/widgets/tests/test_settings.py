@@ -150,14 +150,6 @@ class DomainContextSettingsHandlerTests(unittest.TestCase):
         self.assertEqual(self.widget.attr_list_setting, [DISCRETE_ATTR_ABC, DISCRETE_CLASS_GHI])
         self.assertEqual(self.widget.selection1, [0])
 
-    def test_clone_context(self):
-        mock_context = Mock(values=dict(
-            required_setting=(DISCRETE_ATTR_ABC, Discrete)
-        ))
-        attrs, metas = self.handler.encode_domain(domain)
-        cloned_context = self.handler.clone_context(mock_context, domain, attrs, metas)
-        self.assertEqual(cloned_context.values, mock_context.values)
-
     def add_setting(self, widget, name, setting):
         setting.name = name
         setattr(widget, name, setting.default)
