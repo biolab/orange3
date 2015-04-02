@@ -270,7 +270,7 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     explicitly disabled.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :param orientation: orientation for the layout. If the argument is an
@@ -340,7 +340,7 @@ def widgetLabel(widget, label="", labelWidth=None, **misc):
     Construct a simple, constant label.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param label: The text of the label (default: None)
     :type label: str
     :param labelWidth: The width of the label (default: None)
@@ -370,7 +370,7 @@ def label(widget, master, label, labelWidth=None, box=None,
     `%(mm)i`.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param label: The text of the label, including attribute names
@@ -535,7 +535,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :obj:`DoubleSpinBoxWFocusOut`.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -554,7 +554,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :type labelWidth: int
     :param orientation: tells whether to put the label above (`"vertical"` or
         `True`) or to the left (`"horizontal"` or `False`)
-    :type orientation: int or bool
+    :type orientation: int or bool or str
     :param callback: a function that is called when the value is entered; if
         :obj:`callbackOnReturn` is `True`, the function is called when the
         user commits the value by pressing Enter or clicking the icon
@@ -690,7 +690,7 @@ def checkBox(widget, master, value, label, box=None,
     A simple checkbox.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -829,7 +829,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     Insert a line edit.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -840,7 +840,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     :type labelWidth: int
     :param orientation: tells whether to put the label above (`"vertical"` or
         `True`) or to the left (`"horizontal"` or `False`)
-    :type orientation: int or bool
+    :type orientation: int or bool or str
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :param callback: a function that is called when the check box state is
@@ -915,7 +915,7 @@ def button(widget, master, label, callback=None, width=None, height=None,
     Insert a button (QPushButton, by default)
 
     :param widget: the widget into which the button is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param label: label
@@ -979,7 +979,7 @@ def toolButton(widget, master, label="", callback=None,
     Insert a tool button. Calls :obj:`button`
 
     :param widget: the widget into which the button is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param label: label
@@ -1073,7 +1073,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     is a list of indices of selected items.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the name of the master's attribute with which the value is
@@ -1141,7 +1141,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     button.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -1157,7 +1157,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     :param callback: a function that is called when the selection is changed
     :type callback: function
     :param orientation: orientation of the layout in the box
-    :type orientation: int or str or PyQt4.QtGui.QLayout
+    :type orientation: int or str or QLayout
     :rtype: PyQt4.QtQui.QButtonGroup
     """
     bg = widgetBox(widget, box, orientation, addToLayout=False)
@@ -1236,7 +1236,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
     Construct a slider.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -1324,7 +1324,7 @@ def labeledSlider(widget, master, value, box=None,
     Construct a slider with labels instead of numbers.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -1396,7 +1396,7 @@ def valueSlider(widget, master, value, box=None, label=None,
     Construct a slider with different values.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -1483,7 +1483,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     `control2attributeDict`.
 
     :param widget: the widget into which the box is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param master: master widget
     :type master: OWWidget or OWComponent
     :param value: the master's attribute with which the value is synchronized
@@ -1499,7 +1499,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :param callback: a function that is called when the value is changed
     :type callback: function
     :param items: items that are put into the box
-    :type items: list of ints
+    :type items: list or tuple
     :param sendSelectedValue: flag telling whether to store/retrieve indices
         or string values from `value`
     :type sendSelectedValue: bool
@@ -1944,7 +1944,7 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     auto_commit.
 
     :param widget: the widget into which the box with the button is inserted
-    :type widget: PyQt4.QtGui.QWidget
+    :type widget: PyQt4.QtGui.QWidget or None
     :param value: the master's attribute which stores whether the auto-commit
         is on
     :type value:  str
