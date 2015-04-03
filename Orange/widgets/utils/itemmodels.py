@@ -658,6 +658,7 @@ class TableModel(QAbstractTableModel):
             indices = self.__sortInd[indices]
         self.__sortInd = indices
         self.__sortIndInv = numpy.argsort(indices)
+
         for pind, sourcerow in persistent:
             self.changePersistentIndex(
                 pind, self.index(self.__sortIndInv[sourcerow], pind.column())
@@ -681,6 +682,36 @@ class TableModel(QAbstractTableModel):
         else:
             return numpy.asarray([self.index(i, column).data(role)
                                   for i in self.__sortInd])
+
+    def sortColumn(self):
+        """
+        The column currently used for sorting (-1 if no sorting is applied).
+        """
+        return self.__sortColumn
+
+    def sortOrder(self):
+        """
+        The current sort order.
+        """
+        return self.__sortOrder
+
+    def mapToTableRows(self, modelrows):
+        """
+        Return the row indices in the source table for the given model rows.
+        """
+        if self.__sortColumn < 0:
+            return modelrows
+        else:
+            return self.__sortInd[modelrows].tolist()
+
+    def mapFromTableRows(self, tablerows):
+        """
+        Return the row indices in the model for the given source table rows.
+        """
+        if self.__sortColumn < 0:
+            return tablerows
+        else:
+            return self.__sortIndInv[tablerows].tolist()
 
     def data(self, index, role,
              # For optimizing out LOAD_GLOBAL byte code instructions in
@@ -789,6 +820,8 @@ class TableModel(QAbstractTableModel):
             return coldesc.var
         elif role == TableModel.VariableStatsRole:
             return self._stats_for_column(section)
+        elif role == TableModel.DomainRole:
+            return coldesc.role
         else:
             return None
 
