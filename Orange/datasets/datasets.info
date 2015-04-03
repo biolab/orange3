@@ -1,0 +1,1007 @@
+{
+    "adult": {
+        "features": {
+            "continuous": 6,
+            "discrete": 8,
+            "meta": 0
+        },
+        "location": "adult.tab",
+        "missing": true,
+        "name": "adult",
+        "rows": 32561,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "adult_sample": {
+        "features": {
+            "continuous": 6,
+            "discrete": 8,
+            "meta": 0
+        },
+        "location": "adult_sample.tab",
+        "missing": true,
+        "name": "adult_sample",
+        "rows": 977,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "anneal": {
+        "features": {
+            "continuous": 6,
+            "discrete": 32,
+            "meta": 0
+        },
+        "location": "anneal.tab",
+        "missing": true,
+        "name": "anneal",
+        "rows": 898,
+        "target": {
+            "type": "discrete",
+            "values": 5
+        }
+    },
+    "audiology": {
+        "features": {
+            "continuous": 0,
+            "discrete": 69,
+            "meta": 0
+        },
+        "location": "audiology.tab",
+        "missing": true,
+        "name": "audiology",
+        "rows": 226,
+        "target": {
+            "type": "discrete",
+            "values": 24
+        }
+    },
+    "auto-mpg": {
+        "features": {
+            "continuous": 4,
+            "discrete": 4,
+            "meta": 0
+        },
+        "location": "auto-mpg.tab",
+        "missing": true,
+        "name": "auto-mpg",
+        "rows": 398,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "balance-scale": {
+        "features": {
+            "continuous": 0,
+            "discrete": 4,
+            "meta": 0
+        },
+        "location": "balance-scale.tab",
+        "missing": false,
+        "name": "balance-scale",
+        "rows": 625,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "breast-cancer": {
+        "features": {
+            "continuous": 0,
+            "discrete": 9,
+            "meta": 0
+        },
+        "location": "breast-cancer.tab",
+        "missing": true,
+        "name": "breast-cancer",
+        "rows": 286,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "breast-cancer-wisconsin": {
+        "features": {
+            "continuous": 0,
+            "discrete": 9,
+            "meta": 0
+        },
+        "location": "breast-cancer-wisconsin.tab",
+        "missing": false,
+        "name": "breast-cancer-wisconsin",
+        "rows": 683,
+        "target": {
+            "type": "discrete",
+            "values": 6
+        }
+    },
+    "breast-cancer-wisconsin-cont": {
+        "features": {
+            "continuous": 9,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "breast-cancer-wisconsin-cont.tab",
+        "missing": false,
+        "name": "breast-cancer-wisconsin-cont",
+        "rows": 683,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "breast-cancer-wisconsin-disc": {
+        "features": {
+            "continuous": 0,
+            "discrete": 9,
+            "meta": 0
+        },
+        "location": "breast-cancer-wisconsin-disc.tab",
+        "missing": true,
+        "name": "breast-cancer-wisconsin-disc",
+        "rows": 699,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "bridges": {
+        "features": {
+            "continuous": 3,
+            "discrete": 8,
+            "meta": 0
+        },
+        "location": "bridges.tab",
+        "missing": true,
+        "name": "bridges",
+        "rows": 108,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "bridges.mt1": {
+        "features": {
+            "continuous": 3,
+            "discrete": 3,
+            "meta": 0
+        },
+        "location": "bridges.mt1.tab",
+        "missing": true,
+        "name": "bridges.mt1",
+        "rows": 108,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "bridges.mt2": {
+        "features": {
+            "continuous": 1,
+            "discrete": 5,
+            "meta": 0
+        },
+        "location": "bridges.mt2.tab",
+        "missing": true,
+        "name": "bridges.mt2",
+        "rows": 108,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "brown-selected": {
+        "features": {
+            "continuous": 79,
+            "discrete": 0,
+            "meta": 1
+        },
+        "location": "brown-selected.tab",
+        "missing": true,
+        "name": "brown-selected",
+        "rows": 186,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "bupa": {
+        "features": {
+            "continuous": 6,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "bupa.tab",
+        "missing": false,
+        "name": "bupa",
+        "rows": 345,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "car": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "car.tab",
+        "missing": false,
+        "name": "car",
+        "rows": 1728,
+        "target": {
+            "type": "discrete",
+            "values": 4
+        }
+    },
+    "crx": {
+        "features": {
+            "continuous": 6,
+            "discrete": 9,
+            "meta": 0
+        },
+        "location": "crx.tab",
+        "missing": true,
+        "name": "crx",
+        "rows": 690,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "echocardiogram": {
+        "features": {
+            "continuous": 8,
+            "discrete": 3,
+            "meta": 0
+        },
+        "location": "echocardiogram.tab",
+        "missing": true,
+        "name": "echocardiogram",
+        "rows": 132,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "emotions": {
+        "features": {
+            "continuous": 72,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "emotions.tab",
+        "missing": false,
+        "name": "emotions",
+        "rows": 593,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "flag": {
+        "features": {
+            "continuous": 2,
+            "discrete": 27,
+            "meta": 0
+        },
+        "location": "flag.tab",
+        "missing": false,
+        "name": "flag",
+        "rows": 194,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "flare1": {
+        "features": {
+            "continuous": 0,
+            "discrete": 13,
+            "meta": 0
+        },
+        "location": "flare1.tab",
+        "missing": false,
+        "name": "flare1",
+        "rows": 323,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "flare2": {
+        "features": {
+            "continuous": 0,
+            "discrete": 13,
+            "meta": 0
+        },
+        "location": "flare2.tab",
+        "missing": false,
+        "name": "flare2",
+        "rows": 1066,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "glass": {
+        "features": {
+            "continuous": 9,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "glass.tab",
+        "missing": false,
+        "name": "glass",
+        "rows": 214,
+        "target": {
+            "type": "discrete",
+            "values": 8
+        }
+    },
+    "hair-eye-sex": {
+        "features": {
+            "continuous": 0,
+            "discrete": 3,
+            "meta": 0
+        },
+        "location": "hair-eye-sex.tab",
+        "missing": false,
+        "name": "hair-eye-sex",
+        "rows": 584,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "hayes-roth_learn": {
+        "features": {
+            "continuous": 0,
+            "discrete": 4,
+            "meta": 0
+        },
+        "location": "hayes-roth_learn.tab",
+        "missing": false,
+        "name": "hayes-roth_learn",
+        "rows": 132,
+        "target": {
+            "type": "discrete",
+            "values": 8
+        }
+    },
+    "hayes-roth_test": {
+        "features": {
+            "continuous": 0,
+            "discrete": 4,
+            "meta": 0
+        },
+        "location": "hayes-roth_test.tab",
+        "missing": false,
+        "name": "hayes-roth_test",
+        "rows": 28,
+        "target": {
+            "type": "discrete",
+            "values": 8
+        }
+    },
+    "heart_disease": {
+        "features": {
+            "continuous": 6,
+            "discrete": 7,
+            "meta": 0
+        },
+        "location": "heart_disease.tab",
+        "missing": true,
+        "name": "heart_disease",
+        "rows": 303,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "horse-colic": {
+        "features": {
+            "continuous": 7,
+            "discrete": 13,
+            "meta": 0
+        },
+        "location": "horse-colic.tab",
+        "missing": true,
+        "name": "horse-colic",
+        "rows": 368,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "horse-colic_learn": {
+        "features": {
+            "continuous": 7,
+            "discrete": 20,
+            "meta": 0
+        },
+        "location": "horse-colic_learn.tab",
+        "missing": true,
+        "name": "horse-colic_learn",
+        "rows": 300,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "horse-colic_test": {
+        "features": {
+            "continuous": 7,
+            "discrete": 20,
+            "meta": 0
+        },
+        "location": "horse-colic_test.tab",
+        "missing": true,
+        "name": "horse-colic_test",
+        "rows": 68,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "housing": {
+        "features": {
+            "continuous": 13,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "housing.tab",
+        "missing": false,
+        "name": "housing",
+        "rows": 506,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "imports-85": {
+        "features": {
+            "continuous": 14,
+            "discrete": 11,
+            "meta": 0
+        },
+        "location": "imports-85.tab",
+        "missing": true,
+        "name": "imports-85",
+        "rows": 205,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "ionosphere": {
+        "features": {
+            "continuous": 32,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "ionosphere.tab",
+        "missing": false,
+        "name": "ionosphere",
+        "rows": 351,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "iris": {
+        "features": {
+            "continuous": 4,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "iris.tab",
+        "missing": false,
+        "name": "iris",
+        "rows": 150,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "iris_url": {
+        "features": {
+            "continuous": 4,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab",
+        "missing": false,
+        "name": "iris_url",
+        "rows": 150,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "lenses": {
+        "features": {
+            "continuous": 0,
+            "discrete": 4,
+            "meta": 0
+        },
+        "location": "lenses.tab",
+        "missing": false,
+        "name": "lenses",
+        "rows": 24,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "lung-cancer": {
+        "features": {
+            "continuous": 0,
+            "discrete": 56,
+            "meta": 0
+        },
+        "location": "lung-cancer.tab",
+        "missing": true,
+        "name": "lung-cancer",
+        "rows": 32,
+        "target": {
+            "type": "discrete",
+            "values": 8
+        }
+    },
+    "lymphography": {
+        "features": {
+            "continuous": 3,
+            "discrete": 15,
+            "meta": 0
+        },
+        "location": "lymphography.tab",
+        "missing": false,
+        "name": "lymphography",
+        "rows": 148,
+        "target": {
+            "type": "discrete",
+            "values": 4
+        }
+    },
+    "market-basket": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "market-basket.tab",
+        "missing": true,
+        "name": "market-basket",
+        "rows": 5,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "monks-1": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-1.tab",
+        "missing": false,
+        "name": "monks-1",
+        "rows": 556,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-1_learn": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-1_learn.tab",
+        "missing": false,
+        "name": "monks-1_learn",
+        "rows": 124,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-1_test": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-1_test.tab",
+        "missing": false,
+        "name": "monks-1_test",
+        "rows": 432,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-2": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-2.tab",
+        "missing": false,
+        "name": "monks-2",
+        "rows": 601,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-2_learn": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-2_learn.tab",
+        "missing": false,
+        "name": "monks-2_learn",
+        "rows": 169,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-2_test": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-2_test.tab",
+        "missing": false,
+        "name": "monks-2_test",
+        "rows": 432,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-3": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-3.tab",
+        "missing": false,
+        "name": "monks-3",
+        "rows": 554,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-3_learn": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-3_learn.tab",
+        "missing": false,
+        "name": "monks-3_learn",
+        "rows": 122,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "monks-3_test": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "monks-3_test.tab",
+        "missing": false,
+        "name": "monks-3_test",
+        "rows": 432,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "multitarget-synthetic": {
+        "features": {
+            "continuous": 3,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "multitarget-synthetic.tab",
+        "missing": false,
+        "name": "multitarget-synthetic",
+        "rows": 100,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "o-ring-erosion": {
+        "features": {
+            "continuous": 4,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "o-ring-erosion.tab",
+        "missing": false,
+        "name": "o-ring-erosion",
+        "rows": 23,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "post-operative": {
+        "features": {
+            "continuous": 1,
+            "discrete": 7,
+            "meta": 0
+        },
+        "location": "post-operative.tab",
+        "missing": true,
+        "name": "post-operative",
+        "rows": 90,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "primary-tumor": {
+        "features": {
+            "continuous": 0,
+            "discrete": 17,
+            "meta": 0
+        },
+        "location": "primary-tumor.tab",
+        "missing": true,
+        "name": "primary-tumor",
+        "rows": 339,
+        "target": {
+            "type": "discrete",
+            "values": 21
+        }
+    },
+    "promoters": {
+        "features": {
+            "continuous": 0,
+            "discrete": 57,
+            "meta": 0
+        },
+        "location": "promoters.tab",
+        "missing": false,
+        "name": "promoters",
+        "rows": 106,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "servo": {
+        "features": {
+            "continuous": 0,
+            "discrete": 4,
+            "meta": 0
+        },
+        "location": "servo.tab",
+        "missing": false,
+        "name": "servo",
+        "rows": 167,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "shuttle-landing-control": {
+        "features": {
+            "continuous": 0,
+            "discrete": 6,
+            "meta": 0
+        },
+        "location": "shuttle-landing-control.tab",
+        "missing": false,
+        "name": "shuttle-landing-control",
+        "rows": 253,
+        "target": {
+            "type": "discrete",
+            "values": 8
+        }
+    },
+    "smokers_ct": {
+        "features": {
+            "continuous": 0,
+            "discrete": 2,
+            "meta": 1
+        },
+        "location": "smokers_ct.tab",
+        "missing": false,
+        "name": "smokers_ct",
+        "rows": 193,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "sponge": {
+        "features": {
+            "continuous": 0,
+            "discrete": 45,
+            "meta": 0
+        },
+        "location": "sponge.tab",
+        "missing": true,
+        "name": "sponge",
+        "rows": 76,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "test-pls": {
+        "features": {
+            "continuous": 3,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "test-pls.tab",
+        "missing": false,
+        "name": "test-pls",
+        "rows": 100,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "tic_tac_toe": {
+        "features": {
+            "continuous": 0,
+            "discrete": 9,
+            "meta": 0
+        },
+        "location": "tic_tac_toe.tab",
+        "missing": false,
+        "name": "tic_tac_toe",
+        "rows": 958,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "titanic": {
+        "features": {
+            "continuous": 0,
+            "discrete": 3,
+            "meta": 0
+        },
+        "location": "titanic.tab",
+        "missing": false,
+        "name": "titanic",
+        "rows": 2201,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "vehicle": {
+        "features": {
+            "continuous": 18,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "vehicle.tab",
+        "missing": false,
+        "name": "vehicle",
+        "rows": 846,
+        "target": {
+            "type": "discrete",
+            "values": 4
+        }
+    },
+    "voting": {
+        "features": {
+            "continuous": 0,
+            "discrete": 16,
+            "meta": 0
+        },
+        "location": "voting.tab",
+        "missing": true,
+        "name": "voting",
+        "rows": 435,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "water-treatment": {
+        "features": {
+            "continuous": 38,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "water-treatment.tab",
+        "missing": true,
+        "name": "water-treatment",
+        "rows": 527,
+        "target": {
+            "type": "continuous",
+            "values": null
+        }
+    },
+    "wdbc": {
+        "features": {
+            "continuous": 20,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "wdbc.tab",
+        "missing": false,
+        "name": "wdbc",
+        "rows": 569,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
+    "wine": {
+        "features": {
+            "continuous": 13,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "wine.tab",
+        "missing": false,
+        "name": "wine",
+        "rows": 178,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "yeast-class-RPR": {
+        "features": {
+            "continuous": 79,
+            "discrete": 0,
+            "meta": 1
+        },
+        "location": "yeast-class-RPR.tab",
+        "missing": true,
+        "name": "yeast-class-RPR",
+        "rows": 186,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
+    },
+    "zoo": {
+        "features": {
+            "continuous": 0,
+            "discrete": 16,
+            "meta": 1
+        },
+        "location": "zoo.tab",
+        "missing": false,
+        "name": "zoo",
+        "rows": 101,
+        "target": {
+            "type": "discrete",
+            "values": 7
+        }
+    }
+}
