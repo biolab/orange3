@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock, MagicMock, patch
+import numpy as np
 
 import Orange
 
@@ -31,3 +32,23 @@ class TestPreprocess(unittest.TestCase):
         MockPreprocessor()
         MockPreprocessor.__init__.assert_called_with()
         self.assertEqual(MockPreprocessor.__call__.call_count, 0)
+
+
+class RemoveConstant(unittest.TestCase):
+    def test_remove_columns(self):
+        X = np.random.rand(6, 4)
+        X[:, (1,3)] = 5
+        X[3, 1] = np.nan
+        X[1, 1] = np.nan
+        data = Orange.data.Table(X)
+        d = Orange.preprocess.preprocess.RemoveConstant(data)
+        self.assertEqual(len(d.domain.attributes), 2)
+
+        pp_rc = Orange.preprocess.preprocess.RemoveConstant()
+        d = pp_rc(data)
+        self.assertEqual(len(d.domain.attributes), 2)
+
+    def test_nothing_to_remove(self):
+        data = Orange.data.Table("iris")
+        d = Orange.preprocess.preprocess.RemoveConstant(data)
+        self.assertEqual(len(d.domain.attributes), 4)
