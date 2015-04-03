@@ -2601,11 +2601,11 @@ class IndicatorItemDelegate(QtGui.QStyledItemDelegate):
         self.indicatorSize = indicatorSize
 
     def paint(self, painter, option, index):
-        super().paint(self, painter, option, index)
+        super().paint(painter, option, index)
         rect = option.rect
-        indicator, valid = index.data(self.role).toString(), True
-        indicator = False if indicator == "false" else indicator
-        if valid and indicator:
+        indicator = index.data(self.role)
+
+        if indicator:
             painter.save()
             painter.setRenderHints(QtGui.QPainter.Antialiasing)
             painter.setBrush(QtGui.QBrush(Qt.black))
@@ -2624,7 +2624,7 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
 
 
     def sizeHint(self, option, index):
-        size = super().sizeHint(self, option, index)
+        size = super().sizeHint(option, index)
         return QtCore.QSize(size.width(), max(size.height(), 20))
 
 
@@ -2641,7 +2641,9 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
                                    option) + 1
         textRect = textRect.adjusted(margin, 0, -margin, 0)
         font = index.data(Qt.FontRole)
-        font = QtGui.QFont(font) if font.isValid() else option.font
+        if not isinstance(font, QtGui.QFont):
+            font = option.font
+
         metrics = QtGui.QFontMetrics(font)
         elideText = metrics.elidedText(text, option.textElideMode,
                                        textRect.width())
@@ -2657,34 +2659,46 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
 
         elif event.type() == QtCore.QEvent.MouseButtonRelease:
             link = index.data(LinkRole)
+            if not isinstance(link, str):
+                link = None
+
             pressedIndex, pressPos = self.mousePressState
             if pressedIndex == index and \
                     (pressPos - event.pos()).manhattanLength() < 5 and \
-                    link.isValid():
+                    link is not None:
                 import webbrowser
-                webbrowser.open(link.toString())
+                webbrowser.open(link)
             self.mousePressState = QtCore.QModelIndex(), event.pos()
 
         elif event.type() == QtCore.QEvent.MouseMove:
             link = index.data(LinkRole)
-            if link.isValid() and \
+            if not isinstance(link, str):
+                link = None
+
+            if link is not None and \
                     self.linkRect(option, index).contains(event.pos()):
                 self.parent().viewport().setCursor(Qt.PointingHandCursor)
             else:
                 self.parent().viewport().setCursor(Qt.ArrowCursor)
 
-        return super().editorEvent(self, event, model, option, index)
+        return super().editorEvent(event, model, option, index)
 
 
     def onEntered(self, index):
         link = index.data(LinkRole)
-        if not link.isValid():
+        if not isinstance(link, str):
+            link = None
+        if link is None:
             self.parent().viewport().setCursor(Qt.ArrowCursor)
 
 
     def paint(self, painter, option, index):
         QSt = QtGui.QStyle
-        if index.data(LinkRole).isValid():
+        link = index.data(LinkRole)
+        if not isinstance(link, str):
+            link = None
+
+        if link is not None:
             style = QtGui.qApp.style()
             style.drawPrimitive(QSt.PE_PanelItemViewRow, option, painter)
             style.drawPrimitive(QSt.PE_PanelItemViewItem, option, painter)
@@ -2699,15 +2713,17 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
                 text, option.textElideMode, textRect.width())
             painter.save()
             font = index.data(Qt.FontRole)
-            if font.isValid():
-                painter.setFont(QtGui.QFont(font))
+            if not isinstance(font, QtGui.QFont):
+                font = None
+            if font is not None:
+                painter.setFont(font)
             else:
                 painter.setFont(option.font)
             painter.setPen(QtGui.QPen(Qt.blue))
             painter.drawText(textRect, option.displayAlignment, elideText)
             painter.restore()
         else:
-            super().paint(self, painter, option, index)
+            super().paint(painter, option, index)
 
 
 LinkRole = LinkStyledItemDelegate.LinkRole
