@@ -38,12 +38,12 @@ class DataHintsCache(object):
         pass
 
     def set_hint(self, data, key, value, weight=1.0):
-        attrs = data.domain.variables + data.domain.getmetas().values()
+        attrs = data.domain.variables + data.domain.metas
         for attr in attrs:
             self._hints[key][attr].append((value, weight/len(attrs)))
 
     def get_weighted_hints(self, data, key):
-        attrs = data.domain.variables + data.domain.getmetas().values()
+        attrs = data.domain.variables + data.domain.metas
         weighted_hints = defaultdict(float)
         for attr in attrs:
             for val, w in self._hints[key][attr]:
