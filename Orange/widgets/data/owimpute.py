@@ -641,9 +641,11 @@ class ColumnImputerAsValue(ColumnImputerModel):
 
 def column_imputer_random(variable, data):
     if isinstance(variable, Orange.data.DiscreteVariable):
-        transformer = RandomTransform(variable)
+        dist = distribution.get_distribution(data, variable)
+        transformer = RandomTransform(variable, dist)
     elif isinstance(variable, Orange.data.ContinuousVariable):
-        transformer = RandomTransform(variable)
+        dist = distribution.get_distribution(data, variable)
+        transformer = RandomTransform(variable, dist)
     return RandomImputerModel((variable,), (variable,), (transformer,))
 
 
@@ -709,17 +711,36 @@ class RandomTransform(Transformation):
     def __init__(self, variable, dist=None):
         super().__init__(variable)
         self.dist = dist
+        if dist is not None:
+            if isinstance(variable, Orange.data.DiscreteVariable):
+                dist = numpy.array(self.dist)
+            elif isinstance(variable, Orange.data.ContinuousVariable):
+                dist = numpy.array(self.dist[1, :])
+            else:
+                raise TypeError("Only discrete and continuous "
+                                "variables are supported")
+            dsum = numpy.sum(dist)
+            if dsum > 0:
+                self.sample_prob = numpy.array(dist) / dsum
+            else:
+                self.sample_prob = numpy.ones_like(dist) / len(dist)
+        else:
+            self.sample_prob = None
 
     def transform(self, c):
         if isinstance(self.variable, Orange.data.DiscreteVariable):
             if self.dist is not None:
-                pass
+                c = numpy.random.choice(
+                    len(self.variable.values), size=c.shape, replace=True,
+                    p=self.sample_prob)
             else:
-                c = numpy.random.randint(len(self.variable.values),
-                                         size=c.shape)
+                c = numpy.random.randint(
+                    len(self.variable.values), size=c.shape)
         else:
             if self.dist is not None:
-                pass
+                c = numpy.random.choice(
+                    numpy.asarray(self.dist[0, :]), size=c.shape,
+                    replace=True, p=self.sample_prob)
             else:
                 c = numpy.random.normal(size=c.shape)
         return c
