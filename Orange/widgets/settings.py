@@ -603,19 +603,16 @@ class DomainContextHandler(ContextHandler):
         context.values = {}
         return context
 
-    #noinspection PyMethodOverriding,PyTupleAssignmentBalance
-    def find_or_create_context(self, widget, domain):
+    # noinspection PyMethodOverriding
+    def open_context(self, widget, domain):
         if not domain:
             return None, False
 
         if not isinstance(domain, Domain):
             domain = domain.domain
 
-        encoded_domain = self.encode_domain(domain)
-        context, is_new = \
-            super().find_or_create_context(widget, domain, *encoded_domain)
-
-        return context, is_new
+        attributes, metas = self.encode_domain(domain)
+        super().open_context(widget, domain, attributes, metas)
 
     def settings_to_widget(self, widget):
         super().settings_to_widget(widget)
