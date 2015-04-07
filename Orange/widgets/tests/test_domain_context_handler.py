@@ -167,6 +167,58 @@ class DomainContextHandlerTestCase(TestCase):
                          new_values['with_metas'])
         self.assertNotIn('required', new_values)
 
+    def test_open_context(self):
+        self.handler.bind(SimpleWidget)
+        context = Mock(
+            attributes=self.args[1], metas=self.args[2], values=dict(
+                text=('u', -2),
+                with_metas=[('d1', Discrete), ('d2', Discrete)]
+            ))
+        self.handler.global_contexts = \
+            [Mock(values={}), context, Mock(values={})]
+
+        widget = SimpleWidget()
+        self.handler.initialize(widget)
+        self.handler.open_context(widget, self.args[0])
+        self.assertEqual(widget.text, 'u')
+        self.assertEqual(widget.with_metas, [('d1', Discrete),
+                                             ('d2', Discrete)])
+
+    def test_open_context_with_imperfect_match(self):
+        self.handler.bind(SimpleWidget)
+        context = Mock(values=dict(
+            text=('u', -2),
+            with_metas=[('d1', Discrete), ('d1', Continuous),
+                        ('c1', Continuous), ('c1', Discrete)]
+        ))
+        self.handler.global_contexts = \
+            [Mock(values={}), context, Mock(values={})]
+
+        widget = SimpleWidget()
+        self.handler.initialize(widget)
+        self.handler.open_context(widget, self.args[0])
+        self.assertEqual(widget.text, 'u')
+        self.assertEqual(widget.with_metas, [('d1', Discrete),
+                                             ('c1', Continuous)])
+
+    def test_open_context_with_no_match(self):
+        self.handler.bind(SimpleWidget)
+        context = Mock(values=dict(
+            text=('u', -2),
+            with_metas=[('d1', Discrete), ('d1', Continuous),
+                        ('c1', Continuous), ('c1', Discrete)]
+        ))
+        self.handler.global_contexts = \
+            [Mock(values={}), context, Mock(values={})]
+
+        widget = SimpleWidget()
+        self.handler.initialize(widget)
+        self.handler.open_context(widget, self.args[0])
+        self.assertEqual(widget.text, 'u')
+        self.assertEqual(widget.with_metas, [('d1', Discrete),
+                                             ('c1', Continuous)])
+
+
 
 class SimpleWidget:
     text = ContextSetting("", not_attribute=True)
@@ -174,3 +226,8 @@ class SimpleWidget:
     required = ContextSetting("", required=ContextSetting.REQUIRED)
     if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
                                  selected='selected')
+
+    def retrieveSpecificSettings(self):
+        pass
+    def storeSpecificSettings(self):
+        pass
