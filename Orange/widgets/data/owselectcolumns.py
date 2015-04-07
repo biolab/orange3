@@ -286,23 +286,16 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
             return matched, available
         return super().match_value(setting, value, attrs, metas)
 
-    def clone_context(self, context, domain, attrs, metas):
-        context = copy.deepcopy(context)
-        for setting, data, instance in self.provider.traverse_settings(data=context.values):
-            if not isinstance(setting, ContextSetting):
-                continue
-            value = data.get(setting.name, None)
-            value = self.decode_setting(setting, value)
-            if value is None:
-                continue
-            if isinstance(value, dict):
-                for item, category in list(value.items()):
-                    if not self._var_exists(setting, item, attrs, metas):
-                        del value[item]
-        context.attributes, context.metas = attrs, metas
-        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
-                                  itertools.chain(domain, domain.metas)]
-        return context
+    def filter_value(self, setting, data, domain, attrs, metas):
+        value = data.get(setting.name, None)
+        value = self.decode_setting(setting, value)
+
+        if isinstance(value, dict):
+            for item, category in list(value.items()):
+                if not self._var_exists(setting, item, attrs, metas):
+                    del value[item]
+        else:
+            super().filter_value(setting, data, domain, attrs, metas)
 
 
 class OWSelectAttributes(widget.OWWidget):
