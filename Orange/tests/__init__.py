@@ -27,9 +27,7 @@ def suite():
 
             load(test_class_values_context_handler),
             load(test_domain_context_handler),
-            load(test_owselectcolumns),
-
-            load(test_widget)
+            load(test_owselectcolumns)
         ])
     return unittest.TestSuite(all_tests)
 
