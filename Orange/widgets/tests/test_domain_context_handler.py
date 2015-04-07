@@ -162,9 +162,9 @@ class DomainContextHandlerTestCase(TestCase):
     def test_open_context(self):
         self.handler.bind(SimpleWidget)
         context = self.create_context(self.domain, dict(
-                text=('u', -2),
-                with_metas=[('d1', Discrete), ('d2', Discrete)]
-            ))
+            text=('u', -2),
+            with_metas=[('d1', Discrete), ('d2', Discrete)]
+        ))
         self.handler.global_contexts = \
             [Mock(values={}), context, Mock(values={})]
 
@@ -186,10 +186,13 @@ class DomainContextHandlerTestCase(TestCase):
 
     def test_open_context_with_imperfect_match(self):
         self.handler.bind(SimpleWidget)
-        context = Mock(values=dict(
+        context = self.create_context(None, dict(
             text=('u', -2),
             with_metas=[('d1', Discrete), ('d1', Continuous),
-                        ('c1', Continuous), ('c1', Discrete)]
+                        ('c1', Continuous), ('c1', Discrete)],
+            if_selected=[('c1', Discrete), ('c1', Continuous),
+                         ('d1', Discrete), ('d1', Continuous)],
+            selected=[2],
         ))
         self.handler.global_contexts = \
             [Mock(values={}), context, Mock(values={})]
@@ -209,6 +212,9 @@ class DomainContextHandlerTestCase(TestCase):
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),
                                              ('c1', Continuous)])
+        self.assertEqual(widget.if_selected, [('c1', Continuous),
+                                              ('d1', Discrete)])
+        self.assertEqual(widget.selected, [1])
 
     def test_open_context_with_no_match(self):
         self.handler.bind(SimpleWidget)
@@ -230,6 +236,9 @@ class DomainContextHandlerTestCase(TestCase):
         self.assertEqual(context.values['text'], ('u', -2))
 
     def create_context(self, domain, values):
+        if not domain:
+            domain = Domain([])
+
         context = self.handler.new_context(domain,
                                            *self.handler.encode_domain(domain))
         context.values = values
@@ -241,7 +250,7 @@ class SimpleWidget:
     with_metas = ContextSetting([], exclude_metas=False)
     required = ContextSetting("", required=ContextSetting.REQUIRED)
     if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
-                                 selected='selected')
+        selected='selected')
     selected = ""
 
     def retrieveSpecificSettings(self):

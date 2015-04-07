@@ -662,39 +662,14 @@ class DomainContextHandler(ContextHandler):
 
             value = self.decode_setting(setting, data[setting.name])
             setattr(instance, setting.name, value)
+            if hasattr(setting, "selected") and setting.selected in data:
+                setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
                 excluded |= set(value)
             else:
                 if setting.not_attribute:
                     excluded.add(value)
-
-            if hasattr(setting, "selected"):
-                new_labels, new_selected = [], []
-                old_selected = set(data.get(setting.selected, []))
-
-                # noinspection PyShadowingNames
-                def is_attribute(value):
-                    return (not setting.exclude_attributes
-                            and value in context.attributes)
-
-                # noinspection PyShadowingNames
-                def is_meta(value):
-                    return (not setting.exclude_metas
-                            and value in context.metas)
-
-                for i, old_value in enumerate(value):
-                    old_value = self.decode_setting(setting, old_value)
-                    if is_attribute(old_value) or is_meta(old_value):
-                        if i in old_selected:
-                            new_selected.append(len(new_labels))
-                        new_labels.append(old_value)
-
-                data[setting.name] = new_labels
-                data[setting.selected] = new_selected
-                # first 'name', then 'selected' - this gets signalled to Qt
-                setattr(instance, setting.name, new_labels)  # labels might have changed
-                setattr(instance, setting.selected, new_selected)
 
         if self.reservoir is not None:
             get_attribute = lambda name: context.attributes.get(name, None)
