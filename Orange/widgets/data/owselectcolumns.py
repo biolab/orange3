@@ -292,11 +292,12 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
             if not isinstance(setting, ContextSetting):
                 continue
             value = data.get(setting.name, None)
+            value = self.decode_setting(setting, value)
             if value is None:
                 continue
             if isinstance(value, dict):
-                for item, category in value.items():
-                    if not self._var_exists(setting, value, attrs, metas):
+                for item, category in list(value.items()):
+                    if not self._var_exists(setting, item, attrs, metas):
                         del value[item]
         context.attributes, context.metas = attrs, metas
         context.ordered_domain = [(attr.name, vartype(attr)) for attr in
