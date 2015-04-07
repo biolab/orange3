@@ -483,13 +483,26 @@ class ContextHandler(SettingsHandler):
         s.insert(0, setting)
         del s[len(s):]
 
-    def clone_context(self, context, *args):
+    def clone_context(self, old_context, *args):
         """Construct a copy of the context settings suitable for the context
         described by additional arguments. The method is called by
         find_or_create_context with the same arguments. A class that overloads
         :obj:`match` to accept additional arguments must also overload
         :obj:`clone_context`."""
-        return copy.deepcopy(context)
+        context = self.new_context(*args)
+        context.values = copy.deepcopy(old_context.values)
+
+        traverse = self.provider.traverse_settings
+        for setting, data, instance in traverse(data=context.values):
+            if not isinstance(setting, ContextSetting):
+                continue
+
+            self.filter_value(setting, data, *args)
+        return context
+
+    @staticmethod
+    def filter_value(setting, data, *args):
+        """Remove values related to setting that are invalid given args."""
 
     def close_context(self, widget):
         """Close the context by calling :obj:`settings_from_widget` to write
@@ -564,8 +577,7 @@ class DomainContextHandler(ContextHandler):
         # noinspection PyShadowingNames
         def encode(attributes, encode_values):
             if not encode_values:
-                return {v.name: vartype(v) 
-                    for v in attributes}
+                return {v.name: vartype(v) for v in attributes}
 
             is_discrete = lambda x: isinstance(x, DiscreteVariable)
             return {v.name: v.values if is_discrete(v) else vartype(v)
@@ -600,7 +612,6 @@ class DomainContextHandler(ContextHandler):
         if self.has_meta_attributes:
             context.ordered_domain += [(attr.name, vartype(attr))
                                        for attr in domain.metas]
-        context.values = {}
         return context
 
     # noinspection PyMethodOverriding
@@ -613,6 +624,27 @@ class DomainContextHandler(ContextHandler):
 
         attributes, metas = self.encode_domain(domain)
         super().open_context(widget, domain, attributes, metas)
+
+    # noinspection PyMethodOverriding
+    def filter_value(self, setting, data, domain, attributes, metas):
+        value = data.get(setting.name, None)
+        if isinstance(value, list):
+            sel_name = getattr(setting, "selected", None)
+            selected = set(data.pop(sel_name, []))
+            new_selected, new_value = [], []
+            for i, val in enumerate(value):
+                if self._var_exists(setting, val, attributes, metas):
+                    if i in selected:
+                        new_selected.append(len(new_value))
+                    new_value.append(val)
+
+            data[setting.name] = new_value
+            if hasattr(setting, 'selected'):
+                data[setting.selected] = new_selected
+        elif value is not None:
+            if (value[1] >= 0 and
+                    not self._var_exists(setting, value, attributes, metas)):
+                del data[setting.name]
 
     def settings_to_widget(self, widget):
         super().settings_to_widget(widget)
@@ -786,50 +818,6 @@ class DomainContextHandler(ContextHandler):
             return 1, 1
         else:
             raise IncompatibleContext()
-
-    #noinspection PyMethodOverriding
-    def clone_context(self, context, domain, attrs, metas):
-        context = copy.deepcopy(context)
-
-        for setting, data, instance in self.provider.traverse_settings(data=context.values):
-            if not isinstance(setting, ContextSetting):
-                continue
-
-            value = data.get(setting.name, None)
-            if isinstance(value, list):
-                sel_name = getattr(setting, "selected", None)
-                if sel_name is not None:
-                    selected = data.get(sel_name, [])
-                    selected.sort()
-                    next_sel = selected and selected[0] or -1
-                else:
-                    selected = None
-                    next_sel = -1
-                i = j = realI = 0
-                while i < len(value):
-                    if self._var_exists(setting, value[i], attrs, metas):
-                        if next_sel == realI:
-                            selected[j] -= realI - i
-                            j += 1
-                            next_sel = j < len(selected) and selected[j] or -1
-                        i += 1
-                    else:
-                        del value[i]
-                        if next_sel == realI:
-                            del selected[j]
-                            next_sel = j < len(selected) and selected[j] or -1
-                    realI += 1
-                if sel_name is not None:
-                    data[sel_name] = selected[:j]
-            elif value is not None:
-                if (value[1] >= 0 and
-                        not self._var_exists(setting, value, attrs, metas)):
-                    del data[setting.name]
-
-        context.attributes, context.metas = attrs, metas
-        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
-                                  itertools.chain(domain, domain.metas)]
-        return context
 
     def mergeBack(self, widget):
         glob = self.global_contexts

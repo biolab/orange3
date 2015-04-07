@@ -145,7 +145,7 @@ class DomainContextHandlerTestCase(TestCase):
 
     def test_clone_context(self):
         self.handler.bind(SimpleWidget)
-        context = Mock(values=dict(
+        context = self.create_context(self.domain, dict(
             text=('u', -2),
             with_metas=[('d1', Discrete), ('d1', Continuous),
                         ('c1', Continuous), ('c1', Discrete)],
