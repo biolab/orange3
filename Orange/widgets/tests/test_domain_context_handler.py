@@ -143,14 +143,6 @@ class DomainContextHandlerTestCase(TestCase):
         self.assertAlmostEqual(0.667, self.handler.match(context, *self.args),
                                places=2)
 
-    def test_new_context(self):
-        context = self.handler.new_context()
-
-        self.assertTrue(hasattr(context, 'attributes'))
-        self.assertTrue(hasattr(context, 'metas'))
-        self.assertTrue(hasattr(context, 'ordered_domain'))
-        self.assertTrue(hasattr(context, 'values'))
-
     def test_clone_context(self):
         self.handler.bind(SimpleWidget)
         context = Mock(values=dict(
@@ -180,6 +172,15 @@ class DomainContextHandlerTestCase(TestCase):
         widget = SimpleWidget()
         self.handler.initialize(widget)
         self.handler.open_context(widget, self.args[0])
+
+        context = widget.current_context
+        self.assertEqual(context.attributes, self.args[1])
+        self.assertEqual(context.metas, self.args[2])
+        self.assertSequenceEqual(context.ordered_domain,
+                                 (('c1', Continuous), ('d1', Discrete),
+                                  ('d2', Discrete), ('d3', Discrete),
+                                  ('c2', Continuous), ('d4', Discrete)))
+
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),
                                              ('d2', Discrete)])
@@ -197,37 +198,49 @@ class DomainContextHandlerTestCase(TestCase):
         widget = SimpleWidget()
         self.handler.initialize(widget)
         self.handler.open_context(widget, self.args[0])
+
+        context = widget.current_context
+        self.assertEqual(context.attributes, self.args[1])
+        self.assertEqual(context.metas, self.args[2])
+        self.assertSequenceEqual(context.ordered_domain,
+                                 (('c1', Continuous), ('d1', Discrete),
+                                  ('d2', Discrete), ('d3', Discrete),
+                                  ('c2', Continuous), ('d4', Discrete)))
+
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),
                                              ('c1', Continuous)])
 
     def test_open_context_with_no_match(self):
         self.handler.bind(SimpleWidget)
-        context = Mock(values=dict(
-            text=('u', -2),
-            with_metas=[('d1', Discrete), ('d1', Continuous),
-                        ('c1', Continuous), ('c1', Discrete)]
-        ))
-        self.handler.global_contexts = \
-            [Mock(values={}), context, Mock(values={})]
-
         widget = SimpleWidget()
         self.handler.initialize(widget)
-        self.handler.open_context(widget, self.args[0])
-        self.assertEqual(widget.text, 'u')
-        self.assertEqual(widget.with_metas, [('d1', Discrete),
-                                             ('c1', Continuous)])
+        widget.text = 'u'
 
+        self.handler.open_context(widget, self.args[0])
+
+        self.assertEqual(widget.text, 'u')
+        self.assertEqual(widget.with_metas, [])
+        context = widget.current_context
+        self.assertEqual(context.attributes, self.args[1])
+        self.assertEqual(context.metas, self.args[2])
+        self.assertSequenceEqual(context.ordered_domain,
+                                 (('c1', Continuous), ('d1', Discrete),
+                                  ('d2', Discrete), ('d3', Discrete),
+                                  ('c2', Continuous), ('d4', Discrete)))
+        self.assertEqual(context.values['text'], ('u', -2))
 
 
 class SimpleWidget:
     text = ContextSetting("", not_attribute=True)
-    with_metas = ContextSetting("", exclude_metas=False)
+    with_metas = ContextSetting([], exclude_metas=False)
     required = ContextSetting("", required=ContextSetting.REQUIRED)
     if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
                                  selected='selected')
+    selected = ""
 
     def retrieveSpecificSettings(self):
         pass
+
     def storeSpecificSettings(self):
         pass
