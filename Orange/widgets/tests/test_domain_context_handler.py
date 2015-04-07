@@ -161,8 +161,7 @@ class DomainContextHandlerTestCase(TestCase):
 
     def test_open_context(self):
         self.handler.bind(SimpleWidget)
-        context = Mock(
-            attributes=self.args[1], metas=self.args[2], values=dict(
+        context = self.create_context(self.domain, dict(
                 text=('u', -2),
                 with_metas=[('d1', Discrete), ('d2', Discrete)]
             ))
@@ -229,6 +228,12 @@ class DomainContextHandlerTestCase(TestCase):
                                   ('d2', Discrete), ('d3', Discrete),
                                   ('c2', Continuous), ('d4', Discrete)))
         self.assertEqual(context.values['text'], ('u', -2))
+
+    def create_context(self, domain, values):
+        context = self.handler.new_context(domain,
+                                           *self.handler.encode_domain(domain))
+        context.values = values
+        return context
 
 
 class SimpleWidget:

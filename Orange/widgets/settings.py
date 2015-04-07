@@ -464,7 +464,7 @@ class ContextHandler(SettingsHandler):
             # add_context below
             context = self.clone_context(best_context, *args)
         else:
-            context = self.new_context()
+            context = self.new_context(*args)
         self.add_context(widget, context)
         return context, best_context is None
 
@@ -588,14 +588,19 @@ class DomainContextHandler(ContextHandler):
 
         return attributes, metas
 
-    def new_context(self):
+    def new_context(self, domain, attributes, metas):
         """Create a new context."""
         context = super().new_context()
-        context.attributes = {}
-        context.metas = {}
+        context.attributes = attributes
+        context.metas = metas
         context.ordered_domain = []
+        if self.has_ordinary_attributes:
+            context.ordered_domain += [(attr.name, vartype(attr))
+                                       for attr in domain]
+        if self.has_meta_attributes:
+            context.ordered_domain += [(attr.name, vartype(attr))
+                                       for attr in domain.metas]
         context.values = {}
-        context.no_copy = ["ordered_domain"]
         return context
 
     #noinspection PyMethodOverriding,PyTupleAssignmentBalance
@@ -610,15 +615,6 @@ class DomainContextHandler(ContextHandler):
         context, is_new = \
             super().find_or_create_context(widget, domain, *encoded_domain)
 
-        context.attributes, context.metas = encoded_domain
-
-        if self.has_ordinary_attributes:
-            context.ordered_domain = [(v.name, vartype(v)) for v in domain]
-        else:
-            context.ordered_domain = []
-        if self.has_meta_attributes:
-            context.ordered_domain += [(v.name, vartype(v))
-                                       for v in domain.metas]
         return context, is_new
 
     def settings_to_widget(self, widget):
