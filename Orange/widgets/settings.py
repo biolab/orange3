@@ -824,18 +824,19 @@ class IncompatibleContext(Exception):
 
 
 class ClassValuesContextHandler(ContextHandler):
-    #noinspection PyMethodOverriding
-    def find_or_create_context(self, widget, classes):
+    def open_context(self, widget, classes):
         if isinstance(classes, Variable):
             if isinstance(classes, DiscreteVariable):
                 classes = classes.values
             else:
                 classes = None
-        context, is_new = super().find_or_create_context(widget, classes)
+
+        super().open_context(widget, classes)
+
+    def new_context(self, classes):
+        context = super().new_context()
         context.classes = classes
-        if is_new:
-            context.values = {}
-        return context, is_new
+        return context
 
     #noinspection PyMethodOverriding
     def match(self, context, classes):
@@ -848,15 +849,6 @@ class ClassValuesContextHandler(ContextHandler):
         super().settings_to_widget(widget)
         context = widget.current_context
         self.provider.unpack(widget, context.values)
-
-    def settings_from_widget(self, widget):
-        super().settings_from_widget(widget)
-        context = widget.current_context
-
-        def packer(setting, instance):
-            yield setting.name, copy.copy(getattr(instance, setting.name))
-
-        context.values = self.provider.pack(widget, packer=packer)
 
     def fast_save(self, widget, name, value):
         if widget.current_context is None:

@@ -52,11 +52,15 @@ class TestClassValuesContextHandler(TestCase):
             ))
         self.handler.global_contexts = \
             [Mock(values={}), context, Mock(values={})]
-
         widget = SimpleWidget()
         self.handler.initialize(widget)
-        self.handler.open_context(widget, self.args[0][0])
-        self.assertEqual(widget.text, '')
+        widget.text = 'u'
+
+        self.handler.open_context(widget, self.args[0][1])
+
+        context = widget.current_context
+        self.assertEqual(context.classes, ['a', 'b', 'c'])
+        self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [])
 
 
