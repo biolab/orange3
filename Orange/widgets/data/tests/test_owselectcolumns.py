@@ -71,7 +71,6 @@ class TestSelectAttributesDomainContextHandler(TestCase):
         widget = SimpleWidget()
         self.handler.initialize(widget)
         self.handler.open_context(widget, self.args[0])
-        print(widget.domain_role_hints)
 
         self.assertEqual(widget.domain_role_hints,
                          {('d1', Discrete): ('available', 0),
