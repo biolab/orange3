@@ -524,6 +524,25 @@ class ContextHandler(SettingsHandler):
     def settings_from_widget(self, widget):
         widget.storeSpecificSettings()
 
+        context = widget.current_context
+        if context is None:
+            return
+
+        def packer(setting, instance):
+            if hasattr(instance, setting.name):
+                value = getattr(instance, setting.name)
+                yield setting.name, self.encode_setting(context, setting, value)
+                if hasattr(setting, "selected"):
+                    yield setting.selected, list(getattr(instance, setting.selected))
+
+        context.values = self.provider.pack(widget, packer=packer)
+
+    def encode_setting(self, context, setting, value):
+        return copy.copy(value)
+
+    def decode_setting(self, setting, value):
+        return value
+
     def bind(self, widget_class):
         super().bind(widget_class)
         self.analyze_settings(self.provider, "")
@@ -679,22 +698,6 @@ class DomainContextHandler(ContextHandler):
                 self.attributes_in_res and get_attribute(a[0]) == a[1] or
                 self.metas_in_res and get_meta(a[0]) == a[1])]
             setattr(widget, self.reservoir, ll)
-
-    def settings_from_widget(self, widget):
-        super().settings_from_widget(widget)
-
-        context = widget.current_context
-        if context is None:
-            return
-
-        def packer(setting, instance):
-            if hasattr(instance, setting.name):
-                value = getattr(instance, setting.name)
-                yield setting.name, self.encode_setting(context, setting, value)
-                if hasattr(setting, "selected"):
-                    yield setting.selected, list(getattr(instance, setting.selected))
-
-        context.values = self.provider.pack(widget, packer=packer)
 
     def fast_save(self, widget, name, value):
         context = widget.current_context
