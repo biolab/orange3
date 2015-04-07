@@ -440,11 +440,14 @@ class ContextHandler(SettingsHandler):
 
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
-         passed in additional arguments). A match of 0 zero indicates that
-         the context cannot be used and 2 means a perfect match, so no further
-         search is necessary.
+        passed in additional arguments). A match of 0 zero indicates that
+        the context cannot be used and 2 means a perfect match, so no further
+        search is necessary.
 
-         Derived classes must overload this method."""
+        If imperfect matching is not desired, match should only
+        return 0 and 2.
+
+        Derived classes must overload this method."""
         raise TypeError(self.__class__.__name__ + " does not overload match")
 
     def find_or_create_context(self, widget, *args):
@@ -460,8 +463,6 @@ class ContextHandler(SettingsHandler):
             if score > best_score:  # 0 is not OK!
                 best_context, best_score = context, score
         if best_context:
-            # if cloneIfImperfect should be disabled, change this and the
-            # add_context below
             context = self.clone_context(best_context, *args)
         else:
             context = self.new_context(*args)
