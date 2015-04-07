@@ -103,9 +103,9 @@ class Value(float):
 
     def __hash__(self):
         if self.value is None:
-            return super().__hash__(self)
+            return super().__hash__()
         else:
-            return super().__hash__(self) ^ hash(self.value)
+            return super().__hash__() ^ hash(self.value)
 
     @property
     def value(self):
