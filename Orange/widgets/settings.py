@@ -187,6 +187,7 @@ class SettingsHandler:
         self.provider = None
         """:type: SettingProvider"""
         self.defaults = {}
+        self.known_settings = {}
 
     @staticmethod
     def create(widget_class, template=None):
@@ -208,7 +209,21 @@ class SettingsHandler:
         """Bind settings handler instance to widget_class."""
         self.widget_class = widget_class
         self.provider = SettingProvider(widget_class)
+        self.known_settings = {}
+        self.analyze_settings(self.provider, "")
         self.read_defaults()
+
+    def analyze_settings(self, provider, prefix):
+        for setting in provider.settings.values():
+            self.analyze_setting(prefix, setting)
+
+        for name, sub_provider in provider.providers.items():
+            new_prefix = '%s%s.' % (prefix, name) if prefix else '%s.' % name
+            self.analyze_settings(sub_provider, new_prefix)
+
+    def analyze_setting(self, prefix, setting):
+        self.known_settings[prefix + setting.name] = setting
+
 
     # noinspection PyBroadException
     def read_defaults(self):
@@ -319,12 +334,9 @@ class SettingsHandler:
         self.defaults = self.provider.pack(widget)
         self.write_defaults()
 
-    # TODO would we like this method to store the changed settings back to
-    # class defaults, so the new widgets added to the schema later would have
-    # different defaults? I guess so...
     def fast_save(self, widget, name, value):
         """Store the (changed) widget's setting immediately to the context."""
-        pass
+        self.known_settings[name].default = value
 
     @staticmethod
     def update_packed_data(data, name, value):
@@ -381,6 +393,12 @@ class ContextHandler(SettingsHandler):
         super().__init__()
         self.global_contexts = []
         self.known_settings = {}
+
+    def analyze_setting(self, prefix, setting):
+        super().analyze_setting(prefix, setting)
+        if isinstance(setting, ContextSetting):
+            if hasattr(setting, 'selected'):
+                self.known_settings[prefix + setting.selected] = setting
 
     def initialize(self, instance, data=None):
         """Initialize the widget: call the inherited initialization and
@@ -542,24 +560,6 @@ class ContextHandler(SettingsHandler):
 
     def decode_setting(self, setting, value):
         return value
-
-    def bind(self, widget_class):
-        super().bind(widget_class)
-        self.analyze_settings(self.provider, "")
-
-    def analyze_settings(self, provider, prefix):
-        for setting in provider.settings.values():
-            self.analyze_setting(prefix, setting)
-
-        for name, sub_provider in provider.providers.items():
-            new_prefix = '%s%s.' % (prefix, name) if prefix else '%s.' % name
-            self.analyze_settings(sub_provider, new_prefix)
-
-    def analyze_setting(self, prefix, setting):
-        self.known_settings[prefix + setting.name] = setting
-        if isinstance(setting, ContextSetting):
-            if hasattr(setting, 'selected'):
-                self.known_settings[prefix + setting.selected] = setting
 
 
 class DomainContextHandler(ContextHandler):

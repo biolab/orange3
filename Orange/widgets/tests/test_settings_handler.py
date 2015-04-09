@@ -5,7 +5,7 @@ from tempfile import mkstemp
 import unittest
 from unittest.mock import patch, Mock
 import warnings
-from Orange.widgets.settings import SettingsHandler, Setting
+from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider
 
 
 class SettingHandlerTestCase(unittest.TestCase):
@@ -133,15 +133,30 @@ class SettingHandlerTestCase(unittest.TestCase):
         SettingProvider.assert_called_once_with(SimpleWidget)
         provider.initialize.assert_called_once_with(widget, None)
 
+    def test_fast_save(self):
+        handler = SettingsHandler()
+        handler.read_defaults = lambda: None
+        handler.bind(SimpleWidget)
+
+        widget = SimpleWidget()
+
+        handler.fast_save(widget, 'component.int_setting', 5)
+        self.assertEqual(Component.int_setting.default, 5)
+
+
+
+class Component:
+    int_setting = Setting(42)
+
 
 class SimpleWidget:
     setting = Setting(42)
 
+    component = SettingProvider(Component)
+
 
 class WidgetWithNoProviderDeclared:
     def __init__(self):
-        self.undeclared_component = UndeclaredComponent()
+        self.undeclared_component = Component()
 
 
-class UndeclaredComponent:
-    int_setting = Setting(42)
