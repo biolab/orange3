@@ -608,18 +608,25 @@ class TableModel(QAbstractTableModel):
 
         # column basic statistics (VariableStatsRole), computed when
         # first needed.
-        self._stats = None
+        self.__stats = None
         self.__rowCount = len(sourcedata)
         self.__columnCount = len(self.columns)
 
+        if self.__rowCount > (2 ** 31 - 1):
+            raise ValueError("len(sourcedata) > 2 ** 31 - 1")
+
         self.__sortColumn = -1
         self.__sortOrder = Qt.AscendingOrder
-        self.__sortInd = numpy.arange(0, len(self.source))
-        self.__sortIndInv = self.__sortInd
+        # Indices sorting the source table
+        self.__sortInd = None
+        # The inverse of __sortInd
+        self.__sortIndInv = None
 
     def sort(self, column, order):
         """
         Sort the data by `column` index into `order`
+
+        To reset the sort order pass -1 as the column.
 
         :type column: int
         :type order: Qt.SortOrder
@@ -632,14 +639,19 @@ class TableModel(QAbstractTableModel):
 
         """
         self.layoutAboutToBeChanged.emit()
-        persistent = [(pind, self.__sortInd[pind.row()])
-                      for pind in self.persistentIndexList()]
+
+        # Store persistent indices as well as their (actual) rows in the
+        # source data table.
+        persistent = self.persistentIndexList()
+        persistent_rows = numpy.array([ind.row() for ind in persistent], int)
+        if self.__sortInd is not None:
+            persistent_rows = self.__sortInd[persistent_rows]
 
         self.__sortColumn = column
         self.__sortOrder = order
 
         if column < 0:
-            indices = numpy.arange(0, self.__rowCount)
+            indices = None
         else:
             keydata = self.columnSortKeyData(column, TableModel.ValueRole)
             if keydata is not None:
@@ -655,14 +667,21 @@ class TableModel(QAbstractTableModel):
             if order == Qt.DescendingOrder:
                 indices = indices[::-1]
 
-            indices = self.__sortInd[indices]
-        self.__sortInd = indices
-        self.__sortIndInv = numpy.argsort(indices)
+            if self.__sortInd is not None:
+                indices = self.__sortInd[indices]
 
-        for pind, sourcerow in persistent:
-            self.changePersistentIndex(
-                pind, self.index(self.__sortIndInv[sourcerow], pind.column())
-            )
+        if indices is not None:
+            self.__sortInd = indices
+            self.__sortIndInv = numpy.argsort(indices)
+        else:
+            self.__sortInd = None
+            self.__sortIndInv = None
+
+        if self.__sortInd is not None:
+            persistent_rows = self.__sortIndInv[persistent_rows]
+
+        for pind, row in zip(persistent, persistent_rows):
+            self.changePersistentIndex(pind, self.index(row, pind.column()))
         self.layoutChanged.emit()
 
     def columnSortKeyData(self, column, role):
@@ -677,11 +696,17 @@ class TableModel(QAbstractTableModel):
         if isinstance(coldesc, TableModel.Column) \
                 and role == TableModel.ValueRole:
             col_view, _ = self.source.get_column_view(coldesc.var)
-            coldata = numpy.asarray(col_view)[self.__sortInd]
-            return coldata
+            col_data = numpy.asarray(col_view)
+            if self.__sortInd is not None:
+                col_data = col_data[self.__sortInd]
+            return col_data
         else:
+            if self.__sortInd is not None:
+                indices = self.__sortInd
+            else:
+                indices = range(self.rowCount())
             return numpy.asarray([self.index(i, column).data(role)
-                                  for i in self.__sortInd])
+                                  for i in indices])
 
     def sortColumn(self):
         """
@@ -746,7 +771,8 @@ class TableModel(QAbstractTableModel):
         if  not 0 <= row <= self.__rowCount:
             return None
 
-        row = self.__sortInd[row]
+        if self.__sortInd is not None:
+            row = self.__sortInd[row]
 
         instance = self._row_instance(row)
         coldesc = self.columns[col]
@@ -803,7 +829,10 @@ class TableModel(QAbstractTableModel):
         """Reimplemented from `QAbstractTableModel.headerData`."""
         if orientation == Qt.Vertical:
             if role == Qt.DisplayRole:
-                return int(self.__sortInd[section] + 1)
+                if self.__sortInd is not None:
+                    return int(self.__sortInd[section] + 1)
+                else:
+                    return int(section + 1)
             else:
                 return None
 
@@ -848,10 +877,10 @@ class TableModel(QAbstractTableModel):
         if isinstance(coldesc, TableModel.Basket):
             return None
 
-        if self._stats is None:
-            self._stats = datacaching.getCached(
+        if self.__stats is None:
+            self.__stats = datacaching.getCached(
                 self.source, basic_stats.DomainBasicStats,
                 (self.source, True)
             )
 
-        return self._stats[coldesc.var]
+        return self.__stats[coldesc.var]
