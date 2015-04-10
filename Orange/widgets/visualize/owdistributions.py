@@ -94,7 +94,7 @@ class OWDistributions(widget.OWWidget):
     #: Selected variable index
     variable_idx = settings.ContextSetting(-1)
     #: Selected group variable
-    groupvar_idx = settings.ContextSetting(-1)
+    groupvar_idx = settings.ContextSetting(0)
 
     Hist, ASH, Kernel = 0, 1, 2
     #: Continuous variable density estimation method
@@ -166,7 +166,8 @@ class OWDistributions(widget.OWWidget):
         if self.data is not None:
             domain = self.data.domain
             self.varmodel[:] = list(domain)
-            self.groupvarmodel[:] = filter(is_discrete, domain)
+            self.groupvarmodel[:] = \
+                ["(None)"] + list(filter(is_discrete, domain))
             if is_discrete(domain.class_var):
                 self.groupvar_idx = \
                     list(self.groupvarmodel).index(domain.class_var)
@@ -184,7 +185,7 @@ class OWDistributions(widget.OWWidget):
         self.varmodel[:] = []
         self.groupvarmodel[:] = []
         self.variable_idx = -1
-        self.groupvar_idx = -1
+        self.groupvar_idx = 0
 
     def _setup(self):
         self.plot.clear()
@@ -192,13 +193,13 @@ class OWDistributions(widget.OWWidget):
         self.var = self.cvar = None
         if varidx >= 0:
             self.var = self.varmodel[varidx]
-        if self.groupvar_idx >= 0:
+        if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
         if self.var is None:
             return
-        if is_discrete(self.cvar):
+        if self.cvar:
             self.contingencies = \
                 contingency.get_contingency(self.data, self.var, self.cvar)
             self.display_contingency()
@@ -219,7 +220,7 @@ class OWDistributions(widget.OWWidget):
         elif self.cont_est_type == OWDistributions.Kernel:
             return rect_kernel_curve
 
-    def set_distribution(self, dist, var):
+    def display_distribution(self):
         dist = self.distributions
         var = self.var
         assert len(dist) > 0
@@ -235,16 +236,16 @@ class OWDistributions(widget.OWWidget):
             edges, curve = curve_est(dist)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
-                         fillLevel=0, brush=QtGui.QBrush(Qt.gray))
-            item.setPen(QtGui.QPen(Qt.black))
-        elif is_discrete(var):
+                         fillLevel=0, brush=QtGui.QBrush(Qt.gray), pen=QtGui.QColor(Qt.white))
+            self.plot.addItem(item)
+        else:
             bottomaxis.setTicks([list(enumerate(var.values))])
             for i, w in enumerate(dist):
                 geom = QtCore.QRectF(i - 0.33, 0, 0.66, w)
-                item = DistributionBarItem(geom, [1.0], [Qt.gray])
+                print(w, list(enumerate(var.values)))
+                item = DistributionBarItem(geom, [1.0], [QtGui.QColor(128, 128, 128)])
                 self.plot.addItem(item)
 
-        self.plot.addItem(item)
 
     def _on_relative_freq_changed(self):
         self.set_left_axis_name()
@@ -262,7 +263,6 @@ class OWDistributions(widget.OWWidget):
         assert len(cont) > 0
         self.plot.clear()
 
-        leftaxis = self.plot.getAxis("left")
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
 
@@ -324,10 +324,12 @@ class OWDistributions(widget.OWWidget):
                 self.cont_est_type != OWDistributions.Hist:
             set_label("Density")
         else:
-            set_label(["Frequency", "Relative frequency"][self.relative_freq])
+            set_label(["Frequency", "Relative frequency"]
+                      [self.cvar is not None and self.relative_freq])
 
     def enable_disable_rel_freq(self):
-        self.cb_rel_freq.setDisabled(self.var and is_continuous(self.var))
+        self.cb_rel_freq.setDisabled(
+            self.var is None or self.cvar is None or is_continuous(self.var))
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
