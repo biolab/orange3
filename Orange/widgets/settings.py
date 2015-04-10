@@ -5,7 +5,12 @@ import itertools
 import pickle
 import warnings
 
-from Orange.canvas.utils import environ
+try:
+    from Orange.canvas.utils import environ
+    store_settings = True
+except ImportError:
+    store_settings = False
+
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
 from Orange.widgets.utils import vartype
 
@@ -187,11 +192,16 @@ class SettingsHandler:
         self.provider = None
         """:type: SettingProvider"""
         self.defaults = {}
+        self.known_settings = {}
 
     @staticmethod
     def create(widget_class, template=None):
         """Create a new settings handler based on the template and bind it to
-        widget_class."""
+        widget_class.
+
+        :type template: SettingsHandler
+        :rtype: SettingsHandler
+        """
 
         if template is None:
             template = SettingsHandler()
@@ -200,17 +210,35 @@ class SettingsHandler:
         setting_handler.bind(widget_class)
         return setting_handler
 
-    def get_settings_filename(self):
-        """Return the name of the file with default settings for the widget"""
-        return os.path.join(environ.widget_settings_dir,
-                            self.widget_class.name + ".ini")
+    def bind(self, widget_class):
+        """Bind settings handler instance to widget_class."""
+        self.widget_class = widget_class
+        self.provider = SettingProvider(widget_class)
+        self.known_settings = {}
+        self.analyze_settings(self.provider, "")
+        self.read_defaults()
+
+    def analyze_settings(self, provider, prefix):
+        for setting in provider.settings.values():
+            self.analyze_setting(prefix, setting)
+
+        for name, sub_provider in provider.providers.items():
+            new_prefix = '%s%s.' % (prefix, name) if prefix else '%s.' % name
+            self.analyze_settings(sub_provider, new_prefix)
+
+    def analyze_setting(self, prefix, setting):
+        self.known_settings[prefix + setting.name] = setting
+
 
     # noinspection PyBroadException
     def read_defaults(self):
         """Read (global) defaults for this widget class from a file.
         Opens a file and calls :obj:`read_defaults_file`. Derived classes
         should overload the latter."""
-        filename = self.get_settings_filename()
+        if not store_settings:
+            return
+
+        filename = self._get_settings_filename()
         if os.path.exists(filename):
             settings_file = open(filename, "rb")
             try:
@@ -234,7 +262,10 @@ class SettingsHandler:
         """Write (global) defaults for this widget class to a file.
         Opens a file and calls :obj:`write_defaults_file`. Derived classes
         should overload the latter."""
-        filename = self.get_settings_filename()
+        if not store_settings:
+            return
+
+        filename = self._get_settings_filename()
         settings_file = open(filename, "wb")
         try:
             self.write_defaults_file(settings_file)
@@ -247,6 +278,11 @@ class SettingsHandler:
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file"""
         pickle.dump(self.defaults, settings_file, -1)
+
+    def _get_settings_filename(self):
+        """Return the name of the file with default settings for the widget"""
+        return os.path.join(environ.widget_settings_dir,
+                            self.widget_class.name + ".ini")
 
     def initialize(self, instance, data=None):
         """
@@ -309,12 +345,10 @@ class SettingsHandler:
         self.defaults = self.provider.pack(widget)
         self.write_defaults()
 
-    # TODO would we like this method to store the changed settings back to
-    # class defaults, so the new widgets added to the schema later would have
-    # different defaults? I guess so...
     def fast_save(self, widget, name, value):
         """Store the (changed) widget's setting immediately to the context."""
-        pass
+        if name in self.known_settings:
+            self.known_settings[name].default = value
 
     @staticmethod
     def update_packed_data(data, name, value):
@@ -323,12 +357,6 @@ class SettingsHandler:
         for prefix in prefixes:
             data = data.setdefault(prefix, {})
         data[name] = value
-
-    def bind(self, widget_class):
-        """Bind settings handler instance to widget_class."""
-        self.widget_class = widget_class
-        self.provider = SettingProvider(widget_class)
-        self.read_defaults()
 
     def reset_settings(self, instance):
         for setting, data, instance in self.provider.traverse_settings(instance=instance):
@@ -378,6 +406,12 @@ class ContextHandler(SettingsHandler):
         self.global_contexts = []
         self.known_settings = {}
 
+    def analyze_setting(self, prefix, setting):
+        super().analyze_setting(prefix, setting)
+        if isinstance(setting, ContextSetting):
+            if hasattr(setting, 'selected'):
+                self.known_settings[prefix + setting.selected] = setting
+
     def initialize(self, instance, data=None):
         """Initialize the widget: call the inherited initialization and
         add an attribute 'context_settings' to the widget. This method
@@ -420,47 +454,48 @@ class ContextHandler(SettingsHandler):
             globs.sort(key=lambda c: -c.time)
             del globs[self.MAX_SAVED_CONTEXTS:]
 
-    def new_context(self):
+    def new_context(self, *args):
         """Create a new context."""
         return Context()
 
-    def open_context(self, widget, *args, **kwargs):
+    def open_context(self, widget, *args):
         """Open a context by finding one and setting the widget data or
         creating one and fill with the data from the widget."""
         widget.current_context, is_new = \
-            self.find_or_create_context(widget, *args, **kwargs)
+            self.find_or_create_context(widget, *args)
         if is_new:
             self.settings_from_widget(widget)
         else:
             self.settings_to_widget(widget)
 
-    def match(self, context, *args, **kwargs):
+    def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
-         passed in additional arguments). A match of 0 zero indicates that
-         the context cannot be used and 2 means a perfect match, so no further
-         search is necessary.
+        passed in additional arguments). A match of 0 zero indicates that
+        the context cannot be used and 2 means a perfect match, so no further
+        search is necessary.
 
-         Derived classes must overload this method."""
+        If imperfect matching is not desired, match should only
+        return 0 and 2.
+
+        Derived classes must overload this method."""
         raise TypeError(self.__class__.__name__ + " does not overload match")
 
-    def find_or_create_context(self, widget, *args, **kwargs):
+    def find_or_create_context(self, widget, *args):
         """Find the best matching context or create a new one if nothing
         useful is found. The returned context is moved to or added to the top
         of the context list."""
         best_context, best_score = None, 0
         for i, context in enumerate(widget.context_settings):
-            score = self.match(context, *args, **kwargs)
+            score = self.match(context, *args)
             if score == 2:
                 self.move_context_up(widget, i)
                 return context, False
             if score > best_score:  # 0 is not OK!
                 best_context, best_score = context, score
         if best_context:
-            # if cloneIfImperfect should be disabled, change this and the
-            # add_context below
             context = self.clone_context(best_context, *args)
         else:
-            context = self.new_context()
+            context = self.new_context(*args)
         self.add_context(widget, context)
         return context, best_context is None
 
@@ -479,13 +514,26 @@ class ContextHandler(SettingsHandler):
         s.insert(0, setting)
         del s[len(s):]
 
-    def clone_context(self, context, *arg):
+    def clone_context(self, old_context, *args):
         """Construct a copy of the context settings suitable for the context
         described by additional arguments. The method is called by
         find_or_create_context with the same arguments. A class that overloads
         :obj:`match` to accept additional arguments must also overload
         :obj:`clone_context`."""
-        return copy.deepcopy(context)
+        context = self.new_context(*args)
+        context.values = copy.deepcopy(old_context.values)
+
+        traverse = self.provider.traverse_settings
+        for setting, data, instance in traverse(data=context.values):
+            if not isinstance(setting, ContextSetting):
+                continue
+
+            self.filter_value(setting, data, *args)
+        return context
+
+    @staticmethod
+    def filter_value(setting, data, *args):
+        """Remove values related to setting that are invalid given args."""
 
     def close_context(self, widget):
         """Close the context by calling :obj:`settings_from_widget` to write
@@ -506,23 +554,24 @@ class ContextHandler(SettingsHandler):
     def settings_from_widget(self, widget):
         widget.storeSpecificSettings()
 
-    def bind(self, widget_class):
-        super().bind(widget_class)
-        self.analyze_settings(self.provider, "")
+        context = widget.current_context
+        if context is None:
+            return
 
-    def analyze_settings(self, provider, prefix):
-        for setting in provider.settings.values():
-            self.analyze_setting(prefix, setting)
+        def packer(setting, instance):
+            if hasattr(instance, setting.name):
+                value = getattr(instance, setting.name)
+                yield setting.name, self.encode_setting(context, setting, value)
+                if hasattr(setting, "selected"):
+                    yield setting.selected, list(getattr(instance, setting.selected))
 
-        for name, sub_provider in provider.providers.items():
-            new_prefix = '%s%s.' % (prefix, name) if prefix else '%s.' % name
-            self.analyze_settings(sub_provider, new_prefix)
+        context.values = self.provider.pack(widget, packer=packer)
 
-    def analyze_setting(self, prefix, setting):
-        self.known_settings[prefix + setting.name] = setting
-        if isinstance(setting, ContextSetting):
-            if hasattr(setting, 'selected'):
-                self.known_settings[prefix + setting.selected] = setting
+    def encode_setting(self, context, setting, value):
+        return copy.copy(value)
+
+    def decode_setting(self, setting, value):
+        return value
 
 
 class DomainContextHandler(ContextHandler):
@@ -560,8 +609,7 @@ class DomainContextHandler(ContextHandler):
         # noinspection PyShadowingNames
         def encode(attributes, encode_values):
             if not encode_values:
-                return {v.name: vartype(v) 
-                    for v in attributes}
+                return {v.name: vartype(v) for v in attributes}
 
             is_discrete = lambda x: isinstance(x, DiscreteVariable)
             return {v.name: v.values if is_discrete(v) else vartype(v)
@@ -584,38 +632,51 @@ class DomainContextHandler(ContextHandler):
 
         return attributes, metas
 
-    def new_context(self):
+    def new_context(self, domain, attributes, metas):
         """Create a new context."""
         context = super().new_context()
-        context.attributes = {}
-        context.metas = {}
+        context.attributes = attributes
+        context.metas = metas
         context.ordered_domain = []
-        context.values = {}
-        context.no_copy = ["ordered_domain"]
+        if self.has_ordinary_attributes:
+            context.ordered_domain += [(attr.name, vartype(attr))
+                                       for attr in domain]
+        if self.has_meta_attributes:
+            context.ordered_domain += [(attr.name, vartype(attr))
+                                       for attr in domain.metas]
         return context
 
-    #noinspection PyMethodOverriding,PyTupleAssignmentBalance
-    def find_or_create_context(self, widget, domain):
+    # noinspection PyMethodOverriding
+    def open_context(self, widget, domain):
         if not domain:
             return None, False
 
         if not isinstance(domain, Domain):
             domain = domain.domain
 
-        encoded_domain = self.encode_domain(domain)
-        context, is_new = \
-            super().find_or_create_context(widget, domain, *encoded_domain)
+        attributes, metas = self.encode_domain(domain)
+        super().open_context(widget, domain, attributes, metas)
 
-        context.attributes, context.metas = encoded_domain
+    # noinspection PyMethodOverriding
+    def filter_value(self, setting, data, domain, attributes, metas):
+        value = data.get(setting.name, None)
+        if isinstance(value, list):
+            sel_name = getattr(setting, "selected", None)
+            selected = set(data.pop(sel_name, []))
+            new_selected, new_value = [], []
+            for i, val in enumerate(value):
+                if self._var_exists(setting, val, attributes, metas):
+                    if i in selected:
+                        new_selected.append(len(new_value))
+                    new_value.append(val)
 
-        if self.has_ordinary_attributes:
-            context.ordered_domain = [(v.name, vartype(v)) for v in domain]
-        else:
-            context.ordered_domain = []
-        if self.has_meta_attributes:
-            context.ordered_domain += [(v.name, vartype(v))
-                                       for v in domain.metas]
-        return context, is_new
+            data[setting.name] = new_value
+            if hasattr(setting, 'selected'):
+                data[setting.selected] = new_selected
+        elif value is not None:
+            if (value[1] >= 0 and
+                    not self._var_exists(setting, value, attributes, metas)):
+                del data[setting.name]
 
     def settings_to_widget(self, widget):
         super().settings_to_widget(widget)
@@ -633,39 +694,14 @@ class DomainContextHandler(ContextHandler):
 
             value = self.decode_setting(setting, data[setting.name])
             setattr(instance, setting.name, value)
+            if hasattr(setting, "selected") and setting.selected in data:
+                setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
                 excluded |= set(value)
             else:
                 if setting.not_attribute:
                     excluded.add(value)
-
-            if hasattr(setting, "selected"):
-                new_labels, new_selected = [], []
-                old_selected = set(data.get(setting.selected, []))
-
-                # noinspection PyShadowingNames
-                def is_attribute(value):
-                    return (not setting.exclude_attributes
-                            and value in context.attributes)
-
-                # noinspection PyShadowingNames
-                def is_meta(value):
-                    return (not setting.exclude_metas
-                            and value in context.metas)
-
-                for i, old_value in enumerate(value):
-                    old_value = self.decode_setting(setting, old_value)
-                    if is_attribute(old_value) or is_meta(old_value):
-                        if i in old_selected:
-                            new_selected.append(len(new_labels))
-                        new_labels.append(old_value)
-
-                data[setting.name] = new_labels
-                data[setting.selected] = new_selected
-                # first 'name', then 'selected' - this gets signalled to Qt
-                setattr(instance, setting.name, new_labels)  # labels might have changed
-                setattr(instance, setting.selected, new_selected)
 
         if self.reservoir is not None:
             get_attribute = lambda name: context.attributes.get(name, None)
@@ -674,22 +710,6 @@ class DomainContextHandler(ContextHandler):
                 self.attributes_in_res and get_attribute(a[0]) == a[1] or
                 self.metas_in_res and get_meta(a[0]) == a[1])]
             setattr(widget, self.reservoir, ll)
-
-    def settings_from_widget(self, widget):
-        super().settings_from_widget(widget)
-
-        context = widget.current_context
-        if context is None:
-            return
-
-        def packer(setting, instance):
-            if hasattr(instance, setting.name):
-                value = getattr(instance, setting.name)
-                yield setting.name, self.encode_setting(context, setting, value)
-                if hasattr(setting, "selected"):
-                    yield setting.selected, list(getattr(instance, setting.selected))
-
-        context.values = self.provider.pack(widget, packer=packer)
 
     def fast_save(self, widget, name, value):
         context = widget.current_context
@@ -790,50 +810,6 @@ class DomainContextHandler(ContextHandler):
         else:
             raise IncompatibleContext()
 
-    #noinspection PyMethodOverriding
-    def clone_context(self, context, domain, attrs, metas):
-        context = copy.deepcopy(context)
-
-        for setting, data, instance in self.provider.traverse_settings(data=context.values):
-            if not isinstance(setting, ContextSetting):
-                continue
-
-            value = data.get(setting.name, None)
-            if isinstance(value, list):
-                sel_name = getattr(setting, "selected", None)
-                if sel_name is not None:
-                    selected = data.get(sel_name, [])
-                    selected.sort()
-                    next_sel = selected and selected[0] or -1
-                else:
-                    selected = None
-                    next_sel = -1
-                i = j = realI = 0
-                while i < len(value):
-                    if self._var_exists(setting, value[i], attrs, metas):
-                        if next_sel == realI:
-                            selected[j] -= realI - i
-                            j += 1
-                            next_sel = j < len(selected) and selected[j] or -1
-                        i += 1
-                    else:
-                        del value[i]
-                        if next_sel == realI:
-                            del selected[j]
-                            next_sel = j < len(selected) and selected[j] or -1
-                    realI += 1
-                if sel_name is not None:
-                    data[sel_name] = selected[:j]
-            elif value is not None:
-                if (value[1] >= 0 and
-                        not self._var_exists(setting, value, attrs, metas)):
-                    del data[setting.name]
-
-        context.attributes, context.metas = attrs, metas
-        context.ordered_domain = [(attr.name, vartype(attr)) for attr in
-                                  itertools.chain(domain, domain.metas)]
-        return context
-
     def mergeBack(self, widget):
         glob = self.global_contexts
         mp = self.max_vars_to_pickle
@@ -860,18 +836,19 @@ class IncompatibleContext(Exception):
 
 
 class ClassValuesContextHandler(ContextHandler):
-    #noinspection PyMethodOverriding
-    def find_or_create_context(self, widget, classes):
+    def open_context(self, widget, classes):
         if isinstance(classes, Variable):
             if isinstance(classes, DiscreteVariable):
                 classes = classes.values
             else:
                 classes = None
-        context, is_new = super().find_or_create_context(widget, classes)
+
+        super().open_context(widget, classes)
+
+    def new_context(self, classes):
+        context = super().new_context()
         context.classes = classes
-        if is_new:
-            context.values = {}
-        return context, is_new
+        return context
 
     #noinspection PyMethodOverriding
     def match(self, context, classes):
@@ -884,15 +861,6 @@ class ClassValuesContextHandler(ContextHandler):
         super().settings_to_widget(widget)
         context = widget.current_context
         self.provider.unpack(widget, context.values)
-
-    def settings_from_widget(self, widget):
-        super().settings_from_widget(widget)
-        context = widget.current_context
-
-        def packer(setting, instance):
-            yield setting.name, copy.copy(getattr(instance, setting.name))
-
-        context.values = self.provider.pack(widget, packer=packer)
 
     def fast_save(self, widget, name, value):
         if widget.current_context is None:

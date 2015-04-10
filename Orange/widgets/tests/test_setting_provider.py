@@ -11,67 +11,6 @@ SHOW_Y_AXIS = "show_y_axis"
 ALLOW_ZOOMING = "allow_zooming"
 
 
-def initialize_settings(instance):
-    """This is usually done in Widget's new,
-    but we avoid all that complications for tests."""
-    provider = default_provider.get_provider(instance.__class__)
-    if provider:
-        provider.initialize(instance)
-default_provider = None
-""":type: SettingProvider"""
-
-
-class BaseGraph:
-    show_labels = Setting(True)
-
-    def __init__(self):
-        initialize_settings(self)
-
-
-class Graph(BaseGraph):
-    show_x_axis = Setting(True)
-    show_y_axis = Setting(True)
-
-    def __init__(self):
-        super().__init__()
-        initialize_settings(self)
-
-
-class ExtendedGraph(Graph):
-    pass
-
-
-class ZoomToolbar:
-    allow_zooming = Setting(True)
-
-    def __init__(self):
-        initialize_settings(self)
-
-
-class BaseWidget:
-    settingsHandler = None
-
-    show_graph = Setting(True)
-
-    graph = SettingProvider(Graph)
-
-    def __init__(self):
-        initialize_settings(self)
-        self.graph = Graph()
-
-
-class Widget(BaseWidget):
-    show_zoom_toolbar = Setting(True)
-
-    zoom_toolbar = SettingProvider(ZoomToolbar)
-
-    def __init__(self):
-        super().__init__()
-        initialize_settings(self)
-
-        self.zoom_toolbar = ZoomToolbar()
-
-
 class SettingProviderTestCase(unittest.TestCase):
     def setUp(self):
         global default_provider
@@ -185,7 +124,7 @@ class SettingProviderTestCase(unittest.TestCase):
         self.assertEqual(widget.graph.show_y_axis, False)
         self.assertEqual(widget.zoom_toolbar.allow_zooming, True)
 
-    def test_all_settings_works_without_instance_or_data(self):
+    def test_traverse_settings_works_without_instance_or_data(self):
         settings = set()
 
         for setting, data, instance in default_provider.traverse_settings():
@@ -196,7 +135,7 @@ class SettingProviderTestCase(unittest.TestCase):
             SHOW_LABELS, SHOW_X_AXIS, SHOW_Y_AXIS,
             ALLOW_ZOOMING})
 
-    def test_all_settings_selects_correct_data(self):
+    def test_traverse_settings_selects_correct_data(self):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4, SHOW_Y_AXIS: 5}
         zoom_data = {ALLOW_ZOOMING: 6}
@@ -218,7 +157,7 @@ class SettingProviderTestCase(unittest.TestCase):
             }
         )
 
-    def test_all_settings_with_partial_data(self):
+    def test_traverse_settings_with_partial_data(self):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4}
         all_data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2, GRAPH: graph_data}
@@ -238,7 +177,7 @@ class SettingProviderTestCase(unittest.TestCase):
             }
         )
 
-    def test_all_settings_selects_correct_instance(self):
+    def test_traverse_settings_selects_correct_instance(self):
         settings = {}
         widget = Widget()
 
@@ -257,7 +196,7 @@ class SettingProviderTestCase(unittest.TestCase):
             settings
         )
 
-    def test_all_settings_with_partial_instance(self):
+    def test_traverse_settings_with_partial_instance(self):
         settings = {}
         widget = Widget()
         widget.graph = None
@@ -284,6 +223,68 @@ class SettingProviderTestCase(unittest.TestCase):
                 self.assertDefaultSettingsEqual(provider.providers[name], value)
             else:
                 self.assertEqual(provider.settings[name].default, value)
+
+
+def initialize_settings(instance):
+    """This is usually done in Widget's new,
+    but we avoid all that complications for tests."""
+    provider = default_provider.get_provider(instance.__class__)
+    if provider:
+        provider.initialize(instance)
+default_provider = None
+""":type: SettingProvider"""
+
+
+class BaseGraph:
+    show_labels = Setting(True)
+
+    def __init__(self):
+        initialize_settings(self)
+
+
+class Graph(BaseGraph):
+    show_x_axis = Setting(True)
+    show_y_axis = Setting(True)
+
+    def __init__(self):
+        super().__init__()
+        initialize_settings(self)
+
+
+class ExtendedGraph(Graph):
+    pass
+
+
+class ZoomToolbar:
+    allow_zooming = Setting(True)
+
+    def __init__(self):
+        initialize_settings(self)
+
+
+class BaseWidget:
+    settingsHandler = None
+
+    show_graph = Setting(True)
+
+    graph = SettingProvider(Graph)
+
+    def __init__(self):
+        initialize_settings(self)
+        self.graph = Graph()
+
+
+class Widget(BaseWidget):
+    show_zoom_toolbar = Setting(True)
+
+    zoom_toolbar = SettingProvider(ZoomToolbar)
+
+    def __init__(self):
+        super().__init__()
+        initialize_settings(self)
+
+        self.zoom_toolbar = ZoomToolbar()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
