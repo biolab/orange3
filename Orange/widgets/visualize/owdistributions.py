@@ -7,14 +7,11 @@ A widget for plotting attribute distributions.
 """
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
-
 import numpy
-
 import pyqtgraph as pg
 
 import Orange.data
 from Orange.statistics import distribution, contingency
-
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
@@ -115,7 +112,8 @@ class OWDistributions(widget.OWWidget):
 
         self.varview = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection)
-        self.varview.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.varview.setSizePolicy(
+            QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.varview.setModel(self.varmodel)
         self.varview.setSelectionModel(
             itemmodels.ListSingleSelectionModel(self.varmodel))
@@ -236,16 +234,17 @@ class OWDistributions(widget.OWWidget):
             edges, curve = curve_est(dist)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
-                         fillLevel=0, brush=QtGui.QBrush(Qt.gray), pen=QtGui.QColor(Qt.white))
+                         fillLevel=0, brush=QtGui.QBrush(Qt.gray),
+                         pen=QtGui.QColor(Qt.white))
             self.plot.addItem(item)
         else:
             bottomaxis.setTicks([list(enumerate(var.values))])
             for i, w in enumerate(dist):
                 geom = QtCore.QRectF(i - 0.33, 0, 0.66, w)
                 print(w, list(enumerate(var.values)))
-                item = DistributionBarItem(geom, [1.0], [QtGui.QColor(128, 128, 128)])
+                item = DistributionBarItem(geom, [1.0],
+                                           [QtGui.QColor(128, 128, 128)])
                 self.plot.addItem(item)
-
 
     def _on_relative_freq_changed(self):
         self.set_left_axis_name()
