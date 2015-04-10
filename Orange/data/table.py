@@ -322,9 +322,15 @@ class Table(MutableSequence, Storage):
             self.metas = get_columns(row_indices, conversion.metas, n_rows)
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
-            self.W = np.array(source.W[row_indices])
+            if source.has_weights():
+                self.W = np.array(source.W[row_indices])
+            else:
+                self.W = np.empty((n_rows, 0))
             self.name = getattr(source, 'name', '')
-            self.ids = np.array(source.ids[row_indices])
+            if hasattr(source, 'ids'):
+                self.ids = np.array(source.ids[row_indices])
+            else:
+                cls._init_ids(self)
             Table.conversion_cache[(id(domain), id(source))] = self
             return self
         finally:
