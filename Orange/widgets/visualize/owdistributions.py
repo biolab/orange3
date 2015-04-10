@@ -61,13 +61,17 @@ class DistributionBarItem(pg.GraphicsObject):
     def __paint(self):
         picture = QtGui.QPicture()
         painter = QtGui.QPainter(picture)
-        painter.setPen(Qt.NoPen)
+        pen = QtGui.QPen(QtGui.QBrush(Qt.white), 0.5)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
 
         geom = self.geometry
         x, y = geom.x(), geom.y()
         w, h = geom.width(), geom.height()
         for d, c in zip(self.dist, self.colors):
-            painter.setBrush(QtGui.QBrush(c))
+            if d == 0:
+                continue
+            painter.setBrush(QtGui.QBrush(c.lighter()))
             painter.drawRect(QtCore.QRectF(x, y, w, d * h))
             y += d * h
         painter.end()
@@ -95,56 +99,55 @@ class OWDistributions(widget.OWWidget):
     Hist, ASH, Kernel = 0, 1, 2
     #: Continuous variable density estimation method
     cont_est_type = settings.Setting(ASH)
+    relative_freq = settings.Setting(False)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data = None
 
+        self.distributions = None
+        self.contingencies = None
+        self.var = self.cvar = None
         box = gui.widgetBox(self.controlArea, "Variable")
 
         self.varmodel = itemmodels.VariableListModel()
         self.groupvarmodel = itemmodels.VariableListModel()
 
         self.varview = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection
-        )
+            selectionMode=QtGui.QListView.SingleSelection)
         self.varview.setModel(self.varmodel)
         self.varview.setSelectionModel(
-            itemmodels.ListSingleSelectionModel(self.varmodel)
-        )
+            itemmodels.ListSingleSelectionModel(self.varmodel))
         self.varview.selectionModel().selectionChanged.connect(
-            self._on_variable_idx_changed
-        )
-
+            self._on_variable_idx_changed)
         box.layout().addWidget(self.varview)
 
-        box = gui.widgetBox(self.controlArea, "Group")
+        box = gui.widgetBox(self.controlArea, "Group by")
         self.groupvarview = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection
-        )
+            selectionMode=QtGui.QListView.SingleSelection)
         self.groupvarview.setModel(self.groupvarmodel)
         self.groupvarview.selectionModel().selectionChanged.connect(
-            self._on_groupvar_idx_changed
-        )
+            self._on_groupvar_idx_changed)
         box.layout().addWidget(self.groupvarview)
 
-        box = gui.widgetBox(self.controlArea, "Options")
-        self.estimator = 0
-        box = gui.radioButtons(
-            box, self, "cont_est_type",
-            ["Histogram",
-             "Average shifted histogram",
-             "Kernel density estimator"],
-            callback=self._on_cont_est_type_changed
-        )
+        self.disc_options = gui.widgetBox(self.controlArea, "Show")
+        gui.checkBox(self.disc_options, self, "relative_freq",
+                     "Relative frequencies",
+                     callback=self._on_relative_freq_changed)
+
+        self.cont_options = gui.widgetBox(self.controlArea, "Show")
+        gui.comboBox(
+            self.cont_options, self, "cont_est_type",
+            orientation="horizontal", valueType=int,
+            items=["Histogram", "Average shifted histogram",
+                   "Kernel density estimator"],
+            callback=self._on_cont_est_type_changed)
+        self.cont_options.hide()
 
         plotview = pg.PlotWidget(background=None)
         self.mainArea.layout().addWidget(plotview)
         w = QtGui.QLabel()
-        w.setSizePolicy(
-            QtGui.QSizePolicy.Expanding,
-            QtGui.QSizePolicy.Fixed
-        )
+        w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
 
         self.plot = pg.PlotItem()
@@ -152,13 +155,9 @@ class OWDistributions(widget.OWWidget):
         self.plot.getViewBox().setMenuEnabled(False)
         plotview.setCentralItem(self.plot)
 
-        self.plot.getAxis("left").setLabel("Frequency")
-        axis = self.plot.getAxis("left")
-        axis.setLabel("Density")
-        axis.setPen(QtGui.QPen(self.palette().color(QtGui.QPalette.Text)))
-
-        axis = self.plot.getAxis("bottom")
-        axis.setPen(QtGui.QPen(self.palette().color(QtGui.QPalette.Text)))
+        pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
+        for axis in ("left", "bottom"):
+            self.plot.getAxis(axis).setPen(pen)
 
     def set_data(self, data):
         self.closeContext()
@@ -171,47 +170,42 @@ class OWDistributions(widget.OWWidget):
             if is_discrete(domain.class_var):
                 self.groupvar_idx = \
                     list(self.groupvarmodel).index(domain.class_var)
-
             self.openContext(domain)
-
             self.variable_idx = min(max(self.variable_idx, 0),
                                     len(self.varmodel) - 1)
             self.groupvar_idx = min(max(self.groupvar_idx, 0),
                                     len(self.groupvarmodel) - 1)
             itemmodels.select_row(self.groupvarview, self.groupvar_idx)
             itemmodels.select_row(self.varview, self.variable_idx)
-
             self._setup()
 
     def clear(self):
         self.plot.clear()
         self.varmodel[:] = []
         self.groupvarmodel[:] = []
-
         self.variable_idx = -1
         self.groupvar_idx = -1
 
     def _setup(self):
-        """Setup the plot."""
         self.plot.clear()
-
         varidx = self.variable_idx
-        var = cvar = None
+        self.var = self.cvar = None
         if varidx >= 0:
-            var = self.varmodel[varidx]
-
+            self.var = self.varmodel[varidx]
         if self.groupvar_idx >= 0:
-            cvar = self.groupvarmodel[self.groupvar_idx]
-
-        if var is None:
+            self.cvar = self.groupvarmodel[self.groupvar_idx]
+        if self.var is None:
             return
-
-        if is_discrete(cvar):
-            cont = contingency.get_contingency(self.data, var, cvar)
-            self.set_contingency(cont, var, cvar)
+        self.set_left_axis_name()
+        self.show_hide_options()
+        if is_discrete(self.cvar):
+            self.contingencies = \
+                contingency.get_contingency(self.data, self.var, self.cvar)
+            self.display_contingency()
         else:
-            dist = distribution.get_distribution(self.data, var)
-            self.set_distribution(dist, var)
+            self.distributions = \
+                distribution.get_distribution(self.data, self.var)
+            self.display_distribution()
 
     def _density_estimator(self):
         if self.cont_est_type == OWDistributions.Hist:
@@ -226,33 +220,24 @@ class OWDistributions(widget.OWWidget):
             return rect_kernel_curve
 
     def set_distribution(self, dist, var):
-        """
-        Set the distribution to display.
-        """
+        dist = self.distributions
+        var = self.var
         assert len(dist) > 0
         self.plot.clear()
 
-        leftaxis = self.plot.getAxis("left")
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
 
+        self.set_left_axis_name()
         if is_continuous(var):
-            if self.cont_est_type == OWDistributions.Hist:
-                leftaxis.setLabel("Frequency")
-            else:
-                leftaxis.setLabel("Density")
-
             bottomaxis.setTicks(None)
-
             curve_est = self._density_estimator()
             edges, curve = curve_est(dist)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray))
             item.setPen(QtGui.QPen(Qt.black))
-
         elif is_discrete(var):
-            leftaxis.setLabel("Frequency")
             bottomaxis.setTicks([list(enumerate(var.values))])
             for i, w in enumerate(dist):
                 geom = QtCore.QRectF(i - 0.33, 0, 0.66, w)
@@ -261,10 +246,19 @@ class OWDistributions(widget.OWWidget):
 
         self.plot.addItem(item)
 
-    def set_contingency(self, cont, var, cvar):
+    def _on_relative_freq_changed(self):
+        self.set_left_axis_name()
+        if is_discrete(self.cvar):
+            self.display_contingency()
+        else:
+            self.display_distribution()
+
+    def display_contingency(self):
         """
         Set the contingency to display.
         """
+        cont = self.contingencies
+        var, cvar = self.var, self.cvar
         assert len(cont) > 0
         self.plot.clear()
 
@@ -276,11 +270,6 @@ class OWDistributions(widget.OWWidget):
         colors = [palette[i] for i in range(len(cvar.values))]
 
         if is_continuous(var):
-            if self.cont_est_type == OWDistributions.Hist:
-                leftaxis.setLabel("Frequency")
-            else:
-                leftaxis.setLabel("Density")
-
             bottomaxis.setTicks(None)
 
             weights = numpy.array([numpy.sum(W) for _, W in cont])
@@ -296,18 +285,20 @@ class OWDistributions(widget.OWWidget):
 
             for (X, Y), color in reversed(list(zip(cum_curves, colors))):
                 item = pg.PlotCurveItem()
+                pen = QtGui.QPen(QtGui.QBrush(Qt.white), 0.5)
+                pen.setCosmetic(True)
                 item.setData(X, Y, antialias=True, stepMode=True,
-                             fillLevel=0, brush=QtGui.QBrush(color))
-                item.setPen(QtGui.QPen(color))
+                             fillLevel=0, brush=QtGui.QBrush(color.lighter()),
+                             pen=pen)
                 self.plot.addItem(item)
 
 #             # XXX: sum the individual curves and not the distributions.
-#             # The conditional distributions might be 'smother' then
+#             # The conditional distributions might be 'smoother' than
 #             # the cumulative one
 #             cum_dist = [cont[0]]
 #             for dist in cont[1:]:
 #                 cum_dist.append(dist_sum(dist, cum_dist[-1]))
-# 
+#
 #             curves = [rect_kernel_curve(dist) for dist in cum_dist]
 #             colors = [Qt.blue, Qt.red, Qt.magenta]
 #             for (X, Y), color in reversed(list(zip(curves, colors))):
@@ -317,15 +308,31 @@ class OWDistributions(widget.OWWidget):
 #                 item.setPen(QtGui.QPen(color))
 #                 self.plot.addItem(item)
         elif is_discrete(var):
-            leftaxis.setLabel("Frequency")
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
-                geom = QtCore.QRectF(i - 0.333, 0, 0.666, dsum)
+                geom = QtCore.QRectF(i - 0.333, 0, 0.666, 100
+                                     if self.relative_freq else dsum)
                 item = DistributionBarItem(geom, dist / dsum, colors)
                 self.plot.addItem(item)
+
+    def set_left_axis_name(self):
+        set_label = self.plot.getAxis("left").setLabel
+        if is_continuous(self.var) and \
+                self.cont_est_type != OWDistributions.Hist:
+            set_label("Density")
+        else:
+            set_label(["Frequency", "Relative frequency"][self.relative_freq])
+
+    def show_hide_options(self):
+        if self.var and is_continuous(self.var):
+            self.disc_options.hide()
+            self.cont_options.show()
+        else:
+            self.cont_options.hide()
+            self.disc_options.show()
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
@@ -336,6 +343,7 @@ class OWDistributions(widget.OWWidget):
         self._setup()
 
     def _on_cont_est_type_changed(self):
+        self.set_left_axis_name()
         if self.data is not None:
             self._setup()
 
