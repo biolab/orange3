@@ -31,7 +31,7 @@ def suite():
     ])
     if run_widget_tests:
         all_tests.extend([
-            load(test_widget),
+            #load(test_widget), # does not run on travis
         ])
     return unittest.TestSuite(all_tests)
 
