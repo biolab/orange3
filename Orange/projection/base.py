@@ -43,8 +43,7 @@ class Projection:
 
     @single_cache
     def transform(self, X):
-        trns = self.proj.transform(X)
-        return trns
+        return self.proj.transform(X)
 
     def __call__(self, data):
         return Orange.data.Table(self.domain, data)
