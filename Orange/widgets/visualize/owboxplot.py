@@ -624,6 +624,9 @@ class OWBoxPlot(widget.OWWidget):
         return box
 
     def strudel(self, dist):
+        attr_ind = self.attributes_select[0]
+        attr = self.ddataset.domain[attr_ind]
+
         ss = np.sum(dist)
         box = QtGui.QGraphicsItemGroup()
         if ss < 1e-6:
@@ -639,6 +642,7 @@ class OWBoxPlot(widget.OWWidget):
             rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
             rect.setBrush(QtGui.QBrush(QtGui.QColor(*get_color(i))))
             rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            rect.setToolTip(attr.values[i])
             cum += v
         return box
 
