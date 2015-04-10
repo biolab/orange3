@@ -36,6 +36,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler.b = 'B'
         self.assertEqual(template.b, 'b')
 
+    @patch('Orange.widgets.settings.store_settings', True)
     def test_read_defaults(self):
         default_settings = {'a': 5, 'b': {1: 5}}
         f, settings_file = mkstemp(suffix='.ini')
@@ -50,6 +51,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         os.remove(settings_file)
 
+    @patch('Orange.widgets.settings.store_settings', True)
     def test_write_defaults(self):
         f, settings_file = mkstemp(suffix='.ini')
 

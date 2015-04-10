@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
-from Orange.widgets.data.owselectcolumns import \
+from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils import vartype

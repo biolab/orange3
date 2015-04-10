@@ -5,7 +5,12 @@ import itertools
 import pickle
 import warnings
 
-from Orange.canvas.utils import environ
+try:
+    from Orange.canvas.utils import environ
+    store_settings = True
+except ImportError:
+    store_settings = False
+
 from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
 from Orange.widgets.utils import vartype
 
@@ -230,6 +235,9 @@ class SettingsHandler:
         """Read (global) defaults for this widget class from a file.
         Opens a file and calls :obj:`read_defaults_file`. Derived classes
         should overload the latter."""
+        if not store_settings:
+            return
+
         filename = self._get_settings_filename()
         if os.path.exists(filename):
             settings_file = open(filename, "rb")
@@ -254,6 +262,9 @@ class SettingsHandler:
         """Write (global) defaults for this widget class to a file.
         Opens a file and calls :obj:`write_defaults_file`. Derived classes
         should overload the latter."""
+        if not store_settings:
+            return
+
         filename = self._get_settings_filename()
         settings_file = open(filename, "wb")
         try:
