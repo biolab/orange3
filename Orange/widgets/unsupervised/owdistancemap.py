@@ -362,15 +362,18 @@ class OWDistanceMap(widget.OWWidget):
         self.clear()
         self.matrix = matrix
         if matrix is not None:
-            self.set_items(matrix.row_items)
+            self.set_items(matrix.row_items, matrix.axis)
         else:
             self.set_items(None)
 
-    def set_items(self, items):
+    def set_items(self, items, axis=1):
         self.items = items
         model = self.annot_combo.model()
         if items is None:
             model[:] = ["None", "Enumeration"]
+        elif not axis:
+            model[:] = ["None", "Enumeration", "Attribute names"]
+            self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
             model[:] = ["None", "Enumeration"] + list(items.domain)
         elif isinstance(items, list) and \
@@ -484,6 +487,9 @@ class OWDistanceMap(widget.OWWidget):
             labels = None
         elif self.annotation_idx == 1:
             labels = [str(i + 1) for i in range(self.matrix.dim[0])]
+        elif self.annot_combo.model()[self.annotation_idx] == "Attribute names":
+                attr = self.matrix.row_items.domain.attributes
+                labels = [str(attr[i]) for i in range(self.matrix.dim[0])]
         elif self.annotation_idx == 2 and \
                 isinstance(self.items, widget.AttributeList):
             labels = [v.name for v in self.items]

@@ -846,14 +846,18 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._set_cut_line_visible(self.selection_method == 1)
 
     def set_distances(self, matrix):
+        self._set_items(None)
         self.matrix = matrix
         self._invalidate_clustering()
-        self._set_items(matrix.row_items if matrix is not None else None)
+        self._set_items(matrix.row_items if matrix is not None else None, matrix.axis)
 
-    def _set_items(self, items):
+    def _set_items(self, items, axis=1):
         self.items = items
         if items is None:
             self.label_cb.model()[:] = ["None", "Enumeration"]
+        elif not axis:
+            self.label_cb.model()[:] = ["None", "Enumeration", "Attribute names"]
+            self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
             vars = list(items.domain)
             self.label_cb.model()[:] = ["None", "Enumeration"] + vars
@@ -926,6 +930,9 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = []
             elif self.annotation_idx == 1:
                 labels = [str(i) for i in indices]
+            elif self.label_cb.model()[self.annotation_idx] == "Attribute names":
+                attr = self.matrix.row_items.domain.attributes
+                labels = [str(attr[i]) for i in indices]
             elif isinstance(self.items, Orange.data.Table):
                 var = self.label_cb.model()[self.annotation_idx]
                 col = self.items[:, var]

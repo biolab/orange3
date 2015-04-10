@@ -20,8 +20,13 @@ class DistMatrix():
     .. attribute:: col_items
 
         Items corresponding to matrix columns.
+
+    .. attribute:: axis
+
+        If axis=1 we calculate distances between rows,
+        if axis=0 we calculate distances between columns.
     """
-    def __init__(self, data, row_items=None, col_items=None):
+    def __init__(self, data, row_items=None, col_items=None, axis=1):
         """Construct a new distance matrix containing the given data.
 
         :param data: Distance matrix
@@ -30,11 +35,15 @@ class DistMatrix():
         :type row_items: `Orange.data.Table` or `Orange.data.Instance`
         :param col_items: Items in matrix columns
         :type col_items: `Orange.data.Table` or `Orange.data.Instance`
+        :param axis: The axis along which the distances are calculated
+        :type axis: int
+
         """
         self.dim = data.shape
         self.X = np.array(data)
         self.row_items = row_items
         self.col_items = col_items
+        self.axis = axis
 
     def get_KNN(self, i, k):
         """Return k columns with the lowest value in the i-th row.

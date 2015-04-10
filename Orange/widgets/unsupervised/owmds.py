@@ -130,6 +130,8 @@ class OWMDS(widget.OWWidget):
         super().__init__(parent)
         self.matrix = None
         self.data = None
+        self.matrix_data = None
+        self.signal_data = None
 
         self._pen_data = None
         self._shape_data = None
@@ -213,20 +215,22 @@ class OWMDS(widget.OWWidget):
         self.mainArea.layout().addWidget(self.plot)
 
     def set_data(self, data):
-        self.closeContext()
-        self._clear()
-        self.data = data
-        if data is not None:
-            self._initialize(data)
-            self.openContext(data)
+        self.signal_data = data
 
-        if self.matrix is None:
-            self._effective_matrix = None
+        if self.matrix and data is not None and len(self.matrix.X) == len(data):
+            self.closeContext()
+            self.data = data
+            self.update_controls()
+            self.openContext(data)
+        else:
             self._invalidated = True
 
     def set_disimilarity(self, matrix):
         self.matrix = matrix
-        self._effective_matrix = matrix
+        if matrix and matrix.row_items:
+            self.matrix_data = matrix.row_items
+        if matrix is None:
+            self.matrix_data = None
         self._invalidated = True
 
     def _clear(self):
@@ -238,53 +242,84 @@ class OWMDS(widget.OWWidget):
         self.colorvar_model[:] = ["Same color"]
         self.shapevar_model[:] = ["Same shape"]
         self.sizevar_model[:] = ["Same size"]
+        self.labelvar_model[:] = ["No labels"]
 
         self.color_index = 0
         self.shape_index = 0
         self.size_index = 0
         self.label_index = 0
 
-    def _initialize(self, data):
-        # initialize the graph state from data
-        domain = data.domain
-        all_vars = list(domain.variables + domain.metas)
-        disc_vars = list(filter(is_discrete, all_vars))
-        cont_vars = list(filter(is_continuous, all_vars))
-        str_vars = [var for var in all_vars
-                    if isinstance(var, (Orange.data.DiscreteVariable,
-                                        Orange.data.StringVariable))]
+    def update_controls(self):
+        if getattr(self.matrix, 'axis', 1) == 0:
+            # Column-wise distances
+            attr = "Attribute names"
+            self.labelvar_model[:] = ["No labels", attr]
+            self.shapevar_model[:] = ["Same shape", attr]
+            self.colorvar_model[:] = ["Same color", attr]
 
-        def set_separator(model, index):
-            index = model.index(index, 0)
-            model.setData(index, "separator", Qt.AccessibleDescriptionRole)
-            model.setData(index, Qt.NoItemFlags, role="flags")
+            self.color_index = list(self.colorvar_model).index(attr)
+            self.shape_index = list(self.shapevar_model).index(attr)
+        else:
+            # initialize the graph state from data
+            domain = self.data.domain
+            all_vars = list(domain.variables + domain.metas)
+            disc_vars = list(filter(is_discrete, all_vars))
+            cont_vars = list(filter(is_continuous, all_vars))
+            str_vars = [var for var in all_vars
+                        if isinstance(var, (Orange.data.DiscreteVariable,
+                                            Orange.data.StringVariable))]
 
-        self.colorvar_model[:] = ["Same color", ""] + all_vars
-        set_separator(self.colorvar_model, 1)
+            def set_separator(model, index):
+                index = model.index(index, 0)
+                model.setData(index, "separator", Qt.AccessibleDescriptionRole)
+                model.setData(index, Qt.NoItemFlags, role="flags")
 
-        self.shapevar_model[:] = ["Same shape", ""] + disc_vars
-        set_separator(self.shapevar_model, 1)
+            self.colorvar_model[:] = ["Same color", ""] + all_vars
+            set_separator(self.colorvar_model, 1)
 
-        self.sizevar_model[:] = ["Same size", "Stress", ""] + cont_vars
-        set_separator(self.sizevar_model, 2)
+            self.shapevar_model[:] = ["Same shape", ""] + disc_vars
+            set_separator(self.shapevar_model, 1)
 
-        self.labelvar_model[:] = ["No labels", ""] + str_vars
-        set_separator(self.labelvar_model, 1)
+            self.sizevar_model[:] = ["Same size", "Stress", ""] + cont_vars
+            set_separator(self.sizevar_model, 2)
 
-        if domain.class_var is not None:
-            self.color_index = list(self.colorvar_model).index(domain.class_var)
+            self.labelvar_model[:] = ["No labels", ""] + str_vars
+            set_separator(self.labelvar_model, 1)
+
+            if domain.class_var is not None:
+                self.color_index = list(self.colorvar_model).index(domain.class_var)
 
     def apply(self):
-        if self.data is None and self.matrix is None:
-            self.embedding = None
-            self._update_plot()
-            return
+        # clear everything
+        self.closeContext()
+        self._clear()
+        self.data = None
+        self._effective_matrix = None
+        self.embedding = None
 
-        if self._effective_matrix is None:
-            if self.matrix is not None:
-                self._effective_matrix = self.matrix
-            elif self.data is not None:
-                self._effective_matrix = Orange.distance.Euclidean(self.data)
+        # if no data nor matrix is present reset plot
+        if self.signal_data is None and self.matrix is None:
+            return self._update_plot()
+
+        if self.signal_data and self.matrix_data and len(self.signal_data) != len(self.matrix_data):
+            self.error(1, "Data and distances dimensions do not match.")
+            return self._update_plot()
+        self.error(1)
+
+        if self.signal_data:
+            self.data = self.signal_data
+        elif self.matrix_data:
+            self.data = self.matrix_data
+
+        if self.matrix:
+            self._effective_matrix = self.matrix
+            if self.matrix.axis == 0:
+                self.data = None
+        else:
+            self._effective_matrix = Orange.distance.Euclidean(self.data)
+
+        self.update_controls()
+        self.openContext(self.data)
 
         X = self._effective_matrix.X
 
@@ -343,10 +378,14 @@ class OWMDS(widget.OWWidget):
 
     def _setup_plot(self):
         have_data = self.data is not None
+        have_matrix_transposed = self.matrix is not None and not self.matrix.axis
 
         def column(data, variable):
             a, _ = data.get_column_view(variable)
             return a.ravel()
+
+        def attributes(matrix):
+            return matrix.row_items.domain.attributes
 
         def scale(a):
             dmin, dmax = numpy.nanmin(a), numpy.nanmax(a)
@@ -369,6 +408,13 @@ class OWMDS(widget.OWWidget):
                 pen_data = [make_pen(QtGui.QColor(r, g, b, self.symbol_opacity),
                                      cosmetic=True)
                             for r, g, b in color_data]
+            elif have_matrix_transposed and self.colorvar_model[self.color_index] == 'Attribute names':
+                attr = attributes(self.matrix)
+                palette = colorpalette.ColorPaletteGenerator(len(attr))
+                color_data = [palette.getRGB(i) for i in range(len(attr))]
+                pen_data = [make_pen(QtGui.QColor(r, g, b, self.symbol_opacity),
+                                     cosmetic=True)
+                            for r, g, b in color_data]
             else:
                 pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
             self._pen_data = pen_data
@@ -383,6 +429,11 @@ class OWMDS(widget.OWWidget):
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
+            elif have_matrix_transposed and self.shapevar_model[self.shape_index] == 'Attribute names':
+                Symbols = ScatterPlotItem.Symbols
+                symbols = numpy.array(list(Symbols.keys()))
+                attr = [i % (len(Symbols) - 1) for i, _ in enumerate(attributes(self.matrix))]
+                shape_data = symbols[attr]
             else:
                 shape_data = "o"
             self._shape_data = shape_data
@@ -410,6 +461,10 @@ class OWMDS(widget.OWWidget):
                 label_data = [label_var.repr_val(val) for val in label_data]
                 label_items = [pg.TextItem(text, anchor=(0.5, 0))
                                for text in label_data]
+            elif have_matrix_transposed and self.labelvar_model[self.label_index] == 'Attribute names':
+                attr = attributes(self.matrix)
+                label_items = [pg.TextItem(str(text), anchor=(0.5, 0))
+                               for text in attr]
             else:
                 label_items = None
             self._label_data = label_items

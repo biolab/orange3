@@ -66,7 +66,7 @@ class SklDistance(Distance):
             x2 = np.atleast_2d(x2)
         dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2)
+            dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
         return dist
@@ -117,7 +117,7 @@ class SpearmanDistance(Distance):
         if transpose:
            dist = dist.T
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2)
+            dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
         return dist
@@ -155,7 +155,7 @@ class PearsonDistance(Distance):
         else:
             dist = (1. - rho) / 2.
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2)
+            dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
         return dist
