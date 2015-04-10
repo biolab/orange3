@@ -12,8 +12,14 @@ class TestDatasets(unittest.TestCase):
         self.assertNotEqual(len(d1), 0)
         self.assertEqual(len(d1), len(d2))
 
+    def test_filter(self):
+        discr = [info for info in Orange.datasets.values() if info['features']['continuous'] == 0]
+        for info in discr:
+            data = Orange.data.Table(info['location'])
+            self.assertFalse(data.domain.has_continuous_attributes())
+
     def test_have_all(self):
-        datasets_folder = '../datasets'
+        datasets_folder = os.path.join(os.path.dirname(__file__), '../datasets')
         for fname in os.listdir(datasets_folder):
             if not os.path.isfile(os.path.join(datasets_folder, fname)):
                 continue
