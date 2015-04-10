@@ -140,8 +140,9 @@ class OWDistributions(widget.OWWidget):
         self.groupvarview.selectionModel().selectionChanged.connect(
             self._on_groupvar_idx_changed)
         box.layout().addWidget(self.groupvarview)
-        gui.checkBox(box, self, "relative_freq", "Show relative frequencies",
-                     callback=self._on_relative_freq_changed)
+        self.cb_rel_freq = gui.checkBox(
+            box, self, "relative_freq", "Show relative frequencies",
+            callback=self._on_relative_freq_changed)
 
         plotview = pg.PlotWidget(background=None)
         self.mainArea.layout().addWidget(plotview)
@@ -193,9 +194,10 @@ class OWDistributions(widget.OWWidget):
             self.var = self.varmodel[varidx]
         if self.groupvar_idx >= 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
+        self.set_left_axis_name()
+        self.enable_disable_rel_freq()
         if self.var is None:
             return
-        self.set_left_axis_name()
         if is_discrete(self.cvar):
             self.contingencies = \
                 contingency.get_contingency(self.data, self.var, self.cvar)
@@ -323,6 +325,9 @@ class OWDistributions(widget.OWWidget):
             set_label("Density")
         else:
             set_label(["Frequency", "Relative frequency"][self.relative_freq])
+
+    def enable_disable_rel_freq(self):
+        self.cb_rel_freq.setDisabled(self.var and is_continuous(self.var))
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
