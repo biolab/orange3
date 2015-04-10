@@ -347,7 +347,8 @@ class SettingsHandler:
 
     def fast_save(self, widget, name, value):
         """Store the (changed) widget's setting immediately to the context."""
-        self.known_settings[name].default = value
+        if name in self.known_settings:
+            self.known_settings[name].default = value
 
     @staticmethod
     def update_packed_data(data, name, value):

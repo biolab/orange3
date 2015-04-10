@@ -145,6 +145,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler.fast_save(widget, 'component.int_setting', 5)
         self.assertEqual(Component.int_setting.default, 5)
 
+        handler.fast_save(widget, 'non_setting', 4)
 
 
 class Component:
@@ -153,6 +154,7 @@ class Component:
 
 class SimpleWidget:
     setting = Setting(42)
+    non_setting = 5
 
     component = SettingProvider(Component)
 
