@@ -1,13 +1,13 @@
-import json, os
+import json
+import os
 
-class DatasetInfo(dict):
+
+class _DatasetInfo(dict):
     def __init__(self):
         super().__init__(self)
-        datasets_folder = os.path.join(os.path.dirname(__file__), '../datasets')
-        f = open(os.path.join(datasets_folder,'datasets.info'), 'r')
-        info = json.load(f)
-        f.close()
+        datasets_folder = os.path.join(os.path.dirname(__file__),
+                                       '../datasets')
+        with open(os.path.join(datasets_folder, 'datasets.info'), 'r') as f:
+            info = json.load(f)
         self.update(info)
-
-    def __getattr__(self, item):
-        return self[item]
+        self.__dict__.update(info)

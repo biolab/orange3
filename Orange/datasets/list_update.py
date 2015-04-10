@@ -30,19 +30,19 @@ def data_info(name, location):
         }
     }
 
-info = dict()
+if __name__ == "__main__":
+    info = dict()
 
-for name, location in external_datasets:
-    info[name] = data_info(name, location)
+    for name, location in external_datasets:
+        info[name] = data_info(name, location)
 
-for fname in os.listdir('.'):
-    if not os.path.isfile(fname):
-        continue
-    name, ext = os.path.splitext(fname)
-    if ext != '.tab':
-        continue
-    info[name] = data_info(name, fname)
+    for fname in os.listdir('.'):
+        if not os.path.isfile(fname):
+            continue
+        name, ext = os.path.splitext(fname)
+        if ext != '.tab':
+            continue
+        info[name] = data_info(name, fname)
 
-f = open('datasets.info', 'w')
-json.dump(info, f, indent=4, sort_keys=True)
-f.close()
+    with open('datasets.info', 'w') as f:
+        json.dump(info, f, indent=4, sort_keys=True)
