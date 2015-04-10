@@ -108,41 +108,40 @@ class OWDistributions(widget.OWWidget):
         self.distributions = None
         self.contingencies = None
         self.var = self.cvar = None
-        box = gui.widgetBox(self.controlArea, "Variable")
+        varbox = gui.widgetBox(self.controlArea, "Variable")
 
         self.varmodel = itemmodels.VariableListModel()
         self.groupvarmodel = itemmodels.VariableListModel()
 
         self.varview = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection)
+        self.varview.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.varview.setModel(self.varmodel)
         self.varview.setSelectionModel(
             itemmodels.ListSingleSelectionModel(self.varmodel))
         self.varview.selectionModel().selectionChanged.connect(
             self._on_variable_idx_changed)
-        box.layout().addWidget(self.varview)
+        varbox.layout().addWidget(self.varview)
+        gui.separator(varbox, 8, 8)
+        gui.comboBox(
+            varbox, self, "cont_est_type", label="Show continuous variables by",
+            valueType=int,
+            items=["Histograms", "Average shifted histograms",
+                   "Kernel density estimators"],
+            callback=self._on_cont_est_type_changed)
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.groupvarview = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection)
+        self.groupvarview.setFixedHeight(100)
+        self.groupvarview.setSizePolicy(
+            QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
         self.groupvarview.setModel(self.groupvarmodel)
         self.groupvarview.selectionModel().selectionChanged.connect(
             self._on_groupvar_idx_changed)
         box.layout().addWidget(self.groupvarview)
-
-        self.disc_options = gui.widgetBox(self.controlArea, "Show")
-        gui.checkBox(self.disc_options, self, "relative_freq",
-                     "Relative frequencies",
+        gui.checkBox(box, self, "relative_freq", "Show relative frequencies",
                      callback=self._on_relative_freq_changed)
-
-        self.cont_options = gui.widgetBox(self.controlArea, "Show")
-        gui.comboBox(
-            self.cont_options, self, "cont_est_type",
-            orientation="horizontal", valueType=int,
-            items=["Histogram", "Average shifted histogram",
-                   "Kernel density estimator"],
-            callback=self._on_cont_est_type_changed)
-        self.cont_options.hide()
 
         plotview = pg.PlotWidget(background=None)
         self.mainArea.layout().addWidget(plotview)
@@ -197,7 +196,6 @@ class OWDistributions(widget.OWWidget):
         if self.var is None:
             return
         self.set_left_axis_name()
-        self.show_hide_options()
         if is_discrete(self.cvar):
             self.contingencies = \
                 contingency.get_contingency(self.data, self.var, self.cvar)
@@ -325,14 +323,6 @@ class OWDistributions(widget.OWWidget):
             set_label("Density")
         else:
             set_label(["Frequency", "Relative frequency"][self.relative_freq])
-
-    def show_hide_options(self):
-        if self.var and is_continuous(self.var):
-            self.disc_options.hide()
-            self.cont_options.show()
-        else:
-            self.cont_options.hide()
-            self.disc_options.show()
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
