@@ -130,7 +130,8 @@ class OWMDS(widget.OWWidget):
         super().__init__(parent)
         self.matrix = None
         self.data = None
-        self.dataOverwrittenByMatrix = False
+        self.matrix_data = None
+        self.signal_data = None
 
         self._pen_data = None
         self._shape_data = None
@@ -215,46 +216,23 @@ class OWMDS(widget.OWWidget):
         self.mainArea.layout().addWidget(self.plot)
 
     def set_data(self, data):
-        self.closeContext()
-        self._clear()
-        self.data = data
-        if data is not None:
-            self._initialize(data)
-            self.openContext(data)
-            if self.matrix:
-                self.warning(1, "Ignoring distances when data is present")
-            self.dataOverwrittenByMatrix = False
-        else:
-            # clear the warning and reinitialize the matrix if transposed
-            self.warning(1, "")
-            if self.matrix and not self.matrix.axis:
-                self._initialize_matrix_transposed(self.matrix)
+        self.signal_data = data
 
-        self._effective_matrix = None
-        self._invalidated = True
+        if self.matrix and data is not None and len(self.matrix.X) == len(data):
+            self.closeContext()
+            self.data = data
+            self.update_controls()
+            self.openContext(data)
+        else:
+            self._invalidated = True
 
     def set_disimilarity(self, matrix):
         self.matrix = matrix
-        if not matrix:
-            # when removing matrix, clear the warning
-            self.warning(1, "")
-        else:
-            if not self.data or self.dataOverwrittenByMatrix:
-                # use the provided matrix
-                self._effective_matrix = matrix
-                self._invalidated = True
-                # if calculating distances between rows the 'matrix.row_items' should also be set as data
-                if matrix and matrix.axis:
-                    self._clear()
-                    self.data = matrix.row_items
-                    self._initialize(matrix.row_items)
-                    self.dataOverwrittenByMatrix = True
-                else:
-                    self.set_data(None)
-                    self.dataOverwrittenByMatrix = False
-                    self._initialize_matrix_transposed(matrix)
-            if self.data and not self.dataOverwrittenByMatrix:
-                self.warning(1, "Ignoring distances when data is present")
+        if matrix and matrix.row_items:
+            self.matrix_data = matrix.row_items
+        if matrix is None:
+            self.matrix_data = None
+        self._invalidated = True
 
     def _clear(self):
         self._pen_data = None
@@ -272,57 +250,77 @@ class OWMDS(widget.OWWidget):
         self.size_index = 0
         self.label_index = 0
 
-    def _initialize(self, data):
-        # initialize the graph state from data
-        domain = data.domain
-        all_vars = list(domain.variables + domain.metas)
-        disc_vars = list(filter(is_discrete, all_vars))
-        cont_vars = list(filter(is_continuous, all_vars))
-        str_vars = [var for var in all_vars
-                    if isinstance(var, (Orange.data.DiscreteVariable,
-                                        Orange.data.StringVariable))]
+    def update_controls(self):
+        if getattr(self.matrix, 'axis', 1) == 0:
+            # Column-wise distances
+            attr = "Attribute names"
+            self.labelvar_model[:] = ["No labels", attr]
+            self.shapevar_model[:] = ["Same shape", attr]
+            self.colorvar_model[:] = ["Same color", attr]
 
-        def set_separator(model, index):
-            index = model.index(index, 0)
-            model.setData(index, "separator", Qt.AccessibleDescriptionRole)
-            model.setData(index, Qt.NoItemFlags, role="flags")
+            self.color_index = list(self.colorvar_model).index(attr)
+            self.shape_index = list(self.shapevar_model).index(attr)
+        else:
+            # initialize the graph state from data
+            domain = self.data.domain
+            all_vars = list(domain.variables + domain.metas)
+            disc_vars = list(filter(is_discrete, all_vars))
+            cont_vars = list(filter(is_continuous, all_vars))
+            str_vars = [var for var in all_vars
+                        if isinstance(var, (Orange.data.DiscreteVariable,
+                                            Orange.data.StringVariable))]
 
-        self.colorvar_model[:] = ["Same color", ""] + all_vars
-        set_separator(self.colorvar_model, 1)
+            def set_separator(model, index):
+                index = model.index(index, 0)
+                model.setData(index, "separator", Qt.AccessibleDescriptionRole)
+                model.setData(index, Qt.NoItemFlags, role="flags")
 
-        self.shapevar_model[:] = ["Same shape", ""] + disc_vars
-        set_separator(self.shapevar_model, 1)
+            self.colorvar_model[:] = ["Same color", ""] + all_vars
+            set_separator(self.colorvar_model, 1)
 
-        self.sizevar_model[:] = ["Same size", "Stress", ""] + cont_vars
-        set_separator(self.sizevar_model, 2)
+            self.shapevar_model[:] = ["Same shape", ""] + disc_vars
+            set_separator(self.shapevar_model, 1)
 
-        self.labelvar_model[:] = ["No labels", ""] + str_vars
-        set_separator(self.labelvar_model, 1)
+            self.sizevar_model[:] = ["Same size", "Stress", ""] + cont_vars
+            set_separator(self.sizevar_model, 2)
 
-        if domain.class_var is not None:
-            self.color_index = list(self.colorvar_model).index(domain.class_var)
+            self.labelvar_model[:] = ["No labels", ""] + str_vars
+            set_separator(self.labelvar_model, 1)
 
-    def _initialize_matrix_transposed(self, matrix):
-        # initialize the graph state for the transposed matrix
-        attr = "Attribute names"
-        self.labelvar_model[:] = ["No labels", attr]
-        self.shapevar_model[:] = ["Same shape", attr]
-        self.colorvar_model[:] = ["Same color", attr]
-
-        self.color_index = list(self.colorvar_model).index(attr)
-        self.shape_index = list(self.shapevar_model).index(attr)
+            if domain.class_var is not None:
+                self.color_index = list(self.colorvar_model).index(domain.class_var)
 
     def apply(self):
-        if self.data is None and self.matrix is None:
-            self.embedding = None
-            self._update_plot()
-            return
+        # clear everything
+        self.closeContext()
+        self._clear()
+        self.data = None
+        self._effective_matrix = None
+        self.embedding = None
 
-        if self._effective_matrix is None:
-            if self.data is not None:
-                self._effective_matrix = Orange.distance.Euclidean(self.data)
-            elif self.matrix is not None:
-                self._effective_matrix = self.matrix
+        # if no data nor matrix is present reset plot
+        if self.signal_data is None and self.matrix is None:
+            return self._update_plot()
+
+        if self.signal_data and self.matrix_data and len(self.signal_data) != len(self.matrix_data):
+            self.error(1, "Data and distances dimensions do not match.")
+            return self._update_plot()
+        self.error(1)
+
+        if self.signal_data:
+            self.data = self.signal_data
+        elif self.matrix_data:
+            self.data = self.matrix_data
+
+        if self.matrix:
+            self._effective_matrix = self.matrix
+            if self.matrix.axis == 0:
+                self.data = None
+        else:
+            self._effective_matrix = Orange.distance.Euclidean(self.data)
+
+        self.update_controls()
+        self.openContext(self.data)
 
         X = self._effective_matrix.X
 
