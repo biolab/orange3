@@ -270,6 +270,7 @@ class OWPCA(widget.OWWidget):
             )
             transformed = transformed.from_table(domain, transformed)
             components = Orange.data.Table.from_numpy(None, components)
+            components.name = 'components'
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
