@@ -1,11 +1,11 @@
-
 from PyQt4.QtGui import QFormLayout, QColor, QApplication
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QTimer
 
 import numpy
 import pyqtgraph as pg
 
 import Orange.data
+from Orange.data.sql.table import SqlTable
 import Orange.projection
 from Orange.widgets import widget, gui, settings
 
@@ -21,6 +21,8 @@ class OWPCA(widget.OWWidget):
                ("Components", Orange.data.Table)]
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
+    batch_size = settings.Setting(100)
+    timeout_interval = settings.Setting(2)
     auto_commit = settings.Setting(True)
 
     def __init__(self, parent=None):
@@ -54,6 +56,25 @@ class OWPCA(widget.OWWidget):
         form.addRow("Components", self.components_spin)
         form.addRow("Variance covered", self.variance_spin)
 
+        self.sampling_box = gui.widgetBox(self.controlArea,
+                                          "Incremental learning")
+        form = QFormLayout()
+        self.sampling_box.layout().addLayout(form)
+        self.batch_spin = gui.spin(
+            self.sampling_box, self, "batch_size", 50, 10000, step=50,
+            keyboardTracking=False)
+        form.addRow("Batch size ~ ", self.batch_spin)
+        self.timeout_spin = gui.spin(
+            self.sampling_box, self, "timeout_interval", 1, 10,
+            keyboardTracking=False)
+        form.addRow("Timeout [sec]", self.timeout_spin)
+        self.pause = gui.button(self.sampling_box, self, "Start",
+                   callback=self.start_stop,
+                   tooltip="Update incremental learning")
+        self.__timer = QTimer(self, interval=2000)
+        self.__timer.timeout.connect(self.update_model)
+        #self.sampling_box.setVisible(False)
+
         self.controlArea.layout().addStretch()
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Send data",
@@ -73,15 +94,34 @@ class OWPCA(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.plot)
 
+    def start_stop(self):
+        if 'Start' in self.pause.text():
+            self.__timer.start(self.timeout_interval * 1000)
+            self.pause.setText('Pause')
+        else:
+            self.__timer.stop()
+            self.pause.setText('Start')
+
     def set_data(self, data):
         self.clear()
         self.data = data
 
         if data is not None:
             self._transformed = None
-
-            pca = Orange.projection.PCA()
-            pca = pca(self.data)
+            if isinstance(data, SqlTable):
+                self.sampling_box.setVisible(True)
+                pca = Orange.projection.IncrementalPCA()
+                percent = self.batch_size / data.approx_len() * 100
+                data_sample = data.sample_percentage(percent, no_cache=True)
+                data_sample.download_data(1000000)
+                data_sample = Orange.data.Table.from_numpy(
+                    Orange.data.Domain(data_sample.domain.attributes),
+                    data_sample.X)
+                pca = pca(data_sample)
+            else:
+                self.sampling_box.setVisible(False)
+                pca = Orange.projection.PCA()
+                pca = pca(self.data)
             variance_ratio = pca.explained_variance_ratio_
             cumulative = numpy.cumsum(variance_ratio)
             self.components_spin.setRange(0, len(cumulative))
@@ -101,6 +141,22 @@ class OWPCA(widget.OWWidget):
         self._cumulative = None
         self._line = None
         self.plot.clear()
+
+    def update_model(self):
+        percent = self.batch_size / self.data.approx_len() * 100
+        data_sample = self.data.sample_percentage(percent, no_cache=True)
+        data_sample.download_data(1000000)
+        data_sample = Orange.data.Table.from_numpy(
+                    Orange.data.Domain(data_sample.domain.attributes),
+                    data_sample.X)
+        self._pca.partial_fit(data_sample)
+        self._variance_ratio = self._pca.explained_variance_ratio_
+        self._cumulative = numpy.cumsum(self._variance_ratio)
+        self.plot.clear()
+        self._setup_plot()
+        self._transformed = None
+        self.unconditional_commit()
+
 
     def _setup_plot(self):
         explained_ratio = self._variance_ratio
@@ -212,10 +268,7 @@ class OWPCA(widget.OWWidget):
                 self.data.domain.class_vars,
                 self.data.domain.metas
             )
-            transformed = Orange.data.Table.from_numpy(
-                domain, transformed.X[:, :self.ncomponents], Y=transformed.Y,
-                metas=transformed.metas, W=transformed.W
-            )
+            transformed = transformed.from_table(domain, transformed)
             components = Orange.data.Table.from_numpy(None, components)
 
         self.send("Transformed data", transformed)
