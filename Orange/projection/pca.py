@@ -55,8 +55,13 @@ class RandomizedPCA(SklProjector):
 class PCAModel(Projection, metaclass=WrapperMeta):
     def __init__(self, proj, domain):
         def pca_variable(i):
+            def linear_combination():
+                return ' + '.join(['({} - {}) * {}'.format(a.to_sql(), m, w)
+                                   for a, m, w in zip(
+                        domain.attributes, self.mean_, self.components_[:, i])])
             v = Orange.data.ContinuousVariable('PC %d' % i)
             v.compute_value = Projector(self, i)
+            v.to_sql = linear_combination
             return v
 
         super().__init__(proj=proj)
