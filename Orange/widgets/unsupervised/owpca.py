@@ -19,7 +19,7 @@ class OWPCA(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Transformed data", Orange.data.Table),
                ("Components", Orange.data.Table)]
-    ncomponents = settings.Setting(0)
+    ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     auto_commit = settings.Setting(True)
 
@@ -168,7 +168,7 @@ class OWPCA(widget.OWWidget):
             return
 
         cut = numpy.searchsorted(self._cumulative, self.variance_covered / 100.0)
-        self.ncomponents = cut
+        self.ncomponents = cut + 1
 
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
@@ -191,10 +191,8 @@ class OWPCA(widget.OWWidget):
             cut = max_comp
             self.variance_covered = var_max * 100
         else:
-            cut = numpy.searchsorted(
-                self._cumulative, self.variance_covered / 100.0
-            )
-            self.ncomponents = cut
+            self.ncomponents = cut = numpy.searchsorted(
+                self._cumulative, self.variance_covered / 100.0) + 1
         return cut
 
     def _invalidate_selection(self):
@@ -206,9 +204,8 @@ class OWPCA(widget.OWWidget):
             components = self._pca.components_
             if self._transformed is None:
                 # Compute the full transform (all components) only once.
-                transformed = self._transformed = self._pca(self.data)
-            else:
-                transformed = self._transformed
+                self._transformed = self._pca(self.data)
+            transformed = self._transformed
 
             domain = Orange.data.Domain(
                 transformed.domain.attributes[:self.ncomponents],
