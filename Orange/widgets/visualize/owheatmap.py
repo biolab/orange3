@@ -376,9 +376,9 @@ class OWHeatMap(widget.OWWidget):
     x_var_index = settings.ContextSetting(0)
     y_var_index = settings.ContextSetting(1)
     z_var_index = settings.ContextSetting(0)
-    selected_z_values = settings.Setting([])
-    color_scale = settings.Setting(1)
-    sample_level = settings.Setting(0)
+    selected_z_values = settings.ContextSetting([])
+    color_scale = settings.ContextSetting(1)
+    sample_level = settings.ContextSetting(0)
 
     sample_percentages = []
     sample_percentages_captions = []
