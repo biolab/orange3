@@ -1,9 +1,10 @@
-from PyQt4.QtGui import QFormLayout, QColor, QApplication
+from PyQt4.QtGui import QFormLayout, QColor, QApplication, QLineEdit
 from PyQt4.QtCore import Qt, QTimer
 
 import numpy
 import pyqtgraph as pg
 
+from orangecontrib import remote
 import Orange.data
 from Orange.data.sql.table import SqlTable
 import Orange.projection
@@ -23,6 +24,7 @@ class OWPCA(widget.OWWidget):
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
     timeout_interval = settings.Setting(2)
+    address = settings.Setting('localhost:9465')
     auto_commit = settings.Setting(True)
 
     def __init__(self, parent=None):
@@ -68,11 +70,18 @@ class OWPCA(widget.OWWidget):
             self.sampling_box, self, "timeout_interval", 1, 10,
             keyboardTracking=False)
         form.addRow("Timeout [sec]", self.timeout_spin)
+        self.addresstext = QLineEdit(box)
+        self.addresstext.setPlaceholderText('Remote server')
+        if self.address:
+            self.addresstext.setText(self.address)
+        self.sampling_box.layout().addWidget(self.addresstext)
+
         self.pause = gui.button(self.sampling_box, self, "Start",
                    callback=self.start_stop,
                    tooltip="Update incremental learning")
         self.__timer = QTimer(self, interval=2000)
         self.__timer.timeout.connect(self.update_model)
+
         #self.sampling_box.setVisible(False)
 
         self.controlArea.layout().addStretch()
@@ -110,28 +119,27 @@ class OWPCA(widget.OWWidget):
             self._transformed = None
             if isinstance(data, SqlTable):
                 self.sampling_box.setVisible(True)
-                pca = Orange.projection.IncrementalPCA()
-                percent = min(100, self.batch_size / data.approx_len() * 100)
-                data_sample = data.sample_percentage(percent, no_cache=True)
-                data_sample.download_data(1000000)
-                data_sample = Orange.data.Table.from_numpy(
-                    Orange.data.Domain(data_sample.domain.attributes),
-                    data_sample.X)
-                pca = pca(data_sample)
+                self.address = self.addresstext.text()
+                with remote.server('localhost:9465'):
+                    from Orange.projection.pca import RemotePCA
+                    self.rpca = RemotePCA(
+                        data.connection_params,
+                        data.unquote_identifier(data.table_name), self.address,
+                        self.batch_size, 100)
             else:
                 self.sampling_box.setVisible(False)
                 pca = Orange.projection.PCA()
                 pca = pca(self.data)
-            variance_ratio = pca.explained_variance_ratio_
-            cumulative = numpy.cumsum(variance_ratio)
-            self.components_spin.setRange(0, len(cumulative))
+                variance_ratio = pca.explained_variance_ratio_
+                cumulative = numpy.cumsum(variance_ratio)
+                self.components_spin.setRange(0, len(cumulative))
 
-            self._pca = pca
-            self._variance_ratio = variance_ratio
-            self._cumulative = cumulative
-            self._setup_plot()
+                self._pca = pca
+                self._variance_ratio = variance_ratio
+                self._cumulative = cumulative
+                self._setup_plot()
 
-        self.unconditional_commit()
+                self.unconditional_commit()
 
     def clear(self):
         self.data = None
@@ -143,13 +151,7 @@ class OWPCA(widget.OWWidget):
         self.plot.clear()
 
     def update_model(self):
-        percent = min(100, self.batch_size / self.data.approx_len() * 100)
-        data_sample = self.data.sample_percentage(percent, no_cache=True)
-        data_sample.download_data(1000000)
-        data_sample = Orange.data.Table.from_numpy(
-                    Orange.data.Domain(data_sample.domain.attributes),
-                    data_sample.X)
-        self._pca.partial_fit(data_sample)
+        self._pca = self.rpca.get_state()
         self._variance_ratio = self._pca.explained_variance_ratio_
         self._cumulative = numpy.cumsum(self._variance_ratio)
         self.plot.clear()
@@ -274,6 +276,7 @@ class OWPCA(widget.OWWidget):
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
+
 
 
 def main():

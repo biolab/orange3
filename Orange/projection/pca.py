@@ -124,3 +124,34 @@ class Projector:
         d = dict(self.__dict__)
         d['transformed'] = None
         return d
+
+
+class RemotePCA:
+    def __new__(cls, conn, table, address='localhost:9465', batch=100, max_iter=100):
+        from orangecontrib.remote import save_state
+        import Orange.data.sql.table
+        from time import sleep
+
+        data = Orange.data.sql.table.SqlTable(conn, table)
+        pca = Orange.projection.IncrementalPCA()
+        percent = batch / data.approx_len() * 100
+        if percent < 100:
+            data_sample = data.sample_percentage(percent, no_cache=True)
+        else:
+            data_sample = data
+        data_sample.download_data(1000000)
+        data_sample = Orange.data.Table.from_numpy(
+            Orange.data.Domain(data_sample.domain.attributes),
+            data_sample.X)
+        model = pca(data_sample)
+        save_state(model)
+        for i in range(max_iter if percent < 100 else 0):
+            data_sample = data.sample_percentage(percent, no_cache=True)
+            data_sample.download_data(1000000)
+            data_sample = Orange.data.Table.from_numpy(
+                Orange.data.Domain(data_sample.domain.attributes),
+                data_sample.X)
+            model.partial_fit(data_sample)
+            model.iteration = i
+            save_state(model)
+            sleep(1)
