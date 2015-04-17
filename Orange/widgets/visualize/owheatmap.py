@@ -664,7 +664,6 @@ class OWHeatMap(widget.OWWidget):
         return t._replace(xbins=xbins, ybins=ybins)
 
     def replot(self):
-        self.plot.clear()
         self.setup_plot()
 
     def update_map(self, root):
