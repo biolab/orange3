@@ -1,4 +1,4 @@
-recursive-include Orange/datasets *.tab
+recursive-include Orange/datasets *.tab *.info
 
 recursive-include Orange *.pyx
 recursive-include Orange *.py
