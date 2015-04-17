@@ -111,7 +111,7 @@ class OWPCA(widget.OWWidget):
             if isinstance(data, SqlTable):
                 self.sampling_box.setVisible(True)
                 pca = Orange.projection.IncrementalPCA()
-                percent = self.batch_size / data.approx_len() * 100
+                percent = min(100, self.batch_size / data.approx_len() * 100)
                 data_sample = data.sample_percentage(percent, no_cache=True)
                 data_sample.download_data(1000000)
                 data_sample = Orange.data.Table.from_numpy(
@@ -143,7 +143,7 @@ class OWPCA(widget.OWWidget):
         self.plot.clear()
 
     def update_model(self):
-        percent = self.batch_size / self.data.approx_len() * 100
+        percent = min(100, self.batch_size / self.data.approx_len() * 100)
         data_sample = self.data.sample_percentage(percent, no_cache=True)
         data_sample.download_data(1000000)
         data_sample = Orange.data.Table.from_numpy(
