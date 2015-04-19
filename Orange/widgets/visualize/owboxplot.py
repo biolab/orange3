@@ -399,6 +399,9 @@ class OWBoxPlot(widget.OWWidget):
             self.disc_palette.set_number_of_colors(len(self.dist))
             self.boxes = [self.strudel(self.dist)]
 
+        selected_grouping = self.grouping[self.grouping_select[0]][0]
+        selected_attribute = self.attributes[self.attributes_select[0]][0]
+
         for row, box in enumerate(self.boxes):
             y = (-len(self.boxes) + row) * 40 + 10
             self.box_scene.addItem(box)
@@ -416,6 +419,15 @@ class OWBoxPlot(widget.OWWidget):
                     right = self.scale_x * sum(self.dist)
                 label.setPos(right + 10, y - b.height() / 2)
                 self.box_scene.addItem(label)
+
+            if selected_attribute != selected_grouping:
+                selected_attr = self.dataset.domain[self.attributes_select[0]]
+                for label_text, bar_part in zip(selected_attr.values,
+                                                box.childItems()):
+                    label = QtGui.QGraphicsSimpleTextItem(label_text)
+                    label.setPos(bar_part.boundingRect().x(),
+                                 y - label.boundingRect().height() - 8)
+                    self.box_scene.addItem(label)
 
         self.box_scene.setSceneRect(-self.label_width - 5,
                                    -30 - len(self.boxes) * 40,
