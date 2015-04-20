@@ -67,11 +67,10 @@ class SqlTable(table.Table):
         """
         if isinstance(connection_params, str):
             connection_params = dict(database=connection_params)
+        self.connection_params = connection_params
 
         if self.connection_pool is None:
-            self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
-                1, 16, **connection_params)
-        self.connection_params = connection_params
+            self.create_connection_pool()
 
         if table_or_sql is not None:
             if "SELECT" in table_or_sql.upper():
@@ -81,6 +80,10 @@ class SqlTable(table.Table):
             self.table_name = table
             self.domain = self.get_domain(type_hints, inspect_values)
             self.name = table
+
+    def create_connection_pool(self):
+        self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
+            1, 16, **self.connection_params)
 
     def get_domain(self, type_hints=None, guess_values=False):
         if type_hints is None:
@@ -94,13 +97,13 @@ class SqlTable(table.Table):
 
         def add_to_sql(var, field_name):
             if isinstance(var, ContinuousVariable):
-                var.to_sql = lambda: "({})::double precision".format(
-                    self.quote_identifier(field_name))
+                var.to_sql = ToSql("({})::double precision".format(
+                    self.quote_identifier(field_name)))
             elif isinstance(var, DiscreteVariable):
-                var.to_sql = lambda: "({})::text".format(
-                    self.quote_identifier(field_name))
+                var.to_sql = ToSql("({})::text".format(
+                    self.quote_identifier(field_name)))
             else:
-                var.to_sql = lambda: self.quote_identifier(field_name)
+                var.to_sql = ToSql(self.quote_identifier(field_name))
 
         attrs, class_vars, metas = [], [], []
         for field_name, type_code, *rest in fields:
@@ -139,7 +142,7 @@ class SqlTable(table.Table):
             return ContinuousVariable(field_name)
 
         if type_code in BOOLEAN_TYPES:
-                return DiscreteVariable(field_name, ['false', 'true'])
+            return DiscreteVariable(field_name, ['false', 'true'])
 
         if type_code in CHAR_TYPES:
             if inspect_values:
@@ -649,14 +652,32 @@ class SqlTable(table.Table):
     def checksum(self, include_metas=True):
         return np.nan
 
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        state.pop('connection_pool')
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.create_connection_pool()
+
 
 class SqlRowInstance(instance.Instance):
     """
     Extends :obj:`Orange.data.Instance` to correctly handle values of meta
     attributes.
     """
+
     def __init__(self, domain, data=None):
         nvar = len(domain.variables)
         super().__init__(domain, data[:nvar])
         if len(data) > nvar:
             self._metas = data[nvar:]
+
+
+class ToSql:
+    def __init__(self, sql):
+        self.sql = sql
+
+    def __call__(self):
+        return self.sql
