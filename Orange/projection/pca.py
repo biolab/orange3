@@ -2,6 +2,7 @@ import sklearn.decomposition as skl_decomposition
 
 import Orange.data
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.preprocess import Continuize
 from Orange.projection import SklProjector, Projection
 
 __all__ = ["PCA", "SparsePCA", "RandomizedPCA", "IncrementalPCA"]
@@ -131,6 +132,9 @@ class RemotePCA:
         from orangecontrib.remote import aborted, save_state
         import Orange.data.sql.table
 
+        cont = Continuize(multinomial_treatment=Continuize.Remove,
+                          normalize_continuous=None)
+        data = cont(data)
         pca = Orange.projection.IncrementalPCA()
         percent = batch / data.approx_len() * 100
         if percent < 100:
