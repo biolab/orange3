@@ -66,19 +66,14 @@ class OWPCA(widget.OWWidget):
             self.sampling_box, self, "batch_size", 50, 10000, step=50,
             keyboardTracking=False)
         form.addRow("Batch size ~ ", self.batch_spin)
-        self.timeout_spin = gui.spin(
-            self.sampling_box, self, "timeout_interval", 1, 10,
-            keyboardTracking=False)
-        form.addRow("Timeout [sec]", self.timeout_spin)
         self.addresstext = QLineEdit(box)
         self.addresstext.setPlaceholderText('Remote server')
         if self.address:
             self.addresstext.setText(self.address)
         self.sampling_box.layout().addWidget(self.addresstext)
 
-        self.pause = gui.button(self.sampling_box, self, "Start",
-                   callback=self.start_stop,
-                   tooltip="Update incremental learning")
+        self.pause_button = gui.button(self.sampling_box, self, "Start",
+                                callback=self.pause, tooltip="Update model")
         self.__timer = QTimer(self, interval=2000)
         self.__timer.timeout.connect(self.update_model)
 
@@ -103,13 +98,13 @@ class OWPCA(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.plot)
 
-    def start_stop(self):
-        if 'Start' in self.pause.text():
-            self.__timer.start(self.timeout_interval * 1000)
-            self.pause.setText('Pause')
-        else:
+    def pause(self):
+        if 'Pause' in self.pause_button.text():
             self.__timer.stop()
-            self.pause.setText('Start')
+            self.pause_button.setText('Resume')
+        else:
+            self.__timer.start(2000)
+            self.pause_button.setText('Pause')
 
     def set_data(self, data):
         self.clear()
@@ -119,11 +114,14 @@ class OWPCA(widget.OWWidget):
             self._transformed = None
             if isinstance(data, SqlTable):
                 self.sampling_box.setVisible(True)
+                self.pause_button.setText("Start")
+                self.pause_button.setEnabled(True)
                 self.address = self.addresstext.text()
                 with remote.server('localhost:9465'):
                     from Orange.projection.pca import RemotePCA
                     self.rpca = RemotePCA(data, self.address,
                                           self.batch_size, 100000)
+                self.pause()
             else:
                 self.sampling_box.setVisible(False)
                 pca = Orange.projection.PCA()
@@ -149,13 +147,17 @@ class OWPCA(widget.OWWidget):
         self.plot.clear()
 
     def update_model(self):
+        if self.rpca.ready():
+            self.__timer.stop()
+            self.pause_button.setText("Finished")
+            self.pause_button.setEnabled(False)
         self._pca = self.rpca.get_state()
         self._variance_ratio = self._pca.explained_variance_ratio_
         self._cumulative = numpy.cumsum(self._variance_ratio)
         self.plot.clear()
         self._setup_plot()
         self._transformed = None
-        self.unconditional_commit()
+        self.commit()
 
 
     def _setup_plot(self):
