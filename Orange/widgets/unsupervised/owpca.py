@@ -4,11 +4,16 @@ from PyQt4.QtCore import Qt, QTimer
 import numpy
 import pyqtgraph as pg
 
-from orangecontrib import remote
 import Orange.data
 from Orange.data.sql.table import SqlTable
 import Orange.projection
 from Orange.widgets import widget, gui, settings
+
+try:
+    from orangecontrib import remote
+    remotely = True
+except ImportError:
+    remotely = False
 
 
 class OWPCA(widget.OWWidget):
@@ -62,10 +67,12 @@ class OWPCA(widget.OWWidget):
                                           "Incremental learning")
         form = QFormLayout()
         self.sampling_box.layout().addLayout(form)
+
         self.batch_spin = gui.spin(
             self.sampling_box, self, "batch_size", 50, 10000, step=50,
             keyboardTracking=False)
         form.addRow("Batch size ~ ", self.batch_spin)
+
         self.addresstext = QLineEdit(box)
         self.addresstext.setPlaceholderText('Remote server')
         if self.address:
@@ -77,8 +84,7 @@ class OWPCA(widget.OWWidget):
         self.__timer = QTimer(self, interval=2000)
         self.__timer.timeout.connect(self.update_model)
 
-        #self.sampling_box.setVisible(False)
-
+        self.sampling_box.setVisible(remotely)
         self.controlArea.layout().addStretch()
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Send data",
@@ -112,7 +118,7 @@ class OWPCA(widget.OWWidget):
 
         if data is not None:
             self._transformed = None
-            if isinstance(data, SqlTable):
+            if remotely and isinstance(data, SqlTable):
                 self.sampling_box.setVisible(True)
                 self.pause_button.setText("Start")
                 self.pause_button.setEnabled(True)
