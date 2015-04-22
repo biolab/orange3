@@ -122,10 +122,8 @@ class OWPCA(widget.OWWidget):
                 self.address = self.addresstext.text()
                 with remote.server('localhost:9465'):
                     from Orange.projection.pca import RemotePCA
-                    self.rpca = RemotePCA(
-                        data.connection_params,
-                        data.unquote_identifier(data.table_name), self.address,
-                        self.batch_size, 100)
+                    self.rpca = RemotePCA(data, self.address,
+                                          self.batch_size, 100000)
             else:
                 self.sampling_box.setVisible(False)
                 pca = Orange.projection.PCA()

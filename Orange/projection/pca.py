@@ -127,12 +127,10 @@ class Projector:
 
 
 class RemotePCA:
-    def __new__(cls, conn, table, address='localhost:9465', batch=100, max_iter=100):
-        from orangecontrib.remote import save_state
+    def __new__(cls, data, address='localhost:9465', batch=100, max_iter=100):
+        from orangecontrib.remote import aborted, save_state
         import Orange.data.sql.table
-        from time import sleep
 
-        data = Orange.data.sql.table.SqlTable(conn, table)
         pca = Orange.projection.IncrementalPCA()
         percent = batch / data.approx_len() * 100
         if percent < 100:
@@ -154,4 +152,6 @@ class RemotePCA:
             model.partial_fit(data_sample)
             model.iteration = i
             save_state(model)
-            sleep(1)
+            if aborted():
+                break
+        return model
