@@ -28,7 +28,6 @@ class OWPCA(widget.OWWidget):
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
-    timeout_interval = settings.Setting(2)
     address = settings.Setting('localhost:9465')
     auto_commit = settings.Setting(True)
 
@@ -166,7 +165,6 @@ class OWPCA(widget.OWWidget):
         self._transformed = None
         self.commit()
 
-
     def _setup_plot(self):
         explained_ratio = self._variance_ratio
         explained = self._cumulative
@@ -283,7 +281,6 @@ class OWPCA(widget.OWWidget):
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
-
 
 
 def main():
