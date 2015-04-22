@@ -102,6 +102,8 @@ class IncrementalPCA(SklProjector):
 class IncrementalPCAModel(PCAModel):
     def partial_fit(self, data):
         if isinstance(data, Orange.data.Storage):
+            if data.domain != self.pre_domain:
+                data = data.from_table(self.pre_domain, data)
             self.proj.partial_fit(data.X)
         else:
             self.proj.partial_fit(data)
