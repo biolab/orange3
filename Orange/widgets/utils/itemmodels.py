@@ -609,7 +609,7 @@ class TableModel(QAbstractTableModel):
         # column basic statistics (VariableStatsRole), computed when
         # first needed.
         self.__stats = None
-        self.__rowCount = len(sourcedata)
+        self.__rowCount = sourcedata.approx_len()
         self.__columnCount = len(self.columns)
 
         if self.__rowCount > (2 ** 31 - 1):
