@@ -149,6 +149,51 @@ class RichTableDecorator(QIdentityProxyModel):
             return self.sourceModel().sort(column, order)
 
 
+class TableSliceProxy(QIdentityProxyModel):
+    def __init__(self, parent=None, rowSlice=slice(0, -1), **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__rowslice = rowSlice
+
+    def setRowSlice(self, rowslice):
+        if rowslice.step is not None and rowslice.step != 1:
+            raise ValueError("invalid stride")
+
+        if self.__rowslice != rowslice:
+            self.beginResetModel()
+            self.__rowslice = rowslice
+            self.endResetModel()
+
+    def setSourceModel(self, model):
+        super().setSourceModel(model)
+
+    def mapToSource(self, proxyindex):
+        model = self.sourceModel()
+        if model is None or not proxyindex.isValid():
+            return QModelIndex()
+
+        row, col = proxyindex.row(), proxyindex.column()
+        row = row + self.__rowslice.start
+        assert 0 <= row < model.rowCount()
+        return model.createIndex(row, col, proxyindex.internalPointer())
+
+    def mapFromSource(self, sourceindex):
+        model = self.sourceModel()
+        if model is None or not sourceindex.isValid():
+            return QModelIndex()
+        row, col = sourceindex.row(), sourceindex.column()
+        row = row - self.__rowslice.start
+        assert 0 <= row < self.rowCount()
+        return self.createIndex(row, col, sourceindex.internalPointer())
+
+    def rowCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        count = super().rowCount()
+        start, stop, step = self.__rowslice.indices(count)
+        assert step == 1
+        return stop - start
+
+
 class BlockSelectionModel(QItemSelectionModel):
     """
     Item selection model ensuring the selection maintains a simple block
@@ -481,8 +526,9 @@ class OWDataTable(widget.OWWidget):
             return
 
         datamodel = TableModel(data)
-
         datamodel = RichTableDecorator(datamodel)
+
+        rowcount = len(data)
 
         color_schema = self.discPalette if self.color_by_class else None
         if self.show_distributions:
@@ -508,14 +554,30 @@ class OWDataTable(widget.OWWidget):
             QtCore.QSize(20, 20), view)
 
         vheader.setDefaultSectionSize(size.height() + 2)
+        vheader.setMinimumSectionSize(5)
+        vheader.setResizeMode(QtGui.QHeaderView.Fixed)
+
+        # Limit the number of rows displayed in the QTableView
+        # (workaround for QTBUG-18490 / QTBUG-28631)
+        maxrows = (2 ** 31 - 1) // (vheader.defaultSectionSize() + 2)
+        if rowcount > maxrows:
+            sliceproxy = TableSliceProxy(
+                parent=view, rowSlice=slice(0, maxrows))
+            sliceproxy.setSourceModel(datamodel)
+            # First reset the view (without this the header view retains
+            # it's state - at this point invalid/broken)
+            view.setModel(None)
+            view.setModel(sliceproxy)
+
+        assert view.model().rowCount() <= maxrows
+        assert vheader.sectionSize(0) > 1
 
         # update the header (attribute names)
         self._update_variable_labels(view)
 
         selmodel = BlockSelectionModel(
-            datamodel, parent=view, selectBlocks=not self.select_rows)
+            view.model(), parent=view, selectBlocks=not self.select_rows)
         view.setSelectionModel(selmodel)
-
         view.selectionModel().selectionChanged.connect(self.update_selection)
 
     #noinspection PyBroadException
@@ -588,6 +650,8 @@ class OWDataTable(widget.OWWidget):
     def _update_variable_labels(self, view):
         "Update the variable labels visibility for `view`"
         model = view.model()
+        if isinstance(model, TableSliceProxy):
+            model = model.sourceModel()
 
         if self.show_attribute_labels:
             model.setRichHeaderFlags(
@@ -668,18 +732,20 @@ class OWDataTable(widget.OWWidget):
         """
         Return the selected row and column indices of the selection in view.
         """
-        proxymodel = view.model()
-        sourcemodel = proxymodel.sourceModel()
-        assert isinstance(sourcemodel, TableModel)
         selection = view.selectionModel().selection()
-        # map through the proxy into input table.
-        selection = proxymodel.mapSelectionToSource(selection)
+        model = view.model()
+        # map through the proxies into input table.
+        while isinstance(model, QtGui.QAbstractProxyModel):
+            selection = model.mapSelectionToSource(selection)
+            model = model.sourceModel()
+
+        assert isinstance(model, TableModel)
 
         indexes = selection.indexes()
 
         rows = list(set(ind.row() for ind in indexes))
         # map the rows through the applied sorting (if any)
-        rows = sorted(sourcemodel.mapToTableRows(rows))
+        rows = sorted(model.mapToTableRows(rows))
         cols = sorted(set(ind.column() for ind in indexes))
         return rows, cols
 
@@ -689,8 +755,11 @@ class OWDataTable(widget.OWWidget):
         """
         selected_data = other_data = None
         view = self.tabs.currentWidget()
-        if view and view.model():
-            model = view.model().sourceModel()
+        if view and view.model() is not None:
+            model = view.model()
+            while isinstance(model, QtGui.QAbstractProxyModel):
+                model = model.sourceModel()
+
             table = model.source  # The input data table
             rowsel, colsel = self.get_selection(view)
 

@@ -706,7 +706,7 @@ class Table(MutableSequence, Storage):
             class_cols = np.fromiter(
                 (col - n_attrs for col in col_indices if col >= n_attrs), int)
             meta_cols = np.fromiter(
-                (-1 - col for col in col_indices if col < col), int)
+                (-1 - col for col in col_indices if col < 0), int)
             if value is None:
                 value = Unknown
 
