@@ -48,8 +48,8 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy>=1.9.0',
     'scipy',
+    'scikit-learn>=0.16',
     'bottlechest',
-    "sqlparse"
 )
 
 if sys.version_info < (3, 4):

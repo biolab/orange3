@@ -376,9 +376,9 @@ class OWHeatMap(widget.OWWidget):
     x_var_index = settings.ContextSetting(0)
     y_var_index = settings.ContextSetting(1)
     z_var_index = settings.ContextSetting(0)
-    selected_z_values = settings.Setting([])
-    color_scale = settings.Setting(1)
-    sample_level = settings.Setting(0)
+    selected_z_values = settings.ContextSetting([])
+    color_scale = settings.ContextSetting(1)
+    sample_level = settings.ContextSetting(0)
 
     sample_percentages = []
     sample_percentages_captions = []
@@ -608,6 +608,8 @@ class OWHeatMap(widget.OWWidget):
     def setup_plot(self):
         """Setup the density map plot"""
         self.plot.clear()
+        self.x_var_index = min(self.x_var_index, len(self.x_var_model) - 1)
+        self.y_var_index = min(self.y_var_index, len(self.y_var_model) - 1)
         if self.dataset is None or self.x_var_index == -1 or \
                 self.y_var_index == -1:
             return
@@ -662,7 +664,6 @@ class OWHeatMap(widget.OWWidget):
         return t._replace(xbins=xbins, ybins=ybins)
 
     def replot(self):
-        self.plot.clear()
         self.setup_plot()
 
     def update_map(self, root):

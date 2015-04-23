@@ -3,9 +3,8 @@ import numpy as np
 import pickle
 
 import Orange
-from Orange.data import Variable
 from Orange.preprocess import Continuize
-from Orange.projection import PCA, SparsePCA, RandomizedPCA
+from Orange.projection import PCA, SparsePCA, RandomizedPCA, IncrementalPCA
 
 
 class TestPCA(unittest.TestCase):
@@ -53,6 +52,29 @@ class TestPCA(unittest.TestCase):
         self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
         np.testing.assert_almost_equal(pca_model(data).X, proj)
+
+    def test_incremental_pca(self):
+        data = Orange.data.Table('ionosphere')
+        self.__ipca_test_helper(data, n_com=3, min_xpl_var=0.49)
+        self.__ipca_test_helper(data, n_com=32, min_xpl_var=1)
+
+    def __ipca_test_helper(self, data, n_com, min_xpl_var):
+        pca = IncrementalPCA(n_components=n_com)
+        pca_model = pca(data[::2])
+        pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
+        self.assertGreaterEqual(pca_xpl_var + 1e-6, min_xpl_var)
+        self.assertEqual(n_com, pca_model.n_components)
+        self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
+        proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
+        np.testing.assert_almost_equal(pca_model(data).X, proj)
+        pc1_ipca = pca_model.components_[0]
+        self.assertAlmostEqual(np.linalg.norm(pc1_ipca), 1)
+        pc1_pca = PCA(n_components=n_com)(data).components_[0]
+        self.assertAlmostEqual(np.linalg.norm(pc1_pca), 1)
+        self.assertNotAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 2)
+        pc1_ipca = pca_model.partial_fit(data[1::2]).components_[0]
+        self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 4)
+
 
     def test_compute_value(self):
         iris = Orange.data.Table('iris')

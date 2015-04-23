@@ -612,7 +612,7 @@ class SqlTable(table.Table):
         sample_table = '__%s_%s_%s' % (
             self.unquote_identifier(self.table_name),
             method,
-            str(parameter).replace('.', '_'))
+            str(parameter).replace('.', '_').replace('-', '_'))
         create = False
         try:
             with self._execute_sql_query("SELECT * FROM %s LIMIT 0" % self.quote_identifier(sample_table)) as cur:
