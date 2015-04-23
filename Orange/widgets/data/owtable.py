@@ -528,7 +528,7 @@ class OWDataTable(widget.OWWidget):
         datamodel = TableModel(data)
         datamodel = RichTableDecorator(datamodel)
 
-        rowcount = len(data)
+        rowcount = data.approx_len()
 
         color_schema = self.discPalette if self.color_by_class else None
         if self.show_distributions:
