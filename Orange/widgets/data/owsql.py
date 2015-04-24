@@ -153,14 +153,14 @@ class OWSql(widget.OWWidget):
                         AND n.nspname <> 'information_schema'
                         AND n.nspname !~ '^pg_toast'
                         AND pg_catalog.pg_table_is_visible(c.oid)
+                        AND NOT c.relname LIKE '\\_\\_%'
                    ORDER BY 1;""")
 
         self.tablecombo.addItem("Select a table")
         for i, (table_name,) in enumerate(cur.fetchall()):
-            if not table_name.startswith('__'):
-                self.tablecombo.addItem(table_name)
-                if table_name == self.table:
-                    self.tablecombo.setCurrentIndex(i + 1)
+            self.tablecombo.addItem(table_name)
+            if table_name == self.table:
+                self.tablecombo.setCurrentIndex(i + 1)
         self.tablecombo.addItem("Custom SQL")
 
     def select_table(self):
