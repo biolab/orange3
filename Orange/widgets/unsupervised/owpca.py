@@ -29,6 +29,7 @@ class OWPCA(widget.OWWidget):
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
     address = settings.Setting('localhost:9465')
+    auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
 
     def __init__(self, parent=None):
@@ -64,13 +65,6 @@ class OWPCA(widget.OWWidget):
 
         self.sampling_box = gui.widgetBox(self.controlArea,
                                           "Incremental learning")
-        form = QFormLayout()
-        self.sampling_box.layout().addLayout(form)
-
-        self.batch_spin = gui.spin(
-            self.sampling_box, self, "batch_size", 50, 10000, step=50,
-            keyboardTracking=False)
-        form.addRow("Batch size ~ ", self.batch_spin)
 
         self.addresstext = QLineEdit(box)
         self.addresstext.setPlaceholderText('Remote server')
@@ -78,10 +72,23 @@ class OWPCA(widget.OWWidget):
             self.addresstext.setText(self.address)
         self.sampling_box.layout().addWidget(self.addresstext)
 
-        self.pause_button = gui.button(self.sampling_box, self, "Start",
-                                callback=self.pause, tooltip="Update model")
+        form = QFormLayout()
+        self.sampling_box.layout().addLayout(form)
+        self.batch_spin = gui.spin(
+            self.sampling_box, self, "batch_size", 50, 10000, step=50,
+            keyboardTracking=False)
+        form.addRow("Batch size ~ ", self.batch_spin)
+
+        self.start_button = gui.button(
+            self.sampling_box, self, "Start remote computation",
+            callback=self.start, autoDefault=False,
+            tooltip="Start/abort computation on the server")
+        self.start_button.setEnabled(False)
+
+        gui.checkBox(self.sampling_box, self, "auto_update",
+                     "Periodically fetch model", callback=self.update_model)
         self.__timer = QTimer(self, interval=2000)
-        self.__timer.timeout.connect(self.update_model)
+        self.__timer.timeout.connect(self.get_model)
 
         self.sampling_box.setVisible(remotely)
         self.controlArea.layout().addStretch()
@@ -103,31 +110,39 @@ class OWPCA(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.plot)
 
-    def pause(self):
-        if 'Pause' in self.pause_button.text():
-            self.__timer.stop()
-            self.pause_button.setText('Resume')
-        else:
+    def update_model(self):
+        self.get_model()
+        if self.auto_update and self.rpca and not self.rpca.ready():
             self.__timer.start(2000)
-            self.pause_button.setText('Pause')
+        else:
+            self.__timer.stop()
+
+    def start(self):
+        if 'Abort' in self.start_button.text():
+            self.rpca.abort()
+            self.__timer.stop()
+            self.start_button.setText("Start remote computation")
+        else:
+            self.address = self.addresstext.text()
+            with remote.server(self.address):
+                from Orange.projection.pca import RemotePCA
+                maxiter = (1e5 + self.data.approx_len()) / self.batch_size * 3
+                self.rpca = RemotePCA(self.data, self.address,
+                                      self.batch_size, int(maxiter))
+            self.update_model()
+            self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
         self.clear()
         self.data = data
 
+        self.start_button.setEnabled(False)
         if data is not None:
             self._transformed = None
             if remotely and isinstance(data, SqlTable):
                 self.sampling_box.setVisible(True)
-                self.pause_button.setText("Start")
-                self.pause_button.setEnabled(True)
-                self.address = self.addresstext.text()
-                with remote.server('localhost:9465'):
-                    from Orange.projection.pca import RemotePCA
-                    maxiter = (1e5 + data.approx_len()) / self.batch_size * 3
-                    self.rpca = RemotePCA(data, self.address,
-                                          self.batch_size, int(maxiter))
-                self.pause()
+                self.start_button.setText("Start remote computation")
+                self.start_button.setEnabled(True)
             else:
                 self.sampling_box.setVisible(False)
                 pca = Orange.projection.PCA()
@@ -152,12 +167,15 @@ class OWPCA(widget.OWWidget):
         self._line = None
         self.plot.clear()
 
-    def update_model(self):
+    def get_model(self):
+        if self.rpca is None:
+            return
         if self.rpca.ready():
             self.__timer.stop()
-            self.pause_button.setText("Finished")
-            self.pause_button.setEnabled(False)
+            self.start_button.setText("Restart (finished)")
         self._pca = self.rpca.get_state()
+        if self._pca is None:
+            return
         self._variance_ratio = self._pca.explained_variance_ratio_
         self._cumulative = numpy.cumsum(self._variance_ratio)
         self.plot.clear()
@@ -230,12 +248,11 @@ class OWPCA(widget.OWWidget):
         if self._pca is None:
             return
 
-        cut = numpy.searchsorted(self._cumulative, self.variance_covered / 100.0)
+        cut = numpy.searchsorted(self._cumulative,
+                                 self.variance_covered / 100.0)
         self.ncomponents = cut + 1
-
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
-
         self._invalidate_selection()
 
     def _nselected_components(self):
