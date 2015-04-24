@@ -157,9 +157,10 @@ class OWSql(widget.OWWidget):
 
         self.tablecombo.addItem("Select a table")
         for i, (table_name,) in enumerate(cur.fetchall()):
-            self.tablecombo.addItem(table_name)
-            if table_name == self.table:
-                self.tablecombo.setCurrentIndex(i + 1)
+            if not table_name.startswith('__'):
+                self.tablecombo.addItem(table_name)
+                if table_name == self.table:
+                    self.tablecombo.setCurrentIndex(i + 1)
         self.tablecombo.addItem("Custom SQL")
 
     def select_table(self):
