@@ -73,7 +73,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
             v = Orange.data.ContinuousVariable('PC %d' % i)
             v.compute_value = Projector(self, i)
             v.to_sql = _LinearCombination(
-                domain.attributes, self.components_[:, i],
+                domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))
             return v
 
