@@ -75,7 +75,7 @@ class OWPCA(widget.OWWidget):
         form = QFormLayout()
         self.sampling_box.layout().addLayout(form)
         self.batch_spin = gui.spin(
-            self.sampling_box, self, "batch_size", 50, 10000, step=50,
+            self.sampling_box, self, "batch_size", 50, 100000, step=50,
             keyboardTracking=False)
         form.addRow("Batch size ~ ", self.batch_spin)
 
