@@ -615,6 +615,10 @@ class DendrogramWidget(QGraphicsWidget):
         if event.type() == QEvent.FontChange:
             self.updateGeometry()
 
+        # QEvent.ContentsRectChange is missing in PyQt4 <= 4.11.3
+        if event.type() == 178:  # QEvent.ContentsRectChange:
+            self._rescale()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._rescale()
