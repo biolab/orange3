@@ -28,7 +28,7 @@ class OWPCA(widget.OWWidget):
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
-    address = settings.Setting('localhost:9465')
+    address = settings.Setting('')
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
 
