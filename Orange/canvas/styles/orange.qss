@@ -23,15 +23,20 @@ QMainWindow::separator {
 
 /* The widget buttons in the dock tool box */
 
-WidgetsToolGrid QToolButton {
+WidgetToolBox WidgetToolGrid QToolButton {
+    border: none;
+    background-color: #F2F2F2;
+    border-radius: 8px;
+/*
     font-family: "Helvetica";
     font-size: 10px;
     font-weight: bold;
+*/
     color: #333;
 }
 
 
-/* Dock widget toolbox tab buttons (categories) */
+/* Dock widget tool box tab buttons (categories) */
 
 WidgetToolBox QToolButton#toolbox-tab-button {
     /* nativeStyling property overrides the QStyle and uses a fixed drawing
@@ -75,15 +80,9 @@ WidgetToolBox ToolGrid {
     padding-bottom: 8px;
 }
 
-
-WidgetToolBox ToolGrid QToolButton {
-    border: none;
-    /* border-bottom: 2px solid #B5B8B8;
-    border-right: 2px solid #B5B8B8; */
-    background-color: #F2F2F2;
-    border-radius: 8px;
+WidgetToolBox QWidget#toolbox-contents {
+    background-color: #F2F2F2; /* match the ToolGrid's background */
 }
-
 
 WidgetToolBox ToolGrid QToolButton[last-column] {
     border-right: none;
