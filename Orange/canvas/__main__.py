@@ -12,6 +12,7 @@ import optparse
 import pickle
 import shlex
 import shutil
+import signal
 
 import pkg_resources
 
@@ -44,9 +45,9 @@ def running_in_ipython():
         return False
 
 
-if "PYCHARM_HOSTED" in os.environ:
-    import signal
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+# Allow termination with CTRL + C
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def fix_osx_10_9_private_font():
