@@ -596,7 +596,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             pen = [ pens[a] for a in self.selection ]
         else:
             pen = [pens[0]] * self.n_points
-        brush = [QBrush(Qt.NoBrush)] * self.n_points
+        brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
         return pen, brush
 
     def compute_colors(self, keep_colors=False):
