@@ -10,6 +10,7 @@ concurrent programming
 
 import sys
 import threading
+import atexit
 import logging
 
 from functools import partial
@@ -46,23 +47,31 @@ class _TaskDepotThread(QThread):
     started by a QThreadPool.
 
     """
+    _lock = threading.Lock()
+    _instance = None
 
-    def start(self):
-        """
-        Reimplemented from `QThread.start`
-        """
-        QThread.start(self)
-        # Need to also handle method invoke from this thread
+    def __new__(cls):
+        if _TaskDepotThread._instance is not None:
+            raise RuntimeError("Already exists")
+        return QThread.__new__(cls)
+
+    def __init__(self):
+        QThread.__init__(self)
+        self.start()
+        # Need to handle queued method calls from this thread.
         self.moveToThread(self)
+        atexit.register(self._cleanup)
 
-    def run(self):
-        """
-        Reimplemented from `QThread.run`
-        """
-        # Start the event loop.
-        # On some old Qt4/PyQt4 installations base QThread.run does not seem
-        # to enter the loop, despite being documented to do so.
-        self.exec_()
+    def _cleanup(self):
+        self.quit()
+        self.wait()
+
+    @staticmethod
+    def instance():
+        with _TaskDepotThread._lock:
+            if _TaskDepotThread._instance is None:
+                _TaskDepotThread._instance = _TaskDepotThread()
+            return _TaskDepotThread._instance
 
     @Slot(object, object)
     def transfer(self, obj, thread):
@@ -74,6 +83,9 @@ class _TaskDepotThread(QThread):
         assert obj.thread() is self
         assert QThread.currentThread() is self
         obj.moveToThread(thread)
+
+    def __del__(self):
+        self._cleanup()
 
 
 class _TaskRunnable(QRunnable):
@@ -98,7 +110,8 @@ class _TaskRunnable(QRunnable):
 
         # Move the task to the current thread so it's events, signals, slots
         # are triggered from this thread.
-        assert isinstance(self.task.thread(), _TaskDepotThread)
+        assert self.task.thread() is _TaskDepotThread.instance()
+
         QMetaObject.invokeMethod(
             self.task.thread(), "transfer", Qt.BlockingQueuedConnection,
             Q_ARG(object, self.task),
@@ -111,8 +124,6 @@ class _TaskRunnable(QRunnable):
         self.task.start()
 
         # Quit the loop and exit when task finishes or is cancelled.
-        # TODO: If the task encounters an critical error it might not emit
-        # these signals and this Runnable will never complete.
         self.task.finished.connect(self.eventLoop.quit)
         self.task.cancelled.connect(self.eventLoop.quit)
         self.eventLoop.exec_()
@@ -174,9 +185,7 @@ class ThreadExecutor(QObject):
 
     def _get_depot_thread(self):
         if self._depot_thread is None:
-            self._depot_thread = _TaskDepotThread()
-            self._depot_thread.start()
-
+            self._depot_thread = _TaskDepotThread.instance()
         return self._depot_thread
 
     def submit(self, func, *args, **kwargs):
@@ -191,18 +200,7 @@ class ThreadExecutor(QObject):
                                    "shutdown.")
 
             if isinstance(func, Task):
-                if func.thread() is not QThread.currentThread():
-                    raise ValueError("Can only submit Tasks from it's own " +
-                                     "thread.")
-
-                if func.parent() is not None:
-                    raise ValueError("Can not submit Tasks with a parent.")
-
-                func.moveToThread(self._get_depot_thread())
-                assert func.thread() is self._get_depot_thread()
-                # Use the Task's own Future object
-                f = func.future()
-                runnable = _TaskRunnable(f, func, args, kwargs)
+                f, runnable = self.__make_task_runnable(func)
             else:
                 f = Future()
                 runnable = _Runnable(f, func, args, kwargs)
@@ -211,6 +209,34 @@ class ThreadExecutor(QObject):
             f._watchers.append(self._future_state_change)
             self._threadPool.start(runnable)
             return f
+
+    def submit_task(self, task):
+        with self._state_lock:
+            if self._shutdown:
+                raise RuntimeError("Cannot schedule new futures after " +
+                                   "shutdown.")
+
+            f, runnable = self.__make_task_runnable(task)
+
+            self._futures.append(f)
+            f._watchers.append(self._future_state_change)
+            self._threadPool.start(runnable)
+            return f
+
+    def __make_task_runnable(self, task):
+        if task.thread() is not QThread.currentThread():
+            raise ValueError("Can only submit Tasks from it's own " +
+                             "thread.")
+
+        if task.parent() is not None:
+            raise ValueError("Can not submit Tasks with a parent.")
+
+        task.moveToThread(self._get_depot_thread())
+
+        # Use the Task's own Future object
+        f = task.future()
+        runnable = _TaskRunnable(f, task, (), {})
+        return (f, runnable)
 
     def map(self, func, *iterables):
         futures = [self.submit(func, *args) for args in zip(*iterables)]
@@ -226,10 +252,6 @@ class ThreadExecutor(QObject):
         with self._state_lock:
             self._shutdown = True
 
-        if self._depot_thread is not None:
-            QMetaObject.invokeMethod(
-                self._depot_thread, "quit", Qt.AutoConnection)
-
         if wait:
             # Wait until all futures have completed.
             for future in list(self._futures):
@@ -237,10 +259,6 @@ class ThreadExecutor(QObject):
                     future.exception()
                 except (TimeoutError, CancelledError):
                     pass
-
-            if self._depot_thread is not None:
-                self._depot_thread.wait()
-                self._depot_thread = None
 
     def _future_state_change(self, future, state):
         # Remove futures when finished.
