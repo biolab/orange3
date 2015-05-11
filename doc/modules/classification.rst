@@ -39,7 +39,7 @@ Simple Random Forest
 .. index:: softmax regression classifier
    pair: classification; softmax regression
 
-Softmax Regression Classifier
+Softmax Regression
 -----------------------------
 
 .. autoclass:: SoftmaxRegressionLearner

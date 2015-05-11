@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
+from Orange.preprocess import Continuize, RemoveNaNColumns, Impute
 
 __all__ = ["SoftmaxRegressionLearner"]
 
@@ -10,26 +11,40 @@ class SoftmaxRegressionLearner(Learner):
     """L2 regularized softmax regression classifier.
     Uses the L-BFGS algorithm to minimize the categorical
     cross entropy cost with L2 regularization. This model is suitable
-    when dealing with a multi-class classification problem
+    when dealing with a multi-class classification problem.
 
     When using this learner you should:
 
     - choose a suitable regularization parameter lambda\_,
-    - continuize all discrete attributes,
-    - consider appending a column of ones to the data set (intercept term),
-    - transform the data set so that the columns are on a similar scale,
     - consider using many logistic regression models (one for each
       value of the class variable) instead of softmax regression.
 
-    lambda\_ : float, optional (default=1.0)
-       the regularization parameter. Higher values of lambda\_
-       force the coefficients to be smaller
+    Parameters
+    ----------
+
+    lambda_ : float, optional (default=1.0)
+        Regularization parameter. It controls trade-off between fitting the
+        data and keeping parameters small. Higher values of lambda_ force
+        parameters to be smaller.
+
+    preprocessors : list, optional (default="[Continuize(), Impute(), RemoveNaNColumns()])
+        Preprocessors are applied to data before training or testing. Default preprocessors
+        - continuize all discrete attributes,
+        - transform the dataset so that the columns are on a similar scale,
+        - remove columns with all values as NaN
+        - replace NaN values with suitable values
+
+    fmin_args : dict, optional
+        Parameters for L-BFGS algorithm.
     """
 
     name = 'softmax'
 
-    def __init__(self, lambda_=1.0, normalize=True, preprocessors=None,
-                 **fmin_args):
+    preprocessors = [Continuize(normalize_continuous=Continuize.NormalizeBySD),
+                     Impute(),
+                     RemoveNaNColumns()]
+
+    def __init__(self, lambda_=1.0, preprocessors=None, **fmin_args):
         super().__init__(preprocessors=preprocessors)
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
@@ -52,13 +67,15 @@ class SoftmaxRegressionLearner(Learner):
         return cost, grad.ravel()
 
     def fit(self, X, y, W):
-        if y.shape[1] > 1:
+        if len(y.shape) > 1:
             raise ValueError('Softmax regression does not support '
                              'multi-label classification')
 
         if np.isnan(np.sum(X)) or np.isnan(np.sum(y)):
             raise ValueError('Softmax regression does not support '
                              'unknown values')
+
+        X = np.hstack((X, np.ones((X.shape[0], 1))))
 
         self.num_classes = np.unique(y).size
         Y = np.eye(self.num_classes)[y.ravel().astype(int)]
@@ -76,6 +93,7 @@ class SoftmaxRegressionModel(Model):
         self.Theta = Theta
 
     def predict(self, X):
+        X = np.hstack((X, np.ones((X.shape[0], 1))))
         M = X.dot(self.Theta.T)
         P = np.exp(M - np.max(M, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
