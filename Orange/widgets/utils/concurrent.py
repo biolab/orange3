@@ -350,9 +350,7 @@ class CancelledError(Exception):
 
 class Future(object):
     """
-    A :class:`Future` class represents a result of an asynchronous
-    computation.
-
+    Represents a result of an asynchronous computation.
     """
     Pending, Canceled, Running, Finished = 1, 2, 4, 8
 
@@ -362,6 +360,7 @@ class Future(object):
         self._condition = threading.Condition()
         self._result = None
         self._exception = None
+        self._done_callbacks = []
 
     def _set_state(self, state):
         if self._state != state:
@@ -384,6 +383,7 @@ class Future(object):
                 self._set_state(Future.Canceled)
                 self._condition.notify_all()
 
+        self._invoke_callbacks()
         return True
 
     def cancelled(self):
@@ -467,6 +467,8 @@ class Future(object):
             self._set_state(Future.Finished)
             self._condition.notify_all()
 
+        self._invoke_callbacks()
+
     def set_exception(self, exception):
         """
         Set the exception instance that was raised by the computation
@@ -478,6 +480,16 @@ class Future(object):
             self._set_state(Future.Finished)
             self._condition.notify_all()
 
+        self._invoke_callbacks()
+
+    def add_done_callback(self, fn):
+        with self._condition:
+            if self._state not in [Future.Finished, Future.Canceled]:
+                self._done_callbacks.append(fn)
+                return
+        # Already done
+        fn(self)
+
     def set_running_or_notify_cancel(self):
         with self._condition:
             if self._state == Future.Canceled:
@@ -487,6 +499,13 @@ class Future(object):
                 return True
             else:
                 raise Exception()
+
+    def _invoke_callbacks(self):
+        for callback in self._done_callbacks:
+            try:
+                callback(self)
+            except Exception:
+                pass
 
 
 class StateChangedEvent(QEvent):
@@ -666,6 +685,49 @@ class TestFutures(unittest.TestCase):
 
         with self.assertRaises(Exception):
             f.result()
+
+        class Ref():
+            def __init__(self, ref):
+                self.ref = ref
+
+            def set(self, ref):
+                self.ref = ref
+
+        # Test that done callbacks are called.
+        called = Ref(False)
+        f = Future()
+        f.add_done_callback(lambda f: called.set(True))
+        f.set_result(None)
+        self.assertTrue(called.ref)
+
+        # Test that callbacks are called when cancelled.
+        called = Ref(False)
+        f = Future()
+        f.add_done_callback(lambda f: called.set(True))
+        f.cancel()
+        self.assertTrue(called.ref)
+
+        # Test that callbacks are called immediately when the future is
+        # already done.
+        called = Ref(False)
+        f = Future()
+        f.set_result(None)
+        f.add_done_callback(lambda f: called.set(True))
+        self.assertTrue(called.ref)
+
+        count = Ref(0)
+        f = Future()
+        f.add_done_callback(lambda f: count.set(count.ref + 1))
+        f.add_done_callback(lambda f: count.set(count.ref + 1))
+        f.set_result(None)
+        self.assertEqual(count.ref, 2)
+
+        # Test that the callbacks are called with the future as argument.
+        done_future = Ref(None)
+        f = Future()
+        f.add_done_callback(lambda f: done_future.set(f))
+        f.set_result(None)
+        self.assertIs(f, done_future.ref)
 
 
 class TestExecutor(unittest.TestCase):
