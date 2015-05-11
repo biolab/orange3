@@ -7,21 +7,16 @@ concurrent programming
 
 """
 
-
-import sys
 import threading
 import atexit
 import logging
 
-from functools import partial
 from contextlib import contextmanager
 
-from PyQt4.QtGui import qApp
 
 from PyQt4.QtCore import (
-    Qt, QObject, QMetaObject, QTimer, QThreadPool, QThread, QMutex,
-    QRunnable, QEventLoop, QCoreApplication, QEvent,
-    Q_ARG, pyqtSignature,
+    Qt, QObject, QMetaObject, QThreadPool, QThread, QRunnable,
+    QEventLoop, QCoreApplication, QEvent, Q_ARG
 )
 
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -641,10 +636,7 @@ class methodinvoke(object):
         )
 
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 
 class TestFutures(unittest.TestCase):
