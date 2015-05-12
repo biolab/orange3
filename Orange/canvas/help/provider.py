@@ -3,8 +3,8 @@
 """
 import os
 import logging
+import io
 
-from io import StringIO
 from urllib.parse import urljoin
 
 from PyQt4.QtCore import QObject, QUrl
@@ -99,8 +99,8 @@ class IntersphinxHelpProvider(HelpProvider):
             self._error = reply.error(), reply.errorString()
 
         else:
-            contents = reply.readAll()
-            self._load_inventory(StringIO(contents))
+            contents = bytes(reply.readAll())
+            self._load_inventory(io.BytesIO(contents))
 
     def _load_inventory(self, stream):
         version = stream.readline().rstrip()
@@ -109,9 +109,9 @@ class IntersphinxHelpProvider(HelpProvider):
         else:
             join = urljoin
 
-        if version == "# Sphinx inventory version 1":
+        if version == b"# Sphinx inventory version 1":
             items = read_inventory_v1(stream, self.target, join)
-        elif version == "# Sphinx inventory version 2":
+        elif version == b"# Sphinx inventory version 2":
             items = read_inventory_v2(stream, self.target, join)
         else:
             log.error("Invalid/unknown intersphinx inventory format.")
