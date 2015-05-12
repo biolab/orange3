@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print(ga)
     print(gn)
 
-#    for lambda_ in [0.1, 0.3, 1, 3, 10]:
+# for lambda_ in [0.1, 0.3, 1, 3, 10]:
 #        m = SoftmaxRegressionLearner(lambda_=lambda_)
 #        scores = []
 #        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):

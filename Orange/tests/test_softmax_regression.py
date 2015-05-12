@@ -3,9 +3,8 @@ import unittest
 import Orange
 from Orange.classification import SoftmaxRegressionLearner
 
+
 class SoftmaxRegressionTest(unittest.TestCase):
-
-
     def test_SoftmaxRegression(self):
         table = Orange.data.Table('iris')
         learner = SoftmaxRegressionLearner()
@@ -18,7 +17,7 @@ class SoftmaxRegressionTest(unittest.TestCase):
         learn = SoftmaxRegressionLearner()
         clf = learn(table)
         p = clf(table, ret=Orange.classification.Model.Probs)
-        self.assertTrue(all(abs(p.sum(axis=1)-1) < 1e-6))
+        self.assertTrue(all(abs(p.sum(axis=1) - 1) < 1e-6))
 
     def test_predict_table(self):
         table = Orange.data.Table('iris')
