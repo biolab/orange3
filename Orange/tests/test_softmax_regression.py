@@ -8,7 +8,7 @@ class SoftmaxRegressionTest(unittest.TestCase):
     def test_SoftmaxRegression(self):
         table = Orange.data.Table('iris')
         learner = SoftmaxRegressionLearner()
-        results = Orange.evaluation.CrossValidation(table, [learner], k=10)
+        results = Orange.evaluation.CrossValidation(table, [learner], k=3)
         ca = Orange.evaluation.CA(results)
         self.assertTrue(0.9 < ca < 1.0)
 

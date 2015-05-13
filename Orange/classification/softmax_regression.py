@@ -22,9 +22,9 @@ class SoftmaxRegressionLearner(Learner):
     Parameters
     ----------
 
-    lambda_ : float, optional (default=1.0)
+    lambda\_ : float, optional (default=1.0)
         Regularization parameter. It controls trade-off between fitting the
-        data and keeping parameters small. Higher values of lambda_ force
+        data and keeping parameters small. Higher values of lambda\_ force
         parameters to be smaller.
 
     preprocessors : list, optional (default="[Continuize(), Impute(), RemoveNaNColumns()])
