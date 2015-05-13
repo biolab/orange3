@@ -108,15 +108,6 @@ wrapping the numpy arrays into Orange's :obj:`~Orange.data.Table`. ::
             >>> domain
             [Feature 1, Feature 2, Feature 3, Feature 4 | Class 1]
 
-    .. automethod:: var_from_domain
-
-        ::
-
-            >>> iris.domain.var_from_domain("petal length")
-            ContinuousVariable('petal length')
-            >>> iris.domain.var_from_domain(2)
-            ContinuousVariable('petal length')
-
     .. automethod:: __getitem__
 
         ::
