@@ -196,7 +196,8 @@ PACKAGES = [
 ]
 
 PACKAGE_DATA = {
-    "Orange": ["datasets/*.{}".format(ext) for ext in ["tab", "csv", "basket"]],
+    "Orange": ["datasets/*.{}".format(ext)
+               for ext in ["tab", "csv", "basket", "info"]],
     "Orange.canvas": ["icons/*.png", "icons/*.svg"],
     "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
     "Orange.canvas.application.tutorials": ["*.ows"],
