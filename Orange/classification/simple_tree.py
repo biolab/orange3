@@ -4,7 +4,7 @@ import ctypes as ct
 
 import numpy as np
 from Orange.classification import Learner, Model
-from Orange.data import DiscreteVariable, ContinuousVariable
+from Orange.data import DiscreteVariable, ContinuousVariable, Instance, Table
 
 __all__ = ['SimpleTreeLearner']
 
@@ -99,6 +99,8 @@ class SimpleTreeLearner(Learner):
 class SimpleTreeModel(Model):
 
     def __init__(self, learner, data):
+        if isinstance(data, Instance):
+            data = Table(data.domain, data.table)
         X = np.ascontiguousarray(data.X)
         Y = np.ascontiguousarray(data.Y)
         W = np.ascontiguousarray(data.W)
@@ -161,6 +163,8 @@ class SimpleTreeModel(Model):
             learner.seed)
 
     def predict_storage(self, data):
+        if isinstance(data, Instance):
+            data = Table(data.domain, data.table)
         X = np.ascontiguousarray(data.X)
         if self.type == Classification:
             p = np.zeros((X.shape[0], self.cls_vals))
@@ -251,3 +255,4 @@ class SimpleTreeModel(Model):
             xs.append(self.dumps_tree(n.children[i]))
         xs.append('}')
         return ' '.join(xs)
+
