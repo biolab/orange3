@@ -570,7 +570,7 @@ class OWDataTable(widget.OWWidget):
             view.setModel(sliceproxy)
 
         assert view.model().rowCount() <= maxrows
-        assert vheader.sectionSize(0) > 1
+        assert vheader.sectionSize(0) > 1 or datamodel.rowCount() == 0
 
         # update the header (attribute names)
         self._update_variable_labels(view)
