@@ -2,7 +2,8 @@ import sklearn.linear_model as skl_linear_model
 import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
 
-from Orange.classification import Learner, Model, SklLearner
+from Orange.regression import Model, SklLearner
+
 
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "LassoRegressionLearner", "SGDRegressionLearner",

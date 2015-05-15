@@ -1,15 +1,15 @@
 import numpy as np
 
-from Orange.classification import Learner, Model
-from Orange.classification.simple_tree import SimpleTreeLearner
-from Orange.data import DiscreteVariable
+from Orange.classification.simple_random_forest import SimpleRandomForestLearner as SRFL
+from Orange.classification.simple_random_forest import SimpleRandomForestModel as SRFM
+from Orange.data import ContinuousVariable
 
 __all__ = ['SimpleRandomForestLearner']
 
 
-class SimpleRandomForestLearner(Learner):
+class SimpleRandomForestLearner(SRFL):
     """
-    A random forest classifier, optimized for speed. Trees in the forest
+    A random forest regressor, optimized for speed. Trees in the forest
     are constructed with :obj:`SimpleTreeLearner` classification trees.
 
 
@@ -41,49 +41,28 @@ class SimpleRandomForestLearner(Learner):
     seed : int, optional (default = 42)
         Random seed.
     """
-
-    name = 'simple rf'
-
-    def __init__(self, n_estimators=10, min_instances=2, max_depth=1024,
-                 max_majority=1.0, skip_prob='sqrt', seed=42):
-
-        self.n_estimators = n_estimators
-        self.skip_prob = skip_prob
-        self.max_depth = max_depth
-        self.min_instances = min_instances
-        self.max_majority = max_majority
-        self.seed = seed
-
     def fit_storage(self, data):
         return SimpleRandomForestModel(self, data)
 
 
-class SimpleRandomForestModel(Model):
+class SimpleRandomForestModel(SRFM):
 
     def __init__(self, learner, data):
         self.estimators_ = []
 
-        if isinstance(data.domain.class_var, DiscreteVariable):
-            self.type = 'classification'
-            self.cls_vals = len(data.domain.class_var.values)
+        if isinstance(data.domain.class_var, ContinuousVariable):
+            self.type = 'regression'
+            self.cls_vals = 0
         else:
             assert(False)
         self.learn(learner, data)
 
-    def learn(self, learner, data):
-        tree = SimpleTreeLearner(
-            learner.min_instances, learner.max_depth,
-            learner.max_majority, learner.skip_prob, True)
-        for i in range(learner.n_estimators):
-            tree.seed = learner.seed + i
-            self.estimators_.append(tree(data))
-
     def predict_storage(self, data):
-        if self.type == 'classification':
-            p = np.zeros((data.X.shape[0], self.cls_vals))
+        if self.type == 'regression':
+            p = np.zeros(data.X.shape[0])
             for tree in self.estimators_:
-                p += tree(data, tree.Probs)
+                p += tree(data)
             p /= len(self.estimators_)
-            return p.argmax(axis=1), p
+            return p
         else:
             assert(False)

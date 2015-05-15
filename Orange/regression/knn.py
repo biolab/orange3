@@ -1,5 +1,5 @@
 import sklearn.neighbors as skl_neighbors
-from Orange.classification import SklLearner
+from Orange.regression import SklLearner
 
 __all__ = ["KNNRegressionLearner"]
 

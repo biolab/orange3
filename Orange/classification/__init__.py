@@ -1,4 +1,4 @@
-from .base import *
+from Orange.base import *
 from .knn import *
 from .logistic_regression import *
 from .majority import *
