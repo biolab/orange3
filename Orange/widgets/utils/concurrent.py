@@ -7,20 +7,16 @@ concurrent programming
 
 """
 
-
-import sys
 import threading
+import atexit
 import logging
 
-from functools import partial
 from contextlib import contextmanager
 
-from PyQt4.QtGui import qApp
 
 from PyQt4.QtCore import (
-    Qt, QObject, QMetaObject, QTimer, QThreadPool, QThread, QMutex,
-    QRunnable, QEventLoop, QCoreApplication, QEvent,
-    Q_ARG, pyqtSignature,
+    Qt, QObject, QMetaObject, QThreadPool, QThread, QRunnable,
+    QEventLoop, QCoreApplication, QEvent, Q_ARG
 )
 
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -46,23 +42,31 @@ class _TaskDepotThread(QThread):
     started by a QThreadPool.
 
     """
+    _lock = threading.Lock()
+    _instance = None
 
-    def start(self):
-        """
-        Reimplemented from `QThread.start`
-        """
-        QThread.start(self)
-        # Need to also handle method invoke from this thread
+    def __new__(cls):
+        if _TaskDepotThread._instance is not None:
+            raise RuntimeError("Already exists")
+        return QThread.__new__(cls)
+
+    def __init__(self):
+        QThread.__init__(self)
+        self.start()
+        # Need to handle queued method calls from this thread.
         self.moveToThread(self)
+        atexit.register(self._cleanup)
 
-    def run(self):
-        """
-        Reimplemented from `QThread.run`
-        """
-        # Start the event loop.
-        # On some old Qt4/PyQt4 installations base QThread.run does not seem
-        # to enter the loop, despite being documented to do so.
-        self.exec_()
+    def _cleanup(self):
+        self.quit()
+        self.wait()
+
+    @staticmethod
+    def instance():
+        with _TaskDepotThread._lock:
+            if _TaskDepotThread._instance is None:
+                _TaskDepotThread._instance = _TaskDepotThread()
+            return _TaskDepotThread._instance
 
     @Slot(object, object)
     def transfer(self, obj, thread):
@@ -74,6 +78,9 @@ class _TaskDepotThread(QThread):
         assert obj.thread() is self
         assert QThread.currentThread() is self
         obj.moveToThread(thread)
+
+    def __del__(self):
+        self._cleanup()
 
 
 class _TaskRunnable(QRunnable):
@@ -98,7 +105,8 @@ class _TaskRunnable(QRunnable):
 
         # Move the task to the current thread so it's events, signals, slots
         # are triggered from this thread.
-        assert isinstance(self.task.thread(), _TaskDepotThread)
+        assert self.task.thread() is _TaskDepotThread.instance()
+
         QMetaObject.invokeMethod(
             self.task.thread(), "transfer", Qt.BlockingQueuedConnection,
             Q_ARG(object, self.task),
@@ -111,8 +119,6 @@ class _TaskRunnable(QRunnable):
         self.task.start()
 
         # Quit the loop and exit when task finishes or is cancelled.
-        # TODO: If the task encounters an critical error it might not emit
-        # these signals and this Runnable will never complete.
         self.task.finished.connect(self.eventLoop.quit)
         self.task.cancelled.connect(self.eventLoop.quit)
         self.eventLoop.exec_()
@@ -168,12 +174,13 @@ class ThreadExecutor(QObject):
             threadPool = QThreadPool.globalInstance()
         self._threadPool = threadPool
         self._depot_thread = None
+        self._futures = []
+        self._shutdown = False
+        self._state_lock = threading.Lock()
 
     def _get_depot_thread(self):
         if self._depot_thread is None:
-            self._depot_thread = _TaskDepotThread()
-            self._depot_thread.start()
-
+            self._depot_thread = _TaskDepotThread.instance()
         return self._depot_thread
 
     def submit(self, func, *args, **kwargs):
@@ -182,24 +189,49 @@ class ThreadExecutor(QObject):
         :class:`Future` instance representing the result of the computation.
 
         """
-        if isinstance(func, Task):
-            if func.thread() is not QThread.currentThread():
-                raise ValueError("Can only submit Tasks from it's own thread.")
+        with self._state_lock:
+            if self._shutdown:
+                raise RuntimeError("Cannot schedule new futures after " +
+                                   "shutdown.")
 
-            if func.parent() is not None:
-                raise ValueError("Can not submit Tasks with a parent.")
+            if isinstance(func, Task):
+                f, runnable = self.__make_task_runnable(func)
+            else:
+                f = Future()
+                runnable = _Runnable(f, func, args, kwargs)
 
-            func.moveToThread(self._get_depot_thread())
-            assert func.thread() is self._get_depot_thread()
-            # Use the Task's own Future object
-            f = func.future()
-            runnable = _TaskRunnable(f, func, args, kwargs)
-        else:
-            f = Future()
-            runnable = _Runnable(f, func, args, kwargs)
-        self._threadPool.start(runnable)
+            self._futures.append(f)
+            f._watchers.append(self._future_state_change)
+            self._threadPool.start(runnable)
+            return f
 
-        return f
+    def submit_task(self, task):
+        with self._state_lock:
+            if self._shutdown:
+                raise RuntimeError("Cannot schedule new futures after " +
+                                   "shutdown.")
+
+            f, runnable = self.__make_task_runnable(task)
+
+            self._futures.append(f)
+            f._watchers.append(self._future_state_change)
+            self._threadPool.start(runnable)
+            return f
+
+    def __make_task_runnable(self, task):
+        if task.thread() is not QThread.currentThread():
+            raise ValueError("Can only submit Tasks from it's own " +
+                             "thread.")
+
+        if task.parent() is not None:
+            raise ValueError("Can not submit Tasks with a parent.")
+
+        task.moveToThread(self._get_depot_thread())
+
+        # Use the Task's own Future object
+        f = task.future()
+        runnable = _TaskRunnable(f, task, (), {})
+        return (f, runnable)
 
     def map(self, func, *iterables):
         futures = [self.submit(func, *args) for args in zip(*iterables)]
@@ -212,15 +244,21 @@ class ThreadExecutor(QObject):
         Shutdown the executor and free all resources. If `wait` is True then
         wait until all pending futures are executed or cancelled.
         """
-        if self._depot_thread is not None:
-            QMetaObject.invokeMethod(
-                self._depot_thread, "quit", Qt.AutoConnection)
+        with self._state_lock:
+            self._shutdown = True
 
         if wait:
-            self._threadPool.waitForDone()
-            if self._depot_thread:
-                self._depot_thread.wait()
-                self._depot_thread = None
+            # Wait until all futures have completed.
+            for future in list(self._futures):
+                try:
+                    future.exception()
+                except (TimeoutError, CancelledError):
+                    pass
+
+    def _future_state_change(self, future, state):
+        # Remove futures when finished.
+        if state == Future.Finished:
+            self._futures.remove(future)
 
 
 class ExecuteCallEvent(QEvent):
@@ -307,9 +345,7 @@ class CancelledError(Exception):
 
 class Future(object):
     """
-    A :class:`Future` class represents a result of an asynchronous
-    computation.
-
+    Represents a result of an asynchronous computation.
     """
     Pending, Canceled, Running, Finished = 1, 2, 4, 8
 
@@ -319,6 +355,7 @@ class Future(object):
         self._condition = threading.Condition()
         self._result = None
         self._exception = None
+        self._done_callbacks = []
 
     def _set_state(self, state):
         if self._state != state:
@@ -341,6 +378,7 @@ class Future(object):
                 self._set_state(Future.Canceled)
                 self._condition.notify_all()
 
+        self._invoke_callbacks()
         return True
 
     def cancelled(self):
@@ -424,6 +462,8 @@ class Future(object):
             self._set_state(Future.Finished)
             self._condition.notify_all()
 
+        self._invoke_callbacks()
+
     def set_exception(self, exception):
         """
         Set the exception instance that was raised by the computation
@@ -435,6 +475,16 @@ class Future(object):
             self._set_state(Future.Finished)
             self._condition.notify_all()
 
+        self._invoke_callbacks()
+
+    def add_done_callback(self, fn):
+        with self._condition:
+            if self._state not in [Future.Finished, Future.Canceled]:
+                self._done_callbacks.append(fn)
+                return
+        # Already done
+        fn(self)
+
     def set_running_or_notify_cancel(self):
         with self._condition:
             if self._state == Future.Canceled:
@@ -444,6 +494,13 @@ class Future(object):
                 return True
             else:
                 raise Exception()
+
+    def _invoke_callbacks(self):
+        for callback in self._done_callbacks:
+            try:
+                callback(self)
+            except Exception:
+                pass
 
 
 class StateChangedEvent(QEvent):
@@ -579,10 +636,7 @@ class methodinvoke(object):
         )
 
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 
 class TestFutures(unittest.TestCase):
@@ -623,6 +677,49 @@ class TestFutures(unittest.TestCase):
 
         with self.assertRaises(Exception):
             f.result()
+
+        class Ref():
+            def __init__(self, ref):
+                self.ref = ref
+
+            def set(self, ref):
+                self.ref = ref
+
+        # Test that done callbacks are called.
+        called = Ref(False)
+        f = Future()
+        f.add_done_callback(lambda f: called.set(True))
+        f.set_result(None)
+        self.assertTrue(called.ref)
+
+        # Test that callbacks are called when cancelled.
+        called = Ref(False)
+        f = Future()
+        f.add_done_callback(lambda f: called.set(True))
+        f.cancel()
+        self.assertTrue(called.ref)
+
+        # Test that callbacks are called immediately when the future is
+        # already done.
+        called = Ref(False)
+        f = Future()
+        f.set_result(None)
+        f.add_done_callback(lambda f: called.set(True))
+        self.assertTrue(called.ref)
+
+        count = Ref(0)
+        f = Future()
+        f.add_done_callback(lambda f: count.set(count.ref + 1))
+        f.add_done_callback(lambda f: count.set(count.ref + 1))
+        f.set_result(None)
+        self.assertEqual(count.ref, 2)
+
+        # Test that the callbacks are called with the future as argument.
+        done_future = Ref(None)
+        f = Future()
+        f.add_done_callback(lambda f: done_future.set(f))
+        f.set_result(None)
+        self.assertIs(f, done_future.ref)
 
 
 class TestExecutor(unittest.TestCase):
