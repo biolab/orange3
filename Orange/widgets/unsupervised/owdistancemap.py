@@ -548,7 +548,14 @@ class OWDistanceMap(widget.OWWidget):
             pass
         elif isinstance(self.items, Orange.data.Table):
             indices = self._selection
-            datasubset = self.items.from_table_rows(self.items, indices)
+            if self.matrix.axis == 1:
+                datasubset = self.items.from_table_rows(self.items, indices)
+            elif self.matrix.axis == 0:
+                domain = Orange.data.Domain(
+                    [self.items.domain[i] for i in indices],
+                    self.items.domain.class_vars,
+                    self.items.domain.metas)
+                datasubset = Orange.data.Table.from_table(domain, self.items)
         elif isinstance(self.items, widget.AttributeList):
             subset = [self.items[i] for i in self._selection]
             featuresubset = widget.AttributeList(subset)
