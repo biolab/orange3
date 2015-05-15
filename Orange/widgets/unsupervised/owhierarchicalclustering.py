@@ -996,17 +996,16 @@ class OWHierarchicalClustering(widget.OWWidget):
         unselected_indices = sorted(set(range(self.root.value.last)) -
                                     set(selected_indices))
 
-        selected = [items[k] for k in selected_indices]
-        unselected = [items[k] for k in unselected_indices]
-
-        if not selected:
+        if not selected_indices:
             self.send("Selected Data", None)
             self.send("Other Data", None)
             return
+
         selected_data = unselected_data = None
 
-        if isinstance(items, Orange.data.Table):
-            c = numpy.zeros(len(items))
+        if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
+            # Select rows
+            c = numpy.zeros(self.matrix.X.shape[0])
 
             for i, indices in enumerate(maps):
                 c[indices] = i
@@ -1019,7 +1018,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                     str(self.cluster_name),
                     values=["Cluster {}".format(i + 1)
                             for i in range(len(maps))] +
-                           ["Other"], ordered=True
+                           ["Other"]
                 )
                 data, domain = items, items.domain
 
@@ -1035,15 +1034,26 @@ class OWHierarchicalClustering(widget.OWWidget):
                     metas = metas + (clust_var,)
 
                 domain = Orange.data.Domain(attrs, class_, metas)
-                data = Orange.data.Table(domain, data)
+                data = Orange.data.Table.from_table(domain, items)
                 data.get_column_view(clust_var)[0][:] = c
             else:
                 data = items
 
-            if selected:
+            if selected_indices:
                 selected_data = data[mask]
-            if unselected:
+            if unselected_indices:
                 unselected_data = data[~mask]
+
+        elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
+            # Select columns
+            domain = Orange.data.Domain(
+                [items.domain[i] for i in selected_indices],
+                items.domain.class_vars, items.domain.metas)
+            selected_data = items.from_table(domain, items)
+            domain = Orange.data.Domain(
+                [items.domain[i] for i in unselected_indices],
+                items.domain.class_vars, items.domain.metas)
+            unselected_data = items.from_table(domain, items)
 
         self.send("Selected Data", selected_data)
         self.send("Other Data", unselected_data)
