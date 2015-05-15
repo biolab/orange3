@@ -140,12 +140,18 @@ def corner_anchor(corner):
 
 def legend_anchor_pos(legend):
     """
-    Return the legend's anchor positions relative to it's parent.
+    Return the legend's anchor positions relative to it's parent (if defined).
 
-    .. seealso:: LegendItem.anchor
+    Return `None` if legend does not have a parent or the parent's size
+    is empty.
+
+    .. seealso:: LegendItem.anchor, rect_anchor_pos
 
     """
     parent = legend.parentItem()
+    if parent is None or parent.size().isEmpty():
+        return None
+
     rect = legend.geometry()  # in parent coordinates.
     parent_rect = QRectF(QPointF(0, 0), parent.size())
 
@@ -158,12 +164,15 @@ def rect_anchor_pos(rect, parent_rect):
     """
     Find the 'best' anchor corners of rect within parent_rect.
 
-    Returns a tuple of (rect_corner, parent_corner, rx, ry),
+    Return a tuple of (rect_corner, parent_corner, rx, ry),
     where rect/parent_corners are Qt.Corners which are closest and
     rx, ry are the relative positions of the rect_corner within
-    parent_rect
+    parent_rect. If the parent_rect is empty return `None`.
 
     """
+    if parent_rect.isEmpty():
+        return None
+
     # Find the closest corner of rect to parent rect
     corners = (Qt.TopLeftCorner, Qt.TopRightCorner,
                Qt.BottomRightCorner, Qt.BottomLeftCorner)
@@ -750,11 +759,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def remove_legend(self):
         if self.legend:
-            self.__legend_anchor = legend_anchor_pos(self.legend)
+            anchor = legend_anchor_pos(self.legend)
+            if anchor is not None:
+                self.__legend_anchor = anchor
             self.legend.setParent(None)
             self.legend = None
         if self.color_legend:
-            self.__color_legend_anchor = legend_anchor_pos(self.color_legend)
+            anchor = legend_anchor_pos(self.color_legend)
+            if anchor is not None:
+                self.__color_legend_anchor = anchor
             self.color_legend.setParent(None)
             self.color_legend = None
 
