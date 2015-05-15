@@ -853,7 +853,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._set_items(None)
         self.matrix = matrix
         self._invalidate_clustering()
-        self._set_items(matrix.row_items if matrix is not None else None, matrix.axis)
+
+        if matrix is not None:
+            self._set_items(matrix.row_items, matrix.axis)
 
     def _set_items(self, items, axis=1):
         self.items = items
