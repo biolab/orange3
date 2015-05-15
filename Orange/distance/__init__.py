@@ -10,7 +10,9 @@ from Orange.misc import DistMatrix
 def _preprocess(table):
     """Remove categorical attributes and impute missing values."""
     new_domain = data.Domain([i for i in table.domain.attributes
-                              if isinstance(i, data.ContinuousVariable)], table.domain.class_var)
+                              if isinstance(i, data.ContinuousVariable)],
+                             table.domain.class_var,
+                             table.domain.metas)
     new_data = data.Table(new_domain, table)
     new_data.X = skl_preprocessing.Imputer().fit_transform(new_data.X)
     new_data.X = new_data.X if sparse.issparse(new_data.X) else np.squeeze(new_data.X)
