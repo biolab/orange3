@@ -1087,6 +1087,12 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         return super().eventFilter(obj, event)
 
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self._clear_plot()
+        self.dendrogram.clear()
+        self.dendrogram.deleteLater()
+
     def _dendrogram_geom_changed(self):
         pos = self.dendrogram.pos_at_height(self.cutoff_height)
         geom = self.dendrogram.geometry()
