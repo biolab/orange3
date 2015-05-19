@@ -8,7 +8,7 @@ import numpy
 from PyQt4.QtGui import (
     QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform, QGraphicsWidget
+    QBrush, QTransform, QGraphicsWidget, QApplication
 )
 
 from PyQt4.QtCore import Qt, QRect, QRectF, QSize, QPointF
@@ -570,6 +570,7 @@ class OWDistanceMap(widget.OWWidget):
         self.send("Features", featuresubset)
 
 
+
 class TextList(GraphicsSimpleTextList):
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -585,8 +586,13 @@ class TextList(GraphicsSimpleTextList):
         if n == 0:
             return
 
+        if self.scene() is not None:
+            maxfontsize = self.scene().font().pointSize()
+        else:
+            maxfontsize = QApplication.instance().font().pointSize()
+
         lineheight = max(1, h / n)
-        fontsize = self._point_size(lineheight)
+        fontsize = min(self._point_size(lineheight), maxfontsize)
 
         font = self.font()
         font.setPointSize(fontsize)
@@ -655,7 +661,6 @@ def test(argv=sys.argv):
     else:
         filename = "iris"
 
-    from PyQt4.QtGui import QApplication
     import sip
     import Orange.distance
     app = QApplication(argv)
