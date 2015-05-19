@@ -364,6 +364,13 @@ class OWDistanceMap(widget.OWWidget):
 
     def set_distances(self, matrix):
         self.clear()
+        self.error(0)
+        if matrix is not None:
+            N, _ = matrix.X.shape
+            if N < 2:
+                self.error(0, "Empty distance matrix.")
+                matrix = None
+
         self.matrix = matrix
         if matrix is not None:
             self.set_items(matrix.row_items, matrix.axis)
