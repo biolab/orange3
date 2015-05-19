@@ -471,6 +471,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def new_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
         self.subset_indices = set(e.id for e in subset_data) if subset_data else None
+        self.selection = None
         self.set_data(data, **args)
 
     def update_data(self, attr_x, attr_y):
