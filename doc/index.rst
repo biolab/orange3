@@ -6,6 +6,8 @@
 Orange Documentation
 ====================
 
+This is the intro to Orange documentation. Welcome!
+
 .. toctree::
    :maxdepth: 2
 
