@@ -1995,6 +1995,8 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
             orientation = bool(checkbox_label)
         b = widgetBox(widget, box=box, orientation=orientation,
                       addToLayout=False)
+        b.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
+
     b.checkbox = cb = checkBox(b, master, value, checkbox_label or " ",
                                callback=u, tooltip=auto_label)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
