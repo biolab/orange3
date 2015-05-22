@@ -1,3 +1,5 @@
+import numpy
+
 import Orange.data
 import Orange.misc
 from Orange.widgets import widget, gui, settings
@@ -14,6 +16,14 @@ _METRICS = [
     ("Pearson", distance.PearsonR),
     ("Pearson absolute", distance.PearsonRAbsolute),
 ]
+
+
+def is_discrete(var):
+    return isinstance(var, Orange.data.DiscreteVariable)
+
+
+def is_continuous(var):
+    return isinstance(var, Orange.data.ContinuousVariable)
 
 
 class OWDistances(widget.OWWidget):
@@ -60,16 +70,26 @@ class OWDistances(widget.OWWidget):
         self.warning(1)
         self.error(1)
 
-        distances = None
+        data = distances = None
         if self.data is not None:
             metric = _METRICS[self.metric_idx][1]
-            data = distance._preprocess(self.data)
-            if len(data.domain.attributes) == 0:
+            if not any(map(is_continuous, self.data.domain.attributes)):
                 self.error(1, "No continuous features")
-            elif len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
-                self.warning(1, "Ignoring categoric features")
-            if len(data.domain.attributes) != 0:
-                distances = metric(data, data, 1-self.axis)
+                data = None
+            elif any(map(is_discrete, self.data.domain.attributes)) or \
+                    numpy.any(numpy.isnan(self.data.X)):
+                data = distance._preprocess(self.data)
+                if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
+                    self.warning(1, "Ignoring discrete features")
+            else:
+                data = self.data
+
+        if data is not None:
+            shape = (len(data), len(data.domain.attributes))
+            if numpy.product(shape) == 0:
+                self.error(1, "Empty data (shape == {})".format(shape))
+            else:
+                distances = metric(data, data, 1 - self.axis)
 
         self.send("Distances", distances)
 

@@ -850,10 +850,19 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._set_cut_line_visible(self.selection_method == 1)
 
     def set_distances(self, matrix):
+        self.error(0)
         self._set_items(None)
+        if matrix is not None:
+            N, _ = matrix.X.shape
+            if N < 2:
+                self.error(0, "Empty distance matrix")
+                matrix = None
+
         self.matrix = matrix
         self._invalidate_clustering()
-        self._set_items(matrix.row_items if matrix is not None else None, matrix.axis)
+
+        if matrix is not None:
+            self._set_items(matrix.row_items, matrix.axis)
 
     def _set_items(self, items, axis=1):
         self.items = items
@@ -863,7 +872,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.label_cb.model()[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            vars = list(items.domain)
+            vars = list(items.domain.variables + items.domain.metas)
             self.label_cb.model()[:] = ["None", "Enumeration"] + vars
         elif isinstance(items, list) and \
                 all(isinstance(var, Orange.data.Variable) for var in items):
@@ -939,8 +948,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [str(attr[i]) for i in indices]
             elif isinstance(self.items, Orange.data.Table):
                 var = self.label_cb.model()[self.annotation_idx]
-                col = self.items[:, var]
-                labels = [var.repr_val(next(iter(row))) for row in col]
+                col_data, _ = self.items.get_column_view(var)
+                labels = [var.str_val(val) for val in col_data]
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []
@@ -994,17 +1003,16 @@ class OWHierarchicalClustering(widget.OWWidget):
         unselected_indices = sorted(set(range(self.root.value.last)) -
                                     set(selected_indices))
 
-        selected = [items[k] for k in selected_indices]
-        unselected = [items[k] for k in unselected_indices]
-
-        if not selected:
+        if not selected_indices:
             self.send("Selected Data", None)
             self.send("Other Data", None)
             return
+
         selected_data = unselected_data = None
 
-        if isinstance(items, Orange.data.Table):
-            c = numpy.zeros(len(items))
+        if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
+            # Select rows
+            c = numpy.zeros(self.matrix.X.shape[0])
 
             for i, indices in enumerate(maps):
                 c[indices] = i
@@ -1017,7 +1025,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                     str(self.cluster_name),
                     values=["Cluster {}".format(i + 1)
                             for i in range(len(maps))] +
-                           ["Other"], ordered=True
+                           ["Other"]
                 )
                 data, domain = items, items.domain
 
@@ -1033,15 +1041,26 @@ class OWHierarchicalClustering(widget.OWWidget):
                     metas = metas + (clust_var,)
 
                 domain = Orange.data.Domain(attrs, class_, metas)
-                data = Orange.data.Table(domain, data)
+                data = Orange.data.Table.from_table(domain, items)
                 data.get_column_view(clust_var)[0][:] = c
             else:
                 data = items
 
-            if selected:
+            if selected_indices:
                 selected_data = data[mask]
-            if unselected:
+            if unselected_indices:
                 unselected_data = data[~mask]
+
+        elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
+            # Select columns
+            domain = Orange.data.Domain(
+                [items.domain[i] for i in selected_indices],
+                items.domain.class_vars, items.domain.metas)
+            selected_data = items.from_table(domain, items)
+            domain = Orange.data.Domain(
+                [items.domain[i] for i in unselected_indices],
+                items.domain.class_vars, items.domain.metas)
+            unselected_data = items.from_table(domain, items)
 
         self.send("Selected Data", selected_data)
         self.send("Other Data", unselected_data)
@@ -1067,6 +1086,12 @@ class OWHierarchicalClustering(widget.OWWidget):
             self._selection_method_changed()
 
         return super().eventFilter(obj, event)
+
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self._clear_plot()
+        self.dendrogram.clear()
+        self.dendrogram.deleteLater()
 
     def _dendrogram_geom_changed(self):
         pos = self.dendrogram.pos_at_height(self.cutoff_height)
