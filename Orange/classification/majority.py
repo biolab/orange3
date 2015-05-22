@@ -1,7 +1,7 @@
 from numpy import tile, array
 
 from Orange import data
-from Orange.classification.base import Learner, Model
+from Orange.classification import Learner, Model
 from Orange.statistics import distribution
 
 __all__ = ["MajorityLearner"]
