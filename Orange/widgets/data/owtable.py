@@ -93,15 +93,18 @@ class RichTableDecorator(QIdentityProxyModel):
             return super().data(index, role)
 
     def headerData(self, section, orientation, role):
-        # QIdentityProxyModel doesn’t show headers for empty models
-        if self.sourceModel:
-            return self.sourceModel().headerData(section, orientation, role)
+        if self.sourceModel() is None:
+            return None
 
+        # NOTE: Always use `self.sourceModel().heaerData(...)` and not
+        # super().headerData(...). The later does not work for zero length
+        # source models
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            var = super().headerData(
+            var = self.sourceModel().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is None:
-                return super().headerData(section, orientation, Qt.DisplayRole)
+                return self.sourceModel().headerData(
+                    section, orientation, Qt.DisplayRole)
 
             lines = []
             if self._header_flags & RichTableDecorator.Name:
@@ -112,14 +115,14 @@ class RichTableDecorator(QIdentityProxyModel):
             return "\n".join(lines)
         elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
                 self._header_flags & RichTableDecorator.Icon:
-            var = super().headerData(
+            var = self.sourceModel().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is not None:
                 return gui.attributeIconDict[var]
             else:
                 return None
         else:
-            return super().headerData(section, orientation, role)
+            return self.sourceModel().headerData(section, orientation, role)
 
     def setRichHeaderFlags(self, flags):
         if flags != self._header_flags:
@@ -570,7 +573,7 @@ class OWDataTable(widget.OWWidget):
             view.setModel(sliceproxy)
 
         assert view.model().rowCount() <= maxrows
-        assert vheader.sectionSize(0) > 1
+        assert vheader.sectionSize(0) > 1 or datamodel.rowCount() == 0
 
         # update the header (attribute names)
         self._update_variable_labels(view)
