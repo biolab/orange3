@@ -406,7 +406,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     attr_size = ContextSetting("", ContextSetting.OPTIONAL)
 
     point_width = Setting(10)
-    alpha_value = Setting(255)
+    alpha_value = Setting(128)
     show_grid = Setting(False)
     show_legend = Setting(True)
     tooltip_shows_all = Setting(False)
