@@ -1,13 +1,14 @@
+import sys
+import itertools
 from functools import reduce
 from operator import iadd
-import itertools
 
 import numpy
 
 from PyQt4.QtGui import (
     QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform, QGraphicsWidget
+    QBrush, QTransform, QGraphicsWidget, QApplication
 )
 
 from PyQt4.QtCore import Qt, QRect, QRectF, QSize, QPointF
@@ -36,7 +37,7 @@ class DistanceMapItem(pg.ImageItem):
     """
     class SelectionRect(QGraphicsRectItem):
         def boundingRect(self):
-            return super().boundingRect().adjusted(-1, 1, 1, -1)
+            return super().boundingRect().adjusted(-1, -1, 1, 1)
 
         def paint(self, painter, option, widget=None):
             t = painter.transform()
@@ -49,10 +50,6 @@ class DistanceMapItem(pg.ImageItem):
             painter.setPen(self.pen())
             painter.drawRect(rect.adjusted(pwidth, -pwidth, -pwidth, pwidth))
             painter.restore()
-
-        def setRect(self, rect):
-            self.prepareGeometryChange()
-            super().setRect(rect)
 
     selectionChanged = Signal()
 
@@ -95,10 +92,7 @@ class DistanceMapItem(pg.ImageItem):
 
             visualarea = self.__visualRectForSelection(area)
             item = DistanceMapItem.SelectionRect(visualarea, self)
-            item.update()
-            item.show()
-            pen = QPen(Qt.red, 0)
-            item.setPen(pen)
+            item.setPen(QPen(Qt.red, 0))
 
             selection = disjoint + [(item, area)]
 
@@ -120,9 +114,7 @@ class DistanceMapItem(pg.ImageItem):
                 item, _ = self.__dragging
             else:
                 item = DistanceMapItem.SelectionRect(self)
-                pen = QPen(Qt.red, 0)
-                item.setPen(pen)
-                self.update()
+                item.setPen(QPen(Qt.red, 0))
 
             # intersection with existing regions
             intersection = [(item, selarea)
@@ -148,7 +140,7 @@ class DistanceMapItem(pg.ImageItem):
                 # Clear existing selection
                 # TODO: Fix extended selection.
                 self.__select(QRect(), self.Clear)
-                selrange = QRect(c, r, 2, 2)
+                selrange = QRect(c, r, 1, 1)
                 self.__elastic_band_select(selrange, self.Select | self.Clear)
 
         super().mousePressEvent(event)
@@ -157,8 +149,8 @@ class DistanceMapItem(pg.ImageItem):
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton and self.__dragging:
             r1, c1 = self._cellAt(event.buttonDownPos(Qt.LeftButton))
-            r2, c2 = self._cellAt(event.pos())
-            selrange = QRect(c1, r1, 2, 2).united(QRect(c2, r2, 2, 2))
+            r2, c2 = self._cellCloseTo(event.pos())
+            selrange = QRect(c1, r1, 1, 1).united(QRect(c2, r2, 1, 1))
             self.__elastic_band_select(selrange, self.Select)
 
         super().mouseMoveEvent(event)
@@ -167,8 +159,8 @@ class DistanceMapItem(pg.ImageItem):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.__dragging:
             r1, c1 = self._cellAt(event.buttonDownPos(Qt.LeftButton))
-            r2, c2 = self._cellAt(event.pos())
-            selrange = QRect(c1, r1, 2, 2).united(QRect(c2, r2, 2, 2))
+            r2, c2 = self._cellCloseTo(event.pos())
+            selrange = QRect(c1, r1, 1, 1).united(QRect(c2, r2, 1, 1))
             self.__elastic_band_select(selrange, self.Select | self.Commit)
 
             self.__elastic_band_select(QRect(), self.Clear)
@@ -182,11 +174,22 @@ class DistanceMapItem(pg.ImageItem):
             return -1, -1
         else:
             h, w = self.image.shape
-            i, j = numpy.floor([h - pos.y(), pos.x()])
-            if 0 < i >= h or 0 < j >= w:
-                return -1, -1
-            else:
+            i, j = numpy.floor([pos.y(), pos.x()])
+            if 0 <= i < h and 0 <= j < w:
                 return int(i), int(j)
+            else:
+                return -1, -1
+
+    def _cellCloseTo(self, pos):
+        """Return the i, j cell index closest to `pos` in local coordinates."""
+        if self.image is None:
+            return -1, -1
+        else:
+            h, w = self.image.shape
+            i, j = numpy.floor([pos.y(), pos.x()])
+            i = numpy.clip(i, 0, h - 1)
+            j = numpy.clip(j, 0, w - 1)
+            return int(i), int(j)
 
     def __clearSelections(self):
         for item, _ in self.__selections:
@@ -195,22 +198,24 @@ class DistanceMapItem(pg.ImageItem):
         self.__selections = []
 
     def __visualRectForSelection(self, rect):
-        h, _ = self.image.shape
-        r1, r2 = rect.top(), rect.bottom()
-        c1, c2 = rect.left(), rect.right()
-        return QRectF(QPointF(c1, h - r1), QPointF(c2, h - r2))
+        h, w = self.image.shape
+        rect = rect.normalized()
+        rect = rect.intersected(QRect(0, 0, w, h))
+        r1, r2 = rect.top(), rect.bottom() + 1
+        c1, c2 = rect.left(), rect.right() + 1
+        return QRectF(QPointF(c1, r1), QPointF(c2, r2))
 
     def __selectionForArea(self, area):
         r1, c1 = self._cellAt(area.topLeft())
         r2, c2 = self._cellAt(area.bottomRight())
-        topleft = QRect(c1, r1, 1, 1)
-        bottomright = QRect(c2, r2, 1, 1)
-        return topleft.united(bottomright).normalized()
+        selarea = QRect(c1, r1, c2 - c1 + 1, r2 - r1 + 1)
+        return selarea.normalized()
 
     def selections(self):
         selections = [self.__selectionForArea(area)
                       for _, area in self.__selections]
-        return [(range(r.top(), r.bottom()), range(r.left(), r.right()))
+        return [(range(r.top(), r.bottom() + 1),
+                 range(r.left(), r.right() + 1))
                 for r in selections]
 
     def hoverMoveEvent(self, event):
@@ -238,7 +243,6 @@ class OWDistanceMap(widget.OWWidget):
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
     outputs = [("Data", Orange.data.Table), ("Features", widget.AttributeList)]
 
-    display_grid = settings.Setting(False)
     sorting = settings.Setting(0)
 
     colormap = settings.Setting(0)
@@ -360,6 +364,13 @@ class OWDistanceMap(widget.OWWidget):
 
     def set_distances(self, matrix):
         self.clear()
+        self.error(0)
+        if matrix is not None:
+            N, _ = matrix.X.shape
+            if N < 2:
+                self.error(0, "Empty distance matrix.")
+                matrix = None
+
         self.matrix = matrix
         if matrix is not None:
             self.set_items(matrix.row_items, matrix.axis)
@@ -426,11 +437,13 @@ class OWDistanceMap(widget.OWWidget):
         return self._ordered_tree
 
     def _setup_scene(self):
-        self.matrix_item = DistanceMapItem(self._sorted_matrix[:, ::-1])
-
+        self.matrix_item = DistanceMapItem(self._sorted_matrix)
+        # Scale the y axis to compensate for pg.ViewBox's y axis invert
+        self.matrix_item.scale(1, -1)
         self.viewbox.addItem(self.matrix_item)
-        self.viewbox.setRange(QRectF(0, 0, *self._sorted_matrix.shape),
-                              padding=0)
+        # Set fixed view box range.
+        h, w = self._sorted_matrix.shape
+        self.viewbox.setRange(QRectF(0, -h, w, h), padding=0)
 
         self.matrix_item.selectionChanged.connect(self._invalidate_selection)
 
@@ -548,13 +561,21 @@ class OWDistanceMap(widget.OWWidget):
             pass
         elif isinstance(self.items, Orange.data.Table):
             indices = self._selection
-            datasubset = self.items.from_table_rows(self.items, indices)
+            if self.matrix.axis == 1:
+                datasubset = self.items.from_table_rows(self.items, indices)
+            elif self.matrix.axis == 0:
+                domain = Orange.data.Domain(
+                    [self.items.domain[i] for i in indices],
+                    self.items.domain.class_vars,
+                    self.items.domain.metas)
+                datasubset = Orange.data.Table.from_table(domain, self.items)
         elif isinstance(self.items, widget.AttributeList):
             subset = [self.items[i] for i in self._selection]
             featuresubset = widget.AttributeList(subset)
 
         self.send("Data", datasubset)
         self.send("Features", featuresubset)
+
 
 
 class TextList(GraphicsSimpleTextList):
@@ -572,8 +593,13 @@ class TextList(GraphicsSimpleTextList):
         if n == 0:
             return
 
+        if self.scene() is not None:
+            maxfontsize = self.scene().font().pointSize()
+        else:
+            maxfontsize = QApplication.instance().font().pointSize()
+
         lineheight = max(1, h / n)
-        fontsize = self._point_size(lineheight)
+        fontsize = min(self._point_size(lineheight), maxfontsize)
 
         font = self.font()
         font.setPointSize(fontsize)
@@ -636,25 +662,28 @@ def load_default_palettes():
     return list(palettes.items())
 
 
-def test():
-    from PyQt4.QtGui import QApplication
+def test(argv=sys.argv):
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "iris"
+
     import sip
     import Orange.distance
-    app = QApplication([])
+    app = QApplication(argv)
     w = OWDistanceMap()
     w.show()
     w.raise_()
-    data = Orange.data.Table("iris")
-#     data = Orange.data.Table("housing")
+    data = Orange.data.Table(filename)
     dist = Orange.distance.Euclidean(data)
     w.set_distances(dist)
     w.handleNewSignals()
     rval = app.exec_()
+    w.saveSettings()
     w.onDeleteWidget()
     sip.delete(w)
     del w
     return rval
 
 if __name__ == "__main__":
-    import sys
     sys.exit(test())
