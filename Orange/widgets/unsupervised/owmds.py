@@ -92,17 +92,9 @@ class OWMDS(widget.OWWidget):
     name = "MDS"
     description = "Multidimensional scaling"
     icon = "icons/MDS.svg"
-
-    inputs = (
-        {"name": "Data",
-         "type": Orange.data.Table,
-         "handler": "set_data"},
-        {"name": "Distances",
-         "type": Orange.misc.DistMatrix,
-         "handler": "set_disimilarity"}
-    )
-
-    outputs = ({"name": "Data", "type": Orange.data.Table},)
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]
+    outputs = [("Data", Orange.data.Table)]
 
     #: Initialization type
     PCA, Random = 0, 1

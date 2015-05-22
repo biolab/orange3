@@ -106,13 +106,10 @@ class InputSignal(object):
 def input_channel_from_args(args):
     if isinstance(args, tuple):
         return InputSignal(*args)
-    elif isinstance(args, dict):
-        return InputSignal(**args)
     elif isinstance(args, InputSignal):
         return args
     else:
-        raise TypeError("tuple, dict or InputSignal expected "
-                        "(got {0!r})".format(type(args)))
+        raise TypeError("invalid declaration of widget input signal")
 
 
 class OutputSignal(object):
@@ -173,14 +170,10 @@ class OutputSignal(object):
 def output_channel_from_args(args):
     if isinstance(args, tuple):
         return OutputSignal(*args)
-    elif isinstance(args, dict):
-        return OutputSignal(**args)
     elif isinstance(args, OutputSignal):
         return args
     else:
-        raise TypeError("tuple, dict or OutputSignal expected "
-                        "(got {0!r})".format(type(args)))
-
+        raise TypeError("invalid declaration of widget output signal")
 
 class WidgetDescription(object):
     """

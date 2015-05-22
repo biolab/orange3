@@ -11,14 +11,8 @@ class OWMultiplier(widget.OWWidget):
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]
-    outputs = [{"name": "Product",
-                "type": int,
-                "doc": ""}]
-
-    inputs = [{"name": "A number",
-               "type": int,
-               "handler": "get_a_number",
-               "doc": ""}]
+    outputs = [("Product", int)]
+    inputs = [("A number", int, "get_a_number")]
 
     want_main_area = False
 

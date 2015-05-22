@@ -276,12 +276,7 @@ class OWROCAnalysis(widget.OWWidget):
                    "based on evaluation of classifiers.")
     icon = "icons/ROCAnalysis.svg"
     priority = 1010
-
-    inputs = [
-        {"name": "Evaluation Results",
-         "type": Orange.evaluation.Results,
-         "handler": "set_results"}
-    ]
+    inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
 
     target_index = settings.Setting(0)
     selected_classifiers = []

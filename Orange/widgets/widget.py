@@ -35,8 +35,13 @@ class WidgetMetaClass(type(QDialog)):
         if not cls.name: # not a widget
             return cls
 
-        cls.inputs = list(map(input_channel_from_args, cls.inputs))
-        cls.outputs = list(map(output_channel_from_args, cls.outputs))
+        cls.inputs = [input_channel_from_args(inp) for inp in cls.inputs]
+        cls.outputs = [output_channel_from_args(outp) for outp in cls.outputs]
+
+        for inp in cls.inputs:
+            if not hasattr(cls, inp.handler):
+                raise AttributeError("missing input signal handler '{}' in {}".
+                                     format(inp.handler, cls.name))
 
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or

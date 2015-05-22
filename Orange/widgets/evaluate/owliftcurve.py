@@ -54,12 +54,7 @@ class OWLiftCurve(widget.OWWidget):
     description = ""
     icon = "icons/LiftCurve.svg"
     priority = 1020
-
-    inputs = [
-        {"name": "Evaluation Results",
-         "type": Orange.evaluation.Results,
-         "handler": "set_results"}
-    ]
+    inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
 
     target_index = settings.Setting(0)
     selected_classifiers = settings.Setting([])
