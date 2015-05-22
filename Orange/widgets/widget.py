@@ -403,6 +403,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.activateWindow()
 
     def send(self, signalName, value, id=None):
+        if not any(s.name == signalName for s in self.outputs):
+            raise ValueError('{} is not a valid output signal for widget {}'.format(
+                signalName, self.name))
         if self.signalManager is not None:
             self.signalManager.send(self, signalName, value, id)
 
