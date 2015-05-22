@@ -11,16 +11,9 @@ class OWWidgetName(widget.OWWidget):
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]
-    outputs = [{"name": "Name",
-                "type": type,
-                "doc": ""}]
-
-    inputs = [{"name": "Name",
-               "type": type,
-               "handler": None,
-               "doc": ""}]
-
     want_main_area = False
+    outputs = [("Name", type)]
+    inputs = [("Name", type, "handler")]
 
     foo = Setting(True)
 

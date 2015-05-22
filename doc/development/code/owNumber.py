@@ -1,6 +1,8 @@
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from PyQt4.QtGui import QIntValidator
+from Orange.widgets.widget import OutputSignal
+
 
 class OWWidgetNumber(widget.OWWidget):
     name = "Number"
@@ -12,9 +14,7 @@ class OWWidgetNumber(widget.OWWidget):
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]
-    outputs = [{"name": "Number",
-                "type": int,
-                "doc": "The number entered by the user"}]
+    outputs = [("Number", int)]
 
     want_main_area = False
 

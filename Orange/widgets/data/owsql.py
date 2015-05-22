@@ -9,6 +9,7 @@ from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.widget import OutputSignal
 
 
 class OWSql(widget.OWWidget):
@@ -24,9 +25,9 @@ class OWSql(widget.OWWidget):
     priority = 10
     category = "Data"
     keywords = ["data", "file", "load", "read"]
-    outputs = [{"name": "Data",
-                "type": Table,
-                "doc": "Attribute-valued data set read from the input file."}]
+    outputs = [OutputSignal(
+        "Data", Table,
+        doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
 

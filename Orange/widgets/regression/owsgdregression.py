@@ -15,16 +15,10 @@ class OWSGDRegression(widget.OWWidget):
     description = "Stochastic Gradient Descent Regression."
     icon = "icons/SGDRegression.svg"
 
-    inputs = [{"name": "Data",
-               "type": Orange.data.Table,
-               "handler": "set_data"},
-              {"name": "Preprocessor",
-               "type": Preprocess,
-               "handler": "set_preprocessor"}]
-    outputs = [{"name": "Learner",
-                "type": linear.SGDRegressionLearner},
-               {"name": "Predictor",
-                "type": linear.LinearModel}]
+    inputs = [("Data", Orange.data.Table, "set_data"),
+              ("Preprocessor", Preprocess, "set_preprocessor")]
+    outputs = [("Learner", linear.SGDRegressionLearner),
+               ("Predictor", linear.LinearModel)]
 
     learner_name = settings.Setting("SGD Regression")
 

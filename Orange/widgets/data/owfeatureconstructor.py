@@ -423,14 +423,10 @@ class DescriptorModel(itemmodels.PyListModel):
 class OWFeatureConstructor(widget.OWWidget):
     name = "Feature Constructor"
     icon = "icons/FeatureConstructor.svg"
-    inputs = [{"name": "Data",
-               "type": Orange.data.Table,
-               "handler": "setData"}]
-    outputs = [{"name": "Data",
-                "type": Orange.data.Table}]
+    inputs = [("Data", Orange.data.Table, "setData")]
+    outputs = [("Data", Orange.data.Table)]
     want_main_area = False
 
-    # Stored settings
     settingsHandler = DomainContextHandler()
     descriptors = ContextSetting([])
     currentIndex = ContextSetting(-1)

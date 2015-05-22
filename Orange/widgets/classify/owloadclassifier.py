@@ -14,13 +14,8 @@ class OWLoadClassifier(widget.OWWidget):
     priority = 3050
     icon = "icons/LoadClassifier.svg"
 
-    outputs = [
-        {
-            "name": "Classifier",
-            "type": Orange.classification.Model,
-            "flags": widget.Dynamic
-        }
-    ]
+    outputs = [("Classifier", Orange.classification.Model, widget.Dynamic)]
+
     #: List of recent filenames.
     history = Setting([])
     #: Current (last selected) filename or None.

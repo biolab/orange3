@@ -11,12 +11,9 @@ class OWProduct(widget.OWWidget):
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]
-    outputs = [{"name": "Product",
-                "type": int,
-                "doc": ""}]
-
-    inputs = [{"name": "First factor", "type": int, "handler": "get_first"},
-              {"name": "Second factor", "type": int, "handler": "get_second"}]
+    outputs = [("Product", int)]
+    inputs = [("First factor", int, "get_first"),
+              ("Second factor", int, "get_second")]
 
     want_main_area = False
 

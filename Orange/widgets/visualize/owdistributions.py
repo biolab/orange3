@@ -14,6 +14,7 @@ import Orange.data
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.widget import InputSignal
 
 
 def is_discrete(var):
@@ -81,11 +82,8 @@ class OWDistributions(widget.OWWidget):
     description = "Displays variable value distributions."
     icon = "icons/Distribution.svg"
     priority = 100
-
-    inputs = [{"name": "Data",
-               "type": Orange.data.Table,
-               "handler": "set_data",
-               "doc": "Set the input data set"}]
+    inputs = [InputSignal("Data", Orange.data.Table, "set_data",
+                          doc="Set the input data set")]
 
     settingsHandler = settings.DomainContextHandler()
     #: Selected variable index

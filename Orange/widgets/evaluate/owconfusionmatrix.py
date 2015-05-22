@@ -24,11 +24,8 @@ class OWConfusionMatrix(widget.OWWidget):
     icon = "icons/ConfusionMatrix.svg"
     priority = 1001
 
-    inputs = [{"name": "Evaluation Results",
-               "type": Orange.evaluation.Results,
-               "handler": "set_results"}]
-    outputs = [{"name": "Selected Data",
-                "type": Orange.data.Table}]
+    inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
+    outputs = [("Selected Data", Orange.data.Table)]
 
     quantities = ["Number of instances",
                   "Proportion of predicted",
