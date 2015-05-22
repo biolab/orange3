@@ -70,11 +70,9 @@ class OWScatterPlot(OWWidget):
         axisfont = font_resize(self.font(), 0.8, minsize=11)
         axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
         axis = plot.getAxis("bottom")
-        axis.setTickFont(axisfont)
         axis.setPen(axispen)
 
         axis = plot.getAxis("left")
-        axis.setTickFont(axisfont)
         axis.setPen(axispen)
 
         self.data = None  # Orange.data.Table
