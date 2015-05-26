@@ -100,7 +100,7 @@ class SimpleTreeModel(Model):
 
     def __init__(self, learner, data):
         if isinstance(data, Instance):
-            raise ValueError("Training set should be bigeer than 1 instance")
+            data = Table.from_numpy(data.domain, [data._x], [data._y])
         X = np.ascontiguousarray(data.X)
         Y = np.ascontiguousarray(data.Y)
         W = np.ascontiguousarray(data.W)
@@ -164,7 +164,7 @@ class SimpleTreeModel(Model):
 
     def predict_storage(self, data):
         if isinstance(data, Instance):
-            data = Table([data])
+            data = Table.from_numpy(data.domain, [data._x], [data._y])
         X = np.ascontiguousarray(data.X)
         if self.type == Classification:
             p = np.zeros((X.shape[0], self.cls_vals))

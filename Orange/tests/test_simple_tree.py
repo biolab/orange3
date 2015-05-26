@@ -83,6 +83,7 @@ class SimpleTreeTest(unittest.TestCase):
         for ins in data[::20]:
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
+            self.assertEqual(sum(prob[0]), 1)
 
 
 if __name__ == '__main__':
