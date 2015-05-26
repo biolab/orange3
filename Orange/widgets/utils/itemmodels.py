@@ -17,13 +17,10 @@ from PyQt4.QtGui import (
 
 import numpy
 
-from Orange.data import (
-    Variable, DiscreteVariable, ContinuousVariable, StringVariable
-)
+from Orange.data import Variable, Storage
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
-from Orange.data import Storage
 
 
 class _store(dict):
@@ -355,11 +352,11 @@ class VariableListModel(PyListModel):
                 return PyListModel.data(self, index, role)
 
     def variable_tooltip(self, var):
-        if isinstance(var, DiscreteVariable):
+        if var.is_discrete:
             return self.discrete_variable_tooltip(var)
-        elif isinstance(var, ContinuousVariable):
+        elif var.is_continuous:
             return self.continuous_variable_toltip(var)
-        elif isinstance(var, StringVariable):
+        elif var.is_string:
             return self.string_variable_tooltip(var)
 
     def variable_labels_tooltip(self, var):

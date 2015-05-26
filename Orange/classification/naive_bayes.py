@@ -27,7 +27,7 @@ class NaiveBayesLearner(Learner):
     def fit_storage(self, table):
         if not isinstance(table, Storage):
             raise TypeError("Data is not a subclass of Orange.data.Storage.")
-        if not all(isinstance(var, DiscreteVariable)
+        if not all(var.is_discrete
                    for var in table.domain.variables):
             raise NotImplementedError("Only discrete variables are supported.")
 

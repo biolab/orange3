@@ -6,7 +6,7 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication
 
 import Orange
-from Orange.data import Table, Variable, DiscreteVariable
+from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets import gui
 from Orange.widgets.settings import \
@@ -277,7 +277,7 @@ class OWScatterPlot(OWWidget):
             self.cb_attr_x.addItem(self.icons[attr], attr.name)
             self.cb_attr_y.addItem(self.icons[attr], attr.name)
             self.cb_attr_color.addItem(self.icons[attr], attr.name)
-            if isinstance(attr, DiscreteVariable):
+            if attr.is_discrete:
                 self.cb_attr_shape.addItem(self.icons[attr], attr.name)
             else:
                 self.cb_attr_size.addItem(self.icons[attr], attr.name)

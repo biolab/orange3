@@ -93,9 +93,9 @@ class OWMPR(OWWidget):
 
         disc = Orange.preprocess.discretize.EqualWidth(n=10)
 
-        ndomain = Orange.data.Domain(
-                [disc(self.data, attr) if type(attr) == Orange.data.variable.ContinuousVariable
-                 else attr for attr in self.data.domain.attributes], self.data.domain.class_vars)
+        ndomain = Orange.data.Domain([disc(self.data, attr) if attr.is_continuous else attr
+                                      for attr in self.data.domain.attributes],
+                                     self.data.domain.class_vars)
 
         t = self.data.from_table(ndomain, self.data)
 

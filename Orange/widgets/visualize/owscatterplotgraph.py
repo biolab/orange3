@@ -14,8 +14,6 @@ from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
 from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture, QPainter
 
-from Orange.data import DiscreteVariable, ContinuousVariable
-
 from Orange.widgets import gui
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
                                                ContinuousPaletteGenerator)
@@ -24,6 +22,7 @@ from Orange.widgets.utils.plot import \
 from Orange.widgets.utils.scaling import (get_variable_values_sorted,
                                           ScaleScatterPlotData)
 from Orange.widgets.settings import Setting, ContextSetting
+
 
 # TODO Move utility classes to another module, so they can be used elsewhere
 
@@ -507,7 +506,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                                   ("left", attr_y, index_y)):
             self.set_axis_title(axis, name)
             var = self.data_domain[index]
-            if isinstance(var, DiscreteVariable):
+            if var.is_discrete:
                 self.set_labels(axis, get_variable_values_sorted(var))
             else:
                 self.set_labels(axis, None)
@@ -586,7 +585,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if attr_color != "" and attr_color != "(Same color)":
             color_index = self.attribute_name_index[attr_color]
             color_var = self.data_domain[attr_color]
-            if isinstance(color_var, DiscreteVariable):
+            if color_var.is_discrete:
                 self.discrete_palette.set_number_of_colors(
                     len(color_var.values))
         return color_index
@@ -636,7 +635,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             return pen, brush
 
         c_data = self.original_data[color_index, self.valid_data]
-        if isinstance(self.data_domain[color_index], ContinuousVariable):
+        if self.data_domain[color_index].is_continuous:
             if self.pen_colors is None:
                 self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
                 c_data -= self.scale.offset
@@ -784,7 +783,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             return
         color_var = self.data_domain[color_index]
         use_shape = self.get_shape_index() == color_index
-        if isinstance(color_var, DiscreteVariable):
+        if color_var.is_discrete:
             if not self.legend:
                 self.create_legend()
             palette = self.discrete_palette

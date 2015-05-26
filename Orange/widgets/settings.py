@@ -11,7 +11,7 @@ try:
 except ImportError:
     store_settings = False
 
-from Orange.data import DiscreteVariable, Domain, Variable, ContinuousVariable
+from Orange.data import Domain, Variable
 from Orange.widgets.utils import vartype
 
 __all__ = ["Setting", "SettingsHandler",
@@ -611,8 +611,7 @@ class DomainContextHandler(ContextHandler):
             if not encode_values:
                 return {v.name: vartype(v) for v in attributes}
 
-            is_discrete = lambda x: isinstance(x, DiscreteVariable)
-            return {v.name: v.values if is_discrete(v) else vartype(v)
+            return {v.name: v.values if v.is_discrete else vartype(v)
                     for v in attributes}
 
         match = self.match_values
@@ -837,7 +836,7 @@ class IncompatibleContext(Exception):
 class ClassValuesContextHandler(ContextHandler):
     def open_context(self, widget, classes):
         if isinstance(classes, Variable):
-            if isinstance(classes, DiscreteVariable):
+            if classes.is_discrete:
                 classes = classes.values
             else:
                 classes = None
@@ -851,7 +850,7 @@ class ClassValuesContextHandler(ContextHandler):
 
     #noinspection PyMethodOverriding
     def match(self, context, classes):
-        if isinstance(classes, ContinuousVariable):
+        if isinstance(classes, Variable) and classes.is_continuous:
             return context.classes is None and 2
         else:
             return context.classes == classes and 2
@@ -884,11 +883,8 @@ class PerfectDomainContextHandler(DomainContextHandler):
     def encode_domain(self, domain):
         if self.match_values == 2:
             def encode(attrs):
-                return tuple(
-                    (v.name,
-                     v.values if isinstance(v, DiscreteVariable)
-                     else vartype(v))
-                    for v in attrs)
+                return tuple((v.name, v.values if v.is_discrete else vartype(v))
+                             for v in attrs)
         else:
             def encode(attrs):
                 return tuple((v.name, vartype(v)) for v in attrs)

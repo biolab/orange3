@@ -2,7 +2,6 @@ import numpy as np
 
 from Orange.classification import Learner, Model
 from Orange.classification.simple_tree import SimpleTreeLearner
-from Orange.data import DiscreteVariable
 
 __all__ = ['SimpleRandomForestLearner']
 
@@ -63,7 +62,7 @@ class SimpleRandomForestModel(Model):
     def __init__(self, learner, data):
         self.estimators_ = []
 
-        if isinstance(data.domain.class_var, DiscreteVariable):
+        if data.domain.class_var.is_discrete:
             self.type = 'classification'
             self.cls_vals = len(data.domain.class_var.values)
         else:

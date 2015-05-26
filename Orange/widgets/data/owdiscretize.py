@@ -240,12 +240,11 @@ class OWDiscretize(widget.OWWidget):
     def _initialize(self, data):
         # Initialize the default variable states for new data.
         self.class_var = data.domain.class_var
-        cvars = [var for var in data.domain
-                 if isinstance(var, Orange.data.ContinuousVariable)]
+        cvars = [var for var in data.domain if var.is_continuous]
         self.varmodel[:] = cvars
 
         class_var = data.domain.class_var
-        has_disc_class = isinstance(class_var, Orange.data.DiscreteVariable)
+        has_disc_class = class_var.is_discrete
 
         self.default_bbox.buttons[self.MDL - 1].setEnabled(has_disc_class)
         self.bbox.buttons[self.MDL].setEnabled(has_disc_class)
@@ -410,7 +409,7 @@ class OWDiscretize(widget.OWWidget):
             return None
 
         def disc_var(source):
-            if isinstance(source, Orange.data.ContinuousVariable):
+            if source.is_continuous:
                 return self.discretized_var(source)
             else:
                 return source

@@ -202,7 +202,7 @@ class Continuous:
         ind = C > 0
         return np.vstack((self.values[ind], C[ind]))
 
-    
+
     def __len__(self):
         return self.counts.shape[0]
 
@@ -234,9 +234,9 @@ class Continuous:
 
 def get_contingency(dat, col_variable, row_variable=None, unknowns=None):
     variable = _get_variable(col_variable, dat, "col_variable")
-    if isinstance(variable, data.DiscreteVariable):
+    if variable.is_discrete:
         return Discrete(dat, col_variable, row_variable, unknowns)
-    elif isinstance(variable, data.ContinuousVariable):
+    elif variable.is_continuous:
         return Continuous(dat, col_variable, row_variable, unknowns)
     else:
         raise TypeError("cannot compute distribution of '%s'" %
@@ -251,11 +251,9 @@ def get_contingencies(dat, skipDiscrete=False, skipContinuous=False):
     if skipDiscrete:
         if skipContinuous:
             return []
-        columns = [i for i, var in enumerate(vars)
-                   if isinstance(var, data.ContinuousVariable)]
+        columns = [i for i, var in enumerate(vars) if var.is_continuous]
     elif skipContinuous:
-        columns = [i for i, var in enumerate(vars)
-                   if isinstance(var, data.DiscreteVariable)]
+        columns = [i for i, var in enumerate(vars) if var.is_discrete]
     else:
         columns = None
     try:

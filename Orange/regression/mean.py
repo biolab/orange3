@@ -24,7 +24,7 @@ class MeanLearner(Learner):
         :return: regression model, which always returns mean value
         :rtype: :obj:`MeanModel`
         """
-        if not isinstance(data.domain.class_var, ContinuousVariable):
+        if not data.domain.class_var.is_continuous:
             raise ValueError("regression.MeanLearner expects a domain with a "
                              "(single) continuous variable")
         dist = distribution.get_distribution(data, data.domain.class_var)

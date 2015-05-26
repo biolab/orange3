@@ -29,7 +29,7 @@ class Normalizer:
         return data.from_table(domain, data)
 
     def normalize(self, dist, var):
-        if not isinstance(var, ContinuousVariable):
+        if not var.is_continuous:
             return var
         elif self.norm_type == Normalize.NormalizeBySD:
             return self.normalize_by_sd(dist, var)

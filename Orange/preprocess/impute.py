@@ -9,14 +9,6 @@ from .transformation import Transformation
 __all__ = ["ReplaceUnknowns", "Average"]
 
 
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
 class ReplaceUnknowns(Transformation):
     def __init__(self, variable, value=0):
         super().__init__(variable)
@@ -30,10 +22,10 @@ class Average:
     def __call__(self, data, variable, value=None):
         variable = data.domain[variable]
         if value is None:
-            if is_continuous(variable):
+            if variable.is_continuous:
                 stats = basic_stats.BasicStats(data, variable)
                 value = stats.mean
-            elif is_discrete(variable):
+            elif variable.is_discrete:
                 dist = distribution.get_distribution(data, variable)
                 value = dist.modus()
             else:

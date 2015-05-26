@@ -9,7 +9,7 @@ from PyQt4 import QtGui
 import scipy
 import scipy.special
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Table
+from Orange.data import Table
 from Orange.statistics import contingency, distribution, tests
 
 from Orange.widgets import widget, gui
@@ -218,7 +218,7 @@ class OWBoxPlot(widget.OWWidget):
             self.attributes = [(a.name, vartype(a)) for a in dataset.domain]
             self.grouping = ["None"] + [(a.name, vartype(a))
                                         for a in dataset.domain
-                                        if isinstance(a, DiscreteVariable)]
+                                        if a.is_discrete]
             self.grouping_select = [0]
             self.attributes_select = [0]
             self.attr_changed()
@@ -242,7 +242,7 @@ class OWBoxPlot(widget.OWWidget):
             return
         attr_ind = self.attributes_select[0]
         attr = dataset.domain[attr_ind]
-        self.is_continuous = isinstance(attr, ContinuousVariable)
+        self.is_continuous = attr.is_continuous
         group_by = self.grouping_select[0]
         if group_by:
             group_attr = self.grouping[group_by][0]

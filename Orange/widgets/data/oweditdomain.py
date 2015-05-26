@@ -24,14 +24,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 def get_qualified(module, name):
     """Return a qualified module member ``name`` inside the named
     ``module``.
@@ -54,7 +46,7 @@ def variable_description(var):
 
     """
     var_type = type(var)
-    if is_discrete(var):
+    if var.is_discrete:
         return (var_type.__module__,
                 var_type.__name__,
                 var.name,
@@ -494,9 +486,9 @@ class OWEditDomain(widget.OWWidget):
         var = self.domain_model[index]
 
         editor_index = 2
-        if is_discrete(var):
+        if var.is_discrete:
             editor_index = 0
-        elif is_continuous(var):
+        elif var.is_continuous:
             editor_index = 1
         editor = self.editor_stack.widget(editor_index)
         self.editor_stack.setCurrentWidget(editor)

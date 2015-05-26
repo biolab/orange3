@@ -649,7 +649,7 @@ def copy_descriptor(descriptor, newname=None):
     if newname is None:
         newname = descriptor.name
 
-    if isinstance(descriptor, Orange.data.DiscreteVariable):
+    if descriptor.is_discrete:
         newf = Orange.data.DiscreteVariable(
             newname,
             values=descriptor.values,
@@ -658,7 +658,7 @@ def copy_descriptor(descriptor, newname=None):
         )
         newf.attributes = dict(descriptor.attributes)
 
-    elif isinstance(descriptor, Orange.data.ContinuousVariable):
+    elif descriptor.is_continuous:
         newf = Orange.data.ContinuousVariable(newname)
         newf.number_of_decimals = descriptor.number_of_decimals
         newf.attributes = dict(descriptor.attributes)
@@ -807,7 +807,7 @@ def varying_between(table, idvarlist):
             values = subset[:, var]
             values, _ = subset.get_column_view(var)
 
-            if isinstance(var, Orange.data.StringVariable):
+            if var.is_string:
                 uniq = set(values)
             else:
                 uniq = unique_non_nan(values)
@@ -847,7 +847,7 @@ def string_attributes(domain):
     Return all string attributes from the domain.
     """
     return [attr for attr in domain.variables + domain.metas
-            if isinstance(attr, Orange.data.StringVariable)]
+            if attr.is_string]
 
 
 def discrete_attributes(domain):
@@ -855,7 +855,7 @@ def discrete_attributes(domain):
     Return all discrete attributes from the domain.
     """
     return [attr for attr in domain.variables + domain.metas
-            if isinstance(attr, Orange.data.DiscreteVariable)]
+                 if attr.is_discrete]
 
 
 def source_attributes(domain):

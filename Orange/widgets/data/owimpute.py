@@ -378,8 +378,7 @@ class OWImpute(OWWidget):
         defstate = State(METHODS[0], ())
         states = [self.variable_methods.get(variable_key(var), defstate)
                   for var in vars]
-        all_cont = all(isinstance(var, Orange.data.ContinuousVariable)
-                       for var in vars)
+        all_cont = all(var.is_continuous for var in vars)
         states = list(unique(states))
         method = None
         params = ()
@@ -401,8 +400,7 @@ class OWImpute(OWWidget):
             if method is not None and method.short == "value":
                 value = params[0]
 
-        elif len(vars) == 1 and \
-                isinstance(vars[0], Orange.data.DiscreteVariable):
+        elif len(vars) == 1 and vars[0].is_discrete:
             values, enabled, stack_index = vars[0].values, True, 0
             if method is not None and method.short == "value":
                 try:
@@ -588,7 +586,7 @@ class ColumnImputerDefaults(ColumnImputerModel):
 
 
 def column_imputer_as_value(variable, table):
-    if isinstance(variable, Orange.data.DiscreteVariable):
+    if variable.is_discrete:
         fmt = "{var.name}"
         value = "N/A"
         var = Orange.data.DiscreteVariable(
@@ -603,7 +601,7 @@ def column_imputer_as_value(variable, table):
         )
         codomain = [var]
         transformers = [var.compute_value]
-    elif isinstance(variable, Orange.data.ContinuousVariable):
+    elif variable.is_continuous:
         fmt = "{var.name}_def"
         var = Orange.data.DiscreteVariable(
             fmt.format(var=variable),
@@ -630,7 +628,7 @@ class ColumnImputerAsValue(ColumnImputerModel):
         data = translate_domain(data, self.codomain)
 
         variable = self.codomain[0]
-        if isinstance(variable, Orange.data.ContinuousVariable):
+        if variable.is_continuous:
             tr = self.transformers[0]
             assert isinstance(tr, ReplaceUnknowns)
             c = tr(data[:, variable])
@@ -640,10 +638,10 @@ class ColumnImputerAsValue(ColumnImputerModel):
 
 
 def column_imputer_random(variable, data):
-    if isinstance(variable, Orange.data.DiscreteVariable):
+    if variable.is_discrete:
         dist = distribution.get_distribution(data, variable)
         transformer = RandomTransform(variable, dist)
-    elif isinstance(variable, Orange.data.ContinuousVariable):
+    elif variable.is_continuous:
         dist = distribution.get_distribution(data, variable)
         transformer = RandomTransform(variable, dist)
     return RandomImputerModel((variable,), (variable,), (transformer,))
@@ -712,9 +710,9 @@ class RandomTransform(Transformation):
         super().__init__(variable)
         self.dist = dist
         if dist is not None:
-            if isinstance(variable, Orange.data.DiscreteVariable):
+            if variable.is_discrete:
                 dist = numpy.array(self.dist)
-            elif isinstance(variable, Orange.data.ContinuousVariable):
+            elif variable.is_continuous:
                 dist = numpy.array(self.dist[1, :])
             else:
                 raise TypeError("Only discrete and continuous "
@@ -728,7 +726,7 @@ class RandomTransform(Transformation):
             self.sample_prob = None
 
     def transform(self, c):
-        if isinstance(self.variable, Orange.data.DiscreteVariable):
+        if self.variable.is_discrete:
             if self.dist is not None:
                 c = numpy.random.choice(
                     len(self.variable.values), size=c.shape, replace=True,

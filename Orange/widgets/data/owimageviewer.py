@@ -322,10 +322,6 @@ _ImageItem = namedtuple(
 )
 
 
-def is_string(var):
-    return isinstance(var, Orange.data.StringVariable)
-
-
 class OWImageViewer(widget.OWWidget):
     name = "Image Viewer"
     description = "View images referred to in the data."
@@ -421,7 +417,7 @@ class OWImageViewer(widget.OWWidget):
         if data is not None:
             domain = data.domain
             self.allAttrs = domain.variables + domain.metas
-            self.stringAttrs = list(filter(is_string, self.allAttrs))
+            self.stringAttrs = [a for a in self.allAttrs if a.is_string]
 
             self.stringAttrs = sorted(
                 self.stringAttrs,

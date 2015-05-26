@@ -211,7 +211,7 @@ class OWSelectRows(widget.OWWidget):
 
         if oper == oper_combo.count() - 1:
             self.cond_list.removeCellWidget(oper_combo.row, 2)
-        elif isinstance(var, DiscreteVariable):
+        elif var.is_discrete:
             combo = QtGui.QComboBox()
             combo.addItems([""] + var.values)
             if lc[0]:
@@ -226,13 +226,13 @@ class OWSelectRows(widget.OWWidget):
                                 addToLayout=False)
             box.var_type = vartype(var)
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
-            if isinstance(var, ContinuousVariable):
+            if var.is_continuous:
                 box.controls = [add_numeric(lc[0])]
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
                     box.controls.append(add_numeric(lc[1]))
                 gui.rubber(box)
-            elif isinstance(var, StringVariable):
+            elif var.is_string:
                 box.controls = [add_textual(lc[0])]
                 if oper in [6, 7]:
                     gui.widgetLabel(box, " and ")
@@ -302,12 +302,12 @@ class OWSelectRows(widget.OWWidget):
             for attr_name, oper, values in self.conditions:
                 attr_index = domain.index(attr_name)
                 attr = domain[attr_index]
-                if isinstance(attr, ContinuousVariable):
+                if attr.is_continuous:
                     if any(not v for v in values):
                         continue
                     filter = data_filter.FilterContinuous(
                         attr_index, oper, *[float(v) for v in values])
-                elif isinstance(attr, StringVariable):
+                elif attr.is_string:
                     if any(v for v in values):
                         continue
                     filter = data_filter.FilterString(

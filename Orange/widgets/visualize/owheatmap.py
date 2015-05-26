@@ -20,14 +20,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 def is_not_none(obj):
     return obj is not None
 
@@ -535,8 +527,8 @@ class OWHeatMap(widget.OWWidget):
     def set_sampled_data(self, dataset):
         if dataset is not None:
             domain = dataset.domain
-            cvars = list(filter(is_continuous, domain.variables))
-            dvars = list(filter(is_discrete, domain.variables))
+            cvars = [var for var in domain.variables if var.is_continuous]
+            dvars = [var for var in domain.variables if var.is_discrete]
 
             self.x_var_model[:] = cvars
             self.y_var_model[:] = cvars
@@ -547,7 +539,7 @@ class OWHeatMap(widget.OWWidget):
             self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
             self.z_var_index = min(max(0, self.z_var_index), len(cvars) - 1)
 
-            if is_discrete(domain.class_var):
+            if domain.class_var.is_discrete:
                 self.z_var_index = dvars.index(domain.class_var)
             else:
                 self.z_var_index = len(dvars) - 1
@@ -950,7 +942,7 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
     else:
         subset = data
 
-    if is_discrete(zvar):
+    if zvar.is_discrete:
 
         filters = [value_filter(zvar, val) for val in zvar.values]
         contingencies = [
