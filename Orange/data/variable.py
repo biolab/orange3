@@ -115,6 +115,18 @@ class Variable(metaclass=VariableMeta):
         """
         raise RuntimeError("variable descriptors must overload is_primitive()")
 
+    @property
+    def is_discrete(self):
+        return isinstance(self, DiscreteVariable)
+
+    @property
+    def is_continuous(self):
+        return isinstance(self, ContinuousVariable)
+
+    @property
+    def is_string(self):
+        return isinstance(self, StringVariable)
+
     def repr_val(self, val):
         """
         Return a textual representation of variable's value `val`. Argument
