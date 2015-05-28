@@ -104,19 +104,19 @@ class AUC(Score):
     def multi_class_auc(self, results):
         classes = np.unique(results.actual)
         weights = self.calculate_weights(results)
-        
+
         auc_array = np.array([np.fromiter(
             (skl_metrics.roc_auc_score(results.actual == class_, predicted)
-            for predicted in results.predicted == class_),
+             for predicted in results.predicted == class_),
             dtype=np.float64, count=len(results.predicted))
-            for class_ in classes])
+                              for class_ in classes])
 
         return np.sum(auc_array.T * weights, axis=1)
 
     def compute_score(self, results, target=None):
         domain = results.domain
         n_classes = len(domain.class_var.values)
-        
+
         if n_classes < 2:
             raise ValueError("Class variable has less than two values")
         elif n_classes == 2:
@@ -127,7 +127,7 @@ class AUC(Score):
             else:
                 y = np.array(results.actual == target, dtype=int)
                 return np.fromiter(
-                    (sklearn.metrics.roc_auc_score(y, probabilities[:, target])
+                    (skl_metrics.roc_auc_score(y, probabilities[:, target])
                      for probabilities in results.probabilities),
                     dtype=np.float64, count=len(results.predicted))
 
@@ -299,10 +299,10 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         if not len(lr):
             yield ()
         else:
-            #it can work with single numbers
+            # it can work with single numbers
             index = lr[0]
             if type(1) == type(index):
-                index = [ index ]
+                index = [index]
             for a in range(*index):
                 for b in mxrange(lr[1:]):
                     yield tuple([a] + list(b))
@@ -342,15 +342,15 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
     distanceh = 0.25
 
     if cd and cdmethod is None:
-        #get pairs of non significant methods
+        # get pairs of non significant methods
 
         def get_lines(sums, hsd):
-            #get all pairs
+            # get all pairs
             lsums = len(sums)
             allpairs = [(i, j) for i, j in mxrange([[lsums], [lsums]]) if j > i]
-            #remove not significant
+            # remove not significant
             notSig = [(i, j) for i, j in allpairs if abs(sums[i] - sums[j]) <= hsd]
-            #keep only longest
+            # keep only longest
 
             def no_longer(ij_tuple, notSig):
                 i, j = ij_tuple
@@ -366,20 +366,20 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         lines = get_lines(ssums, cd)
         linesblank = 0.2 + 0.2 + (len(lines) - 1) * 0.1
 
-        #add scale
+        # add scale
         distanceh = 0.25
         cline += distanceh
 
-    #calculate height needed height of an image
+    # calculate height needed height of an image
     minnotsignificant = max(2 * 0.2, linesblank)
     height = cline + ((k + 1) / 2) * 0.2 + minnotsignificant
 
     fig = plt.figure(figsize=(width, height))
     fig.set_facecolor('white')
-    ax = fig.add_axes([0, 0, 1, 1]) #reverse y axis
+    ax = fig.add_axes([0, 0, 1, 1])  # reverse y axis
     ax.set_axis_off()
 
-    hf = 1. / height # height factor
+    hf = 1. / height  # height factor
     wf = 1. / width
 
     def hfl(l):
@@ -420,19 +420,19 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
 
     k = len(ssums)
 
-    for i in range(math.ceil(k/2)):
+    for i in range(math.ceil(k / 2)):
         chei = cline + minnotsignificant + i * 0.2
         line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei), (textspace - 0.1, chei)], linewidth=0.7)
         text(textspace - 0.2, chei, nnames[i], ha="right", va="center")
 
-    for i in range(math.ceil(k/2), k):
+    for i in range(math.ceil(k / 2), k):
         chei = cline + minnotsignificant + (k - i - 1) * 0.2
         line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei), (textspace + scalewidth + 0.1, chei)],
              linewidth=0.7)
         text(textspace + scalewidth + 0.2, chei, nnames[i], ha="left", va="center")
 
     if cd and cdmethod is None:
-        #upper scale
+        # upper scale
         if not reverse:
             begin, end = rankpos(lowv), rankpos(lowv + cd)
         else:
@@ -443,7 +443,7 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         line([(end, distanceh + bigtick / 2), (end, distanceh - bigtick / 2)], linewidth=0.7)
         text((begin + end) / 2, distanceh - 0.05, "CD", ha="center", va="bottom")
 
-        #non significance lines
+        # non significance lines
         def draw_lines(lines, side=0.05, height=0.1):
             start = cline + 0.2
             for l, r in lines:
