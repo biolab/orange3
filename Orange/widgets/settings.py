@@ -654,8 +654,7 @@ class DomainContextHandler(ContextHandler):
         if not isinstance(domain, Domain):
             domain = domain.domain
 
-        attributes, metas = self.encode_domain(domain)
-        super().open_context(widget, domain, attributes, metas)
+        super().open_context(widget, domain, *self.encode_domain(domain))
 
     # noinspection PyMethodOverriding
     def filter_value(self, setting, data, domain, attributes, metas):
@@ -876,6 +875,12 @@ class ClassValuesContextHandler(ContextHandler):
 ### clone_context (which is the same as the ContextHandler's)
 ### We could simplify some other methods, but prefer not to replicate the code
 class PerfectDomainContextHandler(DomainContextHandler):
+    #noinspection PyMethodOverriding
+    def new_context(self, domain, attributes, class_vars, metas):
+        context = super().new_context(domain, attributes, metas)
+        context.class_vars = class_vars
+        return context
+
     def encode_domain(self, domain):
         if self.match_values == 2:
             def encode(attrs):
@@ -896,8 +901,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         return (attributes, class_vars, metas) == (
             context.attributes, context.class_vars, context.metas) and 2
 
-    def encode_setting(self, widget, setting, value):
-        context = widget.current_context
+    def encode_setting(self, context, setting, value):
         if isinstance(value, str):
             atype = -1
             if not setting.exclude_attributes:
@@ -912,7 +916,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
                         break
             return value, copy.copy(atype)
         else:
-            return super().encode_setting(widget, setting, value)
+            return super().encode_setting(context, setting, value)
 
     def clone_context(self, context, _, *__):
         return copy.deepcopy(context)
