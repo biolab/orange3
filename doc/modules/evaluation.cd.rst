@@ -1,8 +1,19 @@
 .. py:currentmodule:: Orange.evaluation.scoring
 
-########################
-CD diagram (``scoring``)
-########################
+#############################
+Scoring methods (``scoring``)
+#############################
+
+Log Loss
+--------
+
+.. index:: Log loss
+.. autofunction:: Orange.evaluation.LogLoss
+
+
+
+CD diagram
+----------
 
 .. index:: CD diagram
 

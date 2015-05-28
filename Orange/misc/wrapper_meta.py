@@ -40,6 +40,7 @@ class WrapperMeta(type):
         I am a Bar
 
     """
+
     class DocTemplate(string.Template):
         pattern = r"""
             \$(?:
@@ -83,12 +84,17 @@ class WrapperMeta(type):
         # a higher level and included in __all__, like ipython's help)
         sklname = "{}.{}".format(module.__name__, sklclass.__name__)
         skldoc = inspect.getdoc(sklclass)
+        sklpar = inspect.getdoc(sklclass)
         if "Attributes\n---------" in skldoc:
             skldoc = skldoc[:skldoc.index('Attributes\n---------')]
+        if "Parameters\n---------" in sklpar:
+            sklpar = sklpar[:sklpar.index('Parameters\n---------')]
 
         mapping = {"sklname": sklname}
         if skldoc is not None:
             mapping["skldoc"] = skldoc
+        if sklpar is not None:
+            mapping["sklpar"] = sklpar
 
         doc = inspect.cleandoc(doc)
         template = WrapperMeta.DocTemplate(doc)

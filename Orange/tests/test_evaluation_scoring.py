@@ -68,7 +68,7 @@ class Scoring_AUC_Test(unittest.TestCase):
 
     def test_multiclass_auc_multi_learners(self):
         data = Orange.data.Table('iris')
-        learners = [ Orange.classification.LogisticRegressionLearner(), Orange.classification.MajorityLearner() ]
+        learners = [Orange.classification.LogisticRegressionLearner(), Orange.classification.MajorityLearner()]
         res = Orange.evaluation.testing.CrossValidation(data, learners, k=10)
         self.assertTrue(AUC(res)[0] > 0.6 > AUC(res)[1] > 0.4)
 
@@ -100,13 +100,13 @@ class Scoring_AUC_Test(unittest.TestCase):
 
         # One wrong
         self.assertAlmostEqual(
-            self.compute_auc(actual, [0., 0., 0., 1., 1., 0.]), 5/6)
+            self.compute_auc(actual, [0., 0., 0., 1., 1., 0.]), 5 / 6)
         # Two wrong
         self.assertAlmostEqual(
-            self.compute_auc(actual, [1., 1., 0., 1., 1., 1.]), 4/6)
+            self.compute_auc(actual, [1., 1., 0., 1., 1., 1.]), 4 / 6)
         # Three wrong
         self.assertAlmostEqual(
-            self.compute_auc(actual, [1., 1., 0., 1., 1., 0.]), 3/6)
+            self.compute_auc(actual, [1., 1., 0., 1., 1., 0.]), 3 / 6)
 
     def compute_auc(self, actual, predicted):
         predicted = np.array(predicted).reshape(1, -1)
@@ -114,6 +114,7 @@ class Scoring_AUC_Test(unittest.TestCase):
             nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
             actual=actual, predicted=predicted)
         return AUC(results)[0]
+
 
 class Scoring_CD_Test(unittest.TestCase):
     def test_cd_score(self):
@@ -123,3 +124,12 @@ class Scoring_CD_Test(unittest.TestCase):
 
         cd = Orange.evaluation.scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
+
+
+class Scoring_LogLoss_Test(unittest.TestCase):
+    def test_log_loss(self):
+        data = Orange.data.Table('iris')
+        majority = Orange.classification.MajorityLearner()
+        results = Orange.evaluation.TestOnTrainingData(data, [majority])
+        ll = Orange.evaluation.LogLoss(results)
+        self.assertAlmostEqual(ll[0], - np.log(1 / 3))
