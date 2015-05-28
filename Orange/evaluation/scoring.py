@@ -3,10 +3,10 @@ import sys
 
 import numpy as np
 import sklearn.metrics as skl_metrics
-from Orange.data import DiscreteVariable
+from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
-           "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks"]
+           "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks", "LogLoss"]
 
 
 class Score:
@@ -130,6 +130,53 @@ class AUC(Score):
                     (sklearn.metrics.roc_auc_score(y, probabilities[:, target])
                      for probabilities in results.probabilities),
                     dtype=np.float64, count=len(results.predicted))
+
+
+class LogLoss(Score, metaclass=WrapperMeta):
+    """
+    A wrapper for `${sklname}`. The following is the documentation
+    from `scikit-learn <http://scikit-learn.org>`_.
+
+    ${sklpar}
+
+    Parameters
+    ----------
+    results : Orange.evaluation.Results
+        Stored predictions and actual data in model testing.
+        - results.actual contains actual values of target variable
+        - results.probabilities contains predicted probabilities
+
+    eps : float
+        Log loss is undefined for p=0 or p=1, so probabilities are
+        clipped to max(eps, min(1 - eps, p)).
+
+    normalize : bool, optional (default=True)
+        If true, return the mean loss per sample.
+        Otherwise, return the sum of the per-sample losses.
+
+    sample_weight : array-like of shape = [n_samples], optional
+        Sample weights.
+
+    Examples
+    --------
+    >>> import Orange
+    >>> data = Orange.data.Table('iris')
+    >>> majority = Orange.classification.MajorityLearner()
+    >>> results = Orange.evaluation.TestOnTrainingData(data, [majority])
+    >>> Orange.evaluation.LogLoss(results)
+    array([ 1.09861231])
+    """
+    __wraps__ = skl_metrics.log_loss
+
+    def compute_score(self, results, eps=1e-15, normalize=True, sample_weight=None):
+        return np.fromiter(
+            (skl_metrics.log_loss(results.actual,
+                                  probabilities,
+                                  eps=eps,
+                                  normalize=normalize,
+                                  sample_weight=sample_weight)
+             for probabilities in results.probabilities),
+            dtype=np.float64, count=len(results.probabilities))
 
 
 ## Regression scores

@@ -123,3 +123,12 @@ class Scoring_CD_Test(unittest.TestCase):
 
         cd = Orange.evaluation.scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
+
+
+class Scoring_LogLoss_Test(unittest.TestCase):
+    def test_log_loss(self):
+        data = Orange.data.Table('iris')
+        majority = Orange.classification.MajorityLearner()
+        results = Orange.evaluation.TestOnTrainingData(data, [majority])
+        ll = Orange.evaluation.LogLoss(results)
+        self.assertAlmostEqual(ll[0], - np.log(1 / 3))
