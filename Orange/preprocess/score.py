@@ -3,11 +3,18 @@ from sklearn import feature_selection as skl_fss
 from Orange.misc.wrapper_meta import WrapperMeta
 
 from Orange.statistics import contingency, distribution
-from Orange.data import Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize
 
-__all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
-           "InfoGain", "GainRatio", "Gini"]
+
+__all__ = ["Chi2",
+           "ANOVA",
+           "UnivariateLinearRegression",
+           "InfoGain",
+           "GainRatio",
+           "Gini",
+           "ReliefF",
+           "RReliefF"]
 
 
 class Scorer:
@@ -196,3 +203,69 @@ class Gini(ClassificationScorer):
     """
     def from_contingency(self, cont, nan_adjustment):
         return (_gini(np.sum(cont, axis=1)) - _gini(cont)) * nan_adjustment
+
+
+class ReliefF(Scorer):
+    feature_type = Variable
+    class_type = DiscreteVariable
+
+    def __init__(self, n_iterations=50, k_nearest=10):
+        self.n_iterations = n_iterations
+        self.k_nearest = k_nearest
+
+    def score_data(self, data, feature):
+        if len(data.domain.class_vars) != 1:
+            raise ValueError('ReliefF requires one single class')
+        if not data.domain.class_var.is_discrete:
+            raise ValueError('ReliefF supports classification; use RReliefF '
+                             'for regression')
+        if len(data.domain.class_var.values) == 1:  # Single-class value non-problem
+            return 0 if feature else np.zeros(data.X.shape[1])
+
+        from Orange.preprocess._relieff import relieff
+        weights = np.asarray(relieff(data.X, data.Y,
+                                     self.n_iterations, self.k_nearest,
+                                     np.array([a.is_discrete for a in data.domain.attributes], dtype=np.int32)))
+        if feature:
+            return weights[0]
+        return weights
+
+class RReliefF(Scorer):
+    feature_type = Variable
+    class_type = ContinuousVariable
+
+    def __init__(self, n_iterations=50, k_nearest=50):
+        self.n_iterations = n_iterations
+        self.k_nearest = k_nearest
+
+    def score_data(self, data, feature):
+        if len(data.domain.class_vars) != 1:
+            raise ValueError('RReliefF requires one single class')
+        if not data.domain.class_var.is_continuous:
+            raise ValueError('RReliefF supports regression; use ReliefF '
+                             'for classification')
+
+        from Orange.preprocess._relieff import rrelieff
+        weights = np.asarray(rrelieff(data.X, data.Y,
+                                      self.n_iterations, self.k_nearest,
+                                      np.array([a.is_discrete for a in data.domain.attributes], dtype=np.int32)))
+        if feature:
+            return weights[0]
+        return weights
+
+
+if __name__ == '__main__':
+    from Orange.data import Table
+    X = np.random.random((500, 20))
+    X[np.random.random(X.shape) > .95] = np.nan
+    y_cls = np.zeros(X.shape[0])
+    y_cls[(X[:, 0] > .5) ^ (X[:, 1] > .6)] = 1
+    y_cls[(X[:, 2] > .8) ^ (X[:, 3] > .8)] = 2
+    y_reg = np.nansum(X[:, 0:3], 1)
+    for relief, y in ((ReliefF(), y_cls),
+                      (RReliefF(), y_reg)):
+        data = Table.from_numpy(None, X, y)
+        weights = relief.score_data(data, False)
+        print(relief.__class__.__name__)
+        print('Best =', weights.argsort()[::-1])
+        print('Weights =', weights[weights.argsort()[::-1]])
