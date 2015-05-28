@@ -215,52 +215,18 @@ class TestInstance(unittest.TestCase):
         with self.assertRaises(ValueError):
             inst[ContinuousVariable("asdf")] = 42
 
-    def test_get_slice(self):
+    def test_list(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
                                     [DiscreteVariable("y", values="ABC")],
                                     self.metas)
         vals = [42, "M", "B", "X", 43, "Foo"]
         inst = Instance(domain, vals)
 
-        slice = inst[0:2]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, [42, "M"])
-
-        slice = inst[0:4]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, [42, "M", "B", "X"])
-
-        slice = inst[2:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, ["B", "X", 43, "Foo"])
-
-        slice = inst[3:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, ["X", 43, "Foo"])
-
-        slice = inst[5:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, ["Foo"])
-
-        slice = inst[:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, [42, "M", "B", "X", 43, "Foo"])
-
-        slice = inst[-6:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, [42, "M", "B", "X", 43, "Foo"])
-
-        slice = inst[-3:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, ["X", 43, "Foo"])
-
-        slice = inst[-2:]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, [43, "Foo"])
-
-        slice = inst[3:5]
-        self.assertIsInstance(slice, list)
-        self.assertEqual(slice, ["X", 43])
+        l = inst.list
+        self.assertIsInstance(l, list)
+        self.assertEqual(l, [42, "M", "B", "X", 43, "Foo"])
+        self.assertGreater(len(l), len(inst))
+        self.assertEqual(len(l), 6)
 
     def test_set_item(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],

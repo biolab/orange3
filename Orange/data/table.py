@@ -444,6 +444,8 @@ class Table(MutableSequence, Storage):
         metas = domain.metas
         nattrs, ncls = len(domain.attributes), len(domain.class_vars)
         for i, row in enumerate(rows):
+            if isinstance(row, Instance):
+                row = row.list
             for j, (var, val) in enumerate(zip(attrs, row)):
                 self.X[i, j] = var.to_val(val)
             for j, (var, val) in enumerate(zip(classes, row[nattrs:])):

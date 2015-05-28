@@ -65,6 +65,17 @@ class Instance:
         return self._metas
 
     @property
+    def list(self):
+        """
+        All instance's values, including attributes, classes and meta
+        attributes, as a list whose length equals `len(self.domain.attributes)
+        + len(self.domain.class_vars) + len(self.domain.metas)`.
+        """
+        n_self, n_metas = len(self), len(self._metas)
+        return [self[i].value if i < n_self else self[n_self - i - 1].value
+                for i in range(n_self + n_metas)]
+
+    @property
     def weight(self):
         """The weight of the data instance. Default is 1."""
         return self._weight
@@ -89,12 +100,6 @@ class Instance:
             self._metas[-1 - key] = value
 
     def __getitem__(self, key):
-        if isinstance(key, slice):
-            n_self, n_metas = len(self), len(self._metas)
-            return [self[i].value if i < n_self
-                    else self[n_self - i - 1].value
-                    for i in range(*key.indices(n_self + n_metas))]
-
         if not isinstance(key, Integral):
             key = self._domain.index(key)
         if 0 <= key < len(self._domain.attributes):
