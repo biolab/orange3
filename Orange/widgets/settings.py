@@ -120,7 +120,7 @@ class SettingProvider:
         if packer is None:
             # noinspection PyShadowingNames
             def packer(setting, instance):
-                if hasattr(instance, setting.name):
+                if type(setting) == Setting and hasattr(instance, setting.name):
                     yield setting.name, getattr(instance, setting.name)
 
         packed_settings = dict(itertools.chain(
