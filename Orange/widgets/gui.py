@@ -4,6 +4,7 @@ import re
 import itertools
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
+from PyQt4.QtGui import QCursor, QApplication
 
 import Orange.data
 from Orange.widgets.utils import getdeepattr
@@ -1978,7 +1979,9 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
 
     def do_commit():
         nonlocal dirty
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         master.unconditional_commit()
+        QApplication.restoreOverrideCursor()
         dirty = False
 
     dirty = False
