@@ -179,24 +179,11 @@ class OWLinearProjection(widget.OWWidget):
     icon = "icons/LinearProjection.svg"
     priority = 2000
 
-    inputs = (
-        {"name": "Data",
-         "type": Orange.data.Table,
-         "handler": "set_data",
-         "flags": widget.Default},
-        {"name": "Data Subset",
-         "type": Orange.data.Table,
-         "handler": "set_subset_data"},
-        # TODO: Allow for axes to be supplied from an external source.
-#         {"name": "Projection",
-#          "type": numpy.array,
-#          "handler": "set_axes"}
-    )
-    outputs = (
-        {"name": "Selected Data",
-         "type": Orange.data.Table,
-         "flags": widget.Default},
-    )
+    inputs = [("Data", Orange.data.Table, "set_data", widget.Default),
+              ("Data Subset", Orange.data.Table, "set_subset_data")]
+#              #TODO: Allow for axes to be supplied from an external source.
+#               ("Projection", numpy.ndarray, "set_axes"),]
+    outputs = [("Selected Data", Orange.data.Table)]
 
     settingsHandler = settings.DomainContextHandler()
 
