@@ -89,6 +89,12 @@ class Instance:
             self._metas[-1 - key] = value
 
     def __getitem__(self, key):
+        if isinstance(key, slice):
+            n_self, n_metas = len(self), len(self._metas)
+            return [self[i].value if i < n_self
+                    else self[n_self - i - 1].value
+                    for i in range(*key.indices(n_self + n_metas))]
+
         if not isinstance(key, Integral):
             key = self._domain.index(key)
         if 0 <= key < len(self._domain.attributes):
@@ -110,7 +116,7 @@ class Instance:
     def str_values(data, variables, limit=True):
         if limit:
             s = ", ".join(var.str_val(val)
-                for var, val in zip(variables, data[:5]))
+                          for var, val in zip(variables, data[:5]))
             if len(data) > 5:
                 s += ", ..."
             return s
@@ -144,12 +150,12 @@ class Instance:
             nan1 = np.isnan(x1)
             nan2 = np.isnan(x2)
             return np.array_equal(nan1, nan2) and \
-                np.array_equal(x1[~nan1], x2[~nan2])
+                   np.array_equal(x1[~nan1], x2[~nan2])
 
         return same(self._x, other._x) and same(self._y, other._y) \
-            and all(m1 == m2 or
-                    type(m1) == type(m2) == float and isnan(m1) and isnan(m2)
-                    for m1, m2 in zip(self._metas, other._metas))
+               and all(m1 == m2 or
+                       type(m1) == type(m2) == float and isnan(m1) and isnan(m2)
+                       for m1, m2 in zip(self._metas, other._metas))
 
     def __iter__(self):
         return chain(iter(self._x), iter(self._y))
