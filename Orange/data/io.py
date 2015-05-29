@@ -289,7 +289,7 @@ class TabDelimFormat:
         f.close()
 
 
-@FileFormats.register("Comma-separated file", ".txt")
+@FileFormats.register("Comma-separated file", ".csv")
 class TxtFormat:
     MISSING_VALUES = frozenset({"", "NA", "?"})
 
