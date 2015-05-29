@@ -168,6 +168,12 @@ echo "======================="
 # satisfied
 "$PIP" install Orange
 
+# Install a delocated pygraphviz wheel (https://pypi.python.org/pypi/delocate).
+"$PIP" install --no-index --trusted-host orange.biolab.si \
+               --find-links http://orange.biolab.si/download/files/wheelhouse/ \
+              'pygraphviz>=1.3rc2'
+
+
 if [[ ! $INPLACE ]]; then
     echo "Moving the application to $APP"
     if [[ -e $APP ]]; then
