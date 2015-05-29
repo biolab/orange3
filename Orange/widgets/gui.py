@@ -357,7 +357,7 @@ def widgetLabel(widget, label="", labelWidth=None, **misc):
 
 
 def label(widget, master, label, labelWidth=None, box=None,
-          orientation="vertical", *misc):
+          orientation="vertical", **misc):
     """
     Construct a label that contains references to the master widget's
     attributes; when their values change, the label is updated.
@@ -392,7 +392,7 @@ def label(widget, master, label, labelWidth=None, box=None,
     reprint()
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
-    miscellanea(lbl, b, widget, *misc)
+    miscellanea(lbl, b, widget, **misc)
     return lbl
 
 
