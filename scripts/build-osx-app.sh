@@ -107,9 +107,11 @@ PIP=$TEMPLATE/Contents/MacOS/pip
 PREFIX=$("$PYTHON" -c'import sys; print(sys.prefix)')
 SITE_PACKAGES=$("$PYTHON" -c'import sysconfig as sc; print(sc.get_path("platlib"))')
 
-echo "Installing bottlechest"
+echo "Installing Bottlechest"
 echo "======================"
-"$PIP" install git+https://github.com/biolab/bottlechest@bottlechest#egg=bottlechest
+"$PIP" install --find-links http://orange.biolab.si/download/files/wheelhouse/ \
+               --use-wheel --trusted-host orange.biolab.si \
+               Bottlechest
 
 echo "Installing orangeqt"
 echo "==================="
@@ -159,6 +161,17 @@ cat <<-'EOF' > "$TEMPLATE"/Contents/MacOS/Orange
 EOF
 
 chmod +x "$TEMPLATE"/Contents/MacOS/Orange
+
+echo "Installing dependencies"
+echo "======================="
+# Running 'pip install Orange' will install/upgrade any dependencies not already
+# satisfied
+"$PIP" install Orange
+
+# Install a delocated pygraphviz wheel (https://pypi.python.org/pypi/delocate).
+"$PIP" install --no-index --trusted-host orange.biolab.si \
+               --find-links http://orange.biolab.si/download/files/wheelhouse/ \
+              'pygraphviz>=1.3rc2'
 
 
 if [[ ! $INPLACE ]]; then
