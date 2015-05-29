@@ -1040,7 +1040,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(x), len([e for e in col if e.endswith("ion")]))
 
 
-        #TODO Test conjunctions and disjunctions of conditions
+        # TODO Test conjunctions and disjunctions of conditions
 
 
 def column_sizes(table):
@@ -1101,6 +1101,7 @@ class CreateEmptyTable(TableTests):
     def test_table_has_file(self):
         table = data.Table()
         self.assertIsNone(table.__file__)
+
 
 class CreateTableWithFilename(TableTests):
     filename = "data.tab"
@@ -1258,6 +1259,49 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
         np.testing.assert_almost_equal(table.W, np.array([1, 2, 3, 4]))
 
+    def test_creates_a_table_from_domain_and_list_and_metas(self):
+        metas = [data.DiscreteVariable("Meta 1", values="XYZ"),
+                 data.ContinuousVariable("Meta 2"),
+                 data.StringVariable("Meta 3")]
+        domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
+                              data.ContinuousVariable(name="b")],
+                             data.DiscreteVariable(name="y", values="abc"),
+                             metas=metas)
+        table = data.Table(domain, [[0, 1, 2, "X", 2, "bb"],
+                                    [1, 2, "?", "Y", 1, "aa"],
+                                    ["m", 3, "a", "Z", 3, "bb"],
+                                    ["?", "?", "c", "X", 1, "aa"]])
+        self.assertIs(table.domain, domain)
+        np.testing.assert_almost_equal(
+            table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
+        np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
+        np.testing.assert_array_equal(table.metas,
+                                      np.array([[0, 2., "bb"],
+                                                [1, 1., "aa"],
+                                                [2, 3., "bb"],
+                                                [0, 1., "aa"]],
+                                               dtype=object))
+
+    def test_creates_a_table_from_list_of_instances(self):
+        table = data.Table('iris')
+        new_table = data.Table(table.domain, [d for d in table])
+        self.assertIs(table.domain, new_table.domain)
+        np.testing.assert_almost_equal(table.X, new_table.X)
+        np.testing.assert_almost_equal(table.Y, new_table.Y)
+        np.testing.assert_almost_equal(table.W, new_table.W)
+        self.assertEqual(table.domain, new_table.domain)
+        np.testing.assert_array_equal(table.metas, new_table.metas)
+
+    def test_creates_a_table_from_list_of_instances_with_metas(self):
+        table = data.Table('zoo')
+        new_table = data.Table(table.domain, [d for d in table])
+        self.assertIs(table.domain, new_table.domain)
+        np.testing.assert_almost_equal(table.X, new_table.X)
+        np.testing.assert_almost_equal(table.Y, new_table.Y)
+        np.testing.assert_almost_equal(table.W, new_table.W)
+        self.assertEqual(table.domain, new_table.domain)
+        np.testing.assert_array_equal(table.metas, new_table.metas)
+
     def test_creates_a_table_with_domain_and_given_X(self):
         domain = self.mock_domain()
 
@@ -1265,8 +1309,6 @@ class CreateTableWithData(TableTests):
         self.assertIsInstance(table.domain, data.Domain)
         self.assertEqual(table.domain, domain)
         np.testing.assert_almost_equal(table.X, self.data)
-
-
 
     def test_creates_a_table_with_given_X_and_Y(self):
         table = data.Table(self.data, self.class_data)
@@ -1339,17 +1381,17 @@ class CreateTableWithData(TableTests):
         with self.assertRaises(ValueError):
             data_ = np.hstack((self.data, ones))
             data.Table.from_numpy(domain, data_, self.class_data,
-                                      self.meta_data)
+                                  self.meta_data)
 
         with self.assertRaises(ValueError):
             classes_ = np.hstack((self.class_data, ones))
             data.Table.from_numpy(domain, self.data, classes_,
-                                      self.meta_data)
+                                  self.meta_data)
 
         with self.assertRaises(ValueError):
             metas_ = np.hstack((self.meta_data, ones))
             data.Table.from_numpy(domain, self.data, self.class_data,
-                                      metas_)
+                                  metas_)
 
     def test_raises_error_if_lengths_of_data_do_not_match(self):
         domain = self.mock_domain(with_classes=True, with_metas=True)
@@ -1716,7 +1758,7 @@ class InterfaceTest(unittest.TestCase):
     features = (
         data.ContinuousVariable(name="Continuous Feature 1"),
         data.ContinuousVariable(name="Continuous Feature 2"),
-        data.DiscreteVariable(name="Discrete Feature 1", values=[0,1]),
+        data.DiscreteVariable(name="Discrete Feature 1", values=[0, 1]),
         data.DiscreteVariable(name="Discrete Feature 2", values=["value1", "value2"]),
     )
 
@@ -1807,14 +1849,13 @@ class InterfaceTest(unittest.TestCase):
         for i in range(self.nrows):
             del self.table[0]
             for j in range(len(self.table)):
-                self.assertEqual(tuple(self.table[j]), self.data[i+j+1])
+                self.assertEqual(tuple(self.table[j]), self.data[i + j + 1])
 
     def test_clear(self):
         self.table.clear()
         self.assertEqual(len(self.table), 0)
         for i in self.table:
             self.fail("Table should not contain any rows.")
-
 
 
 class TestRowInstance(unittest.TestCase):
@@ -1842,5 +1883,7 @@ class TestRowInstance(unittest.TestCase):
             row[0] = i
         np.testing.assert_array_equal(table.X[:, 0], np.arange(len(table)))
 
+
 if __name__ == "__main__":
     unittest.main()
+

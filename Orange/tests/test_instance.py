@@ -215,6 +215,19 @@ class TestInstance(unittest.TestCase):
         with self.assertRaises(ValueError):
             inst[ContinuousVariable("asdf")] = 42
 
+    def test_list(self):
+        domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
+                                    [DiscreteVariable("y", values="ABC")],
+                                    self.metas)
+        vals = [42, "M", "B", "X", 43, "Foo"]
+        inst = Instance(domain, vals)
+
+        l = inst.list
+        self.assertIsInstance(l, list)
+        self.assertEqual(l, [42, "M", "B", "X", 43, "Foo"])
+        self.assertGreater(len(l), len(inst))
+        self.assertEqual(len(l), 6)
+
     def test_set_item(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
                                     [DiscreteVariable("y", values="ABC")],
