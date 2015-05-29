@@ -4,7 +4,7 @@ import ctypes as ct
 
 import numpy as np
 from Orange.classification import Learner, Model
-from Orange.data import DiscreteVariable, ContinuousVariable
+from Orange.data import DiscreteVariable, ContinuousVariable, Instance, Table
 
 __all__ = ['SimpleTreeLearner']
 
@@ -251,3 +251,4 @@ class SimpleTreeModel(Model):
             xs.append(self.dumps_tree(n.children[i]))
         xs.append('}')
         return ' '.join(xs)
+

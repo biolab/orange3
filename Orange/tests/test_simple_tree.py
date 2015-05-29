@@ -76,6 +76,15 @@ class SimpleTreeTest(unittest.TestCase):
         self.assertEqual(clf.dumps_tree(
             clf.node), '{ 0 2 { 1 4 0.13895 { 1 4 -0.32607 { 2 4.60993 1.71141 } { 2 4.96454 3.56122 } } { 2 7.09220 -4.32343 } } { 1 4 -0.35941 { 0 0 { 1 5 -0.20027 { 2 3.54255 0.95095 } { 2 5.50000 -5.56049 } } { 2 7.62411 2.03615 } } { 1 5 0.40797 { 1 3 0.83459 { 2 3.71094 0.27028 } { 2 5.18490 3.70920 } } { 2 5.77083 5.93398 } } } }')
 
+    def test_SimpleTree_single_instance(self):
+        data = Orange.data.Table('iris')
+        lrn = SimpleTreeLearner()
+        clf = lrn(data)
+        for ins in data[::20]:
+            clf(ins)
+            val, prob = clf(ins, clf.ValueProbs)
+            self.assertEqual(sum(prob[0]), 1)
+
 
 if __name__ == '__main__':
     unittest.main()
