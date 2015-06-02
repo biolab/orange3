@@ -103,8 +103,8 @@ mkdir -p "$DISTDIR"
 touch "$BUILDBASE"/requirements.txt
 
 echo "
-#:wheel: scikit-learn https://pypi.python.org/packages/3.4/s/scikit-learn/scikit_learn-0.15.2-cp34-none-win32.whl#md5=40552c03c3aed7910d03b5801fbb3f26
-scikit-learn==0.15.2
+#:wheel: scikit-learn https://pypi.python.org/packages/cp34/s/scikit-learn/scikit_learn-0.16.1-cp34-none-win32.whl#md5=ca5864cdf9f1938aa1a55d6092bf5c86
+scikit-learn==0.16.1
 
 #:wheel: matplotlib https://pypi.python.org/packages/cp34/m/matplotlib/matplotlib-1.4.2-cp34-none-win32.whl#md5=f18b7568493bece5c7b3eb7bb4203826
 matplotlib==1.4.2
