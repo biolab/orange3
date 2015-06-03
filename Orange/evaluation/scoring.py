@@ -49,9 +49,9 @@ class Score:
         return NotImplementedError
 
     @staticmethod
-    def from_predicted(results, score_function):
+    def from_predicted(results, score_function, **kwargs):
         return np.fromiter(
-            (score_function(results.actual, predicted)
+            (score_function(results.actual, predicted, **kwargs)
              for predicted in results.predicted),
             dtype=np.float64, count=len(results.predicted))
 
@@ -74,8 +74,38 @@ class Recall(Score):
 
 
 class F1(Score):
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.f1_score)
+    """
+    ${sklpar}
+    Parameters
+    ----------
+    results : Orange.evaluation.Results
+        Stored predictions and actual data in model testing.
+
+    target : int, optional (default=None)
+        Value of class to report.
+
+    Examples
+    --------
+    >>> import Orange
+    >>> data = Orange.data.Table('iris')
+    >>> learner = Orange.classification.LogisticRegressionLearner()
+    >>> results = Orange.evaluation.TestOnTrainingData(data, [learner])
+    >>> Orange.evaluation.F1(results)
+    array([ 0.9599359])
+    """
+    __wraps__ = skl_metrics.f1_score
+
+    def compute_score(self, results, target=None):
+        if target is None:
+            if len(results.domain.class_var.values) <= 2:
+                return self.from_predicted(results, skl_metrics.f1_score, average='binary')
+            else:
+                return self.from_predicted(results, skl_metrics.f1_score, average='weighted')
+        else:
+            return np.fromiter(
+                (skl_metrics.f1_score(results.actual, predicted, average=None)[target]
+                 for predicted in results.predicted),
+                dtype=np.float64, count=len(results.predicted))
 
 
 class PrecisionRecallFSupport(Score):
