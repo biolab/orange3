@@ -52,24 +52,13 @@ class WrapperMeta(type):
         """
 
     def __new__(cls, name, bases, dict_):
-        docstring = dict_.pop("__doc__", None)
         cls = type.__new__(cls, name, bases, dict_)
-
+        docstring = getattr(cls, "__doc__", None)
         skl_wrapped = getattr(cls, "__wraps__", None)
 
-        if docstring is None and skl_wrapped is not None:
-            docstring = """
-            A wrapper for `${sklname}`. The following is the documentation
-            from `scikit-learn <http://scikit-learn.org>`_.
-
-            ${skldoc}
-
-            Additional Orange parameters:
-
-            preprocessors : list, optional (default="[]")
-                An ordered list of preprocessors applied to data before
-                training or testing.
-        """
+        parent_docs = [parent.__doc__ for parent in bases if parent.__doc__]
+        if docstring is None and skl_wrapped and len(parent_docs) > 0:
+            docstring = parent_docs[0]
 
         if docstring is not None and skl_wrapped is not None:
             docstring = WrapperMeta.format_docstring(docstring, skl_wrapped)
@@ -82,19 +71,23 @@ class WrapperMeta(type):
         module = inspect.getmodule(sklclass)
         # TODO: prettify the name (pull the class up if it is imported at
         # a higher level and included in __all__, like ipython's help)
+        doc_prefix = """
+    A wrapper for `${sklname}`. The following is the documentation
+    from `scikit-learn <http://scikit-learn.org>`_.
+    """
+        doc = doc_prefix + doc
         sklname = "{}.{}".format(module.__name__, sklclass.__name__)
+        mapping = {"sklname": sklname}
         skldoc = inspect.getdoc(sklclass)
-        sklpar = inspect.getdoc(sklclass)
         if "Attributes\n---------" in skldoc:
             skldoc = skldoc[:skldoc.index('Attributes\n---------')]
-        if "Parameters\n---------" in sklpar:
-            sklpar = sklpar[:sklpar.index('Parameters\n---------')]
-
-        mapping = {"sklname": sklname}
-        if skldoc is not None:
             mapping["skldoc"] = skldoc
-        if sklpar is not None:
-            mapping["sklpar"] = sklpar
+        if "Examples\n--------" in skldoc:
+            skldoc = skldoc[:skldoc.index('Examples\n--------')]
+            mapping["skldoc"] = skldoc
+        if "Parameters\n---------" in skldoc:
+            skldoc = skldoc[:skldoc.index('Parameters\n---------')]
+            mapping["sklpar"] = skldoc
 
         doc = inspect.cleandoc(doc)
         template = WrapperMeta.DocTemplate(doc)

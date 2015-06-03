@@ -9,7 +9,14 @@ __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks", "LogLoss"]
 
 
-class Score:
+class Score(metaclass=WrapperMeta):
+    """
+    ${sklpar}
+    Parameters
+    ----------
+    results : Orange.evaluation.Results
+        Stored predictions and actual data in model testing.
+    """
     separate_folds = False
     is_scalar = True
 
@@ -49,9 +56,9 @@ class Score:
         return NotImplementedError
 
     @staticmethod
-    def from_predicted(results, score_function):
+    def from_predicted(results, score_function, **kwargs):
         return np.fromiter(
-            (score_function(results.actual, predicted)
+            (score_function(results.actual, predicted, **kwargs)
              for predicted in results.predicted),
             dtype=np.float64, count=len(results.predicted))
 
@@ -59,26 +66,63 @@ class Score:
 ## Classification scores
 
 class CA(Score):
+    __wraps__ = skl_metrics.accuracy_score
+
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.accuracy_score)
 
 
 class Precision(Score):
+    __wraps__ = skl_metrics.precision_score
+
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.precision_score)
 
 
 class Recall(Score):
+    __wraps__ = skl_metrics.recall_score
+
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.recall_score)
 
 
 class F1(Score):
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.f1_score)
+    """
+    ${sklpar}
+    Parameters
+    ----------
+    results : Orange.evaluation.Results
+        Stored predictions and actual data in model testing.
+
+    target : int, optional (default=None)
+        Value of class to report.
+
+    Examples
+    --------
+    >>> import Orange
+    >>> data = Orange.data.Table('iris')
+    >>> learner = Orange.classification.LogisticRegressionLearner()
+    >>> results = Orange.evaluation.TestOnTrainingData(data, [learner])
+    >>> Orange.evaluation.F1(results)
+    array([ 0.9599359])
+    """
+    __wraps__ = skl_metrics.f1_score
+
+    def compute_score(self, results, target=None):
+        if target is None:
+            if len(results.domain.class_var.values) <= 2:
+                return self.from_predicted(results, skl_metrics.f1_score, average='binary')
+            else:
+                return self.from_predicted(results, skl_metrics.f1_score, average='weighted')
+        else:
+            return np.fromiter(
+                (skl_metrics.f1_score(results.actual, predicted, average=None)[target]
+                 for predicted in results.predicted),
+                dtype=np.float64, count=len(results.predicted))
 
 
 class PrecisionRecallFSupport(Score):
+    __wraps__ = skl_metrics.precision_recall_fscore_support
     is_scalar = False
 
     def compute_score(self, results):
@@ -87,6 +131,17 @@ class PrecisionRecallFSupport(Score):
 
 
 class AUC(Score):
+    """
+    ${sklpar}
+    Parameters
+    ----------
+    results : Orange.evaluation.Results
+        Stored predictions and actual data in model testing.
+
+    target : int, optional (default=None)
+        Value of class to report.
+    """
+    __wraps__ = skl_metrics.roc_auc_score
     separate_folds = True
 
     def calculate_weights(self, results):
@@ -132,19 +187,13 @@ class AUC(Score):
                     dtype=np.float64, count=len(results.predicted))
 
 
-class LogLoss(Score, metaclass=WrapperMeta):
+class LogLoss(Score):
     """
-    A wrapper for `${sklname}`. The following is the documentation
-    from `scikit-learn <http://scikit-learn.org>`_.
-
     ${sklpar}
-
     Parameters
     ----------
     results : Orange.evaluation.Results
         Stored predictions and actual data in model testing.
-        - results.actual contains actual values of target variable
-        - results.probabilities contains predicted probabilities
 
     eps : float
         Log loss is undefined for p=0 or p=1, so probabilities are
@@ -182,6 +231,8 @@ class LogLoss(Score, metaclass=WrapperMeta):
 ## Regression scores
 
 class MSE(Score):
+    __wraps__ = skl_metrics.mean_squared_error
+
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.mean_squared_error)
 
@@ -192,11 +243,15 @@ class RMSE(Score):
 
 
 class MAE(Score):
+    __wraps__ = skl_metrics.mean_absolute_error
+
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.mean_absolute_error)
 
 
 class R2(Score):
+    __wraps__ = skl_metrics.r2_score
+
     def compute_score(self, results):
         return self.from_predicted(results, skl_metrics.r2_score)
 

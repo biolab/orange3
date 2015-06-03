@@ -219,6 +219,14 @@ class SklModel(Model, metaclass=WrapperMeta):
 
 
 class SklLearner(Learner, metaclass=WrapperMeta):
+    """
+    ${skldoc}
+    Additional Orange parameters
+
+    preprocessors : list, optional (default=[Continuize(), SklImpute(), RemoveNaNColumns()])
+        An ordered list of preprocessors applied to data before
+        training or testing.
+    """
     __wraps__ = None
     __returns__ = SklModel
     _params = None
