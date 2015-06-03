@@ -82,6 +82,9 @@ class WrapperMeta(type):
         if "Attributes\n---------" in skldoc:
             skldoc = skldoc[:skldoc.index('Attributes\n---------')]
             mapping["skldoc"] = skldoc
+        if "Examples\n--------" in skldoc:
+            skldoc = skldoc[:skldoc.index('Examples\n--------')]
+            mapping["skldoc"] = skldoc
         if "Parameters\n---------" in skldoc:
             skldoc = skldoc[:skldoc.index('Parameters\n---------')]
             mapping["sklpar"] = skldoc
