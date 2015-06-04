@@ -878,10 +878,6 @@ def table_summary(table):
             array = numpy.atleast_2d(array)
             nans = sum([dist.nans for dist in col_dist])
             non_nans = sum([dist.non_nans for dist in col_dist])
-            if numpy.ma.is_masked(array):
-                masked = array.mask.sum()
-                nans += masked
-                non_nans -= masked
             if density == Storage.DENSE:
                 return DenseArray(nans, non_nans, col_dist)
             elif density == Storage.SPARSE:
