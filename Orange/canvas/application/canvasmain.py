@@ -1512,6 +1512,7 @@ class CanvasMainWindow(QMainWindow):
     def open_addons(self):
         from .addons import AddonManagerDialog
         dlg = AddonManagerDialog(self, windowTitle=self.tr("Add-ons"))
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
         return dlg.exec_()
 
     def show_output_view(self):
