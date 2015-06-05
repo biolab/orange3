@@ -95,7 +95,6 @@ class OWBoxPlot(widget.OWWidget):
     priority = 100
     author = "Amela Rakanović, Janez Demšar"
     inputs = [("Data", Table, "data")]
-    outputs = [("Basic statistic", Table)]
 
     settingsHandler = DomainContextHandler()
     display = Setting(0)
@@ -232,8 +231,6 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_list_box.clear()
         self.attrCombo.clear()
         self.boxScene.clear()
-        self.send("Basic statistic", None)
-        self.send("Significant data", None)
 
     def attr_changed(self):
         self.compute_box_data()
