@@ -422,6 +422,8 @@ class DescriptorModel(itemmodels.PyListModel):
 
 class OWFeatureConstructor(widget.OWWidget):
     name = "Feature Constructor"
+    description = "Construct new features (data columns) from a set of " \
+                  "existing features in the input data set."
     icon = "icons/FeatureConstructor.svg"
     inputs = [("Data", Orange.data.Table, "setData")]
     outputs = [("Data", Orange.data.Table)]

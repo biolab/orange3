@@ -12,8 +12,9 @@ from Orange.widgets.settings import Setting
 
 
 class OWKMeans(widget.OWWidget):
-    name = "K Means"
-    description = "K Means clustering."
+    name = "k-Means"
+    description = "k-means clustering algorithm with silhouette-based " \
+                  "quality estimation."
     icon = "icons/KMeans.svg"
     priority = 2100
 

@@ -632,8 +632,8 @@ class DendrogramWidget(QGraphicsWidget):
 
 class OWHierarchicalClustering(widget.OWWidget):
     name = "Hierarchical Clustering"
-    description = ("Hierarchical clustering based on distance matrix, and "
-                   "a dendrogram viewer.")
+    description = "Display a dendrogram of a hierarchical clustering " \
+                  "constructed from the input distance matrix."
     icon = "icons/HierarchicalClustering.svg"
     priority = 2100
 

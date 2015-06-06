@@ -124,7 +124,7 @@ class DiscDelegate(QStyledItemDelegate):
 
 class OWDiscretize(widget.OWWidget):
     name = "Discretize"
-    description = "Discretization of continuous attributes."
+    description = "Discretize the continuous data features."
     icon = "icons/Discretize.svg"
     inputs = [InputSignal("Data", Orange.data.Table, "set_data",
                           doc="Input data table")]

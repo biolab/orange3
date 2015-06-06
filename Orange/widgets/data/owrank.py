@@ -87,7 +87,8 @@ _DEFAULT_SELECTED = set(m.name for m in SCORES)
 
 class OWRank(widget.OWWidget):
     name = "Rank"
-    description = "Ranks and filters data features by their relevance."
+    description = "Rank data features by their correlation to " \
+                  "the class variable."
     icon = "icons/Rank.svg"
     priority = 1102
 

@@ -90,7 +90,8 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
 class OWMDS(widget.OWWidget):
     name = "MDS"
-    description = "Multidimensional scaling"
+    description = "Two-dimensional data projection by multidimensional " \
+                  "scaling constructed from a distance matrix."
     icon = "icons/MDS.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]

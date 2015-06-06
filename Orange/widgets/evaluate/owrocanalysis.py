@@ -272,8 +272,8 @@ class InfiniteLine(pg.InfiniteLine):
 
 class OWROCAnalysis(widget.OWWidget):
     name = "ROC Analysis"
-    description = ("Displays Receiver Operating Characteristics curve " +
-                   "based on evaluation of classifiers.")
+    description = "Display Receiver Operating Characteristics curve " \
+                  "based on evaluation of classifiers."
     icon = "icons/ROCAnalysis.svg"
     priority = 1010
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]

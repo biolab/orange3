@@ -11,8 +11,8 @@ from Orange.widgets.settings import Setting
 
 
 class OWKNNRegression(widget.OWWidget):
-    name = "k Nearest Neighbors Regression"
-    description = "K-nearest neighbours learner/model."
+    name = "Nearest Neighbors"
+    description = "k-nearest neighbours regression algorithm."
     icon = "icons/kNearestNeighbours.svg"
     priority = 20
 

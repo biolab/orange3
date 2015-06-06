@@ -17,7 +17,7 @@ from Orange.widgets import gui
 
 class OWClassificationTreeGraph(OWTreeViewer2D):
     name = "Classification Tree Viewer"
-    description = "Classification Tree Viewer"
+    description = "Graphical visualization of a classification tree."
     icon = "icons/ClassificationTree.svg"
 
     settingsHandler = ClassValuesContextHandler()

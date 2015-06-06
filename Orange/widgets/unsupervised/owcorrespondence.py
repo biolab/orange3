@@ -44,7 +44,7 @@ def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
 
 class OWCorrespondenceAnalysis(widget.OWWidget):
     name = "Correspondence Analysis"
-    description = "Correspondence analysis"
+    description = "Correspondence analysis for categorical multivariate data."
     icon = "icons/CorrespondenceAnalysis.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data")]

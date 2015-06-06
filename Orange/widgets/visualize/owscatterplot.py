@@ -33,8 +33,8 @@ def font_resize(font, factor, minsize=None, maxsize=None):
 
 
 class OWScatterPlot(OWWidget):
-    name = 'Scatter plot'
-    description = 'Scatter plot visualization'
+    name = 'Scatter Plot'
+    description = 'Scatter plot visualization.'
     icon = "icons/ScatterPlot.svg"
 
     inputs = [("Data", Table, "set_data", Default),

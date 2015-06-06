@@ -48,7 +48,8 @@ def p_index(ct):
 
 class OWMPR(OWWidget):
     name = 'ModelMap Projection Rank'
-    description = 'Ranking projections by estimating projection quality'
+    description = "Rank projections according to the " \
+                  "class-related projection quality"
     icon = "icons/ModelMap.svg"
 
     inputs = [('Data', Table, 'set_data', Default)]

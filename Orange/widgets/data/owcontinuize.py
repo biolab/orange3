@@ -10,8 +10,8 @@ from Orange.widgets.settings import Setting
 
 class OWContinuize(widget.OWWidget):
     name = "Continuize"
-    description = ("Turns discrete attributes into continuous and, " +
-                   "optionally, normalizes the continuous values.")
+    description = ("Transform discrete attributes into continuous and, " +
+                   "optionally, normalize the continuous values.")
     icon = "icons/Continuize.svg"
     author = "Martin Frlin"
     category = "Data"

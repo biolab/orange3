@@ -48,7 +48,7 @@ class ItemDelegate(QItemDelegate):
 
 class OWTestLearners(widget.OWWidget):
     name = "Test Learners"
-    description = ""
+    description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
 

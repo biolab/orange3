@@ -11,8 +11,9 @@ from Orange.widgets import widget, settings, gui
 
 
 class OWSVMClassification(widget.OWWidget):
-    name = "SVM Classification"
-    description = "Support Vector Machine Classification."
+    name = "SVM"
+    description = "Support vector machines classifier with standard " \
+                  "selection of kernels."
     icon = "icons/SVM.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),

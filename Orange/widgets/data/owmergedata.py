@@ -14,7 +14,7 @@ from Orange.widgets.utils import itemmodels
 
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
-    description = "Merges data sets based on values of selected attributes."
+    description = "Merge data sets based on values of selected data feature."
     icon = "icons/MergeData.svg"
     priority = 1110
 

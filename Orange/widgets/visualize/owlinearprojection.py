@@ -175,7 +175,7 @@ class AxisItem(pg.GraphicsObject):
 
 class OWLinearProjection(widget.OWWidget):
     name = "Linear Projection"
-    description = "Linear projection"
+    description = "A multi-axes projection of data to a two-dimension plane."
     icon = "icons/LinearProjection.svg"
     priority = 2000
 

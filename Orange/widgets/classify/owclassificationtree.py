@@ -9,6 +9,7 @@ from Orange.widgets.settings import Setting
 class OWClassificationTree(widget.OWWidget):
     name = "Classification Tree"
     icon = "icons/ClassificationTree.svg"
+    description = "Classification tree algorithm with forward pruning."
     priority = 30
 
     inputs = [("Data", Orange.data.Table, "set_data"),
