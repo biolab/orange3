@@ -112,7 +112,7 @@ function create_template {
 	cp "$BUNDLE_LITE"/Contents/Resources/* "$APP"/Contents/Resources
 	cp "$BUNDLE_LITE"/Contents/Info.plist "$APP"/Contents/Info.plist
 
-	cp "$BUNDLE_LITE"/Contents/PkgInfo $APP/Contents/PkgInfo
+	cp "$BUNDLE_LITE"/Contents/PkgInfo "$APP"/Contents/PkgInfo
 
 	cat <<-'EOF' > "$APP"/Contents/MacOS/ENV
 		# Create an environment for running python from the bundle
@@ -138,6 +138,8 @@ function create_template {
 
 		# Some non framework libraries are put in $FRAMEWORKS_DIR by machlib standalone
 		export DYLD_LIBRARY_PATH="$FRAMEWORKS_DIR"${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}
+		export GVBINDIR="$BUNDLE_DIR"/Resources/graphviz/lib/graphviz
+		export PATH="$PATH":"$BUNDLE_DIR"/MacOS
 EOF
 
 }
@@ -285,6 +287,36 @@ function install_pyqt4 {
 }
 
 
+function install_graphviz {
+	download_and_extract "http://graphviz.org/pub/graphviz/stable/SOURCES/graphviz-2.38.0.tar.gz"
+	pushd graphviz-2.38.0
+	./configure --prefix "$APP"/Contents/Resources/graphviz/ \
+				--with-quartz \
+				--without-qt \
+				--disable-swig \
+				--without-pangocairo \
+				--without-freetype2 \
+				--without-x \
+				--without-rsvg \
+				--without-devil \
+				--without-webp \
+				--without-popler \
+				--without-ghostscript \
+				--without-lasi \
+				--without-fontconfig \
+				--without-gdk \
+				--without-gtk \
+				--without-glut
+
+	make
+	make install
+	(
+		cd "$APP"/Contents/MacOS/
+		ln -sf ../Resources/graphviz/bin/* ./
+	)
+	popd
+}
+
 function install_numpy {
 	"$PIP" install numpy==$NUMPY_VER
 
@@ -367,7 +399,7 @@ function cleanup {
 
 function make_standalone {
 	"$PIP" install macholib==1.5.1
-	"$PYTHON" -m macholib standalone $APP
+	"$PYTHON" -m macholib standalone "$APP"
 	"$PIP" uninstall --yes altgraph
 	"$PIP" uninstall --yes macholib
 }
@@ -396,6 +428,8 @@ install_ipython
 install_scikit_learn
 
 install_psycopg2
+
+install_graphviz
 
 make_standalone
 
