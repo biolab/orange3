@@ -79,7 +79,7 @@ class DistributionBarItem(pg.GraphicsObject):
 
 class OWDistributions(widget.OWWidget):
     name = "Distributions"
-    description = "Displays variable value distributions."
+    description = "Display value distributions of a data feature in a graph."
     icon = "icons/Distribution.svg"
     priority = 100
     inputs = [InputSignal("Data", Orange.data.Table, "set_data",

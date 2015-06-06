@@ -36,6 +36,8 @@ _ItemSet = namedtuple("_ItemSet", ["key", "name", "title", "items"])
 
 class OWVennDiagram(widget.OWWidget):
     name = "Venn Diagram"
+    description = "A graphical visualization of an overlap of data instances " \
+                  "from a collection of input data sets."
     icon = "icons/VennDiagram.svg"
 
     inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]

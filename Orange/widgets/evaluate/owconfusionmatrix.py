@@ -20,7 +20,8 @@ def confusion_matrix(res, index):
 
 class OWConfusionMatrix(widget.OWWidget):
     name = "Confusion Matrix"
-    description = "Shows a confusion matrix."
+    description = "Display confusion matrix constructed from results " \
+                  "of evaluation of classifiers."
     icon = "icons/ConfusionMatrix.svg"
     priority = 1001
 

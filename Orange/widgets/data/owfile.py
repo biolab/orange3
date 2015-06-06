@@ -21,9 +21,8 @@ def add_origin(examples, filename):
 class OWFile(widget.OWWidget):
     name = "File"
     id = "orange.widgets.data.file"
-    description = """
-    Read a data table from a supported file format on the the file system and
-    send it to the the output."""
+    description = "Read a data from an input file " \
+                  "and send the data table to the output."
     icon = "icons/File.svg"
     author = "Janez Demsar"
     maintainer_email = "janez.demsar(@at@)fri.uni-lj.si"

@@ -7,7 +7,8 @@ from Orange.widgets.settings import Setting
 
 class OWMajority(widget.OWWidget):
     name = "Majority"
-    description = "Majority class learner/classifier."
+    description = "Classification to the most frequent class " \
+                  "from the training set."
     priority = 20
     icon = "icons/Majority.svg"
 

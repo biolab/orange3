@@ -12,7 +12,7 @@ from Orange.widgets import widget, settings, gui
 
 class OWSGDRegression(widget.OWWidget):
     name = "Stochastic Gradient Descent"
-    description = "Stochastic Gradient Descent Regression."
+    description = "Stochastic gradient descent algorithm for regression."
     icon = "icons/SGDRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),

@@ -11,7 +11,7 @@ from Orange.widgets.settings import Setting
 
 class OWSaveClassifier(widget.OWWidget):
     name = "Save Classifier"
-    description = "Save a trained classifier to disk."
+    description = "Save a trained classifier to an output file."
     icon = "icons/SaveClassifier.svg"
     priority = 3000
 

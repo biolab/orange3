@@ -25,9 +25,7 @@ CANVAS_COLOR = "Canvas"
 
 class OWParallelCoordinates(OWVisWidget):
     name = "Parallel Coordinates"
-    description = "Shows parallel coordinates"
-    long_description = """Shows parallel coordinates for multidimensional data with
-        many options."""
+    description = "Parallel coordinates display of multi-dimensional data."
     icon = "icons/ParallelCoordinates.svg"
     priority = 100
     author = "Gregor Leban, Anze Staric"

@@ -96,7 +96,7 @@ class MosaicSceneView(QGraphicsView):
 
 class OWMosaicDisplay(OWWidget):
     name = "Mosaic Display"
-    description = "Shows mosaic displays"
+    description = "Display data in a mosaic plot."
     icon = "icons/MosaicDisplay.svg"
 
     inputs = [("Data", Table, "setData", Default),

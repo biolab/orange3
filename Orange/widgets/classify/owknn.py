@@ -11,8 +11,8 @@ def is_discrete(var):
 
 class OWKNNLearner(widget.OWWidget):
 
-    name = "K Nearest Neighbors"
-    description = "K Nearest Neighbors"
+    name = "Nearest Neighbors"
+    description = "k-nearest neighbors classification algorithm."
     icon = "icons/KNN.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]

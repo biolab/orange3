@@ -11,7 +11,8 @@ SortValues, RemoveConstant, RemoveUnusedValues = 1, 2, 4
 
 class OWPurgeDomain(widget.OWWidget):
     name = "Purge Domain"
-    description = "Removes redundant values and attributes, sorts values."
+    description = "Remove redundant values and features from the data set. " \
+                  "Sorts values."
     icon = "icons/PurgeDomain.svg"
     category = "Data"
     keywords = ["data", "purge", "domain"]

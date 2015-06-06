@@ -791,7 +791,7 @@ class OWPaintData(widget.OWWidget):
     ]
 
     name = "Paint Data"
-    description = """Create data by painting on the graph."""
+    description = "Create data by painting data points in the plane."
     long_description = ""
     icon = "icons/PaintData.svg"
     priority = 10

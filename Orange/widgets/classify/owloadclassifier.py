@@ -10,7 +10,7 @@ from Orange.widgets.settings import Setting
 
 class OWLoadClassifier(widget.OWWidget):
     name = "Load Classifier"
-    description = "Load a classifier from disk."
+    description = "Load a classifier from an input file."
     priority = 3050
     icon = "icons/LoadClassifier.svg"
 

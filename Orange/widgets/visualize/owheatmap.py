@@ -364,8 +364,9 @@ def resample(node, samplewidth):
 
 
 class OWHeatMap(widget.OWWidget):
-    name = "Heat map"
-    description = "Draw a two dimentional density plot."
+    name = "Heat Map"
+    description = "Two-dimensional heat map displaying data instances " \
+                  "(rows) and their features (heat map columns)."
     icon = "icons/Heatmap.svg"
     priority = 100
 

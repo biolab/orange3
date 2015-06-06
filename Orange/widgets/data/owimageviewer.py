@@ -328,7 +328,7 @@ def is_string(var):
 
 class OWImageViewer(widget.OWWidget):
     name = "Image Viewer"
-    description = "Views images embedded in the data."
+    description = "View images referred to in the data."
     icon = "icons/ImageViewer.svg"
     priority = 4050
 

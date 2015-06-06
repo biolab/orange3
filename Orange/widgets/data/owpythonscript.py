@@ -349,7 +349,7 @@ def select_row(view, row):
 
 class OWPythonScript(widget.OWWidget):
     name = "Python Script"
-    description = "Executes a Python script."
+    description = "Write a Python script and run it on input data or models."
     icon = "icons/PythonScript.svg"
     priority = 3150
 

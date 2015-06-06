@@ -167,7 +167,7 @@ METHODS = [Method(**m) for m in METHODS]
 
 class OWImpute(OWWidget):
     name = "Impute"
-    description = "Imputes missing values in the data table."
+    description = "Impute missing values in the data table."
     icon = "icons/Impute.svg"
     priority = 2130
 

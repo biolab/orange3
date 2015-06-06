@@ -235,8 +235,7 @@ class DendrogramWidget(DendrogramWidget):
 
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
-
-    description = "Visualize a distance matrix"
+    description = "Visualize a distance matrix."
     icon = "icons/DistanceMatrix.svg"
     priority = 1200
 

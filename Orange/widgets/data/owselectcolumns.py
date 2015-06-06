@@ -269,8 +269,8 @@ class CompleterNavigator(QtCore.QObject):
 
 class OWSelectAttributes(widget.OWWidget):
     name = "Select Columns"
-    description = """Select columns from the data table and define
-    sets of features, classes or meta variables."""
+    description = "Select columns from the data table and assign them to " \
+                  "data features, classes or meta variables."
     icon = "icons/SelectColumns.svg"
     priority = 100
     author = "Ales Erjavec"

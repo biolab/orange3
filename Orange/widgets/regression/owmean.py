@@ -7,7 +7,7 @@ from Orange.preprocess.preprocess import Preprocess
 
 class OWMean(widget.OWWidget):
     name = "Mean Learner"
-    description = ""
+    description = "Regression to the average class value from the training set."
     icon = "icons/Mean.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),

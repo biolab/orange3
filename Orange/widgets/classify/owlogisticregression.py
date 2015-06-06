@@ -10,7 +10,8 @@ from Orange.widgets import widget, settings, gui
 
 class OWLogisticRegression(widget.OWWidget):
     name = "Logistic Regression"
-    description = ""
+    description = "Logistic regression classification algorithm with " \
+                  "LASSO (L1) or ridge (L2) regularization."
     icon = "icons/LogisticRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),

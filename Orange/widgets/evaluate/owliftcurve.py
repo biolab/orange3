@@ -51,7 +51,8 @@ PlotCurve = namedtuple(
 
 class OWLiftCurve(widget.OWWidget):
     name = "Lift Curve"
-    description = ""
+    description = "Construct and display a lift curve " \
+                  "from the evaluation of classifiers."
     icon = "icons/LiftCurve.svg"
     priority = 1020
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]

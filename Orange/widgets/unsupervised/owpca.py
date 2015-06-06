@@ -18,7 +18,7 @@ except ImportError:
 
 class OWPCA(widget.OWWidget):
     name = "PCA"
-    description = "Principal component analysis"
+    description = "Principal component analysis with a scree-diagram."
     icon = "icons/PCA.svg"
     priority = 3050
 

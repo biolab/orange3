@@ -29,7 +29,7 @@ PlotCurve = namedtuple(
 
 class OWCalibrationPlot(widget.OWWidget):
     name = "Calibration Plot"
-    description = "Displays calibration plot based on evaluation of classifiers."
+    description = "Calibration plot based on evaluation of classifiers."
     icon = "icons/CalibrationPlot.svg"
     priority = 1030
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]

@@ -7,7 +7,8 @@ from Orange.widgets import widget, settings, gui
 
 class OWLinearRegression(widget.OWWidget):
     name = "Linear Regression"
-    description = ""
+    description = "A linear regression algorithm with optional L1 and L2 " \
+                  "regularization."
     icon = "icons/LinearRegression.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),

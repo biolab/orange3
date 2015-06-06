@@ -12,7 +12,7 @@ from Orange.widgets import widget, settings, gui
 
 class OWRandomForest(widget.OWWidget):
     name = "Random Forest"
-    description = "Random Forest Classifier"
+    description = "Random forest classication algorithm."
     icon = "icons/RandomForest.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data"),

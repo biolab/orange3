@@ -1359,7 +1359,7 @@ class SequenceFlow(QWidget):
 
 class OWPreprocess(widget.OWWidget):
     name = "Preprocess"
-    description = """Construct and apply data preprocessors."""
+    description = "Construct a data preprocessing pipeline."
     icon = "icons/Preprocess.svg"
     priority = 2105
 

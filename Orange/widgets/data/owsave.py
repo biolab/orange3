@@ -11,7 +11,7 @@ from Orange.data.io import FileFormats
 
 class OWSave(widget.OWWidget):
     name = "Save"
-    description = "Saves data to a file."
+    description = "Save data to an output file."
     icon = "icons/Save.svg"
     author = "Martin Frlin"
     category = "Data"

@@ -15,7 +15,8 @@ from Orange.data import DiscreteVariable
 
 class OWDataSampler(widget.OWWidget):
     name = "Data Sampler"
-    description = "Selects a subset of instances from the data set."
+    description = "Randomly draw a subset of data points " \
+                  "from the input data set."
     icon = "icons/DataSampler.svg"
     priority = 100
     category = "Data"

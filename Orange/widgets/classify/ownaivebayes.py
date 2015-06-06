@@ -11,6 +11,7 @@ from Orange.widgets import widget, gui, settings
 
 class OWNaiveBayes(widget.OWWidget):
     name = "Naive Bayes"
+    description = "Naive Bayesian classifier."
     icon = "icons/NaiveBayes.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
