@@ -552,8 +552,9 @@ def list_pypi_addons():
 
 def list_installed_addons():
     from ..config import ADDON_ENTRY
+    workingset = pkg_resources.WorkingSet(sys.path)
     return [ep.dist for ep in
-            pkg_resources.iter_entry_points(ADDON_ENTRY)]
+            workingset.iter_entry_points(ADDON_ENTRY)]
 
 
 def unique(iterable):
