@@ -525,7 +525,11 @@ def colors(data, variable, palette=None):
         else:
             raise TypeError()
 
-    x = numpy.array(data[:, variable]).ravel()
+    x = data[:, variable]
+    if variable in data.domain.metas:
+        x = numpy.array(x.metas, dtype='float').ravel()
+    else:
+        x = numpy.array(x).ravel()
 
     if is_discrete(variable):
         nvalues = len(variable.values)
