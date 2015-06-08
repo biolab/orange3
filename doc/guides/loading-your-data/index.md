@@ -42,7 +42,7 @@ File and Data Table widgets,
 open the File widget (double click on its icon) and click on the file
 browser icon,
 
-![image](file-browse.PNG)
+![image](loadingyourdata.png)
 
 locate the data file ( e.g. [sample.xlsx] (sample.xlsx)) and open
 it. The **File** widget sends data to **Data Table** widget, which displays the following result:
