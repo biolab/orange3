@@ -32,22 +32,22 @@ Data from Excel
 
 Orange 3.0 recognises Excel files directly, thus simply open your .xlsx file in the program.
 
-![image](spreadsheet1.PNG)
+<img src="spreadsheet1.PNG" alt="image" width="400">
 
 To load the data set in Orange, we can design a simple workflow with
 File and Data Table widgets,
 
-![image](file-data-table-workflow.png)
+<img src="file-data-table-workflow.png" alt="image">
 
 open the File widget (double click on its icon) and click on the file
 browser icon,
 
-![image](file-browse.PNG)
+<img src="loadingyourdata.png" alt="image" width="400">
 
 locate the data file ( e.g. [sample.xlsx] (sample.xlsx)) and open
 it. The **File** widget sends data to **Data Table** widget, which displays the following result:
 
-![image](file-widget.png)
+<img src="file-widget.png" alt="image" width="400">
 
 Notice that our data contains 8 data instances (rows) and 7 data
 attributes (columns).
@@ -69,20 +69,20 @@ all six columns are treated as ordinary attributes (input variables),
 with the only distinction being that the first variable is categorical
 (discrete) and the other five are real-valued (continuous):
 
-![image](select-columns-start.PNG)
+<img src="select-columns-start.PNG" alt="image" width="400">
 
 To correctly reassign attribute types, drag attribute named `function`
 to a **Class** box, and attribute named `gene` to a **Meta Attribute**
 box. The [Select Columns] (http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes) widget should now look like this:
 
-![image](select-columns-reassigned.PNG)
+<img src="select-columns-reassigned.PNG" alt="image" width="400">
 
 Change of attribute types in *Select Columns* widget should be confirmed
 by clicking the **Apply** button. The data from this widget is fed into
 [Data Table] (http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table) widget, that now renders class and meta attributes in a
 color different from those of input features:
 
-![image](data-table-with-class1.PNG)
+<img src="data-table-with-class1.PNG" alt="image" width="400">
 
 We could also define the domain for this data set in a different way.
 Say, we could make the data set ready for regression, and use `heat 0`
@@ -91,12 +91,12 @@ variables, and remove `heat 10` and `heat 20` from the data set (making
 these two attributes available for type assignment, without including
 them in the data on the output of [Select Columns] (http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes) widget):
 
-![image](select-columns-regression.PNG)
+<img src="select-columns-regression.PNG" alt="image" width="400">
 
 By setting the attributes as above, the rendering of the data in the
 Data Table widget gives the following output:
 
-![image](data-table-regression1.PNG)
+<img src="data-table-regression1.PNG" alt="image" width="400">
 
 Header with Attribute Type Information
 --------------------------------------
@@ -121,11 +121,11 @@ and for the domain:
 This is how the header with augmented attribute names looks like in
 Excel [sample-head.xlsx] (sample-head.xlsx):
 
-![image](spreadsheet-simple-head1.PNG)
+<img src="spreadsheet-simple-head1.PNG" alt="image" width="400">
 
 We can again use a [Data Table] (http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table) widget to read the data from Excel file. Orange will automatically recognize attribute values, which is evident in the modified class icons:
 
-![image](file-widget-simplified-header-example.PNG)
+<img src="file-widget-simplified-header-example.PNG" alt="image" width="400">
 
 Notice that the attributes we have ignored (label "i" in the
 attribute name) are not present in the data set.
@@ -139,7 +139,7 @@ their domain (continuous, discrete and string, or abbreviated c, d and
 s), and the third row an optional type (class, meta, or ignore). Here is
 an example:
 
-![image](excel-with-tab1.PNG)
+<img src="excel-with-tab1.PNG" alt="image" width="400">
 
 The above screenshot is from Excel, but the file was actually saved using "Tab Delimited Text (.txt)" format. If you want to 
 save your files in .tab format, you have to rename the file so that it ends with ".tab" extension (say from sample.txt to 
@@ -152,6 +152,6 @@ Saving Files in LibreOffice
 
 If you are using LibreOffice, simply save your files in .xlsl format (available from the drop-down menu under *Save As Type*).
 
-![image](https://github.com/ajdapretnar/orange3/blob/loading-your-data/doc/guides/loading-your-data/saving-tab-delimited-files.PNG)
+![image](saving-tab-delimited-files.PNG)
 
-![image](https://github.com/ajdapretnar/orange3/blob/loading-your-data/doc/guides/loading-your-data/saving-tab-delimited-files2.PNG)
+<img src="saving-tab-delimited-files2.PNG" alt="image" width="400">
