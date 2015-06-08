@@ -152,6 +152,6 @@ Saving Files in LibreOffice
 
 If you are using LibreOffice, simply save your files in .xlsl format (available from the drop-down menu under *Save As Type*).
 
-![image]()
+![image](https://github.com/ajdapretnar/orange3/blob/loading-your-data/doc/guides/loading-your-data/saving-tab-delimited-files.PNG)
 
-![image]()
+![image](https://github.com/ajdapretnar/orange3/blob/loading-your-data/doc/guides/loading-your-data/saving-tab-delimited-files2.PNG)
