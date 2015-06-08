@@ -2,12 +2,12 @@ Loading your Data
 =================
 
 Orange comes with its [own data format] (http://docs.orange.biolab.si/reference/rst/Orange.data.formats.html#tab-delimited), but can
-also handle standard comma or tab delimited data files. The input data
-set would usually be a table, with data instances (samples) in rows and
-data attributes in columns. Data attributes can be of different types
-(continuous, discrete, and strings) and kinds (input variables, meta
-attributes, and class). Data attribute type and kind can be provided
-in the data table header and can be changed later, after reading the
+also handle Excel (.xlsl), comma or tab delimited data files. The input data
+set is usually a table, with data instances (samples) in rows and
+data attributes in columns. Attributes can be of different types
+(continuous, discrete, and strings), with different elements (input variables, meta
+attributes, and class). Data attribute type and element can be provided
+in the data table header. and can be changed later, after reading the
 data, with several specialized widgets, such as Select Rows and [Select Columns] (http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes).
 
 In a Nutshell
@@ -24,13 +24,13 @@ In a Nutshell
     widget and set the header to **Orange simplified header**.
 -   Orange's native format is a tab-delimited text file with three
     header rows. The first row contains attribute names, the second the
-    domain (**continuous**, **discrete** or **string**), and the third
-    the optional type (**class**, **meta** or **string**).
+    type (**continuous**, **discrete** or **string**), and the third
+    the optional element (**class**, **meta** or **string**).
 
 Data from Excel
 ---------------
 
-Orange 3.0 recognises Excel files directly, thus you simply need to upload your .xlsx file in the program.
+Orange 3.0 recognises Excel files directly, thus simply open your .xlsx file in the program.
 
 ![image](spreadsheet1.PNG)
 
@@ -42,7 +42,7 @@ File and Data Table widgets,
 open the File widget (double click on its icon) and click on the file
 browser icon,
 
-![image](file-browser-icon.png)
+![image](file-browse.PNG)
 
 locate the data file ( e.g. [sample.xlsx] (sample.xlsx)) and open
 it. The **File** widget sends data to **Data Table** widget, which displays the following result:
@@ -80,7 +80,7 @@ box. The [Select Columns] (http://docs.orange.biolab.si/widgets/rst/data/selecta
 Change of attribute types in *Select Columns* widget should be confirmed
 by clicking the **Apply** button. The data from this widget is fed into
 [Data Table] (http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table) widget, that now renders class and meta attributes in a
-color different from those for input features:
+color different from those of input features:
 
 ![image](data-table-with-class1.PNG)
 
@@ -93,7 +93,7 @@ them in the data on the output of [Select Columns] (http://docs.orange.biolab.si
 
 ![image](select-columns-regression.PNG)
 
-By setting the attributes as above, the rending of the data in the
+By setting the attributes as above, the rendering of the data in the
 Data Table widget gives the following output:
 
 ![image](data-table-regression1.PNG)
@@ -141,9 +141,17 @@ an example:
 
 ![image](excel-with-tab1.PNG)
 
-The above screenshot is from Excel, but the file was actually saved
-using "Tab Delimited Text (.txt)" format. To open it in Orange, we have
-to rename the file so that it ends with ".tab" extension (say from
-sample.txt to [sample.tab] (sample.tab). In Windows, one can bypass
-this step by placing the name of the file and the .tab extension in
-quotes when using **Save As ...** command (e.g., "sample.tab").
+The above screenshot is from Excel, but the file was actually saved using "Tab Delimited Text (.txt)" format. If you want to 
+save your files in .tab format, you have to rename the file so that it ends with ".tab" extension (say from sample.txt to 
+sample.tab). In Windows, you can bypass this step by placing the name of the file and the .tab extension in quotes when using
+*Save As* ... command (e.g., "sample.tab"). However, in Orange 3.0 this process is redundant since you can open several file 
+types without having to convert them first.
+
+Saving Files in LibreOffice
+---------------------------
+
+If you are using LibreOffice, simply save your files in .xlsl format (available from the drop-down menu under *Save As Type*).
+
+![image]()
+
+![image]()
