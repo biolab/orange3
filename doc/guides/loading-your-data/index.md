@@ -37,7 +37,7 @@ Orange 3.0 recognises Excel files directly, thus simply open your .xlsx file in 
 To load the data set in Orange, we can design a simple workflow with
 File and Data Table widgets,
 
-<img src="file-data-table-workflow.png" alt="image" width="400">
+<img src="file-data-table-workflow.png" alt="image">
 
 open the File widget (double click on its icon) and click on the file
 browser icon,
