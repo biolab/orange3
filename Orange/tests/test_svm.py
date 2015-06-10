@@ -6,54 +6,67 @@ import Orange
 from Orange.classification import (SVMLearner, LinearSVMLearner,
                                    NuSVMLearner, OneClassSVMLearner)
 from Orange.regression import (SVRLearner, NuSVRLearner)
+from Orange.data import Table, Domain, ContinuousVariable
+from Orange.evaluation import CrossValidation, CA, RMSE
 
 
 class SVMTest(unittest.TestCase):
-
     def setUp(self):
-        self.data = Orange.data.Table('ionosphere')
+        self.data = Table('ionosphere')
         self.data.shuffle()
 
     def test_SVM(self):
         learn = SVMLearner()
-        res = Orange.evaluation.CrossValidation(self.data, [learn], k=2)
-        self.assertGreater(Orange.evaluation.CA(res)[0], 0.9)
+        res = CrossValidation(self.data, [learn], k=2)
+        self.assertGreater(CA(res)[0], 0.9)
 
     def test_LinearSVM(self):
         learn = LinearSVMLearner()
-        res = Orange.evaluation.CrossValidation(self.data, [learn], k=2)
-        self.assertTrue(0.8 < Orange.evaluation.CA(res)[0] < 0.9)
+        res = CrossValidation(self.data, [learn], k=2)
+        self.assertTrue(0.8 < CA(res)[0] < 0.9)
 
     def test_NuSVM(self):
         learn = NuSVMLearner(nu=0.01)
-        res = Orange.evaluation.CrossValidation(self.data, [learn], k=2)
-        self.assertGreater(Orange.evaluation.CA(res)[0], 0.9)
+        res = CrossValidation(self.data, [learn], k=2)
+        self.assertGreater(CA(res)[0], 0.9)
 
     def test_SVR(self):
         nrows, ncols = 200, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Orange.data.Table(X, y)
+        data = Table(X, y)
         learn = SVRLearner(kernel='rbf', gamma=0.1)
-        res = Orange.evaluation.CrossValidation(data, [learn], k=2)
-        self.assertLess(Orange.evaluation.RMSE(res)[0], 0.15)
+        res = CrossValidation(data, [learn], k=2)
+        self.assertLess(RMSE(res)[0], 0.15)
 
     def test_NuSVR(self):
         nrows, ncols = 200, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Orange.data.Table(X, y)
+        data = Table(X, y)
         learn = NuSVRLearner(kernel='rbf', gamma=0.1)
-        res = Orange.evaluation.CrossValidation(data, [learn], k=2)
-        self.assertLess(Orange.evaluation.RMSE(res)[0], 0.1)
+        res = CrossValidation(data, [learn], k=2)
+        self.assertLess(RMSE(res)[0], 0.1)
 
     def test_OneClassSVM(self):
-        # TODO: improve the test - what does it check?
-        nrows, ncols = 200, 5
-        X = 0.3 * np.random.randn(nrows, ncols)
-        X = np.r_[X + 2, X - 2]
-        table = Orange.data.Table(X, None)
-        learn = OneClassSVMLearner(kernel="rbf")
-        m = learn(table[:100])
-        z = m(table[100:])
-        self.assertTrue(0.1 < np.sum(z == 1) < 0.5 * len(z))
+        np.random.seed(42)
+        domain = Domain((ContinuousVariable("c1"), ContinuousVariable("c2")))
+        X_in = 0.3 * np.random.randn(40, 2)
+        X_out = np.random.uniform(low=-4, high=4, size=(20, 2))
+        X_all = Table(domain, np.r_[X_in + 2, X_in - 2, X_out])
+        n_true_in = len(X_in) * 2
+        n_true_out = len(X_out)
+
+        nu = 0.2
+        learner = OneClassSVMLearner(nu=nu)
+        cls = learner(X_all)
+        y_pred = cls(X_all)
+        n_pred_out_all = np.sum(y_pred == -1)
+        n_pred_in_true_in = np.sum(y_pred[:n_true_in] == 1)
+        n_pred_out_true_out = np.sum(y_pred[- n_true_out:] == -1)
+
+        self.assertTrue(all(np.absolute(y_pred) == 1))
+        self.assertTrue(n_pred_out_all <= len(X_all) * nu)
+        self.assertTrue(np.absolute(n_pred_out_all - n_true_out) < 2)
+        self.assertTrue(np.absolute(n_pred_in_true_in - n_true_in) < 4)
+        self.assertTrue(np.absolute(n_pred_out_true_out - n_true_out) < 3)
