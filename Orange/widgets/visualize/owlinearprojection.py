@@ -159,12 +159,12 @@ class AxisItem(pg.GraphicsObject):
         left_quad = 270 <= angle <= 360 or -0.0 <= angle < 90
 
         # position the text label along the viewbox_line
-        label_pos = viewbox_line.pointAt(0.95)
+        label_pos = viewbox_line.pointAt(0.90)
 
         if left_quad:
-            anchor = (0, -0.1)
+            anchor = (0.5, -0.1)
         else:
-            anchor = (1, 1.1)
+            anchor = (0.5, 1.1)
 
         pos = T.map(label_pos)
         self._label.setPos(pos)
@@ -360,7 +360,7 @@ class OWLinearProjection(widget.OWWidget):
             "Zoom to fit", self,
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
             triggered=lambda:
-                self.viewbox.setRange(QtCore.QRectF(-1, -1, 2, 2))
+                self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
         )
         zoomin = QAction(
             "Zoom in", self,
@@ -628,7 +628,7 @@ class OWLinearProjection(widget.OWWidget):
                                  label=variables[i].name)
             self.viewbox.addItem(axis_item)
 
-        self.viewbox.setRange(QtCore.QRectF(-1, -1, 2, 2))
+        self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
 
     def _color_data(self, mask=None):
         color_var = self.color_var()
