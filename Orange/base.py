@@ -4,7 +4,9 @@ import numpy as np
 import scipy
 import bottlechest as bn
 
-import Orange
+from Orange.data import (Table, Storage, Instance, Value,
+                         ContinuousVariable, DiscreteVariable)
+from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
@@ -30,8 +32,8 @@ class Learner:
         return self.fit(data.X, data.Y, data.W)
 
     def __call__(self, data):
-        if isinstance(data, Orange.data.Instance):
-            data = Orange.data.Table(data.domain, [data])
+        if isinstance(data, Instance):
+            data = Table(data.domain, [data])
         data = self.preprocess(data)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
@@ -82,13 +84,13 @@ class Model:
         else:
             Y = np.zeros((len(X), len(self.domain.class_vars)))
             Y[:] = np.nan
-            table = Orange.data.Table(self.domain, X, Y)
+            table = Table(self.domain, X, Y)
             return self.predict_storage(table)
 
     def predict_storage(self, data):
-        if isinstance(data, Orange.data.Storage):
+        if isinstance(data, Storage):
             return self.predict(data.X)
-        elif isinstance(data, Orange.data.Instance):
+        elif isinstance(data, Instance):
             return self.predict(np.atleast_2d(data.x))
         raise TypeError("Unrecognized argument (instance of '{}')".format(
                         type(data).__name__))
@@ -97,7 +99,7 @@ class Model:
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if (ret > 0
-            and any(isinstance(v, Orange.data.ContinuousVariable)
+            and any(isinstance(v, ContinuousVariable)
                     for v in self.domain.class_vars)):
             raise ValueError("cannot predict continuous distributions")
 
@@ -106,12 +108,12 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Orange.data.Instance):
+        elif isinstance(data, Instance):
             if data.domain != self.domain:
-                data = Orange.data.Instance(self.domain, data)
-            data = Orange.data.Table(data.domain, [data])
+                data = Instance(self.domain, data)
+            data = Table(data.domain, [data])
             prediction = self.predict_storage(data)
-        elif isinstance(data, Orange.data.Table):
+        elif isinstance(data, Table):
             if data.domain != self.domain:
                 data = data.from_table(self.domain, data)
             prediction = self.predict_storage(data)
@@ -153,8 +155,8 @@ class Model:
         # Return what we need to
         if ret == Model.Probs:
             return probs
-        if isinstance(data, Orange.data.Instance) and not multitarget:
-            value = Orange.data.Value(self.domain.class_var, value[0])
+        if isinstance(data, Instance) and not multitarget:
+            value = Value(self.domain.class_var, value[0])
         if ret == Model.Value:
             return value
         else:  # ret == Model.ValueProbs
@@ -232,9 +234,9 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     _params = None
 
     name = 'skl learner'
-    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None),
-                     Orange.preprocess.RemoveNaNColumns(),
-                     Orange.preprocess.SklImpute(force=False)]
+    preprocessors = [Continuize(),
+                     RemoveNaNColumns(),
+                     SklImpute(force=False)]
 
     @property
     def params(self):
@@ -259,7 +261,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def preprocess(self, data):
         data = super().preprocess(data)
 
-        if any(isinstance(v, Orange.data.DiscreteVariable) and len(v.values) > 2
+        if any(isinstance(v, DiscreteVariable) and len(v.values) > 2
                for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support " +
                              "multinomial variables.")

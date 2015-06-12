@@ -1,14 +1,13 @@
 import sklearn.svm as skl_svm
 
 from Orange.classification import SklLearner, SklModel
-from Orange.preprocess import Continuize
+from Orange.preprocess import Normalize
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner",
            "SVRLearner", "NuSVRLearner", "OneClassSVMLearner"]
 
 
-svm_pps = SklLearner.preprocessors + \
-      [Continuize(normalize_continuous=Continuize.NormalizeBySD)]
+svm_pps = SklLearner.preprocessors + [Normalize()]
 
 
 class SVMClassifier(SklModel):

@@ -11,7 +11,7 @@ import Orange.data
 from . import impute, discretize
 from ..misc.enum import Enum
 
-__all__ = ["Continuize", "Discretize", "Impute", "SklImpute"]
+__all__ = ["Continuize", "Discretize", "Impute", "SklImpute", "Normalize"]
 
 
 def is_continuous(var):
@@ -51,26 +51,22 @@ class Continuize(Preprocess):
     MultinomialTreatment = Enum(
         "Indicators", "FirstAsBase", "FrequentAsBase",
         "Remove", "RemoveMultinomial", "ReportError", "AsOrdinal",
-        "AsNormalizedOrdinal", "Leave", "NormalizeBySpan",
-        "NormalizeBySD"
+        "AsNormalizedOrdinal", "Leave"
     )
 
     (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
-     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave,
-     NormalizeBySpan, NormalizeBySD) = MultinomialTreatment
+     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = MultinomialTreatment
 
-    def __init__(self, zero_based=True, multinomial_treatment=Indicators,
-                 normalize_continuous=NormalizeBySD):
+    def __init__(self, zero_based=True, multinomial_treatment=Indicators):
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
-        self.normalize_continuous = normalize_continuous
 
     def __call__(self, data):
         from . import continuize
+
         continuizer = continuize.DomainContinuizer(
             zero_based=self.zero_based,
-            multinomial_treatment=self.multinomial_treatment,
-            normalize_continuous=self.normalize_continuous)
+            multinomial_treatment=self.multinomial_treatment)
         domain = continuizer(data)
         return data.from_table(domain, data)
 
@@ -78,7 +74,7 @@ class Continuize(Preprocess):
 class Discretize(Preprocess):
     """
     Construct a discretizer, a preprocessor for discretization of
-    continuous fatures.
+    continuous features.
 
     Parameters
     ----------
@@ -172,6 +168,7 @@ class RemoveConstant(Preprocess):
     Construct a preprocessor that removes features with constant values
     from the data set.
     """
+
     def __call__(self, data):
         """
         Remove columns with constant values from the data set and return
@@ -188,6 +185,76 @@ class RemoveConstant(Preprocess):
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
+
+
+class Normalize(Preprocess):
+    """
+    Construct a preprocessor for normalization of features.
+    Given a data table, preprocessor returns a new table in
+    which the continuous attributes are normalized.
+
+    Parameters
+    ----------
+    zero_based : bool (default=True)
+        Determines the value used as the “low” value of the variable.
+        It determines the interval for normalized continuous variables
+        (either [-1, 1] or [0, 1]).
+
+    norm_type : NormTypes (default: Normalize.NormalizeBySD)
+        Normalization type. If Normalize.NormalizeBySD, the values are
+        replaced with standardized values by subtracting the average
+        value and dividing by the standard deviation.
+        Attribute zero_based has no effect on this standardization.
+
+        If Normalize.NormalizeBySpan, the values are replaced with
+        normalized values by subtracting min value of the data and
+        dividing by span (max - min).
+
+    transform_class : bool (default=False)
+        If True the class is normalized as well.
+
+    Examples
+    --------
+    >>> from Orange.data import Table
+    >>> from Orange.preprocess import Normalize
+    >>> data = Table("iris")
+    >>> normalizer = Normalize(Normalize.NormalizeBySpan)
+    >>> normalized_data = normalizer(data)
+    """
+
+    NormTypes = Enum("NormalizeBySpan", "NormalizeBySD")
+    (NormalizeBySpan, NormalizeBySD) = NormTypes
+
+    def __init__(self,
+                 zero_based=True,
+                 norm_type=NormalizeBySD,
+                 transform_class=False):
+        self.zero_based = zero_based
+        self.norm_type = norm_type
+        self.transform_class = transform_class
+
+    def __call__(self, data):
+        """
+        Compute and apply normalization of the given data. Returns a new
+        data table.
+
+        Parameters
+        ----------
+        data : Orange.data.Table
+            A data table to be normalized.
+
+        Returns
+        -------
+        data : Orange.data.Table
+            Normalized data table.
+        """
+        from . import normalize
+
+        normalizer = normalize.Normalizer(
+            zero_based=self.zero_based,
+            norm_type=self.norm_type,
+            transform_class=self.transform_class)
+        return normalizer(data)
 
 
 class PreprocessorList(object):

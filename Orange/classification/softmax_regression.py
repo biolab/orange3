@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
-from Orange.preprocess import Continuize, RemoveNaNColumns, Impute
+from Orange.preprocess import Continuize, RemoveNaNColumns, Impute, Normalize
 
 __all__ = ["SoftmaxRegressionLearner"]
 
@@ -27,23 +27,22 @@ class SoftmaxRegressionLearner(Learner):
         data and keeping parameters small. Higher values of lambda\_ force
         parameters to be smaller.
 
-    preprocessors : list, optional (default=[Continuize(), Impute(), RemoveNaNColumns()])
+    preprocessors : list, optional (default=[RemoveNaNColumns(), Impute(), Continuize(), Normalize()])
         Preprocessors are applied to data before training or testing. Default preprocessors:
 
-        - continuize all discrete attributes,
-        - transform the dataset so that the columns are on a similar scale,
         - remove columns with all values as NaN
         - replace NaN values with suitable values
+        - continuize all discrete attributes,
+        - transform the dataset so that the columns are on a similar scale,
 
     fmin_args : dict, optional
         Parameters for L-BFGS algorithm.
     """
-
     name = 'softmax'
-
-    preprocessors = [Continuize(normalize_continuous=Continuize.NormalizeBySD),
+    preprocessors = [RemoveNaNColumns(),
                      Impute(),
-                     RemoveNaNColumns()]
+                     Continuize(),
+                     Normalize()]
 
     def __init__(self, lambda_=1.0, preprocessors=None, **fmin_args):
         super().__init__(preprocessors=preprocessors)
@@ -131,9 +130,9 @@ if __name__ == '__main__':
     print(gn)
 
 # for lambda_ in [0.1, 0.3, 1, 3, 10]:
-#        m = SoftmaxRegressionLearner(lambda_=lambda_)
-#        scores = []
-#        for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
+# m = SoftmaxRegressionLearner(lambda_=lambda_)
+# scores = []
+# for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
 #            s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
 #            scores.append(s)
 #        print('{:4.1f} {}'.format(lambda_, np.mean(scores)))
