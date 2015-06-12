@@ -1049,6 +1049,12 @@ class SequenceFlow(QWidget):
             self.__icon = ""
             self.__focusframe = None
 
+            self.__deleteaction = QtGui.QAction(
+                "Remove", self, shortcut=QtGui.QKeySequence.Delete,
+                enabled=False, triggered=self.closeRequested
+            )
+            self.addAction(self.__deleteaction)
+
             if widget is not None:
                 self.setWidget(widget)
             self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -1084,11 +1090,13 @@ class SequenceFlow(QWidget):
             event.accept()
             self.__focusframe = QtGui.QFocusFrame(self)
             self.__focusframe.setWidget(self)
+            self.__deleteaction.setEnabled(True)
 
         def focusOutEvent(self, event):
             event.accept()
             self.__focusframe.deleteLater()
             self.__focusframe = None
+            self.__deleteaction.setEnabled(False)
 
         def closeEvent(self, event):
             super().closeEvent(event)
