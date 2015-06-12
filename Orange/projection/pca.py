@@ -134,8 +134,7 @@ class RemotePCA:
         from orangecontrib.remote import aborted, save_state
         import Orange.data.sql.table
 
-        cont = Continuize(multinomial_treatment=Continuize.Remove,
-                          normalize_continuous=None)
+        cont = Continuize(multinomial_treatment=Continuize.Remove)
         data = cont(data)
         pca = Orange.projection.IncrementalPCA()
         percent = batch / data.approx_len() * 100

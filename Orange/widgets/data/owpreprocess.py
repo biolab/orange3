@@ -274,8 +274,7 @@ class ContinuizeEditor(BaseEditor):
     def createinstance(params):
         params = dict(params)
         treatment = params.pop("multinomial_treatment", Continuize.Indicators)
-        return Continuize(multinomial_treatment=treatment,
-                          normalize_continuous=Continuize.Leave)
+        return Continuize(multinomial_treatment=treatment)
 
 
 class _ImputeRandom:

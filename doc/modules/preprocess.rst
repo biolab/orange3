@@ -116,9 +116,6 @@ Continuization
 
     * discrete attribute with only one possible value are removed;
 
-    * continuous variables can be normalized or left as they are, as determined
-      by the argument ``normalize_continuous``.
-
     ::
 
         import Orange
@@ -135,9 +132,7 @@ Continuization
         binary variables are transformed into continuous or when multivalued
         variable is transformed into multiple variables, the transformed
         variable can either have values 0.0 and 1.0 (default,
-        ``zero_based=True``) or -1.0 and 1.0 (``zero_based=False``). This
-        attribute also determines the interval for normalized continuous
-        variables (either [-1, 1] or [0, 1]). (Default: ``False``)
+        ``zero_based=True``) or -1.0 and 1.0 (``zero_based=False``).
 
     .. attribute:: multinomial_treatment
 
@@ -256,17 +251,6 @@ Continuization
                 >>> titanic1[15]
                 [0.333, 0.000, 1.000 | yes]
 
-    .. attribute:: normalize_continuous
-
-        If ``None``, continuous variables are left unchanged. If
-        ``Continuize.NormalizeBySD``, they are replaced with
-        standardized values by subtracting the average value and dividing by
-        the standard deviation. Attribute ``zero_based`` has no effect on this
-        standardization. If ``Continuize.NormalizeBySpan``, they are
-        replaced with normalized values by subtracting min value of the data
-        and dividing by span (max - min). Statistics are computed from the data,
-        so constructor must be given data, not just domain. (Default: ``None``)
-
     .. attribute:: transform_class
 
         If ``True`` the class is replaced by continuous
@@ -278,7 +262,7 @@ Continuization
 .. class:: Orange.preprocess.DomainContinuizer
 
     Construct a domain in which discrete attributes are replaced by
-    continuous. Existing continuous attributes can be normalized. ::
+    continuous. ::
 
         domain_continuizer = Orange.preprocess.DomainContinuizer()
         domain1 = domain_continuizer(titanic)
@@ -287,8 +271,8 @@ Continuization
     the domain.
 
     Domain continuizers can be given either a data set or a domain, and return
-    a new domain. When given only the domain, they cannot normalize continuous
-    attributes or use the most frequent value as the base value.
+    a new domain. When given only the domain, use the most frequent value as
+    the base value.
 
     The class can also behave like a function: if the constructor is given the
     data or a domain, the constructed continuizer is immediately applied and
@@ -301,7 +285,10 @@ Continuization
     discrete attributes are replaced with N attributes (``Indicators``) with
     values 0 and 1.
 
+Normalization
+=============
 
+.. autoclass:: Orange.preprocess.Normalize
 
 Feature selection
 =================

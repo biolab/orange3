@@ -2,7 +2,7 @@ from PyQt4 import QtGui
 
 import Orange.data
 from Orange.statistics import distribution
-from Orange.preprocess import Continuize
+from Orange.preprocess import Continuize, Normalize
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -42,8 +42,8 @@ class OWContinuize(widget.OWWidget):
 
     continuous_treats = (
         ("Leave them as they are", Continuize.Leave),
-        ("Normalize by span", Continuize.NormalizeBySpan),
-        ("Normalize by standard deviation", Continuize.NormalizeBySD))
+        ("Normalize by span", Normalize.NormalizeBySpan),
+        ("Normalize by standard deviation", Normalize.NormalizeBySD))
 
     class_treats = (
         ("Leave it as it is", Continuize.Leave),
@@ -268,9 +268,9 @@ def continuize_var(var,
                    zero_based=True):
 
     if isinstance(var, Orange.data.ContinuousVariable):
-        if continuous_treatment == Continuize.NormalizeBySpan:
+        if continuous_treatment == Normalize.NormalizeBySpan:
             return [normalize_by_span(var, data_or_dist, zero_based)]
-        elif continuous_treatment == Continuize.NormalizeBySD:
+        elif continuous_treatment == Normalize.NormalizeBySD:
             return [normalize_by_sd(var, data_or_dist)]
         else:
             return [var]

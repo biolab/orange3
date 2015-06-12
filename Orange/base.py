@@ -234,9 +234,9 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     _params = None
 
     name = 'skl learner'
-    preprocessors = [Orange.preprocess.Continuize(normalize_continuous=None),
-                     Orange.preprocess.RemoveNaNColumns(),
-                     Orange.preprocess.SklImpute(force=False)]
+    preprocessors = [Continuize(),
+                     RemoveNaNColumns(),
+                     SklImpute(force=False)]
 
     @property
     def params(self):
