@@ -734,12 +734,17 @@ class GraphicsTextWidget(QGraphicsWidget):
         doc_layout.documentSizeChanged.connect(self._onDocumentSizeChanged)
 
     def sizeHint(self, which, constraint=QSizeF()):
-        # TODO: More sensible size hints.
-        # If the text is a plain text or html
-        # Check how QLabel.sizeHint works.
-
         if which == Qt.PreferredSize:
-            return self.__textItem.boundingRect().size()
+            doc = self.document()
+            textwidth = doc.textWidth()
+            if textwidth != constraint.width():
+                cloned = doc.clone(self)
+                cloned.setTextWidth(constraint.width())
+                sh = cloned.size()
+                cloned.deleteLater()
+            else:
+                sh = doc.size()
+            return sh
         else:
             return QGraphicsWidget.sizeHint(self, which, constraint)
 
