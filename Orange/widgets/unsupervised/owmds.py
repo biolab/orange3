@@ -1,8 +1,11 @@
+import sys
+import warnings
+
 import numpy
 import scipy.spatial.distance
 
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QEvent
 
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -100,10 +103,24 @@ class OWMDS(widget.OWWidget):
     #: Initialization type
     PCA, Random = 0, 1
 
+    #: Refresh rate
+    RefreshRate = [
+        ("Every iteration", 1),
+        ("Every 5 steps", 5),
+        ("Every 10 steps", 10),
+        ("Every 25 steps", 25),
+        ("Every 50 steps", 50),
+        ("None", -1)
+    ]
+
+    #: Runtime state
+    Running, Finished, Waiting = 1, 2, 3
+
     settingsHandler = settings.DomainContextHandler()
 
     max_iter = settings.Setting(300)
     initialization = settings.Setting(PCA)
+    refresh_rate = settings.Setting(3)
 
     # output embedding role.
     NoRole, AttrRole, MetaRole = 0, 1, 2
@@ -134,6 +151,10 @@ class OWMDS(widget.OWWidget):
         self._invalidated = False
         self._effective_matrix = None
 
+        self.__update_loop = None
+        self.__state = OWMDS.Waiting
+        self.__in_next_step = False
+
         box = gui.widgetBox(self.controlArea, "MDS Optimization")
         form = QtGui.QFormLayout(
             labelAlignment=Qt.AlignLeft,
@@ -146,10 +167,18 @@ class OWMDS(widget.OWWidget):
 
         form.addRow("Initialization",
                     gui.comboBox(box, self, "initialization",
-                                 items=["PCA (Torgerson)", "Random"]))
+                                 items=["PCA (Torgerson)", "Random"],
+                                 callback=self.__invalidate_embedding))
 
         box.layout().addLayout(form)
-        gui.button(box, self, "Apply", callback=self._invalidate_embedding)
+        form.addRow("Refresh",
+                    gui.comboBox(
+                        box, self, "refresh_rate",
+                        items=[t for t, _ in OWMDS.RefreshRate],
+                        callback=self.__invalidate_refresh))
+
+        self.runbutton = gui.button(
+            box, self, "Run", callback=self._toggle_run)
 
         box = gui.widgetBox(self.controlArea, "Graph")
         self.colorvar_model = itemmodels.VariableListModel()
@@ -242,6 +271,9 @@ class OWMDS(widget.OWWidget):
         self.size_index = 0
         self.label_index = 0
 
+        self.__set_update_loop(None)
+        self.__state = OWMDS.Waiting
+
     def update_controls(self):
         if getattr(self.matrix, 'axis', 1) == 0:
             # Column-wise distances
@@ -282,7 +314,7 @@ class OWMDS(widget.OWWidget):
             if domain.class_var is not None:
                 self.color_index = list(self.colorvar_model).index(domain.class_var)
 
-    def apply(self):
+    def _initialize(self):
         # clear everything
         self.closeContext()
         self._clear()
@@ -292,11 +324,14 @@ class OWMDS(widget.OWWidget):
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
-            return self._update_plot()
+            self._update_plot()
+            return
 
         if self.signal_data and self.matrix_data and len(self.signal_data) != len(self.matrix_data):
             self.error(1, "Data and distances dimensions do not match.")
-            return self._update_plot()
+            self._update_plot()
+            return
+
         self.error(1)
 
         if self.signal_data:
@@ -314,36 +349,183 @@ class OWMDS(widget.OWWidget):
         self.update_controls()
         self.openContext(self.data)
 
+    def _toggle_run(self):
+        if self.__state == OWMDS.Running:
+            self.stop()
+            self._invalidate_output()
+        else:
+            self.start()
+
+    def start(self):
+        if self.__state == OWMDS.Running:
+            return
+        elif self.__state == OWMDS.Finished:
+            # Resume/continue from a previous run
+            self.__start()
+        elif self.__state == OWMDS.Waiting and \
+                self._effective_matrix is not None:
+            self.__start()
+
+    def stop(self):
+        if self.__state == OWMDS.Running:
+            self.__set_update_loop(None)
+
+    def __start(self):
+        X = self._effective_matrix.X
+        if self.embedding is not None:
+            init = self.embedding
+        elif self.initialization == OWMDS.PCA:
+            init = torgerson(X, n_components=2)
+        else:
+            init = None
+
+        # number of iterations per single GUI update step
+        _, step_size = OWMDS.RefreshRate[self.refresh_rate]
+        if step_size == -1:
+            step_size = self.max_iter
+
+        def update_loop(X, max_iter, step, init):
+            """
+            return an iterator over successive improved MDS point embeddings.
+            """
+            # NOTE: this code MUST NOT call into QApplication.processEvents
+            done = False
+            iterations_done = 0
+            oldstress = numpy.finfo(numpy.float).max
+
+            while not done:
+                step_iter = min(max_iter - iterations_done, step)
+                mds = Orange.projection.MDS(
+                    dissimilarity="precomputed", n_components=2,
+                    n_init=1, max_iter=step_iter)
+
+                mdsfit = mds.fit(X, init=init)
+                iterations_done += step_iter
+
+                embedding, stress = mdsfit.embedding_, mdsfit.stress_
+                stress /= numpy.sqrt(numpy.sum(embedding ** 2, axis=1)).sum()
+
+                if iterations_done >= max_iter:
+                    done = True
+                elif (oldstress - stress) < mds.params["eps"]:
+                    done = True
+                init = embedding
+                oldstress = stress
+
+                yield embedding, mdsfit.stress_, iterations_done / max_iter
+
+        self.__set_update_loop(update_loop(X, self.max_iter, step_size, init))
+        self.progressBarInit(processEvents=None)
+
+    def __set_update_loop(self, loop):
+        """
+        Set the update `loop` coroutine.
+
+        The `loop` is a generator yielding `(embedding, stress, progress)`
+        tuples where `embedding` is a `(N, 2) ndarray` of current updated
+        MDS points, `stress` is the current stress and `progress` a float
+        ratio (0 <= progress <= 1)
+
+        If an existing update loop is already in palace it is interrupted
+        (closed).
+
+        .. note::
+            The `loop` must not explicitly yield control flow to the event
+            loop (i.e. call `QApplication.proceesEvents`)
+
+        """
+        if self.__update_loop is not None:
+            self.__update_loop.close()
+            self.__update_loop = None
+            self.progressBarFinished(processEvents=None)
+
+        self.__update_loop = loop
+
+        if loop is not None:
+            self.progressBarInit(processEvents=None)
+            self.setStatusMessage("Running")
+            self.runbutton.setText("Stop")
+            self.__state = OWMDS.Running
+            QtGui.QApplication.postEvent(self, QEvent(QEvent.User))
+        else:
+            self.setStatusMessage("")
+            self.runbutton.setText("Start")
+            self.__state = OWMDS.Finished
+
+    def __next_step(self):
+        if self.__update_loop is None:
+            return
+
+        loop = self.__update_loop
+        try:
+            embedding, stress, progress = next(self.__update_loop)
+            assert self.__update_loop is loop
+        except StopIteration:
+            self.__set_update_loop(None)
+            self.unconditional_commit()
+        else:
+            self.progressBarSet(100.0 * progress, processEvents=None)
+            self.embedding = embedding
+            self._update_plot()
+            # schedule next update
+            QtGui.QApplication.postEvent(
+                self, QEvent(QEvent.User), Qt.LowEventPriority)
+
+    def customEvent(self, event):
+        if event.type() == QEvent.User and self.__update_loop is not None:
+            if not self.__in_next_step:
+                self.__in_next_step = True
+                try:
+                    self.__next_step()
+                finally:
+                    self.__in_next_step = False
+            else:
+                warnings.warn(
+                    "Re-entry in update loop detected. "
+                    "A rogue `proccessEvents` is on the loose.",
+                    RuntimeWarning)
+                # re-schedule the update iteration.
+                QtGui.QApplication.postEvent(self, QEvent(QEvent.User))
+        return super().customEvent(event)
+
+    def __invalidate_embedding(self):
+        state = self.__state
+        if self.__update_loop is not None:
+            self.__set_update_loop(None)
+
         X = self._effective_matrix.X
 
         if self.initialization == OWMDS.PCA:
-            init = torgerson(X, n_components=2)
-            n_init = 1
+            self.embedding = torgerson(X)
         else:
-            init = None
-            n_init = 4
+            self.embedding = numpy.random.rand(len(X), 2)
 
-        dissim = "precomputed"
+        self._update_plot()
 
-        mds = Orange.projection.MDS(
-            dissimilarity=dissim, n_components=2,
-            n_init=n_init, max_iter=self.max_iter
-        )
-        mds_fit = mds.fit(X, init=init)
-        self.embedding = mds_fit.embedding_
+        # restart the optimization if it was interrupted.
+        if state == OWMDS.Running:
+            self.__start()
+
+    def __invalidate_refresh(self):
+        state = self.__state
+
+        if self.__update_loop is not None:
+            self.__set_update_loop(None)
+
+        # restart the optimization if it was interrupted.
+        # TODO: decrease the max iteration count by the already
+        # completed iterations count.
+        if state == OWMDS.Running:
+            self.__start()
 
     def handleNewSignals(self):
         if self._invalidated:
             self._invalidated = False
-            self.apply()
+            self._initialize()
+            self.start()
 
         self._update_plot()
         self.unconditional_commit()
-
-    def _invalidate_embedding(self):
-        self.apply()
-        self._update_plot()
-        self._invalidate_output()
 
     def _invalidate_output(self):
         self.commit()
@@ -508,8 +690,9 @@ class OWMDS(widget.OWWidget):
         self.send("Data", output)
 
     def onDeleteWidget(self):
-        self.plot.clear()
         super().onDeleteWidget()
+        self.plot.clear()
+        self._clear()
 
 
 def colors(data, variable, palette=None):
@@ -557,12 +740,19 @@ def scaled(a):
     return (a - amin) / (span or 1), (amin, amax)
 
 
-def main_test():
+def main_test(argv=sys.argv):
     import gc
-    app = QtGui.QApplication([])
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "iris"
+
+    data = Orange.data.Table(filename)
     w = OWMDS()
-#     w.set_data(Orange.data.Table("iris"))
-    w.set_data(Orange.data.Table("wine"))
+    w.set_data(data)
     w.handleNewSignals()
 
     w.show()
@@ -578,5 +768,4 @@ def main_test():
     return rval
 
 if __name__ == "__main__":
-    import sys
     sys.exit(main_test())
