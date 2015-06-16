@@ -256,7 +256,7 @@ class ThumbnailWidget(QGraphicsWidget):
             return sum(col_widths) + (ncol - 1) * spacing
 
         ncol_best = 1
-        for ncol in range(2, len(widths)):
+        for ncol in range(2, len(widths) + 1):
             w = flow_width(widths, spacing, ncol)
             if w <= constraint:
                 ncol_best = ncol
@@ -773,7 +773,7 @@ def main():
     rval = app.exec_()
     w.saveSettings()
     sip.delete(w)
-    app.processEvenets()
+    app.processEvents()
     return rval
 
 if __name__ == "__main__":
