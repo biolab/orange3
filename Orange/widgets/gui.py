@@ -20,6 +20,169 @@ __re_label = re.compile(r"(^|[^%])%\((?P<value>[a-zA-Z]\w*)\)")
 OrangeUserRole = itertools.count(Qt.UserRole)
 
 
+class TableWidget(QtGui.QTableWidget):
+    """ An easy to use, row-oriented table widget """
+
+    ROW_DATA_ROLE = QtCore.Qt.UserRole + 1
+    ITEM_DATA_ROLE = ROW_DATA_ROLE + 1
+
+    class TableWidgetNumericItem(QtGui.QTableWidgetItem):
+        """TableWidgetItem that sorts numbers correctly!"""
+        def __lt__(self, other):
+            return (self.data(TableWidget.ITEM_DATA_ROLE) <
+                    other.data(TableWidget.ITEM_DATA_ROLE))
+
+    def selectionChanged(self, selected:QtGui.QItemSelection, deselected:QtGui.QItemSelection):
+        """Override or monkey-patch this method to catch selection changes"""
+        super().selectionChanged(selected, deselected)
+
+    def __setattr__(self, attr, value):
+        """
+        The following selectionChanged magic ensures selectionChanged
+        slot, when monkey-patched, always calls the super's selectionChanged
+        first (--> avoids Qt quirks), and the user needs not care about that.
+        """
+        if attr == 'selectionChanged':
+            func = value
+            @QtCore.pyqtSlot(QtGui.QItemSelection, QtGui.QItemSelection)
+            def _f(selected, deselected):
+                super(self.__class__, self).selectionChanged(selected, deselected)
+                func(selected, deselected)
+            value = _f
+        self.__dict__[attr] = value
+
+    def _update_headers(func):
+        """Decorator to update certain table features after method calls"""
+        def _f(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            if self.col_labels is not None:
+                self.setHorizontalHeaderLabels(self.col_labels)
+            if self.row_labels is not None:
+                self.setVerticalHeaderLabels(self.row_labels)
+            if self.stretch_last_section:
+                self.horizontalHeader().setStretchLastSection(True)
+        return _f
+
+    @_update_headers
+    def __init__(self,
+                 parent=None,
+                 col_labels=None,
+                 row_labels=None,
+                 stretch_last_section=True,
+                 multi_selection=False,
+                 select_rows=False):
+        """
+        Parameters
+        ----------
+        parent: QObject
+            Parent QObject. If parent has layout(), this widget is added to it.
+        col_labels: list of str
+            Labels or [] (sequential numbers) or None (no horizontal header)
+        row_label: list_of_str
+            Labels or [] (sequential numbers) or None (no vertical header)
+        stretch_last_section: bool
+        multi_selection: bool
+            Single selection if False
+        select_rows: bool
+            If True, select whole rows instead of individual cells.
+        """
+        super().__init__(parent)
+        self.col_labels = col_labels
+        self.row_labels = row_labels
+        self.stretch_last_section = stretch_last_section
+        try: parent.layout().addWidget(self)
+        except (AttributeError, TypeError): pass
+        if col_labels is None:
+            self.horizontalHeader().setVisible(False)
+        if row_labels is None:
+            self.verticalHeader().setVisible(False)
+        if multi_selection:
+            self.setSelectionMode(self.MultiSelection)
+        if select_rows:
+            self.setSelectionBehavior(self.SelectRows)
+        self.setHorizontalScrollMode(self.ScrollPerPixel)
+        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.setEditTriggers(self.NoEditTriggers)
+        self.setAlternatingRowColors(True)
+        self.setShowGrid(False)
+        self.setSortingEnabled(True)
+
+    @_update_headers
+    def addRow(self, items:tuple, data=None):
+        """
+        Appends iterable of `items` as the next row, optionally setting row
+        data to `data`. Each item of `items` can be a string or tuple
+        (item_name, item_data) if individual, cell-data is required.
+        """
+        row_data = data
+        row = self.rowCount()
+        self.insertRow(row)
+        col_count = max(len(items), self.columnCount())
+        if col_count != self.columnCount():
+            self.setColumnCount(col_count)
+        for col, item_data in enumerate(items):
+            if isinstance(item_data, str):
+                name = item_data
+            elif hasattr(item_data, '__iter__') and len(item_data) == 2:
+                name, item_data = item_data
+            elif isinstance(item_data, float):
+                name = '{:.4f}'.format(item_data)
+            else:
+                name = str(item_data)
+            if isinstance(item_data, (float, int)):
+                item = self.TableWidgetNumericItem(name)
+            else:
+                item = QtGui.QTableWidgetItem(name)
+            item.setData(self.ITEM_DATA_ROLE, item_data)
+            self.setItem(row, col, item)
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+        if row_data is not None:
+            self.setRowData(row, row_data)
+
+    def rowData(self, row:int):
+        return self.item(row, 0).data(self.ROW_DATA_ROLE)
+
+    def setRowData(self, row:int, data):
+        self.item(row, 0).setData(self.ROW_DATA_ROLE, data)
+
+    def clear(self):
+        super().clear()
+        self.setRowCount(0)
+        self.setColumnCount(0)
+
+    def selectFirstRow(self):
+        if self.rowCount() > 0:
+            self.selectRow(0)
+
+    def selectRowsWhere(self, col, value, n_hits=-1,
+                        flags=QtCore.Qt.MatchExactly, _select=True):
+        """
+        Select (also return) at most `n_hits` rows where column `col`
+        has value (``data()``) `value`.
+        """
+        model = self.model()
+        matches = model.match(model.index(0, col),
+                              self.ITEM_DATA_ROLE,
+                              value,
+                              n_hits,
+                              flags)
+        model = self.selectionModel()
+        selection_flag = model.Select if _select else model.Deselect
+        for index in matches:
+            if _select ^ model.isSelected(index):
+                model.select(index, selection_flag | model.Rows)
+        return matches
+
+    def deselectRowsWhere(self, col, value, n_hits=-1,
+                          flags=QtCore.Qt.MatchExactly):
+        """
+        Deselect (also return) at most `n_hits` rows where column `col`
+        has value (``data()``) `value`.
+        """
+        return self.selectRowsWhere(col, value, n_hits, flags, False)
+
+
 class ControlledAttributesDict(dict):
     def __init__(self, master):
         super().__init__()
