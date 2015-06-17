@@ -123,7 +123,7 @@ class OWPredictions(widget.OWWidget):
             info.append("Predictors: N/A")
 
         if self.class_var is not None:
-            if self.is_discrete(self.class_var):
+            if self.class_var.is_discrete:
                 info.append("Task: Classification")
                 self.checkbox_class.setEnabled(True)
                 self.checkbox_prob.setEnabled(True)
@@ -149,7 +149,7 @@ class OWPredictions(widget.OWWidget):
 
         predictor = next(iter(self.predictors.values())).predictor
         class_var = predictor.domain.class_var
-        classification = self.is_discrete(class_var)
+        classification = class_var.is_discrete
 
         newattrs = []
         newcolumns = []
@@ -217,9 +217,9 @@ class OWPredictions(widget.OWWidget):
 
     @classmethod
     def predict(cls, predictor, data):
-        if isinstance(predictor.domain.class_var, DiscreteVariable):
+        if predictor.domain.class_var.is_discrete:
             return cls.predict_discrete(predictor, data)
-        elif isinstance(predictor.domain.class_var, ContinuousVariable):
+        elif predictor.domain.class_var.is_continuous:
             return cls.predict_continuous(predictor, data)
 
     @staticmethod
@@ -230,10 +230,6 @@ class OWPredictions(widget.OWWidget):
     def predict_continuous(predictor, data):
         values = predictor(data, Orange.classification.Model.Value)
         return values, [None] * len(data)
-
-    @staticmethod
-    def is_discrete(var):
-        return isinstance(var, Orange.data.DiscreteVariable)
 
 
 if __name__ == "__main__":

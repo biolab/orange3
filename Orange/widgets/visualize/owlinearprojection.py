@@ -26,11 +26,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 
-is_continuous = lambda var: isinstance(var, Orange.data.ContinuousVariable)
-is_discrete = lambda var: isinstance(var, Orange.data.DiscreteVariable)
-is_string = lambda var: isinstance(var, Orange.data.StringVariable)
-
-
 class DnDVariableListModel(itemmodels.VariableListModel):
 
     MimeType = "application/x-orange-variable-list"
@@ -525,11 +520,11 @@ class OWLinearProjection(widget.OWWidget):
         # Initialize the GUI controls from data's domain.
         all_vars = list(data.domain.variables)
         cont_vars = [var for var in data.domain.variables
-                     if is_continuous(var)]
+                     if var.is_continuous]
         disc_vars = [var for var in data.domain.variables
-                     if is_discrete(var)]
+                     if var.is_discrete]
         string_vars = [var for var in data.domain.variables
-                       if is_string(var)]
+                       if var.is_string]
 
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]
@@ -540,7 +535,7 @@ class OWLinearProjection(widget.OWWidget):
         self.shapevar_model[:] = ["Same shape"] + disc_vars
         self.labelvar_model[:] = ["No label"] + string_vars
 
-        if is_discrete(data.domain.class_var):
+        if data.domain.class_var.is_discrete:
             self.color_index = all_vars.index(data.domain.class_var) + 1
 
     def __activate_selection(self):
@@ -634,7 +629,7 @@ class OWLinearProjection(widget.OWWidget):
         color_var = self.color_var()
         if color_var is not None:
             color_data = self._get_data(color_var)
-            if is_continuous(color_var):
+            if color_var.is_continuous:
                 color_data = plotutils.continuous_colors(color_data)
             else:
                 color_data = plotutils.discrete_colors(
@@ -713,7 +708,7 @@ class OWLinearProjection(widget.OWWidget):
         if shape_var is None:
             shape_data = numpy.array(["o"] * len(self.data))
         else:
-            assert is_discrete(shape_var)
+            assert shape_var.is_discrete
             max_symbol = len(ScatterPlotItem.Symbols) - 1
             shape = self._get_data(shape_var)
             shape_mask = numpy.isnan(shape)

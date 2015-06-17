@@ -18,14 +18,6 @@ import Orange.distance
 import Orange.misc
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 def torgerson(distances, n_components=2):
     """
     Perform classical mds (Torgerson scaling).
@@ -256,11 +248,10 @@ class OWMDS(widget.OWWidget):
             # initialize the graph state from data
             domain = self.data.domain
             all_vars = list(domain.variables + domain.metas)
-            disc_vars = list(filter(is_discrete, all_vars))
-            cont_vars = list(filter(is_continuous, all_vars))
+            disc_vars = [var for var in all_vars if var.is_discrete]
+            cont_vars = [var for var in all_vars if var.is_continuous]
             str_vars = [var for var in all_vars
-                        if isinstance(var, (Orange.data.DiscreteVariable,
-                                            Orange.data.StringVariable))]
+                            if var.is_discrete or var.is_string]
 
             def set_separator(model, index):
                 index = model.index(index, 0)
@@ -390,7 +381,7 @@ class OWMDS(widget.OWWidget):
         if self._pen_data is None:
             if have_data and self.color_index > 0:
                 color_var = self.colorvar_model[self.color_index]
-                if is_discrete(color_var):
+                if color_var.is_discrete:
                     palette = colorpalette.ColorPaletteGenerator(
                         len(color_var.values)
                     )
@@ -514,9 +505,9 @@ class OWMDS(widget.OWWidget):
 
 def colors(data, variable, palette=None):
     if palette is None:
-        if is_discrete(variable):
+        if variable.is_discrete:
             palette = colorpalette.ColorPaletteGenerator(len(variable.values))
-        elif is_continuous(variable):
+        elif variable.is_continuous:
             palette = colorpalette.ColorPaletteBW()
             palette = colorpalette.ContinuousPaletteGenerator(
                 QtGui.QColor(220, 220, 220),
@@ -532,7 +523,7 @@ def colors(data, variable, palette=None):
     else:
         x = numpy.array(x).ravel()
 
-    if is_discrete(variable):
+    if variable.is_discrete:
         nvalues = len(variable.values)
         x[numpy.isnan(x)] = nvalues
         color_index = palette.getRGB(numpy.arange(nvalues + 1))

@@ -10,7 +10,6 @@ import sklearn.cross_validation as skl_cross_validation
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table
-from Orange.data import DiscreteVariable
 
 
 class OWDataSampler(widget.OWWidget):
@@ -158,8 +157,9 @@ class OWDataSampler(widget.OWWidget):
 
     def updateindices(self):
         rnd = self.RandomSeed if self.use_seed else None
-        stratified = (self.stratify and type(self.data) == Table
-                      and is_discrete(self.data.domain.class_var))
+        stratified = (self.stratify and
+                      type(self.data) == Table and
+                      self.data.domain.class_var.is_discrete)
         if self.sampling_type == self.FixedSize:
             self.indices = sample_random_n(
                 self.data, self.sampleSizeNumber,
@@ -175,10 +175,6 @@ class OWDataSampler(widget.OWWidget):
                 random_state=rnd)
 
 
-def is_discrete(var):
-    return isinstance(var, DiscreteVariable)
-
-
 def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
     """
     :param Orange.data.Table table:
@@ -187,7 +183,7 @@ def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
     :param Random random_state:
     :rval tuple-of-arrays: A tuple of array indices one for each fold.
     """
-    if stratified and is_discrete(table.domain.class_var):
+    if stratified and table.domain.class_var.is_discrete:
         # XXX: StratifiedKFold does not support random_state
         ind = skl_cross_validation.StratifiedKFold(
             table.Y.ravel(), folds, random_state=random_state)
@@ -209,7 +205,7 @@ def sample_random_n(table, n, stratified=False, replace=False,
         o[sample] = 0
         others = np.nonzero(o)[0]
         return others, sample
-    if stratified and is_discrete(table.domain.class_var):
+    if stratified and table.domain.class_var.is_discrete:
         test_size = max(len(table.domain.class_var.values), n)
         ind = skl_cross_validation.StratifiedShuffleSplit(
             table.Y.ravel(), n_iter=1,

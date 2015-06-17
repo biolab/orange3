@@ -11,7 +11,7 @@ from PyQt4.QtCore import Qt, QSize
 import Orange
 from Orange.evaluation import *
 from Orange.widgets import widget, gui, settings
-from Orange.data import DiscreteVariable, Domain
+from Orange.data import Domain
 
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
@@ -34,10 +34,6 @@ def regression_stats(results):
             R2(results))
 
 regression_stats.headers = ["MSE", "RMSE", "MAE", "R2"]
-
-
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
 
 
 class ItemDelegate(QItemDelegate):
@@ -245,26 +241,26 @@ class OWTestLearners(widget.OWWidget):
         results = list(split_by_model(results))
 
         class_var = self.train_data.domain.class_var
-        
-        if is_discrete(class_var):
+
+        if class_var.is_discrete:
             stats = [classification_stats(self.one_vs_rest(res)) for res in results]
         else:
             stats = [regression_stats(res) for res in results]
 
         self._update_header()
-        
+
         for (key, input), res, stat in zip(items, results, stats):
             self.learners[key] = input._replace(results=res, stats=stat)
 
         self.setStatusMessage("")
-        
+
         self._update_stats_model()
 
 
     def _update_header(self):
         headers = ["Method"]
         if self.train_data is not None:
-            if is_discrete(self.train_data.domain.class_var):
+            if self.train_data.domain.class_var.is_discrete:
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
@@ -293,7 +289,7 @@ class OWTestLearners(widget.OWWidget):
             model.appendRow(row)
 
     def _update_class_selection(self):
-        if is_discrete(self.train_data.domain.class_var):
+        if self.train_data.domain.class_var.is_discrete:
             self.cbox.setVisible(True)
             values = self.train_data.domain.class_var.values
             self.class_selection_combo.clear()
@@ -323,14 +319,14 @@ class OWTestLearners(widget.OWWidget):
     def _select_class(self):
         if self.previous_class_selection == self.class_selection:
             return
-        
+
         results = list(split_by_model(self.results))
 
         items = [(key, input) for key, input in self.learners.items()]
         learners = [input.learner for _, input in items]
 
         class_var = self.train_data.domain.class_var
-        if is_discrete(class_var):
+        if class_var.is_discrete:
             stats = [classification_stats(self.one_vs_rest(res)) for res in results]
         else:
             stats = [regression_stats(res) for res in results]

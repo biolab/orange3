@@ -17,7 +17,7 @@ from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.canvas.utils import environ
 from Orange.classification import Learner
-from Orange.data import Table, filter, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets import gui
@@ -299,7 +299,7 @@ class OWMosaicDisplay(OWWidget):
         self.attr4Combo.addItem("(None)")
 
         for attr in data.domain:
-            if isinstance(attr, DiscreteVariable):
+            if attr.is_discrete:
                 for combo in [self.attr1Combo, self.attr2Combo, self.attr3Combo, self.attr4Combo]:
                     combo.addItem(self.icons[attr], attr.name)
 
@@ -338,10 +338,9 @@ class OWMosaicDisplay(OWWidget):
         if not self.data:
             return
 
-        if any(isinstance(attr, ContinuousVariable)
-               for attr in self.data.domain):
-            self.information(0, "Data contains continuous variables. " +
-                             "Discretize the data to use them.")
+        if any(attr.is_continuous for attr in self.data.domain):
+            self.information(0, "Data contains continuous variables. "
+                                "Discretize the data to use them.")
 
         """ TODO: check
         if data.has_missing_class():
@@ -350,7 +349,7 @@ class OWMosaicDisplay(OWWidget):
             self.information(2, "Unused attribute values were removed.")
         """
 
-        if isinstance(self.data.domain.class_var, DiscreteVariable):
+        if self.data.domain.class_var.is_discrete:
             self.interior_coloring = CLASS_DISTRIBUTION
             self.colorPalette.set_number_of_colors(
                 len(self.data.domain.class_var.values))
@@ -778,12 +777,15 @@ class OWMosaicDisplay(OWWidget):
         if tuple(used_vals) in self.selectionConditions:
             outerRect.setPen(QPen(Qt.black, 3, Qt.DotLine))
 
-        if self.interior_coloring == CLASS_DISTRIBUTION and (
-                    not self.data.domain.class_var or not isinstance(self.data.domain.class_var, DiscreteVariable)):
+        if (self.interior_coloring == CLASS_DISTRIBUTION and
+            (not self.data.domain.class_var or
+             not self.data.domain.class_var.is_discrete)):
             return
 
         # draw pearsons residuals
-        if self.interior_coloring == PEARSON or not self.data.domain.class_var or not isinstance(self.data.domain.class_var, DiscreteVariable):
+        if (self.interior_coloring == PEARSON or
+            not self.data.domain.class_var or
+            not self.data.domain.class_var.is_discrete):
             s = sum(self.aprioriDistributions[0])
             expected = s * reduce(lambda x, y: x * y,
                                   [self.aprioriDistributions[i][used_vals[i]] / float(s) for i in range(len(used_vals))])
@@ -932,8 +934,9 @@ class OWMosaicDisplay(OWWidget):
     def DrawLegend(self, data, x0_x1, y0_y1):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
-        if self.interior_coloring == CLASS_DISTRIBUTION and (
-                    not data.domain.class_var or isinstance(data.domain.class_var, ContinuousVariable)):
+        if (self.interior_coloring == CLASS_DISTRIBUTION and
+            (not data.domain.class_var or
+             data.domain.class_var.is_continuous)):
             return
 
         if self.interior_coloring == PEARSON:
@@ -978,7 +981,7 @@ class OWMosaicDisplay(OWWidget):
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.colorPalette = dlg.getDiscretePalette("discPalette")
-            if self.data and self.data.domain.class_var and isinstance(self.data.domain.class_var, DiscreteVariable):
+            if self.data and self.data.domain.class_var and self.data.domain.class_var.is_discrete:
                 self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
             self.updateGraph()
 

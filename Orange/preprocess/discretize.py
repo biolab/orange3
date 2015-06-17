@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Domain
+from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from .transformation import Transformation
@@ -399,7 +399,7 @@ class DomainDiscretizer:
         def transform_list(s, fixed=None):
             new_vars = []
             for var in s:
-                if isinstance(var, ContinuousVariable):
+                if var.is_continuous:
                     if fixed and var.name in fixed.keys():
                         nv = method(data, var, fixed)
                     else:

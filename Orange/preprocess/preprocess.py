@@ -14,14 +14,6 @@ from ..misc.enum import Enum
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute", "Normalize"]
 
 
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
 class Preprocess(object):
     """
     A generic preprocessor class. All preprocessors need to inherit this
@@ -96,7 +88,7 @@ class Discretize(Preprocess):
         """
 
         def transform(var):
-            if is_continuous(var):
+            if var.is_continuous:
                 new_var = method(data, var)
                 if new_var is not None and len(new_var.values) >= 2:
                     return new_var

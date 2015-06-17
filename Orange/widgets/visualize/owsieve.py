@@ -10,7 +10,7 @@ from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
 
 
 import Orange
-from Orange.data import Table, ContinuousVariable, DiscreteVariable
+from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
@@ -111,7 +111,7 @@ class OWSieveDiagram(OWWidget):
 
         self.warning(0, "")
         if data:
-            if any(isinstance(attr, ContinuousVariable) for attr in data.domain):
+            if any(attr.is_continuous for attr in data.domain):
                 self.warning(0, "Data contains continuous variables. " +
                              "Discretize the data to use them.")
 
@@ -175,7 +175,7 @@ class OWSieveDiagram(OWWidget):
 
         if not self.data: return
         for i, var in enumerate(self.data.domain):
-            if isinstance(var, DiscreteVariable):
+            if var.is_discrete:
                 self.attrXCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
                 self.attrYCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
                 self.attrConditionCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
@@ -284,7 +284,7 @@ class OWSieveDiagram(OWWidget):
             if valsX[i] == 0: continue
             currY = yOff
             width = int(float(sqareSize * valsX[i])/float(normX))
-            
+
             #for j in range(len(valsY)):
             for j in range(len(valsY)-1, -1, -1):   # this way we sort y values correctly
                 ((xAttr, xVal), (yAttr, yVal), actual, sum_) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]

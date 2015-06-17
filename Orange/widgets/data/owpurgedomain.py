@@ -266,7 +266,7 @@ def purge_var_M(var, data, flags):
         if var is None:
             return Removed(state, state.var)
 
-    if isinstance(state.var, Orange.data.DiscreteVariable):
+    if state.var.is_discrete:
         if flags & RemoveUnusedValues:
             newattr = remove_unused_values(state.var, data)
 
@@ -302,18 +302,18 @@ def purge_domain(data, attribute_flags=RemoveConstant | RemoveUnusedValues,
 
 def has_at_least_two_values(data, var):
     ((dist, _), ) = data._compute_distributions([var])
-    if isinstance(var, Orange.data.ContinuousVariable):
+    if var.is_continuous:
         dist = dist[1, :]
     return numpy.sum(dist > 0.0) > 1
 
 
 def remove_constant(var, data):
-    if isinstance(var, Orange.data.ContinuousVariable):
+    if var.is_continuous:
         if not has_at_least_two_values(data, var):
             return None
         else:
             return var
-    elif isinstance(var, Orange.data.DiscreteVariable):
+    elif var.is_discrete:
         if len(var.values) < 2:
             return None
         else:

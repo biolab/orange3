@@ -619,7 +619,7 @@ class _Scaling(preprocess.preprocess.Preprocess):
 
         newvars = []
         for var in data.domain.attributes:
-            if isinstance(var, Orange.data.ContinuousVariable):
+            if var.is_continuous:
                 newvars.append(transform(var))
             else:
                 newvars.append(var)

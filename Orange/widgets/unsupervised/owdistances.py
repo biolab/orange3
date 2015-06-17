@@ -18,14 +18,6 @@ _METRICS = [
 ]
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 class OWDistances(widget.OWWidget):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
@@ -73,11 +65,11 @@ class OWDistances(widget.OWWidget):
         data = distances = None
         if self.data is not None:
             metric = _METRICS[self.metric_idx][1]
-            if not any(map(is_continuous, self.data.domain.attributes)):
+            if not any(a.is_continuous for a in self.data.domain.attributes):
                 self.error(1, "No continuous features")
                 data = None
-            elif any(map(is_discrete, self.data.domain.attributes)) or \
-                    numpy.any(numpy.isnan(self.data.X)):
+            elif (any(a.is_discrete for a in self.data.domain.attributes) or
+                  numpy.any(numpy.isnan(self.data.X))):
                 data = distance._preprocess(self.data)
                 if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
                     self.warning(1, "Ignoring discrete features")

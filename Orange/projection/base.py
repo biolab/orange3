@@ -81,7 +81,7 @@ class SklProjector(Projector, metaclass=WrapperMeta):
 
     def preprocess(self, data):
         data = super().preprocess(data)
-        if any(isinstance(v, Orange.data.DiscreteVariable) and len(v.values) > 2
+        if any(v.is_discrete and len(v.values) > 2
                for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support "
                              "multinomial variables.")

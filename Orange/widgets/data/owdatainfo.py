@@ -105,7 +105,7 @@ class OWDataInfo(widget.OWWidget):
 
         class_var = domain.class_var
         if class_var:
-            if isinstance(class_var, ContinuousVariable):
+            if class_var.is_continuous:
                 self.targets = "Continuous target variable"
             else:
                 self.targets = "Discrete class with %i values" % \

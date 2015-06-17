@@ -96,10 +96,10 @@ class SqlTable(table.Table):
                 fields.append(col)
 
         def add_to_sql(var, field_name):
-            if isinstance(var, ContinuousVariable):
+            if var.is_continuous:
                 var.to_sql = ToSql("({})::double precision".format(
                     self.quote_identifier(field_name)))
-            elif isinstance(var, DiscreteVariable):
+            elif var.is_discrete:
                 var.to_sql = ToSql("({})::text".format(
                     self.quote_identifier(field_name)))
             else:
@@ -113,7 +113,7 @@ class SqlTable(table.Table):
                 var = self.get_variable(field_name, type_code, guess_values)
             add_to_sql(var, field_name)
 
-            if isinstance(var, StringVariable):
+            if var.is_string:
                 metas.append(var)
             else:
                 if var in type_hints.class_vars:
@@ -353,8 +353,7 @@ class SqlTable(table.Table):
         return self._get_stats(columns)
 
     def _get_stats(self, columns):
-        columns = [(c.to_sql(), isinstance(c, ContinuousVariable))
-                   for c in columns]
+        columns = [(c.to_sql(), c.is_continuous) for c in columns]
         sql_fields = []
         for field_name, continuous in columns:
             stats = self.CONTINUOUS_STATS if continuous else self.DISCRETE_STATS
@@ -394,7 +393,7 @@ class SqlTable(table.Table):
                                     order_by=[field_name])
             with self._execute_sql_query(query) as cur:
                 dist = np.array(cur.fetchall())
-            if isinstance(col, ContinuousVariable):
+            if col.is_continuous:
                 dists.append((dist.T, []))
             else:
                 dists.append((dist[:, 1].T, []))
@@ -413,12 +412,12 @@ class SqlTable(table.Table):
             raise NotImplementedError("Defaults have not been implemented yet")
 
         row = self.domain[row_var]
-        if not isinstance(row, DiscreteVariable):
+        if not row.is_discrete:
             raise TypeError("Row variable must be discrete")
 
         columns = [self.domain[var] for var in col_vars]
 
-        if any(not isinstance(var, (ContinuousVariable, DiscreteVariable))
+        if any(not (var.is_continuous or var.is_discrete)
                for var in columns):
             raise ValueError("contingency can be computed only for discrete "
                              "and continuous values")
@@ -437,7 +436,7 @@ class SqlTable(table.Table):
                                     group_by=group_by, order_by=order_by)
             with self._execute_sql_query(query) as cur:
                 data = list(cur.fetchall())
-                if isinstance(column, ContinuousVariable):
+                if column.is_continuous:
                     all_contingencies[i] = \
                         (self._continuous_contingencies(data, row), [])
                 else:
@@ -497,7 +496,7 @@ class SqlTable(table.Table):
         var = self.domain[column]
         if value is None:
             pass
-        elif isinstance(var, variable.DiscreteVariable):
+        elif var.is_discrete:
             value = var.to_val(value)
             value = "'%s'" % var.repr_val(value)
         else:

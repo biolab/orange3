@@ -2,7 +2,6 @@ import numpy as np
 
 from Orange.classification.simple_random_forest import SimpleRandomForestLearner as SRFL
 from Orange.classification.simple_random_forest import SimpleRandomForestModel as SRFM
-from Orange.data import ContinuousVariable
 
 __all__ = ['SimpleRandomForestLearner']
 
@@ -50,7 +49,7 @@ class SimpleRandomForestModel(SRFM):
     def __init__(self, learner, data):
         self.estimators_ = []
 
-        if isinstance(data.domain.class_var, ContinuousVariable):
+        if data.domain.class_var.is_continuous:
             self.type = 'regression'
             self.cls_vals = 0
         else:
