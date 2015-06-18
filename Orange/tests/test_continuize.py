@@ -179,7 +179,7 @@ class ContinuizerTest(unittest.TestCase):
                 transform_class=True)
             self.assertTrue(all(attr.is_continuous
                                 for attr in dom.attributes))
-            self.assertTrue(dom.class_var.is_continuous)
+            self.assertTrue(dom.has_continuous_class)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
             self.assertEqual([attr.name for attr in dom],

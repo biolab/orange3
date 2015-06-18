@@ -35,8 +35,7 @@ class OWMajority(widget.OWWidget):
     def set_data(self, data):
         self.error(0)
         if data is not None:
-            if not isinstance(data.domain.class_var,
-                              Orange.data.DiscreteVariable):
+            if not data.domain.has_discrete_class:
                 data = None
                 self.error(0, "Discrete class variable expected.")
 

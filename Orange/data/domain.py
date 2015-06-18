@@ -276,6 +276,14 @@ class Domain:
         else:
             return any(var.is_continuous for var in self.variables)
 
+    @property
+    def has_continuous_class(self):
+        return self.class_var and self.class_var.is_continuous
+
+    @property
+    def has_discrete_class(self):
+        return self.class_var and self.class_var.is_discrete
+
     def get_conversion(self, source):
         """
         Return an instance of :class:`DomainConversion` for conversion from the

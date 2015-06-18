@@ -156,7 +156,7 @@ class OWDistributions(widget.OWWidget):
             self.varmodel[:] = list(domain)
             self.groupvarmodel[:] = \
                 ["(None)"] + [var for var in domain if var.is_discrete]
-            if domain.class_var.is_discrete:
+            if domain.has_discrete_class:
                 self.groupvar_idx = \
                     list(self.groupvarmodel).index(domain.class_var)
             self.openContext(domain)

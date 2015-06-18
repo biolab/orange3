@@ -31,7 +31,7 @@ class OWMean(widget.OWWidget):
     def set_data(self, data):
         self.error(0)
         if data is not None:
-            if not data.domain.class_var.is_continuous:
+            if not data.domain.has_continuous_class:
                 data = None
                 self.error(0, "Continuous class variable expected.")
 

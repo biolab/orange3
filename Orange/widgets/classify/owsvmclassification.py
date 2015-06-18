@@ -126,8 +126,7 @@ class OWSVMClassification(widget.OWWidget):
         self.warning(0)
 
         if data is not None:
-            if not isinstance(data.domain.class_var,
-                              Orange.data.DiscreteVariable):
+            if not data.domain.has_discrete_class:
                 data = None
                 self.warning(0, "Data does not have a discrete class var")
 

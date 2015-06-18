@@ -159,7 +159,7 @@ class OWDataSampler(widget.OWWidget):
         rnd = self.RandomSeed if self.use_seed else None
         stratified = (self.stratify and
                       type(self.data) == Table and
-                      self.data.domain.class_var.is_discrete)
+                      self.data.domain.has_discrete_class)
         if self.sampling_type == self.FixedSize:
             self.indices = sample_random_n(
                 self.data, self.sampleSizeNumber,
@@ -183,7 +183,7 @@ def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
     :param Random random_state:
     :rval tuple-of-arrays: A tuple of array indices one for each fold.
     """
-    if stratified and table.domain.class_var.is_discrete:
+    if stratified and table.domain.has_discrete_class:
         # XXX: StratifiedKFold does not support random_state
         ind = skl_cross_validation.StratifiedKFold(
             table.Y.ravel(), folds, random_state=random_state)
@@ -205,7 +205,7 @@ def sample_random_n(table, n, stratified=False, replace=False,
         o[sample] = 0
         others = np.nonzero(o)[0]
         return others, sample
-    if stratified and table.domain.class_var.is_discrete:
+    if stratified and table.domain.has_discrete_class:
         test_size = max(len(table.domain.class_var.values), n)
         ind = skl_cross_validation.StratifiedShuffleSplit(
             table.Y.ravel(), n_iter=1,

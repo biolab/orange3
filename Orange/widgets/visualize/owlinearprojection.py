@@ -535,7 +535,7 @@ class OWLinearProjection(widget.OWWidget):
         self.shapevar_model[:] = ["Same shape"] + disc_vars
         self.labelvar_model[:] = ["No label"] + string_vars
 
-        if data.domain.class_var.is_discrete:
+        if data.domain.has_discrete_class:
             self.color_index = all_vars.index(data.domain.class_var) + 1
 
     def __activate_selection(self):

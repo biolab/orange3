@@ -62,7 +62,7 @@ class SimpleRandomForestModel(Model):
     def __init__(self, learner, data):
         self.estimators_ = []
 
-        if data.domain.class_var.is_discrete:
+        if data.domain.has_discrete_class:
             self.type = 'classification'
             self.cls_vals = len(data.domain.class_var.values)
         else:

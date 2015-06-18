@@ -24,8 +24,8 @@ def data_info(name, location):
         },
         'missing': bool(data.has_missing()),
         'target': {
-            'type': 'discrete' if class_var.is_discrete else 'continuous',
-            'values': len(class_var.values) if class_var.is_discrete else None,
+            'type': 'discrete' if data.domain.has_discrete_class else 'continuous',
+            'values': len(class_var.values) if data.domain.has_discrete_class else None,
         }
     }
 

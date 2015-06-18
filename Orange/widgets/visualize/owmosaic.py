@@ -349,7 +349,7 @@ class OWMosaicDisplay(OWWidget):
             self.information(2, "Unused attribute values were removed.")
         """
 
-        if self.data.domain.class_var.is_discrete:
+        if self.data.domain.has_discrete_class:
             self.interior_coloring = CLASS_DISTRIBUTION
             self.colorPalette.set_number_of_colors(
                 len(self.data.domain.class_var.values))
@@ -778,14 +778,12 @@ class OWMosaicDisplay(OWWidget):
             outerRect.setPen(QPen(Qt.black, 3, Qt.DotLine))
 
         if (self.interior_coloring == CLASS_DISTRIBUTION and
-            (not self.data.domain.class_var or
-             not self.data.domain.class_var.is_discrete)):
+            not self.data.domain.has_discrete_class):
             return
 
         # draw pearsons residuals
         if (self.interior_coloring == PEARSON or
-            not self.data.domain.class_var or
-            not self.data.domain.class_var.is_discrete):
+            not self.data.domain.has_discrete_class):
             s = sum(self.aprioriDistributions[0])
             expected = s * reduce(lambda x, y: x * y,
                                   [self.aprioriDistributions[i][used_vals[i]] / float(s) for i in range(len(used_vals))])
@@ -935,8 +933,7 @@ class OWMosaicDisplay(OWWidget):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
         if (self.interior_coloring == CLASS_DISTRIBUTION and
-            (not data.domain.class_var or
-             data.domain.class_var.is_continuous)):
+            data.domain.has_continuous_class):
             return
 
         if self.interior_coloring == PEARSON:
@@ -981,7 +978,7 @@ class OWMosaicDisplay(OWWidget):
             self.color_settings = dlg.getColorSchemas()
             self.selected_schema_index = dlg.selectedSchemaIndex
             self.colorPalette = dlg.getDiscretePalette("discPalette")
-            if self.data and self.data.domain.class_var and self.data.domain.class_var.is_discrete:
+            if self.data and self.data.domain.has_discrete_class:
                 self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
             self.updateGraph()
 

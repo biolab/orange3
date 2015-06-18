@@ -244,7 +244,7 @@ class OWDiscretize(widget.OWWidget):
         self.varmodel[:] = cvars
 
         class_var = data.domain.class_var
-        has_disc_class = class_var.is_discrete
+        has_disc_class = data.domain.has_discrete_class
 
         self.default_bbox.buttons[self.MDL - 1].setEnabled(has_disc_class)
         self.bbox.buttons[self.MDL].setEnabled(has_disc_class)

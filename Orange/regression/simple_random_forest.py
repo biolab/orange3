@@ -49,7 +49,7 @@ class SimpleRandomForestModel(SRFM):
     def __init__(self, learner, data):
         self.estimators_ = []
 
-        if data.domain.class_var.is_continuous:
+        if data.domain.has_continuous_class:
             self.type = 'regression'
             self.cls_vals = 0
         else:

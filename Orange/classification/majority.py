@@ -18,7 +18,7 @@ class MajorityLearner(Learner):
     name = 'majority'
 
     def fit_storage(self, dat):
-        if not dat.domain.class_var.is_discrete:
+        if not dat.domain.has_discrete_class:
             raise ValueError("classification.MajorityLearner expects a domain with a "
                              "(single) discrete variable")
         dist = distribution.get_distribution(dat, dat.domain.class_var)

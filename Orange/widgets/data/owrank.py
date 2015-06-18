@@ -17,14 +17,6 @@ import Orange.preprocess.discretize
 from Orange.widgets import widget, settings, gui
 
 
-def is_class_discrete(data):
-    return data.domain.class_var.is_discrete
-
-
-def is_class_continuous(data):
-    return data.domain.class_var.is_continuous
-
-
 def table(shape, fill=None):
     """ Return a 2D table with shape filed with ``fill``
     """
@@ -261,9 +253,9 @@ class OWRank(widget.OWWidget):
             self.usefulAttributes = [attr for attr in attrs
                                      if attr.is_discrete or attr.is_continuous]
 
-            if is_class_continuous(self.data):
+            if self.data.domain.has_continuous_class:
                 self.switchRanksMode(1)
-            elif is_class_discrete(self.data):
+            elif self.data.domain.has_discrete_class:
                 self.switchRanksMode(0)
             else:
                 # String or other.

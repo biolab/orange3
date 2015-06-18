@@ -141,10 +141,9 @@ class OWTestLearners(widget.OWWidget):
 
     def set_train_data(self, data):
         self.error(0)
-        if data is not None:
-            if data.domain.class_var is None:
-                self.error(0, "Train data input requires a class variable")
-                data = None
+        if data and not data.domain.class_var:
+            self.error(0, "Train data input requires a class variable")
+            data = None
 
         self.train_data = data
         self.closeContext()
@@ -156,10 +155,9 @@ class OWTestLearners(widget.OWWidget):
 
     def set_test_data(self, data):
         self.error(1)
-        if data is not None:
-            if data.domain.class_var is None:
-                self.error(1, "Test data input requires a class variable")
-                data = None
+        if data and not data.domain.class_var:
+            self.error(1, "Test data input requires a class variable")
+            data = None
 
         self.test_data = data
         if self.resampling == OWTestLearners.TestOnTest:
