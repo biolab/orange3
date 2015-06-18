@@ -6,7 +6,7 @@ class TestOrange(unittest.TestCase):
         import pkgutil
         import Orange
         unimported = ['canvas', 'datasets', 'testing', 'tests', 'setup',
-                      'widgets']
+                      'util', 'widgets']
         for _, name, __ in pkgutil.iter_modules(Orange.__path__):
             if name not in unimported:
                 self.assertIn(name, Orange.__dict__)
