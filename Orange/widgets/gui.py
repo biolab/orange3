@@ -185,7 +185,7 @@ class TableWidget(QtGui.QTableWidget):
 
 class WebviewWidget(QtWebKit.QWebView):
     """WebKit window in a window"""
-    def __init__(self, parent=None, bridge=None, debug=None):
+    def __init__(self, parent=None, bridge=None, html=None, debug=None):
         """
         Parameters
         ----------
@@ -195,22 +195,26 @@ class WebviewWidget(QtWebKit.QWebView):
             The "bridge" object exposed as ``window.pybridge`` in JavaScript.
             Any bridge methods desired to be accessible from JS need to be
             decorated ``@QtCore.pyqtSlot(<*args>, result=<type>)``.
+        html: str
+            HTML content to set in the webview.
         debug: bool
             If True, enable context menu and webkit inspector.
         """
-        if debug is None:
-            import logging
-            debug = logging.getLogger().level <= logging.DEBUG
         super().__init__(parent)
         self._bridge = bridge
         try: parent.layout().addWidget(self)
         except (AttributeError, TypeError): pass
         settings = self.settings()
         settings.setAttribute(settings.LocalContentCanAccessFileUrls, True)
+        if debug is None:
+            import logging
+            debug = logging.getLogger().level <= logging.DEBUG
         if debug:
             settings.setAttribute(settings.DeveloperExtrasEnabled, True)
         else:
             self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        if html:
+            self.setHtml(html)
 
     def setContent(self, data, mimetype, url):
         super().setContent(data, mimetype, QtCore.QUrl(url))
