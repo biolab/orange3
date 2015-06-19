@@ -63,9 +63,6 @@ class OWPredictions(widget.OWWidget):
             box, self, "show_probabilities", "Probabilities",
             callback=self.commit)
 
-        QtGui.qApp.processEvents()
-        QtCore.QTimer.singleShot(0, self.fix_size)
-
         #: input data
         self.data = None
         #: A dict mapping input ids to PredictorSlot
@@ -73,9 +70,10 @@ class OWPredictions(widget.OWWidget):
         #: A class variable (prediction target)
         self.class_var = None
 
-    def fix_size(self):
-        self.adjustSize()
-        self.setFixedSize(self.size())
+        # enforce fixed size but provide a sensible minimum width constraint.
+        self.layout().activate()
+        self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
+        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
     def set_data(self, data):
         self.data = data
