@@ -65,6 +65,7 @@ class Value(float):
         if not isinstance(value, str):
             try:
                 self = super().__new__(cls, value)
+                self._value = value
                 self.variable = variable
                 return self
             except:
