@@ -1676,7 +1676,7 @@ def valueSlider(widget, master, value, box=None, label=None,
 # - can valueType be anything else than str?
 # - sendSelectedValue is not a great name
 def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
-             orientation='vertical', items=None, callback=None,
+             orientation='vertical', items=(), callback=None,
              sendSelectedValue=False, valueType=str,
              control2attributeDict=None, emptyString=None, editable=False,
              **misc):
@@ -1706,8 +1706,8 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type labelWidth: int
     :param callback: a function that is called when the value is changed
     :type callback: function
-    :param items: items that are put into the box
-    :type items: list or tuple
+    :param items: items (optionally with data) that are put into the box
+    :type items: tuple of str or tuples
     :param sendSelectedValue: flag telling whether to store/retrieve indices
         or string values from `value`
     :type sendSelectedValue: bool
@@ -1733,8 +1733,11 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     combo = QtGui.QComboBox(hb)
     combo.setEditable(editable)
     combo.box = hb
-    if items:
-        combo.addItems([str(i) for i in items])
+    for item in items:
+        if isinstance(item, (tuple, list)):
+            combo.addItem(*item)
+        else:
+            combo.addItem(str(item))
 
     if value:
         cindex = getdeepattr(master, value)
