@@ -138,7 +138,7 @@ class OWDiscretize(widget.OWWidget):
     default_k = settings.Setting(5)
     autosend = settings.Setting(True)
 
-    # Discretization methods
+    #: Discretization methods
     Default, Leave, MDL, EqualFreq, EqualWidth, Remove, Custom = range(7)
 
     want_main_area = False
@@ -260,10 +260,13 @@ class OWDiscretize(widget.OWWidget):
 
     def _restore(self, saved_state):
         # Restore variable states from a saved_state dictionary.
+        def_method = self._current_default_method()
         for i, var in enumerate(self.varmodel):
             key = variable_key(var)
             if key in saved_state:
                 state = saved_state[key]
+                if isinstance(state.method, Default):
+                    state = DState(Default(def_method), None, None)
                 self._set_var_state(i, state)
 
     def _reset(self):
