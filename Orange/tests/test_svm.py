@@ -35,7 +35,7 @@ class SVMTest(unittest.TestCase):
         data = Orange.data.Table(X, y)
         learn = SVRLearner(kernel='rbf', gamma=0.1)
         res = Orange.evaluation.CrossValidation(data, [learn], k=2)
-        self.assertLess(Orange.evaluation.RMSE(res)[0], 0.1)
+        self.assertLess(Orange.evaluation.RMSE(res)[0], 0.15)
 
     def test_NuSVR(self):
         nrows, ncols = 200, 5
