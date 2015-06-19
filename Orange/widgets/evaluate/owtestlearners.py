@@ -147,10 +147,10 @@ class OWTestLearners(widget.OWWidget):
 
         self.train_data = data
         self.closeContext()
-        self.class_selection = "(None)"
-        self.openContext(data.domain.class_var)
+        if data is not None:
+            self.openContext(data.domain.class_var)
+            self._update_header()
         self._update_class_selection()
-        self._update_header()
         self._invalidate()
 
     def set_test_data(self, data):
@@ -287,16 +287,20 @@ class OWTestLearners(widget.OWWidget):
             model.appendRow(row)
 
     def _update_class_selection(self):
+        self.class_selection_combo.clear()
+        if not self.train_data:
+            return
         if self.train_data.domain.class_var.is_discrete:
             self.cbox.setVisible(True)
             values = self.train_data.domain.class_var.values
-            self.class_selection_combo.clear()
             self.class_selection_combo.addItem("(None)")
             self.class_selection_combo.addItems(values)
 
             class_index = 0
-            if self.class_selection != '(None)' and self.class_selection != 0:
-                class_index = self.train_data.domain.class_var.values.index(self.class_selection)+1
+            if self.class_selection in self.train_data.domain.class_var.values:
+                    class_index = self.train_data.domain.class_var.values.index(self.class_selection)+1
+            else:
+                self.class_selection = '(None)'
 
             self.class_selection_combo.setCurrentIndex(class_index)
             self.previous_class_selection = "(None)"
