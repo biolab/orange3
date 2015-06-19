@@ -369,7 +369,7 @@ class Bootstrap(Results):
         row_indices = np.hstack(row_indices)
         actual = np.hstack(actual)
         predicted = np.array([np.hstack(pred) for pred in predicted])
-        if class_var.is_discrete:
+        if data.domain.has_discrete_class:
             probabilities = np.array([np.vstack(prob) for prob in probabilities])
         nrows = len(actual)
         nmodels = len(predicted)
@@ -378,7 +378,7 @@ class Bootstrap(Results):
         self.row_indices = row_indices
         self.actual = actual
         self.predicted = predicted.reshape(nmodels, nrows)
-        if class_var.is_discrete:
+        if data.domain.has_discrete_class:
             self.probabilities = probabilities
 
 
@@ -398,11 +398,11 @@ class TestOnTestData(Results):
 
         for i, learner in enumerate(learners):
             model = learner(train_data)
-            if data.domain.has_discrete_class:
+            if train_data.domain.has_discrete_class:
                 values, probs = model(test_data, model.ValueProbs)
                 self.predicted[i] = values
                 self.probabilities[i][:, :] = probs
-            elif data.domain.has_continuous_class:
+            elif train_data.domain.has_continuous_class:
                 values = model(test_data, model.Value)
                 self.predicted[i] = values
 
