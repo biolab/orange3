@@ -17,7 +17,9 @@ from PyQt4.QtGui import (
 )
 
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, QObject, QEvent, QSize, QModelIndex, QMimeData
+from PyQt4.QtCore import (
+    Qt, QObject, QEvent, QSize, QModelIndex, QMimeData, QTimer
+)
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
@@ -1046,6 +1048,12 @@ class SequenceFlow(QWidget):
             self.__icon = ""
             self.__focusframe = None
 
+            self.__deleteaction = QtGui.QAction(
+                "Remove", self, shortcut=QtGui.QKeySequence.Delete,
+                enabled=False, triggered=self.closeRequested
+            )
+            self.addAction(self.__deleteaction)
+
             if widget is not None:
                 self.setWidget(widget)
             self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -1081,11 +1089,13 @@ class SequenceFlow(QWidget):
             event.accept()
             self.__focusframe = QtGui.QFocusFrame(self)
             self.__focusframe.setWidget(self)
+            self.__deleteaction.setEnabled(True)
 
         def focusOutEvent(self, event):
             event.accept()
             self.__focusframe.deleteLater()
             self.__focusframe = None
+            self.__deleteaction.setEnabled(False)
 
         def closeEvent(self, event):
             super().closeEvent(event)
@@ -1410,13 +1420,14 @@ class OWPreprocess(widget.OWWidget):
         self.flow_view = SequenceFlow()
         self.controler = Controller(self.flow_view, parent=self)
 
-        self.scroll_area = QtGui.QScrollArea()
+        self.scroll_area = QtGui.QScrollArea(
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn
+        )
         self.scroll_area.viewport().setAcceptDrops(True)
         self.scroll_area.setWidget(self.flow_view)
         self.scroll_area.setWidgetResizable(True)
         self.mainArea.layout().addWidget(self.scroll_area)
-
-        ####
+        self.flow_view.installEventFilter(self)
 
         box = gui.widgetBox(self.controlArea, "Output")
         gui.auto_commit(box, self, "autocommit", "Commit", box=False)
@@ -1443,6 +1454,12 @@ class OWPreprocess(widget.OWWidget):
             model = self.load({})
 
         self.set_model(model)
+
+        if not model.rowCount():
+            # enforce default width constraint if no preprocessors
+            # are instantiated (if the model is not empty the constraints
+            # will be triggered by LayoutRequest event on the `flow_view`)
+            self.__update_size_constraint()
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""
@@ -1562,9 +1579,15 @@ class OWPreprocess(widget.OWWidget):
             QApplication.postEvent(self, QEvent(QEvent.User))
 
     def customEvent(self, event):
-        if self._invalidated:
+        if event.type() == QEvent.User and self._invalidated:
             self._invalidated = False
             self.apply()
+
+    def eventFilter(self, receiver, event):
+        if receiver is self.flow_view and event.type() == QEvent.LayoutRequest:
+            QTimer.singleShot(0, self.__update_size_constraint)
+
+        return super().eventFilter(receiver, event)
 
     def storeSpecificSettings(self):
         """Reimplemented."""
@@ -1581,18 +1604,35 @@ class OWPreprocess(widget.OWWidget):
         self.set_model(None)
         super().onDeleteWidget()
 
+    @Slot()
+    def __update_size_constraint(self):
+        # Update minimum width constraint on the scroll area containing
+        # the 'instantiated' preprocessor list (to avoid the horizontal
+        # scroll bar).
+        sh = self.flow_view.minimumSizeHint()
+        scroll_width = self.scroll_area.verticalScrollBar().width()
+        self.scroll_area.setMinimumWidth(
+            min(max(sh.width() + scroll_width + 2, self.controlArea.width()),
+                520))
 
-def test_main():
-    app = QtGui.QApplication(sys.argv)
+
+def test_main(argv=sys.argv):
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "brown-selected"
+
     w = OWPreprocess()
-    w.set_data(Orange.data.Table("brown-selected"))
+    w.set_data(Orange.data.Table(filename))
     w.show()
     w.raise_()
     r = app.exec_()
     w.saveSettings()
     w.onDeleteWidget()
     return r
-
 
 if __name__ == "__main__":
     sys.exit(test_main())
