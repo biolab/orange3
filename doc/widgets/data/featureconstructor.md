@@ -50,7 +50,7 @@ Examples
 
 With **Feature Constructor** you can easily adjust or combine existing features into new ones. Below we have added one new continuous and one new discrete feature. Notice that we use an underscore for the feature name (e.g. petal_length). For the continuous feature we squared the existing *petal length* value, while we used *lower than* for the discrete one.
 
-![image](images/feature-constructor-example.png)
+<img src="images/feature-constructor-example.png" alt="image" width="400">
 
 Hints
 -----
