@@ -39,9 +39,10 @@ class SettingHandlerTestCase(unittest.TestCase):
     @patch('Orange.widgets.settings.store_settings', True)
     def test_read_defaults(self):
         default_settings = {'a': 5, 'b': {1: 5}}
-        f, settings_file = mkstemp(suffix='.ini')
+        fd, settings_file = mkstemp(suffix='.ini')
         with open(settings_file, 'wb') as f:
             pickle.dump(default_settings, f)
+        os.close(fd)
 
         handler = SettingsHandler()
         handler._get_settings_filename = lambda: settings_file
@@ -53,7 +54,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     @patch('Orange.widgets.settings.store_settings', True)
     def test_write_defaults(self):
-        f, settings_file = mkstemp(suffix='.ini')
+        fd, settings_file = mkstemp(suffix='.ini')
 
         handler = SettingsHandler()
         handler.defaults = {'a': 5, 'b': {1: 5}}
@@ -62,6 +63,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         with open(settings_file, 'rb') as f:
             default_settings = pickle.load(f)
+        os.close(fd)
 
         self.assertEqual(handler.defaults, default_settings)
 
