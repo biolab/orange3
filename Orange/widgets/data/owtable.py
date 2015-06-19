@@ -943,7 +943,7 @@ def format_summary(summary):
     else:
         if len(summary.domain.class_vars) > 1:
             c_text = "%s outcome%s" % sp(len(summary.domain.class_vars))
-        elif summary.domain.class_var.is_continuous:
+        elif summary.domain.has_continuous_class:
             c_text = "Continuous target variable"
         else:
             c_text = "Discrete class with %s value%s" % sp(

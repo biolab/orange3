@@ -56,7 +56,7 @@ class SelectBestFeatures:
             discr_ratio = (sum(a.is_discrete
                                for a in data.domain.attributes)
                            / len(data.domain.attributes))
-            if data.domain.class_var.is_discrete:
+            if data.domain.has_discrete_class:
                 if discr_ratio >= 0.5:
                     method = GainRatio()
                 else:

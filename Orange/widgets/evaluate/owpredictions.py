@@ -149,7 +149,7 @@ class OWPredictions(widget.OWWidget):
 
         predictor = next(iter(self.predictors.values())).predictor
         class_var = predictor.domain.class_var
-        classification = class_var.is_discrete
+        classification = class_var and class_var.is_discrete
 
         newattrs = []
         newcolumns = []
@@ -217,10 +217,12 @@ class OWPredictions(widget.OWWidget):
 
     @classmethod
     def predict(cls, predictor, data):
-        if predictor.domain.class_var.is_discrete:
-            return cls.predict_discrete(predictor, data)
-        elif predictor.domain.class_var.is_continuous:
-            return cls.predict_continuous(predictor, data)
+        class_var = predictor.domain.class_var
+        if class_var:
+            if class_var.is_discrete:
+                return cls.predict_discrete(predictor, data)
+            elif class_var.is_continuous:
+                return cls.predict_continuous(predictor, data)
 
     @staticmethod
     def predict_discrete(predictor, data):

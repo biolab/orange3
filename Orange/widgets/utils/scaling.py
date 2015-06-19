@@ -116,8 +116,8 @@ class ScaleData:
 
         self.data_domain = full_data.domain
         self.data_has_class = bool(full_data.domain.class_var)
-        self.data_has_continuous_class = full_data.domain.class_var.is_continuous
-        self.data_has_discrete_class = full_data.domain.class_var.is_discrete
+        self.data_has_continuous_class = full_data.domain.has_continuous_class
+        self.data_has_discrete_class = full_data.domain.has_discrete_class
 
         self.data_class_name = self.data_has_class and full_data.domain.class_var.name
         if self.data_has_class:

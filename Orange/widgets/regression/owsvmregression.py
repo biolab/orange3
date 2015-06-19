@@ -152,7 +152,7 @@ class OWSVMRegression(widget.OWWidget):
         self.warning(0)
 
         if data is not None:
-            if not data.domain.class_var.is_continuous:
+            if not data.domain.has_continuous_class:
                 data = None
                 self.warning(0, "Data does not have a continuous class var")
 

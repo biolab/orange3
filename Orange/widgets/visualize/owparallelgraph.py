@@ -255,7 +255,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def draw_legend(self):
         if self.data_has_class:
-            if self.data_domain.class_var.is_discrete:
+            if self.data_domain.has_discrete_class:
                 self.legend().clear()
                 values = get_variable_values_sorted(self.data_domain.class_var)
                 for i, value in enumerate(values):

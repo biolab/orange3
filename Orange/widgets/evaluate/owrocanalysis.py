@@ -399,8 +399,7 @@ class OWROCAnalysis(widget.OWWidget):
             if results.data is None:
                 self.error(0, "Give me data!!")
                 results = None
-            elif not isinstance(results.data.domain.class_var,
-                                Orange.data.DiscreteVariable):
+            elif not results.data.domain.has_discrete_class:
                 self.error(0, "Need discrete class variable")
                 results = None
 

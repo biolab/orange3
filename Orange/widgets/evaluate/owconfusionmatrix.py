@@ -100,9 +100,7 @@ class OWConfusionMatrix(widget.OWWidget):
             if results.data is not None:
                 data = results.data
 
-        if data is not None and \
-                not isinstance(data.domain.class_var,
-                               Orange.data.DiscreteVariable):
+        if data is not None and not data.domain.has_discrete_class:
             data = None
             results = None
             self.warning(

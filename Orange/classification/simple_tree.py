@@ -106,10 +106,10 @@ class SimpleTreeModel(Model):
             n_cls = len(data.domain.class_vars)
             raise ValueError("Number of classes should be 1: {}".format(n_cls))
 
-        if data.domain.class_var.is_discrete:
+        if data.domain.has_discrete_class:
             self.type = Classification
             self.cls_vals = len(data.domain.class_var.values)
-        elif data.domain.class_var.is_continuous:
+        elif data.domain.has_continuous_class:
             self.type = Regression
             self.cls_vals = 0
         else:

@@ -198,9 +198,9 @@ class OWFile(widget.OWWidget):
             self.infoa.setText(
                 "{} instance(s), {} feature(s), {} meta attributes"
                 .format(len(data), len(domain.attributes), len(domain.metas)))
-            if domain.class_var.is_continuous:
+            if domain.has_continuous_class:
                 self.infob.setText("Regression; numerical class.")
-            elif domain.class_var.is_discrete:
+            elif domain.has_discrete_class:
                 self.infob.setText("Classification; " +
                                    "discrete class with {} values."
                                    .format(len(domain.class_var.values)))

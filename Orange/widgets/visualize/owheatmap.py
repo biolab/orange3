@@ -539,7 +539,7 @@ class OWHeatMap(widget.OWWidget):
             self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
             self.z_var_index = min(max(0, self.z_var_index), len(cvars) - 1)
 
-            if domain.class_var.is_discrete:
+            if domain.has_discrete_class:
                 self.z_var_index = dvars.index(domain.class_var)
             else:
                 self.z_var_index = len(dvars) - 1
