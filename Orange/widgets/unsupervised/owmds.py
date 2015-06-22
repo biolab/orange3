@@ -87,7 +87,8 @@ class OWMDS(widget.OWWidget):
     icon = "icons/MDS.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]
-    outputs = [("Data", Orange.data.Table)]
+    outputs = [("Data", Orange.data.Table),
+               ("Data Subset", Orange.data.Table)]
 
     #: Initialization type
     PCA, Random = 0, 1
@@ -122,7 +123,9 @@ class OWMDS(widget.OWWidget):
         self._shape_data = None
         self._size_data = None
         self._label_data = None
-
+        self._scatter_item = None
+        self._selection_item = None
+        self._selection_mask = None
         self._invalidated = False
         self._effective_matrix = None
 
@@ -196,8 +199,14 @@ class OWMDS(widget.OWWidget):
                         checkbox_label="Send after any change",
                         box=None)
 
-        self.plot = pg.PlotWidget(background="w")
+        self.plot = pg.PlotWidget(background="w", enableMenu=False)
         self.mainArea.layout().addWidget(self.plot)
+        self.selection_tool = PlotSelectionTool(
+            parent=self, selectionMode=PlotSelectionTool.Lasso)
+        self.selection_tool.setViewBox(self.plot.getViewBox())
+        self.selection_tool.selectionStarted.connect(self.__selection_start)
+        self.selection_tool.selectionUpdated.connect(self.__selection_update)
+        self.selection_tool.selectionFinished.connect(self.__selection_end)
 
     def set_data(self, data):
         self.signal_data = data
@@ -209,6 +218,7 @@ class OWMDS(widget.OWWidget):
             self.openContext(data)
         else:
             self._invalidated = True
+        self._selection_mask = None
 
     def set_disimilarity(self, matrix):
         self.matrix = matrix
@@ -217,6 +227,7 @@ class OWMDS(widget.OWWidget):
         if matrix is None:
             self.matrix_data = None
         self._invalidated = True
+        self._selection_mask = None
 
     def _clear(self):
         self._pen_data = None
@@ -357,6 +368,9 @@ class OWMDS(widget.OWWidget):
 
     def _update_plot(self):
         self.plot.clear()
+        self._scatter_item = None
+        self._selection_item = None
+
         if self.embedding is not None:
             self._setup_plot()
 
@@ -379,6 +393,13 @@ class OWMDS(widget.OWWidget):
                 return numpy.zeros_like(a)
 
         if self._pen_data is None:
+            if self._selection_mask is not None:
+                pointflags = numpy.where(
+                    self._selection_mask,
+                    mdsplotutils.Selected, mdsplotutils.NoFlags)
+            else:
+                pointflags = None
+
             if have_data and self.color_index > 0:
                 color_var = self.colorvar_model[self.color_index]
                 if color_var.is_discrete:
@@ -388,19 +409,27 @@ class OWMDS(widget.OWWidget):
                 else:
                     palette = None
 
-                color_data = colors(self.data, color_var, palette)
-                pen_data = [make_pen(QtGui.QColor(r, g, b, self.symbol_opacity),
-                                     cosmetic=True)
-                            for r, g, b in color_data]
+                color_data = mdsplotutils.color_data(
+                    self.data, color_var, plotstyle=mdsplotutils.plotstyle)
+                color_data = numpy.hstack(
+                    (color_data,
+                     numpy.full((len(color_data), 1), self.symbol_opacity))
+                )
+                pen_data = mdsplotutils.pen_data(color_data, pointflags)
             elif have_matrix_transposed and self.colorvar_model[self.color_index] == 'Attribute names':
                 attr = attributes(self.matrix)
                 palette = colorpalette.ColorPaletteGenerator(len(attr))
                 color_data = [palette.getRGB(i) for i in range(len(attr))]
-                pen_data = [make_pen(QtGui.QColor(r, g, b, self.symbol_opacity),
-                                     cosmetic=True)
-                            for r, g, b in color_data]
+                color_data = numpy.hstack(
+                    color_data,
+                    numpy.full((len(color_data), 1), self.symbol_opacity)
+                )
+
+                pen_data = mdsplotutils.pen_data(color_data, pointflags)
             else:
                 pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
+                pen_data = numpy.full(len(self.data), pen_data, dtype=object)
+
             self._pen_data = pen_data
 
         if self._shape_data is None:
@@ -453,11 +482,11 @@ class OWMDS(widget.OWWidget):
                 label_items = None
             self._label_data = label_items
 
-        item = ScatterPlotItem(
+        self._scatter_item = item = ScatterPlotItem(
             x=self.embedding[:, 0], y=self.embedding[:, 1],
             pen=self._pen_data, symbol=self._shape_data,
             brush=QtGui.QBrush(Qt.transparent),
-            size=size_data,
+            size=size_data, data=numpy.arange(len(self.data)),
             antialias=True
         )
         self.plot.addItem(item)
@@ -497,10 +526,84 @@ class OWMDS(widget.OWWidget):
             output = Orange.data.Table.from_numpy(domain, X, Y, M)
 
         self.send("Data", output)
+        if output is not None and self._selection_mask is not None and \
+                numpy.any(self._selection_mask):
+            subset = output[self._selection_mask]
+        else:
+            subset = None
+        self.send("Data Subset", subset)
 
     def onDeleteWidget(self):
-        self.plot.clear()
         super().onDeleteWidget()
+        self.plot.clear()
+        self._selection_item = self._scatter_item = None
+        self._clear()
+
+    def __selection_start(self):
+        item = QtGui.QGraphicsPathItem()
+        color = QtGui.QColor(Qt.yellow)
+        item.setPen(QtGui.QPen(color, 0))
+        color.setAlpha(50)
+        item.setBrush(QtGui.QBrush(color))
+
+        self._selection_item = item
+        self.__selection_update()
+
+    def __selection_update(self):
+        if self._selection_item is None:
+            return
+
+        item = self._selection_item
+
+        T, ok = self.plot.getViewBox().childTransform().inverted()
+        if ok:
+            path = self.selection_tool.selectionShape()
+            path = T.map(path)
+            self._selection_item.setPath(path)
+            if item.parentItem() is None:
+                self.plot.addItem(item)
+
+        self.select(path)
+
+    def __selection_end(self):
+        self.__selection_update()
+        if self._selection_item is None:
+            return
+
+        item = self._selection_item
+        path = item.path()
+        self.plot.removeItem(item)
+        self._selection_item.setParentItem(None)
+        self._selection_item = None
+
+        self.select(path)
+        self._pen_data = None
+        self._update_plot()
+        self._invalidate_output()
+
+    def select(self, region):
+        item = self._scatter_item
+        if item is None:
+            return
+
+        indices = numpy.array(
+            [spot.data() for spot in item.points()
+             if region.contains(spot.pos())],
+            dtype=int)
+
+        if not QtGui.QApplication.keyboardModifiers() & Qt.ControlModifier:
+            self._selection_mask = None
+
+        self.select_indices(indices)
+
+    def select_indices(self, indices):
+        if self.data is None:
+            return
+
+        if self._selection_mask is None:
+            self._selection_mask = numpy.zeros(len(self.data), dtype=bool)
+
+        self._selection_mask[indices] = True
 
 
 def colors(data, variable, palette=None):
@@ -546,6 +649,176 @@ def scaled(a):
     amin, amax = numpy.nanmin(a), numpy.nanmax(a)
     span = amax - amin
     return (a - amin) / (span or 1), (amin, amax)
+
+from types import SimpleNamespace as namespace
+
+from Orange.widgets.visualize.owlinearprojection import PlotSelectionTool
+from Orange.widgets.visualize.owlinearprojection import plotutils
+
+
+class mdsplotutils(plotutils):
+    NoFlags, Selected, Highlight = 0, 1, 2
+    NoFill, Filled = 0, 1
+
+    plotstyle = namespace(
+        selected_pen=make_pen(Qt.yellow, width=3, cosmetic=True),
+        highligh_pen=QtGui.QPen(Qt.blue, 1),
+        selected_brush=None,
+        default_color=QtGui.QColor(Qt.darkGray).rgba(),
+        discrete_palette=colorpalette.ColorPaletteHSV(),
+        continuous_palette=colorpalette.ContinuousPaletteGenerator(
+            QtGui.QColor(220, 220, 220),
+            QtGui.QColor(0, 0, 0),
+            False
+        ),
+        symbols=ScatterPlotItem.Symbols,
+        point_size=10,
+        min_point_size=5,
+    )
+
+    @staticmethod
+    def column_data(table, var, mask=None):
+        col, _ = table.get_column_view(var)
+        dtype = float if var.is_primitive() else object
+        col = numpy.asarray(col, dtype=dtype)
+        if mask is not None:
+            mask = numpy.asarray(mask, dtype=bool)
+            return col[mask]
+        else:
+            return col
+
+    @staticmethod
+    def color_data(table, var=None, mask=None, plotstyle=None):
+        N = len(table)
+        if mask is not None:
+            mask = numpy.asarray(mask, dtype=bool)
+            N = numpy.count_nonzero(mask)
+
+        if plotstyle is None:
+            plotstyle = mdsplotutils.plotstyle
+
+        if var is None:
+            col = numpy.zeros(N, dtype=float)
+            color_data = numpy.full(N, plotstyle.default_color, dtype=object)
+        elif var.is_primitive():
+            col = mdsplotutils.column_data(table, var, mask)
+            if var.is_discrete:
+                palette = plotstyle.discrete_palette
+                color_data = plotutils.discrete_colors(
+                    col, nvalues=len(var.values), palette=palette)
+            elif var.is_continuous:
+                color_data = plotutils.continuous_colors(
+                    col, palette=plotstyle.continuous_palette)
+        else:
+            raise TypeError("Discrete/Continuous variable or None expected.")
+
+        return color_data
+
+    @staticmethod
+    def pen_data(basecolors, flags=None, plotstyle=None):
+        if plotstyle is None:
+            plotstyle = mdsplotutils.plotstyle
+
+        pens = numpy.array(
+            [mdsplotutils.make_pen(QtGui.QColor(*rgba), width=1)
+             for rgba in basecolors],
+            dtype=object)
+
+        if flags is None:
+            return pens
+
+        selected_mask = flags & mdsplotutils.Selected
+        if numpy.any(selected_mask):
+            pens[selected_mask.astype(bool)] = plotstyle.selected_pen
+
+        highlight_mask = flags & mdsplotutils.Highlight
+        if numpy.any(highlight_mask):
+            pens[highlight_mask.astype(bool)] = plotstyle.hightlight_pen
+
+        return pens
+
+    @staticmethod
+    def brush_data(basecolors, flags=None, plotstyle=None):
+        if plotstyle is None:
+            plotstyle = mdsplotutils.plotstyle
+
+        brush = numpy.array(
+            [mdsplotutils.make_brush(QtGui.QColor(r, g, b))
+             for r, g, b in basecolors],
+            dtype=object)
+
+        if flags is None:
+            return brush
+
+        fill_mask = flags & mdsplotutils.Filled
+
+        if not numpy.all(fill_mask):
+            brush[~fill_mask] = QtGui.QBrush(Qt.NoBrush)
+        return brush
+
+    @staticmethod
+    def shape_data(table, var, mask=None, plotstyle=None):
+        if plotstyle is None:
+            plotstyle = mdsplotutils.plotstyle
+
+        N = len(table)
+        if mask is not None:
+            mask = numpy.asarray(mask, dtype=bool)
+            N = numpy.nonzero(mask)
+
+        if var is None:
+            return numpy.full(N, "o", dtype=object)
+        elif var.is_discrete:
+            shape_data = mdsplotutils.column_data(table, var, mask)
+            maxsymbols = len(plotstyle.symbols) - 1
+            validmask = numpy.isfinite(shape_data)
+            shape = shape_data % (maxsymbols - 1)
+            shape[~validmask] = maxsymbols  # Special symbol for unknown values
+            symbols = numpy.array(list(plotstyle.symbols))
+            shape_data = symbols[numpy.asarray(shape, dtype=int)]
+
+            if mask is None:
+                return shape_data
+            else:
+                return shape_data[mask]
+        else:
+            raise TypeError()
+
+    @staticmethod
+    def size_data(table, var, mask=None, plotstyle=None):
+        if plotstyle is None:
+            plotstyle = mdsplotutils.plotstyle
+
+        N = len(table)
+        if mask is not None:
+            mask = numpy.asarray(mask, dtype=bool)
+            N = numpy.nonzero(mask)
+
+        if var is None:
+            return numpy.full(N, plotstyle.point_size, dtype=float)
+        else:
+            size_data = mdsplotutils.column_data(table, var, mask)
+            size_data = mdsplotutils.normalized(size_data)
+            size_mask = numpy.isnan(size_data)
+            size_data = size_data * plotstyle.point_size + \
+                        plotstyle.min_point_size
+            size_data[size_mask] = plotstyle.min_point_size - 2
+
+            if mask is None:
+                return size_data
+            else:
+                return size_data[mask]
+
+    @staticmethod
+    def make_pen(color, width=1, cosmetic=True):
+        pen = QtGui.QPen(color)
+        pen.setWidthF(width)
+        pen.setCosmetic(cosmetic)
+        return pen
+
+    @staticmethod
+    def make_brush(color, ):
+        return QtGui.QBrush(color, )
 
 
 def main_test():
