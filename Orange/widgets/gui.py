@@ -563,6 +563,8 @@ def widgetLabel(widget, label="", labelWidth=None, **misc):
     lbl = QtGui.QLabel(label, widget)
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
+    else:
+        lbl.setFixedSize(lbl.sizeHint())
     miscellanea(lbl, None, widget, **misc)
     return lbl
 
