@@ -201,6 +201,8 @@ class WebviewWidget(QtWebKit.QWebView):
             If True, enable context menu and webkit inspector.
         """
         super().__init__(parent)
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                             QtGui.QSizePolicy.Expanding))
         self._bridge = bridge
         try: parent.layout().addWidget(self)
         except (AttributeError, TypeError): pass
