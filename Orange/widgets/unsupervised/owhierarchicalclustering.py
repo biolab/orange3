@@ -872,7 +872,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.label_cb.model()[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            vars = list(items.domain.variables + items.domain.metas)
+            vars = list(items.domain.class_vars + items.domain.metas + items.domain.attributes)
             self.label_cb.model()[:] = ["None", "Enumeration"] + vars
         elif isinstance(items, list) and \
                 all(isinstance(var, Orange.data.Variable) for var in items):
