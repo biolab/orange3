@@ -247,11 +247,18 @@ class OWSieveDiagram(OWWidget):
                     actualProb = 0
                 probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])] = ((data.domain[self.attrX].values[i], valx), (data.domain[self.attrY].values[j], valy), actualProb, len(data))
 
+        #get text width of Y labels
+        max_ylabel_w = 0
+        for j in range(len(valsY)):
+            xl = OWCanvasText(self.canvas, "", 0, 0, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]), show=False)
+            max_ylabel_w = max(int(xl.boundingRect().width()), max_ylabel_w)
+        max_ylabel_w = min(max_ylabel_w, 200) #upper limit for label widths
+
         # get text width of Y attribute name
         text = OWCanvasText(self.canvas, data.domain[self.attrY].name, x  = 0, y = 0, bold = 1, show = 0, vertical=True)
-        xOff = int(text.boundingRect().height() + 40)
-        yOff = 50
-        sqareSize = min(self.canvasView.width() - xOff - 35, self.canvasView.height() - yOff - 30)
+        xOff = int(text.boundingRect().height() + max_ylabel_w)
+        yOff = 55
+        sqareSize = min(self.canvasView.width() - xOff - 35, self.canvasView.height() - yOff - 50)
         if sqareSize < 0: return    # canvas is too small to draw rectangles
         self.canvasView.setSceneRect(0, 0, self.canvasView.width(), self.canvasView.height())
 
@@ -277,7 +284,7 @@ class OWSieveDiagram(OWWidget):
         ######################
         # draw rectangles
         currX = xOff
-        max_ylabel_w = 0
+        max_xlabel_h = 0
 
         normX, normY = sum(valsX), sum(valsY)
         for i in range(len(valsX)):
@@ -305,15 +312,16 @@ class OWSieveDiagram(OWWidget):
 
                 currY += height
                 if currX == xOff:
-                    xl = OWCanvasText(self.canvas, "", xOff - 10, currY - height/2, Qt.AlignRight | Qt.AlignVCenter, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]))
-                    max_ylabel_w = max(int(xl.boundingRect().width()), max_ylabel_w)
+                    OWCanvasText(self.canvas, "", xOff, currY - height/2, Qt.AlignRight | Qt.AlignVCenter, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]))
 
-            OWCanvasText(self.canvas, "", currX + width/2, yOff + sqareSize + 5, Qt.AlignCenter, htmlText = getHtmlCompatibleString(data.domain[self.attrX].values[i]))
+            xl = OWCanvasText(self.canvas, "", currX + width/2, yOff + sqareSize, Qt.AlignHCenter | Qt.AlignTop, htmlText = getHtmlCompatibleString(data.domain[self.attrX].values[i]))
+            max_xlabel_h = max(int(xl.boundingRect().height()), max_xlabel_h)
+
             currX += width
 
         # show attribute names
-        OWCanvasText(self.canvas, self.attrY, max(xOff-20-max_ylabel_w, 20), yOff + sqareSize/2, Qt.AlignRight | Qt.AlignVCenter, bold = 1, vertical=True)
-        OWCanvasText(self.canvas, self.attrX, xOff + sqareSize/2, yOff + sqareSize + 15, Qt.AlignCenter, bold = 1)
+        OWCanvasText(self.canvas, self.attrY, 0, yOff + sqareSize/2, Qt.AlignLeft | Qt.AlignVCenter, bold = 1, vertical=True)
+        OWCanvasText(self.canvas, self.attrX, xOff + sqareSize/2, yOff + sqareSize + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop, bold = 1)
 
         #self.canvas.update()
 
