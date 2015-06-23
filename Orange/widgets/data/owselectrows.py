@@ -40,7 +40,7 @@ class OWSelectRows(widget.OWWidget):
         StringVariable: ["equals", "is not",
                          "is before", "is equal or before",
                          "is after", "is equal or after",
-                         "is between", "is outside",
+                         "is between", "is outside", "contains",
                          "begins with", "ends with",
                          "is defined"]}
 
@@ -330,8 +330,6 @@ class OWSelectRows(widget.OWWidget):
                     filter = data_filter.FilterContinuous(
                         attr_index, oper, *[float(v) for v in values])
                 elif attr.is_string:
-                    if any(v for v in values):
-                        continue
                     filter = data_filter.FilterString(
                         attr_index, oper, *[str(v) for v in values])
                 else:
@@ -469,8 +467,7 @@ class DropDownToolButton(QtGui.QToolButton):
 def test():
     app = QtGui.QApplication([])
     w = OWSelectRows()
-    w.set_data(Table("imports-85"))
-    #w.set_data(Table("smokers_ct"))
+    w.set_data(Table("zoo"))
     w.show()
     app.exec_()
 
