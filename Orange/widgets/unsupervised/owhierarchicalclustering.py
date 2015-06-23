@@ -872,8 +872,24 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.label_cb.model()[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            vars = list(items.domain.class_vars + items.domain.metas + items.domain.attributes)
-            self.label_cb.model()[:] = ["None", "Enumeration"] + vars
+            class_metas_len = len(items.domain.class_vars +
+                                  items.domain.metas)
+            vars = list(items.domain.attributes)
+            if class_metas_len > 0:
+                vars = list(items.domain.class_vars +
+                            items.domain.metas + ('',)) + vars
+            self.label_cb.model()[:] = ["None", "Enumeration", ''] + vars
+
+            def set_separator(model, index):
+                index = model.index(index, 0)
+                model.setData(index, "separator",
+                              Qt.AccessibleDescriptionRole)
+                model.setData(index, Qt.NoItemFlags, role="flags")
+
+            set_separator(self.label_cb.model(), 2)
+            if class_metas_len > 0:
+                set_separator(self.label_cb.model(), 3 + class_metas_len)
+
         elif isinstance(items, list) and \
                 all(isinstance(var, Orange.data.Variable) for var in items):
             self.label_cb.model()[:] = ["None", "Enumeration", "Name"]
