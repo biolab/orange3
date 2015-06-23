@@ -1,3 +1,5 @@
+import pkg_resources
+
 import numpy
 import scipy.spatial.distance
 
@@ -187,6 +189,53 @@ class OWMDS(widget.OWWidget):
                                 callback=self._on_color_index_changed,
                                 createLabel=False))
         box.layout().addLayout(form)
+
+        box = QtGui.QGroupBox("Zoom/Select", )
+        box.setLayout(QtGui.QHBoxLayout())
+
+        group = QtGui.QActionGroup(self, exclusive=True)
+
+        def icon(name):
+            path = "icons/Dlg_{}.png".format(name)
+            path = pkg_resources.resource_filename(widget.__name__, path)
+            return QtGui.QIcon(path)
+
+        action_select = QtGui.QAction(
+            "Select", self, checkable=True, checked=True, icon=icon("arrow"),
+            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_1))
+        action_zoom = QtGui.QAction(
+            "Zoom", self, checkable=True, checked=False, icon=icon("zoom"),
+            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_2))
+        action_pan = QtGui.QAction(
+            "Pan", self, checkable=True, checked=False, icon=icon("pan_hand"),
+            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_3))
+
+        action_reset_zoom = QtGui.QAction(
+            "Zoom to fit", self, icon=icon("zoom_reset"),
+            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_0))
+        action_reset_zoom.triggered.connect(
+            lambda: self.plot.autoRange())
+        group.addAction(action_select)
+        group.addAction(action_zoom)
+        group.addAction(action_pan)
+        self.addActions(group.actions() + [action_reset_zoom])
+        action_select.setChecked(True)
+
+        def button(action):
+            b = QtGui.QToolButton()
+            b.setToolButtonStyle(Qt.ToolButtonIconOnly)
+            b.setDefaultAction(action)
+            return b
+
+        box.layout().addWidget(button(action_select))
+        box.layout().addWidget(button(action_zoom))
+        box.layout().addWidget(button(action_pan))
+        box.layout().addSpacing(4)
+        box.layout().addWidget(button(action_reset_zoom))
+        box.layout().addStretch()
+
+        self.controlArea.layout().addWidget(box)
+
         gui.rubber(self.controlArea)
         box = gui.widgetBox(self.controlArea, "Output")
         cb = gui.comboBox(box, self, "output_embedding_role",
@@ -201,12 +250,31 @@ class OWMDS(widget.OWWidget):
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
         self.mainArea.layout().addWidget(self.plot)
+
         self.selection_tool = PlotSelectionTool(
             parent=self, selectionMode=PlotSelectionTool.Lasso)
+        self.zoom_tool = PlotZoomTool(parent=self)
+        self.pan_tool = PlotPanTool(parent=self)
+        self.pinch_tool = PlotPinchZoomTool(parent=self)
+        self.pinch_tool.setViewBox(self.plot.getViewBox())
         self.selection_tool.setViewBox(self.plot.getViewBox())
-        self.selection_tool.selectionStarted.connect(self.__selection_start)
-        self.selection_tool.selectionUpdated.connect(self.__selection_update)
         self.selection_tool.selectionFinished.connect(self.__selection_end)
+        self.current_tool = self.selection_tool
+
+        def activate_tool(action):
+            self.current_tool.setViewBox(None)
+
+            if action is action_select:
+                active, cur = self.selection_tool, Qt.ArrowCursor
+            elif action is action_zoom:
+                active, cur = self.zoom_tool, Qt.ArrowCursor
+            elif action is action_pan:
+                active, cur = self.pan_tool, Qt.OpenHandCursor
+            self.current_tool = active
+            self.current_tool.setViewBox(self.plot.getViewBox())
+            self.plot.getViewBox().setCursor(QtGui.QCursor(cur))
+
+        group.triggered[QtGui.QAction].connect(activate_tool)
 
     def set_data(self, data):
         self.signal_data = data
@@ -540,43 +608,7 @@ class OWMDS(widget.OWWidget):
         self._selection_item = self._scatter_item = None
         self._clear()
 
-    def __selection_start(self):
-        item = QtGui.QGraphicsPathItem()
-        color = QtGui.QColor(Qt.yellow)
-        item.setPen(QtGui.QPen(color, 0))
-        color.setAlpha(50)
-        item.setBrush(QtGui.QBrush(color))
-
-        self._selection_item = item
-        self.__selection_update()
-
-    def __selection_update(self):
-        if self._selection_item is None:
-            return
-
-        item = self._selection_item
-
-        T, ok = self.plot.getViewBox().childTransform().inverted()
-        if ok:
-            path = self.selection_tool.selectionShape()
-            path = T.map(path)
-            self._selection_item.setPath(path)
-            if item.parentItem() is None:
-                self.plot.addItem(item)
-
-        self.select(path)
-
-    def __selection_end(self):
-        self.__selection_update()
-        if self._selection_item is None:
-            return
-
-        item = self._selection_item
-        path = item.path()
-        self.plot.removeItem(item)
-        self._selection_item.setParentItem(None)
-        self._selection_item = None
-
+    def __selection_end(self, path):
         self.select(path)
         self._pen_data = None
         self._update_plot()
@@ -653,7 +685,8 @@ def scaled(a):
 
 from types import SimpleNamespace as namespace
 
-from Orange.widgets.visualize.owlinearprojection import PlotSelectionTool
+from Orange.widgets.visualize.owlinearprojection import \
+    PlotSelectionTool, PlotZoomTool, PlotPanTool, PlotPinchZoomTool
 from Orange.widgets.visualize.owlinearprojection import plotutils
 
 
