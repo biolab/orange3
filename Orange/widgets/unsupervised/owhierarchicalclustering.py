@@ -661,7 +661,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     append_clusters = settings.Setting(True)
     cluster_role = settings.Setting(2)
     cluster_name = settings.Setting("Cluster")
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     #: Cluster variable domain role
     AttributeRole, ClassRole, MetaRole = 0, 1, 2
