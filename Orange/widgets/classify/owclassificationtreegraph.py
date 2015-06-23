@@ -88,7 +88,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             node.set_rect(QRectF())
             self.update_node_info(node)
         w = max([n.rect().width() for n in self.scene.nodes()] + [0])
-        if w > self.max_node_width < 200:
+        if w > self.max_node_width:
             w = self.max_node_width
         for node in self.scene.nodes():
             node.set_rect(QRectF(node.rect().x(), node.rect().y(),
@@ -113,8 +113,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         if not node.is_leaf():
             text += "<hr/>{}".format(
                 self.domain.attributes[node.attribute()].name)
-        node.setHtml('<center><p style="line-height: 120%; margin-bottom: 0">'
-                     '{}</p></center>'.
+        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">'
+                     '{}</p>'.
                      format(text))
 
     def activate_loaded_settings(self):
