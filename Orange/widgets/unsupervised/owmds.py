@@ -259,6 +259,7 @@ class OWMDS(widget.OWWidget):
             # initialize the graph state from data
             domain = self.data.domain
             all_vars = list(domain.variables + domain.metas)
+            cd_vars = [var for var in all_vars if var.is_primitive()]
             disc_vars = [var for var in all_vars if var.is_discrete]
             cont_vars = [var for var in all_vars if var.is_continuous]
             str_vars = [var for var in all_vars
@@ -269,7 +270,7 @@ class OWMDS(widget.OWWidget):
                 model.setData(index, "separator", Qt.AccessibleDescriptionRole)
                 model.setData(index, Qt.NoItemFlags, role="flags")
 
-            self.colorvar_model[:] = ["Same color", ""] + all_vars
+            self.colorvar_model[:] = ["Same color", ""] + cd_vars
             set_separator(self.colorvar_model, 1)
 
             self.shapevar_model[:] = ["Same shape", ""] + disc_vars
