@@ -185,7 +185,7 @@ class TableWidget(QtGui.QTableWidget):
 
 class WebviewWidget(QtWebKit.QWebView):
     """WebKit window in a window"""
-    def __init__(self, parent=None, bridge=None, debug=None):
+    def __init__(self, parent=None, bridge=None, html=None, debug=None):
         """
         Parameters
         ----------
@@ -195,22 +195,28 @@ class WebviewWidget(QtWebKit.QWebView):
             The "bridge" object exposed as ``window.pybridge`` in JavaScript.
             Any bridge methods desired to be accessible from JS need to be
             decorated ``@QtCore.pyqtSlot(<*args>, result=<type>)``.
+        html: str
+            HTML content to set in the webview.
         debug: bool
             If True, enable context menu and webkit inspector.
         """
-        if debug is None:
-            import logging
-            debug = logging.getLogger().level <= logging.DEBUG
         super().__init__(parent)
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                             QtGui.QSizePolicy.Expanding))
         self._bridge = bridge
         try: parent.layout().addWidget(self)
         except (AttributeError, TypeError): pass
         settings = self.settings()
         settings.setAttribute(settings.LocalContentCanAccessFileUrls, True)
+        if debug is None:
+            import logging
+            debug = logging.getLogger().level <= logging.DEBUG
         if debug:
             settings.setAttribute(settings.DeveloperExtrasEnabled, True)
         else:
             self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        if html:
+            self.setHtml(html)
 
     def setContent(self, data, mimetype, url):
         super().setContent(data, mimetype, QtCore.QUrl(url))
@@ -559,6 +565,8 @@ def widgetLabel(widget, label="", labelWidth=None, **misc):
     lbl = QtGui.QLabel(label, widget)
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
+    else:
+        lbl.setFixedSize(lbl.sizeHint())
     miscellanea(lbl, None, widget, **misc)
     return lbl
 
@@ -1676,7 +1684,7 @@ def valueSlider(widget, master, value, box=None, label=None,
 # - can valueType be anything else than str?
 # - sendSelectedValue is not a great name
 def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
-             orientation='vertical', items=None, callback=None,
+             orientation='vertical', items=(), callback=None,
              sendSelectedValue=False, valueType=str,
              control2attributeDict=None, emptyString=None, editable=False,
              **misc):
@@ -1706,8 +1714,8 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type labelWidth: int
     :param callback: a function that is called when the value is changed
     :type callback: function
-    :param items: items that are put into the box
-    :type items: list or tuple
+    :param items: items (optionally with data) that are put into the box
+    :type items: tuple of str or tuples
     :param sendSelectedValue: flag telling whether to store/retrieve indices
         or string values from `value`
     :type sendSelectedValue: bool
@@ -1733,8 +1741,11 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     combo = QtGui.QComboBox(hb)
     combo.setEditable(editable)
     combo.box = hb
-    if items:
-        combo.addItems([str(i) for i in items])
+    for item in items:
+        if isinstance(item, (tuple, list)):
+            combo.addItem(*item)
+        else:
+            combo.addItem(str(item))
 
     if value:
         cindex = getdeepattr(master, value)

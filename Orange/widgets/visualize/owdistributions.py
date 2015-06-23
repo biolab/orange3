@@ -218,7 +218,7 @@ class OWDistributions(widget.OWWidget):
         bottomaxis.setLabel(var.name)
 
         self.set_left_axis_name()
-        if var.is_continuous:
+        if var and var.is_continuous:
             bottomaxis.setTicks(None)
             curve_est = self._density_estimator()
             edges, curve = curve_est(dist)
@@ -238,7 +238,7 @@ class OWDistributions(widget.OWWidget):
 
     def _on_relative_freq_changed(self):
         self.set_left_axis_name()
-        if self.cvar.is_discrete:
+        if self.cvar and self.cvar.is_discrete:
             self.display_contingency()
         else:
             self.display_distribution()
@@ -258,7 +258,7 @@ class OWDistributions(widget.OWWidget):
         palette = colorpalette.ColorPaletteGenerator(len(cvar.values))
         colors = [palette[i] for i in range(len(cvar.values))]
 
-        if var.is_continuous:
+        if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
             weights = numpy.array([numpy.sum(W) for _, W in cont])
@@ -296,7 +296,7 @@ class OWDistributions(widget.OWWidget):
 #                              fillLevel=0, brush=QtGui.QBrush(color))
 #                 item.setPen(QtGui.QPen(color))
 #                 self.plot.addItem(item)
-        elif var.is_discrete:
+        elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
@@ -309,8 +309,9 @@ class OWDistributions(widget.OWWidget):
 
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
-        if self.var.is_continuous and \
-                self.cont_est_type != OWDistributions.Hist:
+        if (self.var and
+            self.var.is_continuous and
+            self.cont_est_type != OWDistributions.Hist):
             set_label("Density")
         else:
             set_label(["Frequency", "Relative frequency"]
