@@ -31,6 +31,4 @@ class Average:
             else:
                 raise TypeError("Variable must be continuous or discrete")
 
-        var = copy.copy(variable)
-        var.compute_value = ReplaceUnknowns(variable, value)
-        return var
+        return variable.copy(compute_value=ReplaceUnknowns(variable, value))

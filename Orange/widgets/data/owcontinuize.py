@@ -166,9 +166,6 @@ class WeightedIndicator_1(Indicator1):
 
 
 def make_indicator_var(source, value_ind, weight=None, zero_based=True):
-    var = Orange.data.ContinuousVariable(
-        "{}={}".format(source.name, source.values[value_ind])
-    )
     if zero_based and weight is None:
         indicator = Indicator(source, value=value_ind)
     elif zero_based:
@@ -177,8 +174,10 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
         indicator = Indicator1(source, value=value_ind)
     else:
         indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
-    var.compute_value = indicator
-    return var
+    return Orange.data.ContinuousVariable(
+        "{}={}".format(source.name, source.values[value_ind]),
+        compute_value=indicator
+    )
 
 
 def dummy_coding(var, base_value=-1, zero_based=True):
@@ -309,16 +308,13 @@ def _ensure_dist(var, data_or_dist):
 
 
 def normalized_var(var, translate, scale):
-    new_var = Orange.data.ContinuousVariable(var.name)
-    norm = Normalizer(var, translate, scale)
-    new_var.compute_value = norm
-    return new_var
+    return Orange.data.ContinuousVariable(var.name,
+                                          compute_value=Normalizer(var, translate, scale))
 
 
 def ordinal_to_continuous(var):
-    new_var = Orange.data.ContinuousVariable(var.name)
-    new_var.compute_value = Identity(var)
-    return new_var
+    return Orange.data.ContinuousVariable(var.name,
+                                          compute_value=Identity(var))
 
 
 def ordinal_to_normalized_continuous(var, zero_based=True):

@@ -247,9 +247,8 @@ def merge_transforms(exp):
             new_var = Orange.data.DiscreteVariable(
                 exp.var.name,
                 values=exp.var.values,
-                ordered=exp.var.ordered
-            )
-            new_var.compute_value = merge_lookup(A, B)
+                ordered=exp.var.ordered,
+                compute_value=merge_lookup(A, B))
             assert isinstance(prev.sub, Var)
             return Transformed(prev.sub, new_var)
         else:
@@ -335,20 +334,21 @@ def remove_unused_values(var, data):
         return var
 
     used_values = [var.values[i] for i in unique]
-    new_var = Orange.data.DiscreteVariable(
-        "R_{}".format(var.name),
-        values=used_values
-    )
     translation_table = numpy.array([numpy.NaN] * len(var.values))
-    translation_table[unique] = range(len(new_var.values))
+    translation_table[unique] = range(len(used_values))
 
+    base_value = -1
     if 0 >= var.base_value < len(var.values):
         base = translation_table[var.base_value]
         if numpy.isfinite(base):
-            new_var.base_value = int(base)
+            base_value = int(base)
 
-    new_var.compute_value = Lookup(var, translation_table)
-    return new_var
+    return Orange.data.DiscreteVariable(
+        "R_{}".format(var.name),
+        values=used_values,
+        base_value=base_value,
+        compute_value=Lookup(var, translation_table)
+    )
 
 
 def sort_var_values(var):
@@ -361,9 +361,8 @@ def sort_var_values(var):
         [float(newvalues.index(value)) for value in var.values]
     )
 
-    newvar = Orange.data.DiscreteVariable(var.name, values=newvalues)
-    newvar.compute_value = Lookup(var, translation_table)
-    return newvar
+    return Orange.data.DiscreteVariable(var.name, values=newvalues,
+                                        compute_value=Lookup(var, translation_table))
 
 from Orange.preprocess.transformation import Lookup
 

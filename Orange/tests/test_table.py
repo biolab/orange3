@@ -14,6 +14,7 @@ from unittest.mock import Mock, MagicMock, patch
 
 class TableTestCase(unittest.TestCase):
     def setUp(self):
+        Variable._clear_all_caches()
         data.table.dataset_dirs.append("Orange/tests")
 
     def test_indexing_class(self):
@@ -689,7 +690,6 @@ class TableTestCase(unittest.TestCase):
             os.remove("test-zoo.tab")
 
     def test_save_pickle(self):
-        Variable._clear_all_caches()
         table = data.Table("iris")
         try:
             table.save("iris.pickle")

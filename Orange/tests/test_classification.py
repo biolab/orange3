@@ -10,7 +10,7 @@ import traceback
 import Orange.classification
 from Orange.classification import (
     Learner, Model, NaiveBayesLearner, LogisticRegressionLearner)
-from Orange.data import DiscreteVariable, Domain, Table
+from Orange.data import DiscreteVariable, Domain, Table, Variable
 from Orange.data.io import BasketFormat
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
@@ -202,17 +202,22 @@ class LearnerAccessibility(unittest.TestCase):
                           " namespace" % learner.__name__)
 
     def test_all_models_work_after_unpickling(self):
-        iris = Table('iris')
-        titanic = Table('titanic')
-        for learner in list(self.all_learners())[1:]:
+        Variable._clear_all_caches()
+        datasets = [Table('iris'), Table('titanic')]
+        for learner in list(self.all_learners()):
             try:
-                model = learner()(iris)
-                model(iris)
+                learner = learner()
             except Exception as err:
                 print('%s cannot be used with default parameters' % learner.__name__)
                 traceback.print_exc()
                 continue
 
-            model2 = pickle.loads(pickle.dumps(model))
-            np.testing.assert_almost_equal(model(iris), model2(iris),
-                                           err_msg='%s does not return same values when unpickled' % learner.__name__)
+            for ds in datasets:
+                model = learner(ds)
+                s = pickle.dumps(model, 0)
+                model2 = pickle.loads(s)
+
+                np.testing.assert_almost_equal(Table(model.domain, ds).X, Table(model2.domain, ds).X)
+                np.testing.assert_almost_equal(model(ds), model2(ds),
+                                               err_msg='%s does not return same values when unpickled %s' % (learner.__class__.__name__, ds.name))
+                #print('%s on %s works' % (learner, ds.name))
