@@ -203,7 +203,6 @@ class OWSelectRows(widget.OWWidget):
             le = gui.lineEdit(box, self, None)
             if contents:
                 le.setText(contents)
-            le.setMaximumWidth(60)
             le.setAlignment(Qt.Qt.AlignRight)
             le.editingFinished.connect(self.conditions_changed)
             return le
