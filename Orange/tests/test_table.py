@@ -5,7 +5,7 @@ from math import isnan
 import random
 
 from Orange import data
-from Orange.data import filter
+from Orange.data import filter, Variable
 from Orange.data import Unknown
 
 import numpy as np
@@ -689,6 +689,7 @@ class TableTestCase(unittest.TestCase):
             os.remove("test-zoo.tab")
 
     def test_save_pickle(self):
+        Variable._clear_all_caches()
         table = data.Table("iris")
         try:
             table.save("iris.pickle")
