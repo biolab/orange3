@@ -1,9 +1,11 @@
 import inspect
 import os
+import pickle
 import pkgutil
 import unittest
 
 import numpy as np
+import traceback
 
 import Orange.classification
 from Orange.classification import (
@@ -178,7 +180,7 @@ class SklTest(unittest.TestCase):
 
 
 class LearnerAccessibility(unittest.TestCase):
-    def test_all_learners_accessible_in_Orange_classification_namespace(self):
+    def all_learners(self):
         classification_modules = pkgutil.walk_packages(
             path=Orange.classification.__path__,
             prefix="Orange.classification.",
@@ -190,7 +192,27 @@ class LearnerAccessibility(unittest.TestCase):
                 continue
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if issubclass(class_, Learner):
-                    if not hasattr(Orange.classification, class_.__name__):
-                        self.fail("%s is not visible in Orange.classification"
-                                  " namespace" % class_.__name__)
+                if issubclass(class_, Learner) and 'base' not in class_.__module__:
+                    yield class_
+
+    def test_all_learners_accessible_in_Orange_classification_namespace(self):
+        for learner in self.all_learners():
+            if not hasattr(Orange.classification, learner.__name__):
+                self.fail("%s is not visible in Orange.classification"
+                          " namespace" % learner.__name__)
+
+    def test_all_models_work_after_unpickling(self):
+        iris = Table('iris')
+        titanic = Table('titanic')
+        for learner in list(self.all_learners())[1:]:
+            try:
+                model = learner()(iris)
+                model(iris)
+            except Exception as err:
+                print('%s cannot be used with default parameters' % learner.__name__)
+                traceback.print_exc()
+                continue
+
+            model2 = pickle.loads(pickle.dumps(model))
+            np.testing.assert_almost_equal(model(iris), model2(iris),
+                                           err_msg='%s does not return same values when unpickled' % learner.__name__)
