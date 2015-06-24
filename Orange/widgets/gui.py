@@ -2,6 +2,7 @@ import math
 import os
 import re
 import itertools
+import numpy
 from PyQt4 import QtGui, QtCore, QtWebKit
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from PyQt4.QtGui import QCursor, QApplication
@@ -129,7 +130,7 @@ class TableWidget(QtGui.QTableWidget):
                 name = '{:.4f}'.format(item_data)
             else:
                 name = str(item_data)
-            if isinstance(item_data, (float, int)):
+            if isinstance(item_data, (float, int, numpy.number)):
                 item = self.TableWidgetNumericItem(name)
             else:
                 item = QtGui.QTableWidgetItem(name)
