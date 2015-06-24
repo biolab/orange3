@@ -17,14 +17,6 @@ from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.widget import InputSignal
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
 
@@ -163,8 +155,8 @@ class OWDistributions(widget.OWWidget):
             domain = self.data.domain
             self.varmodel[:] = list(domain)
             self.groupvarmodel[:] = \
-                ["(None)"] + list(filter(is_discrete, domain))
-            if is_discrete(domain.class_var):
+                ["(None)"] + [var for var in domain if var.is_discrete]
+            if domain.has_discrete_class:
                 self.groupvar_idx = \
                     list(self.groupvarmodel).index(domain.class_var)
             self.openContext(domain)
@@ -226,7 +218,7 @@ class OWDistributions(widget.OWWidget):
         bottomaxis.setLabel(var.name)
 
         self.set_left_axis_name()
-        if is_continuous(var):
+        if var and var.is_continuous:
             bottomaxis.setTicks(None)
             curve_est = self._density_estimator()
             edges, curve = curve_est(dist)
@@ -246,7 +238,7 @@ class OWDistributions(widget.OWWidget):
 
     def _on_relative_freq_changed(self):
         self.set_left_axis_name()
-        if is_discrete(self.cvar):
+        if self.cvar and self.cvar.is_discrete:
             self.display_contingency()
         else:
             self.display_distribution()
@@ -266,7 +258,7 @@ class OWDistributions(widget.OWWidget):
         palette = colorpalette.ColorPaletteGenerator(len(cvar.values))
         colors = [palette[i] for i in range(len(cvar.values))]
 
-        if is_continuous(var):
+        if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
             weights = numpy.array([numpy.sum(W) for _, W in cont])
@@ -304,7 +296,7 @@ class OWDistributions(widget.OWWidget):
 #                              fillLevel=0, brush=QtGui.QBrush(color))
 #                 item.setPen(QtGui.QPen(color))
 #                 self.plot.addItem(item)
-        elif is_discrete(var):
+        elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
@@ -317,8 +309,9 @@ class OWDistributions(widget.OWWidget):
 
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
-        if is_continuous(self.var) and \
-                self.cont_est_type != OWDistributions.Hist:
+        if (self.var and
+            self.var.is_continuous and
+            self.cont_est_type != OWDistributions.Hist):
             set_label("Density")
         else:
             set_label(["Frequency", "Relative frequency"]
@@ -326,7 +319,7 @@ class OWDistributions(widget.OWWidget):
 
     def enable_disable_rel_freq(self):
         self.cb_rel_freq.setDisabled(
-            self.var is None or self.cvar is None or is_continuous(self.var))
+            self.var is None or self.cvar is None or self.var.is_continuous)
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)

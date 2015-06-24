@@ -9,14 +9,6 @@ __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "Bootstrap", "TestOnTestData", "sample"]
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 class Results:
     """
     Class for storing predictions in model testing.
@@ -129,9 +121,9 @@ class Results:
                     probabilities is not None and probabilities.shape[1]],
             "mismatching number of rows")
         nclasses = set_or_raise(
-            nclasses, [domain is not None and (len(domain.class_var.values)
-                                               if is_discrete(domain.class_var)
-                                               else None),
+            nclasses, [domain and (len(domain.class_var.values)
+                                   if domain.has_discrete_class
+                                   else None),
                        probabilities is not None and probabilities.shape[2]],
             "mismatching number of class values")
         if nclasses is not None and probabilities is not None:
@@ -210,7 +202,7 @@ class CrossValidation(Results):
         self.k = k
         self.random_state = random_state
         Y = data.Y.copy().flatten()
-        if is_discrete(data.domain.class_var):
+        if data.domain.has_discrete_class:
             indices = skl_cross_validation.StratifiedKFold(
                 Y, self.k, shuffle=True, random_state=self.random_state
             )
@@ -224,7 +216,6 @@ class CrossValidation(Results):
         if self.store_models:
             self.models = []
         ptr = 0
-        class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
             if len(test_data) == 0:
@@ -241,11 +232,11 @@ class CrossValidation(Results):
                 if self.store_models:
                     fold_models.append(model)
 
-                if is_discrete(class_var):
+                if data.domain.has_discrete_class:
                     values, probs = model(test_data, model.ValueProbs)
                     self.predicted[i][fold_slice] = values
                     self.probabilities[i][fold_slice, :] = probs
-                elif is_continuous(class_var):
+                elif data.domain.has_continuous_class:
                     values = model(test_data, model.Value)
                     self.predicted[i][fold_slice] = values
 
@@ -277,7 +268,6 @@ class LeaveOneOut(Results):
         if self.store_models:
             self.models = []
         self.actual = Y.flatten()
-        class_var = data.domain.class_var
         for test_idx in self.row_indices:
             X[[0, test_idx]] = X[[test_idx, 0]]
             Y[[0, test_idx]] = Y[[test_idx, 0]]
@@ -294,11 +284,11 @@ class LeaveOneOut(Results):
                 if self.store_models:
                     fold_models.append(model)
 
-                if is_discrete(class_var):
+                if data.domain.has_discrete_class:
                     values, probs = model(test_data, model.ValueProbs)
                     self.predicted[i][test_idx] = values
                     self.probabilities[i][test_idx, :] = probs
-                elif is_continuous(class_var):
+                elif data.domain.has_continuous_class:
                     values = model(test_data, model.Value)
                     self.predicted[i][test_idx] = values
 
@@ -314,17 +304,16 @@ class TestOnTrainingData(Results):
             models = []
             self.models = [models]
         self.actual = data.Y.flatten()
-        class_var = data.domain.class_var
         for i, learner in enumerate(learners):
             model = learner(data)
             if self.store_models:
                 models.append(model)
 
-            if is_discrete(class_var):
+            if data.domain.has_discrete_class:
                 values, probs = model(data, model.ValueProbs)
                 self.predicted[i] = values
                 self.probabilities[i] = probs
-            elif is_continuous(class_var):
+            elif data.domain.has_continuous_class:
                 values = model(data, model.Value)
                 self.predicted[i] = values
 
@@ -353,7 +342,6 @@ class Bootstrap(Results):
         predicted = [[] for _ in learners]
         probabilities = [[] for _ in learners]
         fold_start = 0
-        class_var = data.domain.class_var
         for train, test in indices:
             train_data, test_data = data[train], data[test]
             self.folds.append(slice(fold_start, fold_start + len(test)))
@@ -368,11 +356,11 @@ class Bootstrap(Results):
                 if self.store_models:
                     fold_models.append(model)
 
-                if is_discrete(class_var):
+                if data.domain.has_discrete_class:
                     values, probs = model(test_data, model.ValueProbs)
                     predicted[i].append(values)
                     probabilities[i].append(probs)
-                elif is_continuous(class_var):
+                elif data.domain.has_continuous_class:
                     values = model(test_data, model.Value)
                     predicted[i].append(values)
 
@@ -381,7 +369,7 @@ class Bootstrap(Results):
         row_indices = np.hstack(row_indices)
         actual = np.hstack(actual)
         predicted = np.array([np.hstack(pred) for pred in predicted])
-        if is_discrete(class_var):
+        if data.domain.has_discrete_class:
             probabilities = np.array([np.vstack(prob) for prob in probabilities])
         nrows = len(actual)
         nmodels = len(predicted)
@@ -390,7 +378,7 @@ class Bootstrap(Results):
         self.row_indices = row_indices
         self.actual = actual
         self.predicted = predicted.reshape(nmodels, nrows)
-        if is_discrete(class_var):
+        if data.domain.has_discrete_class:
             self.probabilities = probabilities
 
 
@@ -408,14 +396,13 @@ class TestOnTestData(Results):
         self.row_indices = np.arange(len(test_data))
         self.actual = test_data.Y.flatten()
 
-        class_var = train_data.domain.class_var
         for i, learner in enumerate(learners):
             model = learner(train_data)
-            if is_discrete(class_var):
+            if train_data.domain.has_discrete_class:
                 values, probs = model(test_data, model.ValueProbs)
                 self.predicted[i] = values
                 self.probabilities[i][:, :] = probs
-            elif is_continuous(class_var):
+            elif train_data.domain.has_continuous_class:
                 values = model(test_data, model.Value)
                 self.predicted[i] = values
 
@@ -469,7 +456,7 @@ def sample(table, n=0.7, stratified=False, replace=False,
         return table[sample], table[others]
 
     n = len(table) - n
-    if stratified and is_discrete(table.domain.class_var):
+    if stratified and table.domain.has_discrete_class:
         test_size = max(len(table.domain.class_var.values), n)
         ind = skl_cross_validation.StratifiedShuffleSplit(
             table.Y.ravel(), n_iter=1,

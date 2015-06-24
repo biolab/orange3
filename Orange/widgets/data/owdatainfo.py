@@ -37,14 +37,18 @@ class OWDataInfo(widget.OWWidget):
             bo = gui.widgetBox(self.controlArea, box,
                                addSpace=False and box != "Meta Attributes")
             gui.label(bo, self, "%%(%s)s" % name)
-        self.targets = "Discrete class with 123 values"
-        QtGui.qApp.processEvents()
-        QtCore.QTimer.singleShot(0, self.fix_size)
 
-    def fix_size(self):
-        self.adjustSize()
-        self.targets = "None"
-        self.setFixedSize(self.size())
+        # ensure the widget has some decent minimum width.
+        self.targets = "Discrete class with 123 values"
+        self.layout().activate()
+        # NOTE: The minimum width is set on the 'contained' widget and
+        # not `self`. The layout will set a fixed size to `self` taking
+        # into account the minimum constraints of the children (it would
+        # override any minimum/fixed size set on `self`).
+        self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
+        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
+
+        self.targets = ""
 
     def data(self, data):
         def n_or_none(i):
@@ -105,7 +109,7 @@ class OWDataInfo(widget.OWWidget):
 
         class_var = domain.class_var
         if class_var:
-            if isinstance(class_var, ContinuousVariable):
+            if class_var.is_continuous:
                 self.targets = "Continuous target variable"
             else:
                 self.targets = "Discrete class with %i values" % \
@@ -137,5 +141,6 @@ if __name__ == "__main__":
     ow = OWDataInfo()
     ow.show()
     ow.data(Table("iris"))
+    ow.raise_()
     a.exec_()
     ow.saveSettings()

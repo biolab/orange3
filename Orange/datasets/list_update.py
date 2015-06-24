@@ -2,7 +2,6 @@ import os
 import json
 
 import Orange
-from Orange.data import DiscreteVariable, ContinuousVariable
 
 external_datasets = [
     ("iris_url", "https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab"),
@@ -19,14 +18,14 @@ def data_info(name, location):
         'location': location,
         'rows': len(data),
         'features': {
-            'discrete': sum(isinstance(x, DiscreteVariable) for x in attr),
-            'continuous': sum(isinstance(x, ContinuousVariable) for x in attr),
-            'meta': len(data.domain.metas)
+            'discrete': sum(a.is_discrete for a in attr),
+            'continuous': sum(a.is_continuous for a in attr),
+            'meta': len(data.domain.metas),
         },
         'missing': bool(data.has_missing()),
         'target': {
-            'type': 'discrete' if isinstance(class_var, DiscreteVariable) else 'continuous',
-            'values': len(class_var.values) if isinstance(class_var, DiscreteVariable) else None
+            'type': 'discrete' if data.domain.has_discrete_class else 'continuous',
+            'values': len(class_var.values) if data.domain.has_discrete_class else None,
         }
     }
 

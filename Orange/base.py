@@ -4,8 +4,7 @@ import numpy as np
 import scipy
 import bottlechest as bn
 
-from Orange.data import (Table, Storage, Instance, Value,
-                         ContinuousVariable, DiscreteVariable)
+from Orange.data import Table, Storage, Instance, Value
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 from Orange.misc.wrapper_meta import WrapperMeta
 
@@ -99,8 +98,7 @@ class Model:
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if (ret > 0
-            and any(isinstance(v, ContinuousVariable)
-                    for v in self.domain.class_vars)):
+            and any(v.is_continuous for v in self.domain.class_vars)):
             raise ValueError("cannot predict continuous distributions")
 
         # Call the predictor
@@ -261,7 +259,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def preprocess(self, data):
         data = super().preprocess(data)
 
-        if any(isinstance(v, DiscreteVariable) and len(v.values) > 2
+        if any(v.is_discrete and len(v.values) > 2
                for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support " +
                              "multinomial variables.")

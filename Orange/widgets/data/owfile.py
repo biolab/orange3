@@ -3,7 +3,6 @@ from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 from Orange.data.io import FileFormats
 from Orange.widgets.widget import OutputSignal
 
@@ -11,7 +10,7 @@ from Orange.widgets.widget import OutputSignal
 def add_origin(examples, filename):
     """Adds attribute with file location to each variable"""
     vars = examples.domain.variables + examples.domain.metas
-    strings = [var for var in vars if isinstance(var, StringVariable)]
+    strings = [var for var in vars if var.is_string]
     dir_name, basename = os.path.split(filename)
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
@@ -199,9 +198,9 @@ class OWFile(widget.OWWidget):
             self.infoa.setText(
                 "{} instance(s), {} feature(s), {} meta attributes"
                 .format(len(data), len(domain.attributes), len(domain.metas)))
-            if isinstance(domain.class_var, ContinuousVariable):
+            if domain.has_continuous_class:
                 self.infob.setText("Regression; numerical class.")
-            elif isinstance(domain.class_var, DiscreteVariable):
+            elif domain.has_discrete_class:
                 self.infob.setText("Classification; " +
                                    "discrete class with {} values."
                                    .format(len(domain.class_var.values)))

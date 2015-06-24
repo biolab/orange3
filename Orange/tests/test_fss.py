@@ -60,11 +60,11 @@ class TestFSS(unittest.TestCase):
     def test_defaults(self):
         fs = SelectBestFeatures(k=3)
         data2 = fs(Impute(Table('auto-mpg')))
-        self.assertTrue(all(isinstance(a, ContinuousVariable) for a in data2.domain.attributes))
+        self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
         data2 = fs(Table('wine'))
-        self.assertTrue(all(isinstance(a, ContinuousVariable) for a in data2.domain.attributes))
+        self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
         data2 = fs(Table('titanic'))
-        self.assertTrue(all(isinstance(a, DiscreteVariable) for a in data2.domain.attributes))
+        self.assertTrue(all(a.is_discrete for a in data2.domain.attributes))
 
 
 class TestRemoveNaNColumns(unittest.TestCase):

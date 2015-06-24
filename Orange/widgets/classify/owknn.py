@@ -5,10 +5,6 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
 class OWKNNLearner(widget.OWWidget):
 
     name = "Nearest Neighbors"

@@ -7,7 +7,7 @@ from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
-from Orange.data import Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Domain
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
@@ -53,9 +53,10 @@ class SelectBestFeatures:
         # select default method according to the provided data
         if method is None:
             autoMethod = True
-            discr_ratio = sum(isinstance(a, DiscreteVariable)
-                              for a in data.domain.attributes) / len(data.domain.attributes)
-            if isinstance(data.domain.class_var, DiscreteVariable):
+            discr_ratio = (sum(a.is_discrete
+                               for a in data.domain.attributes)
+                           / len(data.domain.attributes))
+            if data.domain.has_discrete_class:
                 if discr_ratio >= 0.5:
                     method = GainRatio()
                 else:

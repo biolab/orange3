@@ -262,11 +262,9 @@ class Domain:
                 is set, the check includes the class attribute(s).
         """
         if not include_class:
-            return any(isinstance(var, DiscreteVariable)
-                       for var in self.attributes)
+            return any(var.is_discrete for var in self.attributes)
         else:
-            return any(isinstance(var, DiscreteVariable)
-                       for var in self.variables)
+            return any(var.is_discrete for var in self.variables)
 
     def has_continuous_attributes(self, include_class=False):
         """
@@ -274,11 +272,17 @@ class Domain:
         `include_class` is set, the check includes the class attribute(s).
         """
         if not include_class:
-            return any(isinstance(var, ContinuousVariable)
-                       for var in self.attributes)
+            return any(var.is_continuous for var in self.attributes)
         else:
-            return any(isinstance(var, ContinuousVariable)
-                       for var in self.variables)
+            return any(var.is_continuous for var in self.variables)
+
+    @property
+    def has_continuous_class(self):
+        return self.class_var and self.class_var.is_continuous
+
+    @property
+    def has_discrete_class(self):
+        return self.class_var and self.class_var.is_discrete
 
     def get_conversion(self, source):
         """

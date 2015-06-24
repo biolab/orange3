@@ -18,7 +18,6 @@ from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
 import Orange.data
-from Orange.data import ContinuousVariable
 from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
@@ -63,8 +62,7 @@ class RichTableDecorator(QIdentityProxyModel):
             raise TypeError()
 
         if source is not None:
-            self._continuous = [isinstance(var, ContinuousVariable)
-                                for var in source.vars]
+            self._continuous = [var.is_continuous for var in source.vars]
             labels = []
             for var in source.vars:
                 if isinstance(var, Orange.data.Variable):
@@ -945,7 +943,7 @@ def format_summary(summary):
     else:
         if len(summary.domain.class_vars) > 1:
             c_text = "%s outcome%s" % sp(len(summary.domain.class_vars))
-        elif isinstance(summary.domain.class_var, ContinuousVariable):
+        elif summary.domain.has_continuous_class:
             c_text = "Continuous target variable"
         else:
             c_text = "Discrete class with %s value%s" % sp(

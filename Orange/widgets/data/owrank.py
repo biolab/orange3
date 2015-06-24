@@ -17,22 +17,6 @@ import Orange.preprocess.discretize
 from Orange.widgets import widget, settings, gui
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
-def is_class_discrete(data):
-    return is_discrete(data.domain.class_var)
-
-
-def is_class_continuous(data):
-    return is_continuous(data.domain.class_var)
-
-
 def table(shape, fill=None):
     """ Return a 2D table with shape filed with ``fill``
     """
@@ -266,13 +250,12 @@ class OWRank(widget.OWWidget):
         self.data = data
         if self.data is not None:
             attrs = self.data.domain.attributes
-            self.usefulAttributes = \
-                [attr for attr in attrs
-                 if is_discrete(attr) or is_continuous(attr)]
+            self.usefulAttributes = [attr for attr in attrs
+                                     if attr.is_discrete or attr.is_continuous]
 
-            if is_class_continuous(self.data):
+            if self.data.domain.has_continuous_class:
                 self.switchRanksMode(1)
-            elif is_class_discrete(self.data):
+            elif self.data.domain.has_discrete_class:
                 self.switchRanksMode(0)
             else:
                 # String or other.
@@ -281,7 +264,7 @@ class OWRank(widget.OWWidget):
 
             self.ranksModel.setRowCount(len(attrs))
             for i, a in enumerate(attrs):
-                if is_discrete(a):
+                if a.is_discrete:
                     v = len(a.values)
                 else:
                     v = "C"
@@ -422,7 +405,7 @@ class OWRank(widget.OWWidget):
         if not self.discretizedData:
             discretizer = Orange.preprocess.discretize.EqualFreq(n=4)
             contAttrs = [attr for attr in self.data.domain.attributes
-                         if is_continuous(attr)]
+                         if attr.is_continuous]
             at = []
             attrDict = {}
             for attri in contAttrs:

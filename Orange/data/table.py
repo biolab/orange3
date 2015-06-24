@@ -1205,7 +1205,7 @@ class Table(MutableSequence, Storage):
                 m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
             else:
                 m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
-            if isinstance(var, DiscreteVariable):
+            if var.is_discrete:
                 if W is not None:
                     W = W.ravel()
                 dist, unknowns = bn.bincount(m, len(var.values) - 1, W)
@@ -1241,7 +1241,7 @@ class Table(MutableSequence, Storage):
                 raise ValueError("No row variable")
 
         row_desc = self.domain[row_var]
-        if not isinstance(row_desc, DiscreteVariable):
+        if not row_desc.is_discrete:
             raise TypeError("Row variable must be discrete")
         row_indi = self.domain.index(row_var)
         n_rows = len(row_desc.values)
@@ -1257,12 +1257,12 @@ class Table(MutableSequence, Storage):
         col_desc = [self.domain[var] for var in col_vars]
         col_indi = [self.domain.index(var) for var in col_vars]
 
-        if any(not isinstance(var, (ContinuousVariable, DiscreteVariable))
+        if any(not (var.is_discrete or var.is_continuous)
                for var in col_desc):
             raise ValueError("contingency can be computed only for discrete "
                              "and continuous values")
 
-        if any(isinstance(var, ContinuousVariable) for var in col_desc):
+        if any(var.is_continuous for var in col_desc):
             if bn.countnans(row_data):
                 raise ValueError("cannot compute contigencies with missing "
                                  "row data")
@@ -1276,7 +1276,7 @@ class Table(MutableSequence, Storage):
             arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
 
             vars = [(e, f_ind(col_indi[e]), col_desc[e]) for e in arr_indi]
-            disc_vars = [v for v in vars if isinstance(v[2], DiscreteVariable)]
+            disc_vars = [v for v in vars if v[2].is_discrete]
             if disc_vars:
                 if sp.issparse(arr):
                     max_vals = max(len(v[2].values) for v in disc_vars)
@@ -1291,8 +1291,7 @@ class Table(MutableSequence, Storage):
                         contingencies[col_i] = bn.contingency(arr[:, arr_i],
                                                               row_data, len(var.values) - 1, n_rows - 1, W)
 
-            cont_vars = [v for v in vars
-                         if isinstance(v[2], ContinuousVariable)]
+            cont_vars = [v for v in vars if v[2].is_continuous]
             if cont_vars:
 
                 classes = row_data.astype(dtype=np.int8)

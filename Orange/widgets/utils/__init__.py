@@ -1,13 +1,12 @@
 from functools import reduce
-from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable
 
 
 def vartype(var):
-    if isinstance(var, DiscreteVariable):
+    if var.is_discrete:
         return 1
-    elif isinstance(var, ContinuousVariable):
+    elif var.is_continuous:
         return 2
-    elif isinstance(var, StringVariable):
+    elif var.is_string:
         return 3
     else:
         return 0

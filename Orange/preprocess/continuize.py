@@ -1,4 +1,4 @@
-from Orange.data import DiscreteVariable, ContinuousVariable, Domain
+from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
 from .transformation import Identity, Indicator, Indicator1, Normalizer
 from .preprocess import Continuize
@@ -20,9 +20,9 @@ class DomainContinuizer:
     def __call__(self, data):
         def transform_discrete(var):
             if (len(var.values) < 2 or
-                        treat == Continuize.Remove or
-                            treat == Continuize.RemoveMultinomial and
-                            len(var.values) > 2):
+                    treat == Continuize.Remove or
+                    treat == Continuize.RemoveMultinomial and
+                    len(var.values) > 2):
                 return []
             if treat == Continuize.AsOrdinal:
                 new_var = ContinuousVariable(var.name)
@@ -61,7 +61,7 @@ class DomainContinuizer:
             nonlocal var_ptr
             new_vars = []
             for var in s:
-                if isinstance(var, DiscreteVariable):
+                if var.is_discrete:
                     new_vars += transform_discrete(var)
                     if needs_discrete:
                         var_ptr += 1
@@ -77,9 +77,8 @@ class DomainContinuizer:
         transform_class = self.transform_class
 
         domain = data if isinstance(data, Domain) else data.domain
-        if treat == Continuize.ReportError and any(
-                        isinstance(var, DiscreteVariable) and len(var.values) > 2
-                        for var in domain):
+        if (treat == Continuize.ReportError and
+                any(var.is_discrete and len(var.values) > 2 for var in domain)):
             raise ValueError("data has multinomial attributes")
         needs_discrete = (treat == Continuize.FrequentAsBase and
                           domain.has_discrete_attributes(transform_class))

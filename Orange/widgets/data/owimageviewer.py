@@ -256,7 +256,7 @@ class ThumbnailWidget(QGraphicsWidget):
             return sum(col_widths) + (ncol - 1) * spacing
 
         ncol_best = 1
-        for ncol in range(2, len(widths)):
+        for ncol in range(2, len(widths) + 1):
             w = flow_width(widths, spacing, ncol)
             if w <= constraint:
                 ncol_best = ncol
@@ -320,10 +320,6 @@ _ImageItem = namedtuple(
      "url",       # Composed final url.
      "future"]    # Future instance yielding an QImage
 )
-
-
-def is_string(var):
-    return isinstance(var, Orange.data.StringVariable)
 
 
 class OWImageViewer(widget.OWWidget):
@@ -421,7 +417,7 @@ class OWImageViewer(widget.OWWidget):
         if data is not None:
             domain = data.domain
             self.allAttrs = domain.variables + domain.metas
-            self.stringAttrs = list(filter(is_string, self.allAttrs))
+            self.stringAttrs = [a for a in self.allAttrs if a.is_string]
 
             self.stringAttrs = sorted(
                 self.stringAttrs,
@@ -773,7 +769,7 @@ def main():
     rval = app.exec_()
     w.saveSettings()
     sip.delete(w)
-    app.processEvenets()
+    app.processEvents()
     return rval
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@ import ctypes as ct
 
 import numpy as np
 from Orange.classification import Learner, Model
-from Orange.data import DiscreteVariable, ContinuousVariable, Instance, Table
 
 __all__ = ['SimpleTreeLearner']
 
@@ -107,10 +106,10 @@ class SimpleTreeModel(Model):
             n_cls = len(data.domain.class_vars)
             raise ValueError("Number of classes should be 1: {}".format(n_cls))
 
-        if isinstance(data.domain.class_var, DiscreteVariable):
+        if data.domain.has_discrete_class:
             self.type = Classification
             self.cls_vals = len(data.domain.class_var.values)
-        elif isinstance(data.domain.class_var, ContinuousVariable):
+        elif data.domain.has_continuous_class:
             self.type = Regression
             self.cls_vals = 0
         else:
@@ -130,10 +129,10 @@ class SimpleTreeModel(Model):
         attr_vals = []
         domain = []
         for attr in data.domain.attributes:
-            if isinstance(attr, DiscreteVariable):
+            if attr.is_discrete:
                 attr_vals.append(len(attr.values))
                 domain.append(IntVar)
-            elif isinstance(attr, ContinuousVariable):
+            elif attr.is_continuous:
                 attr_vals.append(0)
                 domain.append(FloatVar)
             else:
@@ -251,4 +250,3 @@ class SimpleTreeModel(Model):
             xs.append(self.dumps_tree(n.children[i]))
         xs.append('}')
         return ' '.join(xs)
-
