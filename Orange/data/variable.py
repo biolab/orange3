@@ -11,7 +11,9 @@ from . import _variable
 ValueUnknown = Unknown  # Shadowing within classes
 
 
-def make_variable(cls, *args):
+def make_variable(cls, compute_value, *args):
+    if compute_value is not None:
+        return cls(*args)
     return cls.make(*args)
 
 
@@ -193,7 +195,9 @@ class Variable(metaclass=VariableMeta):
     def __reduce__(self):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
-        return make_variable, (self.__class__, self.name), self.__dict__
+
+        cv = None if self.compute_value == self.__class__.compute_value else self.compute_value
+        return make_variable, (self.__class__, cv, self.name), self.__dict__
 
     def __copy__(self):
         """
@@ -399,7 +403,8 @@ class DiscreteVariable(Variable):
     def __reduce__(self):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
-        return make_variable, (self.__class__, self.name,
+        cv = None if self.compute_value == self.__class__.compute_value else self.compute_value
+        return make_variable, (self.__class__, cv, self.name,
                                self.values, self.ordered, self.base_value), \
             self.__dict__
 
