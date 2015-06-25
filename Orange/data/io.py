@@ -228,7 +228,7 @@ class TabDelimFormat:
 
     @classmethod
     def _write_fast(cls, f, data):
-        wa = [var.repr_val for var in data.domain.variables + data.domain.metas]
+        wa = [var.str_val for var in data.domain.variables + data.domain.metas]
         for Xi, Yi, Mi in zip(data.X, data._Y, data.metas):
             f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
             f.write("\n")
