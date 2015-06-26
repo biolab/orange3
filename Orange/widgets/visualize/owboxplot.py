@@ -230,7 +230,8 @@ class OWBoxPlot(widget.OWWidget):
     def reset_all_data(self):
         self.attr_list_box.clear()
         self.group_list_box.clear()
-        self.box_scene.clear()
+        self.clear_scene()
+        self.infot1.setText("")
 
     def attr_changed(self):
         self.compute_box_data()
@@ -375,6 +376,7 @@ class OWBoxPlot(widget.OWWidget):
                                    self.scene_width, len(self.boxes * 40) + 90)
         self.box_view.centerOn(self.scene_width / 2,
                               -30 - len(self.boxes) * 40 / 2 + 45)
+        self.infot1.setText("")
 
     # noinspection PyPep8Naming
     def compute_tests(self):
