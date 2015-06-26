@@ -547,8 +547,7 @@ from Orange.statistics import distribution
 
 def column_imputer_defaults(variable, table, default):
     transform = ReplaceUnknowns(variable, default)
-    var = copy.copy(variable)
-    var.compute_value = ReplaceUnknowns(variable, default)
+    var = variable.copy(compute_value=ReplaceUnknowns(variable, default))
     return ColumnImputerDefaults(table.domain, (var,),
                                  [transform], [default])
 
@@ -592,13 +591,12 @@ def column_imputer_as_value(variable, table):
         var = Orange.data.DiscreteVariable(
             fmt.format(var=variable),
             values=variable.values + [value],
-            base_value=variable.base_value
-        )
-        var.compute_value = Lookup(
-            variable,
-            numpy.arange(len(variable.values), dtype=int),
-            unknown=len(variable.values)
-        )
+            base_value=variable.base_value,
+            compute_value=Lookup(
+                variable,
+                numpy.arange(len(variable.values), dtype=int),
+                unknown=len(variable.values)
+            ))
         codomain = [var]
         transformers = [var.compute_value]
     elif variable.is_continuous:
@@ -606,8 +604,7 @@ def column_imputer_as_value(variable, table):
         var = Orange.data.DiscreteVariable(
             fmt.format(var=variable),
             values=("undef", "def"),
-        )
-        var.compute_value = IsDefined(variable)
+            compute_value=IsDefined(variable))
         codomain = [variable, var]
         stats = basic_stats.BasicStats(table, variable)
         transformers = [ReplaceUnknowns(variable, stats.mean),

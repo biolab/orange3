@@ -5,7 +5,7 @@ from math import isnan
 import random
 
 from Orange import data
-from Orange.data import filter
+from Orange.data import filter, Variable
 from Orange.data import Unknown
 
 import numpy as np
@@ -14,6 +14,7 @@ from unittest.mock import Mock, MagicMock, patch
 
 class TableTestCase(unittest.TestCase):
     def setUp(self):
+        Variable._clear_all_caches()
         data.table.dataset_dirs.append("Orange/tests")
 
     def test_indexing_class(self):

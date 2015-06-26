@@ -295,9 +295,7 @@ class _ImputeRandom:
 
     def __call__(self, data, variable):
         dist = distribution.get_distribution(data, variable)
-        var = copy.copy(variable)
-        var.compute_value = self.ReplaceUnknownsSampleRandom(variable, dist)
-        return var
+        return variable.copy(compute_value=self.ReplaceUnknownsSampleRandom(variable, dist))
 
 
 class _RemoveNaNRows(preprocess.preprocess.Preprocess):
@@ -614,10 +612,7 @@ class _Scaling(preprocess.preprocess.Preprocess):
             else:
                 s = 1
             factor = 1 / s
-            newvar = copy.copy(var)
-            newvar.compute_value = \
-                preprocess.transformation.Normalizer(var, c, factor)
-            return newvar
+            return var.copy(compute_value=preprocess.transformation.Normalizer(var, c, factor))
 
         newvars = []
         for var in data.domain.attributes:

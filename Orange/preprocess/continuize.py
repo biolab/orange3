@@ -25,19 +25,15 @@ class DomainContinuizer:
                     len(var.values) > 2):
                 return []
             if treat == Continuize.AsOrdinal:
-                new_var = ContinuousVariable(var.name)
-                new_var.compute_value = Identity(var)
+                new_var = ContinuousVariable(var.name,
+                                             compute_value=Identity(var))
                 return [new_var]
             if treat == Continuize.AsNormalizedOrdinal:
-                new_var = ContinuousVariable(var.name)
                 n_values = max(1, len(var.values))
                 if self.zero_based:
-                    new_var.compute_value = \
-                        Normalizer(var, 0, 1 / (n_values - 1))
+                    return [ContinuousVariable(var.name, compute_value=Normalizer(var, 0, 1 / (n_values - 1)))]
                 else:
-                    new_var.compute_value = \
-                        Normalizer(var, (n_values - 1) / 2, 2 / (n_values - 1))
-                return [new_var]
+                    return [ContinuousVariable(var.name, compute_value=Normalizer(var, (n_values - 1) / 2, 2 / (n_values - 1)))]
 
             new_vars = []
             if treat == Continuize.Indicators:
@@ -52,8 +48,8 @@ class DomainContinuizer:
                 if i == base:
                     continue
                 new_var = ContinuousVariable(
-                    "{}={}".format(var.name, val))
-                new_var.compute_value = ind_class(var, i)
+                    "{}={}".format(var.name, val),
+                    compute_value=ind_class(var, i))
                 new_vars.append(new_var)
             return new_vars
 
