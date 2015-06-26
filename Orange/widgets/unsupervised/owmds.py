@@ -92,7 +92,7 @@ class OWMDS(widget.OWWidget):
     icon = "icons/MDS.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]
-    outputs = [("Data", Orange.data.Table),
+    outputs = [("Data", Orange.data.Table, widget.Default),
                ("Data Subset", Orange.data.Table)]
 
     #: Initialization type
@@ -758,23 +758,23 @@ class OWMDS(widget.OWWidget):
             output = embedding = None
 
         if self.embedding is not None and self.data is not None:
-            X, Y, M = self.data.X, self.data.Y, self.data.metas
             domain = self.data.domain
             attrs = domain.attributes
             class_vars = domain.class_vars
             metas = domain.metas
 
-            if self.output_embedding_role == OWMDS.NoRole:
-                pass
-            elif self.output_embedding_role == OWMDS.AttrRole:
+            if self.output_embedding_role == OWMDS.AttrRole:
                 attrs = attrs + embedding.domain.attributes
-                X = numpy.c_[X, embedding.X]
             elif self.output_embedding_role == OWMDS.MetaRole:
                 metas = metas + embedding.domain.attributes
-                M = numpy.c_[M, embedding.X]
 
             domain = Orange.data.Domain(attrs, class_vars, metas)
-            output = Orange.data.Table.from_numpy(domain, X, Y, M)
+            output = Orange.data.Table.from_table(domain, self.data)
+
+            if self.output_embedding_role == OWMDS.AttrRole:
+                output.X[:, -2:] = embedding.X
+            elif self.output_embedding_role == OWMDS.MetaRole:
+                output.metas[:, -2:] = embedding.X
 
         self.send("Data", output)
         if output is not None and self._selection_mask is not None and \
