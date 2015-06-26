@@ -67,7 +67,7 @@ class OWBoxPlot(widget.OWWidget):
     """
     Here's how the widget's functions call each other:
 
-    - `data` is a signal handler fills the list boxes and calls `attr_changed`.
+    - `set_data` is a signal handler fills the list boxes and calls `attr_changed`.
 
     - `attr_changed` handles changes of attribute or grouping (callbacks for
     list boxes). It recomputes box data by calling `compute_box_data`, shows
@@ -213,6 +213,7 @@ class OWBoxPlot(widget.OWWidget):
             dataset = None
         self.closeContext()
         self.dataset = dataset
+        self.dist = self.stats = self.conts = []
         self.grouping_select = []
         self.attributes_select = []
         self.attr_list_box.clear()
@@ -294,7 +295,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def layout_changed(self):
         self.clear_scene()
-        if len(self.conts) == len(self.dist) == 0:
+        if self.dataset is None or len(self.conts) == len(self.dist) == 0:
             return
 
         if not self.is_continuous:
@@ -316,6 +317,9 @@ class OWBoxPlot(widget.OWWidget):
         self.display_changed()
 
     def display_changed(self):
+        if self.dataset is None:
+            return
+
         if not self.is_continuous:
             return self.display_changed_disc()
 
