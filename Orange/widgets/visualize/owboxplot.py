@@ -216,13 +216,15 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_list_box.clear()
         self.group_list_box.clear()
         if dataset:
-            self.openContext(self.dataset)
             self.attributes = [(a.name, vartype(a)) for a in dataset.domain]
             self.grouping = ["None"] + [(a.name, vartype(a))
                                         for a in dataset.domain
                                         if a.is_discrete]
             self.grouping_select = [0]
             self.attributes_select = [0]
+
+            self.openContext(self.dataset)
+
             self.attr_changed()
         else:
             self.reset_all_data()
