@@ -145,6 +145,18 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if self.want_basic_layout:
             self.insertLayout()
 
+        def patched__init__(*args, _old__init__=cls.__init__, **kwargs):
+            """
+            After initialization, test input signal handlers with None as input
+            => catch connection deleting bugs early.
+            """
+            _old__init__(*args, **kwargs)
+            for input in self.inputs:
+                args = (None,) if input.single else (None, 0)
+                getattr(self, input.handler)(*args)
+
+        cls.__init__ = patched__init__
+
         return self
 
     def __init__(self, *args, **kwargs):
