@@ -33,7 +33,7 @@ class TableWidget(QtGui.QTableWidget):
             return (self.data(TableWidget.ITEM_DATA_ROLE) <
                     other.data(TableWidget.ITEM_DATA_ROLE))
 
-    def selectionChanged(self, selected:QtGui.QItemSelection, deselected:QtGui.QItemSelection):
+    def selectionChanged(self, selected:[QtGui.QItemSelectionRange], deselected:[QtGui.QItemSelectionRange]):
         """Override or monkey-patch this method to catch selection changes"""
         super().selectionChanged(selected, deselected)
 
@@ -88,6 +88,7 @@ class TableWidget(QtGui.QTableWidget):
             If True, select whole rows instead of individual cells.
         """
         super().__init__(parent)
+        self._column_filter = {}
         self.col_labels = col_labels
         self.row_labels = row_labels
         self.stretch_last_section = stretch_last_section
@@ -135,6 +136,8 @@ class TableWidget(QtGui.QTableWidget):
             else:
                 item = QtGui.QTableWidgetItem(name)
             item.setData(self.ITEM_DATA_ROLE, item_data)
+            if col in self._column_filter:
+                item = self._column_filter[col](item) or item
             self.setItem(row, col, item)
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
@@ -146,6 +149,16 @@ class TableWidget(QtGui.QTableWidget):
 
     def setRowData(self, row:int, data):
         self.item(row, 0).setData(self.ROW_DATA_ROLE, data)
+
+    def setColumnFilter(self, item_filter_func, columns:int or list):
+        """
+        Pass item(s) at column(s) through `item_filter_func` before
+        insertion. Useful for setting specific columns to bold or similar.
+        """
+        try: iter(columns)
+        except TypeError: columns = [columns]
+        for i in columns:
+            self._column_filter[i] = item_filter_func
 
     def clear(self):
         super().clear()
