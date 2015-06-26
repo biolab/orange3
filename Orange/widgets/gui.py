@@ -232,7 +232,7 @@ class WebviewWidget(QtWebKit.QWebView):
         if html:
             self.setHtml(html)
 
-    def setContent(self, data, mimetype, url):
+    def setContent(self, data, mimetype, url=''):
         super().setContent(data, mimetype, QtCore.QUrl(url))
         if self._bridge:
             self.page().mainFrame().addToJavaScriptWindowObject('pybridge', self._bridge)
