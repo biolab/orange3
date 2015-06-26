@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-
+import sys
 import math
 import itertools
 import numpy as np
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-import scipy
+
 import scipy.special
 
-from Orange.data import Table
-from Orange.statistics import contingency, distribution, tests
+import Orange.data
+from Orange.statistics import contingency, distribution
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
@@ -92,20 +92,24 @@ class OWBoxPlot(widget.OWWidget):
     icon = "icons/BoxPlot.svg"
     priority = 100
     author = "Amela Rakanović, Janez Demšar"
-    inputs = [("Data", Table, "data")]
+    inputs = [("Data", Orange.data.Table, "set_data")]
+
+    #: Comparison types for continuous variables
+    CompareNone, CompareMedians, CompareMeans = 0, 1, 2
 
     settingsHandler = DomainContextHandler()
-    display = Setting(0)
-    grouping_select = ContextSetting([0])
+
     attributes_select = ContextSetting([0])
+    grouping_select = ContextSetting([0])
+    show_annotations = Setting(True)
+    compare = Setting(CompareMedians)
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
     stretched = Setting(True)
-    colorSettings = Setting(None)
-    selectedSchemaIndex = Setting(0)
 
-    _sorting_criteria_attrs = ["", "", "median", "mean"]
-    _label_positions = ["q25", "median", "mean"]
+    _sorting_criteria_attrs = {
+        CompareNone: "", CompareMedians: "median", CompareMeans: "mean"
+    }
 
     _pen_axis_tick = QtGui.QPen(QtCore.Qt.white, 5)
     _pen_axis = QtGui.QPen(QtCore.Qt.darkGray, 3)
@@ -135,38 +139,50 @@ class OWBoxPlot(widget.OWWidget):
         self.grouping = []
         self.attributes = []
         self.stats = []
-        self.ddataset = None
+        self.dataset = None
+        self.posthoc_lines = []
 
         self.label_txts = self.mean_labels = self.boxes = self.labels = \
             self.attr_labels = self.order = []
         self.p = -1.0
-        self.scale_x = self.scene_min_x = self.scene_width = self.label_width \
-            = 0
+        self.scale_x = self.scene_min_x = self.scene_width = 0
+        self.label_width = 0
 
         self.attr_list_box = gui.listBox(
             self.controlArea, self, "attributes_select", "attributes",
             box="Variable", callback=self.attr_changed)
-        self.attrCombo = gui.listBox(
-            self.controlArea, self, 'grouping_select', "grouping",
-            box="Grouping", callback=self.attr_changed)
-        self.sorting_combo = gui.radioButtonsInBox(
-            self.controlArea, self, 'display', box='Display',
-            callback=self.display_changed,
-            btnLabels=["Box plots", "Annotated boxes",
-                       "Compare medians", "Compare means"])
+
+        box = gui.widgetBox(self.controlArea, "Grouping")
+        self.group_list_box = gui.listBox(
+            box, self, 'grouping_select', "grouping",
+            callback=self.attr_changed)
+
+        # TODO: move Compare median/mean to grouping box
+        self.display_box = gui.widgetBox(self.controlArea, "Display")
+
+        gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
+                     callback=self.display_changed)
+        self.compare_rb = gui.radioButtonsInBox(
+            self.display_box, self, 'compare',
+            btnLabels=["No comparison", "Compare medians", "Compare means"],
+            callback=self.display_changed)
+
         self.stretching_box = gui.checkBox(
             self.controlArea, self, 'stretched', "Stretch bars", box='Display',
             callback=self.display_changed).box
+
         gui.rubber(self.controlArea)
 
         gui.widgetBox(self.mainArea, addSpace=True)
-        self.boxScene = QtGui.QGraphicsScene()
-        self.boxView = QtGui.QGraphicsView(self.boxScene)
-        self.boxView.setRenderHints(QtGui.QPainter.Antialiasing |
+        self.box_scene = QtGui.QGraphicsScene()
+        self.box_view = QtGui.QGraphicsView(self.box_scene)
+        self.box_view.setRenderHints(QtGui.QPainter.Antialiasing |
                                     QtGui.QPainter.TextAntialiasing |
                                     QtGui.QPainter.SmoothPixmapTransform)
-        self.mainArea.layout().addWidget(self.boxView)
-        self.posthoc_lines = []
+        self.box_view.viewport().installEventFilter(self)
+
+        self.mainArea.layout().addWidget(self.box_view)
+
         e = gui.widgetBox(self.mainArea, addSpace=False, orientation=0)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
         self.mainArea.setMinimumWidth(650)
@@ -177,44 +193,30 @@ class OWBoxPlot(widget.OWWidget):
 
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
-        self.set_display_box()
+        self.disc_palette = colorpalette.ColorPaletteGenerator()
 
-        dlg = self.createColorDialog()
-        self.discPalette = dlg.getDiscretePalette("discPalette")
+        self.update_display_box()
 
-    def resizeEvent(self, ev):
-        super().resizeEvent(ev)
-        self.layout_changed()
+    def eventFilter(self, obj, event):
+        if obj is self.box_view.viewport() and \
+                event.type() == QtCore.QEvent.Resize:
+            self.layout_changed()
 
-    # noinspection PyPep8Naming
-    def setColors(self):
-        dlg = self.createColorDialog()
-        if dlg.exec_():
-            self.colorSettings = dlg.getColorSchemas()
-            self.selectedSchemaIndex = dlg.selectedSchemaIndex
-            self.discPalette = dlg.getDiscretePalette("discPalette")
-            self.display_changed()
-
-    # noinspection PyPep8Naming
-    def createColorDialog(self):
-        c = colorpalette.ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        c.setColorSchemas(self.colorSettings, self.selectedSchemaIndex)
-        return c
+        return super().eventFilter(obj, event)
 
     # noinspection PyTypeChecker
-    def data(self, dataset):
+    def set_data(self, dataset):
         if dataset is not None and (
                 not bool(dataset) or not len(dataset.domain)):
             dataset = None
         self.closeContext()
-        self.ddataset = dataset
+        self.dataset = dataset
         self.grouping_select = []
         self.attributes_select = []
         self.attr_list_box.clear()
-        self.attrCombo.clear()
+        self.group_list_box.clear()
         if dataset:
-            self.openContext(self.ddataset)
+            self.openContext(self.dataset)
             self.attributes = [(a.name, vartype(a)) for a in dataset.domain]
             self.grouping = ["None"] + [(a.name, vartype(a))
                                         for a in dataset.domain
@@ -227,16 +229,16 @@ class OWBoxPlot(widget.OWWidget):
 
     def reset_all_data(self):
         self.attr_list_box.clear()
-        self.attrCombo.clear()
-        self.boxScene.clear()
+        self.group_list_box.clear()
+        self.box_scene.clear()
 
     def attr_changed(self):
         self.compute_box_data()
-        self.set_display_box()
+        self.update_display_box()
         self.layout_changed()
 
     def compute_box_data(self):
-        dataset = self.ddataset
+        dataset = self.dataset
         if dataset is None:
             self.stats = self.dist = self.conts = []
             return
@@ -263,28 +265,30 @@ class OWBoxPlot(widget.OWWidget):
             self.label_txts = [""]
         self.stats = [stat for stat in self.stats if stat.N > 0]
 
-    def set_display_box(self):
+    def update_display_box(self):
         if self.is_continuous:
             self.stretching_box.hide()
-            self.sorting_combo.show()
-            self.sorting_combo.setDisabled(len(self.stats) < 2)
+            self.display_box.show()
+            group_by = self.grouping_select[0]
+            self.compare_rb.setEnabled(group_by != 0)
         else:
             self.stretching_box.show()
-            self.sorting_combo.hide()
+            self.display_box.hide()
 
     def clear_scene(self):
-        self.boxScene.clear()
+        self.box_scene.clear()
         self.posthoc_lines = []
 
     def layout_changed(self):
         self.clear_scene()
         if len(self.conts) == len(self.dist) == 0:
             return
+
         if not self.is_continuous:
             return self.display_changed_disc()
 
         attr = self.attributes[self.attributes_select[0]][0]
-        attr = self.ddataset.domain[attr]
+        attr = self.dataset.domain[attr]
 
         self.mean_labels = [self.mean_label(stat, attr, lab)
                             for stat, lab in zip(self.stats, self.label_txts)]
@@ -292,9 +296,10 @@ class OWBoxPlot(widget.OWWidget):
         self.boxes = [self.box_group(stat) for stat in self.stats]
         self.labels = [self.label_group(stat, attr, mean_lab)
                        for stat, mean_lab in zip(self.stats, self.mean_labels)]
-        self.attr_labels = [self.attr_label(lab) for lab in self.label_txts]
+        self.attr_labels = [QtGui.QGraphicsSimpleTextItem(lab)
+                            for lab in self.label_txts]
         for it in itertools.chain(self.labels, self.boxes, self.attr_labels):
-            self.boxScene.addItem(it)
+            self.box_scene.addItem(it)
         self.display_changed()
 
     def display_changed(self):
@@ -302,35 +307,44 @@ class OWBoxPlot(widget.OWWidget):
             return self.display_changed_disc()
 
         self.order = list(range(len(self.stats)))
-        criterion = self._sorting_criteria_attrs[self.display]
+        criterion = self._sorting_criteria_attrs[self.compare]
         if criterion:
-            self.order.sort(key=lambda i: getattr(self.stats[i], criterion))
-        heights = 90 if self.display == 1 else 60
+            self.order = sorted(
+                self.order, key=lambda i: getattr(self.stats[i], criterion))
+
+        heights = 90 if self.show_annotations else 60
 
         for row, box_index in enumerate(self.order):
             y = (-len(self.stats) + row) * heights + 10
             self.boxes[box_index].setY(y)
             labels = self.labels[box_index]
-            if self.display == 1:
+
+            if self.show_annotations:
                 labels.show()
                 labels.setY(y)
             else:
                 labels.hide()
+
             label = self.attr_labels[box_index]
             label.setY(y - 15 - label.boundingRect().height())
-            if self.display == 1:
+            if self.show_annotations:
                 label.hide()
             else:
                 stat = self.stats[box_index]
-                poss = (stat.q25, -1, stat.median + 5 / self.scale_x,
-                        stat.mean + 5 / self.scale_x)
+
+                if self.compare == OWBoxPlot.CompareMedians:
+                    pos = stat.median + 5 / self.scale_x
+                elif self.compare == OWBoxPlot.CompareMeans:
+                    pos = stat.mean + 5 / self.scale_x
+                else:
+                    pos = stat.q25
+                label.setX(pos * self.scale_x)
                 label.show()
-                label.setX(poss[self.display] * self.scale_x)
 
         r = QtCore.QRectF(self.scene_min_x, -30 - len(self.stats) * heights,
                           self.scene_width, len(self.stats) * heights + 90)
-        self.boxScene.setSceneRect(r)
-        self.boxView.centerOn(self.scene_min_x + self.scene_width / 2,
+        self.box_scene.setSceneRect(r)
+        self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
                               -30 - len(self.stats) * heights / 2 + 45)
 
         self.compute_tests()
@@ -338,27 +352,28 @@ class OWBoxPlot(widget.OWWidget):
 
     def display_changed_disc(self):
         self.clear_scene()
-        self.attr_labels = [self.attr_label(lab) for lab in self.label_txts]
+        self.attr_labels = [QtGui.QGraphicsSimpleTextItem(lab)
+                            for lab in self.label_txts]
         self.draw_axis_disc()
         if self.grouping_select[0]:
-            self.discPalette.set_number_of_colors(len(self.conts[0]))
+            self.disc_palette.set_number_of_colors(len(self.conts[0]))
             self.boxes = [self.strudel(cont) for cont in self.conts]
         else:
-            self.discPalette.set_number_of_colors(len(self.dist))
+            self.disc_palette.set_number_of_colors(len(self.dist))
             self.boxes = [self.strudel(self.dist)]
 
         for row, box in enumerate(self.boxes):
             y = (-len(self.boxes) + row) * 40 + 10
-            self.boxScene.addItem(box)
+            self.box_scene.addItem(box)
             box.setPos(0, y)
             label = self.attr_labels[row]
             b = label.boundingRect()
             label.setPos(-b.width() - 10, y - b.height() / 2)
-            self.boxScene.addItem(label)
-        self.boxScene.setSceneRect(-self.label_width - 5,
+            self.box_scene.addItem(label)
+        self.box_scene.setSceneRect(-self.label_width - 5,
                                    -30 - len(self.boxes) * 40,
                                    self.scene_width, len(self.boxes * 40) + 90)
-        self.boxView.centerOn(self.scene_width / 2,
+        self.box_view.centerOn(self.scene_width / 2,
                               -30 - len(self.boxes) * 40 / 2 + 45)
 
     # noinspection PyPep8Naming
@@ -392,13 +407,13 @@ class OWBoxPlot(widget.OWWidget):
             return F, p
 
         self.warning.hide()
-        if self.display < 2 or len(self.stats) < 2:
+        if self.compare == OWBoxPlot.CompareNone or len(self.stats) < 2:
             t = ""
         elif any(s.N <= 1 for s in self.stats):
             t = "At least one group has just one instance, " \
                 "cannot compute significance"
         elif len(self.stats) == 2:
-            if self.display == 2:
+            if self.compare == OWBoxPlot.CompareMedians:
                 t = ""
                 # z, self.p = tests.wilcoxon_rank_sum(
                 #    self.stats[0].dist, self.stats[1].dist)
@@ -407,7 +422,7 @@ class OWBoxPlot(widget.OWWidget):
                 t, self.p = stat_ttest()
                 t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
         else:
-            if self.display == 2:
+            if self.compare == OWBoxPlot.CompareMedians:
                 t = ""
                 # U, self.p = -1, -1
                 # t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
@@ -415,10 +430,6 @@ class OWBoxPlot(widget.OWWidget):
                 F, self.p = stat_ANOVA()
                 t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
         self.infot1.setText("<center>%s</center>" % t)
-
-    @staticmethod
-    def attr_label(text):
-        return QtGui.QGraphicsSimpleTextItem(text)
 
     def mean_label(self, stat, attr, val_name):
         label = QtGui.QGraphicsItemGroup()
@@ -459,7 +470,7 @@ class OWBoxPlot(widget.OWWidget):
         gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
         gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
 
-        bv = self.boxView
+        bv = self.box_view
         viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
         self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
@@ -476,12 +487,12 @@ class OWBoxPlot(widget.OWWidget):
 
         val = first_val
         attr = self.attributes[self.attributes_select[0]][0]
-        attr_desc = self.ddataset.domain[attr]
+        attr_desc = self.dataset.domain[attr]
         while True:
-            l = self.boxScene.addLine(val * scale_x, -1, val * scale_x, 1,
+            l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                       self._pen_axis_tick)
             l.setZValue(100)
-            t = self.boxScene.addSimpleText(
+            t = self.box_scene.addSimpleText(
                 attr_desc.repr_val(val), self._axis_font)
             t.setFlags(t.flags() |
                        QtGui.QGraphicsItem.ItemIgnoresTransformations)
@@ -490,7 +501,7 @@ class OWBoxPlot(widget.OWWidget):
             if val >= top:
                 break
             val += step
-        self.boxScene.addLine(bottom * scale_x - 4, 0,
+        self.box_scene.addLine(bottom * scale_x - 4, 0,
                               top * scale_x + 4, 0, self._pen_axis)
 
     def draw_axis_disc(self):
@@ -512,7 +523,7 @@ class OWBoxPlot(widget.OWWidget):
             steps = int(math.ceil(max_box / step))
         max_box = step * steps
 
-        bv = self.boxView
+        bv = self.box_view
         viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
         self.scene_width = viewrect.width()
 
@@ -522,12 +533,12 @@ class OWBoxPlot(widget.OWWidget):
         self.label_width = lab_width
         self.scale_x = scale_x = (self.scene_width - lab_width - 10) / max_box
 
-        self.boxScene.addLine(0, 0, max_box * scale_x, 0, self._pen_axis)
+        self.box_scene.addLine(0, 0, max_box * scale_x, 0, self._pen_axis)
         for val in range(0, step * steps + 1, step):
-            l = self.boxScene.addLine(val * scale_x, -1, val * scale_x, 1,
+            l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                       self._pen_axis_tick)
             l.setZValue(100)
-            t = self.boxScene.addSimpleText(str(val), self._axis_font)
+            t = self.box_scene.addSimpleText(str(val), self._axis_font)
             t.setPos(val * scale_x - t.boundingRect().width() / 2, 8)
         if self.stretched:
             self.scale_x *= 100
@@ -620,14 +631,14 @@ class OWBoxPlot(widget.OWWidget):
 
     def strudel(self, dist):
         attr_ind = self.attributes_select[0]
-        attr = self.ddataset.domain[attr_ind]
+        attr = self.dataset.domain[attr_ind]
 
         ss = np.sum(dist)
         box = QtGui.QGraphicsItemGroup()
         if ss < 1e-6:
             QtGui.QGraphicsRectItem(0, -10, 1, 10, box)
         cum = 0
-        get_color = self.discPalette.getRGB
+        get_color = self.disc_palette.getRGB
         for i, v in enumerate(dist):
             if v < 1e-6:
                 continue
@@ -643,22 +654,33 @@ class OWBoxPlot(widget.OWWidget):
 
     def show_posthoc(self):
         def line(y0, y1):
-            it = self.boxScene.addLine(x, y0, x, y1, self._post_line_pen)
+            it = self.box_scene.addLine(x, y0, x, y1, self._post_line_pen)
             it.setZValue(-100)
             self.posthoc_lines.append(it)
 
         while self.posthoc_lines:
-            self.boxScene.removeItem(self.posthoc_lines.pop())
-        if self.display < 2 or len(self.stats) < 2:
+            self.box_scene.removeItem(self.posthoc_lines.pop())
+
+        if self.compare == OWBoxPlot.CompareNone or len(self.stats) < 2:
             return
-        crit_line = self._sorting_criteria_attrs[self.display]
+
+        if self.compare == OWBoxPlot.CompareMedians:
+            crit_line = "median"
+        elif self.compare == OWBoxPlot.CompareMeans:
+            crit_line = "mean"
+        else:
+            assert False
+
         xs = []
-        y_up = -len(self.stats) * 60 + 10
+
+        height = 90 if self.show_annotations else 60
+
+        y_up = -len(self.stats) * height + 10
         for pos, box_index in enumerate(self.order):
             stat = self.stats[box_index]
             x = getattr(stat, crit_line) * self.scale_x
             xs.append(x)
-            by = y_up + pos * 60
+            by = y_up + pos * height
             line(by + 12, 3)
             line(by - 12, by - 25)
 
@@ -679,7 +701,30 @@ class OWBoxPlot(widget.OWWidget):
                 rowi = len(used_to)
                 used_to.append(to)
             y = - 6 - rowi * 6
-            it = self.boxScene.addLine(frm_x - 2, y, xs[to] + 2, y,
+            it = self.box_scene.addLine(frm_x - 2, y, xs[to] + 2, y,
                                        self._post_grp_pen)
             self.posthoc_lines.append(it)
             last_to = to
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "brown-selected"
+
+    data = Orange.data.Table(filename)
+    w = OWBoxPlot()
+    w.show()
+    w.raise_()
+    w.set_data(data)
+    rval = app.exec_()
+    w.saveSettings()
+    return rval
+
+if __name__ == "__main__":
+    sys.exit(main())
