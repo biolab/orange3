@@ -62,6 +62,7 @@ class PyListModel(QAbstractListModel):
     """ A model for displaying python list like objects in Qt item view classes
     """
     MIME_TYPES = ["application/x-Orange-PyListModelData"]
+    Separator = object()
 
     def __init__(self, iterable=None, parent=None,
                  flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled,
@@ -257,9 +258,13 @@ class PyListModel(QAbstractListModel):
 
             if not isinstance(value, list):
                 value = list(value)
+            separators = [start + i for i, v in enumerate(value) if v is self.Separator]
             self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
             self._list[s] = value
             self._other_data[s] = (_store() for _ in value)
+            for idx in separators:
+                self._other_data[idx]['flags'] = Qt.NoItemFlags
+                self._other_data[idx][Qt.AccessibleDescriptionRole] = 'separator'
             self.endInsertRows()
         else:
             s = len(self) + s if s < 0 else s
