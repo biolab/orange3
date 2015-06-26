@@ -290,6 +290,13 @@ Normalization
 
 .. autoclass:: Orange.preprocess.Normalize
 
+
+Randomization
+=============
+
+.. autoclass:: Orange.preprocess.Randomize
+
+
 Feature selection
 =================
 

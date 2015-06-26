@@ -11,7 +11,7 @@ import Orange.data
 from . import impute, discretize
 from ..misc.enum import Enum
 
-__all__ = ["Continuize", "Discretize", "Impute", "SklImpute", "Normalize"]
+__all__ = ["Continuize", "Discretize", "Impute", "SklImpute", "Normalize", "Randomize"]
 
 
 class Preprocess(object):
@@ -247,6 +247,59 @@ class Normalize(Preprocess):
             norm_type=self.norm_type,
             transform_class=self.transform_class)
         return normalizer(data)
+
+
+class Randomize(Preprocess):
+    """
+    Construct a preprocessor for randomization of features or classes.
+    Given a data table, preprocessor returns a new table in
+    which the data is shuffled.
+
+    Parameters
+    ----------
+
+    rand_type : NormTypes (default: Randomize.RandomizeClasses)
+        Randomization type. If Randomize.RandomizeClasses, classes
+        are shuffled.
+        If Randomize.RandomizeAttributes, attributes are shuffled.
+        If Randomize.RandomizeMetas, metas are shuffled.
+
+    Examples
+    --------
+    >>> from Orange.data import Table
+    >>> from Orange.preprocess import Randomize
+    >>> data = Table("iris")
+    >>> randomizer = Randomize(Randomize.RandomizeClasses)
+    >>> randomizer_data = randomizer(data)
+    """
+
+    RandTypes = Enum("RandomizeClasses", "RandomizeAttributes", "RandomizeMetas")
+    (RandomizeClasses, RandomizeAttributes, RandomizeMetas) = RandTypes
+
+    def __init__(self,
+                 rand_type=RandomizeClasses):
+        self.rand_type = rand_type
+
+    def __call__(self, data):
+        """
+        Apply randomization of the given data. Returns a new
+        data table.
+
+        Parameters
+        ----------
+        data : Orange.data.Table
+            A data table to be randomized.
+
+        Returns
+        -------
+        data : Orange.data.Table
+            Randomized data table.
+        """
+        from . import randomize
+
+        randomizer = randomize.Randomizer(
+            rand_type=self.rand_type)
+        return randomizer(data)
 
 
 class PreprocessorList(object):
