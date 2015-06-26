@@ -150,12 +150,14 @@ class OWBoxPlot(widget.OWWidget):
 
         self.attr_list_box = gui.listBox(
             self.controlArea, self, "attributes_select", "attributes",
-            box="Variable", callback=self.attr_changed)
+            box="Variable", callback=self.attr_changed,
+            sizeHint=QtCore.QSize(200, 250))
 
         box = gui.widgetBox(self.controlArea, "Grouping")
         self.group_list_box = gui.listBox(
             box, self, 'grouping_select', "grouping",
-            callback=self.attr_changed)
+            callback=self.attr_changed,
+            sizeHint=QtCore.QSize(200, 150))
 
         # TODO: move Compare median/mean to grouping box
         self.display_box = gui.widgetBox(self.controlArea, "Display")
