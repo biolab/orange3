@@ -242,6 +242,14 @@ class OWBoxPlot(widget.OWWidget):
         self.update_display_box()
         self.layout_changed()
 
+        if self.is_continuous:
+            heights = 90 if self.show_annotations else 60
+            self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
+                                  -30 - len(self.stats) * heights / 2 + 45)
+        else:
+            self.box_view.centerOn(self.scene_width / 2,
+                                  -30 - len(self.boxes) * 40 / 2 + 45)
+
     def compute_box_data(self):
         dataset = self.dataset
         if dataset is None:
@@ -349,8 +357,6 @@ class OWBoxPlot(widget.OWWidget):
         r = QtCore.QRectF(self.scene_min_x, -30 - len(self.stats) * heights,
                           self.scene_width, len(self.stats) * heights + 90)
         self.box_scene.setSceneRect(r)
-        self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
-                              -30 - len(self.stats) * heights / 2 + 45)
 
         self.compute_tests()
         self.show_posthoc()
@@ -378,8 +384,6 @@ class OWBoxPlot(widget.OWWidget):
         self.box_scene.setSceneRect(-self.label_width - 5,
                                    -30 - len(self.boxes) * 40,
                                    self.scene_width, len(self.boxes * 40) + 90)
-        self.box_view.centerOn(self.scene_width / 2,
-                              -30 - len(self.boxes) * 40 / 2 + 45)
         self.infot1.setText("")
 
     # noinspection PyPep8Naming
