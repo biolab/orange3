@@ -20,6 +20,14 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 
+def is_discrete(var):
+    return isinstance(var, Orange.data.DiscreteVariable)
+
+
+def is_continuous(var):
+    return isinstance(var, Orange.data.ContinuousVariable)
+
+
 def is_not_none(obj):
     return obj is not None
 
@@ -355,11 +363,11 @@ def resample(node, samplewidth):
         return node._replace(children=children_ar.reshape((-1, nbins)))
 
 
-class OWHeatMap(widget.OWWidget):
-    name = "Heat Map"
+class OWScatterMap(widget.OWWidget):
+    name = "Scatter Map"
     description = "Two-dimensional heat map displaying data instances " \
                   "(rows) and their features (heat map columns)."
-    icon = "icons/Heatmap.svg"
+    icon = "icons/Scattermap.svg"
     priority = 100
 
     inputs = [("Data", Orange.data.Table, "set_data")]
@@ -523,8 +531,8 @@ class OWHeatMap(widget.OWWidget):
     def set_sampled_data(self, dataset):
         if dataset is not None:
             domain = dataset.domain
-            cvars = [var for var in domain.variables if var.is_continuous]
-            dvars = [var for var in domain.variables if var.is_discrete]
+            cvars = list(filter(is_continuous, domain.variables))
+            dvars = list(filter(is_discrete, domain.variables))
 
             self.x_var_model[:] = cvars
             self.y_var_model[:] = cvars
@@ -938,7 +946,7 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
     else:
         subset = data
 
-    if zvar.is_discrete:
+    if is_discrete(zvar):
 
         filters = [value_filter(zvar, val) for val in zvar.values]
         contingencies = [
@@ -1356,7 +1364,7 @@ def compute_chi_squares(observes):
 def main():
     import sip
     app = QtGui.QApplication([])
-    w = OWHeatMap()
+    w = OWScatterMap()
     w.show()
     w.raise_()
     data = Orange.data.Table('iris')
