@@ -58,7 +58,7 @@ class MajorityTest(unittest.TestCase):
             e.set_class("?")
         clf = learn(iris)
         y = clf(iris)
-        self.assertTrue((y == 0).all())
+        self.assertTrue((y == 1).all())
 
     def test_continuous(self):
         autompg = Table('auto-mpg')
