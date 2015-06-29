@@ -251,14 +251,15 @@ class Normalize(Preprocess):
 
 class Randomize(Preprocess):
     """
-    Construct a preprocessor for randomization of features or classes.
+    Construct a preprocessor for randomization of classes,
+    attributes or metas.
     Given a data table, preprocessor returns a new table in
     which the data is shuffled.
 
     Parameters
     ----------
 
-    rand_type : NormTypes (default: Randomize.RandomizeClasses)
+    rand_type : RandTypes (default: Randomize.RandomizeClasses)
         Randomization type. If Randomize.RandomizeClasses, classes
         are shuffled.
         If Randomize.RandomizeAttributes, attributes are shuffled.
@@ -270,7 +271,7 @@ class Randomize(Preprocess):
     >>> from Orange.preprocess import Randomize
     >>> data = Table("iris")
     >>> randomizer = Randomize(Randomize.RandomizeClasses)
-    >>> randomizer_data = randomizer(data)
+    >>> randomized_data = randomizer(data)
     """
 
     RandTypes = Enum("RandomizeClasses", "RandomizeAttributes", "RandomizeMetas")
