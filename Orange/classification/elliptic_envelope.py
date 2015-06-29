@@ -23,5 +23,17 @@ class EllipticEnvelopeLearner(SklLearner):
         return self.__returns__(self.clf.fit(X))
 
     def mahalanobis(self, observations):
+        """Return Mahalanobis distances of the training set observations.
+
+        Parameters
+        ----------
+        observations : ndarray (n_samples, n_features)
+            Data on which `fit` is called.
+
+        Returns
+        -------
+        distances : ndarray (n_samples,)
+            Mahalanobis distances of the training set observations.
+        """
         if self.clf is not None:
             return self.clf.mahalanobis(observations)
