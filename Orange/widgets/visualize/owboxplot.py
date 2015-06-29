@@ -699,7 +699,12 @@ class OWBoxPlot(widget.OWWidget):
             rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
             rect.setBrush(QtGui.QBrush(QtGui.QColor(*get_color(i))))
             rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            rect.setToolTip(attr.values[i])
+            if self.stretched:
+                tooltip = "{}: {:.2f}%".format(attr.values[i],
+                                               100 * dist[i] / sum(dist))
+            else:
+                tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
+            rect.setToolTip(tooltip)
             cum += v
         return box
 
