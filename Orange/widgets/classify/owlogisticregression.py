@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.classification import logistic_regression as lr
-from Orange.preprocess.preprocess import Preprocess
+from Orange.preprocess.preprocess import Preprocess, add_preprocessors
 from Orange.widgets import widget, settings, gui
 
 
@@ -78,7 +78,7 @@ class OWLogisticRegression(widget.OWWidget):
         if preproc is None:
             self.preprocessors = None
         else:
-            self.preprocessors = (preproc,)
+            self.preprocessors = add_preprocessors(preproc, lr.LogisticRegressionLearner.preprocessors)
         self.apply()
 
     def apply(self):
