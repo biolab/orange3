@@ -253,6 +253,23 @@ class SimpleTreeModel(Model):
         return ' '.join(xs)
 
     def to_string(self, node=None, level=0):
+        """Return a text-based representation of the tree.
+
+        Parameters
+        ----------
+        node : LP_SIMPLE_TREE_NODE, optional (default=None)
+            Tree node. Used to construct representation of the
+            tree under this node.
+            If not provided, node is considered root node.
+
+        level : int, optional (defaul=0)
+            Level of the node. Used for line indentation.
+
+        Returns
+        -------
+        tree : str
+            Text-based representation of the tree.
+        """
         if node is None:
             if self.node is None:
                 return '(null node)'
