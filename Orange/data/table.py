@@ -1090,6 +1090,8 @@ class Table(MutableSequence, Storage):
                 else:
                     sel = reduce(operator.add,
                                  (col == val for val in vals), sel)
+            elif isinstance(f, data_filter.FilterRegex):
+                sel = np.vectorize(f)(col)
             elif isinstance(f, (data_filter.FilterContinuous,
                                 data_filter.FilterString)):
                 if (isinstance(f, data_filter.FilterString) and

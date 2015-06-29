@@ -1,5 +1,6 @@
 from numbers import Real
 import random
+import re
 from math import isnan
 
 from ..misc.enum import Enum
@@ -524,3 +525,13 @@ class FilterStringList(ValueFilter):
             return value in self._values
         else:
             return value.lower() in self.values_lower
+
+
+class FilterRegex(ValueFilter):
+    """Filter that checks whether the values match the regular expression."""
+    def __init__(self, column, pattern, flags=0):
+        super().__init__(column)
+        self._re = re.compile(pattern, flags)
+
+    def __call__(self, inst):
+        return bool(self._re.search(inst))
