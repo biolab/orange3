@@ -97,7 +97,7 @@ class SimpleTreeTest(unittest.TestCase):
                               ['f', 3, "c"]])
         lrn = SimpleTreeLearner(min_instances=1)
         clf = lrn(data)
-        str = clf.to_string(clf.node, 0)
+        str = clf.to_string()
         res = '\nd1 ([2.0, 2.0, 2.0])\n: e\n   c1 ([2.0, 2.0, 0.0])\n   : <=2.5\n      c1 ([1.0, 2.0, 0.0])\n      : <=1.5 --> a ([1.0, 1.0, 0.0])\n      : >1.5 --> b ([0.0, 1.0, 0.0])\n   : >2.5 --> a ([1.0, 0.0, 0.0])\n: f --> c ([0.0, 0.0, 2.0])'
         self.assertEqual(str, res)
 
@@ -113,7 +113,7 @@ class SimpleTreeTest(unittest.TestCase):
                               ['f', 3, 30]])
         lrn = SimpleTreeLearner(min_instances=1)
         clf = lrn(data)
-        str = clf.to_string(clf.node, 0)
+        str = clf.to_string()
         res = '\nd1 (120.0: 6.0)\n: e\n   c1 (60.0: 4.0)\n   : <=2.5\n      c1 (50.0: 3.0)\n      : <=1.5 --> 15.0 (30.0: 2.0)\n      : >1.5 --> 20.0 (20.0: 1.0)\n   : >2.5 --> 10.0 (10.0: 1.0)\n: f --> 30.0 (60.0: 2.0)'
         self.assertEqual(str, res)
 

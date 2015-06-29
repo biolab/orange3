@@ -252,9 +252,12 @@ class SimpleTreeModel(Model):
         xs.append('}')
         return ' '.join(xs)
 
-    def to_string(self, node, level):
+    def to_string(self, node=None, level=0):
         if node is None:
-            return '(null node)'
+            if self.node is None:
+                return '(null node)'
+            else:
+                node = self.node
         n = node.contents
         if n.children_size == 0:
             if self.type == Classification:
