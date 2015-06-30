@@ -5,7 +5,7 @@ from PyQt4 import QtGui
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
-from Orange.data.io import FileFormats
+from Orange.data.io import FileFormat
 
 
 class OWSave(widget.OWWidget):
@@ -81,8 +81,7 @@ class OWSave(widget.OWWidget):
         elif self.data is not None:
             try:
                 ext = self.formats[self.format_index][1]
-                format = self.file_formats[ext]
-                format().write(self.filename, self.data)
+                self.file_formats[ext].write(self.filename, self.data)
                 self.error()
             except Exception as errValue:
                 self.error(str(errValue))

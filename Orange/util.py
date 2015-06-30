@@ -1,7 +1,7 @@
 """Various small utilities that might be useful everywhere"""
 
 from functools import wraps
-from itertools import chain
+from itertools import chain, count
 from collections import OrderedDict
 import logging
 
@@ -74,6 +74,13 @@ class Registry(type):
         if cls in cls.registry.values():
             return cls.__name__
         return '{}({{{}}})'.format(cls.__name__, ', '.join(cls.registry))
+
+
+def namegen(prefix='_', *args, count=count, **kwargs):
+    """Continually generate names with `prefix`, e.g. '_1', '_2', ..."""
+    count = iter(count(*args, **kwargs))
+    while True:
+        yield prefix + str(next(count))
 
 
 def export_globals(globals, module_name):

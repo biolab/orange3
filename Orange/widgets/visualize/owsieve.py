@@ -18,7 +18,7 @@ from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
                                                OWCanvasEllipse, OWCanvasLine)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 class OWSieveDiagram(OWWidget):
@@ -459,7 +459,7 @@ class OWSieveDiagram(OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.canvas,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 # class OWSieveOptimization(OWMosaicOptimization, orngMosaic):

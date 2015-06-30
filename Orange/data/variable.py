@@ -394,6 +394,8 @@ class ContinuousVariable(Variable):
     set to 0 to prevent changes by `to_val`.
     """
 
+    TYPE_HEADERS = ('continuous', 'c')
+
     def __init__(self, name="", number_of_decimals=None, compute_value=None):
         """
         Construct a new continuous variable. The number of decimals is set to
@@ -469,6 +471,9 @@ class DiscreteVariable(Variable):
         used in some methods like, for instance, when creating dummy variables
         for regression.
     """
+
+    TYPE_HEADERS = ('discrete', 'd')
+
     _all_vars = collections.defaultdict(list)
     presorted_values = []
 
@@ -682,7 +687,7 @@ class StringVariable(Variable):
     Descriptor for string variables. String variables can only appear as
     meta attributes.
     """
-    Unknown = None
+    TYPE_HEADERS = ('string', 's', 'text')
 
     def to_val(self, s):
         """

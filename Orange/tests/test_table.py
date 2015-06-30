@@ -1192,7 +1192,7 @@ class CreateTableWithFilename(TableTests):
     filename = "data.tab"
 
     @patch("os.path.exists", Mock(return_value=True))
-    @patch("Orange.data.io.TabDelimFormat")
+    @patch("Orange.data.io.TabFormat")
     def test_read_data_calls_reader(self, reader_mock):
         table_mock = Mock(data.Table)
         reader_instance = reader_mock.return_value = \
@@ -1208,7 +1208,7 @@ class CreateTableWithFilename(TableTests):
         table_mock = Mock(data.Table)
         reader_instance = Mock(read_file=Mock(return_value=table_mock))
 
-        with patch.dict(data.io.FileFormats.readers,
+        with patch.dict(data.io.FileFormat.readers,
                         {'.xlsx': lambda: reader_instance}):
             table = data.Table.from_file("test.xlsx")
 

@@ -23,7 +23,7 @@ from Orange.clustering import hierarchical
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
 from .owhierarchicalclustering import DendrogramWidget, GraphicsSimpleTextList
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 def _remove_item(item):
@@ -585,7 +585,7 @@ class OWDistanceMap(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.grid_widget,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

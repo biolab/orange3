@@ -13,7 +13,7 @@ from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess.score import ReliefF
 from Orange.widgets import gui
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
@@ -427,7 +427,7 @@ class OWScatterPlot(OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.graph.plot_widget.plotItem,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
     def onDeleteWidget(self):

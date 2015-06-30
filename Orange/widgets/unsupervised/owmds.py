@@ -23,7 +23,7 @@ import Orange.data
 import Orange.projection
 import Orange.distance
 import Orange.misc
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 def torgerson(distances, n_components=2):
@@ -986,7 +986,7 @@ class OWMDS(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.plot.plotItem,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 
