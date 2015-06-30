@@ -5,7 +5,7 @@ from PyQt4.QtGui import QGridLayout, QLabel
 from PyQt4.QtCore import Qt
 
 import Orange.data
-from Orange.classification import svm, SklModel
+from Orange.regression import svm, SklModel
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -149,13 +149,6 @@ class OWSVMRegression(widget.OWWidget):
 
     def set_data(self, data):
         """Set the input train data set."""
-        self.warning(0)
-
-        if data is not None:
-            if not data.domain.has_continuous_class:
-                data = None
-                self.warning(0, "Data does not have a continuous class var")
-
         self.data = data
         if data is not None:
             self.apply()
@@ -187,8 +180,12 @@ class OWSVMRegression(widget.OWWidget):
 
         predictor = None
         if self.data is not None:
-            predictor = learner(self.data)
-            predictor.name = self.learner_name
+            try:
+                self.warning(0)
+                predictor = learner(self.data)
+                predictor.name = self.learner_name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)

@@ -3,7 +3,7 @@
 
 import Orange.data
 import Orange.regression.knn as knn
-import Orange.classification
+from Orange.regression import SklModel
 from Orange.preprocess.preprocess import Preprocess
 
 from Orange.widgets import widget, gui
@@ -19,7 +19,7 @@ class OWKNNRegression(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", knn.KNNRegressionLearner),
-               ("Predictor", Orange.classification.SklModel)]
+               ("Predictor", SklModel)]
 
     want_main_area = False
 
@@ -81,8 +81,12 @@ class OWKNNRegression(widget.OWWidget):
         learner.name = self.learner_name
         model = None
         if self.data is not None:
-            model = learner(self.data)
-            model.name = self.learner_name
+            try:
+                self.warning(0)
+                model = learner(self.data)
+                model.name = self.learner_name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Predictor", model)

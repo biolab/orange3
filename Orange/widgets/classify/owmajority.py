@@ -33,14 +33,9 @@ class OWMajority(widget.OWWidget):
         self.apply()
 
     def set_data(self, data):
-        self.error(0)
-        if data is not None:
-            if not data.domain.has_discrete_class:
-                data = None
-                self.error(0, "Discrete class variable expected.")
-
         self.data = data
-        self.apply()
+        if data is not None:
+            self.apply()
 
     def set_preprocessor(self, preproc):
         if preproc is None:
@@ -54,11 +49,14 @@ class OWMajority(widget.OWWidget):
             preprocessors=self.preprocessors)
 
         learner.name = self.learner_name
+        classifier = None
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
-        else:
-            classifier = None
+            try:
+                self.warning(0)
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)

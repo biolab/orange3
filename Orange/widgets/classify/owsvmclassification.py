@@ -123,13 +123,6 @@ class OWSVMClassification(widget.OWWidget):
 
     def set_data(self, data):
         """Set the input train data set."""
-        self.warning(0)
-
-        if data is not None:
-            if not data.domain.has_discrete_class:
-                data = None
-                self.warning(0, "Data does not have a discrete class var")
-
         self.data = data
         if data is not None:
             self.apply()
@@ -160,8 +153,12 @@ class OWSVMClassification(widget.OWWidget):
 
         classifier = None
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
+            try:
+                self.warning(0)
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)

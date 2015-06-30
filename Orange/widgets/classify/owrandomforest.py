@@ -129,7 +129,6 @@ class OWRandomForest(widget.OWWidget):
 
     def set_data(self, data):
         """Set the input train data set."""
-        self.warning(0)
         self.data = data
         if data is not None:
             self.apply()
@@ -159,8 +158,13 @@ class OWRandomForest(widget.OWWidget):
         learner.name = self.learner_name
         classifier = None
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
+            try:
+                self.warning(0)
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
+            except ValueError as err:
+                print(err)
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)

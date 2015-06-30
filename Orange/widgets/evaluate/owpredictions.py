@@ -9,6 +9,7 @@ import numpy
 from PyQt4 import QtCore, QtGui
 
 import Orange
+from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -37,7 +38,7 @@ class OWPredictions(widget.OWWidget):
     priority = 200
     description = "Display predictions of models for an input data set."
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Predictors", Orange.classification.Model,
+              ("Predictors", Model,
                "set_predictor", widget.Multiple)]
     outputs = [("Predictions", Orange.data.Table),
                ("Evaluation Results", Orange.evaluation.Results)]
@@ -224,11 +225,11 @@ class OWPredictions(widget.OWWidget):
 
     @staticmethod
     def predict_discrete(predictor, data):
-        return predictor(data, Orange.classification.Model.ValueProbs)
+        return predictor(data, Model.ValueProbs)
 
     @staticmethod
     def predict_continuous(predictor, data):
-        values = predictor(data, Orange.classification.Model.Value)
+        values = predictor(data, Model.Value)
         return values, [None] * len(data)
 
 
@@ -236,8 +237,10 @@ if __name__ == "__main__":
     app = QtGui.QApplication([])
     w = OWPredictions()
     data = Orange.data.Table("iris")
-    svm_clf = Orange.classification.SVMLearner(probability=True)(data)
-    lr_clf = Orange.classification.LogisticRegressionLearner()(data)
+#    svm_clf = Orange.classification.SVMLearner(probability=True)(data)
+#    lr_clf = Orange.classification.LogisticRegressionLearner()(data)
+    svm_clf = Orange.regression.RidgeRegressionLearner(alpha=1.0)(data)
+    lr_clf = Orange.regression.LinearRegressionLearner()(data)
     w.set_data(data)
     w.set_predictor(svm_clf, 0)
     w.set_predictor(lr_clf, 1)

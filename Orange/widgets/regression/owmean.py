@@ -29,14 +29,9 @@ class OWMean(widget.OWWidget):
         self.apply()
 
     def set_data(self, data):
-        self.error(0)
-        if data is not None:
-            if not data.domain.has_continuous_class:
-                data = None
-                self.error(0, "Continuous class variable expected.")
-
         self.data = data
-        self.apply()
+        if data is not None:
+            self.apply()
 
     def set_preprocessor(self, preproc):
         if preproc is None:
@@ -48,11 +43,14 @@ class OWMean(widget.OWWidget):
     def apply(self):
         learner = mean.MeanLearner(preprocessors=self.preprocessors)
         learner.name = self.learner_name
+        predictor = None
         if self.data is not None:
-            predictor = learner(self.data)
-            predictor.name = learner.name
-        else:
-            predictor = None
+            try:
+                self.warning(0)
+                predictor = learner(self.data)
+                predictor.name = learner.name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)

@@ -65,8 +65,12 @@ class OWNaiveBayes(widget.OWWidget):
         learner.name = self.learner_name
 
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
+            try:
+                self.warning(0)
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)

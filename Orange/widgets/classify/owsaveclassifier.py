@@ -3,7 +3,7 @@ import pickle
 
 from PyQt4 import QtGui
 
-import Orange.classification
+from Orange.base import Model
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -15,7 +15,7 @@ class OWSaveClassifier(widget.OWWidget):
     icon = "icons/SaveClassifier.svg"
     priority = 3000
 
-    inputs = [("Classifer", Orange.classification.Model, "setModel")]
+    inputs = [("Classifer", Model, "setModel")]
 
     #: Current (last selected) filename or None.
     filename = Setting(None)

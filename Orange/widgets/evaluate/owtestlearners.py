@@ -9,6 +9,7 @@ from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
 from PyQt4.QtCore import Qt, QSize
 
 import Orange
+from Orange.base import Learner
 from Orange.evaluation import *
 from Orange.widgets import widget, gui, settings
 from Orange.data import Domain
@@ -48,7 +49,7 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Orange.classification.Learner,
+    inputs = [("Learner", Learner,
                "set_learner", widget.Multiple),
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
               ("Test Data", Orange.data.Table, "set_test_data")]
@@ -208,32 +209,37 @@ class OWTestLearners(widget.OWWidget):
                             "Select 'Test on test data' to use it.")
 
         # TODO: Test each learner individually
-        if self.resampling == OWTestLearners.KFold:
-            results = Orange.evaluation.CrossValidation(
-                self.train_data, learners, k=self.k_folds, store_data=True
-            )
-        elif self.resampling == OWTestLearners.LeaveOneOut:
-            results = Orange.evaluation.LeaveOneOut(
-                self.train_data, learners, store_data=True
-            )
-        elif self.resampling == OWTestLearners.Bootstrap:
-            p = self.sample_p / 100.0
-            results = Orange.evaluation.Bootstrap(
-                self.train_data, learners, n_resamples=self.n_repeat, p=p,
-                store_data=True
-            )
-        elif self.resampling == OWTestLearners.TestOnTrain:
-            results = Orange.evaluation.TestOnTrainingData(
-                self.train_data, learners, store_data=True
-            )
-        elif self.resampling == OWTestLearners.TestOnTest:
-            if self.test_data is None:
-                return
-            results = Orange.evaluation.TestOnTestData(
-                self.train_data, self.test_data, learners, store_data=True
-            )
-        else:
-            assert False
+        try:
+            self.error(3)
+            if self.resampling == OWTestLearners.KFold:
+                results = Orange.evaluation.CrossValidation(
+                    self.train_data, learners, k=self.k_folds, store_data=True
+                )
+            elif self.resampling == OWTestLearners.LeaveOneOut:
+                results = Orange.evaluation.LeaveOneOut(
+                    self.train_data, learners, store_data=True
+                )
+            elif self.resampling == OWTestLearners.Bootstrap:
+                p = self.sample_p / 100.0
+                results = Orange.evaluation.Bootstrap(
+                    self.train_data, learners, n_resamples=self.n_repeat, p=p,
+                    store_data=True
+                )
+            elif self.resampling == OWTestLearners.TestOnTrain:
+                results = Orange.evaluation.TestOnTrainingData(
+                    self.train_data, learners, store_data=True
+                )
+            elif self.resampling == OWTestLearners.TestOnTest:
+                if self.test_data is None:
+                    return
+                results = Orange.evaluation.TestOnTestData(
+                    self.train_data, self.test_data, learners, store_data=True
+                )
+            else:
+                assert False
+        except ValueError as err:
+            self.error(3, str(err))
+            return
 
         self.results = results
         results = list(split_by_model(results))
@@ -280,6 +286,8 @@ class OWTestLearners(widget.OWWidget):
             head = QStandardItem()
             head.setData(name, Qt.DisplayRole)
             row.append(head)
+            if input.stats is None:
+                return
             for stat in input.stats:
                 item = QStandardItem()
                 item.setData(" {:.3f} ".format(stat[0]), Qt.DisplayRole)

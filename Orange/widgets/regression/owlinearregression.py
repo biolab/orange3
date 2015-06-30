@@ -88,8 +88,12 @@ class OWLinearRegression(widget.OWWidget):
         learner.name = self.learner_name
         predictor = None
         if self.data is not None:
-            predictor = learner(self.data)
-            predictor.name = self.learner_name
+            try:
+                self.warning(0)
+                predictor = learner(self.data)
+                predictor.name = self.learner_name
+            except ValueError as err:
+                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)

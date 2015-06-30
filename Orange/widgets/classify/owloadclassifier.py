@@ -2,7 +2,7 @@ import os
 import pickle
 
 from PyQt4 import QtGui
-import Orange.classification
+from Orange.base import Model
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -14,7 +14,7 @@ class OWLoadClassifier(widget.OWWidget):
     priority = 3050
     icon = "icons/LoadClassifier.svg"
 
-    outputs = [("Classifier", Orange.classification.Model, widget.Dynamic)]
+    outputs = [("Classifier", Model, widget.Dynamic)]
 
     #: List of recent filenames.
     history = Setting([])

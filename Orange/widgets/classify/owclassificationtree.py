@@ -91,14 +91,14 @@ class OWClassificationTree(widget.OWWidget):
 
         self.send("Learner", self.learner)
 
-        self.error(1)
         if self.data is not None:
             try:
+                self.warning(1)
                 self.classifier = self.learner(self.data)
                 self.classifier.name = self.model_name
                 self.classifier.instances = self.data
-            except Exception as errValue:
-                self.error(1, str(errValue))
+            except ValueError as errValue:
+                self.warning(1, str(errValue))
                 self.classifier = None
         else:
             self.classifier = None
