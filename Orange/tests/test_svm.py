@@ -3,8 +3,9 @@ import unittest
 import numpy as np
 
 import Orange
-from Orange.classification import (SVMLearner, LinearSVMLearner, NuSVMLearner,
-                                   SVRLearner, NuSVRLearner, OneClassSVMLearner)
+from Orange.classification import (SVMLearner, LinearSVMLearner,
+                                   NuSVMLearner, OneClassSVMLearner)
+from Orange.regression import (SVRLearner, NuSVRLearner)
 
 
 class SVMTest(unittest.TestCase):

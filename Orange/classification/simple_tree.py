@@ -3,7 +3,7 @@ import sysconfig
 import ctypes as ct
 
 import numpy as np
-from Orange.classification import Learner, Model
+from Orange.base import Learner, Model
 
 __all__ = ['SimpleTreeLearner']
 

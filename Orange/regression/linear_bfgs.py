@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
-from Orange.classification import Learner, Model
+from Orange.regression import Learner, Model
 from Orange.preprocess import Normalize, Continuize, Impute, RemoveNaNColumns
 
 __all__ = ["LinearRegressionLearner"]
