@@ -1,5 +1,5 @@
-from numbers import Real, Integral
-from math import isnan, floor
+from numbers import Number, Real, Integral
+from math import isnan, floor, sqrt
 import numpy as np
 from pickle import PickleError
 
@@ -13,11 +13,68 @@ Unknown = ValueUnknown = float("nan")
 # For checking for unknowns
 MISSING_VALUES = {"?", ".", "", "NA", "~", None}
 
+DISCRETE_INT_MAX_VALUES = 16
+
 
 def make_variable(cls, compute_value, *args):
     if compute_value is not None:
         return cls(*args, compute_value=compute_value)
     return cls.make(*args)
+
+
+def is_discrete_values(values):
+    """
+    Return set of uniques if `values` is an iterable of discrete values
+    else False if non-discrete, or None if indeterminate.
+
+    Note
+    ----
+    Assumes consistent type of items of `values`.
+    """
+    if not len(values): return None
+    # If the first few values are, or can be converted to, floats,
+    # the type is numeric
+    try:
+        isinstance(next(iter(values)), Number) or \
+        [float(v) for _, v in zip(range(min(3, len(values))), values)]
+    except ValueError:
+        is_numeric = False
+        max_values = int(max(len(values)**.6, DISCRETE_INT_MAX_VALUES))
+    else:
+        is_numeric = True
+        max_values = DISCRETE_INT_MAX_VALUES
+
+    # If more than max values => not discrete
+    unique = set()
+    for i in values:
+        unique.add(i)
+        if len(unique) > max_values:
+            return False
+
+    # Strip NaN from unique
+    unique = {i for i in unique if not (isinstance(i, Number) and np.isnan(i))}
+
+    # All NaNs => indeterminate
+    if not unique: return None
+
+    # Strings with |values| < max_unique
+    if not is_numeric:
+        return unique
+
+    # Handle numbers
+    try: unique_float = set(map(float, unique))
+    except ValueError:
+        # Converting all the values to floats resulted in an error.
+        # Since the values have enough unique values, they are probably
+        # string values and discrete.
+        return unique
+
+    # Finally discern between integers or floats
+    return (min(unique_float) >= 0 and
+            max(unique_float) <= max_values and
+            all(i == int(i) for i in unique_float) and
+            # return original unique sans nans
+            unique)
 
 
 class Value(float):

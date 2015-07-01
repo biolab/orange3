@@ -165,17 +165,14 @@ class Domain:
             n_classes = Y.shape[1]
             places = get_places(n_classes)
             for i, class_ in enumerate(Y.T):
-                mn, mx = np.min(class_), np.max(class_)
-                if 0 <= mn <= mx <= 20:
-                    values = np.unique(class_)
-                    if all(int(x) == x and 0 <= x <= 19 for x in values):
-                        mx = int(mx)
-                        val_places = 1 + (mx >= 10)
-                        values = ["v%*i" % (val_places, i + 1)
-                                  for i in range(mx + 1)]
-                        name = get_name("Class", i, places)
-                        class_vars.append(DiscreteVariable(name, values))
-                        continue
+                if is_discrete_values(class_):
+                    mn, mx = np.min(class_), int(np.max(class_))
+                    val_places = 1 + (mx >= 10)
+                    values = ["v%*i" % (val_places, i + 1)
+                              for i in range(mx + 1)]
+                    name = get_name("Class", i, places)
+                    class_vars.append(DiscreteVariable(name, values))
+                    continue
                 class_vars.append(
                     ContinuousVariable(name=get_name("Target", i + 1, places)))
         if metas is not None:
