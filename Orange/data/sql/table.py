@@ -12,7 +12,7 @@ import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
-from .. import domain, variable, value, table, instance, filter,\
+from .. import domain, variable, table, instance, filter,\
     DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.data.sql import filter as sql_filter
 
@@ -192,7 +192,7 @@ class SqlTable(table.Table):
             try:
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                return value.Value(
+                return variable.Value(
                     var,
                     self._query(self.table_name, var, rows=[row_idx])
                 )
