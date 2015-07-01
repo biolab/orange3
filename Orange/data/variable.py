@@ -10,6 +10,8 @@ from . import _variable
 
 ValueUnknown = Unknown  # Shadowing within classes
 
+MISSING_VALUES = {"?", ".", "", "NA", "~", None}
+
 
 def make_variable(cls, compute_value, *args):
     if compute_value is not None:
@@ -59,8 +61,6 @@ class Variable(metaclass=VariableMeta):
         A dictionary with user-defined attributes of the variable
     """
 
-    _DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
-
     _variable_types = []
     Unknown = ValueUnknown
 
@@ -70,7 +70,7 @@ class Variable(metaclass=VariableMeta):
         """
         self.name = name
         self._compute_value = compute_value
-        self.unknown_str = set(Variable._DefaultUnknownStr)
+        self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.attributes = {}
         if name and compute_value is None:
