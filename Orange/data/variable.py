@@ -7,6 +7,8 @@ import collections
 
 from . import _variable
 
+from Orange.util import Registry
+
 
 # For storing unknowns
 Unknown = ValueUnknown = float("nan")
@@ -195,15 +197,12 @@ class Value(float):
         self._value = state.get('value', None)
 
 
-class VariableMeta(type):
-    # noinspection PyMethodParameters
-    def __new__(mcs, name, *args):
-        cls = type.__new__(mcs, name, *args)
-        if not hasattr(cls, '_all_vars') or cls._all_vars is Variable._all_vars:
-            cls._all_vars = {}
-        if name != "Variable":
-            Variable._variable_types.append(cls)
-        return cls
+class VariableMeta(Registry):
+    def __new__(cls, name, bases, attrs):
+        obj = super().__new__(cls, name, bases, attrs)
+        if not hasattr(obj, '_all_vars') or obj._all_vars is Variable._all_vars:
+            obj._all_vars = {}
+        return obj
 
 
 class Variable(metaclass=VariableMeta):
@@ -236,8 +235,6 @@ class Variable(metaclass=VariableMeta):
 
         A dictionary with user-defined attributes of the variable
     """
-
-    _variable_types = []
     Unknown = ValueUnknown
 
     def __init__(self, name="", compute_value=None):
@@ -272,13 +269,13 @@ class Variable(metaclass=VariableMeta):
         """
         cls._all_vars.clear()
 
-    @classmethod
-    def _clear_all_caches(cls):
+    @staticmethod
+    def _clear_all_caches():
         """
         Clears list of stored variables for all subclasses
         """
-        for cls0 in cls._variable_types:
-            cls0._clear_cache()
+        for cls in Variable.registry.values():
+            cls._clear_cache()
 
     @staticmethod
     def is_primitive():
