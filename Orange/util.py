@@ -19,3 +19,28 @@ def abstract(obj):
             raise NotImplementedError("Can't call abstract method {} of class {}"
                                       .format(obj.__name__, cls_name))
         return _refuse__call__
+
+
+def export_globals(globals, module_name):
+    """
+    Return list of important for export globals (callables, constants) from
+    `globals` dict, defined in module `module_name`.
+
+    Usage
+    -----
+    In some module, on the second-to-last line:
+
+    __all__ = export_globals(globals(), __name__)
+
+    """
+    return [getattr(v, '__name__', k)
+            for k, v in globals.items()                          # export
+            if ((callable(v) and v.__module__ == module_name     # callables from this module
+                 or k.isupper()) and                             # or CONSTANTS
+                not getattr(v, '__name__', k).startswith('_'))]  # neither marked internal
+
+
+# For best result, keep this at the bottom
+__all__ = export_globals(globals(), __name__)
+
+# ONLY NON-EXPORTED VALUES BELOW HERE
