@@ -4,7 +4,6 @@ from collections import namedtuple, OrderedDict
 from itertools import chain
 from functools import reduce
 from contextlib import contextmanager
-import itertools
 
 import numpy
 import scipy.cluster.hierarchy
@@ -874,7 +873,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             model[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            model[:] = itertools.chain(
+            model[:] = chain(
                 ["None", "Enumeration"],
                 [model.Separator],
                 items.domain.class_vars,

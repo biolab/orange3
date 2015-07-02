@@ -5,6 +5,7 @@ import pkg_resources
 
 import numpy
 import scipy.spatial.distance
+from itertools import chain
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, QEvent
@@ -365,22 +366,18 @@ class OWMDS(widget.OWWidget):
             str_vars = [var for var in all_vars
                             if var.is_discrete or var.is_string]
 
-            def set_separator(model, index):
-                index = model.index(index, 0)
-                model.setData(index, "separator", Qt.AccessibleDescriptionRole)
-                model.setData(index, Qt.NoItemFlags, role="flags")
-
-            self.colorvar_model[:] = ["Same color", ""] + cd_vars
-            set_separator(self.colorvar_model, 1)
-
-            self.shapevar_model[:] = ["Same shape", ""] + disc_vars
-            set_separator(self.shapevar_model, 1)
-
-            self.sizevar_model[:] = ["Same size", "Stress", ""] + cont_vars
-            set_separator(self.sizevar_model, 2)
-
-            self.labelvar_model[:] = ["No labels", ""] + str_vars
-            set_separator(self.labelvar_model, 1)
+            self.colorvar_model[:] = chain(["Same color"],
+                                           [self.colorvar_model.Separator],
+                                           cd_vars)
+            self.shapevar_model[:] = chain(["Same shape"],
+                                           [self.shapevar_model.Separator],
+                                           disc_vars)
+            self.sizevar_model[:] = chain(["Same size", "Stress"],
+                                          [self.sizevar_model.Separator],
+                                          cont_vars)
+            self.labelvar_model[:] = chain(["No labels"],
+                                           [self.labelvar_model.Separator],
+                                           str_vars)
 
             if domain.class_var is not None:
                 self.color_index = list(self.colorvar_model).index(domain.class_var)
