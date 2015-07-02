@@ -329,6 +329,21 @@
             "values": null
         }
     },
+    "geo-gds360": {
+        "features": {
+            "continuous": 9485,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "geo-gds360.tab",
+        "missing": false,
+        "name": "geo-gds360",
+        "rows": 24,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
     "glass": {
         "features": {
             "continuous": 9,
