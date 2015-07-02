@@ -4,6 +4,7 @@ from collections import namedtuple, OrderedDict
 from itertools import chain
 from functools import reduce
 from contextlib import contextmanager
+import itertools
 
 import numpy
 import scipy.cluster.hierarchy
@@ -866,21 +867,28 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def _set_items(self, items, axis=1):
         self.items = items
+        model = self.label_cb.model()
         if items is None:
-            self.label_cb.model()[:] = ["None", "Enumeration"]
+            model[:] = ["None", "Enumeration"]
         elif not axis:
-            self.label_cb.model()[:] = ["None", "Enumeration", "Attribute names"]
+            model[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            vars = list(items.domain.class_vars + items.domain.metas + items.domain.attributes)
-            self.label_cb.model()[:] = ["None", "Enumeration"] + vars
+            model[:] = itertools.chain(
+                ["None", "Enumeration"],
+                [model.Separator],
+                items.domain.class_vars,
+                items.domain.metas,
+                [model.Separator] if items.domain.class_vars or items.domain.metas else [],
+                items.domain.attributes
+            )
         elif isinstance(items, list) and \
                 all(isinstance(var, Orange.data.Variable) for var in items):
-            self.label_cb.model()[:] = ["None", "Enumeration", "Name"]
+            model[:] = ["None", "Enumeration", "Name"]
         else:
-            self.label_cb.model()[:] = ["None", "Enumeration"]
+            model[:] = ["None", "Enumeration"]
         self.annotation_idx = min(self.annotation_idx,
-                                  len(self.label_cb.model()) - 1)
+                                  len(model) - 1)
 
     def handleNewSignals(self):
         self._update_labels()
