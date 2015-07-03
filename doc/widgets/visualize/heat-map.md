@@ -21,7 +21,7 @@ Signals
 Description
 -----------
 
-**Heat map** is a graphical method for visualizing frequencies in
+[**Heat map**](https://en.wikipedia.org/wiki/Heat_map) is a graphical method for visualizing frequencies in
 a two-way matrix by color. The higher the occurrence of a certain value,
 the darker the represented color. By combining two values on x and y axes we see where the attribute
 combination is the strongest and where the weakest, thus enabling us to find strong corelations
