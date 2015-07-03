@@ -97,7 +97,7 @@ default) used to color the data points.
 
 ![image](images/Predictions-ExampleScatterplot.png)
 
-To get the above plot, we selected *Jitter continuous values**,
+To get the above plot, we selected *Jitter continuous values*,
 since the classification tree gives just a few distinct probabilities,
 hence without jittering there would be too much overlap between the
 points.
