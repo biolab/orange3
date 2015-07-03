@@ -223,7 +223,7 @@ class Values(Filter):
         return data[sel]
 
 
-class ValueFilter:
+class ValueFilter(Filter):
     """
     The base class for subfilters that check individual values of data
     instances. Derived classes handle discrete, continuous and string
@@ -244,6 +244,7 @@ class ValueFilter:
     """
 
     def __init__(self, column):
+        super().__init__()
         self.column = column
         self.last_domain = None
 

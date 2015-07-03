@@ -282,7 +282,7 @@ class Domain:
 
     @property
     def has_discrete_class(self):
-        return self.class_var and self.class_var.is_discrete
+        return bool(self.class_var and self.class_var.is_discrete)
 
     def get_conversion(self, source):
         """

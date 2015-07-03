@@ -397,20 +397,16 @@ class OWHeatMap(widget.OWWidget):
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
 
-        self.sampling_box = box = gui.widgetBox(self.controlArea, "Sampling")
-        sampling_options =\
-            self.sample_times_captions + self.sample_percentages_captions
-        gui.comboBox(box, self, 'sample_level',
-                     items=sampling_options,
-                     callback=self.update_sample)
-
-        gui.button(box, self, "Sharpen", self.sharpen)
+        self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
+        sampling_options = (self.sample_times_captions +
+                            self.sample_percentages_captions)
+        gui.comboBox(self.sampling_box, self, 'sample_level',
+                     items=sampling_options, callback=self.update_sample)
+        gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
 
         box = gui.widgetBox(self.controlArea, "Input")
-
         self.labelDataInput = gui.widgetLabel(box, 'No data on input')
         self.labelDataInput.setTextFormat(Qt.PlainText)
-        self.labelOutput = gui.widgetLabel(box, '')
 
         self.x_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesX = gui.comboBox(

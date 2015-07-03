@@ -19,7 +19,8 @@ class OWSVMClassification(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", svm.SVMLearner),
-               ("Classifier", svm.SVMClassifier)]
+               ("Classifier", svm.SVMClassifier),
+               ("Support vectors", Orange.data.Table)]
 
     want_main_area = False
 
@@ -159,12 +160,15 @@ class OWSVMClassification(widget.OWWidget):
         learner.name = self.learner_name
 
         classifier = None
+        sv = None
         if self.data is not None:
             classifier = learner(self.data)
             classifier.name = self.learner_name
+            sv = self.data[classifier.skl_model.support_]
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+        self.send("Support vectors", sv)
 
     def _on_kernel_changed(self):
         enabled = [[False, False, False],  # linear

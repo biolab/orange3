@@ -1,14 +1,16 @@
 import inspect
 import os
+import pickle
 import pkgutil
 import unittest
 
 import numpy as np
+import traceback
 
 import Orange.classification
 from Orange.classification import (
     Learner, Model, NaiveBayesLearner, LogisticRegressionLearner)
-from Orange.data import DiscreteVariable, Domain, Table
+from Orange.data import DiscreteVariable, Domain, Table, Variable
 from Orange.data.io import BasketFormat
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
@@ -178,7 +180,7 @@ class SklTest(unittest.TestCase):
 
 
 class LearnerAccessibility(unittest.TestCase):
-    def test_all_learners_accessible_in_Orange_classification_namespace(self):
+    def all_learners(self):
         classification_modules = pkgutil.walk_packages(
             path=Orange.classification.__path__,
             prefix="Orange.classification.",
@@ -190,7 +192,32 @@ class LearnerAccessibility(unittest.TestCase):
                 continue
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if issubclass(class_, Learner):
-                    if not hasattr(Orange.classification, class_.__name__):
-                        self.fail("%s is not visible in Orange.classification"
-                                  " namespace" % class_.__name__)
+                if issubclass(class_, Learner) and 'base' not in class_.__module__:
+                    yield class_
+
+    def test_all_learners_accessible_in_Orange_classification_namespace(self):
+        for learner in self.all_learners():
+            if not hasattr(Orange.classification, learner.__name__):
+                self.fail("%s is not visible in Orange.classification"
+                          " namespace" % learner.__name__)
+
+    def test_all_models_work_after_unpickling(self):
+        Variable._clear_all_caches()
+        datasets = [Table('iris'), Table('titanic')]
+        for learner in list(self.all_learners()):
+            try:
+                learner = learner()
+            except Exception as err:
+                print('%s cannot be used with default parameters' % learner.__name__)
+                traceback.print_exc()
+                continue
+
+            for ds in datasets:
+                model = learner(ds)
+                s = pickle.dumps(model, 0)
+                model2 = pickle.loads(s)
+
+                np.testing.assert_almost_equal(Table(model.domain, ds).X, Table(model2.domain, ds).X)
+                np.testing.assert_almost_equal(model(ds), model2(ds),
+                                               err_msg='%s does not return same values when unpickled %s' % (learner.__class__.__name__, ds.name))
+                #print('%s on %s works' % (learner, ds.name))

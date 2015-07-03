@@ -41,7 +41,7 @@ instances.
 4.  Values of continuous attributes can be visualized with bars; colors can be attributed to different classes.
 5.  Data instances (rows) can be selected and sent to the widget's
     output channel.
-6.  While auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press '*Send Selected      Rows*'.
+6.  While auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press '*Send Selected Rows*'.
 
 Example
 -------

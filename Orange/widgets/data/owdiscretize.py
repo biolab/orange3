@@ -412,7 +412,7 @@ class OWDiscretize(widget.OWWidget):
             return None
 
         def disc_var(source):
-            if source.is_continuous:
+            if source and source.is_continuous:
                 return self.discretized_var(source)
             else:
                 return source

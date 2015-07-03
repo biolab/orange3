@@ -353,12 +353,13 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(f_to_g.metas, [-1, 0, -3])
 
         x = lambda: 42
-        income.compute_value = x
-        g_to_f = f.get_conversion(g)
-        self.assertIs(g_to_f.source, g)
-        self.assertEqual(g_to_f.attributes, [-2])
-        self.assertEqual(g_to_f.class_vars, [Variable.compute_value, x])
-        self.assertEqual(g_to_f.metas, [-1, x, -3])
+        new_income = income.copy(compute_value=x)
+        h = Domain((gender,), (race, new_income), metas=(age, new_income, ssn))
+        g_to_h = h.get_conversion(g)
+        self.assertIs(g_to_h.source, g)
+        self.assertEqual(g_to_h.attributes, [-2])
+        self.assertEqual(g_to_h.class_vars, [None, x])
+        self.assertEqual(g_to_h.metas, [-1, x, -3])
 
     def test_conversion(self):
         domain = Domain([age, income], [race],
