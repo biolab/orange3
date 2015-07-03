@@ -49,6 +49,7 @@ example of the schema is shown below.
   each class (e.g., 48 instances were classified into virginica).
 
 2. In *Show* we select what data we would like to see in the matrix.
+
     - *Number of instances* shows correctly and incorrectly classified instances numerically.
     - *Proportions of predicted* shows how many instances
   classified as, say, *Iris-versicolor* are in which true class; in the
@@ -60,6 +61,7 @@ example of the schema is shown below.
   ![image](images/ConfusionMatrix-propTrue.png)
 
 3. In *Select* you can choose the desired output.
+
     - Button *Correct* sends all correctly classified instances to the output by
   selecting the diagonal of the matrix.
     - *Misclassified* selects the
