@@ -3,7 +3,7 @@ Predictions
 
 ![image](icons/predictions.png)
 
-Shows the classifiers' predictions on data.
+Shows classifiers' predictions on the data.
 
 Signals
 -------
