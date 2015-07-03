@@ -1,126 +1,103 @@
 Confusion Matrix
 ================
 
-![image]
+![image](icons/confusion-matrix.png)
 
-Shows a confusion matrix.
+Shows proportions between predicted and actual class.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   
+- **Evaluation results**
 
-        Evaluation results (orngTest.ExperimentResults)
+  Results of testing the algorithms; typically from **Test Learners**
 
-        :   Results of testing the algorithms; typically from
-            Test Learners
+**Outputs**:
 
-Outputs:
+- **Selected Data**
 
-:   -   
-
-        Selected Examples (ExampleTable)
-
-        :   A set of examples from the selected cells in the
-            confusion matrix.
+  Data subset from the selected cells in the confusion matrix.
 
 Description
 -----------
 
-Confusion Matrix gives the number/proportion of examples from one class
-classified in to another (or same) class. Besides that, selecting
-elements of the matrix feeds the corresponding examples onto the output
-signal. This way, one can observe which specific examples were
-misclassified in a certai way.
+[**Confusion Matrix**](https://en.wikipedia.org/wiki/Confusion_matrix) gives the number/proportion of 
+instances between predicted and actual class. Selection of
+the elements in the matrix feeds the corresponding instances into the output
+signal. This way, one can observe which specific instances were
+misclassified and how.
 
-The widget usually gets the evaluation results from Test Learners; an
+The widget usually gets the evaluation results from **Test Learners**; an
 example of the schema is shown below.
 
-![image][1]
+![image](images/ConfusionMatrix3-stamped.png)
 
-The widget on the snapshot shows the confusion matrix for classification
-tree and naive Bayesian classifier trained and tested on the Iris data.
+Snapshot shows the confusion matrix for **Classification
+Tree** and **Naive Bayesian** classifier trained and tested on the *Iris* data.
 The righthand side of the widget contains the matrix for naive Bayesian
 classifier (since this classifier is selected on the left). Each row
-corresponds to a correct class, and columns represent the predicted
-classes. For instance, seven examples of Iris-versicolor were
-misclassified as Iris-virginica. The rightmost column gives the number
-of examples from each class (there are 50 irises of each of the three
-classes) and the bottom row gives the number of examples classified into
-each class (e.g., 52 instances were classified into virginica).
+corresponds to a correct class, while columns represent the predicted
+classes. For instance, four instances of *Iris-versicolor* were
+misclassified as *Iris-virginica*. The rightmost column gives the number
+of instances from each class (there are 50 irises of each of the three
+classes) and the bottom row gives the number of instances classified into
+each class (e.g., 48 instances were classified into virginica).
 
-When the evaluation results contain data on multiple learning
-algorithms, we have to choose one in in box Learners.
+When evaluation results contain data on multiple learning
+algorithms, we have to choose one in the *Learners* box.
 
 ![image][2]
 
-In Show we select what data we would like to see in the matrix. In the
-above example, we are observing the Number of examples. The alternatives
-are Proportions of predicted and Proportions of true classes. In the
-iris example, “proportions of predicted” shows how many of examples
-classified as, say, Iris-versicolor are in which true class; in the
-table we can read the 0% of them are actually setosae, 89.6% of those
-classified as versicolor are versicolors, and 10.4% are virginicae.
+In *Show* we select what data we would like to see in the matrix. In the
+above example, we are observing the *Number of instances*. The alternatives
+are *Proportions of predicted* and *Proportions of actual* classes. In the
+*Iris* example, "proportions of predicted" shows how many instances
+classified as, say, *Iris-versicolor* are in which true class; in the
+table we can read the 0% of them are actually setosae, 88.5% of those
+classified as versicolor are versicolors, and 7.7% are virginicae.
 
-![image][3]
+![image](images/ConfusionMatrix-propTrue.png)
 
-Proportions of predicted shows the opposite relation: of all true
-versicolors, 86% were classified as versicolors and 14% as virginicae.
+"Proportions of actual" shows the opposite relation: of all true
+versicolors, 92% were classified as versicolors and 8% as virginicae.
 
-Button Correct sends all correctly classified examples to the output by
-selecting the diagonal of the matrix. Misclassified selects the
-misclassified examples. None annulates the selection. As mentioned
-before, one can also select individual cells of the table, to select
-specific kinds of misclassified examples, e.g. the versicolors
-classified as virginicae.
+Button *Correct* sends all correctly classified instances to the output by
+selecting the diagonal of the matrix. *Misclassified* selects the
+misclassified instances. *None* annuls the selection. As mentioned
+before, one can also select individual cells of the table to select
+specific kinds of misclassified instances (e.g. the versicolors
+classified as virginicae).
 
-  [image]: ../../../../Orange/OrangeWidgets/Evaluate/icons/ConfusionMatrix.svg
-  [1]: images/ConfusionMatrix.png
-  [2]: images/ConfusionMatrix-Schema.png
-  [3]: images/ConfusionMatrix-propTrue.png
+When sending selected instances the widget can add new attributes,
+such as predicted classes or their probabilities, if the
+corresponding options *Predictions* and/or *Probabilities* are checked.
 
-When sending the selecting examples the widget can add new attributes
-telling the predicted classes or their probabilities, if the
-corresponding options Append class prediction and/or
-Append predicted class probabilities are checked.
-
-The widget updates the output at every change if Commit automatically is
-checked. If not, the user will need to press Commit to commit the
+The widget outputs every change if *Auto send is on*. If not, the user will need to click *Send data* to commit the
 changes.
 
 Example
-=======
+-------
 
 The following schema demonstrates well what this widget can be used for.
 
-![image]
+![image](images/ConfusionMatrix-Schema.png)
 
-Test Learners gets data from File and two learning algorithms from
-Naive Bayes and Classification Tree. It performs cross-validation or
+**Test Learners** gets the data from **File** and two learning algorithms from
+**Naive Bayes** and **Classification Tree**. It performs cross-validation or
 some other train-and-test procedures to get class predictions by both
-algorithms for all (or some, depending on the procedure) examples from
-the data. The test results are fed into the confusion matrix, where we
-can observe how many examples were misclassified in which way.
+algorithms for all (or some) data instances. Test results are fed into the **Confusion Matrix**, where we
+can observe how many instances were misclassified and in which way.
 
-On the output we connected two other widgets. Data Table will show the
-examples we select in the Confusion matrix. If we, for instance, click
-Misclassified the table will contain all examples which were
+In the output used **Data Table** to show the
+instances we selected in the confusion matrix. If we, for instance, click
+*Misclassified*, the table will contain all instances which were
 misclassified by the selected method.
 
-Scatter Plot gets two set of examples. From the file widget, it gets the
-complete data and the confusion matrix will send only the selected data,
-for instance the misclassified examples. The scatter plot will show all
-the data, with the symbols representing the selected data filled and the
-other symbols hollow.
+**Scatterplot** gets two sets of data. From the **File** widget it gets the
+complete data, while the confusion matrix sends only the selected data,
+misclassifications for instance. The scatter plot will show all
+the data, with the bold symbols representing the selected data.
 
-For a nice example, we can load the iris data set and observe the
-position of misclassified examples in the scatter plot with attributes
-petal length and petal width used for x and y axes. As expected, the
-misclassified examples lie on the boundary between the two classes.
-
-![image][1]
-
-  [image]: images/ConfusionMatrix-Schema.png
-  [1]: images/ConfusionMatrix-Example.png
+<img src="images/ConfusionMatrix3-stamped.png" alt="image" width="600">
