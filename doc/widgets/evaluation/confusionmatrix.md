@@ -62,7 +62,7 @@ example of the schema is shown below.
 
 3. In *Select* you can choose the desired output.
 
-    - Button **Correct** sends all correctly classified instances to the output by
+    - **Correct** sends all correctly classified instances to the output by
     selecting the diagonal of the matrix.
     - **Misclassified** selects the
     misclassified instances.
