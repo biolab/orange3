@@ -34,48 +34,48 @@ example of the schema is shown below.
 
 ![image](images/ConfusionMatrix3-stamped.png)
 
-Snapshot shows the confusion matrix for **Classification
-Tree** and **Naive Bayesian** classifier trained and tested on the *Iris* data.
-The righthand side of the widget contains the matrix for naive Bayesian
-classifier (since this classifier is selected on the left). Each row
-corresponds to a correct class, while columns represent the predicted
-classes. For instance, four instances of *Iris-versicolor* were
-misclassified as *Iris-virginica*. The rightmost column gives the number
-of instances from each class (there are 50 irises of each of the three
-classes) and the bottom row gives the number of instances classified into
-each class (e.g., 48 instances were classified into virginica).
+1. When evaluation results contain data on multiple learning
+  algorithms, we have to choose one in the *Learners* box.
+  
+  Snapshot shows the confusion matrix for **Classification
+  Tree** and **Naive Bayesian** classifier trained and tested on the *Iris* data.
+  The righthand side of the widget contains the matrix for naive Bayesian
+  classifier (since this classifier is selected on the left). Each row
+  corresponds to a correct class, while columns represent the predicted
+  classes. For instance, four instances of *Iris-versicolor* were
+  misclassified as *Iris-virginica*. The rightmost column gives the number
+  of instances from each class (there are 50 irises of each of the three
+  classes) and the bottom row gives the number of instances classified into
+  each class (e.g., 48 instances were classified into virginica).
 
-When evaluation results contain data on multiple learning
-algorithms, we have to choose one in the *Learners* box.
+2. In *Show* we select what data we would like to see in the matrix.
+    - *Number of instances* shows correctly and incorrectly classified instances numerically.
+    - *Proportions of predicted* shows how many instances
+  classified as, say, *Iris-versicolor* are in which true class; in the
+  table we can read the 0% of them are actually setosae, 88.5% of those
+  classified as versicolor are versicolors, and 7.7% are virginicae.
+    - *Proportions of actual* shows the opposite relation: of all true
+  versicolors, 92% were classified as versicolors and 8% as virginicae.
 
-![image][2]
+  ![image](images/ConfusionMatrix-propTrue.png)
 
-In *Show* we select what data we would like to see in the matrix. In the
-above example, we are observing the *Number of instances*. The alternatives
-are *Proportions of predicted* and *Proportions of actual* classes. In the
-*Iris* example, "proportions of predicted" shows how many instances
-classified as, say, *Iris-versicolor* are in which true class; in the
-table we can read the 0% of them are actually setosae, 88.5% of those
-classified as versicolor are versicolors, and 7.7% are virginicae.
+3. In *Select* you can choose the desired output.
+    - Button *Correct* sends all correctly classified instances to the output by
+  selecting the diagonal of the matrix.
+    - *Misclassified* selects the
+  misclassified instances.
+    - *None* annuls the selection.
+  
+  As mentioned before, one can also select individual cells of the table to select
+  specific kinds of misclassified instances (e.g. the versicolors
+  classified as virginicae).
 
-![image](images/ConfusionMatrix-propTrue.png)
+4. When sending selected instances the widget can add new attributes,
+  such as predicted classes or their probabilities, if the
+  corresponding options *Predictions* and/or *Probabilities* are checked.
 
-"Proportions of actual" shows the opposite relation: of all true
-versicolors, 92% were classified as versicolors and 8% as virginicae.
-
-Button *Correct* sends all correctly classified instances to the output by
-selecting the diagonal of the matrix. *Misclassified* selects the
-misclassified instances. *None* annuls the selection. As mentioned
-before, one can also select individual cells of the table to select
-specific kinds of misclassified instances (e.g. the versicolors
-classified as virginicae).
-
-When sending selected instances the widget can add new attributes,
-such as predicted classes or their probabilities, if the
-corresponding options *Predictions* and/or *Probabilities* are checked.
-
-The widget outputs every change if *Auto send is on*. If not, the user will need to click *Send data* to commit the
-changes.
+5. The widget outputs every change if *Auto send is on*. If not, the user will need to click *Send data* to commit the
+  changes.
 
 Example
 -------
@@ -100,4 +100,4 @@ complete data, while the confusion matrix sends only the selected data,
 misclassifications for instance. The scatter plot will show all
 the data, with the bold symbols representing the selected data.
 
-<img src="images/ConfusionMatrix3-stamped.png" alt="image" width="600">
+<img src="images/ConfusionMatrix-Example.png" alt="image" width="600">
