@@ -31,14 +31,19 @@ The widget receives a data set and one or more predictors (classifiers, not
 learning algorithms - see the example below). It outputs the
 data and the predictions.
 
+![image](images/Predictions-stamped.png)
+
+1. Information on the input
+2. Select the desired output
+
 Despite its simplicity, the widget allows for quite an interesting analysis
-of decisions of predictive models; there is a simple demonstration at
+of decisions of [predictive models](https://en.wikipedia.org/wiki/Predictive_modelling); there is a simple demonstration at
 the bottom of the page. **Confusion Matrix** is a related widget and
 although many things can be done with any of them,
 there are tasks for which one of them might be much more convenient than
 the other.
 
-![image][1]
+![image](images/Predictions-DataTable.png)
 
 The output of the widget is another data set, where predictions are
 appended as new meta attributes. You can select which features you wish to output
@@ -49,7 +54,7 @@ Example
 
 Here is a demonstration.
 
-![image][2]
+![image](images/Predictions-Schema.png)
 
 First, compare the schema with the one for **Test Learners**. Widgets
 representing learning algorithms, like **Naive Bayes** or
@@ -72,9 +77,9 @@ classified.
 
 The results of this procedure on the *heart disease* data are shown in the
 **Data Table** snapshot. The last seven columns are (from right to left) the actual
-class, and the predictions by the classification tree and naive Bayesian
-classifier. For the latter two we see probabilities of class "1", class "0"
-and the predicted class. Probabilities are shown
+class, and the predictions by the [classification tree](https://en.wikipedia.org/wiki/Decision_tree_learning)
+and [naive Bayesian](https://en.wikipedia.org/wiki/Naive_Bayes_classifier) classifier. For the latter two we see 
+probabilities of class "1", class "0" and the predicted class. Probabilities are shown
 as separate attributes, so we can sort instances by these values.
 
 To save the predictions, we simply attach the **Save** widget to
@@ -90,7 +95,7 @@ then given to the **Scatterplot**, which we set to use the attributes with
 probabilities as the x and y axes, and the class is (already by
 default) used to color the data points.
 
-![image]
+![image](images/Predictions-ExampleScatterplot.png)
 
 To get the above plot, we selected *Jitter continuous values**,
 since the classification tree gives just a few distinct probabilities,
@@ -113,7 +118,7 @@ conclusions may be ungrounded.
 
 Here is the entire schema:
 
-<img src="" alt="image" width="600">
+<img src="images/Predictions-Example.png" alt="image" width="600">
 
 Another example of using this widget is given in the documentation for
 widget **Confusion Matrix**.
