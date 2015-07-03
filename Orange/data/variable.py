@@ -277,17 +277,13 @@ class Variable(metaclass=VariableMeta):
         for cls in Variable.registry.values():
             cls._clear_cache()
 
-    @staticmethod
-    def is_primitive():
+    @classmethod
+    def is_primitive(cls):
         """
         `True` if the variable's values are stored as floats.
-        Primitive variables are :obj:`~data.DiscreteVariable` and
-        :obj:`~data.ContinuousVariable`. Non-primitive variables can appear
-        in the data only as meta attributes.
-
-        Derived classes must overload the function.
+        Non-primitive variables can appear in the data only as meta attributes.
         """
-        raise RuntimeError("variable descriptors must overload is_primitive()")
+        return cls in (DiscreteVariable, ContinuousVariable)
 
     @property
     def is_discrete(self):
@@ -421,11 +417,6 @@ class ContinuousVariable(Variable):
         self.adjust_decimals = 0
         self._out_format = "%.{}f".format(self.number_of_decimals)
 
-    @staticmethod
-    def is_primitive():
-        """ Return `True`: continuous variables are stored as floats."""
-        return True
-
     def to_val(self, s):
         """
         Convert a value, given as an instance of an arbitrary type, to a float.
@@ -501,11 +492,6 @@ class DiscreteVariable(Variable):
         if self.base_value >= 0:
             args += ", base_value={}".format(self.base_value)
         return "{}('{}', {})".format(self.__class__.__name__, self.name, args)
-
-    @staticmethod
-    def is_primitive():
-        """ Return `True`: discrete variables are stored as floats. """
-        return True
 
     def to_val(self, s):
         """
@@ -697,11 +683,6 @@ class StringVariable(Variable):
     meta attributes.
     """
     Unknown = None
-
-    @staticmethod
-    def is_primitive():
-        """Return `False`: string variables are not stored as floats."""
-        return False
 
     def to_val(self, s):
         """
