@@ -50,23 +50,23 @@ example of the schema is shown below.
 
 2. In *Show* we select what data we would like to see in the matrix.
 
-    - *Number of instances* shows correctly and incorrectly classified instances numerically.
-    - *Proportions of predicted* shows how many instances
+    - **Number of instances** shows correctly and incorrectly classified instances numerically.
+    - **Proportions of predicted** shows how many instances
     classified as, say, *Iris-versicolor* are in which true class; in the
     table we can read the 0% of them are actually setosae, 88.5% of those
     classified as versicolor are versicolors, and 7.7% are virginicae.
-    - *Proportions of actual* shows the opposite relation: of all true
+    - **Proportions of actual** shows the opposite relation: of all true
     versicolors, 92% were classified as versicolors and 8% as virginicae.
 
   ![image](images/ConfusionMatrix-propTrue.png)
 
 3. In *Select* you can choose the desired output.
 
-    - Button *Correct* sends all correctly classified instances to the output by
+    - Button **Correct** sends all correctly classified instances to the output by
     selecting the diagonal of the matrix.
-    - *Misclassified* selects the
+    - **Misclassified** selects the
     misclassified instances.
-    - *None* annuls the selection.
+    - **None** annuls the selection.
   
   As mentioned before, one can also select individual cells of the table to select
   specific kinds of misclassified instances (e.g. the versicolors
