@@ -16,7 +16,6 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.canvas.utils import environ
-from Orange.classification import Learner
 from Orange.data import Table, filter, DiscreteVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.distribution import get_distribution
@@ -101,7 +100,7 @@ class OWMosaicDisplay(OWWidget):
 
     inputs = [("Data", Table, "setData", Default),
               ("Data Subset", Table, "setSubsetData")]
-    outputs = [("Selected Data", Table), ("Learner", Learner)]
+    outputs = [("Selected Data", Table)]
 
     settingsHandler = DomainContextHandler()
     show_apriori_distribution_lines = Setting(False)
