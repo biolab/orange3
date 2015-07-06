@@ -3,7 +3,7 @@ Distances
 
 ![image](icons/distances.png)
 
-Computes distances between instances/attributes in the data set.
+Computes distances between rows/columns in the data set.
 
 Signals
 -------
@@ -23,8 +23,8 @@ Signals
 Description
 -----------
 
-Widget Distances computes the distances between either the attributes
-or instances in the data set.
+Widget Distances computes the distances between either the rows
+or columns in the data set.
 
 ![Distances Widget](images/Distances-stamped.png)
 
@@ -56,4 +56,4 @@ This is an intermediate widget: it needs to be fed into another widget to displa
 for instance **Distance Map** to visualize distances in a map, **Hierarchical Clustering** to cluster the attributes,
 or **MDS** to visualize the distances in a plane.
 
-![Distances Schema](images/DistancesExample.png)
+<img src="images/DistancesExample.png" alt="image" width="600">
