@@ -26,7 +26,7 @@ Description
 Widget Distances computes the distances between either the attributes
 or instances in the data set.
 
-![Association Rules Widget]
+![Distances Widget](images/Distances-stamped.png)
 
 1. Choose which distances to measure, between rows or columns.
 
@@ -52,8 +52,8 @@ or instances in the data set.
 Example
 -------
 
-This widget is an intermediate widget: it needs to be fed into another widget,
+This is an intermediate widget: it needs to be fed into another widget to display results,
 for instance **Distance Map** to visualize distances in a map, **Hierarchical Clustering** to cluster the attributes,
-or **MDS** to visualize the distances on a plane.
+or **MDS** to visualize the distances in a plane.
 
-![Association Rules]
+![Distances Schema](images/DistancesExample.png)
