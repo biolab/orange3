@@ -23,7 +23,7 @@ Signals
 Description
 -----------
 
-Widget Distances computes the distances between either the rows
+Widget **Distances** computes the distances between either the rows
 or columns in the data set.
 
 ![Distances Widget](images/Distances-stamped.png)
