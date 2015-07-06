@@ -29,7 +29,7 @@ def _orange_to_numpy(x):
 
 
 class Distance():
-    def __call__(self, e1, e2=None, axis=1):
+    def __call__(self, e1, e2=None, axis=1, impute=False):
         """
         :param e1: input data instances, we calculate distances between all pairs
         :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
@@ -39,6 +39,8 @@ class Distance():
         :param axis: if axis=1 we calculate distances between rows,
            if axis=0 we calculate distances between columns
         :type axis: int
+        :param impute: if impute=True all NaN values in matrix are replaced with 0
+        :type impute: bool
         :return: the matrix with distances between given examples
         :rtype: :class:`Orange.misc.distmatrix.DistMatrix`
         """
@@ -54,7 +56,7 @@ class SklDistance(Distance):
         """
         self.metric = metric
 
-    def __call__(self, e1, e2=None, axis=1):
+    def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if axis == 0:
@@ -89,7 +91,7 @@ class SpearmanDistance(Distance):
         """
         self.absolute = absolute
 
-    def __call__(self, e1, e2=None, axis=1):
+    def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if x2 is None:
@@ -107,6 +109,8 @@ class SpearmanDistance(Distance):
             slc = len(e1) if x1.ndim > 1 else 1
             transpose = True
         rho, _ = stats.spearmanr(x1, x2, axis=axis)
+        if np.isnan(rho).any() and impute:
+            rho = np.nan_to_num(rho)
         if self.absolute:
             dist = (1. - np.abs(rho)) / 2.
         else:
@@ -138,7 +142,7 @@ class PearsonDistance(Distance):
         """
         self.absolute = absolute
 
-    def __call__(self, e1, e2=None, axis=1):
+    def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if x2 is None:
@@ -151,6 +155,8 @@ class PearsonDistance(Distance):
         if x2.ndim == 1:
             x2 = list([x2])
         rho = np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
+        if np.isnan(rho).any() and impute:
+            rho = np.nan_to_num(rho)
         if self.absolute:
             dist = (1. - np.abs(rho)) / 2.
         else:
