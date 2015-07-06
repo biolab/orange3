@@ -36,6 +36,7 @@ Description
 2. The penalty type (either [L1](https://en.wikipedia.org/wiki/Least_squares#Lasso_method) or [L2](https://en.wikipedia.org/wiki/Tikhonov_regularization)).
 3. [Regularization](https://en.wikipedia.org/wiki/Regularization_(mathematics)) value (higher value means less regularization).
 4. Set [numerical tolerance](https://en.wikipedia.org/wiki/Error-tolerant_design) (permitted deviation from expected value).
+5. Press '*Apply*' to commit changes.
 
 Example
 -------
