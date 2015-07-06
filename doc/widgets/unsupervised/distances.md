@@ -1,54 +1,49 @@
-Attribute Distance
-==================
+Distances
+=========
 
-![image]
+![image](icons/distances.png)
 
-Computes distances between examples in the data set
+Computes distances between instances/attributes in the data set.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   
+- **Data**
 
-        Examples
+  Data set
 
-        :   A list of examples
+**Outputs**:
 
-Outputs:
+- **Distances**
 
-:   -   
-
-        Distance Matrix
-
-        :   A matrix of attribute distances
+  Distance matrix
 
 Description
 -----------
 
-Widget Attribute Distances computes the distances between the attributes
-in the data sets. Don’t confuse it with a similar widget for computing
-the distances between examples.
+Widget Distances computes the distances between either the attributes
+or instances in the data set.
 
 ![Association Rules Widget]
 
+1. Choose the *Distance Metrics*:
+    - [**Euclidean**](https://en.wikipedia.org/wiki/Euclidean_distance) ("straight line", distance between two points)
+    - [**Manhattan**](https://en.wiktionary.org/wiki/Manhattan_distance) (the sum of absolute differences for all attributes)
+    - [**Cosine**](https://en.wikipedia.org/wiki/Cosine_similarity) (the cosine of the angle between two vectors of an inner product space)
+    - [**Jaccard**](https://en.wikipedia.org/wiki/Jaccard_index) (the size of the intersection divided by the size of the union of the sample sets)
+    - [**Spearman**](https://en.wikipedia.org/wiki/Spearman's_rank_correlation_coefficient) (linear correlation between the rank of the values)
+    - [**Spearman absolute**](https://en.wikipedia.org/wiki/Spearman's_rank_correlation_coefficient) (linear correlation between the rank of the absolute values)
+    - [**Pearson**](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient) (linear correlation between the values)
+    - [**Pearson absolute**](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient) (linear correlation between the absolute values)
+
+In case of missing values the widget automatically imputes the average value of the row or the column.
+
 Since the widget cannot compute distances between discrete and
-continuous attributes, all attributes are first either discretized, by
-splitting the attribute into four quartiles, or “continuized” by
-treating any discrete attributes as ordinal with values equivalent to 0,
-1, 2, 3… For other, possibly better methods of
-discretization/continuization, see widgets Discretize and Continuize.
-
-The two kinds of attributes then have different measures of distance.
-
-For discrete attributes, the distance can be computed as
-Pearson's chi-square, where the more the two attributes are dependent,
-the closer they are. The measure actually returns the p-value of the
-common chi-square test of independence. The other two measures are as
-defined by Aleks Jakulin in his work on [attribute interactions]:
-2-way interaction is defined as I(A;B)/H(A,B) and 3-way interaction is
-I(A;B;C), respectively.
+continuous attributes, it only uses continuous attributes and ignores the discrete ones.
+If you want to put the discrete attributes to use, continuize them
+with **Continuize** widget first.
 
 Examples
 --------
