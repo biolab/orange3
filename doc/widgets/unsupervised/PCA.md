@@ -1,41 +1,37 @@
-Principal Component Analysis
-============================
+PCA
+===
 
-![PCA]
+![PCA](icons/pca.png)
 
-Channels
---------
+Principal Component Analysis linear transformation of input data.
 
-Inputs:
+Signals
+-------
 
-:   -   Input Data (Table)
+**Inputs**:
 
-Outputs:
+- **Data**
 
-:   -   
+  Data set
 
-        Transformed Data (Table)
+**Outputs**:
 
-        :   PCA transformed input data.
+- **Transformed Data**
 
-    -   
+  PCA transformed input data.
 
-        Eigen Vectors (Table)
+- **Components**
 
-        :   Eigen vectors.
+  [Eigenvectors](https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors).
 
 Description
 -----------
 
-[Principal Component Analysis] (PCA) computes the PCA linear
+[Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis) (PCA) computes the PCA linear
 transformation of the input data.
 
 ![PCA widget]
 
 The number of components of the transformation can be selected using
-either the Components Selection input box or by dragging the vertical
+either the *Components Selection** input box or by dragging the vertical
 cutoff line in the graph.
-
-  [PCA]: ../../../../Orange/OrangeWidgets/Unsupervised/icons/PCA.svg
-  [Principal Component Analysis]: http://en.wikipedia.org/wiki/Principal_component_analysis
-  [PCA widget]: images/PCA.png
