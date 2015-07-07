@@ -3,7 +3,7 @@ PCA
 
 ![PCA](icons/pca.png)
 
-Principal Component Analysis linear transformation of input data.
+PCA linear transformation of input data.
 
 Signals
 -------
@@ -33,15 +33,14 @@ transformation of the input data.
 ![PCA widget](images/PCA-stamped.png)
 
 The number of components of the transformation can be selected using
-either the *Components Selection** input box or by dragging the vertical
+either the *Components Selection* input box or by dragging the vertical
 cutoff line in the graph.
 
 Examples
 --------
 
-PCA can be used to simplify visualizations of large data sets and select the most relevant attributes in a data set. Below we
-used *Iris* data set to show how we can improve the visualization of the data set with PCA. The transformed data scatter plot
-shows a much clearer distinction between classes than default settings.
+**PCA** can be used to simplify visualizations of large data sets and select the most relevant attributes in a data set. Below we
+used *Iris* data set to show how we can improve the visualization of the data set with PCA. The transformed data in a **Scatter plot** show a much clearer distinction between classes than the default settings.
 
 <img src="images/PCAExample.png" alt="image" width="600">
 
