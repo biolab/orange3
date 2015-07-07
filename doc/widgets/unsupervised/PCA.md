@@ -32,8 +32,8 @@ transformation of the input data.
 
 ![PCA widget](images/PCA-stamped.png)
 
-The number of components of the transformation can be selected using
-either the *Components Selection* input box or by dragging the vertical
+The number of components of the transformation can be selected
+either in the *Components Selection* input box or by dragging the vertical
 cutoff line in the graph.
 
 Examples
