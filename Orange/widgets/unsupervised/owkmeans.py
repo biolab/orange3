@@ -323,7 +323,7 @@ class OWKMeans(widget.OWWidget):
         if self.place_cluster_ids == self.OUTPUT_CLASS:
             if classes:
                 meta_attrs += classes
-                metas = np.hstack((metas, Y.reshape(150, 1)))
+                metas = np.hstack((metas, Y.reshape(len(self.data), 1)))
             classes = [clust_var]
             Y = clust_ids
         elif self.place_cluster_ids == self.OUTPUT_ATTRIBUTE:
