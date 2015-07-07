@@ -1,41 +1,30 @@
 Correspondence Analysis
 =======================
 
-![PCA]
+![Correspondence Analysis](icons/correspondence-analysis.png)
 
-Channels
---------
+Signals
+-------
 
-Inputs:
+**Inputs**:
 
-:   -   Input Data (Table)
+- **Data**
 
-Outputs:
+  Data set.
 
-:   -   
+**Outputs**:
 
-        Transformed Data (Table)
-
-        :   PCA transformed input data.
-
-    -   
-
-        Eigen Vectors (Table)
-
-        :   Eigen vectors.
+- None
 
 Description
 -----------
 
-[Principal Component Analysis] (PCA) computes the PCA linear
-transformation of the input data.
+[Correspondence Analysis](https://en.wikipedia.org/wiki/Correspondence_analysis) (CA) computes the CA linear
+transformation of the input data. While it is similar to PCA, CA computes linear transformation on discrete
+rather than on continuous data.
 
-![PCA widget]
+![CA widget]
 
 The number of components of the transformation can be selected using
 either the Components Selection input box or by dragging the vertical
 cutoff line in the graph.
-
-  [PCA]: ../../../../Orange/OrangeWidgets/Unsupervised/icons/PCA.svg
-  [Principal Component Analysis]: http://en.wikipedia.org/wiki/Principal_component_analysis
-  [PCA widget]: images/PCA.png
