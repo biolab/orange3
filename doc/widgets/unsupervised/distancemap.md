@@ -44,7 +44,7 @@ data, where smaller distances are represented with white and larger with dark pu
 The matrix is symmetric and the diagonal is white - no attribute is different from itself.
 Symmetricity is always assumed, while the diagonal may also be non-zero.
 
-![image][1]
+![image](images/DistanceMap-stamped.png)
 
 1. *Element sorting* arranges elements in the map by:
     - None (lists instances as found in the data set)
@@ -76,17 +76,30 @@ where attributes with the lowest distance scores are exposed. Besides the
 diagonal line we see that in our example *ST by exercise* and *major vessels
 colored* are the two attributes closest together.
 
-![image]
+![image](images/DistanceMap-Highlighted.png)
 
 The user can select a region in the map with the usual click-and-drag of the cursor.
 When a part of the map is selected, the widget outputs all
 items from the selected cells.
 
+Another option is to select "*rows*" instead of "*columns*" in the **Distances** widget.
+This will display distances between rows in the **Distance Map**. Here is an example:
+
+![image](images/DistanceMap-Rows.png)
+
 Examples
 ========
 
+The first workflow shows a very standard use of the **Distance Map** widget. We 
+select 70% of the original *Iris* data as our sample and view the distances between
+columns in **Distance Map**.
 
-![image][2]
+<img src="images/DistanceMap-Example2.png" alt="image" width="600">
 
-The file widget loads the iris data set; we then compute the attribute
-distances and visualize them.
+In the second example we use the *heart disease* data and select a subset of
+women only from the **Scatter Plot**. Then we visualize distances between columns
+in the **Distance Map**. Since the subset contains also some discrete data,
+**Distances** widget warns us it will ignore discrete features, thus we will
+see only continuous instances/attributes in the map.
+
+<img src="images/DistanceMap-Example.png" alt="image" width="600">
