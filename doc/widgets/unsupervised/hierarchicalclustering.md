@@ -10,19 +10,19 @@ Signals
 
 **Inputs**:
 
-- **Distance Matrix**
+- **Distances**
 
-  A matrix of distances between items being clustered
+  Distance matrix
 
 **Outputs**:
 
 - **Selected Data**
 
-  Data subset.
+  Data subset
 
 - **Other Data**
 
-  Remaining data.
+  Remaining data
 
 Description
 -----------
