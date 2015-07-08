@@ -31,7 +31,7 @@ The widget computes hierarchical clustering of arbitrary types of
 objects from the matrix of distances between them and shows the
 corresponding dendrogram.
 
-![image][1]
+![image](images/HierarchicalClustering-stamped.png)
 
 1. The widget supports four kinds of linkages:
     - **Single linkage** is the distance between the closest elements of the two clusters
@@ -71,37 +71,15 @@ corresponding dendrogram.
 Examples
 ========
 
-The schema below computes clustering of attributes and of examples.
+The schema below computes clustering of attributes (columns) and of instances (rows).
 
-![image]
+![image](images/HierarchicalClustering-Example2.png)
 
-We loaded the Zoo data set. The clustering of attributes is already
-shown above. Below is the clustering of examples, that is, of animals,
-and the nodes are annotated by the animals’ names. We connected the
-Linear projection showing the freeviz-optimized projection of the data
-so that it shows all examples read from the file, while the signal from
-Hierarchical clustering is used as a subset. Linear projection thus
-marks the examples selected in Hierarchical clustering. This way, we can
+We loaded the *Iris* data set. The clustering of attributes (columns) is already
+shown above. Below is the clustering of instances
+and the nodes are annotated by the Iris' subvarieties. We connected the
+**Scatter Plot** showing all the instances from the file, while the signal from
+**Hierarchical clustering** is used as a subset. This way, we can
 observe the position of the selected cluster(s) in the projection.
 
-![image][1]
-
-To (visually) test how well the clustering corresponds to the actual
-classes in the data, we can tell the widget to show the class (“type”)
-of the animal instead of its name (Annotate). Correspondence looks good.
-
-![image][2]
-
-A fancy way to verify the correspondence between the clustering and the
-actual classes would be to compute the chi-square test between them. As
-Orange does not have a dedicated widget for that, we can compute the
-chi-square in Attribute Distance and observe it in Distance Map. The
-only caveat is that Attribute Distance computes distances between
-attributes and not the class and the attribute, so we have to use
-Select attributes to put the class among the ordinary attributes and
-replace it with another attribute, say “tail” (this is needed since
-Attribute Distance requires data
-
-  [image]: images/HierarchicalClustering-Schema.png
-  [1]: images/HierarchicalClustering-Example.png
-  [2]: images/HierarchicalClustering-Example2.png
+![image](images/HierarchicalClustering-Example.png)
