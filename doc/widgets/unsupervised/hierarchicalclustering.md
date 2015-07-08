@@ -74,7 +74,7 @@ The schema below computes clustering of attributes (columns). We see that if we 
 cluster IDs*, we can see an additional column in the **Data Table** named *Cluster*. This is a way to
 check how hierarchical clustering clustered individual instances.
 
-![image](images/HierarchicalClustering-Example2.png)
+<img src="images/HierarchicalClustering-Example2.png" alt="image" width="600">
 
 We loaded the *Iris* data set. Below is the clustering of instances
 and the nodes are annotated by the Iris' subvarieties. We connected the
@@ -82,4 +82,4 @@ and the nodes are annotated by the Iris' subvarieties. We connected the
 **Hierarchical clustering** is used as a subset. This way, we can
 observe the position of the selected cluster(s) in the projection.
 
-![image](images/HierarchicalClustering-Example.png)
+<img src="images/HierarchicalClustering-Example.png" alt="image" width="600">
