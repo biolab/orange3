@@ -1,7 +1,7 @@
 Hierarchical Clustering
 =======================
 
-![image]
+![image](icons/hierarchical-clustering.png)
 
 Groups items using a hierarchical clustering algorithm.
 
