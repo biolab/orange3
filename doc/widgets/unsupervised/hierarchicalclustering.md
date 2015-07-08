@@ -27,9 +27,9 @@ Signals
 Description
 -----------
 
-The widget computes hierarchical clustering of arbitrary types of
+The widget computes [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) of arbitrary types of
 objects from the matrix of distances between them and shows the
-corresponding dendrogram.
+corresponding [dendrogram](https://en.wikipedia.org/wiki/Dendrogram).
 
 ![image](images/HierarchicalClustering-stamped.png)
 
@@ -39,12 +39,11 @@ corresponding dendrogram.
     - **Weighted linkage** computes the weighted distance between elements of the two clusters
     - **Complete linkage** is the distance between clusters' most distant elements
 
-2. Nodes of the dendrogram can be labeled. What the labels are depends upon
+2. Nodes of the dendrogram can be labeled in**Annotation** box. What the labels are depends upon
   the items being clustered. When clustering attributes, the
   labels are obviously the attribute names. When clustering instances, we
   can use the values of one of the attributes, typically the one that gives the
-  name or the id of an instance, as labels. The label can be chosen in the box
-  **Annotation**.
+  name or the id of an instance, as labels.
 
 3. Huge dendrograms can be pruned in the *Pruning* box by
   selecting the maximum depth of the dendrogram. This only affects the displayed
@@ -71,12 +70,13 @@ corresponding dendrogram.
 Examples
 ========
 
-The schema below computes clustering of attributes (columns) and of instances (rows).
+The schema below computes clustering of attributes (columns). We see that if we choose *Append
+cluster IDs*, we can see an additional column in the **Data Table** named *Cluster*. This is a way to
+check how hierarchical clustering clustered individual instances.
 
 ![image](images/HierarchicalClustering-Example2.png)
 
-We loaded the *Iris* data set. The clustering of attributes (columns) is already
-shown above. Below is the clustering of instances
+We loaded the *Iris* data set. Below is the clustering of instances
 and the nodes are annotated by the Iris' subvarieties. We connected the
 **Scatter Plot** showing all the instances from the file, while the signal from
 **Hierarchical clustering** is used as a subset. This way, we can
