@@ -8,85 +8,65 @@ Groups items using a hierarchical clustering algorithm.
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   
+- **Distance Matrix**
 
-        Distance Matrix
+  A matrix of distances between items being clustered
 
-        :   A matrix of distances between items being clustered
+**Outputs**:
 
-Outputs:
+- **Selected Data**
 
-:   -   
+  Data subset.
 
-        Selected Examples
+- **Other Data**
 
-        :   A list of selected examples; applicable only when the input
-            matrix refers to distances between examples
-
-    -   
-
-        Remaining Examples
-
-        :   A list of unselected examples
-
-    -   
-
-        Centroids
-
-        :   A list of cluster centroids
+  Remaining data.
 
 Description
 -----------
 
 The widget computes hierarchical clustering of arbitrary types of
 objects from the matrix of distances between them and shows the
-corresponding dendrogram. If the distances apply to examples, the widget
-offers some special functionality (adding cluster indices, outputting
-examples…).
+corresponding dendrogram.
 
 ![image][1]
 
-The widget supports three kinds of linkages. In Single linkage
-clustering, the distance between two clusters is defined as the distance
-between the closest elements of the two clusters. Average linkage
-clustering computes the average distance between elements of the two
-clusters, and Complete linkage defines the distance between two clusters
-as the distance between their most distant elements.
+1. The widget supports four kinds of linkages:
+    - **Single linkage** is the distance between the closest elements of the two clusters
+    - **Average linkage** computes the average distance between elements of the two clusters
+    - **Weighted linkage** computes the weighted distance between elements of the two clusters
+    - **Complete linkage** is the distance between clusters' most distant elements
 
-Nodes of the dendrogram can be labeled. What the labels are depends upon
-the items being clustered. For instance, when clustering attributes, the
-labels are obviously the attribute names. When clustering examples, we
-can use the values of one of the attributes, typically one that give the
-name or id of an instance, as labels. The label can be chosen in the box
-Annotate, which also allows setting the font size and line spacing.
+2. Nodes of the dendrogram can be labeled. What the labels are depends upon
+  the items being clustered. When clustering attributes, the
+  labels are obviously the attribute names. When clustering instances, we
+  can use the values of one of the attributes, typically the one that gives the
+  name or the id of an instance, as labels. The label can be chosen in the box
+  **Annotation**.
 
-Huge dendrograms can be pruned by checking Limit pring depth and
-selecting the appropriate depth. This only affects the displayed
-dendrogram and not the actual clustering.
+3. Huge dendrograms can be pruned in the *Pruning* box by
+  selecting the maximum depth of the dendrogram. This only affects the displayed
+  dendrogram, not the actual clustering.
 
-Clicking inside the dendrogram can have two effects. If the cut off line
-is not shown (Show cutoff line is unchecked), clicking inside the
-dendrogram will select a cluster. Multiple clusters can be selected by
-holding Ctrl. Each selected cluster is shown in different color and is
-treated as a separate cluster on the output.
+4. Widget offers three different selection methods:
+    - **Manual** (Clicking inside the dendrogram will select a cluster. Multiple clusters can be selected by
+    holding Ctrl. Each selected cluster is shown in different color and is
+    treated as a separate cluster in the output.)
+    - **Height ratio** (Clicking on the bottom or top ruler of the dendrogram places a
+    cutoff line in the graph. Items to the right of the line are selected.)
+    - **Top N** (Selects the number of top nodes.)
 
-If Show cutoff line is checked, clicking in the dendrogram places a
-cutoff line. All items in the clustering are selected and the are
-divided into groups according to the position of the line.
+5. If the items being clustered are instances, they can be added a cluster
+  index (*Append cluster IDs*). The ID can appear as an ordinary **Attribute**,
+  **Class attribute** or a **Meta attribute**. In the second
+  case, if the data already has a class attribute, the original class is
+  placed among meta attributes.
 
-If the items being clustered are examples, they can be added a cluster
-index (Append cluster indices). The index can appear as a
-Class attribute, ordinary Attribute or a Meta attribute. In the former
-case, if the data already has a class attribute, the original class is
-placed among meta attributes.
+  The data can be automatically output on any change (*Auto send is on*) or, if the box
+  isn't ticked, by pushing *Send Data*.
 
-The data can be output on any change (Commit on change) or, if this is
-disabled, by pushing Commit.
-
-  [image]: ../../../../Orange/OrangeWidgets/Unsupervised/icons/HierarchicalClustering.svg
-  [1]: images/HierarchicalClustering.png
 
 Examples
 ========
