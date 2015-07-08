@@ -9,6 +9,8 @@ from Orange.misc import DistMatrix
 
 def _preprocess(table):
     """Remove categorical attributes and impute missing values."""
+    if not len(table):
+        return table
     new_domain = data.Domain([a for a in table.domain.attributes if a.is_continuous],
                              table.domain.class_var,
                              table.domain.metas)
