@@ -46,17 +46,17 @@ Symmetricity is always assumed, while the diagonal may also be non-zero.
 
 ![image](images/DistanceMap-stamped.png)
 
-1. *Element sorting* arranges elements in the map by:
+1. *Element sorting* arranges elements in the map by
     - None (lists instances as found in the data set)
     - **Clustering** (clusters data by similarity)
     - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
 
-2. *Colors*:
+2. *Colors*
     - **color scale** (select the color palette for your distance map)
     - **low** (exposes instances or attributes with low correlation)
     - **high** (exposes instances or attributes with high correlation)
 
-3. *Select annotations* shows and hides the item names besides the map:
+3. *Select annotations* shows and hides the item names besides the map
     - None (doesn't display annotations)
     - **Enumeration** (displays correlation factors as annotations)
     - **By attribute** (displays the selected attribute as annotation)
