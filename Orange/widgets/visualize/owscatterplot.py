@@ -1,9 +1,12 @@
+from bisect import bisect_left
 import sys
 
 import numpy as np
 from PyQt4.QtCore import QSize, Qt
 from PyQt4 import QtGui
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
+    QStandardItem
+from sklearn.neighbors import NearestNeighbors
 
 import Orange
 from Orange.data import Table
@@ -69,7 +72,6 @@ class OWScatterPlot(OWWidget):
         box.layout().addWidget(self.graph.plot_widget)
         plot = self.graph.plot_widget
 
-        axisfont = font_resize(self.font(), 0.8, minsize=11)
         axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
         axis = plot.getAxis("bottom")
         axis.setPen(axispen)
@@ -98,6 +100,13 @@ class OWScatterPlot(OWWidget):
         gui.checkBox(
             gui.indentedBox(box), self, 'graph.jitter_continuous',
             'Jitter continuous values', callback=self.reset_graph_data)
+
+        self.vizrank = self.VizRank(self)
+        self.optimizationButtons = gui.widgetBox(
+            self.controlArea, "Optimization", orientation="horizontal")
+        gui.button(self.optimizationButtons, self, "VizRank",
+                   callback=self.vizrank.reshow,
+                   tooltip="Find projections with good class separation")
 
         box = gui.widgetBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
@@ -183,10 +192,6 @@ class OWScatterPlot(OWWidget):
         self.addActions([zoom_in, zoom_out, zoom_fit])
         self.graphButton.clicked.connect(self.save_graph)
 
-        # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
-        #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
-        # self.optimizationDlg = self.vizrank
-
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
     #     for curve in self.graph.selectionCurveList:
@@ -225,19 +230,17 @@ class OWScatterPlot(OWWidget):
         if isinstance(self.data, SqlTable):
             self.data.download_data()
 
-        # self.vizrank.clearResults()
         if not same_domain:
             self.init_attr_values()
+        self.vizrank._initialize()
         self.openContext(self.data)
 
     def set_subset_data(self, subset_data):
         self.subset_data = subset_data
-        # self.vizrank.clearArguments()
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
         self.graph.new_data(self.data, self.subset_data)
-        # self.vizrank.resetDialog()
         if self.attribute_selection_list and \
                 all(attr.name in self.graph.attribute_name_index
                     for attr in self.attribute_selection_list):
@@ -395,6 +398,107 @@ class OWScatterPlot(OWWidget):
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
+    class VizRank(OWWidget):
+        name = "VizRank"
+
+        def __init__(self, parent_widget):
+            super().__init__(self, want_control_area=0)
+            self.parent_widget = parent_widget
+
+            self.running = False
+            self.k = 10
+
+            self.projectionTable = QTableView()
+            self.mainArea.layout().addWidget(self.projectionTable)
+            self.projectionTable.setSelectionBehavior(QTableView.SelectRows)
+            self.projectionTable.setSelectionMode(QTableView.SingleSelection)
+            self.projectionTable.setSortingEnabled(True)
+            self.projectionTableModel = QStandardItemModel(self)
+            self.projectionTable.setModel(self.projectionTableModel)
+            self.projectionTable.selectionModel().selectionChanged.connect(
+                self.on_selection_changed)
+
+            self.button = gui.button(self.mainArea, self, "Rank projections",
+                                     callback=self.toggle, default=True)
+            self.resize(380, 512)
+            self._initialize()
+
+        def _initialize(self):
+            self.running = False
+            self.projectionTableModel.clear()
+            self.projectionTableModel.setHorizontalHeaderLabels(
+                ["Score", "Feature 1", "Feature 2"])
+            self.projectionTable.setColumnWidth(0, 60)
+            self.projectionTable.setColumnWidth(1, 120)
+            self.projectionTable.setColumnWidth(2, 120)
+            self.button.setText("Rank projections")
+            self.button.setEnabled(False)
+            self.pause = False
+            self.scores = []
+            self.attrs = []
+            self.data = None
+            self.progress = None
+            self.i, self.j = 0, 0
+
+            if self.parent_widget.data:
+                self.attrs = [a.name for a in
+                              self.parent_widget.data.domain.attributes]
+                self.progress = gui.ProgressBar(
+                    self, len(self.attrs) * (len(self.attrs) - 1) / 2)
+                self.button.setEnabled(True)
+
+        def on_selection_changed(self, selected, deselected):
+            """Called when the ranks view selection changes."""
+            a1 = selected.indexes()[1].data()
+            a2 = selected.indexes()[2].data()
+            self.parent_widget.major_graph_update(attributes=(a1, a2))
+
+        def toggle(self):
+            if self.running:
+                self.running = False
+                self.button.setText("Continue")
+                self.button.setEnabled(False)
+            elif self.progress:
+                self.running = True
+                self.button.setText("Pause")
+                self.run()
+
+        def run(self):
+            graph = self.parent_widget.graph
+            y_full = self.parent_widget.data.Y
+            norm = 1 / (len(y_full) * self.k)
+            for i in range(self.i, len(self.attrs)):
+                ind1 = graph.attribute_name_index[self.attrs[i]]
+                for j in range(self.j, i):
+                    if not self.running:
+                        self.i, self.j = i, j
+                        if not self.projectionTable.selectedIndexes():
+                            self.projectionTable.selectRow(0)
+                        self.button.setEnabled(True)
+                        return
+                    ind2 = graph.attribute_name_index[self.attrs[j]]
+                    X = graph.scaled_data[[ind1, ind2], :]
+                    valid = graph.get_valid_list([ind1, ind2])
+                    X = X[:, valid].T
+                    y = y_full[valid]
+                    knn = NearestNeighbors(n_neighbors=self.k).fit(X)
+                    ind = knn.kneighbors(return_distance=False)
+                    score = norm * np.sum(y[ind] == y.reshape(-1, 1))
+                    pos = bisect_left(self.scores, score)
+                    self.projectionTableModel.insertRow(
+                        len(self.scores) - pos,
+                        [QStandardItem("{:.4f}".format(score)),
+                         QStandardItem(self.attrs[i]),
+                         QStandardItem(self.attrs[j])])
+                    self.scores.insert(pos, score)
+                    self.progress.advance()
+                self.j = 0
+            self.progress.finish()
+            if not self.projectionTable.selectedIndexes():
+                self.projectionTable.selectRow(0)
+            self.button.setText("Finished")
+            self.button.setEnabled(False)
+
 
 def test_main():
     import sip
@@ -402,13 +506,11 @@ def test_main():
     ow = OWScatterPlot()
     ow.show()
     ow.raise_()
-    data = Orange.data.Table(r"iris.tab")
+    data = Orange.data.Table("iris.tab")
     ow.set_data(data)
     ow.set_subset_data(data[:30])
-    #ow.set_data(Orange.data.Table("wine.tab"))
     ow.handleNewSignals()
     a.exec()
-    #save settings
     ow.saveSettings()
     sip.delete(ow)
 
