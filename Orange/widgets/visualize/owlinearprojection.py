@@ -27,6 +27,7 @@ import Orange
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from .owscatterplotgraph import LegendItem, legend_anchor_pos
 
 
 class DnDVariableListModel(itemmodels.VariableListModel):
@@ -171,6 +172,45 @@ class AxisItem(pg.GraphicsObject):
         self._label.setRotation(angle if left_quad else angle - 180)
 
 
+class LegendItem(LegendItem):
+    def clear(self):
+        """
+        Clear all legend items.
+        """
+        items = list(self.items)
+        self.items = []
+        for sample, label in items:
+            # yes, the LegendItem shadows QGraphicsWidget.layout() with
+            # an instance attribute.
+            self.layout.removeItem(sample)
+            self.layout.removeItem(label)
+            sample.hide()
+            label.hide()
+
+        self.updateSize()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            event.accept()
+            if self.parentItem() is not None:
+                self.autoAnchor(
+                    self.pos() + (event.pos() - event.lastPos()) / 2)
+        else:
+            event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            event.ignore()
+
+
 class OWLinearProjection(widget.OWWidget):
     name = "Linear Projection"
     description = "A multi-axes projection of data to a two-dimension plane."
@@ -201,6 +241,7 @@ class OWLinearProjection(widget.OWWidget):
 
     auto_commit = settings.Setting(True)
 
+    legend_anchor = settings.Setting(((1, 0), (1, 0)))
     MinPointSize = 6
 
     ReplotRequest = QEvent.registerEventType()
@@ -213,6 +254,7 @@ class OWLinearProjection(widget.OWWidget):
         self._subset_mask = None
         self._selection_mask = None
         self._item = None
+        self.__legend = None
         self.__selection_item = None
         self.__replot_requested = False
 
@@ -400,6 +442,7 @@ class OWLinearProjection(widget.OWWidget):
         actions.select.setChecked(True)
 
         currenttool = self.selection
+        self.selection.setViewBox(None)
 
         def activated(action):
             nonlocal currenttool
@@ -455,6 +498,15 @@ class OWLinearProjection(widget.OWWidget):
             self._item.setParentItem(None)
             self.viewbox.removeItem(self._item)
             self._item = None
+
+        if self.__legend is not None:
+            anchor = legend_anchor_pos(self.__legend)
+            if anchor is not None:
+                self.legend_anchor = anchor
+
+            self.__legend.setParentItem(None)
+            self.__legend.clear()
+            self.__legend.setVisible(False)
 
         self.viewbox.clear()
 
@@ -687,6 +739,7 @@ class OWLinearProjection(widget.OWWidget):
             self.viewbox.addItem(axis_item)
 
         self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
+        self._update_legend()
 
     def _color_data(self, mask=None):
         color_var = self.color_var()
@@ -766,6 +819,8 @@ class OWLinearProjection(widget.OWWidget):
         else:
             self._item.setBrush(brush[self._item._mask])
 
+        self._update_legend()
+
     def _shape_data(self, mask):
         shape_var = self.shape_var()
         if shape_var is None:
@@ -790,6 +845,7 @@ class OWLinearProjection(widget.OWWidget):
             return
 
         self.set_shape(self._shape_data(mask=None))
+        self._update_legend()
 
     def _size_data(self, mask=None):
         size_var = self.size_var()
@@ -811,6 +867,53 @@ class OWLinearProjection(widget.OWWidget):
         if self.data is None:
             return
         self.set_size(self._size_data(mask=None))
+
+    def _update_legend(self):
+        if self.__legend is None:
+            self.__legend = legend = LegendItem()
+            legend.setParentItem(self.viewbox)
+            legend.setZValue(self.viewbox.zValue() + 10)
+            legend.anchor(*self.legend_anchor)
+        else:
+            legend = self.__legend
+
+        legend.clear()
+
+        color_var, shape_var = self.color_var(), self.shape_var()
+        if color_var is not None and not color_var.is_discrete:
+            color_var = None
+        assert shape_var is None or shape_var.is_discrete
+        if color_var is None and shape_var is None:
+            legend.setParentItem(None)
+            legend.hide()
+            return
+        else:
+            if legend.parentItem() is None:
+                legend.setParentItem(self.viewbox)
+            legend.setVisible(True)
+
+        palette = self.discrete_palette
+        symbols = list(ScatterPlotItem.Symbols)
+
+        if shape_var is color_var:
+            items = [(palette[i], symbols[i], name)
+                     for i, name in enumerate(color_var.values)]
+        else:
+            colors = shapes = []
+            if color_var is not None:
+                colors = [(palette[i], "o", name)
+                          for i, name in enumerate(color_var.values)]
+            if shape_var is not None:
+                shapes = [(QtGui.QColor(Qt.gray),
+                           symbols[i % (len(symbols) - 1)], name)
+                          for i, name in enumerate(shape_var.values)]
+            items = colors + shapes
+
+        for color, symbol, name in items:
+            legend.addItem(
+                ScatterPlotItem(pen=color, brush=color, symbol=symbol, size=10),
+                name
+            )
 
     def set_shape(self, shape):
         """
