@@ -27,6 +27,7 @@ c_double_p = ct.POINTER(ct.c_double)
 class SIMPLE_TREE_NODE(ct.Structure):
     pass
 
+
 SIMPLE_TREE_NODE._fields_ = [
     ('type', ct.c_int),
     ('children_size', ct.c_int),
@@ -83,7 +84,6 @@ class SimpleTreeLearner(Learner):
 
     def __init__(self, min_instances=2, max_depth=1024, max_majority=1.0,
                  skip_prob=0.0, bootstrap=False, seed=42):
-
         self.min_instances = min_instances
         self.max_depth = max_depth
         self.max_majority = max_majority
@@ -96,12 +96,13 @@ class SimpleTreeLearner(Learner):
 
 
 class SimpleTreeModel(Model):
-
     def __init__(self, learner, data):
         X = np.ascontiguousarray(data.X)
         Y = np.ascontiguousarray(data.Y)
         W = np.ascontiguousarray(data.W)
         self.num_attrs = X.shape[1]
+        self.dom_attr = data.domain.attributes
+        self.cls_vars = list(data.domain.class_vars)
         if len(data.domain.class_vars) != 1:
             n_cls = len(data.domain.class_vars)
             raise ValueError("Number of classes should be 1: {}".format(n_cls))
@@ -250,3 +251,55 @@ class SimpleTreeModel(Model):
             xs.append(self.dumps_tree(n.children[i]))
         xs.append('}')
         return ' '.join(xs)
+
+    def to_string(self, node=None, level=0):
+        """Return a text-based representation of the tree.
+
+        Parameters
+        ----------
+        node : LP_SIMPLE_TREE_NODE, optional (default=None)
+            Tree node. Used to construct representation of the
+            tree under this node.
+            If not provided, node is considered root node.
+
+        level : int, optional (defaul=0)
+            Level of the node. Used for line indentation.
+
+        Returns
+        -------
+        tree : str
+            Text-based representation of the tree.
+        """
+        if node is None:
+            if self.node is None:
+                return '(null node)'
+            else:
+                node = self.node
+        n = node.contents
+        if n.children_size == 0:
+            if self.type == Classification:
+                node_cont = [n.dist[i] for i in range(self.cls_vals)]
+                index = node_cont.index(max(node_cont))
+                major_class = self.cls_vars[0].values[index]
+            else:
+                node_cont = str(n.sum) + ': ' + str(n.n)
+                major_class = n.sum / n.n
+            return ' --> %s (%s)' % (major_class, node_cont)
+        else:
+            node_desc = self.dom_attr[n.split_attr].name
+            if self.type == Classification:
+                node_cont = [n.dist[i] for i in range(self.cls_vals)]
+            else:
+                node_cont = str(n.sum) + ': ' + str(n.n)
+            ret_str = '\n' + '   ' * level + '%s (%s)' % (node_desc,
+                                                          node_cont)
+            for i in range(n.children_size):
+                attr = self.dom_attr[n.split_attr]
+                if attr.is_continuous:
+                    split = '<=' if i % 2 == 0 else '>'
+                    split += str(round(n.split, 5))
+                    ret_str += '\n' + '   ' * level + ': %s' % split
+                else:
+                    ret_str += '\n' + '   ' * level + ': %s' % attr.values[i]
+                ret_str += self.to_string(n.children[i], level + 1)
+            return ret_str
