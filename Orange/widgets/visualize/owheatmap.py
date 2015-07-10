@@ -190,7 +190,7 @@ class OWHeatMap(widget.OWWidget):
     # Display legend
     legend = settings.Setting(True)
     # Annotations
-    annotation_index = settings.Setting(0)
+    annotation_index = settings.ContextSetting(0)
     # Stored color palette settings
     color_settings = settings.Setting(None)
     user_palettes = settings.Setting([])
@@ -211,9 +211,9 @@ class OWHeatMap(widget.OWWidget):
 
         self.palette = None
         self.keep_aspect = False
-        self.data = []
+        self.data = None
 
-        self.annotation_vars = []
+        self.annotation_vars = ['(None)']
         self.__rows_cache = {}
         self.__columns_cache = {}
 
@@ -278,6 +278,7 @@ class OWHeatMap(widget.OWWidget):
         annotbox = gui.widgetBox(box, "Row Annotations")
         annotbox.setFlat(True)
         self.annotations_cb = gui.comboBox(annotbox, self, "annotation_index",
+                                           items=self.annotation_vars,
                                            callback=self.update_annotations)
 
         posbox = gui.widgetBox(box, "Column Labels Position")
@@ -355,8 +356,9 @@ class OWHeatMap(widget.OWWidget):
     def clear(self):
         self.data = None
         self.annotations_cb.clear()
+        self.annotations_cb.addItem('(None)')
         self.split_lb.clear()
-        self.annotation_vars = []
+        self.annotation_vars = ['(None)']
         self.clear_scene()
         self.selected_rows = []
         self.__columns_cache.clear()
@@ -386,7 +388,7 @@ class OWHeatMap(widget.OWWidget):
             variables = [var for var in variables
                          if isinstance(var, (Orange.data.DiscreteVariable,
                                              Orange.data.StringVariable))]
-            self.annotation_vars = variables
+            self.annotation_vars.extend(variables)
 
             for var in variables:
                 self.annotations_cb.addItem(*gui.attributeItem(var))
@@ -394,7 +396,7 @@ class OWHeatMap(widget.OWWidget):
             self.split_lb.addItems(candidate_split_labels(data))
 
             self.openContext(self.data)
-            if self.annotation_index >= len(variables):
+            if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
 
             self.update_heatmaps()
@@ -965,6 +967,8 @@ class OWHeatMap(widget.OWWidget):
         if self.data is not None:
             if self.annotation_vars:
                 var = self.annotation_vars[self.annotation_index]
+                if var == '(None)':
+                    var = None
             else:
                 var = None
 
