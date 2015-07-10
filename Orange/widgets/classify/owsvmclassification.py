@@ -39,7 +39,7 @@ class OWSVMClassification(widget.OWWidget):
     probability = settings.Setting(False)
     tol = settings.Setting(0.001)
     max_iter = settings.Setting(100)
-    limit_iter = settings.Setting(False)
+    limit_iter = settings.Setting(True)
 
     def __init__(self, parent=None):
         super().__init__(parent)
