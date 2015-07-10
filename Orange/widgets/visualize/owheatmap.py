@@ -26,14 +26,6 @@ from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
 
 
-def is_discrete(var):
-    return isinstance(var, Orange.data.DiscreteVariable)
-
-
-def is_continuous(var):
-    return isinstance(var, Orange.data.ContinuousVariable)
-
-
 def split_domain(domain, split_label):
     """Split the domain based on values of `split_label` value.
     """
@@ -419,7 +411,7 @@ class OWHeatMap(widget.OWWidget):
 
     def _make(self, data, group_var=None, group_key=None):
         if group_var is not None:
-            assert is_discrete(group_var)
+            assert group_var.is_discrete
             _col_data, _ = data.get_column_view(group_var)
             row_groups = [np.flatnonzero(_col_data == i)
                           for i in range(len(group_var.values))]
@@ -488,7 +480,7 @@ class OWHeatMap(widget.OWWidget):
     def cluster_columns(self, data, parts, ordered=False):
         if len(parts.columns) > 1:
             data = vstack_by_subdomain(data, [col.domain for col in parts.columns])
-        assert all(is_continuous(var) for var in data.domain.attributes)
+        assert all(var.is_continuous for var in data.domain.attributes)
 
         col0 = parts.columns[0]
         if col0.cluster is not None:
@@ -525,7 +517,7 @@ class OWHeatMap(widget.OWWidget):
         else:
             groups = [("", data.domain)]
 
-        if is_discrete(data.domain.class_var):
+        if data.domain.class_var.is_discrete:
             group_var = data.domain.class_var
         else:
             group_var = None
