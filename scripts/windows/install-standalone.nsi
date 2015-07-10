@@ -54,6 +54,11 @@ UninstallIcon OrangeInstall.ico
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY ${INSTALL_SETTINGS_KEY}
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME ${INSTALL_SETTINGS_INSTMODE}
 
+# A function which will restore the install dir passed on the command
+# line (/D=DIR) if running in silent mode (MultiUser.nsh will not respect
+# the default $InstDir).
+!define MULTIUSER_INSTALLMODE_FUNCTION RestoreSilentInstDir
+
 !include MultiUser.nsh
 !include MUI2.nsh
 !include LogicLib.nsh
@@ -80,7 +85,17 @@ UninstallIcon OrangeInstall.ico
 
 !define UNINSTALLER "$INSTDIR\uninstall.exe"
 
+Var SILENTINSTDIR
+
 Function .onInit
+	# INSTDIR is not empty if specified by the /D command line switch.
+	# Store it because MultiUser.nsh will override it with it's own either
+	# in MULTIUSER_INIT or MULTIUSER_PAGE_INSTALLMODE.
+	${If} $INSTDIR != ""
+	${AndIf} ${Silent}
+		StrCpy $SILENTINSTDIR $INSTDIR
+	${EndIf}
+
 	# Initialize MultiUser
 	!insertmacro MULTIUSER_INIT
 	# Initialize SSE global variable
@@ -90,6 +105,13 @@ FunctionEnd
 
 Function un.onInit
 	!insertmacro MULTIUSER_UNINIT
+FunctionEnd
+
+Function RestoreSilentInstDir
+	${If} $SILENTINSTDIR != ""
+	${AndIf} ${Silent}
+		StrCpy $INSTDIR $SILENTINSTDIR
+	${EndIf}
 FunctionEnd
 
 
