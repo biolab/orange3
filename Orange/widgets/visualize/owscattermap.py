@@ -355,11 +355,11 @@ def resample(node, samplewidth):
         return node._replace(children=children_ar.reshape((-1, nbins)))
 
 
-class OWHeatMap(widget.OWWidget):
-    name = "Heat Map"
+class OWScatterMap(widget.OWWidget):
+    name = "Scatter Map"
     description = "Two-dimensional heat map displaying data instances " \
                   "(rows) and their features (heat map columns)."
-    icon = "icons/Heatmap.svg"
+    icon = "icons/Scattermap.svg"
     priority = 100
 
     inputs = [("Data", Orange.data.Table, "set_data")]
@@ -1356,7 +1356,7 @@ def compute_chi_squares(observes):
 def main():
     import sip
     app = QtGui.QApplication([])
-    w = OWHeatMap()
+    w = OWScatterMap()
     w.show()
     w.raise_()
     data = Orange.data.Table('iris')
