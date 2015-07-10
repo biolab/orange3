@@ -38,6 +38,8 @@ class OWSVMClassification(widget.OWWidget):
     shrinking = settings.Setting(True),
     probability = settings.Setting(False)
     tol = settings.Setting(0.001)
+    max_iter = settings.Setting(100)
+    limit_iter = settings.Setting(True)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,8 +61,8 @@ class OWSVMClassification(widget.OWWidget):
         form.addWidget(c_svm, 0, 0, Qt.AlignLeft)
         form.addWidget(QtGui.QLabel(self.tr("Cost (C)")), 0, 1, Qt.AlignRight)
         c_spin = gui.doubleSpin(
-            typebox, self, "C", 0.1, 512.0, 0.1,
-            decimals=2, addToLayout=False
+            typebox, self, "C", 1e-3, 1000.0, 0.1,
+            decimals=3, addToLayout=False
         )
 
         form.addWidget(c_spin, 0, 2)
@@ -105,8 +107,11 @@ class OWSVMClassification(widget.OWWidget):
             alignment=Qt.AlignRight
         )
         self._kernel_params = [gamma, coef0, degree]
-        box = gui.widgetBox(self.controlArea, "Numerical Tolerance")
-        gui.doubleSpin(box, self, "tol", 1e-7, 1e-3, 5e-7)
+        box = gui.widgetBox(self.controlArea, "Optimization parameters")
+        gui.doubleSpin(box, self, "tol", 1e-7, 1.0, 5e-7,
+        label="Numerical Tolerance")
+        gui.spin(box, self, "max_iter", 0, 1e6, 100,
+        label="Iteration Limit", checked="limit_iter")
 
         gui.button(self.controlArea, self, "&Apply",
                    callback=self.apply, default=True)
@@ -150,6 +155,7 @@ class OWSVMClassification(widget.OWWidget):
             gamma=self.gamma,
             coef0=self.coef0,
             tol=self.tol,
+            max_iter=self.max_iter if self.limit_iter else -1,
             probability=True,
             preprocessors=self.preprocessors
         )
