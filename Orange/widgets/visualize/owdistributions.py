@@ -221,7 +221,7 @@ class OWDistributions(widget.OWWidget):
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
             curve_est = self._density_estimator()
-            edges, curve = curve_est(dist, self.contingencies)
+            edges, curve = curve_est(dist, None)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray),
@@ -265,7 +265,7 @@ class OWDistributions(widget.OWWidget):
             weights /= numpy.sum(weights)
 
             curve_est = self._density_estimator()
-            curves = [curve_est(dist, cont) for dist in cont]
+            curves = [curve_est(dist, cont) for dist in cont if len(dist[0])]
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
 
             cum_curves = [curves[0]]
@@ -434,12 +434,17 @@ def ash_curve(dist, cont=None, bandwidth=None, m=3):
     dist = numpy.asarray(dist)
     X, W = dist
     if bandwidth is None:
-        bandwidth = 3.5 * weighted_std(X, weights=W) * (X.size ** (-1 / 3))
-    if bandwidth == 0:
-        bandwidth = max(3.5 *
-                        weighted_std(cont.values,
-                                     weights=numpy.sum(cont.counts, axis=0))
-                        * (cont.values.size ** (-1 / 3)), 0.01)
+        std = weighted_std(X, weights=W)
+        size = X.size
+        # if only one sample in the class
+        if std == 0 and cont is not None:
+            std = weighted_std(cont.values, weights=numpy.sum(cont.counts, axis=0))
+            size = cont.values.size
+        # if attr is constant or contingencies is None (no class variable)
+        if std == 0:
+            std = 0.1
+            size = X.size
+        bandwidth = 3.5 * std * (size ** (-1 / 3))
 
     hist, edges = average_shifted_histogram(X, bandwidth, m, weights=W)
     return edges, hist
