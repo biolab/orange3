@@ -519,7 +519,8 @@ from Orange.classification.naive_bayes import NaiveBayesLearner
 def column_imputer_by_model(variable, table, *, learner=NaiveBayesLearner()):
     model = learn_model_for(learner, variable, table)
     assert model.domain.class_vars == (variable,)
-    return ColumnImputerFromModel(table.domain, model.domain.class_vars, model)
+    var = variable.copy(compute_value=model)
+    return ColumnImputerFromModel(table.domain, (var,), model)
 
 
 class ColumnImputerFromModel(ColumnImputerModel):
@@ -641,7 +642,8 @@ def column_imputer_random(variable, data):
     elif variable.is_continuous:
         dist = distribution.get_distribution(data, variable)
         transformer = RandomTransform(variable, dist)
-    return RandomImputerModel((variable,), (variable,), (transformer,))
+    var = variable.copy(compute_value=transformer)
+    return RandomImputerModel((variable,), (var,), (transformer,))
 
 
 class RandomImputerModel(ColumnImputerModel):
@@ -725,20 +727,20 @@ class RandomTransform(Transformation):
     def transform(self, c):
         if self.variable.is_discrete:
             if self.dist is not None:
-                c = numpy.random.choice(
+                rnd = numpy.random.choice(
                     len(self.variable.values), size=c.shape, replace=True,
                     p=self.sample_prob)
             else:
-                c = numpy.random.randint(
+                rnd = numpy.random.randint(
                     len(self.variable.values), size=c.shape)
         else:
             if self.dist is not None:
-                c = numpy.random.choice(
+                rnd = numpy.random.choice(
                     numpy.asarray(self.dist[0, :]), size=c.shape,
                     replace=True, p=self.sample_prob)
             else:
-                c = numpy.random.normal(size=c.shape)
-        return c
+                rnd = numpy.random.normal(size=c.shape)
+        return numpy.where(numpy.isnan(c), rnd, c)
 
 
 class ModelTransform(Transformation):
@@ -751,7 +753,7 @@ class ModelTransform(Transformation):
 
 
 # Rename to TableImputer (Model?)
-class ImputerModel(object):
+class ImputerModel:
     """
     A fitted Imputation model.
 
