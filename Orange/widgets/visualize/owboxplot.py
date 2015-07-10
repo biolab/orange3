@@ -291,6 +291,10 @@ class OWBoxPlot(widget.OWWidget):
 
     def clear_scene(self):
         self.box_scene.clear()
+        self.attr_labels = []
+        self.labels = []
+        self.boxes = []
+        self.mean_labels = []
         self.posthoc_lines = []
 
     def layout_changed(self):
@@ -369,6 +373,14 @@ class OWBoxPlot(widget.OWWidget):
         self.clear_scene()
         self.attr_labels = [QtGui.QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts]
+
+        if not self.stretched:
+            if self.grouping_select[0]:
+                self.labels = [QtGui.QGraphicsTextItem("{}".format(int(sum(cont))))
+                               for cont in self.conts]
+            else:
+                self.labels = [QtGui.QGraphicsTextItem(str(int(sum(self.dist))))]
+
         self.draw_axis_disc()
         if self.grouping_select[0]:
             self.disc_palette.set_number_of_colors(len(self.conts[0]))
@@ -385,6 +397,16 @@ class OWBoxPlot(widget.OWWidget):
             b = label.boundingRect()
             label.setPos(-b.width() - 10, y - b.height() / 2)
             self.box_scene.addItem(label)
+            if not self.stretched:
+                label = self.labels[row]
+                b = label.boundingRect()
+                if self.grouping_select[0]:
+                    right = self.scale_x * sum(self.conts[row])
+                else:
+                    right = self.scale_x * sum(self.dist)
+                label.setPos(right + 10, y - b.height() / 2)
+                self.box_scene.addItem(label)
+
         self.box_scene.setSceneRect(-self.label_width - 5,
                                    -30 - len(self.boxes) * 40,
                                    self.scene_width, len(self.boxes * 40) + 90)
@@ -545,7 +567,22 @@ class OWBoxPlot(widget.OWWidget):
         lab_width = max(lab_width, 40)
         lab_width = min(lab_width, self.scene_width / 3)
         self.label_width = lab_width
-        self.scale_x = scale_x = (self.scene_width - lab_width - 10) / max_box
+
+        right_offset = 0  # offset for the right label
+        if not self.stretched and self.labels:
+            if self.grouping_select[0]:
+                rows = list(zip(self.conts, self.labels))
+            else:
+                rows = [(self.dist, self.labels[0])]
+            # available space left of the 'group labels'
+            available = self.scene_width - lab_width - 10
+            scale_x = (available - right_offset) / max_box
+            max_right = max(sum(dist) * scale_x + 10 +
+                            lbl.boundingRect().width()
+                            for dist, lbl in rows)
+            right_offset = max(0, max_right - max_box * scale_x)
+
+        self.scale_x = scale_x = (self.scene_width - lab_width - 10 - right_offset) / max_box
 
         self.box_scene.addLine(0, 0, max_box * scale_x, 0, self._pen_axis)
         for val in range(0, step * steps + 1, step):
@@ -662,7 +699,12 @@ class OWBoxPlot(widget.OWWidget):
             rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
             rect.setBrush(QtGui.QBrush(QtGui.QColor(*get_color(i))))
             rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            rect.setToolTip(attr.values[i])
+            if self.stretched:
+                tooltip = "{}: {:.2f}%".format(attr.values[i],
+                                               100 * dist[i] / sum(dist))
+            else:
+                tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
+            rect.setToolTip(tooltip)
             cum += v
         return box
 
@@ -736,7 +778,10 @@ def main(argv=None):
     w.show()
     w.raise_()
     w.set_data(data)
+    w.handleNewSignals()
     rval = app.exec_()
+    w.set_data(None)
+    w.handleNewSignals()
     w.saveSettings()
     return rval
 
