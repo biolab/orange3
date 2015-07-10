@@ -1262,11 +1262,16 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
     def cell_at(self, pos):
         """Return the cell row, column from `pos` in local coordinates.
         """
-        if self.__pixmap.isNull() or \
-                not self.heatmap_item.geometry().contains(pos):
+        if self.__pixmap.isNull() or not (
+                    self.heatmap_item.geometry().contains(pos) or
+                    self.averages_item.geometry().contains(pos)):
             return (-1, -1)
 
-        pos = self.mapToItem(self.heatmap_item, pos)
+        if self.heatmap_item.geometry().contains(pos):
+            item_clicked = self.heatmap_item
+        elif self.averages_item.geometry().contains(pos):
+            item_clicked = self.averages_item
+        pos = self.mapToItem(item_clicked, pos)
         size = self.heatmap_item.size()
 
         x, y = pos.x(), pos.y()
