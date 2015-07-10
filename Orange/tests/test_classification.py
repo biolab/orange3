@@ -56,6 +56,11 @@ class ModelTest(unittest.TestCase):
         for row in table:
             pred.append(clf(row))
 
+    def test_learner_adequacy(self):
+        table = Table("housing")
+        learner = LogisticRegressionLearner()
+        self.assertRaises(ValueError, learner, table)
+
     def test_value_from_probs(self):
         nrows = 100
         ncols = 5
@@ -176,6 +181,10 @@ class SklTest(unittest.TestCase):
         self.assertEqual(len(res.models[0][0].domain.attributes), 2)
         self.assertGreater(Orange.evaluation.CA(res)[0], 0.8)
 
+    def test_learner_adequacy(self):
+        table = Table("housing")
+        learner = LogisticRegressionLearner()
+        self.assertRaises(ValueError, learner, table)
 
 class LearnerAccessibility(unittest.TestCase):
     def test_all_learners_accessible_in_Orange_classification_namespace(self):

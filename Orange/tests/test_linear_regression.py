@@ -31,3 +31,8 @@ class LinearRegressionTest(unittest.TestCase):
         rmse = Orange.evaluation.RMSE(res)
         for i in range(len(learners)-1):
             self.assertTrue(rmse[i] < rmse[-1])
+
+    def test_learner_adequacy(self):
+        table = Orange.data.Table("iris")
+        learner = Orange.regression.LinearRegressionLearner()
+        self.assertRaises(ValueError, learner, table)
