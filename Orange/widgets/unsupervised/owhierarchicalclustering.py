@@ -184,6 +184,11 @@ class DendrogramWidget(QGraphicsWidget):
     class ClusterGraphicsItem(QGraphicsPathItem):
         _rect = None
 
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # enable item selection for setSelected and isSelected
+            self.setFlag(self.ItemIsSelectable)
+
         def shape(self):
             if self._rect is not None:
                 p = QPainterPath()
@@ -603,6 +608,9 @@ class DendrogramWidget(QGraphicsWidget):
                 assert self._highlighted_item is obj
                 event.accept()
                 return True
+            elif event.type() == QEvent.GraphicsSceneMouseRelease and \
+                    event.button() == Qt.LeftButton:
+                return True # MouseRelease messes with isSelected in case of ctrl-click
 
         if event.type() == QEvent.GraphicsSceneHoverLeave:
             self._set_hover_item(None)
