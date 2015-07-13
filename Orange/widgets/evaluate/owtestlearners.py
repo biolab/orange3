@@ -243,11 +243,14 @@ class OWTestLearners(widget.OWWidget):
         results = list(split_by_model(results))
 
         class_var = self.train_data.domain.class_var
-
-        if class_var.is_discrete:
-            stats = [classification_stats(self.one_vs_rest(res)) for res in results]
-        else:
-            stats = [regression_stats(res) for res in results]
+        try:
+            if class_var.is_discrete:
+                stats = [classification_stats(self.one_vs_rest(res)) for res in results]
+            else:
+                stats = [regression_stats(res) for res in results]
+        except Exception as e:
+            self.error(2, str(e))
+            return
 
         self._update_header()
 
