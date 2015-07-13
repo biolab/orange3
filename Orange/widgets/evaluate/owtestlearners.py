@@ -236,7 +236,10 @@ class OWTestLearners(widget.OWWidget):
             else:
                 assert False
         except Exception as e:
-            self.error(2, str(e))
+            err_msg = str(e)
+            if err_msg.startswith('Input contains NaN'):
+                err_msg = 'Test data contains missing values.'
+            self.error(2, err_msg)
             return
 
         self.results = results

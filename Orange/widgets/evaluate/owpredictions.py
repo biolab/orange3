@@ -95,7 +95,15 @@ class OWPredictions(widget.OWWidget):
                 del self.predictors[inputid]
             elif pred.results is None:
                 if self.data is not None:
-                    results = self.predict(pred.predictor, self.data)
+                    try:
+                        self.error(0)
+                        results = self.predict(pred.predictor, self.data)
+                    except ValueError as err:
+                        err_msg = str(err)
+                        if numpy.isnan(self.data).any():
+                            err_msg = 'Test data contains missing values.'
+                        self.error(0, err_msg)
+                        return
                     self.predictors[inputid] = pred._replace(results=results)
         if not self.predictors:
             self.class_var = None
