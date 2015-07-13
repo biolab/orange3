@@ -714,7 +714,6 @@ class ImageLoader(QObject):
 
             if location is not None and n_redir < 1:
                 n_redir += 1
-                print(location)
                 location = reply.url().resolved(location)
                 # Retry the original request with a new url.
                 request = QNetworkRequest(reply.request())
