@@ -1,7 +1,7 @@
 from Orange.widgets import widget, settings, gui
 
-import Orange.data
-from Orange.regression import mean
+from Orange.data import Table
+from Orange.regression.mean import MeanLearner, MeanModel
 from Orange.preprocess.preprocess import Preprocess
 
 
@@ -10,9 +10,9 @@ class OWMean(widget.OWWidget):
     description = "Regression to the average class value from the training set."
     icon = "icons/Mean.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", mean.MeanLearner), ("Predictor", mean.MeanModel)]
+    outputs = [("Learner", MeanLearner), ("Predictor", MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")
 
@@ -41,16 +41,29 @@ class OWMean(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        learner = mean.MeanLearner(preprocessors=self.preprocessors)
+        learner = MeanLearner(preprocessors=self.preprocessors)
         learner.name = self.learner_name
         predictor = None
         if self.data is not None:
-            try:
-                self.warning(0)
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
                 predictor = learner(self.data)
                 predictor.name = learner.name
-            except ValueError as err:
-                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWMean()
+    d = Table('housing')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()

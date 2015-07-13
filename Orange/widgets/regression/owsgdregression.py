@@ -4,8 +4,8 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QGridLayout, QLabel
 from PyQt4.QtCore import Qt
 
-import Orange.data
-from Orange.regression import linear
+from Orange.data import Table
+from Orange.regression.linear import SGDRegressionLearner, LinearModel
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -15,10 +15,10 @@ class OWSGDRegression(widget.OWWidget):
     description = "Stochastic gradient descent algorithm for regression."
     icon = "icons/SGDRegression.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", linear.SGDRegressionLearner),
-               ("Predictor", linear.LinearModel)]
+    outputs = [("Learner", SGDRegressionLearner),
+               ("Predictor", LinearModel)]
 
     learner_name = settings.Setting("SGD Regression")
 
@@ -164,18 +164,18 @@ class OWSGDRegression(widget.OWWidget):
             n_iter=self.n_iter,
         )
 
-        learner = linear.SGDRegressionLearner(
+        learner = SGDRegressionLearner(
             preprocessors=self.preprocessors, **common_args)
         learner.name = self.learner_name
 
         predictor = None
         if self.data is not None:
-            try:
-                self.warning(0)
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
                 predictor = learner(self.data)
                 predictor.name = self.learner_name
-            except ValueError as err:
-                self.warning(0, str(err))
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
@@ -209,14 +209,15 @@ class OWSGDRegression(widget.OWWidget):
 
 
 
-def main():
-    app = QtGui.QApplication([])
-    w = OWSGDRegression()
-    w.set_data(Orange.data.Table("housing"))
-    w.show()
-    return app.exec_()
-
-
 if __name__ == "__main__":
     import sys
-    sys.exit(main())
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWSGDRegression()
+    d = Table('housing')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()
+

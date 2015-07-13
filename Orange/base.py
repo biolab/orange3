@@ -17,6 +17,7 @@ class Learner:
     #: fitting the model
     name = 'learner'
     preprocessors = ()
+    learner_adequacy_err_msg = ''
 
     def __init__(self, preprocessors=None):
         if preprocessors is None:
@@ -31,6 +32,9 @@ class Learner:
         return self.fit(data.X, data.Y, data.W)
 
     def __call__(self, data):
+        if not self.check_learner_adequacy(data.domain):
+            raise ValueError(self.learner_adequacy_err_msg)
+
         if isinstance(data, Instance):
             data = Table(data.domain, [data])
         data = self.preprocess(data)
@@ -61,6 +65,9 @@ class Learner:
 
     def __repr__(self):
         return self.name
+
+    def check_learner_adequacy(self, domain):
+        return True
 
 
 class Model:

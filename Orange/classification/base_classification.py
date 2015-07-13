@@ -7,9 +7,10 @@ __all__ = ["LearnerClassification", "ModelClassification",
 
 
 class LearnerClassification(Learner):
-    def __call__(self, data):
-        check_learner_adequacy(data.domain)
-        return super().__call__(data)
+    learner_adequacy_err_msg = "Discrete class variable expected."
+
+    def check_learner_adequacy(self, domain):
+        return domain.has_discrete_class or domain.class_var is None
 
 
 class ModelClassification(Model):
@@ -17,9 +18,10 @@ class ModelClassification(Model):
 
 
 class SklLearnerClassification(SklLearner):
-    def __call__(self, data):
-        check_learner_adequacy(data.domain)
-        return super().__call__(data)
+    learner_adequacy_err_msg = "Discrete class variable expected."
+
+    def check_learner_adequacy(self, domain):
+        return domain.has_discrete_class or domain.class_var is None
 
 
 class SklModelClassification(SklModel):
@@ -47,7 +49,7 @@ class SklModelClassification(SklModel):
                     class_values = len(self.domain.class_vars[c].values)
                     for cv in range(class_values):
                         if (i < len(self.used_vals[c]) and
-                                cv == self.used_vals[c][i]):
+                                    cv == self.used_vals[c][i]):
                             probs_ext[:, c, cv] = probs[:, c, i]
                             i += 1
                 if self.supports_multiclass:
@@ -59,8 +61,3 @@ class SklModelClassification(SklModel):
             return probs
         else:  # ret == Model.ValueProbs
             return value, probs
-
-
-def check_learner_adequacy(domain):
-    if domain.has_continuous_class:
-        raise ValueError("Discrete class variable expected.")

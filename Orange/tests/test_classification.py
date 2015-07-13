@@ -58,7 +58,7 @@ class ModelTest(unittest.TestCase):
 
     def test_learner_adequacy(self):
         table = Table("housing")
-        learner = LogisticRegressionLearner()
+        learner = NaiveBayesLearner()
         self.assertRaises(ValueError, learner, table)
 
     def test_value_from_probs(self):
@@ -200,6 +200,8 @@ class LearnerAccessibility(unittest.TestCase):
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
                 if issubclass(class_, Learner):
-                    if not hasattr(Orange.classification, class_.__name__):
+                    if name == 'LearnerClassification':
+                        name = 'Learner'
+                    if not hasattr(Orange.classification, name):
                         self.fail("%s is not visible in Orange.classification"
                                   " namespace" % class_.__name__)

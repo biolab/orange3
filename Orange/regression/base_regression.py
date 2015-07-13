@@ -5,9 +5,10 @@ __all__ = ["LearnerRegression", "ModelRegression",
 
 
 class LearnerRegression(Learner):
-    def __call__(self, data):
-        check_learner_adequacy(data.domain)
-        return super().__call__(data)
+    learner_adequacy_err_msg = "Continuous class variable expected."
+
+    def check_learner_adequacy(self, domain):
+        return domain.has_continuous_class or domain.class_var is None
 
 
 class ModelRegression(Model):
@@ -15,16 +16,11 @@ class ModelRegression(Model):
 
 
 class SklLearnerRegression(SklLearner):
-    def __call__(self, data):
-        check_learner_adequacy(data.domain)
-        return super().__call__(data)
+    learner_adequacy_err_msg = "Continuous class variable expected."
+
+    def check_learner_adequacy(self, domain):
+        return domain.has_continuous_class or domain.class_var is None
 
 
 class SklModelRegression(SklModel):
-    def __call__(self, data, ret=Model.Value):
-        return super().__call__(data, ret=ret)
-
-
-def check_learner_adequacy(domain):
-    if domain.has_discrete_class:
-        raise ValueError("Continuous class variable expected.")
+    pass

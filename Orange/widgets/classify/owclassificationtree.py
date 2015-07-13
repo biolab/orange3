@@ -1,7 +1,6 @@
-from PyQt4.QtGui import QApplication
-import Orange.data
+from Orange.data import Table
 from Orange.preprocess.preprocess import Preprocess
-from Orange.classification import tree
+from Orange.classification.tree import TreeLearner, TreeClassifier
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
@@ -12,12 +11,12 @@ class OWClassificationTree(widget.OWWidget):
     description = "Classification tree algorithm with forward pruning."
     priority = 30
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
     outputs = [
-        ("Learner", tree.TreeLearner),
-        ("Classification Tree", tree.TreeClassifier)
+        ("Learner", TreeLearner),
+        ("Classification Tree", TreeClassifier)
     ]
     want_main_area = False
 
@@ -80,28 +79,26 @@ class OWClassificationTree(widget.OWWidget):
         self.reportData(self.data)
 
     def set_learner(self):
-        self.learner = tree.TreeLearner(
+        self.learner = TreeLearner(
             criterion=self.scores[self.attribute_score][1],
             max_depth=self.max_depth,
             min_samples_split=self.min_internal,
             min_samples_leaf=self.min_leaf,
-            preprocessors=self.preprocessors)
-
+            preprocessors=self.preprocessors
+        )
         self.learner.name = self.model_name
-
-        self.send("Learner", self.learner)
+        self.classifier = None
 
         if self.data is not None:
-            try:
-                self.warning(1)
+            self.error(1)
+            if not self.learner.check_learner_adequacy(self.data.domain):
+                self.error(1, self.learner.learner_adequacy_err_msg)
+            else:
                 self.classifier = self.learner(self.data)
                 self.classifier.name = self.model_name
                 self.classifier.instances = self.data
-            except ValueError as errValue:
-                self.warning(1, str(errValue))
-                self.classifier = None
-        else:
-            self.classifier = None
+
+        self.send("Learner", self.learner)
         self.send("Classification Tree", self.classifier)
 
     def set_data(self, data):
@@ -119,11 +116,14 @@ class OWClassificationTree(widget.OWWidget):
             self.preprocessors = (preproc,)
         self.set_learner()
 
+
 if __name__ == "__main__":
     import sys
+    from PyQt4.QtGui import QApplication
+
     a = QApplication(sys.argv)
     ow = OWClassificationTree()
-    d = Orange.data.table.Table('iris')
+    d = Table('iris')
     ow.set_data(d)
     ow.show()
     a.exec_()

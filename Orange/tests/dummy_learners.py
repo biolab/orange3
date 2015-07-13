@@ -1,8 +1,8 @@
-from Orange import classification
+from Orange.base import SklLearner, SklModel, Model
 import numpy as np
 
 
-class DummyLearner(classification.SklLearner):
+class DummyLearner(SklLearner):
     def fit(self, X, Y, W):
         rows = Y.shape[0]
         value = Y[np.random.randint(0, rows)]
@@ -11,25 +11,62 @@ class DummyLearner(classification.SklLearner):
         return DummyPredictor(value, prob)
 
 
-class DummyPredictor(classification.SklModel):
+class DummyPredictor(SklModel):
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
-        self.ret = classification.Model.ValueProbs
+        self.ret = Model.ValueProbs
 
     def predict(self, X):
         rows = X.shape[0]
         value = np.tile(self.value, rows)
         probs = np.tile(self.prob, (rows, 1))
-        if self.ret == classification.Model.Value:
+        if self.ret == Model.Value:
             return value
-        elif self.ret == classification.Model.Value:
+        elif self.ret == Model.Value:
             return probs
         else:
             return value, probs
 
+    def __call__(self, data, ret=Model.Value):
+        prediction = super().__call__(data, ret=ret)
 
-class DummyMulticlassLearner(classification.SklLearner):
+        if ret == Model.Value:
+            return prediction
+
+        if ret == Model.Probs:
+            probs = prediction
+        else:  # ret == Model.ValueProbs
+            value, probs = prediction
+
+        # Expand probability predictions for class values which are not present
+        if ret != self.Value:
+            n_class = len(self.domain.class_vars)
+            max_values = max(len(cv.values) for cv in self.domain.class_vars)
+            if max_values != probs.shape[-1]:
+                if not self.supports_multiclass:
+                    probs = probs[:, np.newaxis, :]
+                probs_ext = np.zeros((len(probs), n_class, max_values))
+                for c in range(n_class):
+                    i = 0
+                    class_values = len(self.domain.class_vars[c].values)
+                    for cv in range(class_values):
+                        if (i < len(self.used_vals[c]) and
+                                    cv == self.used_vals[c][i]):
+                            probs_ext[:, c, cv] = probs[:, c, i]
+                            i += 1
+                if self.supports_multiclass:
+                    probs = probs_ext
+                else:
+                    probs = probs_ext[:, 0, :]
+
+        if ret == Model.Probs:
+            return probs
+        else:  # ret == Model.ValueProbs
+            return value, probs
+
+
+class DummyMulticlassLearner(SklLearner):
     supports_multiclass = True
 
     def fit(self, X, Y, W):
@@ -46,19 +83,56 @@ class DummyMulticlassLearner(classification.SklLearner):
         return DummyMulticlassPredictor(value, prob)
 
 
-class DummyMulticlassPredictor(classification.SklModel):
+class DummyMulticlassPredictor(SklModel):
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
-        self.ret = classification.Model.ValueProbs
+        self.ret = Model.ValueProbs
 
     def predict(self, X):
         rows = X.shape[0]
         value = np.tile(self.value, (rows, 1))
         probs = np.tile(self.prob, (rows, 1, 1))
-        if self.ret == classification.Model.Value:
+        if self.ret == Model.Value:
             return value
-        elif self.ret == classification.Model.Value:
+        elif self.ret == Model.Value:
             return probs
         else:
+            return value, probs
+
+    def __call__(self, data, ret=Model.Value):
+        prediction = super().__call__(data, ret=ret)
+
+        if ret == Model.Value:
+            return prediction
+
+        if ret == Model.Probs:
+            probs = prediction
+        else:  # ret == Model.ValueProbs
+            value, probs = prediction
+
+        # Expand probability predictions for class values which are not present
+        if ret != self.Value:
+            n_class = len(self.domain.class_vars)
+            max_values = max(len(cv.values) for cv in self.domain.class_vars)
+            if max_values != probs.shape[-1]:
+                if not self.supports_multiclass:
+                    probs = probs[:, np.newaxis, :]
+                probs_ext = np.zeros((len(probs), n_class, max_values))
+                for c in range(n_class):
+                    i = 0
+                    class_values = len(self.domain.class_vars[c].values)
+                    for cv in range(class_values):
+                        if (i < len(self.used_vals[c]) and
+                                    cv == self.used_vals[c][i]):
+                            probs_ext[:, c, cv] = probs[:, c, i]
+                            i += 1
+                if self.supports_multiclass:
+                    probs = probs_ext
+                else:
+                    probs = probs_ext[:, 0, :]
+
+        if ret == Model.Probs:
+            return probs
+        else:  # ret == Model.ValueProbs
             return value, probs
