@@ -5,13 +5,14 @@ import pickle
 from itertools import chain
 
 import bottlechest as bn
-import numpy as np
+from sklearn import tree
 from scipy import sparse
 # We are not loading openpyxl here since it takes some time
 
 from Orange.data import _io
 from Orange.data import Domain
 from Orange.data.variable import *
+from PyQt4 import QtGui, QtCore
 
 
 # A singleton simulated with a class
@@ -20,6 +21,8 @@ class FileFormats:
     names = {}
     writers = {}
     readers = {}
+    img_writers = {}
+    graph_writers = {}
 
     @classmethod
     def register(cls, name, extension):
@@ -31,6 +34,10 @@ class FileFormats:
                 cls.writers[extension] = format
             if hasattr(format, "read_file"):
                 cls.readers[extension] = format
+            if hasattr(format, "write_image"):
+                cls.img_writers[extension] = format
+            if hasattr(format, "write_graph"):
+                cls.graph_writers[extension] = format
             return format
         return f
 
@@ -288,6 +295,9 @@ class TabDelimFormat:
                 f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
         f.close()
 
+    def write(self, filename, data):
+        self.write_file(filename, data)
+
 
 @FileFormats.register("Comma-separated file", ".csv")
 class TxtFormat:
@@ -355,6 +365,9 @@ class TxtFormat:
     @classmethod
     def write_file(cls, filename, data):
         cls.csv_saver(filename, data, ',')
+
+    def write(self, filename, data):
+        self.write_file(filename, data)
 
 
 @FileFormats.register("Basket file", ".basket")
@@ -658,3 +671,51 @@ class PickleFormat:
         with open(filename, "wb") as f:
             pickle.dump(table, f)
 
+    def write(self, filename, table):
+        self.write_file(filename, table)
+
+
+@FileFormats.register("Portable Network Graphics", ".png")
+class PngFormat:
+    @classmethod
+    def write_image(cls, filename, scene):
+        source = QtCore.QRectF()
+        for item in scene.items():
+            if item.isVisible():
+                source = source.united(item.boundingRect().translated(item.pos()))
+        source = source.adjusted(-15, -15, 15, 15)
+
+        size = source.size()
+        buffer = QtGui.QPixmap(int(size.width()), int(size.height()))
+        painter = QtGui.QPainter()
+        painter.begin(buffer)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
+        brush = scene.backgroundBrush()
+        if brush.style() == QtCore.Qt.NoBrush:
+            brush = QtGui.QBrush(scene.palette().color(QtGui.QPalette.Base))
+        painter.fillRect(buffer.rect(), brush)
+        target = QtCore.QRectF(0, 0, source.width(), source.height())
+        scene.render(painter, target, source)
+        buffer.save(filename)
+        del painter
+
+    def write_graph(self, filename, scene):
+        self.write_image(filename, scene)
+
+    def write(self, filename, scene):
+        if type(scene) == dict:
+            scene = scene['scene']
+        self.write_image(filename, scene)
+
+
+@FileFormats.register("Dot Tree File", ".dot")
+class DotFormat:
+    @classmethod
+    def write_graph(cls, filename, graph):
+        tree.export_graphviz(graph, out_file=filename)
+
+    def write(self, filename, tree):
+        if type(tree) == dict:
+            tree = tree['tree']
+        self.write_graph(filename, tree)

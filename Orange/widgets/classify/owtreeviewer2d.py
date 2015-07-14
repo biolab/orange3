@@ -1,6 +1,7 @@
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
+from Orange.widgets.data.owsave import OWSave
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -395,6 +396,7 @@ class OWTreeViewer2D(OWWidget):
             items=['Fixed', 'Relative to root', 'Relative to parent'],
             callback=self.toggle_line_width), 3, 1)
         self.resize(800, 500)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def send_report(self):
         from PyQt4.QtSvg import QSvgGenerator
@@ -531,21 +533,6 @@ class OWTreeViewer2D(OWWidget):
         # self.send("Data", self.selectedNode.tree.examples if self.selectedNode
         #           else None)
 
-    def save_graph(self, file_name=None):
-        pass
-        # from OWDlgs import OWChooseImageSizeDlg
-        # dlg = OWChooseImageSizeDlg(
-        #     self.scene,
-        #     [("Save as Dot Tree File (.dot)", self.saveDot)],
-        #     parent=self)
-        # dlg.exec()
-
-    # noinspection PyTypeChecker
-    def save_dot(self, filename=None):
-        if filename is None:
-            # noinspection PyCallByClass
-            filename = QFileDialog.getSaveFileName(
-                self, "Save to ...", "tree.dot", "Dot Tree File (.DOT)")
-            if not filename:
-                return
-        # orngTree.printDot(self.tree, filename)
+    def save_graph(self):
+        save_img = OWSave(parent=self, scene=self.scene, tree=self.tree)
+        save_img.exec_()

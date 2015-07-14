@@ -31,6 +31,7 @@ from PyQt4.QtNetwork import (
 import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.data.owsave import OWSave
 
 # from OWConcurrent import Future, FutureWatcher
 from concurrent.futures import Future
@@ -601,9 +602,8 @@ class OWImageViewer(widget.OWWidget):
             self.send("Data", None)
 
     def saveScene(self):
-        from OWDlgs import OWChooseImageSizeDlg
-        sizeDlg = OWChooseImageSizeDlg(self.scene, parent=self)
-        sizeDlg.exec_()
+        save_img = OWSave(parent=self, scene=self.scene)
+        save_img.exec_()
 
     def _updateStatus(self, future):
         if future.cancelled():

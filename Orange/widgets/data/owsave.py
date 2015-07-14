@@ -2,7 +2,6 @@ import os.path
 
 from PyQt4 import QtGui
 
-from Orange import data
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -21,16 +20,25 @@ class OWSave(widget.OWWidget):
 
     want_main_area = False
 
-    format_index = Setting(0)
     last_dir = Setting("")
 
-    formats = tuple((FileFormats.names[ext], ext)
-                    for ext in FileFormats.writers)
-
-    def __init__(self, parent=None, signalManager=None, settings=None):
+    def __init__(self, parent=None, signalManager=None, settings=None,
+                 scene=None, tree=None):
         super().__init__(self, parent, signalManager, settings, "Save")
         self.data = None
         self.filename = ""
+        self.file_formats = FileFormats.writers
+        self.file_dialog_title = 'Save Orange Data File'
+        self.format_index = 0
+        if scene is not None:
+            self.file_formats = FileFormats.img_writers
+            self.file_dialog_title = 'Save Image'
+        if tree is not None:
+            self.file_formats = FileFormats.graph_writers
+            self.file_dialog_title = 'Save Graph'
+
+        self.formats = tuple((FileFormats.names[ext], ext)
+                             for ext in self.file_formats)
         self.comboBoxFormat = gui.comboBox(
             self.controlArea, self, value='format_index',
             items=['{} (*{})'.format(*x) for x in self.formats],
@@ -43,10 +51,14 @@ class OWSave(widget.OWWidget):
                                  callback=self.save_file_as, disabled=True)
         self.setMinimumWidth(320)
         self.adjustSize()
+        if scene:
+            self.dataset(scene)
+        if scene and tree:
+            self.dataset({'scene': scene, 'tree': tree})
 
     def reset_filename(self):
         base, ext = os.path.splitext(self.filename)
-        if ext in FileFormats.writers:
+        if ext in self.file_formats:
             self.filename = base + self.formats[self.format_index][1]
             self.save.setText("Save as '%s'" % os.path.split(self.filename)[1])
 
@@ -59,7 +71,7 @@ class OWSave(widget.OWWidget):
         f = self.formats[self.format_index]
         home_dir = os.path.expanduser("~")
         filename = QtGui.QFileDialog.getSaveFileName(
-            self, 'Save Orange Data File',
+            self, self.file_dialog_title,
             self.filename or self.last_dir or home_dir,
             '{} (*{})'.format(*f))
         if not filename:
@@ -78,8 +90,8 @@ class OWSave(widget.OWWidget):
         elif self.data is not None:
             try:
                 ext = self.formats[self.format_index][1]
-                format = FileFormats.writers[ext]
-                format().write_file(self.filename, self.data)
+                format = self.file_formats[ext]
+                format().write(self.filename, self.data)
                 self.error()
             except Exception as errValue:
                 self.error(str(errValue))
@@ -87,6 +99,7 @@ class OWSave(widget.OWWidget):
 
 if __name__ == "__main__":
     import sys
+
     a = QtGui.QApplication(sys.argv)
     table = Table("iris")
     ow = OWSave()
