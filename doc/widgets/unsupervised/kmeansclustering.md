@@ -1,38 +1,47 @@
-K-Means Clustering
-==================
+k-Means
+=======
 
-![image]
+![image](icons/k-means.png)
 
-Groups the examples using the K-Means clustering algorithm.
+Groups items using the k-Means clustering algorithm.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   
+- **Data**
 
-        Examples
+  Data set
 
-        :   A list of examples
+**Outputs**:
 
-Outputs:
+- **Data**
 
-:   -   
-
-        Examples
-
-        :   A list of examples with the cluster index as the class
-            attribute
+  Data set with cluster index as a class attribute.
 
 Description
 -----------
 
-The widget applies the K-means clustering algorithm to the data from the
-input and outputs a new data set in which the cluster index is used for
-the class attribute. The original class attribute, if it existed, is
+The widget applies k-Means clustering algorithm to the data
+and outputs a new data set in which the cluster index is used as
+a class attribute. The original class attribute, if it existed, is
 moved to meta attributes. The basic information on the clustering
 results is also shown in the widget.
+
+![image](images/kMeans-stamped.png)
+
+1. Select the number of clusters.
+    - Fixed: algorithm clusters data in a specified number of clusters.
+    - Optimized: algorithm returns possible clusters within the selected cluster range with appended scoring (bigger is better).
+      - [**Silhouette**](https://en.wikipedia.org/wiki/Silhouette_(clustering)) (contrasts average distance to elements in the same cluster with the average distance to elements in other clusters)
+      - **Inter-cluster distance** (measures distances between clusters, normally between centroids)
+      - **Distance to [centroids](https://en.wikipedia.org/wiki/Centroid)** (measures distances to the arithmetic means of clusters)
+2. Select initialization method (the way the algorithm begins clutering):
+    - **k-Means++** (first center is selected randomly, subsequent are chosen from the remaining points with probability proportioned to squared distance from the closest center)
+    - **Random initialization** (clusters are assigned randomly at first and then updated with further iterations)
+  **Re-runs** (how many times the algorithm is run) and **maximal iterations** (the maximum number of iteration within each algorithm run) can be set manually.
+3. 
 
 Examples
 --------
