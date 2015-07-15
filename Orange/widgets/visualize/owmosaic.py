@@ -206,7 +206,8 @@ class OWMosaicDisplay(OWWidget):
                      callback=self.updateGraph)
 
         gui.checkBox(box5, self, "remove_unused_values",
-                     "Remove unused attribute values")
+                     "Remove unused attribute values",
+                     callback=self.updateGraph)
 
         gui.checkBox(box5, self, 'show_apriori_distribution_lines',
                      'Show apriori distribution with lines',
@@ -275,7 +276,7 @@ class OWMosaicDisplay(OWWidget):
             attr = self.variable4
 
         if self.data and attr != "" and attr != "(None)":
-            dlg = SortAttributeValuesDlg(attr,
+            dlg = self.SortAttributeValuesDlg(attr,
                                          self.manualAttributeValuesDict.get(attr, None) or get_variable_values_sorted(
                                              self.data.domain[attr]))
             if dlg.exec_() == QDialog.Accepted:
@@ -704,18 +705,20 @@ class OWMosaicDisplay(OWWidget):
         for i in range(len(values)):
             val = values[i]
             perc = counts[i] / float(total)
-            if side == 0:
-                OWCanvasText(self.canvas, str(val), x0 + currPos + width * 0.5 * perc, y1 + self.attributeValueOffset,
-                             Qt.AlignTop | Qt.AlignHCenter, bold=0)
-            elif side == 1:
-                OWCanvasText(self.canvas, str(val), x0 - self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
-                             Qt.AlignRight | Qt.AlignVCenter, bold=0)
-            elif side == 2:
-                OWCanvasText(self.canvas, str(val), x0 + currPos + width * perc * 0.5, y0 - self.attributeValueOffset,
-                             Qt.AlignHCenter | Qt.AlignBottom, bold=0)
-            else:
-                OWCanvasText(self.canvas, str(val), x1 + self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
-                             Qt.AlignLeft | Qt.AlignVCenter, bold=0)
+            hide_value = self.remove_unused_values and counts[i]==0
+            if not hide_value:
+                if side == 0:
+                    OWCanvasText(self.canvas, str(val), x0 + currPos + width * 0.5 * perc, y1 + self.attributeValueOffset,
+                                 Qt.AlignTop | Qt.AlignHCenter, bold=0)
+                elif side == 1:
+                    OWCanvasText(self.canvas, str(val), x0 - self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
+                                 Qt.AlignRight | Qt.AlignVCenter, bold=0)
+                elif side == 2:
+                    OWCanvasText(self.canvas, str(val), x0 + currPos + width * perc * 0.5, y0 - self.attributeValueOffset,
+                                 Qt.AlignHCenter | Qt.AlignBottom, bold=0)
+                else:
+                    OWCanvasText(self.canvas, str(val), x1 + self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
+                                 Qt.AlignLeft | Qt.AlignVCenter, bold=0)
 
             if side % 2 == 0:
                 currPos += perc * width + self._cellspace * (totalAttrs - side)
@@ -1059,52 +1062,54 @@ class OWMosaicDisplay(OWWidget):
         # self.optimizationDlg.saveSettings()
 
 
-class SortAttributeValuesDlg(OWWidget):
-    def __init__(self, attr="", valueList=[]):
-        super().__init__(self)
+    class SortAttributeValuesDlg(OWWidget):
+        name = "Sort Attribute Values"
 
-        self.setLayout(QVBoxLayout())
-        #self.space = QWidget(self)
-        #self.layout = QVBoxLayout(self, 4)
-        #self.layout.addWidget(self.space)
+        def __init__(self, attr="", valueList=[]):
+            super().__init__(self)
 
-        box1 = gui.widgetBox(self, "Select Value Order for Attribute \"" + attr + '"', orientation="horizontal")
+            #self.settingsHandler(QVBoxLayout())
+            #self.space = QWidget(self)
+            #self.layout = QVBoxLayout(self, 4)
+            #self.layout.addWidget(self.space)
 
-        self.attributeList = gui.listBox(box1, self, selectionMode=QListWidget.ExtendedSelection, enableDragDrop=1)
-        self.attributeList.addItems(valueList)
+            box1 = gui.widgetBox(self, "Select Value Order for Attribute \"" + attr + '"', orientation="horizontal")
 
-        vbox = gui.widgetBox(box1, "", orientation="vertical")
-        self.buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP,
-                                       tooltip="Move selected attribute values up")
-        self.buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
-                                         tooltip="Move selected attribute values down")
-        self.buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
-        self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.buttonUPAttr.setFixedWidth(40)
-        self.buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
-        self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.buttonDOWNAttr.setFixedWidth(40)
+            self.attributeList = gui.listBox(box1, self, selectionMode=QListWidget.ExtendedSelection, enableDragDrop=1)
+            self.attributeList.addItems(valueList)
 
-        box2 = gui.widgetBox(self, 1, orientation="horizontal")
-        self.okButton = gui.button(box2, self, "OK", callback=self.accept)
-        self.cancelButton = gui.button(box2, self, "Cancel", callback=self.reject)
+            vbox = gui.widgetBox(box1, "", orientation="vertical")
+            self.buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP,
+                                           tooltip="Move selected attribute values up")
+            self.buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
+                                             tooltip="Move selected attribute values down")
+            self.buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
+            self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+            self.buttonUPAttr.setFixedWidth(40)
+            self.buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
+            self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+            self.buttonDOWNAttr.setFixedWidth(40)
 
-        self.resize(300, 300)
+            box2 = gui.widgetBox(self, 1, orientation="horizontal")
+            self.okButton = gui.button(box2, self, "OK", callback=self.accept)
+            self.cancelButton = gui.button(box2, self, "Cancel", callback=self.reject)
 
-    # move selected attribute values
-    def moveAttrUP(self):
-        for i in range(1, self.attributeList.count()):
-            if self.attributeList.item(i).isSelected():
-                self.attributeList.insertItem(i - 1, self.attributeList.item(i).text())
-                self.attributeList.takeItem(i + 1)
-                self.attributeList.item(i - 1).setSelected(True)
+            self.resize(300, 300)
 
-    def moveAttrDOWN(self):
-        for i in range(self.attributeList.count() - 2, -1, -1):
-            if self.attributeList.item(i).isSelected():
-                self.attributeList.insertItem(i + 2, self.attributeList.item(i).text())
-                self.attributeList.item(i + 2).setSelected(True)
-                self.attributeList.takeItem(i)
+        # move selected attribute values
+        def moveAttrUP(self):
+            for i in range(1, self.attributeList.count()):
+                if self.attributeList.item(i).isSelected():
+                    self.attributeList.insertItem(i - 1, self.attributeList.item(i).text())
+                    self.attributeList.takeItem(i + 1)
+                    self.attributeList.item(i - 1).setSelected(True)
+
+        def moveAttrDOWN(self):
+            for i in range(self.attributeList.count() - 2, -1, -1):
+                if self.attributeList.item(i).isSelected():
+                    self.attributeList.insertItem(i + 2, self.attributeList.item(i).text())
+                    self.attributeList.item(i + 2).setSelected(True)
+                    self.attributeList.takeItem(i)
 
 
 class OWCanvasText(QGraphicsTextItem):
