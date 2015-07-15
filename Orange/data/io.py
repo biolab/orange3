@@ -12,7 +12,7 @@ from scipy import sparse
 from Orange.data import _io
 from Orange.data import Domain
 from Orange.data.variable import *
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui, QtCore, QtSvg
 
 
 # A singleton simulated with a class
@@ -674,9 +674,22 @@ class PickleFormat:
     def write(self, filename, table):
         self.write_file(filename, table)
 
+class ImgFormat:
+    @staticmethod
+    def _get_buffer(size, filename):
+        raise NotImplementedError(
+            "Descendants of ImgFormat must override method _get_buffer")
 
-@FileFormats.register("Portable Network Graphics", ".png")
-class PngFormat:
+    @staticmethod
+    def _get_target(self, scene, painter, buffer):
+        raise NotImplementedError(
+            "Descendants of ImgFormat must override method _get_target")
+
+    @staticmethod
+    def _save_buffer(self, buffer, filename):
+        raise NotImplementedError(
+            "Descendants of ImgFormat must override method _get_target")
+
     @classmethod
     def write_image(cls, filename, scene):
         source = QtCore.QRectF()
@@ -684,21 +697,16 @@ class PngFormat:
             if item.isVisible():
                 source = source.united(item.boundingRect().translated(item.pos()))
         source = source.adjusted(-15, -15, 15, 15)
+        buffer = cls._get_buffer(source.size(), filename)
 
-        size = source.size()
-        buffer = QtGui.QPixmap(int(size.width()), int(size.height()))
         painter = QtGui.QPainter()
         painter.begin(buffer)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
-        brush = scene.backgroundBrush()
-        if brush.style() == QtCore.Qt.NoBrush:
-            brush = QtGui.QBrush(scene.palette().color(QtGui.QPalette.Base))
-        painter.fillRect(buffer.rect(), brush)
-        target = QtCore.QRectF(0, 0, source.width(), source.height())
+        target = cls._get_target(scene, painter, buffer, source)
         scene.render(painter, target, source)
-        buffer.save(filename)
-        del painter
+        cls._save_buffer(buffer, filename)
+        painter.end()
 
     def write_graph(self, filename, scene):
         self.write_image(filename, scene)
@@ -707,6 +715,43 @@ class PngFormat:
         if type(scene) == dict:
             scene = scene['scene']
         self.write_image(filename, scene)
+
+
+@FileFormats.register("Portable Network Graphics", ".png")
+class PngFormat(ImgFormat):
+    @staticmethod
+    def _get_buffer(size, filename):
+        return QtGui.QPixmap(int(size.width()), int(size.height()))
+
+    @staticmethod
+    def _get_target(scene, painter, buffer, source):
+        brush = scene.backgroundBrush()
+        if brush.style() == QtCore.Qt.NoBrush:
+            brush = QtGui.QBrush(scene.palette().color(QtGui.QPalette.Base))
+        painter.fillRect(buffer.rect(), brush)
+        return QtCore.QRectF(0, 0, source.width(), source.height())
+
+    @staticmethod
+    def _save_buffer(buffer, filename):
+        buffer.save(filename)
+
+
+@FileFormats.register("Scalable Vector Graphics", ".svg")
+class SvgFormat(ImgFormat):
+    @staticmethod
+    def _get_buffer(size, filename):
+        buffer = QtSvg.QSvgGenerator()
+        buffer.setFileName(filename)
+        buffer.setSize(QtCore.QSize(int(size.width()), int(size.height())))
+        return buffer
+
+    @staticmethod
+    def _get_target(scene, painter, buffer, source):
+        return QtCore.QRectF(0, 0, source.width(), source.height())
+
+    @staticmethod
+    def _save_buffer(buffer, filename):
+        pass
 
 
 @FileFormats.register("Dot Tree File", ".dot")
