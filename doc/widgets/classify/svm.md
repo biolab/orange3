@@ -46,26 +46,21 @@ widget is its graphical user interface.
 
 1. Learner can be given a name under which it will appear in other widgets. The default name is
 “SVM Learner”.
-
 2. Classification type with test error settings. *C-SVM* and *v-SVM* are based
   on different minimization of the error function. On the right side you can set test error bounds,
   [*Cost*](http://www.quora.com/What-are-C-and-gamma-with-regards-to-a-support-vector-machine) for C-SVM and *Complexity bound* for v-SVM.
-
 3. The next block of options deals with kernel, a function that
   transforms attribute space to a new feature space to fit the
   maximum-margin hyperplane, thus allowing the algorithm to create
   non-linear classifiers with [*Polynomial*](https://en.wikipedia.org/wiki/Polynomial_kernel), [*RBF*](https://en.wikipedia.org/wiki/Radial_basis_function_kernel) and [*Sigmoid*](http://crsouza.com/2010/03/kernel-functions-for-machine-learning-applications/#sigmoid) kernels. Functions that specify the
   kernel are presented besides their names, and the constants involved are:
-
     - **g** for the gamma constant in kernel function (the recommended value is
     1/k, where k is the number of the attributes, but since there may be no
     training set given to the widget the default is 0 and the user has to
     set this option manually),
     - **c** for the constant c0 in the kernel function (default 0), and
     - **d** for the degree of the kernel (default 3).
-  
 4. Set permitted deviation from the expected value in *Numerical Tolerance*. Tick the box next to *Iteration Limit* to set the maximum number of iterations permitted.
-
 5. Click *Apply* to commit changes.
 
 Examples
