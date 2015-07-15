@@ -42,7 +42,7 @@ technique often yields supreme predictive performance results. Orange
 embeds a popular implementation of SVM from [LIBSVM](https://www.csie.ntu.edu.tw/~cjlin/libsvm/) package. This
 widget is its graphical user interface.
 
-![Support vector machines widget](images/SVM-stamped.png)
+![Support vector machines widget](images/SVM-new-stamped.png)
 
 1. Learner can be given a name under which it will appear in other widgets. The default name is
 “SVM Learner”.
@@ -64,7 +64,9 @@ widget is its graphical user interface.
     - **c** for the constant c0 in the kernel function (default 0), and
     - **d** for the degree of the kernel (default 3).
   
-4. Set permitted deviation from the expected value.
+4. Set permitted deviation from the expected value in *Numerical Tolerance*. Tick the box next to *Iteration Limit* to set the maximum number of iterations permitted.
+
+5. Click *Apply* to commit changes.
 
 Examples
 --------
