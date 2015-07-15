@@ -1,15 +1,21 @@
 language: python
+
 python:
-- '3.4'
+    - '3.4'
+
 before_install:
-- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ]; then source $TRAVIS_BUILD_DIR/travis/decrypt_upload_doc_id.sh; fi;
+    - if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ]; then source $TRAVIS_BUILD_DIR/travis/decrypt_upload_doc_id.sh; fi;
+
 install:
-- source $TRAVIS_BUILD_DIR/travis/install.sh
-- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh; fi;
+    - source $TRAVIS_BUILD_DIR/travis/install.sh
+    - if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh; fi;
+
 before_script:
+
 script:
-- cd $TRAVIS_BUILD_DIR
-- python setup.py test
-- cd $TRAVIS_BUILD_DIR/doc && make html
+    - cd $TRAVIS_BUILD_DIR
+    - python setup.py test
+    - cd $TRAVIS_BUILD_DIR/doc && make html
+
 after_success:
-- if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/upload_doc.sh; fi;
+    - if [ $TRAVIS_REPO_SLUG = 'biolab/orange3' ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then source $TRAVIS_BUILD_DIR/travis/upload_doc.sh; fi;
