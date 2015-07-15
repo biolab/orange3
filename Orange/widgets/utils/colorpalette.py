@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+from numbers import Number
 
 import numpy as np
 from PyQt4 import QtCore
@@ -520,39 +521,48 @@ class PaletteEditor(QDialog):
         return [self.discListbox.item(i).rgbColor for i in range(self.discListbox.count())]
 
 
-class ContinuousPaletteGenerator:
+EPS = 7./3 - 4./3 - 1  # http://stackoverflow.com/a/25155518/1090455
+NAN_GREY = (0x88, 0x88, 0x88)
+
+class GradientPaletteGenerator:
+    def __init__(self, *colors):
+        assert len(colors) >= 2
+        self.bins = np.linspace(0, 1, len(colors))
+        self.deriv = self.bins[1] - self.bins[0]
+        self.colors = np.array([self.to_rgb_tuple(c) for c in colors])
+
+    def to_rgb_tuple(self, color):
+        try:
+            color = QColor(*color)
+        except TypeError:
+            color = QColor(color)
+        return color.red(), color.green(), color.blue()
+
+    def getRGB(self, values):
+        """
+        Return RGB tuple that matches `value`, which is assumed
+        to lay within [0, 1].
+        """
+        values, single = (np.array([values]), True) if isinstance(values, Number) else (values, False)
+        values = np.clip(values, 0, 1 - EPS)
+        bin = np.digitize(values, self.bins)
+        nans = bin >= len(self.bins)
+        bin[nans] = 0  # just so that the next two lines pass
+        p = (values - self.bins[bin - 1]) / self.deriv
+        results = np.round((1 - p) * self.colors[bin - 1].T + p * self.colors[bin].T).T.astype(int)
+        results[nans] = NAN_GREY
+        return results[0] if single else results
+
+    def __getitem__(self, values):
+        if isinstance(values, Number):
+            return QColor(*self.getRGB(values))
+        return [QColor(*c) for c in self.getRGB(values)]
+
+
+class ContinuousPaletteGenerator(GradientPaletteGenerator):
     def __init__(self, color1, color2, passThroughBlack):
-        self.c1Red, self.c1Green, self.c1Blue = color1.red(), color1.green(), color1.blue()
-        self.c2Red, self.c2Green, self.c2Blue = color2.red(), color2.green(), color2.blue()
-        self.passThroughBlack = passThroughBlack
-
-    def getRGB(self, val):
-        if self.passThroughBlack:
-            red = np.array([self.c1Red, 0, self.c2Red])
-            green = np.array([self.c1Green, 0, self.c2Green])
-            blue = np.array([self.c1Blue, 0, self.c2Blue])
-            cs = [0, 0.5, 1]
-        else:
-            red = np.array([self.c1Red, self.c2Red])
-            green = np.array([self.c1Green, self.c2Green])
-            blue = np.array([self.c1Blue, self.c2Blue])
-            cs = [0, 1]
-
-        r = np.interp(val, cs, red)
-        g = np.interp(val, cs, green)
-        b = np.interp(val, cs, blue)
-
-        rgb = np.c_[r, g, b]
-        rgb[np.isnan(rgb).any(axis=1), :] = (157, 185, 250)
-
-        if np.isscalar(val):
-            return tuple(rgb[0].tolist())
-        else:
-            return rgb
-
-    # val must be between 0 and 1
-    def __getitem__(self, val):
-        return QColor(*self.getRGB(val))
+        args = (color1, '#000000', color2) if passThroughBlack else (color1, color2)
+        super().__init__(*args)
 
 
 class ExtendedContinuousPaletteGenerator:
