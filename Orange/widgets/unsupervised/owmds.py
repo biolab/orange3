@@ -5,6 +5,7 @@ import pkg_resources
 
 import numpy
 import scipy.spatial.distance
+from itertools import chain
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, QEvent
@@ -131,6 +132,8 @@ class OWMDS(widget.OWWidget):
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
 
+    legend_anchor = settings.Setting(((1, 0), (1, 0)))
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.matrix = None
@@ -143,7 +146,7 @@ class OWMDS(widget.OWWidget):
         self._size_data = None
         self._label_data = None
         self._scatter_item = None
-        self._selection_item = None
+        self._legend_item = None
         self._selection_mask = None
         self._invalidated = False
         self._effective_matrix = None
@@ -345,6 +348,17 @@ class OWMDS(widget.OWWidget):
         self.__set_update_loop(None)
         self.__state = OWMDS.Waiting
 
+    def _clear_plot(self):
+        self.plot.clear()
+        self._scatter_item = None
+        if self._legend_item is not None:
+            anchor = legend_anchor_pos(self._legend_item)
+            if anchor is not None:
+                self.legend_anchor = anchor
+            if self._legend_item.scene() is not None:
+                self._legend_item.scene().removeItem(self._legend_item)
+            self._legend_item = None
+
     def update_controls(self):
         if getattr(self.matrix, 'axis', 1) == 0:
             # Column-wise distances
@@ -365,22 +379,18 @@ class OWMDS(widget.OWWidget):
             str_vars = [var for var in all_vars
                             if var.is_discrete or var.is_string]
 
-            def set_separator(model, index):
-                index = model.index(index, 0)
-                model.setData(index, "separator", Qt.AccessibleDescriptionRole)
-                model.setData(index, Qt.NoItemFlags, role="flags")
-
-            self.colorvar_model[:] = ["Same color", ""] + cd_vars
-            set_separator(self.colorvar_model, 1)
-
-            self.shapevar_model[:] = ["Same shape", ""] + disc_vars
-            set_separator(self.shapevar_model, 1)
-
-            self.sizevar_model[:] = ["Same size", "Stress", ""] + cont_vars
-            set_separator(self.sizevar_model, 2)
-
-            self.labelvar_model[:] = ["No labels", ""] + str_vars
-            set_separator(self.labelvar_model, 1)
+            self.colorvar_model[:] = chain(["Same color"],
+                                           [self.colorvar_model.Separator],
+                                           cd_vars)
+            self.shapevar_model[:] = chain(["Same shape"],
+                                           [self.shapevar_model.Separator],
+                                           disc_vars)
+            self.sizevar_model[:] = chain(["Same size", "Stress"],
+                                          [self.sizevar_model.Separator],
+                                          cont_vars)
+            self.labelvar_model[:] = chain(["No labels"],
+                                           [self.labelvar_model.Separator],
+                                           str_vars)
 
             if domain.class_var is not None:
                 self.color_index = list(self.colorvar_model).index(domain.class_var)
@@ -618,9 +628,7 @@ class OWMDS(widget.OWWidget):
         self._update_plot()
 
     def _update_plot(self):
-        self.plot.clear()
-        self._scatter_item = None
-        self._selection_item = None
+        self._clear_plot()
 
         if self.embedding is not None:
             self._setup_plot()
@@ -747,6 +755,33 @@ class OWMDS(widget.OWWidget):
                 self.plot.addItem(text_item)
                 text_item.setPos(x, y)
 
+        self._legend_item = LegendItem()
+        self._legend_item.setParentItem(self.plot.getViewBox())
+        self._legend_item.anchor(*self.legend_anchor)
+
+        color_var = shape_var = None
+        if have_data and 1 <= self.color_index < len(self.colorvar_model):
+            color_var = self.colorvar_model[self.color_index]
+            assert isinstance(color_var, Orange.data.Variable)
+        if have_data and 1 <= self.shape_index < len(self.shapevar_model):
+            shape_var = self.shapevar_model[self.shape_index]
+            assert isinstance(shape_var, Orange.data.Variable)
+
+        if shape_var is not None or \
+                (color_var is not None and color_var.is_discrete):
+
+            legend_data = mdsplotutils.legend_data(
+                color_var, shape_var, plotstyle=mdsplotutils.plotstyle)
+
+            for color, symbol, text in legend_data:
+                self._legend_item.addItem(
+                    ScatterPlotItem(pen=color, brush=color, symbol=symbol,
+                                    size=10),
+                    text
+                )
+        else:
+            self._legend_item.hide()
+
     def commit(self):
         if self.embedding is not None:
             output = embedding = Orange.data.Table.from_numpy(
@@ -786,8 +821,7 @@ class OWMDS(widget.OWWidget):
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
-        self.plot.clear()
-        self._selection_item = self._scatter_item = None
+        self._clear_plot()
         self._clear()
 
     def __selection_end(self, path):
@@ -868,7 +902,8 @@ def scaled(a):
 from types import SimpleNamespace as namespace
 
 from Orange.widgets.visualize.owlinearprojection import \
-    PlotSelectionTool, PlotZoomTool, PlotPanTool, PlotPinchZoomTool
+    PlotSelectionTool, PlotZoomTool, PlotPanTool, PlotPinchZoomTool, \
+    LegendItem, legend_anchor_pos
 from Orange.widgets.visualize.owlinearprojection import plotutils
 
 
@@ -1024,6 +1059,36 @@ class mdsplotutils(plotutils):
                 return size_data
             else:
                 return size_data[mask]
+
+    @staticmethod
+    def legend_data(color_var=None, shape_var=None, plotstyle=None):
+        if plotstyle is None:
+            plotstyle = mdsplotutils.plotstyle
+
+        if color_var is not None and not color_var.is_discrete:
+            color_var = None
+        assert shape_var is None or shape_var.is_discrete
+        if color_var is None and shape_var is None:
+            return []
+
+        palette = plotstyle.discrete_palette
+        symbols = list(plotstyle.symbols)
+
+        if shape_var is color_var:
+            items = [(palette[i], symbols[i], name)
+                     for i, name in enumerate(color_var.values)]
+        else:
+            colors = shapes = []
+            if color_var is not None:
+                colors = [(palette[i], "o", name)
+                          for i, name in enumerate(color_var.values)]
+            if shape_var is not None:
+                shapes = [(QtGui.QColor(Qt.gray),
+                           symbols[i % (len(symbols) - 1)], name)
+                          for i, name in enumerate(shape_var.values)]
+            items = colors + shapes
+
+        return items
 
     @staticmethod
     def make_pen(color, width=1, cosmetic=True):
