@@ -1,1376 +1,1857 @@
-import time
-import itertools
-import heapq
-import operator
-
-from functools import reduce
-from collections import namedtuple
+import sys
+import math
+from collections import defaultdict
+from types import SimpleNamespace as namespace
 
 import numpy as np
+
+from PyQt4 import QtGui
+from PyQt4.QtGui import (
+    QSizePolicy, QGraphicsScene, QGraphicsView, QFontMetrics,
+    QPen, QPixmap, QColor
+)
+from PyQt4.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
+from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, QRectF, QPointF
 
 import Orange.data
-from Orange.data.sql.table import SqlTable
-from Orange.statistics import contingency
-from Orange.preprocess.discretize import EqualWidth, Discretizer
+import Orange.distance
 
+from Orange.clustering import hierarchical
+from Orange.widgets.utils import colorbrewer
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
 
 
-def is_not_none(obj):
-    return obj is not None
+from Orange.widgets.unsupervised.owhierarchicalclustering import \
+    DendrogramWidget
 
 
-Tree = namedtuple(
-    "Tree",
-    ["xbins",          # bin edges on the first axis
-     "ybins",          # bin edges on the second axis
-     "contingencies",  # x/y contingency table/s
-     "children",       # an (nbins, nbins) array of sub trees or None (if leaf)
-     ]
-)
-
-Tree.is_leaf = property(
-    lambda self: self.children is None
-)
-
-Tree.is_empty = property(
-    lambda self: not np.any(self.contingencies)
-)
-
-Tree.brect = property(
-    lambda self:
-        (self.xbins[0],
-         self.ybins[0],
-         self.xbins[-1] - self.xbins[0],
-         self.ybins[-1] - self.ybins[0])
-)
-
-Tree.nbins = property(
-    lambda self: self.xbins.size - 1
-)
-
-
-Tree.depth = (
-    lambda self:
-        1 if self.is_leaf
-          else max(ch.depth() + 1
-                   for ch in filter(is_not_none, self.children.flat))
-)
-
-
-def max_contingency(node):
-    """Return the maximum contingency value from node."""
-    if node.is_leaf:
-        return node.contingencies.max()
-    else:
-        valid = np.nonzero(node.children)
-        children = node.children[valid]
-        mask = np.ones_like(node.children, dtype=bool)
-        mask[valid] = False
-        ctng = node.contingencies[mask]
-        v = 0.0
-        if len(children):
-            v = max(max_contingency(ch) for ch in children)
-        if len(ctng):
-            v = max(ctng.max(), v)
-        return v
-
-
-def blockshaped(arr, rows, cols):
-    N, M = arr.shape[:2]
-    rest = arr.shape[2:]
-    assert N % rows == 0
-    assert M % cols == 0
-    return (arr.reshape((N // rows, rows, -1, cols) + rest)
-               .swapaxes(1, 2)
-               .reshape((N // rows, M // cols, rows, cols) + rest))
-
-
-Rect, RoundRect, Circle = 0, 1, 2
-
-
-def lod_from_transform(T):
-    # Return level of detail from a only transform without taking
-    # into account the rotation or shear.
-    r = T.mapRect(QRectF(0, 0, 1, 1))
-    return np.sqrt(r.width() * r.height())
-
-
-class DensityPatch(pg.GraphicsObject):
-    Rect, RoundRect, Circle = Rect, RoundRect, Circle
-
-    Linear, Sqrt, Log = 1, 2, 3
-
-    def __init__(self, root=None, cell_size=10, cell_shape=Rect,
-                 color_scale=Sqrt, palette=None):
-        super().__init__()
-        self.setFlag(QtGui.QGraphicsItem.ItemUsesExtendedStyleOption, True)
-        self._root = root
-        self._cache = {}
-        self._cell_size = cell_size
-        self._cell_shape = cell_shape
-        self._color_scale = color_scale
-        self._palette = palette
-
-    def boundingRect(self):
-        return self.rect()
-
-    def rect(self):
-        if self._root is not None:
-            return QRectF(*self._root.brect)
-        else:
-            return QRectF()
-
-    def set_root(self, root):
-        self.prepareGeometryChange()
-        self._root = root
-        self._cache.clear()
-        self.update()
-
-    def set_cell_shape(self, shape):
-        if self._cell_shape != shape:
-            self._cell_shape = shape
-            self.update()
-
-    def cell_shape(self):
-        return self._cell_shape
-
-    def set_cell_size(self, size):
-        assert size >= 1
-        if self._cell_size != size:
-            self._cell_size = size
-            self.update()
-
-    def cell_size(self):
-        return self._cell_size
-
-    def set_color_scale(self, scale):
-        if self._color_scale != scale:
-            self._color_scale = scale
-            self.update()
-
-    def color_scale(self):
-        return self._color_scale
-
-    def paint(self, painter, option, widget):
-        root = self._root
-        if root is None:
-            return
-
-        cell_shape, cell_size = self._cell_shape, self._cell_size
-        nbins = root.nbins
-        T = painter.worldTransform()
-        # level of detail is the geometric mean of a transformed
-        # unit rectangle's sides (== sqrt(area)).
-#         lod = option.levelOfDetailFromTransform(T)
-        lod = lod_from_transform(T)
-        rect = self.rect()
-        # sqrt(area) of one cell
-        size1 = np.sqrt(rect.width() * rect.height()) / nbins
-        cell_size = cell_size
-        scale = cell_size / (lod * size1)
-
-        if np.isinf(scale):
-            scale = np.finfo(float).max
-
-        p = int(np.floor(np.log2(scale)))
-
-        p = min(max(p, - int(np.log2(nbins ** (root.depth() - 1)))),
-                int(np.log2(root.nbins)))
-
-        if (p, cell_shape, cell_size) not in self._cache:
-            rs_root = resample(root, 2 ** p)
-            rs_max = max_contingency(rs_root)
-
-            def log_scale(ctng):
-                log_max = np.log(rs_max + 1)
-                log_ctng = np.log(ctng + 1)
-                return log_ctng / log_max
-
-            def sqrt_scale(ctng):
-                sqrt_max = np.sqrt(rs_max)
-                sqrt_ctng = np.sqrt(ctng)
-                return sqrt_ctng / (sqrt_max or 1)
-
-            def lin_scale(ctng):
-                return ctng / (rs_max or 1)
-
-            scale = {self.Linear: lin_scale, self.Sqrt: sqrt_scale,
-                     self.Log: log_scale}
-            patch = Patch_create(rs_root, palette=self._palette,
-                                 scale=scale[self._color_scale],
-                                 shape=cell_shape)
-            self._cache[p, cell_shape, cell_size] = patch
-        else:
-            patch = self._cache[p, cell_shape, cell_size]
-
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.setPen(Qt.NoPen)
-
-        for picture in picture_intersect(patch, option.exposedRect):
-            picture.play(painter)
-
-#: A visual patch utilizing QPicture
-Patch = namedtuple(
-  "Patch",
-  ["node",      # : Tree # source node (Tree)
-   "picture",   # : () -> QPicture # combined full QPicture
-   "children",  # : () -> sequence # all child subpatches
-   ]
-)
-
-Patch.rect = property(
-    lambda self: QRectF(*self.node.brect)
-)
-
-Patch.is_leaf = property(
-    lambda self: len(self.children()) == 0
-)
-
-Some = namedtuple("Some", ["val"])
-
-
-def once(f):
-    cached = None
-
-    def f_once():
-        nonlocal cached
-        if cached is None:
-            cached = Some(f())
-        return cached.val
-    return f_once
-
-
-def picture_intersect(patch, region):
-    """Return a list of all QPictures in `patch` that intersect region.
+def split_domain(domain, split_label):
+    """Split the domain based on values of `split_label` value.
     """
-    if not region.intersects(patch.rect):
-        return []
-    elif region.contains(patch.rect) or patch.is_leaf:
-        return [patch.picture()]
-    else:
-        accum = reduce(
-            operator.iadd,
-            (picture_intersect(child, region) for child in patch.children()),
-            []
-        )
-        return accum
+    groups = defaultdict(list)
+    for attr in domain.attributes:
+        groups[attr.attributes.get(split_label)].append(attr)
+
+    attr_values = [attr.attributes.get(split_label)
+                   for attr in domain.attributes]
+
+    domains = []
+    for value, attrs in groups.items():
+        group_domain = Orange.data.Domain(
+            attrs, domain.class_vars, domain.metas)
+
+        domains.append((value, group_domain))
+
+    if domains:
+        assert(all(len(dom) == len(domains[0][1]) for _, dom in domains))
+
+    return sorted(domains, key=lambda t: attr_values.index(t[0]))
 
 
-def Patch_create(node, palette=None, scale=None, shape=Rect):
-    """Create a `Patch` for visualizing node.
+def vstack_by_subdomain(data, sub_domains):
+    domain = sub_domains[0]
+    newtable = Orange.data.Table(domain)
+
+    for sub_dom in sub_domains:
+        sub_data = data.from_table(sub_dom, data)
+        # TODO: improve O(N ** 2)
+        newtable.extend(sub_data)
+
+    return newtable
+
+
+def select_by_class(data, class_):
+    indices = select_by_class_indices(data, class_)
+    return data[indices]
+
+
+def select_by_class_indices(data, class_):
+    col, _ = data.get_column_view(data.domain.class_var)
+    return col == class_
+
+
+def group_by_unordered(iterable, key):
+    groups = defaultdict(list)
+    for item in iterable:
+        groups[key(item)].append(item)
+    return groups.items()
+
+
+def candidate_split_labels(data):
     """
-    # note: the patch (picture and children fields) is is lazy evaluated.
-    if node.is_empty:
-        return Patch(node, once(lambda: QtGui.QPicture()), once(lambda: ()))
-    else:
-        @once
-        def picture_this_level():
-            pic = QtGui.QPicture()
-            painter = QtGui.QPainter(pic)
-            ctng = node.contingencies
-            colors = create_image(ctng, palette, scale=scale)
-            x, y, w, h = node.brect
-            N, M = ctng.shape[:2]
+    Return candidate labels on which we can split the data.
+    """
+    groups = defaultdict(list)
+    for attr in data.domain.attributes:
+        for item in attr.attributes.items():
+            groups[item].append(attr)
 
-            # Nonzero contingency mask
-            any_mask = Node_mask(node)
+    by_keys = defaultdict(list)
+    for (key, _), attrs in groups.items():
+        by_keys[key].append(attrs)
 
-            if node.is_leaf:
-                skip = itertools.repeat(False)
-            else:
-                # Skip all None children they were already painted.
-                skip = (ch is not None for ch in node.children.flat)
+    # Find the keys for which all values have the same number
+    # of attributes.
+    candidates = []
+    for key, groups in by_keys.items():
+        count = len(groups[0])
+        if all(len(attrs) == count for attrs in groups) and \
+                len(groups) > 1 and count > 1:
+            candidates.append(key)
 
-            painter.save()
-            painter.translate(x, y)
-            painter.scale(w / node.nbins, h / node.nbins)
-
-            indices = itertools.product(range(N), range(M))
-            for (i, j), skip, any_ in zip(indices, skip, any_mask.flat):
-                if not skip and any_:
-                    painter.setBrush(QtGui.QColor(*colors[i, j]))
-                    if shape == Rect:
-                        painter.drawRect(i, j, 1, 1)
-                    elif shape == Circle:
-                        painter.drawEllipse(i, j, 1, 1)
-                    elif shape == RoundRect:
-                        painter.drawRoundedRect(i, j, 1, 1, 25.0, 25.0,
-                                                Qt.RelativeSize)
-            painter.restore()
-            painter.end()
-            return pic
-
-        @once
-        def child_patches():
-            if node.is_leaf:
-                children = []
-            else:
-                children = filter(is_not_none, node.children.flat)
-            return tuple(Patch_create(child, palette, scale, shape)
-                         for child in children) + \
-                   (Patch(node, picture_this_level, once(lambda: ())),)
-
-        @once
-        def picture_children():
-            pic = QtGui.QPicture()
-            painter = QtGui.QPainter(pic)
-            for ch in child_patches():
-                painter.drawPicture(0, 0, ch.picture())
-            painter.end()
-            return pic
-
-        return Patch(node, picture_children, child_patches)
+    return candidates
 
 
-def resample(node, samplewidth):
-    assert 0 < samplewidth <= node.nbins
-    assert int(np.log2(samplewidth)) == np.log2(samplewidth)
+def leaf_indices(tree):
+    return [leaf.value.index for leaf in hierarchical.leaves(tree)]
 
-    if samplewidth == 1:
-        return node._replace(children=None)
-    elif samplewidth > 1:
-        samplewidth = int(samplewidth)
-        ctng = blockshaped(node.contingencies, samplewidth, samplewidth)
-        ctng = ctng.sum(axis=(2, 3))
-        assert ctng.shape[0] == node.nbins // samplewidth
-        return Tree(node.xbins[::samplewidth],
-                    node.ybins[::samplewidth],
-                    ctng,
-                    None)
-    elif node.is_leaf:
-        return Tree(*node)
-    else:
-        nbins = node.nbins
-        children = [resample(ch, samplewidth * nbins)
-                    if ch is not None else None
-                    for ch in node.children.flat]
 
-        children_ar = np.full(nbins ** 2, None, dtype=object)
-        children_ar[:] = children
-        return node._replace(children=children_ar.reshape((-1, nbins)))
+def palette_gradient(colors, discrete=False):
+    n = len(colors)
+    stops = np.linspace(0.0, 1.0, n, endpoint=True)
+    gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
+    grad = QtGui.QLinearGradient(QPointF(0, 0), QPointF(1, 0))
+    grad.setStops(gradstops)
+    return grad
+
+
+def palette_pixmap(colors, size):
+    img = QPixmap(size)
+    img.fill(Qt.transparent)
+
+    grad = palette_gradient(colors)
+    grad.setCoordinateMode(QtGui.QLinearGradient.ObjectBoundingMode)
+
+    painter = QtGui.QPainter(img)
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(QtGui.QBrush(grad))
+    painter.drawRect(0, 0, size.width(), size.height())
+    painter.end()
+    return img
+
+
+def color_palette_model(palettes, iconsize=QSize(64, 16)):
+    model = QtGui.QStandardItemModel()
+    for name, palette in palettes:
+        _, colors = max(palette.items())
+        colors = [QColor(*c) for c in colors]
+        item = QtGui.QStandardItem(name)
+        item.setIcon(QtGui.QIcon(palette_pixmap(colors, iconsize)))
+        item.setData(palette, Qt.UserRole)
+        model.appendRow([item])
+    return model
+
+
+def color_palette_table(colors, samples=255,
+                        threshold_low=0.0, threshold_high=1.0):
+    N = len(colors)
+    colors = np.array(colors, dtype=np.ubyte)
+    low, high = threshold_low * 255, threshold_high * 255
+    points = np.linspace(low, high, N)
+    space = np.linspace(0, 255, 255)
+
+    r = np.interp(space, points, colors[:, 0], left=255, right=0)
+    g = np.interp(space, points, colors[:, 1], left=255, right=0)
+    b = np.interp(space, points, colors[:, 2], left=255, right=0)
+    return np.c_[r, g, b]
+
+# TODO:
+#     * Richer Tool Tips
+#     * Color map edit/manage
+#     * 'Gamma' color transform (nonlinear exponential interpolation)
+#     * Restore saved row selection (?)
+#     * 'namespace' use cleanup
 
 
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
-    description = "Two-dimensional heat map displaying data instances " \
-                  "(rows) and their features (heat map columns)."
+    description = "Heatmap visualization."
     icon = "icons/Heatmap.svg"
-    priority = 100
+    priority = 1040
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.Table, "set_dataset")]
+    outputs = [("Data", Orange.data.Table, widget.Default)]
 
     settingsHandler = settings.DomainContextHandler()
 
-    x_var_index = settings.ContextSetting(0)
-    y_var_index = settings.ContextSetting(1)
-    z_var_index = settings.ContextSetting(0)
-    selected_z_values = settings.ContextSetting([])
-    color_scale = settings.ContextSetting(1)
-    sample_level = settings.ContextSetting(0)
+    NoSorting, Clustering, OrderedClustering = 0, 1, 2
+    NoPosition, PositionTop, PositionBottom = 0, 1, 2
 
-    sample_percentages = []
-    sample_percentages_captions = []
-    sample_times = [0.1, 0.5, 3, 5, 20, 40, 80]
-    sample_times_captions = ['0.1s', '1s', '5s', '10s', '30s', '1min', '2min']
+    gamma = settings.Setting(0)
+    threshold_low = settings.Setting(0.0)
+    threshold_high = settings.Setting(1.0)
+    # Type of sorting to apply on rows
+    sort_rows = settings.Setting(NoSorting)
+    # Type of sorting to apply on columns
+    sort_columns = settings.Setting(NoSorting)
+    # Display stripe with averages
+    averages = settings.Setting(True)
+    # Display legend
+    legend = settings.Setting(True)
+    # Annotations
+    annotation_index = settings.ContextSetting(0)
+    # Stored color palette settings
+    color_settings = settings.Setting(None)
+    user_palettes = settings.Setting([])
+    palette_index = settings.Setting(0)
+    column_label_pos = settings.Setting(PositionTop)
 
-    use_cache = settings.Setting(True)
-
-    n_bins = 2 ** 4
-
-    mouse_mode = 0
+    auto_commit = settings.Setting(True)
 
     def __init__(self, parent=None):
         super().__init__(self, parent)
 
-        self.dataset = None
-        self.z_values = []
+        # set default settings
+        self.SpaceX = 10
+        self.ShowAnnotation = 0
 
-        self._root = None
-        self._displayed_root = None
-        self._item = None
-        self._cache = {}
+        self.colorSettings = None
+        self.selectedSchemaIndex = 0
 
-        self.colors = colorpalette.ColorPaletteGenerator(10)
+        self.palette = None
+        self.keep_aspect = False
+        self.data = None
 
-        self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
-        sampling_options = (self.sample_times_captions +
-                            self.sample_percentages_captions)
-        gui.comboBox(self.sampling_box, self, 'sample_level',
-                     items=sampling_options, callback=self.update_sample)
-        gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
+        self.annotation_vars = ['(None)']
+        self.__rows_cache = {}
+        self.__columns_cache = {}
 
-        box = gui.widgetBox(self.controlArea, "Input")
-        self.labelDataInput = gui.widgetLabel(box, 'No data on input')
-        self.labelDataInput.setTextFormat(Qt.PlainText)
+        # GUI definition
+        colorbox = gui.widgetBox(self.controlArea, "Color")
+        self.color_cb = gui.comboBox(colorbox, self, "palette_index")
+        self.color_cb.setIconSize(QSize(64, 16))
+        palettes = sorted(colorbrewer.colorSchemes["sequential"].items())
+        palettes += [("Green-Black-Red",
+                      {3: [(0, 255, 0), (0, 0, 0), (255, 0, 0)]})]
+        palettes += self.user_palettes
+        model = color_palette_model(palettes, self.color_cb.iconSize())
+        self.color_cb.setModel(model)
+        self.color_cb.activated.connect(self.update_color_schema)
+        self.color_cb.setCurrentIndex(self.palette_index)
+        # TODO: Add 'Manage/Add/Remove' action.
 
-        self.x_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesX = gui.comboBox(
-            self.controlArea, self, value='x_var_index', box='X Attribute',
-            callback=self.replot)
-        self.comboBoxAttributesX.setModel(self.x_var_model)
-
-        self.y_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesY = gui.comboBox(
-            self.controlArea, self, value='y_var_index', box='Y Attribute',
-            callback=self.replot)
-        self.comboBoxAttributesY.setModel(self.y_var_model)
-
-        box = gui.widgetBox(self.controlArea, "Color by")
-        self.z_var_model = itemmodels.VariableListModel()
-        self.comboBoxClassvars = gui.comboBox(
-            box, self, value='z_var_index',
-            callback=self._on_z_var_changed)
-        self.comboBoxClassvars.setModel(self.z_var_model)
-
-        box1 = gui.widgetBox(box, 'Colors displayed', margin=0)
-        box1.setFlat(True)
-
-        self.z_values_view = gui.listBox(
-            box1, self, "selected_z_values", "z_values",
-            callback=self._on_z_values_selection_changed,
-            selectionMode=QtGui.QListView.MultiSelection,
-            addSpace=False
+        form = QtGui.QFormLayout(
+            formAlignment=Qt.AlignLeft,
+            labelAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
         )
-        box1 = gui.widgetBox(box, "Color Scale", margin=0)
-        box1.setFlat(True)
-        gui.comboBox(box1, self, "color_scale",
-                     items=["Linear", "Square root", "Logarithmic"],
-                     callback=self._on_color_scale_changed)
 
-        self.mouseBehaviourBox = gui.radioButtons(
-            self.controlArea, self, value='mouse_mode',
-            btnLabels=('Drag', 'Select'),
-            box='Mouse left button behavior',
-            callback=self._update_mouse_mode
-        )
+        lowslider = gui.hSlider(
+            colorbox, self, "threshold_low", minValue=0.0, maxValue=1.0,
+            step=0.05, ticks=True, intOnly=False,
+            createLabel=False, callback=self.update_color_schema)
+        highslider = gui.hSlider(
+            colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
+            step=0.05, ticks=True, intOnly=False,
+            createLabel=False, callback=self.update_color_schema)
+
+        form.addRow("Low:", lowslider)
+        form.addRow("High:", highslider)
+        colorbox.layout().addLayout(form)
+
+        sortbox = gui.widgetBox(self.controlArea, "Sorting")
+        # For attributes
+        gui.comboBox(sortbox, self, "sort_columns",
+                     items=["No sorting",
+                            "Clustering",
+                            "Clustering with leaf ordering"],
+                     label='Columns',
+                     callback=self.update_sorting_attributes)
+
+        # For examples
+        gui.comboBox(sortbox, self, "sort_rows",
+                     items=["No sorting",
+                            "Clustering",
+                            "Clustering with leaf ordering"],
+                     label='Rows',
+                     callback=self.update_sorting_examples)
+
+        box = gui.widgetBox(self.controlArea, 'Annotation && Legends')
+
+        gui.checkBox(box, self, 'legend', 'Show legend',
+                     callback=self.update_legend)
+
+        gui.checkBox(box, self, 'averages', 'Stripes with averages',
+                     callback=self.update_averages_stripe)
+
+        annotbox = gui.widgetBox(box, "Row Annotations")
+        annotbox.setFlat(True)
+        self.annotations_cb = gui.comboBox(annotbox, self, "annotation_index",
+                                           items=self.annotation_vars,
+                                           callback=self.update_annotations)
+
+        posbox = gui.widgetBox(box, "Column Labels Position")
+        posbox.setFlat(True)
+
+        gui.comboBox(
+            posbox, self, "column_label_pos",
+            items=["None", "Top", "Bottom", "Top and Bottom"],
+            callback=self.update_column_annotations)
+
+        gui.checkBox(self.controlArea, self, "keep_aspect",
+                     "Keep aspect ratio", box="Resize",
+                     callback=self.__aspect_mode_changed)
+
+        splitbox = gui.widgetBox(self.controlArea, "Split By")
+        self.split_lb = QtGui.QListWidget()
+        self.split_lb.itemSelectionChanged.connect(self.update_heatmaps)
+        splitbox.layout().addWidget(self.split_lb)
 
         gui.rubber(self.controlArea)
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
 
-        self.plot = pg.PlotWidget(background="w")
-        self.plot.setMenuEnabled(False)
-        self.plot.setFrameStyle(QtGui.QFrame.StyledPanel)
-        self.plot.setMinimumSize(500, 500)
+        # Scene with heatmap
+        self.heatmap_scene = self.scene = HeatmapScene(parent=self)
+        self.selection_manager = HeatmapSelectionManager(self)
+        self.selection_manager.selection_changed.connect(
+            self.on_selection_changed)
+        self.selection_manager.selection_finished.connect(
+            self.on_selection_finished)
+        self.heatmap_scene.set_selection_manager(self.selection_manager)
 
-        def font_resize(font, factor, minsize=None, maxsize=None):
-            font = QtGui.QFont(font)
-            fontinfo = QtGui.QFontInfo(font)
-            size = fontinfo.pointSizeF() * factor
+        item = QtGui.QGraphicsRectItem(0, 0, 10, 10, None, self.heatmap_scene)
+        self.heatmap_scene.itemsBoundingRect()
+        self.heatmap_scene.removeItem(item)
 
-            if minsize is not None:
-                size = max(size, minsize)
-            if maxsize is not None:
-                size = min(size, maxsize)
+        policy = (Qt.ScrollBarAlwaysOn if self.keep_aspect
+                  else Qt.ScrollBarAlwaysOff)
+        self.sceneView = QGraphicsView(
+            self.scene,
+            verticalScrollBarPolicy=policy,
+            horizontalScrollBarPolicy=policy)
 
-            font.setPointSizeF(size)
-            return font
+        self.sceneView.viewport().installEventFilter(self)
 
-        axisfont = font_resize(self.font(), 0.8, minsize=11)
-        axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
-        axis = self.plot.getAxis("bottom")
-        axis.setTickFont(axisfont)
-        axis.setPen(axispen)
-        axis = self.plot.getAxis("left")
-        axis.setTickFont(axisfont)
-        axis.setPen(axispen)
+        self.mainArea.layout().addWidget(self.sceneView)
+        self.heatmap_scene.widget = None
 
-        self.plot.getViewBox().sigTransformChanged.connect(
-            self._on_transform_changed)
-        self.mainArea.layout().addWidget(self.plot)
+        self.heatmap_widget_grid = [[]]
+        self.attr_annotation_widgets = []
+        self.attr_dendrogram_widgets = []
+        self.gene_annotation_widgets = []
+        self.gene_dendrogram_widgets = []
 
-    def set_data(self, dataset):
-        self.closeContext()
-        self.clear()
+        self.selection_rects = []
+        self.selected_rows = []
 
-        if isinstance(dataset, SqlTable):
-            self.original_data = dataset
-            self.sample_level = 0
-            self.sampling_box.setVisible(True)
+    def sizeHint(self):
+        return QSize(800, 400)
 
-            self.update_sample()
+    def color_palette(self):
+        data = self.color_cb.itemData(self.palette_index, role=Qt.UserRole)
+        if data is None:
+            return []
         else:
-            self.dataset = dataset
-            self.sampling_box.setVisible(False)
-            self.set_sampled_data(self.dataset)
+            _, colors = max(data.items())
+            return color_palette_table(
+                colors, threshold_low=self.threshold_low,
+                threshold_high=self.threshold_high)
 
-    def update_sample(self):
-        self.closeContext()
-        self.clear()
-
-        if self.sample_level < len(self.sample_times):
-            sample_type = 'time'
-            level = self.sample_times[self.sample_level]
-        else:
-            sample_type = 'percentage'
-            level = self.sample_level - len(self.sample_times)
-            level = self.sample_percentages[level]
-
-        if sample_type == 'time':
-            self.dataset = \
-                self.original_data.sample_time(level, no_cache=True)
-        else:
-            if 0 < level < 100:
-                self.dataset = \
-                    self.original_data.sample_percentage(level, no_cache=True)
-            if level >= 100:
-                self.dataset = self.original_data
-        self.set_sampled_data(self.dataset)
-
-    def set_sampled_data(self, dataset):
-        if dataset is not None:
-            domain = dataset.domain
-            cvars = [var for var in domain.variables if var.is_continuous]
-            dvars = [var for var in domain.variables if var.is_discrete]
-
-            self.x_var_model[:] = cvars
-            self.y_var_model[:] = cvars
-            self.z_var_model[:] = dvars
-
-            nvars = len(cvars)
-            self.x_var_index = min(max(0, self.x_var_index), nvars - 1)
-            self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
-            self.z_var_index = min(max(0, self.z_var_index), len(cvars) - 1)
-
-            if domain.has_discrete_class:
-                self.z_var_index = dvars.index(domain.class_var)
-            else:
-                self.z_var_index = len(dvars) - 1
-
-            self.openContext(dataset)
-
-            if 0 <= self.z_var_index < len(self.z_var_model):
-                self.z_values = self.z_var_model[self.z_var_index].values
-                k = len(self.z_values)
-                self.selected_z_values = range(k)
-                self.colors = colorpalette.ColorPaletteGenerator(k)
-                for i in range(k):
-                    item = self.z_values_view.item(i)
-                    item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
-
-            self.labelDataInput.setText(
-                'Data set: %s'
-                % (getattr(self.dataset, "name", "untitled"),)
-            )
-
-            self.setup_plot()
-        else:
-            self.labelDataInput.setText('No data on input')
-            self.send("Sampled data", None)
+    def selected_split_label(self):
+        """Return the current selected split label."""
+        item = self.split_lb.currentItem()
+        return str(item.text()) if item else None
 
     def clear(self):
-        self.dataset = None
-        self.x_var_model[:] = []
-        self.y_var_model[:] = []
-        self.z_var_model[:] = []
-        self.z_values = []
-        self._root = None
-        self._displayed_root = None
-        self._item = None
-        self._cache = {}
-        self.plot.clear()
+        self.data = None
+        self.annotations_cb.clear()
+        self.annotations_cb.addItem('(None)')
+        self.split_lb.clear()
+        self.annotation_vars = ['(None)']
+        self.clear_scene()
+        self.selected_rows = []
+        self.__columns_cache.clear()
+        self.__rows_cache.clear()
 
-    def _on_z_var_changed(self):
-        if 0 <= self.z_var_index < len(self.z_var_model):
-            self.z_values = self.z_var_model[self.z_var_index].values
-            k = len(self.z_values)
-            self.selected_z_values = range(k)
+    def clear_scene(self):
+        self.selection_manager.set_heatmap_widgets([[]])
+        self.heatmap_scene.clear()
+        self.heatmap_scene.widget = None
+        self.heatmap_widget_grid = [[]]
+        self.col_annotation_widgets = []
+        self.col_annotation_widgets_bottom = []
+        self.col_annotation_widgets_top = []
+        self.row_annotation_widgets = []
+        self.col_dendrograms = []
+        self.row_dendrograms = []
+        self.selection_rects = []
 
-            self.colors = colorpalette.ColorPaletteGenerator(k)
-            for i in range(k):
-                item = self.z_values_view.item(i)
-                item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
-
-            self.replot()
-
-    def _on_z_values_selection_changed(self):
-        if self._displayed_root is not None:
-            self.update_map(self._displayed_root)
-
-    def _on_color_scale_changed(self):
-        if self._displayed_root is not None:
-            self.update_map(self._displayed_root)
-
-    def setup_plot(self):
-        """Setup the density map plot"""
-        self.plot.clear()
-        self.x_var_index = min(self.x_var_index, len(self.x_var_model) - 1)
-        self.y_var_index = min(self.y_var_index, len(self.y_var_model) - 1)
-        if self.dataset is None or self.x_var_index == -1 or \
-                self.y_var_index == -1:
-            return
-
-        data = self.dataset
-        xvar = self.x_var_model[self.x_var_index]
-        yvar = self.y_var_model[self.y_var_index]
-        if 0 <= self.z_var_index < len(self.z_var_model):
-            zvar = self.z_var_model[self.z_var_index]
-        else:
-            zvar = None
-
-        axis = self.plot.getAxis("bottom")
-        axis.setLabel(xvar.name)
-
-        axis = self.plot.getAxis("left")
-        axis.setLabel(yvar.name)
-
-        if (xvar, yvar, zvar) in self._cache:
-            root = self._cache[xvar, yvar, zvar]
-        else:
-            root = self.get_root(data, xvar, yvar, zvar)
-            self._cache[xvar, yvar, zvar] = root
-
-        self._root = root
-
-        self.update_map(root)
-
-    def get_root(self, data, xvar, yvar, zvar=None):
-        """Compute the root density map item"""
-        assert self.n_bins > 2
-        x_disc = EqualWidth(n=self.n_bins)(data, xvar)
-        y_disc = EqualWidth(n=self.n_bins)(data, yvar)
-
-        def bins(var):
-            points = list(var.compute_value.points)
-            assert points[0] <= points[1]
-            width = points[1] - points[0]
-            return np.array([points[0] - width] +
-                            points +
-                            [points[-1] + width])
-
-        xbins = bins(x_disc)
-        ybins = bins(y_disc)
-
-        # Extend the lower/upper bin edges to infinity.
-        # (the grid_bin function has an optimization for this case).
-        xbins1 = np.r_[-np.inf, xbins[1:-1], np.inf]
-        ybins1 = np.r_[-np.inf, ybins[1:-1], np.inf]
-
-        t = grid_bin(data, xvar, yvar, xbins1, ybins1, zvar=zvar)
-        return t._replace(xbins=xbins, ybins=ybins)
-
-    def replot(self):
-        self.setup_plot()
-
-    def update_map(self, root):
-        self.plot.clear()
-        self._item = None
-
-        self._displayed_root = root
-
-        palette = self.colors
-        contingencies = root.contingencies
-
-        def Tree_take(node, indices, axis):
-            """Take elements from the contingency matrices in node."""
-            contig = np.take(node.contingencies, indices, axis)
-            if node.is_leaf:
-                return node._replace(contingencies=contig)
-            else:
-                children_ar = np.full(node.children.size, None, dtype=object)
-                children_ar[:] = [
-                    Tree_take(ch, indices, axis) if ch is not None else None
-                    for ch in node.children.flat
-                ]
-                children = children_ar.reshape(node.children.shape)
-                return node._replace(contingencies=contig, children=children)
-
-        if contingencies.ndim == 3:
-            if not self.selected_z_values:
-                return
-
-            _, _, k = contingencies.shape
-
-            if self.selected_z_values != list(range(k)):
-                palette = [palette[i] for i in self.selected_z_values]
-                root = Tree_take(root, self.selected_z_values, 2)
-
-        self._item = item = DensityPatch(
-            root, cell_size=10,
-            cell_shape=DensityPatch.Rect,
-            color_scale=self.color_scale + 1,
-            palette=palette
-        )
-        self.plot.addItem(item)
-
-    def sharpen(self):
-        viewb = self.plot.getViewBox()
-        rect = viewb.boundingRect()
-        p1 = viewb.mapToView(rect.topLeft())
-        p2 = viewb.mapToView(rect.bottomRight())
-        rect = QtCore.QRectF(p1, p2).normalized()
-
-        self.sharpen_region(rect)
-
-    def sharpen_root_region(self, region):
-        data = self.dataset
-        xvar = self.x_var_model[self.x_var_index]
-        yvar = self.y_var_model[self.y_var_index]
-
-        if 0 <= self.z_var_index < len(self.z_var_model):
-            zvar = self.z_var_model[self.z_var_index]
-        else:
-            zvar = None
-
-        root = self._root
-
-        if not QRectF(*root.brect).intersects(region):
-            return
-
-        nbins = self.n_bins
-
-        def bin_func(xbins, ybins):
-            return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
-
-        self.progressBarInit()
-        last_node = root
-        update_time = time.time()
-        changed = False
-
-        for i, node in enumerate(
-                sharpen_region(self._root, region, nbins, bin_func)):
-            tick = time.time() - update_time
-            changed = changed or node is not last_node
-            if changed and ((i % nbins == 0) or tick > 2.0):
-                self.update_map(node)
-                last_node = node
-                changed = False
-                update_time = time.time()
-                self.progressBarSet(100 * i / (nbins ** 2))
-
-        self._root = last_node
-        self._cache[xvar, yvar, zvar] = self._root
-        self.update_map(self._root)
-        self.progressBarFinished()
-
-    def _sampling_width(self):
-        if self._item is None:
-            return 0
-
-        item = self._item
-        rect = item.rect()
-
-        T = self.plot.transform() * item.sceneTransform()
-#         lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
-        lod = lod_from_transform(T)
-        size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
-        cell_size = 10
-        scale = cell_size / (lod * size1)
-        if np.isinf(scale):
-            scale = np.finfo(float).max
-        p = int(np.floor(np.log2(scale)))
-        p = min(p, int(np.log2(self.n_bins)))
-        return 2 ** int(p)
-
-    def sharpen_region(self, region):
-        data = self.dataset
-        xvar = self.x_var_model[self.x_var_index]
-        yvar = self.y_var_model[self.y_var_index]
-
-        if 0 <= self.z_var_index < len(self.z_var_model):
-            zvar = self.z_var_model[self.z_var_index]
-        else:
-            zvar = None
-
-        root = self._root
-        nbins = self.n_bins
-
-        if not QRectF(*root.brect).intersects(region):
-            return
-
-        def bin_func(xbins, ybins):
-            return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
-
-        def min_depth(node, region):
-            if not region.intersects(QRectF(*node.brect)):
-                return np.inf
-            elif node.is_leaf:
-                return 1
-            elif node.is_empty:
-                return 1
-            else:
-                xs, xe, ys, ye = bindices(node, region)
-                children = node.children[xs: xe, ys: ye].ravel()
-                contingency = node.contingencies[xs: xe, ys: ye]
-                if contingency.ndim == 3:
-                    contingency = contingency.reshape(-1, contingency.shape[2])
-
-                if any(ch is None and np.any(val)
-                       for ch, val in zip(children, contingency)):
-                    return 1
-                else:
-                    ch_depth = [min_depth(ch, region) + 1
-                                for ch in filter(is_not_none, children.flat)]
-                    return min(ch_depth if ch_depth else [1])
-
-        depth = min_depth(self._root, region)
-        bw = self._sampling_width()
-        nodes = self.select_nodes_to_sharpen(self._root, region, bw,
-                                             depth + 1)
-
-        def update_rects(node):
-            scored = score_candidate_rects(node, region)
-            ind1 = set(zip(*Node_nonzero(node)))
-            ind2 = set(zip(*node.children.nonzero())) \
-                   if not node.is_leaf else set()
-            ind = ind1 - ind2
-            return [(score, r) for score, i, j, r in scored if (i, j) in ind]
-
-        scored_rects = reduce(operator.iadd, map(update_rects, nodes), [])
-        scored_rects = sorted(scored_rects, reverse=True,
-                              key=operator.itemgetter(0))
-        root = self._root
-        self.progressBarInit()
-        update_time = time.time()
-
-        for i, (_, rect) in enumerate(scored_rects):
-            root = sharpen_region_recur(
-                root, rect.intersect(region),
-                nbins, depth + 1, bin_func
-            )
-            tick = time.time() - update_time
-            if tick > 2.0:
-                self.update_map(root)
-                update_time = time.time()
-
-            self.progressBarSet(100 * i / len(scored_rects))
-
-        self._root = root
-
-        self._cache[xvar, yvar, zvar] = self._root
-        self.update_map(self._root)
-        self.progressBarFinished()
-
-    def select_nodes_to_sharpen(self, node, region, bw, depth):
-        """
-        :param node:
-        :param bw: bandwidth (samplewidth)
-        :param depth: maximum node depth to consider
-        """
-
-        if not QRectF(*node.brect).intersects(region):
-            return []
-        elif bw >= 1:
-            return []
-        elif depth == 1:
-            return []
-        elif node.is_empty:
-            return []
-        elif node.is_leaf:
-            return [node]
-        else:
-            xs, xe, ys, ye = bindices(node, region)
-
-            def intersect_indices(rows, cols):
-                mask = (xs <= rows) & (rows < xe) & (ys <= cols) & (cols < ye)
-                return rows[mask], cols[mask]
-
-            indices1 = intersect_indices(*Node_nonzero(node))
-            indices2 = intersect_indices(*node.children.nonzero())
-            # If there are any non empty and non expanded cells in the
-            # intersection return the node for sharpening, ...
-            if np.any(np.array(indices1) != np.array(indices2)):
-                return [node]
-
-            children = node.children[indices2]
-            # ... else run down the children in the intersection
-            return reduce(operator.iadd,
-                          (self.select_nodes_to_sharpen(
-                               ch, region, bw * node.nbins, depth - 1)
-                           for ch in children.flat),
-                          [])
-
-    def _update_mouse_mode(self):
-        if self.mouse_mode == 0:
-            mode = pg.ViewBox.PanMode
-        else:
-            mode = pg.ViewBox.RectMode
-        self.plot.getViewBox().setMouseMode(mode)
-
-    def _on_transform_changed(self, *args):
-        pass
-
-    def onDeleteWidget(self):
+    def set_dataset(self, data=None):
+        """Set the input dataset to display."""
+        self.closeContext()
         self.clear()
-        super().onDeleteWidget()
 
+        self.data = data
+        if data is not None:
+            variables = self.data.domain.class_vars + self.data.domain.metas
+            variables = [var for var in variables
+                         if isinstance(var, (Orange.data.DiscreteVariable,
+                                             Orange.data.StringVariable))]
+            self.annotation_vars.extend(variables)
 
-def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
-    x_disc = Discretizer.create_discretized_var(xvar, xbins[1:-1])
-    y_disc = Discretizer.create_discretized_var(yvar, ybins[1:-1])
+            for var in variables:
+                self.annotations_cb.addItem(*gui.attributeItem(var))
 
-    x_min, x_max = xbins[0], xbins[-1]
-    y_min, y_max = ybins[0], ybins[-1]
+            self.split_lb.addItems(candidate_split_labels(data))
 
-    querydomain = [x_disc, y_disc]
-    if zvar is not None:
-        querydomain = querydomain + [zvar]
+            self.openContext(self.data)
+            if self.annotation_index >= len(self.annotation_vars):
+                self.annotation_index = 0
 
-    querydomain = Orange.data.Domain(querydomain)
+            self.update_heatmaps()
 
-    def interval_filter(var, low, high):
-        return Orange.data.filter.Values(
-            [Orange.data.filter.FilterContinuous(
-                 var, max=high, min=low,
-                 oper=Orange.data.filter.FilterContinuous.Between)]
-        )
+        self.commit()
 
-    def value_filter(var, val):
-        return Orange.data.filter.Values(
-            [Orange.data.filter.FilterDiscrete(var, [val])]
-        )
-
-    def filters_join(filters):
-        return Orange.data.filter.Values(
-            reduce(list.__iadd__, (f.conditions for f in filters), [])
-        )
-
-    inf_bounds = np.isinf([x_min, x_max, y_min, y_max])
-    if not all(inf_bounds):
-        # No need to filter the data
-        range_filters = [interval_filter(xvar, x_min, x_max),
-                         interval_filter(yvar, y_min, y_max)]
-        range_filter = filters_join(range_filters)
-        subset = range_filter(data)
-    else:
-        subset = data
-
-    if zvar.is_discrete:
-
-        filters = [value_filter(zvar, val) for val in zvar.values]
-        contingencies = [
-            contingency.get_contingency(
-                filter_(subset.from_table(querydomain, subset)),
-                col_variable=y_disc, row_variable=x_disc
-            )
-            for filter_ in filters
-        ]
-        contingencies = np.dstack(contingencies)
-    else:
-        contingencies = contingency.get_contingency(
-            subset.from_table(querydomain, subset),
-            col_variable=y_disc, row_variable=x_disc
-        )
-
-    contingencies = np.asarray(contingencies)
-    return Tree(xbins, ybins, contingencies, None)
-
-
-def sharpen_node_cell(node, i, j, nbins, gridbin_func):
-    if node.is_leaf:
-        children = np.full((nbins, nbins), None, dtype=object)
-    else:
-        children = np.array(node.children, dtype=None)
-
-    xbins = np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
-    ybins = np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
-
-    if node.contingencies[i, j].any():
-        t = gridbin_func(xbins, ybins)
-        assert t.contingencies.shape[:2] == (nbins, nbins)
-        children[i, j] = t
-        return node._replace(children=children)
-    else:
-        return node
-
-
-def sharpen_node_cell_range(node, xrange, yrange, nbins, gridbin_func):
-    if node.is_leaf:
-        children = np.full((nbins, nbins), None, dtype=object)
-    else:
-        children = np.array(node.children, dtype=None)
-
-    xs, xe = xrange.start, xrange.stop
-    ys, ye = yrange.start, yrange.stop
-
-    xbins = np.linspace(node.xbins[xs], node.xbins[xe], (xe - xs) * nbins + 1)
-    ybins = np.linspace(node.ybins[ys], node.ybins[ye], (ye - ys) * nbins + 1)
-
-    if node.contingencies[xs: xe, ys: ye].any():
-        t = gridbin_func(xbins, ybins)
-        for i, j in itertools.product(range(xs, xe), range(ys, ye)):
-            children[i, j] = Tree(t.xbins[i * nbins: (i + 1) * nbins + 1],
-                                  t.ybins[j * nbins: (j + 1) * nbins + 1],
-                                  t.contingencies[xs: xe, ys: ye])
-            assert children[i, j].shape[:2] == (nbins, nbins)
-        return node._replace(children=children)
-    else:
-        return node
-
-
-def sharpen_region(node, region, nbins, gridbin_func):
-    if not QRectF(*node.brect).intersects(region):
-        raise ValueError()
-#         return node
-
-    xs, xe, ys, ye = bindices(node, region)
-    ndim = node.contingencies.ndim
-
-    if node.children is not None:
-        children = np.array(node.children, dtype=object)
-        assert children.ndim == 2
-    else:
-        children = np.full((nbins, nbins), None, dtype=object)
-
-    if ndim == 3:
-        # compute_chisqares expects classes in 1 dim
-        c = node.contingencies
-        chi_lr, chi_up = compute_chi_squares(
-            c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
-        )
-
-        def max_chisq(i, j):
-            def valid(i, j):
-                return 0 <= i < chi_up.shape[0] and \
-                       0 <= j < chi_lr.shape[1]
-
-            return max(chi_lr[i, j] if valid(i, j) else 0,
-                       chi_lr[i, j - 1] if valid(i, j - 1) else 0,
-                       chi_up[i, j] if valid(i, j) else 0,
-                       chi_up[i - 1, j] if valid(i - 1, j) else 0)
-
-        heap = [(-max_chisq(i - xs, j - ys), (i, j))
-                for i in range(xs, xe)
-                for j in range(ys, ye)
-                if children[i, j] is None]
-    else:
-        heap = list(enumerate((i, j)
-                    for i in range(xs, xe)
-                    for j in range(ys, ye)
-                    if children[i, j] is None))
-
-    heap = sorted(heap)
-    update_node = node
-    while heap:
-        _, (i, j) = heapq.heappop(heap)
-
-        xbins = np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
-        ybins = np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
-
-        if node.contingencies[i, j].any():
-            t = gridbin_func(xbins, ybins)
-            assert t.contingencies.shape[:2] == (nbins, nbins)
+    def update_heatmaps(self):
+        if self.data is not None:
+            self.clear_scene()
+            self.construct_heatmaps(self.data, self.selected_split_label())
+            self.construct_heatmaps_scene(self.heatmapparts)
         else:
-            t = None
+            self.clear()
 
-        children[i, j] = t
-        if t is None:
-            yield update_node
+    def _make(self, data, group_var=None, group_key=None):
+        if group_var is not None:
+            assert group_var.is_discrete
+            _col_data, _ = data.get_column_view(group_var)
+            row_groups = [np.flatnonzero(_col_data == i)
+                          for i in range(len(group_var.values))]
+            row_indices = [np.flatnonzero(_col_data == i)
+                           for i in range(len(group_var.values))]
+            row_groups = [namespace(title=name, indices=ind, cluster=None,
+                                    cluster_ord=None)
+                          for name, ind in zip(group_var.values, row_indices)]
         else:
-            update_node = update_node._replace(
-                children=np.array(children, dtype=object)
-            )
-            yield update_node
+            row_groups = [namespace(title=None, indices=slice(0, -1),
+                                    cluster=None, cluster_ord=None)]
 
-
-def Node_mask(node):
-    if node.contingencies.ndim == 3:
-        return node.contingencies.any(axis=2)
-    else:
-        return node.contingencies > 0
-
-
-def Node_nonzero(node):
-    return np.nonzero(Node_mask(node))
-
-
-def sharpen_region_recur(node, region, nbins, depth, gridbin_func):
-    if depth <= 1:
-        return node
-    elif not QRectF(*node.brect).intersects(region):
-        return node
-    elif node.is_empty:
-        return node
-    elif node.is_leaf:
-        xs, xe, ys, ye = bindices(node, region)
-        # indices in need of update
-        indices = Node_nonzero(node)
-        for i, j in zip(*indices):
-            if xs <= i < xe and ys <= j < ye:
-                node = sharpen_node_cell(node, i, j, nbins, gridbin_func)
-
-        # if the exposed region is empty the node.is_leaf property
-        # is preserved
-        if node.is_leaf:
-            return node
-
-        return sharpen_region_recur(node, region, nbins, depth, gridbin_func)
-    else:
-        xs, xe, ys, ye = bindices(node, region)
-
-        # indices is need of update
-        indices1 = Node_nonzero(node)
-        indices2 = node.children.nonzero()
-        indices = sorted(set(list(zip(*indices1))) - set(list(zip(*indices2))))
-
-        for i, j in indices:
-            if xs <= i < xe and ys <= j < ye:
-                node = sharpen_node_cell(node, i, j, nbins, gridbin_func)
-
-        children = np.array(node.children, dtype=object)
-        children[xs: xe, ys: ye] = [
-            [sharpen_region_recur(ch, region, nbins, depth - 1, gridbin_func)
-             if ch is not None else None
-             for ch in row]
-            for row in np.array(children[xs: xe, ys: ye])
-        ]
-        return node._replace(children=children)
-
-
-def stack_tile_blocks(blocks):
-    return np.vstack(list(map(np.hstack, blocks)))
-
-
-def bins_join(bins):
-    return np.hstack([b[:-1] for b in bins[:-1]] + [bins[-1]])
-
-
-def flatten(node, nbins=None, preserve_max=False):
-    if node.is_leaf:
-        return node
-    else:
-        N, M = node.children.shape[:2]
-
-        xind = {i: np.flatnonzero(node.children[i, :]) for i in range(N)}
-        yind = {j: np.flatnonzero(node.children[:, j]) for j in range(M)}
-        xind = {i: ind[0] for i, ind in xind.items() if ind.size}
-        yind = {j: ind[0] for j, ind in yind.items() if ind.size}
-
-        xbins = [node.children[i, xind[i]].xbins if i in xind
-                 else np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
-                 for i in range(N)]
-
-        ybins = [node.children[yind[j], j].ybins if j in yind
-                  else np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
-                  for j in range(M)]
-
-        xbins = bins_join(xbins)
-        ybins = bins_join(ybins)
-
-#         xbins = bins_join([c.xbins for c in node.children[:, 0]])
-#         ybins = bins_join([c.ybins for c in node.children[0, :]])
-
-        ndim = node.contingencies.ndim
-        if ndim == 3:
-            repeats = (nbins, nbins, 1)
+        if group_key is not None:
+            col_groups = split_domain(data.domain, group_key)
+            assert len(col_groups) > 0
+            col_indices = [np.array([data.domain.index(var) for var in group])
+                           for _, group in col_groups]
+            col_groups = [namespace(title=name, domain=d, indices=ind,
+                                    cluster=None, cluster_ord=None)
+                          for (name, d), ind in zip(col_groups, col_indices)]
         else:
-            repeats = (nbins, nbins)
+            col_groups = [
+                namespace(
+                    title=None, indices=slice(0, len(data.domain.attributes)),
+                    domain=data.domain, cluster=None, cluster_ord=None)
+            ]
 
-        def child_contingency(node, row, col):
-            child = node.children[row, col]
-            if child is None:
-                return np.tile(node.contingencies[row, col], repeats)
-            elif preserve_max:
-                parent_max = np.max(node.contingencies[row, col])
-                c_max = np.max(child.contingencies)
-                if c_max > 0:
-                    return child.contingencies * (parent_max / c_max)
-                else:
-                    return child.contingencies
+        minv, maxv = np.nanmin(data.X), np.nanmax(data.X)
+
+        parts = namespace(
+            rows=row_groups, columns=col_groups,
+            levels=(minv, maxv),
+        )
+        return parts
+
+    def cluster_rows(self, data, parts, ordered=False):
+        row_groups = []
+        for row in parts.rows:
+            if row.cluster is not None:
+                cluster = row.cluster
             else:
-                return child.contingencies
+                cluster = None
+            if row.cluster_ord is not None:
+                cluster_ord = row.cluster_ord
+            else:
+                cluster_ord = None
 
-        contingencies = [[child_contingency(node, i, j)
-                          for j in range(nbins)]
-                         for i in range(nbins)]
+            need_dist = cluster is None or (ordered and cluster_ord is None)
+            if need_dist:
+                subset = data[row.indices]
+                subset = Orange.distance._preprocess(subset)
+                matrix = Orange.distance.Euclidean(subset)
 
-        contingencies = stack_tile_blocks(contingencies)
-        cnode = Tree(xbins, ybins, contingencies, None)
-        assert node.brect == cnode.brect
-        assert np.all(np.diff(cnode.xbins) > 0)
-        assert np.all(np.diff(cnode.ybins) > 0)
-        return cnode
+            if cluster is None:
+                cluster = hierarchical.dist_matrix_clustering(matrix)
+
+            if ordered and cluster_ord is None:
+                cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
+
+            row_groups.append(namespace(title=row.title, indices=row.indices,
+                                        cluster=cluster, cluster_ord=cluster_ord))
+
+        return namespace(columns=parts.columns, rows=row_groups,
+                         levels=parts.levels)
+
+    def cluster_columns(self, data, parts, ordered=False):
+        if len(parts.columns) > 1:
+            data = vstack_by_subdomain(data, [col.domain for col in parts.columns])
+        assert all(var.is_continuous for var in data.domain.attributes)
+
+        col0 = parts.columns[0]
+        if col0.cluster is not None:
+            cluster = col0.cluster
+        else:
+            cluster = None
+        if col0.cluster_ord is not None:
+            cluster_ord = col0.cluster_ord
+        else:
+            cluster_ord = None
+        need_dist = cluster is None or (ordered and cluster_ord is None)
+
+        if need_dist:
+            data = Orange.distance._preprocess(data)
+            matrix = Orange.distance.PearsonR(data, axis=0)
+
+        if cluster is None:
+            cluster = hierarchical.dist_matrix_clustering(matrix)
+        if ordered and cluster_ord is None:
+            cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
+
+        col_groups = [namespace(title=col.title, indices=col.indices,
+                                cluster=cluster, cluster_ord=cluster_ord,
+                                domain=col.domain)
+                      for col in parts.columns]
+        return namespace(columns=col_groups,  rows=parts.rows,
+                         levels=parts.levels)
+
+    def construct_heatmaps(self, data, split_label=None):
+
+        if split_label is not None:
+            groups = split_domain(data.domain, split_label)
+            assert len(groups) > 0
+        else:
+            groups = [("", data.domain)]
+
+        if data.domain.class_var.is_discrete:
+            group_var = data.domain.class_var
+        else:
+            group_var = None
+
+        self.progressBarInit()
+
+        group_label = split_label
+
+        parts = self._make(data, group_var, group_label)
+        # Restore/update the row/columns items descriptions from cache if
+        # available
+        if group_var in self.__rows_cache:
+            parts.rows = self.__rows_cache[group_var].rows
+        if group_label in self.__columns_cache:
+            parts.columns = self.__columns_cache[group_label].columns
+
+        if self.sort_rows != OWHeatMap.NoSorting:
+            parts = self.cluster_rows(
+                self.data, parts,
+                ordered=self.sort_rows == OWHeatMap.OrderedClustering)
+
+        if self.sort_columns != OWHeatMap.NoSorting:
+            parts = self.cluster_columns(
+                self.data, parts,
+                ordered=self.sort_columns == OWHeatMap.OrderedClustering)
+
+        # Cache the updated parts
+        self.__rows_cache[group_var] = parts
+        self.__columns_cache[group_label] = parts
+
+        self.heatmapparts = parts
+        self.progressBarFinished()
+
+    def construct_heatmaps_scene(self, parts):
+        def select_row(item):
+            if self.sort_rows == OWHeatMap.NoSorting:
+                return namespace(title=item.title, indices=item.indices,
+                                 cluster=None)
+            elif self.sort_rows == OWHeatMap.Clustering:
+                return namespace(title=item.title, indices=item.indices,
+                                 cluster=item.cluster)
+            elif self.sort_rows == OWHeatMap.OrderedClustering:
+                return namespace(title=item.title, indices=item.indices,
+                                 cluster=item.cluster_ord)
+
+        def select_col(item):
+            if self.sort_columns == OWHeatMap.NoSorting:
+                return namespace(title=item.title, indices=item.indices,
+                                 cluster=None, domain=item.domain)
+            elif self.sort_columns == OWHeatMap.Clustering:
+                return namespace(title=item.title, indices=item.indices,
+                                 cluster=item.cluster, domain=item.domain)
+            elif self.sort_columns == OWHeatMap.OrderedClustering:
+                return namespace(title=item.title, indices=item.indices,
+                                 cluster=item.cluster_ord, domain=item.domain)
+
+        rows = [select_row(rowitem) for rowitem in parts.rows]
+        cols = [select_col(colitem) for colitem in parts.columns]
+        parts = namespace(columns=cols, rows=rows, levels=parts.levels)
+
+        self.setup_scene(parts)
+
+    def setup_scene(self, parts):
+        # parts = * a list of row descriptors (title, indices, cluster,)
+        #         * a list of col descriptors (title, indices, cluster, domain)
+
+        self.heatmap_scene.clear()
+        # The top level container widget
+        widget = QtGui.QGraphicsWidget()
+        grid = QtGui.QGraphicsGridLayout()
+        grid.setSpacing(self.SpaceX)
+        self.heatmap_scene.addItem(widget)
+
+        N, M = len(parts.rows), len(parts.columns)
+
+        # Start row/column where the heatmap items are inserted
+        # (after the titles/legends/dendrograms)
+        Row0 = 3
+        Col0 = 3
+        LegendRow = 0
+        # The column for the vertical dendrogram
+        DendrogramColumn = 0
+        # The row for the horizontal dendrograms
+        DendrogramRow = 1
+        RightLabelColumn = Col0 + M
+        TopLabelsRow = 2
+        BottomLabelsRow = Row0 + 2 * N
+
+        widget.setLayout(grid)
+
+        palette = self.color_palette()
+
+        sort_i = []
+        sort_j = []
+
+        column_dendrograms = [None] * M
+        row_dendrograms = [None] * N
+
+        for i, rowitem in enumerate(parts.rows):
+            if rowitem.title:
+                title = QtGui.QGraphicsSimpleTextItem(rowitem.title, widget)
+                item = GraphicsSimpleTextLayoutItem(title, parent=grid)
+                grid.addItem(item, Row0 + i * 2, Col0)
+
+            if rowitem.cluster:
+                dendrogram = DendrogramWidget(parent=widget)
+                dendrogram.set_root(rowitem.cluster)
+                dendrogram.setMaximumWidth(100)
+                dendrogram.setMinimumWidth(100)
+                # Ignore dendrogram vertical size hint (heatmap's size
+                # should define the  row's vertical size).
+                dendrogram.setSizePolicy(
+                    QSizePolicy.Expanding, QSizePolicy.Ignored)
+                grid.addItem(dendrogram, Row0 + i * 2 + 1, DendrogramColumn)
+                sort_i.append(np.array(leaf_indices(rowitem.cluster)))
+                row_dendrograms[i] = dendrogram
+            else:
+                sort_i.append(None)
+
+        for j, colitem in enumerate(parts.columns):
+            if colitem.title:
+                title = QtGui.QGraphicsSimpleTextItem(colitem.title, widget)
+                item = GraphicsSimpleTextLayoutItem(title, parent=grid)
+                grid.addItem(item, 1, Col0 + j)
+
+            if colitem.cluster:
+                dendrogram = DendrogramWidget(
+                    parent=widget, orientation=DendrogramWidget.Top)
+
+                dendrogram.set_root(colitem.cluster)
+                dendrogram.setMaximumHeight(100)
+                dendrogram.setMinimumHeight(100)
+                # Ignore dendrogram horizontal size hint (heatmap's width
+                # should define the column width).
+                dendrogram.setSizePolicy(
+                    QSizePolicy.Ignored, QSizePolicy.Expanding)
+                grid.addItem(dendrogram, DendrogramRow, Col0 + j)
+                sort_j.append(np.array(leaf_indices(colitem.cluster)))
+                column_dendrograms[j] = dendrogram
+            else:
+                sort_j.append(None)
+
+        heatmap_widgets = []
+        for i in range(N):
+            heatmap_row = []
+            for j in range(M):
+                row_ix = parts.rows[i].indices
+                col_ix = parts.columns[j].indices
+                hw = GraphicsHeatmapWidget(parent=widget)
+                data = self.data[row_ix, col_ix].X
+
+                if sort_i[i] is not None:
+                    data = data[sort_i[i]]
+                if sort_j[j] is not None:
+                    data = data[:, sort_j[j]]
+
+                hw.set_heatmap_data(data)
+                hw.set_levels(parts.levels)
+                hw.set_color_table(palette)
+                hw.set_show_averages(self.averages)
+
+                grid.addItem(hw, Row0 + i * 2 + 1, Col0 + j)
+                grid.setRowStretchFactor(Row0 + i * 2 + 1, data.shape[0] * 100)
+                heatmap_row.append(hw)
+            heatmap_widgets.append(heatmap_row)
+
+        row_annotation_widgets = []
+        col_annotation_widgets = []
+        col_annotation_widgets_top = []
+        col_annotation_widgets_bottom = []
+
+        for i, rowitem in enumerate(parts.rows):
+            if isinstance(rowitem.indices, slice):
+                indices = np.array(
+                    range(*rowitem.indices.indices(self.data.X.shape[0])))
+            else:
+                indices = rowitem.indices
+            if sort_i[i] is not None:
+                indices = indices[sort_i[i]]
+
+            labels = [str(i) for i in indices]
+
+            labelslist = GraphicsSimpleTextList(
+                labels, parent=widget, orientation=Qt.Vertical)
+
+            labelslist._indices = indices
+            labelslist.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            labelslist.setContentsMargins(0.0, 0.0, 0.0, 0.0)
+            labelslist.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
+            grid.addItem(labelslist, Row0 + i * 2 + 1, RightLabelColumn)
+            grid.setAlignment(labelslist, Qt.AlignLeft)
+            row_annotation_widgets.append(labelslist)
+
+        for j, colitem in enumerate(parts.columns):
+            # Top attr annotations
+            if isinstance(colitem.indices, slice):
+                indices = np.array(
+                    range(*colitem.indices.indices(self.data.X.shape[1])))
+            else:
+                indices = colitem.indices
+            if sort_j[j] is not None:
+                indices = indices[sort_j[j]]
+
+            labels = [self.data.domain[i].name for i in indices]
+
+            labelslist = GraphicsSimpleTextList(
+                labels, parent=widget, orientation=Qt.Horizontal)
+            labelslist.setAlignment(Qt.AlignBottom | Qt.AlignLeft)
+            labelslist._indices = indices
+
+            labelslist.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+            grid.addItem(labelslist, TopLabelsRow, Col0 + j,
+                         Qt.AlignBottom | Qt.AlignLeft)
+            col_annotation_widgets.append(labelslist)
+            col_annotation_widgets_top.append(labelslist)
+
+            # Bottom attr annotations
+            labelslist = GraphicsSimpleTextList(
+                labels, parent=widget, orientation=Qt.Horizontal)
+            labelslist.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+            labelslist.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+            grid.addItem(labelslist, BottomLabelsRow, Col0 + j)
+            col_annotation_widgets.append(labelslist)
+            col_annotation_widgets_bottom.append(labelslist)
+
+        legend = GradientLegendWidget(
+            parts.levels[0], parts.levels[1],
+            parent=widget)
+
+        legend.set_color_table(palette)
+        legend.setMinimumSize(QSizeF(100, 20))
+        legend.setVisible(self.legend)
+
+        grid.addItem(legend, LegendRow, Col0)
+
+        self.heatmap_scene.widget = widget
+        self.heatmap_widget_grid = heatmap_widgets
+        self.selection_manager.set_heatmap_widgets(heatmap_widgets)
+
+        self.row_annotation_widgets = row_annotation_widgets
+        self.col_annotation_widgets = col_annotation_widgets
+        self.col_annotation_widgets_top = col_annotation_widgets_top
+        self.col_annotation_widgets_bottom = col_annotation_widgets_bottom
+        self.col_dendrograms = column_dendrograms
+        self.row_dendrograms = row_dendrograms
+
+        self.update_annotations()
+        self.update_column_annotations()
+
+        self.__update_size_constraints()
+
+    def __update_size_constraints(self):
+        if self.heatmap_scene.widget is not None:
+            mode = Qt.KeepAspectRatio if self.keep_aspect \
+                   else Qt.IgnoreAspectRatio
+            size = QSizeF(self.sceneView.viewport().size())
+            widget = self.heatmap_scene.widget
+            layout = widget.layout()
+            if mode == Qt.IgnoreAspectRatio:
+                # Reset the row height constraints ...
+                for i, hm_row in enumerate(self.heatmap_widget_grid):
+                    layout.setRowMaximumHeight(3 + i * 2 + 1, np.finfo(np.float32).max)
+                    layout.setRowPreferredHeight(3 + i * 2 + 1, 0)
+                # ... and resize to match the viewport, taking the minimum size
+                # into account
+                minsize = widget.minimumSize()
+                size = size.expandedTo(minsize)
+                widget.resize(size)
+            else:
+                # First set/update the widget's width (the layout will
+                # distribute the available width to heatmap widgets in
+                # the grid)
+                minsize = widget.minimumSize()
+                widget.resize(size.expandedTo(minsize).width(),
+                              widget.size().height())
+                # calculate and set the heatmap row's heights based on
+                # the width
+                for i, hm_row in enumerate(self.heatmap_widget_grid):
+                    heights = []
+                    for hm in hm_row:
+                        hm_size = QSizeF(hm.heatmap_item.pixmap().size())
+                        hm_size = scaled(
+                            hm_size, QSizeF(hm.size().width(), -1),
+                            Qt.KeepAspectRatioByExpanding)
+
+                        heights.append(hm_size.height())
+                    layout.setRowMaximumHeight(3 + i * 2 + 1, max(heights))
+                    layout.setRowPreferredHeight(3 + i * 2 + 1, max(heights))
+
+                # set/update the widget's height
+                constraint = QSizeF(size.width(), -1)
+                sh = widget.effectiveSizeHint(Qt.PreferredSize, constraint)
+                minsize = widget.effectiveSizeHint(Qt.MinimumSize, constraint)
+                sh = sh.expandedTo(minsize).expandedTo(widget.minimumSize())
+
+#                 print("Resize 2", sh)
+#                 print("  old:", widget.size().width(), widget.size().height())
+#                 print("  new:", widget.size().width(), sh.height())
+
+                widget.resize(sh)
+#                 print("Did resize")
+            self.__fixup_grid_layout()
+
+    def __fixup_grid_layout(self):
+        self.__update_margins()
+        self.on_selection_changed()
+
+        rect = self.scene.widget.geometry()
+        self.heatmap_scene.setSceneRect(rect)
+
+    def __aspect_mode_changed(self):
+        if self.keep_aspect:
+            policy = Qt.ScrollBarAlwaysOn
+        else:
+            policy = Qt.ScrollBarAlwaysOff
+
+        viewport = self.sceneView.viewport()
+        # Temp. remove the event filter so we won't process the resize twice
+        viewport.removeEventFilter(self)
+        self.sceneView.setVerticalScrollBarPolicy(policy)
+        self.sceneView.setHorizontalScrollBarPolicy(policy)
+        viewport.installEventFilter(self)
+        self.__update_size_constraints()
+
+    def eventFilter(self, reciever, event):
+        if reciever is self.sceneView.viewport() and \
+                event.type() == QEvent.Resize:
+            self.__update_size_constraints()
+
+        return super().eventFilter(reciever, event)
+
+    def __update_margins(self):
+        """
+        Update dendrogram and text list widgets margins to include the
+        space for average stripe.
+        """
+        def offset(hm):
+            if hm.show_averages:
+                return hm.averages_item.size().width()
+            else:
+                return 0
+
+        hm_row = self.heatmap_widget_grid[0]
+        hm_col = next(zip(*self.heatmap_widget_grid))
+        dendrogram_col = self.col_dendrograms
+        dendrogram_row = self.row_dendrograms
+
+        col_annot = zip(self.col_annotation_widgets_top,
+                        self.col_annotation_widgets_bottom)
+        row_annot = self.row_annotation_widgets
+
+        for hm, annot, dendrogram in zip(hm_row, col_annot, dendrogram_col):
+            width = hm.size().width()
+            left_offset = offset(hm)
+            col_count = hm.heatmap_data().shape[1]
+            half_col = (width - left_offset) / col_count / 2
+            if dendrogram is not None:
+                _, top, _, bottom = dendrogram.getContentsMargins()
+                dendrogram.setContentsMargins(
+                    left_offset + half_col, top, half_col, bottom)
+
+            _, top, right, bottom = annot[0].getContentsMargins()
+            annot[0].setContentsMargins(left_offset, top, right, bottom)
+            _, top, right, bottom = annot[1].getContentsMargins()
+            annot[1].setContentsMargins(left_offset, top, right, bottom)
+
+        for hm, annot, dendrogram in zip(hm_col, row_annot, dendrogram_row):
+            height = hm.size().height()
+            row_count = hm.heatmap_data().shape[0]
+            half_row = height / row_count / 2
+            if dendrogram is not None:
+                left, _, right, _ = dendrogram.getContentsMargins()
+                dendrogram.setContentsMargins(left, half_row, right, half_row)
+
+    def heatmap_widgets(self):
+        """Iterate over heatmap widgets.
+        """
+        for item in self.heatmap_scene.items():
+            if isinstance(item, GraphicsHeatmapWidget):
+                yield item
+
+    def label_widgets(self):
+        """Iterate over GraphicsSimpleTextList widgets.
+        """
+        for item in self.heatmap_scene.items():
+            if isinstance(item, GraphicsSimpleTextList):
+                yield item
+
+    def dendrogram_widgets(self):
+        """Iterate over dendrogram widgets
+        """
+        for item in self.heatmap_scene.items():
+            if isinstance(item, DendrogramWidget):
+                yield item
+
+    def legend_widgets(self):
+        for item in self.heatmap_scene.items():
+            if isinstance(item, GradientLegendWidget):
+                yield item
+
+    def update_averages_stripe(self):
+        """Update the visibility of the averages stripe.
+        """
+        if self.data is not None:
+            for widget in self.heatmap_widgets():
+                widget.set_show_averages(self.averages)
+                widget.layout().activate()
+
+            self.scene.widget.layout().activate()
+            self.__fixup_grid_layout()
+
+    def update_grid_spacing(self):
+        """Update layout spacing.
+        """
+        if self.scene.widget:
+            layout = self.scene.widget.layout()
+            layout.setSpacing(self.SpaceX)
+            self.__fixup_grid_layout()
+
+    def update_color_schema(self):
+        palette = self.color_palette()
+        for heatmap in self.heatmap_widgets():
+            heatmap.set_color_table(palette)
+
+        for legend in self.legend_widgets():
+            legend.set_color_table(palette)
+
+    def update_sorting_examples(self):
+        if self.data:
+            self.update_heatmaps()
+
+    def update_sorting_attributes(self):
+        if self.data:
+            self.update_heatmaps()
+
+    def update_legend(self):
+        for item in self.heatmap_scene.items():
+            if isinstance(item, GradientLegendWidget):
+                item.setVisible(self.legend)
+
+    def update_annotations(self):
+        if self.data is not None:
+            if self.annotation_vars:
+                var = self.annotation_vars[self.annotation_index]
+                if var == '(None)':
+                    var = None
+            else:
+                var = None
+
+            show = var is not None
+            if show:
+                annot_col, _ = self.data.get_column_view(var)
+            else:
+                annot_col = None
+
+            for labelslist in self.row_annotation_widgets:
+                labelslist.setVisible(bool(show))
+                if show:
+                    indices = labelslist._indices
+                    data = annot_col[indices]
+                    labels = [var.str_val(val) for val in data]
+                    labelslist.set_labels(labels)
+
+    def update_column_annotations(self):
+        if self.data is not None:
+            show_top = self.column_label_pos & OWHeatMap.PositionTop
+            show_bottom = self.column_label_pos & OWHeatMap.PositionBottom
+
+            for labelslist in self.col_annotation_widgets_top:
+                labelslist.setVisible(show_top)
+
+            TopLabelsRow = 2
+            Row0 = 3
+            BottomLabelsRow = Row0 + 2 * len(self.heatmapparts.rows)
+
+            layout = self.heatmap_scene.widget.layout()
+            layout.setRowMaximumHeight(TopLabelsRow, -1 if show_top else 0)
+            layout.setRowSpacing(TopLabelsRow, -1 if show_top else 0)
+
+            for labelslist in self.col_annotation_widgets_bottom:
+                labelslist.setVisible(show_bottom)
+
+            layout.setRowMaximumHeight(BottomLabelsRow, -1 if show_top else 0)
+
+            self.__fixup_grid_layout()
+
+    def on_selection_changed(self):
+        for item in self.selection_rects:
+            item.setParentItem(None)
+            self.heatmap_scene.removeItem(item)
+
+        self.selection_rects = []
+        self.selection_manager.update_selection_rects()
+        rects = self.selection_manager.selection_rects
+        for rect in rects:
+            item = QtGui.QGraphicsRectItem(rect, None)
+            item.setPen(QPen(Qt.black, 2))
+            self.heatmap_scene.addItem(item)
+            self.selection_rects.append(item)
+
+    def on_selection_finished(self):
+        self.selected_rows = self.selection_manager.selections
+        self.commit()
+
+    def commit(self):
+        data = None
+        if self.data is not None and self.selected_rows:
+            sortind = np.hstack([labels._indices for labels in self.row_annotation_widgets])
+            indices = sortind[self.selected_rows]
+            data = self.data[indices]
+
+        self.send("Data", data)
+
+QWIDGETSIZE_MAX = 16777215
 
 
-def bindices(node, rect):
-    assert rect.normalized() == rect
-    assert not rect.intersect(QRectF(*node.brect)).isEmpty()
+def scaled(size, constraint, mode=Qt.KeepAspectRatio):
+    if constraint.width() < 0 and constraint.height() < 0:
+        return size
 
-    xs = np.searchsorted(node.xbins, rect.left(), side="left") - 1
-    xe = np.searchsorted(node.xbins, rect.right(), side="right")
-    ys = np.searchsorted(node.ybins, rect.top(), side="left") - 1
-    ye = np.searchsorted(node.ybins, rect.bottom(), side="right")
-
-    return np.clip([xs, xe, ys, ye],
-                   [0, 0, 0, 0],
-                   [node.xbins.size - 2, node.xbins.size - 1,
-                    node.ybins.size - 2, node.ybins.size - 1])
-
-
-def create_image(contingencies, palette=None, scale=None):
-#     import scipy.signal
-#     import scipy.ndimage
-
-    if scale is None:
-        scale = lambda c: c / (contingencies.max() or 1)
-
-    P = scale(contingencies)
-
-#     if scale > 0:
-#         P = contingencies / scale
-#     else:
-#         P = contingencies
-
-#     nbins = node.xbins.shape[0] - 1
-#     smoothing = 32
-#     bandwidth = nbins / smoothing
-
-    if P.ndim == 3:
-        ncol = P.shape[-1]
-        if palette is None:
-            palette = colorpalette.ColorPaletteGenerator(ncol)
-        colors = [palette[i] for i in range(ncol)]
-        colors = np.array(
-            [[c.red(), c.green(), c.blue()] for c in colors]
-        )
-#         P = scipy.ndimage.filters.gaussian_filter(
-#             P, bandwidth, mode="constant")
-#         P /= P.max()
-
-        argmax = np.argmax(P, axis=2)
-        irow, icol = np.indices(argmax.shape)
-        P_max = P[irow, icol, argmax]
-        positive = P_max > 0
-        P_max = np.where(positive, P_max * 0.95 + 0.05, 0.0)
-
-        colors = 255 - colors[argmax.ravel()]
-
-        # XXX: Non linear intensity scaling
-        colors *= P_max.ravel().reshape(-1, 1)
-        colors = colors.reshape(P_max.shape + (3,))
-        colors = 255 - colors
-    elif P.ndim == 2:
-        palette = colorpalette.ColorPaletteBW()
-        mix = P
-        positive = mix > 0
-        mix = np.where(positive, mix * 0.99 + 0.01, 0.0)
-
-#         mix = scipy.ndimage.filters.gaussian_filter(
-#             mix, bandwidth, mode="constant")
-#         mix /= mix.max() if total else 1.0
-
-        colors = np.zeros((np.prod(mix.shape), 3)) + 255
-        colors -= mix.ravel().reshape(-1, 1) * 255
-        colors = colors.reshape(mix.shape + (3,))
-
-    return colors
+    size, constraint = QSizeF(size), QSizeF(constraint)
+    if mode == Qt.IgnoreAspectRatio:
+        if constraint.width() >= 0:
+            size.setWidth(constraint.width())
+        if constraint.height() >= 0:
+            size.setHeight(constraint.height())
+    elif mode == Qt.KeepAspectRatio:
+        if constraint.width() < 0:
+            constraint.setWidth(QWIDGETSIZE_MAX)
+        if constraint.height() < 0:
+            constraint.setHeight(QWIDGETSIZE_MAX)
+        size.scale(constraint, mode)
+    elif mode == Qt.KeepAspectRatioByExpanding:
+        if constraint.width() < 0:
+            constraint.setWidth(0)
+        if constraint.height() < 0:
+            constraint.setHeight(0)
+        size.scale(constraint, mode)
+    return size
 
 
-def score_candidate_rects(node, region):
+class GraphicsPixmapWidget(QtGui.QGraphicsWidget):
+    def __init__(self, parent=None, pixmap=None, scaleContents=False,
+                 aspectMode=Qt.KeepAspectRatio, **kwargs):
+        super().__init__(parent)
+        self.setContentsMargins(0, 0, 0, 0)
+        self.__scaleContents = scaleContents
+        self.__aspectMode = aspectMode
+
+        self.__pixmap = pixmap or QPixmap()
+        self.__item = QtGui.QGraphicsPixmapItem(self.__pixmap, self)
+        self.__updateScale()
+
+    def setPixmap(self, pixmap):
+        self.prepareGeometryChange()
+        self.__pixmap = pixmap or QPixmap()
+        self.__item.setPixmap(self.__pixmap)
+        self.updateGeometry()
+
+    def pixmap(self):
+        return self.__pixmap
+
+    def setAspectRatioMode(self, mode):
+        if self.__aspectMode != mode:
+            self.__aspectMode = mode
+
+    def aspectRatioMode(self):
+        return self.__aspectMode
+
+    def setScaleContents(self, scale):
+        if self.__scaleContents != scale:
+            self.__scaleContents = bool(scale)
+            self.updateGeometry()
+            self.__updateScale()
+
+    def scaleContents(self):
+        return self.__scaleContents
+
+    def sizeHint(self, which, constraint=QSizeF()):
+        if which == Qt.PreferredSize:
+            sh = QSizeF(self.__pixmap.size())
+            if self.__scaleContents:
+                sh = scaled(sh, constraint, self.__aspectMode)
+            return sh
+        elif which == Qt.MinimumSize:
+            if self.__scaleContents:
+                return QSizeF(0, 0)
+            else:
+                return QSizeF(self.__pixmap.size())
+        elif which == Qt.MaximumSize:
+            if self.__scaleContents:
+                return QSizeF()
+            else:
+                return QSizeF(self.__pixmap.size())
+        else:
+            # Qt.MinimumDescent
+            return QSizeF()
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        crect = self.contentsRect()
+        self.__item.setPos(crect.topLeft())
+        self.__updateScale()
+
+    def __updateScale(self):
+        if self.__pixmap.isNull():
+            return
+        pxsize = QSizeF(self.__pixmap.size())
+        crect = self.contentsRect()
+        self.__item.setPos(crect.topLeft())
+
+        if self.__scaleContents:
+            csize = scaled(pxsize, crect.size(), self.__aspectMode)
+        else:
+            csize = pxsize
+
+        xscale = csize.width() / pxsize.width()
+        yscale = csize.height() / pxsize.height()
+
+        t = QtGui.QTransform().scale(xscale, yscale)
+        self.__item.setTransform(t)
+
+    def pixmapTransform(self):
+        return QtGui.QTransform(self.__item.transform())
+
+
+class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
+    def __init__(self, parent=None, data=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setAcceptHoverEvents(True)
+
+        self.__levels = None
+        self.__colortable = None
+        self.__data = data
+
+        self.__pixmap = QPixmap()
+        self.__avgpixmap = QPixmap()
+
+        layout = QtGui.QGraphicsLinearLayout(Qt.Horizontal)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.heatmap_item = GraphicsPixmapWidget(
+            self, scaleContents=True, aspectMode=Qt.IgnoreAspectRatio)
+
+        self.averages_item = GraphicsPixmapWidget(
+            self, scaleContents=True, aspectMode=Qt.IgnoreAspectRatio)
+
+        layout.addItem(self.averages_item)
+        layout.addItem(self.heatmap_item)
+        layout.setItemSpacing(0, 2)
+
+        self.setLayout(layout)
+
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.show_averages = True
+
+        self.set_heatmap_data(data)
+
+    def clear(self):
+        """Clear/reset the widget."""
+        self.__data = None
+        self.__pixmap = None
+        self.__avgpixmap = None
+
+        self.heatmap_item.setPixmap(QtGui.QPixmap())
+        self.averages_item.setPixmap(QtGui.QPixmap())
+        self.show_averages = True
+        self.updateGeometry()
+        self.layout().invalidate()
+
+    def set_heatmap(self, heatmap):
+        """Set the heatmap data for display.
+        """
+        self.clear()
+
+        self.set_heatmap_data(heatmap)
+        self.update()
+
+    def set_heatmap_data(self, data):
+        """Set the heatmap data for display."""
+        if self.__data is not data:
+            self.clear()
+            self.__data = data
+            self._update_pixmap()
+            self.update()
+
+    def heatmap_data(self):
+        if self.__data is not None:
+            v = self.__data.view()
+            v.flags.writeable = False
+            return v
+        else:
+            return None
+
+    def set_levels(self, levels):
+        if levels != self.__levels:
+            self.__levels = levels
+            self._update_pixmap()
+            self.update()
+
+    def set_show_averages(self, show):
+        if self.show_averages != show:
+            self.show_averages = show
+            self.averages_item.setVisible(show)
+            self.averages_item.setMaximumWidth(-1 if show else 0)
+            self.layout().invalidate()
+            self.update()
+
+    def set_color_table(self, table):
+        self.__colortable = table
+        self._update_pixmap()
+        self.update()
+
+    def _update_pixmap(self):
+        """
+        Update the pixmap if its construction arguments changed.
+        """
+        if self.__data is not None:
+            if self.__colortable is not None:
+                lut = self.__colortable
+            else:
+                lut = None
+            argb, _ = pg.makeARGB(
+                self.__data, lut=lut, levels=self.__levels, scale=250)
+
+            qimage = pg.makeQImage(argb, transpose=False)
+            self.__pixmap = QPixmap.fromImage(qimage)
+            avg = np.nanmean(self.__data, axis=1, keepdims=True)
+            argb, _ = pg.makeARGB(
+                avg, lut=lut, levels=self.__levels, scale=250)
+            qimage = pg.makeQImage(argb, transpose=False)
+            self.__avgpixmap = QPixmap.fromImage(qimage)
+        else:
+            self.__pixmap = QPixmap()
+            self.__avgpixmap = QPixmap()
+
+        self.heatmap_item.setPixmap(self.__pixmap)
+        self.averages_item.setPixmap(self.__avgpixmap)
+        self.layout().invalidate()
+
+    def cell_at(self, pos):
+        """Return the cell row, column from `pos` in local coordinates.
+        """
+        if self.__pixmap.isNull() or not (
+                    self.heatmap_item.geometry().contains(pos) or
+                    self.averages_item.geometry().contains(pos)):
+            return (-1, -1)
+
+        if self.heatmap_item.geometry().contains(pos):
+            item_clicked = self.heatmap_item
+        elif self.averages_item.geometry().contains(pos):
+            item_clicked = self.averages_item
+        pos = self.mapToItem(item_clicked, pos)
+        size = self.heatmap_item.size()
+
+        x, y = pos.x(), pos.y()
+
+        N, M = self.__data.shape
+        fx = x / size.width()
+        fy = y / size.height()
+        i = min(int(math.floor(fy * N)), N - 1)
+        j = min(int(math.floor(fx * M)), M - 1)
+        return i, j
+
+    def cell_rect(self, row, column):
+        """Return a rectangle in local coordinates containing the cell
+        at `row` and `column`.
+        """
+        size = self.__pixmap.size()
+        if not (0 <= column < size.width() or 0 <= row < size.height()):
+            return QRectF()
+
+        topleft = QPointF(column, row)
+        bottomright = QPointF(column + 1, row + 1)
+        t = self.heatmap_item.pixmapTransform()
+        rect = t.mapRect(QRectF(topleft, bottomright))
+        rect.translated(self.heatmap_item.pos())
+        return rect
+
+    def row_rect(self, row):
+        """
+        Return a QRectF in local coordinates containing the entire row.
+        """
+        rect = self.cell_rect(row, 0)
+        rect.setLeft(0)
+        rect.setRight(self.size().width())
+        return rect
+
+    def cell_tool_tip(self, row, column):
+        return "{}, {}: {:g}".format(row, column, self.__data[row, column])
+
+    def hoverMoveEvent(self, event):
+        pos = event.pos()
+        row, column = self.cell_at(pos)
+        tooltip = self.cell_tool_tip(row, column)
+        # TODO: Move/delegate to (Scene) helpEvent
+        self.setToolTip(tooltip)
+        return super().hoverMoveEvent(event)
+
+
+class HeatmapScene(QGraphicsScene):
+    """A Graphics Scene with heatmap widgets."""
+    def __init__(self, parent=None):
+        QGraphicsScene.__init__(self, parent)
+        self.selection_manager = HeatmapSelectionManager()
+
+    def set_selection_manager(self, manager):
+        self.selection_manager = manager
+
+    def _items(self, pos=None, cls=object):
+        if pos is not None:
+            items = self.items(QRectF(pos, QSizeF(3, 3)).translated(-1.5, -1.5))
+        else:
+            items = self.items()
+
+        for item in items:
+            if isinstance(item, cls):
+                yield item
+
+    def heatmap_at_pos(self, pos):
+        items = list(self._items(pos, GraphicsHeatmapWidget))
+        if items:
+            return items[0]
+        else:
+            return None
+
+    def dendrogram_at_pos(self, pos):
+        return None
+
+        items = list(self._items(pos, DendrogramItem))
+        if items:
+            return items[0]
+        else:
+            return None
+
+    def heatmap_widgets(self):
+        return self._items(None, GraphicsHeatmapWidget)
+
+    def select_from_dendrogram(self, dendrogram, clear=True):
+        """Select all heatmap rows which belong to the dendrogram.
+        """
+        dendrogram_widget = dendrogram.parentWidget()
+        anchors = list(dendrogram_widget.leaf_anchors())
+        cluster = dendrogram.cluster
+        start, end = anchors[cluster.first], anchors[cluster.last - 1]
+        start, end = dendrogram_widget.mapToScene(start), dendrogram_widget.mapToScene(end)
+        # Find a heatmap widget containing start and end y coordinates.
+
+        heatmap = None
+        for hm in self.heatmap_widgets():
+            b_rect = hm.sceneBoundingRect()
+            if b_rect.contains(QPointF(b_rect.center().x(), start.y())):
+                heatmap = hm
+                break
+
+        if dendrogram:
+            b_rect = heatmap.boundingRect()
+            start, end = heatmap.mapFromScene(start), heatmap.mapFromScene(end)
+            start, _ = heatmap.cell_at(QPointF(b_rect.center().x(), start.y()))
+            end, _ = heatmap.cell_at(QPointF(b_rect.center().x(), end.y()))
+            self.selection_manager.selection_add(start, end, heatmap, clear=clear)
+        return
+
+    def mousePressEvent(self, event):
+        pos = event.scenePos()
+        heatmap = self.heatmap_at_pos(pos)
+        if heatmap and event.button() & Qt.LeftButton:
+            row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
+            self.selection_manager.selection_start(heatmap, event)
+
+        dendrogram = self.dendrogram_at_pos(pos)
+        if dendrogram and event.button() & Qt.LeftButton:
+            if dendrogram.orientation == Qt.Vertical:
+                self.select_from_dendrogram(dendrogram, clear=not event.modifiers() & Qt.ControlModifier)
+            return
+
+        return QGraphicsScene.mousePressEvent(self, event)
+
+    def mouseMoveEvent(self, event):
+        pos = event.scenePos()
+        heatmap = self.heatmap_at_pos(pos)
+        if heatmap and event.buttons() & Qt.LeftButton:
+            row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
+            self.selection_manager.selection_update(heatmap, event)
+
+        dendrogram = self.dendrogram_at_pos(pos)
+        if dendrogram and dendrogram.orientation == Qt.Horizontal:  # Filter mouse move events
+            return
+
+        return QGraphicsScene.mouseMoveEvent(self, event)
+
+    def mouseReleaseEvent(self, event):
+        pos = event.scenePos()
+        heatmap = self.heatmap_at_pos(pos)
+        if heatmap:
+            row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
+            self.selection_manager.selection_finish(heatmap, event)
+
+        dendrogram = self.dendrogram_at_pos(pos)
+        if dendrogram and dendrogram.orientation == Qt.Horizontal:  # Filter mouse events
+            return
+
+        return QGraphicsScene.mouseReleaseEvent(self, event)
+
+    def mouseDoubleClickEvent(self, event):
+        pos = event.scenePos()
+        dendrogram = self.dendrogram_at_pos(pos)
+        if dendrogram:  # Filter mouse events
+            return
+        return QGraphicsScene.mouseDoubleClickEvent(self, event)
+
+
+class GraphicsSimpleTextLayoutItem(QtGui.QGraphicsLayoutItem):
+    """ A Graphics layout item wrapping a QGraphicsSimpleTextItem alowing it
+    to be managed by a layout.
+
     """
-    Score candidate bin rects in node.
+    def __init__(self, text_item, orientation=Qt.Horizontal, parent=None):
+        super().__init__(parent)
+        self.orientation = orientation
+        self.text_item = text_item
+        if orientation == Qt.Vertical:
+            self.text_item.rotate(-90)
+            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        else:
+            self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
-    Return a list of (score, i, j QRectF) list)
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        if self.orientation == Qt.Horizontal:
+            self.text_item.setPos(rect.topLeft())
+        else:
+            self.text_item.setPos(rect.bottomLeft())
 
+    def sizeHint(self, which, constraint=QSizeF()):
+        if which in [Qt.PreferredSize]:
+            size = self.text_item.boundingRect().size()
+            if self.orientation == Qt.Horizontal:
+                return size
+            else:
+                return QSizeF(size.height(), size.width())
+        else:
+            return QSizeF()
+
+    def updateGeometry(self):
+        super().updateGeometry()
+        parent = self.parentLayoutItem()
+        if parent.isLayout():
+            parent.updateGeometry()
+
+    def setFont(self, font):
+        self.text_item.setFont(font)
+        self.updateGeometry()
+
+    def setText(self, text):
+        self.text_item.setText(text)
+        self.updateGeometry()
+
+
+class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
+    """A simple text list widget."""
+    def __init__(self, labels=[], orientation=Qt.Vertical, parent=None):
+        super().__init__(parent)
+        self.label_items = []
+        self.orientation = orientation
+        self.alignment = Qt.AlignCenter
+        self.__resize_in_progress = False
+
+        layout = QtGui.QGraphicsLinearLayout(orientation)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.set_labels(labels)
+
+    def clear(self):
+        """Remove all text items."""
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            item = layout.itemAt(i)
+            item.text_item.setParentItem(None)
+            if self.scene():
+                self.scene().removeItem(item.text_item)
+            layout.removeAt(i)
+
+        self.label_items = []
+#         self.updateGeometry()
+
+    def set_labels(self, labels):
+        """Set the text labels to show in the widget.
+        """
+        self.clear()
+        orientation = Qt.Horizontal if self.orientation == Qt.Vertical else Qt.Vertical
+        for text in labels:
+            item = QtGui.QGraphicsSimpleTextItem(text, self)
+            item.setFont(self.font())
+            item.setToolTip(text)
+            item = GraphicsSimpleTextLayoutItem(item, orientation, parent=self)
+            self.layout().addItem(item)
+            self.layout().setAlignment(item, self.alignment)
+            self.label_items.append(item)
+
+    def setAlignment(self, alignment):
+        """Set alignment of text items in the widget
+        """
+        self.alignment = alignment
+        layout = self.layout()
+        for i in range(layout.count()):
+            layout.setAlignment(layout.itemAt(i), alignment)
+
+    def sizeHint(self, which, constraint=QRectF()):
+        if not self.isVisible():
+            return QSizeF(0, 0)
+        else:
+            return super().sizeHint(which, constraint)
+
+    def setVisible(self, visible):
+        super().setVisible(visible)
+        self.updateGeometry()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.__resize_in_progress = True
+        self._updateFontSize()
+        self.__resize_in_progress = False
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.FontChange:
+            font = self.font()
+            for item in self.label_items:
+                item.setFont(font)
+
+            if not self.__resize_in_progress:
+                self.updateGeometry()
+                self.layout().invalidate()
+                self.layout().activate()
+
+    def _updateFontSize(self):
+        crect = self.contentsRect()
+        if self.orientation == Qt.Vertical:
+            h = crect.height()
+        else:
+            h = crect.width()
+        n = len(self.label_items)
+        if n == 0:
+            return
+
+        if self.scene() is not None:
+            maxfontsize = self.scene().font().pointSize()
+        else:
+            maxfontsize = QtGui.QApplication.instance().font().pointSize()
+
+        lineheight = max(1, h / n)
+        fontsize = min(self._pointSize(lineheight), maxfontsize)
+
+        font = self.font()
+        font.setPointSize(fontsize)
+        self.setFont(font)
+
+    def _pointSize(self, height):
+        font = self.font()
+        font.setPointSize(height)
+        fix = 0
+        while QFontMetrics(font).lineSpacing() > height and height - fix > 1:
+            fix += 1
+            font.setPointSize(height - fix)
+        return height - fix
+
+
+class GradientLegendWidget(QtGui.QGraphicsWidget):
+    def __init__(self, low, high, parent=None):
+        super().__init__(parent)
+        self.low = low
+        self.high = high
+        self.color_table = None
+
+        layout = QtGui.QGraphicsLinearLayout(Qt.Vertical)
+        self.setLayout(layout)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(1)
+
+        layout_labels = QtGui.QGraphicsLinearLayout(Qt.Horizontal)
+        layout.addItem(layout_labels)
+        layout_labels.setContentsMargins(0, 0, 0, 0)
+        label_lo = QtGui.QGraphicsSimpleTextItem("%.2f" % low, self)
+        label_hi = QtGui.QGraphicsSimpleTextItem("%.2f" % high, self)
+        self.item_low = GraphicsSimpleTextLayoutItem(label_lo, parent=self)
+        self.item_high = GraphicsSimpleTextLayoutItem(label_hi, parent=self)
+
+        layout_labels.addItem(self.item_low)
+        layout_labels.addStretch(10)
+        layout_labels.addItem(self.item_high)
+
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.__pixitem = GraphicsPixmapWidget(parent=self, scaleContents=True,
+                                              aspectMode=Qt.IgnoreAspectRatio)
+        self.__pixitem.setMinimumHeight(12)
+        layout.addItem(self.__pixitem)
+        self.__update()
+
+    def set_color_table(self, color_table):
+        self.color_table = color_table
+        self.__update()
+
+    def __update(self):
+        data = np.linspace(self.low, self.high, num=50, endpoint=True)
+        data = data.reshape((1, -1))
+        argb, _ = pg.makeARGB(data, lut=self.color_table,
+                              levels=(self.low, self.high))
+        qimg = pg.makeQImage(argb, transpose=False)
+        self.__pixitem.setPixmap(QPixmap.fromImage(qimg))
+
+        self.item_low.setText("%.2f" % self.low)
+        self.item_high.setText("%.2f" % self.high)
+        self.layout().invalidate()
+
+
+class HeatmapSelectionManager(QObject):
+    """Selection manager for heatmap rows
     """
-    xs, xe, ys, ye = bindices(node, region)
+    selection_changed = Signal()
+    selection_finished = Signal()
 
-    if node.contingencies.ndim == 3:
-        c = node.contingencies
-        # compute_chisqares expects classes in 1 dim
-        chi_lr, chi_up = compute_chi_squares(
-            c[xs: xe, ys: ye, :].swapaxes(1, 2).swapaxes(0, 1)
-        )
+    def __init__(self, parent=None):
+        QObject.__init__(self, parent)
+        self.selections = []
+        self.selection_ranges = []
+        self.heatmap_widgets = []
+        self.selection_rects = []
+        self.heatmaps = []
+        self._heatmap_ranges = {}
+        self._start_row = 0
 
-        def max_chisq(i, j):
-            def valid(i, j):
-                return 0 <= i < chi_up.shape[0] and \
-                       0 <= j < chi_lr.shape[1]
+    def clear(self):
+        self.remove_rows(self.selection)
 
-            return max(chi_lr[i, j] if valid(i, j) else 0,
-                       chi_lr[i, j - 1] if valid(i, j - 1) else 0,
-                       chi_up[i, j] if valid(i, j) else 0,
-                       chi_up[i - 1, j] if valid(i - 1, j) else 0)
+    def set_heatmap_widgets(self, widgets):
+        self.remove_rows(self.selections)
+        self.heatmaps = list(zip(*widgets))
 
-        return [(max_chisq(i - xs, j - ys), i, j,
-                 QRectF(QPointF(node.xbins[i], node.ybins[j]),
-                        QPointF(node.xbins[i + 1], node.ybins[j + 1])))
-                 for i, j in itertools.product(range(xs, xe), range(ys, ye))]
+        # Compute row ranges for all heatmaps
+        self._heatmap_ranges = {}
+        start = end = 0
+
+        for group in zip(*widgets):
+            start = end = 0
+            for heatmap in group:
+                end += heatmap.heatmap_data().shape[0]
+                self._heatmap_ranges[heatmap] = (start, end)
+                start = end
+
+    def select_rows(self, rows, heatmap=None, clear=True):
+        """Add `rows` to selection. If `heatmap` is provided the rows
+        are mapped from the local indices to global heatmap indics. If `clear`
+        then remove previous rows.
+        """
+        if heatmap is not None:
+            start, _ = self._heatmap_ranges[heatmap]
+            rows = [start + r for r in rows]
+
+        old_selection = list(self.selections)
+        if clear:
+            self.selections = rows
+        else:
+            self.selections = sorted(set(self.selections + rows))
+
+        if self.selections != old_selection:
+            self.update_selection_rects()
+            self.selection_changed.emit()
+
+    def remove_rows(self, rows):
+        """Remove `rows` from the selection.
+        """
+        old_selection = list(self.selections)
+        self.selections = sorted(set(self.selections) - set(rows))
+        if old_selection != self.selections:
+            self.update_selection_rects()
+            self.selection_changed.emit()
+
+    def combined_ranges(self, ranges):
+        combined_ranges = set()
+        for start, end in ranges:
+            if start <= end:
+                rng = range(start, end + 1)
+            else:
+                rng = range(start, end - 1, -1)
+            combined_ranges.update(rng)
+        return sorted(combined_ranges)
+
+    def selection_start(self, heatmap_widget, event):
+        """ Selection  started by `heatmap_widget` due to `event`.
+        """
+        pos = heatmap_widget.mapFromScene(event.scenePos())
+        row, _ = heatmap_widget.cell_at(pos)
+
+        start, _ = self._heatmap_ranges[heatmap_widget]
+        row = start + row
+        self._start_row = row
+        range = (row, row)
+        if event.modifiers() & Qt.ControlModifier:
+            self.selection_ranges.append(range)
+        else:
+            self.selection_ranges = [range]
+        self.select_rows(self.combined_ranges(self.selection_ranges))
+
+    def selection_update(self, heatmap_widget, event):
+        """ Selection updated by `heatmap_widget due to `event` (mouse drag).
+        """
+        pos = heatmap_widget.mapFromScene(event.scenePos())
+        row, _ = heatmap_widget.cell_at(pos)
+        if row < 0:
+            return
+
+        start, _ = self._heatmap_ranges[heatmap_widget]
+        row = start + row
+        if self.selection_ranges:
+            self.selection_ranges[-1] = (self._start_row, row)
+        else:
+            self.selection_ranges = [(row, row)]
+
+        self.select_rows(self.combined_ranges(self.selection_ranges))
+
+    def selection_finish(self, heatmap_widget, event):
+        """ Selection finished by `heatmap_widget due to `event`.
+        """
+        pos = heatmap_widget.mapFromScene(event.scenePos())
+        row, _ = heatmap_widget.cell_at(pos)
+        start, _ = self._heatmap_ranges[heatmap_widget]
+        row = start + row
+        range = (self._start_row, row)
+        self.selection_ranges[-1] = range
+        self.select_rows(self.combined_ranges(self.selection_ranges),
+                         clear=not event.modifiers() & Qt.ControlModifier)
+        self.selection_finished.emit()
+
+    def selection_add(self, start, end, heatmap=None, clear=True):
+        """ Add a selection range from `start` to `end`.
+        """
+        if heatmap is not None:
+            _start, _ = self._heatmap_ranges[heatmap]
+            start = _start + start
+            end = _start + end
+
+        if clear:
+            self.selection_ranges = []
+        self.selection_ranges.append((start, end))
+        self.select_rows(self.combined_ranges(self.selection_ranges))
+        self.selection_finished.emit()
+
+    def update_selection_rects(self):
+        """ Update the selection rects.
+        """
+        def continuous_ranges(selections):
+            """ Group continuous ranges
+            """
+            selections = iter(selections)
+            start = end = next(selections)
+            try:
+                while True:
+                    new_end = next(selections)
+                    if new_end > end + 1:
+                        yield start, end
+                        start = end = new_end
+                    else:
+                        end = new_end
+            except StopIteration:
+                yield start, end
+
+        def group_selections(selections):
+            """Group selections along with heatmaps.
+            """
+            rows2hm = self.rows_to_heatmaps()
+            selections = iter(selections)
+            start = end = next(selections)
+            end_heatmaps = rows2hm[end]
+            try:
+                while True:
+                    new_end = next(selections)
+                    new_end_heatmaps = rows2hm[new_end]
+                    if new_end > end + 1 or new_end_heatmaps != end_heatmaps:
+                        yield start, end, end_heatmaps
+                        start = end = new_end
+                        end_heatmaps = new_end_heatmaps
+                    else:
+                        end = new_end
+
+            except StopIteration:
+                yield start, end, end_heatmaps
+
+        def selection_rect(start, end, heatmaps):
+            rect = QRectF()
+            for heatmap in heatmaps:
+                h_start, _ = self._heatmap_ranges[heatmap]
+                rect |= heatmap.mapToScene(heatmap.row_rect(start - h_start)).boundingRect()
+                rect |= heatmap.mapToScene(heatmap.row_rect(end - h_start)).boundingRect()
+            return rect
+
+        self.selection_rects = []
+        for start, end, heatmaps in group_selections(self.selections):
+            rect = selection_rect(start, end, heatmaps)
+            self.selection_rects.append(rect)
+
+    def rows_to_heatmaps(self):
+        heatmap_groups = zip(*self.heatmaps)
+        rows2hm = {}
+        for heatmaps in heatmap_groups:
+            hm = heatmaps[0]
+            start, end = self._heatmap_ranges[hm]
+            rows2hm.update(dict.fromkeys(range(start, end), heatmaps))
+        return rows2hm
+
+
+def test_main(argv=sys.argv):
+    if len(argv) > 1:
+        filename = argv[1]
     else:
-        return [(1, i, j,
-                 QRectF(QPointF(node.xbins[i], node.ybins[j]),
-                        QPointF(node.xbins[i + 1], node.ybins[j + 1])))
-                 for i, j in itertools.product(range(xs, xe), range(ys, ye))]
+        filename = "brown-selected"
 
+    app = QtGui.QApplication(argv)
+    ow = OWHeatMap()
 
-def compute_chi_squares(observes):
-    # compute chi squares for left-right neighbours
-
-    def get_estimates(observes):
-        estimates = []
-        for obs in observes:
-            n = obs.sum()
-            sum_rows = obs.sum(1)
-            sum_cols = obs.sum(0)
-            prob_rows = sum_rows / n
-            prob_cols = sum_cols / n
-            rows, cols = np.indices(obs.shape)
-            est = np.zeros(obs.shape)
-            est[rows, cols] = n * prob_rows[rows] * prob_cols[cols]
-            estimates.append(est)
-        return np.nan_to_num(np.array(estimates))
-
-    estimates = get_estimates(observes)
-
-    depth, rows, coll = np.indices(( observes.shape[0], observes.shape[1], observes.shape[2]-1 ))
-    colr = coll + 1
-    obs_dblstack = np.array([ observes[depth, rows, coll], observes[depth, rows, colr] ])
-    obs_pairs = np.zeros(( obs_dblstack.shape[1], obs_dblstack.shape[2], obs_dblstack.shape[3], obs_dblstack.shape[0] ))
-    depth, rows, coll, pairs = np.indices(obs_pairs.shape)
-    obs_pairs[depth, rows, coll, pairs] = obs_dblstack[pairs, depth, rows, coll]
-
-    depth, rows, coll = np.indices(( estimates.shape[0], estimates.shape[1], estimates.shape[2]-1 ))
-    colr = coll + 1
-    est_dblstack = np.array([ estimates[depth, rows, coll], estimates[depth, rows, colr] ])
-    est_pairs = np.zeros(( est_dblstack.shape[1], est_dblstack.shape[2], est_dblstack.shape[3], est_dblstack.shape[0] ))
-    depth, rows, coll, pairs = np.indices(est_pairs.shape)
-    est_pairs[depth, rows, coll, pairs] = est_dblstack[pairs, depth, rows, coll]
-
-    oe2e = (obs_pairs - est_pairs)**2 / est_pairs
-    chi_squares_lr = np.nan_to_num(np.nansum(np.nansum(oe2e, axis=3), axis=0))
-
-    # compute chi squares for up-down neighbours
-    depth, rowu, cols = np.indices(( observes.shape[0], observes.shape[1]-1, observes.shape[2] ))
-    rowd = rowu + 1
-    obs_dblstack = np.array([ observes[depth, rowu, cols], observes[depth, rowd, cols] ])
-    obs_pairs = np.zeros(( obs_dblstack.shape[1], obs_dblstack.shape[2], obs_dblstack.shape[3], obs_dblstack.shape[0] ))
-    depth, rowu, cols, pairs = np.indices(obs_pairs.shape)
-    obs_pairs[depth, rowu, cols, pairs] = obs_dblstack[pairs, depth, rowu, cols]
-
-    depth, rowu, cols = np.indices(( estimates.shape[0], estimates.shape[1]-1, estimates.shape[2] ))
-    rowd = rowu + 1
-    est_dblstack = np.array([ estimates[depth, rowu, cols], estimates[depth, rowd, cols] ])
-    est_pairs = np.zeros(( est_dblstack.shape[1], est_dblstack.shape[2], est_dblstack.shape[3], est_dblstack.shape[0] ))
-    depth, rowu, cols, pairs = np.indices(est_pairs.shape)
-    est_pairs[depth, rowu, cols, pairs] = est_dblstack[pairs, depth, rowu, cols]
-
-    oe2e = (obs_pairs - est_pairs)**2 / est_pairs
-    chi_squares_ud = np.nan_to_num(np.nansum(np.nansum(oe2e, axis=3), axis=0))
-
-    return (chi_squares_lr, chi_squares_ud)
-
-
-def main():
-    import sip
-    app = QtGui.QApplication([])
-    w = OWHeatMap()
-    w.show()
-    w.raise_()
-    data = Orange.data.Table('iris')
-#     data = Orange.data.Table('housing')
-    data = Orange.data.Table('adult')
-    w.set_data(data)
-    rval = app.exec_()
-    w.onDeleteWidget()
-
-    sip.delete(w)
-    del w
-    app.processEvents()
-    return rval
+    ow.set_dataset(Orange.data.Table(filename))
+    ow.handleNewSignals()
+    ow.show()
+    ow.raise_()
+    app.exec_()
+    ow.saveSettings()
+    return 0
 
 if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+    sys.exit(test_main())
