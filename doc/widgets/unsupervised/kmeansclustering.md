@@ -23,7 +23,7 @@ Signals
 Description
 -----------
 
-The widget applies k-Means clustering algorithm to the data
+The widget applies [k-Means clustering](https://en.wikipedia.org/wiki/K-means_clustering) algorithm to the data
 and outputs a new data set in which the cluster index is used as
 a class attribute. The original class attribute, if it existed, is
 moved to meta attributes. The basic information on the clustering
@@ -38,7 +38,7 @@ results is also shown in the widget.
       - **Inter-cluster distance** (measures distances between clusters, normally between centroids)
       - **Distance to [centroids](https://en.wikipedia.org/wiki/Centroid)** (measures distances to the arithmetic means of clusters)
 2. Select initialization method (the way the algorithm begins clutering):
-    - **k-Means++** (first center is selected randomly, subsequent are chosen from the remaining points with probability proportioned to squared distance from the closest center)
+    - [**k-Means++**](https://en.wikipedia.org/wiki/K-means%2B%2B) (first center is selected randomly, subsequent are chosen from the remaining points with probability proportioned to squared distance from the closest center)
     - **Random initialization** (clusters are assigned randomly at first and then updated with further iterations)
   **Re-runs** (how many times the algorithm is run) and **maximal iterations** (the maximum number of iteration within each algorithm run) can be set manually.
 3. The widget outputs a new data set with appended cluster information. Select how to append cluster information (as class, feature or meta attribute) and name the column.
