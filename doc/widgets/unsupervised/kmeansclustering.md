@@ -40,7 +40,8 @@ results is also shown in the widget.
 2. Select initialization method (the way the algorithm begins clutering):
     - [**k-Means++**](https://en.wikipedia.org/wiki/K-means%2B%2B) (first center is selected randomly, subsequent are chosen from the remaining points with probability proportioned to squared distance from the closest center)
     - **Random initialization** (clusters are assigned randomly at first and then updated with further iterations)
-  **Re-runs** (how many times the algorithm is run) and **maximal iterations** (the maximum number of iteration within each algorithm run) can be set manually.
+
+    **Re-runs** (how many times the algorithm is run) and **maximal iterations** (the maximum number of iteration within each      algorithm run) can be set manually.
 3. The widget outputs a new data set with appended cluster information. Select how to append cluster information (as class, feature or meta attribute) and name the column.
 4. If *Run on every change* is ticked, the widget will commit changes automatically. Alternatively, click *Run*.
 
@@ -51,7 +52,7 @@ We are going to explore the widget with the following schema.
 
 ![image](images/K-MeansClustering-Schema.png)
 
-The beginning is nothing special: we load *Iris* data set, divide it into
+The beginning is nothing special: we load the *Iris* data set, divide it into
 three clusters and show it in **Data Table**, where we can observe which instance
 went into which cluster. The interesting parts are the **Scatter Plot** and
 **Select Rows**.
@@ -88,8 +89,8 @@ we reinstate the original class *Iris* as the class and put the cluster index am
 attributes.
 
 The match is perfect for *setosa*: all instances of setosa are in the
-second cluster (blue). 48 versicolors are in the third cluster (red),
-while two ended up in the first. For virginicae, 36 are in the first
+second cluster (blue). 48 *versicolors* are in the third cluster (red),
+while two ended up in the first. For *virginicae*, 36 are in the first
 cluster and 14 in the third.
 
 ![image](images/K-MeansClustering-Example2.png)
