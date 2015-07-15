@@ -15,13 +15,15 @@ install:
       fi
 
 before_script:
+    - pip install coveralls
 
 script:
     - cd $TRAVIS_BUILD_DIR
-    - python setup.py test
+    - coverage run --source=Orange setup.py test
     - cd $TRAVIS_BUILD_DIR/doc && make html
 
 after_success:
+    - coveralls
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
         source $TRAVIS_BUILD_DIR/travis/upload_doc.sh;
       fi
