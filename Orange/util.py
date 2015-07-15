@@ -1,5 +1,15 @@
 """Various small utilities that might be useful everywhere"""
 
+import numpy as np
+
+
+def scale(values, min=0, max=1):
+    """Return values scaled to [min, max]"""
+    ptp = np.nanmax(values) - np.nanmin(values)
+    if ptp == 0:
+        return np.clip(values, min, max)
+    return (-np.nanmin(values) + values) / ptp * (max - min) + min
+
 
 def abstract(obj):
     """Designate decorated class or method abstract."""
