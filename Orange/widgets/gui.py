@@ -2649,6 +2649,8 @@ class CallFrontListBoxLabels(ControlledCallFront):
                         item = QtGui.QListWidgetItem(attributeIconDict[icon], text)
                     else:
                         item = QtGui.QListWidgetItem(icon, text)
+                elif isinstance(value, Variable):
+                    item = QtGui.QListWidgetItem(*attributeItem(value))
                 else:
                     item = QtGui.QListWidgetItem(value)
 
