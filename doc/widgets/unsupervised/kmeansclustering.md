@@ -32,8 +32,8 @@ results is also shown in the widget.
 ![image](images/kMeans-stamped.png)
 
 1. Select the number of clusters.
-    - Fixed: algorithm clusters data in a specified number of clusters.
-    - Optimized: algorithm returns possible clusters within the selected cluster range with appended scoring (bigger is better).
+    - **Fixed**: algorithm clusters data in a specified number of clusters.
+    - **Optimized**: algorithm returns possible clusters within the selected cluster range with appended scoring (bigger is better).
       - [**Silhouette**](https://en.wikipedia.org/wiki/Silhouette_(clustering)) (contrasts average distance to elements in the same cluster with the average distance to elements in other clusters)
       - **Inter-cluster distance** (measures distances between clusters, normally between centroids)
       - **Distance to [centroids](https://en.wikipedia.org/wiki/Centroid)** (measures distances to the arithmetic means of clusters)
@@ -41,7 +41,8 @@ results is also shown in the widget.
     - **k-Means++** (first center is selected randomly, subsequent are chosen from the remaining points with probability proportioned to squared distance from the closest center)
     - **Random initialization** (clusters are assigned randomly at first and then updated with further iterations)
   **Re-runs** (how many times the algorithm is run) and **maximal iterations** (the maximum number of iteration within each algorithm run) can be set manually.
-3. 
+3. The widget output is a new data set with appended cluster information. Select how to append cluster information (as class, feature or meta attribute) and name the column.
+4. If *Run on every change is ticked*, the widget will commit changes automatically. Alternatively, click *Run*.
 
 Examples
 --------
