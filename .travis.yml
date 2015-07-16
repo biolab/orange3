@@ -20,9 +20,10 @@ before_script:
 script:
     - cd $TRAVIS_BUILD_DIR
     - coverage run --source=Orange setup.py test
-    - cd $TRAVIS_BUILD_DIR/doc && make html
+    - (cd $TRAVIS_BUILD_DIR/doc && make html)
 
 after_success:
+    - cd $TRAVIS_BUILD_DIR
     - coveralls
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
         source $TRAVIS_BUILD_DIR/travis/upload_doc.sh;
