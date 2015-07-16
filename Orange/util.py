@@ -1,6 +1,12 @@
 """Various small utilities that might be useful everywhere"""
 
+from itertools import chain
 import numpy as np
+
+
+def flatten(lst):
+    """Flatten iterable a single level."""
+    return chain.from_iterable(lst)
 
 
 def scale(values, min=0, max=1):
