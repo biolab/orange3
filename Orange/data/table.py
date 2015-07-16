@@ -15,6 +15,7 @@ import bottlechest as bn
 from scipy import sparse as sp
 
 from .instance import *
+from Orange.util import flatten
 from Orange.data import Domain, io, DiscreteVariable, ContinuousVariable, Variable
 from Orange.data.storage import Storage
 from . import _contingency
@@ -856,6 +857,43 @@ class Table(MutableSequence, Storage):
         except Exception:
             self._resize_all(old_length)
             raise
+
+    @staticmethod
+    def concatenate(tables, axis=1):
+        """Return concatenation of `tables` by `axis`."""
+        if not tables:
+            raise ValueError('need at least one table to concatenate')
+        if 1 == len(tables):
+            return tables[0].copy()
+        CONCAT_ROWS, CONCAT_COLS = 0, 1
+        if axis == CONCAT_ROWS:
+            table = tables[0].copy()
+            for t in tables[1:]:
+                table.extend(t)
+            return table
+        elif axis == CONCAT_COLS:
+            from operator import iand, attrgetter
+            from functools import reduce
+            if reduce(iand,
+                      (set(map(attrgetter('name'),
+                               chain(t.domain.variables, t.domain.metas)))
+                       for t in tables)):
+                raise ValueError('Concatenating two domains with variables '
+                                 'with same name is undefined')
+            domain = Domain(flatten(t.domain.attributes for t in tables),
+                            flatten(t.domain.class_vars for t in tables),
+                            flatten(t.domain.metas for t in tables))
+
+            def ndmin(A):
+                return A if A.ndim > 1 else A.reshape(A.shape[0], 1)
+
+            table = Table.from_numpy(domain,
+                                     np.hstack(tuple(ndmin(t.X) for t in tables)),
+                                     np.hstack(tuple(ndmin(t.Y) for t in tables)),
+                                     np.hstack(tuple(ndmin(t.metas) for t in tables)),
+                                     np.hstack(tuple(ndmin(t.W) for t in tables)))
+            return table
+        raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
 
     def is_view(self):
         """
