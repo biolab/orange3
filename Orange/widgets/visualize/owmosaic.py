@@ -15,7 +15,7 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
 
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.canvas.utils import environ
+
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.distribution import get_distribution
@@ -182,8 +182,7 @@ class OWMosaicDisplay(OWWidget):
                               tooltip="Change the order of attribute values")
             butt.setFixedSize(26, 24)
             butt.setCheckable(1)
-            butt.setIcon(QIcon(os.path.join(environ.widget_install_dir,
-                                            "icons/Dlg_sort.png")))
+            butt.setIcon(QIcon(gui.resource_filename("icons/Dlg_sort.png")))
             setattr(self, "sort{}".format(i), butt)
             setattr(self, "attr{}".format(i) + "Combo", combo)
 
@@ -1078,10 +1077,10 @@ class SortAttributeValuesDlg(OWWidget):
                                        tooltip="Move selected attribute values up")
         self.buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
                                          tooltip="Move selected attribute values down")
-        self.buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
+        self.buttonUPAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_up3.png")))
         self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         self.buttonUPAttr.setFixedWidth(40)
-        self.buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
+        self.buttonDOWNAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_down3.png")))
         self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         self.buttonDOWNAttr.setFixedWidth(40)
 

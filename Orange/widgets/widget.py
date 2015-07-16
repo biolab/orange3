@@ -5,12 +5,10 @@ import os
 import warnings
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
-    QDir, QEventLoop
+    QEventLoop
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
-    qApp, QFrame, QStatusBar, QHBoxLayout, QIcon, QTabWidget, QStyle,\
-    QApplication
+    qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QApplication
 
-from Orange.canvas.utils import environ
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.scheme import widgetsscheme as widget_scheme
@@ -226,12 +224,10 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
             self._warningWidget = createPixmapWidget(
                 self.statusBarIconArea,
-                os.path.join(environ.widget_install_dir,
-                             "icons/triangle-orange.png"))
+                gui.resource_filename("icons/triangle-orange.png"))
             self._errorWidget = createPixmapWidget(
                 self.statusBarIconArea,
-                os.path.join(environ.widget_install_dir,
-                             "icons/triangle-red.png"))
+                gui.resource_filename("icons/triangle-red.png"))
 
     # status bar handler functions
     def setState(self, stateType, id, text):
@@ -680,29 +676,27 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.resize(self.width(), new_height)
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
-        pixmaps = self.getWidgetStateIcons()
+        iconpaths = {
+            "Info": gui.resource_filename("icons/information.png"),
+            "Warning": gui.resource_filename("icons/warning.png"),
+            "Error": gui.resource_filename("icons/error.png")
+        }
         items = []
-        iconPath = {"Info": "canvasIcons:information.png",
-                    "Warning": "canvasIcons:warning.png",
-                    "Error": "canvasIcons:error.png"}
+
         for show, what in [(info, "Info"), (warning, "Warning"),
                            (error, "Error")]:
             if show and self.widgetState[what]:
                 items.append('<img src="%s" style="float: left;"> %s' %
-                             (iconPath[what],
+                             (iconpaths[what],
                               "\n".join(self.widgetState[what].values())))
         return "<br>".join(items)
 
     @classmethod
     def getWidgetStateIcons(cls):
         if not hasattr(cls, "_cached__widget_state_icons"):
-            iconsDir = os.path.join(environ.canvas_install_dir, "icons")
-            QDir.addSearchPath("canvasIcons",
-                               os.path.join(environ.canvas_install_dir,
-                                            "icons/"))
-            info = QPixmap("canvasIcons:information.png")
-            warning = QPixmap("canvasIcons:warning.png")
-            error = QPixmap("canvasIcons:error.png")
+            info = QPixmap(gui.resource_filename("icons/information.png"))
+            warning = QPixmap(gui.resource_filename("icons/warning.png"))
+            error = QPixmap(gui.resource_filename("icons/error.png"))
             cls._cached__widget_state_icons = \
                 {"Info": info, "Warning": warning, "Error": error}
         return cls._cached__widget_state_icons
