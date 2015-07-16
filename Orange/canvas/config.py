@@ -196,7 +196,8 @@ def widget_settings_dir():
     """
     Return the widget settings directory.
     """
-    return os.path.join(data_dir(), 'widgets')
+    import Orange.misc.environ
+    return Orange.misc.environ.widget_settings_dir()
 
 
 def open_config():
