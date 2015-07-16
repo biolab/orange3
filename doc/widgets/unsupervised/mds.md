@@ -75,6 +75,13 @@ recommend reading this widget's description as well.
 Example
 -------
 
-The above graphs were drawn using the following simple schema.
+The above graphs were drawn using the following simple schema. Using the *Distances* widget we input the distance matrix
+into the *MDS* widget, where we see the *Iris* data displayed in a 2-dimensional plane. We can see the appended coordinates
+in the *Data Table* widget.
 
 ![image](images/MDS-Example.png)
+
+References
+----------
+
+Wickelmaier, F. (2003). An Introduction to MDS. Sound Quality Research Unit, Aalborg University. Available [here](https://homepages.uni-tuebingen.de/florian.wickelmaier/pubs/Wickelmaier2003SQRU.pdf).
