@@ -79,7 +79,7 @@ The above graphs were drawn using the following simple schema. Using the *Distan
 into the *MDS* widget, where we see the *Iris* data displayed in a 2-dimensional plane. We can see the appended coordinates
 in the *Data Table* widget.
 
-![image](images/MDS-Example.png)
+<img src="images/MDS-Example.png" alt="image" width="600">
 
 References
 ----------
