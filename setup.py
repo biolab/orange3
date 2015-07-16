@@ -11,7 +11,7 @@ VERSION = '3.2'
 ISRELEASED = False
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
-README_FILE = os.path.join(os.path.dirname(__file__), 'README.txt')
+README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
 LONG_DESCRIPTION = open(README_FILE).read()
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'contact@orange.biolab.si'
