@@ -1,7 +1,26 @@
 language: python
 
+sudo: false
+
 python:
     - '3.4'
+
+cache:
+    apt: true
+    directories:
+        - $TRAVIS_BUILD_DIR/wheelhouse
+        - $HOME/.cache/pip
+        - $HOME/.ccache
+
+before_cache:
+
+addons:
+    apt:
+        packages:
+            - libblas-dev
+            - liblapack-dev
+            - postgresql-server-dev-9.1
+            - libqt4-dev
 
 before_install:
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ]; then
