@@ -15,8 +15,7 @@ import bottlechest as bn
 from scipy import sparse as sp
 
 from .instance import *
-from Orange.data import (domain as orange_domain,
-                         io, DiscreteVariable, ContinuousVariable, Variable)
+from Orange.data import Domain, io, DiscreteVariable, ContinuousVariable, Variable
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -187,7 +186,7 @@ class Table(MutableSequence, Storage):
                 return cls.from_file(args[0], **kwargs)
         elif isinstance(args[0], Table):
             return cls.from_table(args[0].domain, args[0])
-        elif isinstance(args[0], orange_domain.Domain):
+        elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
                 return cls.from_domain(domain, **kwargs)
@@ -391,7 +390,7 @@ class Table(MutableSequence, Storage):
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
         if domain is None:
-            domain = orange_domain.Domain.from_numpy(X, Y, metas)
+            domain = Domain.from_numpy(X, Y, metas)
 
         if Y is None:
             if sp.issparse(X):
@@ -656,7 +655,7 @@ class Table(MutableSequence, Storage):
                          if col >= n_attrs]
             r_metas = [attributes[i]
                        for i, col in enumerate(col_indices) if col < 0]
-            domain = orange_domain.Domain(r_attrs, r_classes, r_metas)
+            domain = Domain(r_attrs, r_classes, r_metas)
         else:
             domain = self.domain
         return Table.from_table(domain, self, row_idx)
