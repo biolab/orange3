@@ -274,7 +274,8 @@ class SettingsHandler:
     def _get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
         return os.path.join(widget_settings_dir(),
-                            self.widget_class.__name__ + ".ini")
+                            "{0.__module__}.{0.__qualname__}.pickle"
+                            .format(self.widget_class))
 
     def initialize(self, instance, data=None):
         """
