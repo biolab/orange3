@@ -57,9 +57,7 @@ positions the points using Torgerson’s method.
     - **Refresh**: It can do so at Every step, Every 10 steps or Every 100 steps. Setting a lower refresh
 interval makes the animation more visually appealing, but can be slow if
 the number of points is high.
-
-  Optimization is run automatically in the beginning and later by pushing *Start*.
-  
+<br><br>Optimization is run automatically in the beginning and later by pushing *Start*.
 2. Defines how the points are visualized:
     - **Color**: depends upon values of discrete attributes
     - **Shape**: depends upon values of discrete attributes
@@ -68,12 +66,9 @@ continuous attribute (Stress) of the instance the point represents.
     - **Label**: Any attribute can serve as a label.
     - **Symbol size**:
     - **Symbol opacity**:
-
-  These options are available only when visalizing distances between rows (selected in the **Distances** widget).
-
+<br><br>These options are available only when visalizing distances between rows (selected in the **Distances** widget).
 3. Adjust the graph with *Zoom/Select*. Arrow enables you to select data instances.
   The magnifying glass enables zooming, which can be also done by scrolling in and out. Hand allows you to move the graph around. Rectangle readjusts the graph proportionally.
-
 4. Append the coordinates of each point to the data set. They can be appended either
 as normal attributes (*As attributes*) or as meta attributes (*As metas*). Select *Do not append* to omit this function.
   Sending the instances can be automatic if *Send after any change* is checked. Alternatively click *Send data*.
