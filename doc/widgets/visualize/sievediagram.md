@@ -33,6 +33,15 @@ the standard Pearson residual) appears as the density of shading, using
 color to indicate whether the deviation from independence is positive
 (blue) or negative (red).
 
+![image](images/SieveDiagram-stamped.png)
+
+1. Select the attributes you want to display in the sieve plot.
+2. Select an additional condition for the plot. This will show the selected two attributes only for the defined condition (e.g. attribute = survived, value = no).
+3. Visual settings for your plot.
+    - *Show lines* displays horizontal and vertical lines representing observed frequency.
+    - *Show data examples...* displayes dots in the plot that represent instances.
+    - *...in color* adds the corresponding color to the dots.
+
 The snapshot below shows a sieve diagram for *Titanic* data set and has
 attributes *sex* and *survived* (the latter is a class attribute in
 this data set). The plot shows that the two variables are highly
