@@ -1,8 +1,9 @@
-from functools import reduce
+
 import sys
 import time
 import os
 import warnings
+from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
     QEventLoop
@@ -92,7 +93,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     widgetStateChanged = Signal(str, int, str)
     blockingStateChanged = Signal(bool)
-    asyncCallsStateChange = Signal()
     progressBarValueChanged = Signal(float)
     processingStateChanged = Signal(int)
 
@@ -112,7 +112,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.signalManager = kwargs.get('signal_manager', None)
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
-        self._guiElements = []      # used for automatic widget debugging
         self.__reportData = None
 
         OWWidget.widget_id += 1
@@ -239,26 +238,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # TODO add!
     def prepareDataReport(self, data):
         pass
-
-
-    # ##############################################
-    """
-    def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
-        self.error([1234, 1235, 1236])
-        if not data:
-            return 0
-        if not data.domain.classVar:
-            self.error(1234, "A data set with a class attribute is required.")
-            return 0
-        if wantedVarType and data.domain.classVar.varType != wantedVarType:
-            self.error(1235, "Unable to handle %s class." %
-                             str(data.domain.class_var.var_type).lower())
-            return 0
-        if checkMissing and not orange.Preprocessor_dropMissingClasses(data):
-            self.error(1236, "Unable to handle data set with no known classes")
-            return 0
-        return 1
-    """
 
     def restoreWidgetPosition(self):
         restored = False
@@ -395,19 +374,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def saveSettings(self):
         self.settingsHandler.update_defaults(self)
 
-    # this function is only intended for derived classes to send appropriate
-    # signals when all settings are loaded
-    def activate_loaded_settings(self):
-        pass
-
-    # reimplemented in other widgets
     def onDeleteWidget(self):
+        """
+        Invoked by the canvas to notify the widget it has been deleted
+        from the workflow.
+
+        If possible, subclasses should gracefully cancel any currently
+        executing tasks.
+        """
         pass
 
     def handleNewSignals(self):
-        # this is called after all new signals have been handled
-        # implement this in your widget if you want to process something only
-        # after you received multiple signals
+        """
+        Invoked by the workflow signal propagation manager after all
+        signals handlers have been called.
+
+        Reimplement this method in order to coalesce updates from
+        multiple updated inputs.
+        """
         pass
 
     # ############################################
@@ -656,36 +640,34 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 lambda self: self.setVisible(not self.isVisible())}
 
     def setBlocking(self, state=True):
-        """ Set blocking flag for this widget. While this flag is set this
-        widget and all its descendants will not receive any new signals from
-        the signal manager
+        """
+        Set blocking flag for this widget.
+
+        While this flag is set this widget and all its descendants
+        will not receive any new signals from the workflow signal manager.
+
+        This is useful for instance if the widget does it's work in a
+        separate thread or schedules processing from the event queue.
+        In this case it can set the blocking flag in it's processNewSignals
+        method schedule the task and return immediately. After the task
+        has completed the widget can clear the flag and send the updated
+        outputs.
+
+        .. note::
+            Failure to clear this flag will block dependent nodes forever.
         """
         if self.__blocking != state:
             self.__blocking = state
             self.blockingStateChanged.emit(state)
 
     def isBlocking(self):
-        """ Is this widget blocking signal processing.
+        """
+        Is this widget blocking signal processing.
         """
         return self.__blocking
 
     def resetSettings(self):
         self.settingsHandler.reset_settings(self)
-
-
-def blocking(method):
-    """ Return method that sets blocking flag while executing
-    """
-    from functools import wraps
-
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        old = self._blocking
-        self.setBlocking(True)
-        try:
-            return method(self, *args, **kwargs)
-        finally:
-            self.setBlocking(old)
 
 
 # Pull signal constants from canvas to widget namespace
