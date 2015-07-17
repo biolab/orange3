@@ -1,3 +1,9 @@
+[run]
+omit =
+    Orange/canvas/*
+    Orange/widgets/*
+
+
 [report]
 exclude_lines =
     pragma: no cover
