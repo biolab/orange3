@@ -49,24 +49,30 @@ the sum of forces acting on it.
 
 ![image](images/MDS-zoo-stamped.png)
 
-1. The widget redraws the projection during optimization. Optimization is run automatically in the beginning and later by pushing *Start*.
+1. The widget redraws the projection during optimization. Optimization is run automatically in the beginning and later by
+   pushing *Start*.
     - **Max iterations**: The optimization stops either when the projection changes only minimally
-at the last iteration or when a maximum number of iterations has been reached.
-    - **Initialization**: PCA (Torgerson) positions the initial points along principal coordinate axes. *Random* sets the initial points to a random position and then readjusts them. 
-    - **Refresh**: Set how often you want to refresh the visualization. It can be at *Every iteration*, *Every 5/10/25/50 steps* or never (*None*). Setting a lower refresh interval makes the animation more visually appealing, but can be slow if
-the number of points is high.
-2. Defines how the points are visualized. These options are available only when visalizing distances between rows (selected in the **Distances** widget).
+      at the last iteration or when a maximum number of iterations has been reached.
+    - **Initialization**: PCA (Torgerson) positions the initial points along principal coordinate axes. *Random* sets the 
+      initial points to a random position and then readjusts them. 
+    - **Refresh**: Set how often you want to refresh the visualization. It can be at *Every iteration*, *Every 5/10/25/50  
+      steps* or never (*None*). Setting a lower refresh interval makes the animation more visually appealing, but can be slow
+      if the number of points is high.
+2. Defines how the points are visualized. These options are available only when visalizing distances between rows (selected 
+   in the **Distances** widget).
     - **Color**: Color of points by attribute (gray for continuous, colored for discrete).
     - **Shape**: Shape of points by attribute (only for discrete).
-    - **Size**: Set the size of points (*Same size* or select an attribute) or let the size depend on the value of the continuous attribute the point represents (Stress).
+    - **Size**: Set the size of points (*Same size* or select an attribute)
+      or let the size depend on the value of the continuous attribute the point represents (Stress).
     - **Label**: Discrete attributes can serve as a label.
     - **Symbol size**: Adjust the size of the dots.
     - **Symbol opacity**: Adjust the transparency level of the dots.
 3. Adjust the graph with *Zoom/Select*. Arrow enables you to select data instances.
-  The magnifying glass enables zooming, which can be also done by scrolling in and out. Hand allows you to move the graph around. Rectangle readjusts the graph proportionally.
+   The magnifying glass enables zooming, which can be also done by scrolling in and out. Hand allows you to move the graph 
+   around. Rectangle readjusts the graph proportionally.
 4. Append the coordinates of each point to the data set. They can be appended either
-as normal attributes (*As attributes*) or as meta attributes (*As metas*). Select *Do not append* to omit this function.
-  Sending the instances can be automatic if *Send after any change* is checked. Alternatively click *Send data*.
+   as normal attributes (*As attributes*) or as meta attributes (*As metas*). Select *Do not append* to omit this function.
+   Sending the instances can be automatic if *Send after any change* is checked. Alternatively click *Send data*.
 
 The MDS graph performs many of the functions of the visualizations
 widget. It is in many respects similar to the **Scatter Plot**, so we
