@@ -5,6 +5,7 @@ import pickle
 from itertools import chain
 
 import bottlechest as bn
+import numpy as np
 from sklearn import tree
 from scipy import sparse
 # We are not loading openpyxl here since it takes some time
@@ -39,6 +40,7 @@ class FileFormats:
             if hasattr(format, "write_graph"):
                 cls.graph_writers[extension] = format
             return format
+
         return f
 
 
@@ -99,7 +101,7 @@ class TabDelimFormat:
             is_class = "class" in flag
             is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
             is_weight = "w" in flag or "weight" in flag \
-                or tpe in ["w", "weight"]
+                        or tpe in ["w", "weight"]
 
             attrs = [f.split("=", 1) for f in flag if "=" in f]
 
@@ -115,7 +117,7 @@ class TabDelimFormat:
             elif tpe in ["w", "weight"]:
                 var = None
             elif tpe in ["d", "discrete"]:
-                var = DiscreteVariable() # no name to bypass caching
+                var = DiscreteVariable()  # no name to bypass caching
                 var.name = name
                 var.fix_order = True
             elif tpe in ["s", "string"]:
@@ -224,6 +226,7 @@ class TabDelimFormat:
 
     def _read_file(self, file, cls=None):
         from ..data import Table
+
         if cls is None:
             cls = Table
         domain = self.read_header(file)
@@ -328,6 +331,7 @@ class TxtFormat:
 
     def read_file(self, filename, cls=None):
         from ..data import Table
+
         if cls is None:
             cls = Table
         with open(filename, "rt") as file:
@@ -358,8 +362,8 @@ class TxtFormat:
 
                 writer.writerow([type(v).__name__.replace("Variable", "").lower()
                                  for v in all_vars])  # write variable types
-                writer.writerow(flags) # write flags
-            for ex in data: # write examples
+                writer.writerow(flags)  # write flags
+            for ex in data:  # write examples
                 writer.writerow(ex)
 
     @classmethod
@@ -376,6 +380,7 @@ class BasketFormat:
     def read_file(cls, filename, storage_class=None):
         if storage_class is None:
             from ..data import Table as storage_class
+
         def constr_vars(inds):
             if inds:
                 return [ContinuousVariable(x.decode("utf-8")) for _, x in
@@ -407,8 +412,9 @@ class ExcelFormat:
 
     def open_workbook(self, f):
         from openpyxl import load_workbook
+
         if isinstance(f, str) and ":" in f[2:]:
-            f, sheet = f.rsplit(":",1)
+            f, sheet = f.rsplit(":", 1)
         else:
             sheet = None
         wb = load_workbook(f, use_iterators=True,
@@ -430,9 +436,9 @@ class ExcelFormat:
         if not (all(tpe in ("", "c", "d", "s", "continuous", "discrete",
                             "string", "w", "weight") or " " in tpe
                     for tpe in types) and
-                all(flg in ("", "i", "ignore", "m", "meta", "w", "weight",
-                            "b", "basket", "class") or "=" in flg
-                    for flg in flags)):
+                    all(flg in ("", "i", "ignore", "m", "meta", "w", "weight",
+                                "b", "basket", "class") or "=" in flg
+                        for flg in flags)):
             return False
         attributes = []
         class_vars = []
@@ -502,8 +508,9 @@ class ExcelFormat:
 
     def read_header_1(self, worksheet):
         import openpyxl.cell.cell
+
         if worksheet.get_highest_column() < 2 or \
-                worksheet.get_highest_row() < 2:
+                        worksheet.get_highest_row() < 2:
             return False
         cols = self.n_columns
         names = [cell.value.strip() if cell.value is not None else ""
@@ -573,8 +580,8 @@ class ExcelFormat:
 
     def read_header(self, worksheet):
         domain = self.read_header_3(worksheet) or \
-            self.read_header_0(worksheet) or \
-            self.read_header_1(worksheet)
+                 self.read_header_0(worksheet) or \
+                 self.read_header_1(worksheet)
         if domain is False:
             raise ValueError("Invalid header")
         return domain
@@ -646,6 +653,7 @@ class ExcelFormat:
 
     def read_file(self, file, cls=None):
         from Orange.data import Table
+
         if cls is None:
             cls = Table
         worksheet = self.open_workbook(file)
@@ -673,6 +681,7 @@ class PickleFormat:
 
     def write(self, filename, table):
         self.write_file(filename, table)
+
 
 class ImgFormat:
     @staticmethod
@@ -707,9 +716,6 @@ class ImgFormat:
         scene.render(painter, target, source)
         cls._save_buffer(buffer, filename)
         painter.end()
-
-    def write_graph(self, filename, scene):
-        self.write_image(filename, scene)
 
     def write(self, filename, scene):
         if type(scene) == dict:

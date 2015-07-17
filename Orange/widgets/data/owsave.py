@@ -23,20 +23,14 @@ class OWSave(widget.OWWidget):
     last_dir = Setting("")
 
     def __init__(self, parent=None, signalManager=None, settings=None,
-                 scene=None, tree=None):
+                 data=None, file_formats=None):
         super().__init__(self, parent, signalManager, settings, "Save")
         self.data = None
         self.filename = ""
-        self.file_formats = FileFormats.writers
-        self.file_dialog_title = 'Save Orange Data File'
         self.format_index = 0
-        if scene is not None:
-            self.file_formats = FileFormats.img_writers
-            self.file_dialog_title = 'Save Image'
-        if tree is not None:
-            self.file_formats = FileFormats.graph_writers
-            self.file_dialog_title = 'Save Graph'
-
+        self.file_formats = FileFormats.writers
+        if file_formats:
+            self.file_formats = file_formats
         self.formats = tuple((FileFormats.names[ext], ext)
                              for ext in self.file_formats)
         self.comboBoxFormat = gui.comboBox(
@@ -51,10 +45,8 @@ class OWSave(widget.OWWidget):
                                  callback=self.save_file_as, disabled=True)
         self.setMinimumWidth(320)
         self.adjustSize()
-        if scene:
-            self.dataset(scene)
-        if scene and tree:
-            self.dataset({'scene': scene, 'tree': tree})
+        if data:
+            self.dataset(data)
 
     def reset_filename(self):
         base, ext = os.path.splitext(self.filename)
@@ -71,8 +63,7 @@ class OWSave(widget.OWWidget):
         f = self.formats[self.format_index]
         home_dir = os.path.expanduser("~")
         filename = QtGui.QFileDialog.getSaveFileName(
-            self, self.file_dialog_title,
-            self.filename or self.last_dir or home_dir,
+            self, 'Save', self.filename or self.last_dir or home_dir,
             '{} (*{})'.format(*f))
         if not filename:
             return

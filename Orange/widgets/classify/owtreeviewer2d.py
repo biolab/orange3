@@ -1,7 +1,9 @@
+from itertools import chain
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.widgets.data.owsave import OWSave
+from Orange.data.io import FileFormats
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -12,17 +14,17 @@ DefDroppletBrush = QBrush(Qt.darkGray)
 class GraphNode(object):
     def __init__(self, *_, **kwargs):
         self.edges = kwargs.get("edges", set())
-        
+
     def graph_edges(self):
         return self.edges
-    
+
     def graph_add_edge(self, edge):
         self.edges.add(edge)
-        
+
     def __iter__(self):
         for edge in self.edges:
             yield edge.node2
-            
+
     def graph_nodes(self, atype=1):
         pass
 
@@ -43,17 +45,17 @@ class GraphicsDroplet(QGraphicsEllipseItem):
         self.setAcceptedMouseButtons(Qt.LeftButton)
         self.setBrush(QBrush(Qt.gray))
         self.setPen(Qt.white)
-        
+
     def hoverEnterEvent(self, event):
         super().hoverEnterEvent(event)
         self.setBrush(QBrush(QColor(100, 100, 100)))
         self.update()
-        
+
     def hoverLeaveEvent(self, event):
         super().hoverLeaveEvent(event)
         self.setBrush(QBrush(QColor(200, 200, 200)))
         self.update()
-        
+
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self.parentItem().set_open(not self.parentItem().isOpen)
@@ -103,40 +105,40 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
 
     def setHtml(self, html):
         return super().setHtml("<body>" + html + "</body>")
-    
+
     def update_contents(self):
         self.setTextWidth(-1)
         self.setTextWidth(self.document().idealWidth())
         self.droplet.setPos(self.rect().center().x(), self.rect().height())
         self.droplet.setVisible(bool(self.branches))
-        
+
     def set_rect(self, rect):
         self.prepareGeometryChange()
         rect = QRectF() if rect is None else rect
         self._rect = rect
         self.update_contents()
         self.update()
-        
+
     def shape(self):
         path = QPainterPath()
         path.addRect(self.boundingRect())
         return path
-    
+
     def rect(self):
         if getattr(self, "_rect", QRectF()).isValid():
             return self._rect
         else:
             return QRectF(QPointF(0, 0), self.document().size()) | \
-                getattr(self, "_rect", QRectF(0, 0, 1, 1))
-        
+                   getattr(self, "_rect", QRectF(0, 0, 1, 1))
+
     def boundingRect(self):
         return self._rect if getattr(self, "_rect", QRectF()).isValid() \
             else super().boundingRect()
-    
-    @property  
+
+    @property
     def branches(self):
         return [edge.node2 for edge in self.graph_edges() if edge.node1 is self]
-    
+
     def paint(self, painter, option, widget=0):
         painter.save()
         painter.setBrush(self.backgroundBrush)
@@ -165,7 +167,7 @@ class GraphicsNode(TextTreeNode):
         for node in self.graph_traverse_bf():
             if node is not self:
                 node.setVisible(do_open)
-               
+
     def itemChange(self, change, value):
         if change in [QGraphicsItem.ItemPositionHasChanged,
                       QGraphicsItem.ItemVisibleHasChanged]:
@@ -179,14 +181,14 @@ class GraphicsNode(TextTreeNode):
                 QTimer.singleShot(0, edge.update_ends)
             elif edge.node2 is self:
                 edge.setVisible(self.isVisible())
-                
+
     def edge_in_point(self, edge):
         return edge.mapFromItem(
             self, QPointF(self.rect().center().x(), self.rect().y()))
 
     def edge_out_point(self, edge):
         return edge.mapFromItem(self.droplet, self.droplet.rect().center())
-    
+
     def paint(self, painter, option, widget=0):
         if self.isSelected():
             option.state ^= QStyle.State_Selected
@@ -197,10 +199,10 @@ class GraphicsNode(TextTreeNode):
             painter.drawRoundedRect(rect.adjusted(-4, -4, 4, 4), 10, 10)
             painter.restore()
         super().paint(painter, option, widget)
-        
+
     def boundingRect(self):
         return super().boundingRect().adjusted(-5, -5, 5, 5)
-            
+
     def mousePressEvent(self, event):
         return super().mousePressEvent(event)
 
@@ -210,15 +212,15 @@ class GraphicsEdge(QGraphicsLineItem, GraphEdge):
         QGraphicsLineItem.__init__(self, *args)
         GraphEdge.__init__(self, **kwargs)
         self.setZValue(-30)
-        
+
     def update_ends(self):
         try:
             self.prepareGeometryChange()
             self.setLine(QLineF(self.node1.edge_out_point(self),
                                 self.node2.edge_in_point(self)))
         except RuntimeError:  # this gets called through QTimer.singleShot
-                              # and might already be deleted by Qt
-            pass 
+            # and might already be deleted by Qt
+            pass
 
 
 class TreeGraphicsView(QGraphicsView):
@@ -265,6 +267,7 @@ class TreeGraphicsScene(QGraphicsScene):
     def _fix_pos(self, node, x, y):
         def brect(node):
             return node.boundingRect() | node.childrenBoundingRect()
+
         if node.branches and node.isOpen:
             for n in node.branches:
                 x, ry = self._fix_pos(n, x,
@@ -285,10 +288,10 @@ class TreeGraphicsScene(QGraphicsScene):
 
     def mousePressEvent(self, event):
         return QGraphicsScene.mousePressEvent(self, event)
-    
+
     def edges(self):
         return [item for item in self.items() if isinstance(item, GraphEdge)]
-    
+
     def nodes(self):
         return [item for item in self.items() if isinstance(item, GraphNode)]
 
@@ -325,7 +328,7 @@ class TreeNavigator(QGraphicsView):
     def updateSceneRect(self, rect):
         super().updateSceneRect(rect)
         self.update_view()
-        
+
     def update_view(self, *_):
         if self.scene():
             self.fitInView(self.scene().sceneRect())
@@ -336,7 +339,7 @@ class TreeNavigator(QGraphicsView):
         painter.setBrush(QColor(100, 100, 100, 100))
         painter.setRenderHints(self.renderHints())
         painter.drawPolygon(self.viewPolygon())
-        
+
     # noinspection PyPep8Naming
     def viewPolygon(self):
         return self.mapFromScene(
@@ -392,7 +395,7 @@ class OWTreeViewer2D(OWWidget):
                                    QSizePolicy.Fixed)), 2, 1)
         layout.addWidget(QLabel("Edge width: "), 3, 0, Qt.AlignRight)
         layout.addWidget(gui.comboBox(
-            box, self,  'line_width_method', addToLayout=False,
+            box, self, 'line_width_method', addToLayout=False,
             items=['Fixed', 'Relative to root', 'Relative to parent'],
             callback=self.toggle_line_width), 3, 1)
         self.resize(800, 500)
@@ -400,6 +403,7 @@ class OWTreeViewer2D(OWWidget):
 
     def send_report(self):
         from PyQt4.QtSvg import QSvgGenerator
+
         if self.tree:
             self.reportSection("Tree")
             urlfn, filefn = self.getUniqueImageName(ext=".svg")
@@ -407,8 +411,8 @@ class OWTreeViewer2D(OWWidget):
             svg.setFileName(filefn)
             ssize = self.scene.sceneRect().size()
             w, h = ssize.width(), ssize.height()
-            fact = 600/w
-            svg.setSize(QSize(600, h*fact))
+            fact = 600 / w
+            svg.setSize(QSize(600, h * fact))
             painter = QPainter()
             painter.begin(svg)
             self.scene.render(painter)
@@ -417,7 +421,7 @@ class OWTreeViewer2D(OWWidget):
             # from OWDlgs import OWChooseImageSizeDlg
             # self.reportImage(OWChooseImageSizeDlg(self.scene).saveImage)
             # self.report_object(self.svg_type, urlfn, width="600",
-            #                    height=str(h*fact))
+            # height=str(h*fact))
 
     def toggle_zoom_slider(self):
         k = 0.0028 * (self.zoom ** 2) + 0.2583 * self.zoom + 1.1389
@@ -490,15 +494,17 @@ class OWTreeViewer2D(OWWidget):
         left_child_ind = tree.children_left[i]
         right_child_ind = tree.children_right[i]
         if right_child_ind >= 0:
-            self.walkcreate(tree, parent=node, level=level+1, i=right_child_ind)
+            self.walkcreate(tree, parent=node, level=level + 1,
+                            i=right_child_ind)
         if left_child_ind >= 0:
-            self.walkcreate(tree, parent=node, level=level+1, i=left_child_ind)
+            self.walkcreate(tree, parent=node, level=level + 1,
+                            i=left_child_ind)
         return node
 
     def walkupdate(self, node, level=0):
         if not node:
             return
-        if self.max_tree_depth and self.max_tree_depth < level+1:
+        if self.max_tree_depth and self.max_tree_depth < level + 1:
             node.set_open(False)
             return
         else:
@@ -531,8 +537,12 @@ class OWTreeViewer2D(OWWidget):
         self.selected_node = (self.scene.selectedItems() + [None])[0]
         # self.centerNodeButton.setDisabled(not self.selected_node)
         # self.send("Data", self.selectedNode.tree.examples if self.selectedNode
-        #           else None)
+        # else None)
 
     def save_graph(self):
-        save_img = OWSave(parent=self, scene=self.scene, tree=self.tree)
+        save_img = OWSave(parent=self,
+                          data={'scene': self.scene, 'tree': self.tree},
+                          file_formats=dict(chain(
+                              FileFormats.img_writers.items(),
+                              FileFormats.graph_writers.items())))
         save_img.exec_()
