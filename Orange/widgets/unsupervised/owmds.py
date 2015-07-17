@@ -687,9 +687,9 @@ class OWMDS(widget.OWWidget):
                 attr = attributes(self.matrix)
                 palette = colorpalette.ColorPaletteGenerator(len(attr))
                 color_data = [palette.getRGB(i) for i in range(len(attr))]
-                color_data = numpy.hstack(
+                color_data = numpy.hstack((
                     color_data,
-                    numpy.full((len(color_data), 1), self.symbol_opacity)
+                    numpy.full((len(color_data), 1), self.symbol_opacity))
                 )
 
                 pen_data = mdsplotutils.pen_data(color_data, pointflags)
@@ -756,7 +756,9 @@ class OWMDS(widget.OWWidget):
             x=self.embedding[:, 0], y=self.embedding[:, 1],
             pen=self._pen_data, symbol=self._shape_data,
             brush=QtGui.QBrush(Qt.transparent),
-            size=size_data, data=numpy.arange(len(self.data)),
+            size=size_data, data=numpy.arange(len(self.data
+                                                  if have_data
+                                                  else self.matrix.X)),
             antialias=True
         )
         self.plot.addItem(item)
