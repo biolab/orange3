@@ -74,7 +74,7 @@ class OWSieveDiagram(OWWidget):
         box2 = gui.widgetBox(self.controlArea, box = "Visual settings")
         gui.checkBox(box2, self, "showLines", "Show lines", callback = self.updateGraph)
         hbox = gui.widgetBox(box2, orientation = "horizontal")
-        gui.checkBox(hbox, self, "showCases", "Show data examples...", callback = self.updateGraph)
+        gui.checkBox(hbox, self, "showCases", "Show data instances...", callback = self.updateGraph)
         gui.checkBox(hbox, self, "showInColor", "...in color", callback = self.updateGraph)
 
         gui.separator(self.controlArea)
@@ -304,9 +304,9 @@ class OWSieveDiagram(OWWidget):
 
                 expected = float(xVal*yVal)/float(sum_)
                 pearson = (actual - expected) / sqrt(expected)
-                tooltipText = """<b>X Attribute: %s</b><br>Value: <b>%s</b><br>Number of examples (p(x)): <b>%d (%.2f%%)</b><hr>
-                                <b>Y Attribute: %s</b><br>Value: <b>%s</b><br>Number of examples (p(y)): <b>%d (%.2f%%)</b><hr>
-                                <b>Number Of Examples (Probabilities):</b><br>Expected (p(x)p(y)): <b>%.1f (%.2f%%)</b><br>Actual (p(x,y)): <b>%d (%.2f%%)</b>
+                tooltipText = """<b>X Attribute: %s</b><br>Value: <b>%s</b><br>Number of ins (p(x)): <b>%d (%.2f%%)</b><hr>
+                                <b>Y Attribute: %s</b><br>Value: <b>%s</b><br>Number of instances (p(y)): <b>%d (%.2f%%)</b><hr>
+                                <b>Number Of Instances (Probabilities):</b><br>Expected (p(x)p(y)): <b>%.1f (%.2f%%)</b><br>Actual (p(x,y)): <b>%d (%.2f%%)</b>
                                 <hr><b>Statistics:</b><br>Chi-square: <b>%.2f</b><br>Standardized Pearson residual: <b>%.2f</b>""" %(self.attrX, getHtmlCompatibleString(xAttr), xVal, 100.0*float(xVal)/float(sum_), self.attrY, getHtmlCompatibleString(yAttr), yVal, 100.0*float(yVal)/float(sum_), expected, 100.0*float(xVal*yVal)/float(sum_*sum_), actual, 100.0*float(actual)/float(sum_), chisquare, pearson )
                 rect.setToolTip(tooltipText)
 
