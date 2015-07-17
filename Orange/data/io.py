@@ -6,11 +6,9 @@ from itertools import chain
 
 import bottlechest as bn
 import numpy as np
-from sklearn import tree
 from scipy import sparse
 # We are not loading openpyxl here since it takes some time
 
-from Orange.data import _io
 from Orange.data import Domain
 from Orange.data.variable import *
 from PyQt4 import QtGui, QtCore, QtSvg
@@ -378,6 +376,8 @@ class TxtFormat:
 class BasketFormat:
     @classmethod
     def read_file(cls, filename, storage_class=None):
+        from Orange.data import _io
+
         if storage_class is None:
             from ..data import Table as storage_class
 
@@ -764,6 +764,8 @@ class SvgFormat(ImgFormat):
 class DotFormat:
     @classmethod
     def write_graph(cls, filename, graph):
+        from sklearn import tree
+
         tree.export_graphviz(graph, out_file=filename)
 
     def write(self, filename, tree):
