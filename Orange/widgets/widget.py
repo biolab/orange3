@@ -224,24 +224,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 self.statusBarIconArea,
                 gui.resource_filename("icons/triangle-red.png"))
 
-    def updateWidgetStateInfo(self, stateType, id, text):
-        html = self.widgetStateToHtml(self._owInfo, self._owWarning,
-                                      self._owError)
-        if html:
-            self.widgetStateInfoBox.show()
-            self.widgetStateInfo.setText(html)
-            self.widgetStateInfo.setToolTip(html)
-        else:
-            if not self.widgetStateInfoBox.isVisible():
-                dHeight = - self.widgetStateInfoBox.height()
-            else:
-                dHeight = 0
-            self.widgetStateInfoBox.hide()
-            self.widgetStateInfo.setText("")
-            self.widgetStateInfo.setToolTip("")
-            width, height = self.width(), self.height() + dHeight
-            self.resize(width, height)
-
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
             return
