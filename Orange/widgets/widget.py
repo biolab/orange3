@@ -224,39 +224,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 self.statusBarIconArea,
                 gui.resource_filename("icons/triangle-red.png"))
 
-    # status bar handler functions
-    def setState(self, stateType, id, text):
-        stateChanged = super().setState(stateType, id, text)
-        if not stateChanged or not hasattr(self, "widgetStatusArea"):
-            return
-
-        iconsShown = 0
-        warnings = [("Warning", self._warningWidget, self._owWarning),
-                    ("Error", self._errorWidget, self._owError)]
-        for state, widget, use in warnings:
-            if not widget:
-                continue
-            if use and self.widgetState[state]:
-                widget.setToolTip("\n".join(self.widgetState[state].values()))
-                widget.show()
-                iconsShown = 1
-            else:
-                widget.setToolTip("")
-                widget.hide()
-
-        if iconsShown:
-            self.statusBarIconArea.show()
-        else:
-            self.statusBarIconArea.hide()
-
-        if (stateType == "Warning" and self._owWarning) or \
-                (stateType == "Error" and self._owError):
-            if text:
-                self.setStatusBarText(stateType + ": " + text)
-            else:
-                self.setStatusBarText("")
-        self.updateStatusBarState()
-
     def updateWidgetStateInfo(self, stateType, id, text):
         html = self.widgetStateToHtml(self._owInfo, self._owWarning,
                                       self._owError)
