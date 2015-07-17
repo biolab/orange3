@@ -28,6 +28,10 @@ def _get_variable(variable, dat, attr_name,
     return variable
 
 
+def create_discrete(cls, *args):
+    return cls(*args)
+
+
 class Discrete(np.ndarray):
     def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None):
         if isinstance(dat, data.Storage):
@@ -143,6 +147,9 @@ class Discrete(np.ndarray):
             self[:] /= t
             if axis is None or axis == 1:
                 self.unknowns /= t
+
+    def __reduce__(self):
+        return create_discrete, (Discrete, np.copy(self), self.col_variable, self.row_variable, self.unknowns)
 
 
 class Continuous:

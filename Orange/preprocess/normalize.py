@@ -37,22 +37,17 @@ class Normalizer:
             return self.normalize_by_span(dist, var)
 
     def normalize_by_sd(self, dist, var):
-        new_var = ContinuousVariable(var.name)
         avg, sd = dist.mean(), dist.standard_deviation()
         if sd == 0:
             sd = 1
-        new_var.compute_value = Norm(var, avg, 1 / sd)
-        return new_var
+        return ContinuousVariable(var.name, compute_value=Norm(var, avg, 1 / sd))
 
     def normalize_by_span(self, dist, var):
-        new_var = ContinuousVariable(var.name)
         dma, dmi = dist.max(), dist.min()
         diff = dma - dmi
         if diff < 1e-15:
             diff = 1
         if self.zero_based:
-            new_var.compute_value = Norm(var, dmi, 1 / diff)
+            return ContinuousVariable(var.name, compute_value=Norm(var, dmi, 1 / diff))
         else:
-            new_var.compute_value = Norm(var, (dma + dmi) / 2,
-                                         2 / diff)
-        return new_var
+            return ContinuousVariable(var.name, compute_value=Norm(var, (dma + dmi) / 2, 2 / diff))

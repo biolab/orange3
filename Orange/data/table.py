@@ -1148,6 +1148,7 @@ class Table(MutableSequence, Storage):
                                       "not implemented yet")
         W = self.W if self.has_weights() else None
         rr = []
+        stats = []
         if not columns:
             if self.domain.attributes:
                 rr.append(bn.stats(self.X, W))
@@ -1155,14 +1156,14 @@ class Table(MutableSequence, Storage):
                 rr.append(bn.stats(self._Y, W))
             if include_metas and self.domain.metas:
                 rr.append(bn.stats(self.metas, W))
-            stats = np.vstack(tuple(rr))
+            if len(rr):
+                stats = np.vstack(tuple(rr))
         else:
             columns = [self.domain.index(c) for c in columns]
             nattrs = len(self.domain.attributes)
             Xs = any(0 <= c < nattrs for c in columns) and bn.stats(self.X, W)
             Ys = any(c >= nattrs for c in columns) and bn.stats(self._Y, W)
             ms = any(c < 0 for c in columns) and bn.stats(self.metas, W)
-            stats = []
             for column in columns:
                 if 0 <= column < nattrs:
                     stats.append(Xs[column, :])

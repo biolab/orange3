@@ -70,8 +70,8 @@ class _LinearCombination:
 class PCAModel(Projection, metaclass=WrapperMeta):
     def __init__(self, proj, domain):
         def pca_variable(i):
-            v = Orange.data.ContinuousVariable('PC %d' % i)
-            v.compute_value = Projector(self, i)
+            v = Orange.data.ContinuousVariable(
+                'PC %d' % i, compute_value=Projector(self, i))
             v.to_sql = _LinearCombination(
                 domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))

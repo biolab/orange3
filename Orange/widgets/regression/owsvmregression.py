@@ -17,7 +17,8 @@ class OWSVMRegression(widget.OWWidget):
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", SVRLearner),
-               ("Predictor", SklModel)]
+               ("Predictor", SklModel),
+               ("Support vectors", Table)]
 
     learner_name = settings.Setting("SVM Regression")
 
@@ -179,6 +180,7 @@ class OWSVMRegression(widget.OWWidget):
         learner.name = self.learner_name
         predictor = None
 
+        sv = None
         if self.data is not None:
             self.error(0)
             if not learner.check_learner_adequacy(self.data.domain):
@@ -186,9 +188,11 @@ class OWSVMRegression(widget.OWWidget):
             else:
                 predictor = learner(self.data)
                 predictor.name = self.learner_name
+                sv = self.data[predictor.skl_model.support_]
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
+        self.send("Support vectors", sv)
 
     def _on_kernel_changed(self):
         enabled = [[False, False, False],  # linear

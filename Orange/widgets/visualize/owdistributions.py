@@ -5,6 +5,9 @@ Distributions
 A widget for plotting attribute distributions.
 
 """
+import sys
+import collections
+
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 import numpy
@@ -15,6 +18,7 @@ from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.widget import InputSignal
+from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 
 
 def selected_index(view):
@@ -147,6 +151,11 @@ class OWDistributions(widget.OWWidget):
         for axis in ("left", "bottom"):
             self.plot.getAxis(axis).setPen(pen)
 
+        self._legend = LegendItem()
+        self._legend.setParentItem(self.plot.getViewBox())
+        self._legend.hide()
+        self._legend.anchor((1, 0), (1, 0))
+
     def set_data(self, data):
         self.closeContext()
         self.clear()
@@ -174,9 +183,14 @@ class OWDistributions(widget.OWWidget):
         self.groupvarmodel[:] = []
         self.variable_idx = -1
         self.groupvar_idx = 0
+        self._legend.clear()
+        self._legend.hide()
 
     def _setup(self):
         self.plot.clear()
+        self._legend.clear()
+        self._legend.hide()
+
         varidx = self.variable_idx
         self.var = self.cvar = None
         if varidx >= 0:
@@ -231,7 +245,6 @@ class OWDistributions(widget.OWWidget):
             bottomaxis.setTicks([list(enumerate(var.values))])
             for i, w in enumerate(dist):
                 geom = QtCore.QRectF(i - 0.33, 0, 0.66, w)
-                print(w, list(enumerate(var.values)))
                 item = DistributionBarItem(geom, [1.0],
                                            [QtGui.QColor(128, 128, 128)])
                 self.plot.addItem(item)
@@ -251,6 +264,7 @@ class OWDistributions(widget.OWWidget):
         var, cvar = self.var, self.cvar
         assert len(cont) > 0
         self.plot.clear()
+        self._legend.clear()
 
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
@@ -306,6 +320,13 @@ class OWDistributions(widget.OWWidget):
                                      if self.relative_freq else dsum)
                 item = DistributionBarItem(geom, dist / dsum, colors)
                 self.plot.addItem(item)
+
+        for color, name in zip(colors, cvar.values):
+            self._legend.addItem(
+                ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
+                name
+            )
+        self._legend.show()
 
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
@@ -542,17 +563,24 @@ def shape_reduce_keep_dims(shape, axis):
     return tuple(shape)
 
 
-def main():
+def main(argv=None):
     import gc
-    app = QtGui.QApplication([])
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
     w = OWDistributions()
     w.show()
-#     data = Orange.data.Table("brown-selected")
-#     data = Orange.data.Table("lenses")
-#     data = Orange.data.Table("housing")
-    data = Orange.data.Table("heart_disease")
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "heart_disease"
+    data = Orange.data.Table(filename)
     w.set_data(data)
+    w.handleNewSignals()
     rval = app.exec_()
+    w.set_data(None)
+    w.handleNewSignals()
     w.deleteLater()
     del w
     app.processEvents()
@@ -561,4 +589,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

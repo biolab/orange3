@@ -13,9 +13,10 @@ __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 class Learner:
     supports_multiclass = False
+    supports_weights = False
+    name = 'learner'
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
-    name = 'learner'
     preprocessors = ()
     learner_adequacy_err_msg = ''
 

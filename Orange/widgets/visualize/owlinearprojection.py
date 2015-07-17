@@ -6,6 +6,9 @@ Linear projection widget
 
 from functools import reduce
 from operator import itemgetter
+from types import SimpleNamespace as namespace
+
+import pkg_resources
 
 from PyQt4 import QtGui, QtCore
 
@@ -13,8 +16,8 @@ from PyQt4.QtGui import (
     QListView, QSizePolicy, QApplication, QAction, QKeySequence,
     QGraphicsLineItem, QSlider, QPainterPath
 )
-from PyQt4.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF
-from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF, QPointF
+from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import numpy
 
@@ -24,6 +27,7 @@ import Orange
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from .owscatterplotgraph import LegendItem, legend_anchor_pos
 
 
 class DnDVariableListModel(itemmodels.VariableListModel):
@@ -168,6 +172,45 @@ class AxisItem(pg.GraphicsObject):
         self._label.setRotation(angle if left_quad else angle - 180)
 
 
+class LegendItem(LegendItem):
+    def clear(self):
+        """
+        Clear all legend items.
+        """
+        items = list(self.items)
+        self.items = []
+        for sample, label in items:
+            # yes, the LegendItem shadows QGraphicsWidget.layout() with
+            # an instance attribute.
+            self.layout.removeItem(sample)
+            self.layout.removeItem(label)
+            sample.hide()
+            label.hide()
+
+        self.updateSize()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            event.accept()
+            if self.parentItem() is not None:
+                self.autoAnchor(
+                    self.pos() + (event.pos() - event.lastPos()) / 2)
+        else:
+            event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            event.ignore()
+
+
 class OWLinearProjection(widget.OWWidget):
     name = "Linear Projection"
     description = "A multi-axes projection of data to a two-dimension plane."
@@ -198,6 +241,7 @@ class OWLinearProjection(widget.OWWidget):
 
     auto_commit = settings.Setting(True)
 
+    legend_anchor = settings.Setting(((1, 0), (1, 0)))
     MinPointSize = 6
 
     ReplotRequest = QEvent.registerEventType()
@@ -210,6 +254,7 @@ class OWLinearProjection(widget.OWWidget):
         self._subset_mask = None
         self._selection_mask = None
         self._item = None
+        self.__legend = None
         self.__selection_item = None
         self.__replot_requested = False
 
@@ -325,6 +370,10 @@ class OWLinearProjection(widget.OWWidget):
         size_slider.valueChanged.connect(self._set_size)
         form.addRow("", size_slider)
 
+        toolbox = gui.widgetBox(self.controlArea, "Zoom/Select")
+        toollayout = QtGui.QHBoxLayout()
+        toolbox.layout().addLayout(toollayout)
+
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
 
         # Main area plot
@@ -332,17 +381,20 @@ class OWLinearProjection(widget.OWWidget):
         self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.view.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.viewbox = pg.ViewBox(enableMouse=True, enableMenu=False)
+        self.viewbox.grabGesture(Qt.PinchGesture)
         self.view.setCentralItem(self.viewbox)
 
         self.mainArea.layout().addWidget(self.view)
+
         self.selection = PlotSelectionTool(
-            self.viewbox, selectionMode=PlotSelectionTool.Lasso)
-
+            self, selectionMode=PlotSelectionTool.Lasso)
         self.selection.setViewBox(self.viewbox)
-
-        self.selection.selectionStarted.connect(self._selection_start)
-        self.selection.selectionUpdated.connect(self._selection_update)
         self.selection.selectionFinished.connect(self._selection_finish)
+
+        self.zoomtool = PlotZoomTool(self)
+        self.pantool = PlotPanTool(self)
+        self.pinchtool = PlotPinchZoomTool(self)
+        self.pinchtool.setViewBox(self.viewbox)
 
         self.continuous_palette = colorpalette.ContinuousPaletteGenerator(
             QtGui.QColor(220, 220, 220),
@@ -351,23 +403,77 @@ class OWLinearProjection(widget.OWWidget):
         )
         self.discrete_palette = colorpalette.ColorPaletteGenerator(13)
 
-        zoomtofit = QAction(
-            "Zoom to fit", self,
-            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
-            triggered=lambda:
-                self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
+        def icon(name):
+            path = "icons/Dlg_{}.png".format(name)
+            path = pkg_resources.resource_filename(widget.__name__, path)
+            return QtGui.QIcon(path)
+
+        actions = namespace(
+            zoomtofit=QAction(
+                "Zoom to fit", self, icon=icon("zoom_reset"),
+                shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
+                triggered=lambda:
+                    self.viewbox.setRange(QRectF(-1.05, -1.05, 2.1, 2.1))),
+            zoomin=QAction(
+                "Zoom in", self,
+                shortcut=QKeySequence(QKeySequence.ZoomIn),
+                triggered=lambda: self.viewbox.scaleBy((1 / 1.25, 1 / 1.25))),
+            zoomout=QAction(
+                "Zoom out", self,
+                shortcut=QKeySequence(QKeySequence.ZoomOut),
+                triggered=lambda: self.viewbox.scaleBy((1.25, 1.25))),
+            select=QAction(
+                "Select", self, checkable=True, icon=icon("arrow"),
+                shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_1)),
+            zoom=QAction(
+                "Zoom", self, checkable=True, icon=icon("zoom"),
+                shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_2)),
+            pan=QAction(
+                "Pan", self, checkable=True, icon=icon("pan_hand"),
+                shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_3)),
         )
-        zoomin = QAction(
-            "Zoom in", self,
-            shortcut=QKeySequence(QKeySequence.ZoomIn),
-            triggered=lambda: self.viewbox.scaleBy((1 / 1.25, 1 / 1.25))
-        )
-        zoomout = QAction(
-            "Zoom out", self,
-            shortcut=QKeySequence(QKeySequence.ZoomOut),
-            triggered=lambda: self.viewbox.scaleBy((1.25, 1.25))
-        )
-        self.addActions([zoomtofit, zoomin, zoomout])
+        self.addActions([actions.zoomtofit, actions.zoomin, actions.zoomout])
+
+        group = QtGui.QActionGroup(self, exclusive=True)
+        group.addAction(actions.select)
+        group.addAction(actions.zoom)
+        group.addAction(actions.pan)
+
+        actions.select.setChecked(True)
+
+        currenttool = self.selection
+        self.selection.setViewBox(None)
+
+        def activated(action):
+            nonlocal currenttool
+            if action is actions.select:
+                tool, cursor = self.selection, Qt.ArrowCursor
+            elif action is actions.zoom:
+                tool, cursor = self.zoomtool, Qt.ArrowCursor
+            elif action is actions.pan:
+                tool, cursor = self.pantool, Qt.OpenHandCursor
+            else:
+                assert False
+            currenttool.setViewBox(None)
+            tool.setViewBox(self.viewbox)
+            self.viewbox.setCursor(QtGui.QCursor(cursor))
+            currenttool = tool
+
+        group.triggered[QAction].connect(activated)
+
+        def button(action):
+            b = QtGui.QToolButton()
+            b.setDefaultAction(action)
+            return b
+
+        toollayout.addWidget(button(actions.select))
+        toollayout.addWidget(button(actions.zoom))
+        toollayout.addWidget(button(actions.pan))
+
+        toollayout.addSpacing(4)
+        toollayout.addWidget(button(actions.zoomtofit))
+        toollayout.addStretch()
+        toolbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
 
     def sizeHint(self):
         return QSize(800, 500)
@@ -392,6 +498,15 @@ class OWLinearProjection(widget.OWWidget):
             self._item.setParentItem(None)
             self.viewbox.removeItem(self._item)
             self._item = None
+
+        if self.__legend is not None:
+            anchor = legend_anchor_pos(self.__legend)
+            if anchor is not None:
+                self.legend_anchor = anchor
+
+            self.__legend.setParentItem(None)
+            self.__legend.clear()
+            self.__legend.setVisible(False)
 
         self.viewbox.clear()
 
@@ -624,6 +739,7 @@ class OWLinearProjection(widget.OWWidget):
             self.viewbox.addItem(axis_item)
 
         self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
+        self._update_legend()
 
     def _color_data(self, mask=None):
         color_var = self.color_var()
@@ -703,6 +819,8 @@ class OWLinearProjection(widget.OWWidget):
         else:
             self._item.setBrush(brush[self._item._mask])
 
+        self._update_legend()
+
     def _shape_data(self, mask):
         shape_var = self.shape_var()
         if shape_var is None:
@@ -727,6 +845,7 @@ class OWLinearProjection(widget.OWWidget):
             return
 
         self.set_shape(self._shape_data(mask=None))
+        self._update_legend()
 
     def _size_data(self, mask=None):
         size_var = self.size_var()
@@ -748,6 +867,53 @@ class OWLinearProjection(widget.OWWidget):
         if self.data is None:
             return
         self.set_size(self._size_data(mask=None))
+
+    def _update_legend(self):
+        if self.__legend is None:
+            self.__legend = legend = LegendItem()
+            legend.setParentItem(self.viewbox)
+            legend.setZValue(self.viewbox.zValue() + 10)
+            legend.anchor(*self.legend_anchor)
+        else:
+            legend = self.__legend
+
+        legend.clear()
+
+        color_var, shape_var = self.color_var(), self.shape_var()
+        if color_var is not None and not color_var.is_discrete:
+            color_var = None
+        assert shape_var is None or shape_var.is_discrete
+        if color_var is None and shape_var is None:
+            legend.setParentItem(None)
+            legend.hide()
+            return
+        else:
+            if legend.parentItem() is None:
+                legend.setParentItem(self.viewbox)
+            legend.setVisible(True)
+
+        palette = self.discrete_palette
+        symbols = list(ScatterPlotItem.Symbols)
+
+        if shape_var is color_var:
+            items = [(palette[i], symbols[i], name)
+                     for i, name in enumerate(color_var.values)]
+        else:
+            colors = shapes = []
+            if color_var is not None:
+                colors = [(palette[i], "o", name)
+                          for i, name in enumerate(color_var.values)]
+            if shape_var is not None:
+                shapes = [(QtGui.QColor(Qt.gray),
+                           symbols[i % (len(symbols) - 1)], name)
+                          for i, name in enumerate(shape_var.values)]
+            items = colors + shapes
+
+        for color, symbol, name in items:
+            legend.addItem(
+                ScatterPlotItem(pen=color, brush=color, symbol=symbol, size=10),
+                name
+            )
 
     def set_shape(self, shape):
         """
@@ -771,36 +937,7 @@ class OWLinearProjection(widget.OWWidget):
         self.point_size = value
         self._on_size_change()
 
-    def _selection_start(self):
-        item = QtGui.QGraphicsPathItem()
-        color = QtGui.QColor(Qt.yellow)
-        item.setPen(QtGui.QPen(color, 0))
-        color.setAlpha(50)
-        item.setBrush(QtGui.QBrush(color))
-        self.__selection_item = item
-
-        self._selection_update()
-
-    def _selection_update(self):
-        if self.__selection_item is None:
-            return
-        item = self.__selection_item
-
-        T, ok = self.viewbox.childTransform().inverted()
-
-        if ok:
-            path = self.selection.selectionShape()
-            path = T.map(path)
-            item.setPath(path)
-            if item.parentItem() is None:
-                self.viewbox.addItem(item)
-
-    def _selection_finish(self):
-        self._selection_update()
-        path = self.__selection_item.path()
-        self.__selection_item.setParentItem(None)
-        self.viewbox.removeItem(self.__selection_item)
-
+    def _selection_finish(self, path):
         self.select(path)
 
     def select(self, selectionshape):
@@ -840,64 +977,258 @@ class OWLinearProjection(widget.OWWidget):
         self.send("Selected Data", subset)
 
 
-class PlotSelectionTool(QObject):
-    #: Selection modes
-    Rect, Lasso = 1, 2
+class PlotTool(QObject):
+    """
+    An abstract tool operating on a pg.ViewBox.
 
-    selectionStarted = Signal()
-    selectionUpdated = Signal()
-    selectionFinished = Signal()
+    Subclasses of `PlotTool` implement various actions responding to
+    user input events. For instance `PlotZoomTool` when active allows
+    the user to select/draw a rectangular region on a plot in which to
+    zoom.
 
-    def __init__(self, parent=None, selectionMode=Rect, **kwargs):
+    The tool works by installing itself as an `eventFilter` on to the
+    `pg.ViewBox` instance and dispatching events to the appropriate
+    event handlers `mousePressEvent`, ...
+
+    When subclassing note that the event handlers (`mousePressEvent`, ...)
+    are actually event filters and need to return a boolean value
+    indicating if the event was handled (filtered) and should not propagate
+    further to the view box.
+
+    See Also
+    --------
+    PyQt4.QtCore.QObject.eventFilter
+
+    """
+    def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.__viewbox = None
-        self.__mode = selectionMode
-        self._selection = None
-
-    def setSelectionMode(self, mode):
-        assert mode in {PlotSelectionTool.Rect, PlotSelectionTool.Lasso}
-        if self.__mode != mode:
-            if self._selection is not None:
-                self.selectionFinished.emit()
-            self.__mode = mode
-            self._selection = None
-
-    def selectionMode(self):
-        return self.__mode
 
     def setViewBox(self, viewbox):
+        """
+        Set the view box to operate on.
+
+        Call ``setViewBox(None)`` to remove the tool from the current
+        view box. If an existing view box is already set it is first
+        removed.
+
+        .. note::
+            The PlotTool will install itself as an event filter on the
+            view box.
+
+        Parameters
+        ----------
+        viewbox : pg.ViewBox or None
+
+        """
         if self.__viewbox is viewbox:
             return
         if self.__viewbox is not None:
             self.__viewbox.removeEventFilter(self)
+            self.__viewbox.destroyed.disconnect(self.__viewdestroyed)
 
         self.__viewbox = viewbox
 
         if self.__viewbox is not None:
             self.__viewbox.installEventFilter(self)
+            self.__viewbox.destroyed.connect(self.__viewdestroyed)
 
     def viewBox(self):
+        """
+        Return the view box.
+
+        Returns
+        -------
+        viewbox : pg.ViewBox
+        """
         return self.__viewbox
 
+    @Slot(QObject)
+    def __viewdestroyed(self, obj):
+        self.__viewbox = None
+
+    def mousePressEvent(self, event):
+        """
+        Handle a mouse press event.
+
+        Parameters
+        ----------
+        event : QGraphicsSceneMouseEvent
+            The event.
+
+        Returns
+        -------
+        status : bool
+            True if the event was handled (and should not
+            propagate further to the view box) and False otherwise.
+        """
+        return False
+
+    def mouseMoveEvent(self, event):
+        """
+        Handle a mouse move event.
+
+        Parameters
+        ----------
+        event : QGraphicsSceneMouseEvent
+            The event
+
+        Returns
+        -------
+        status : bool
+            True if the event was handled (and should not
+            propagate further to the view box) and False otherwise.
+        """
+        return False
+
+    def mouseReleaseEvent(self, event):
+        """
+        Handle a mouse release event.
+
+        Parameters
+        ----------
+        event : QGraphicsSceneMouseEvent
+            The event
+
+        Returns
+        -------
+        status : bool
+            True if the event was handled (and should not
+            propagate further to the view box) and False otherwise.
+        """
+        return False
+
+    def mouseDoubleClickEvent(self, event):
+        """
+        Handle a mouse double click event.
+
+        Parameters
+        ----------
+        event : QGraphicsSceneMouseEvent
+            The event.
+
+        Returns
+        -------
+        status : bool
+            True if the event was handled (and should not
+            propagate further to the view box) and False otherwise.
+        """
+        return False
+
+    def gestureEvent(self, event):
+        """
+        Handle a gesture event.
+
+        Parameters
+        ----------
+        event : QGraphicsSceneGestureEvent
+            The event.
+
+        Returns
+        -------
+        status : bool
+            True if the event was handled (and should not
+            propagate further to the view box) and False otherwise.
+        """
+        return False
+
+    def eventFilter(self, obj, event):
+        """
+        Reimplemented from `QObject.eventFilter`.
+        """
+        if obj is self.__viewbox:
+            if event.type() == QEvent.GraphicsSceneMousePress:
+                return self.mousePressEvent(event)
+            elif event.type() == QEvent.GraphicsSceneMouseMove:
+                return self.mouseMoveEvent(event)
+            elif event.type() == QEvent.GraphicsSceneMouseRelease:
+                return self.mouseReleaseEvent(event)
+            elif event.type() == QEvent.GraphicsSceneMouseDoubleClick:
+                return self.mouseDoubleClickEvent(event)
+            elif event.type() == QEvent.Gesture:
+                return self.gestureEvent(event)
+        return super().eventFilter(obj, event)
+
+
+class PlotSelectionTool(PlotTool):
+    """
+    A tool for selecting a region on a plot.
+
+    """
+    #: Selection modes
+    Rect, Lasso = 1, 2
+
+    #: Selection was started by the user.
+    selectionStarted = Signal(QPainterPath)
+    #: The current selection has been updated
+    selectionUpdated = Signal(QPainterPath)
+    #: The selection has finished (user has released the mouse button)
+    selectionFinished = Signal(QPainterPath)
+
+    def __init__(self, parent=None, selectionMode=Rect, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__mode = selectionMode
+        self.__path = None
+        self.__item = None
+
+    def setSelectionMode(self, mode):
+        """
+        Set the selection mode (rectangular or lasso selection).
+
+        Parameters
+        ----------
+        mode : int
+            PlotSelectionTool.Rect or PlotSelectionTool.Lasso
+
+        """
+        assert mode in {PlotSelectionTool.Rect, PlotSelectionTool.Lasso}
+        if self.__mode != mode:
+            if self.__path is not None:
+                self.selectionFinished.emit()
+            self.__mode = mode
+            self.__path = None
+
+    def selectionMode(self):
+        """
+        Return the current selection mode.
+        """
+        return self.__mode
+
     def selectionShape(self):
-        if self._selection is not None:
-            shape = QPainterPath(self._selection)
+        """
+        Return the current selection shape.
+
+        This is the area selected/drawn by the user.
+
+        Returns
+        -------
+        shape : QPainterPath
+            The selection shape in view coordinates.
+        """
+        if self.__path is not None:
+            shape = QPainterPath(self.__path)
             shape.closeSubpath()
         else:
             shape = QPainterPath()
-        return shape
+        viewbox = self.viewBox()
+
+        if viewbox is None:
+            return QPainterPath()
+
+        return viewbox.childGroup.mapFromParent(shape)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             pos = event.pos()
             if self.__mode == PlotSelectionTool.Rect:
                 rect = QRectF(pos, pos)
-                self._selection = QPainterPath()
-                self._selection.addRect(rect)
+                self.__path = QPainterPath()
+                self.__path.addRect(rect)
             else:
-                self._selection = QPainterPath()
-                self._selection.moveTo(event.pos())
-            self.selectionStarted.emit()
+                self.__path = QPainterPath()
+                self.__path.moveTo(event.pos())
+            self.selectionStarted.emit(self.selectionShape())
+            self.__updategraphics()
             event.accept()
             return True
         else:
@@ -907,11 +1238,12 @@ class PlotSelectionTool(QObject):
         if event.buttons() & Qt.LeftButton:
             if self.__mode == PlotSelectionTool.Rect:
                 rect = QRectF(event.buttonDownPos(Qt.LeftButton), event.pos())
-                self._selection = QPainterPath()
-                self._selection.addRect(rect)
+                self.__path = QPainterPath()
+                self.__path.addRect(rect)
             else:
-                self._selection.lineTo(event.pos())
-            self.selectionUpdated.emit()
+                self.__path.lineTo(event.pos())
+            self.selectionUpdated.emit(self.selectionShape())
+            self.__updategraphics()
             event.accept()
             return True
         else:
@@ -921,26 +1253,228 @@ class PlotSelectionTool(QObject):
         if event.button() == Qt.LeftButton:
             if self.__mode == PlotSelectionTool.Rect:
                 rect = QRectF(event.buttonDownPos(Qt.LeftButton), event.pos())
-                self._selection = QPainterPath()
-                self._selection.addRect(rect)
+                self.__path = QPainterPath()
+                self.__path.addRect(rect)
             else:
-                self._selection.lineTo(event.pos())
-
-            self.selectionFinished.emit()
+                self.__path.lineTo(event.pos())
+            self.selectionFinished.emit(self.selectionShape())
+            self.__path = QPainterPath()
+            self.__updategraphics()
             event.accept()
             return True
         else:
             return False
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.GraphicsSceneMousePress:
-            return self.mousePressEvent(event)
-        elif event.type() == QEvent.GraphicsSceneMouseMove:
-            return self.mouseMoveEvent(event)
-        elif event.type() == QEvent.GraphicsSceneMouseRelease:
-            return self.mouseReleaseEvent(event)
+    def __updategraphics(self):
+        viewbox = self.viewBox()
+        if viewbox is None:
+            return
+
+        if self.__path.isEmpty():
+            if self.__item is not None:
+                self.__item.setParentItem(None)
+                viewbox.removeItem(self.__item)
+                if self.__item.scene():
+                    self.__item.scene().removeItem(self.__item)
+                self.__item = None
         else:
-            return super().eventFilter(obj, event)
+            if self.__item is None:
+                item = QtGui.QGraphicsPathItem()
+                color = QtGui.QColor(Qt.yellow)
+                item.setPen(QtGui.QPen(color, 0))
+                color.setAlpha(50)
+                item.setBrush(QtGui.QBrush(color))
+                self.__item = item
+                viewbox.addItem(item)
+
+            self.__item.setPath(self.selectionShape())
+
+
+class PlotZoomTool(PlotTool):
+    """
+    A zoom tool.
+
+    Allows the user to draw a rectangular region to zoom in.
+    """
+
+    zoomStarted = Signal(QRectF)
+    zoomUpdated = Signal(QRectF)
+    zoomFinished = Signal(QRectF)
+
+    def __init__(self, parent=None, autoZoom=True, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__zoomrect = QRectF()
+        self.__zoomitem = None
+        self.__autozoom = autoZoom
+
+    def zoomRect(self):
+        """
+        Return the current drawn rectangle (region of interest)
+
+        Returns
+        -------
+        zoomrect : QRectF
+        """
+        view = self.viewBox()
+        if view is None:
+            return QRectF()
+        return view.childGroup.mapRectFromParent(self.__zoomrect)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.__zoomrect = QRectF(event.pos(), event.pos())
+            self.zoomStarted.emit(self.zoomRect())
+            self.__updategraphics()
+            event.accept()
+            return True
+        elif event.button() == Qt.RightButton:
+            event.accept()
+            return True
+        else:
+            return False
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            self.__zoomrect = QRectF(
+                event.buttonDownPos(Qt.LeftButton), event.pos()).normalized()
+            self.zoomUpdated.emit(self.zoomRect())
+            self.__updategraphics()
+            event.accept()
+            return True
+        elif event.buttons() & Qt.RightButton:
+            event.accept()
+            return True
+        else:
+            return False
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.__zoomrect = QRectF(
+                event.buttonDownPos(Qt.LeftButton), event.pos()).normalized()
+
+            if self.__autozoom:
+                PlotZoomTool.pushZoomRect(self.viewBox(), self.zoomRect())
+
+            self.zoomFinished.emit(self.zoomRect())
+            self.__zoomrect = QRectF()
+            self.__updategraphics()
+            event.accept()
+            return True
+        elif event.button() == Qt.RightButton:
+            PlotZoomTool.popZoomStack(self.viewBox())
+            event.accept()
+            return True
+        else:
+            return False
+
+    def __updategraphics(self):
+        viewbox = self.viewBox()
+        if viewbox is None:
+            return
+        if not self.__zoomrect.isValid():
+            if self.__zoomitem is not None:
+                self.__zoomitem.setParentItem(None)
+                viewbox.removeItem(self.__zoomitem)
+                if self.__zoomitem.scene() is not None:
+                    self.__zoomitem.scene().removeItem(self.__zoomitem)
+                self.__zoomitem = None
+        else:
+            if self.__zoomitem is None:
+                self.__zoomitem = QtGui.QGraphicsRectItem()
+                color = QtGui.QColor(Qt.yellow)
+                self.__zoomitem.setPen(QtGui.QPen(color, 0))
+                color.setAlpha(50)
+                self.__zoomitem.setBrush(QtGui.QBrush(color))
+                viewbox.addItem(self.__zoomitem)
+
+            self.__zoomitem.setRect(self.zoomRect())
+
+    @staticmethod
+    def pushZoomRect(viewbox, rect):
+        viewbox.showAxRect(rect)
+        viewbox.axHistoryPointer += 1
+        viewbox.axHistory[viewbox.axHistoryPointer:] = [rect]
+
+    @staticmethod
+    def popZoomStack(viewbox):
+        if viewbox.axHistoryPointer == 0:
+            viewbox.autoRange()
+            viewbox.axHistory = []
+            viewbox.axHistoryPointer = -1
+        else:
+            viewbox.scaleHistory(-1)
+
+
+class PlotPanTool(PlotTool):
+    """
+    Pan/translate tool.
+    """
+    panStarted = Signal()
+    translated = Signal(QPointF)
+    panFinished = Signal()
+
+    def __init__(self, parent=None, autoPan=True, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__autopan = autoPan
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.panStarted.emit()
+            event.accept()
+            return True
+        else:
+            return False
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            viewbox = self.viewBox()
+            delta = (viewbox.mapToView(event.pos()) -
+                     viewbox.mapToView(event.lastPos()))
+            if self.__autopan:
+                viewbox.translateBy(-delta / 2)
+            self.translated.emit(-delta / 2)
+            event.accept()
+            return True
+        else:
+            return False
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.panFinished.emit()
+            event.accept()
+            return True
+        else:
+            return False
+
+
+class PlotPinchZoomTool(PlotTool):
+    """
+    A tool implementing a "Pinch to zoom".
+    """
+
+    def gestureEvent(self, event):
+        gesture = event.gesture(Qt.PinchGesture)
+        if gesture.state() == Qt.GestureStarted:
+            event.accept(gesture)
+            return True
+        elif gesture.changeFlags() & QtGui.QPinchGesture.ScaleFactorChanged:
+            viewbox = self.viewBox()
+            center = viewbox.mapSceneToView(gesture.centerPoint())
+            scale_prev = gesture.lastScaleFactor()
+            scale = gesture.scaleFactor()
+            if scale_prev != 0:
+                scale = scale / scale_prev
+            if scale > 0:
+                viewbox.scaleBy((1 / scale, 1 / scale), center)
+            event.accept()
+            return True
+        elif gesture.state() == Qt.GestureFinished:
+            viewbox = self.viewBox()
+            PlotZoomTool.pushZoomRect(viewbox, viewbox.viewRect())
+            event.accept()
+            return True
+        else:
+            return False
 
 
 class plotutils:

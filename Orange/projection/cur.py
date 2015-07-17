@@ -127,9 +127,8 @@ class CURModel(Projection):
 
         if axis == 0:
             def cur_variable(i):
-                v = data.domain.variables[i]
-                v.compute_value = Projector(self, i)
-                return v
+                var = data.domain.variables[i]
+                return var.copy(compute_value=Projector(self, i))
 
             domain = Orange.data.Domain(
                 [cur_variable(org_idx) for org_idx in self.features_],

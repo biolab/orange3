@@ -61,8 +61,8 @@ PYTHON_VER_SHORT=${PYTHON_VER%.[0-9]*}
 PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
 PYTHON_MSI=python-$PYTHON_VER.msi
 
-PYQT_VER=4.11.3
-PYQT_MD5=7f0e53bbae9b8d39ae2dbe90fb8104cd
+PYQT_VER=4.11.4
+PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
 
 NUMPY_VER=1.9.2
 NUMPY_MD5=0c06b7beabdc053ef63699ada0ee5e98
@@ -227,7 +227,7 @@ function prepare_pyqt4 {
     download_url \
         https://dl.dropboxusercontent.com/u/100248799/PyQt4-${PYQT_VER}-cp34-none-win32.whl \
         "$DOWNLOADDIR"/PyQt4-${PYQT_VER}-cp34-none-win32.whl \
-        7f0e53bbae9b8d39ae2dbe90fb8104cd
+        $PYQT_MD5
 
     cp "$DOWNLOADDIR"/PyQt4-${PYQT_VER}-cp34-none-win32.whl "$BUILDBASE"/wheelhouse
 }

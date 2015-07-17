@@ -60,7 +60,7 @@ class OWDataSampler(widget.OWWidget):
         self.sampleSizePercentageSlider = gui.hSlider(
             gui.indentedBox(sampling), self,
             "sampleSizePercentage",
-            minValue=0, maxValue=100, ticks=10, labelFormat="%d %%",
+            minValue=0, maxValue=99, ticks=10, labelFormat="%d %%",
             callback=set_sampling_type(self.FixedProportion))
 
         gui.appendRadioButton(sampling, "Fixed sample size:")

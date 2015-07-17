@@ -210,7 +210,6 @@ class OWTestLearners(widget.OWWidget):
 
         # TODO: Test each learner individually
         try:
-            self.error(3)
             if self.resampling == OWTestLearners.KFold:
                 results = Orange.evaluation.CrossValidation(
                     self.train_data, learners, k=self.k_folds, store_data=True
@@ -238,7 +237,7 @@ class OWTestLearners(widget.OWWidget):
             else:
                 assert False
         except ValueError as err:
-            self.error(3, str(err))
+            self.error(2, str(err))
             return
 
         self.results = results
