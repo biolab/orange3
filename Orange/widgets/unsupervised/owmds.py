@@ -124,10 +124,10 @@ class OWMDS(widget.OWWidget):
     output_embedding_role = settings.Setting(1)
     autocommit = settings.Setting(True)
 
-    color_index = settings.ContextSetting(0, not_attribute=True)
-    shape_index = settings.ContextSetting(0, not_attribute=True)
-    size_index = settings.ContextSetting(0, not_attribute=True)
-    label_index = settings.ContextSetting(0, not_attribute=True)
+    color_value = settings.ContextSetting("")
+    shape_value = settings.ContextSetting("")
+    size_value = settings.ContextSetting("")
+    label_value = settings.ContextSetting("")
 
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
@@ -182,28 +182,35 @@ class OWMDS(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Graph")
         self.colorvar_model = itemmodels.VariableListModel()
-        cb = gui.comboBox(box, self, "color_index", box="Color",
-                          callback=self._on_color_index_changed)
-        cb.setModel(self.colorvar_model)
-        cb.box.setFlat(True)
+
+        common_options = {"sendSelectedValue": True, "valueType": str}
+
+        self.cb_color_value = gui.comboBox(
+            box, self, "color_value", box="Color",
+            callback=self._on_color_index_changed, **common_options)
+        self.cb_color_value.setModel(self.colorvar_model)
+        self.cb_color_value.box.setFlat(True)
 
         self.shapevar_model = itemmodels.VariableListModel()
-        cb = gui.comboBox(box, self, "shape_index", box="Shape",
-                          callback=self._on_shape_index_changed)
-        cb.setModel(self.shapevar_model)
-        cb.box.setFlat(True)
+        self.cb_shape_value = gui.comboBox(
+            box, self, "shape_value", box="Shape",
+            callback=self._on_shape_index_changed, **common_options)
+        self.cb_shape_value.setModel(self.shapevar_model)
+        self.cb_shape_value.box.setFlat(True)
 
         self.sizevar_model = itemmodels.VariableListModel()
-        cb = gui.comboBox(box, self, "size_index", "Size",
-                          callback=self._on_size_index_changed)
-        cb.setModel(self.sizevar_model)
-        cb.box.setFlat(True)
+        self.cb_size_value = gui.comboBox(
+            box, self, "size_value", "Size",
+            callback=self._on_size_index_changed, **common_options)
+        self.cb_size_value.setModel(self.sizevar_model)
+        self.cb_size_value.box.setFlat(True)
 
         self.labelvar_model = itemmodels.VariableListModel()
-        cb = gui.comboBox(box, self, "label_index", "Label",
-                          callback=self._on_label_index_changed)
-        cb.setModel(self.labelvar_model)
-        cb.box.setFlat(True)
+        self.cb_label_value = gui.comboBox(
+            box, self, "label_value", "Label",
+            callback=self._on_label_index_changed, **common_options)
+        self.cb_label_value.setModel(self.labelvar_model)
+        self.cb_label_value.box.setFlat(True)
 
         form = QtGui.QFormLayout(
             labelAlignment=Qt.AlignLeft,
@@ -340,10 +347,10 @@ class OWMDS(widget.OWWidget):
         self.sizevar_model[:] = ["Same size"]
         self.labelvar_model[:] = ["No labels"]
 
-        self.color_index = 0
-        self.shape_index = 0
-        self.size_index = 0
-        self.label_index = 0
+        self.color_value = self.colorvar_model[0]
+        self.shape_value = self.shapevar_model[0]
+        self.size_value = self.sizevar_model[0]
+        self.label_value = self.labelvar_model[0]
 
         self.__set_update_loop(None)
         self.__state = OWMDS.Waiting
@@ -367,8 +374,8 @@ class OWMDS(widget.OWWidget):
             self.shapevar_model[:] = ["Same shape", attr]
             self.colorvar_model[:] = ["Same color", attr]
 
-            self.color_index = list(self.colorvar_model).index(attr)
-            self.shape_index = list(self.shapevar_model).index(attr)
+            self.color_value = attr
+            self.shape_value = attr
         else:
             # initialize the graph state from data
             domain = self.data.domain
@@ -393,7 +400,7 @@ class OWMDS(widget.OWWidget):
                                            str_vars)
 
             if domain.class_var is not None:
-                self.color_index = list(self.colorvar_model).index(domain.class_var)
+                self.color_value = domain.class_var.name
 
     def _initialize(self):
         # clear everything
@@ -659,8 +666,9 @@ class OWMDS(widget.OWWidget):
             else:
                 pointflags = None
 
-            if have_data and self.color_index > 0:
-                color_var = self.colorvar_model[self.color_index]
+            color_index = self.cb_color_value.currentIndex()
+            if have_data and color_index > 0:
+                color_var = self.colorvar_model[color_index]
                 if color_var.is_discrete:
                     palette = colorpalette.ColorPaletteGenerator(
                         len(color_var.values)
@@ -675,7 +683,7 @@ class OWMDS(widget.OWWidget):
                      numpy.full((len(color_data), 1), self.symbol_opacity))
                 )
                 pen_data = mdsplotutils.pen_data(color_data, pointflags)
-            elif have_matrix_transposed and self.colorvar_model[self.color_index] == 'Attribute names':
+            elif have_matrix_transposed and self.colorvar_model[color_index] == 'Attribute names':
                 attr = attributes(self.matrix)
                 palette = colorpalette.ColorPaletteGenerator(len(attr))
                 color_data = [palette.getRGB(i) for i in range(len(attr))]
@@ -692,16 +700,17 @@ class OWMDS(widget.OWWidget):
             self._pen_data = pen_data
 
         if self._shape_data is None:
-            if have_data and self.shape_index > 0:
+            shape_index = self.cb_shape_value.currentIndex()
+            if have_data and shape_index > 0:
                 Symbols = ScatterPlotItem.Symbols
                 symbols = numpy.array(list(Symbols.keys()))
 
-                shape_var = self.shapevar_model[self.shape_index]
+                shape_var = self.shapevar_model[shape_index]
                 data = column(self.data, shape_var)
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
-            elif have_matrix_transposed and self.shapevar_model[self.shape_index] == 'Attribute names':
+            elif have_matrix_transposed and self.shapevar_model[shape_index] == 'Attribute names':
                 Symbols = ScatterPlotItem.Symbols
                 symbols = numpy.array(list(Symbols.keys()))
                 attr = [i % (len(Symbols) - 1) for i, _ in enumerate(attributes(self.matrix))]
@@ -713,13 +722,14 @@ class OWMDS(widget.OWWidget):
         if self._size_data is None:
             MinPointSize = 3
             point_size = self.symbol_size + MinPointSize
-            if have_data and self.size_index == 1:
+            size_index = self.cb_size_value.currentIndex()
+            if have_data and size_index == 1:
                 # size by stress
                 size_data = stress(self.embedding, self._effective_matrix.X)
                 size_data = scale(size_data)
                 size_data = MinPointSize + size_data * point_size
-            elif have_data and self.size_index > 0:
-                size_var = self.sizevar_model[self.size_index]
+            elif have_data and size_index > 0:
+                size_var = self.sizevar_model[size_index]
                 size_data = column(self.data, size_var)
                 size_data = scale(size_data)
                 size_data = MinPointSize + size_data * point_size
@@ -727,13 +737,14 @@ class OWMDS(widget.OWWidget):
                 size_data = point_size
 
         if self._label_data is None:
-            if have_data and self.label_index > 0:
-                label_var = self.labelvar_model[self.label_index]
+            label_index = self.cb_label_value.currentIndex()
+            if have_data and label_index > 0:
+                label_var = self.labelvar_model[label_index]
                 label_data = column(self.data, label_var)
                 label_data = [label_var.repr_val(val) for val in label_data]
                 label_items = [pg.TextItem(text, anchor=(0.5, 0))
                                for text in label_data]
-            elif have_matrix_transposed and self.labelvar_model[self.label_index] == 'Attribute names':
+            elif have_matrix_transposed and self.labelvar_model[label_index] == 'Attribute names':
                 attr = attributes(self.matrix)
                 label_items = [pg.TextItem(str(text), anchor=(0.5, 0))
                                for text in attr]
@@ -760,11 +771,13 @@ class OWMDS(widget.OWWidget):
         self._legend_item.anchor(*self.legend_anchor)
 
         color_var = shape_var = None
-        if have_data and 1 <= self.color_index < len(self.colorvar_model):
-            color_var = self.colorvar_model[self.color_index]
+        color_index = self.cb_color_value.currentIndex()
+        if have_data and 1 <= color_index < len(self.colorvar_model):
+            color_var = self.colorvar_model[color_index]
             assert isinstance(color_var, Orange.data.Variable)
-        if have_data and 1 <= self.shape_index < len(self.shapevar_model):
-            shape_var = self.shapevar_model[self.shape_index]
+        shape_index = self.cb_shape_value.currentIndex()
+        if have_data and 1 <= shape_index < len(self.shapevar_model):
+            shape_var = self.shapevar_model[shape_index]
             assert isinstance(shape_var, Orange.data.Variable)
 
         if shape_var is not None or \
