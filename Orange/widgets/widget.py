@@ -11,7 +11,7 @@ from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
 
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas.scheme import widgetsscheme as widget_scheme
+
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -114,11 +114,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self._guiElements = []      # used for automatic widget debugging
         self.__reportData = None
-
-        # TODO: position used to be saved like this. Reimplement.
-        #if save_position:
-        #    self.settingsList = getattr(self, "settingsList", []) + \
-        #                        ["widgetShown", "savedWidgetGeometry"]
 
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
@@ -751,12 +746,9 @@ Single = widget_description.Single
 Multiple = widget_description.Multiple
 Explicit = widget_description.Explicit
 Dynamic = widget_description.Dynamic
+
 InputSignal = widget_description.InputSignal
 OutputSignal = widget_description.OutputSignal
-
-SignalLink = widget_scheme.SignalLink
-WidgetsSignalManager = widget_scheme.WidgetsSignalManager
-SignalWrapper = widget_scheme.SignalWrapper
 
 
 class AttributeList(list):
