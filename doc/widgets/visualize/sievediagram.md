@@ -67,7 +67,7 @@ Below we see a simple schema using a *Titanic* data set, where we use **Rank** w
 displays the sieve plot for the two best attributes, which in our case are sex and status. We see that the survival rate
 on Titanic was very high for women of the first class and very low for female crew members. 
 
-![image](images/SieveDiagram-Example.png)
+<img src="images/SieveDiagram-Example.png" alt="image" width="600">
 
 References
 ----------
