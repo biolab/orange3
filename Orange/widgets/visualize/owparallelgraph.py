@@ -11,11 +11,11 @@ import numpy as np
 from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
 from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
 
-from Orange.canvas.utils import environ
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft, OWPlotItem
@@ -65,8 +65,8 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         self.selected_examples = []
         self.unselected_examples = []
-        self.bottom_pixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/upgreenarrow.png"))
-        self.top_pixmap = QPixmap(os.path.join(environ.widget_install_dir, "icons/downgreenarrow.png"))
+        self.bottom_pixmap = QPixmap(gui.resource_filename("icons/upgreenarrow.png"))
+        self.top_pixmap = QPixmap(gui.resource_filename("icons/downgreenarrow.png"))
 
     def set_data(self, data, subset_data=None, **args):
         self.start_progress()

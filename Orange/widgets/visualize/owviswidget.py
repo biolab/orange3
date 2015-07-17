@@ -2,14 +2,13 @@ import os
 
 from PyQt4.QtGui import QListWidget, QIcon, QSizePolicy
 
-from Orange.canvas.utils import environ
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils import vartype
 
-ICON_UP = os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")
-ICON_DOWN = os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")
+ICON_UP = gui.resource_filename("icons/Dlg_up3.png")
+ICON_DOWN = gui.resource_filename("icons/Dlg_down3.png")
 
 
 class OWVisWidget(OWWidget):

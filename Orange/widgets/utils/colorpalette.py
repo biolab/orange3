@@ -7,7 +7,6 @@ from PyQt4 import QtCore
 from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt, QSize, pyqtSignal
 
-from Orange.canvas.utils import environ
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
 
@@ -461,10 +460,10 @@ class PaletteEditor(QDialog):
         vbox = gui.widgetBox(hbox, orientation='vertical')
         buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP, tooltip="Move selected colors up")
         buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN, tooltip="Move selected colors down")
-        buttonUPAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_up3.png")))
+        buttonUPAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_up3.png")))
         buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         buttonUPAttr.setMaximumWidth(30)
-        buttonDOWNAttr.setIcon(QIcon(os.path.join(environ.widget_install_dir, "icons/Dlg_down3.png")))
+        buttonDOWNAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_down3.png")))
         buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         buttonDOWNAttr.setMaximumWidth(30)
         self.discListbox.itemDoubleClicked.connect(self.changeDiscreteColor)
