@@ -3,7 +3,7 @@ import os.path
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout
 
-from Orange.canvas.utils import environ
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 
 SPACE = 0
@@ -21,19 +21,18 @@ ZOOM_SELECTION = 10
 # attr name used to store toolbars on a widget
 TOOLBARS_STORE = "__toolbars"
 
-icons = os.path.join(environ.widget_install_dir, "icons")
-dlg_zoom = os.path.join(icons, "Dlg_zoom.png")
-dlg_zoom_selection = os.path.join(icons, "Dlg_zoom_selection.png")
-dlg_pan = os.path.join(icons, "Dlg_pan_hand.png")
-dlg_select = os.path.join(icons, "Dlg_arrow.png")
-dlg_rect = os.path.join(icons, "Dlg_rect.png")
-dlg_poly = os.path.join(icons, "Dlg_poly.png")
-dlg_zoom_extent = os.path.join(icons, "Dlg_zoom_extent.png")
-dlg_undo = os.path.join(icons, "Dlg_undo.png")
-dlg_clear = os.path.join(icons, "Dlg_clear.png")
-dlg_send = os.path.join(icons, "Dlg_send.png")
-dlg_browseRectangle = os.path.join(icons, "Dlg_browseRectangle.png")
-dlg_browseCircle = os.path.join(icons, "Dlg_browseCircle.png")
+dlg_zoom = gui.resource_filename("icons/Dlg_zoom.png")
+dlg_zoom_selection = gui.resource_filename("icons/Dlg_zoom_selection.png")
+dlg_pan = gui.resource_filename("icons/Dlg_pan_hand.png")
+dlg_select = gui.resource_filename("icons/Dlg_arrow.png")
+dlg_rect = gui.resource_filename("icons/Dlg_rect.png")
+dlg_poly = gui.resource_filename("icons/Dlg_poly.png")
+dlg_zoom_extent = gui.resource_filename("icons/Dlg_zoom_extent.png")
+dlg_undo = gui.resource_filename("icons/Dlg_undo.png")
+dlg_clear = gui.resource_filename("icons/Dlg_clear.png")
+dlg_send = gui.resource_filename("icons/Dlg_send.png")
+dlg_browseRectangle = gui.resource_filename("icons/Dlg_browseRectangle.png")
+dlg_browseCircle = gui.resource_filename("icons/Dlg_browseCircle.png")
 
 
 class ToolbarButton:

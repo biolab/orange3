@@ -158,15 +158,18 @@ def main(argv=None):
 
     qt_argv += args
 
-    if options.clear_widget_settings:
-        log.debug("Clearing widget settings")
-        shutil.rmtree(config.widget_settings_dir(), ignore_errors=True)
-
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
 
     # NOTE: config.init() must be called after the QApplication constructor
     config.init()
+
+    if options.clear_widget_settings:
+        log.debug("Clearing widget settings")
+        import Orange.misc.environ
+        shutil.rmtree(
+            Orange.misc.environ.widget_settings_dir(),
+            ignore_errors=True)
 
     file_handler = logging.FileHandler(
         filename=os.path.join(config.log_dir(), "canvas.log"),

@@ -673,7 +673,7 @@ class ImageLoader(QObject):
             netmanager = QNetworkAccessManager()
             cache = QNetworkDiskCache()
             cache.setCacheDirectory(
-                os.path.join(widget.environ.widget_settings_dir,
+                os.path.join(settings.widget_settings_dir(),
                              __name__ + ".ImageLoader.Cache")
             )
             netmanager.setCache(cache)

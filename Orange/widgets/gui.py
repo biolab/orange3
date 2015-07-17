@@ -2,7 +2,10 @@ import math
 import os
 import re
 import itertools
+
+import pkg_resources
 import numpy
+
 from PyQt4 import QtGui, QtCore, QtWebKit
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from PyQt4.QtGui import QCursor, QApplication
@@ -19,6 +22,13 @@ __re_label = re.compile(r"(^|[^%])%\((?P<value>[a-zA-Z]\w*)\)")
 
 
 OrangeUserRole = itertools.count(Qt.UserRole)
+
+
+def resource_filename(path):
+    """
+    Return a resource filename (package data) for path.
+    """
+    return pkg_resources.resource_filename(__name__, path)
 
 
 class TableWidget(QtGui.QTableWidget):
