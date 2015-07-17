@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.classification import Learner, Model
+from Orange.base import Learner, Model
 from Orange.classification.simple_tree import SimpleTreeLearner
 
 __all__ = ['SimpleRandomForestLearner']

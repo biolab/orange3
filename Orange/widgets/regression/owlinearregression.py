@@ -1,6 +1,8 @@
-from PyQt4.QtGui import QSizePolicy, QLayout
-import Orange.data
-from Orange.regression import linear
+from PyQt4.QtGui import QLayout
+
+from Orange.data import Table
+from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
+                                      LinearRegressionLearner)
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -11,10 +13,10 @@ class OWLinearRegression(widget.OWWidget):
                   "regularization."
     icon = "icons/LinearRegression.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", linear.RidgeRegressionLearner),
-               ("Predictor", linear.LinearModel)]
+    outputs = [("Learner", RidgeRegressionLearner),
+               ("Predictor", LinearModel)]
 
     #: Types
     OLS, Ridge, Lasso = 0, 1, 2
@@ -75,21 +77,26 @@ class OWLinearRegression(widget.OWWidget):
     def apply(self):
         args = {"preprocessors": self.preprocessors}
         if self.reg_type == OWLinearRegression.OLS:
-            learner = linear.LinearRegressionLearner(**args)
+            learner = LinearRegressionLearner(**args)
         elif self.reg_type == OWLinearRegression.Ridge:
-            learner = linear.RidgeRegressionLearner(
+            learner = RidgeRegressionLearner(
                 alpha=self.ridgealpha, **args)
         elif self.reg_type == OWLinearRegression.Lasso:
-            learner = linear.RidgeRegressionLearner(
+            learner = RidgeRegressionLearner(
                 alpha=self.lassoalpha, **args)
         else:
             assert False
 
         learner.name = self.learner_name
         predictor = None
+
         if self.data is not None:
-            predictor = learner(self.data)
-            predictor.name = self.learner_name
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                predictor = learner(self.data)
+                predictor.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
@@ -97,3 +104,16 @@ class OWLinearRegression(widget.OWWidget):
     def _reg_type_changed(self):
         self.ridge_box.setEnabled(self.reg_type == self.Ridge)
         self.lasso_box.setEnabled(self.reg_type == self.Lasso)
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWLinearRegression()
+    d = Table('iris')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()

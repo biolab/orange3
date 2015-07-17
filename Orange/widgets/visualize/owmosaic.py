@@ -16,6 +16,7 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.canvas.utils import environ
+
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.distribution import get_distribution

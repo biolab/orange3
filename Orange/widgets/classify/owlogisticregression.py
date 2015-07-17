@@ -1,8 +1,6 @@
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
+from PyQt4 import QtGui
 
-
-import Orange.data
+from Orange.data import Table
 from Orange.classification import logistic_regression as lr
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
@@ -14,7 +12,7 @@ class OWLogisticRegression(widget.OWWidget):
                   "LASSO (L1) or ridge (L2) regularization."
     icon = "icons/LogisticRegression.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", lr.LogisticRegressionLearner),
                ("Classifier", lr.LogisticRegressionClassifier)]
@@ -96,8 +94,12 @@ class OWLogisticRegression(widget.OWWidget):
         classifier = None
 
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
@@ -106,6 +108,6 @@ class OWLogisticRegression(widget.OWWidget):
 if __name__ == "__main__":
     app = QtGui.QApplication([])
     w = OWLogisticRegression()
-    w.set_data(Orange.data.Table("zoo"))
+    w.set_data(Table("zoo"))
     w.show()
     app.exec_()

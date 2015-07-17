@@ -16,8 +16,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt, QRegExp, QByteArray
 
 import Orange.data
-import Orange.classification
-
+from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
@@ -357,16 +356,16 @@ class OWPythonScript(widget.OWWidget):
                widget.Default),
 #               ("in_distance", Orange.misc.SymMatrix, "setDistanceMatrix",
 #                widget.Default),
-              ("in_learner", Orange.classification.Learner, "setLearner",
+              ("in_learner", Learner, "setLearner",
                widget.Default),
-              ("in_classifier", Orange.classification.Model, "setClassifier",
+              ("in_classifier", Model, "setClassifier",
                widget.Default),
               ("in_object", object, "setObject")]
 
     outputs = [("out_data", Orange.data.Table, ),
 #                ("out_distance", Orange.misc.SymMatrix, ),
-               ("out_learner", Orange.classification.Learner, ),
-               ("out_classifier", Orange.classification.Model, widget.Dynamic),
+               ("out_learner", Learner, ),
+               ("out_classifier", Model, widget.Dynamic),
                ("out_object", object, widget.Dynamic)]
 
     libraryListSource = \

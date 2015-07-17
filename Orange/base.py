@@ -18,6 +18,7 @@ class Learner:
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
+    learner_adequacy_err_msg = ''
 
     def __init__(self, preprocessors=None):
         if preprocessors is None:
@@ -32,6 +33,9 @@ class Learner:
         return self.fit(data.X, data.Y, data.W)
 
     def __call__(self, data):
+        if not self.check_learner_adequacy(data.domain):
+            raise ValueError(self.learner_adequacy_err_msg)
+
         if isinstance(data, Instance):
             data = Table(data.domain, [data])
         data = self.preprocess(data)
@@ -62,6 +66,9 @@ class Learner:
 
     def __repr__(self):
         return self.name
+
+    def check_learner_adequacy(self, domain):
+        return True
 
 
 class Model:
@@ -177,43 +184,6 @@ class SklModel(Model, metaclass=WrapperMeta):
             probs = self.skl_model.predict_proba(X)
             return value, probs
         return value
-
-    def __call__(self, data, ret=Model.Value):
-        prediction = super().__call__(data, ret=ret)
-
-        if ret == Model.Value:
-            return prediction
-
-        if ret == Model.Probs:
-            probs = prediction
-        else:  # ret == Model.ValueProbs
-            value, probs = prediction
-
-        # Expand probability predictions for class values which are not present
-        if ret != self.Value:
-            n_class = len(self.domain.class_vars)
-            max_values = max(len(cv.values) for cv in self.domain.class_vars)
-            if max_values != probs.shape[-1]:
-                if not self.supports_multiclass:
-                    probs = probs[:, np.newaxis, :]
-                probs_ext = np.zeros((len(probs), n_class, max_values))
-                for c in range(n_class):
-                    i = 0
-                    class_values = len(self.domain.class_vars[c].values)
-                    for cv in range(class_values):
-                        if (i < len(self.used_vals[c]) and
-                                cv == self.used_vals[c][i]):
-                            probs_ext[:, c, cv] = probs[:, c, i]
-                            i += 1
-                if self.supports_multiclass:
-                    probs = probs_ext
-                else:
-                    probs = probs_ext[:, 0, :]
-
-        if ret == Model.Probs:
-            return probs
-        else:  # ret == Model.ValueProbs
-            return value, probs
 
     def __repr__(self):
         return '{} {}'.format(self.name, self.params)

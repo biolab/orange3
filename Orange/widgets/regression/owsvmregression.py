@@ -4,8 +4,8 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QGridLayout, QLabel
 from PyQt4.QtCore import Qt
 
-import Orange.data
-from Orange.classification import svm, SklModel
+from Orange.data import Table
+from Orange.regression import SVRLearner, NuSVRLearner, SklModel
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -14,11 +14,11 @@ class OWSVMRegression(widget.OWWidget):
     name = "SVM"
     description = "Support vector machine regression algorithm."
     icon = "icons/SVMRegression.svg"
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", svm.SVRLearner),
+    outputs = [("Learner", SVRLearner),
                ("Predictor", SklModel),
-               ("Support vectors", Orange.data.Table)]
+               ("Support vectors", Table)]
 
     learner_name = settings.Setting("SVM Regression")
 
@@ -150,13 +150,6 @@ class OWSVMRegression(widget.OWWidget):
 
     def set_data(self, data):
         """Set the input train data set."""
-        self.warning(0)
-
-        if data is not None:
-            if not data.domain.has_continuous_class:
-                data = None
-                self.warning(0, "Data does not have a continuous class var")
-
         self.data = data
         if data is not None:
             self.apply()
@@ -179,24 +172,27 @@ class OWSVMRegression(widget.OWWidget):
             preprocessors=self.preprocessors
         )
         if self.svrtype == OWSVMRegression.Epsilon_SVR:
-            learner = svm.SVRLearner(
+            learner = SVRLearner(
                 C=self.epsilon_C, epsilon=self.epsilon, **common_args
             )
         else:
-            learner = svm.NuSVRLearner(C=self.nu_C, nu=self.nu, **common_args)
+            learner = NuSVRLearner(C=self.nu_C, nu=self.nu, **common_args)
         learner.name = self.learner_name
-
         predictor = None
+
         sv = None
         if self.data is not None:
-            predictor = learner(self.data)
-            predictor.name = self.learner_name
-            sv = self.data[predictor.skl_model.support_]
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                predictor = learner(self.data)
+                predictor.name = self.learner_name
+                sv = self.data[predictor.skl_model.support_]
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
         self.send("Support vectors", sv)
-
 
     def _on_kernel_changed(self):
         enabled = [[False, False, False],  # linear
@@ -209,14 +205,14 @@ class OWSVMRegression(widget.OWWidget):
             spin.setEnabled(enabled)
 
 
-def main():
-    app = QtGui.QApplication([])
-    w = OWSVMRegression()
-    w.set_data(Orange.data.Table("housing"))
-    w.show()
-    return app.exec_()
-
-
 if __name__ == "__main__":
     import sys
-    sys.exit(main())
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWSVMRegression()
+    d = Table('housing')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()
