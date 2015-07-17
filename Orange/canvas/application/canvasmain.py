@@ -575,6 +575,10 @@ class CanvasMainWindow(QMainWindow):
                     toggled=self.set_scheme_margins_enabled
                     )
 
+        self.reset_widget_settings_action = \
+            QAction(self.tr("Reset widget settings..."), self,
+                    triggered=self.reset_widget_settings)
+
     def setup_menu(self):
         menu_bar = QMenuBar()
 
@@ -648,6 +652,7 @@ class CanvasMainWindow(QMainWindow):
 #        self.options_menu.addAction("Attach Python Console")
         self.options_menu.addSeparator()
         self.options_menu.addAction(self.canvas_settings_action)
+        self.options_menu.addAction(self.reset_widget_settings_action)
         self.options_menu.addAction(self.canvas_addons_action)
 
         # Widget menu
@@ -1514,6 +1519,31 @@ class CanvasMainWindow(QMainWindow):
         dlg = AddonManagerDialog(self, windowTitle=self.tr("Add-ons"))
         dlg.setAttribute(Qt.WA_DeleteOnClose)
         return dlg.exec_()
+
+    def reset_widget_settings(self):
+        res = message_question(
+            "Clear all widget settings on next restart",
+            title="Clear settings",
+            informative_text=(
+                "A restart of the application is necessary " +
+                "for the changes to take effect"),
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            default_button=QMessageBox.Ok,
+            parent=self
+        )
+        if res == QMessageBox.Ok:
+            # Touch a finely crafted file inside the settings directory.
+            # The existence of this file is checked by the canvas main
+            # function and is deleted there.
+            fname = os.path.join(config.widget_settings_dir(),
+                                 "DELETE_ON_START")
+            with open(fname, "a"):
+                pass
+
+            if not self.close():
+                message_information(
+                    "Settings will still be reset at next application start",
+                    parent=self)
 
     def show_output_view(self):
         """Show a window with application output.
