@@ -12,7 +12,7 @@ import itertools
 import pkg_resources
 
 from PyQt4.QtGui import (
-    QDesktopServices, QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
+    QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 )
 
 from PyQt4.QtCore import Qt, QCoreApplication, QPoint, QRect
@@ -151,14 +151,12 @@ def data_dir():
     does not yet exists then create it.
 
     """
-    import Orange
-    init()
-    datadir = QDesktopServices.storageLocation(QDesktopServices.DataLocation)
-    datadir = str(datadir)
-    datadir = os.path.join(datadir, Orange.__version__)
-    if not os.path.exists(datadir):
-        os.makedirs(datadir)
-    return datadir
+    from Orange.misc import environ
+    path = os.path.join(environ.data_dir(), "canvas")
+
+    if not os.path.isdir(path):
+        os.makedirs(path, exist_ok=True)
+    return path
 
 
 def cache_dir():
@@ -166,14 +164,12 @@ def cache_dir():
     does not yet exists then create it.
 
     """
-    import Orange
-    init()
-    cachedir = QDesktopServices.storageLocation(QDesktopServices.CacheLocation)
-    cachedir = str(cachedir)
-    cachedir = os.path.join(cachedir, Orange.__version__)
-    if not os.path.exists(cachedir):
-        os.makedirs(cachedir)
-    return cachedir
+    from Orange.misc import environ
+    path = os.path.join(environ.cache_dir(), "canvas")
+
+    if not os.path.isdir(path):
+        os.makedirs(path, exist_ok=True)
+    return path
 
 
 def log_dir():
@@ -196,8 +192,8 @@ def widget_settings_dir():
     """
     Return the widget settings directory.
     """
-    import Orange.misc.environ
-    return Orange.misc.environ.widget_settings_dir()
+    from Orange.misc import environ
+    return environ.widget_settings_dir()
 
 
 def open_config():
