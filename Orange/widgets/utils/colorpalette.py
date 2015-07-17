@@ -627,7 +627,7 @@ class ColorPaletteGenerator:
             for i in range(self.number_of_colors):
                 col = QColor()
                 col.setHsv(360 / number_of_colors * i, 255, 255)
-                self.rgb_colors.append(col.getRgb())
+                self.rgb_colors.append(col.getRgb()[:3])
         self.rgb_array = np.array(self.rgb_colors)
         self.rgba_array = np.hstack([
             self.rgb_array, np.full((len(self.rgb_colors), 1), 255)])
