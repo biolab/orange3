@@ -2,14 +2,14 @@ import unittest
 
 import numpy as np
 
-import Orange
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import KNNLearner
 from Orange.evaluation import CA, CrossValidation
 
 
 class KNNTest(unittest.TestCase):
     def test_KNN(self):
-        table = Orange.data.Table('iris')
+        table = Table('iris')
         learn = KNNLearner()
         results = CrossValidation(table, [learn], k=10)
         ca = CA(results)
@@ -17,7 +17,7 @@ class KNNTest(unittest.TestCase):
         self.assertLess(ca, 0.99)
 
     def test_predict_single_instance(self):
-        data = Orange.data.Table('iris')
+        data = Table('iris')
         learn = KNNLearner()
         clf = learn(data)
         for ins in data[::20]:
@@ -30,7 +30,14 @@ class KNNTest(unittest.TestCase):
         y = np.random.random_integers(-2, 2, (nrows, 1))
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
-        t = Orange.data.Table(x1, y1)
+        attr = (ContinuousVariable('Feature 1'),
+                ContinuousVariable('Feature 2'),
+                ContinuousVariable('Feature 3'),
+                ContinuousVariable('Feature 4'),
+                ContinuousVariable('Feature 5'))
+        class_vars = (DiscreteVariable('Target 1'),)
+        domain = Domain(attr, class_vars)
+        t = Table(domain, x1, y1)
         learn = KNNLearner()
         clf = learn(t)
         z = clf(x2)

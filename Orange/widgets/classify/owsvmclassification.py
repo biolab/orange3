@@ -3,9 +3,8 @@
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 
-
-import Orange.data
-from Orange.classification import svm
+from Orange.data import Table
+from Orange.classification.svm import SVMLearner, SVMClassifier, NuSVMLearner
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -16,11 +15,11 @@ class OWSVMClassification(widget.OWWidget):
                   "selection of kernels."
     icon = "icons/SVM.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", svm.SVMLearner),
-               ("Classifier", svm.SVMClassifier),
-               ("Support vectors", Orange.data.Table)]
+    outputs = [("Learner", SVMLearner),
+               ("Classifier", SVMClassifier),
+               ("Support vectors", Table)]
 
     want_main_area = False
 
@@ -129,13 +128,6 @@ class OWSVMClassification(widget.OWWidget):
 
     def set_data(self, data):
         """Set the input train data set."""
-        self.warning(0)
-
-        if data is not None:
-            if not data.domain.has_discrete_class:
-                data = None
-                self.warning(0, "Data does not have a discrete class var")
-
         self.data = data
         if data is not None:
             self.apply()
@@ -160,17 +152,20 @@ class OWSVMClassification(widget.OWWidget):
             preprocessors=self.preprocessors
         )
         if self.svmtype == 0:
-            learner = svm.SVMLearner(C=self.C, **common_args)
+            learner = SVMLearner(C=self.C, **common_args)
         else:
-            learner = svm.NuSVMLearner(nu=self.nu, **common_args)
+            learner = NuSVMLearner(nu=self.nu, **common_args)
         learner.name = self.learner_name
-
         classifier = None
         sv = None
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
-            sv = self.data[classifier.skl_model.support_]
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
+                sv = self.data[classifier.skl_model.support_]
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
@@ -190,6 +185,6 @@ class OWSVMClassification(widget.OWWidget):
 if __name__ == "__main__":
     app = QtGui.QApplication([])
     w = OWSVMClassification()
-    w.set_data(Orange.data.Table("iris"))
+    w.set_data(Table("iris"))
     w.show()
     app.exec_()

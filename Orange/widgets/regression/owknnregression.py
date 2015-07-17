@@ -1,9 +1,9 @@
 """
 """
 
-import Orange.data
-import Orange.regression.knn as knn
-import Orange.classification
+from Orange.data import Table
+from  Orange.regression.knn import KNNRegressionLearner
+from Orange.regression import SklModel
 from Orange.preprocess.preprocess import Preprocess
 
 from Orange.widgets import widget, gui
@@ -16,10 +16,10 @@ class OWKNNRegression(widget.OWWidget):
     icon = "icons/kNearestNeighbours.svg"
     priority = 20
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", knn.KNNRegressionLearner),
-               ("Predictor", Orange.classification.SklModel)]
+    outputs = [("Learner", KNNRegressionLearner),
+               ("Predictor", SklModel)]
 
     want_main_area = False
 
@@ -73,7 +73,7 @@ class OWKNNRegression(widget.OWWidget):
         """
         Construct the learner and apply it on the training data if available.
         """
-        learner = knn.KNNRegressionLearner(
+        learner = KNNRegressionLearner(
             n_neighbors=self.n_neighbors,
             metric=self.metrics[self.metric_index],
             preprocessors=self.preprocessors
@@ -81,8 +81,25 @@ class OWKNNRegression(widget.OWWidget):
         learner.name = self.learner_name
         model = None
         if self.data is not None:
-            model = learner(self.data)
-            model.name = self.learner_name
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                model = learner(self.data)
+                model.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Predictor", model)
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWKNNRegression()
+    d = Table('housing')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()

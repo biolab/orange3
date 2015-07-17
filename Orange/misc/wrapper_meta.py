@@ -53,12 +53,20 @@ class WrapperMeta(type):
 
     def __new__(cls, name, bases, dict_):
         cls = type.__new__(cls, name, bases, dict_)
-        docstring = getattr(cls, "__doc__", None)
+#        docstring = getattr(cls, "__doc__", None)
         skl_wrapped = getattr(cls, "__wraps__", None)
 
-        parent_docs = [parent.__doc__ for parent in bases if parent.__doc__]
-        if docstring is None and skl_wrapped and len(parent_docs) > 0:
-            docstring = parent_docs[0]
+        def get_doc(c):
+            if getattr(c, "__doc__", None):
+                return getattr(c, "__doc__", None)
+            else:
+                parents = getattr(c, "__bases__", None)
+                return get_doc(parents[0])
+        docstring = get_doc(cls)
+
+        #parent_docs = [parent.__doc__ for parent in bases if parent.__doc__]
+        #if docstring is None and skl_wrapped and len(parent_docs) > 0:
+         #   docstring = parent_docs[0]
 
         if docstring is not None and skl_wrapped is not None:
             docstring = WrapperMeta.format_docstring(docstring, skl_wrapped)

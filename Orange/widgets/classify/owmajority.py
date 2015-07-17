@@ -1,5 +1,5 @@
-import Orange.data
-import Orange.classification.majority
+from Orange.data import Table
+from Orange.classification.majority import MajorityLearner, ConstantModel
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -12,10 +12,10 @@ class OWMajority(widget.OWWidget):
     priority = 20
     icon = "icons/Majority.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", Orange.classification.majority.MajorityLearner),
-               ("Classifier", Orange.classification.majority.ConstantModel)]
+    outputs = [("Learner", MajorityLearner),
+               ("Classifier", ConstantModel)]
 
     learner_name = Setting("Majority")
 
@@ -33,14 +33,9 @@ class OWMajority(widget.OWWidget):
         self.apply()
 
     def set_data(self, data):
-        self.error(0)
-        if data is not None:
-            if not data.domain.has_discrete_class:
-                data = None
-                self.error(0, "Discrete class variable expected.")
-
         self.data = data
-        self.apply()
+        if data is not None:
+            self.apply()
 
     def set_preprocessor(self, preproc):
         if preproc is None:
@@ -50,15 +45,32 @@ class OWMajority(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        learner = Orange.classification.majority.MajorityLearner(
-            preprocessors=self.preprocessors)
-
+        learner = MajorityLearner(
+            preprocessors=self.preprocessors
+        )
         learner.name = self.learner_name
+        classifier = None
+
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
-        else:
-            classifier = None
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWMajority()
+    d = Table('iris')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()

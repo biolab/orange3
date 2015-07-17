@@ -13,7 +13,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt, QMargins
 
 import Orange.data
-import Orange.classification
+from Orange.base import Model, Learner
 from Orange.data import filter as data_filter
 
 from Orange.widgets import gui, settings
@@ -172,7 +172,7 @@ class OWImpute(OWWidget):
     priority = 2130
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Learner", Orange.classification.Learner, "set_learner")]
+              ("Learner", Learner, "set_learner")]
     outputs = [("Data", Orange.data.Table)]
 
     METHODS = METHODS
@@ -776,7 +776,7 @@ class ImputerModel(object):
         for i, (var, imp) in enumerate(col_models):
             if isinstance(imp, ColumnImputerModel):
                 pass
-            elif isinstance(imp, Orange.classification.Model):
+            elif isinstance(imp, Model):
                 imp = ColumnImputerFromModel(domain, imp.class_vars, imp)
             elif isinstance(imp, collections.Callable):
                 raise NotImplementedError
@@ -875,7 +875,6 @@ Imputation:
 
 """
 
-from Orange.classification import Learner, Model
 
 
 class MeanLearner(Learner):

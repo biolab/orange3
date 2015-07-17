@@ -225,8 +225,6 @@ if __name__ == "__main__":
     import os
 
     a = QtGui.QApplication(sys.argv)
-    settings = os.path.join(widget.environ.widget_settings_dir,
-                            OWSql.name + ".ini")
     ow = OWSql()
     ow.show()
     a.exec_()

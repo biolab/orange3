@@ -1,4 +1,4 @@
-import Orange.data
+from Orange.data import Table
 from Orange.classification import KNNLearner, SklModel
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui
@@ -6,11 +6,10 @@ from Orange.widgets.settings import Setting
 
 
 class OWKNNLearner(widget.OWWidget):
-
     name = "Nearest Neighbors"
     description = "k-nearest neighbors classification algorithm."
     icon = "icons/KNN.svg"
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", KNNLearner), ("Classifier", SklModel)]
 
@@ -66,9 +65,27 @@ class OWKNNLearner(widget.OWWidget):
         )
         learner.name = self.learner_name
         classifier = None
+
         if self.data is not None:
-            classifier = learner(self.data)
-            classifier.name = self.learner_name
+            self.error(0)
+            if not learner.check_learner_adequacy(self.data.domain):
+                self.error(0, learner.learner_adequacy_err_msg)
+            else:
+                classifier = learner(self.data)
+                classifier.name = self.learner_name
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt4.QtGui import QApplication
+
+    a = QApplication(sys.argv)
+    ow = OWKNNLearner()
+    d = Table('iris')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()

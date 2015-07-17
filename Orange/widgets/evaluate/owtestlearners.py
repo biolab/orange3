@@ -9,6 +9,7 @@ from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
 from PyQt4.QtCore import Qt, QSize
 
 import Orange
+from Orange.base import Learner
 from Orange.evaluation import *
 from Orange.widgets import widget, gui, settings
 from Orange.data import Domain
@@ -48,7 +49,7 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Orange.classification.Learner,
+    inputs = [("Learner", Learner,
                "set_learner", widget.Multiple),
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
               ("Test Data", Orange.data.Table, "set_test_data")]
@@ -235,8 +236,8 @@ class OWTestLearners(widget.OWWidget):
                 )
             else:
                 assert False
-        except Exception as e:
-            self.error(2, str(e))
+        except ValueError as err:
+            self.error(2, str(err))
             return
 
         self.results = results
@@ -284,6 +285,8 @@ class OWTestLearners(widget.OWWidget):
             head = QStandardItem()
             head.setData(name, Qt.DisplayRole)
             row.append(head)
+            if input.stats is None:
+                return
             for stat in input.stats:
                 item = QStandardItem()
                 item.setData(" {:.3f} ".format(stat[0]), Qt.DisplayRole)

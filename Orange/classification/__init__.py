@@ -1,4 +1,7 @@
-from Orange.base import *
+from .base_classification import (ModelClassification as Model,
+                                  LearnerClassification as Learner,
+                                  SklModelClassification as SklModel,
+                                  SklLearnerClassification as SklLearner)
 from .knn import *
 from .logistic_regression import *
 from .majority import *
