@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -63,6 +64,15 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         np.testing.assert_array_equal(disc1,
                                       [0]*len(d.domain.class_var.values))
 
+    def test_fallback(self):
+        d = data.Table("zoo")
+        default = distribution.Discrete(d, "type")
+
+        d._compute_distributions = Mock(side_effect=NotImplementedError)
+        fallback = distribution.Discrete(d, "type")
+
+        np.testing.assert_almost_equal(fallback, default)
+        np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
     def test_indexing(self):
         d = data.Table("zoo")
