@@ -650,9 +650,11 @@ class ExcelFormat:
 class PickleFormat:
     @classmethod
     def read_file(cls, file, _=None):
-        return pickle.load(open(file, "rb"))
+        with open(file, "rb") as f:
+            return pickle.load(f)
 
     @classmethod
     def write_file(cls, filename, table):
-        pickle.dump(table, open(filename, "wb"))
+        with open(filename, "wb") as f:
+            pickle.dump(table, f)
 
