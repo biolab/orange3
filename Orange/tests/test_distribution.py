@@ -74,6 +74,16 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(fallback, default)
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
+    def test_equality(self):
+        d = data.Table("zoo")
+        d1 = distribution.Discrete(d, 0)
+        d2 = distribution.Discrete(d, 0)
+        d3 = distribution.Discrete(d, 1)
+
+        self.assertEqual(d1, d1)
+        self.assertEqual(d1, d2)
+        self.assertNotEqual(d1, d3)
+
     def test_indexing(self):
         d = data.Table("zoo")
         indamphibian = d.domain.class_var.to_val("amphibian")

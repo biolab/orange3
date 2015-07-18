@@ -89,6 +89,8 @@ class Discrete(np.ndarray):
         return np.array_equal(self, other) and (
             not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
 
+    def __ne__(self, other):
+        return not self == other
 
     def __getitem__(self, index):
         if isinstance(index, str):
