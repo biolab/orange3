@@ -80,8 +80,9 @@ class Discrete(np.ndarray):
             self[...] = dist
             self.unknowns = unknowns
         except NotImplementedError:
-            self = np.zeros(
-                (len(row_variable.values), len(col_variable.values)))
+            shape = len(row_variable.values), len(col_variable.values)
+            self = super().__new__(cls, shape)
+            self[...] = np.zeros(shape)
             self.unknowns = 0
             rind = data.domain.index(row_variable)
             cind = data.domain.index(col_variable)

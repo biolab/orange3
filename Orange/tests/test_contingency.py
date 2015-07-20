@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -29,6 +30,15 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont,
             [[1, 3], [11, 9], [4, 9], [7, 1], [2, 8], [19, 22], [1, 4]])
 
+    def test_discrete_with_fallback(self):
+        d = data.Table("zoo")
+        default = contingency.Discrete(d, 0)
+
+        d._compute_contingency = Mock(side_effect=NotImplementedError)
+        fallback = contingency.Discrete(d, 0)
+
+        np.testing.assert_almost_equal(fallback, default)
+        np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
     def test_continuous(self):
         d = data.Table("iris")

@@ -65,7 +65,8 @@ class Discrete(np.ndarray):
             self[:] = dist
             self.unknowns = unknowns
         except NotImplementedError:
-            self = np.zeros(len(variable.values))
+            self = super().__new__(cls, len(variable.values))
+            self[:] = np.zeros(len(variable.values))
             self.unknowns = 0
             if data.has_weights():
                 for val, w in zip(data[:, variable], data.W):
@@ -88,6 +89,8 @@ class Discrete(np.ndarray):
         return np.array_equal(self, other) and (
             not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
 
+    def __ne__(self, other):
+        return not self == other
 
     def __getitem__(self, index):
         if isinstance(index, str):
