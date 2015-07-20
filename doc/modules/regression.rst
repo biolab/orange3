@@ -69,9 +69,6 @@ Example
 .. autoclass:: MeanLearner
    :members:
 
-.. autoclass:: MeanModel
-   :members:
-
 
 .. index:: random forest (simple)
    pair: regression; simple random forest
