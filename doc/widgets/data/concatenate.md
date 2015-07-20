@@ -50,8 +50,8 @@ one containing instances from the first experiment and the other instances from 
 experiment and we wish to join the two data tables together. We use **Concatenate** widget
 to merge data sets by attributes (appending new rows under existing attributes).
 
-Below we used a modified *Zoo* data set. In the first **File** widget we loaded only animals beginning with letters A 
-and B and in the second one only animals beginning with the letter C. Upon concatenation we observe the new data
+Below we used a modified *Zoo* data set. In the [first](zoo-first.tab) **File** widget we loaded only animals beginning with letters A 
+and B and in the [second](zoo-second.tab) one only animals beginning with the letter C. Upon concatenation we observe the new data
 in the **Data Table** widget, where we see the complete table with animals from A to C.
 
-![image](images/Concatenate-Example.png)
+<img src="images/Concatenate-Example.png" alt="image" width="600">
