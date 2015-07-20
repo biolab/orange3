@@ -52,7 +52,7 @@ the **Select Columns** widget, where we select to output only two attributes
 (namely petal width and petal length). We view both the original data set
 and the data set with selected columns in the **Data Table** widget.
 
-![Select Columns schema](images/SelectColumns-Example1.png)
+<img src="images/SelectColumns-Example1.png" alt="image" width="600">
 
 For a more complex use of the widget we composed a workflow to redefine the classification problem in 
 *heart-disease* data set. Originally, the task was to predict if the patient has
