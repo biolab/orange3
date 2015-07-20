@@ -108,7 +108,7 @@ class OWMosaicDisplay(OWWidget):
     color_settings = Setting(None)
     selected_schema_index = Setting(0)
     show_subset_data_boxes = Setting(True)
-    remove_unused_values = Setting(True)
+    remove_unused_labels = Setting(True)
     variable1 = ContextSetting("")
     variable2 = ContextSetting("")
     variable3 = ContextSetting("")
@@ -143,6 +143,8 @@ class OWMosaicDisplay(OWWidget):
         self.manualAttributeValuesDict = {}
         self.conditionalDict = None
         self.conditionalSubsetDict = None
+        self.distributionDict = None
+        self.distributionSubsetDict = None
         self.activeRule = None
 
         self.selectionRectangle = None
@@ -202,8 +204,9 @@ class OWMosaicDisplay(OWWidget):
                      items=self.interior_coloring_opts,
                      callback=self.updateGraph)
 
-        gui.checkBox(box5, self, "remove_unused_values",
-                     "Remove unused attribute values")
+        gui.checkBox(box5, self, "remove_unused_labels",
+                     "Remove unused attribute labels",
+                     callback=self.updateGraph)
 
         gui.checkBox(box5, self, 'show_apriori_distribution_lines',
                      'Show apriori distribution with lines',
@@ -272,7 +275,7 @@ class OWMosaicDisplay(OWWidget):
             attr = self.variable4
 
         if self.data and attr != "" and attr != "(None)":
-            dlg = SortAttributeValuesDlg(attr,
+            dlg = self.SortAttributeValuesDlg(attr,
                                          self.manualAttributeValuesDict.get(attr, None) or get_variable_values_sorted(
                                              self.data.domain[attr]))
             if dlg.exec_() == QDialog.Accepted:
@@ -530,12 +533,11 @@ class OWMosaicDisplay(OWWidget):
 
         # compute distributions
 
-        self.conditionalDict = self.getConditionalDistributions(data, attrList)
-        self.conditionalDict[""] = len(data)
-        self.conditionalSubsetDict = None
+        self.conditionalDict, self.distributionDict = self.getConditionalDistributions(data, attrList)
+        self.conditionalSubsetDict = self.distributionSubsetDict = None
         if subsetData:
-            self.conditionalSubsetDict = self.getConditionalDistributions(subsetData, attrList)
-            self.conditionalSubsetDict[""] = len(subsetData)
+            self.conditionalSubsetDict, self.distributionSubsetDict = \
+                self.getConditionalDistributions(subsetData, attrList)
 
         # draw rectangles
         self.DrawData(attrList, (xOff, xOff + squareSize), (yOff, yOff + squareSize), 0, "", len(attrList), **args)
@@ -552,6 +554,8 @@ class OWMosaicDisplay(OWWidget):
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
         cond_dist = defaultdict(int)
+        dist = defaultdict(int)
+        cond_dist[""] = dist[""] = len(data)
         all_attrs = [data.domain[a] for a in attrs]
         if data.domain.class_var is not None:
             all_attrs.append(data.domain.class_var)
@@ -569,6 +573,7 @@ class OWMosaicDisplay(OWWidget):
                     str_values =[a.repr_val(a.to_val(x)) for a, x in zip(all_attrs, r[:-1])]
                     str_values = [x if x != '?' else 'None' for x in str_values]
                     cond_dist['-'.join(str_values)] = r[-1]
+                    dist[str_values[-1]] += r[-1]
             else:
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
@@ -580,7 +585,8 @@ class OWMosaicDisplay(OWWidget):
                     filt = filter.Values(conditions)
                     filtdata = filt(data)
                     cond_dist['-'.join(vals)] = len(filtdata)
-        return cond_dist
+                    dist[vals[-1]] += len(filtdata)
+        return cond_dist, dist
 
 
     # ############################################################################
@@ -701,18 +707,20 @@ class OWMosaicDisplay(OWWidget):
         for i in range(len(values)):
             val = values[i]
             perc = counts[i] / float(total)
-            if side == 0:
-                OWCanvasText(self.canvas, str(val), x0 + currPos + width * 0.5 * perc, y1 + self.attributeValueOffset,
-                             Qt.AlignTop | Qt.AlignHCenter, bold=0)
-            elif side == 1:
-                OWCanvasText(self.canvas, str(val), x0 - self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
-                             Qt.AlignRight | Qt.AlignVCenter, bold=0)
-            elif side == 2:
-                OWCanvasText(self.canvas, str(val), x0 + currPos + width * perc * 0.5, y0 - self.attributeValueOffset,
-                             Qt.AlignHCenter | Qt.AlignBottom, bold=0)
-            else:
-                OWCanvasText(self.canvas, str(val), x1 + self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
-                             Qt.AlignLeft | Qt.AlignVCenter, bold=0)
+            hide_value = self.remove_unused_labels and self.distributionDict[val] == 0
+            if not hide_value:
+                if side == 0:
+                    OWCanvasText(self.canvas, str(val), x0 + currPos + width * 0.5 * perc, y1 + self.attributeValueOffset,
+                                 Qt.AlignTop | Qt.AlignHCenter, bold=0)
+                elif side == 1:
+                    OWCanvasText(self.canvas, str(val), x0 - self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
+                                 Qt.AlignRight | Qt.AlignVCenter, bold=0)
+                elif side == 2:
+                    OWCanvasText(self.canvas, str(val), x0 + currPos + width * perc * 0.5, y0 - self.attributeValueOffset,
+                                 Qt.AlignHCenter | Qt.AlignBottom, bold=0)
+                else:
+                    OWCanvasText(self.canvas, str(val), x1 + self.attributeValueOffset, y0 + currPos + height * 0.5 * perc,
+                                 Qt.AlignLeft | Qt.AlignVCenter, bold=0)
 
             if side % 2 == 0:
                 currPos += perc * width + self._cellspace * (totalAttrs - side)
@@ -1056,52 +1064,49 @@ class OWMosaicDisplay(OWWidget):
         # self.optimizationDlg.saveSettings()
 
 
-class SortAttributeValuesDlg(OWWidget):
-    def __init__(self, attr="", valueList=[]):
-        super().__init__(self)
+    class SortAttributeValuesDlg(OWWidget):
+        name = "Sort Attribute Values"
 
-        self.setLayout(QVBoxLayout())
-        #self.space = QWidget(self)
-        #self.layout = QVBoxLayout(self, 4)
-        #self.layout.addWidget(self.space)
+        def __init__(self, attr="", valueList=[]):
+            super().__init__(self)
 
-        box1 = gui.widgetBox(self, "Select Value Order for Attribute \"" + attr + '"', orientation="horizontal")
+            box1 = gui.widgetBox(self, "Select Value Order for Attribute \"" + attr + '"', orientation="horizontal")
 
-        self.attributeList = gui.listBox(box1, self, selectionMode=QListWidget.ExtendedSelection, enableDragDrop=1)
-        self.attributeList.addItems(valueList)
+            self.attributeList = gui.listBox(box1, self, selectionMode=QListWidget.ExtendedSelection, enableDragDrop=1)
+            self.attributeList.addItems(valueList)
 
-        vbox = gui.widgetBox(box1, "", orientation="vertical")
-        self.buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP,
-                                       tooltip="Move selected attribute values up")
-        self.buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
-                                         tooltip="Move selected attribute values down")
-        self.buttonUPAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_up3.png")))
-        self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.buttonUPAttr.setFixedWidth(40)
-        self.buttonDOWNAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_down3.png")))
-        self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
-        self.buttonDOWNAttr.setFixedWidth(40)
+            vbox = gui.widgetBox(box1, "", orientation="vertical")
+            self.buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP,
+                                           tooltip="Move selected attribute values up")
+            self.buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
+                                             tooltip="Move selected attribute values down")
+            self.buttonUPAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_up3.png")))
+            self.buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+            self.buttonUPAttr.setFixedWidth(40)
+            self.buttonDOWNAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_down3.png")))
+            self.buttonDOWNAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
+            self.buttonDOWNAttr.setFixedWidth(40)
 
-        box2 = gui.widgetBox(self, 1, orientation="horizontal")
-        self.okButton = gui.button(box2, self, "OK", callback=self.accept)
-        self.cancelButton = gui.button(box2, self, "Cancel", callback=self.reject)
+            box2 = gui.widgetBox(self, 1, orientation="horizontal")
+            self.okButton = gui.button(box2, self, "OK", callback=self.accept)
+            self.cancelButton = gui.button(box2, self, "Cancel", callback=self.reject)
 
-        self.resize(300, 300)
+            self.resize(300, 300)
 
-    # move selected attribute values
-    def moveAttrUP(self):
-        for i in range(1, self.attributeList.count()):
-            if self.attributeList.item(i).isSelected():
-                self.attributeList.insertItem(i - 1, self.attributeList.item(i).text())
-                self.attributeList.takeItem(i + 1)
-                self.attributeList.item(i - 1).setSelected(True)
+        # move selected attribute values
+        def moveAttrUP(self):
+            for i in range(1, self.attributeList.count()):
+                if self.attributeList.item(i).isSelected():
+                    self.attributeList.insertItem(i - 1, self.attributeList.item(i).text())
+                    self.attributeList.takeItem(i + 1)
+                    self.attributeList.item(i - 1).setSelected(True)
 
-    def moveAttrDOWN(self):
-        for i in range(self.attributeList.count() - 2, -1, -1):
-            if self.attributeList.item(i).isSelected():
-                self.attributeList.insertItem(i + 2, self.attributeList.item(i).text())
-                self.attributeList.item(i + 2).setSelected(True)
-                self.attributeList.takeItem(i)
+        def moveAttrDOWN(self):
+            for i in range(self.attributeList.count() - 2, -1, -1):
+                if self.attributeList.item(i).isSelected():
+                    self.attributeList.insertItem(i + 2, self.attributeList.item(i).text())
+                    self.attributeList.item(i + 2).setSelected(True)
+                    self.attributeList.takeItem(i)
 
 
 class OWCanvasText(QGraphicsTextItem):
