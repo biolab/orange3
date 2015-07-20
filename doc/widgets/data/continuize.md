@@ -76,12 +76,18 @@ for their transformation are:
 Example
 -------
 
-The schema below shows a typical use of this widget: in order to
+First let's see how the **Continuize** widget behaves. We feed the original data into the
+**Data Table** and see how they look like. Then we continuize the discrete values and
+observe them in another **Data Table**.
+
+<img src="images/Continuize-Example1.png" alt="image" width="600">
+
+The workflow below shows a typical use of this widget: in order to
 properly plot linear projection of the data, discrete attributes need to
 be converted to continuous, therefore we put the data through **Continuize**
-widget before drawing it. Attribute "chest pain" originally had four
+widget before drawing it. Attribute "*chest pain*" originally had four
 values and was transformed into three continuous attributes; similar
 happened to gender, which was transformed into a single attribute
-gender=female.
+"*gender=female*".
 
-<img src="images/Continuize-Schema.png" alt="image" width="600">
+<img src="images/Continuize-Example2.png" alt="image" width="600">
