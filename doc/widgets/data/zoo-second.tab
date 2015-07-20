@@ -1,0 +1,14 @@
+name	hair	feathers	eggs	milk	airborne	aquatic	predator	toothed	backbone	breathes	venomous	fins	legs	tail	domestic	catsize	type
+string	d	d	d	d	d	d	d	d	d	d	d	d	d	d	d	d	d
+																	class
+calf	1	0	0	1	0	0	0	1	1	1	0	0	4	1	1	1	mammal
+carp	0	0	1	0	0	1	0	1	1	0	0	1	0	1	1	0	fish
+catfish	0	0	1	0	0	1	1	1	1	0	0	1	0	1	0	0	fish
+cavy	1	0	0	1	0	0	0	1	1	1	0	0	4	0	1	0	mammal
+cheetah	1	0	0	1	0	0	1	1	1	1	0	0	4	1	0	1	mammal
+chicken	0	1	1	0	1	0	0	0	1	1	0	0	2	1	1	0	bird
+chub	0	0	1	0	0	1	1	1	1	0	0	1	0	1	0	0	fish
+clam	0	0	1	0	0	0	1	0	0	0	0	0	0	0	0	0	invertebrate
+crab	0	0	1	0	0	1	1	0	0	0	0	0	4	0	0	0	invertebrate
+crayfish	0	0	1	0	0	1	1	0	0	0	0	0	6	0	0	0	invertebrate
+crow	0	1	1	0	1	0	1	0	1	1	0	0	2	1	0	0	bird
