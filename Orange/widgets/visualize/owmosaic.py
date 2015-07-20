@@ -108,7 +108,7 @@ class OWMosaicDisplay(OWWidget):
     color_settings = Setting(None)
     selected_schema_index = Setting(0)
     show_subset_data_boxes = Setting(True)
-    remove_unused_values = Setting(True)
+    remove_unused_labels = Setting(True)
     variable1 = ContextSetting("")
     variable2 = ContextSetting("")
     variable3 = ContextSetting("")
@@ -143,6 +143,8 @@ class OWMosaicDisplay(OWWidget):
         self.manualAttributeValuesDict = {}
         self.conditionalDict = None
         self.conditionalSubsetDict = None
+        self.distributionDict = None
+        self.distributionSubsetDict = None
         self.activeRule = None
 
         self.selectionRectangle = None
@@ -202,8 +204,8 @@ class OWMosaicDisplay(OWWidget):
                      items=self.interior_coloring_opts,
                      callback=self.updateGraph)
 
-        gui.checkBox(box5, self, "remove_unused_values",
-                     "Remove unused attribute values",
+        gui.checkBox(box5, self, "remove_unused_labels",
+                     "Remove unused attribute labels",
                      callback=self.updateGraph)
 
         gui.checkBox(box5, self, 'show_apriori_distribution_lines',
@@ -531,12 +533,11 @@ class OWMosaicDisplay(OWWidget):
 
         # compute distributions
 
-        self.conditionalDict = self.getConditionalDistributions(data, attrList)
-        self.conditionalDict[""] = len(data)
-        self.conditionalSubsetDict = None
+        self.conditionalDict, self.distributionDict = self.getConditionalDistributions(data, attrList)
+        self.conditionalSubsetDict = self.distributionSubsetDict = None
         if subsetData:
-            self.conditionalSubsetDict = self.getConditionalDistributions(subsetData, attrList)
-            self.conditionalSubsetDict[""] = len(subsetData)
+            self.conditionalSubsetDict, self.distributionSubsetDict = \
+                self.getConditionalDistributions(subsetData, attrList)
 
         # draw rectangles
         self.DrawData(attrList, (xOff, xOff + squareSize), (yOff, yOff + squareSize), 0, "", len(attrList), **args)
@@ -553,6 +554,8 @@ class OWMosaicDisplay(OWWidget):
     ## TODO: this function is used both in owmosaic and owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
         cond_dist = defaultdict(int)
+        dist = defaultdict(int)
+        cond_dist[""] = dist[""] = len(data)
         all_attrs = [data.domain[a] for a in attrs]
         if data.domain.class_var is not None:
             all_attrs.append(data.domain.class_var)
@@ -570,6 +573,7 @@ class OWMosaicDisplay(OWWidget):
                     str_values =[a.repr_val(a.to_val(x)) for a, x in zip(all_attrs, r[:-1])]
                     str_values = [x if x != '?' else 'None' for x in str_values]
                     cond_dist['-'.join(str_values)] = r[-1]
+                    dist[str_values[-1]] += r[-1]
             else:
                 for indices in product(*(range(len(a.values)) for a in attr)):
                     vals = []
@@ -581,7 +585,8 @@ class OWMosaicDisplay(OWWidget):
                     filt = filter.Values(conditions)
                     filtdata = filt(data)
                     cond_dist['-'.join(vals)] = len(filtdata)
-        return cond_dist
+                    dist[vals[-1]] += len(filtdata)
+        return cond_dist, dist
 
 
     # ############################################################################
@@ -702,7 +707,7 @@ class OWMosaicDisplay(OWWidget):
         for i in range(len(values)):
             val = values[i]
             perc = counts[i] / float(total)
-            hide_value = self.remove_unused_values and counts[i]==0
+            hide_value = self.remove_unused_labels and self.distributionDict[val] == 0
             if not hide_value:
                 if side == 0:
                     OWCanvasText(self.canvas, str(val), x0 + currPos + width * 0.5 * perc, y1 + self.attributeValueOffset,
