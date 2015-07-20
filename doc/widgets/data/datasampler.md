@@ -46,9 +46,9 @@ Examples
 --------
 
 First let's see how the **Data Sampler** works. Let's look at the information on the original data set in the 
-**Data Info** widget. We see there are 24 instances in the data (we used *lenses.tab*). Then we sample the data with 
-**Data Sampler**. We choose to go with a fixed sample size of 5 instances for simplicity. 
-Then we observe the sampled data in the **Data Table** widget. The second
+**Data Info** widget. We see there are 24 instances in the data (we used *lenses.tab*). We sampled the data with 
+**Data Sampler**, where we choose to go with a fixed sample size of 5 instances for simplicity. 
+We can observe the sampled data in the **Data Table** widget. The second
 **Data Table** shows the remaining 19 instances that weren't in the sample.
 
 <img src="images/DataSampler-Example1.png" alt="image" width="600">
