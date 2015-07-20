@@ -28,9 +28,17 @@ Description
 -----------
 
 [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis) (PCA) computes the PCA linear
-transformation of the input data.
+transformation of the input data. It outputs either a transformed data set with weights for individual instances or
+weights for principal components.
 
 ![PCA widget](images/PCA-stamped.png)
+
+1. Select how many principal components you wish in your output. It is best to choose as few as possible with as high
+   variance as possible. You can also set how much variance you wish to cover with your principal components.
+2. When *Auto send on change* is ticked, the widget will automatically communicate all the changes. Alternatively click
+   *Send data*.
+3. Principal components graph, where the red line is the variance per component and the green line is cumulative
+   variance covered by components.
 
 The number of components of the transformation can be selected
 either in the *Components Selection* input box or by dragging the vertical
