@@ -40,4 +40,4 @@ Example
 
 Below we compare basic statistics of two **Data Info** widgets - one with the information on the entire data set and the other with the information on the (manually) selected subset from the **Scatterplot** widget.
 
-<img src="images/data-info-example1.png" alt="image" width="600">
+<img src="images/DataInfo-Example.png" alt="image" width="600">
