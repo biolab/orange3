@@ -42,11 +42,20 @@ sampled data set). Output is processed after the input data set is provided and 
 3. *Replicable sampling* maintains sampling patterns that can be carried across users, while *stratification* mimics the composition of the input data set.
 4. Press '*Sample data*' to output the data sample.
 
-Example
--------
+Examples
+--------
 
-In the following workflow schema we have sampled 10 data instances
+First let's see how the **Data Sampler** works. Let's look at the information on the original data set in the 
+**Data Info** widget. We see there are 24 instances in the data (we used *lenses.tab*). Then we sample the data with 
+**Data Sampler**. We choose to go with a fixed sample size of 5 instances for simplicity. 
+Then we observe the sampled data in the **Data Table** widget. The second
+**Data Table** shows the remaining 19 instances that weren't in the sample.
+
+<img src="images/DataSampler-Example1.png" alt="image" width="600">
+
+In the workflow below we have sampled 10 data instances
 from the *Iris* data set and sent the original data and the sample to **Scatterplot**
-widget. Sampled data instances are plotted with filled circles.
+widget for exploratory data analysis. Sampled data instances are plotted with filled circles,
+while the original data set is represented with the empty circles.
 
 <img src="images/DataSampler-Example.png" alt="image" width="600">
