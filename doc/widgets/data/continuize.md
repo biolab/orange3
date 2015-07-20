@@ -73,16 +73,16 @@ for their transformation are:
 5. If *Auto apply is on*, the data set is committed on any change.
   Otherwise, you have to press *Apply* after each change.
 
-Example
--------
+Examples
+--------
 
-First let's see how the **Continuize** widget behaves. We feed the original data into the
+First let's what is the output of **Continuize** widget. We feed the original data into the
 **Data Table** and see how they look like. Then we continuize the discrete values and
 observe them in another **Data Table**.
 
 <img src="images/Continuize-Example1.png" alt="image" width="600">
 
-The workflow below shows a typical use of this widget: in order to
+In the second example we show a typical use of this widget: in order to
 properly plot linear projection of the data, discrete attributes need to
 be converted to continuous, therefore we put the data through **Continuize**
 widget before drawing it. Attribute "*chest pain*" originally had four
