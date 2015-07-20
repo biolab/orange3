@@ -45,9 +45,9 @@ output channel.
 Example
 -------
 
-Below we demonstrate how to simply edit the existing domain. We simplified
-the *lenses.tab* data set, where we edited the *perscription* attribute. Where in the
-original we had the two values *myope* and *hypermetrope* we changed it into *nearsightedness* and
+Below we demonstrate how to simply edit the existing domain. We selected
+*lenses.tab* data set and edited the *perscription* attribute. Where in the
+original we had the values *myope* and *hypermetrope* we changed it into *nearsightedness* and
 *farsightedness* instead. For easier comparison we feed both the original and edited
 data into the **Data Table** widget.
 
