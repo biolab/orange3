@@ -208,7 +208,7 @@ class OWPCA(widget.OWWidget):
         self.plot.addItem(self._line)
         self.plot.setRange(xRange=(0.0, p - 1), yRange=(0.0, 1.0))
         axis = self.plot.getAxis("bottom")
-        axis.setTicks([[(i, "C{}".format(i + 1)) for i in range(p)]])
+        axis.setTicks([[(i, "PC{}".format(i + 1)) for i in range(p)]])
 
     def _on_cut_changed(self, line):
         # cut changed by means of a cut line over the scree plot.
