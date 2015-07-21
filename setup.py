@@ -52,6 +52,7 @@ INSTALL_REQUIRES = (
     'numpy>=1.9.0',
     'scipy',
     'scikit-learn>=0.16',
+    'chardet>=2.3.0',
     'bottlechest',
     'xlrd>=0.9.2',
 )

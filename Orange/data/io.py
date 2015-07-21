@@ -1,5 +1,6 @@
 import re
 import logging
+import subprocess
 from os import path
 from itertools import chain, repeat
 from functools import lru_cache
@@ -7,6 +8,8 @@ from collections import OrderedDict
 
 import bottlechest as bn
 import numpy as np
+
+from chardet.universaldetector import UniversalDetector
 
 from Orange.data.variable import *
 from Orange.util import abstract, Registry, flatten, namegen
@@ -17,18 +20,69 @@ log = logging.getLogger()
 _IDENTITY = lambda i: i
 
 
-def open_compressed(file, *args, _open=open, **kwargs):
-    """Return open file handle, optionally decompress"""
-    try: _, ext = path.splitext(file)
-    except Exception:
-        return file  # filename not string
-    if ext == '.gz':
-        from gzip import open as _open
-    elif ext == '.bz2':
-        from bz2 import open as _open
-    elif ext == '.xz':
-        from lzma import open as _open
-    return _open(file, *args, **kwargs)
+class Compression:
+    GZIP = '.gz'
+    BZIP2 = '.bz2'
+    XZ = '.xz'
+    all = (GZIP, BZIP2, XZ)
+
+
+def open_compressed(filename, *args, _open=open, **kwargs):
+    """Return seamlessly decompressed open file handle for `filename`"""
+    if isinstance(filename, str):
+        if filename.endswith(Compression.GZIP):
+            from gzip import open as _open
+        elif filename.endswith(Compression.BZIP2):
+            from bz2 import open as _open
+        elif filename.endswith(Compression.XZ):
+            from lzma import open as _open
+        return _open(filename, *args, **kwargs)
+    # Else already a file, just pass it through
+    return filename
+
+
+def detect_encoding(filename):
+    """
+    Detect encoding of `filename`, which can be a ``str`` filename, a
+    ``file``-like object, or ``bytes``.
+    """
+    # Try with Unix file utility first because it's faster (~10ms vs 100ms)
+    if isinstance(filename, str) and not filename.endswith(Compression.all):
+        try:
+            with subprocess.Popen(('file', '--brief', '--mime-encoding', filename),
+                                  stdout=subprocess.PIPE) as process:
+                process.wait()
+                if process.returncode == 0:
+                    encoding = process.stdout.read().strip()
+                    # file only supports these encodings; for others it says
+                    # unknown-8bit or binary. So we give chardet a chance to do
+                    # better
+                    if encoding in (b'utf-8', b'us-ascii', b'iso-8859-1',
+                                    b'utf-7', b'utf-16le', b'utf-16be', b'ebcdic'):
+                        return encoding.decode('us-ascii')
+        except OSError: pass  # windoze
+
+    # file not available or unable to guess the encoding, have chardet do it
+    detector = UniversalDetector()
+
+    def _from_file(f):
+        for line in f:
+            detector.feed(line)
+            if detector.done: break
+        detector.close()
+        return detector.result.get('encoding')
+
+    if isinstance(filename, str):
+        with open_compressed(filename, 'rb') as f:
+            return _from_file(f)
+    elif isinstance(filename, bytes):
+        detector.feed(filename)
+        detector.close()
+        return detector.result.get('encoding')
+    elif hasattr(filename, 'encoding'):
+        return filename.encoding
+    else:  # assume file-like object that you can iter through
+        return _from_file(filename)
 
 
 class Flags:
@@ -79,7 +133,21 @@ _RE_TYPES = re.compile(r'^\s*({}|{}|)\s*$'.format(_RE_DISCRETE_LIST.pattern,
 _RE_FLAGS = re.compile(r'^\s*( |{})*\s*$'.format('|'.join(flatten(filter(None, i) for i in Flags.ALL.items()))))
 
 
-class FileFormatRegistry(Registry):
+class FileFormatMeta(Registry):
+
+    def __new__(cls, name, bases, attrs):
+        newcls = super().__new__(cls, name, bases, attrs)
+
+        # Optionally add compressed versions of extensions as supported
+        if getattr(newcls, 'SUPPORT_COMPRESSED', False):
+            new_extensions = list(getattr(newcls, 'EXTENSIONS', ()))
+            for compression in Compression.all:
+                for ext in newcls.EXTENSIONS:
+                    new_extensions.append(ext + compression)
+            newcls.EXTENSIONS = tuple(new_extensions)
+
+        return newcls
+
     @property
     def formats(self):
         return self.registry.values()
@@ -117,12 +185,13 @@ class FileFormatRegistry(Registry):
 
 
 @abstract
-class FileFormat(metaclass=FileFormatRegistry):
+class FileFormat(metaclass=FileFormatMeta):
     """
     Subclasses set the following attributes and override the following methods:
 
         EXTENSIONS = ('.ext1', '.ext2', ...)
         DESCRIPTION = 'human-readable file format description'
+        SUPPORT_COMPRESSED = False
 
         @classmethod
         def read_file(cls, filename, wrapper=_IDENTITY):
@@ -139,6 +208,15 @@ class FileFormat(metaclass=FileFormatRegistry):
     iterable (list (rows) of lists of values (cols)). `wrapper` is the
     desired output class (if other than Table).
     """
+    @staticmethod
+    def open(filename, *args, **kwargs):
+        """
+        Format handlers can use this method instead of the builtin ``open()``
+        to transparently (de)compress files if requested (according to
+        `filename` extension). Set ``SUPPORT_COMPRESSED=True`` if you use this.
+        """
+        return open_compressed(filename, *args, **kwargs)
+
     @classmethod
     def read(cls, filename, wrapper=None):
         for ext, reader in cls.readers.items():
@@ -385,15 +463,17 @@ class FileFormat(metaclass=FileFormatRegistry):
 
 
 class CSVFormat(FileFormat):
-    EXTENSIONS = ('.csv', '.csv.gz')
-    DESCRIPTION = 'Comma-separated-values file'
+    EXTENSIONS = ('.csv',)
+    DESCRIPTION = 'Comma-separated values'
     DELIMITER = ','
+    SUPPORT_COMPRESSED = True
 
     @classmethod
     def read_file(cls, filename, wrapper=None):
         wrapper = wrapper or _IDENTITY
+        encoding = detect_encoding(filename)
         import csv
-        with open_compressed(filename, newline='', encoding='utf-8') as file:
+        with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
             # Sniff the CSV dialect (delimiter, quotes, ...)
             try:
                 dialect = csv.Sniffer().sniff(file.read(1024), list(',;:$ \t'))
@@ -412,15 +492,15 @@ class CSVFormat(FileFormat):
     @classmethod
     def write_file(cls, filename, data):
         import csv
-        with open_compressed(filename, 'w', newline='', encoding='utf-8') as file:
+        with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITER)
             cls.write_headers(writer.writerow, data)
             writer.writerows(data)
 
 
 class TabFormat(CSVFormat):
-    EXTENSIONS = ('.tab', '.tsv', '.tab.gz', '.tsv.gz')
-    DESCRIPTION = 'Tab-delimited-values file'
+    EXTENSIONS = ('.tab', '.tsv')
+    DESCRIPTION = 'Tab-separated values'
     DELIMITER = '\t'
 
 
@@ -504,11 +584,12 @@ class ExcelFormat(FileFormat):
 class DotFormat(FileFormat):
     EXTENSIONS = ('.dot', '.gv')
     DESCRIPTION = 'Dot graph description'
+    SUPPORT_COMPRESSED = True
 
     @staticmethod
     def write_graph(cls, filename, graph):
         from sklearn import tree
-        tree.export_graphviz(graph, out_file=filename)
+        tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))
 
     @classmethod
     def write(cls, filename, tree):
