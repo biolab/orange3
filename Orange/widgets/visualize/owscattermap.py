@@ -493,8 +493,9 @@ class OWScatterMap(widget.OWWidget):
         self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
         sampling_options = (self.sample_times_captions +
                             self.sample_percentages_captions)
-        gui.comboBox(self.sampling_box, self, 'sample_level',
-                     items=sampling_options, callback=self.update_sample)
+        self.sample_combo = gui.comboBox(
+            self.sampling_box, self, 'sample_level', items=sampling_options,
+            callback=self.update_sample)
         gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
 
         box = gui.widgetBox(self.controlArea, "Input")
@@ -582,12 +583,12 @@ class OWScatterMap(widget.OWWidget):
         if isinstance(dataset, SqlTable):
             self.original_data = dataset
             self.sample_level = 0
-            self.sampling_box.setVisible(True)
-
+            self.sample_combo.setEnabled(True)
             self.update_sample()
         else:
             self.dataset = dataset
-            self.sampling_box.setVisible(False)
+            self.sample_combo.setCurrentIndex(-1)
+            self.sample_combo.setEnabled(False)
             self.set_sampled_data(self.dataset)
 
     def update_sample(self):
