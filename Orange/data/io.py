@@ -212,8 +212,18 @@ class TabDelimFormat:
         table.domain = Domain(attrs, classes, metas=metas)
 
     def read_file(self, filename, cls=None):
-        with open(filename) as file:
-            return self._read_file(file, cls)
+        encodings = ["latin-1", "windows-1250", "cp1252"]
+        try:
+            with open(filename) as file:
+                return self._read_file(file, cls)
+        except UnicodeDecodeError:
+            for enc in encodings:
+                try:
+                    with open(filename, encoding=enc) as file:
+                        return self._read_file(file, cls)
+                except ValueError:
+                    pass
+            raise ValueError()
 
     def _read_file(self, file, cls=None):
         from ..data import Table
