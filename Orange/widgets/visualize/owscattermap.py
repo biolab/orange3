@@ -653,7 +653,6 @@ class OWScatterMap(widget.OWWidget):
             self.setup_plot()
         else:
             self.labelDataInput.setText('No data on input')
-            self.send("Sampled data", None)
 
     def clear(self):
         self.dataset = None
