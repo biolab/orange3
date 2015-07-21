@@ -627,7 +627,7 @@ class OWScatterMap(widget.OWWidget):
             nvars = len(cvars)
             self.x_var_index = min(max(0, self.x_var_index), nvars - 1)
             self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
-            self.z_var_index = min(max(0, self.z_var_index), len(cvars) - 1)
+            self.z_var_index = min(max(0, self.z_var_index), len(dvars) - 1)
 
             if domain.has_discrete_class:
                 self.z_var_index = dvars.index(domain.class_var)
