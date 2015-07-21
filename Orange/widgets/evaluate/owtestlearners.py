@@ -1,46 +1,203 @@
-from collections import OrderedDict, namedtuple
+import sys
+import abc
 import functools
+
+from collections import OrderedDict, namedtuple
 
 import numpy as np
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QTreeView, QStandardItemModel, QStandardItem, \
-    QHeaderView, QItemDelegate
-from PyQt4.QtCore import Qt, QSize
+from PyQt4.QtGui import (
+    QTreeView, QStandardItemModel, QStandardItem, QHeaderView,
+    QStyledItemDelegate
+)
+from PyQt4.QtCore import Qt, QSize, QObject, QEvent, QCoreApplication
+from PyQt4.QtCore import pyqtSignal as Signal
 
-import Orange
+import Orange.data
+import Orange.evaluation
+import Orange.classification
+import Orange.regression
+
 from Orange.base import Learner
-from Orange.evaluation import *
+from Orange.evaluation import scoring
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui, settings
 
 
-Input = namedtuple("Input", ["learner", "results", "stats"])
+Input = namedtuple(
+    "Input",
+    ["learner",  # :: Orange.base.Learner
+     "results",  # :: Option[Try[Orange.evaluation.Results]]
+     "stats"]    # :: Option[Sequence[Try[float]]]
+)
 
 
 def classification_stats(results):
-    return (AUC(results),
-            CA(results),
-            F1(results),
-            Precision(results),
-            Recall(results))
+    return tuple(score(results) for score in classification_stats.scores)
 
-classification_stats.headers = ["AUC", "CA", "F1", "Precision", "Recall"]
+classification_stats.headers, classification_stats.scores = zip(*(
+    ("AUC", scoring.AUC),
+    ("CA", scoring.CA),
+    ("F1", scoring.F1),
+    ("Precision", scoring.Precision),
+    ("Recall", scoring.Recall),
+))
 
 
 def regression_stats(results):
-    return (MSE(results),
-            RMSE(results),
-            MAE(results),
-            R2(results))
+    return tuple(score(results) for score in regression_stats.scores)
 
-regression_stats.headers = ["MSE", "RMSE", "MAE", "R2"]
+regression_stats.headers, regression_stats.scores = zip(*(
+    ("MSE", scoring.MSE),
+    ("RMSE", scoring.RMSE),
+    ("MAE", scoring.MAE),
+    ("R2", scoring.R2),
+))
 
 
-class ItemDelegate(QItemDelegate):
+class ItemDelegate(QStyledItemDelegate):
     def sizeHint(self, *args):
         size = super().sizeHint(*args)
         return QSize(size.width(), size.height() + 6)
+
+
+class AsyncUpdateLoop(QObject):
+    Next = QEvent.registerEventType()
+
+    #: State flags
+    Idle, Running, Cancelled, Finished = 0, 1, 2, 3
+    yielded = Signal(object)
+    finished = Signal()
+
+    returned = Signal(object)
+    raised = Signal(object)
+    cancelled = Signal()
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__update_loop = None
+        self.__next_pending = False
+        self.__in_next = False
+        self.__state = AsyncUpdateLoop.Idle
+
+    def set_update_loop(self, loop):
+        if self.__update_loop is not None:
+            self.__update_loop.close()
+            self.__update_loop = None
+            self.__state = AsyncUpdateLoop.Cancelled
+
+            self.cancelled.emit()
+            self.finished.emit()
+
+        if loop is not None:
+            self.__update_loop = loop
+            self.__state = AsyncUpdateLoop.Running
+            self.__schedule_next()
+
+    def cancel(self):
+        self.set_update_loop(None)
+
+    def state(self):
+        return self.__state
+
+    def __schedule_next(self):
+        if not self.__next_pending:
+            self.__next_pending = True
+            QCoreApplication.postEvent(
+                self, QEvent(AsyncUpdateLoop.Next), Qt.LowEventPriority)
+
+    def __next(self):
+        if self.__update_loop is not None:
+            try:
+                rval = next(self.__update_loop)
+            except StopIteration as stop:
+                self.__state = AsyncUpdateLoop.Finished
+                self.returned.emit(stop.value)
+                self.finished.emit()
+                self.__update_loop = None
+            except BaseException as er:
+                self.__state = AsyncUpdateLoop.Finished
+                self.raised.emit(er)
+                self.finished.emit()
+                self.__update_loop = None
+            else:
+                self.yielded.emit(rval)
+                self.__schedule_next()
+
+    def customEvent(self, event):
+        if event.type() == AsyncUpdateLoop.Next:
+            assert self.__next_pending
+            self.__next_pending = False
+            if not self.__in_next:
+                self.__in_next = True
+                try:
+                    self.__next()
+                finally:
+                    self.__in_next = False
+            else:
+                # warn
+                self.__schedule_next()
+
+
+class Try(abc.ABC):
+    # Try to walk in a Turing tar pit.
+
+    class Success(object):
+        __slots__ = ("__value",)
+#         __bool__ = lambda self: True
+        success = property(lambda self: True)
+        value = property(lambda self: self.__value)
+
+        def __init__(self, value):
+            self.__value = value
+
+        def __getnewargs__(self):
+            return (self.value,)
+
+        def __repr__(self):
+            return "{}({!r})".format(self.__class__.__qualname__,
+                                     self.value)
+
+        def map(self, fn):
+            return Try(lambda: fn(self.value))
+
+    class Fail(object):
+        __slots__ = ("__exception")
+#         __bool__ = lambda self: False
+        success = property(lambda self: False)
+        exception = property(lambda self: self.__exception)
+
+        def __init__(self, exception):
+            self.__exception = exception
+
+        def __getnewargs__(self):
+            return (self.exception,)
+
+        def __repr__(self):
+            return "{}({!r})".format(self.__class__.__qualname__,
+                                     self.exception)
+
+        def map(self, fn):
+            return self
+
+    def __new__(cls, f, *args, **kwargs):
+        try:
+            rval = f(*args, **kwargs)
+        except BaseException as ex:
+            # IMPORANT: Will capture traceback in ex.__traceback__
+            return Try.Fail(ex)
+        else:
+            return Try.Success(rval)
+
+Try.register(Try.Success)
+Try.register(Try.Fail)
+
+
+def raise_(exc):
+    raise exc
+
+Try.register = lambda cls: raise_(TypeError())
 
 
 class OWTestLearners(widget.OWWidget):
@@ -110,10 +267,10 @@ class OWTestLearners(widget.OWWidget):
         gui.button(rbox, self, "Apply", callback=self.apply)
 
         self.cbox = gui.widgetBox(self.controlArea, "Target class")
-        self.class_selection_combo = gui.comboBox(self.cbox, self, "class_selection",
-             items=[],
-             callback=self._select_class,
-             sendSelectedValue=True, valueType=str)
+        self.class_selection_combo = gui.comboBox(
+            self.cbox, self, "class_selection", items=[],
+            sendSelectedValue=True, valueType=str,
+            callback=self._on_target_class_changed)
 
         gui.rubber(self.controlArea)
 
@@ -129,20 +286,34 @@ class OWTestLearners(widget.OWWidget):
         header.setStretchLastSection(False)
 
         self.result_model = QStandardItemModel(self)
+        self.result_model.setHorizontalHeaderLabels(["Model"])
         self.view.setModel(self.result_model)
         self.view.setItemDelegate(ItemDelegate())
-        self._update_header()
+
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.view)
 
+        self.__loop = AsyncUpdateLoop(parent=self)
+        self.__loop.yielded.connect(self.__add_result)
+        self.__loop.finished.connect(self.__on_finished)
+        self.__loop.returned.connect(self.__on_returned)
+
     def set_learner(self, learner, key):
+        """
+        Set the input `learner` for `key`.
+        """
         if key in self.learners and learner is None:
+            # Removed
             del self.learners[key]
         else:
-            self.learners[key] = Input(learner, None, ())
+            self.learners[key] = Input(learner, None, None)
+
         self._update_stats_model()
 
     def set_train_data(self, data):
+        """
+        Set the input training dataset.
+        """
         self.error(0)
         if data and not data.domain.class_var:
             self.error(0, "Train data input requires a class variable")
@@ -156,6 +327,9 @@ class OWTestLearners(widget.OWWidget):
         self._invalidate()
 
     def set_test_data(self, data):
+        """
+        Set the input separate testing dataset.
+        """
         self.error(1)
         if data and not data.domain.class_var:
             self.error(1, "Test data input requires a class variable")
@@ -166,20 +340,25 @@ class OWTestLearners(widget.OWWidget):
             self._invalidate()
 
     def set_preprocessor(self, preproc):
+        """
+        Set the input preprocessor to apply on the training data.
+        """
         self.preprocessor = preproc
         self.train_data = None
         self._invalidate()
 
     def handleNewSignals(self):
+        """Reimplemented from OWWidget.handleNewSignals."""
         if self.train_data is None:
             if self.preprocessor and self.orig_train_data:
                 self.train_data = self.preprocessor(self.orig_train_data)
             else:
                 self.train_data = self.orig_train_data
-            self._update_header()
+
             self._update_class_selection()
-        self.update_results()
-        self.commit()
+
+        self._update_header()
+        self.apply()
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
@@ -192,7 +371,10 @@ class OWTestLearners(widget.OWWidget):
     def _param_changed(self):
         self._invalidate()
 
-    def update_results(self):
+    def _start_update(self):
+        """
+        Run/evaluate the learners.
+        """
         self.warning([1, 2])
         self.error(2)
 
@@ -211,80 +393,99 @@ class OWTestLearners(widget.OWWidget):
                 return
 
         # items in need of an update
-        items = [(key, input) for key, input in self.learners.items()
-                 if input.results is None]
-        learners = [input.learner for _, input in items]
+        items = [(key, slot) for key, slot in self.learners.items()
+                 if slot.results is None]
+        learners = [slot.learner for _, slot in items]
 
-        self.setStatusMessage("Running")
         if self.test_data is not None and \
                 self.resampling != OWTestLearners.TestOnTest:
             self.warning(1, "Test data is present but unused. "
                             "Select 'Test on test data' to use it.")
 
-        # TODO: Test each learner individually
-        try:
-            if self.resampling == OWTestLearners.KFold:
-                results = Orange.evaluation.CrossValidation(
-                    self.train_data, learners, k=self.k_folds, store_data=True
-                )
-            elif self.resampling == OWTestLearners.LeaveOneOut:
-                results = Orange.evaluation.LeaveOneOut(
-                    self.train_data, learners, store_data=True
-                )
-            elif self.resampling == OWTestLearners.Bootstrap:
-                p = self.sample_p / 100.0
-                results = Orange.evaluation.Bootstrap(
-                    self.train_data, learners, n_resamples=self.n_repeat, p=p,
-                    store_data=True
-                )
-            elif self.resampling == OWTestLearners.TestOnTrain:
-                results = Orange.evaluation.TestOnTrainingData(
-                    self.train_data, learners, store_data=True
-                )
-            elif self.resampling == OWTestLearners.TestOnTest:
-                if self.test_data is None:
-                    return
-                results = Orange.evaluation.TestOnTestData(
-                    self.train_data, self.test_data, learners, store_data=True
-                )
-            else:
-                assert False
-        except Exception as e:
-            err_msg = str(e)
-            if err_msg.startswith('Input contains NaN'):
-                err_msg = 'Test data contains missing values.'
-            self.error(2, err_msg)
-            return
+        rstate = 42
+        if self.resampling == OWTestLearners.KFold:
+            def evaluate(learner, data=self.train_data, k=self.k_folds):
+                return Orange.evaluation.CrossValidation(
+                    data, [learner], k=k, random_state=rstate, store_data=True)
+        elif self.resampling == OWTestLearners.LeaveOneOut:
+            def evaluate(learner, data=self.train_data):
+                return Orange.evaluation.LeaveOneOut(
+                    data, [learner], store_data=True)
+        elif self.resampling == OWTestLearners.Bootstrap:
+            def evaluate(learner, data=self.train_data,
+                         n_resamples=self.n_repeat, p=self.sample_p / 100.0):
+                return Orange.evaluation.Bootstrap(
+                    data, [learner], n_resamples=n_resamples, p=p,
+                    random_state=rstate, store_data=True)
+        elif self.resampling == OWTestLearners.TestOnTrain:
+            def evaluate(learner, data=self.train_data):
+                return Orange.evaluation.TestOnTrainingData(
+                    data, [learner], store_data=True)
+        elif self.resampling == OWTestLearners.TestOnTest:
+            def evaluate(learner, train=self.train_data, test=self.test_data):
+                return Orange.evaluation.TestOnTestData(
+                    train, test, [learner], store_data=True)
+        else:
+            assert False
 
-        self.results = results
-        results = list(split_by_model(results))
+        def update_loop(learners):
+            for i, learner in enumerate(learners):
+                yield (i, learner, Try(lambda: evaluate(learner)))
+
+        self.setStatusMessage("Running")
+        self.progressBarInit(processEvents=None)
+        self.__loop.set_update_loop(update_loop(learners))
+
+    def __add_result(self, r):
+        # add evaluation results for a single learner.
+        # :type r: (int, Learner, Try[Results])
+        step, learner, result = r
+
+        if not result.success:
+            sys.excepthook(type(result.exception), result.exception, None)
+            # Strip the captured traceback from the exception.
+            result = Try.Fail(type(result.exception)(*result.exception.args))
 
         class_var = self.train_data.domain.class_var
-        try:
-            if class_var.is_discrete:
-                stats = [classification_stats(self.one_vs_rest(res)) for res in results]
-            else:
-                stats = [regression_stats(res) for res in results]
-        except Exception as e:
-            self.error(2, str(e))
-            return
 
-        self._update_header()
+        if result.success and class_var.is_discrete:
+            stats = [Try(lambda: score(result.value))
+                     for score in classification_stats.scores]
+        elif result.success:
+            assert class_var.is_continuous
+            stats = [Try(lambda: score(result.value))
+                     for score in regression_stats.scores]
+        else:
+            stats = None
 
-        for (key, input), res, stat in zip(items, results, stats):
-            self.learners[key] = input._replace(results=res, stats=stat)
+        for key, slot in list(self.learners.items()):
+            if slot.learner is learner:
+                self.learners[key] = slot._replace(results=result, stats=stats)
 
+        self.progressBarSet(100 * step / len(self.learners),
+                            processEvents=False)
+
+    def __on_finished(self):
+        # The update coroutine has finished normally, by
+        # error or by interruption.
         self.setStatusMessage("")
+        self.progressBarFinished(processEvents=None)
 
+    def __on_returned(self, rval):
+        # The update coroutine has returned in a normal fashion.
         self._update_stats_model()
+        self.commit()
 
     def _update_header(self):
+        # Set the correct horizontal header labels on the results_model.
         headers = ["Method"]
         if self.train_data is not None:
             if self.train_data.domain.has_discrete_class:
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
+
+        # remove possible extra columns from the model.
         for i in reversed(range(len(headers),
                                 self.result_model.columnCount())):
             self.result_model.takeColumn(i)
@@ -292,83 +493,85 @@ class OWTestLearners(widget.OWWidget):
         self.result_model.setHorizontalHeaderLabels(headers)
 
     def _update_stats_model(self):
+        # Update the results_model with up to date scores.
+        # Note: The target class specific scores (if requested) are
+        # computed as needed in this method.
         model = self.view.model()
-
+        # clear the table model, but preserving the header labels
         for r in reversed(range(model.rowCount())):
             model.takeRow(r)
 
-        for input in self.learners.values():
-            name = learner_name(input.learner)
-            row = []
-            head = QStandardItem()
-            head.setData(name, Qt.DisplayRole)
-            row.append(head)
-            if input.stats is None:
-                return
-            for stat in input.stats:
-                item = QStandardItem()
-                item.setData(" {:.3f} ".format(stat[0]), Qt.DisplayRole)
-                row.append(item)
+        if self.train_data is None:
+            return
+
+        target_index = None
+        class_var = self.train_data.domain.class_var
+        if class_var.is_discrete and self.class_selection != "(None)":
+            target_index = class_var.values.index(self.class_selection)
+
+        for slot in self.learners.values():
+            name = learner_name(slot.learner)
+            head = QStandardItem(name)
+
+            if isinstance(slot.results, Try.Fail):
+                head.setToolTip(str(slot.results.exception))
+                head.setText("{} (error)".format(name))
+                head.setForeground(QtGui.QBrush(Qt.red))
+
+            row = [head]
+
+            if class_var.is_discrete and target_index is not None:
+                if slot.results.success:
+                    ovr_results = results_one_vs_rest(
+                        slot.results.value, target_index)
+
+                    stats = [Try(lambda: score(ovr_results))
+                             for score in classification_stats.scores]
+                else:
+                    stats = None
+            else:
+                stats = slot.stats
+
+            if stats is not None:
+                for stat in stats:
+                    item = QStandardItem()
+                    if stat.success:
+                        item.setText("{:.3f}".format(stat.value[0]))
+                    else:
+                        item.setToolTip(str(stat.exception))
+                    row.append(item)
+
             model.appendRow(row)
 
     def _update_class_selection(self):
+        self.class_selection_combo.setCurrentIndex(-1)
         self.class_selection_combo.clear()
         if not self.train_data:
             return
+
         if self.train_data.domain.has_discrete_class:
             self.cbox.setVisible(True)
-            values = self.train_data.domain.class_var.values
-            self.class_selection_combo.addItem("(None)")
-            self.class_selection_combo.addItems(values)
+            class_var = self.train_data.domain.class_var
+            items = ["(None)"] + class_var.values
+            self.class_selection_combo.addItems(items)
 
             class_index = 0
-            if self.class_selection in self.train_data.domain.class_var.values:
-                    class_index = self.train_data.domain.class_var.values.index(self.class_selection)+1
-            else:
-                self.class_selection = '(None)'
+            if self.class_selection in class_var.values:
+                class_index = class_var.values.index(self.class_selection) + 1
 
             self.class_selection_combo.setCurrentIndex(class_index)
-            self.previous_class_selection = "(None)"
+            self.class_selection = items[class_index]
         else:
             self.cbox.setVisible(False)
 
-    def one_vs_rest(self, res):
-        if self.class_selection != '(None)' and self.class_selection != 0:
-            class_ = self.train_data.domain.class_var.values.index(self.class_selection)
-            actual = res.actual == class_
-            predicted = res.predicted == class_
-            return Results(
-                nmethods=1, domain=self.train_data.domain,
-                actual=actual, predicted=predicted)
-        else:
-            return res
-
-    def _select_class(self):
-        if self.previous_class_selection == self.class_selection:
-            return
-
-        results = list(split_by_model(self.results))
-
-        items = [(key, input) for key, input in self.learners.items()]
-        learners = [input.learner for _, input in items]
-
-        class_var = self.train_data.domain.class_var
-        if class_var.is_discrete:
-            stats = [classification_stats(self.one_vs_rest(res)) for res in results]
-        else:
-            stats = [regression_stats(res) for res in results]
-
-        for (key, input), res, stat in zip(items, results, stats):
-            self.learners[key] = input._replace(results=res, stats=stat)
-
-        self.setStatusMessage("")
-
+    def _on_target_class_changed(self):
         self._update_stats_model()
-        self.previous_class_selection = self.class_selection
 
     def _invalidate(self, which=None):
         if which is None:
             which = self.learners.keys()
+
+        self.__loop.set_update_loop(None)
 
         all_keys = list(self.learners.keys())
         model = self.view.model()
@@ -383,21 +586,30 @@ class OWTestLearners(widget.OWWidget):
                     item = model.item(row, c)
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
+                        item.setData(None, Qt.ToolTipRole)
 
     def apply(self):
-        self.update_results()
-        self.commit()
+        self._update_header()
+        if self.train_data is not None:
+            self._start_update()
+        else:
+            # Clear the output
+            self.commit()
 
     def commit(self):
-        results = [val.results for val in self.learners.values()
-                   if val.results is not None]
-        if results:
-            combined = results_merge(results)
-            combined.learner_names = [learner_name(val.learner)
-                                     for val in self.learners.values()]
+        valid = [slot for slot in self.learners.values()
+                 if slot.results is not None and slot.results.success]
+        if valid:
+            combined = results_merge([slot.results.value for slot in valid])
+            combined.learner_names = [learner_name(slot.learner)
+                                      for slot in valid]
         else:
             combined = None
         self.send("Evaluation Results", combined)
+
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self.__loop.set_update_loop(None)
 
 
 def learner_name(learner):
@@ -464,18 +676,55 @@ def results_merge(results):
                             Orange.evaluation.Results())
 
 
-def main():
-    app = QtGui.QApplication([])
-    data = Orange.data.Table("iris")
+def results_one_vs_rest(results, pos_index):
+    actual = results.actual == pos_index
+    predicted = results.predicted == pos_index
+    return Orange.evaluation.Results(
+        nmethods=1, domain=results.domain,
+        actual=actual, predicted=predicted)
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "iris"
+
+    data = Orange.data.Table(filename)
+    class_var = data.domain.class_var
+
+    if class_var is None:
+        return 1
+    elif class_var.is_discrete:
+        learners = [lambda data: 1 / 0,
+                    Orange.classification.LogisticRegressionLearner(),
+                    Orange.classification.MajorityLearner(),
+                    Orange.classification.NaiveBayesLearner()]
+    else:
+        learners = [lambda data: 1 / 0,
+                    Orange.regression.MeanLearner(),
+                    Orange.regression.KNNRegressionLearner(),
+                    Orange.regression.RidgeRegressionLearner()]
+
     w = OWTestLearners()
     w.show()
     w.set_train_data(data)
     w.set_test_data(data)
-    w.set_learner(Orange.classification.LogisticRegressionLearner(), 1)
-    w.set_learner(Orange.classification.MajorityLearner(), 2)
+
+    for i, learner in enumerate(learners):
+        w.set_learner(learner, i)
+
     w.handleNewSignals()
-    return app.exec_()
+    rval = app.exec_()
+
+    for i in range(len(learners)):
+        w.set_learner(None, i)
+    w.handleNewSignals()
+    return rval
 
 if __name__ == "__main__":
-    import sys
     sys.exit(main())
