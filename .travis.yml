@@ -1,7 +1,27 @@
 language: python
 
+sudo: false
+
 python:
     - '3.4'
+
+cache:
+    apt: true
+    directories:
+        - $TRAVIS_BUILD_DIR/wheelhouse
+        - $TRAVIS_BUILD_DIR/postgres
+        - $HOME/.cache/pip
+        - $HOME/.ccache
+
+before_cache:
+
+addons:
+    apt:
+        packages:
+            - libblas-dev
+            - liblapack-dev
+            - postgresql-server-dev-9.1
+            - libqt4-dev
 
 before_install:
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ]; then
@@ -10,6 +30,7 @@ before_install:
 
 install:
     - source $TRAVIS_BUILD_DIR/travis/install.sh
+    - source $TRAVIS_BUILD_DIR/travis/install_postgres.sh
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
         source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh;
       fi
