@@ -519,7 +519,7 @@ class OWHeatMap(widget.OWWidget):
         else:
             groups = [("", data.domain)]
 
-        if data.domain.class_var.is_discrete:
+        if data.domain.has_discrete_class:
             group_var = data.domain.class_var
         else:
             group_var = None
