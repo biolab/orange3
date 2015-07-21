@@ -28,15 +28,15 @@ class OWSave(widget.OWWidget):
         self.data = None
         self.filename = ""
         self.format_index = 0
-        self.file_formats = FileFormats.writers
-        if file_formats:
-            self.file_formats = file_formats
-        self.formats = tuple((FileFormats.names[ext], ext)
-                             for ext in self.file_formats)
+        self.file_formats = file_formats or FileFormat.writers
+        self.formats = [(f.DESCRIPTION, f.EXTENSIONS)
+                        for f in sorted(set(self.file_formats.values()),
+                                        key=list(self.file_formats.values()).index)]
         self.comboBoxFormat = gui.comboBox(
             self.controlArea, self, value='format_index',
-            items=['{} (*{})'.format(*x) for x in self.formats],
-            box='File Format', callback=self.reset_filename)
+            items=['{} (*{})'.format(x[0], ' *'.join(x[1]))
+                   for x in self.formats],
+            box='File Format')
         box = gui.widgetBox(self.controlArea)
         self.save = gui.button(box, self, "Save", callback=self.save_file,
                                default=True, disabled=True)
@@ -48,28 +48,26 @@ class OWSave(widget.OWWidget):
         if data:
             self.dataset(data)
 
-    def reset_filename(self):
-        base, ext = os.path.splitext(self.filename)
-        if ext in self.file_formats:
-            self.filename = base + self.formats[self.format_index][1]
-            self.save.setText("Save as '%s'" % os.path.split(self.filename)[1])
-
     def dataset(self, data):
         self.data = data
         self.save.setDisabled(data is None)
         self.saveAs.setDisabled(data is None)
 
     def save_file_as(self):
-        f = self.formats[self.format_index]
+        format_name, format_extensions = self.formats[self.format_index]
         home_dir = os.path.expanduser("~")
         filename = QtGui.QFileDialog.getSaveFileName(
-            self, 'Save', self.filename or self.last_dir or home_dir,
-            '{} (*{})'.format(*f))
+            self, 'Save as ...',
+            self.filename or self.last_dir or home_dir,
+            '{} (*{})'.format(format_name, ' *'.join(format_extensions)))
         if not filename:
             return
+        for ext in format_extensions:
+            if filename.endswith(ext):
+                break
+        else:
+            filename += format_extensions[0]
         self.filename = filename
-        if os.path.splitext(filename)[1] != f[1]:
-            self.filename += f[1]
         self.last_dir, file_name = os.path.split(self.filename)
         self.save.setText("Save as '%s'" % file_name)
         self.save.setDisabled(False)
@@ -81,6 +79,8 @@ class OWSave(widget.OWWidget):
         elif self.data is not None:
             try:
                 ext = self.formats[self.format_index][1]
+                if not isinstance(ext, str):
+                    ext = ext[0]  # is e.g. a tuple of extensions
                 self.file_formats[ext].write(self.filename, self.data)
                 self.error()
             except Exception as errValue:

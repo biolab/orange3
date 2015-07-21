@@ -497,13 +497,15 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
         for dir in dataset_dirs:
-            ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
-            if not ext:
-                for ext in FileFormat.readers:
-                    if os.path.exists(absolute_filename + ext):
-                        absolute_filename += ext
-                        break
+            if os.path.exists(absolute_filename):
+                break
+            for ext in FileFormat.readers:
+                if filename.endswith(ext):
+                    break
+                if os.path.exists(absolute_filename + ext):
+                    absolute_filename += ext
+                    break
             if os.path.exists(absolute_filename):
                 break
         else:
@@ -511,15 +513,7 @@ class Table(MutableSequence, Storage):
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
-        reader = FileFormat.readers.get(ext)
-        if not reader:
-            desc = FileFormat.names.get(ext)
-            if desc:
-                raise IOError("Reading {}s is not supported".
-                    format(desc.lower()))
-            else:
-                raise IOError("Unknown file name extension.")
-        data = reader().read(absolute_filename, wrapper)
+        data = FileFormat.read(absolute_filename, wrapper)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids

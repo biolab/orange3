@@ -149,10 +149,11 @@ class OWFile(widget.OWWidget):
     new_variables = Setting(False)
 
     dlgFormats = (
-        "All readable files ({})\n".format(
-            " ".join("*" + c for c in FileFormat.readers)) +
-        "\n".join("{} (*{})".format(FileFormat.names[ext], ext)
-                  for ext in FileFormat.readers))
+        "All readable files ({});;".format(
+            '*' + ' *'.join(FileFormat.readers.keys())) +
+        ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
+                  for f in sorted(set(FileFormat.readers.values()),
+                                  key=list(FileFormat.readers.values()).index)))
 
     def __init__(self):
         super().__init__()

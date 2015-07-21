@@ -1209,7 +1209,7 @@ class CreateTableWithFilename(TableTests):
         reader_instance = Mock(read_file=Mock(return_value=table_mock))
 
         with patch.dict(data.io.FileFormat.readers,
-                        {'.xlsx': lambda: reader_instance}):
+                        {'.xlsx': reader_instance}):
             table = data.Table.from_file("test.xlsx")
 
         reader_instance.read_file.assert_called_with("test.xlsx", None)
