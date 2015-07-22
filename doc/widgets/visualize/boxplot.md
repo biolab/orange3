@@ -40,7 +40,9 @@ outliers, and alike.
    For continuous attributes the widget displays:
 
 4. The mean (dark blue vertical line). 
-5. Border values for the standard deviation of the mean. Blue highlighted area is the entire standard deviation of the mean. 
+5. Border values for the 
+   [standard deviation of the mean](https://en.wikipedia.org/wiki/Standard_deviation#Standard_deviation_of_the_mean).
+   Blue highlighted area is the entire standard deviation of the mean. 
 6. The median (yellow vertical line).
    The thin blue line represents the area between the first (25%) and the third (75%) quantile,
    while the thin dotted line represents the entire range of values (from the lowest to the highest value
