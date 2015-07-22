@@ -12,7 +12,7 @@ Signals
 
 - **Data**
 
-  Data set
+  Data set.
 
 **Outputs**:
 
@@ -26,14 +26,14 @@ Description
 The widget applies [k-Means clustering](https://en.wikipedia.org/wiki/K-means_clustering) algorithm to the data
 and outputs a new data set in which the cluster index is used as
 a class attribute. The original class attribute, if it existed, is
-moved to meta attributes. The basic information on the clustering
-results is also shown in the widget.
+moved to meta attributes. Scores of clustering
+results for various k are also shown in the widget.
 
 ![image](images/kMeans-stamped.png)
 
 1. Select the number of clusters.
     - **Fixed**: algorithm clusters data in a specified number of clusters.
-    - **Optimized**: algorithm returns possible clusters within the selected cluster range with appended scoring (bigger is better).
+    - **Optimized**: widget shows clustering scores for the selected cluster range.
       - [**Silhouette**](https://en.wikipedia.org/wiki/Silhouette_(clustering)) (contrasts average distance to elements in the same cluster with the average distance to elements in other clusters)
       - **Inter-cluster distance** (measures distances between clusters, normally between centroids)
       - **Distance to [centroids](https://en.wikipedia.org/wiki/Centroid)** (measures distances to the arithmetic means of clusters)
@@ -52,14 +52,14 @@ We are going to explore the widget with the following schema.
 
 ![image](images/K-MeansClustering-Schema.png)
 
-The beginning is nothing special: we load the *Iris* data set, divide it into
+First we load the *Iris* data set, divide it into
 three clusters and show it in **Data Table**, where we can observe which instance
 went into which cluster. The interesting parts are the **Scatter Plot** and
 **Select Rows**.
 
 Since K-means added cluster index as a class attribute,
 scatter plot will color the points according to the clusters they are
-in. Indeed, what we get looks like this:
+in.
 
 ![image](images/kMeans-Scatterplot.png)
 
