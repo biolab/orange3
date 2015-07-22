@@ -12,7 +12,7 @@ Signals
 
 - **Data**
 
-  Data set
+  Data set.
 
 **Outputs**:
 
@@ -28,17 +28,17 @@ Description
 -----------
 
 [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis) (PCA) computes the PCA linear
-transformation of the input data. It outputs either a transformed data set with weights for individual instances or
-weights for principal components.
+transformation of the input data. It outputs either a transformed data set with weights of individual instances or
+weights of principal components.
 
 ![PCA widget](images/PCA-stamped.png)
 
-1. Select how many principal components you wish in your output. It is best to choose as few as possible with as high
-   variance as possible. You can also set how much variance you wish to cover with your principal components.
+1. Select how many principal components you wish in your output. It is best to choose as few as possible with variance     
+   covered as high as possible. You can also set how much variance you wish to cover with your principal components.
 2. When *Auto send on change* is ticked, the widget will automatically communicate all the changes. Alternatively click
    *Send data*.
-3. Principal components graph, where the red line is the variance per component and the green line is cumulative
-   variance covered by components.
+3. Principal components graph, where the red (lower) line is the variance covered per component and the green (upper)
+   line is cumulative variance covered by components.
 
 The number of components of the transformation can be selected
 either in the *Components Selection* input box or by dragging the vertical
@@ -47,7 +47,7 @@ cutoff line in the graph.
 Examples
 --------
 
-**PCA** can be used to simplify visualizations of large data sets and select the most relevant attributes in a data set. Below we
+**PCA** can be used to simplify visualizations of large data sets. Below we
 used *Iris* data set to show how we can improve the visualization of the data set with PCA. The transformed data in a **Scatter plot** show a much clearer distinction between classes than the default settings.
 
 <img src="images/PCAExample.png" alt="image" width="600">
