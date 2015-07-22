@@ -29,7 +29,9 @@ outliers, and alike.
 ![Attribute Statistics for continuous features](images/BoxPlot-Continuous-stamped.png)
 
 1. Select the variable you want to see plotted.
+
 2. Choose *Grouping* to see [box plots](https://en.wikipedia.org/wiki/Box_plot) displayed by class.
+
 3. When instances are grouped by class you can change the display mode.
    Annotated boxes will display the end values, the mean and the median,
    while compare medians and compare means will, naturally, compare the 
@@ -40,9 +42,11 @@ outliers, and alike.
    For continuous attributes the widget displays:
 
 4. The mean (dark blue vertical line). 
+
 5. Border values for the 
    [standard deviation of the mean](https://en.wikipedia.org/wiki/Standard_deviation#Standard_deviation_of_the_mean).
-   Blue highlighted area is the entire standard deviation of the mean. 
+   Blue highlighted area is the entire standard deviation of the mean.
+
 6. The median (yellow vertical line).
    The thin blue line represents the area between the first (25%) and the third (75%) quantile,
    while the thin dotted line represents the entire range of values (from the lowest to the highest value
