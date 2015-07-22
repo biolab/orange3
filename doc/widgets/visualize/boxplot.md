@@ -35,9 +35,9 @@ outliers, and alike.
    while compare medians and compare means will, naturally, compare the 
    selected value between class groups.
 
-![image](images/BoxPlot-Continuous-small.png)
+   ![image](images/BoxPlot-Continuous-small.png)
 
-For continuous attributes the widget displays:
+   For continuous attributes the widget displays:
 
 4. The mean (dark blue vertical line).
 5. The minimal and maximal value.
