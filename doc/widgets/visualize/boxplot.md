@@ -48,7 +48,7 @@ outliers, and alike.
    Blue highlighted area is the entire standard deviation of the mean.
 
 6. The median (yellow vertical line).
-<br>
+<br><br>
    The thin blue line represents the area between the first (25%) and the third (75%) quantile,
    while the thin dotted line represents the entire range of values (from the lowest to the highest value
    in the data set for the selected parameter).
