@@ -3,7 +3,7 @@ Box Plot
 
 ![image](icons/box-plot.png)
 
-Shows basic distribution of attribute values.
+Shows distribution of attribute values.
 
 Signals
 -------
@@ -43,7 +43,7 @@ while compare medians and compare means will, naturally, compare the selected va
 4. Choose display mode
 
 For discrete attributes, the bars represent the number of examples with
-each particular attribute value. The picture shows the number of
+each particular attribute value. The plot shows the number of
 different animal types in the *Zoo* data set: there are 41 mammals, 13
 fish, 20 birds and so on.
 
