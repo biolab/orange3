@@ -52,23 +52,9 @@ appended as new meta attributes. You can select which features you wish to outpu
 Example
 -------
 
-Here is a demonstration.
-
 ![image](images/Predictions-Schema.png)
 
-First, compare the schema with the one for **Test Learners**. Widgets
-representing learning algorithms, like **Naive Bayes** or
-**Classification Tree** provide two kinds of signals, one with a learning
-algorithm and one with a classifier. The learner is always available,
-while for outputting a classifier, the classification widget needs to be given some data.
-
-**Test Learners** tests learning algorithms, hence it expects learning
-algorithms in the input. In the corresponding schema, we gave the Test
-Learners some data from the **File** widget and a few "learner widgets".
-Widget **Predictions** shows predictions of a classifier, hence it needs a
-classifier and the data.
-
-This is what we do: we randomly split the data into two subsets.
+We randomly split the data into two subsets.
 The larger subset, containing 70 % of data instances, is sent to *Naive Bayes*
 and **Classification Tree**, so they can produce the corresponding
 classifiers. Classifiers are then sent into **Predictions**, among with the
@@ -76,47 +62,34 @@ remaining 30 % of the data. Predictions shows how these examples are
 classified.
 
 The results of this procedure on the *heart disease* data are shown in the
-**Data Table** snapshot. The last seven columns are (from right to left) the actual
-class, and the predictions by the [classification tree](https://en.wikipedia.org/wiki/Decision_tree_learning)
-and [naive Bayesian](https://en.wikipedia.org/wiki/Naive_Bayes_classifier) classifier. For the latter two we see 
-probabilities of class "1", class "0" and the predicted class. Probabilities are shown
-as separate attributes, so we can sort instances by these values.
+**Data Table** snapshot. We see probabilities of class "1", class "0" and the predicted class
+for both classifiers.
 
 To save the predictions, we simply attach the **Save** widget to
 **Predictions**. The final file is a data table and can be saved as
 a .tab or .csv format.
 
-Finally, we can analyze the classifier’s predictions. For instance, we
-want to observe the relations between probabilities predicted by the two
-classifiers with respect to the class. For that, we first take
+Finally, we can analyze the classifier’s predictions. For that, we first take
 **Select Columns** with which we move the meta attributes with
 probability predictions to features. The transformed data is
 then given to the **Scatterplot**, which we set to use the attributes with
-probabilities as the x and y axes, and the class is (already by
+probabilities as the x and y axes, while the class is (already by
 default) used to color the data points.
 
 ![image](images/Predictions-ExampleScatterplot.png)
 
 To get the above plot, we selected *Jitter continuous values*,
-since the classification tree gives just a few distinct probabilities,
-hence without jittering there would be too much overlap between the
-points.
+since the classification tree gives just a few distinct probabilities.
 
 The blue points in the bottom left corner represent the people with no diameter
 narrowing, which were correctly classified by both classifiers. The
 upper right red points represent the patients with narrowed vessels,
-which were correctly classified by both. At the top left there are a few
-blue points: these are those without the narrowed vessels to whom the tree
-gave a high probability of having the disease, while Bayesian classifier
-was right by predicting a low probability of the disease. In the
-opposite corner, the red points are the sick, to which the
-tree gave a low probability, while the naive Bayesian classifier was
-(again) right by assigning a high probability of having the disease.
+which were correctly classified by both.
 
 Note that this analysis is done on a rather small sample, so these
 conclusions may be ungrounded.
 
-Here is the entire schema:
+Here is the entire workflow:
 
 <img src="images/Predictions-Example.png" alt="image" width="600">
 
