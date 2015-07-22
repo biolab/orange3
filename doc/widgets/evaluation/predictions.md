@@ -80,7 +80,6 @@ default) used to color the data points.
 
 To get the above plot, we selected *Jitter continuous values*,
 since the classification tree gives just a few distinct probabilities.
-
 The blue points in the bottom left corner represent the people with no diameter
 narrowing, which were correctly classified by both classifiers. The
 upper right red points represent the patients with narrowed vessels,
@@ -88,7 +87,6 @@ which were correctly classified by both.
 
 Note that this analysis is done on a rather small sample, so these
 conclusions may be ungrounded.
-
 Here is the entire workflow:
 
 <img src="images/Predictions-Example.png" alt="image" width="600">
