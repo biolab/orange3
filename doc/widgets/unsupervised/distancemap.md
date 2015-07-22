@@ -27,17 +27,17 @@ Signals
 Description
 -----------
 
-**Distance Map** is a visualization of distances between objects. The
-visualization is rather simple: it is the same as if we printed out a
-table of numbers, except that the numbers are replaced by spots colored
-with the specified palette.
+**Distance Map** visualizes distances between objects. The
+visualization is the same as if we printed out a
+table of numbers, except that the numbers are replaced by colored spots.
 
 Distances are most often those between instances ("*rows*" in **Distances** widget)
 or attributes ("*columns*" in **Distances** widget). The only suitable input for **Distance Map**
 is **Distances** widget. For the output the user can select a region of the map and
 the widget will output the corresponding instances or attributes.
-Also note that the widget ignores discrete values and calculates
-distances only for continuous data.
+Also note that **Distances** widget ignores discrete values and calculates
+distances only for continuous data, thus can only display distance map for discrete
+data if you **Continuize** them first.
 
 The snapshot shows distances between columns in the *heart disease*
 data, where smaller distances are represented with white and larger with dark purple.
@@ -52,27 +52,24 @@ Symmetricity is always assumed, while the diagonal may also be non-zero.
     - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
 
 2. *Colors*
-    - **color scale** (select the color palette for your distance map)
-    - **low** (exposes instances or attributes with low correlation)
-    - **high** (exposes instances or attributes with high correlation)
+    - **Colors** (select the color palette for your distance map)
+    - **Low** and**High** are thresholds for the color palette (low for instances or attributes with low
+    distances and high for instances or attributes with high distances).
 
-3. *Select annotations* shows and hides the item names besides the map
-    - None (doesn't display annotations)
-    - **Enumeration** (displays correlation factors as annotations)
-    - **By attribute** (displays the selected attribute as annotation)
+3. Select *Annotations*.
 
 4.  If *Auto send is on*, the data subset is communicated
 automatically, otherwise you need to press *Send data*.
 
 Normally, the color palette is used to
 visualize the entire range of distances appearing in the matrix. This
-can be changed by setting the low and high threshold. In this way we expose 
-the distances outside this interval, so the *Colors* box can be used for visualizing the
+can be changed by setting the low and high threshold. In this way we ignore the differences 
+in distances outside this interval and visualize the
 interesting part of the distribution.
 
-Below we exposed the most correlated attributes by setting the color
-of high distances to the minimum. We get a predominantly black square
-where attributes with the lowest distance scores are exposed. Besides the
+Below we visualized the most correlated attributes (distances by columns) in the *heart disease* data set 
+by setting the color threshold for high distances to the minimum. We get a predominantly black square
+where attributes with the lowest distance scores are represented by white. Besides the
 diagonal line we see that in our example *ST by exercise* and *major vessels
 colored* are the two attributes closest together.
 
@@ -82,13 +79,8 @@ The user can select a region in the map with the usual click-and-drag of the cur
 When a part of the map is selected, the widget outputs all
 items from the selected cells.
 
-Another option is to select "*rows*" instead of "*columns*" in the **Distances** widget.
-This will display distances between rows in the **Distance Map**. Here is an example:
-
-![image](images/DistanceMap-Rows.png)
-
 Examples
-========
+--------
 
 The first workflow shows a very standard use of the **Distance Map** widget. We 
 select 70% of the original *Iris* data as our sample and view the distances between
