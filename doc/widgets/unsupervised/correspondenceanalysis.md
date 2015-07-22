@@ -34,7 +34,7 @@ Example
 
 Below is a simple comparison between **Correspondence Analysis** and **Scatter plot** widgets. While **Scatter plot**
 shows fairly well which class and sex had a good survival rate and which one didn't, **Correspondence Analysis** can plot
-several variables in a 2-D graph, thus making it easy to see the relations between variables. It is clear from the
+several variables in a 2-D graph, thus making it easy to see the relations between variable values. It is clear from the
 graph that "no", "male" and "crew" are related to each other. The same goes for "yes", "female" and "first".
 
 <img src="images/CorrespondenceAnalysis-Example.png" alt="image" width="600">
