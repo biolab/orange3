@@ -263,7 +263,7 @@ class OWTestLearners(widget.OWWidget):
     def _update_header(self):
         headers = ["Method"]
         if self.train_data is not None:
-            if self.train_data.domain.class_var.is_discrete:
+            if self.train_data.domain.has_discrete_class:
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
@@ -297,7 +297,7 @@ class OWTestLearners(widget.OWWidget):
         self.class_selection_combo.clear()
         if not self.train_data:
             return
-        if self.train_data.domain.class_var.is_discrete:
+        if self.train_data.domain.has_discrete_class:
             self.cbox.setVisible(True)
             values = self.train_data.domain.class_var.values
             self.class_selection_combo.addItem("(None)")

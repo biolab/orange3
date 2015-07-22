@@ -1,8 +1,9 @@
-from functools import reduce
+
 import sys
 import time
 import os
 import warnings
+from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
     QEventLoop
@@ -11,7 +12,7 @@ from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
 
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas.scheme import widgetsscheme as widget_scheme
+
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -92,7 +93,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     widgetStateChanged = Signal(str, int, str)
     blockingStateChanged = Signal(bool)
-    asyncCallsStateChange = Signal()
     progressBarValueChanged = Signal(float)
     processingStateChanged = Signal(int)
 
@@ -112,13 +112,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.signalManager = kwargs.get('signal_manager', None)
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
-        self._guiElements = []      # used for automatic widget debugging
         self.__reportData = None
-
-        # TODO: position used to be saved like this. Reimplement.
-        #if save_position:
-        #    self.settingsList = getattr(self, "settingsList", []) + \
-        #                        ["widgetShown", "savedWidgetGeometry"]
 
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
@@ -229,57 +223,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 self.statusBarIconArea,
                 gui.resource_filename("icons/triangle-red.png"))
 
-    # status bar handler functions
-    def setState(self, stateType, id, text):
-        stateChanged = super().setState(stateType, id, text)
-        if not stateChanged or not hasattr(self, "widgetStatusArea"):
-            return
-
-        iconsShown = 0
-        warnings = [("Warning", self._warningWidget, self._owWarning),
-                    ("Error", self._errorWidget, self._owError)]
-        for state, widget, use in warnings:
-            if not widget:
-                continue
-            if use and self.widgetState[state]:
-                widget.setToolTip("\n".join(self.widgetState[state].values()))
-                widget.show()
-                iconsShown = 1
-            else:
-                widget.setToolTip("")
-                widget.hide()
-
-        if iconsShown:
-            self.statusBarIconArea.show()
-        else:
-            self.statusBarIconArea.hide()
-
-        if (stateType == "Warning" and self._owWarning) or \
-                (stateType == "Error" and self._owError):
-            if text:
-                self.setStatusBarText(stateType + ": " + text)
-            else:
-                self.setStatusBarText("")
-        self.updateStatusBarState()
-
-    def updateWidgetStateInfo(self, stateType, id, text):
-        html = self.widgetStateToHtml(self._owInfo, self._owWarning,
-                                      self._owError)
-        if html:
-            self.widgetStateInfoBox.show()
-            self.widgetStateInfo.setText(html)
-            self.widgetStateInfo.setToolTip(html)
-        else:
-            if not self.widgetStateInfoBox.isVisible():
-                dHeight = - self.widgetStateInfoBox.height()
-            else:
-                dHeight = 0
-            self.widgetStateInfoBox.hide()
-            self.widgetStateInfo.setText("")
-            self.widgetStateInfo.setToolTip("")
-            width, height = self.width(), self.height() + dHeight
-            self.resize(width, height)
-
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
             return
@@ -295,26 +238,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # TODO add!
     def prepareDataReport(self, data):
         pass
-
-
-    # ##############################################
-    """
-    def isDataWithClass(self, data, wantedVarType=None, checkMissing=False):
-        self.error([1234, 1235, 1236])
-        if not data:
-            return 0
-        if not data.domain.classVar:
-            self.error(1234, "A data set with a class attribute is required.")
-            return 0
-        if wantedVarType and data.domain.classVar.varType != wantedVarType:
-            self.error(1235, "Unable to handle %s class." %
-                             str(data.domain.class_var.var_type).lower())
-            return 0
-        if checkMissing and not orange.Preprocessor_dropMissingClasses(data):
-            self.error(1236, "Unable to handle data set with no known classes")
-            return 0
-        return 1
-    """
 
     def restoreWidgetPosition(self):
         restored = False
@@ -451,19 +374,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def saveSettings(self):
         self.settingsHandler.update_defaults(self)
 
-    # this function is only intended for derived classes to send appropriate
-    # signals when all settings are loaded
-    def activate_loaded_settings(self):
-        pass
-
-    # reimplemented in other widgets
     def onDeleteWidget(self):
+        """
+        Invoked by the canvas to notify the widget it has been deleted
+        from the workflow.
+
+        If possible, subclasses should gracefully cancel any currently
+        executing tasks.
+        """
         pass
 
     def handleNewSignals(self):
-        # this is called after all new signals have been handled
-        # implement this in your widget if you want to process something only
-        # after you received multiple signals
+        """
+        Invoked by the workflow signal propagation manager after all
+        signals handlers have been called.
+
+        Reimplement this method in order to coalesce updates from
+        multiple updated inputs.
+        """
         pass
 
     # ############################################
@@ -712,36 +640,34 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 lambda self: self.setVisible(not self.isVisible())}
 
     def setBlocking(self, state=True):
-        """ Set blocking flag for this widget. While this flag is set this
-        widget and all its descendants will not receive any new signals from
-        the signal manager
+        """
+        Set blocking flag for this widget.
+
+        While this flag is set this widget and all its descendants
+        will not receive any new signals from the workflow signal manager.
+
+        This is useful for instance if the widget does it's work in a
+        separate thread or schedules processing from the event queue.
+        In this case it can set the blocking flag in it's processNewSignals
+        method schedule the task and return immediately. After the task
+        has completed the widget can clear the flag and send the updated
+        outputs.
+
+        .. note::
+            Failure to clear this flag will block dependent nodes forever.
         """
         if self.__blocking != state:
             self.__blocking = state
             self.blockingStateChanged.emit(state)
 
     def isBlocking(self):
-        """ Is this widget blocking signal processing.
+        """
+        Is this widget blocking signal processing.
         """
         return self.__blocking
 
     def resetSettings(self):
         self.settingsHandler.reset_settings(self)
-
-
-def blocking(method):
-    """ Return method that sets blocking flag while executing
-    """
-    from functools import wraps
-
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        old = self._blocking
-        self.setBlocking(True)
-        try:
-            return method(self, *args, **kwargs)
-        finally:
-            self.setBlocking(old)
 
 
 # Pull signal constants from canvas to widget namespace
@@ -751,12 +677,9 @@ Single = widget_description.Single
 Multiple = widget_description.Multiple
 Explicit = widget_description.Explicit
 Dynamic = widget_description.Dynamic
+
 InputSignal = widget_description.InputSignal
 OutputSignal = widget_description.OutputSignal
-
-SignalLink = widget_scheme.SignalLink
-WidgetsSignalManager = widget_scheme.WidgetsSignalManager
-SignalWrapper = widget_scheme.SignalWrapper
 
 
 class AttributeList(list):

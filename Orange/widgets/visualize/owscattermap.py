@@ -938,8 +938,7 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
     else:
         subset = data
 
-    if zvar.is_discrete:
-
+    if zvar and zvar.is_discrete:
         filters = [value_filter(zvar, val) for val in zvar.values]
         contingencies = [
             contingency.get_contingency(

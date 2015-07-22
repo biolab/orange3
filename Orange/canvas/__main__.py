@@ -164,11 +164,14 @@ def main(argv=None):
     # NOTE: config.init() must be called after the QApplication constructor
     config.init()
 
-    if options.clear_widget_settings:
-        log.debug("Clearing widget settings")
-        import Orange.misc.environ
+    clear_settings_flag = os.path.join(
+        config.widget_settings_dir(), "DELETE_ON_START")
+
+    if options.clear_widget_settings or \
+            os.path.isfile(clear_settings_flag):
+        log.info("Clearing widget settings")
         shutil.rmtree(
-            Orange.misc.environ.widget_settings_dir(),
+            config.widget_settings_dir(),
             ignore_errors=True)
 
     file_handler = logging.FileHandler(

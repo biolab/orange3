@@ -403,14 +403,6 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.resize(500, 600)
 
-        # For automatic widget testing using
-        self._guiElements.extend(
-            [(QtGui.QListView, self.available_attrs_view),
-             (QtGui.QListView, self.used_attrs_view),
-             (QtGui.QListView, self.class_attrs_view),
-             (QtGui.QListView, self.meta_attrs_view),
-             ])
-
     def set_data(self, data=None):
         self.update_domain_role_hints()
         self.closeContext()

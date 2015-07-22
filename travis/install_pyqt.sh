@@ -1,6 +1,33 @@
-# PyQt requirements
-ln -s $TRAVIS_BUILD_DIR/../../biolab $TRAVIS_BUILD_DIR/../../astaric
-cd $TRAVIS_BUILD_DIR/wheelhouse/pyqt/sip-4.16.5
+PYQT=$TRAVIS_BUILD_DIR/pyqt
+
+SIP_VERSION=4.16.9
+PYQT_VERSION=4.11.4
+
+if [ ! "$(ls $PYQT)" ]; then
+    mkdir -p $PYQT
+    cd $PYQT
+
+    wget -O sip.tar.gz http://www.riverbankcomputing.com/static/Downloads/sip4/sip-$SIP_VERSION.tar.gz
+    mkdir -p sip
+    tar xzf sip.tar.gz -C sip --strip-component=1
+
+    wget -O PyQt.tar.gz  http://sourceforge.net/projects/pyqt/files/PyQt4/PyQt-$PYQT_VERSION/PyQt-x11-gpl-$PYQT_VERSION.tar.gz
+    mkdir -p PyQt
+    tar xzf PyQt.tar.gz -C PyQt --strip-components=1
+
+    cd $PYQT/sip
+    python configure.py -e $PYQT/include
+    make
+    make install
+
+    cd $PYQT/PyQt
+    pwd
+    python configure.py --confirm-license --no-designer-plugin
+    make
+fi
+
+cd $PYQT/sip
 make install
-cd $TRAVIS_BUILD_DIR/wheelhouse/pyqt/PyQt-x11-gpl-4.11.3
+
+cd $PYQT/PyQt
 make install
