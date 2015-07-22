@@ -39,9 +39,12 @@ outliers, and alike.
 
    For continuous attributes the widget displays:
 
-4. The mean (dark blue vertical line).
-5. The minimal and maximal value.
+4. The mean (dark blue vertical line). 
+5. Border values for the standard deviation of the mean. Blue highlighted area is the entire standard deviation of the mean. 
 6. The median (yellow vertical line).
+   The thin blue line represents the area between the first (25%) and the third (75%) quantile,
+   while the thin dotted line represents the entire range of values (from the lowest to the highest value
+   in the data set for the selected parameter).
 
 For discrete attributes, the bars represent the number of instances with
 each particular attribute value. The plot shows the number of
