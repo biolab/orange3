@@ -91,20 +91,22 @@ class OWPredictions(widget.OWWidget):
             self.class_var = predictor.domain.class_var
 
     def handleNewSignals(self):
+        self.error(0)
         for inputid, pred in list(self.predictors.items()):
             if pred.predictor is None:
                 del self.predictors[inputid]
-            elif pred.results is None:
+            elif pred.results is None or numpy.isnan(pred.results[0]).all():
                 if self.data is not None:
                     try:
-                        self.error(0)
                         results = self.predict(pred.predictor, self.data)
                     except ValueError as err:
-                        err_msg = str(err)
-                        if numpy.isnan(self.data).any():
-                            err_msg = 'Test data contains missing values.'
+                        err_msg = '{}:\n'.format(pred.predictor.name) + str(err)
                         self.error(0, err_msg)
-                        return
+                        n, m = len(self.data), 1
+                        if self.data.domain.has_discrete_class:
+                            m = len(self.data.domain.class_var.values)
+                        probabilities = numpy.full((n, m), numpy.nan)
+                        results = (numpy.full(n, numpy.nan), probabilities)
                     self.predictors[inputid] = pred._replace(results=results)
         if not self.predictors:
             self.class_var = None
