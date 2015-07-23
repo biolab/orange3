@@ -1,3 +1,4 @@
+import sys
 import time
 import itertools
 import heapq
@@ -1384,17 +1385,28 @@ def compute_chi_squares(observes):
     return (chi_squares_lr, chi_squares_ud)
 
 
-def main():
+def main(argv=None):
     import sip
-    app = QtGui.QApplication([])
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+
     w = OWScatterMap()
     w.show()
     w.raise_()
-    data = Orange.data.Table('iris')
-#     data = Orange.data.Table('housing')
-    data = Orange.data.Table('adult')
+
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "adult"
+
+    data = Orange.data.Table(filename)
+
     w.set_data(data)
     rval = app.exec_()
+
+    w.set_data(None)
     w.onDeleteWidget()
 
     sip.delete(w)
@@ -1403,5 +1415,4 @@ def main():
     return rval
 
 if __name__ == "__main__":
-    import sys
     sys.exit(main())
