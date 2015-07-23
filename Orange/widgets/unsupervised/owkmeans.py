@@ -321,8 +321,7 @@ class OWKMeans(widget.OWWidget):
 
         clust_var = DiscreteVariable(
             self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
-        clust_ids = km.proj.predict(self.data.X). \
-            astype(int).reshape((len(self.data), 1))
+        clust_ids = km(self.data)
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
         meta_attrs = domain.metas
@@ -343,7 +342,7 @@ class OWKMeans(widget.OWWidget):
         domain = Domain(attributes, classes, meta_attrs)
         new_table = Table(domain, X, Y, metas, self.data.W)
 
-        centroids = Table(Domain(self.data.domain.attributes), km.centroids)
+        centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
 
         self.send("Annotated Data", new_table)
         self.send("Centroids", centroids)

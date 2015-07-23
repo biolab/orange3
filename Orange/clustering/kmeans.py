@@ -41,7 +41,7 @@ class KMeansModel(Projection):
     def __call__(self, data):
         if isinstance(data, Table):
             if data.domain is not self.pre_domain:
-                data = Table(self.pkmre_domain, data)
+                data = Table(self.pre_domain, data)
             c = DiscreteVariable(name='Cluster id', values=range(self.k))
             domain = Domain([c])
             return Table(
