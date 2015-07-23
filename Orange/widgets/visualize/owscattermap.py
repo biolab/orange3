@@ -1216,67 +1216,6 @@ def stack_tile_blocks(blocks):
     return np.vstack(list(map(np.hstack, blocks)))
 
 
-def bins_join(bins):
-    return np.hstack([b[:-1] for b in bins[:-1]] + [bins[-1]])
-
-
-def flatten(node, nbins=None, preserve_max=False):
-    if node.is_leaf:
-        return node
-    else:
-        N, M = node.children.shape[:2]
-
-        xind = {i: np.flatnonzero(node.children[i, :]) for i in range(N)}
-        yind = {j: np.flatnonzero(node.children[:, j]) for j in range(M)}
-        xind = {i: ind[0] for i, ind in xind.items() if ind.size}
-        yind = {j: ind[0] for j, ind in yind.items() if ind.size}
-
-        xbins = [node.children[i, xind[i]].xbins if i in xind
-                 else np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
-                 for i in range(N)]
-
-        ybins = [node.children[yind[j], j].ybins if j in yind
-                  else np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
-                  for j in range(M)]
-
-        xbins = bins_join(xbins)
-        ybins = bins_join(ybins)
-
-#         xbins = bins_join([c.xbins for c in node.children[:, 0]])
-#         ybins = bins_join([c.ybins for c in node.children[0, :]])
-
-        ndim = node.contingencies.ndim
-        if ndim == 3:
-            repeats = (nbins, nbins, 1)
-        else:
-            repeats = (nbins, nbins)
-
-        def child_contingency(node, row, col):
-            child = node.children[row, col]
-            if child is None:
-                return np.tile(node.contingencies[row, col], repeats)
-            elif preserve_max:
-                parent_max = np.max(node.contingencies[row, col])
-                c_max = np.max(child.contingencies)
-                if c_max > 0:
-                    return child.contingencies * (parent_max / c_max)
-                else:
-                    return child.contingencies
-            else:
-                return child.contingencies
-
-        contingencies = [[child_contingency(node, i, j)
-                          for j in range(nbins)]
-                         for i in range(nbins)]
-
-        contingencies = stack_tile_blocks(contingencies)
-        cnode = Tree(xbins, ybins, contingencies, None)
-        assert node.brect == cnode.brect
-        assert np.all(np.diff(cnode.xbins) > 0)
-        assert np.all(np.diff(cnode.ybins) > 0)
-        return cnode
-
-
 def bindices(node, rect):
     assert rect.normalized() == rect
     assert not rect.intersect(QRectF(*node.brect)).isEmpty()
