@@ -65,16 +65,17 @@ corresponding [dendrogram](https://en.wikipedia.org/wiki/Dendrogram).
 Examples
 --------
 
-The schema below computes clustering of attributes (columns). We see that if we choose *Append
-cluster IDs*, we can see an additional column in the **Data Table** named *Cluster*. This is a way to
+The workflow below shows the output of **Hierarchical Clustering** for *Iris* data set in **Data Table** widget.
+We see that if we choose *Append cluster IDs* in hierarchical clustering, we can see an additional
+column in the **Data Table** named *Cluster*. This is a way to
 check how hierarchical clustering clustered individual instances.
 
 <img src="images/HierarchicalClustering-Example2.png" alt="image" width="600">
 
-We loaded the *Iris* data set. Below is the clustering of instances
-and the nodes are annotated by the Iris' subvarieties. We connected the
-**Scatter Plot** showing all the instances from the file, while the signal from
-**Hierarchical clustering** is used as a subset. This way, we can
+In the second example we loaded the *Iris* data set again, but this time
+we added the **Scatter Plot** showing all the instances from the **File** widget, 
+while at the same time receiving the selected instances signal from
+**Hierarchical clustering**. This way, we can
 observe the position of the selected cluster(s) in the projection.
 
 <img src="images/HierarchicalClustering-Example.png" alt="image" width="600">
