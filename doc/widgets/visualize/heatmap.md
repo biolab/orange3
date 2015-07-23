@@ -27,7 +27,7 @@ the darker the represented color. By combining class and attributes on x and y a
 values are the strongest and where the weakest, thus enabling us to find typical features (discrete) or value range 
 (continuous) for each class.
 
-![image]()
+![image](images/HeatMap-new2.png)
 
 1. Information on the input data
 2. Choose x attribute
@@ -59,6 +59,6 @@ to inspect this further. We sort the table by type and look at invertebrates for
 this class has 0, 4, 5, 6 or even 8 legs, which is why it was a good idea to remove it from the
 heat map visualization as an 'outlying' attribute.
 
-![image]()
+![image](images/HeatMap-new1.png)
 
-![image]()
+![image](images/HeatMap-new4.png)
