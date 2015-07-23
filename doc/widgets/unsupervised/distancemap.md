@@ -84,7 +84,7 @@ Examples
 
 The first workflow shows a very standard use of the **Distance Map** widget. We 
 select 70% of the original *Iris* data as our sample and view the distances between
-columns in **Distance Map**.
+rows in **Distance Map**.
 
 <img src="images/DistanceMap-Example2.png" alt="image" width="600">
 
