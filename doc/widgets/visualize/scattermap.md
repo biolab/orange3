@@ -27,7 +27,7 @@ the darker the represented color. By combining two values on x and y axes we see
 combination is the strongest and where the weakest, thus enabling us to find strong corelations
 or representative instances.
 
-![image]()
+![image](images/ScatterMap2.png)
 
 1. Information on the input data
 2. Choose x attribute
@@ -51,4 +51,4 @@ petal width and 1.4 and 1.7 for petal length.
 
 ![image]()
 
-![image]()
+![image](images/ScatterMap3.png)
