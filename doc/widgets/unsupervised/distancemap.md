@@ -86,7 +86,7 @@ The first workflow shows a very standard use of the **Distance Map** widget. We
 select 70% of the original *Iris* data as our sample and view the distances between
 rows in **Distance Map**.
 
-<img src="images/DistanceMap-Example2.png" alt="image" width="600">
+<img src="images/DistanceMap-Example1.png" alt="image" width="600">
 
 In the second example we use the *heart disease* data and select a subset of
 women only from the **Scatter Plot**. Then we visualize distances between columns
