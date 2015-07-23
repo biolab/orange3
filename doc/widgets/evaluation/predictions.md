@@ -89,7 +89,7 @@ Note that this analysis is done on a rather small sample, so these
 conclusions may be ungrounded.
 Here is the entire workflow:
 
-<img src="images/Predictions-Example.png" alt="image" width="600">
+<img src="images/Predictions-Example1.png" alt="image" width="600">
 
 Another example of using this widget is given in the documentation for
 widget **Confusion Matrix**.
