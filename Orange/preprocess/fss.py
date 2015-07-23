@@ -66,7 +66,10 @@ class SelectBestFeatures:
 
         if not isinstance(data.domain.class_var, method.class_type):
             raise ValueError(("Scoring method {} requires a class variable " +
-                              "of type {}.").format(method, method.class_type))
+                              "of type {}.").format(
+                method.__name__ if hasattr(method, '__name__') else method,
+                method.class_type.__name__)
+            )
         features = data.domain.attributes
         try:
             scores = method(data)
