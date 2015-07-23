@@ -403,6 +403,7 @@ class AddonManagerDialog(QDialog):
             minimum=0, maximum=0,
             labelText=self.tr("Retrieving package list"),
             sizeGripEnabled=False,
+            windowTitle="Progress"
         )
 
         self.__progress.rejected.connect(self.reject)
