@@ -80,7 +80,7 @@ class OWConfusionMatrix(widget.OWWidget):
         grid.addWidget(QLabel("Predicted"), 0, 1, Qt.AlignCenter)
         grid.addWidget(VerticalLabel("Actual Class"), 1, 0, Qt.AlignCenter)
 
-        self.tablemodel = QStandardItemModel()
+        self.tablemodel = QStandardItemModel(self)
         self.tableview = QTableView(editTriggers=QTableView.NoEditTriggers)
         self.tableview.setModel(self.tablemodel)
         self.tableview.selectionModel().selectionChanged.connect(
