@@ -39,7 +39,7 @@ corresponding [dendrogram](https://en.wikipedia.org/wiki/Dendrogram).
     - **Weighted linkage** uses the [WPGMA](http://research.amnh.org/~siddall/methods/day1.html) method
     - **Complete linkage** computes the distance between clusters' most distant elements
 
-2. Labels of nodes in the dendrogram can be chosen in**Annotation** box.
+2. Labels of nodes in the dendrogram can be chosen in **Annotation** box.
 
 3. Huge dendrograms can be pruned in the *Pruning* box by
   selecting the maximum depth of the dendrogram. This only affects the display, not the actual clustering.
@@ -58,8 +58,8 @@ corresponding [dendrogram](https://en.wikipedia.org/wiki/Dendrogram).
   case, if the data already has a class attribute, the original class is
   placed among meta attributes.
 
-  The data can be automatically output on any change (*Auto send is on*) or, if the box
-  isn't ticked, by pushing *Send Data*.
+6. The data can be automatically output on any change (*Auto send is on*) or, if the box
+   isn't ticked, by pushing *Send Data*.
 
 
 Examples
