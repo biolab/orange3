@@ -1559,7 +1559,12 @@ class OWPreprocess(widget.OWWidget):
     def apply(self):
         preprocessor = self.buildpreproc()
         if self.data is not None:
-            data = preprocessor(self.data)
+            self.error(0)
+            try:
+                data = preprocessor(self.data)
+            except ValueError as e:
+                self.error(0, str(e))
+                return
         else:
             data = None
 
