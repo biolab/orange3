@@ -1,9 +1,9 @@
-Heat Map
-=============
+Scatter Map
+===========
 
-![image](icons/heat-map.png)
+![image]()
 
-Plots a heat map for a pair of attributes.
+Plots a scatter map for a pair of continuous attributes.
 
 Signals
 -------
@@ -21,13 +21,13 @@ Signals
 Description
 -----------
 
-[**Heat map**](https://en.wikipedia.org/wiki/Heat_map) is a graphical method for visualizing frequencies in
+[**Scatter map**](https://en.wikipedia.org/wiki/Scatter_plot) is a graphical method for visualizing frequencies in
 a two-way matrix by color. The higher the occurrence of a certain value,
 the darker the represented color. By combining two values on x and y axes we see where the attribute
 combination is the strongest and where the weakest, thus enabling us to find strong corelations
 or representative instances.
 
-![image](images/heat-map2-stamped.png)
+![image]()
 
 1. Information on the input data
 2. Choose x attribute
@@ -41,13 +41,14 @@ or representative instances.
 Example
 -------
 
-Below you can see an example workflow for Heat Map widget. Notice that the widget only works with continuous
-data, so you need to first continuize data attributes that you want to visualize. Heat map below displays two
+Below you can see an example workflow for Scatter Map widget. Notice that the widget only works with continuous
+data, so you need to first continuize data attributes that you want to visualize. Scatter map below displays two
 attributes from *Iris* data set, namely the petal width and petal length. Here we can see the distribution of width and 
 length values per Iris type. You can see that the variety *Iris setosa* is distinctly separated from the other two varieties 
-by petal width and length and that the most typical values for these attributes is 0.2 for petal width and 1.5 for petal 
-length. *Iris virginica* and *Iris versicolor* on the other hand have a greater variance of petal width and length values.
+by petal width and length and that the most typical values for these attributes are between 0.1 and 0.25 for 
+petal width and 1.4 and 1.7 for petal length.
+*Iris virginica* and *Iris versicolor* on the other hand have a greater variance of petal width and length values.
 
-![image](images/heat-map-workflow.png)
+![image]()
 
-![image](images/heat-map.png)
+![image]()
