@@ -24,14 +24,6 @@ PredictorSlot = namedtuple(
 )
 
 
-def pname(predictor):
-    """Return a predictor name."""
-    if hasattr(predictor, "name"):
-        return predictor.name
-    else:
-        return type(predictor).__name__
-
-
 class OWPredictions(widget.OWWidget):
     name = "Predictions"
     icon = "icons/Predictions.svg"
@@ -83,10 +75,10 @@ class OWPredictions(widget.OWWidget):
     def set_predictor(self, predictor=None, id=None):
         if id in self.predictors:
             self.predictors[id] = self.predictors[id]._replace(
-                predictor=predictor, name=pname(predictor), results=None)
+                predictor=predictor, name=predictor.name, results=None)
         else:
             self.predictors[id] = \
-                PredictorSlot(predictor, pname(predictor), None)
+                PredictorSlot(predictor, predictor.name, None)
         if predictor is not None:
             self.class_var = predictor.domain.class_var
 
@@ -219,7 +211,7 @@ class OWPredictions(widget.OWWidget):
             if classification:
                 results.probabilities = numpy.array(
                     [p.results[1] for p in slots])
-            results.learner_names = [pname(p.predictor) for p in slots]
+            results.learner_names = [p.predictor.name for p in slots]
 
         self.send("Predictions", predictions)
         self.send("Evaluation Results", results)
