@@ -741,8 +741,8 @@ class OWMDS(widget.OWWidget):
             if have_data and label_index > 0:
                 label_var = self.labelvar_model[label_index]
                 label_data = column(self.data, label_var)
-                label_data = [label_var.repr_val(val) for val in label_data]
-                label_items = [pg.TextItem(text, anchor=(0.5, 0))
+                label_data = [label_var.str_val(val) for val in label_data]
+                label_items = [pg.TextItem(text, anchor=(0.5, 0), color=0.0)
                                for text in label_data]
             elif have_matrix_transposed and self.labelvar_model[label_index] == 'Attribute names':
                 attr = attributes(self.matrix)
