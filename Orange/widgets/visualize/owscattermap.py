@@ -491,6 +491,10 @@ class OWScatterMap(widget.OWWidget):
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
 
+        box = gui.widgetBox(self.controlArea, "Input")
+        self.labelDataInput = gui.widgetLabel(box, 'No data on input')
+        self.labelDataInput.setTextFormat(Qt.PlainText)
+
         self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
         sampling_options = (self.sample_times_captions +
                             self.sample_percentages_captions)
@@ -498,10 +502,6 @@ class OWScatterMap(widget.OWWidget):
             self.sampling_box, self, 'sample_level', items=sampling_options,
             callback=self.update_sample)
         gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
-
-        box = gui.widgetBox(self.controlArea, "Input")
-        self.labelDataInput = gui.widgetLabel(box, 'No data on input')
-        self.labelDataInput.setTextFormat(Qt.PlainText)
 
         self.x_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesX = gui.comboBox(
