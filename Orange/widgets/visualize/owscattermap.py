@@ -476,8 +476,6 @@ class OWScatterMap(widget.OWWidget):
 
     n_bins = 2 ** 4
 
-    mouse_mode = 0
-
     def __init__(self, parent=None):
         super().__init__(self, parent)
 
@@ -536,13 +534,6 @@ class OWScatterMap(widget.OWWidget):
         gui.comboBox(box1, self, "color_scale",
                      items=["Linear", "Square root", "Logarithmic"],
                      callback=self._on_color_scale_changed)
-
-        self.mouseBehaviourBox = gui.radioButtons(
-            self.controlArea, self, value='mouse_mode',
-            btnLabels=('Drag', 'Select'),
-            box='Mouse left button behavior',
-            callback=self._update_mouse_mode
-        )
 
         gui.rubber(self.controlArea)
 
@@ -979,13 +970,6 @@ class OWScatterMap(widget.OWWidget):
                                ch, region, bw * node.nbins, depth - 1)
                            for ch in children.flat),
                           [])
-
-    def _update_mouse_mode(self):
-        if self.mouse_mode == 0:
-            mode = pg.ViewBox.PanMode
-        else:
-            mode = pg.ViewBox.RectMode
-        self.plot.getViewBox().setMouseMode(mode)
 
     def _on_transform_changed(self, *args):
         pass
