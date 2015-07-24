@@ -399,7 +399,7 @@ class OWMDS(widget.OWWidget):
                                           cont_vars)
             self.labelvar_model[:] = chain(["No labels"],
                                            [self.labelvar_model.Separator],
-                                           str_vars)
+                                           all_vars)
 
             if domain.class_var is not None:
                 self.color_value = domain.class_var.name
