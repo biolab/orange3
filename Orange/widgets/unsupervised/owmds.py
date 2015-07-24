@@ -682,8 +682,10 @@ class OWMDS(widget.OWWidget):
                     (color_data,
                      numpy.full((len(color_data), 1), self.symbol_opacity))
                 )
-                pen_data = mdsplotutils.pen_data(color_data, pointflags)
-            elif have_matrix_transposed and self.colorvar_model[color_index] == 'Attribute names':
+                pen_data = mdsplotutils.pen_data(color_data * 0.8, pointflags)
+                brush_data = mdsplotutils.brush_data(color_data)
+            elif have_matrix_transposed and \
+                    self.colorvar_model[color_index] == 'Attribute names':
                 attr = attributes(self.matrix)
                 palette = colorpalette.ColorPaletteGenerator(len(attr))
                 color_data = [palette.getRGB(i) for i in range(len(attr))]
@@ -691,13 +693,17 @@ class OWMDS(widget.OWWidget):
                     color_data,
                     numpy.full((len(color_data), 1), self.symbol_opacity))
                 )
-
-                pen_data = mdsplotutils.pen_data(color_data, pointflags)
+                pen_data = mdsplotutils.pen_data(color_data * 0.8, pointflags)
+                brush_data = mdsplotutils.brush_data(color_data)
             else:
                 pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
                 pen_data = numpy.full(len(self.data), pen_data, dtype=object)
+                brush_data = numpy.full(len(self.data),
+                                        QtGui.QColor(Qt.lightGray),
+                                        dtype=object)
 
             self._pen_data = pen_data
+            self._brush_data = brush_data
 
         if self._shape_data is None:
             shape_index = self.cb_shape_value.currentIndex()
@@ -710,10 +716,12 @@ class OWMDS(widget.OWWidget):
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
-            elif have_matrix_transposed and self.shapevar_model[shape_index] == 'Attribute names':
+            elif have_matrix_transposed and \
+                    self.shapevar_model[shape_index] == 'Attribute names':
                 Symbols = ScatterPlotItem.Symbols
                 symbols = numpy.array(list(Symbols.keys()))
-                attr = [i % (len(Symbols) - 1) for i, _ in enumerate(attributes(self.matrix))]
+                attr = [i % (len(Symbols) - 1)
+                        for i, _ in enumerate(attributes(self.matrix))]
                 shape_data = symbols[attr]
             else:
                 shape_data = "o"
@@ -744,7 +752,8 @@ class OWMDS(widget.OWWidget):
                 label_data = [label_var.str_val(val) for val in label_data]
                 label_items = [pg.TextItem(text, anchor=(0.5, 0), color=0.0)
                                for text in label_data]
-            elif have_matrix_transposed and self.labelvar_model[label_index] == 'Attribute names':
+            elif have_matrix_transposed and \
+                    self.labelvar_model[label_index] == 'Attribute names':
                 attr = attributes(self.matrix)
                 label_items = [pg.TextItem(str(text), anchor=(0.5, 0))
                                for text in attr]
@@ -754,8 +763,7 @@ class OWMDS(widget.OWWidget):
 
         self._scatter_item = item = ScatterPlotItem(
             x=self.embedding[:, 0], y=self.embedding[:, 1],
-            pen=self._pen_data, symbol=self._shape_data,
-            brush=QtGui.QBrush(Qt.transparent),
+            pen=self._pen_data, brush=self._brush_data, symbol=self._shape_data,
             size=size_data, data=numpy.arange(len(self.data
                                                   if have_data
                                                   else self.matrix.X)),
@@ -1009,8 +1017,8 @@ class mdsplotutils(plotutils):
             plotstyle = mdsplotutils.plotstyle
 
         brush = numpy.array(
-            [mdsplotutils.make_brush(QtGui.QColor(r, g, b))
-             for r, g, b in basecolors],
+            [mdsplotutils.make_brush(QtGui.QColor(*c))
+             for c in basecolors],
             dtype=object)
 
         if flags is None:
