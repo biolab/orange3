@@ -511,7 +511,7 @@ class DendrogramWidget(QGraphicsWidget):
         else:
             allitems = [item for item in allitems if not item.node.is_leaf]
 
-        brects = [QPolygonF(item.boundingRect()) for item in allitems]
+        brects = [QPolygonF(item.boundingRect()) for item in allitems if item.boundingRect().isValid()]
         return reduce(QPolygonF.united, brects, QPolygonF())
 
     def _update_selection_items(self):
