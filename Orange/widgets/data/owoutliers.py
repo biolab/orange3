@@ -143,15 +143,15 @@ class OWOutliers(widget.OWWidget):
             learner = EllipticEnvelopeLearner(
                 support_fraction=self.support_fraction_emp,
                 contamination=self.cont_emp / 100.)
-        cls = learner(self.data)
-        y_pred = cls(self.data)
-        self.add_metas(learner)
+        model = learner(self.data)
+        y_pred = model(self.data)
+        self.add_metas(model)
         return np.array(y_pred)
 
-    def add_metas(self, learner):
+    def add_metas(self, model):
         if self.outlier_method in (self.RobustCovariance,
                                    self.EmpiricalCovariance):
-            mahal = learner.mahalanobis(self.data.X)
+            mahal = model.mahalanobis(self.data.X)
             mahal = mahal.reshape(len(self.data), 1)
             attrs = self.data.domain.attributes
             classes = self.data.domain.class_vars
