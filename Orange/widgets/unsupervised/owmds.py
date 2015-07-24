@@ -160,6 +160,7 @@ class OWMDS(widget.OWWidget):
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
+            verticalSpacing=10
         )
 
         form.addRow("Max iterations:",
@@ -177,45 +178,44 @@ class OWMDS(widget.OWWidget):
                         items=[t for t, _ in OWMDS.RefreshRate],
                         callback=self.__invalidate_refresh))
 
+        gui.separator(box, 10)
         self.runbutton = gui.button(
             box, self, "Run", callback=self._toggle_run)
 
         box = gui.widgetBox(self.controlArea, "Graph")
         self.colorvar_model = itemmodels.VariableListModel()
 
-        common_options = {"sendSelectedValue": True, "valueType": str}
+        common_options = {"sendSelectedValue": True, "valueType": str,
+                          "orientation": "horizontal", "labelWidth": 50, }
 
         self.cb_color_value = gui.comboBox(
-            box, self, "color_value", box="Color",
+            box, self, "color_value", label="Color",
             callback=self._on_color_index_changed, **common_options)
         self.cb_color_value.setModel(self.colorvar_model)
-        self.cb_color_value.box.setFlat(True)
 
         self.shapevar_model = itemmodels.VariableListModel()
         self.cb_shape_value = gui.comboBox(
-            box, self, "shape_value", box="Shape",
+            box, self, "shape_value", label="Shape",
             callback=self._on_shape_index_changed, **common_options)
         self.cb_shape_value.setModel(self.shapevar_model)
-        self.cb_shape_value.box.setFlat(True)
 
         self.sizevar_model = itemmodels.VariableListModel()
         self.cb_size_value = gui.comboBox(
-            box, self, "size_value", "Size",
+            box, self, "size_value", label="Size",
             callback=self._on_size_index_changed, **common_options)
         self.cb_size_value.setModel(self.sizevar_model)
-        self.cb_size_value.box.setFlat(True)
 
         self.labelvar_model = itemmodels.VariableListModel()
         self.cb_label_value = gui.comboBox(
-            box, self, "label_value", "Label",
+            box, self, "label_value", label="Label",
             callback=self._on_label_index_changed, **common_options)
         self.cb_label_value.setModel(self.labelvar_model)
-        self.cb_label_value.box.setFlat(True)
 
         form = QtGui.QFormLayout(
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
+            verticalSpacing=10
         )
         form.addRow("Symbol size",
                     gui.hSlider(box, self, "symbol_size",
@@ -229,8 +229,11 @@ class OWMDS(widget.OWWidget):
                                 createLabel=False))
         box.layout().addLayout(form)
 
+        gui.rubber(self.controlArea)
+
         box = QtGui.QGroupBox("Zoom/Select", )
         box.setLayout(QtGui.QHBoxLayout())
+        box.layout().setMargin(0)
 
         group = QtGui.QActionGroup(self, exclusive=True)
 
@@ -275,7 +278,6 @@ class OWMDS(widget.OWWidget):
 
         self.controlArea.layout().addWidget(box)
 
-        gui.rubber(self.controlArea)
         box = gui.widgetBox(self.controlArea, "Output")
         cb = gui.comboBox(box, self, "output_embedding_role",
                           box="Append coordinates",
