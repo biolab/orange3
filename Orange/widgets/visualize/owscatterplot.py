@@ -124,9 +124,8 @@ class OWScatterPlot(OWWidget):
         gui.checkBox(box, self, value='graph.tooltip_shows_all',
                      label='Show all data on mouse hover')
 
-        gui.separator(self.controlArea, 8, 8)
         self.zoom_select_toolbar = g.zoom_select_toolbar(
-            self.controlArea, nomargin=True,
+            gui.widgetBox(self.controlArea, "Zoom/Select"), nomargin=True,
             buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
                      g.StateButtonsEnd, g.ZoomReset]
         )
