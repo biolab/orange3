@@ -126,7 +126,7 @@ class OWTestLearners(widget.OWWidget):
         header.setDefaultAlignment(Qt.AlignCenter)
         header.setStretchLastSection(False)
 
-        self.result_model = QStandardItemModel()
+        self.result_model = QStandardItemModel(self)
         self.view.setModel(self.result_model)
         self.view.setItemDelegate(ItemDelegate())
         self._update_header()
