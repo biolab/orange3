@@ -860,16 +860,19 @@ class OWScatterMap(widget.OWWidget):
 
     def sharpen_region(self, region):
         data = self.dataset
-        xvar = self.x_var_model[self.x_var_index]
-        yvar = self.y_var_model[self.y_var_index]
-
-        if 0 <= self.z_var_index < len(self.z_var_model):
-            zvar = self.z_var_model[self.z_var_index]
-        else:
-            zvar = None
-
         root = self._root
         nbins = self.n_bins
+        xvar = yvar = zvar = None
+
+        if 0 <= self.x_var_index < len(self.x_var_model):
+            xvar = self.x_var_model[self.x_var_index]
+        if 0 <= self.y_var_index < len(self.y_var_model):
+            yvar = self.y_var_model[self.y_var_index]
+        if 0 <= self.z_var_index < len(self.z_var_model):
+            zvar = self.z_var_model[self.z_var_index]
+
+        if data is None or xvar is None or yvar is None or root is None:
+            return
 
         if not QRectF(*root.brect).intersects(region):
             return
