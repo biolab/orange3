@@ -131,6 +131,7 @@ class OWMDS(widget.OWWidget):
 
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
+    connected = settings.Setting(10)
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
 
@@ -145,6 +146,7 @@ class OWMDS(widget.OWWidget):
         self._shape_data = None
         self._size_data = None
         self._label_data = None
+        self._similar_pairs = None
         self._scatter_item = None
         self._legend_item = None
         self._selection_mask = None
@@ -227,6 +229,13 @@ class OWMDS(widget.OWWidget):
                                 minValue=100, maxValue=255, step=100,
                                 callback=self._on_color_index_changed,
                                 createLabel=False))
+        form.addRow("Show similar pairs",
+                    gui.hSlider(
+                        gui.widgetBox(self.controlArea,
+                                      orientation="horizontal"),
+                        self, "connected", minValue=0, maxValue=20,
+                        createLabel=False,
+                        callback=self._on_connected_changed))
         box.layout().addLayout(form)
 
         gui.rubber(self.controlArea)
@@ -345,6 +354,7 @@ class OWMDS(widget.OWWidget):
         self._shape_data = None
         self._size_data = None
         self._label_data = None
+        self._similar_pairs = None
 
         self.colorvar_model[:] = ["Same color"]
         self.shapevar_model[:] = ["Same shape"]
@@ -638,6 +648,10 @@ class OWMDS(widget.OWWidget):
         self._label_data = None
         self._update_plot()
 
+    def _on_connected_changed(self):
+        self._similar_pairs = None
+        self._update_plot()
+
     def _update_plot(self):
         self._clear_plot()
 
@@ -765,8 +779,25 @@ class OWMDS(widget.OWWidget):
                 label_items = None
             self._label_data = label_items
 
+        emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
+
+        if self.connected:
+            if self._similar_pairs is None:
+                m = self._effective_matrix
+                n = m.dim[0]
+                p = (n * (n - 1) // 2 * self.connected) // 100
+                indcs = numpy.triu_indices(n, 1)
+                sorted = numpy.argsort(m.X[indcs])[:p]
+                self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
+                fpairs[::2] = indcs[0][sorted]
+                fpairs[1::2] = indcs[1][sorted]
+            curve = pg.PlotCurveItem(emb_x[self._similar_pairs],
+                                     emb_y[self._similar_pairs],
+                                     pen=0.0, connect="pairs")
+            self.plot.addItem(curve)
+
         self._scatter_item = item = ScatterPlotItem(
-            x=self.embedding[:, 0], y=self.embedding[:, 1],
+            x=emb_x, y=emb_y,
             pen=self._pen_data, brush=self._brush_data, symbol=self._shape_data,
             size=size_data, data=numpy.arange(len(self.data
                                                   if have_data
