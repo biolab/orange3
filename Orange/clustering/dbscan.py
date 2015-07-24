@@ -10,7 +10,7 @@ class DBSCAN(SklProjector):
     __wraps__ = skl_cluster.DBSCAN
 
     def __init__(self, eps=0.5, min_samples=5, metric='euclidean',
-                 algorithm='auto', leaf_size=30, p=None, random_state=None,
+                 algorithm='auto', leaf_size=30, p=None,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()

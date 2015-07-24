@@ -35,7 +35,7 @@ class LassoRegressionLearner(SklLearner):
     name = 'lasso'
 
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
-                 precompute='auto', copy_X=True, max_iter=1000,
+                 precompute=False, copy_X=True, max_iter=1000,
                  tol=0.0001, warm_start=False, positive=False):
         self.params = vars()
 
@@ -45,7 +45,7 @@ class ElasticNetLearner(SklLearner):
     name = 'elastic'
 
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
-                 normalize=False, precompute='auto', max_iter=1000,
+                 normalize=False, precompute=False, max_iter=1000,
                  copy_X=True, tol=0.0001, warm_start=False, positive=False):
         self.params = vars()
 
