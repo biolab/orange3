@@ -1469,8 +1469,7 @@ class SchemeEditWidget(QWidget):
 
         if not handled:
             message_information(
-                self.tr("Sorry there is no documentation available for "
-                        "this widget."),
+                self.tr("There is no documentation for this widget yet."),
                 parent=self)
 
     def __toggleLinkEnabled(self, enabled):
