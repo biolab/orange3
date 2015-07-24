@@ -951,7 +951,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             if self.annotation_idx == 0:
                 labels = []
             elif self.annotation_idx == 1:
-                labels = [str(i) for i in indices]
+                labels = [str(i+1) for i in indices]
             elif self.label_cb.model()[self.annotation_idx] == "Attribute names":
                 attr = self.matrix.row_items.domain.attributes
                 labels = [str(attr[i]) for i in indices]
