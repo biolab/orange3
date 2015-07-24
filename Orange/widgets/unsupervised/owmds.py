@@ -288,6 +288,8 @@ class OWMDS(widget.OWWidget):
                         box=None)
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
+        self.plot.getPlotItem().hideAxis("bottom")
+        self.plot.getPlotItem().hideAxis("left")
         self.mainArea.layout().addWidget(self.plot)
 
         self.selection_tool = PlotSelectionTool(
@@ -770,6 +772,7 @@ class OWMDS(widget.OWWidget):
             antialias=True
         )
         self.plot.addItem(item)
+        self.plot.getPlotItem().autoRange()
 
         if self._label_data is not None:
             for (x, y), text_item in zip(self.embedding, self._label_data):
