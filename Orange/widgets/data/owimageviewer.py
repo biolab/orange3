@@ -32,7 +32,7 @@ import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.data.owsave import OWSave
-from Orange.data.io import FileFormats
+from Orange.widgets.io import FileFormats
 
 # from OWConcurrent import Future, FutureWatcher
 from concurrent.futures import Future

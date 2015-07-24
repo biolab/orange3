@@ -3,7 +3,7 @@ from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.widgets.data.owsave import OWSave
-from Orange.data.io import FileFormats
+from Orange.widgets.io import FileFormats
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
