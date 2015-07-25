@@ -288,12 +288,11 @@ class OWMDS(widget.OWWidget):
         self.controlArea.layout().addWidget(box)
 
         box = gui.widgetBox(self.controlArea, "Output")
-        cb = gui.comboBox(box, self, "output_embedding_role",
-                          box="Append coordinates",
-                          items=["Do not append", "As attributes", "As metas"],
-                          callback=self._invalidate_output)
-        cb.box.setFlat(True)
-
+        gui.comboBox(box, self, "output_embedding_role",
+                     items=["Without coordinates",
+                            "Coordinates as attributes",
+                            "Coordinates as meta attribtues"],
+                     callback=self._invalidate_output, addSpace=4)
         gui.auto_commit(box, self, "autocommit", "Send data",
                         checkbox_label="Send after any change",
                         box=None)
