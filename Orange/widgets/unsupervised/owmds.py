@@ -132,6 +132,7 @@ class OWMDS(widget.OWWidget):
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
     connected = settings.Setting(10)
+    spread_equal_points = settings.Setting(False)
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
 
@@ -179,7 +180,10 @@ class OWMDS(widget.OWWidget):
                         box, self, "refresh_rate",
                         items=[t for t, _ in OWMDS.RefreshRate],
                         callback=self.__invalidate_refresh))
-
+        gui.separator(box, 10)
+        gui.checkBox(box, self, "spread_equal_points",
+                     "Spread points at zero-distances",
+                     callback=self.__invalidate_embedding)
         gui.separator(box, 10)
         self.runbutton = gui.button(
             box, self, "Run", callback=self._toggle_run)
@@ -473,6 +477,10 @@ class OWMDS(widget.OWWidget):
 
     def __start(self):
         X = self._effective_matrix.X
+        if self.spread_equal_points:
+            maxval = numpy.max(X)
+            X = numpy.clip(X, maxval / 10, maxval)
+
         if self.embedding is not None:
             init = self.embedding
         elif self.initialization == OWMDS.PCA:
