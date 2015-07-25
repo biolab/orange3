@@ -761,6 +761,7 @@ class OWMDS(widget.OWWidget):
                 size_data = MinPointSize + size_data * point_size
             else:
                 size_data = point_size
+            self._size_data = size_data
 
         if self._label_data is None:
             label_index = self.cb_label_value.currentIndex()
@@ -793,15 +794,22 @@ class OWMDS(widget.OWWidget):
                 fpairs[1::2] = indcs[1][sorted]
             curve = pg.PlotCurveItem(emb_x[self._similar_pairs],
                                      emb_y[self._similar_pairs],
-                                     pen=0.0, connect="pairs")
+                                     pen=pg.mkPen(0.5, width=2),
+                                     connect="pairs", antialias=True)
             self.plot.addItem(curve)
+            item = ScatterPlotItem(
+                x=emb_x, y=emb_y,
+                pen=1.0, brush=1.0, symbol=self._shape_data,
+                size=self._size_data + 3,
+                antialias=True
+            )
+            self.plot.addItem(item)
 
+        data = numpy.arange(len(self.data if have_data else self.matrix.X))
         self._scatter_item = item = ScatterPlotItem(
             x=emb_x, y=emb_y,
             pen=self._pen_data, brush=self._brush_data, symbol=self._shape_data,
-            size=size_data, data=numpy.arange(len(self.data
-                                                  if have_data
-                                                  else self.matrix.X)),
+            size=self._size_data, data=data,
             antialias=True
         )
         self.plot.addItem(item)
