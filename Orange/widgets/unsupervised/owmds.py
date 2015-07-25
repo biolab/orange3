@@ -784,6 +784,17 @@ class OWMDS(widget.OWWidget):
 
         if self.connected:
             if self._similar_pairs is None:
+                # This code requires storing lower triangle of X (n x n / 2
+                # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
+                # argsort result. If this becomes an issue, it can be reduced to
+                # n x n argsort indices by argsorting the entire X. Then we
+                # take the first n + 2 * p indices. We compute their coordinates
+                # i, j in the original matrix. We keep those for which i < j.
+                # n + 2 * p will suffice to exclude the diagonal (i = j). If the
+                # number of those for which i < j is smaller than p, we instead
+                # take i > j. Among those that remain, we take the first p.
+                # Assuming that MDS can't show so many points that memory could
+                # become an issue, I preferred using simpler code.
                 m = self._effective_matrix
                 n = m.dim[0]
                 p = (n * (n - 1) // 2 * self.connected) // 100
