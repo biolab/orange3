@@ -63,16 +63,17 @@ class OWOutliers(widget.OWWidget):
             spinType=float, minv=0, maxv=10, callback=self.gamma_changed)
         gui.separator(detection, 12)
 
-        gui.appendRadioButton(detection, "Covariance estimator:")
+        self.rb_cov = gui.appendRadioButton(detection, "Covariance estimator:")
         ibox = gui.indentedBox(detection)
-        gui.widgetLabel(ibox, 'Contamination:')
+        self.l_cov = gui.widgetLabel(ibox, 'Contamination:')
         self.cont_slider = gui.hSlider(
             ibox, self, "cont", minValue=0, maxValue=100, ticks=10,
             labelFormat="%d %%", callback=self.cont_changed)
 
         ebox = gui.widgetBox(ibox, box=None, orientation='horizontal')
-        gui.checkBox(ebox, self, "empirical_covariance", "Support fraction:",
-                     callback=self.empirical_changed)
+        self.cb_emp_cov = gui.checkBox(
+            ebox, self, "empirical_covariance",
+            "Support fraction:", callback=self.empirical_changed)
         self.support_fraction_spin = gui.spin(
             ebox, self, "support_fraction", step=1e-1, spinType=float,
             minv=0.1, maxv=10, callback=self.support_fraction_changed)
@@ -98,6 +99,23 @@ class OWOutliers(widget.OWWidget):
     def empirical_changed(self):
         self.outlier_method = self.Covariance
 
+    def disable_covariance(self):
+        self.outlier_method = self.OneClassSVM
+        self.rb_cov.setDisabled(True)
+        self.l_cov.setDisabled(True)
+        self.cont_slider.setDisabled(True)
+        self.cb_emp_cov.setDisabled(True)
+        self.support_fraction_spin.setDisabled(True)
+        self.warning(0, 'Too many features for covariance estimation.')
+
+    def enable_covariance(self):
+        self.rb_cov.setDisabled(False)
+        self.l_cov.setDisabled(False)
+        self.cont_slider.setDisabled(False)
+        self.cb_emp_cov.setDisabled(False)
+        self.support_fraction_spin.setDisabled(False)
+        self.warning(0)
+
     def set_data(self, dataset):
         self.data = dataset
         if self.data is None:
@@ -106,6 +124,12 @@ class OWOutliers(widget.OWWidget):
         else:
             self.data_info_label.setText('%d instances' % len(self.data))
             self.in_out_info_label.setText(' ')
+
+        self.enable_covariance()
+        if self.data and len(self.data.domain.attributes) > 1500:
+            self.disable_covariance()
+
+        self.commit()
 
     def commit(self):
         self.error()
