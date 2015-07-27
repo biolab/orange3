@@ -56,22 +56,31 @@ class OWLogisticRegression(widget.OWWidget):
                    callback=self.apply, default=True)
         self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
                                              QtGui.QSizePolicy.Fixed))
-        self.setMinimumWidth(275)
+        self.setMinimumWidth(300)
         self.set_c()
         self.apply()
 
     def set_c(self):
         self.C = pow(10, -self.log_C)
-        if self.C > 100:
+        if self.C >= 100:
             self.C = (self.C // 25) * 25
-        elif self.C > 10:
+        elif self.C >= 10:
             self.C = (self.C // 10) * 10
-        elif self.C > 1:
+        elif self.C >= 1:
             self.C = round(self.C, 0)
-        if self.C >= 1:
-            self.c_label.setText("C={}".format(int(self.C)))
+        elif self.C > 0.2:
+            self.C = round(self.C * 20) / 20
         else:
-            self.c_label.setText("C={:.3f}".format(self.C))
+            self.C = round(self.C, 3)
+
+        if self.C >= 1:
+            frmt = "{}"
+            self.C = int(self.C)
+        elif self.C >= 0.2:
+            frmt = "{:.2f}"
+        else:
+            frmt = "{:.3f}"
+        self.c_label.setText(("C=" + frmt).format(self.C))
 
     def set_data(self, data):
         self.data = data
