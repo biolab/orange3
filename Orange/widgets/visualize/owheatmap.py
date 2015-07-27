@@ -226,6 +226,7 @@ class OWHeatMap(widget.OWWidget):
                       {3: [(0, 255, 0), (0, 0, 0), (255, 0, 0)]})]
         palettes += self.user_palettes
         model = color_palette_model(palettes, self.color_cb.iconSize())
+        model.setParent(self)
         self.color_cb.setModel(model)
         self.color_cb.activated.connect(self.update_color_schema)
         self.color_cb.setCurrentIndex(self.palette_index)

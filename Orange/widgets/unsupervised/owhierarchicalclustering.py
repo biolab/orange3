@@ -153,6 +153,8 @@ def update_pen(pen, brush=None, width=None, style=None,
         pen.setCapStyle(cap_style)
     if join_style is not None:
         pen.setJoinStyle(join_style)
+    if cosmetic is not None:
+        pen.setCosmetic(cosmetic)
     return pen
 
 
@@ -183,11 +185,6 @@ class DendrogramWidget(QGraphicsWidget):
 
     class ClusterGraphicsItem(QGraphicsPathItem):
         _rect = None
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            # enable item selection for setSelected and isSelected
-            self.setFlag(self.ItemIsSelectable)
 
         def shape(self):
             if self._rect is not None:
@@ -378,6 +375,9 @@ class DendrogramWidget(QGraphicsWidget):
         """
         self.set_selected_items(list(map(self.item, clusters)))
 
+    def is_selected(self, item):
+        return item in self._selection
+
     def select_item(self, item, state):
         """Set the `item`s selection state to `select_state`
 
@@ -441,7 +441,6 @@ class DendrogramWidget(QGraphicsWidget):
 #         selection_item.setPath(path_outline(path, width=4))
         selection_item.unscaled_path = outline
         self._selection[item] = selection_item
-        item.setSelected(True)
 
     def _remove_selection(self, item):
         """Remove selection rooted at item."""
@@ -454,8 +453,6 @@ class DendrogramWidget(QGraphicsWidget):
             self.scene().removeItem(selection_poly)
 
         del self._selection[item]
-
-        item.setSelected(False)
 
         self._re_enumerate_selections()
 
@@ -514,7 +511,7 @@ class DendrogramWidget(QGraphicsWidget):
         else:
             allitems = [item for item in allitems if not item.node.is_leaf]
 
-        brects = [QPolygonF(item.boundingRect()) for item in allitems]
+        brects = [QPolygonF(item.boundingRect()) for item in allitems if item.boundingRect().isValid()]
         return reduce(QPolygonF.united, brects, QPolygonF())
 
     def _update_selection_items(self):
@@ -601,16 +598,13 @@ class DendrogramWidget(QGraphicsWidget):
             elif event.type() == QEvent.GraphicsSceneMousePress and \
                     event.button() == Qt.LeftButton:
                 if event.modifiers() & Qt.ControlModifier:
-                    self.select_item(obj, not obj.isSelected())
+                    self.select_item(obj, not self.is_selected(obj))
                 else:
                     self.set_selected_items([obj])
                 self.selectionEdited.emit()
                 assert self._highlighted_item is obj
                 event.accept()
                 return True
-            elif event.type() == QEvent.GraphicsSceneMouseRelease and \
-                    event.button() == Qt.LeftButton:
-                return True # MouseRelease messes with isSelected in case of ctrl-click
 
         if event.type() == QEvent.GraphicsSceneHoverLeave:
             self._set_hover_item(None)
@@ -957,7 +951,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             if self.annotation_idx == 0:
                 labels = []
             elif self.annotation_idx == 1:
-                labels = [str(i) for i in indices]
+                labels = [str(i+1) for i in indices]
             elif self.label_cb.model()[self.annotation_idx] == "Attribute names":
                 attr = self.matrix.row_items.domain.attributes
                 labels = [str(attr[i]) for i in indices]

@@ -1,3 +1,4 @@
+import sys
 import time
 import itertools
 import heapq
@@ -33,33 +34,36 @@ Tree = namedtuple(
      ]
 )
 
-Tree.is_leaf = property(
-    lambda self: self.children is None
-)
 
-Tree.is_empty = property(
-    lambda self: not np.any(self.contingencies)
-)
+class Tree(Tree):
+    @property
+    def is_leaf(self):
+        """Is this node a leaf."""
+        return self.children is None
 
-Tree.brect = property(
-    lambda self:
-        (self.xbins[0],
-         self.ybins[0],
-         self.xbins[-1] - self.xbins[0],
-         self.ybins[-1] - self.ybins[0])
-)
+    @property
+    def is_empty(self):
+        """Is this node empty, i.e. is it's contingency matrix empty."""
+        return not np.any(self.contingencies)
 
-Tree.nbins = property(
-    lambda self: self.xbins.size - 1
-)
+    @property
+    def brect(self):
+        """The bounding rect `(x, y, width, height)` tuple of the node's bins.
+        """
+        return (self.xbins[0], self.ybins[0],
+                self.xbins[-1] - self.xbins[0],
+                self.ybins[-1] - self.ybins[0])
 
+    @property
+    def nbins(self):
+        """Number of bins."""
+        return self.xbins.size - 1
 
-Tree.depth = (
-    lambda self:
-        1 if self.is_leaf
-          else max(ch.depth() + 1
-                   for ch in filter(is_not_none, self.children.flat))
-)
+    def depth(self):
+        """Return the tree depth."""
+        return (1 if self.is_leaf
+                  else max(ch.depth() + 1
+                           for ch in filter(is_not_none, self.children.flat)))
 
 
 def max_contingency(node):
@@ -81,6 +85,37 @@ def max_contingency(node):
 
 
 def blockshaped(arr, rows, cols):
+    """
+    Return an array of (rows, cols) `arr` sub blocks.
+
+    E.g. given an (N, M) array return a (N//rows, M//cols, rows, cols)
+    array A, such that A[0, 0] contains the upper left sub-block of `arr`
+    (`arr[0:rows, 0:cols]`), A[0, 1] the sub-block left to it
+    (arr[0: rows, rows: 2 * rows]), ...
+
+    Example
+    -------
+
+    >>> A = numpy.array(
+    ...     [[1, 2, 3,  4,  5,  6],
+    ...      [7, 8, 9, 10, 11, 12]]
+    ... )
+
+    >>> blockshaped(A, 2, 3)
+    array([[[[ 1,  2,  3],
+             [ 7,  8,  9]],
+            [[ 4,  5,  6],
+             [10, 11, 12]]]])
+
+    >>> blockshaped(A, 1, 2)
+    array([[[[ 1,  2]],
+            [[ 3,  4]],
+            [[ 5,  6]]],
+           [[[ 7,  8]],
+            [[ 9, 10]],
+            [[11, 12]]]])
+
+    """
     N, M = arr.shape[:2]
     rest = arr.shape[2:]
     assert N % rows == 0
@@ -90,19 +125,33 @@ def blockshaped(arr, rows, cols):
                .reshape((N // rows, M // cols, rows, cols) + rest))
 
 
-Rect, RoundRect, Circle = 0, 1, 2
-
-
 def lod_from_transform(T):
-    # Return level of detail from a only transform without taking
-    # into account the rotation or shear.
+    """
+    Return level of detail from a translation/scale only transform T.
+
+    Level of detail is the geometric mean of a transformed unit
+    rectangle's width and height (i.e. sqrt(area)).
+
+    :type T: QTransform
+
+    """
     r = T.mapRect(QRectF(0, 0, 1, 1))
     return np.sqrt(r.width() * r.height())
 
+#: Density patch shapes
+Rect, RoundRect, Circle = 0, 1, 2
+
 
 class DensityPatch(pg.GraphicsObject):
-    Rect, RoundRect, Circle = Rect, RoundRect, Circle
+    """
+    A 2-dimentional (rectangular) bin-plot graphics item.
 
+    Displays a contingency from a `Tree` instance, automatically
+    re-sampling to adjust for level of detail.
+    """
+    #: Density patch shapes
+    Rect, RoundRect, Circle = Rect, RoundRect, Circle
+    #: Density patch color scale (linear, square root and logarithmic).
     Linear, Sqrt, Log = 1, 2, 3
 
     def __init__(self, root=None, cell_size=10, cell_shape=Rect,
@@ -126,12 +175,18 @@ class DensityPatch(pg.GraphicsObject):
             return QRectF()
 
     def set_root(self, root):
+        """
+        Set root `Tree` node.
+        """
         self.prepareGeometryChange()
         self._root = root
         self._cache.clear()
         self.update()
 
     def set_cell_shape(self, shape):
+        """
+        Set the cell shape (Rect, RoundRect or Circle).
+        """
         if self._cell_shape != shape:
             self._cell_shape = shape
             self.update()
@@ -140,6 +195,9 @@ class DensityPatch(pg.GraphicsObject):
         return self._cell_shape
 
     def set_cell_size(self, size):
+        """
+        Set the (approximate preferred) cell size in pixels.
+        """
         assert size >= 1
         if self._cell_size != size:
             self._cell_size = size
@@ -164,14 +222,10 @@ class DensityPatch(pg.GraphicsObject):
         cell_shape, cell_size = self._cell_shape, self._cell_size
         nbins = root.nbins
         T = painter.worldTransform()
-        # level of detail is the geometric mean of a transformed
-        # unit rectangle's sides (== sqrt(area)).
-#         lod = option.levelOfDetailFromTransform(T)
         lod = lod_from_transform(T)
         rect = self.rect()
-        # sqrt(area) of one cell
+        # sqrt(area) of one cell in object coordinates.
         size1 = np.sqrt(rect.width() * rect.height()) / nbins
-        cell_size = cell_size
         scale = cell_size / (lod * size1)
 
         if np.isinf(scale):
@@ -214,22 +268,26 @@ class DensityPatch(pg.GraphicsObject):
         for picture in picture_intersect(patch, option.exposedRect):
             picture.play(painter)
 
-#: A visual patch utilizing QPicture
+#: A visual patch of a Tree 'rendered' as a QPicture
 Patch = namedtuple(
   "Patch",
   ["node",      # : Tree # source node (Tree)
    "picture",   # : () -> QPicture # combined full QPicture
-   "children",  # : () -> sequence # all child subpatches
+   "children",  # : () -> Tuple[Patch] # all child subpatches
    ]
 )
 
-Patch.rect = property(
-    lambda self: QRectF(*self.node.brect)
-)
 
-Patch.is_leaf = property(
-    lambda self: len(self.children()) == 0
-)
+class Patch(Patch):
+    @property
+    def is_leaf(self):
+        """Is this a leaf patch (has no children)."""
+        return len(self.children()) == 0
+
+    @property
+    def rect(self):
+        """Patch bounding rectangle as a QRectF."""
+        return QRectF(*self.node.brect)
 
 Some = namedtuple("Some", ["val"])
 
@@ -246,7 +304,12 @@ def once(f):
 
 
 def picture_intersect(patch, region):
-    """Return a list of all QPictures in `patch` that intersect region.
+    """
+    Return a list of all QPictures in `patch` that intersect region.
+    :type patch: Patch
+    :type region: QRectF
+    :rval: List[Patch]
+
     """
     if not region.intersects(patch.rect):
         return []
@@ -262,14 +325,29 @@ def picture_intersect(patch, region):
 
 
 def Patch_create(node, palette=None, scale=None, shape=Rect):
-    """Create a `Patch` for visualizing node.
     """
-    # note: the patch (picture and children fields) is is lazy evaluated.
+    Return a `Patch` for visualizing `node`.
+
+    .. note::
+        The patch (picture and children fields) are evaluated lazily.
+
+    :type node: Tree
+    :type palette: colorpalette.PaletteGenerator
+    :type scale: nparray -> ndarray
+    :type shape: int
+    :rtype: Patch
+
+    """
     if node.is_empty:
         return Patch(node, once(lambda: QtGui.QPicture()), once(lambda: ()))
     else:
         @once
         def picture_this_level():
+            # Create a QPicture drawing the contribution from this
+            # level only. This is all regions where the contingency is
+            # not empty and does not have a computed sub-contingency
+            # (i.e. the node does not have a child in that cell).
+
             pic = QtGui.QPicture()
             painter = QtGui.QPainter(pic)
             ctng = node.contingencies
@@ -307,6 +385,7 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
 
         @once
         def child_patches():
+            # Return a tuple of all non empty child patches for this node.
             if node.is_leaf:
                 children = []
             else:
@@ -317,6 +396,8 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
 
         @once
         def picture_children():
+            # Return a QPicture displaying all children patches of this
+            # node.
             pic = QtGui.QPicture()
             painter = QtGui.QPainter(pic)
             for ch in child_patches():
@@ -328,6 +409,19 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
 
 
 def resample(node, samplewidth):
+    """
+    Resample/aggregate the node's contingency, joining `samplewidth` bins.
+
+    `samplewidth` is the number of bins which should be joined and MUST
+    be a power of 2.
+
+    If `samplewidth` == 1 then return the node as is. If larger then
+    1 then sum `samplewidth` neighboring contingency cells returning a
+    new node with shape ``(nbins//samplewidth, nbins//samplewidth)``.
+    If smaller then 1 (i.e. undersampled) recurse into node's
+    subcontingencies with a samplewidth * nbins
+
+    """
     assert 0 < samplewidth <= node.nbins
     assert int(np.log2(samplewidth)) == np.log2(samplewidth)
 
@@ -357,8 +451,7 @@ def resample(node, samplewidth):
 
 class OWScatterMap(widget.OWWidget):
     name = "Scatter Map"
-    description = "Two-dimensional heat map displaying data instances " \
-                  "(rows) and their features (heat map columns)."
+    description = "Draw a two dimentional rectangular bin density plot."
     icon = "icons/Scattermap.svg"
     priority = 100
 
@@ -370,8 +463,9 @@ class OWScatterMap(widget.OWWidget):
     y_var_index = settings.ContextSetting(1)
     z_var_index = settings.ContextSetting(0)
     selected_z_values = settings.ContextSetting([])
-    color_scale = settings.ContextSetting(1)
-    sample_level = settings.ContextSetting(0)
+
+    color_scale = settings.Setting(1)
+    sample_level = settings.Setting(0)
 
     sample_percentages = []
     sample_percentages_captions = []
@@ -400,8 +494,9 @@ class OWScatterMap(widget.OWWidget):
         self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
         sampling_options = (self.sample_times_captions +
                             self.sample_percentages_captions)
-        gui.comboBox(self.sampling_box, self, 'sample_level',
-                     items=sampling_options, callback=self.update_sample)
+        self.sample_combo = gui.comboBox(
+            self.sampling_box, self, 'sample_level', items=sampling_options,
+            callback=self.update_sample)
         gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
 
         box = gui.widgetBox(self.controlArea, "Input")
@@ -489,12 +584,12 @@ class OWScatterMap(widget.OWWidget):
         if isinstance(dataset, SqlTable):
             self.original_data = dataset
             self.sample_level = 0
-            self.sampling_box.setVisible(True)
-
+            self.sample_combo.setEnabled(True)
             self.update_sample()
         else:
             self.dataset = dataset
-            self.sampling_box.setVisible(False)
+            self.sample_combo.setCurrentIndex(-1)
+            self.sample_combo.setEnabled(False)
             self.set_sampled_data(self.dataset)
 
     def update_sample(self):
@@ -533,7 +628,7 @@ class OWScatterMap(widget.OWWidget):
             nvars = len(cvars)
             self.x_var_index = min(max(0, self.x_var_index), nvars - 1)
             self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
-            self.z_var_index = min(max(0, self.z_var_index), len(cvars) - 1)
+            self.z_var_index = min(max(0, self.z_var_index), len(dvars) - 1)
 
             if domain.has_discrete_class:
                 self.z_var_index = dvars.index(domain.class_var)
@@ -559,7 +654,6 @@ class OWScatterMap(widget.OWWidget):
             self.setup_plot()
         else:
             self.labelDataInput.setText('No data on input')
-            self.send("Sampled data", None)
 
     def clear(self):
         self.dataset = None
@@ -767,16 +861,19 @@ class OWScatterMap(widget.OWWidget):
 
     def sharpen_region(self, region):
         data = self.dataset
-        xvar = self.x_var_model[self.x_var_index]
-        yvar = self.y_var_model[self.y_var_index]
-
-        if 0 <= self.z_var_index < len(self.z_var_model):
-            zvar = self.z_var_model[self.z_var_index]
-        else:
-            zvar = None
-
         root = self._root
         nbins = self.n_bins
+        xvar = yvar = zvar = None
+
+        if 0 <= self.x_var_index < len(self.x_var_model):
+            xvar = self.x_var_model[self.x_var_index]
+        if 0 <= self.y_var_index < len(self.y_var_model):
+            yvar = self.y_var_model[self.y_var_index]
+        if 0 <= self.z_var_index < len(self.z_var_model):
+            zvar = self.z_var_model[self.z_var_index]
+
+        if data is None or xvar is None or yvar is None or root is None:
+            return
 
         if not QRectF(*root.brect).intersects(region):
             return
@@ -1123,67 +1220,6 @@ def stack_tile_blocks(blocks):
     return np.vstack(list(map(np.hstack, blocks)))
 
 
-def bins_join(bins):
-    return np.hstack([b[:-1] for b in bins[:-1]] + [bins[-1]])
-
-
-def flatten(node, nbins=None, preserve_max=False):
-    if node.is_leaf:
-        return node
-    else:
-        N, M = node.children.shape[:2]
-
-        xind = {i: np.flatnonzero(node.children[i, :]) for i in range(N)}
-        yind = {j: np.flatnonzero(node.children[:, j]) for j in range(M)}
-        xind = {i: ind[0] for i, ind in xind.items() if ind.size}
-        yind = {j: ind[0] for j, ind in yind.items() if ind.size}
-
-        xbins = [node.children[i, xind[i]].xbins if i in xind
-                 else np.linspace(node.xbins[i], node.xbins[i + 1], nbins + 1)
-                 for i in range(N)]
-
-        ybins = [node.children[yind[j], j].ybins if j in yind
-                  else np.linspace(node.ybins[j], node.ybins[j + 1], nbins + 1)
-                  for j in range(M)]
-
-        xbins = bins_join(xbins)
-        ybins = bins_join(ybins)
-
-#         xbins = bins_join([c.xbins for c in node.children[:, 0]])
-#         ybins = bins_join([c.ybins for c in node.children[0, :]])
-
-        ndim = node.contingencies.ndim
-        if ndim == 3:
-            repeats = (nbins, nbins, 1)
-        else:
-            repeats = (nbins, nbins)
-
-        def child_contingency(node, row, col):
-            child = node.children[row, col]
-            if child is None:
-                return np.tile(node.contingencies[row, col], repeats)
-            elif preserve_max:
-                parent_max = np.max(node.contingencies[row, col])
-                c_max = np.max(child.contingencies)
-                if c_max > 0:
-                    return child.contingencies * (parent_max / c_max)
-                else:
-                    return child.contingencies
-            else:
-                return child.contingencies
-
-        contingencies = [[child_contingency(node, i, j)
-                          for j in range(nbins)]
-                         for i in range(nbins)]
-
-        contingencies = stack_tile_blocks(contingencies)
-        cnode = Tree(xbins, ybins, contingencies, None)
-        assert node.brect == cnode.brect
-        assert np.all(np.diff(cnode.xbins) > 0)
-        assert np.all(np.diff(cnode.ybins) > 0)
-        return cnode
-
-
 def bindices(node, rect):
     assert rect.normalized() == rect
     assert not rect.intersect(QRectF(*node.brect)).isEmpty()
@@ -1352,17 +1388,28 @@ def compute_chi_squares(observes):
     return (chi_squares_lr, chi_squares_ud)
 
 
-def main():
+def main(argv=None):
     import sip
-    app = QtGui.QApplication([])
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+
     w = OWScatterMap()
     w.show()
     w.raise_()
-    data = Orange.data.Table('iris')
-#     data = Orange.data.Table('housing')
-    data = Orange.data.Table('adult')
+
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "adult"
+
+    data = Orange.data.Table(filename)
+
     w.set_data(data)
     rval = app.exec_()
+
+    w.set_data(None)
     w.onDeleteWidget()
 
     sip.delete(w)
@@ -1371,5 +1418,4 @@ def main():
     return rval
 
 if __name__ == "__main__":
-    import sys
     sys.exit(main())

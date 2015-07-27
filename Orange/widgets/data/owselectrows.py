@@ -275,6 +275,7 @@ class OWSelectRows(widget.OWWidget):
         if not data:
             self.commit()
             return
+        self.conditions = []
         self.openContext(data)
         if not self.conditions and len(domain.variables):
             self.add_row()

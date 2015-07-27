@@ -116,7 +116,7 @@
         "rows": 683,
         "target": {
             "type": "discrete",
-            "values": 6
+            "values": 2
         }
     },
     "breast-cancer-wisconsin-cont": {
@@ -329,6 +329,21 @@
             "values": null
         }
     },
+    "geo-gds360": {
+        "features": {
+            "continuous": 9485,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "geo-gds360.tab",
+        "missing": false,
+        "name": "geo-gds360",
+        "rows": 24,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
     "glass": {
         "features": {
             "continuous": 9,
@@ -341,7 +356,7 @@
         "rows": 214,
         "target": {
             "type": "discrete",
-            "values": 8
+            "values": 6
         }
     },
     "hair-eye-sex": {
@@ -371,7 +386,7 @@
         "rows": 132,
         "target": {
             "type": "discrete",
-            "values": 8
+            "values": 3
         }
     },
     "hayes-roth_test": {
@@ -386,7 +401,7 @@
         "rows": 28,
         "target": {
             "type": "discrete",
-            "values": 8
+            "values": 3
         }
     },
     "heart_disease": {
@@ -551,7 +566,7 @@
         "rows": 32,
         "target": {
             "type": "discrete",
-            "values": 8
+            "values": 3
         }
     },
     "lymphography": {
@@ -821,7 +836,7 @@
         "rows": 253,
         "target": {
             "type": "discrete",
-            "values": 8
+            "values": 2
         }
     },
     "smokers_ct": {

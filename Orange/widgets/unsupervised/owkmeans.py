@@ -127,7 +127,7 @@ class OWKMeans(widget.OWWidget):
                         orientation="horizontal")
         gui.rubber(self.controlArea)
 
-        self.table_model = QStandardItemModel()
+        self.table_model = QStandardItemModel(self)
         self.table_model.setHorizontalHeaderLabels(["k", "Score"])
         self.table_model.setColumnCount(2)
 

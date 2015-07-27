@@ -212,13 +212,13 @@ class OWDistributions(widget.OWWidget):
 
     def _density_estimator(self):
         if self.cont_est_type == OWDistributions.Hist:
-            def hist(dist):
+            def hist(dist, cont):
                 h, edges = numpy.histogram(dist[0, :], bins=10,
                                            weights=dist[1, :])
                 return edges, h
             return hist
         elif self.cont_est_type == OWDistributions.ASH:
-            return lambda dist: ash_curve(dist, m=5)
+            return lambda dist, cont: ash_curve(dist, cont, m=5)
         elif self.cont_est_type == OWDistributions.Kernel:
             return rect_kernel_curve
 
@@ -235,7 +235,7 @@ class OWDistributions(widget.OWWidget):
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
             curve_est = self._density_estimator()
-            edges, curve = curve_est(dist)
+            edges, curve = curve_est(dist, None)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray),
@@ -279,7 +279,7 @@ class OWDistributions(widget.OWWidget):
             weights /= numpy.sum(weights)
 
             curve_est = self._density_estimator()
-            curves = [curve_est(dist) for dist in cont]
+            curves = [curve_est(dist, cont) for dist in cont if len(dist[0])]
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
 
             cum_curves = [curves[0]]
@@ -380,7 +380,7 @@ def dist_sum(D1, D2):
     return unique, W
 
 
-def rect_kernel_curve(dist, bandwidth=None):
+def rect_kernel_curve(dist, cont=None, bandwidth=None):
     """
     Return a rectangular kernel density curve for `dist`.
 
@@ -451,11 +451,21 @@ def sum_rect_curve(Xa, Ya, Xb, Yb):
     return unique, Y
 
 
-def ash_curve(dist, bandwidth=None, m=3, weights=None):
+def ash_curve(dist, cont=None, bandwidth=None, m=3):
     dist = numpy.asarray(dist)
     X, W = dist
     if bandwidth is None:
-        bandwidth = 3.5 * weighted_std(X, weights=W) * (X.size ** (-1 / 3))
+        std = weighted_std(X, weights=W)
+        size = X.size
+        # if only one sample in the class
+        if std == 0 and cont is not None:
+            std = weighted_std(cont.values, weights=numpy.sum(cont.counts, axis=0))
+            size = cont.values.size
+        # if attr is constant or contingencies is None (no class variable)
+        if std == 0:
+            std = 0.1
+            size = X.size
+        bandwidth = 3.5 * std * (size ** (-1 / 3))
 
     hist, edges = average_shifted_histogram(X, bandwidth, m, weights=W)
     return edges, hist
@@ -489,7 +499,7 @@ def average_shifted_histogram(a, h, m=3, weights=None):
     amin, amax = a.min(), a.max()
     delta = h / m
     offset = (m - 1) * delta
-    nbins = numpy.ceil((amax - amin + 2 * offset) / delta)
+    nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m - 1)
     bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
                           endpoint=True)
     hist, edges = numpy.histogram(a, bins, weights=weights, density=True)
