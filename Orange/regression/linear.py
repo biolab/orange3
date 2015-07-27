@@ -16,7 +16,6 @@ class LinearRegressionLearner(SklLearner):
 
     def __init__(self, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
-        self.params = vars()
     
     def fit(self, X, Y, W):
         sk = skl_linear_model.LinearRegression()
