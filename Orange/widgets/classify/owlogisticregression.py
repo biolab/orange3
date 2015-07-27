@@ -1,4 +1,5 @@
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification import logistic_regression as lr
@@ -22,9 +23,10 @@ class OWLogisticRegression(widget.OWWidget):
     learner_name = settings.Setting("Logistic Regression")
 
     penalty_type = settings.Setting(1)
-    dual = settings.Setting(False)
-    C = settings.Setting(1.0)
-    tol = settings.Setting(0.0001)
+    log_C = settings.Setting(0)
+
+    dual = False
+    tol = 0.0001
     fit_intercept = True
     intercept_scaling = 1.0
 
@@ -37,35 +39,48 @@ class OWLogisticRegression(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, self.tr("Name"))
         gui.lineEdit(box, self, "learner_name")
 
-        box = gui.widgetBox(self.controlArea, self.tr("Regularization"))
-        form = QtGui.QFormLayout()
-        form.setContentsMargins(0, 0, 0, 0)
-
-        box.layout().addLayout(form)
-
-        buttonbox = gui.radioButtonsInBox(
-            box, self, "penalty_type", btnLabels=("L1", "L2"),
-            orientation="horizontal"
-        )
-        form.addRow(self.tr("Penalty type:"), buttonbox)
-
-        spin = gui.doubleSpin(box, self, "C", 0.0, 1024.0, step=0.0001)
-
-        form.addRow("Reg (C):", spin)
-
-        box = gui.widgetBox(self.controlArea, "Numerical Tolerance")
-        gui.doubleSpin(box, self, "tol", 1e-7, 1e-3, 5e-7)
-
+        box = gui.widgetBox(self.controlArea, box=True)
+        gui.comboBox(box, self, "penalty_type", label="Regularization type: ",
+                     items=("Lasso (L1)", "Ridge (L2)"),
+                     orientation="horizontal", addSpace=4)
+        gui.widgetLabel(box, "Strength:")
+        box2 = gui.widgetBox(gui.indentedBox(box), orientation="horizontal")
+        gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
+        gui.hSlider(box2, self, "log_C", minValue=-3, maxValue=3, step=0.01,
+                    callback=self.set_c, intOnly=False, createLabel=False)
+        gui.widgetLabel(box2, "Strong").setStyleSheet("margin-top:6px")
+        box2 = gui.widgetBox(box, orientation="horizontal")
+        box2.layout().setAlignment(Qt.AlignCenter)
+        self.c_label = gui.widgetLabel(box2)
         gui.button(self.controlArea, self, "&Apply",
                    callback=self.apply, default=True)
-
-        self.setSizePolicy(
-            QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
-                              QtGui.QSizePolicy.Fixed)
-        )
-        self.setMinimumWidth(250)
-
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+                                             QtGui.QSizePolicy.Fixed))
+        self.setMinimumWidth(300)
+        self.set_c()
         self.apply()
+
+    def set_c(self):
+        self.C = pow(10, -self.log_C)
+        if self.C >= 100:
+            self.C = (self.C // 25) * 25
+        elif self.C >= 10:
+            self.C = (self.C // 10) * 10
+        elif self.C >= 1:
+            self.C = round(self.C, 0)
+        elif self.C > 0.2:
+            self.C = round(self.C * 20) / 20
+        else:
+            self.C = round(self.C, 3)
+
+        if self.C >= 1:
+            frmt = "{}"
+            self.C = int(self.C)
+        elif self.C >= 0.2:
+            frmt = "{:.2f}"
+        else:
+            frmt = "{:.3f}"
+        self.c_label.setText(("C=" + frmt).format(self.C))
 
     def set_data(self, data):
         self.data = data
