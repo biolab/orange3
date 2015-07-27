@@ -14,6 +14,9 @@ class LinearRegressionLearner(SklLearner):
     __wraps__ = skl_linear_model.LinearRegression
     name = 'linreg'
 
+    def __init__(self, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+    
     def fit(self, X, Y, W):
         sk = skl_linear_model.LinearRegression()
         sk.fit(X, Y)
@@ -26,7 +29,8 @@ class RidgeRegressionLearner(SklLearner):
 
     def __init__(self, alpha=1.0, fit_intercept=True,
                  normalize=False, copy_X=True, max_iter=None,
-                 tol=0.001, solver='auto'):
+                 tol=0.001, solver='auto', preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
 
@@ -36,7 +40,9 @@ class LassoRegressionLearner(SklLearner):
 
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
-                 tol=0.0001, warm_start=False, positive=False):
+                 tol=0.0001, warm_start=False, positive=False,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
 
@@ -46,7 +52,9 @@ class ElasticNetLearner(SklLearner):
 
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
                  normalize=False, precompute=False, max_iter=1000,
-                 copy_X=True, tol=0.0001, warm_start=False, positive=False):
+                 copy_X=True, tol=0.0001, warm_start=False, positive=False,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
 
@@ -57,7 +65,8 @@ class ElasticNetCVLearner(SklLearner):
     def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
                  fit_intercept=True, normalize=False, precompute='auto',
                  max_iter=1000, tol=0.0001, cv=None, copy_X=True,
-                 verbose=0, n_jobs=1, positive=False):
+                 verbose=0, n_jobs=1, positive=False, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
 
