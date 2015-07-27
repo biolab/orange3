@@ -24,14 +24,14 @@ class OWOutliers(widget.OWWidget):
 
     want_main_area = False
 
-    OneClassSVM, RobustCovariance, EmpiricalCovariance = range(3)
+    OneClassSVM, Covariance = range(2)
 
     outlier_method = Setting(OneClassSVM)
-    nu = Setting(10)
+    nu = Setting(50)
     gamma = Setting(0)
-    cont_robust = Setting(10)
-    cont_emp = Setting(10)
-    support_fraction_emp = Setting(1)
+    cont = Setting(10)
+    empirical_covariance = Setting(False)
+    support_fraction = Setting(1)
 
     data_info_default = 'No data on input.'
     in_out_info_default = ' '
@@ -51,7 +51,10 @@ class OWOutliers(widget.OWWidget):
         gui.appendRadioButton(detection,
                               "One class SVM with non-linear kernel (RBF):")
         ibox = gui.indentedBox(detection)
-        gui.widgetLabel(ibox, 'Fraction:')
+        gui.widgetLabel(ibox, 'NU:', tooltip='An upper bound on the fraction '
+                                             'of training errors and a lower '
+                                             'bound of the fraction of '
+                                             'support vectors')
         self.nu_slider = gui.hSlider(
             ibox, self, "nu", minValue=1, maxValue=100, ticks=10,
             labelFormat="%d %%", callback=self.nu_changed)
@@ -60,24 +63,19 @@ class OWOutliers(widget.OWWidget):
             spinType=float, minv=0, maxv=10, callback=self.gamma_changed)
         gui.separator(detection, 12)
 
-        gui.appendRadioButton(detection, "Robust covariance estimator:")
+        gui.appendRadioButton(detection, "Covariance estimator:")
         ibox = gui.indentedBox(detection)
         gui.widgetLabel(ibox, 'Contamination:')
-        self.cont_robust_slider = gui.hSlider(
-            ibox, self, "cont_robust", minValue=0, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.cont_robust_changed)
-        gui.separator(detection, 12)
+        self.cont_slider = gui.hSlider(
+            ibox, self, "cont", minValue=0, maxValue=100, ticks=10,
+            labelFormat="%d %%", callback=self.cont_changed)
 
-        gui.appendRadioButton(detection, "Empirical covariance estimator:")
-        ibox = gui.indentedBox(detection)
-        gui.widgetLabel(ibox, 'Contamination:')
-        self.cont_emp_slider = gui.hSlider(
-            ibox, self, "cont_emp", minValue=0, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.cont_emp_changed)
-        self.support_fraction_emp_spin = gui.spin(
-            ibox, self, "support_fraction_emp", label="Support fraction: ",
-            step=1e-1, spinType=float, minv=0.1, maxv=10,
-            callback=self.support_fraction_emp_changed)
+        ebox = gui.widgetBox(ibox, box=None, orientation='horizontal')
+        gui.checkBox(ebox, self, "empirical_covariance", "Support fraction:",
+                     callback=self.empirical_changed)
+        self.support_fraction_spin = gui.spin(
+            ebox, self, "support_fraction", step=1e-1, spinType=float,
+            minv=0.1, maxv=10, callback=self.support_fraction_changed)
 
         gui.separator(detection, 12)
 
@@ -91,14 +89,14 @@ class OWOutliers(widget.OWWidget):
     def gamma_changed(self):
         self.outlier_method = self.OneClassSVM
 
-    def cont_robust_changed(self):
-        self.outlier_method = self.RobustCovariance
+    def cont_changed(self):
+        self.outlier_method = self.Covariance
 
-    def cont_emp_changed(self):
-        self.outlier_method = self.EmpiricalCovariance
+    def support_fraction_changed(self):
+        self.outlier_method = self.Covariance
 
-    def support_fraction_emp_changed(self):
-        self.outlier_method = self.EmpiricalCovariance
+    def empirical_changed(self):
+        self.outlier_method = self.Covariance
 
     def set_data(self, dataset):
         self.data = dataset
@@ -135,22 +133,18 @@ class OWOutliers(widget.OWWidget):
             learner = OneClassSVMLearner(
                 gamma=self.gamma, nu=self.nu / 100,
                 preprocessors=SklLearner.preprocessors)
-        elif self.outlier_method == self.RobustCovariance:
-            learner = EllipticEnvelopeLearner(
-                support_fraction=None,
-                contamination=self.cont_robust / 100.)
         else:
             learner = EllipticEnvelopeLearner(
-                support_fraction=self.support_fraction_emp,
-                contamination=self.cont_emp / 100.)
+                support_fraction=self.support_fraction
+                if self.empirical_covariance else None,
+                contamination=self.cont / 100.)
         model = learner(self.data)
         y_pred = model(self.data)
         self.add_metas(model)
         return np.array(y_pred)
 
     def add_metas(self, model):
-        if self.outlier_method in (self.RobustCovariance,
-                                   self.EmpiricalCovariance):
+        if self.outlier_method == self.Covariance:
             mahal = model.mahalanobis(self.data.X)
             mahal = mahal.reshape(len(self.data), 1)
             attrs = self.data.domain.attributes
