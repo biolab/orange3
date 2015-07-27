@@ -490,10 +490,10 @@ class SelectTool(DataTool):
         self._selection_rect = None
         self._mouse_dragging = False
         self._delete_action = QAction(
-            "Delete", self,
-            shortcut=QtGui.QKeySequence.Delete,
-            shortcutContext=Qt.WindowShortcut
+            "Delete", self, shortcutContext=Qt.WindowShortcut
         )
+        self._delete_action.setShortcuts([QtGui.QKeySequence.Delete,
+                                          QtGui.QKeySequence("Backspace")])
         self._delete_action.triggered.connect(self.delete)
 
     def setSelectionRect(self, rect):
