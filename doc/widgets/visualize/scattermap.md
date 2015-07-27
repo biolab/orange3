@@ -1,7 +1,7 @@
 Scatter Map
 ===========
 
-![image]()
+![image](icons/scatter-map.png)
 
 Plots a scatter map for a pair of continuous attributes.
 
