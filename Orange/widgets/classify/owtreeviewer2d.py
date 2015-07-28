@@ -358,7 +358,6 @@ class OWTreeViewer2D(OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.root = None
         self.selected_node = None
         self.root_node = None
         self.tree = None
@@ -429,6 +428,9 @@ class OWTreeViewer2D(OWWidget):
         self.scene.update()
 
     def toggle_line_width(self):
+        if self.root_node is None:
+            return
+
         root_instances = self.root_node.num_instances()
         width = 3
         for edge in self.scene.edges():
@@ -504,6 +506,7 @@ class OWTreeViewer2D(OWWidget):
 
     def clear(self):
         self.tree = None
+        self.root_node = None
         self.scene.clear()
         self.scene.setSceneRect(QRectF())
 
