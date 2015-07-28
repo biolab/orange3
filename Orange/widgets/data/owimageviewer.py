@@ -31,7 +31,6 @@ from PyQt4.QtNetwork import (
 import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
-from Orange.widgets.data.owsave import OWSave
 from Orange.widgets.io import FileFormats
 
 # from OWConcurrent import Future, FutureWatcher
@@ -598,6 +597,8 @@ class OWImageViewer(widget.OWWidget):
             self.send("Data", None)
 
     def saveScene(self):
+        from Orange.widgets.data.owsave import OWSave
+
         save_img = OWSave(parent=self, data=self.scene,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()

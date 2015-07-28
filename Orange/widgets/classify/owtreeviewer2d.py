@@ -2,7 +2,6 @@ from itertools import chain
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.widgets.data.owsave import OWSave
 from Orange.widgets.io import FileFormats
 
 from PyQt4.QtCore import *
@@ -540,6 +539,8 @@ class OWTreeViewer2D(OWWidget):
         # else None)
 
     def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
         save_img = OWSave(parent=self,
                           data={'scene': self.scene, 'tree': self.tree},
                           file_formats=dict(chain(
