@@ -32,7 +32,7 @@ supervised learning.
 
 1. A 2D drawing canvas with fixed coordinate system.
 2. Name the axes and selet the class to paint data instances. You can add or remove classes. Use one class only to create classless, unsupervised data sets.
-3. Drawing tools. Paint data points with *Brush* (multiple data instances) or *Put* (individual data instance). Select data points with *Select* and remove them with Delete key. Reposition data points with [*Jitter*](https://en.wikipedia.org/wiki/Jitter) (spread) and *Magnet* (focus). Use *Zoom* and scroll to zoom in or out. Below, set radius and intensity for Brush, Put, Jitter and Magnet tools.
+3. Drawing tools. Paint data points with *Brush* (multiple data instances) or *Put* (individual data instance). Select data points with *Select* and remove them with Delete/Backspace key. Reposition data points with [*Jitter*](https://en.wikipedia.org/wiki/Jitter) (spread) and *Magnet* (focus). Use *Zoom* and scroll to zoom in or out. Below, set radius and intensity for Brush, Put, Jitter and Magnet tools.
 4. Tick the box on the left to automacitally commit changes to other widgets. Alternatively, press '*Send*' 
   to apply them.
 
