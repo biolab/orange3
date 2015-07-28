@@ -14,7 +14,7 @@ from operator import itemgetter
 
 import pkg_resources
 
-from .provider import IntersphinxHelpProvider
+from . import provider
 
 from PyQt4.QtCore import QObject, QUrl
 
@@ -260,7 +260,10 @@ def create_intersphinx_provider(entry_point):
 
             if os.path.exists(target) and \
                     os.path.exists(os.path.join(target, "objects.inv")):
-                return IntersphinxHelpProvider(target=target)
+                return provider.IntersphinxHelpProvider(
+                    inventory=os.path.join(target, "objects.inv"),
+                    target=target
+                )
             else:
                 continue
         elif fields:
@@ -273,14 +276,114 @@ def create_intersphinx_provider(entry_point):
                               "'%s', '%s'." % (target, inventory))
                 continue
 
-            return IntersphinxHelpProvider(target=target, inventory=inventory)
+            return provider.IntersphinxHelpProvider(
+                target=target, inventory=inventory)
         else:
-            return IntersphinxHelpProvider(target=target, inventory=inventory)
+            return provider.IntersphinxHelpProvider(
+                target=target, inventory=inventory)
 
     return None
 
 
-_providers = {"intersphinx": create_intersphinx_provider}
+def create_html_provider(entry_point):
+    locations = entry_point.load()
+    dist = entry_point.dist
+    replacements = {"PROJECT_NAME": dist.project_name,
+                    "PROJECT_NAME_LOWER": dist.project_name.lower(),
+                    "PROJECT_VERSION": dist.version}
+    try:
+        replacements["URL"] = get_dist_url(dist)
+    except KeyError:
+        pass
+
+    formatter = string.Formatter()
+
+    for target in locations:
+        # Extract all format fields
+        format_iter = formatter.parse(target)
+        fields = list(map(itemgetter(1), format_iter))
+        fields = [_f for _f in set(fields) if _f]
+
+        if "DEVELOP_ROOT" in fields:
+            if not is_develop_egg(dist):
+                # skip the location
+                continue
+            target = formatter.format(target, DEVELOP_ROOT=dist.location)
+            if os.path.exists(target):
+                return provider.SimpleHelpProvider(
+                    baseurl=QUrl.fromLocalFile(target))
+            else:
+                continue
+        elif fields:
+            try:
+                target = formatter.format(target, **replacements)
+            except KeyError:
+                log.exception("Error while formating doc root mapping",
+                              target)
+                continue
+
+            return provider.SimpleHelpProvider(baseurl=target)
+        else:
+            return provider.SimpleHelpProvider(baseurl=target)
+
+    return None
+
+
+def create_html_inventory_provider(entry_point):
+    locations = entry_point.load()
+    dist = entry_point.dist
+    replacements = {"PROJECT_NAME": dist.project_name,
+                    "PROJECT_NAME_LOWER": dist.project_name.lower(),
+                    "PROJECT_VERSION": dist.version}
+    try:
+        replacements["URL"] = get_dist_url(dist)
+    except KeyError:
+        pass
+
+    formatter = string.Formatter()
+
+    for target, xpathquery in locations:
+
+        if isinstance(target, (tuple, list)):
+            pass
+
+        # Extract all format fields
+        format_iter = formatter.parse(target)
+        fields = list(map(itemgetter(1), format_iter))
+        fields = [_f for _f in set(fields) if _f]
+
+        if "DEVELOP_ROOT" in fields:
+            if not is_develop_egg(dist):
+                # skip the location
+                continue
+            target = formatter.format(target, DEVELOP_ROOT=dist.location)
+            if os.path.exists(target):
+                return provider.HtmlIndexProvider(
+                    inventory=QUrl.fromLocalFile(target),
+                    xpathquery=xpathquery)
+            else:
+                continue
+        elif fields:
+            try:
+                target = formatter.format(target, **replacements)
+            except KeyError:
+                log.exception("Error while formating doc root mapping",
+                              target)
+                continue
+
+            return provider.HtmlIndexProvider(
+                inventroy=target, xpathquery=xpathquery)
+        else:
+            return provider.HtmlIndexProvider(
+                inventory=target, xpathquery=xpathquery)
+
+    return None
+
+_providers = {
+    "intersphinx": create_intersphinx_provider,
+    "html-simple": create_html_provider,
+    "html-index": create_html_inventory_provider,
+}
 
 
 def get_help_provider_for_distribution(dist):
