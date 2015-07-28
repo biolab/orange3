@@ -489,9 +489,38 @@ class OWScatterMap(widget.OWWidget):
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
 
-        box = gui.widgetBox(self.controlArea, "Input")
+        box = gui.widgetBox(self.controlArea, "Info")
         self.labelDataInput = gui.widgetLabel(box, 'No data on input')
         self.labelDataInput.setTextFormat(Qt.PlainText)
+
+        box = gui.widgetBox(self.controlArea, "Axes")
+        self.x_var_model = itemmodels.VariableListModel()
+        self.comboBoxAttributesX = gui.comboBox(
+            box, self, value='x_var_index', callback=self.replot)
+        self.comboBoxAttributesX.setModel(self.x_var_model)
+
+        self.y_var_model = itemmodels.VariableListModel()
+        self.comboBoxAttributesY = gui.comboBox(
+            box, self, value='y_var_index', callback=self.replot)
+        self.comboBoxAttributesY.setModel(self.y_var_model)
+
+        box = gui.widgetBox(self.controlArea, "Color")
+        self.z_var_model = itemmodels.VariableListModel()
+        self.comboBoxClassvars = gui.comboBox(
+            box, self, value='z_var_index',
+            callback=self._on_z_var_changed)
+        self.comboBoxClassvars.setModel(self.z_var_model)
+
+        self.z_values_view = gui.listBox(
+            box, self, "selected_z_values", "z_values",
+            callback=self._on_z_values_selection_changed,
+            selectionMode=QtGui.QListView.MultiSelection,
+            addSpace=False
+        )
+        gui.comboBox(box, self, "color_scale", label="Scale: ",
+                     orientation="horizontal",
+                     items=["Linear", "Square root", "Logarithmic"],
+                     callback=self._on_color_scale_changed)
 
         self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
         sampling_options = (self.sample_times_captions +
@@ -500,40 +529,6 @@ class OWScatterMap(widget.OWWidget):
             self.sampling_box, self, 'sample_level', items=sampling_options,
             callback=self.update_sample)
         gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
-
-        self.x_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesX = gui.comboBox(
-            self.controlArea, self, value='x_var_index', box='X Attribute',
-            callback=self.replot)
-        self.comboBoxAttributesX.setModel(self.x_var_model)
-
-        self.y_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesY = gui.comboBox(
-            self.controlArea, self, value='y_var_index', box='Y Attribute',
-            callback=self.replot)
-        self.comboBoxAttributesY.setModel(self.y_var_model)
-
-        box = gui.widgetBox(self.controlArea, "Color by")
-        self.z_var_model = itemmodels.VariableListModel()
-        self.comboBoxClassvars = gui.comboBox(
-            box, self, value='z_var_index',
-            callback=self._on_z_var_changed)
-        self.comboBoxClassvars.setModel(self.z_var_model)
-
-        box1 = gui.widgetBox(box, 'Colors displayed', margin=0)
-        box1.setFlat(True)
-
-        self.z_values_view = gui.listBox(
-            box1, self, "selected_z_values", "z_values",
-            callback=self._on_z_values_selection_changed,
-            selectionMode=QtGui.QListView.MultiSelection,
-            addSpace=False
-        )
-        box1 = gui.widgetBox(box, "Color Scale", margin=0)
-        box1.setFlat(True)
-        gui.comboBox(box1, self, "color_scale",
-                     items=["Linear", "Square root", "Logarithmic"],
-                     callback=self._on_color_scale_changed)
 
         gui.rubber(self.controlArea)
 
