@@ -119,9 +119,9 @@ class OWMDS(widget.OWWidget):
     refresh_rate = settings.Setting(3)
 
     # output embedding role.
-    NoRole, AttrRole, MetaRole = 0, 1, 2
+    NoRole, AttrRole, AddAttrRole, MetaRole = 0, 1, 2, 3
 
-    output_embedding_role = settings.Setting(1)
+    output_embedding_role = settings.Setting(2)
     autocommit = settings.Setting(True)
 
     color_value = settings.ContextSetting("")
@@ -131,7 +131,7 @@ class OWMDS(widget.OWWidget):
 
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
-    connected = settings.Setting(10)
+    connected_pairs = settings.Setting(5)
     spread_equal_points = settings.Setting(False)
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
@@ -237,7 +237,7 @@ class OWMDS(widget.OWWidget):
                     gui.hSlider(
                         gui.widgetBox(self.controlArea,
                                       orientation="horizontal"),
-                        self, "connected", minValue=0, maxValue=20,
+                        self, "connected_pairs", minValue=0, maxValue=20,
                         createLabel=False,
                         callback=self._on_connected_changed))
         box.layout().addLayout(form)
@@ -246,7 +246,7 @@ class OWMDS(widget.OWWidget):
 
         box = QtGui.QGroupBox("Zoom/Select", )
         box.setLayout(QtGui.QHBoxLayout())
-        box.layout().setMargin(0)
+        box.layout().setMargin(2)
 
         group = QtGui.QActionGroup(self, exclusive=True)
 
@@ -293,9 +293,10 @@ class OWMDS(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Output")
         gui.comboBox(box, self, "output_embedding_role",
-                     items=["Without coordinates",
-                            "Coordinates as attributes",
-                            "Coordinates as meta attribtues"],
+                     items=["Original features only",
+                            "Coordinates only",
+                            "Coordinates as features",
+                            "Coordinates as meta attributes"],
                      callback=self._invalidate_output, addSpace=4)
         gui.auto_commit(box, self, "autocommit", "Send data",
                         checkbox_label="Send after any change",
@@ -330,6 +331,8 @@ class OWMDS(widget.OWWidget):
             self.plot.getViewBox().setCursor(QtGui.QCursor(cur))
 
         group.triggered[QtGui.QAction].connect(activate_tool)
+
+        self._initialize()
 
     def set_data(self, data):
         self.signal_data = data
@@ -789,7 +792,7 @@ class OWMDS(widget.OWWidget):
 
         emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
 
-        if self.connected:
+        if self.connected_pairs:
             if self._similar_pairs is None:
                 # This code requires storing lower triangle of X (n x n / 2
                 # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
@@ -804,7 +807,7 @@ class OWMDS(widget.OWWidget):
                 # become an issue, I preferred using simpler code.
                 m = self._effective_matrix
                 n = m.dim[0]
-                p = (n * (n - 1) // 2 * self.connected) // 100
+                p = (n * (n - 1) // 2 * self.connected_pairs) // 100
                 indcs = numpy.triu_indices(n, 1)
                 sorted = numpy.argsort(m.X[indcs])[:p]
                 self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
@@ -812,7 +815,7 @@ class OWMDS(widget.OWWidget):
                 fpairs[1::2] = indcs[1][sorted]
             curve = pg.PlotCurveItem(emb_x[self._similar_pairs],
                                      emb_y[self._similar_pairs],
-                                     pen=pg.mkPen(0.5, width=2),
+                                     pen=pg.mkPen(0.8, width=2),
                                      connect="pairs", antialias=True)
             self.plot.addItem(curve)
             item = ScatterPlotItem(
@@ -884,14 +887,18 @@ class OWMDS(widget.OWWidget):
             metas = domain.metas
 
             if self.output_embedding_role == OWMDS.AttrRole:
-                attrs = attrs + embedding.domain.attributes
+                attrs = embedding.domain.attributes
+            elif self.output_embedding_role == OWMDS.AddAttrRole:
+                attrs = domain.attributes + embedding.domain.attributes
             elif self.output_embedding_role == OWMDS.MetaRole:
-                metas = metas + embedding.domain.attributes
+                metas += embedding.domain.attributes
 
             domain = Orange.data.Domain(attrs, class_vars, metas)
             output = Orange.data.Table.from_table(domain, self.data)
 
             if self.output_embedding_role == OWMDS.AttrRole:
+                output.X[:] = embedding.X
+            if self.output_embedding_role == OWMDS.AddAttrRole:
                 output.X[:, -2:] = embedding.X
             elif self.output_embedding_role == OWMDS.MetaRole:
                 output.metas[:, -2:] = embedding.X
