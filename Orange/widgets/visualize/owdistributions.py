@@ -294,34 +294,17 @@ class OWDistributions(widget.OWWidget):
             colors = cols
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
 
-            cum_curves = [curves[0]]
-            for X, Y in curves[1:]:
-                cum_curves.append(sum_rect_curve(X, Y, *cum_curves[-1]))
-
-            for (X, Y), color in reversed(list(zip(cum_curves, colors))):
+            for (X, Y), color in reversed(list(zip(curves, colors))):
                 item = pg.PlotCurveItem()
-                pen = QtGui.QPen(QtGui.QBrush(Qt.white), 0.5)
+                pen = QtGui.QPen(QtGui.QBrush(color), 5)
                 pen.setCosmetic(True)
+                color = QtGui.QColor(color)
+                color.setAlphaF(0.1)
                 item.setData(X, Y, antialias=True, stepMode=True,
                              fillLevel=0, brush=QtGui.QBrush(color),
                              pen=pen)
                 self.plot.addItem(item)
 
-#             # XXX: sum the individual curves and not the distributions.
-#             # The conditional distributions might be 'smoother' than
-#             # the cumulative one
-#             cum_dist = [cont[0]]
-#             for dist in cont[1:]:
-#                 cum_dist.append(dist_sum(dist, cum_dist[-1]))
-#
-#             curves = [rect_kernel_curve(dist) for dist in cum_dist]
-#             colors = [Qt.blue, Qt.red, Qt.magenta]
-#             for (X, Y), color in reversed(list(zip(curves, colors))):
-#                 item = pg.PlotCurveItem()
-#                 item.setData(X, Y, antialias=True, stepMode=True,
-#                              fillLevel=0, brush=QtGui.QBrush(color))
-#                 item.setPen(QtGui.QPen(color))
-#                 self.plot.addItem(item)
         elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
 
