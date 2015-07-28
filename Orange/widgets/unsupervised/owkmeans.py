@@ -1,14 +1,14 @@
 import math
-import random
 import numpy as np
 
 from PyQt4.QtGui import QGridLayout, QSizePolicy, \
     QTableView, QStandardItemModel, QStandardItem, QIntValidator
 from PyQt4.QtCore import Qt, QTimer
 
-import Orange
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.data import Table, Domain, DiscreteVariable
+from Orange.clustering import KMeans
 
 
 class OWKMeans(widget.OWWidget):
@@ -18,18 +18,20 @@ class OWKMeans(widget.OWWidget):
     icon = "icons/KMeans.svg"
     priority = 2100
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Table, "set_data")]
 
-    outputs = [("Annotated Data", Orange.data.Table, widget.Default),
-               ("Centroids", Orange.data.Table)]
+    outputs = [("Annotated Data", Table, widget.Default),
+               ("Centroids", Table)]
 
     INIT_KMEANS, INIT_RANDOM = range(2)
     INIT_METHODS = "Initialize with KMeans++", "Random initialization"
 
     SILHOUETTE, INTERCLUSTER, DISTANCES = range(3)
     SCORING_METHODS = [("Silhouette", lambda km: km.silhouette, False),
-                       ("Inter-cluster distance", lambda km: km.inter_cluster, True),
-                       ("Distance to centroids", lambda km: km.inertia, True)]
+                       ("Inter-cluster distance",
+                        lambda km: km.inter_cluster, True),
+                       ("Distance to centroids",
+                        lambda km: km.inertia, True)]
 
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
     OUTPUT_METHODS = ("Class", "Feature", "Meta")
@@ -76,11 +78,13 @@ class OWKMeans(widget.OWWidget):
         layout.addWidget(ftobox)
         gui.spin(
             ftobox, self, "k_from", minv=2, maxv=29,
-            controlWidth=60, alignment=Qt.AlignRight, callback=self.update_from)
+            controlWidth=60, alignment=Qt.AlignRight,
+            callback=self.update_from)
         gui.widgetLabel(ftobox, "  To: ")
         self.fixedSpinBox = gui.spin(
             ftobox, self, "k_to", minv=3, maxv=30,
-            controlWidth=60, alignment=Qt.AlignRight, callback=self.update_to)
+            controlWidth=60, alignment=Qt.AlignRight,
+            callback=self.update_to)
         gui.rubber(ftobox)
 
         layout.addWidget(gui.widgetLabel(None, "Scoring: "),
@@ -99,7 +103,8 @@ class OWKMeans(widget.OWWidget):
         layout = QGridLayout()
         box2 = gui.widgetBox(box, orientation=layout)
         box2.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-        layout.addWidget(gui.widgetLabel(None, "Re-runs: "), 0, 0, Qt.AlignLeft)
+        layout.addWidget(gui.widgetLabel(None, "Re-runs: "),
+                         0, 0, Qt.AlignLeft)
         sb = gui.widgetBox(None, margin=0, orientation="horizontal")
         layout.addWidget(sb, 0, 1)
         gui.lineEdit(
@@ -111,8 +116,9 @@ class OWKMeans(widget.OWWidget):
         sb = gui.widgetBox(None, margin=0, orientation="horizontal")
         layout.addWidget(sb, 1, 1)
         gui.lineEdit(sb, self, "max_iterations",
-            controlWidth=60, valueType=int, validator=QIntValidator(),
-            callback=self.update)
+                     controlWidth=60, valueType=int,
+                     validator=QIntValidator(),
+                     callback=self.update)
 
         box = gui.widgetBox(self.controlArea, "Output")
         gui.comboBox(box, self, "place_cluster_ids",
@@ -148,7 +154,8 @@ class OWKMeans(widget.OWWidget):
         table.horizontalHeader().setStretchLastSection(True)
 
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.mainArea.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+        self.mainArea.setSizePolicy(QSizePolicy.Maximum,
+                                    QSizePolicy.Preferred)
         self.table_box.setSizePolicy(QSizePolicy.Fixed,
                                      QSizePolicy.MinimumExpanding)
         self.table_view.setSizePolicy(QSizePolicy.Preferred,
@@ -207,7 +214,7 @@ class OWKMeans(widget.OWWidget):
                 self.progressBarInit()
                 progress_steps = self.k_to - self.k_from + 1
                 self.optimization_runs = []
-                kmeans = Orange.clustering.kmeans.KMeans(
+                kmeans = KMeans(
                     init=['random', 'k-means++'][self.smart_init],
                     n_init=self.n_init,
                     max_iter=self.max_iterations)
@@ -226,7 +233,7 @@ class OWKMeans(widget.OWWidget):
     def cluster(self):
         if not self.check_data_size(self.k):
             return
-        self.km = Orange.clustering.kmeans.KMeans(
+        self.km = KMeans(
             n_clusters=self.k,
             init=['random', 'k-means++'][self.smart_init],
             n_init=self.n_init,
@@ -247,7 +254,7 @@ class OWKMeans(widget.OWWidget):
     def show_results(self):
         minimize = self.SCORING_METHODS[self.scoring][2]
         k_scores = [(k, self.SCORING_METHODS[self.scoring][1](run)) for
-                  k, run in self.optimization_runs]
+                    k, run in self.optimization_runs]
         scores = list(zip(*k_scores))[1]
         if minimize:
             best_score, worst_score = min(scores), max(scores)
@@ -312,10 +319,9 @@ class OWKMeans(widget.OWWidget):
             self.send("Centroids", None)
             return
 
-        clust_var = Orange.data.DiscreteVariable(
+        clust_var = DiscreteVariable(
             self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
-        clust_ids = km.proj.predict(self.data.X).\
-            astype(int).reshape((len(self.data), 1))
+        clust_ids = km(self.data)
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
         meta_attrs = domain.metas
@@ -333,11 +339,10 @@ class OWKMeans(widget.OWWidget):
             meta_attrs += (clust_var, )
             metas = np.hstack((metas, clust_ids))
 
-        domain = Orange.data.Domain(attributes, classes, meta_attrs)
-        new_table = Orange.data.Table(domain, X, Y, metas, self.data.W)
+        domain = Domain(attributes, classes, meta_attrs)
+        new_table = Table(domain, X, Y, metas, self.data.W)
 
-        centroids = Orange.data.Table(
-            Orange.data.Domain(self.data.domain.attributes), km.centroids)
+        centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
 
         self.send("Annotated Data", new_table)
         self.send("Centroids", centroids)
@@ -374,6 +379,7 @@ class OWKMeans(widget.OWWidget):
         self.reportData(self.data)
         if self.optimized:
             import OWReport
+
             self.reportSection("Cluster size optimization report")
             self.reportRaw(OWReport.reportTable(self.table_view))
 
@@ -381,9 +387,10 @@ class OWKMeans(widget.OWWidget):
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+
     a = QApplication(sys.argv)
     ow = OWKMeans()
-    d = Orange.data.Table("iris.tab")
+    d = Table("iris.tab")
     ow.set_data(d)
     ow.show()
     a.exec()
