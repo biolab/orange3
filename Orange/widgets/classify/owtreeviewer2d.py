@@ -257,8 +257,10 @@ class TreeGraphicsScene(QGraphicsScene):
         if not x or not y:
             x, y = self._HSPACING, self._VSPACING
         self._fix_pos(node, x, y)
+        rect = self.itemsBoundingRect().adjusted(-10, -10, 20, 20)
+        self.setSceneRect(rect)
         self.update()
-        
+
     def _fix_pos(self, node, x, y):
         def brect(node):
             return node.boundingRect() | node.childrenBoundingRect()
@@ -503,6 +505,7 @@ class OWTreeViewer2D(OWWidget):
     def clear(self):
         self.tree = None
         self.scene.clear()
+        self.scene.setSceneRect(QRectF())
 
     def update_node_tooltips(self):
         for node in self.scene.nodes():
