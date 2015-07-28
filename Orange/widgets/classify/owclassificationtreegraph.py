@@ -179,6 +179,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.scene_view.centerOn(self.root_node.x(), self.root_node.y())
             self.update_node_tooltips()
         self.scene.update()
+        self.send("Data", None)
 
     def walkcreate(self, tree, node_id, parent=None):
         node = ClassificationTreeNode(tree, self.domain, parent, None,
