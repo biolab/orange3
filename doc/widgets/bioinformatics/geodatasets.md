@@ -22,8 +22,8 @@ Signals
 Description
 -----------
 
-**GEO Data Sets** (officially, [GEO DataSets](http://www.ncbi.nlm.nih.gov/gds)) is a data base of gene
-expression curated profiles maintained by [NCBI](http://www.ncbi.nlm.nih.gov/) and included in [Gene
+**[GEO DataSets](http://www.ncbi.nlm.nih.gov/gds)** is a data base of gene
+expression curated profiles maintained by [NCBI](http://www.ncbi.nlm.nih.gov/) and included in the [Gene
 Expression Omnibus](http://www.ncbi.nlm.nih.gov/geo/info/datasets.html). This Orange widget provides
 access to all its data sets and outputs a data set selected for further
 processing. For convenience, each data set is stored locally. 
