@@ -64,12 +64,11 @@ class DistributionBarItem(pg.GraphicsObject):
         geom = self.geometry
         x, y = geom.x(), geom.y()
         w, h = geom.width(), geom.height()
+        wsingle = w / len(self.dist)
         for d, c in zip(self.dist, self.colors):
-            if d == 0:
-                continue
             painter.setBrush(QtGui.QBrush(c.lighter()))
-            painter.drawRect(QtCore.QRectF(x, y, w, d * h))
-            y += d * h
+            painter.drawRect(QtCore.QRectF(x, y, wsingle, d * h))
+            x += wsingle
         painter.end()
 
         self.__picture = picture
