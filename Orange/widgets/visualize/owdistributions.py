@@ -66,7 +66,7 @@ class DistributionBarItem(pg.GraphicsObject):
         w, h = geom.width(), geom.height()
         wsingle = w / len(self.dist)
         for d, c in zip(self.dist, self.colors):
-            painter.setBrush(QtGui.QBrush(c.lighter()))
+            painter.setBrush(QtGui.QBrush(c))
             painter.drawRect(QtCore.QRectF(x, y, wsingle, d * h))
             x += wsingle
         painter.end()
@@ -275,7 +275,7 @@ class OWDistributions(widget.OWWidget):
 
         cvar_values = cvar.values
         palette = colorpalette.ColorPaletteGenerator(len(cvar_values))
-        colors = [palette[i] for i in range(len(cvar_values))]
+        colors = [palette[i].lighter() for i in range(len(cvar_values))]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
@@ -303,7 +303,7 @@ class OWDistributions(widget.OWWidget):
                 pen = QtGui.QPen(QtGui.QBrush(Qt.white), 0.5)
                 pen.setCosmetic(True)
                 item.setData(X, Y, antialias=True, stepMode=True,
-                             fillLevel=0, brush=QtGui.QBrush(color.lighter()),
+                             fillLevel=0, brush=QtGui.QBrush(color),
                              pen=pen)
                 self.plot.addItem(item)
 
