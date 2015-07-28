@@ -32,11 +32,9 @@ Description
 
 ![Logistic Regression Widget](images/LogisticRegression-stamped.png)
 
-1. A name under which the learner appears in other widgets. The default name is "Logistic regression".
-2. The penalty type (either [L1](https://en.wikipedia.org/wiki/Least_squares#Lasso_method) or [L2](https://en.wikipedia.org/wiki/Tikhonov_regularization)).
-3. [Regularization](https://en.wikipedia.org/wiki/Regularization_(mathematics)) value (higher value means less regularization).
-4. Set [numerical tolerance](https://en.wikipedia.org/wiki/Error-tolerant_design) (permitted deviation from expected value).
-5. Press '*Apply*' to commit changes.
+1. A name under which the learner appears in other widgets. The default name is "Logistic Regression".
+2. [Regularization](https://en.wikipedia.org/wiki/Regularization_(mathematics)) type (either [L1](https://en.wikipedia.org/wiki/Least_squares#Lasso_method) or [L2](https://en.wikipedia.org/wiki/Tikhonov_regularization)). Set the cost strength (default is C=1).
+3. Press '*Apply*' to commit changes.
 
 Example
 -------
