@@ -3,6 +3,8 @@ PIPAx
 
 ![Widget icon](icons/pipax.png)
 
+Gives access to PIPA databases.
+
 Signals
 -------
 
