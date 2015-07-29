@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
+from Orange.widgets.io import FileFormats
 
 
 def selected_index(view):
@@ -92,6 +93,8 @@ class OWDistributions(widget.OWWidget):
     cont_est_type = settings.Setting(ASH)
     relative_freq = settings.Setting(False)
 
+    want_graph = True
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.data = None
@@ -155,6 +158,7 @@ class OWDistributions(widget.OWWidget):
         self._legend.setParentItem(self.plot.getViewBox())
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
+        self.graphButton.clicked.connect(self.save_graph)
 
     def set_data(self, data):
         self.closeContext()
@@ -358,6 +362,13 @@ class OWDistributions(widget.OWWidget):
     def onDeleteWidget(self):
         self.plot.clear()
         super().onDeleteWidget()
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.plot,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def dist_sum(D1, D2):

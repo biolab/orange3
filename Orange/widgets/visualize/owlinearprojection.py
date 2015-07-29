@@ -28,6 +28,7 @@ import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
+from Orange.widgets.io import FileFormats
 
 
 class DnDVariableListModel(itemmodels.VariableListModel):
@@ -245,6 +246,8 @@ class OWLinearProjection(widget.OWWidget):
     MinPointSize = 6
 
     ReplotRequest = QEvent.registerEventType()
+
+    want_graph = True
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -474,6 +477,7 @@ class OWLinearProjection(widget.OWWidget):
         toollayout.addWidget(button(actions.zoomtofit))
         toollayout.addStretch()
         toolbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def sizeHint(self):
         return QSize(800, 500)
@@ -975,6 +979,13 @@ class OWLinearProjection(widget.OWWidget):
                 subset = self.data[indices]
 
         self.send("Selected Data", subset)
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.viewbox,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 class PlotTool(QObject):

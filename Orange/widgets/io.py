@@ -1,6 +1,9 @@
 from Orange.data.io import FileFormats
 from PyQt4 import QtGui, QtCore, QtSvg
 
+from pyqtgraph import GraphicsWidget
+from pyqtgraph.exporters import SVGExporter, ImageExporter
+
 
 class ImgFormat:
     @staticmethod
@@ -16,25 +19,36 @@ class ImgFormat:
     @staticmethod
     def _save_buffer(self, buffer, filename):
         raise NotImplementedError(
-            "Descendants of ImgFormat must override method _get_target")
+            "Descendants of ImgFormat must override method _save_buffer")
+
+    @staticmethod
+    def _get_exporter(self):
+        raise NotImplementedError(
+            "Descendants of ImgFormat must override method _get_exporter")
 
     @classmethod
     def write_image(cls, filename, scene):
-        source = QtCore.QRectF()
-        for item in scene.items():
-            if item.isVisible():
-                source = source.united(item.boundingRect().translated(item.pos()))
-        source = source.adjusted(-15, -15, 15, 15)
-        buffer = cls._get_buffer(source.size(), filename)
+        if isinstance(scene, GraphicsWidget):
+            exporter = cls._get_exporter()
+            exp = exporter(scene)
+            exp.export(filename)
+        else:
+            source = QtCore.QRectF()
+            for item in scene.items():
+                if item.isVisible() and item.boundingRect().isValid():
+                    source = source.united(
+                        item.boundingRect().translated(item.pos()))
+            source = source.adjusted(-15, -15, 15, 15)
+            buffer = cls._get_buffer(source.size(), filename)
 
-        painter = QtGui.QPainter()
-        painter.begin(buffer)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+            painter = QtGui.QPainter()
+            painter.begin(buffer)
+            painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
-        target = cls._get_target(scene, painter, buffer, source)
-        scene.render(painter, target, source)
-        cls._save_buffer(buffer, filename)
-        painter.end()
+            target = cls._get_target(scene, painter, buffer, source)
+            scene.render(painter, target, source)
+            cls._save_buffer(buffer, filename)
+            painter.end()
 
     def write(self, filename, scene):
         if type(scene) == dict:
@@ -60,6 +74,10 @@ class PngFormat(ImgFormat):
     def _save_buffer(buffer, filename):
         buffer.save(filename)
 
+    @staticmethod
+    def _get_exporter():
+        return ImageExporter
+
 
 @FileFormats.register("Scalable Vector Graphics", ".svg")
 class SvgFormat(ImgFormat):
@@ -77,3 +95,7 @@ class SvgFormat(ImgFormat):
     @staticmethod
     def _save_buffer(buffer, filename):
         pass
+
+    @staticmethod
+    def _get_exporter():
+        return SVGExporter

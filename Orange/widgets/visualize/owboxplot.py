@@ -16,6 +16,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.widgets.utils import datacaching, colorpalette, vartype
+from Orange.widgets.io import FileFormats
 
 
 def compute_scale(min_, max_):
@@ -134,6 +135,8 @@ class OWBoxPlot(widget.OWWidget):
     _label_font.setPixelSize(11)
     _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
 
+    want_graph = True
+
     def __init__(self):
         super().__init__()
         self.grouping = []
@@ -198,6 +201,7 @@ class OWBoxPlot(widget.OWWidget):
         self.disc_palette = colorpalette.ColorPaletteGenerator()
 
         self.update_display_box()
+        self.graphButton.clicked.connect(self.save_graph)
 
     def eventFilter(self, obj, event):
         if obj is self.box_view.viewport() and \
@@ -761,6 +765,13 @@ class OWBoxPlot(widget.OWWidget):
                                        self._post_grp_pen)
             self.posthoc_lines.append(it)
             last_to = to
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.box_scene,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def main(argv=None):

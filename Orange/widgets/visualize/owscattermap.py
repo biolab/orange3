@@ -19,6 +19,7 @@ from Orange.preprocess.discretize import EqualWidth, Discretizer
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.io import FileFormats
 
 
 def is_not_none(obj):
@@ -476,6 +477,10 @@ class OWScatterMap(widget.OWWidget):
 
     n_bins = 2 ** 4
 
+    mouse_mode = 0
+
+    want_graph = True
+
     def __init__(self, parent=None):
         super().__init__(self, parent)
 
@@ -558,6 +563,7 @@ class OWScatterMap(widget.OWWidget):
         self.plot.getViewBox().sigTransformChanged.connect(
             self._on_transform_changed)
         self.mainArea.layout().addWidget(self.plot)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def set_data(self, dataset):
         self.closeContext()
@@ -968,6 +974,13 @@ class OWScatterMap(widget.OWWidget):
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.plot.plotItem,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):

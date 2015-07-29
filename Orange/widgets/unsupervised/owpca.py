@@ -8,6 +8,7 @@ import Orange.data
 from Orange.data.sql.table import SqlTable
 import Orange.projection
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.io import FileFormats
 
 try:
     from orangecontrib import remote
@@ -31,6 +32,8 @@ class OWPCA(widget.OWWidget):
     address = settings.Setting('')
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
+
+    want_graph = True
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -109,6 +112,7 @@ class OWPCA(widget.OWWidget):
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
 
         self.mainArea.layout().addWidget(self.plot)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def update_model(self):
         self.get_model()
@@ -298,6 +302,13 @@ class OWPCA(widget.OWWidget):
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.plot.plotItem,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def main():

@@ -18,6 +18,7 @@ from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
                                                OWCanvasEllipse, OWCanvasLine)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.widgets.io import FileFormats
 
 
 class OWSieveDiagram(OWWidget):
@@ -33,6 +34,9 @@ class OWSieveDiagram(OWWidget):
     outputs = []
 
     settingsList = ["showLines", "showCases", "showInColor"]
+
+    want_graph = True
+
     def __init__(self,parent=None, signalManager = None):
         OWWidget.__init__(self, parent, signalManager, "Sieve diagram", True)
 
@@ -89,6 +93,7 @@ class OWSieveDiagram(OWWidget):
         self.icons = gui.attributeIconDict
         self.resize(800, 550)
         random.seed()
+        self.graphButton.clicked.connect(self.save_graph)
 
     def sendReport(self):
         self.startReport("%s [%s, %s]" % (self.windowTitle(), self.attrX, self.attrY))
@@ -429,6 +434,13 @@ class OWSieveDiagram(OWWidget):
     def closeEvent(self, ce):
         # self.optimizationDlg.hide()
         QDialog.closeEvent(self, ce)
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.canvas,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 # class OWSieveOptimization(OWMosaicOptimization, orngMosaic):
 #     settingsList = ["percentDataUsed", "ignoreTooSmallCells",

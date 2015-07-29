@@ -16,6 +16,7 @@ from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.widgets.io import FileFormats
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -58,6 +59,8 @@ class OWScatterPlot(OWWidget):
     zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
+
+    want_graph = True
 
     def __init__(self):
         super().__init__()
@@ -173,6 +176,7 @@ class OWScatterPlot(OWWidget):
             triggered=fit_to_view
         )
         self.addActions([zoom_in, zoom_out, zoom_fit])
+        self.graphButton.clicked.connect(self.save_graph)
 
         # self.vizrank = OWVizRank(self, self.signalManager, self.graph,
         #                          orngVizRank.SCATTERPLOT, "ScatterPlot")
@@ -368,6 +372,13 @@ class OWScatterPlot(OWWidget):
               gui.YesNo[self.graph.jitter_continuous])])
         self.reportSection("Graph")
         self.reportImage(self.graph.save_to_file, QSize(400, 400))
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.graph.plot_widget.plotItem,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def test_main():
