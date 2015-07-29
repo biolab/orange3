@@ -7,7 +7,8 @@ from Orange.regression import Model, SklLearner
 
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "LassoRegressionLearner", "SGDRegressionLearner",
-           "ElasticNetLearner", "ElasticNetCVLearner"]
+           "ElasticNetLearner", "ElasticNetCVLearner",
+           "PolynomialLearner"]
 
 
 class LinearRegressionLearner(SklLearner):
@@ -86,6 +87,27 @@ class SGDRegressionLearner(SklLearner):
         clf = skl_pipeline.Pipeline(
             [('scaler', skl_preprocessing.StandardScaler()), ('sgd', sk)])
         clf.fit(X, Y.ravel())
+        return LinearModel(clf)
+
+
+class PolynomialLearner(SklLearner):
+    __wraps__ = None
+    name = 'unireg'
+
+    def __init__(self, learner, degree=1, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.degree = degree
+        self.learner = learner
+    
+    def fit(self, X, Y, W):
+        clf = skl_pipeline.make_pipeline(
+            skl_preprocessing.PolynomialFeatures(self.degree),
+            self.learner.__wraps__())
+        Y = Y.reshape(-1)
+        if W is None or not self.supports_weights:
+            clf.fit(X, Y)
+        else:
+            clf.fit(X, Y, sample_weight=W.reshape(-1))
         return LinearModel(clf)
 
 
