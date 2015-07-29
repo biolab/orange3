@@ -25,7 +25,7 @@ Description
 
 **GenExpress** is very similar to the **PIPAx** and **GEO Data Sets** widgets as it allows you to upload the data from selected experiments.
 
-![GenExpress widget](images/GenExpress1-stamped.png)
+![GenExpress widget](images/GenExpress-stamped.png)
 
 1. Choose between 7 different projects to source your data from: cyclic AMP pulsing, D. discoideum AX4,
    D. discoideum bacterial growth, D. discoideum prespore/prestalk, D. purpureum AX1 on K.p., D. purpureum
