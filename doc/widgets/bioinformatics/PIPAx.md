@@ -58,12 +58,12 @@ selected experiments.
 Example
 -------
 
-In the schema below we connected **PIPA** to **Data Table**, **Set Enrichment**, and **Distance Map**
+In the schema below we connected **PIPAx** to **Data Table**, **Set Enrichment**, and **Distance Map**
 (through **Distances**) widgets.
 
 <img src="images/PIPA-Example.png" alt="image" width="600">
 
-The **Data Table** widget below contains the output from the **PIPA** widget.
+The **Data Table** widget below contains the output from the **PIPAx** widget.
 Each column contains gene expressions of a single experiment. The labels
 are shown in the table header.
 
