@@ -23,6 +23,9 @@ Signals
 Description
 -----------
 
+**PIPAx** is very similar to the **GenExpress** and **GEO Data Sets** widgets as it allows you to upload the data from 
+selected experiments.
+
 ![PIPA widget](images/PIPAx-stamped.png)
 
 1. Reloads the experiment data.
