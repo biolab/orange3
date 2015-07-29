@@ -54,6 +54,7 @@ selected experiments.
 8. If username and passwords are not given, only the public experiments will be accessible. Alternatively you can access 
    the entire ??? data base.
 9. **PIPAx** widget lists available experiment data, which can be filtered with the *Search* box at the top.
+   To select which attributes to display in the widget right-click on the attribute name.
 
 Example
 -------
