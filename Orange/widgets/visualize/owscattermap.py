@@ -489,9 +489,34 @@ class OWScatterMap(widget.OWWidget):
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
 
-        box = gui.widgetBox(self.controlArea, "Input")
-        self.labelDataInput = gui.widgetLabel(box, 'No data on input')
-        self.labelDataInput.setTextFormat(Qt.PlainText)
+        box = gui.widgetBox(self.controlArea, "Axes")
+        self.x_var_model = itemmodels.VariableListModel()
+        self.comboBoxAttributesX = gui.comboBox(
+            box, self, value='x_var_index', callback=self.replot)
+        self.comboBoxAttributesX.setModel(self.x_var_model)
+
+        self.y_var_model = itemmodels.VariableListModel()
+        self.comboBoxAttributesY = gui.comboBox(
+            box, self, value='y_var_index', callback=self.replot)
+        self.comboBoxAttributesY.setModel(self.y_var_model)
+
+        box = gui.widgetBox(self.controlArea, "Color")
+        self.z_var_model = itemmodels.VariableListModel()
+        self.comboBoxClassvars = gui.comboBox(
+            box, self, value='z_var_index',
+            callback=self._on_z_var_changed)
+        self.comboBoxClassvars.setModel(self.z_var_model)
+
+        self.z_values_view = gui.listBox(
+            box, self, "selected_z_values", "z_values",
+            callback=self._on_z_values_selection_changed,
+            selectionMode=QtGui.QListView.MultiSelection,
+            addSpace=False
+        )
+        gui.comboBox(box, self, "color_scale", label="Scale: ",
+                     orientation="horizontal",
+                     items=["Linear", "Square root", "Logarithmic"],
+                     callback=self._on_color_scale_changed)
 
         self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
         sampling_options = (self.sample_times_captions +
@@ -500,40 +525,6 @@ class OWScatterMap(widget.OWWidget):
             self.sampling_box, self, 'sample_level', items=sampling_options,
             callback=self.update_sample)
         gui.button(self.sampling_box, self, "Sharpen", self.sharpen)
-
-        self.x_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesX = gui.comboBox(
-            self.controlArea, self, value='x_var_index', box='X Attribute',
-            callback=self.replot)
-        self.comboBoxAttributesX.setModel(self.x_var_model)
-
-        self.y_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesY = gui.comboBox(
-            self.controlArea, self, value='y_var_index', box='Y Attribute',
-            callback=self.replot)
-        self.comboBoxAttributesY.setModel(self.y_var_model)
-
-        box = gui.widgetBox(self.controlArea, "Color by")
-        self.z_var_model = itemmodels.VariableListModel()
-        self.comboBoxClassvars = gui.comboBox(
-            box, self, value='z_var_index',
-            callback=self._on_z_var_changed)
-        self.comboBoxClassvars.setModel(self.z_var_model)
-
-        box1 = gui.widgetBox(box, 'Colors displayed', margin=0)
-        box1.setFlat(True)
-
-        self.z_values_view = gui.listBox(
-            box1, self, "selected_z_values", "z_values",
-            callback=self._on_z_values_selection_changed,
-            selectionMode=QtGui.QListView.MultiSelection,
-            addSpace=False
-        )
-        box1 = gui.widgetBox(box, "Color Scale", margin=0)
-        box1.setFlat(True)
-        gui.comboBox(box1, self, "color_scale",
-                     items=["Linear", "Square root", "Logarithmic"],
-                     callback=self._on_color_scale_changed)
 
         gui.rubber(self.controlArea)
 
@@ -607,44 +598,44 @@ class OWScatterMap(widget.OWWidget):
         self.set_sampled_data(self.dataset)
 
     def set_sampled_data(self, dataset):
-        if dataset is not None:
-            domain = dataset.domain
-            cvars = [var for var in domain.variables if var.is_continuous]
-            dvars = [var for var in domain.variables if var.is_discrete]
+        if dataset is None:
+            return
 
-            self.x_var_model[:] = cvars
-            self.y_var_model[:] = cvars
-            self.z_var_model[:] = dvars
+        domain = dataset.domain
+        cvars = [var for var in domain.variables if var.is_continuous]
+        dvars = [var for var in domain.variables if var.is_discrete]
 
-            nvars = len(cvars)
-            self.x_var_index = min(max(0, self.x_var_index), nvars - 1)
-            self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
-            self.z_var_index = min(max(0, self.z_var_index), len(dvars) - 1)
+        self.x_var_model[:] = cvars
+        self.y_var_model[:] = cvars
+        self.z_var_model[:] = dvars
 
-            if domain.has_discrete_class:
-                self.z_var_index = dvars.index(domain.class_var)
-            else:
-                self.z_var_index = len(dvars) - 1
+        nvars = len(cvars)
+        self.x_var_index = min(max(0, self.x_var_index), nvars - 1)
+        self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
+        self.z_var_index = min(max(0, self.z_var_index), len(dvars) - 1)
 
-            self.openContext(dataset)
-
-            if 0 <= self.z_var_index < len(self.z_var_model):
-                self.z_values = self.z_var_model[self.z_var_index].values
-                k = len(self.z_values)
-                self.selected_z_values = range(k)
-                self.colors = colorpalette.ColorPaletteGenerator(k)
-                for i in range(k):
-                    item = self.z_values_view.item(i)
-                    item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
-
-            self.labelDataInput.setText(
-                'Data set: %s'
-                % (getattr(self.dataset, "name", "untitled"),)
-            )
-
-            self.setup_plot()
+        if domain.has_discrete_class:
+            self.z_var_index = dvars.index(domain.class_var)
         else:
-            self.labelDataInput.setText('No data on input')
+            self.z_var_index = len(dvars) - 1
+
+        self.openContext(dataset)
+
+        if 0 <= self.z_var_index < len(self.z_var_model):
+            self.z_values = self.z_var_model[self.z_var_index].values
+            k = len(self.z_values)
+            self.selected_z_values = range(k)
+            self.colors = colorpalette.ColorPaletteGenerator(k)
+            for i in range(k):
+                item = self.z_values_view.item(i)
+                item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
+
+        if not cvars:
+            self.error(1, "Data contains no continuous features")
+        else:
+            self.error(1)
+
+        self.setup_plot()
 
     def clear(self):
         self.dataset = None
