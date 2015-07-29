@@ -3,6 +3,8 @@ GenExpress
 
 ![Widget icon](icons/genexpress.png)
 
+Gives access to gene expression databases.
+
 Signals
 -------
 
