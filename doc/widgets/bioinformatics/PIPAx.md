@@ -50,10 +50,10 @@ selected experiments.
 6. **Exclude labels with constant values** removes labels that are the same for all selected experiments.<br>
    **Average replicates (use median)** averages identical experiments by using medians as values.<br>
    **Logarithmic (base 2) transformation** computes the [binary logarithm](https://en.wikipedia.org/wiki/Binary_logarithm) of     the (value + 1).
-7. Selected experiments will appear in the output when the *Commit* button is clicked. You can connec 
+7. Selected experiments will appear in the output when the *Commit* button is clicked. You can connect 
    the PIPA widget to any Orange widget which accepts data table as input.
-8. If username and passwords are not given, only the public experiments will be accessible. Alternatively you can access 
-   the entire ??? data base.
+8. If username and passwords are not given, only the public experiments will be accessible. Otherwise you can access 
+   the entire PIPA data base.
 9. **PIPAx** widget lists available experiment data, which can be filtered with the *Search* box at the top.
    To select which attributes to display in the widget right-click on the attribute name.
 
