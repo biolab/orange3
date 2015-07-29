@@ -3,7 +3,7 @@ PIPAx
 
 ![Widget icon](icons/pipax.png)
 
-Gives access to PIPA databases.
+Gives access to [**PIPA**](http://pipa.biolab.si/hp/index.html#) databases.
 
 Signals
 -------
@@ -23,7 +23,8 @@ Signals
 Description
 -----------
 
-**PIPAx** is very similar to the **GenExpress** and **GEO Data Sets** widgets as it allows you to upload the data from 
+**PIPAx** is a widget for a direct access to [**PIPA**](http://pipa.biolab.si/hp/index.html#) database 
+and it is very similar to the **GenExpress** and **GEO Data Sets** widgets as it allows you to upload the data from 
 selected experiments.
 
 ![PIPA widget](images/PIPAx-stamped.png)
