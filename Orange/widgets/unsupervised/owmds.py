@@ -601,6 +601,8 @@ class OWMDS(widget.OWWidget):
         return super().customEvent(event)
 
     def __invalidate_embedding(self):
+        if self.embedding is None:
+            return
         state = self.__state
         if self.__update_loop is not None:
             self.__set_update_loop(None)
