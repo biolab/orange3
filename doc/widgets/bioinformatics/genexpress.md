@@ -53,7 +53,9 @@ Description
 6. Selected experiments will appear in the output when the *Commit* button is clicked. You can connect 
    GenExpress widget to any Orange widget which accepts data table as input.
 7. Select the server you wish to access the data from (either dictyExpress or Genialis). If username and password are not       given, only public experiments will be accessible.
-8. **GenExpress** widget lists available experiment data, which can be filtered with the *Search* box at the top.
+8. *Clear cache* removes the uploaded data sets from internal memory.
+9. **GenExpress** widget lists available experiment data, which can be filtered with the *Search* box at the top.
+   To select which attributes to display in the widget right-click on the attribute name.
 
 Example
 -------
