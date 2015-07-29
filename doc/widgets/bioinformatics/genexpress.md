@@ -3,7 +3,7 @@ GenExpress
 
 ![Widget icon](icons/genexpress.png)
 
-Gives access to gene expression databases.
+Gives access to [**GenExpress**](https://www.genialis.com/genexpress/) databases.
 
 Signals
 -------
@@ -23,7 +23,9 @@ Signals
 Description
 -----------
 
-**GenExpress** is very similar to the **PIPAx** and **GEO Data Sets** widgets as it allows you to upload the data from selected experiments.
+**GenExpress** is a widget for a direct access to [**GenExpress**](https://www.genialis.com/genexpress/)
+database and it is very similar to the **PIPAx** and **GEO Data Sets** widgets as it allows you 
+to upload the data from selected experiments.
 
 ![GenExpress widget](images/GenExpress-stamped.png)
 
