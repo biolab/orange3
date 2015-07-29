@@ -147,8 +147,9 @@ class OWDistributions(widget.OWWidget):
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
 
         self.plot = pg.PlotItem()
-#         self.plot.getViewBox().setMouseEnabled(False, False)
+        self.plot.getViewBox().setMouseEnabled(False, False)
         self.plot.getViewBox().setMenuEnabled(False)
+        self.plot.hideButtons() 
         plotview.setCentralItem(self.plot)
 
         pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
@@ -214,6 +215,8 @@ class OWDistributions(widget.OWWidget):
             self.distributions = \
                 distribution.get_distribution(self.data, self.var)
             self.display_distribution()
+        self.plot.autoRange()
+
 
     def _density_estimator(self):
         if self.cont_est_type == OWDistributions.Hist:
