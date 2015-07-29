@@ -22,6 +22,7 @@ from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 from Orange.widgets.io import FileFormats
 
+from sklearn.neighbors import KernelDensity
 
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
@@ -88,7 +89,7 @@ class OWDistributions(widget.OWWidget):
     #: Selected group variable
     groupvar_idx = settings.ContextSetting(0)
 
-    Hist, ASH, Kernel = 0, 1, 2
+    Hist, ASH, Kernel, KSP = 0, 1, 2, 3
     #: Continuous variable density estimation method
     cont_est_type = settings.Setting(ASH)
     relative_freq = settings.Setting(False)
@@ -122,7 +123,7 @@ class OWDistributions(widget.OWWidget):
             varbox, self, "cont_est_type", label="Show continuous variables by",
             valueType=int,
             items=["Histograms", "Average shifted histograms",
-                   "Kernel density estimators"],
+                   "Kernel density estimators", "Gaussian kernel density estimators"],
             callback=self._on_cont_est_type_changed)
 
         box = gui.widgetBox(self.controlArea, "Group by")
@@ -225,6 +226,8 @@ class OWDistributions(widget.OWWidget):
             return lambda dist, cont: ash_curve(dist, cont, m=5)
         elif self.cont_est_type == OWDistributions.Kernel:
             return rect_kernel_curve
+        elif self.cont_est_type == OWDistributions.KSP:
+            return scipy_kernel_curve
 
     def display_distribution(self):
         dist = self.distributions
@@ -382,6 +385,44 @@ def dist_sum(D1, D2):
     return unique, W
 
 
+#from sklearn.grid_search import GridSearchCV
+
+def scipy_kernel_curve(dist, cont=None):
+    bw = silverman(dist, cont)
+    kd = KernelDensity(bandwidth=bw)
+    vals = numpy.repeat(dist[0, :], dist[1, :].astype(int)) #FIXME here it would be better to just get values
+                                                            #what to do with weights?
+    kd.fit(vals[:, numpy.newaxis])
+    minx = min(dist[0, :])
+    maxx = max(dist[0, :])
+    minx, maxx = minx - (maxx-minx)*0.2, maxx + (maxx-minx)*0.2
+    xvals = numpy.linspace(minx, maxx, 1000)
+    yvals = kd.score_samples(xvals[:, numpy.newaxis])
+    xvals = numpy.append(xvals, maxx + xvals[1] - xvals[0])
+    xvals = xvals - 0.5*(xvals[1] - xvals[0])
+    return xvals, numpy.exp(yvals)
+
+
+def silverman(dist, cont=None):
+    # Silverman's rule of thumb.
+
+    def IQR(a, weights=None):
+        """Interquartile range of `a`."""
+        q1, q3 = weighted_quantiles(a, [0.25, 0.75], weights=weights)
+        return q3 - q1
+
+    if cont is not None:
+        bX, bW = cont.values, numpy.sum(cont.counts, axis=0)
+    else:
+        bX, bW =  dist[0, :], dist[1, :]
+    A = weighted_std(bX, weights=bW)
+    iqr = IQR(bX, weights=bW)
+    if iqr > 0:
+        A = min(A, iqr / 1.34)
+
+    return 0.9 * A * (bX.size ** -0.2)
+
+
 def rect_kernel_curve(dist, cont=None, bandwidth=None):
     """
     Return a rectangular kernel density curve for `dist`.
@@ -398,19 +439,8 @@ def rect_kernel_curve(dist, cont=None, bandwidth=None):
     X = dist[0, :]
     W = dist[1, :]
 
-    def IQR(a, weights=None):
-        """Interquartile range of `a`."""
-        q1, q3 = weighted_quantiles(a, [0.25, 0.75], weights=weights)
-        return q3 - q1
-
     if bandwidth is None:
-        # Silverman's rule of thumb.
-        A = weighted_std(X, weights=W)
-        iqr = IQR(X, weights=W)
-        if iqr > 0:
-            A = min(A, iqr / 1.34)
-
-        bandwidth = 0.9 * A * (X.size ** -0.2)
+        bandwidth = silverman(dist, cont)
 
     bottom_edges = X - bandwidth / 2
     top_edges = X + bandwidth / 2
