@@ -1120,7 +1120,7 @@ class SequenceFlow(QWidget):
         if self.widgets():
             return super().sizeHint()
         else:
-            return QSize(150, 100)
+            return QSize(250, 350)
 
     def addWidget(self, widget, title):
         """Add `widget` with `title` to list of widgets (in the last position).
@@ -1614,6 +1614,10 @@ class OWPreprocess(widget.OWWidget):
         self.scroll_area.setMinimumWidth(
             min(max(sh.width() + scroll_width + 2, self.controlArea.width()),
                 520))
+
+    def sizeHint(self):
+        sh = super().sizeHint()
+        return sh.expandedTo(QSize(sh.width(), 500))
 
 
 def test_main(argv=sys.argv):
