@@ -41,10 +41,10 @@ selected data subset (normally the most interesting genes).
    - **ANOVA (P-value)**: variance distribution with P-value as criterium
    - [**Signal to Noise Ratio**](https://en.wikipedia.org/wiki/Signal-to-noise_ratio): biological signal to noise ratio
    - [**Mann-Whitney**](https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test): non-parametric test of null hypothesis with P-value as criterium
-3. Select *target labels*. Labels depend on the attributes in the input. In *Values* you can change the sample target
+3. Select *Target Labels*. Labels depend on the attributes in the input. In *Values* you can change the sample target
    (default value is the first value on the list, alphabetically or numerically).
 4. *Selection* box controls the output data.
-   - By setting the *lower threshold* and *upper threshold* values you
+   - By setting the *Lower threshold* and *Upper threshold* values you
    are outputting the data outside this interval (the most interesting expression levels). You can also manually place
    the threshold lines by dragging left or right in the plot.
    - If you click *Compute null distribution* box, the widget
@@ -54,5 +54,13 @@ selected data subset (normally the most interesting genes).
   - The final option is to set the number of best ranked genes and output them with *Select*.
 5. When *Auto commit is on* is ticked, the widget will automatically apply the changed. Alternatively press *Commit*. If the *Add gene scores to output* is ticked, the widget will append an additional column with gene scores to the data.
 
+Example
+-------
 
+In the example below we chose two experiments from the **dictyExpress** widget (namely *yakA-pufA* and *yakA-*) and
+observed them in the **Data Table**. Then we used the **Differential Expression** widget to select the most interesting
+genes. We chose *Compute null distribution* and output the data with default settings (20 permutations, 
+&alpha;-value is 0.01). Then we can again observe the selected data in another **Data Table**. As we have ticked
+the *Add gene scores to output*, the table shows an additional column with gene scores as instances.
 
+<img src="images/DiffExpression-Example.png" alt="image" width="600">
