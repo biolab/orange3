@@ -143,9 +143,53 @@ class SettingHandlerTestCase(unittest.TestCase):
         widget = SimpleWidget()
 
         handler.fast_save(widget, 'component.int_setting', 5)
-        self.assertEqual(Component.int_setting.default, 5)
+
+        self.assertEqual(
+            handler.known_settings['component.int_setting'].default, 5)
+
+        self.assertEqual(Component.int_setting.default, 42)
 
         handler.fast_save(widget, 'non_setting', 4)
+
+    def test_fast_save_siblings_spill(self):
+        handler_mk1 = SettingsHandler()
+        handler_mk1.read_defaults = lambda: None
+        handler_mk1.bind(SimpleWidgetMk1)
+
+        widget_mk1 = SimpleWidgetMk1()
+
+        handler_mk1.fast_save(widget_mk1, "setting", -1)
+        handler_mk1.fast_save(widget_mk1, "component.int_setting", 1)
+
+        self.assertEqual(
+            handler_mk1.known_settings['setting'].default, -1)
+        self.assertEqual(
+            handler_mk1.known_settings['component.int_setting'].default, 1)
+
+        handler_mk1.initialize(widget_mk1, data=None)
+        handler_mk1.provider.providers["component"].initialize(
+            widget_mk1.component, data=None)
+
+        self.assertEqual(widget_mk1.setting, -1)
+        self.assertEqual(widget_mk1.component.int_setting, 1)
+
+        handler_mk2 = SettingsHandler()
+        handler_mk2.read_defaults = lambda: None
+        handler_mk2.bind(SimpleWidgetMk2)
+
+        widget_mk2 = SimpleWidgetMk2()
+
+        handler_mk2.initialize(widget_mk2, data=None)
+        handler_mk2.provider.providers["component"].initialize(
+            widget_mk2.component, data=None)
+
+        self.assertEqual(widget_mk2.setting, 42,
+                         "spils defaults into sibling classes")
+
+        self.assertEqual(Component.int_setting.default, 42)
+
+        self.assertEqual(widget_mk2.component.int_setting, 42,
+                         "spils defaults into sibling classes")
 
 
 class Component:
@@ -158,9 +202,18 @@ class SimpleWidget:
 
     component = SettingProvider(Component)
 
+    def __init__(self):
+        self.component = Component()
+
+
+class SimpleWidgetMk1(SimpleWidget):
+    pass
+
+
+class SimpleWidgetMk2(SimpleWidget):
+    pass
+
 
 class WidgetWithNoProviderDeclared:
     def __init__(self):
         self.undeclared_component = Component()
-
-

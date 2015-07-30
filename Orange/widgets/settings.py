@@ -39,6 +39,9 @@ class Setting:
 
     __repr__ = __str__
 
+    def __getnewargs__(self):
+        return (self.default, )
+
 
 class SettingProvider:
     """A hierarchical structure keeping track of settings belonging to
@@ -66,9 +69,11 @@ class SettingProvider:
         for name in dir(provider_class):
             value = getattr(provider_class, name, None)
             if isinstance(value, Setting):
+                value = copy.deepcopy(value)
                 value.name = name
                 self.settings[name] = value
             if isinstance(value, SettingProvider):
+                value = copy.deepcopy(value)
                 value.name = name
                 self.providers[name] = value
 
