@@ -33,12 +33,7 @@ class ImgFormat:
             exp = exporter(scene)
             exp.export(filename)
         else:
-            source = QtCore.QRectF()
-            for item in scene.items():
-                if item.isVisible() and item.boundingRect().isValid():
-                    source = source.united(
-                        item.boundingRect().translated(item.pos()))
-            source = source.adjusted(-15, -15, 15, 15)
+            source = scene.itemsBoundingRect().adjusted(-15, -15, 15, 15)
             buffer = cls._get_buffer(source.size(), filename)
 
             painter = QtGui.QPainter()
