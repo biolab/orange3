@@ -30,7 +30,7 @@ selected experiments.
 ![dicty widget](images/dictyExpress-stamped.png)
 
 1. The widget will automatically save (cache) downloaded data, which makes them available also in the offline mode. To reset    the widget click *Clear cache*.
-2. **Exclude labels with constant values** removes labels that are the same for all selected experiments.
+2. *Exclude labels with constant values* removes labels that are the same for all selected experiments.
 3. Selected experiments will appear in the output when the *Commit* button is clicked. You can connect 
    the dictyExpress widget to any Orange widget which accepts data table as input.
 4. If token is not given, only public experiments will be accessible. Otherwise you can access 
