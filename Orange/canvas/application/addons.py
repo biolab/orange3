@@ -434,6 +434,22 @@ class AddonManagerDialog(QDialog):
         dists = {dist.project_name: dist for dist in installed}
         packages = {pkg.name: pkg for pkg in packages}
 
+        # For every pypi available distribution not listed by
+        # list_installed_addons, check if it is actually already
+        # installed.
+        ws = pkg_resources.WorkingSet()
+        for pkg_name in set(packages.keys()).difference(set(dists.keys())):
+            try:
+                d = ws.find(pkg_resources.Requirement.parse(pkg_name))
+            except pkg_resources.VersionConflict:
+                pass
+            except ValueError:
+                # Requirements.parse error ?
+                pass
+            else:
+                if d is not None:
+                    dists[d.project_name] = d
+
         project_names = unique(
             itertools.chain(packages.keys(), dists.keys())
         )
