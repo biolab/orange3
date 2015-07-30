@@ -43,12 +43,15 @@ selected data subset (normally the most interesting genes).
    - [**Mann-Whitney**](https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test): non-parametric test of null hypothesis with P-value as criterium
 3. Select *target labels*. Labels depend on the attributes in the input. In *Values* you can change the sample target
    (default value is the first value on the list, alphabetically or numerically).
-4. *Selection* box controls the output data. By setting the *lower threshold* and *upper threshold* values you
+4. *Selection* box controls the output data.
+   - By setting the *lower threshold* and *upper threshold* values you
    are outputting the data outside this interval (the most interesting expression levels). You can also manually place
-   the threshold lines by dragging left or right in the plot. <br><br>If you click *Compute null distribution* box, the widget
+   the threshold lines by dragging left or right in the plot.
+   - If you click *Compute null distribution* box, the widget
    will calculate null distribution and display it in the plot. *Permutations* field allows you to set the precision of
    null distribution (the more permutations the more precise the distribution), while [*&alpha;-value*](https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#Type_I_error) will
-   be the allowed probability of false positives. Press *Select* to output this data.<br><br> The final option is to set the number of best ranked genes and output them with *Select*.
+   be the allowed probability of false positives. Press *Select* to output this data.
+  - The final option is to set the number of best ranked genes and output them with *Select*.
 5. When *Auto commit is on* is ticked, the widget will automatically apply the changed. Alternatively press *Commit*. If the *Add gene scores to output* is ticked, the widget will append an additional column with gene scores to the data.
 
 
