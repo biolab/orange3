@@ -22,6 +22,7 @@ class OWRandomForest(widget.OWWidget):
                ("Classifier", RandomForestClassifier)]
 
     want_main_area = False
+    resizing_enabled = False
 
     learner_name = settings.Setting("Random Forest Learner")
     n_estimators = settings.Setting(10)
@@ -120,11 +121,6 @@ class OWRandomForest(widget.OWWidget):
         gui.button(self.controlArea, self, "&Apply",
                    callback=self.apply, default=True)
 
-        self.setSizePolicy(
-            QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
-                              QtGui.QSizePolicy.Fixed)
-        )
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
         self.settingsChanged()
         self.apply()
 
