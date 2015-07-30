@@ -51,13 +51,12 @@ class OWOutliers(widget.OWWidget):
         gui.appendRadioButton(detection,
                               "One class SVM with non-linear kernel (RBF):")
         ibox = gui.indentedBox(detection)
-        gui.widgetLabel(ibox, 'NU:', tooltip='An upper bound on the fraction '
-                                             'of training errors and a lower '
-                                             'bound of the fraction of '
-                                             'support vectors')
+        tooltip = "An upper bound on the fraction of training errors and a " \
+                  "lower bound of the fraction of support vectors"
+        gui.widgetLabel(ibox, 'Nu:', tooltip=tooltip)
         self.nu_slider = gui.hSlider(
             ibox, self, "nu", minValue=1, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.nu_changed)
+            labelFormat="%d %%", callback=self.nu_changed, tooltip=tooltip)
         self.gamma_spin = gui.spin(
             ibox, self, "gamma", label="Kernel coefficient:", step=1e-2,
             spinType=float, minv=0, maxv=10, callback=self.gamma_changed)
