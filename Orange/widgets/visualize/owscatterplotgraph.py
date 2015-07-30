@@ -42,7 +42,7 @@ class PaletteItemSample(ItemSample):
         super().__init__(None)
         self.palette = palette
         self.scale = scale
-        cuts = ["{0:{1}}".format(scale.offset + i * scale.width, scale.decimals)
+        cuts = ["{0:.{1}f}".format(scale.offset + i * scale.width, scale.decimals)
                 for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cuts, cuts[1:])]
