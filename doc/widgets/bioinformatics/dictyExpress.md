@@ -1,45 +1,47 @@
 dictyExpress
 ============
 
-![Databases widget icon]
+![Widget icon](icons/dictyexpress.png)
 
-Updates local systems biology databases, like gene ontologies,
-annotations, gene names, protein interaction networks, and similar.
+Gives access to [**dictyExpress**](http://dictyexpress.biolab.si/) databases.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   (None)
+- (None)
 
-Outputs:
+**Outputs**:
 
-:   -   (None)
+- **Data**
+
+  Selected experiments. Each annotated column contains results
+  of a single experiment or, if the corresponding option is
+  chosen, the average of multiple replicates.
 
 Description
 -----------
 
-Many widgets in Orange bioinformatics add-on rely on information on
-genes, gene sets, pathways, and alike. This information is stored on
-your local computer when the widget requires them for the first time.
-The corresponding data comes from different web resources, and is either
-preprocessed and then stored on Orange server, or accessed directly from
-a dedicated web site.
+**dictyExpress** is a widget for a direct access to [**dictyExpress**](http://dictyexpress.biolab.si/) database 
+and it is very similar to the **GenExpress** and **GEO Data Sets** widgets as it allows you to upload the data from 
+selected experiments.
 
-Orange does not change the data on your local computer, and with time
-this becomes different to the newest version of the online data sets.
-Databases widget can update the data on your local machine, and can also
-be used to manage (remove or add) any locally stored systems biology
-data set.
+![dicty widget](images/dictyExpress-stamped.png)
 
-![Databases widget]
+1. The widget will automatically save (cache) downloaded data, which makes them available also in the offline mode. To reset    the widget click *Clear cache*.
+2. **Exclude labels with constant values** removes labels that are the same for all selected experiments.
+3. Selected experiments will appear in the output when the *Commit* button is clicked. You can connect 
+   the dictyExpress widget to any Orange widget which accepts data table as input.
+4. If token is not given, only public experiments will be accessible. Otherwise you can access 
+   the entire dictyExpress data base.
+5. **dictyExpress** widget lists available experiment data, which can be filtered with the *Search* box at the top.
 
-To get a more detailed information on the particular database that
-requires an update, hover on its Update button.
+Example
+-------
 
-![Databases widget][1]
+In the schema below we connected **ditcyExpress** to a **Data Table** to observe all of
+the selected experiments. Then we used **Differential Expression** widget to select
+the most relevant genes and output them to another **Data Table**.
 
-  [Databases widget icon]: ../../orangecontrib/bio/widgets/icons/Databases.svg
-  [Databases widget]: images/databases-stamped.png
-  [1]: images/databases-hover.png
+<img src="images/dictyExpress-Example.png" alt="image" width="600">
