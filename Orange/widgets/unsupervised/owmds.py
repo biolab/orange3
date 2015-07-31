@@ -453,7 +453,8 @@ class OWMDS(widget.OWWidget):
             if self.matrix.axis == 0:
                 self.data = None
         else:
-            self._effective_matrix = Orange.distance.Euclidean(self.data)
+            preprocessed_data = Orange.projection.MDS().preprocess(self.data)
+            self._effective_matrix = Orange.distance.Euclidean(preprocessed_data)
 
         self.update_controls()
         self.openContext(self.data)
