@@ -1506,6 +1506,8 @@ class OWPreprocess(widget.OWWidget):
             # will be triggered by LayoutRequest event on the `flow_view`)
             self.__update_size_constraint()
 
+        self.apply()
+
     def load(self, saved):
         """Load a preprocessor list from a dict."""
         name = saved.get("name", "")
