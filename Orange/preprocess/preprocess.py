@@ -297,20 +297,19 @@ class Randomize(Preprocess):
         data : Orange.data.Table
             Randomized data table.
         """
-        X = data.X.copy()
-        Y = data.Y.copy()
-        metas = data.metas.copy()
+        new_data = Table(data)
+        new_data.ensure_copy()
 
         if self.rand_type == Randomize.RandomizeClasses:
-            self.randomize(Y)
+            self.randomize(new_data.Y)
         elif self.rand_type == Randomize.RandomizeAttributes:
-            self.randomize(X)
+            self.randomize(new_data.X)
         elif self.rand_type == Randomize.RandomizeMetas:
-            self.randomize(metas)
+            self.randomize(new_data.metas)
         else:
             raise TypeError('Unsupported type')
 
-        return Table(data.domain, X, Y, metas)
+        return new_data
 
     def randomize(self, table):
         if len(table.shape) > 1:

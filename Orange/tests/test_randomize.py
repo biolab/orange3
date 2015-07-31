@@ -54,9 +54,9 @@ class TestRandomizer(unittest.TestCase):
     def test_randomize_keep_original_data(self):
         data_orig = Table("zoo")
         data = Table("zoo")
-        randomizer = Randomize()
-        data_rand = randomizer(data)
+        _ = Randomize(rand_type=Randomize.RandomizeClasses)(data)
+        _ = Randomize(rand_type=Randomize.RandomizeAttributes)(data)
+        _ = Randomize(rand_type=Randomize.RandomizeMetas)(data)
         self.assertTrue((data.X == data_orig.X).all())
         self.assertTrue((data.metas == data_orig.metas).all())
         self.assertTrue((data.Y == data_orig.Y).all())
-        self.assertTrue((data.Y != data_rand.Y).any())
