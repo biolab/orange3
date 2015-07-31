@@ -24,7 +24,7 @@ Description
 -----------
 
 [**Volcano plot**](https://en.wikipedia.org/wiki/Volcano_plot_(statistics)) is a graphical method for 
-visualizing changes in replicate data. The widget plots a binary logarithm of fold-change on x-axis versus
+visualizing changes in replicate data. The widget plots a binary logarithm of fold-change on the x-axis versus
 [statistical significance](https://en.wikipedia.org/wiki/Statistical_significance) 
 (negative base 10 logarithm of p-value) on the y-axis. 
 
