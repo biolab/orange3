@@ -19,6 +19,7 @@ class OWNaiveBayes(widget.OWWidget):
                ("Classifier", NaiveBayesModel)]
 
     want_main_area = False
+    resizing_enabled = False
 
     learner_name = settings.Setting("Naive Bayes")
 

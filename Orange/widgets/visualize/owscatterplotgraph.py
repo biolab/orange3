@@ -42,7 +42,7 @@ class PaletteItemSample(ItemSample):
         super().__init__(None)
         self.palette = palette
         self.scale = scale
-        cuts = ["{0:{1}}".format(scale.offset + i * scale.width, scale.decimals)
+        cuts = ["{0:.{1}f}".format(scale.offset + i * scale.width, scale.decimals)
                 for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cuts, cuts[1:])]
@@ -794,7 +794,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     ScatterPlotItem(
                         pen=color, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
-                    value)
+                    escape(value))
         else:
             legend = self.color_legend = LegendItem()
             legend.setParentItem(self.plot_widget.getViewBox())
@@ -817,7 +817,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         for i, value in enumerate(shape_var.values):
             self.legend.addItem(
                 ScatterPlotItem(pen=pen, brush=color, size=10,
-                                symbol=self.CurveSymbols[i]), value)
+                                symbol=self.CurveSymbols[i]), escape(value))
 
     def zoom_button_clicked(self):
         self.scatterplot_item.getViewBox().setMouseMode(

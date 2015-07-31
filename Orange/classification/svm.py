@@ -1,6 +1,7 @@
 import sklearn.svm as skl_svm
 
 from Orange.classification import SklLearner, SklModel
+from Orange.base import SklLearner as SklLearnerBase
 from Orange.preprocess import Normalize
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner",
@@ -75,7 +76,7 @@ class NuSVMLearner(SklLearner):
         self.supports_weights = True
 
 
-class OneClassSVMLearner(SklLearner):
+class OneClassSVMLearner(SklLearnerBase):
     __wraps__ = skl_svm.OneClassSVM
     name = 'one class svm'
     preprocessors = svm_pps

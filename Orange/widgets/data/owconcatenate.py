@@ -48,6 +48,7 @@ class OWConcatenate(widget.OWWidget):
     source_attr_name = settings.Setting("Source ID")
 
     want_main_area = False
+    resizing_enabled = False
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -120,9 +121,6 @@ class OWConcatenate(widget.OWWidget):
             self.controlArea, self, self.tr("Apply Changes"),
             callback=self.apply, default=True
         )
-
-        gui.rubber(self.controlArea)
-        self.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
 
     def set_primary_data(self, data):
         self.primary_data = data

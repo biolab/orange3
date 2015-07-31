@@ -1,3 +1,4 @@
+from itertools import chain
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
@@ -19,12 +20,20 @@ class OWLogisticRegression(widget.OWWidget):
                ("Classifier", lr.LogisticRegressionClassifier)]
 
     want_main_area = False
+    resizing_enabled = False
 
     learner_name = settings.Setting("Logistic Regression")
 
     penalty_type = settings.Setting(1)
-    log_C = settings.Setting(0)
+    C_index = settings.Setting(61)
 
+    C_s = list(chain(range(1000, 200, -50),
+                     range(200, 100, -10),
+                     range(100, 20, -5),
+                     range(20, 0, -1),
+                     [x / 10 for x in range(9, 2, -1)],
+                     [x / 100 for x in range(20, 2, -1)],
+                     [x / 1000 for x in range(20, 0, -1)]))
     dual = False
     tol = 0.0001
     fit_intercept = True
@@ -46,41 +55,25 @@ class OWLogisticRegression(widget.OWWidget):
         gui.widgetLabel(box, "Strength:")
         box2 = gui.widgetBox(gui.indentedBox(box), orientation="horizontal")
         gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
-        gui.hSlider(box2, self, "log_C", minValue=-3, maxValue=3, step=0.01,
-                    callback=self.set_c, intOnly=False, createLabel=False)
+        gui.hSlider(box2, self, "C_index",
+                    minValue=0, maxValue=len(self.C_s) - 1,
+                    callback=self.set_c, createLabel=False)
         gui.widgetLabel(box2, "Strong").setStyleSheet("margin-top:6px")
         box2 = gui.widgetBox(box, orientation="horizontal")
         box2.layout().setAlignment(Qt.AlignCenter)
         self.c_label = gui.widgetLabel(box2)
         gui.button(self.controlArea, self, "&Apply",
                    callback=self.apply, default=True)
-        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
-                                             QtGui.QSizePolicy.Fixed))
-        self.setMinimumWidth(300)
         self.set_c()
         self.apply()
 
     def set_c(self):
-        self.C = pow(10, -self.log_C)
-        if self.C >= 100:
-            self.C = (self.C // 25) * 25
-        elif self.C >= 10:
-            self.C = (self.C // 10) * 10
-        elif self.C >= 1:
-            self.C = round(self.C, 0)
-        elif self.C > 0.2:
-            self.C = round(self.C * 20) / 20
-        else:
-            self.C = round(self.C, 3)
-
+        self.C = self.C_s[self.C_index]
         if self.C >= 1:
-            frmt = "{}"
-            self.C = int(self.C)
-        elif self.C >= 0.2:
-            frmt = "{:.2f}"
+            frmt = "C={}"
         else:
-            frmt = "{:.3f}"
-        self.c_label.setText(("C=" + frmt).format(self.C))
+            frmt = "C={:.3f}"
+        self.c_label.setText(frmt.format(self.C))
 
     def set_data(self, data):
         self.data = data

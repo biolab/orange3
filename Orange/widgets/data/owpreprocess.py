@@ -27,7 +27,7 @@ import Orange.data
 
 from Orange import preprocess
 from Orange.statistics import distribution
-from Orange.preprocess import Continuize
+from Orange.preprocess import Continuize, Randomize as Random
 
 from Orange.widgets import widget, gui, settings
 from .owimpute import RandomTransform
@@ -686,6 +686,50 @@ class Scale(BaseEditor):
         return _Scaling(center=center, scale=scale)
 
 
+class _Randomize(preprocess.preprocess.Preprocess):
+    """
+    Randomize data preprocessor.
+    """
+
+    def __init__(self, rand_type=Random.RandomizeClasses):
+        self.rand_type = rand_type
+
+    def __call__(self, data):
+        randomizer = Random(rand_type=self.rand_type)
+        return randomizer(data)
+
+
+class Randomize(BaseEditor):
+    RandomizeClasses, RandomizeAttributes, RandomizeMetas = Random.RandTypes
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        form = QFormLayout()
+        self.__rand_type_cb = QComboBox()
+        self.__rand_type_cb.addItems(["Classes",
+                                      "Features",
+                                      "Meta data"])
+
+        form.addRow("Randomize", self.__rand_type_cb)
+        self.layout().addLayout(form)
+        self.__rand_type_cb.currentIndexChanged.connect(self.changed)
+        self.__rand_type_cb.activated.connect(self.edited)
+
+    def setParameters(self, params):
+        rand_type = params.get("rand_type", Randomize.RandomizeClasses)
+        self.__rand_type_cb.setCurrentIndex(rand_type)
+
+    def parameters(self):
+        return {"rand_type": self.__rand_type_cb.currentIndex()}
+
+    @staticmethod
+    def createinstance(params):
+        rand_type = params.get("rand_type", Randomize.RandomizeClasses)
+        return _Randomize(rand_type=rand_type)
+
+
 # This is intended for future improvements.
 # I.e. it should be possible to add/register preprocessor actions
 # through entry points (for use by add-ons). Maybe it should be a
@@ -754,6 +798,12 @@ PREPROCESSORS = [
         Description("Center and Scale Features",
                     icon_path("Continuize.svg")),
         Scale
+    ),
+    PreprocessAction(
+        "Randomize", "orange.preprocess.randomize", "Randomization",
+        Description("Randomize",
+                    icon_path("Random.svg")),
+        Randomize
     )
 ]
 
@@ -1120,7 +1170,7 @@ class SequenceFlow(QWidget):
         if self.widgets():
             return super().sizeHint()
         else:
-            return QSize(150, 100)
+            return QSize(250, 350)
 
     def addWidget(self, widget, title):
         """Add `widget` with `title` to list of widgets (in the last position).
@@ -1614,6 +1664,10 @@ class OWPreprocess(widget.OWWidget):
         self.scroll_area.setMinimumWidth(
             min(max(sh.width() + scroll_width + 2, self.controlArea.width()),
                 520))
+
+    def sizeHint(self):
+        sh = super().sizeHint()
+        return sh.expandedTo(QSize(sh.width(), 500))
 
 
 def test_main(argv=sys.argv):

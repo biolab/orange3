@@ -223,6 +223,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 self.statusBarIconArea,
                 gui.resource_filename("icons/triangle-red.png"))
 
+        if not self.resizing_enabled:
+            self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
+
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
             return

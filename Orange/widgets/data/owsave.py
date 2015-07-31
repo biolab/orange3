@@ -20,6 +20,7 @@ class OWSave(widget.OWWidget):
     inputs = [("Data", Table, "dataset")]
 
     want_main_area = False
+    resizing_enabled = False
 
     format_index = Setting(0)
     last_dir = Setting("")

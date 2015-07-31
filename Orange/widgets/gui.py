@@ -1105,7 +1105,8 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     """
     if box or label:
         b = widgetBox(widget, box, orientation, addToLayout=False)
-        widgetLabel(b, label, labelWidth)
+        if label is not None:
+            widgetLabel(b, label, labelWidth)
         hasHBox = orientation == 'horizontal' or not orientation
     else:
         b = widget
