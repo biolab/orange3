@@ -30,6 +30,7 @@ class OWSql(widget.OWWidget):
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
+    resizing_enabled = False
 
     host = Setting(None)
     port = Setting(None)
@@ -40,10 +41,8 @@ class OWSql(widget.OWWidget):
     sql = Setting("")
     guess_values = Setting(True)
 
-    def __init__(self, parent=None, signalManager=None, stored_settings=None):
-        super(OWSql, self).__init__(parent=parent,
-                                    signalManager=signalManager,
-                                    stored_settings=stored_settings)
+    def __init__(self, parent=None):
+        super(OWSql, self).__init__(parent=parent)
 
         self._connection = None
 
@@ -73,8 +72,11 @@ class OWSql(widget.OWWidget):
         box.layout().addWidget(self.passwordtext)
 
         tables = gui.widgetBox(box, orientation='horizontal')
-        self.tablecombo = QtGui.QComboBox(tables)
-
+        self.tablecombo = QtGui.QComboBox(
+            tables,
+            minimumContentsLength=35,
+            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLength
+        )
         tables.layout().addWidget(self.tablecombo)
         self.tablecombo.activated[int].connect(self.select_table)
         self.connectbutton = gui.button(

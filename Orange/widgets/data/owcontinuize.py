@@ -21,6 +21,7 @@ class OWContinuize(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     want_main_area = False
+    resizing_enabled = False
 
     multinomial_treatment = Setting(0)
     zero_based = Setting(1)
@@ -85,7 +86,6 @@ class OWContinuize(widget.OWWidget):
         gui.auto_commit(self.controlArea, self, "autosend", "Apply")
 
         self.data = None
-        self.resize(150, 300)
 
     def settings_changed(self):
         self.commit()

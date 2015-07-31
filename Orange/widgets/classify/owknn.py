@@ -14,6 +14,8 @@ class OWKNNLearner(widget.OWWidget):
     outputs = [("Learner", KNNLearner), ("Classifier", SklModel)]
 
     want_main_area = False
+    resizing_enabled = False
+
     learner_name = Setting("kNN")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
@@ -38,10 +40,6 @@ class OWKNNLearner(widget.OWWidget):
 
         gui.button(self.controlArea, self, "Apply",
                    callback=self.apply, default=True)
-
-        self.setMinimumWidth(250)
-        layout = self.layout()
-        self.layout().setSizeConstraint(layout.SetFixedSize)
 
         self.apply()
 

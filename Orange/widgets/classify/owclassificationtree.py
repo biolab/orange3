@@ -19,6 +19,7 @@ class OWClassificationTree(widget.OWWidget):
         ("Classification Tree", TreeClassifier)
     ]
     want_main_area = False
+    resizing_enabled = False
 
     model_name = Setting("Classification Tree")
     attribute_score = Setting(0)
@@ -59,9 +60,6 @@ class OWClassificationTree(widget.OWWidget):
         self.btn_apply = gui.button(self.controlArea, self, "&Apply",
                                     callback=self.set_learner, disabled=0,
                                     default=True)
-
-        gui.rubber(self.controlArea)
-        self.resize(100, 100)
 
         self.set_learner()
 
