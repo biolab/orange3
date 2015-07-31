@@ -53,7 +53,7 @@ response* data from **GEO Data Sets** widget and visualize them in a **Data Tabl
 6378 gene in the input, so it is essential to prune the data and analyse only those genes
 that are statistically significant. **Volcano Plot** helps us do exactly that. Once the
 desired area is selected in the plot, we output the data and observe them in another **Data Table**.
-Now we get only 4 instances, which were those genes that had a high normalized fold change under
+Now we get only 80 instances, which were those genes that had a high normalized fold change under
 high dose of caffeine and had a low p-value at the same time.
 
 <img src="" alt="image" width="600">
