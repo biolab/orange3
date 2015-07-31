@@ -11,8 +11,8 @@ from PyQt4.QtCore import Qt, QSize
 import Orange
 from Orange.base import Learner
 from Orange.evaluation import *
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui, settings
-from Orange.data import Domain
 
 
 Input = namedtuple("Input", ["learner", "results", "stats"])
@@ -52,7 +52,8 @@ class OWTestLearners(widget.OWWidget):
     inputs = [("Learner", Learner,
                "set_learner", widget.Multiple),
               ("Data", Orange.data.Table, "set_train_data", widget.Default),
-              ("Test Data", Orange.data.Table, "set_test_data")]
+              ("Test Data", Orange.data.Table, "set_test_data"),
+              ("Preprocessor", Preprocess, "set_preprocessor")]
 
     outputs = [("Evaluation Results", Orange.evaluation.Results)]
 
@@ -75,8 +76,10 @@ class OWTestLearners(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.orig_train_data = None
         self.train_data = None
         self.test_data = None
+        self.preprocessor = None
 
         #: An Ordered dictionary with current inputs and their testing
         #: results.
@@ -114,7 +117,6 @@ class OWTestLearners(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-
         self.view = QTreeView(
             rootIsDecorated=False,
             uniformRowHeights=True,
@@ -146,12 +148,11 @@ class OWTestLearners(widget.OWWidget):
             self.error(0, "Train data input requires a class variable")
             data = None
 
-        self.train_data = data
+        self.orig_train_data = data
+        self.train_data = None
         self.closeContext()
         if data is not None:
             self.openContext(data.domain.class_var)
-            self._update_header()
-        self._update_class_selection()
         self._invalidate()
 
     def set_test_data(self, data):
@@ -164,7 +165,19 @@ class OWTestLearners(widget.OWWidget):
         if self.resampling == OWTestLearners.TestOnTest:
             self._invalidate()
 
+    def set_preprocessor(self, preproc):
+        self.preprocessor = preproc
+        self.train_data = None
+        self._invalidate()
+
     def handleNewSignals(self):
+        if self.train_data is None:
+            if self.preprocessor and self.orig_train_data:
+                self.train_data = self.preprocessor(self.orig_train_data)
+            else:
+                self.train_data = self.orig_train_data
+            self._update_header()
+            self._update_class_selection()
         self.update_results()
         self.commit()
 
@@ -264,7 +277,6 @@ class OWTestLearners(widget.OWWidget):
         self.setStatusMessage("")
 
         self._update_stats_model()
-
 
     def _update_header(self):
         headers = ["Method"]
