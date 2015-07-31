@@ -1,9 +1,9 @@
 Volcano Plot
 ============
 
-![image](icons/heat-map.png)
+![image](icons/volcano-plot.png)
 
-Plots a heat map for a pair of attributes.
+Plots significance versus fold-change for gene expression rates.
 
 Signals
 -------
@@ -16,16 +16,23 @@ Signals
 
 **Outputs**:
 
-- None
+- **Selected data**
+
+  Data subset.
 
 Description
 -----------
 
-[**Heat map**](https://en.wikipedia.org/wiki/Heat_map) is a graphical method for visualizing attribute values
-by class in a two-way matrix. Values are represented by color: the higher a certain value is,
-the darker the represented color. By combining class and attributes on x and y axes we see where the attribute
-values are the strongest and where the weakest, thus enabling us to find typical features (discrete) or value range 
-(continuous) for each class.
+[**Volcano plot**](https://en.wikipedia.org/wiki/Volcano_plot_(statistics)) is a graphical method for 
+visualizing changes in replicate data. The widget plots a binary logarithm of fold-change on x-axis versus
+[statistical significance](https://en.wikipedia.org/wiki/Statistical_significance) 
+(negative base 10 logarithm of p-value) on the y-axis. 
+
+**Volcano Plot** is useful for a quick visual identification of statistically significant
+data (genes). Genes that are highly dysregulated are
+farther to the left and right, while highly significant fold changes appear higher on the plot.
+A combination of the two are those genes that are statistically significant - the widget
+automatically selects the top-ranking genes within the top right and left fields and outputs them.
 
 ![image](images/HeatMap-new2.png)
 
@@ -41,24 +48,12 @@ values are the strongest and where the weakest, thus enabling us to find typical
 Example
 -------
 
-Below you can see an example workflow for Heat Map widget. Heat map below displays attribute values
-for *Zoo* data set (0 is white, 1 is light blue, >1 is dark blue). The first thing we see in the map is
-'legs' attribute which is the only one colored in dark blue. In order to get a clearer heat map,
-we then use **Select Columns** widget and remove 'legs' attribute from the data set. Then we again
-feed the data to the **Heat Map**.
+Below you can see a simple workflow for **Volcano Plot**. We use *Caffeine effect: time course and dose
+response* data from **GEO Data Sets** widget and visualize them in a **Data Table**. We have
+6378 gene in the input, so it is essential to prune the data and analyse only those genes
+that are statistically significant. **Volcano Plot** helps us do exactly that. Once the
+desired area is selected in the plot, we output the data and observe them in another **Data Table**.
+Now we get only 4 instances, which were those genes that had a high normalized fold change under
+high dose of caffeine and had a low p-value at the same time.
 
-The new projections is much clearer. By removing 'legs' we get a neat visualization of attribute
-values for each class. We see that mammals typically have hair, teeth, backbone and milk, while birds
-have feathers, eggs and a tail.
-
-Additionally we would like to see why 'legs' attribute was so pronounced in the first heat map.
-We again use **Select Columns** widget to feed only this attribute into the **Data Table**. We already
-see that this attribute has values different than 0 or 1 - animal either have 2 or 4 legs or none at all.
-But as there were two classes represented by a very dark blue, namely invertebrates and insects, we wish
-to inspect this further. We sort the table by type and look at invertebrates for example. We see that
-this class has 0, 4, 5, 6 or even 8 legs, which is why it was a good idea to remove it from the
-heat map visualization as an 'outlying' attribute.
-
-![image](images/HeatMap-new1.png)
-
-![image](images/HeatMap-new4.png)
+<img src="" alt="image" width="600">
