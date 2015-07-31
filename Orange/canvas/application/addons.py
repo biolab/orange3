@@ -74,11 +74,15 @@ def is_updatable(item):
     else:
         inst, dist = item
         try:
-            return (version.LooseVersion(dist.version) <
-                    version.LooseVersion(inst.version))
-        except Exception:
-            # ???
-            return dist.version < inst.version
+            v1 = version.StrictVersion(dist.version)
+            v2 = version.StrictVersion(inst.version)
+        except ValueError:
+            pass
+        else:
+            return v1 < v2
+
+        return (version.LooseVersion(dist.version) <
+                version.LooseVersion(inst.version))
 
 
 class TristateCheckItemDelegate(QStyledItemDelegate):
@@ -433,6 +437,22 @@ class AddonManagerDialog(QDialog):
         installed = list_installed_addons()
         dists = {dist.project_name: dist for dist in installed}
         packages = {pkg.name: pkg for pkg in packages}
+
+        # For every pypi available distribution not listed by
+        # list_installed_addons, check if it is actually already
+        # installed.
+        ws = pkg_resources.WorkingSet()
+        for pkg_name in set(packages.keys()).difference(set(dists.keys())):
+            try:
+                d = ws.find(pkg_resources.Requirement.parse(pkg_name))
+            except pkg_resources.VersionConflict:
+                pass
+            except ValueError:
+                # Requirements.parse error ?
+                pass
+            else:
+                if d is not None:
+                    dists[d.project_name] = d
 
         project_names = unique(
             itertools.chain(packages.keys(), dists.keys())

@@ -225,8 +225,15 @@ def get_dist_meta(dist):
         # egg-info
         contents = dist.get_metadata("PKG-INFO")
     elif dist.has_metadata("METADATA"):
+        # dist-info
         contents = dist.get_metadata("METADATA")
-    return parse_meta(contents)
+    else:
+        contents = None
+
+    if contents is not None:
+        return parse_meta(contents)
+    else:
+        return {}
 
 
 def create_intersphinx_provider(entry_point):
