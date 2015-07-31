@@ -31,19 +31,20 @@ visualizing changes in replicate data. The widget plots a binary logarithm of fo
 **Volcano Plot** is useful for a quick visual identification of statistically significant
 data (genes). Genes that are highly dysregulated are
 farther to the left and right, while highly significant fold changes appear higher on the plot.
-A combination of the two are those genes that are statistically significant - the widget
-automatically selects the top-ranking genes within the top right and left fields and outputs them.
+A combination of the two are those genes that are statistically significant - the widget selects 
+the top-ranking genes within the top right and left fields by default.
 
-![image](images/HeatMap-new2.png)
+![image](images/VolcanoPlot-stamped.png)
 
-1. Information on the input data
-2. Choose x attribute
-3. Choose y attribute
-4. Discrete attribute for color scheme
-5. Color scheme legend. You can select which attribute instances you wish to see in the visualization.
-6. Select the color scale strength (linear, square root or logarithmic)
-7. To move the map use *Drag* and to select data subset use *Select*
-8. Visualization
+1. Information on the input and output data.
+2. Select *Target Labels*. Labels depend on the attributes in the input. In *Values* you can 
+   change the sample target (default value is the first value on the list, alphabetically or numerically).
+3. Change the *Settings*: adjust the symbol size and turn off symmetrical selection of the output
+   data (the widget selects statistically significant instances by default).
+4. If *Auto commit is on* the widget will automatically apply the changes. Alternatively click *Commit*.
+5. Visualization of the changes in gene expression. The red lines represent the area with the
+   most statistically significant instances. Symmetrical selection is chosen by default, but you can
+   also manually adjust the area you want in the output.
 
 Example
 -------
@@ -56,4 +57,4 @@ desired area is selected in the plot, we output the data and observe them in ano
 Now we get only 80 instances, which were those genes that had a high normalized fold change under
 high dose of caffeine and had a low p-value at the same time.
 
-<img src="" alt="image" width="600">
+<img src="images/VolcanoPlot-Example.png" alt="image" width="600">
