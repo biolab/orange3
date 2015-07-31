@@ -1,5 +1,6 @@
 import sys
 import warnings
+from xml.sax.saxutils import escape
 
 import pkg_resources
 
@@ -867,7 +868,7 @@ class OWMDS(widget.OWWidget):
                 self._legend_item.addItem(
                     ScatterPlotItem(pen=color, brush=color, symbol=symbol,
                                     size=10),
-                    text
+                    escape(text)
                 )
         else:
             self._legend_item.hide()

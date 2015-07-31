@@ -7,6 +7,7 @@ Linear projection widget
 from functools import reduce
 from operator import itemgetter
 from types import SimpleNamespace as namespace
+from xml.sax.saxutils import escape
 
 import pkg_resources
 
@@ -912,7 +913,7 @@ class OWLinearProjection(widget.OWWidget):
         for color, symbol, name in items:
             legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, symbol=symbol, size=10),
-                name
+                escape(name)
             )
 
     def set_shape(self, shape):

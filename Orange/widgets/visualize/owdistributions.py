@@ -7,6 +7,7 @@ A widget for plotting attribute distributions.
 """
 import sys
 import collections
+from xml.sax.saxutils import escape
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
@@ -324,7 +325,7 @@ class OWDistributions(widget.OWWidget):
         for color, name in zip(colors, cvar.values):
             self._legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
-                name
+                escape(name)
             )
         self._legend.show()
 
