@@ -1537,6 +1537,7 @@ class CanvasMainWindow(QMainWindow):
             # function and is deleted there.
             fname = os.path.join(config.widget_settings_dir(),
                                  "DELETE_ON_START")
+            os.makedirs(config.widget_settings_dir(), exist_ok=True)
             with open(fname, "a"):
                 pass
 
