@@ -5,7 +5,7 @@ Data Table (``table``)
 ######################
 
 .. autoclass:: Orange.data.Table
-    :members: X, Y, W, metas, columns
+    :members: columns
 
     Stores data instances as a set of 2d tables representing the independent
     variables (attributes, features) and dependent variables
