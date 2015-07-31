@@ -8,6 +8,7 @@ import sklearn.preprocessing as skl_preprocessing
 import bottlechest
 
 import Orange.data
+from Orange.data import Table
 from . import impute, discretize
 from ..misc.enum import Enum
 
@@ -274,11 +275,11 @@ class Randomize(Preprocess):
     >>> randomized_data = randomizer(data)
     """
 
-    RandTypes = Enum("RandomizeClasses", "RandomizeAttributes", "RandomizeMetas")
+    RandTypes = Enum("RandomizeClasses", "RandomizeAttributes",
+                     "RandomizeMetas")
     (RandomizeClasses, RandomizeAttributes, RandomizeMetas) = RandTypes
 
-    def __init__(self,
-                 rand_type=RandomizeClasses):
+    def __init__(self, rand_type=RandomizeClasses):
         self.rand_type = rand_type
 
     def __call__(self, data):
@@ -296,11 +297,27 @@ class Randomize(Preprocess):
         data : Orange.data.Table
             Randomized data table.
         """
-        from . import randomize
+        X = data.X.copy()
+        Y = data.Y.copy()
+        metas = data.metas.copy()
 
-        randomizer = randomize.Randomizer(
-            rand_type=self.rand_type)
-        return randomizer(data)
+        if self.rand_type == Randomize.RandomizeClasses:
+            self.randomize(Y)
+        elif self.rand_type == Randomize.RandomizeAttributes:
+            self.randomize(X)
+        elif self.rand_type == Randomize.RandomizeMetas:
+            self.randomize(metas)
+        else:
+            raise TypeError('Unsupported type')
+
+        return Table(data.domain, X, Y, metas)
+
+    def randomize(self, table):
+        if len(table.shape) > 1:
+            for i in range(table.shape[1]):
+                np.random.shuffle(table[:,i])
+        else:
+            np.random.shuffle(table)
 
 
 class PreprocessorList(object):

@@ -806,7 +806,7 @@ PREPROCESSORS = [
     ),
     PreprocessAction(
         "Randomize", "orange.preprocess.randomize", "Randomization",
-        Description("Randomize Classes, Features or Metas",
+        Description("Randomize",
                     icon_path("Random.svg")),
         Randomize
     )
