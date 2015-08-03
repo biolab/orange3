@@ -16,16 +16,19 @@ Signals
 
 **Outputs**:
 
-- None
+- **Selected Data**
+
+  Data subset.
 
 Description
 -----------
 
 [**Heat map**](https://en.wikipedia.org/wiki/Heat_map) is a graphical method for visualizing attribute values
 by class in a two-way matrix. Values are represented by color: the higher a certain value is,
-the darker the represented color. By combining class and attributes on x and y axes we see where the attribute
-values are the strongest and where the weakest, thus enabling us to find typical features (discrete) or value range 
-(continuous) for each class.
+the darker the represented color. In bioinformatics heat map normally shows fold change values
+for each gene.
+
+Selecting the dark-colored area will output genes with high fold change rates.
 
 ![image](images/HeatMap-new2.png)
 
@@ -40,6 +43,9 @@ values are the strongest and where the weakest, thus enabling us to find typical
 
 Example
 -------
+
+**Heat Map** in bioinformatics add-on is quite similar to the **Heat Map** from the visualize widget set.
+
 
 Below you can see an example workflow for Heat Map widget. Heat map below displays attribute values
 for *Zoo* data set (0 is white, 1 is light blue, >1 is dark blue). The first thing we see in the map is
