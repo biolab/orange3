@@ -90,3 +90,14 @@ class DistMatrix(np.ndarray):
             return 1./self
         else:
             raise ValueError('Unknown option for typ of matrix inversion.')
+
+    def submatrix(self, row_items, col_items=None):
+        """Return a submatrix of self, describing only distances between items"""
+        if not col_items:
+            col_items = row_items
+        obj = self[np.ix_(row_items, col_items)]
+        if obj.row_items:
+            obj.row_items = self.row_items[row_items]
+        if obj.col_items:
+            obj.col_items = self.col_items[col_items]
+        return obj

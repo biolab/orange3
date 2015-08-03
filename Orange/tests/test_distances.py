@@ -10,6 +10,17 @@ from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              Jaccard, _preprocess)
 
 
+class TestDistMatrix(TestCase):
+    def test_submatrix(self):
+        iris = Table('iris')
+        dist = Euclidean(iris)
+        sub = dist.submatrix([2, 3, 4])
+        np.testing.assert_equal(sub, dist[2:5, 2:5])
+        self.assertTrue(np.all([i == j
+                                for i, j in zip(sub.row_items,
+                                                dist.row_items[2:5])]))
+
+
 class TestEuclidean(TestCase):
     def setUp(self):
         self.iris = Table('iris')
