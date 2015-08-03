@@ -1,42 +1,57 @@
 MA Plot
 =======
 
-![image](icons/heat-map.png)
+![image](icons/ma-plot.png)
 
-Plots a heat map for a pair of attributes.
+Visualization of intensity-dependent ratio of raw microarray data.
 
 Signals
 -------
 
 **Inputs**:
 
-- **Data**
+- **Expression Array**
 
-  Input data set.
+  DNA microarray.
 
 **Outputs**:
 
-- None
+- **Normalized Expression Array**
+
+  Lowess-normalized microarray.
+
+- **Filtered Expression Array**
+
+  Selected instances (in the Z-score cutoff).
 
 Description
 -----------
 
-[**Heat map**](https://en.wikipedia.org/wiki/Heat_map) is a graphical method for visualizing attribute values
-by class in a two-way matrix. Values are represented by color: the higher a certain value is,
-the darker the represented color. By combining class and attributes on x and y axes we see where the attribute
-values are the strongest and where the weakest, thus enabling us to find typical features (discrete) or value range 
-(continuous) for each class.
+[**MA Plot**](https://en.wikipedia.org/wiki/MA_plot) is a graphical method for visualizing intensity-dependent
+ratio of raw mircoarray data. The A represents the average log intensity of the gene
+expression (x-axis in the plot), while M stands for the binary log of intensity ratio (y-axis). The widget
+outputs either normalized data (Lowess normalization method) or instances above the Z-score cutoff line (instances
+with meaningful fold changes).
 
-![image](images/HeatMap-new2.png)
+![image](https://github.com/ajdapretnar/orange3/blob/widget-documentation/doc/widgets/bioinformatics/images/MAplot5-stamped.png)
 
-1. Information on the input data
-2. Choose x attribute
-3. Choose y attribute
-4. Discrete attribute for color scheme
-5. Color scheme legend. You can select which attribute instances you wish to see in the visualization.
-6. Select the color scale strength (linear, square root or logarithmic)
-7. To move the map use *Drag* and to select data subset use *Select*
-8. Visualization
+1. Information on the input data.
+2. Select the attribute to split the plot by.
+3. Center the plot using:
+   - **average**
+   - [**Lowess (fast-interpolated)**](https://en.wikipedia.org/wiki/Local_regression) normalization method
+   - **Lowess** normalization method
+4. Merge replicated by:
+   - **average**
+   - **median**
+   - **geometric mean**
+5. Set the **Z-score cutoff** threshold. Z-score is your confidence interval and it is set to
+   95% by default. If the widget is set to output *filtered expression array*, instances above the
+   [Z-score](https://en.wikipedia.org/wiki/Standard_score) threshold will be in the output (red dots in the plot).
+6. Ticking the *Append Z-scores* will add an additional meta attribute with Z-scores to your output data.<br>
+   Ticking the *Append Log ratio and Intensity values* will add two additional meta attributes with M and A values
+   to your output data.
+7. If *Auto commit is on*, the widget will automatically apply changes to the output. Alternatively click *Commit*.
 
 Example
 -------
