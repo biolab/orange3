@@ -1,8 +1,9 @@
 from Orange.data.io import FileFormats
 from PyQt4 import QtGui, QtCore, QtSvg
 
-from pyqtgraph import GraphicsWidget
-from pyqtgraph.exporters import SVGExporter, ImageExporter
+from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
+from pyqtgraph.exporters.SVGExporter import SVGExporter
+from pyqtgraph.exporters.ImageExporter import ImageExporter
 
 
 class ImgFormat:
