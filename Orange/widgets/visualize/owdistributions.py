@@ -543,13 +543,15 @@ def average_shifted_histogram(a, h, m=3, weights=None):
 
     amin, amax = a.min(), a.max()
     delta = h / m
-    offset = (m - 1) * delta
-    nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m - 1)
+    wfac = 4 #extended windows for gaussian smoothing
+    offset = (wfac * m - 1) * delta
+    nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m * wfac - 1)
+    
     bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
                           endpoint=True)
     hist, edges = numpy.histogram(a, bins, weights=weights, density=True)
 
-    kernel = triangular_kernel((numpy.arange(2 * m - 1) - (m - 1)) / m)
+    kernel = gaussian_kernel((numpy.arange(2 * wfac * m - 1) - (wfac * m - 1)) / (wfac * m), wfac)
     kernel = kernel / numpy.sum(kernel)
     ash = numpy.convolve(hist, kernel, mode="same")
 
@@ -560,6 +562,11 @@ def average_shifted_histogram(a, h, m=3, weights=None):
 
 def triangular_kernel(x):
     return numpy.clip(1, 0, 1 - numpy.abs(x))
+
+
+def gaussian_kernel(x, k):
+    #fit k standard deviations into available space from [-1 .. 1]
+    return 1/(numpy.sqrt(2 * numpy.pi)) * numpy.exp( - (x*k)**2 / (2))
 
 
 def weighted_std(a, axis=None, weights=None, ddof=0):
@@ -630,6 +637,7 @@ def main(argv=None):
         filename = argv[1]
     else:
         filename = "heart_disease"
+        filename = "adult"
     data = Orange.data.Table(filename)
     w.set_data(data)
     w.handleNewSignals()
