@@ -1,6 +1,6 @@
 from PyQt4.QtGui import QLayout
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
                                       LinearRegressionLearner, PolynomialLearner)
 from Orange.preprocess.preprocess import Preprocess
@@ -12,16 +12,14 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QColor, QPen
 from PyQt4.QtCore import QRectF
 
-from Orange.widgets.visualize.owscatterplotgraph import legend_anchor_pos
-
 import pyqtgraph as pg
 import numpy as np
 
 
 class OWUnivariateRegression(widget.OWWidget):
     name = "Univariate Regression"
-    description = "A linear regression algorithm with optional L1 and L2 " \
-                  "regularization."
+    description = "Univariate regression algorithm with optional Linear " \
+                  "regression widget and polynomial degree setting."
     icon = "icons/UnivariateRegression.svg"
 
     inputs = [("Data", Table, "set_data", widget.Default),
@@ -32,12 +30,10 @@ class OWUnivariateRegression(widget.OWWidget):
     
     learner_name = settings.Setting("Univariate Regression")
     
-    polynomialexpansion = settings.Setting(0.0)
+    polynomialexpansion = settings.Setting(1)
     
     x_var_index = settings.ContextSetting(0)
     y_var_index = settings.ContextSetting(1)
-    
-    show_legend = settings.Setting(True)
     
     want_main_area = True
 
@@ -52,31 +48,26 @@ class OWUnivariateRegression(widget.OWWidget):
         
         self.x_label = 'x'
         self.y_label = 'y'
-        self.legend = None
-        self.__legend_anchor = (1, 0), (1, 0)
         
         box = gui.widgetBox(self.controlArea, "Learner/Predictor Name")
         gui.lineEdit(box, self, "learner_name")
 
+        box = gui.widgetBox(self.controlArea, "Input")
+
         self.x_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesX = gui.comboBox(
-            self.controlArea, self, value='x_var_index', box='X Attribute',
+            box, self, value='x_var_index',
             callback=self.apply)
         self.comboBoxAttributesX.setModel(self.x_var_model)
 
-        self.y_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesY = gui.comboBox(
-            self.controlArea, self, value='y_var_index', box='Y Attribute',
-            callback=self.apply)
-        self.comboBoxAttributesY.setModel(self.y_var_model)
-
-        box = gui.widgetBox(self.controlArea, "Options")
-        
         gui.doubleSpin(box, self, "polynomialexpansion", 0, 10, 
             label="Polynomial expansion:", callback=self.apply)
 
-        gui.button(self.controlArea, self, "Apply", callback=self.apply,
-                   default=True)
+        self.y_var_model = itemmodels.VariableListModel()
+        self.comboBoxAttributesY = gui.comboBox(
+            self.controlArea, self, value='y_var_index', box='Target',
+            callback=self.apply)
+        self.comboBoxAttributesY.setModel(self.y_var_model)
 
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
         
@@ -158,9 +149,10 @@ class OWUnivariateRegression(widget.OWWidget):
     def plot_regression_line(self, x_data, y_data):
         if self.plot_item:
             self.plotview.removeItem(self.plot_item)
-        pen = QPen(QColor(255, 0, 0))
         self.plot_item = pg.PlotCurveItem(
-            x=x_data, y=y_data, pen=pen
+            x=x_data, y=y_data, 
+            pen=pg.mkPen(QColor(255, 0, 0), width=2), 
+            antialias=True
         )
         self.plotview.addItem(self.plot_item)
         self.plotview.replot()
@@ -180,58 +172,37 @@ class OWUnivariateRegression(widget.OWWidget):
             axis = self.plot.getAxis("left")
             axis.setLabel(self.y_label)
         
-        if self.data is not None and self.learner is not None:
+        if self.data is not None:
+            if self.learner is None:
+                learner = LinearRegressionLearner(**args)
+
             Y = self.data.Y
             if len(self.data.Y.shape) == 1:
                 Y = self.data.Y.reshape(-1,1)
             data = np.hstack([self.data.X, Y])
             x = data[:,self.x_var_index]
             y = data[:,self.y_var_index]
-            
+
             data_table = Table(x.reshape(-1,1), y)
+            attributes = self.data.domain[self.x_var_index]
+            class_var = self.data.domain[self.y_var_index]
+            data_table.domain = Domain([attributes], class_vars=[class_var])
+
             degree = int(self.polynomialexpansion)
-            
-            linspace = np.linspace(min(x), max(x), 1000).reshape(-1,1)
-            
+
             learner = PolynomialLearner(learner, degree=degree)
             learner.name = self.learner_name
             predictor = learner(data_table)
-            
+
+            linspace = np.linspace(min(x), max(x), 1000).reshape(-1,1)
             values = predictor(linspace, predictor.Value)
-            
+
             self.plot_scatter_points(x, y)
             self.set_range(x, y)
             self.plot_regression_line(linspace.ravel(), values.ravel())
-            
-            self.make_legend()
-            
+
         self.send("Learner", learner)
         self.send("Predictor", predictor)
-
-    def create_legend(self):
-        self.legend = pg.LegendItem()
-        self.legend.setParentItem(self.plotview.getViewBox())
-        self.legend.anchor(*self.__legend_anchor)
-
-    def remove_legend(self):
-        if self.legend:
-            anchor = legend_anchor_pos(self.legend)
-            if anchor is not None:
-                self.__legend_anchor = anchor
-            self.legend.setParent(None)
-            self.legend = None
-
-    def update_legend(self):
-        if self.legend:
-            self.legend.setVisible(self.show_legend)
-            
-    def make_legend(self):
-        self.remove_legend()
-        if not self.legend:
-            self.create_legend()
-        self.legend.addItem(self.scatterplot_item, "Data Points")
-        self.legend.addItem(self.plot_item, 6*"&nbsp;" + "Regression Line")
-        self.update_legend()
 
 
 if __name__ == "__main__":
@@ -241,9 +212,12 @@ if __name__ == "__main__":
     a = QApplication(sys.argv)
     ow = OWUnivariateRegression()
     learner = RidgeRegressionLearner(alpha=1.0)
+    polylearner = PolynomialLearner(learner, degree=2)
     d = Table('iris')
     ow.set_data(d)
     ow.set_learner(learner)
     ow.show()
     a.exec_()
     ow.saveSettings()
+    
+    
