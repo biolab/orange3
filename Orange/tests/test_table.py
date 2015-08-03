@@ -1040,8 +1040,13 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue(str(e["name"]).endswith("ion"))
         self.assertEqual(len(x), len([e for e in col if e.endswith("ion")]))
 
+    def test_valueFilter_regex(self):
+        d = data.Table("zoo")
+        f = filter.FilterRegex(d.domain['name'], '^c...$')
+        x = filter.Values([f])(d)
+        self.assertEqual(len(x), 7)
 
-        # TODO Test conjunctions and disjunctions of conditions
+    # TODO Test conjunctions and disjunctions of conditions
 
 
 def column_sizes(table):
