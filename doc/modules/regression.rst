@@ -51,7 +51,7 @@ data instances. Its accuracy can serve as a baseline for other regression
 models.
 
 The model learner (:class:`MeanLearner`) computes the mean of the given data or
-distribution. The model is stored as an instance of :class:`MeanModel`. ::
+distribution. The model is stored as an instance of :class:`MeanModel`.
 
 Example
 =======

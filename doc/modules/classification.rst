@@ -40,7 +40,7 @@ Simple Random Forest
    pair: classification; softmax regression
 
 Softmax Regression
------------------------------
+------------------
 
 .. autoclass:: SoftmaxRegressionLearner
    :members:

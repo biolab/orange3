@@ -149,8 +149,6 @@ Utility functions
 .. autodata:: attributeIconDict
 .. autofunction:: attributeItem
 
-.. autofunction:: setStopper
-
 ******************************
 Internal functions and classes
 ******************************
