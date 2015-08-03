@@ -480,7 +480,7 @@ class OWDistanceMap(widget.OWWidget):
 
     def _update_ordering(self):
         if self.sorting == 0:
-            self._sorted_matrix = self.matrix.X
+            self._sorted_matrix = self.matrix
             self._sort_indices = None
         else:
             if self.sorting == 1:
@@ -490,7 +490,7 @@ class OWDistanceMap(widget.OWWidget):
 
             leaves = hierarchical.leaves(tree)
             indices = numpy.array([leaf.value.index for leaf in leaves])
-            X = self.matrix.X
+            X = self.matrix
             self._sorted_matrix = X[indices[:, numpy.newaxis],
                                     indices[numpy.newaxis, :]]
             self._sort_indices = indices
@@ -503,10 +503,10 @@ class OWDistanceMap(widget.OWWidget):
         if self.annotation_idx == 0:
             labels = None
         elif self.annotation_idx == 1:
-            labels = [str(i + 1) for i in range(self.matrix.dim[0])]
+            labels = [str(i + 1) for i in range(self.matrix.shape[0])]
         elif self.annot_combo.model()[self.annotation_idx] == "Attribute names":
                 attr = self.matrix.row_items.domain.attributes
-                labels = [str(attr[i]) for i in range(self.matrix.dim[0])]
+                labels = [str(attr[i]) for i in range(self.matrix.shape[0])]
         elif self.annotation_idx == 2 and \
                 isinstance(self.items, widget.AttributeList):
             labels = [v.name for v in self.items]

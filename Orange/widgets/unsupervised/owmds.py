@@ -346,7 +346,7 @@ class OWMDS(widget.OWWidget):
     def set_data(self, data):
         self.signal_data = data
 
-        if self.matrix and data is not None and len(self.matrix.X) == len(data):
+        if self.matrix and data is not None and len(self.matrix) == len(data):
             self.closeContext()
             self.data = data
             self.update_controls()
@@ -843,7 +843,7 @@ class OWMDS(widget.OWWidget):
             )
             self.plot.addItem(item)
 
-        data = numpy.arange(len(self.data if have_data else self.matrix.X))
+        data = numpy.arange(len(self.data if have_data else self.matrix))
         self._scatter_item = item = ScatterPlotItem(
             x=emb_x, y=emb_y,
             pen=self._pen_data, brush=self._brush_data, symbol=self._shape_data,

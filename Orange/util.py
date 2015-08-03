@@ -1,7 +1,22 @@
 """Various small utilities that might be useful everywhere"""
 
+from functools import wraps
 from itertools import chain
 import numpy as np
+import logging
+
+
+log = logging.getLogger()
+
+
+def deprecated(obj):
+    """Mark called object deprecated."""
+    @wraps(obj)
+    def wrapper(*args, **kwargs):
+        name = '{}.{}'.format(obj.__self__.__class__, obj.__name__) if hasattr(obj, '__self__') else obj
+        log.warning('Call to deprecated {}'.format(name))
+        return obj(*args, **kwargs)
+    return wrapper
 
 
 def flatten(lst):
