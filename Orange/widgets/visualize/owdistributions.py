@@ -265,6 +265,7 @@ class OWDistributions(widget.OWWidget):
             self.display_contingency()
         else:
             self.display_distribution()
+        self.plot.autoRange()
 
     def display_contingency(self):
         """
@@ -315,11 +316,20 @@ class OWDistributions(widget.OWWidget):
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
+
+            maxh = 0 #maximal column height
+            maxrh = 0 #maximal relative column height
+            for i, (value, dist) in enumerate(zip(var.values, cont.T)):
+                maxh = max(maxh, max(dist))
+                maxrh = max(maxrh, max(dist/sum(dist)))
+
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
-                geom = QtCore.QRectF(i - 0.333, 0, 0.666, 100
-                                     if self.relative_freq else dsum)
-                item = DistributionBarItem(geom, dist / dsum, colors)
+                geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
+                                     if self.relative_freq else maxh)
+                item = DistributionBarItem(geom, dist/dsum/maxrh
+                                           if self.relative_freq
+                                           else dist/maxh, colors)
                 self.plot.addItem(item)
 
         for color, name in zip(colors, cvar_values):
