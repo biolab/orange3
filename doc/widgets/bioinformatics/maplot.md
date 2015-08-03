@@ -3,7 +3,7 @@ MA Plot
 
 ![image](icons/ma-plot.png)
 
-Visualization of intensity-dependent ratio of raw microarray data.
+Visualization of intensity-dependent ratios of raw microarray data.
 
 Signals
 -------
