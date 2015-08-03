@@ -23,6 +23,7 @@ from Orange.clustering import hierarchical
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
 from .owhierarchicalclustering import DendrogramWidget, GraphicsSimpleTextList
+from Orange.widgets.io import FileFormats
 
 
 def _remove_item(item):
@@ -253,6 +254,8 @@ class OWDistanceMap(widget.OWWidget):
 
     autocommit = settings.Setting(True)
 
+    want_graph = True
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -360,6 +363,7 @@ class OWDistanceMap(widget.OWWidget):
         self.dendrogram = None
 
         self.grid_widget.scene().installEventFilter(self)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def set_distances(self, matrix):
         self.clear()
@@ -575,6 +579,12 @@ class OWDistanceMap(widget.OWWidget):
         self.send("Data", datasubset)
         self.send("Features", featuresubset)
 
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.grid_widget,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 class TextList(GraphicsSimpleTextList):
