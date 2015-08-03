@@ -27,7 +27,7 @@ class KMeans(SklProjector):
             proj = proj.fit(X, Y)
             proj.silhouette = silhouette_score(X, proj.labels_)
         proj.inertia = proj.inertia_ / len(X)
-        cluster_dist = Euclidean(proj.cluster_centers_).X
+        cluster_dist = Euclidean(proj.cluster_centers_)
         proj.inter_cluster = np.mean(cluster_dist[np.triu_indices_from(cluster_dist, 1)])
         return KMeansModel(proj, self.preprocessors)
 

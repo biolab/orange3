@@ -86,7 +86,7 @@ def dist_matrix_linkage(matrix, linkage=AVERAGE):
     :param str linkage:
     """
     # Extract compressed upper triangular distance matrix.
-    distances = condensedform(matrix.X)
+    distances = condensedform(matrix)
     return scipy.cluster.hierarchy.linkage(distances, method=linkage)
 
 
@@ -98,7 +98,7 @@ def dist_matrix_clustering(matrix, linkage=AVERAGE):
     :param str linkage:
     """
     # Extract compressed upper triangular distance matrix.
-    distances = condensedform(matrix.X)
+    distances = condensedform(matrix)
     Z = scipy.cluster.hierarchy.linkage(distances, method=linkage)
     return tree_from_linkage(Z)
 
