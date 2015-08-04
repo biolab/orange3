@@ -106,7 +106,7 @@ class OWDistributions(widget.OWWidget):
         varbox = gui.widgetBox(self.controlArea, "Variable")
 
         self.varmodel = itemmodels.VariableListModel()
-        self.groupvarmodel = itemmodels.VariableListModel()
+        self.groupvarmodel = []
 
         self.varview = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection)
@@ -127,15 +127,9 @@ class OWDistributions(widget.OWWidget):
             callback=self._on_cont_est_type_changed)
 
         box = gui.widgetBox(self.controlArea, "Group by")
-        self.groupvarview = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection)
-        self.groupvarview.setFixedHeight(100)
-        self.groupvarview.setSizePolicy(
-            QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        self.groupvarview.setModel(self.groupvarmodel)
-        self.groupvarview.selectionModel().selectionChanged.connect(
-            self._on_groupvar_idx_changed)
-        box.layout().addWidget(self.groupvarview)
+        self.icons = gui.attributeIconDict
+        self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
+             callback=self._on_groupvar_idx_changed, valueType=str)
         self.cb_rel_freq = gui.checkBox(
             box, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed)
@@ -169,24 +163,28 @@ class OWDistributions(widget.OWWidget):
         if self.data is not None:
             domain = self.data.domain
             self.varmodel[:] = list(domain)
-            self.groupvarmodel[:] = \
+
+            self.groupvarview.clear()
+            self.groupvarmodel = \
                 ["(None)"] + [var for var in domain if var.is_discrete]
+            self.groupvarview.addItem("(None)")
+            for var in self.groupvarmodel[1:]:
+                self.groupvarview.addItem(self.icons[var], var.name)
             if domain.has_discrete_class:
                 self.groupvar_idx = \
-                    list(self.groupvarmodel).index(domain.class_var)
+                    self.groupvarmodel.index(domain.class_var)
             self.openContext(domain)
             self.variable_idx = min(max(self.variable_idx, 0),
                                     len(self.varmodel) - 1)
             self.groupvar_idx = min(max(self.groupvar_idx, 0),
                                     len(self.groupvarmodel) - 1)
-            itemmodels.select_row(self.groupvarview, self.groupvar_idx)
             itemmodels.select_row(self.varview, self.variable_idx)
             self._setup()
 
     def clear(self):
         self.plot.clear()
         self.varmodel[:] = []
-        self.groupvarmodel[:] = []
+        self.groupvarmodel = []
         self.variable_idx = -1
         self.groupvar_idx = 0
         self._legend.clear()
@@ -358,7 +356,6 @@ class OWDistributions(widget.OWWidget):
         self._setup()
 
     def _on_groupvar_idx_changed(self):
-        self.groupvar_idx = selected_index(self.groupvarview)
         self._setup()
 
     def _on_cont_est_type_changed(self):
