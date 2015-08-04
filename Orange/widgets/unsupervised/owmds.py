@@ -309,6 +309,7 @@ class OWMDS(widget.OWWidget):
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
         self.plot.getPlotItem().hideAxis("bottom")
         self.plot.getPlotItem().hideAxis("left")
+        self.plot.getPlotItem().hideButtons()
         self.mainArea.layout().addWidget(self.plot)
 
         self.selection_tool = PlotSelectionTool(
