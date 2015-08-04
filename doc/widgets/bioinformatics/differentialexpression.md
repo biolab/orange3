@@ -57,10 +57,11 @@ selected data subset (normally the most interesting genes).
 Example
 -------
 
-In the example below we chose two experiments from the **dictyExpress** widget (namely *yakA-pufA* and *yakA-*) and
+In the example below we chose two experiments from the **PIPAx** widget ( 8 experiments measuring gene expression 
+levels on *Dictyostelium discoideum* at different timepoints) and
 observed them in the **Data Table**. Then we used the **Differential Expression** widget to select the most interesting
-genes. We chose *Compute null distribution* and output the data with default settings (20 permutations, 
-&alpha;-value is 0.01). Then we can again observe the selected data in another **Data Table**. As we have ticked
+genes. We left upper and lower threshold at default (1 and -1) and output the data. 
+Then we observed the selected data in another **Data Table**. As we have ticked
 the *Add gene scores to output*, the table shows an additional column with gene scores as instances.
 
 <img src="images/DiffExpression-Example.png" alt="image" width="600">
