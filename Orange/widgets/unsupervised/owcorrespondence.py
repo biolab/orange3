@@ -16,6 +16,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
+from Orange.widgets.io import FileFormats
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -55,6 +56,8 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
     selected_var_indices = settings.ContextSetting([])
 
+    want_graph = True
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -91,6 +94,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         self.plot = pg.PlotWidget(background="w")
         self.mainArea.layout().addWidget(self.plot)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def set_data(self, data):
         self.closeContext()
@@ -231,6 +235,13 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
             ax1, ax2 = self._p_axes()
             self.infotext.setText(fmt.format(inertia[ax1], inertia[ax2]))
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.plot.plotItem,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def burt_table(data, variables):

@@ -20,7 +20,7 @@ import Orange.distance
 from Orange.clustering import hierarchical
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets import widget, gui, settings
-
+from Orange.widgets.io import FileFormats
 
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
@@ -199,6 +199,8 @@ class OWHeatMap(widget.OWWidget):
 
     auto_commit = settings.Setting(True)
 
+    want_graph = True
+
     def __init__(self, parent=None):
         super().__init__(self, parent)
 
@@ -335,6 +337,7 @@ class OWHeatMap(widget.OWWidget):
 
         self.selection_rects = []
         self.selected_rows = []
+        self.graphButton.clicked.connect(self.save_graph)
 
     def sizeHint(self):
         return QSize(800, 400)
@@ -1036,6 +1039,14 @@ class OWHeatMap(widget.OWWidget):
             data = self.data[indices]
 
         self.send("Data", data)
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.scene,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
+
 
 QWIDGETSIZE_MAX = 16777215
 

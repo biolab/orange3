@@ -28,6 +28,7 @@ import Orange.data
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.io import FileFormats
 
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
@@ -52,6 +53,8 @@ class OWVennDiagram(widget.OWWidget):
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
     autocommit = settings.Setting(False)
+
+    want_graph = True
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -124,6 +127,7 @@ class OWVennDiagram(widget.OWWidget):
                     max(self.controlArea.sizeHint().height(), 550))
 
         self._queue = []
+        self.graphButton.clicked.connect(self.save_graph)
 
     def setData(self, data, key=None):
         self.error(0)
@@ -553,6 +557,13 @@ class OWVennDiagram(widget.OWWidget):
     def getSettings(self, *args, **kwargs):
         self._storeHints()
         return super().getSettings(self, *args, **kwargs)
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.scene,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def pairwise(iterable):

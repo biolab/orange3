@@ -23,6 +23,7 @@ import Orange.data
 import Orange.projection
 import Orange.distance
 import Orange.misc
+from Orange.widgets.io import FileFormats
 
 
 def torgerson(distances, n_components=2):
@@ -136,6 +137,8 @@ class OWMDS(widget.OWWidget):
     spread_equal_points = settings.Setting(False)
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
+
+    want_graph = True
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -332,6 +335,7 @@ class OWMDS(widget.OWWidget):
             self.plot.getViewBox().setCursor(QtGui.QCursor(cur))
 
         group.triggered[QtGui.QAction].connect(activate_tool)
+        self.graphButton.clicked.connect(self.save_graph)
 
         self._initialize()
 
@@ -949,6 +953,13 @@ class OWMDS(widget.OWWidget):
             self._selection_mask = numpy.zeros(len(self.data), dtype=bool)
 
         self._selection_mask[indices] = True
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.plot.plotItem,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def colors(data, variable, palette=None):

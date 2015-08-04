@@ -348,3 +348,14 @@ class TestInstance(unittest.TestCase):
         inst2[-3] = "Bar"
         self.assertFalse(inst == inst2)
 
+    def test_instance_id(self):
+        domain = self.create_domain(["x"])
+        vals = [42]
+
+        inst = Instance(domain, vals, id=42)
+        self.assertEqual(inst.id, 42)
+
+        inst2 = Instance(domain, vals)
+        inst3 = Instance(domain, vals)
+
+        self.assertNotEqual(inst2.id, inst3.id)

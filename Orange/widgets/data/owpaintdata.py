@@ -25,6 +25,7 @@ import Orange.data
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.io import FileFormats
 
 
 def indices_to_mask(indices, size):
@@ -806,6 +807,8 @@ class OWPaintData(widget.OWWidget):
     brushRadius = Setting(75)
     density = Setting(7)
 
+    want_graph = True
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -967,6 +970,7 @@ class OWPaintData(widget.OWWidget):
         # enable brush tool
         self.toolActions.actions()[0].setChecked(True)
         self.set_current_tool(self.TOOLS[0][2])
+        self.graphButton.clicked.connect(self.save_graph)
 
     def add_new_class_label(self):
 
@@ -1174,6 +1178,13 @@ class OWPaintData(widget.OWWidget):
 
     def onDeleteWidget(self):
         self.plot.clear()
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.plotview.plotItem,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 def test():

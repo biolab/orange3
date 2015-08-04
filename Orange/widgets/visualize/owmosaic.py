@@ -23,6 +23,7 @@ from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, DefaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
+from Orange.widgets.io import FileFormats
 
 
 PEARSON = 0
@@ -122,6 +123,8 @@ class OWMosaicDisplay(OWWidget):
     _apriori_pen_color = QColor(255, 255, 255, 128)
     _box_size = 5
     _cellspace = 4
+
+    want_graph = True
 
     def __init__(self, parent=None):
         super().__init__(self, parent)
@@ -245,7 +248,7 @@ class OWMosaicDisplay(OWWidget):
         self.selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
 
         gui.rubber(self.controlArea)
-
+        self.graphButton.clicked.connect(self.save_graph)
 
     def permutationListToggle(self):
         if self.exploreAttrPermutations:
@@ -1107,6 +1110,13 @@ class OWMosaicDisplay(OWWidget):
                     self.attributeList.insertItem(i + 2, self.attributeList.item(i).text())
                     self.attributeList.item(i + 2).setSelected(True)
                     self.attributeList.takeItem(i)
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.canvas,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 class OWCanvasText(QGraphicsTextItem):

@@ -28,6 +28,7 @@ from Orange.clustering.hierarchical import \
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
+from Orange.widgets.io import FileFormats
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -665,6 +666,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     cluster_name = settings.Setting("Cluster")
     autocommit = settings.Setting(True)
 
+    want_graph = True
+
     #: Cluster variable domain role
     AttributeRole, ClassRole, MetaRole = 0, 1, 2
 
@@ -850,6 +853,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.top_axis.line.valueChanged.connect(self._axis_slider_changed)
         self.dendrogram.geometryChanged.connect(self._dendrogram_geom_changed)
         self._set_cut_line_visible(self.selection_method == 1)
+        self.graphButton.clicked.connect(self.save_graph)
 
     def set_distances(self, matrix):
         self.error(0)
@@ -1199,6 +1203,13 @@ class OWHierarchicalClustering(widget.OWWidget):
         # dendrogram view.
         self.selection_method = 0
         self._selection_method_changed()
+
+    def save_graph(self):
+        from Orange.widgets.data.owsave import OWSave
+
+        save_img = OWSave(parent=self, data=self.scene,
+                          file_formats=FileFormats.img_writers)
+        save_img.exec_()
 
 
 class GraphicsSimpleTextList(QGraphicsWidget):

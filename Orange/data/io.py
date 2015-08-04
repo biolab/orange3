@@ -9,7 +9,6 @@ import numpy as np
 from scipy import sparse
 # We are not loading openpyxl here since it takes some time
 
-from Orange.data import _io
 from Orange.data import Domain
 from Orange.data.variable import *
 
@@ -20,6 +19,8 @@ class FileFormats:
     names = {}
     writers = {}
     readers = {}
+    img_writers = {}
+    graph_writers = {}
 
     @classmethod
     def register(cls, name, extension):
@@ -31,7 +32,12 @@ class FileFormats:
                 cls.writers[extension] = format
             if hasattr(format, "read_file"):
                 cls.readers[extension] = format
+            if hasattr(format, "write_image"):
+                cls.img_writers[extension] = format
+            if hasattr(format, "write_graph"):
+                cls.graph_writers[extension] = format
             return format
+
         return f
 
 
@@ -92,7 +98,7 @@ class TabDelimFormat:
             is_class = "class" in flag
             is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
             is_weight = "w" in flag or "weight" in flag \
-                or tpe in ["w", "weight"]
+                        or tpe in ["w", "weight"]
 
             attrs = [f.split("=", 1) for f in flag if "=" in f]
 
@@ -108,7 +114,7 @@ class TabDelimFormat:
             elif tpe in ["w", "weight"]:
                 var = None
             elif tpe in ["d", "discrete"]:
-                var = DiscreteVariable() # no name to bypass caching
+                var = DiscreteVariable()  # no name to bypass caching
                 var.name = name
                 var.fix_order = True
             elif tpe in ["s", "string"]:
@@ -217,6 +223,7 @@ class TabDelimFormat:
 
     def _read_file(self, file, cls=None):
         from ..data import Table
+
         if cls is None:
             cls = Table
         domain = self.read_header(file)
@@ -288,6 +295,9 @@ class TabDelimFormat:
                 f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
         f.close()
 
+    def write(self, filename, data):
+        self.write_file(filename, data)
+
 
 @FileFormats.register("Comma-separated file", ".csv")
 class TxtFormat:
@@ -318,6 +328,7 @@ class TxtFormat:
 
     def read_file(self, filename, cls=None):
         from ..data import Table
+
         if cls is None:
             cls = Table
         with open(filename, "rt") as file:
@@ -348,21 +359,27 @@ class TxtFormat:
 
                 writer.writerow([type(v).__name__.replace("Variable", "").lower()
                                  for v in all_vars])  # write variable types
-                writer.writerow(flags) # write flags
-            for ex in data: # write examples
+                writer.writerow(flags)  # write flags
+            for ex in data:  # write examples
                 writer.writerow(ex)
 
     @classmethod
     def write_file(cls, filename, data):
         cls.csv_saver(filename, data, ',')
 
+    def write(self, filename, data):
+        self.write_file(filename, data)
+
 
 @FileFormats.register("Basket file", ".basket")
 class BasketFormat:
     @classmethod
     def read_file(cls, filename, storage_class=None):
+        from Orange.data import _io
+
         if storage_class is None:
             from ..data import Table as storage_class
+
         def constr_vars(inds):
             if inds:
                 return [ContinuousVariable(x.decode("utf-8")) for _, x in
@@ -394,8 +411,9 @@ class ExcelFormat:
 
     def open_workbook(self, f):
         from openpyxl import load_workbook
+
         if isinstance(f, str) and ":" in f[2:]:
-            f, sheet = f.rsplit(":",1)
+            f, sheet = f.rsplit(":", 1)
         else:
             sheet = None
         wb = load_workbook(f, use_iterators=True,
@@ -417,9 +435,9 @@ class ExcelFormat:
         if not (all(tpe in ("", "c", "d", "s", "continuous", "discrete",
                             "string", "w", "weight") or " " in tpe
                     for tpe in types) and
-                all(flg in ("", "i", "ignore", "m", "meta", "w", "weight",
-                            "b", "basket", "class") or "=" in flg
-                    for flg in flags)):
+                    all(flg in ("", "i", "ignore", "m", "meta", "w", "weight",
+                                "b", "basket", "class") or "=" in flg
+                        for flg in flags)):
             return False
         attributes = []
         class_vars = []
@@ -489,8 +507,9 @@ class ExcelFormat:
 
     def read_header_1(self, worksheet):
         import openpyxl.cell.cell
+
         if worksheet.get_highest_column() < 2 or \
-                worksheet.get_highest_row() < 2:
+                        worksheet.get_highest_row() < 2:
             return False
         cols = self.n_columns
         names = [cell.value.strip() if cell.value is not None else ""
@@ -560,8 +579,8 @@ class ExcelFormat:
 
     def read_header(self, worksheet):
         domain = self.read_header_3(worksheet) or \
-            self.read_header_0(worksheet) or \
-            self.read_header_1(worksheet)
+                 self.read_header_0(worksheet) or \
+                 self.read_header_1(worksheet)
         if domain is False:
             raise ValueError("Invalid header")
         return domain
@@ -633,6 +652,7 @@ class ExcelFormat:
 
     def read_file(self, file, cls=None):
         from Orange.data import Table
+
         if cls is None:
             cls = Table
         worksheet = self.open_workbook(file)
@@ -658,3 +678,19 @@ class PickleFormat:
         with open(filename, "wb") as f:
             pickle.dump(table, f)
 
+    def write(self, filename, table):
+        self.write_file(filename, table)
+
+
+@FileFormats.register("Dot Tree File", ".dot")
+class DotFormat:
+    @classmethod
+    def write_graph(cls, filename, graph):
+        from sklearn import tree
+
+        tree.export_graphviz(graph, out_file=filename)
+
+    def write(self, filename, tree):
+        if type(tree) == dict:
+            tree = tree['tree']
+        self.write_graph(filename, tree)

@@ -63,7 +63,11 @@ if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
         zip_safe=False,  # the package can run out of an .egg file
         include_package_data=True,
         test_suite='Orange.tests.test_suite',
-        install_requires=INSTALL_REQUIRES
+        install_requires=INSTALL_REQUIRES,
+        entry_points={
+            "orange.canvas.help": (
+                "html-index = Orange.widgets:WIDGET_HELP_PATH",)
+        }
     )
 else:
     extra_setuptools_args = dict()
