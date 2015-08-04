@@ -26,6 +26,37 @@ Development
 
     development/widget
 
+Widgets
+=======
+
+.. toctree::
+   :maxdepth: 1
+
+   widgets/data/file
+   widgets/data/save
+   widgets/data/datainfo
+   widgets/data/datatable
+   widgets/data/selectcolumns
+   widgets/data/selectrows
+   widgets/data/datasampler
+   widgets/data/discretize
+   widgets/data/continuize
+   widgets/data/concatenate
+   widgets/data/paintdata
+   widgets/data/pythonscript
+   widgets/data/featureconstructor
+   widgets/data/editdomain
+
+   widgets/visualize/boxplot
+   widgets/visualize/distributions
+   widgets/visualize/heat-map
+   widgets/visualize/scatterplot
+   widgets/visualize/venn-diagram
+
+   widgets/classify/naivebayes
+   widgets/classify/logisticregression
+
+
 Indices and tables
 ==================
 

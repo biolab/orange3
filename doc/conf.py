@@ -39,7 +39,8 @@ autodoc_member_order = "bysource"
 templates_path = ['templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = [".rst", ".md"]
+source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
