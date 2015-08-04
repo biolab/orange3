@@ -32,18 +32,25 @@ Groups are data clusters set by the user through *separate by* function in the w
 more labels (usually timepoint, replicates, IDs, etc.). Widget outputs distance matrix that can be fed into
 **Distance Map** and **Hierarchical Clustering** widgets.
 
-![Distances Widget](images/Distances-stamped.png)
+![Distances Widget](images/ExpressionProfileDistances3-stamped.png)
 
-1. Choose which distances to measure, between rows or columns.
-2. Choose the *Distance Metric*:
+1. Information on the input data.
+2. Separate the experiments by labels (normally timepoint, replicates, data name, etc.).
+3. Sort the experiments by lables.
+4. Choose the *Distance Measure*:
+    - [**Pearson**](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient) (linear correlation between the values, remapped as a distance in a [0, 1] interval)
     - [**Euclidean**](https://en.wikipedia.org/wiki/Euclidean_distance) ("straight line", distance between two points)
     - [**Spearman**](https://en.wikipedia.org/wiki/Spearman's_rank_correlation_coefficient) (linear correlation between the rank of the values, remapped as a distance in a [0, 1] interval)
-    - [**Pearson**](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient) (linear correlation between the values, remapped as a distance in a [0, 1] interval)
-3. Tick '*Apply on any change*' to automatically commit changes to other widgets. Alternatively, press '*Apply*'.
+5. If *Auto commit is on*, the widget will automatically apply changes to the output. Alternatively click *Commit*.
 
 Example
 -------
 
-for instance to **Distance Map** to visualize distances, **Hierarchical Clustering** to cluster the attributes.
+**Expression Profile Distances** widget is used to calculate distances between gene expression values
+sorted by labels. We chose 8 experiments measuring gene expression levels on *Dictyostelium discoideum* at
+different timepoints. In the **Expression Profile Distances** widget we separated the data by timepoint
+and sorted them by replicates. We can see the grouping immediately in the *Groups* box on the right. Then we
+fed the results to **Distance Map** and **Hierarchical Clustering** to visualize the distances 
+and cluster the attributes.
 
-<img src="images/DistancesExample.png" alt="image" width="600">
+<img src="images/ExpressionProfileDistances-Example.png" alt="image" width="600">
