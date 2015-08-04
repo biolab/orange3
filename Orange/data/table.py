@@ -462,6 +462,13 @@ class Table(MutableSequence, Storage):
             obj.ids = np.array(range(cls._next_instance_id, cls._next_instance_id + obj.X.shape[0]))
             cls._next_instance_id += obj.X.shape[0]
 
+    @classmethod
+    def new_id(cls):
+        with cls._next_instance_lock:
+            id = cls._next_instance_id
+            cls._next_instance_id += 1
+            return id
+
     FILE_FORMATS = {
         ".tab": (io.TabDelimFormat, )
     }
