@@ -221,7 +221,7 @@ class DiscretizeEditor(BaseEditor):
         resolved = dict(defaults)
         # update only keys in defaults?
         resolved.update(params)
-        return preprocess.Discretize(method(**params))
+        return preprocess.Discretize(method(**params), remove_const=False)
 
 
 class ContinuizeEditor(BaseEditor):
