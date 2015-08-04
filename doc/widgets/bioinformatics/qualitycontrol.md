@@ -1,45 +1,48 @@
 Quality Control
 ===============
 
-![Databases widget icon]
+![Quality Control widget icon](icons/quality-control.png)
 
-Updates local systems biology databases, like gene ontologies,
-annotations, gene names, protein interaction networks, and similar.
+Computes and plots distances between experiments or replicates.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   (None)
+- **Data**
 
-Outputs:
+  Data set.
 
-:   -   (None)
+**Outputs**:
+
+- (None)
 
 Description
 -----------
 
-Many widgets in Orange bioinformatics add-on rely on information on
-genes, gene sets, pathways, and alike. This information is stored on
-your local computer when the widget requires them for the first time.
-The corresponding data comes from different web resources, and is either
-preprocessed and then stored on Orange server, or accessed directly from
-a dedicated web site.
+**Quality Control** measures distances between experiments and replicates for a selected label. The widget visualizes
+distances by selected label. Experiment that lies the farthest from the initial black line is an outlier and
+should be additionally inspected for anomalies. In the screenshot below we see that among the four chosen
+experiments of NC4 strain of *Dictyostelium discoideum*, the one with ID D37_M1_R6 is the most distant to other experiments
+(is an outlier).
 
-Orange does not change the data on your local computer, and with time
-this becomes different to the newest version of the online data sets.
-Databases widget can update the data on your local machine, and can also
-be used to manage (remove or add) any locally stored systems biology
-data set.
+![image](images/QualityControl2-stamped.png)
 
-![Databases widget]
+1. Information on the input.
+2. Separate experiments by label.
+3. Sort experiments by label.
+4. Compute distances by:
+   - [**Pearson correlation**](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient)
+   - [**Euclidean distances**](https://en.wikipedia.org/wiki/Euclidean_distance)
+   - [**Spearman correlation**](https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient)
 
-To get a more detailed information on the particular database that
-requires an update, hover on its Update button.
+Example
+-------
 
-![Databases widget][1]
+**Quality Control** widget gives us feedback on the quality of our data and can be connected to any widget with
+data output. In the example below we fed four experiments of AX4 strain of *Dictyostelium discoideum* from **PIPAx**
+widget into **Quality Control** and separated them by timepoint label. In this case experiment performed at
+tp 12 is an outlier as it has the greatest distance to other experiments.
 
-  [Databases widget icon]: ../../orangecontrib/bio/widgets/icons/Databases.svg
-  [Databases widget]: images/databases-stamped.png
-  [1]: images/databases-hover.png
+![image](images/QualityControl-Example.png)
