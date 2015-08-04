@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Instance:
-    def __init__(self, domain, data=None):
+    def __init__(self, domain, data=None, id=None):
         """
         Construct a new data instance.
 
@@ -14,6 +14,8 @@ class Instance:
         :type domain: Orange.data.Domain
         :param data: instance's values
         :type data: Orange.data.Instance or a sequence of values
+        :param id: instance id
+        :type id: hashable value
         """
         if data is None and isinstance(domain, Instance):
             data = domain
@@ -34,6 +36,12 @@ class Instance:
         else:
             self._x, self._y, self._metas = domain.convert(data)
             self._weight = 1
+
+        if id is not None:
+            self.id = id
+        else:
+            from Orange.data import Table
+            self.id = Table.new_id()
 
     @property
     def domain(self):
