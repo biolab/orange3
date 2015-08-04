@@ -827,6 +827,15 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue(e[2] < 4.5 or e[2] > 5.1)
         self.assertEqual(sum((col < 4.5) + (col > 5.1)), len(x))
 
+        f.oper = filter.FilterContinuous.IsDefined
+        f.ref = f.max = None
+        x = filter.Values([f])(d)
+        self.assertEqual(len(x), len(d))
+
+        d[:30, v.petal_length] = Unknown
+        x = filter.Values([f])(d)
+        self.assertEqual(len(x), len(d) - 30)
+
     def test_filter_value_continuous_args(self):
         d = data.Table("iris")
         col = d.X[:, 2]
@@ -894,6 +903,13 @@ class TableTestCase(unittest.TestCase):
 
         f = filter.FilterDiscrete(d.domain.class_var, values=[2, data.Table])
         self.assertRaises(TypeError, d._filter_values, f)
+
+        v = d.columns
+        f = filter.FilterDiscrete(v.hair, values=None)
+        self.assertEqual(len(filter.Values([f])(d)), len(d))
+
+        d[:5, v.hair] = Unknown
+        self.assertEqual(len(filter.Values([f])(d)), len(d) - 5)
 
     def test_valueFilter_string_case_sens(self):
         d = data.Table("zoo")
