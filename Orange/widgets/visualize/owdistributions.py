@@ -468,31 +468,6 @@ def rect_kernel_curve(dist, cont=None, bandwidth=None):
     return edges, curve
 
 
-def sum_rect_curve(Xa, Ya, Xb, Yb):
-    """
-    Sum two curves (i.e. stack one over the other).
-    """
-    X = numpy.r_[Xa, Xb]
-    Y = numpy.r_[Ya, 0, Yb, 0]
-    assert X.shape == Y.shape
-
-    dY = numpy.r_[Y[0], numpy.diff(Y)]
-    sort_ind = numpy.argsort(X)
-    X = X[sort_ind]
-    dY = dY[sort_ind]
-
-    unique, uniq_index = numpy.unique(X, return_index=True)
-    spans = numpy.diff(numpy.r_[uniq_index, len(X)])
-    dY = [numpy.sum(dY[start:start + span])
-          for start, span in zip(uniq_index, spans)]
-    dY = numpy.array(dY)
-    assert dY.shape[0] == unique.shape[0]
-    # NOTE: The final cumulative sum element is 0
-    Y = numpy.cumsum(dY)[:-1]
-
-    return unique, Y
-
-
 def ash_curve(dist, cont=None, bandwidth=None, m=3):
     dist = numpy.asarray(dist)
     X, W = dist
