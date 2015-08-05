@@ -280,7 +280,7 @@ class OWDistributions(widget.OWWidget):
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
-            weights = numpy.array([numpy.sum(W) for _, W in cont])
+            weights = numpy.array([numpy.sum(W) for v, W in cont if len(v)])
             weights /= numpy.sum(weights)
 
             curve_est = self._density_estimator()
