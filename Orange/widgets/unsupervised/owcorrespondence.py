@@ -103,7 +103,8 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.data = data
 
         if data is not None:
-            self.varlist[:] = data.domain.variables
+            self.varlist[:] = [var for var in data.domain.variables
+                               if var.is_discrete]
             self.selected_var_indices = [0, 1][:len(self.varlist)]
             self.component_x, self.component_y = 0, 1
             self.openContext(data)
