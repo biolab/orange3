@@ -65,7 +65,8 @@ class BinSql:
         self.points = points
 
     def __call__(self):
-        return 'bin(%s, ARRAY%s)' % (self.var.to_sql(), str(self.points))
+        return 'width_bucket(%s, ARRAY%s::double precision[])' % (
+            self.var.to_sql(), str(self.points))
 
 
 class SingleValueSql:
