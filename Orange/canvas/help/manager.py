@@ -248,6 +248,9 @@ def create_intersphinx_provider(entry_point):
     except KeyError:
         pass
 
+    if is_develop_egg(dist):
+        replacements["DEVELOP_ROOT"] = dist.location
+
     formatter = string.Formatter()
 
     for target, inventory in locations:
@@ -259,35 +262,30 @@ def create_intersphinx_provider(entry_point):
         fields = list(map(itemgetter(1), format_iter))
         fields = [_f for _f in set(fields) if _f]
 
-        if "DEVELOP_ROOT" in fields:
-            if not is_develop_egg(dist):
-                # skip the location
-                continue
-            target = formatter.format(target, DEVELOP_ROOT=dist.location)
+        if not set(fields) <= set(replacements.keys()):
+            log.warning("Invalid replacement fields %s",
+                        set(fields) - set(replacements.keys()))
+            continue
 
-            if os.path.exists(target) and \
-                    os.path.exists(os.path.join(target, "objects.inv")):
-                return provider.IntersphinxHelpProvider(
-                    inventory=os.path.join(target, "objects.inv"),
-                    target=target
-                )
-            else:
-                continue
-        elif fields:
-            try:
-                target = formatter.format(target, **replacements)
-                if inventory:
-                    inventory = formatter.format(inventory, **replacements)
-            except KeyError:
-                log.exception("Error while formating intersphinx mapping "
-                              "'%s', '%s'." % (target, inventory))
-                continue
+        target = formatter.format(target, **replacements)
+        if inventory:
+            inventory = formatter.format(inventory, **replacements)
 
-            return provider.IntersphinxHelpProvider(
-                target=target, inventory=inventory)
+        targeturl = QUrl(target)
+        if targeturl.isValid() and not targeturl.scheme():
+            targeturl.setScheme("file")
+            islocal = targeturl.isLocalFile()
         else:
-            return provider.IntersphinxHelpProvider(
-                target=target, inventory=inventory)
+            islocal = False
+
+        if islocal and os.path.exists(os.path.join(target, "objects.inv")):
+            inventory = QUrl.fromLocalFile(os.path.join(target, "objects.inv"))
+        elif not islocal:
+            if not inventory:
+                inventory = QUrl(target).resolved(QUrl("objects.inv"))
+
+        return provider.IntersphinxHelpProvider(
+            inventory=inventory, target=target)
 
     return None
 
@@ -379,7 +377,7 @@ def create_html_inventory_provider(entry_point):
                 continue
 
             return provider.HtmlIndexProvider(
-                inventroy=target, xpathquery=xpathquery)
+                inventory=target, xpathquery=xpathquery)
         else:
             return provider.HtmlIndexProvider(
                 inventory=target, xpathquery=xpathquery)
