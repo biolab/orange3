@@ -42,6 +42,10 @@ Preprocessing is crucial for achieving better-quality analysis results. The **Pr
 Example
 -------
 
-In the example below we have used *Iris* data set and preprocessed the data. We selected 3 most relevant features by Gini index, centered them by mean and scaled by span. In the **Distributions** widgets we see that the unprocessed data range from 0 to 7, while the preprocessed data range from -1 to 1, since they're scaled by span. In the *Data Table* we also see the three most relevant features according to the Gini index, which are *sepal length*, *petal width* and *sepal length* in our case.
+In the example below we have used *adult* data set and preprocessed the data. We continuized
+discrete values (age, education and marital status...) as *one attribute per value*, we imputed missing values
+(replacing ? with average values), selected 10 most relevant attributes by *Information gain*, 
+and centered them by mean and scaled by span. We can observe the changes in a **Data Table** and compare it
+to the non-processed data.
 
-<img src="images/preprocess-example.png" alt="image" width="400">
+<img src="images/Preprocess-Example1.png" alt="image" width="400">
