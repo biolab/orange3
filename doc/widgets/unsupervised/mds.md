@@ -32,10 +32,12 @@ Signals
 Description
 -----------
 
-[Multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling) is a technique which finds a low-dimensional
+[Multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling) is a 
+technique which finds a low-dimensional
 (in our case a two-dimensional) projection of points, where it tries to
 fit distances between points as well as possible. The perfect
-fit is typically impossible to obtain since the data is high-dimensional or the distances are not Euclidean.
+fit is typically impossible to obtain since the data is high-dimensional or the distances are not 
+[Euclidean](https://en.wikipedia.org/wiki/Euclidean_distance).
 
 In the input the widget needs either a data set or a matrix of distances.
 When visualizing distances between rows, you can also adjust the color of
@@ -81,9 +83,9 @@ recommend reading this widget's description as well.
 Example
 -------
 
-The above graphs were drawn using the following simple schema. Using the *Distances* widget we input the distance matrix
-into the *MDS* widget, where we see the *Iris* data displayed in a 2-dimensional plane. We can see the appended coordinates
-in the *Data Table* widget.
+The above graphs were drawn using the following simple schema. Using the **Distances** widget we input the distance matrix
+into the **MDS** widget, where we see the *Iris* data displayed in a 2-dimensional plane. We can see the appended coordinates
+in the **Data Table** widget.
 
 <img src="images/MDS-Example.png" alt="image" width="600">
 
