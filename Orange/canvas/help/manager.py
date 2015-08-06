@@ -236,10 +236,7 @@ def get_dist_meta(dist):
         return {}
 
 
-def create_intersphinx_provider(entry_point):
-    locations = entry_point.load()
-    dist = entry_point.dist
-
+def _replacements_for_dist(dist):
     replacements = {"PROJECT_NAME": dist.project_name,
                     "PROJECT_NAME_LOWER": dist.project_name.lower(),
                     "PROJECT_VERSION": dist.version}
@@ -251,6 +248,13 @@ def create_intersphinx_provider(entry_point):
     if is_develop_egg(dist):
         replacements["DEVELOP_ROOT"] = dist.location
 
+    return replacements
+
+
+def create_intersphinx_provider(entry_point):
+    locations = entry_point.load()
+    replacements = _replacements_for_dist(entry_point.dist)
+
     formatter = string.Formatter()
 
     for target, inventory in locations:
@@ -259,8 +263,8 @@ def create_intersphinx_provider(entry_point):
         if inventory:
             format_iter = itertools.chain(format_iter,
                                           formatter.parse(inventory))
-        fields = list(map(itemgetter(1), format_iter))
-        fields = [_f for _f in set(fields) if _f]
+        # Names used in both target and inventory
+        fields = {name for _, name, _, _ in format_iter if name}
 
         if not set(fields) <= set(replacements.keys()):
             log.warning("Invalid replacement fields %s",
@@ -272,115 +276,103 @@ def create_intersphinx_provider(entry_point):
             inventory = formatter.format(inventory, **replacements)
 
         targeturl = QUrl(target)
-        if targeturl.isValid() and not targeturl.scheme():
-            targeturl.setScheme("file")
-            islocal = targeturl.isLocalFile()
-        else:
-            islocal = False
+        if not targeturl.isValid():
+            continue
 
-        if islocal and os.path.exists(os.path.join(target, "objects.inv")):
-            inventory = QUrl.fromLocalFile(os.path.join(target, "objects.inv"))
-        elif not islocal:
+        islocal = targeturl.scheme() == "" or targeturl.scheme() == "file"
+
+        if islocal:
+            if os.path.exists(os.path.join(target, "objects.inv")):
+                inventory = QUrl.fromLocalFile(
+                    os.path.join(target, "objects.inv"))
+            else:
+                log.info("Local doc root '%s' does not exist.", target)
+                continue
+
+        else:
             if not inventory:
+                # Default inventory location
                 inventory = QUrl(target).resolved(QUrl("objects.inv"))
 
-        return provider.IntersphinxHelpProvider(
-            inventory=inventory, target=target)
-
+        if inventory is not None:
+            return provider.IntersphinxHelpProvider(
+                inventory=inventory, target=target)
     return None
 
 
 def create_html_provider(entry_point):
     locations = entry_point.load()
-    dist = entry_point.dist
-    replacements = {"PROJECT_NAME": dist.project_name,
-                    "PROJECT_NAME_LOWER": dist.project_name.lower(),
-                    "PROJECT_VERSION": dist.version}
-    try:
-        replacements["URL"] = get_dist_url(dist)
-    except KeyError:
-        pass
+    replacements = _replacements_for_dist(entry_point.dist)
 
     formatter = string.Formatter()
 
     for target in locations:
         # Extract all format fields
         format_iter = formatter.parse(target)
-        fields = list(map(itemgetter(1), format_iter))
-        fields = [_f for _f in set(fields) if _f]
+        fields = {name for _, name, _, _ in format_iter if name}
 
-        if "DEVELOP_ROOT" in fields:
-            if not is_develop_egg(dist):
-                # skip the location
-                continue
-            target = formatter.format(target, DEVELOP_ROOT=dist.location)
-            if os.path.exists(target):
-                return provider.SimpleHelpProvider(
-                    baseurl=QUrl.fromLocalFile(target))
-            else:
-                continue
-        elif fields:
-            try:
-                target = formatter.format(target, **replacements)
-            except KeyError:
-                log.exception("Error while formating doc root mapping",
-                              target)
+        if not set(fields) <= set(replacements.keys()):
+            log.warning("Invalid replacement fields %s",
+                        set(fields) - set(replacements.keys()))
+            continue
+        target = formatter.format(target, **replacements)
+
+        targeturl = QUrl(target)
+        if not targeturl.isValid():
+            continue
+
+        islocal = targeturl.scheme() == "" or targeturl.scheme() == "file"
+
+        if islocal:
+            if not os.path.exists(target):
+                log.info("Local doc root '%s' does not exist.", target)
                 continue
 
-            return provider.SimpleHelpProvider(baseurl=target)
-        else:
-            return provider.SimpleHelpProvider(baseurl=target)
+        if target:
+            return provider.SimpleHelpProvider(
+                baseurl=QUrl.fromLocalFile(target))
 
     return None
 
 
 def create_html_inventory_provider(entry_point):
     locations = entry_point.load()
-    dist = entry_point.dist
-    replacements = {"PROJECT_NAME": dist.project_name,
-                    "PROJECT_NAME_LOWER": dist.project_name.lower(),
-                    "PROJECT_VERSION": dist.version}
-    try:
-        replacements["URL"] = get_dist_url(dist)
-    except KeyError:
-        pass
+    replacements = _replacements_for_dist(entry_point.dist)
 
     formatter = string.Formatter()
 
     for target, xpathquery in locations:
-
         if isinstance(target, (tuple, list)):
             pass
 
         # Extract all format fields
         format_iter = formatter.parse(target)
-        fields = list(map(itemgetter(1), format_iter))
-        fields = [_f for _f in set(fields) if _f]
+        fields = {name for _, name, _, _ in format_iter if name}
 
-        if "DEVELOP_ROOT" in fields:
-            if not is_develop_egg(dist):
-                # skip the location
-                continue
-            target = formatter.format(target, DEVELOP_ROOT=dist.location)
-            if os.path.exists(target):
-                return provider.HtmlIndexProvider(
-                    inventory=QUrl.fromLocalFile(target),
-                    xpathquery=xpathquery)
-            else:
-                continue
-        elif fields:
-            try:
-                target = formatter.format(target, **replacements)
-            except KeyError:
-                log.exception("Error while formating doc root mapping",
-                              target)
+        if not set(fields) <= set(replacements.keys()):
+            log.warning("Invalid replacement fields %s",
+                        set(fields) - set(replacements.keys()))
+            continue
+
+        target = formatter.format(target, **replacements)
+
+        targeturl = QUrl(target)
+        if not targeturl.isValid():
+            continue
+
+        islocal = targeturl.scheme() == "" or targeturl.scheme() == "file"
+
+        if islocal:
+            if not os.path.exists(target):
+                log.info("Local doc root '%s' does not exist", target)
                 continue
 
-            return provider.HtmlIndexProvider(
-                inventory=target, xpathquery=xpathquery)
+            inventory = QUrl.fromLocalFile(target)
         else:
-            return provider.HtmlIndexProvider(
-                inventory=target, xpathquery=xpathquery)
+            inventory = QUrl(target)
+
+        return provider.HtmlIndexProvider(
+            inventory=inventory, xpathquery=xpathquery)
 
     return None
 
