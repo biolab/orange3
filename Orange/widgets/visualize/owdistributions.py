@@ -283,12 +283,13 @@ class OWDistributions(widget.OWWidget):
 
             curve_est = self._density_estimator()
             weights, cols, cvar_values, curves = [], [], [], []
-            for i, (v, W) in enumerate(cont):
+            for i, dist in enumerate(cont):
+                v, W = dist
                 if len(v):
                     weights.append(numpy.sum(W))
                     cols.append(colors[i])
                     cvar_values.append(cvar.values[i])
-                    curves.append(curve_est([v, W], cont))
+                    curves.append(curve_est(dist, cont))
             weights = numpy.array(weights)
             weights /= numpy.sum(weights)
             colors = cols
