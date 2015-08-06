@@ -274,8 +274,9 @@ class OWDistributions(widget.OWWidget):
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
 
-        palette = colorpalette.ColorPaletteGenerator(len(cvar.values))
-        colors = [palette[i] for i in range(len(cvar.values))]
+        cvar_values = cvar.values
+        palette = colorpalette.ColorPaletteGenerator(len(cvar_values))
+        colors = [palette[i] for i in range(len(cvar_values))]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
@@ -286,6 +287,9 @@ class OWDistributions(widget.OWWidget):
             curve_est = self._density_estimator()
             curves = [curve_est(dist, cont) for dist in cont if len(dist[0])]
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
+
+            colors = [col for (col, dist) in zip(colors, cont) if len(dist[0])]
+            cvar_values = [val for (val, dist) in zip(cvar_values, cont) if len(dist[0])]
 
             cum_curves = [curves[0]]
             for X, Y in curves[1:]:
@@ -326,7 +330,7 @@ class OWDistributions(widget.OWWidget):
                 item = DistributionBarItem(geom, dist / dsum, colors)
                 self.plot.addItem(item)
 
-        for color, name in zip(colors, cvar.values):
+        for color, name in zip(colors, cvar_values):
             self._legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
                 escape(name)
