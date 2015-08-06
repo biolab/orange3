@@ -52,6 +52,7 @@ that are over- or under-represented in a particular gene set.
 ![image](images/GObrowser5-stamped.png)
 
 **INPUT**<br>
+
 1. Information on the input data set. *Ontology/Annotation Info* reports on the current status of updates in GO database.
 2. Select organism for the GO term analysis. The widget automatically matches the organism of the input data.
 3. Use this attribute to extract gene names for the input data. You can use attribute names as gene names and adjust the naming in the *Gene matcher settings* box. Gene matcher has the following four options:
@@ -76,6 +77,7 @@ that are over- or under-represented in a particular gene set.
 ![image](images/GObrowser-tabs-stamped.png)
 
 **FILTER**<br>
+
 1. *Filter GO Term Nodes* by:
    - **Genes**: filter by number of genes mapped to a term
      - # is a minimal number of genes mapped to a term
@@ -107,6 +109,7 @@ that are over- or under-represented in a particular gene set.
    - NR: Not Recorded (Obsolete)
 
 **SELECT**<br>
+
 4. *Annotated genes* outputs genes that are:
    - **Directly or Indirectly** annotated (direct and inherited annotations)
    - **Directly** annotated (inherited annotations won't be in the output)
