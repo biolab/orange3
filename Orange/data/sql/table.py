@@ -597,11 +597,11 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def sample_percentage(self, percentage, no_cache=False):
-        return self._sample('blocksample_percent', percentage,
+        return self._sample('system', percentage,
                             no_cache=no_cache)
 
     def sample_time(self, time_in_seconds, no_cache=False):
-        return self._sample('blocksample_time', int(time_in_seconds * 1000),
+        return self._sample('system_time', int(time_in_seconds * 1000),
                             no_cache=no_cache)
 
     def _sample(self, method, parameter, no_cache=False):
@@ -614,11 +614,11 @@ class SqlTable(table.Table):
             str(parameter).replace('.', '_').replace('-', '_'))
         create = False
         try:
-            with self._execute_sql_query("SELECT * FROM %s LIMIT 0" % self.quote_identifier(sample_table)) as cur:
+            with self._execute_sql_query("SELECT * FROM %s LIMIT 0;" % self.quote_identifier(sample_table)) as cur:
                 cur.fetchall()
 
             if no_cache:
-                with self._execute_sql_query("DROP TABLE %s" % self.quote_identifier(sample_table)) as cur:
+                with self._execute_sql_query("DROP TABLE %s;" % self.quote_identifier(sample_table)) as cur:
                     cur.fetchall()
                 create = True
 
@@ -626,12 +626,14 @@ class SqlTable(table.Table):
             create = True
 
         if create:
-            with self._execute_sql_query('SELECT %s(%s, %s, %s)' % (
-                    method,
-                    self.quote_string(sample_table),
-                    self.quote_string(self.unquote_identifier(self.table_name)),
-                    parameter)) as cur:
-                cur.fetchall()
+            with self._execute_sql_query((
+                    "CREATE TABLE {target} AS "
+                    "SELECT * FROM {source} TABLESAMPLE {method}({param});"
+                    ).format(target=self.quote_identifier(sample_table),
+                         source=self.table_name,
+                         method=method,
+                         param=parameter)):
+                pass
 
         sampled_table = self.copy()
         sampled_table.table_name = self.quote_identifier(sample_table)
