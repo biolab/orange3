@@ -281,15 +281,18 @@ class OWDistributions(widget.OWWidget):
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
-            weights = numpy.array([numpy.sum(W) for v, W in cont if len(v)])
-            weights /= numpy.sum(weights)
-
             curve_est = self._density_estimator()
-            curves = [curve_est(dist, cont) for dist in cont if len(dist[0])]
+            weights, cols, cvar_values, curves = [], [], [], []
+            for i, (v, W) in enumerate(cont):
+                if len(v):
+                    weights.append(numpy.sum(W))
+                    cols.append(colors[i])
+                    cvar_values.append(cvar.values[i])
+                    curves.append(curve_est([v, W], cont))
+            weights = numpy.array(weights)
+            weights /= numpy.sum(weights)
+            colors = cols
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
-
-            colors = [col for (col, dist) in zip(colors, cont) if len(dist[0])]
-            cvar_values = [val for (val, dist) in zip(cvar_values, cont) if len(dist[0])]
 
             cum_curves = [curves[0]]
             for X, Y in curves[1:]:
