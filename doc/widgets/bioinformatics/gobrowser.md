@@ -87,3 +87,31 @@ that are over- or under-represented in a particular gene set.
    - [**Binomial**](https://en.wikipedia.org/wiki/Binomial_distribution): use binomial distribution
    - [**Hypergeometric**](https://en.wikipedia.org/wiki/Hypergeometric_distribution): use hypergeometric distribution
 3. **Evidence codes in annotation** show how the annotation to a particular term is supported:
+   - EXP: Inferred from Experiment
+   - IDA: Inferred from Direct Assay
+   - IPI: Inferred from Physical Interaction
+   - IMP: Inferred from Mutant Phenotype
+   - IGI: Inferred from Genetic Interaction
+   - IEP: Inferred from Expression Pattern
+   - ISS: Inferred from Sequence Similarity
+   - ISA: Inferred from Sequence Alignment
+   - ISO: Inferred from Sequence Orthology
+   - ISM: Inferred from Sequence Model
+   - IGC: Inferred from Genomic Context
+   - RCA: Reviewed Computational Analysis
+   - TAS: Traceable Author Statement
+   - NAS: Non-Traceable Author Statement
+   - IC: Inferred by Curator
+   - ND: No biological data available
+   - IEA: Inferred from Electronic Annotation
+   - NR: Not Recorded (Obsolete)
+
+**SELECT**
+4. *Annotated genes* outputs genes that are:
+   - **Directly or Indirectly** annotated (direct and inherited annotations)
+   - **Directly** annotated (inherited annotations won't be in the output)
+5. *Output*:
+   - **All selected genes**: outputs genes annotated to all selected GO terms
+   - **Term-specific genes**: outputs genes that appear in only one of selected GO terms
+   - **Common term genes**: outputs genes common to all selected GO terms
+   - **Add GO Term as class**: adds GO terms as class attribute
