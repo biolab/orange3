@@ -217,10 +217,14 @@ class OWDistributions(widget.OWWidget):
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
             edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST)
+            edges = edges + (edges[1] - edges[0])/2
+            edges = edges[:-1]
             item = pg.PlotCurveItem()
-            item.setData(edges, curve, antialias=True, stepMode=True,
+            pen = QtGui.QPen(QtGui.QBrush(Qt.white), 3)
+            pen.setCosmetic(True)
+            item.setData(edges, curve, antialias=True, stepMode=False,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray),
-                         pen=QtGui.QColor(Qt.white))
+                         pen=pen)
             self.plot.addItem(item)
         else:
             bottomaxis.setTicks([list(enumerate(var.values))])
