@@ -300,12 +300,14 @@ class OWDistributions(widget.OWWidget):
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
 
             for (X, Y), color in reversed(list(zip(curves, colors))):
+                X = X + (X[1] - X[0])/2
+                X = X[:-1]
                 item = pg.PlotCurveItem()
-                pen = QtGui.QPen(QtGui.QBrush(color), 5)
+                pen = QtGui.QPen(QtGui.QBrush(color), 3)
                 pen.setCosmetic(True)
                 color = QtGui.QColor(color)
-                color.setAlphaF(0.1)
-                item.setData(X, Y, antialias=True, stepMode=True,
+                color.setAlphaF(0.2)
+                item.setData(X, Y, antialias=True, stepMode=False,
                              fillLevel=0, brush=QtGui.QBrush(color),
                              pen=pen)
                 self.plot.addItem(item)
