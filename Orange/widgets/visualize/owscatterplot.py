@@ -86,10 +86,10 @@ class OWScatterPlot(OWWidget):
                           "sendSelectedValue": True, "valueType": str}
         box = gui.widgetBox(self.controlArea, "Axis Data")
         self.cb_attr_x = gui.comboBox(box, self, "attr_x", label="Axis x:",
-                                      callback=self.major_graph_update,
+                                      callback=self.update_attr,
                                       **common_options)
         self.cb_attr_y = gui.comboBox(box, self, "attr_y", label="Axis y:",
-                                      callback=self.major_graph_update,
+                                      callback=self.update_attr,
                                       **common_options)
         gui.valueSlider(
             box, self, value='graph.jitter_size',  label='Jittering: ',
@@ -103,7 +103,7 @@ class OWScatterPlot(OWWidget):
         box = gui.widgetBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
             box, self, "graph.attr_color", label="Color:",
-            emptyString="(Same color)", callback=self.graph.update_colors,
+            emptyString="(Same color)", callback=self.update_colors,
             **common_options)
         self.cb_attr_label = gui.comboBox(
             box, self, "graph.attr_label", label="Label:",
@@ -126,6 +126,12 @@ class OWScatterPlot(OWWidget):
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(box, self, value='graph.tooltip_shows_all',
                      label='Show all data on mouse hover')
+        self.cb_class_density = gui.checkBox(
+            box, self, value='graph.class_density', label='Show class density',
+            callback=self.major_graph_update)
+        self.resolution_slider = gui.hSlider(
+            box, self, value='graph.resolution', minValue=2, maxValue=200, step=10,
+            label='Resolution', callback=self.major_graph_update)
 
         self.zoom_select_toolbar = g.zoom_select_toolbar(
             gui.widgetBox(self.controlArea, "Zoom/Select"), nomargin=True,
@@ -300,6 +306,16 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_size = ""
         self.graph.attr_label = ""
 
+    def update_attr(self):
+        self.major_graph_update()
+        self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.resolution_slider.setEnabled(self.graph.can_draw_density())
+
+    def update_colors(self):
+        self.graph.update_colors()
+        self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.resolution_slider.setEnabled(self.graph.can_draw_density())
+
     def major_graph_update(self, attributes=None, inside_colors=None, **args):
         self.update_graph(attributes, inside_colors, **args)
 
@@ -390,7 +406,7 @@ def test_main():
     data = Orange.data.Table(r"iris.tab")
     ow.set_data(data)
     ow.set_subset_data(data[:30])
-    #ow.setData(orange.ExampleTable("wine.tab"))
+    #ow.set_data(Orange.data.Table("wine.tab"))
     ow.handleNewSignals()
     a.exec()
     #save settings
