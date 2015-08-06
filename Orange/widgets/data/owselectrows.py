@@ -268,20 +268,20 @@ class OWSelectRows(widget.OWWidget):
         self.data = data
         self.remove_all_rows()
         self.add_button.setDisabled(data is None)
-        domain = data and data.domain
         self.add_all_button.setDisabled(
             data is None or
-            len(domain.variables) + len(domain.metas) > 100)
+            len(data.domain.variables) + len(data.domain.metas) > 100)
         if not data:
             self.commit()
             return
         self.conditions = []
         self.openContext(data)
-        if not self.conditions and len(domain.variables):
+        if not self.conditions and len(data.domain.variables):
             self.add_row()
         self.update_info(data, self.data_in_variables)
         for attr, cond_type, cond_value in self.conditions:
-            attrs = [a.name for a in domain.variables + domain.metas]
+            attrs = [a.name for a in
+                     data.domain.variables + data.domain.metas]
             if attr in attrs:
                 self.add_row(attrs.index(attr), cond_type, cond_value)
         self.unconditional_commit()

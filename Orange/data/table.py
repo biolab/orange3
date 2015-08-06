@@ -1062,9 +1062,9 @@ class Table(MutableSequence, Storage):
                     or isinstance(f, data_filter.FilterContinuous) and \
                                     f.oper == f.IsDefined:
                 if conjunction:
-                    sel *= np.isnan(col)
+                    sel *= ~np.isnan(col)
                 else:
-                    sel += np.isnan(col)
+                    sel += ~np.isnan(col)
             elif isinstance(f, data_filter.FilterString) and \
                             f.oper == f.IsDefined:
                 if conjunction:

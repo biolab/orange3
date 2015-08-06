@@ -309,6 +309,7 @@ class OWMDS(widget.OWWidget):
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
         self.plot.getPlotItem().hideAxis("bottom")
         self.plot.getPlotItem().hideAxis("left")
+        self.plot.getPlotItem().hideButtons()
         self.mainArea.layout().addWidget(self.plot)
 
         self.selection_tool = PlotSelectionTool(
@@ -549,7 +550,7 @@ class OWMDS(widget.OWWidget):
 
         .. note::
             The `loop` must not explicitly yield control flow to the event
-            loop (i.e. call `QApplication.proceesEvents`)
+            loop (i.e. call `QApplication.processEvents`)
 
         """
         if self.__update_loop is not None:
@@ -585,6 +586,7 @@ class OWMDS(widget.OWWidget):
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
             self._update_plot()
+            self.plot.autoRange()
             # schedule next update
             QtGui.QApplication.postEvent(
                 self, QEvent(QEvent.User), Qt.LowEventPriority)
@@ -607,6 +609,8 @@ class OWMDS(widget.OWWidget):
         return super().customEvent(event)
 
     def __invalidate_embedding(self):
+        # reset/invalidate the MDS embedding, to the default initialization
+        # (Random or PCA), restarting the optimization if necessary.
         if self.embedding is None:
             return
         state = self.__state
@@ -621,6 +625,7 @@ class OWMDS(widget.OWWidget):
             self.embedding = numpy.random.rand(len(X), 2)
 
         self._update_plot()
+        self.plot.autoRange()
 
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
@@ -645,6 +650,7 @@ class OWMDS(widget.OWWidget):
             self.start()
 
         self._update_plot()
+        self.plot.autoRange()
         self.unconditional_commit()
 
     def _invalidate_output(self):
@@ -842,7 +848,6 @@ class OWMDS(widget.OWWidget):
             antialias=True
         )
         self.plot.addItem(item)
-        self.plot.getPlotItem().autoRange()
 
         if self._label_data is not None:
             for (x, y), text_item in zip(self.embedding, self._label_data):
