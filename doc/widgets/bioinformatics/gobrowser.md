@@ -46,12 +46,12 @@ classifiying genes and gene products to terms organized in a graph structure cal
 It takes data on gene expression as an input (it is best to input statistically significant genes,
 for example for the **Differential Expression** widget) and returns a ranked list of GO terms with
 p-values. The user can select a GO term in the list and output the data on the selected or unselected
-genes, data on unknown genes and an enrichment report. This is a great tool to find biological processes
+genes, data on unknown genes and an enrichment report. This is a great tool for finding biological processes
 that are over- or under-represented in a particular gene set.
 
 ![image](images/GObrowser5-stamped.png)
 
-**INPUT**
+**INPUT**<br>
 1. Information on the input data set. *Ontology/Annotation Info* reports on the current status of updates in GO database.
 2. Select organism for the GO term analysis. The widget automatically matches the organism of the input data.
 3. Use this attribute to extract gene names for the input data. You can use attribute names as gene names and adjust the naming in the *Gene matcher settings* box. Gene matcher has the following four options:
@@ -75,7 +75,7 @@ that are over- or under-represented in a particular gene set.
 
 ![image](images/GObrowser-tabs-stamped.png)
 
-**FILTER**
+**FILTER**<br>
 1. *Filter GO Term Nodes* by:
    - **Genes**: filter by number of genes mapped to a term
      - # is a minimal number of genes mapped to a term
@@ -106,7 +106,7 @@ that are over- or under-represented in a particular gene set.
    - IEA: Inferred from Electronic Annotation
    - NR: Not Recorded (Obsolete)
 
-**SELECT**
+**SELECT**<br>
 4. *Annotated genes* outputs genes that are:
    - **Directly or Indirectly** annotated (direct and inherited annotations)
    - **Directly** annotated (inherited annotations won't be in the output)
