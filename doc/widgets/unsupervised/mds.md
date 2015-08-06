@@ -60,6 +60,7 @@ the sum of forces acting on it.
     - **Refresh**: Set how often you want to refresh the visualization. It can be at *Every iteration*, *Every 5/10/25/50  
       steps* or never (*None*). Setting a lower refresh interval makes the animation more visually appealing, but can be slow
       if the number of points is high.
+    - *Spread points at zero-distances* allows you to jitter instances with zero distances for better visualization.
 2. Defines how the points are visualized. These options are available only when visalizing distances between rows (selected 
    in the **Distances** widget).
     - **Color**: Color of points by attribute (gray for continuous, colored for discrete).
@@ -69,12 +70,17 @@ the sum of forces acting on it.
     - **Label**: Discrete attributes can serve as a label.
     - **Symbol size**: Adjust the size of the dots.
     - **Symbol opacity**: Adjust the transparency level of the dots.
+    - **Show similar pairs**: Adjust the strength of network lines.
 3. Adjust the graph with *Zoom/Select*. Arrow enables you to select data instances.
    The magnifying glass enables zooming, which can be also done by scrolling in and out. Hand allows you to move the graph 
    around. Rectangle readjusts the graph proportionally.
-4. Append the coordinates of each point to the data set. They can be appended either
-   as normal attributes (*As attributes*) or as meta attributes (*As metas*). Select *Do not append* to omit this function.
+4. Select the desired output:
+    - **Original features only** (input data set)
+    - **Coordinates only** (MDS coordinates)
+    - **Coordinates as features** (input data set + MDS coordinates as regular attributes)
+    - **Coordinates as meta attributes** (input data set + MDS coordinates as meta attributes)<br>
    Sending the instances can be automatic if *Send after any change* is checked. Alternatively click *Send data*.
+5. **Save Graph** allows you to save the graph either as .svg or .png file to your device.
 
 The MDS graph performs many of the functions of the visualizations
 widget. It is in many respects similar to the **Scatter Plot**, so we
