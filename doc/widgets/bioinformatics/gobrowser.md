@@ -131,4 +131,4 @@ as this term has a high enrichment rate. To learn more about which genes
 are annotated to this GO term we view it in the **Data Table**, where we see all the genes
 participating in this process listed.
 
-<img src="" alt="image" width="600">
+<img src="images/GObrowser-Example.png" alt="image" width="600">
