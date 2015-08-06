@@ -65,3 +65,14 @@ general imputation technique for all attributes.
 the default.
 5. All changes are committed immediately if *Commit on any change* is checked.
 Otherwise, *Commit* needs to be clicked to apply any new settings.
+
+Example
+-------
+
+To see how **Impute** widget works, we selected a very simple data set *fruits-and-veggies* containing
+attributes for color, growth, price per kilo, whether they're sweet and/or sour and type. We see there
+are some missing values present (marked with ?). To correct this we use the **Impute** widget and
+select the desired imputation method (we went with *As a distinct value*).
+In another **Data Table** we see how the questionmarks turned into distinct values ("green", "tree", 0 or 1...).
+
+<img src="images/Impute-Example.png" alt="image" width="600">
