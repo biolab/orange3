@@ -118,3 +118,17 @@ that are over- or under-represented in a particular gene set.
    - **Term-specific genes**: outputs genes that appear in only one of selected GO terms
    - **Common term genes**: outputs genes common to all selected GO terms
    - **Add GO Term as class**: adds GO terms as class attribute
+
+Example
+-------
+
+In the example below we have used **GEO Data Sets** widget, in which we have selected 
+*Caffeine effects: time course and dose response* data set, and connected it to a **Differential
+Analysis**. Differential analysis allows us to select genes with the highest statistical relevance
+(we used ANOVA scoring) and feed them to **GO Browser**. This widget lists four biological
+processes for our selected genes. Say we are interested in finding out more about *monosaccharide transport*
+as this term has a high enrichment rate. To learn more about which genes
+are annotated to this GO term we view it in the **Data Table**, where we see all the genes
+participating in this process listed.
+
+<img src="" alt="image" width="600">
