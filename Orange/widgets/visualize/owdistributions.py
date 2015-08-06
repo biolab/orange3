@@ -22,8 +22,6 @@ from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 from Orange.widgets.io import FileFormats
 
-from sklearn.neighbors import KernelDensity
-
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
 
@@ -89,12 +87,10 @@ class OWDistributions(widget.OWWidget):
     #: Selected group variable
     groupvar_idx = settings.ContextSetting(0)
 
-    Hist, ASH, Kernel, KSP = 0, 1, 2, 3
-    #: Continuous variable density estimation method
-    cont_est_type = settings.Setting(ASH)
     relative_freq = settings.Setting(False)
 
     want_graph = True
+    ASH_HIST = 50
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -118,13 +114,6 @@ class OWDistributions(widget.OWWidget):
         self.varview.selectionModel().selectionChanged.connect(
             self._on_variable_idx_changed)
         varbox.layout().addWidget(self.varview)
-        gui.separator(varbox, 8, 8)
-        gui.comboBox(
-            varbox, self, "cont_est_type", label="Show continuous variables by",
-            valueType=int,
-            items=["Histograms", "Average shifted histograms",
-                   "Kernel density estimators", "Gaussian kernel density estimators"],
-            callback=self._on_cont_est_type_changed)
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
@@ -215,21 +204,6 @@ class OWDistributions(widget.OWWidget):
             self.display_distribution()
         self.plot.autoRange()
 
-
-    def _density_estimator(self):
-        if self.cont_est_type == OWDistributions.Hist:
-            def hist(dist, cont):
-                h, edges = numpy.histogram(dist[0, :], bins=10,
-                                           weights=dist[1, :])
-                return edges, h
-            return hist
-        elif self.cont_est_type == OWDistributions.ASH:
-            return lambda dist, cont: ash_curve(dist, cont, m=5)
-        elif self.cont_est_type == OWDistributions.Kernel:
-            return rect_kernel_curve
-        elif self.cont_est_type == OWDistributions.KSP:
-            return scipy_kernel_curve
-
     def display_distribution(self):
         dist = self.distributions
         var = self.var
@@ -242,8 +216,7 @@ class OWDistributions(widget.OWWidget):
         self.set_left_axis_name()
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
-            curve_est = self._density_estimator()
-            edges, curve = curve_est(dist, None)
+            edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST)
             item = pg.PlotCurveItem()
             item.setData(edges, curve, antialias=True, stepMode=True,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray),
@@ -285,7 +258,6 @@ class OWDistributions(widget.OWWidget):
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
-            curve_est = self._density_estimator()
             weights, cols, cvar_values, curves = [], [], [], []
             for i, dist in enumerate(cont):
                 v, W = dist
@@ -293,7 +265,7 @@ class OWDistributions(widget.OWWidget):
                     weights.append(numpy.sum(W))
                     cols.append(colors[i])
                     cvar_values.append(cvar.values[i])
-                    curves.append(curve_est(dist, cont))
+                    curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST))
             weights = numpy.array(weights)
             weights /= numpy.sum(weights)
             colors = cols
@@ -341,9 +313,7 @@ class OWDistributions(widget.OWWidget):
 
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
-        if (self.var and
-            self.var.is_continuous and
-            self.cont_est_type != OWDistributions.Hist):
+        if self.var and self.var.is_continuous:
             set_label("Density")
         else:
             set_label(["Frequency", "Relative frequency"]
@@ -359,11 +329,6 @@ class OWDistributions(widget.OWWidget):
 
     def _on_groupvar_idx_changed(self):
         self._setup()
-
-    def _on_cont_est_type_changed(self):
-        self.set_left_axis_name()
-        if self.data is not None:
-            self._setup()
 
     def onDeleteWidget(self):
         self.plot.clear()
@@ -395,79 +360,6 @@ def dist_sum(D1, D2):
     W = numpy.array(W)
     assert W.shape[0] == unique.shape[0]
     return unique, W
-
-
-#from sklearn.grid_search import GridSearchCV
-
-def scipy_kernel_curve(dist, cont=None):
-    bw = silverman(dist, cont)
-    kd = KernelDensity(bandwidth=bw)
-    vals = numpy.repeat(dist[0, :], dist[1, :].astype(int)) #FIXME here it would be better to just get values
-                                                            #what to do with weights?
-    kd.fit(vals[:, numpy.newaxis])
-    minx = min(dist[0, :])
-    maxx = max(dist[0, :])
-    minx, maxx = minx - (maxx-minx)*0.2, maxx + (maxx-minx)*0.2
-    xvals = numpy.linspace(minx, maxx, 1000)
-    yvals = kd.score_samples(xvals[:, numpy.newaxis])
-    xvals = numpy.append(xvals, maxx + xvals[1] - xvals[0])
-    xvals = xvals - 0.5*(xvals[1] - xvals[0])
-    return xvals, numpy.exp(yvals)
-
-
-def silverman(dist, cont=None):
-    # Silverman's rule of thumb.
-
-    def IQR(a, weights=None):
-        """Interquartile range of `a`."""
-        q1, q3 = weighted_quantiles(a, [0.25, 0.75], weights=weights)
-        return q3 - q1
-
-    if cont is not None:
-        bX, bW = cont.values, numpy.sum(cont.counts, axis=0)
-    else:
-        bX, bW =  dist[0, :], dist[1, :]
-    A = weighted_std(bX, weights=bW)
-    iqr = IQR(bX, weights=bW)
-    if iqr > 0:
-        A = min(A, iqr / 1.34)
-
-    return 0.9 * A * (bX.size ** -0.2)
-
-
-def rect_kernel_curve(dist, cont=None, bandwidth=None):
-    """
-    Return a rectangular kernel density curve for `dist`.
-
-    `dist` must not be empty.
-    """
-    # XXX: what to do with unknowns
-    #      Distribute uniformly between the all points?
-
-    dist = numpy.array(dist)
-    if dist.size == 0:
-        raise ValueError("'dist' is empty.")
-
-    X = dist[0, :]
-    W = dist[1, :]
-
-    if bandwidth is None:
-        bandwidth = silverman(dist, cont)
-
-    bottom_edges = X - bandwidth / 2
-    top_edges = X + bandwidth / 2
-
-    edges = numpy.hstack((bottom_edges, top_edges))
-    edge_weights = numpy.hstack((W, -W))
-
-    sort_ind = numpy.argsort(edges)
-    edges = edges[sort_ind]
-    edge_weights = edge_weights[sort_ind]
-
-    # NOTE: The final cumulative sum element is 0
-    curve = numpy.cumsum(edge_weights)[:-1]
-    curve /= numpy.sum(W) * bandwidth
-    return edges, curve
 
 
 def ash_curve(dist, cont=None, bandwidth=None, m=3):
@@ -611,7 +503,6 @@ def main(argv=None):
         filename = argv[1]
     else:
         filename = "heart_disease"
-        filename = "adult"
     data = Orange.data.Table(filename)
     w.set_data(data)
     w.handleNewSignals()
