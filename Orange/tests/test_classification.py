@@ -6,6 +6,7 @@ import unittest
 
 import numpy as np
 import traceback
+from Orange.base import SklLearner
 
 import Orange.classification
 from Orange.classification import (
@@ -187,6 +188,11 @@ class SklTest(unittest.TestCase):
         table = Table("housing")
         learner = LogisticRegressionLearner()
         self.assertRaises(ValueError, learner, table)
+
+    def test_params(self):
+        learner = SklLearner()
+        self.assertIsInstance(learner.params, dict)
+
 
 class LearnerAccessibility(unittest.TestCase):
     def all_learners(self):
