@@ -631,7 +631,10 @@ class OWHeatMap(widget.OWWidget):
                 grid.addItem(item, Row0 + i * 2, Col0)
 
             if rowitem.cluster:
-                dendrogram = DendrogramWidget(parent=widget)
+                dendrogram = DendrogramWidget(
+                    parent=widget,
+                    selectionMode=DendrogramWidget.NoSelection,
+                    hoverHighlightEnabled=True)
                 dendrogram.set_root(rowitem.cluster)
                 dendrogram.setMaximumWidth(100)
                 dendrogram.setMinimumWidth(100)
@@ -639,6 +642,11 @@ class OWHeatMap(widget.OWWidget):
                 # should define the  row's vertical size).
                 dendrogram.setSizePolicy(
                     QSizePolicy.Expanding, QSizePolicy.Ignored)
+                dendrogram.itemClicked.connect(
+                    lambda item, partindex=i:
+                        self.__select_by_cluster(item, partindex)
+                )
+
                 grid.addItem(dendrogram, Row0 + i * 2 + 1, DendrogramColumn)
                 sort_i.append(np.array(leaf_indices(rowitem.cluster)))
                 row_dendrograms[i] = dendrogram
@@ -653,7 +661,10 @@ class OWHeatMap(widget.OWWidget):
 
             if colitem.cluster:
                 dendrogram = DendrogramWidget(
-                    parent=widget, orientation=DendrogramWidget.Top)
+                    parent=widget,
+                    orientation=DendrogramWidget.Top,
+                    selectionMode=DendrogramWidget.NoSelection,
+                    hoverHighlightEnabled=False)
 
                 dendrogram.set_root(colitem.cluster)
                 dendrogram.setMaximumHeight(100)
@@ -1013,6 +1024,20 @@ class OWHeatMap(widget.OWWidget):
             layout.setRowMaximumHeight(BottomLabelsRow, -1 if show_top else 0)
 
             self.__fixup_grid_layout()
+
+    def __select_by_cluster(self, item, dendrogramindex):
+        # User clicked on a dendrogram node.
+        # Select all rows corresponding to the cluster item.
+        node = item.node
+        try:
+            hm = self.heatmap_widget_grid[dendrogramindex][0]
+        except IndexError:
+            pass
+        else:
+            self.selection_manager.selection_add(
+                node.value.first, node.value.last - 1, hm,
+                clear=not (QtGui.QApplication.keyboardModifiers() &
+                           Qt.ControlModifier))
 
     def __update_selection_geometry(self):
         for item in self.selection_rects:
