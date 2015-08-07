@@ -17,6 +17,10 @@ if [ ! "$(ls $POSTGRES)" ]; then
     ./configure --prefix $POSTGRES
     make install
 
+	# Build and install tsm_system_time extension
+	cd contrib/tsm_system_time
+	make install
+
     # Add our PostgreSQL to PATH, so extensions know where to install.
     export PATH=$POSTGRES/bin:$PATH
 
@@ -33,6 +37,7 @@ $POSTGRES/bin/postgres -D $TRAVIS_BUILD_DIR/db -p 12345 &
 sleep 1
 $POSTGRES/bin/createdb -p 12345 test
 $POSTGRES/bin/psql test -c 'CREATE EXTENSION quantile;' -p 12345
+$POSTGRES/bin/psql test -c 'CREATE EXTENSION tsm_system_time;' -p 12345
 
 pip install psycopg2
 export ORANGE_TEST_DB_URI=postgres://localhost:12345/test
