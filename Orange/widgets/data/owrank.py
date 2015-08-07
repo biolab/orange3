@@ -279,6 +279,7 @@ class OWRank(widget.OWWidget):
                                          len(attrs)), None)
             self.updateScores()
 
+        self.selectMethodChanged()
         self.unconditional_commit()
 
     def updateScores(self, measuresMask=None):
