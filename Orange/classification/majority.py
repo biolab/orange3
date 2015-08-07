@@ -33,8 +33,11 @@ class MajorityLearner(Learner):
         else:
             dist.fill(1 / len(dist))
 
-        if all(np.array(dist) == dist[0]):
-            unif_maj = int(sha1(bytes(dat.Y)).hexdigest(), 16) % len(dist)
+        probs = np.array(dist)
+        ties = np.flatnonzero(probs == probs.max())
+        if len(ties) > 1:
+            random_idx = int(sha1(bytes(dat.Y)).hexdigest(), 16) % len(ties)
+            unif_maj = ties[random_idx]
         else:
             unif_maj = None
         return ConstantModel(dist=dist, unif_maj=unif_maj)
