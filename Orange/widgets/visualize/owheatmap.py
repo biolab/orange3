@@ -308,7 +308,7 @@ class OWHeatMap(widget.OWWidget):
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)
         self.selection_manager = HeatmapSelectionManager(self)
         self.selection_manager.selection_changed.connect(
-            self.on_selection_changed)
+            self.__update_selection_geometry)
         self.selection_manager.selection_finished.connect(
             self.on_selection_finished)
         self.heatmap_scene.set_selection_manager(self.selection_manager)
@@ -592,7 +592,9 @@ class OWHeatMap(widget.OWWidget):
 
         self.heatmap_scene.clear()
         # The top level container widget
-        widget = QtGui.QGraphicsWidget()
+        widget = GraphicsWidget()
+        widget.layoutDidActivate.connect(self.__update_selection_geometry)
+
         grid = QtGui.QGraphicsGridLayout()
         grid.setSpacing(self.SpaceX)
         self.heatmap_scene.addItem(widget)
@@ -832,10 +834,9 @@ class OWHeatMap(widget.OWWidget):
 
     def __fixup_grid_layout(self):
         self.__update_margins()
-        self.on_selection_changed()
-
         rect = self.scene.widget.geometry()
         self.heatmap_scene.setSceneRect(rect)
+        self.__update_selection_geometry()
 
     def __aspect_mode_changed(self):
         if self.keep_aspect:
@@ -1013,7 +1014,7 @@ class OWHeatMap(widget.OWWidget):
 
             self.__fixup_grid_layout()
 
-    def on_selection_changed(self):
+    def __update_selection_geometry(self):
         for item in self.selection_rects:
             item.setParentItem(None)
             self.heatmap_scene.removeItem(item)
@@ -1047,6 +1048,19 @@ class OWHeatMap(widget.OWWidget):
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
+
+class GraphicsWidget(QtGui.QGraphicsWidget):
+    """A graphics widget which can notify on relayout events.
+    """
+    #: The widget's layout has activated (i.e. did a relayout
+    #: of the widget's contents)
+    layoutDidActivate = Signal()
+
+    def event(self, event):
+        rval = super().event(event)
+        if event.type() == QEvent.LayoutRequest and self.layout() is not None:
+            self.layoutDidActivate.emit()
+        return rval
 
 QWIDGETSIZE_MAX = 16777215
 
@@ -1862,6 +1876,8 @@ def test_main(argv=sys.argv):
     ow.show()
     ow.raise_()
     app.exec_()
+    ow.set_dataset(None)
+    ow.handleNewSignals()
     ow.saveSettings()
     return 0
 
