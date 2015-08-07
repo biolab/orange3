@@ -211,6 +211,8 @@ class DendrogramWidget(QGraphicsWidget):
     #: Selection flags
     NoSelection, SingleSelection, ExtendedSelection = 0, 1, 2
 
+    #: Emitted when a user clicks on the cluster item.
+    itemClicked = Signal(ClusterGraphicsItem)
     selectionChanged = Signal()
     selectionEdited = Signal()
 
@@ -623,6 +625,7 @@ class DendrogramWidget(QGraphicsWidget):
 
                 if current_selection != self._selection:
                     self.selectionEdited.emit()
+                self.itemClicked.emit(obj)
                 event.accept()
                 return True
 
