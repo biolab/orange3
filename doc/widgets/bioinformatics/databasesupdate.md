@@ -1,5 +1,5 @@
-Databases
-=========
+Databases Update
+================
 
 ![Databases widget icon](icons/databases-update.png)
 
