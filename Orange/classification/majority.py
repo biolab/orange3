@@ -1,7 +1,7 @@
-from numpy import tile, array, zeros
 from hashlib import sha1
 
-from Orange import data
+import numpy as np
+
 from Orange.classification import Learner, Model
 from Orange.statistics import distribution
 
@@ -33,7 +33,7 @@ class MajorityLearner(Learner):
         else:
             dist.fill(1 / len(dist))
 
-        if all(array(dist) == dist[0]):
+        if all(np.array(dist) == dist[0]):
             unif_maj = int(sha1(bytes(dat.Y)).hexdigest(), 16) % len(dist)
         else:
             unif_maj = None
@@ -59,7 +59,7 @@ class ConstantModel(Model):
         :return: regression model that returns majority value
         :rtype: Orange.classification.Model
         """
-        self.dist = array(dist)
+        self.dist = np.array(dist)
         self.unif_maj = unif_maj
 
     def predict(self, X):
@@ -71,9 +71,9 @@ class ConstantModel(Model):
         :return: predicted value
         :rtype: vector of majority values
         """
-        probs = tile(self.dist, (len(X), 1))
+        probs = np.tile(self.dist, (len(X), 1))
         if self.unif_maj is not None:
-            value = tile(self.unif_maj, (len(X), ))
+            value = np.tile(self.unif_maj, (len(X), ))
             return value, probs
         return probs
 
