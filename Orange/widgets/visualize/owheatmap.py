@@ -1024,7 +1024,9 @@ class OWHeatMap(widget.OWWidget):
         rects = self.selection_manager.selection_rects
         for rect in rects:
             item = QtGui.QGraphicsRectItem(rect, None)
-            item.setPen(QPen(Qt.black, 2))
+            pen = QPen(Qt.black, 2)
+            pen.setCosmetic(True)
+            item.setPen(pen)
             self.heatmap_scene.addItem(item)
             self.selection_rects.append(item)
 
