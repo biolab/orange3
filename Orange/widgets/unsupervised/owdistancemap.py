@@ -229,11 +229,6 @@ class DistanceMapItem(pg.ImageItem):
             self.setToolTip("")
 
 
-class DendrogramWidget(DendrogramWidget):
-    def sceneEventFilter(self, recv, event):
-        return QGraphicsWidget.sceneEventFilter(self, recv, event)
-
-
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
     description = "Visualize a distance matrix."
@@ -331,12 +326,18 @@ class OWDistanceMap(widget.OWWidget):
         self.grid.addItem(self.viewbox, 1, 1)
 
         self.left_dendrogram = DendrogramWidget(
-            self.grid_widget, orientation=DendrogramWidget.Left)
+            self.grid_widget, orientation=DendrogramWidget.Left,
+            selectionMode=DendrogramWidget.NoSelection,
+            hoverHighlightEnabled=False
+        )
         self.left_dendrogram.setAcceptedMouseButtons(Qt.NoButton)
         self.left_dendrogram.setAcceptHoverEvents(False)
 
         self.top_dendrogram = DendrogramWidget(
-            self.grid_widget, orientation=DendrogramWidget.Top)
+            self.grid_widget, orientation=DendrogramWidget.Top,
+            selectionMode=DendrogramWidget.NoSelection,
+            hoverHighlightEnabled=False
+        )
         self.top_dendrogram.setAcceptedMouseButtons(Qt.NoButton)
         self.top_dendrogram.setAcceptHoverEvents(False)
 
