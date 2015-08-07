@@ -200,7 +200,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     """
     __wraps__ = None
     __returns__ = SklModel
-    _params = None
+    _params = {}
 
     name = 'skl learner'
     preprocessors = [Continuize(),
