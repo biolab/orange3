@@ -1,12 +1,4 @@
 from PyQt4.QtGui import QLayout
-
-from Orange.data import Table, Domain
-from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
-                                      LinearRegressionLearner, PolynomialLearner)
-from Orange.preprocess.preprocess import Preprocess
-from Orange.widgets import widget, settings, gui
-from Orange.widgets.utils import itemmodels
-
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtGui import QColor, QPen
@@ -14,6 +6,14 @@ from PyQt4.QtCore import QRectF
 
 import pyqtgraph as pg
 import numpy as np
+
+from Orange.data import Table, Domain
+from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
+                                      LinearRegressionLearner, PolynomialLearner)
+from Orange.regression import Learner
+from Orange.preprocess.preprocess import Preprocess
+from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils import itemmodels
 
 
 class OWUnivariateRegression(widget.OWWidget):
@@ -24,8 +24,8 @@ class OWUnivariateRegression(widget.OWWidget):
 
     inputs = [("Data", Table, "set_data", widget.Default),
               ("Preprocessor", Preprocess, "set_preprocessor"),
-              ("Learner", RidgeRegressionLearner, "set_learner")]
-    outputs = [("Learner", RidgeRegressionLearner),
+              ("Learner", Learner, "set_learner")]
+    outputs = [("Learner", Learner),
                ("Predictor", LinearModel)]
     
     learner_name = settings.Setting("Univariate Regression")
@@ -68,8 +68,6 @@ class OWUnivariateRegression(widget.OWWidget):
             self.controlArea, self, value='y_var_index', box='Target',
             callback=self.apply)
         self.comboBoxAttributesY.setModel(self.y_var_model)
-
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
         
         gui.rubber(self.controlArea)
         
@@ -100,30 +98,49 @@ class OWUnivariateRegression(widget.OWWidget):
 
         self.apply()
 
+    def clear(self):
+        self.data = None
+        self.clear_plot()
+        
+    def clear_plot(self):
+        if self.plot_item is not None:
+            self.plot_item.setParentItem(None)
+            self.plotview.removeItem(self.plot_item)
+            self.plot_item = None
+            
+        if self.scatterplot_item is not None:
+            self.scatterplot_item.setParentItem(None)
+            self.plotview.removeItem(self.scatterplot_item)
+            self.scatterplot_item = None
+        
+        self.plotview.clear()
+    
     def set_data(self, data):
+        self.clear()
         self.data = data
         if data is not None:
             cvars = [var for var in data.domain.variables if var.is_continuous]
+            class_cvars = [var for var in data.domain.class_vars if var.is_continuous]
+            
             self.x_var_model[:] = cvars
             self.y_var_model[:] = cvars
             
             nvars = len(cvars)
+            nclass = len(class_cvars)
             self.x_var_index = min(max(0, self.x_var_index), nvars - 1)
-            self.y_var_index = min(max(0, self.y_var_index), nvars - 1)
-            
-            self.apply()
+            if nclass > 0:
+                self.y_var_index = min(max(0, nvars-nclass), nvars - 1)
+            else:
+                self.y_var_index = min(max(0, nvars-1), nvars - 1)
 
     def set_preprocessor(self, preproc):
         if preproc is None:
             self.preprocessors = None
         else:
             self.preprocessors = (preproc,)
-        self.apply()
     
     def set_learner(self, learner):
         self.learner = learner
-        if learner is not None:
-            self.apply()
 
     def handleNewSignals(self):
         self.apply()
@@ -158,35 +175,16 @@ class OWUnivariateRegression(widget.OWWidget):
         self.plotview.replot()
     
     def apply(self):
-        args = {"preprocessors": self.preprocessors}
         learner = self.learner
         predictor = None
-        
-        if len(self.x_var_model) != 0:
-            self.x_label = self.x_var_model[self.x_var_index]
-            axis = self.plot.getAxis("bottom")
-            axis.setLabel(self.x_label)
-        
-        if len(self.y_var_model) != 0:
-            self.y_label = self.y_var_model[self.y_var_index]
-            axis = self.plot.getAxis("left")
-            axis.setLabel(self.y_label)
-        
+
         if self.data is not None:
             if self.learner is None:
-                learner = LinearRegressionLearner(**args)
+                learner = LinearRegressionLearner(preprocessors=self.preprocessors)
 
-            Y = self.data.Y
-            if len(self.data.Y.shape) == 1:
-                Y = self.data.Y.reshape(-1,1)
-            data = np.hstack([self.data.X, Y])
-            x = data[:,self.x_var_index]
-            y = data[:,self.y_var_index]
-
-            data_table = Table(x.reshape(-1,1), y)
-            attributes = self.data.domain[self.x_var_index]
-            class_var = self.data.domain[self.y_var_index]
-            data_table.domain = Domain([attributes], class_vars=[class_var])
+            attributes = self.x_var_model[self.x_var_index]
+            class_var = self.y_var_model[self.y_var_index]
+            data_table = Table(Domain([attributes], class_vars=[class_var]), self.data)
 
             degree = int(self.polynomialexpansion)
 
@@ -194,12 +192,24 @@ class OWUnivariateRegression(widget.OWWidget):
             learner.name = self.learner_name
             predictor = learner(data_table)
 
+            x = data_table.X.ravel()
+            y = data_table.Y.ravel()
             linspace = np.linspace(min(x), max(x), 1000).reshape(-1,1)
             values = predictor(linspace, predictor.Value)
 
             self.plot_scatter_points(x, y)
-            self.set_range(x, y)
+
             self.plot_regression_line(linspace.ravel(), values.ravel())
+
+            x_label = self.x_var_model[self.x_var_index]
+            axis = self.plot.getAxis("bottom")
+            axis.setLabel(x_label)
+            
+            y_label = self.y_var_model[self.y_var_index]
+            axis = self.plot.getAxis("left")
+            axis.setLabel(y_label)
+
+            self.set_range(x, y)
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)

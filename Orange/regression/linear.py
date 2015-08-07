@@ -83,7 +83,7 @@ class SGDRegressionLearner(SklLearner):
         self.params = vars()
 
     def fit(self, X, Y, W):
-        sk = skl_linear_model.SGDRegressor(**self.params)
+        sk = self.__wraps__(**self.params)
         clf = skl_pipeline.Pipeline(
             [('scaler', skl_preprocessing.StandardScaler()), ('sgd', sk)])
         clf.fit(X, Y.ravel())
@@ -100,15 +100,14 @@ class PolynomialLearner(SklLearner):
         self.learner = learner
     
     def fit(self, X, Y, W):
-        clf = skl_pipeline.make_pipeline(
-            skl_preprocessing.PolynomialFeatures(self.degree),
-            self.learner.__wraps__())
-        Y = Y.reshape(-1)
+        polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
+        X = polyfeatures.fit_transform(X)
+        clf = self.learner
         if W is None or not self.supports_weights:
-            clf.fit(X, Y)
+            model = clf.fit(X, Y, None)
         else:
-            clf.fit(X, Y, sample_weight=W.reshape(-1))
-        return LinearModel(clf)
+            model = clf.fit(X, Y, sample_weight=W.reshape(-1))
+        return PolynomialModel(model, polyfeatures)
 
 
 class LinearModel(Model):
@@ -129,3 +128,17 @@ class LinearModel(Model):
 
     def __str__(self):
         return 'LinearModel {}'.format(self.skmodel)
+
+class PolynomialModel(Model):
+    supports_multiclass = True
+
+    def __init__(self, skmodel, polyfeatures):
+        self.skmodel = skmodel
+        self.polyfeatures = polyfeatures
+
+    def predict(self, table):
+        table = self.polyfeatures.fit_transform(table)
+        return self.skmodel.predict(table)
+
+    def __str__(self):
+        return 'PolynomialModel {}'.format(self.skmodel)
