@@ -19,5 +19,5 @@ class SklLearnerRegression(SklLearner, LearnerRegression):
     pass
 
 
-class SklModelRegression(SklModel):
+class SklModelRegression(SklModel, ModelRegression):
     pass

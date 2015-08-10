@@ -21,7 +21,7 @@ class SklLearnerClassification(SklLearner, LearnerClassification):
     pass
 
 
-class SklModelClassification(SklModel):
+class SklModelClassification(SklModel, ModelClassification):
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
 
