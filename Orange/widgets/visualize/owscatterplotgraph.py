@@ -505,8 +505,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.valid_data = self.get_valid_list([index_x, index_y])
         x_data, y_data = self.get_xy_data_positions(
             attr_x, attr_y, self.valid_data)
-        x_data = x_data[self.valid_data]
-        y_data = y_data[self.valid_data]
         self.n_points = len(x_data)
 
         min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
