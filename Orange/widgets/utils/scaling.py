@@ -1,9 +1,10 @@
 from datetime import time
-import sys
 import random
-import numpy as np
-import Orange
+import sys
 
+import numpy as np
+
+import Orange
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.datacaching import getCached, setCached
