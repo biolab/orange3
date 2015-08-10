@@ -1,54 +1,37 @@
 Outliers
 ========
 
-![image]
+![image](icons/outliers.png)
 
-Simple outlier detection by comparing distances between examples.
+Simple outlier detection by comparing distances between instances.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   
+- **Data**
 
-        Examples (ExampleTable)
+  Data set.
 
-        :   Attribute-valued data set.
+- **Distances**
 
-    -   
+  Distance matrix.
 
-        Distance matrix
+**Outputs**:
 
-        :   A matrix of example distances.
+- **Outliers**
 
-Outputs:
+  Data set containing instances scored as outliers.
 
-:   -   
+- **Inliers**
 
-        Outliers (ExampleTable)
-
-        :   Attribute-valued data set containing only examples that
-            are outliers. Meta attribute Z-score is added.
-
-    -   
-
-        Inliers (ExampleTable)
-
-        :   Attribute-valued data set containing only examples that are
-            not outliers. Meta attribute Z-score is added.
-
-    -   
-
-        Examples with Z-scores (ExampleTable)
-
-        :   Attribute-valued data set containing examples from input
-            data with corresponding Z-scores as meta attribute.
+  Data set containing instances not scored as outliers.
 
 Description
 -----------
 
-Outliers widget first computes distances between each pair of examples
+**Outliers** widget first computes distances between each pair of instances
 in input Examples. Average distance between example to its nearest
 examples is valued by a Z-score. Z-scores higher than zero denote an
 example that is more distant to other examples than average. Input can
@@ -73,7 +56,3 @@ directly from the File widget, and the output Examples with Z-score to
 the Data Table widget.
 
 ![Schema with Outliers]
-
-  [image]: ../../../../Orange/OrangeWidgets/Data/icons/Outliers.svg
-  [Outliers]: images/Outliers.gif
-  [Schema with Outliers]: images/Outliers-Example1.gif
