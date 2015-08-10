@@ -76,7 +76,7 @@ class OWSieveDiagram(OWWidget):
         gui.separator(self.controlArea)
 
         box2 = gui.widgetBox(self.controlArea, box = "Visual settings")
-        gui.checkBox(box2, self, "showLines", "Show lines", callback = self.updateGraph)
+        gui.checkBox(box2, self, "showLines", "Show squares (observed frequency)", callback = self.updateGraph)
         hbox = gui.widgetBox(box2, orientation = "horizontal")
         gui.checkBox(hbox, self, "showCases", "Show data instances...", callback = self.updateGraph)
         gui.checkBox(hbox, self, "showInColor", "...in color", callback = self.updateGraph)
