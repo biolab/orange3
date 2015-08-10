@@ -310,9 +310,6 @@ class ScaleScatterPlotData(ScaleData):
         """
         xattr_index = self.attribute_name_index[xattr]
         yattr_index = self.attribute_name_index[yattr]
-
-        xattr_index = self.attribute_name_index[xattr]
-        yattr_index = self.attribute_name_index[yattr]
         if filter_valid is True:
             filter_valid = self.get_valid_list([xattr_index, yattr_index])
         if isinstance(filter_valid, np.ndarray):
