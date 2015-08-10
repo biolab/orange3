@@ -152,7 +152,7 @@ class ScaleData:
                                                                                                  "visualizationData")
         else:
             no_jittering_data = np.c_[full_data.X, full_data.Y].T
-            valid_data_array = no_jittering_data != np.NaN
+            valid_data_array = ~np.isnan(no_jittering_data)
             original_data = no_jittering_data.copy()
 
             for index in range(len(data.domain)):
