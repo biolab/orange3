@@ -4,7 +4,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, DiscreteVariable, ContinuousVariable
-from Orange.preprocess.preprocess import Discretize, Continuize
+from Orange.preprocess.preprocess import Discretize
 
 __all__ = ["Chi2", "ANOVA", "UnivariateLinearRegression",
            "InfoGain", "GainRatio", "Gini"]
@@ -66,7 +66,7 @@ class Chi2(SklScorer):
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
     preprocessors = [
-        Discretize()
+        Discretize(remove_const=False)
     ]
 
     def score(self, X, y):
@@ -128,7 +128,7 @@ class ClassificationScorer(Scorer):
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
     preprocessors = [
-        Discretize()
+        Discretize(remove_const=False)
     ]
 
     def score_data(self, data, feature):

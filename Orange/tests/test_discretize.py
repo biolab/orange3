@@ -133,6 +133,22 @@ class TestDiscretizer(TestCase):
         table3 = data.Table(table2.domain, table[:10])
         self.assertEqual(ins, table3[0])
 
+    def test_remove_constant(self):
+        table = data.Table('iris')
+        table[:, 0] = 1
+        discretize = Discretize(remove_const=True)
+        new_table = discretize(table)
+        self.assertNotEqual(len(table.domain.attributes),
+                            len(new_table.domain.attributes))
+
+    def test_keep_constant(self):
+        table = data.Table('iris')
+        table[:, 0] = 1
+        discretize = Discretize(remove_const=False)
+        new_table = discretize(table)
+        self.assertEqual(len(table.domain.attributes),
+                         len(new_table.domain.attributes))
+
 
 # noinspection PyPep8Naming
 class TestDiscretizeTable(TestCase):

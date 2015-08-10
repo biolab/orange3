@@ -374,6 +374,7 @@ class DiscreteVariable(Variable):
         :type s: str
         :rtype: float
         """
+        s = str(s) if s is not None else s
         try:
             return ValueUnknown if s in self.unknown_str \
                 else self.values.index(s)

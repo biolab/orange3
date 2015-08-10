@@ -72,10 +72,15 @@ class Discretize(Preprocess):
     Parameters
     ----------
     method : discretization method (default: Orange.preprocess.discretize.Discretization)
+
+    remove_const : bool (default=True)
+        Determines whether the features with constant values are removed
+        during discretization.
     """
 
-    def __init__(self, method=None):
+    def __init__(self, method=None, remove_const=True):
         self.method = method
+        self.remove_const = remove_const
 
     def __call__(self, data):
         """
@@ -91,7 +96,8 @@ class Discretize(Preprocess):
         def transform(var):
             if var.is_continuous:
                 new_var = method(data, var)
-                if new_var is not None and len(new_var.values) >= 2:
+                if new_var is not None and \
+                        (len(new_var.values) >= 2 or not self.remove_const):
                     return new_var
                 else:
                     return None
