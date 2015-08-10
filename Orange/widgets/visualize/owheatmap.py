@@ -1300,6 +1300,7 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
                 lut = None
             argb, _ = pg.makeARGB(
                 self.__data, lut=lut, levels=self.__levels, scale=250)
+            argb[np.isnan(self.__data)] = (100, 100, 100, 255)
 
             qimage = pg.makeQImage(argb, transpose=False)
             self.__pixmap = QPixmap.fromImage(qimage)
