@@ -31,20 +31,11 @@ Signals
 Description
 -----------
 
-**Outliers** widget first computes distances between each pair of instances
-in input Examples. Average distance between example to its nearest
-examples is valued by a Z-score. Z-scores higher than zero denote an
-example that is more distant to other examples than average. Input can
-also be a distance matrix: in this case precalculated distances are
-used.
-
-Two parameters for Z-score calculation can be choosen: distance metrics
-and number of nearest examples to which example’s average distance is
-computed. Also, minimum Z-score to consider an example as outlier can be
-set. Note, that higher the example’s Z-score, more distant is the
-example from other examples.
-
-Changes are applied automatically.
+**Outliers** widget applies one of the two methods for outlier detection. Both methods apply
+classification to the data set, one with SVM (multiple kernels) and the other with elliptical
+envelope.
+*One-class SVM with non-linear kernels (RBF)* performs well with non-Gaussian distributions, while
+*Covariance estimator* works only for data with Gaussian distribution.
 
 ![Outliers](images/Outliers1-stamped.png)
 
