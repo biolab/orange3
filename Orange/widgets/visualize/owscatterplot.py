@@ -245,6 +245,7 @@ class OWScatterPlot(OWWidget):
             self.attr_y = self.attribute_selection_list[1].name
         self.attribute_selection_list = None
         self.update_graph()
+        self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.unconditional_commit()
 
     def set_shown_attributes(self, attributes):

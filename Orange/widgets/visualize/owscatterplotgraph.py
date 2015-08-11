@@ -1,4 +1,7 @@
+import ctypes
 import itertools
+import os
+import sysconfig
 from collections import Counter
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
@@ -414,7 +417,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_legend = Setting(True)
     tooltip_shows_all = Setting(False)
     class_density = Setting(False)
-    resolution = 100
+    resolution = 500
 
     CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
@@ -466,6 +469,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # self.setMouseTracking(True)
         # self.grabGesture(QPinchGesture)
         # self.grabGesture(QPanGesture)
+
+        path = os.path.dirname(os.path.abspath(__file__))
+        self.lib = ctypes.pydll.LoadLibrary(os.path.join(path, "_grid_knn" + sysconfig.get_config_var("SO")))
 
         self.update_grid()
 
@@ -534,7 +540,29 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             y_sz = (max_y-min_y)/(self.resolution-1)
             x_grid = [min_x+i*x_sz for i in range(self.resolution)]
             y_grid = [min_y+i*y_sz for i in range(self.resolution)]
-            img = self.compute_density(x_grid, y_grid, x_data, y_data, [pen.color() for pen in color_data])
+
+            # Python
+            # img = self.compute_density(x_grid, y_grid, x_data, y_data, [pen.color() for pen in color_data])
+            # C++
+            fun = self.lib.compute_density
+            fun.restype = None
+            fun.argtypes = [ctypes.c_int,
+                            np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
+                            np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
+                            ctypes.c_int,
+                            np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
+                            np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
+                            np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS"),
+                            np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS")]
+            gx = np.ascontiguousarray(x_grid, dtype=np.float64)
+            gy = np.ascontiguousarray(y_grid, dtype=np.float64)
+            dx = np.ascontiguousarray(x_data, dtype=np.float64)
+            dy = np.ascontiguousarray(y_data, dtype=np.float64)
+            drgb = np.ascontiguousarray([pen.color().getRgb()[:3] for pen in color_data], dtype=np.int32)
+            img = np.ascontiguousarray(np.zeros((self.resolution, self.resolution, 4)), dtype=np.int32)
+            fun(self.resolution, gx, gy, self.n_points, dx, dy, drgb, img)
+            img = np.swapaxes(img,0,1)
+
             self.density_img = ImageItem(img, autoLevels=False)
             self.density_img.setRect(QRectF(min_x-x_sz/2, min_y-y_sz/2,
                                             max_x-min_x+x_sz, max_y-min_y+y_sz))

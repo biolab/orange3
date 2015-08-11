@@ -17,6 +17,7 @@ def configuration(parent_package='', top_path=None):
     config.add_subpackage('statistics')
     config.add_subpackage('testing')
     config.add_subpackage('tests')
+    config.add_subpackage('widgets')
 
     return config
 
