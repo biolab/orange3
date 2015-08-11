@@ -52,7 +52,7 @@ selected data subset (normally the most interesting genes).
    null distribution (the more permutations the more precise the distribution), while [*&alpha;-value*](https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#Type_I_error) will
    be the allowed probability of false positives. Press *Select* to output this data.
   - The final option is to set the number of best ranked genes and output them with *Select*.
-5. When *Auto commit is on* is ticked, the widget will automatically apply the changed. Alternatively press *Commit*. If the *Add gene scores to output* is ticked, the widget will append an additional column with gene scores to the data.
+5. When *Auto commit is on* is ticked, the widget will automatically apply the changes. Alternatively press *Commit*. If the *Add gene scores to output* is ticked, the widget will append an additional column with gene scores to the data.
 
 Example
 -------
