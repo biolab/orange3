@@ -3,9 +3,11 @@ from unittest import TestCase
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from Orange.data import Table
-from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute, PearsonR,
-                             PearsonRAbsolute, Manhattan, Cosine, Jaccard)
+from Orange.data import (Table, Domain, ContinuousVariable,
+                         DiscreteVariable, StringVariable)
+from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
+                             PearsonR, PearsonRAbsolute, Manhattan, Cosine,
+                             Jaccard, _preprocess)
 
 
 class TestEuclidean(TestCase):
@@ -543,3 +545,29 @@ class TestPearsonRAbsolute(TestCase):
                                                  [ 0.21006195,  0.1155948 ,  0.11607395,  0.13891172,  0.17324382, 0.25512861,  0.        ,  0.14419442,  0.42023881],
                                                  [ 0.24072005,  0.08043531,  0.06493949,  0.21622332,  0.21452448, 0.29560909,  0.14419442,  0.        ,  0.45930368],
                                                  [ 0.42847752,  0.43326547,  0.46590168,  0.37404826,  0.42283252, 0.42766076,  0.42023881,  0.45930368,  0.        ]]))
+
+
+class TestDistances(TestCase):
+    def test_preprocess(self):
+        domain = Domain([ContinuousVariable("c"),
+                         DiscreteVariable("d", values=['a', 'b'])],
+                        [DiscreteVariable("cls", values=['e', 'f'])],
+                        [StringVariable("m")])
+        table = Table(domain, [[1, 'a', 'e', 'm1'],
+                               [2, 'b', 'f', 'm2']])
+        new_table = _preprocess(table)
+        np.testing.assert_equal(new_table.X, table.X[:, 0].reshape(2, 1))
+        np.testing.assert_equal(new_table.Y, table.Y)
+        np.testing.assert_equal(new_table.metas, table.metas)
+        self.assertEqual(list(new_table.domain.attributes),
+                         [a for a in table.domain.attributes if a.is_continuous])
+        self.assertEqual(new_table.domain.class_vars, table.domain.class_vars)
+        self.assertEqual(new_table.domain.metas, table.domain.metas)
+
+    def test_preprocess_multiclass(self):
+        table = Table('test5.tab')
+        new_table = _preprocess(table)
+        np.testing.assert_equal(new_table.Y, table.Y)
+        self.assertEqual(list(new_table.domain.attributes),
+                         [a for a in table.domain.attributes if a.is_continuous])
+        self.assertEqual(new_table.domain.class_vars, table.domain.class_vars)
