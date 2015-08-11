@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from Orange.util import scale, abstract, export_globals
+from Orange.util import *
 
 
 SOMETHING = 0xf00babe
@@ -29,5 +29,17 @@ class UtilTest(unittest.TestCase):
         self.assertRegex(cm.exception.args[0], 'method')
 
     def test_export_globals(self):
-        self.assertEquals(sorted(export_globals(globals(), __name__)),
-                          ['SOMETHING', 'UtilTest'])
+        self.assertEqual(sorted(export_globals(globals(), __name__)),
+                         ['SOMETHING', 'UtilTest'])
+
+    def test_flatten(self):
+        self.assertEqual(list(flatten([[1,2],[3]])), [1,2,3])
+
+    def test_deprecated(self):
+        @deprecated
+        def identity(x): return x
+
+        with self.assertLogs() as cm: x = identity(10)
+        self.assertTrue(x == 10)
+        self.assertTrue('deprecated' in cm.output[0])
+        self.assertTrue('identity' in cm.output[0])
