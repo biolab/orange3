@@ -276,7 +276,7 @@ class OWMDS(widget.OWWidget):
             "Zoom to fit", self, icon=icon("zoom_reset"),
             shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_0))
         action_reset_zoom.triggered.connect(
-            lambda: self.plot.autoRange())
+            lambda: self.plot.autoRange(padding=0.1))
         group.addAction(action_select)
         group.addAction(action_zoom)
         group.addAction(action_pan)
@@ -589,7 +589,7 @@ class OWMDS(widget.OWWidget):
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
             self._update_plot()
-            self.plot.autoRange()
+            self.plot.autoRange(padding=0.1)
             # schedule next update
             QtGui.QApplication.postEvent(
                 self, QEvent(QEvent.User), Qt.LowEventPriority)
@@ -628,7 +628,7 @@ class OWMDS(widget.OWWidget):
             self.embedding = numpy.random.rand(len(X), 2)
 
         self._update_plot()
-        self.plot.autoRange()
+        self.plot.autoRange(padding=0.1)
 
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
@@ -653,7 +653,7 @@ class OWMDS(widget.OWWidget):
             self.start()
 
         self._update_plot()
-        self.plot.autoRange()
+        self.plot.autoRange(padding=0.1)
         self.unconditional_commit()
 
     def _invalidate_output(self):
