@@ -1,45 +1,58 @@
 Set Enrichment
 ==============
 
-![Databases widget icon]
+![Set Enrichment widget icon](icons/set-enrichment.png)
 
-Updates local systems biology databases, like gene ontologies,
-annotations, gene names, protein interaction networks, and similar.
+Determines statistically significant differences in expression levels for biological processes.
 
 Signals
 -------
 
-Inputs:
+**Inputs**:
 
-:   -   (None)
+- **Data**
 
-Outputs:
+  Data set.
 
-:   -   (None)
+- **Reference**
+
+  Referential data set.
+
+**Outputs**:
+
+- **Selected data**
+
+  Data subset.
 
 Description
 -----------
 
-Many widgets in Orange bioinformatics add-on rely on information on
-genes, gene sets, pathways, and alike. This information is stored on
-your local computer when the widget requires them for the first time.
-The corresponding data comes from different web resources, and is either
-preprocessed and then stored on Orange server, or accessed directly from
-a dedicated web site.
+**Set Enrichment** widget provides access to several databases ([GO](http://geneontology.org/),
+[KEGG](http://www.genome.jp/kegg/), [miRNA](http://www.mirbase.org/) and [MeSH](http://www.nlm.nih.gov/mesh/MBrowser.html)). 
+Set enrichment is a method for determining statistically significant genes and/or chemicals within
+specifict biological processes.
+The widget shows a ranked list of terms with [p-values](https://en.wikipedia.org/wiki/P-value), 
+[FDR](https://en.wikipedia.org/wiki/False_discovery_rate) and 
+[enrichment](https://en.wikipedia.org/wiki/Gene_set_enrichment). 
+This is a great tool for finding biological processes that are over- or under-represented in a particular gene 
+or chemical set. The widget is similar to **GO Browser**, but it is not limited exclusively to GO database.
 
-Orange does not change the data on your local computer, and with time
-this becomes different to the newest version of the online data sets.
-Databases widget can update the data on your local machine, and can also
-be used to manage (remove or add) any locally stored systems biology
-data set.
+![image](images/SetEnrichment1-stamped.png)
 
-![Databases widget]
+1. Information on the input data set and the ratio of genes that were found in the databases.
+2. Select the species for the term analysis. The widget automatically selects the species from the input data.
+3. *Entity names* define the features in the input data that you wish to use for term analysis. Tick *Use feature names*
+   if your genes or chemicals are used as attribute names rather than as meta attributes.
+4. Select the reference data. You can either have all the entities as reference or a reference set from the input.
+5. Select which *Entity sets* you wish to have displayed in the list.
+6. When *Auto commit is on*, the widget will automatically apply the changes. Alternatively press *Commit*. 
+7. Filter the list by:
+   - the minimum number of **entities** included in each term
+   - the minimum threshold for **p-value**
+   - the maximum threshold for *false discovery rate*
+   - a search word
 
-To get a more detailed information on the particular database that
-requires an update, hover on its Update button.
+Example
+-------
 
-![Databases widget][1]
 
-  [Databases widget icon]: ../../orangecontrib/bio/widgets/icons/Databases.svg
-  [Databases widget]: images/databases-stamped.png
-  [1]: images/databases-hover.png
