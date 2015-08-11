@@ -12,11 +12,10 @@ def _preprocess(table):
     if not len(table):
         return table
     new_domain = data.Domain([a for a in table.domain.attributes if a.is_continuous],
-                             table.domain.class_var,
+                             table.domain.class_vars,
                              table.domain.metas)
     new_data = data.Table(new_domain, table)
     new_data.X = skl_preprocessing.Imputer().fit_transform(new_data.X)
-    new_data.X = new_data.X if sparse.issparse(new_data.X) else np.squeeze(new_data.X)
     return new_data
 
 
