@@ -559,8 +559,9 @@ class TestDistances(TestCase):
         np.testing.assert_equal(new_table.X, table.X[:, 0].reshape(2, 1))
         np.testing.assert_equal(new_table.Y, table.Y)
         np.testing.assert_equal(new_table.metas, table.metas)
-        self.assertEqual(list(new_table.domain.attributes),
-                         [a for a in table.domain.attributes if a.is_continuous])
+        self.assertEqual([a.name for a in new_table.domain.attributes],
+                         [a.name for a in table.domain.attributes
+                          if a.is_continuous])
         self.assertEqual(new_table.domain.class_vars, table.domain.class_vars)
         self.assertEqual(new_table.domain.metas, table.domain.metas)
 
@@ -568,6 +569,12 @@ class TestDistances(TestCase):
         table = Table('test5.tab')
         new_table = _preprocess(table)
         np.testing.assert_equal(new_table.Y, table.Y)
-        self.assertEqual(list(new_table.domain.attributes),
-                         [a for a in table.domain.attributes if a.is_continuous])
+        self.assertEqual([a.name for a in new_table.domain.attributes],
+                         [a.name for a in table.domain.attributes
+                          if a.is_continuous])
         self.assertEqual(new_table.domain.class_vars, table.domain.class_vars)
+
+    def test_preprocess_impute(self):
+        table = Table('test5.tab')
+        new_table = _preprocess(table)
+        self.assertFalse(np.isnan(new_table.X).any())

@@ -1,10 +1,10 @@
 import numpy as np
 from scipy import stats, sparse
 import sklearn.metrics as skl_metrics
-import sklearn.preprocessing as skl_preprocessing
 
 from Orange import data
 from Orange.misc import DistMatrix
+from Orange.preprocess import SklImpute
 
 
 def _preprocess(table):
@@ -15,7 +15,7 @@ def _preprocess(table):
                              table.domain.class_vars,
                              table.domain.metas)
     new_data = data.Table(new_domain, table)
-    new_data.X = skl_preprocessing.Imputer().fit_transform(new_data.X)
+    new_data = SklImpute(new_data)
     return new_data
 
 
