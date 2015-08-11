@@ -414,7 +414,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_legend = Setting(True)
     tooltip_shows_all = Setting(False)
     class_density = Setting(False)
-    resolution = Setting(100)
+    resolution = 100
 
     CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
@@ -560,8 +560,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.replot()
 
     # compute the color density image
-    def compute_density(self, x_grid, y_grid, x_data, y_data, color_data, k=20):
-        k = min(k, len(x_data))
+    def compute_density(self, x_grid, y_grid, x_data, y_data, color_data):
+        k = int(len(x_data)**0.5)
         color_data = [c.getRgb()[:3] for c in color_data]
         distinct_colors = len(set(color_data))
         lo, hi = ceil(k/distinct_colors), k
