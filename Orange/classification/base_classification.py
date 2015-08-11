@@ -17,14 +17,11 @@ class ModelClassification(Model):
     pass
 
 
-class SklLearnerClassification(SklLearner):
-    learner_adequacy_err_msg = "Discrete class variable expected."
-
-    def check_learner_adequacy(self, domain):
-        return domain.has_discrete_class or domain.class_var is None
+class SklLearnerClassification(SklLearner, LearnerClassification):
+    pass
 
 
-class SklModelClassification(SklModel):
+class SklModelClassification(SklModel, ModelClassification):
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
 

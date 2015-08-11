@@ -1,12 +1,12 @@
 import numpy as np
 
-from Orange.classification.simple_random_forest import SimpleRandomForestLearner as SRFL
+from Orange.regression import Learner
 from Orange.classification.simple_random_forest import SimpleRandomForestModel as SRFM
 
 __all__ = ['SimpleRandomForestLearner']
 
 
-class SimpleRandomForestLearner(SRFL):
+class SimpleRandomForestLearner(Learner):
     """
     A random forest regressor, optimized for speed. Trees in the forest
     are constructed with :obj:`SimpleTreeLearner` classification trees.
@@ -40,28 +40,30 @@ class SimpleRandomForestLearner(SRFL):
     seed : int, optional (default = 42)
         Random seed.
     """
+
+    name = 'simple rf reg'
+
+    def __init__(self, n_estimators=10, min_instances=2, max_depth=1024,
+                 max_majority=1.0, skip_prob='sqrt', seed=42):
+        self.n_estimators = n_estimators
+        self.skip_prob = skip_prob
+        self.max_depth = max_depth
+        self.min_instances = min_instances
+        self.max_majority = max_majority
+        self.seed = seed
+
     def fit_storage(self, data):
         return SimpleRandomForestModel(self, data)
 
 
 class SimpleRandomForestModel(SRFM):
-
     def __init__(self, learner, data):
         self.estimators_ = []
-
-        if data.domain.has_continuous_class:
-            self.type = 'regression'
-            self.cls_vals = 0
-        else:
-            assert(False)
         self.learn(learner, data)
 
     def predict_storage(self, data):
-        if self.type == 'regression':
-            p = np.zeros(data.X.shape[0])
-            for tree in self.estimators_:
-                p += tree(data)
-            p /= len(self.estimators_)
-            return p
-        else:
-            assert(False)
+        p = np.zeros(data.X.shape[0])
+        for tree in self.estimators_:
+            p += tree(data)
+        p /= len(self.estimators_)
+        return p

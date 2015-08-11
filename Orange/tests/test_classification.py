@@ -184,11 +184,6 @@ class SklTest(unittest.TestCase):
         self.assertEqual(len(res.models[0][0].domain.attributes), 2)
         self.assertGreater(Orange.evaluation.CA(res)[0], 0.8)
 
-    def test_learner_adequacy(self):
-        table = Table("housing")
-        learner = LogisticRegressionLearner()
-        self.assertRaises(ValueError, learner, table)
-
     def test_params(self):
         learner = SklLearner()
         self.assertIsInstance(learner.params, dict)
@@ -236,3 +231,13 @@ class LearnerAccessibility(unittest.TestCase):
                 np.testing.assert_almost_equal(model(ds), model2(ds),
                                                err_msg='%s does not return same values when unpickled %s' % (learner.__class__.__name__, ds.name))
                 #print('%s on %s works' % (learner, ds.name))
+
+    def test_adequacy_all_learners(self):
+        for learner in self.all_learners():
+            try:
+                learner = learner()
+                table = Table("housing")
+                self.assertRaises(ValueError, learner, table)
+            except TypeError as err:
+                traceback.print_exc()
+                continue
