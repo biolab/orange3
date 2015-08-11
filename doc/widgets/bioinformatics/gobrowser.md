@@ -44,7 +44,7 @@ Description
 Gene Ontology (GO) is a system for hierarchically
 classifiying genes and gene products to terms organized in a graph structure called an ontology.
 It takes data on gene expression as an input (it is best to input statistically significant genes,
-for example for the **Differential Expression** widget) and returns a ranked list of GO terms with
+for example from the **Differential Expression** widget) and returns a ranked list of GO terms with
 p-values. The user can select a GO term in the list and output the data on the selected or unselected
 genes, data on unknown genes and an enrichment report. This is a great tool for finding biological processes
 that are over- or under-represented in a particular gene set.
