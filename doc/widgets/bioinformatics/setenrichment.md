@@ -55,4 +55,10 @@ or chemical set. The widget is similar to **GO Browser**, but it is not limited 
 Example
 -------
 
+In the example below we have decided to analyse gene expression levels from *Caffeine effect: time course
+and dose response* data set. We used the ANOVA scoring in the **Differential Expression** widget to 
+select the most interesting genes. Then we fed those 628 genes to **Set Enrichment** for additional
+analysis of the most valuable terms. We sorted the data by FDR values and selected the top-scoring
+term. A nice way to view the selected data is in the **Heat Map** widget.
 
+<img src="images/SetEnrichment-Example.png" alt="image" width="600">
