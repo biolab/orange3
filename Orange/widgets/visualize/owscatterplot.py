@@ -137,9 +137,6 @@ class OWScatterPlot(OWWidget):
         self.cb_class_density = gui.checkBox(
             box, self, value='graph.class_density', label='Show class density',
             callback=self.major_graph_update)
-        self.resolution_slider = gui.hSlider(
-            box, self, value='graph.resolution', minValue=2, maxValue=200, step=10,
-            label='Resolution', callback=self.major_graph_update)
 
         self.zoom_select_toolbar = g.zoom_select_toolbar(
             gui.widgetBox(self.controlArea, "Zoom/Select"), nomargin=True,
@@ -311,12 +308,10 @@ class OWScatterPlot(OWWidget):
     def update_attr(self):
         self.major_graph_update()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
-        self.resolution_slider.setEnabled(self.graph.can_draw_density())
 
     def update_colors(self):
         self.graph.update_colors()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
-        self.resolution_slider.setEnabled(self.graph.can_draw_density())
 
     def major_graph_update(self, attributes=None, inside_colors=None, **args):
         self.update_graph(attributes, inside_colors, **args)
