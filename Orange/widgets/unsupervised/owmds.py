@@ -51,6 +51,9 @@ def torgerson(distances, n_components=2):
     B = numpy.multiply(D_sq, -0.5, out=D_sq)
 
     U, L, _ = numpy.linalg.svd(B)
+    if n_components > N:
+        U = numpy.hstack((U, numpy.zeros((N, n_components - N))))
+        L = numpy.hstack((L, numpy.zeros((n_components - N))))
     U = U[:, :n_components]
     L = L[:n_components]
     D = numpy.diag(numpy.sqrt(L))
