@@ -3,7 +3,7 @@ Set Enrichment
 
 ![Set Enrichment widget icon](icons/set-enrichment.png)
 
-Determines statistically significant differences in expression levels for biological processes.
+Determines statistically significant differences in entity expression levels for biological processes.
 
 Signals
 -------
@@ -35,7 +35,7 @@ The widget shows a ranked list of terms with [p-values](https://en.wikipedia.org
 [FDR](https://en.wikipedia.org/wiki/False_discovery_rate) and 
 [enrichment](https://en.wikipedia.org/wiki/Gene_set_enrichment). 
 This is a great tool for finding biological processes that are over- or under-represented in a particular gene 
-or chemical set. The widget is similar to **GO Browser**, but it is not limited exclusively to GO database.
+or chemical set. While the widget is similar to **GO Browser**, **Set Enrichment** is not limited exclusively to GO database.
 
 ![image](images/SetEnrichment1-stamped.png)
 
@@ -49,7 +49,7 @@ or chemical set. The widget is similar to **GO Browser**, but it is not limited 
 7. Filter the list by:
    - the minimum number of **entities** included in each term
    - the minimum threshold for **p-value**
-   - the maximum threshold for *false discovery rate*
+   - the maximum threshold for **false discovery rate**
    - a search word
 
 Example
