@@ -6,7 +6,6 @@ from Orange.regression import SimpleRandomForestLearner as SimpRandForestReg
 
 
 class SimpleRandomForestTest(unittest.TestCase):
-
     def test_SimpleRandomForest_classification(self):
         data = Orange.data.Table('iris')
         lrn = SimpRandForestCls()

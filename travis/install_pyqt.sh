@@ -7,7 +7,7 @@ if [ ! "$(ls $PYQT)" ]; then
     mkdir -p $PYQT
     cd $PYQT
 
-    wget -O sip.tar.gz http://www.riverbankcomputing.com/static/Downloads/sip4/sip-$SIP_VERSION.tar.gz
+    wget -O sip.tar.gz http://sourceforge.net/projects/pyqt/files/sip/sip-$SIP_VERSION/sip-$SIP_VERSION.tar.gz
     mkdir -p sip
     tar xzf sip.tar.gz -C sip --strip-component=1
 
