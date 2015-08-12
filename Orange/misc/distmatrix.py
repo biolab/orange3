@@ -50,6 +50,20 @@ class DistMatrix(np.ndarray):
             return out_arr.item()
         return np.ndarray.__array_wrap__(self, out_arr, context)
 
+    """
+    __reduce__() and __setstate__() ensure DistMatrix is picklable.
+    """
+    def __reduce__(self):
+        state = super().__reduce__()
+        newstate = state[2] + (self.row_items, self.col_items, self.axis)
+        return state[0], state[1], newstate
+
+    def __setstate__(self, state):
+        self.row_items = state[-3]
+        self.col_items = state[-2]
+        self.axis = state[-1]
+        super().__setstate__(state[0:-3])
+
     @property
     @deprecated
     def dim(self):

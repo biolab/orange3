@@ -1,4 +1,5 @@
 from unittest import TestCase
+import pickle
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -10,15 +11,28 @@ from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              Jaccard, _preprocess)
 
 
+def tables_equal(tab1, tab2):
+    # TODO: introduce Table.__eq__() ???
+    return (tab1 == tab2 or  # catches None
+            np.all([i == j for i, j in zip(tab1, tab2)]))
+
+
 class TestDistMatrix(TestCase):
+    def setUp(self):
+        self.iris = Table('iris')
+        self.dist = Euclidean(self.iris)
+
     def test_submatrix(self):
-        iris = Table('iris')
-        dist = Euclidean(iris)
-        sub = dist.submatrix([2, 3, 4])
-        np.testing.assert_equal(sub, dist[2:5, 2:5])
-        self.assertTrue(np.all([i == j
-                                for i, j in zip(sub.row_items,
-                                                dist.row_items[2:5])]))
+        sub = self.dist.submatrix([2, 3, 4])
+        np.testing.assert_equal(sub, self.dist[2:5, 2:5])
+        self.assertTrue(tables_equal(sub.row_items, self.dist.row_items[2:5]))
+
+    def test_pickling(self):
+        unpickled_dist = pickle.loads(pickle.dumps(self.dist))
+        np.testing.assert_equal(unpickled_dist, self.dist)
+        self.assertTrue(tables_equal(unpickled_dist.row_items, self.dist.row_items))
+        self.assertTrue(tables_equal(unpickled_dist.col_items, self.dist.col_items))
+        self.assertEqual(unpickled_dist.axis, self.dist.axis)
 
 
 class TestEuclidean(TestCase):
