@@ -2,6 +2,7 @@ import itertools
 from collections import Counter
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
+
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
@@ -15,7 +16,6 @@ from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
 from PyQt4 import QtCore
 from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
 from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture, QPainter
-
 from sklearn.neighbors import NearestNeighbors
 
 from Orange.widgets import gui
@@ -505,8 +505,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.valid_data = self.get_valid_list([index_x, index_y])
         x_data, y_data = self.get_xy_data_positions(
             attr_x, attr_y, self.valid_data)
-        x_data = x_data[self.valid_data]
-        y_data = y_data[self.valid_data]
         self.n_points = len(x_data)
 
         min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)

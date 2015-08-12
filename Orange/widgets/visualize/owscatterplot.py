@@ -6,17 +6,16 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication
 
 import Orange
-from Orange.data import Table, Variable
+from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets import gui
+from Orange.widgets.io import FileFormats
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
-from Orange.widgets.io import FileFormats
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):

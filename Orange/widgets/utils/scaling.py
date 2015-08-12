@@ -1,9 +1,10 @@
 from datetime import time
-import sys
 import random
-import numpy as np
-import Orange
+import sys
 
+import numpy as np
+
+import Orange
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.datacaching import getCached, setCached
@@ -152,7 +153,7 @@ class ScaleData:
                                                                                                  "visualizationData")
         else:
             no_jittering_data = np.c_[full_data.X, full_data.Y].T
-            valid_data_array = no_jittering_data != np.NaN
+            valid_data_array = ~np.isnan(no_jittering_data)
             original_data = no_jittering_data.copy()
 
             for index in range(len(data.domain)):
@@ -308,9 +309,6 @@ class ScaleScatterPlotData(ScaleData):
         Create x-y projection of attributes in attrlist.
 
         """
-        xattr_index = self.attribute_name_index[xattr]
-        yattr_index = self.attribute_name_index[yattr]
-
         xattr_index = self.attribute_name_index[xattr]
         yattr_index = self.attribute_name_index[yattr]
         if filter_valid is True:
