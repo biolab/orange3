@@ -40,7 +40,7 @@ or chemical set. While the widget is similar to **GO Browser**, **Set Enrichment
 ![image](images/SetEnrichment1-stamped.png)
 
 1. Information on the input data set and the ratio of genes that were found in the databases.
-2. Select the species for the term analysis. The widget automatically selects the species from the input data.
+2. Select the species for term analysis. The widget automatically selects the species from the input data.
 3. *Entity names* define the features in the input data that you wish to use for term analysis. Tick *Use feature names*
    if your genes or chemicals are used as attribute names rather than as meta attributes.
 4. Select the reference data. You can either have all the entities as reference or a reference set from the input.
