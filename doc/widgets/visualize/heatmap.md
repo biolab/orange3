@@ -54,13 +54,13 @@ for *Zoo* data set (0 is white, 1 is light blue, >1 is dark blue). The first thi
 we then use **Select Columns** widget and remove 'legs' attribute from the data set. Then we again
 feed the data to the **Heat Map**.
 
-<src img="images/HeatMap-Example1.png" alt="image" width="600">
+<img src="images/HeatMap-Example1.png" alt="image" width="600">
 
 The new projections is much clearer. By removing 'legs' we get a neat visualization of attribute
 values for each class. We see that mammals typically have hair, teeth, backbone and milk, while birds
 have feathers, eggs and a tail.
 
-<src img="images/HeatMap-Example2.png" alt="image" width="600">
+<img src="images/HeatMap-Example2.png" alt="image" width="600">
 
 Additionally we would like to see why 'legs' attribute was so pronounced in the first heat map.
 We again use **Select Columns** widget to feed only this attribute into the **Data Table**. We already
@@ -70,4 +70,4 @@ to inspect this further. We sort the table by type and look at invertebrates for
 this class has 0, 4, 5, 6 or even 8 legs, which is why it was a good idea to remove it from the
 heat map visualization as an 'outlying' attribute.
 
-<src img="images/HeatMap-Example3.png" alt="image" width="600">
+<img src="images/HeatMap-Example3.png" alt="image" width="600">
