@@ -35,12 +35,15 @@ values are the strongest and where the weakest, thus enabling us to find typical
    - **No Sorting** (lists attributes as found in the data set)
    - **Clustering** (clusters data by similarity)
    - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
-3. Choose y attribute
-4. Discrete attribute for color scheme
-5. Color scheme legend. You can select which attribute instances you wish to see in the visualization.
-6. Select the color scale strength (linear, square root or logarithmic)
-7. To move the map use *Drag* and to select data subset use *Select*
-8. Visualization
+3. Set what is displayed in the plot in **Annotation & Legend**.
+   - If *Show legend* is ticked, a color chart will be displayed above the map.
+   - If *Stripes with averages* is ticked, a new line with attribute averages will be displayed on the left.
+   - **Row Annotations** adds annotations to each instance on the right.
+   - **Column Label Positions** places column labels in a selected place (None, Top, Bottom, Top and Bottom).
+4. If *Keep aspect ratio* is ticked, each value will be displayed with a square (proportionate to the map).
+5. Split the map by labels, if present in the input.
+6. If *Auto commit is on*, changes are communicated automatically. Alternatively press *Commit*.
+7. *Save graph* saves the graph to the user's computer in a .svg or .png format.
 
 Example
 -------
