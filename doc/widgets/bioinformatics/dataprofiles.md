@@ -48,7 +48,7 @@ especially if the data has been sourced at different timepoints. This allows the
 to see difference in expression levels in time for each instance in the data set and the
 over mean.
 
-Below we used the **PIPAx** widget, where we selected 8 AX4 Dictyostelium experiments, all
+Below we used the **PIPAx** widget, where we selected 8 *AX4 Dictyostelium* experiments, all
 having been sourced at diffferent timepoints and belonging to one of the two replicates. We
 decided to average replicates (to get one instance for both replicates) and to apply logarithmic
 transformation to adjust expression levels.
