@@ -42,10 +42,10 @@ Description
    genes to an existing selection, click *Append genes to current saved selection*.
 3. In *Select specified genes* you can type the gene name and the widget will automatically suggest corresponding
    genes. 
-4. The "+" button has a drop-down menu with two options:
+4. The "+" button has a drop-down menu with two options. Genes that match the genes in 
+   the input will be colored blue, while the unmatched will remain black.
    - *Import names from gene sets...* gives a list of gene sets and copies genes from selected sets into the list.
    - *Import names from text files...* imports gene names from the file.
-<br>Genes that match the genes in the input will be colored blue, while the unmatched will remain black.
 5. *More* has two settings: *Complete on gene symbol names* (for easier
    gene selection) and *Translate all names to official symbol names* (for uniformity).
 6. Set the organism to select the genes from (organism from the input data is chosen as default).
