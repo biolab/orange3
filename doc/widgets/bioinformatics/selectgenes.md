@@ -45,7 +45,7 @@ Description
 4. The "+" button has a drop-down menu with two options:
    - *Import names from gene sets...* gives a list of gene sets and copies genes from selected sets into the list.
    - *Import names from text files...* imports gene names from the file.
-   <br>Genes that match the genes in the input will be colored blue, while the unmatched will remain black.
+  <br>Genes that match the genes in the input will be colored blue, while the unmatched will remain black.
 5. *More* has two settings: *Complete on gene symbol names* (for easier
    gene selection) and *Translate all names to official symbol names* (for uniformity).
 6. Set the organism to select the genes from (organism from the input data is chosen as default).
