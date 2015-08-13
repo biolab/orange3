@@ -16,48 +16,46 @@ Signals
 
 - **Gene Subset**
 
-  Data subset.
+  A subset of genes to be used for gene selection.
 
 **Outputs**:
 
 - **Selected Data**
 
-  Data subset.
+  A subset of genes selected in the widget.
 
 Description
 -----------
 
-**Select Genes** widget is used to manually create the gene subset. The user can decide which genes or gene sets 
-will be used. The widget has two input channels: one is the standard *Data* channel that inputs a data sets from on of
-the data widgets. The other channel is *Gene subset*, which feeds only a selected subset into the widget
-(for example we can use **Differential Expression** widget to select only statistically significant genes). From the
-input subset we can sort and select an even smaller subset that will allow for a detailed analysis.
+**Select Genes** widget is used to manually create the gene subset. There are three ways to select genes:
+- Manual gene selection (written input). The widget supports autocompletion for gene names.
+- Selecting genes from gene sets in the "+" option.
+- Selecting genes from a separate input (input can be adjusted in the widget).
 
 ![image](images/SelectGenes2-stamped.png)
 
 1. Select *Gene Attribute* if there is more than one column with gene names.
-2. In *Gene Selection* you can specify how you want to select your genes. <br>*Select Genes from 'Gene
-   Subset' input* will work only if a separate subset is provided in the input. <br>Here too you can
-   select *Gene Attribute*. <br>If you wish to create a new saved selection, click *Copy genes to saved
-   subsets*. All the genes from the second input will be listed below. <br>If you wish to only add these
+2. Specify how you want to select your genes:
+   *Select Genes from 'Gene Subset' input* adds genes from the separate input to selected genes.
+   To create a new saved selection, click *Copy genes to saved
+   subsets*. The genes will be listed in *Select Genes*. To add these
    genes to an existing selection, click *Append genes to current saved selection*.
-3. With *Select specified genes* you can manually select the genes you wish in your output. Once you start
-   typing the gene name, the widget will automatically suggest the possible genes. <br>In the "+" button
-   you have a drop-down menu with two options: *Import names from gene sets...* (see below) and *Import
-   names from text files...*. <br>In *More* you have two settings: *Complete on gene symbol names* (for easier
-   gene selection) and *Translate all names to official symbol names* (for uniformity). <br>Finally, you can set
-   also the organism to select the genes from (organism from the input data is chosen as default).
-4. *Saved Selections* allow you to save the most frequently used genes. <br>Press "+" to add a new
-   selection and "-" to remove the existing one. <br>Once you have selected the genes, press *Save*
-   to save the list. <br>By double-clicking the selection in the list above, you can alter its name.
-5. *Output* for this widget is a data subset. If you wish to preserve the order of instances from
+3. In *Select specified genes* you can type the gene name and the widget will automatically suggest corresponding
+   genes. 
+4. The "+" button has a drop-down menu with two options:
+   - *Import names from gene sets...* gives a list of gene sets and copies genes from selected sets into the list.
+   - *Import names from text files...* imports gene names from the file.
+   <br>Genes that match the genes in the input will be colored blue, while the unmatched will remain black.
+5. *More* has two settings: *Complete on gene symbol names* (for easier
+   gene selection) and *Translate all names to official symbol names* (for uniformity).
+6. Set the organism to select the genes from (organism from the input data is chosen as default).
+7. *Saved Selections* saves the most frequently used genes. "+" adds a new
+   selection, "-" removes the existing one, and *Save* saves the current list. Double-click the selection to rename it.
+8. *Output* for this widget is a data subset. If you wish to preserve the order of instances from
    your input data, tick the *Preserve input order* box. If *Auto commit is on*, all changes will
    be communicated automatically. Alternatively press *Commit*.
 
-On the other hand we might be interested in specific gene functions. We can go to *Select Specified Genes - 
-Select Genes - Import names from gene sets*. Then we get a list of gene sets by category, name and the number
-of genes in the set. This is how you can select genes by function - only those input genes that match the selected
-function will be in the output (colored blue in the list).
+Below is an example of the *Import Gene Set Names* option.
 
 ![image](images/SelectGenes4.png)
 
