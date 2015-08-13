@@ -27,10 +27,14 @@ the darker the represented color. By combining class and attributes on x and y a
 values are the strongest and where the weakest, thus enabling us to find typical features (discrete) or value range 
 (continuous) for each class.
 
-![image](images/HeatMap-new2.png)
+![image](images/HeatMap-new2-stamped.png)
 
-1. Information on the input data
-2. Choose x attribute
+1. Color scheme legend. **Low** and **High** are thresholds for the color palette
+   (low for attributes with low values and high for attributes with high values).
+2. Sort columns and rows:
+   - **No Sorting** (lists attributes as found in the data set)
+   - **Clustering** (clusters data by similarity)
+   - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
 3. Choose y attribute
 4. Discrete attribute for color scheme
 5. Color scheme legend. You can select which attribute instances you wish to see in the visualization.
@@ -47,9 +51,13 @@ for *Zoo* data set (0 is white, 1 is light blue, >1 is dark blue). The first thi
 we then use **Select Columns** widget and remove 'legs' attribute from the data set. Then we again
 feed the data to the **Heat Map**.
 
+<src img="images/HeatMap-Example1.png" alt="image" width="600">
+
 The new projections is much clearer. By removing 'legs' we get a neat visualization of attribute
 values for each class. We see that mammals typically have hair, teeth, backbone and milk, while birds
 have feathers, eggs and a tail.
+
+<src img="images/HeatMap-Example2.png" alt="image" width="600">
 
 Additionally we would like to see why 'legs' attribute was so pronounced in the first heat map.
 We again use **Select Columns** widget to feed only this attribute into the **Data Table**. We already
@@ -59,6 +67,4 @@ to inspect this further. We sort the table by type and look at invertebrates for
 this class has 0, 4, 5, 6 or even 8 legs, which is why it was a good idea to remove it from the
 heat map visualization as an 'outlying' attribute.
 
-![image](images/HeatMap-new1.png)
-
-![image](images/HeatMap-new4.png)
+<src img="images/HeatMap-Example3.png" alt="image" width="600">
