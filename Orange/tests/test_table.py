@@ -598,6 +598,18 @@ class TableTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             d.extend(x)
 
+    def test_copy(self):
+        t = data.Table(np.zeros((5, 3)), np.arange(5), np.zeros((5, 3)))
+
+        copy = t.copy()
+        self.assertTrue(np.all(t.X == copy.X))
+        self.assertTrue(np.all(t.Y == copy.Y))
+        self.assertTrue(np.all(t.metas == copy.metas))
+        copy[0] = [1, 1, 1, 1, 1, 1, 1, 1]
+        self.assertFalse(np.all(t.X == copy.X))
+        self.assertFalse(np.all(t.Y == copy.Y))
+        self.assertFalse(np.all(t.metas == copy.metas))
+
     def test_convert_through_append(self):
         d = data.Table("iris")
         dom2 = data.Domain([d.domain[0], d.domain[2], d.domain[4]])
