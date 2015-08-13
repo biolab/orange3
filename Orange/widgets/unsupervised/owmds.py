@@ -51,6 +51,9 @@ def torgerson(distances, n_components=2):
     B = numpy.multiply(D_sq, -0.5, out=D_sq)
 
     U, L, _ = numpy.linalg.svd(B)
+    if n_components > N:
+        U = numpy.hstack((U, numpy.zeros((N, n_components - N))))
+        L = numpy.hstack((L, numpy.zeros((n_components - N))))
     U = U[:, :n_components]
     L = L[:n_components]
     D = numpy.diag(numpy.sqrt(L))
@@ -273,7 +276,7 @@ class OWMDS(widget.OWWidget):
             "Zoom to fit", self, icon=icon("zoom_reset"),
             shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_0))
         action_reset_zoom.triggered.connect(
-            lambda: self.plot.autoRange())
+            lambda: self.plot.autoRange(padding=0.1))
         group.addAction(action_select)
         group.addAction(action_zoom)
         group.addAction(action_pan)
@@ -586,7 +589,7 @@ class OWMDS(widget.OWWidget):
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
             self._update_plot()
-            self.plot.autoRange()
+            self.plot.autoRange(padding=0.1)
             # schedule next update
             QtGui.QApplication.postEvent(
                 self, QEvent(QEvent.User), Qt.LowEventPriority)
@@ -625,7 +628,7 @@ class OWMDS(widget.OWWidget):
             self.embedding = numpy.random.rand(len(X), 2)
 
         self._update_plot()
-        self.plot.autoRange()
+        self.plot.autoRange(padding=0.1)
 
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
@@ -650,7 +653,7 @@ class OWMDS(widget.OWWidget):
             self.start()
 
         self._update_plot()
-        self.plot.autoRange()
+        self.plot.autoRange(padding=0.1)
         self.unconditional_commit()
 
     def _invalidate_output(self):
