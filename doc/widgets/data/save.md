@@ -43,4 +43,4 @@ In the workflow below we load the data into a **Scatter Plot** widget, where
 we select a subset of the data instances and push them to the **Save** widget to
 store them in a file.
 
-<img src="images/Save-Workflow.png" alt="image" width="400">
+<img src="images/Save-Workflow.png" alt="image" width="600">
