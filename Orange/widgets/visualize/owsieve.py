@@ -114,14 +114,14 @@ class OWSieveDiagram(OWWidget):
         # self.data = self.optimizationDlg.setData(data, 0)
         self.data = data
 
+        if not sameDomain:
+            self.initCombos()
+
         self.warning(0, "")
         if data:
             if any(attr.is_continuous for attr in data.domain):
                 self.warning(0, "Data contains continuous variables. " +
                              "Discretize the data to use them.")
-
-        if not sameDomain:
-            self.initCombos()
 
         self.setShownAttributes(self.attributeSelectionList)
 
@@ -189,6 +189,9 @@ class OWSieveDiagram(OWWidget):
         if self.attrXCombo.count() > 0:
             self.attrX = str(self.attrXCombo.itemText(0))
             self.attrY = str(self.attrYCombo.itemText(self.attrYCombo.count() > 1))
+        else:
+            self.attrX = None
+            self.attrY = None
 
     def resizeEvent(self, e):
         OWWidget.resizeEvent(self,e)
