@@ -21,8 +21,7 @@ Signals
 Description
 -----------
 
-**Distributions** displays value distribution of discrete or
-continuous attributes. If the data contains class variable, distributions are
+**Distributions** displays [value distribution](https://en.wikipedia.org/wiki/Frequency_distribution) of discrete or continuous attributes. If the data contains class variable, distributions may be
 conditioned on the class.
 
 ![Distribution for a discrete feature](images/Distributions-Disc.png)
