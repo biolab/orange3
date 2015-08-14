@@ -616,6 +616,35 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(np.all(t.Y == copy.Y))
         self.assertFalse(np.all(t.metas == copy.metas))
 
+    def test_concatenate(self):
+        d1 = data.Domain([data.ContinuousVariable('a1')])
+        t1 = data.Table.from_numpy(d1, [[1],
+                                        [2]])
+        d2 = data.Domain([data.ContinuousVariable('a2')], metas=[data.StringVariable('s')])
+        t2 = data.Table.from_numpy(d2, [[3],
+                                        [4]], metas=[['foo'],
+                                                     ['fuu']])
+        self.assertRaises(ValueError, lambda: data.Table.concatenate((t1, t2), axis=5))
+
+        t3 = data.Table.concatenate((t1, t2))
+        self.assertEqual(t3.domain.attributes, t1.domain.attributes + t2.domain.attributes)
+        self.assertEqual(len(t3.domain.metas), 1)
+        self.assertEqual(t3.X.shape, (2,2))
+        self.assertRaises(ValueError, lambda: data.Table.concatenate((t3, t1)))
+
+        t4 = data.Table.concatenate((t3, t3), axis=0)
+        np.testing.assert_equal(t4.X, [[1, 3],
+                                       [2, 4],
+                                       [1, 3],
+                                       [2, 4]])
+        t4 = data.Table.concatenate((t3, t1), axis=0)
+        np.testing.assert_equal(t4.X, [[1, 3],
+                                       [2, 4],
+                                       [1, np.nan],
+                                       [2, np.nan]])
+
+
+
     def test_convert_through_append(self):
         d = data.Table("iris")
         dom2 = data.Domain([d.domain[0], d.domain[2], d.domain[4]])

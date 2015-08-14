@@ -15,8 +15,8 @@ import bottlechest as bn
 from scipy import sparse as sp
 
 from .instance import *
-from Orange.data import (domain as orange_domain,
-                         io, DiscreteVariable, ContinuousVariable, Variable)
+from Orange.util import flatten
+from Orange.data import Domain, io, DiscreteVariable, ContinuousVariable, Variable
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -187,7 +187,7 @@ class Table(MutableSequence, Storage):
                 return cls.from_file(args[0], **kwargs)
         elif isinstance(args[0], Table):
             return cls.from_table(args[0].domain, args[0])
-        elif isinstance(args[0], orange_domain.Domain):
+        elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
                 return cls.from_domain(domain, **kwargs)
@@ -391,7 +391,7 @@ class Table(MutableSequence, Storage):
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
         if domain is None:
-            domain = orange_domain.Domain.from_numpy(X, Y, metas)
+            domain = Domain.from_numpy(X, Y, metas)
 
         if Y is None:
             if sp.issparse(X):
@@ -656,7 +656,7 @@ class Table(MutableSequence, Storage):
                          if col >= n_attrs]
             r_metas = [attributes[i]
                        for i, col in enumerate(col_indices) if col < 0]
-            domain = orange_domain.Domain(r_attrs, r_classes, r_metas)
+            domain = Domain(r_attrs, r_classes, r_metas)
         else:
             domain = self.domain
         return Table.from_table(domain, self, row_idx)
@@ -855,6 +855,43 @@ class Table(MutableSequence, Storage):
         except Exception:
             self._resize_all(old_length)
             raise
+
+    @staticmethod
+    def concatenate(tables, axis=1):
+        """Return concatenation of `tables` by `axis`."""
+        if not tables:
+            raise ValueError('need at least one table to concatenate')
+        if 1 == len(tables):
+            return tables[0].copy()
+        CONCAT_ROWS, CONCAT_COLS = 0, 1
+        if axis == CONCAT_ROWS:
+            table = tables[0].copy()
+            for t in tables[1:]:
+                table.extend(t)
+            return table
+        elif axis == CONCAT_COLS:
+            from operator import iand, attrgetter
+            from functools import reduce
+            if reduce(iand,
+                      (set(map(attrgetter('name'),
+                               chain(t.domain.variables, t.domain.metas)))
+                       for t in tables)):
+                raise ValueError('Concatenating two domains with variables '
+                                 'with same name is undefined')
+            domain = Domain(flatten(t.domain.attributes for t in tables),
+                            flatten(t.domain.class_vars for t in tables),
+                            flatten(t.domain.metas for t in tables))
+
+            def ndmin(A):
+                return A if A.ndim > 1 else A.reshape(A.shape[0], 1)
+
+            table = Table.from_numpy(domain,
+                                     np.hstack(tuple(ndmin(t.X) for t in tables)),
+                                     np.hstack(tuple(ndmin(t.Y) for t in tables)),
+                                     np.hstack(tuple(ndmin(t.metas) for t in tables)),
+                                     np.hstack(tuple(ndmin(t.W) for t in tables)))
+            return table
+        raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
 
     def is_view(self):
         """

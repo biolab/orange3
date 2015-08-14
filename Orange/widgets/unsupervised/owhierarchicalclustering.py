@@ -859,7 +859,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.error(0)
         self._set_items(None)
         if matrix is not None:
-            N, _ = matrix.X.shape
+            N, _ = matrix.shape
             if N < 2:
                 self.error(0, "Empty distance matrix")
                 matrix = None
@@ -1025,7 +1025,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
             # Select rows
-            c = numpy.zeros(self.matrix.X.shape[0])
+            c = numpy.zeros(self.matrix.shape[0])
 
             for i, indices in enumerate(maps):
                 c[indices] = i

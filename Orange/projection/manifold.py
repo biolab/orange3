@@ -23,11 +23,11 @@ class MDS(SklProjector):
         if isinstance(self._metric, distances):
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
-            dist_matrix = self._metric(X).X
+            dist_matrix = self._metric(X)
             self.params['dissimilarity'] = 'precomputed'
             clf = self.fit(dist_matrix, Y=Y)
         elif self._metric is 'precomputed':
-            dist_matrix, Y, domain = data.X, None, None
+            dist_matrix, Y, domain = data, None, None
             clf = self.fit(dist_matrix, Y=Y)
         else:
             data = self.preprocess(data)
