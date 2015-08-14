@@ -50,16 +50,12 @@ Symmetricity is always assumed, while the diagonal may also be non-zero.
     - None (lists instances as found in the data set)
     - **Clustering** (clusters data by similarity)
     - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
-
 2. *Colors*
     - **Colors** (select the color palette for your distance map)
-    - **Low** and**High** are thresholds for the color palette (low for instances or attributes with low
+    - **Low** and **High** are thresholds for the color palette (low for instances or attributes with low
     distances and high for instances or attributes with high distances).
-
 3. Select *Annotations*.
-
-4.  If *Auto send is on*, the data subset is communicated
-automatically, otherwise you need to press *Send data*.
+4. If *Auto send is on*, the data subset is communicated automatically, otherwise you need to press *Send data*.
 
 Normally, the color palette is used to
 visualize the entire range of distances appearing in the matrix. This

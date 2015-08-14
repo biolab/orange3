@@ -27,16 +27,23 @@ the darker the represented color. By combining class and attributes on x and y a
 values are the strongest and where the weakest, thus enabling us to find typical features (discrete) or value range 
 (continuous) for each class.
 
-![image](images/HeatMap-new2.png)
+![image](images/HeatMap-new2-stamped.png)
 
-1. Information on the input data
-2. Choose x attribute
-3. Choose y attribute
-4. Discrete attribute for color scheme
-5. Color scheme legend. You can select which attribute instances you wish to see in the visualization.
-6. Select the color scale strength (linear, square root or logarithmic)
-7. To move the map use *Drag* and to select data subset use *Select*
-8. Visualization
+1. Color scheme legend. **Low** and **High** are thresholds for the color palette
+   (low for attributes with low values and high for attributes with high values).
+2. Sort columns and rows:
+   - **No Sorting** (lists attributes as found in the data set)
+   - **Clustering** (clusters data by similarity)
+   - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
+3. Set what is displayed in the plot in **Annotation & Legend**.
+   - If *Show legend* is ticked, a color chart will be displayed above the map.
+   - If *Stripes with averages* is ticked, a new line with attribute averages will be displayed on the left.
+   - **Row Annotations** adds annotations to each instance on the right.
+   - **Column Label Positions** places column labels in a selected place (None, Top, Bottom, Top and Bottom).
+4. If *Keep aspect ratio* is ticked, each value will be displayed with a square (proportionate to the map).
+5. Split the map by labels, if present in the input.
+6. If *Auto commit is on*, changes are communicated automatically. Alternatively press *Commit*.
+7. *Save graph* saves the graph to the user's computer in a .svg or .png format.
 
 Example
 -------
@@ -47,9 +54,13 @@ for *Zoo* data set (0 is white, 1 is light blue, >1 is dark blue). The first thi
 we then use **Select Columns** widget and remove 'legs' attribute from the data set. Then we again
 feed the data to the **Heat Map**.
 
+<img src="images/HeatMap-Example1.png" alt="image" width="600">
+
 The new projections is much clearer. By removing 'legs' we get a neat visualization of attribute
 values for each class. We see that mammals typically have hair, teeth, backbone and milk, while birds
 have feathers, eggs and a tail.
+
+<img src="images/HeatMap-Example2.png" alt="image" width="600">
 
 Additionally we would like to see why 'legs' attribute was so pronounced in the first heat map.
 We again use **Select Columns** widget to feed only this attribute into the **Data Table**. We already
@@ -59,6 +70,4 @@ to inspect this further. We sort the table by type and look at invertebrates for
 this class has 0, 4, 5, 6 or even 8 legs, which is why it was a good idea to remove it from the
 heat map visualization as an 'outlying' attribute.
 
-![image](images/HeatMap-new1.png)
-
-![image](images/HeatMap-new4.png)
+<img src="images/HeatMap-Example3.png" alt="image" width="600">
