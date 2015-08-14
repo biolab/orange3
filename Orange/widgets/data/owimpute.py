@@ -1,7 +1,6 @@
 from Orange.widgets import widget as owidget
 import collections
 from collections import namedtuple
-import copy
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
@@ -15,8 +14,8 @@ from PyQt4.QtCore import Qt, QMargins
 import Orange.data
 from Orange.base import Model, Learner
 from Orange.data import filter as data_filter
-from Orange.regression.base_regression import LearnerRegression, ModelRegression
-from Orange.classification.base_classification import LearnerClassification, ModelClassification
+from Orange.regression.base_regression import LearnerRegression
+from Orange.classification.base_classification import LearnerClassification
 
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget
