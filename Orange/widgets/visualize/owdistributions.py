@@ -88,6 +88,7 @@ class OWDistributions(widget.OWWidget):
     groupvar_idx = settings.ContextSetting(0)
 
     relative_freq = settings.Setting(False)
+    disc_cont = settings.Setting(False)
 
     want_graph = True
     ASH_HIST = 50
@@ -114,6 +115,12 @@ class OWDistributions(widget.OWWidget):
         self.varview.selectionModel().selectionChanged.connect(
             self._on_variable_idx_changed)
         varbox.layout().addWidget(self.varview)
+
+        self.cb_disc_cont = gui.checkBox(
+            self.controlArea, self, "disc_cont", "Discretize continuous variables",
+            callback=self._on_groupvar_idx_changed)
+
+        gui.separator(self.controlArea, 8, 8)
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
@@ -190,17 +197,23 @@ class OWDistributions(widget.OWWidget):
             self.var = self.varmodel[varidx]
         if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
-        self.set_left_axis_name()
-        self.enable_disable_rel_freq()
+        data = self.data
         if self.var is None:
             return
+        if self.disc_cont:
+            data = self.data[:, (self.var, self.cvar) if self.cvar else self.var ]
+            disc = Orange.preprocess.discretize.EqualWidth(n=10)
+            data = Orange.preprocess.Discretize(data, method=disc)
+            self.var = data.domain.variables[0]
+        self.set_left_axis_name()
+        self.enable_disable_rel_freq()
         if self.cvar:
             self.contingencies = \
-                contingency.get_contingency(self.data, self.var, self.cvar)
+                contingency.get_contingency(data, self.var, self.cvar)
             self.display_contingency()
         else:
             self.distributions = \
-                distribution.get_distribution(self.data, self.var)
+                distribution.get_distribution(data, self.var)
             self.display_distribution()
         self.plot.autoRange()
 
