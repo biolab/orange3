@@ -35,9 +35,9 @@ A simple widget that presents information on data set size, features, targets, m
 4. Information on meta attributes
 5. Information on where the data is stored
 
-Examples
---------
+Example
+-------
 
-Below we compare two **Data Info** widgets - one with the information on the entire data set and the other with the information on the (manually) selected subset from the **Scatterplot** widget.
+Below we compare basic statistics of two **Data Info** widgets - one with the information on the entire data set and the other with the information on the (manually) selected subset from the **Scatterplot** widget.
 
-<img src="images/data-info-example1.png" alt="image" width="400">
+<img src="images/DataInfo-Example.png" alt="image" width="600">
