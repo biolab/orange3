@@ -904,6 +904,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def unselect_all(self):
         self.selection = None
         self.update_colors(keep_colors=True)
+        self.master.selection_changed()
 
     def select(self, points):
         # noinspection PyArgumentList
