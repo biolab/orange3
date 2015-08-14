@@ -168,7 +168,7 @@ class OWRank(widget.OWWidget):
         self.discRanksView.setColumnWidth(0, 20)
         self.discRanksView.sortByColumn(1, Qt.DescendingOrder)
         self.discRanksView.selectionModel().selectionChanged.connect(
-            self.onSelectionChanged
+            self.commit
         )
         self.discRanksView.pressed.connect(self.onSelectItem)
         self.discRanksView.horizontalHeader().sectionClicked.connect(
@@ -198,7 +198,7 @@ class OWRank(widget.OWWidget):
         self.discRanksView.setColumnWidth(0, 20)
         self.contRanksView.sortByColumn(1, Qt.DescendingOrder)
         self.contRanksView.selectionModel().selectionChanged.connect(
-            self.onSelectionChanged
+            self.commit
         )
         self.contRanksView.pressed.connect(self.onSelectItem)
         self.contRanksView.horizontalHeader().sectionClicked.connect(
@@ -280,7 +280,7 @@ class OWRank(widget.OWWidget):
             self.updateScores()
 
         self.selectMethodChanged()
-        self.unconditional_commit()
+        self.commit()
 
     def updateScores(self, measuresMask=None):
         """
@@ -372,19 +372,13 @@ class OWRank(widget.OWWidget):
         self.usefulAttributes = []
         self.ranksModel.setRowCount(0)
 
-    def onSelectionChanged(self, *args):
-        """
-        Called when the ranks view selection changes.
-        """
-        self.data_changed()
-
     def onSelectItem(self, index):
         """
         Called when the user selects/unselects an item in the table view.
         """
         self.selectMethod = OWRank.SelectManual  # Manual
         self.selectButtons.button(self.selectMethod).setChecked(True)
-        self.data_changed()
+        self.commit()
 
     def setSelectMethod(self, method):
         if self.selectMethod != method:
@@ -495,9 +489,6 @@ class OWRank(widget.OWWidget):
     def sendReport(self):
         self.reportData(self.data)
         self.reportRaw(gui.reportTable(self.ranksView))
-
-    def data_changed(self):
-        self.commit()
 
     def commit(self):
         selected = self.selectedAttrs()
