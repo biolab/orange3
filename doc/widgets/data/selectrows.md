@@ -57,9 +57,18 @@ in the composition of the condition or any of its terms.
 Example
 -------
 
-![image] (images/SelectRows-schema.png)
+In the workflow below we used *Zoo* data from the **File** widget and fed it
+into the **Select Rows**. 
+In the widget we chose to output only two animal types (namely fish and reptiles). 
+We can inspect both the original data set and the data set with selected rows in the 
+**Data Table** widget.
 
-In this example we used the car data from *imports-85* data set and
-listed all the imported diesel cars by brand.
+<img src="images/SelectRows-Example.png" alt="image" width="600">
 
-<img src="images/SelectRows-Workflow.png" alt="image" width="400">
+In the next example we used the car data from *imports-85* data set and similarly
+fed it into the **Box Plot** widget. We first observe the entire data set based on
+the engine type. Then we selected only diesel cars in **Select Rows** widget and
+feed it again into the **Box Plot**. There we can see all the imported diesel cars 
+listed by brand.
+
+<img src="images/SelectRows-Workflow.png" alt="image" width="600">
