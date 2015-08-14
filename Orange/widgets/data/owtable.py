@@ -411,6 +411,10 @@ class OWDataTable(widget.OWWidget):
         gui.checkBox(box, self, "select_rows", "Select full rows",
                      callback=self._on_select_rows_changed)
 
+        gui.button(box, self, "Deselect all",
+                   self.deselect_all_rows, autoDefault=False,
+                   tooltip="Deselect all rows on current tab")
+
         gui.rubber(self.controlArea)
 
         gui.auto_commit(self.controlArea, self, "auto_commit",
@@ -452,6 +456,10 @@ class OWDataTable(widget.OWWidget):
             )
             if self.show_distributions:
                 self._on_distribution_color_changed()
+
+    def deselect_all_rows(self):
+        view = self.tabs.currentWidget()
+        if view: view.clearSelection()
 
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
