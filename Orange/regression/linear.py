@@ -113,11 +113,11 @@ class PolynomialLearner(SklLearner):
 class LinearModel(Model):
     supports_multiclass = True
 
-    def __init__(self, skmodel):
-        self.skmodel = skmodel
+    def __init__(self, model):
+        self.model = model
 
-    def predict(self, table):
-        vals = self.skmodel.predict(table)
+    def predict(self, X):
+        vals = self.model.predict(X)
         if len(vals.shape) == 1:
             # Prevent IndexError for 1D array
             return vals
@@ -127,18 +127,18 @@ class LinearModel(Model):
             return vals
 
     def __str__(self):
-        return 'LinearModel {}'.format(self.skmodel)
+        return 'LinearModel {}'.format(self.model)
 
 class PolynomialModel(Model):
     supports_multiclass = True
 
-    def __init__(self, skmodel, polyfeatures):
-        self.skmodel = skmodel
+    def __init__(self, model, polyfeatures):
+        self.model = model
         self.polyfeatures = polyfeatures
 
-    def predict(self, table):
-        table = self.polyfeatures.fit_transform(table)
-        return self.skmodel.predict(table)
+    def predict(self, X):
+        X = self.polyfeatures.fit_transform(X)
+        return self.model.predict(X)
 
     def __str__(self):
-        return 'PolynomialModel {}'.format(self.skmodel)
+        return 'PolynomialModel {}'.format(self.model)
