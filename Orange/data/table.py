@@ -889,6 +889,14 @@ class Table(MutableSequence, Storage):
         if self.W.base is not None:
             self.W = self.W.copy()
 
+    def copy(self):
+        """
+        Return a copy of the table
+        """
+        t = Table(self)
+        t.ensure_copy()
+        return t
+
     @staticmethod
     def __determine_density(data):
         if data is None:
