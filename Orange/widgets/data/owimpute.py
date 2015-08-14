@@ -283,7 +283,7 @@ class OWImpute(OWWidget):
         self.learner = learner
 
         if self.data is not None and \
-                any(state.model.short == "model" for state in
+                any(state.method.short == "model" for state in
                     map(self.state_for_column, range(len(self.data.domain)))):
             self.commit()
 
@@ -510,7 +510,10 @@ def learn_model_for(learner, variable, data):
              if attr is not variable]
     domain = Orange.data.Domain(attrs, (variable,))
     data = Orange.data.Table.from_table(domain, data)
-    return learner(data)
+    try:
+        return learner(data)
+    except:
+        pass
 
 
 from Orange.classification.naive_bayes import NaiveBayesLearner
