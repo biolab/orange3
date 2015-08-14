@@ -34,7 +34,7 @@ Description
 5. Expression in Python
 6. Press commit to communicate changes
 
-For discrete variables, however, there's a bit more work. First add or remove the values you want to for the new feature. Then select the base value and the expression. In the example below, we have constructed an expression with 'if lower than' and defined three conditions; the program ascribes 0 (which we renamed to lower) if the original value is lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the other values. 
+For discrete variables, however, there's a bit more work. First add or remove the values you want to for the new feature. Then select the base value and the expression. In the example below, we have constructed an expression with 'if lower than' and defined three conditions; the program ascribes 0 (which we renamed to lower) if the original value is lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the other values. Notice that we use an underscore for the feature name (e.g. petal_length).
 
 ![image](images/feature-constructor2-stamped.png)
 
@@ -45,12 +45,15 @@ For discrete variables, however, there's a bit more work. First add or remove th
 5. Order the values
 6. Expression in Python
 
-Examples
---------
+Example
+-------
 
-With **Feature Constructor** you can easily adjust or combine existing features into new ones. Below we have added one new continuous and one new discrete feature. Notice that we use an underscore for the feature name (e.g. petal_length). For the continuous feature we squared the existing *petal length* value, while we used *lower than* for the discrete one.
+With **Feature Constructor** you can easily adjust or combine existing features into new ones. Below we added one
+new discrete feature to the *Titanic* data set. We created a new attribute called *Financial status* and set the
+values to be *rich* if the person belongs to the first class (status = first) and *not rich* for everybody else.
+We can see the new data set with **Data Table** widget.
 
-<img src="images/feature-constructor-example.png" alt="image" width="400">
+<img src="images/FeatureConstructor-Example.png" alt="image" width="400">
 
 Hints
 -----
