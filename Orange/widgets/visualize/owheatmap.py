@@ -171,7 +171,7 @@ class OWHeatMap(widget.OWWidget):
     priority = 1040
 
     inputs = [("Data", Orange.data.Table, "set_dataset")]
-    outputs = [("Data", Orange.data.Table, widget.Default)]
+    outputs = [("Selected Data", Orange.data.Table, widget.Default)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -1038,7 +1038,7 @@ class OWHeatMap(widget.OWWidget):
             indices = sortind[self.selected_rows]
             data = self.data[indices]
 
-        self.send("Data", data)
+        self.send("Selected Data", data)
 
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
