@@ -53,16 +53,14 @@ Signals
 Description
 -----------
 
-![Python Script widget with an example script](images/python-script-example.png)
-
-**Python Script** widget can be used to run a python script in the inputs,
-when a suitable functionality is not implemented in an existing widgets.
-The scripts have `in_data`, `in_distance`, `in_learner`, `in_classifier`
-and `in_object` variables (from input signals) in their local namespace.
+**Python Script** widget can be used to run a python script in the input,
+when a suitable functionality is not implemented in an existing widget.
+The script has `in_data`, `in_distance`, `in_learner`, `in_classifier`
+and `in_object` variables (from input signals) in its local namespace.
 If a signal is not connected or it did not yet receive any data, those
 variables contain `None`.
 
-After the script is executed `out_data`, `out_distance`, … variables
+After the script is executed, `out_data`, `out_distance`, … variables
 from the script’s local namespace are extracted and used as outputs of
 the widget. The widget can be further connected to other widgets for visualizing the output.
 
@@ -80,23 +78,23 @@ receives:
 >
 > You should not modify the input objects in place.
 
-The *Python script* editor on the left can be used to edit a script (it
-supports some rudimentary syntax highlighting).
+![Python Script widget with an example script](images/PythonScript-stamped.png)
 
-Pressing the *Execute* in the *Run* box executes the script (using `exec`).
-Any script output (from `print`) is captured and displayed in the
-*Console* below the script.
-
-If *Auto execute* is checked, the script is run any time inputs to
-the widget change.
-
-Library
--------
-
-The *Library* control can be used to manage multiple scripts.
-
+1. Info box contains names of basic operators for Orange Python script.
+2. The *Library* control can be used to manage multiple scripts.
 Pressing "+" will add a new entry and open it in the *Python script*
-editor. When the script is modified its entry in the *Library* will
+editor. When the script is modified, its entry in the *Library* will
 change to indicate it has unsaved changes. Pressing *Update* will save the
 script (keyboard shortcut ctrl + s). A script can be removed by
 selecting it and pressing the "-" button.
+3. Pressing *Execute* in the *Run* box executes the script (using `exec`).
+Any script output (from `print`) is captured and displayed in the
+*Console* below the script. If *Auto execute* is checked, the script is run any time inputs to
+the widget change.
+4. The *Python script* editor on the left can be used to edit a script (it
+supports some rudimentary syntax highlighting).
+5. Console displays the output of the script.
+
+Examples
+--------
+
