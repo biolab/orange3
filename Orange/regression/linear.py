@@ -92,7 +92,7 @@ class SGDRegressionLearner(SklLearner):
 
 class PolynomialLearner(SklLearner):
     __wraps__ = None
-    name = 'unireg'
+    name = 'poly learner'
 
     def __init__(self, learner, degree=1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
