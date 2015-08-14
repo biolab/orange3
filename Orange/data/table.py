@@ -848,12 +848,10 @@ class Table(MutableSequence, Storage):
             else:
                 for i, example in enumerate(instances):
                     self[old_length + i] = example
-                try:
-                    self[old_length + i] = example.id
-                except:
-                    with type(self)._next_instance_lock:
-                        self.ids[old_length + i] = type(self)._next_instance_id
-                        type(self)._next_instance_id += 1
+                    try:
+                        self.ids[old_length + i] = example.id
+                    except AttributeError:
+                        self.ids[old_length + i] = self.new_id()
         except Exception:
             self._resize_all(old_length)
             raise
