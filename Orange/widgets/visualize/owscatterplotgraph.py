@@ -878,16 +878,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                                 symbol=self.CurveSymbols[i]), escape(value))
 
     def zoom_button_clicked(self):
-        self.scatterplot_item.getViewBox().setMouseMode(
-            self.scatterplot_item.getViewBox().RectMode)
+        self.plot_widget.getViewBox().setMouseMode(
+            self.plot_widget.getViewBox().RectMode)
 
     def pan_button_clicked(self):
-        self.scatterplot_item.getViewBox().setMouseMode(
-            self.scatterplot_item.getViewBox().PanMode)
+        self.plot_widget.getViewBox().setMouseMode(
+            self.plot_widget.getViewBox().PanMode)
 
     def select_button_clicked(self):
-        self.scatterplot_item.getViewBox().setMouseMode(
-            self.scatterplot_item.getViewBox().RectMode)
+        self.plot_widget.getViewBox().setMouseMode(
+            self.plot_widget.getViewBox().RectMode)
 
     def reset_button_clicked(self):
         self.view_box.autoRange()
