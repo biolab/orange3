@@ -22,7 +22,6 @@ from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 from Orange.widgets.io import FileFormats
 
-
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
 
@@ -64,12 +63,11 @@ class DistributionBarItem(pg.GraphicsObject):
         geom = self.geometry
         x, y = geom.x(), geom.y()
         w, h = geom.width(), geom.height()
+        wsingle = w / len(self.dist)
         for d, c in zip(self.dist, self.colors):
-            if d == 0:
-                continue
-            painter.setBrush(QtGui.QBrush(c.lighter()))
-            painter.drawRect(QtCore.QRectF(x, y, w, d * h))
-            y += d * h
+            painter.setBrush(QtGui.QBrush(c))
+            painter.drawRect(QtCore.QRectF(x, y, wsingle, d * h))
+            x += wsingle
         painter.end()
 
         self.__picture = picture
@@ -89,12 +87,11 @@ class OWDistributions(widget.OWWidget):
     #: Selected group variable
     groupvar_idx = settings.ContextSetting(0)
 
-    Hist, ASH, Kernel = 0, 1, 2
-    #: Continuous variable density estimation method
-    cont_est_type = settings.Setting(ASH)
     relative_freq = settings.Setting(False)
+    disc_cont = settings.Setting(False)
 
     want_graph = True
+    ASH_HIST = 50
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -106,7 +103,7 @@ class OWDistributions(widget.OWWidget):
         varbox = gui.widgetBox(self.controlArea, "Variable")
 
         self.varmodel = itemmodels.VariableListModel()
-        self.groupvarmodel = itemmodels.VariableListModel()
+        self.groupvarmodel = []
 
         self.varview = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection)
@@ -118,24 +115,17 @@ class OWDistributions(widget.OWWidget):
         self.varview.selectionModel().selectionChanged.connect(
             self._on_variable_idx_changed)
         varbox.layout().addWidget(self.varview)
-        gui.separator(varbox, 8, 8)
-        gui.comboBox(
-            varbox, self, "cont_est_type", label="Show continuous variables by",
-            valueType=int,
-            items=["Histograms", "Average shifted histograms",
-                   "Kernel density estimators"],
-            callback=self._on_cont_est_type_changed)
+
+        self.cb_disc_cont = gui.checkBox(
+            self.controlArea, self, "disc_cont", "Discretize continuous variables",
+            callback=self._on_groupvar_idx_changed)
+
+        gui.separator(self.controlArea, 8, 8)
 
         box = gui.widgetBox(self.controlArea, "Group by")
-        self.groupvarview = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection)
-        self.groupvarview.setFixedHeight(100)
-        self.groupvarview.setSizePolicy(
-            QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        self.groupvarview.setModel(self.groupvarmodel)
-        self.groupvarview.selectionModel().selectionChanged.connect(
-            self._on_groupvar_idx_changed)
-        box.layout().addWidget(self.groupvarview)
+        self.icons = gui.attributeIconDict
+        self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
+             callback=self._on_groupvar_idx_changed, valueType=str)
         self.cb_rel_freq = gui.checkBox(
             box, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed)
@@ -147,8 +137,9 @@ class OWDistributions(widget.OWWidget):
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
 
         self.plot = pg.PlotItem()
-#         self.plot.getViewBox().setMouseEnabled(False, False)
+        self.plot.getViewBox().setMouseEnabled(False, False)
         self.plot.getViewBox().setMenuEnabled(False)
+        self.plot.hideButtons() 
         plotview.setCentralItem(self.plot)
 
         pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
@@ -168,24 +159,28 @@ class OWDistributions(widget.OWWidget):
         if self.data is not None:
             domain = self.data.domain
             self.varmodel[:] = list(domain)
-            self.groupvarmodel[:] = \
+
+            self.groupvarview.clear()
+            self.groupvarmodel = \
                 ["(None)"] + [var for var in domain if var.is_discrete]
+            self.groupvarview.addItem("(None)")
+            for var in self.groupvarmodel[1:]:
+                self.groupvarview.addItem(self.icons[var], var.name)
             if domain.has_discrete_class:
                 self.groupvar_idx = \
-                    list(self.groupvarmodel).index(domain.class_var)
+                    self.groupvarmodel.index(domain.class_var)
             self.openContext(domain)
             self.variable_idx = min(max(self.variable_idx, 0),
                                     len(self.varmodel) - 1)
             self.groupvar_idx = min(max(self.groupvar_idx, 0),
                                     len(self.groupvarmodel) - 1)
-            itemmodels.select_row(self.groupvarview, self.groupvar_idx)
             itemmodels.select_row(self.varview, self.variable_idx)
             self._setup()
 
     def clear(self):
         self.plot.clear()
         self.varmodel[:] = []
-        self.groupvarmodel[:] = []
+        self.groupvarmodel = []
         self.variable_idx = -1
         self.groupvar_idx = 0
         self._legend.clear()
@@ -202,30 +197,25 @@ class OWDistributions(widget.OWWidget):
             self.var = self.varmodel[varidx]
         if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
-        self.set_left_axis_name()
-        self.enable_disable_rel_freq()
+        data = self.data
         if self.var is None:
             return
+        if self.disc_cont:
+            data = self.data[:, (self.var, self.cvar) if self.cvar else self.var ]
+            disc = Orange.preprocess.discretize.EqualWidth(n=10)
+            data = Orange.preprocess.Discretize(data, method=disc)
+            self.var = data.domain.variables[0]
+        self.set_left_axis_name()
+        self.enable_disable_rel_freq()
         if self.cvar:
             self.contingencies = \
-                contingency.get_contingency(self.data, self.var, self.cvar)
+                contingency.get_contingency(data, self.var, self.cvar)
             self.display_contingency()
         else:
             self.distributions = \
-                distribution.get_distribution(self.data, self.var)
+                distribution.get_distribution(data, self.var)
             self.display_distribution()
-
-    def _density_estimator(self):
-        if self.cont_est_type == OWDistributions.Hist:
-            def hist(dist, cont):
-                h, edges = numpy.histogram(dist[0, :], bins=10,
-                                           weights=dist[1, :])
-                return edges, h
-            return hist
-        elif self.cont_est_type == OWDistributions.ASH:
-            return lambda dist, cont: ash_curve(dist, cont, m=5)
-        elif self.cont_est_type == OWDistributions.Kernel:
-            return rect_kernel_curve
+        self.plot.autoRange()
 
     def display_distribution(self):
         dist = self.distributions
@@ -239,12 +229,15 @@ class OWDistributions(widget.OWWidget):
         self.set_left_axis_name()
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
-            curve_est = self._density_estimator()
-            edges, curve = curve_est(dist, None)
+            edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST)
+            edges = edges + (edges[1] - edges[0])/2
+            edges = edges[:-1]
             item = pg.PlotCurveItem()
-            item.setData(edges, curve, antialias=True, stepMode=True,
+            pen = QtGui.QPen(QtGui.QBrush(Qt.white), 3)
+            pen.setCosmetic(True)
+            item.setData(edges, curve, antialias=True, stepMode=False,
                          fillLevel=0, brush=QtGui.QBrush(Qt.gray),
-                         pen=QtGui.QColor(Qt.white))
+                         pen=pen)
             self.plot.addItem(item)
         else:
             bottomaxis.setTicks([list(enumerate(var.values))])
@@ -260,6 +253,7 @@ class OWDistributions(widget.OWWidget):
             self.display_contingency()
         else:
             self.display_distribution()
+        self.plot.autoRange()
 
     def display_contingency(self):
         """
@@ -276,12 +270,11 @@ class OWDistributions(widget.OWWidget):
 
         cvar_values = cvar.values
         palette = colorpalette.ColorPaletteGenerator(len(cvar_values))
-        colors = [palette[i] for i in range(len(cvar_values))]
+        colors = [palette[i].lighter() for i in range(len(cvar_values))]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
-            curve_est = self._density_estimator()
             weights, cols, cvar_values, curves = [], [], [], []
             for i, dist in enumerate(cont):
                 v, W = dist
@@ -289,49 +282,44 @@ class OWDistributions(widget.OWWidget):
                     weights.append(numpy.sum(W))
                     cols.append(colors[i])
                     cvar_values.append(cvar.values[i])
-                    curves.append(curve_est(dist, cont))
+                    curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST))
             weights = numpy.array(weights)
             weights /= numpy.sum(weights)
             colors = cols
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
 
-            cum_curves = [curves[0]]
-            for X, Y in curves[1:]:
-                cum_curves.append(sum_rect_curve(X, Y, *cum_curves[-1]))
+            for t in [ "fill", "line" ]:
+                for (X, Y), color in reversed(list(zip(curves, colors))):
+                    X = X + (X[1] - X[0])/2
+                    X = X[:-1]
+                    item = pg.PlotCurveItem()
+                    pen = QtGui.QPen(QtGui.QBrush(color), 3)
+                    pen.setCosmetic(True)
+                    color = QtGui.QColor(color)
+                    color.setAlphaF(0.2)
+                    item.setData(X, Y, antialias=True, stepMode=False,
+                         fillLevel=0 if t == "fill" else None,
+                         brush=QtGui.QBrush(color), pen=pen)
+                    self.plot.addItem(item)
 
-            for (X, Y), color in reversed(list(zip(cum_curves, colors))):
-                item = pg.PlotCurveItem()
-                pen = QtGui.QPen(QtGui.QBrush(Qt.white), 0.5)
-                pen.setCosmetic(True)
-                item.setData(X, Y, antialias=True, stepMode=True,
-                             fillLevel=0, brush=QtGui.QBrush(color.lighter()),
-                             pen=pen)
-                self.plot.addItem(item)
-
-#             # XXX: sum the individual curves and not the distributions.
-#             # The conditional distributions might be 'smoother' than
-#             # the cumulative one
-#             cum_dist = [cont[0]]
-#             for dist in cont[1:]:
-#                 cum_dist.append(dist_sum(dist, cum_dist[-1]))
-#
-#             curves = [rect_kernel_curve(dist) for dist in cum_dist]
-#             colors = [Qt.blue, Qt.red, Qt.magenta]
-#             for (X, Y), color in reversed(list(zip(curves, colors))):
-#                 item = pg.PlotCurveItem()
-#                 item.setData(X, Y, antialias=True, stepMode=True,
-#                              fillLevel=0, brush=QtGui.QBrush(color))
-#                 item.setPen(QtGui.QPen(color))
-#                 self.plot.addItem(item)
         elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
+
+            maxh = 0 #maximal column height
+            maxrh = 0 #maximal relative column height
+            for i, (value, dist) in enumerate(zip(var.values, cont.T)):
+                maxh = max(maxh, max(dist))
+                maxrh = max(maxrh, max(dist/sum(dist)))
+
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
-                geom = QtCore.QRectF(i - 0.333, 0, 0.666, 100
-                                     if self.relative_freq else dsum)
-                item = DistributionBarItem(geom, dist / dsum, colors)
+                geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
+                                     if self.relative_freq else maxh)
+                item = DistributionBarItem(geom, dist/dsum/maxrh
+                                           if self.relative_freq
+                                           else dist/maxh, colors)
                 self.plot.addItem(item)
 
         for color, name in zip(colors, cvar_values):
@@ -343,9 +331,7 @@ class OWDistributions(widget.OWWidget):
 
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
-        if (self.var and
-            self.var.is_continuous and
-            self.cont_est_type != OWDistributions.Hist):
+        if self.var and self.var.is_continuous:
             set_label("Density")
         else:
             set_label(["Frequency", "Relative frequency"]
@@ -360,13 +346,7 @@ class OWDistributions(widget.OWWidget):
         self._setup()
 
     def _on_groupvar_idx_changed(self):
-        self.groupvar_idx = selected_index(self.groupvarview)
         self._setup()
-
-    def _on_cont_est_type_changed(self):
-        self.set_left_axis_name()
-        if self.data is not None:
-            self._setup()
 
     def onDeleteWidget(self):
         self.plot.clear()
@@ -398,77 +378,6 @@ def dist_sum(D1, D2):
     W = numpy.array(W)
     assert W.shape[0] == unique.shape[0]
     return unique, W
-
-
-def rect_kernel_curve(dist, cont=None, bandwidth=None):
-    """
-    Return a rectangular kernel density curve for `dist`.
-
-    `dist` must not be empty.
-    """
-    # XXX: what to do with unknowns
-    #      Distribute uniformly between the all points?
-
-    dist = numpy.array(dist)
-    if dist.size == 0:
-        raise ValueError("'dist' is empty.")
-
-    X = dist[0, :]
-    W = dist[1, :]
-
-    def IQR(a, weights=None):
-        """Interquartile range of `a`."""
-        q1, q3 = weighted_quantiles(a, [0.25, 0.75], weights=weights)
-        return q3 - q1
-
-    if bandwidth is None:
-        # Silverman's rule of thumb.
-        A = weighted_std(X, weights=W)
-        iqr = IQR(X, weights=W)
-        if iqr > 0:
-            A = min(A, iqr / 1.34)
-
-        bandwidth = 0.9 * A * (X.size ** -0.2)
-
-    bottom_edges = X - bandwidth / 2
-    top_edges = X + bandwidth / 2
-
-    edges = numpy.hstack((bottom_edges, top_edges))
-    edge_weights = numpy.hstack((W, -W))
-
-    sort_ind = numpy.argsort(edges)
-    edges = edges[sort_ind]
-    edge_weights = edge_weights[sort_ind]
-
-    # NOTE: The final cumulative sum element is 0
-    curve = numpy.cumsum(edge_weights)[:-1]
-    curve /= numpy.sum(W) * bandwidth
-    return edges, curve
-
-
-def sum_rect_curve(Xa, Ya, Xb, Yb):
-    """
-    Sum two curves (i.e. stack one over the other).
-    """
-    X = numpy.r_[Xa, Xb]
-    Y = numpy.r_[Ya, 0, Yb, 0]
-    assert X.shape == Y.shape
-
-    dY = numpy.r_[Y[0], numpy.diff(Y)]
-    sort_ind = numpy.argsort(X)
-    X = X[sort_ind]
-    dY = dY[sort_ind]
-
-    unique, uniq_index = numpy.unique(X, return_index=True)
-    spans = numpy.diff(numpy.r_[uniq_index, len(X)])
-    dY = [numpy.sum(dY[start:start + span])
-          for start, span in zip(uniq_index, spans)]
-    dY = numpy.array(dY)
-    assert dY.shape[0] == unique.shape[0]
-    # NOTE: The final cumulative sum element is 0
-    Y = numpy.cumsum(dY)[:-1]
-
-    return unique, Y
 
 
 def ash_curve(dist, cont=None, bandwidth=None, m=3):
@@ -518,13 +427,15 @@ def average_shifted_histogram(a, h, m=3, weights=None):
 
     amin, amax = a.min(), a.max()
     delta = h / m
-    offset = (m - 1) * delta
-    nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m - 1)
+    wfac = 4 #extended windows for gaussian smoothing
+    offset = (wfac * m - 1) * delta
+    nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m * wfac - 1)
+    
     bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
                           endpoint=True)
     hist, edges = numpy.histogram(a, bins, weights=weights, density=True)
 
-    kernel = triangular_kernel((numpy.arange(2 * m - 1) - (m - 1)) / m)
+    kernel = gaussian_kernel((numpy.arange(2 * wfac * m - 1) - (wfac * m - 1)) / (wfac * m), wfac)
     kernel = kernel / numpy.sum(kernel)
     ash = numpy.convolve(hist, kernel, mode="same")
 
@@ -535,6 +446,11 @@ def average_shifted_histogram(a, h, m=3, weights=None):
 
 def triangular_kernel(x):
     return numpy.clip(1, 0, 1 - numpy.abs(x))
+
+
+def gaussian_kernel(x, k):
+    #fit k standard deviations into available space from [-1 .. 1]
+    return 1/(numpy.sqrt(2 * numpy.pi)) * numpy.exp( - (x*k)**2 / (2))
 
 
 def weighted_std(a, axis=None, weights=None, ddof=0):
