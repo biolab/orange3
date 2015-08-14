@@ -1,4 +1,4 @@
-
+from Orange.widgets import widget as owidget
 import collections
 from collections import namedtuple
 import copy
@@ -15,6 +15,8 @@ from PyQt4.QtCore import Qt, QMargins
 import Orange.data
 from Orange.base import Model, Learner
 from Orange.data import filter as data_filter
+from Orange.regression.base_regression import LearnerRegression, ModelRegression
+from Orange.classification.base_classification import LearnerClassification, ModelClassification
 
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget
@@ -172,7 +174,8 @@ class OWImpute(OWWidget):
     priority = 2130
 
     inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Learner", Learner, "set_learner")]
+              # ("Learner", Learner, "set_learner"),
+              ("Learners", Learner, "set_learner", owidget.Multiple)]
     outputs = [("Data", Orange.data.Table)]
 
     METHODS = METHODS
@@ -257,7 +260,9 @@ class OWImpute(OWWidget):
                         orientation="horizontal",
                         checkbox_label="Commit on any change")
         self.data = None
-        self.learner = None
+
+        # Have multiple learners indexed by the edge index
+        self.learners = dict()
 
     def set_default_method(self, index):
         """
@@ -279,8 +284,13 @@ class OWImpute(OWWidget):
             itemmodels.select_row(self.varview, 0)
         self.unconditional_commit()
 
-    def set_learner(self, learner):
-        self.learner = learner
+    def set_learner(self, learner, tid=None):
+
+        idx = tid[0]
+        if not idx in self.learners:
+            self.learners[idx] = learner
+        else:
+            self.learners.pop(idx, None)
 
         if self.data is not None and \
                 any(state.method.short == "model" for state in
@@ -326,8 +336,29 @@ class OWImpute(OWWidget):
         elif method.short == "avg":
             return column_imputer_average(var, data)
         elif method.short == "model":
-            learner = self.learner if self.learner is not None else MeanLearner()
+
+            learner = None
+            for tid, learner_pointer in sorted(self.learners.items()):
+                if var.is_continuous and \
+                        isinstance(learner_pointer, LearnerRegression):
+                    if learner is None:
+                        learner = learner_pointer
+                    else:
+                        print("Multiple regression models ; using %s" % str(learner.name))
+                if not var.is_continuous and \
+                        isinstance(learner_pointer, LearnerClassification):
+                    if learner is None:
+                        learner = learner_pointer
+                    else:
+                        print("Multiple classification models ; using %s" % str(learner.name))
+
+            # No suitable model was found for this variable type,
+            # default to MeanLearner
+            if learner is None:
+                print("No suitable model for attribute \"%s\"; imputing average/most frequent." % var.name)
+                learner = MeanLearner()
             return column_imputer_by_model(var, data, learner=learner)
+
         elif method.short == "random":
             return column_imputer_random(var, data)
         elif method.short == "value":
@@ -510,10 +541,8 @@ def learn_model_for(learner, variable, data):
              if attr is not variable]
     domain = Orange.data.Domain(attrs, (variable,))
     data = Orange.data.Table.from_table(domain, data)
-    try:
-        return learner(data)
-    except:
-        pass
+    return learner(data)
+
 
 
 from Orange.classification.naive_bayes import NaiveBayesLearner
