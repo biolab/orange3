@@ -23,21 +23,21 @@ Signals
 Description
 -----------
 
-**Discretize** widget discretizes continuous attributes with a selected method.
+**Discretize** widget [discretizes](https://en.wikipedia.org/wiki/Discretization) continuous attributes with a selected method.
 
 ![Discretize](images/Discretize-All-stamped.png)
 
 1. The basic version of the widget is rather simple. It allows choosing
   between three different discretizations. 
-  - **Entropy-MDL**, invented by Fayyad
+  - [**Entropy-MDL**](http://ijcai.org/Past%20Proceedings/IJCAI-93-VOL2/PDF/022.pdf), invented by Fayyad
   and Irani is a top-down discretization which recursively splits the
   attribute at a cut maximizing information gain, until the gain
   is lower than the minimal description length of the cut. This discretization
   can result in an arbitrary number of intervals, including a single
   interval in which case the attribute is discarded as useless (removed).
-  - **Equal-frequency** splits the attribute into the a given number of intervals,
+  - [**Equal-frequency**](http://www.saedsayad.com/unsupervised_binning.htm) splits the attribute into the a given number of intervals,
   so that they each contain approximately the same number of instances.
-  - **Equal-width** evenly splits the range between the smallest and the largest
+  - [**Equal-width**](https://en.wikipedia.org/wiki/Data_binning) evenly splits the range between the smallest and the largest
   observed value. *Number of intervals* can be set manually.
   - The widget can also be set to leave the attributes continuous or to
   remove them.
@@ -64,4 +64,4 @@ Example
 In the schema below we show *Iris* data set with continuous attributes (as
 in original data file) and with discretized attributes.
 
-<img src="images/Discretize-Example.png" alt="image" width="400">
+<img src="images/Discretize-Example.png" alt="image" width="600">

@@ -29,7 +29,7 @@ replaced with continuous.
 
 ![image](images/Continuize-stamped.png)
 
-1. Continuization methods, which define the treatment of
+1. [*Continuization methods*](https://en.wikipedia.org/wiki/Continuity_correction), which define the treatment of
 multivalued discrete attributes. Say that we have a discrete attribute
 status with values low, middle and high, listed in that order. Options
 for their transformation are:
@@ -73,15 +73,21 @@ for their transformation are:
 5. If *Auto apply is on*, the data set is committed on any change.
   Otherwise, you have to press *Apply* after each change.
 
-Example
--------
+Examples
+--------
 
-The schema below shows a typical use of this widget: in order to
+First let's what is the output of **Continuize** widget. We feed the original data into the
+**Data Table** and see how they look like. Then we continuize the discrete values and
+observe them in another **Data Table**.
+
+<img src="images/Continuize-Example1.png" alt="image" width="600">
+
+In the second example we show a typical use of this widget: in order to
 properly plot linear projection of the data, discrete attributes need to
-be converted to continuous, therefore we put the data through Continuize
-widget before drawing it. Attribute “chest pain” originally had four
+be converted to continuous, therefore we put the data through **Continuize**
+widget before drawing it. Attribute "*chest pain*" originally had four
 values and was transformed into three continuous attributes; similar
 happened to gender, which was transformed into a single attribute
-gender=female.
+"*gender=female*".
 
-<img src="images/Continuize-Schema.png" alt="image" width="400">
+<img src="images/Continuize-Example2.png" alt="image" width="600">
