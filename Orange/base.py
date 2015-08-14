@@ -36,6 +36,8 @@ class Learner:
         if not self.check_learner_adequacy(data.domain):
             raise ValueError(self.learner_adequacy_err_msg)
 
+        origdomain = data.domain
+
         if isinstance(data, Instance):
             data = Table(data.domain, [data])
         data = self.preprocess(data)
@@ -54,6 +56,7 @@ class Learner:
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
+        model.original_domain = origdomain
         return model
 
     def preprocess(self, data):
@@ -122,6 +125,12 @@ class Model:
         elif isinstance(data, Table):
             if data.domain != self.domain:
                 data = data.from_table(self.domain, data)
+            prediction = self.predict_storage(data)
+        elif isinstance(data, (list, tuple)):
+            if not isinstance(data[0], (list, tuple)):
+                data = [ data ]
+            data = Table(self.original_domain, data)
+            data = Table(self.domain, data)
             prediction = self.predict_storage(data)
         else:
             raise TypeError("Unrecognized argument (instance of '{}')".format(
