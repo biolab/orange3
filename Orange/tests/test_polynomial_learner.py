@@ -2,8 +2,8 @@ import unittest
 import numpy as np
 import Orange
 
-class UnivariateRegressionTest(unittest.TestCase):
-    def test_UnivariateRegression(self):
+class PolynomialLearnerTest(unittest.TestCase):
+    def test_PolynomialLearner(self):
         x = np.array([0.172, 0.167, 0.337, 0.420, 0.355, 0.710, 0.801, 0.876])
         y = np.array([0.784, 0.746, 0.345, 0.363, 0.366, 0.833, 0.490, 0.445])
         

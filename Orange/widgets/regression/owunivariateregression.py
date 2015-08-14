@@ -18,8 +18,7 @@ from Orange.widgets.utils import itemmodels
 
 class OWUnivariateRegression(widget.OWWidget):
     name = "Univariate Regression"
-    description = "Univariate regression algorithm with optional Linear " \
-                  "regression widget and polynomial degree setting."
+    description = "Univariate regression with polynomial expansion."
     icon = "icons/UnivariateRegression.svg"
 
     inputs = [("Data", Table, "set_data", widget.Default),
