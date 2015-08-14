@@ -107,7 +107,7 @@ void combine_colors(int k, int *knn, int *drgb, int lo, int hi, int *rgba) {
 			main_color=c;
 		}
 	}
-	rgba[3]=128.0*(color_count-lo)/(hi-lo); // a
+	rgba[3]=(lo!=hi)?(128.0*(color_count-lo)/(hi-lo)):128.0; // a
 	rgba[2]=main_color%256; main_color/=256; // b
 	rgba[1]=main_color%256; main_color/=256; // g
 	rgba[0]=main_color; // r
