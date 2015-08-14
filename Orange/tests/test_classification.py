@@ -189,6 +189,26 @@ class SklTest(unittest.TestCase):
         self.assertIsInstance(learner.params, dict)
 
 
+class ClassfierListInputTest(unittest.TestCase):
+    def test_discrete(self):
+        table = Table("titanic")
+        tree = Orange.classification.TreeLearner()(table)
+        strlist = [ [ "crew", "adult", "male" ],
+                    [ "crew", "adult", None ] ]
+        for se in strlist: #individual examples
+            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
+        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+
+    def test_continuous(lf):
+        table = Table("iris")
+        tree = Orange.classification.TreeLearner()(table)
+        strlist = [ [ 2, 3, 4, 5 ],
+                    [ 1, 2, 3, 5 ] ]
+        for se in strlist: #individual examples
+            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
+        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+
+
 class LearnerAccessibility(unittest.TestCase):
     def all_learners(self):
         classification_modules = pkgutil.walk_packages(
