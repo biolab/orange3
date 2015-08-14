@@ -270,9 +270,7 @@ class ScaleData:
         inds = indices[:]
         if also_class_if_exists and self.data_has_class:
             inds.append(self.data_class_index)
-        selected_array = self.valid_data_array.take(inds, axis=0)
-        arr = np.add.reduce(selected_array)
-        return np.equal(arr, len(inds))
+        return np.all(self.valid_data_array[inds], axis=0)
 
     def get_valid_indices(self, indices):
         """
