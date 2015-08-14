@@ -598,6 +598,12 @@ class TableTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             d.extend(x)
 
+        y = d[:2, 1]
+        x.ensure_copy()
+        x.extend(y)
+        np.testing.assert_almost_equal(x[-2:, 1].X, y.X)
+        self.assertEqual(np.isnan(x).sum(), 8)
+
     def test_copy(self):
         t = data.Table(np.zeros((5, 3)), np.arange(5), np.zeros((5, 3)))
 
