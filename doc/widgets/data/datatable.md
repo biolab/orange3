@@ -41,12 +41,12 @@ instances.
 4.  Values of continuous attributes can be visualized with bars; colors can be attributed to different classes.
 5.  Data instances (rows) can be selected and sent to the widget's
     output channel.
-6.  While auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press '*Send Selected      Rows*'.
+6.  While auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press '*Send Selected Rows*'.
 
 Example
 -------
 
-We used two **File** widgets to read the *iris* and *glass* data set (provided in
+We used two **File** widgets to read the *Iris* and *Glass* data set (provided in
 Orange distribution), and send them to the **Data Table** widget.
 
 ![Example data table schema](images/DataTable-Schema.png)
@@ -56,4 +56,4 @@ Selected data instances in the first **Data Table** are passed to the second
 glass). Changing from one data set to another alters the communicated
 selection of the data instances if "*Commit on any change*" is selected.
 
-<img src="images/DataTable-Example.png" alt="image" width="400">
+<img src="images/DataTable-Example.png" alt="image" width="600">
