@@ -1,4 +1,6 @@
 from collections import defaultdict
+from itertools import chain
+
 import numpy as np
 from sklearn import feature_selection as skl_fss
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -16,7 +18,8 @@ __all__ = ["Chi2",
            "GainRatio",
            "Gini",
            "ReliefF",
-           "RReliefF"]
+           "RReliefF",
+           "FCBF"]
 
 
 class Scorer:
@@ -196,6 +199,51 @@ def _gini(D):
                * 0.5 * np.sum(D, axis=0) / np.sum(D))
 
 
+def _symmetrical_uncertainty(X, Y):
+    """Symmetrical uncertainty, Press et al., 1988."""
+    from Orange.preprocess._relieff import contingency_table
+    X, Y = np.around(X), np.around(Y)
+    cont = contingency_table(X, Y)
+    ig = InfoGain().from_contingency(cont, 1)
+    return 2 * ig / (_entropy(cont.sum(0)) + _entropy(cont.sum(1)))
+
+
+class FCBF(ClassificationScorer):
+    """
+    Fast Correlation-Based Filter. Described in:
+
+    Yu, L., Liu, H.,
+    Feature selection for high-dimensional data: A fast correlation-based filter solution.
+    2003. http://www.aaai.org/Papers/ICML/2003/ICML03-111.pdf
+    """
+    def score_data(self, data, feature=None):
+        S = []
+        for i, a in enumerate(data.X.T):
+            S.append((_symmetrical_uncertainty(a, data.Y), i))
+        S.sort()
+        worst = []
+
+        p = 1
+        while True:
+            try: SUpc, Fp = S[-p]
+            except IndexError: break
+            q = p + 1
+            while True:
+                try: SUqc, Fq = S[-q]
+                except IndexError: break
+                # TODO: cache
+                if _symmetrical_uncertainty(data.X.T[Fp],
+                                            data.X.T[Fq]) >= SUqc:
+                    del S[-q]
+                    worst.append((1e-4*SUqc, Fq))
+                else:
+                    q += 1
+            p += 1
+        best = S
+        scores = [i[0] for i in sorted(chain(best, worst), key=lambda i: i[1])]
+        return np.array(scores) if not feature else scores[0]
+
+
 class InfoGain(ClassificationScorer):
     """
     Information gain is the expected decrease of entropy. See `Wikipedia entry on information gain
@@ -290,7 +338,6 @@ if __name__ == '__main__':
     X[np.random.random(X.shape) > .95] = np.nan
     y_cls = np.zeros(X.shape[0])
     y_cls[(X[:, 0] > .5) ^ (X[:, 1] > .6)] = 1
-    y_cls[(X[:, 2] > .8) ^ (X[:, 3] > .8)] = 2
     y_reg = np.nansum(X[:, 0:3], 1)
     for relief, y in ((ReliefF(), y_cls),
                       (RReliefF(), y_reg)):
@@ -299,3 +346,9 @@ if __name__ == '__main__':
         print(relief.__class__.__name__)
         print('Best =', weights.argsort()[::-1])
         print('Weights =', weights[weights.argsort()[::-1]])
+    X *= 10
+    data = Table.from_numpy(None, X, y_cls)
+    weights = FCBF().score_data(data, False)
+    print('FCBF')
+    print('Best =', weights.argsort()[::-1])
+    print('Weights =', weights[weights.argsort()[::-1]])

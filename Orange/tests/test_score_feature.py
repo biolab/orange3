@@ -116,3 +116,10 @@ class FeatureScoringTest(unittest.TestCase):
         best = {self.housing.domain[attr].name for attr in weights.argsort()[-6:]}
         for feature in ('LSTAT', 'RM', 'AGE'):
             self.assertIn(feature, best)
+
+    def test_fcbf(self):
+        scorer = score.FCBF()
+        weights = scorer(self.zoo, None)
+        found = [self.zoo.domain[attr].name for attr in reversed(weights.argsort()[-5:])]
+        reference = ['legs', 'backbone', 'toothed', 'hair', 'aquatic']
+        self.assertEqual(found, reference)

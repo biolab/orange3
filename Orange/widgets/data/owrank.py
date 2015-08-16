@@ -39,6 +39,7 @@ SCORES = [
     score_meta("Gini Gain", "Gini", score.Gini),
     score_meta("ReliefF", "ReliefF", score.ReliefF),
     score_meta("RReliefF", "RReliefF", score.RReliefF),
+    score_meta("FCBF", "FCBF", score.FCBF),
 ]
 
 _DEFAULT_SELECTED = set(m.name for m in SCORES)
