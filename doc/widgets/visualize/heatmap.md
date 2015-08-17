@@ -16,7 +16,9 @@ Signals
 
 **Outputs**:
 
-- None
+- **Selected Data**
+
+  A subset of instances that user has manually selected in the map.
 
 Description
 -----------
@@ -49,8 +51,8 @@ Example
 -------
 
 Below you can see an example workflow for Heat Map widget. Heat map below displays attribute values
-for *Zoo* data set (0 is white, 1 is light blue, >1 is dark blue). The first thing we see in the map is
-'legs' attribute which is the only one colored in dark blue. In order to get a clearer heat map,
+for *Zoo* data set (0 is white, 1 is light orange, >1 is dark orange). The first thing we see in the map is
+'legs' attribute which is the only one colored in dark orange. In order to get a clearer heat map,
 we then use **Select Columns** widget and remove 'legs' attribute from the data set. Then we again
 feed the data to the **Heat Map**.
 
