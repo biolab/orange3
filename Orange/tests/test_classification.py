@@ -219,6 +219,13 @@ class ClassfierListInputTest(unittest.TestCase):
         assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
 
 
+class UnknownValuesInPrediction(unittest.TestCase):
+    def test_unknown(self):
+        table = Table("iris")
+        tree = LogisticRegressionLearner()(table)
+        tree([1, 2, None])
+
+
 class LearnerAccessibility(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
