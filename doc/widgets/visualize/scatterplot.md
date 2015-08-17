@@ -27,7 +27,7 @@ Signals
 
 - **Unselected Data**
 
-  All other data (examples not included in the user’s selection).
+  All other data (instances not included in the user’s selection).
 
 Description
 -----------
