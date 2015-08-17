@@ -208,10 +208,17 @@ class DendrogramWidget(QGraphicsWidget):
     #: Orientation
     Left, Top, Right, Bottom = 1, 2, 3, 4
 
+    #: Selection flags
+    NoSelection, SingleSelection, ExtendedSelection = 0, 1, 2
+
+    #: Emitted when a user clicks on the cluster item.
+    itemClicked = Signal(ClusterGraphicsItem)
     selectionChanged = Signal()
     selectionEdited = Signal()
 
-    def __init__(self, parent=None, root=None, orientation=Left):
+    def __init__(self, parent=None, root=None, orientation=Left,
+                 hoverHighlightEnabled=True, selectionMode=ExtendedSelection):
+
         QGraphicsWidget.__init__(self, parent)
         self.orientation = orientation
         self._root = None
@@ -224,7 +231,8 @@ class DendrogramWidget(QGraphicsWidget):
         self._itemgroup = QGraphicsWidget(self)
         self._itemgroup.setGeometry(self.contentsRect())
         self._cluster_parent = {}
-
+        self.__hoverHighlightEnabled = hoverHighlightEnabled
+        self.__selectionMode = selectionMode
         self.setContentsMargins(5, 5, 5, 5)
         self.set_root(root)
 
@@ -592,18 +600,32 @@ class DendrogramWidget(QGraphicsWidget):
 
     def sceneEventFilter(self, obj, event):
         if isinstance(obj, DendrogramWidget.ClusterGraphicsItem):
-            if event.type() == QEvent.GraphicsSceneHoverEnter:
+            if event.type() == QEvent.GraphicsSceneHoverEnter and \
+                    self.__hoverHighlightEnabled:
                 self._set_hover_item(obj)
                 event.accept()
                 return True
             elif event.type() == QEvent.GraphicsSceneMousePress and \
                     event.button() == Qt.LeftButton:
-                if event.modifiers() & Qt.ControlModifier:
-                    self.select_item(obj, not self.is_selected(obj))
-                else:
-                    self.set_selected_items([obj])
-                self.selectionEdited.emit()
-                assert self._highlighted_item is obj
+
+                is_selected = self.is_selected(obj)
+                current_selection = list(self._selection)
+
+                if self.__selectionMode == DendrogramWidget.SingleSelection:
+                    if event.modifiers() & Qt.ControlModifier:
+                        self.set_selected_items(
+                            [obj] if not is_selected else [])
+                    elif current_selection != [obj]:
+                        self.set_selected_items([obj])
+                elif self.__selectionMode == DendrogramWidget.ExtendedSelection:
+                    if event.modifiers() & Qt.ControlModifier:
+                        self.select_item(obj, not self.is_selected(obj))
+                    elif current_selection != [obj]:
+                        self.set_selected_items([obj])
+
+                if current_selection != self._selection:
+                    self.selectionEdited.emit()
+                self.itemClicked.emit(obj)
                 event.accept()
                 return True
 
