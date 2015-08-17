@@ -361,7 +361,6 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
         Function used to report on progress.
 
     """
-    distances = distances.X
     M = numpy.zeros_like(distances)
 
     # rearrange distances by order defined by tree's leaves
