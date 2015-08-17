@@ -141,7 +141,8 @@ class ExpandProbabilitiesTest(unittest.TestCase):
     def prepareTable(self, rows, attr, vars, class_var_domain):
         attributes = ["Feature %i" % i for i in range(attr)]
         classes = ["Class %i" % i for i in range(vars)]
-        attr_vars = [DiscreteVariable(name=a) for a in attributes]
+        attr_vars = [DiscreteVariable(name=a, values=range(2))
+                     for a in attributes]
         class_vars = [DiscreteVariable(name=c,
                                             values=range(class_var_domain))
                       for c in classes]
