@@ -530,10 +530,6 @@ class StringVariable(Variable):
         """Return `False`: string variables are not stored as floats."""
         return False
 
-    @staticmethod
-    def compute_value(_):
-        return None
-
     def to_val(self, s):
         """
         Return the value as a string. If it is already a string, the same
