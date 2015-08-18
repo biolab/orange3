@@ -136,7 +136,7 @@ class OWScatterPlot(OWWidget):
                      label='Show all data on mouse hover')
         self.cb_class_density = gui.checkBox(
             box, self, value='graph.class_density', label='Show class density',
-            callback=self.major_graph_update)
+            callback=self.update_density)
 
         self.zoom_select_toolbar = g.zoom_select_toolbar(
             gui.widgetBox(self.controlArea, "Zoom/Select"), nomargin=True,
@@ -206,7 +206,7 @@ class OWScatterPlot(OWWidget):
 
     def reset_graph_data(self, *_):
         self.graph.rescale_data()
-        self.major_graph_update()
+        self.update_graph()
 
     def set_data(self, data):
         if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
@@ -261,7 +261,7 @@ class OWScatterPlot(OWWidget):
             return
         if self.data.domain.class_var:
             self.graph.attr_color = self.data.domain.class_var.name
-        self.major_graph_update(val[3])
+        self.update_graph(val[3])
 
     def get_shown_attributes(self):
         return self.attr_x, self.attr_y
@@ -307,23 +307,23 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_label = ""
 
     def update_attr(self):
-        self.major_graph_update()
+        self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_colors(self):
         self.graph.update_colors()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
-    def major_graph_update(self, attributes=None, inside_colors=None, **args):
-        self.update_graph(attributes, inside_colors, **args)
+    def update_density(self):
+        self.update_graph(reset_view=False)
 
-    def update_graph(self, attributes=None, inside_colors=None, **_):
+    def update_graph(self, attributes=None, reset_view=True, **_):
         self.graph.zoomStack = []
         if not self.graph.have_data:
             return
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
-        self.graph.update_data(self.attr_x, self.attr_y)
+        self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def saveSettings(self):
         OWWidget.saveSettings(self)
