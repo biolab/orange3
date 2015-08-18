@@ -39,6 +39,7 @@ before_script:
 
 script:
     - cd $TRAVIS_BUILD_DIR
+    - python -c "from Orange.tests import *"
     - coverage run --source=Orange setup.py test
     - (cd $TRAVIS_BUILD_DIR/doc && make html)
 

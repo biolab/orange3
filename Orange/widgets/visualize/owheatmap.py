@@ -308,7 +308,7 @@ class OWHeatMap(widget.OWWidget):
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)
         self.selection_manager = HeatmapSelectionManager(self)
         self.selection_manager.selection_changed.connect(
-            self.on_selection_changed)
+            self.__update_selection_geometry)
         self.selection_manager.selection_finished.connect(
             self.on_selection_finished)
         self.heatmap_scene.set_selection_manager(self.selection_manager)
@@ -592,7 +592,9 @@ class OWHeatMap(widget.OWWidget):
 
         self.heatmap_scene.clear()
         # The top level container widget
-        widget = QtGui.QGraphicsWidget()
+        widget = GraphicsWidget()
+        widget.layoutDidActivate.connect(self.__update_selection_geometry)
+
         grid = QtGui.QGraphicsGridLayout()
         grid.setSpacing(self.SpaceX)
         self.heatmap_scene.addItem(widget)
@@ -629,7 +631,10 @@ class OWHeatMap(widget.OWWidget):
                 grid.addItem(item, Row0 + i * 2, Col0)
 
             if rowitem.cluster:
-                dendrogram = DendrogramWidget(parent=widget)
+                dendrogram = DendrogramWidget(
+                    parent=widget,
+                    selectionMode=DendrogramWidget.NoSelection,
+                    hoverHighlightEnabled=True)
                 dendrogram.set_root(rowitem.cluster)
                 dendrogram.setMaximumWidth(100)
                 dendrogram.setMinimumWidth(100)
@@ -637,6 +642,11 @@ class OWHeatMap(widget.OWWidget):
                 # should define the  row's vertical size).
                 dendrogram.setSizePolicy(
                     QSizePolicy.Expanding, QSizePolicy.Ignored)
+                dendrogram.itemClicked.connect(
+                    lambda item, partindex=i:
+                        self.__select_by_cluster(item, partindex)
+                )
+
                 grid.addItem(dendrogram, Row0 + i * 2 + 1, DendrogramColumn)
                 sort_i.append(np.array(leaf_indices(rowitem.cluster)))
                 row_dendrograms[i] = dendrogram
@@ -651,7 +661,10 @@ class OWHeatMap(widget.OWWidget):
 
             if colitem.cluster:
                 dendrogram = DendrogramWidget(
-                    parent=widget, orientation=DendrogramWidget.Top)
+                    parent=widget,
+                    orientation=DendrogramWidget.Top,
+                    selectionMode=DendrogramWidget.NoSelection,
+                    hoverHighlightEnabled=False)
 
                 dendrogram.set_root(colitem.cluster)
                 dendrogram.setMaximumHeight(100)
@@ -832,10 +845,9 @@ class OWHeatMap(widget.OWWidget):
 
     def __fixup_grid_layout(self):
         self.__update_margins()
-        self.on_selection_changed()
-
         rect = self.scene.widget.geometry()
         self.heatmap_scene.setSceneRect(rect)
+        self.__update_selection_geometry()
 
     def __aspect_mode_changed(self):
         if self.keep_aspect:
@@ -1013,7 +1025,21 @@ class OWHeatMap(widget.OWWidget):
 
             self.__fixup_grid_layout()
 
-    def on_selection_changed(self):
+    def __select_by_cluster(self, item, dendrogramindex):
+        # User clicked on a dendrogram node.
+        # Select all rows corresponding to the cluster item.
+        node = item.node
+        try:
+            hm = self.heatmap_widget_grid[dendrogramindex][0]
+        except IndexError:
+            pass
+        else:
+            self.selection_manager.selection_add(
+                node.value.first, node.value.last - 1, hm,
+                clear=not (QtGui.QApplication.keyboardModifiers() &
+                           Qt.ControlModifier))
+
+    def __update_selection_geometry(self):
         for item in self.selection_rects:
             item.setParentItem(None)
             self.heatmap_scene.removeItem(item)
@@ -1023,7 +1049,9 @@ class OWHeatMap(widget.OWWidget):
         rects = self.selection_manager.selection_rects
         for rect in rects:
             item = QtGui.QGraphicsRectItem(rect, None)
-            item.setPen(QPen(Qt.black, 2))
+            pen = QPen(Qt.black, 2)
+            pen.setCosmetic(True)
+            item.setPen(pen)
             self.heatmap_scene.addItem(item)
             self.selection_rects.append(item)
 
@@ -1047,6 +1075,19 @@ class OWHeatMap(widget.OWWidget):
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
+
+class GraphicsWidget(QtGui.QGraphicsWidget):
+    """A graphics widget which can notify on relayout events.
+    """
+    #: The widget's layout has activated (i.e. did a relayout
+    #: of the widget's contents)
+    layoutDidActivate = Signal()
+
+    def event(self, event):
+        rval = super().event(event)
+        if event.type() == QEvent.LayoutRequest and self.layout() is not None:
+            self.layoutDidActivate.emit()
+        return rval
 
 QWIDGETSIZE_MAX = 16777215
 
@@ -1259,6 +1300,7 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
                 lut = None
             argb, _ = pg.makeARGB(
                 self.__data, lut=lut, levels=self.__levels, scale=250)
+            argb[np.isnan(self.__data)] = (100, 100, 100, 255)
 
             qimage = pg.makeQImage(argb, transpose=False)
             self.__pixmap = QPixmap.fromImage(qimage)
@@ -1862,6 +1904,8 @@ def test_main(argv=sys.argv):
     ow.show()
     ow.raise_()
     app.exec_()
+    ow.set_dataset(None)
+    ow.handleNewSignals()
     ow.saveSettings()
     return 0
 
