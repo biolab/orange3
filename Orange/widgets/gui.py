@@ -2821,18 +2821,25 @@ class BarItemDelegate(QtGui.QStyledItemDelegate):
         self.scale = scale
 
     def paint(self, painter, option, index):
-        QSt = QtGui.QStyle
-        QtGui.qApp.style().drawPrimitive(
-            QSt.PE_PanelItemViewRow, option, painter)
-        QtGui.qApp.style().drawPrimitive(
-            QSt.PE_PanelItemViewItem, option, painter)
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewRow, option, painter,
+            option.widget)
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewItem, option, painter,
+            option.widget)
+
         rect = option.rect
         val = index.data(Qt.DisplayRole)
         if isinstance(val, float):
             minv, maxv = self.scale
             val = (val - minv) / (maxv - minv)
             painter.save()
-            if option.state & QSt.State_Selected:
+            if option.state & QtGui.QStyle.State_Selected:
                 painter.setOpacity(0.75)
             painter.setBrush(self.brush)
             painter.drawRect(
@@ -2870,23 +2877,26 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
         self.mousePressState = QtCore.QModelIndex(), QtCore.QPoint()
         parent.entered.connect(self.onEntered)
 
-
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
         return QtCore.QSize(size.width(), max(size.height(), 20))
 
-
     def linkRect(self, option, index):
-        style = self.parent().style()
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+
         text = self.displayText(index.data(Qt.DisplayRole),
                                 QtCore.QLocale.system())
         self.initStyleOption(option, index)
-        textRect = style.subElementRect(QtGui.QStyle.SE_ItemViewItemText,
-                                        option)
+        textRect = style.subElementRect(
+            QtGui.QStyle.SE_ItemViewItemText, option, option.widget)
+
         if not textRect.isValid():
             textRect = option.rect
-        margin = style.pixelMetric(QtGui.QStyle.PM_FocusFrameHMargin,
-                                   option) + 1
+        margin = style.pixelMetric(
+            QtGui.QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
         textRect = textRect.adjusted(margin, 0, -margin, 0)
         font = index.data(Qt.FontRole)
         if not isinstance(font, QtGui.QFont):
@@ -2897,7 +2907,6 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
                                        textRect.width())
         return metrics.boundingRect(textRect, option.displayAlignment,
                                     elideText)
-
 
     def editorEvent(self, event, model, option, index):
         if event.type() == QtCore.QEvent.MouseButtonPress and \
@@ -2931,7 +2940,6 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
 
         return super().editorEvent(event, model, option, index)
 
-
     def onEntered(self, index):
         link = index.data(LinkRole)
         if not isinstance(link, str):
@@ -2939,34 +2947,39 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
         if link is None:
             self.parent().viewport().setCursor(Qt.ArrowCursor)
 
-
     def paint(self, painter, option, index):
-        QSt = QtGui.QStyle
         link = index.data(LinkRole)
         if not isinstance(link, str):
             link = None
 
         if link is not None:
-            style = QtGui.qApp.style()
-            style.drawPrimitive(QSt.PE_PanelItemViewRow, option, painter)
-            style.drawPrimitive(QSt.PE_PanelItemViewItem, option, painter)
+            if option.widget is not None:
+                style = option.widget.style()
+            else:
+                style = QtGui.QApplication.style()
+            style.drawPrimitive(
+                QtGui.QStyle.PE_PanelItemViewRow, option, painter,
+                option.widget)
+            style.drawPrimitive(
+                QtGui.QStyle.PE_PanelItemViewItem, option, painter,
+                option.widget)
+
             text = self.displayText(index.data(Qt.DisplayRole),
                                     QtCore.QLocale.system())
-            textRect = style.subElementRect(QSt.SE_ItemViewItemText, option)
+            textRect = style.subElementRect(
+                QtGui.QStyle.SE_ItemViewItemText, option, option.widget)
             if not textRect.isValid():
                 textRect = option.rect
-            margin = style.pixelMetric(QSt.PM_FocusFrameHMargin, option) + 1
+            margin = style.pixelMetric(
+                QtGui.QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
             textRect = textRect.adjusted(margin, 0, -margin, 0)
             elideText = QtGui.QFontMetrics(option.font).elidedText(
                 text, option.textElideMode, textRect.width())
             painter.save()
             font = index.data(Qt.FontRole)
             if not isinstance(font, QtGui.QFont):
-                font = None
-            if font is not None:
-                painter.setFont(font)
-            else:
-                painter.setFont(option.font)
+                font = option.font
+            painter.setFont(font)
             painter.setPen(QtGui.QPen(Qt.blue))
             painter.drawText(textRect, option.displayAlignment, elideText)
             painter.restore()
@@ -3005,7 +3018,6 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
         return QtCore.QSize(width, height)
 
     def paint(self, painter, option, index):
-        QSt = QtGui.QStyle
         self.initStyleOption(option, index)
         text = self.displayText(index.data(Qt.DisplayRole), QtCore.QLocale())
         ratio, have_ratio = self.get_bar_ratio(option, index)
@@ -3022,11 +3034,20 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
         font = self.get_font(option, index)
         painter.setFont(font)
 
-        QtGui.qApp.style().drawPrimitive(QSt.PE_PanelItemViewRow, option, painter)
-        QtGui.qApp.style().drawPrimitive(QSt.PE_PanelItemViewItem, option, painter)
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewRow, option, painter,
+            option.widget)
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewItem, option, painter,
+            option.widget)
 
         # TODO: Check ForegroundRole.
-        if option.state & QSt.State_Selected:
+        if option.state & QtGui.QStyle.State_Selected:
             color = option.palette.highlightedText().color()
         else:
             color = option.palette.text().color()
