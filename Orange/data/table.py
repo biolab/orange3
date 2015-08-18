@@ -16,7 +16,7 @@ from scipy import sparse as sp
 
 from .instance import *
 from Orange.util import flatten
-from Orange.data import Domain, io, DiscreteVariable, ContinuousVariable, Variable
+from Orange.data import (Domain, io, Variable, StringVariable)
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -250,7 +250,8 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        def get_columns(row_indices, src_cols, n_rows):
+        def get_columns(row_indices, src_cols, n_rows,
+                        default_dtype=np.float64):
             if not len(src_cols):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
@@ -275,7 +276,9 @@ class Table(MutableSequence, Storage):
             if any(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
                 types.append(source._Y.dtype)
-            new_type = np.find_common_type(types, [])
+            new_type = np.find_common_type(types, []) if len(types) \
+                else default_dtype
+
             a = np.empty((n_rows, len(src_cols)), dtype=new_type)
             for i, col in enumerate(src_cols):
                 if col is None:
@@ -321,7 +324,12 @@ class Table(MutableSequence, Storage):
             if self.X.ndim == 1:
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
             self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
-            self.metas = get_columns(row_indices, conversion.metas, n_rows)
+
+            default_dtype = np.float64
+            if any(isinstance(var, StringVariable) for var in domain.metas):
+                default_dtype = np.object
+            self.metas = get_columns(row_indices, conversion.metas,
+                                     n_rows, default_dtype)
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             if source.has_weights():
