@@ -442,7 +442,7 @@ class SqlTable(table.Table):
                 else:
                     all_contingencies[i] =\
                         (self._discrete_contingencies(data, row, column), [])
-        return all_contingencies
+        return all_contingencies, None
 
     def _continuous_contingencies(self, data, row):
         values = np.zeros(len(data))
