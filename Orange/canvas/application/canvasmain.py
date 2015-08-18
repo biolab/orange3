@@ -558,10 +558,10 @@ class CanvasMainWindow(QMainWindow):
             QAction(self.tr("Expand Tool Dock"), self,
                     objectName="toggle-tool-dock-expand",
                     checkable=True,
-                    checked=True,
                     shortcut=QKeySequence(Qt.ControlModifier |
                                           (Qt.ShiftModifier | Qt.Key_D)),
                     triggered=self.set_tool_dock_expanded)
+        self.toggle_tool_dock_expand.setChecked(True)
 
         # Gets assigned in setup_ui (the action is defined in CanvasToolDock)
         # TODO: This is bad (should be moved here).
@@ -570,10 +570,11 @@ class CanvasMainWindow(QMainWindow):
         self.toogle_margins_action = \
             QAction(self.tr("Show Workflow Margins"), self,
                     checkable=True,
-                    checked=True,
                     toolTip=self.tr("Show margins around the workflow view."),
-                    toggled=self.set_scheme_margins_enabled
                     )
+        self.toogle_margins_action.setChecked(True)
+        self.toogle_margins_action.toggled.connect(
+            self.set_scheme_margins_enabled)
 
         self.reset_widget_settings_action = \
             QAction(self.tr("Reset widget settings..."), self,
