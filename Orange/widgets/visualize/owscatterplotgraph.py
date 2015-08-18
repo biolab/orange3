@@ -508,7 +508,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.selection = None
         self.set_data(data, **args)
 
-    def update_data(self, attr_x, attr_y):
+    def update_data(self, attr_x, attr_y, reset_view=True):
         self.shown_x = attr_x
         self.shown_y = attr_y
 
@@ -537,13 +537,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             attr_x, attr_y, self.valid_data)
         self.n_points = len(x_data)
 
-        min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
-        min_y, max_y = np.nanmin(y_data), np.nanmax(y_data)
-        self.view_box.setRange(
-            QRectF(min_x, min_y, max_x - min_x, max_y - min_y),
-            padding=0.025)
-        self.view_box.init_history()
-        self.view_box.tag_history()
+        if reset_view:
+            min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
+            min_y, max_y = np.nanmin(y_data), np.nanmax(y_data)
+            self.view_box.setRange(
+                QRectF(min_x, min_y, max_x - min_x, max_y - min_y),
+                padding=0.025)
+            self.view_box.init_history()
+            self.view_box.tag_history()
+        else:
+            [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
 
         for axis, name, index in (("bottom", attr_x, index_x),
                                   ("left", attr_y, index_y)):
