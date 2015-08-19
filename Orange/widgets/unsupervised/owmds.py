@@ -346,7 +346,7 @@ class OWMDS(widget.OWWidget):
     def set_data(self, data):
         self.signal_data = data
 
-        if self.matrix and data is not None and len(self.matrix) == len(data):
+        if self.matrix is not None and data is not None and len(self.matrix) == len(data):
             self.closeContext()
             self.data = data
             self.update_controls()
@@ -357,7 +357,7 @@ class OWMDS(widget.OWWidget):
 
     def set_disimilarity(self, matrix):
         self.matrix = matrix
-        if matrix and matrix.row_items:
+        if matrix is not None and matrix.row_items:
             self.matrix_data = matrix.row_items
         if matrix is None:
             self.matrix_data = None
@@ -456,7 +456,7 @@ class OWMDS(widget.OWWidget):
         elif self.matrix_data:
             self.data = self.matrix_data
 
-        if self.matrix:
+        if self.matrix is not None:
             self._effective_matrix = self.matrix
             if self.matrix.axis == 0:
                 self.data = None
