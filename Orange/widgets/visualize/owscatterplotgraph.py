@@ -545,8 +545,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 padding=0.025)
             self.view_box.init_history()
             self.view_box.tag_history()
-        else:
-            [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
+        [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
 
         for axis, name, index in (("bottom", attr_x, index_x),
                                   ("left", attr_y, index_y)):
@@ -906,7 +905,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.plot_widget.getViewBox().RectMode)
 
     def reset_button_clicked(self):
-        self.view_box.autoRange()
+        self.update_data(self.shown_x, self.shown_y, reset_view=True)  # also redraw density image
+        # self.view_box.autoRange()
 
     def select_by_click(self, _, points):
         self.select(points)
