@@ -250,8 +250,7 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        def get_columns(row_indices, src_cols, n_rows,
-                        default_dtype=np.float64):
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
             if not len(src_cols):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
@@ -262,15 +261,15 @@ class Table(MutableSequence, Storage):
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
                 arr = _subarray(source.metas, row_indices,
                                  [-1 - x for x in src_cols])
-                if arr.dtype != default_dtype:
-                    return arr.astype(default_dtype)
+                if arr.dtype != dtype:
+                    return arr.astype(dtype)
                 return arr
             if all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
                 return _subarray(source._Y, row_indices,
                                  [x - n_src_attrs for x in src_cols])
 
-            a = np.empty((n_rows, len(src_cols)), dtype=default_dtype)
+            a = np.empty((n_rows, len(src_cols)), dtype=dtype)
             for i, col in enumerate(src_cols):
                 if col is None:
                     a[:, i] = Unknown
@@ -316,11 +315,11 @@ class Table(MutableSequence, Storage):
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
             self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
 
-            default_dtype = np.float64
+            dtype = np.float64
             if any(isinstance(var, StringVariable) for var in domain.metas):
-                default_dtype = np.object
+                dtype = np.object
             self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, default_dtype)
+                                     n_rows, dtype)
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             if source.has_weights():
