@@ -661,8 +661,8 @@ class OWFeatureConstructor(widget.OWWidget):
     def check_attrs_values(self, attr, data):
         for i in range(len(data)):
             for var in attr:
-                if not math.isnan(data[i, var.name]) \
-                        and int(data[i, var.name]) >= len(var.values):
+                if not math.isnan(data[i, var]) \
+                        and int(data[i, var]) >= len(var.values):
                     return var.name
         return None
 
