@@ -297,6 +297,11 @@ Randomization
 .. autoclass:: Orange.preprocess.Randomize
 
 
+Remove
+======
+
+.. autoclass:: Orange.preprocess.Remove
+
 Feature selection
 =================
 

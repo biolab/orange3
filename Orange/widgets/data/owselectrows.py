@@ -5,6 +5,7 @@ from Orange.widgets.settings import *
 from Orange.widgets.utils import vartype
 from Orange.data.table import Table
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
+from Orange.preprocess import Remove
 import Orange.data.filter as data_filter
 
 
@@ -360,17 +361,18 @@ class OWSelectRows(widget.OWWidget):
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name
             #     non_matching_output.name = self.data.name
-            #
-            # if self.purge_attributes or self.purge_classes:
-            #     remover = orange.RemoveUnusedValues(removeOneValued=True)
-            #
-            #     newDomain = remover(matching_output, 0, True, self.purge_classes)
-            #     if newDomain != matching_output.domain:
-            #         matching_output = orange.ExampleTable(newDomain, matching_output)
-            #
-            #     newDomain = remover(non_matching_output, 0, True, self.purge_classes)
-            #     if newDomain != non_matching_output.domain:
-            #         nonmatchingOutput = orange.ExampleTable(newDomain, non_matching_output)
+
+            purge_attrs = self.purge_attributes
+            purge_classes = self.purge_classes
+            if purge_attrs or purge_classes:
+                attr_flags = sum([Remove.RemoveConstant * purge_attrs,
+                                  Remove.RemoveUnusedValues * purge_attrs])
+                class_flags = sum([Remove.RemoveConstant * purge_classes,
+                                  Remove.RemoveUnusedValues * purge_classes])
+                remover = Remove(attr_flags, class_flags)
+
+                matching_output = remover(matching_output)
+                non_matching_output = remover(non_matching_output)
 
         self.send("Matching Data", matching_output)
         self.send("Unmatched Data", non_matching_output)
