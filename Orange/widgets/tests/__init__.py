@@ -6,8 +6,8 @@ from Orange.widgets.tests.test_context_handler import *
 
 from Orange.widgets.tests.test_class_values_context_handler import *
 from Orange.widgets.tests.test_domain_context_handler import *
-from Orange.widgets.data.tests.test_owselectcolumns import *
-
+from Orange.widgets.tests.test_owselectcolumns import *
+from Orange.widgets.tests.test_scatterplot_density import *
 
 class Test(unittest.TestCase):
     pass

@@ -3,8 +3,8 @@ import unittest
 
 from Orange.widgets.tests import test_setting_provider, \
     test_settings_handler, test_context_handler, \
-    test_class_values_context_handler, test_domain_context_handler
-from Orange.widgets.data.tests import test_owselectcolumns
+    test_class_values_context_handler, test_domain_context_handler, \
+    test_owselectcolumns, test_scatterplot_density
 
 try:
     from Orange.widgets.tests import test_widget
@@ -27,7 +27,8 @@ def suite():
 
         load(test_class_values_context_handler),
         load(test_domain_context_handler),
-        load(test_owselectcolumns)
+        load(test_owselectcolumns),
+        load(test_scatterplot_density)
     ])
     if run_widget_tests:
         all_tests.extend([
