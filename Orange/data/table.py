@@ -260,26 +260,17 @@ class Table(MutableSequence, Storage):
                    for x in src_cols):
                 return _subarray(source.X, row_indices, src_cols)
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                return _subarray(source.metas, row_indices,
+                arr = _subarray(source.metas, row_indices,
                                  [-1 - x for x in src_cols])
+                if arr.dtype != default_dtype:
+                    return arr.astype(default_dtype)
+                return arr
             if all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
                 return _subarray(source._Y, row_indices,
                                  [x - n_src_attrs for x in src_cols])
 
-            types = []
-            if any(isinstance(x, Integral) and 0 <= x < n_src_attrs
-                   for x in src_cols):
-                types.append(source.X.dtype)
-            if any(isinstance(x, Integral) and x < 0 for x in src_cols):
-                types.append(source.metas.dtype)
-            if any(isinstance(x, Integral) and x >= n_src_attrs
-                   for x in src_cols):
-                types.append(source._Y.dtype)
-            new_type = np.find_common_type(types, []) if len(types) \
-                else default_dtype
-
-            a = np.empty((n_rows, len(src_cols)), dtype=new_type)
+            a = np.empty((n_rows, len(src_cols)), dtype=default_dtype)
             for i, col in enumerate(src_cols):
                 if col is None:
                     a[:, i] = Unknown
