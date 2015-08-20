@@ -8,17 +8,6 @@ from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.clustering import DBSCAN
 from Orange import distance
 
-_METRICS = [
-    ("Euclidean", "euclidean"),
-    ("Manhattan", "manhattan"),
-    # ("Cosine", distance.Cosine),
-    ("Jaccard", distance.Jaccard),
-    # ("Spearman", distance.SpearmanR),
-    # ("Spearman absolute", distance.SpearmanRAbsolute),
-    # ("Pearson", distance.PearsonR),
-    # ("Pearson absolute", distance.PearsonRAbsolute),
-]
-
 
 class OWDBSCAN(widget.OWWidget):
     name = "DBSCAN"
@@ -32,6 +21,16 @@ class OWDBSCAN(widget.OWWidget):
 
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
     OUTPUT_METHODS = ("Class", "Feature", "Meta")
+    METRICS = [
+        ("Euclidean", "euclidean"),
+        ("Manhattan", "manhattan"),
+        # ("Cosine", distance.Cosine),
+        ("Jaccard", distance.Jaccard),
+        # ("Spearman", distance.SpearmanR),
+        # ("Spearman absolute", distance.SpearmanRAbsolute),
+        # ("Pearson", distance.PearsonR),
+        # ("Pearson absolute", distance.PearsonRAbsolute),
+    ]
 
     min_samples = Setting(5)
     eps = Setting(0.5)
@@ -58,7 +57,7 @@ class OWDBSCAN(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, self.tr("Distance Metric"))
         gui.comboBox(box, self, "metric_idx",
-                     items=list(zip(*_METRICS))[0],
+                     items=list(zip(*self.METRICS))[0],
                      callback=self._invalidate)
 
         box = gui.widgetBox(self.controlArea, "Output")
@@ -83,13 +82,12 @@ class OWDBSCAN(widget.OWWidget):
 
     def check_data_size(self):
         if len(self.data) < 2:
-            self.error("Not enough unique data instances" +
+            self.error("Not enough unique data instances "
                        "({}).".format(len(self.data)))
             return False
         return True
 
     def commit(self):
-        print("RUN")
         self.error()
         if not self.data:
             return
@@ -100,12 +98,12 @@ class OWDBSCAN(widget.OWWidget):
             return
         self.model = DBSCAN(
             eps=self.eps,
-            min_samples=self.min_samples
+            min_samples=self.min_samples,
+            metric=self.METRICS[self.metric_idx][1]
         )(self.data)
         self.send_data()
 
     def send_data(self, row=None):
-        print("SEND")
         model = self.model
         if not self.data or not self.model:
             self.send("Data", None)
