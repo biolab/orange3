@@ -52,7 +52,7 @@ class Discretizer(Transformation):
             values = ["single_value"]
             to_sql = SingleValueSql(values[0])
 
-        dvar = DiscreteVariable(name="D_" + var.name, values=values,
+        dvar = DiscreteVariable(name=var.name, values=values,
                                 compute_value=cls(var, points))
         dvar.source_variable = var
         dvar.to_sql = to_sql
