@@ -394,6 +394,12 @@ class OWScatterPlot(OWWidget):
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self.graph.plot_widget.getViewBox().deleteLater()
+        self.graph.plot_widget.clear()
+
+
     class VizRank(OWWidget):
         name = "VizRank"
 
