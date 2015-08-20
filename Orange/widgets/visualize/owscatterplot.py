@@ -9,7 +9,7 @@ from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
 from sklearn.neighbors import NearestNeighbors
 
 import Orange
-from Orange.data import Table
+from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets import gui, widget
 from Orange.widgets.io import FileFormats
@@ -270,6 +270,8 @@ class OWScatterPlot(OWWidget):
     def init_attr_values(self):
         self.cb_attr_x.clear()
         self.cb_attr_y.clear()
+        self.attr_x = ""
+        self.attr_y = ""
         self.cb_attr_color.clear()
         self.cb_attr_color.addItem("(Same color)")
         self.cb_attr_label.clear()
@@ -307,9 +309,10 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_size = ""
         self.graph.attr_label = ""
 
-    def update_attr(self):
-        self.update_graph()
+    def update_attr(self, attributes=None):
+        self.update_graph(attributes=attributes)
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.send_features()
 
 
     def update_colors(self):
@@ -321,10 +324,10 @@ class OWScatterPlot(OWWidget):
 
     def update_graph(self, attributes=None, reset_view=True, **_):
         self.graph.zoomStack = []
-        if not self.graph.have_data:
-            return
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
+        if not self.graph.have_data:
+            return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def saveSettings(self):
@@ -332,9 +335,9 @@ class OWScatterPlot(OWWidget):
         # self.vizrank.saveSettings()
 
     def selection_changed(self):
-        self.commit()
+        self.send_data()
 
-    def commit(self):
+    def send_data(self):
         selected = unselected = None
         # TODO: Implement selection for sql data
         if isinstance(self.data, SqlTable):
@@ -347,6 +350,18 @@ class OWScatterPlot(OWWidget):
             unselected = self.data[unselection]
         self.send("Selected Data", selected)
         self.send("Other Data", unselected)
+
+    def send_features(self):
+        features = None
+        if self.attr_x or self.attr_y:
+            dom = Domain([], metas=(StringVariable(name="feature"),))
+            features = Table(dom, [[self.attr_x], [self.attr_y]])
+            features.name = "Features"
+        self.send("Features", features)
+
+    def commit(self):
+        self.send_data()
+        self.send_features()
 
     def set_colors(self):
         dlg = self.create_color_dialog()
@@ -455,9 +470,7 @@ class OWScatterPlot(OWWidget):
             """Called when the ranks view selection changes."""
             a1 = selected.indexes()[1].data()
             a2 = selected.indexes()[2].data()
-            self.parent_widget.attr_x = a1
-            self.parent_widget.attr_y = a2
-            self.parent_widget.update_attr()
+            self.parent_widget.update_attr(attributes=(a1, a2))
 
         def toggle(self):
             if self.running:
