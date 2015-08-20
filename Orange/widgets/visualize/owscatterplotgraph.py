@@ -504,8 +504,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def new_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
-        self.subset_indices = set(e.id for e in subset_data) if subset_data else None
+
+        self.density_img = None
+        self.scatterplot_item = None
+        self.scatterplot_item_sel = None
+        self.labels = []
         self.selection = None
+        self.valid_data = None
+
+        self.subset_indices = set(e.id for e in subset_data) if subset_data else None
+
         self.set_data(data, **args)
 
     def update_data(self, attr_x, attr_y, reset_view=True):
@@ -515,10 +523,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.remove_legend()
         if self.density_img:
             self.plot_widget.removeItem(self.density_img)
+            self.density_img = None
         if self.scatterplot_item:
             self.plot_widget.removeItem(self.scatterplot_item)
+            self.scatterplot_item = None
         if self.scatterplot_item_sel:
             self.plot_widget.removeItem(self.scatterplot_item_sel)
+            self.scatterplot_item_sel = None
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
@@ -912,13 +923,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # self.view_box.autoRange()
 
     def select_by_click(self, _, points):
-        self.select(points)
+        if self.scatterplot_item is not None:
+            self.select(points)
 
     def select_by_rectangle(self, value_rect):
-        points = [point
-                  for point in self.scatterplot_item.points()
-                  if value_rect.contains(QPointF(point.pos()))]
-        self.select(points)
+        if self.scatterplot_item is not None:
+            points = [point
+                      for point in self.scatterplot_item.points()
+                      if value_rect.contains(QPointF(point.pos()))]
+            self.select(points)
 
     def unselect_all(self):
         self.selection = None
@@ -927,6 +940,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def select(self, points):
         # noinspection PyArgumentList
+        if self.raw_data is None:
+            return
         keys = QApplication.keyboardModifiers()
         if self.selection is None or not keys & (
                         Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
