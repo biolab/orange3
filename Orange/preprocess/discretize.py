@@ -27,8 +27,8 @@ class Discretizer(Transformation):
         assert low is None or high is None or low < high
         assert decimals >= 0
 
-        def fmt_value(value, decimals):
-            return (("%%.%if" % decimals) % value).rstrip("0").rstrip(".")
+        def fmt_value(value, decimals=4):
+            return str(round(value, decimals)).rstrip('.0')
 
         if (low is None or np.isinf(low)) and \
                 not (high is None or np.isinf(high)):
