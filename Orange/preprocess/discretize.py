@@ -28,7 +28,10 @@ class Discretizer(Transformation):
         assert decimals >= 0
 
         def fmt_value(value, decimals=4):
-            return str(round(value, decimals)).rstrip('.0')
+            val = str(round(value, decimals))
+            if val.endswith(".0"):
+                return val[:-2]
+            return val
 
         if (low is None or np.isinf(low)) and \
                 not (high is None or np.isinf(high)):
