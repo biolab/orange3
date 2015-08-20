@@ -339,7 +339,8 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
-        box = gui.widgetBox(self.controlArea, "Class", addToLayout=False)
+        box = gui.widgetBox(self.controlArea, "Target Variable",
+                            addToLayout=False)
         self.class_attrs = ClassVarListItemModel()
         self.class_attrs_view = ClassVariableItemView()
         self.class_attrs_view.setModel(self.class_attrs)
