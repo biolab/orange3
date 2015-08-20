@@ -405,7 +405,7 @@ _define_symbols()
 
 # load C++ library
 path = os.path.dirname(os.path.abspath(__file__))
-lib = ctypes.pydll.LoadLibrary(os.path.join(path, "_grid_knn" + sysconfig.get_config_var("SO")))
+lib = ctypes.pydll.LoadLibrary(os.path.join(path, "_grid_density" + sysconfig.get_config_var("SO")))
 
 # compute the color density image
 def compute_density(x_grid, y_grid, x_data, y_data, rgb_data):
@@ -431,6 +431,9 @@ def compute_density(x_grid, y_grid, x_data, y_data, rgb_data):
     img = np.swapaxes(img, 0, 1)
     return img
 
+def grid_sample(x_data, y_data, k):
+    return np.random.permutation(len(x_data))[:k]
+
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     attr_color = ContextSetting("", ContextSetting.OPTIONAL)
@@ -444,7 +447,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_legend = Setting(True)
     tooltip_shows_all = Setting(False)
     class_density = Setting(False)
-    resolution = 500
+    resolution = 256
 
     CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
@@ -580,7 +583,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             x_grid = [min_x+i*x_sz for i in range(self.resolution)]
             y_grid = [min_y+i*y_sz for i in range(self.resolution)]
             rgb_data = [pen.color().getRgb()[:3] for pen in color_data]
-            img = compute_density(x_grid, y_grid, x_data, y_data, rgb_data)
+            sample = range(self.n_points)
+            if self.n_points > 1000:
+                sample = grid_sample(x_data, y_data, 1000)
+            img = compute_density(x_grid, y_grid,
+                                  np.array(x_data)[sample], np.array(y_data)[sample], np.array(rgb_data)[sample])
             self.density_img = ImageItem(img, autoLevels=False)
             self.density_img.setRect(QRectF(min_x-x_sz/2, min_y-y_sz/2,
                                             max_x-min_x+x_sz, max_y-min_y+y_sz))
