@@ -29,12 +29,9 @@ from Orange.preprocess.transformation import \
 
 from functools import reduce
 import numpy as np
+import warnings
 
 
-
-# TODO: fix table imputer to pass correct values to columns.
-# TODO: imputed data propagate to the original table when using RandomImputer
-# or model-based imputer
 
 def _margins(margins, container):
     if isinstance(margins, tuple):
@@ -356,18 +353,21 @@ class OWImpute(OWWidget):
                     if learner is None:
                         learner = learner_pointer
                     else:
-                        print("Multiple regression models ; using %s" % str(learner.name))
+                        print("Multiple regression models ; using %s" \
+                              % str(learner.name))
                 if not var.is_continuous and \
                         isinstance(learner_pointer, LearnerClassification):
                     if learner is None:
                         learner = learner_pointer
                     else:
-                        print("Multiple classification models ; using %s" % str(learner.name))
+                        print("Multiple classification models ; using %s" \
+                              % str(learner.name))
 
             # No suitable model was found for this variable type,
             # default to MeanLearner
             if learner is None:
-                print("No suitable model for attribute \"%s\"; imputing average/most frequent." % var.name)
+                print("No suitable model for attribute \"%s\"; " + \
+                      " imputing average/most frequent." % var.name)
                 learner = MeanLearner()
             return column_imputer_by_model(var, data, learner=learner)
 
@@ -560,7 +560,8 @@ def learn_model_for(learner, variable, data):
         inxs = np.where(np.logical_not(np.isnan(data.X[:, var_index])))[0]
 
     domain = Orange.data.Domain(attrs, (variable,))
-    training_data = Orange.data.Table.from_table(domain, data, row_indices=list(inxs))
+    training_data = Orange.data.Table.from_table(domain, data,
+                                                 row_indices=list(inxs))
     assert len(inxs)
     return learner(training_data)
 
@@ -709,9 +710,6 @@ class NullColumnImputer(ColumnImputerModel):
     def __call__(self, data, weight=None):
         data = translate_domain(data, self.codomain)
         return data
-
-
-
 
 
 
@@ -1070,7 +1068,7 @@ class Test(unittest.TestCase):
         self.assertClose(idata.X,
                          [[1.0, 1.0, 0.0],
                           [2.0, 1.0, 3.0],
-                          [1.0, 1.0, 1.5]])
+                          [2.0, 1.0, 1.5]])
 
     def test_impute_random(self):
         nan = np.nan
