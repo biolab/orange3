@@ -93,6 +93,15 @@ class OWScatterPlot(OWWidget):
         self.cb_attr_y = gui.comboBox(box, self, "attr_y", label="Axis y:",
                                       callback=self.update_attr,
                                       **common_options)
+
+        self.vizrank = self.VizRank(self)
+        vizrank_box = gui.widgetBox(box, None, orientation='horizontal')
+        gui.separator(vizrank_box, width=common_options["labelWidth"])
+        gui.button(vizrank_box, self, "Rank projections",
+                   callback=self.vizrank.reshow,
+                   tooltip="Find projections with good class separation")
+        gui.separator(box)
+
         gui.valueSlider(
             box, self, value='graph.jitter_size',  label='Jittering: ',
             values=self.jitter_sizes, callback=self.reset_graph_data,
@@ -101,13 +110,6 @@ class OWScatterPlot(OWWidget):
         gui.checkBox(
             gui.indentedBox(box), self, 'graph.jitter_continuous',
             'Jitter continuous values', callback=self.reset_graph_data)
-
-        self.vizrank = self.VizRank(self)
-        self.optimizationButtons = gui.widgetBox(
-            self.controlArea, "Optimization", orientation="horizontal")
-        gui.button(self.optimizationButtons, self, "VizRank",
-                   callback=self.vizrank.reshow,
-                   tooltip="Find projections with good class separation")
 
         box = gui.widgetBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
@@ -418,7 +420,7 @@ class OWScatterPlot(OWWidget):
 
 
     class VizRank(OWWidget):
-        name = "VizRank"
+        name = "Rank projections (Scatter Plot)"
 
         def __init__(self, parent_widget):
             super().__init__(self, want_control_area=0)
@@ -437,7 +439,7 @@ class OWScatterPlot(OWWidget):
             self.projectionTable.selectionModel().selectionChanged.connect(
                 self.on_selection_changed)
 
-            self.button = gui.button(self.mainArea, self, "Rank projections",
+            self.button = gui.button(self.mainArea, self, "Start evaluation",
                                      callback=self.toggle, default=True)
             self.resize(380, 512)
             self._initialize()
@@ -450,7 +452,7 @@ class OWScatterPlot(OWWidget):
             self.projectionTable.setColumnWidth(0, 60)
             self.projectionTable.setColumnWidth(1, 120)
             self.projectionTable.setColumnWidth(2, 120)
-            self.button.setText("Rank projections")
+            self.button.setText("Start evaluation")
             self.button.setEnabled(False)
             self.pause = False
             self.scores = []
