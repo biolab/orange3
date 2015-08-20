@@ -527,6 +527,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         if self.scaled_data is None or not len(self.scaled_data):
             self.valid_data = None
+            self.selection = None
             self.n_points = 0
             return
 
@@ -574,12 +575,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                                             max_x-min_x+x_sz, max_y-min_y+y_sz))
             self.plot_widget.addItem(self.density_img)
 
+        data_indices = np.flatnonzero(self.valid_data)
         self.scatterplot_item = ScatterPlotItem(
-            x=x_data, y=y_data, data=np.arange(self.n_points),
+            x=x_data, y=y_data, data=data_indices,
             symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
         )
         self.scatterplot_item_sel = ScatterPlotItem(
-            x=x_data, y=y_data, data=np.arange(self.n_points),
+            x=x_data, y=y_data, data=data_indices,
             symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
@@ -671,7 +673,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         pens = [ QPen(Qt.NoPen),
                  make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1.) ]
         if self.selection is not None:
-            pen = [ pens[a] for a in self.selection ]
+            pen = [pens[a] for a in self.selection[self.valid_data]]
         else:
             pen = [pens[0]] * self.n_points
         brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
@@ -928,12 +930,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         keys = QApplication.keyboardModifiers()
         if self.selection is None or not keys & (
                         Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
-            self.selection = np.full(self.n_points, False, dtype=np.bool)
+            self.selection = np.full(len(self.raw_data), False, dtype=np.bool)
         indices = [p.data() for p in points]
         if keys & Qt.ControlModifier:
             self.selection[indices] = False
         elif keys & Qt.AltModifier:
-            self.selection[indices] = 1 - self.selection[indices]
+            self.selection[indices] = ~self.selection[indices]
         else:  # Handle shift and no modifiers
             self.selection[indices] = True
         self.update_colors(keep_colors=True)
@@ -943,8 +945,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.selection is None:
             return np.array([], dtype=int)
         else:
-            return np.arange(len(self.raw_data)
-                )[self.valid_data][self.selection]
+            return np.flatnonzero(self.selection)
 
     def set_palette(self, p):
         self.plot_widget.setPalette(p)
