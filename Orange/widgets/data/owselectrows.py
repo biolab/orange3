@@ -18,7 +18,7 @@ class OWSelectRows(widget.OWWidget):
     author = "Peter Juvan, Janez Demšar"
     author_email = "janez.demsar(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
-    outputs = [("Matching Data", Table), ("Unmatched Data", Table)]
+    outputs = [("Matching Data", Table, widget.Default), ("Unmatched Data", Table)]
 
     want_main_area = False
 
