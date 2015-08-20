@@ -636,7 +636,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:
             size_data = \
                 self.MinShapeSize + \
-                self.no_jittering_scaled_data[size_index] * self.point_width
+                self.no_jittering_scaled_data[size_index, self.valid_data] * self.point_width
         size_data[np.isnan(size_data)] = self.MinShapeSize - 2
         return size_data
 
@@ -808,7 +808,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if shape_index == -1:
             shape_data = self.CurveSymbols[np.zeros(self.n_points, dtype=int)]
         else:
-            shape_data = self.original_data[shape_index]
+            shape_data = self.original_data[shape_index, self.valid_data]
             shape_data[np.isnan(shape_data)] = len(self.CurveSymbols) - 1
             shape_data = self.CurveSymbols[shape_data.astype(int)]
         return shape_data
