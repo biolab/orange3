@@ -309,8 +309,8 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_size = ""
         self.graph.attr_label = ""
 
-    def update_attr(self):
-        self.update_graph()
+    def update_attr(self, attributes=None):
+        self.update_graph(attributes=attributes)
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.send_features()
 
@@ -324,10 +324,10 @@ class OWScatterPlot(OWWidget):
 
     def update_graph(self, attributes=None, reset_view=True, **_):
         self.graph.zoomStack = []
-        if not self.graph.have_data:
-            return
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
+        if not self.graph.have_data:
+            return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def saveSettings(self):
@@ -470,9 +470,7 @@ class OWScatterPlot(OWWidget):
             """Called when the ranks view selection changes."""
             a1 = selected.indexes()[1].data()
             a2 = selected.indexes()[2].data()
-            self.parent_widget.attr_x = a1
-            self.parent_widget.attr_y = a2
-            self.parent_widget.update_attr()
+            self.parent_widget.update_attr(attributes=(a1, a2))
 
         def toggle(self):
             if self.running:
