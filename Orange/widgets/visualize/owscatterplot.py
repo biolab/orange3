@@ -9,9 +9,9 @@ from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
 from sklearn.neighbors import NearestNeighbors
 
 import Orange
-from Orange.data import Table
+from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.io import FileFormats
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
@@ -44,8 +44,9 @@ class OWScatterPlot(OWWidget):
               ("Data Subset", Table, "set_subset_data"),
               ("Features", AttributeList, "set_shown_attributes")]
 
-    outputs = [("Selected Data", Table),
-               ("Other Data", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               ("Other Data", Table),
+               ("Features", Table)]
 
     settingsHandler = DomainContextHandler()
 
@@ -269,6 +270,8 @@ class OWScatterPlot(OWWidget):
     def init_attr_values(self):
         self.cb_attr_x.clear()
         self.cb_attr_y.clear()
+        self.attr_x = ""
+        self.attr_y = ""
         self.cb_attr_color.clear()
         self.cb_attr_color.addItem("(Same color)")
         self.cb_attr_label.clear()
@@ -306,9 +309,11 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_size = ""
         self.graph.attr_label = ""
 
-    def update_attr(self):
-        self.update_graph()
+    def update_attr(self, attributes=None):
+        self.update_graph(attributes=attributes)
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.send_features()
+
 
     def update_colors(self):
         self.graph.update_colors()
@@ -319,10 +324,10 @@ class OWScatterPlot(OWWidget):
 
     def update_graph(self, attributes=None, reset_view=True, **_):
         self.graph.zoomStack = []
-        if not self.graph.have_data:
-            return
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
+        if not self.graph.have_data:
+            return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def saveSettings(self):
@@ -330,9 +335,9 @@ class OWScatterPlot(OWWidget):
         # self.vizrank.saveSettings()
 
     def selection_changed(self):
-        self.commit()
+        self.send_data()
 
-    def commit(self):
+    def send_data(self):
         selected = unselected = None
         # TODO: Implement selection for sql data
         if isinstance(self.data, SqlTable):
@@ -345,6 +350,18 @@ class OWScatterPlot(OWWidget):
             unselected = self.data[unselection]
         self.send("Selected Data", selected)
         self.send("Other Data", unselected)
+
+    def send_features(self):
+        features = None
+        if self.attr_x or self.attr_y:
+            dom = Domain([], metas=(StringVariable(name="feature"),))
+            features = Table(dom, [[self.attr_x], [self.attr_y]])
+            features.name = "Features"
+        self.send("Features", features)
+
+    def commit(self):
+        self.send_data()
+        self.send_features()
 
     def set_colors(self):
         dlg = self.create_color_dialog()
@@ -393,6 +410,12 @@ class OWScatterPlot(OWWidget):
         save_img = OWSave(parent=self, data=self.graph.plot_widget.plotItem,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
+
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self.graph.plot_widget.getViewBox().deleteLater()
+        self.graph.plot_widget.clear()
+
 
     class VizRank(OWWidget):
         name = "VizRank"
@@ -447,7 +470,7 @@ class OWScatterPlot(OWWidget):
             """Called when the ranks view selection changes."""
             a1 = selected.indexes()[1].data()
             a2 = selected.indexes()[2].data()
-            self.parent_widget.major_graph_update(attributes=(a1, a2))
+            self.parent_widget.update_attr(attributes=(a1, a2))
 
         def toggle(self):
             if self.running:
@@ -496,19 +519,33 @@ class OWScatterPlot(OWWidget):
             self.button.setEnabled(False)
 
 
-def test_main():
-    import sip
-    a = QApplication(sys.argv)
+def test_main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    a = QApplication(argv)
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "iris"
+
     ow = OWScatterPlot()
     ow.show()
     ow.raise_()
-    data = Orange.data.Table("iris.tab")
+    data = Orange.data.Table(filename)
     ow.set_data(data)
     ow.set_subset_data(data[:30])
     ow.handleNewSignals()
-    a.exec()
+
+    rval = a.exec()
+
+    ow.set_data(None)
+    ow.set_subset_data(None)
+    ow.handleNewSignals()
     ow.saveSettings()
-    sip.delete(ow)
+    ow.onDeleteWidget()
+
+    return rval
 
 if __name__ == "__main__":
     test_main()

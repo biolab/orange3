@@ -15,7 +15,7 @@ from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, RE
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
 from Orange.widgets.widget import AttributeList
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 
 
 CONTINUOUS_PALETTE = "contPalette"
@@ -32,7 +32,8 @@ class OWParallelCoordinates(OWVisWidget):
     inputs = [("Data", Orange.data.Table, 'set_data', Default),
               ("Data Subset", Orange.data.Table, 'set_subset_data'),
               ("Features", AttributeList, 'set_shown_attributes')]
-    outputs = [("Selected Data", Orange.data.Table), ("Other Data", Orange.data.Table),
+    outputs = [("Selected Data", Orange.data.Table, widget.Default),
+               ("Other Data", Orange.data.Table),
                ("Features", AttributeList)]
 
     settingsHandler = DomainContextHandler()
