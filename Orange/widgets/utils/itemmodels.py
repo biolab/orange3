@@ -338,6 +338,18 @@ class PyListModel(QAbstractListModel):
             self, mime, action, row, column, parent)
 
 
+class PyListModelTooltip(PyListModel):
+    def __init__(self):
+        super().__init__()
+        self.tooltips = []
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.ToolTipRole:
+            return self.tooltips[index.row()]
+        else:
+            return super().data(index, role)
+
+
 class VariableListModel(PyListModel):
 
     MIME_TYPE = "application/x-Orange-VariableList"

@@ -16,7 +16,7 @@ from scipy import sparse as sp
 
 from .instance import *
 from Orange.util import flatten
-from Orange.data import Domain, io, DiscreteVariable, ContinuousVariable, Variable
+from Orange.data import (Domain, io, Variable, StringVariable)
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -250,7 +250,7 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        def get_columns(row_indices, src_cols, n_rows):
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
             if not len(src_cols):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
@@ -259,24 +259,17 @@ class Table(MutableSequence, Storage):
                    for x in src_cols):
                 return _subarray(source.X, row_indices, src_cols)
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                return _subarray(source.metas, row_indices,
+                arr = _subarray(source.metas, row_indices,
                                  [-1 - x for x in src_cols])
+                if arr.dtype != dtype:
+                    return arr.astype(dtype)
+                return arr
             if all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
                 return _subarray(source._Y, row_indices,
                                  [x - n_src_attrs for x in src_cols])
 
-            types = []
-            if any(isinstance(x, Integral) and 0 <= x < n_src_attrs
-                   for x in src_cols):
-                types.append(source.X.dtype)
-            if any(isinstance(x, Integral) and x < 0 for x in src_cols):
-                types.append(source.metas.dtype)
-            if any(isinstance(x, Integral) and x >= n_src_attrs
-                   for x in src_cols):
-                types.append(source._Y.dtype)
-            new_type = np.find_common_type(types, [])
-            a = np.empty((n_rows, len(src_cols)), dtype=new_type)
+            a = np.empty((n_rows, len(src_cols)), dtype=dtype)
             for i, col in enumerate(src_cols):
                 if col is None:
                     a[:, i] = Unknown
@@ -321,7 +314,12 @@ class Table(MutableSequence, Storage):
             if self.X.ndim == 1:
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
             self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
-            self.metas = get_columns(row_indices, conversion.metas, n_rows)
+
+            dtype = np.float64
+            if any(isinstance(var, StringVariable) for var in domain.metas):
+                dtype = np.object
+            self.metas = get_columns(row_indices, conversion.metas,
+                                     n_rows, dtype)
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             if source.has_weights():

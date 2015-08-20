@@ -1109,6 +1109,22 @@ class TableTestCase(unittest.TestCase):
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 7)
 
+    def test_table_dtypes(self):
+        table = data.Table("iris")
+        metas = np.hstack((table.metas, table.Y.reshape(len(table), 1)))
+        attributes_metas = table.domain.metas + table.domain.class_vars
+        domain_metas = data.Domain(table.domain.attributes,
+                                   table.domain.class_vars,
+                                   attributes_metas)
+        table_metas = data.Table(domain_metas, table.X, table.Y, metas)
+        new_table = data.Table(data.Domain(table_metas.domain.metas,
+                                           table_metas.domain.metas,
+                                           table_metas.domain.metas),
+                               table_metas)
+        self.assertTrue(new_table.X.dtype == np.float64)
+        self.assertTrue(new_table.Y.dtype == np.float64)
+        self.assertTrue(new_table.metas.dtype == np.float64)
+
     # TODO Test conjunctions and disjunctions of conditions
 
 
