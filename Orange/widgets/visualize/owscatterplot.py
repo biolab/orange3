@@ -11,7 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 import Orange
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.io import FileFormats
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
@@ -44,8 +44,9 @@ class OWScatterPlot(OWWidget):
               ("Data Subset", Table, "set_subset_data"),
               ("Features", AttributeList, "set_shown_attributes")]
 
-    outputs = [("Selected Data", Table),
-               ("Other Data", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               ("Other Data", Table),
+               ("Features", Table)]
 
     settingsHandler = DomainContextHandler()
 
@@ -309,6 +310,7 @@ class OWScatterPlot(OWWidget):
     def update_attr(self):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+
 
     def update_colors(self):
         self.graph.update_colors()

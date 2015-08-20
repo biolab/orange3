@@ -21,7 +21,7 @@ class OWDataSampler(widget.OWWidget):
     category = "Data"
     keywords = ["data", "sample"]
     inputs = [("Data", Table, "set_data")]
-    outputs = [("Data Sample", Table), ("Remaining Data", Table)]
+    outputs = [("Data Sample", Table, widget.Default), ("Remaining Data", Table)]
 
     want_main_area = False
 
