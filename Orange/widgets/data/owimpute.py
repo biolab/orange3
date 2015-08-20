@@ -793,8 +793,6 @@ class ModelTransform(Transformation):
     def __call__(self, data):
         return self.model(data)
 
-import copy
-
 # Rename to TableImputer (Model?)
 class ImputerModel(object):
     """
