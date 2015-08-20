@@ -396,6 +396,12 @@ class OWScatterPlot(OWWidget):
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self.graph.plot_widget.getViewBox().deleteLater()
+        self.graph.plot_widget.clear()
+
+
     class VizRank(OWWidget):
         name = "VizRank"
 
@@ -500,19 +506,33 @@ class OWScatterPlot(OWWidget):
             self.button.setEnabled(False)
 
 
-def test_main():
-    import sip
-    a = QApplication(sys.argv)
+def test_main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    a = QApplication(argv)
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "iris"
+
     ow = OWScatterPlot()
     ow.show()
     ow.raise_()
-    data = Orange.data.Table("iris.tab")
+    data = Orange.data.Table(filename)
     ow.set_data(data)
     ow.set_subset_data(data[:30])
     ow.handleNewSignals()
-    a.exec()
+
+    rval = a.exec()
+
+    ow.set_data(None)
+    ow.set_subset_data(None)
+    ow.handleNewSignals()
     ow.saveSettings()
-    sip.delete(ow)
+    ow.onDeleteWidget()
+
+    return rval
 
 if __name__ == "__main__":
     test_main()
