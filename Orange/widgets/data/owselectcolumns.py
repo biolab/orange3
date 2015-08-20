@@ -617,15 +617,26 @@ class OWSelectAttributes(widget.OWWidget):
                      (len(removed), ", ".join(x.name for x in removed)))])
 
 
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+def test_main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(list(argv))
+
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "brown-selected"
+
     w = OWSelectAttributes()
-#    data = Orange.data.Table("rep:dicty-express.tab")
-    data = Orange.data.Table("brown-selected.tab")
+    data = Orange.data.Table(filename)
     w.set_data(data)
     w.show()
-    app.exec_()
+    w.raise_()
+    rval = app.exec_()
     w.set_data(None)
     w.saveSettings()
+    return rval
 
-
+if __name__ == "__main__":
+    sys.exit(test_main())
