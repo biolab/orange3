@@ -447,7 +447,9 @@ class OWScatterPlot(OWWidget):
             """Called when the ranks view selection changes."""
             a1 = selected.indexes()[1].data()
             a2 = selected.indexes()[2].data()
-            self.parent_widget.major_graph_update(attributes=(a1, a2))
+            self.parent_widget.attr_x = a1
+            self.parent_widget.attr_y = a2
+            self.parent_widget.update_attr()
 
         def toggle(self):
             if self.running:
