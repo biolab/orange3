@@ -146,7 +146,7 @@ class OWBoxPlot(widget.OWWidget):
         self.posthoc_lines = []
 
         self.label_txts = self.mean_labels = self.boxes = self.labels = \
-            self.attr_labels = self.order = []
+            self.label_txts_all = self.attr_labels = self.order = []
         self.p = -1.0
         self.scale_x = self.scene_min_x = self.scene_width = 0
         self.label_width = 0
@@ -273,14 +273,17 @@ class OWBoxPlot(widget.OWWidget):
                 (dataset, attr_ind, group_ind))
             if self.is_continuous:
                 self.stats = [BoxData(cont) for cont in self.conts]
-            self.label_txts = dataset.domain[group_ind].values
+            self.label_txts_all = dataset.domain[group_ind].values
         else:
             self.dist = datacaching.getCached(
                 dataset, distribution.get_distribution, (dataset, attr_ind))
             self.conts = []
             if self.is_continuous:
                 self.stats = [BoxData(self.dist)]
-            self.label_txts = [""]
+            self.label_txts_all = [""]
+        self.label_txts = [txts for stat, txts in zip(self.stats,
+                                                      self.label_txts_all)
+                           if stat.N > 0]
         self.stats = [stat for stat in self.stats if stat.N > 0]
 
     def update_display_box(self):
@@ -376,7 +379,7 @@ class OWBoxPlot(widget.OWWidget):
     def display_changed_disc(self):
         self.clear_scene()
         self.attr_labels = [QtGui.QGraphicsSimpleTextItem(lab)
-                            for lab in self.label_txts]
+                            for lab in self.label_txts_all]
 
         if not self.stretched:
             if self.grouping_select[0]:
