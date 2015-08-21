@@ -138,7 +138,7 @@ class VariablesListItemView(QtGui.QListView):
     """ A Simple QListView subclass initialized for displaying
     variables.
     """
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, acceptedType=Orange.data.Variable):
         super().__init__(parent)
         self.setSelectionMode(self.ExtendedSelection)
         self.setAcceptDrops(True)
@@ -152,6 +152,9 @@ class VariablesListItemView(QtGui.QListView):
         self.setDragDropOverwriteMode(False)
         self.viewport().setAcceptDrops(True)
 
+        #: type | Tuple[type]
+        self.__acceptedType = acceptedType
+
     def startDrag(self, supported_actions):
         indices = self.selectionModel().selectedIndexes()
         indices = [i for i in indices if i.flags() & Qt.ItemIsDragEnabled]
@@ -159,11 +162,10 @@ class VariablesListItemView(QtGui.QListView):
             data = self.model().mimeData(indices)
             if not data:
                 return
-#            rect = QtCore.QRect()
-#            pixmap = self.render_to_pixmap(indices)
+
             drag = QtGui.QDrag(self)
             drag.setMimeData(data)
-#            drag.setPixmap(pixmap)
+
             default_action = QtCore.Qt.IgnoreAction
             if hasattr(self, "defaultDropAction") and \
                     self.defaultDropAction() != Qt.IgnoreAction and \
@@ -179,32 +181,52 @@ class VariablesListItemView(QtGui.QListView):
                 for s1, s2 in reversed(list(slices(rows))):
                     delslice(self.model(), s1, s2)
 
-    def render_to_pixmap(self, indices):
-        pass
-
-
-class ClassVariableItemView(VariablesListItemView):
-    def __init__(self, parent=None):
-        VariablesListItemView.__init__(self, parent)
-        self.setDropIndicatorShown(False)
-
     def dragEnterEvent(self, event):
-        """ Don't accept drops if the class is already present in the model.
         """
-        if self.accepts_drop(event):
+        Reimplemented from QListView.dragEnterEvent
+        """
+        if self.acceptsDropEvent(event):
             event.accept()
         else:
             event.ignore()
 
-    def accepts_drop(self, event):
+    def acceptsDropEvent(self, event):
+        """
+        Should the drop event be accepted.
+        """
         mime = event.mimeData()
-        vars = self.model().items_from_mime_data(mime)
+        vars = source_model(self).items_from_mime_data(mime)
         if vars is None:
-            return event.ignore()
+            return False
+
+        if not all(isinstance(var, self.__acceptedType) for var in vars):
+            return False
+
+        event.accept()
+        return True
+
+
+class ClassVariableItemView(VariablesListItemView):
+    def __init__(self, parent=None, acceptedType=Orange.data.Variable):
+        VariablesListItemView.__init__(self, parent, acceptedType)
+        self.setDropIndicatorShown(False)
+
+    def acceptsDropEvent(self, event):
+        """
+        Reimplemented
+
+        Ensure only one variable is in the model.
+        """
+        accepts = super().acceptsDropEvent(event)
+        mime = event.mimeData()
+        vars = source_model(self).items_from_mime_data(mime)
+        if vars is None:
+            return False
 
         if len(self.model()) + len(vars) > 1:
-            return event.ignore()
-        return True
+            return False
+
+        return accepts
 
 
 class VariableFilterProxyModel(QtGui.QSortFilterProxyModel):
@@ -305,9 +327,11 @@ class OWSelectAttributes(widget.OWWidget):
         self.filter_edit.installEventFilter(self.completer_navigator)
 
         self.available_attrs = VariablesListItemModel()
+
         self.available_attrs_proxy = VariableFilterProxyModel()
         self.available_attrs_proxy.setSourceModel(self.available_attrs)
-        self.available_attrs_view = VariablesListItemView()
+        self.available_attrs_view = VariablesListItemView(
+            acceptedType=Orange.data.Variable)
         self.available_attrs_view.setModel(self.available_attrs_proxy)
 
         aa = self.available_attrs
@@ -326,7 +350,10 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
-        self.used_attrs_view = VariablesListItemView()
+        self.used_attrs_view = VariablesListItemView(
+            acceptedType=(Orange.data.DiscreteVariable,
+                          Orange.data.ContinuousVariable))
+
         self.used_attrs_view.setModel(self.used_attrs)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.used_attrs_view))
@@ -336,7 +363,9 @@ class OWSelectAttributes(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Target Variable",
                             addToLayout=False)
         self.class_attrs = ClassVarListItemModel()
-        self.class_attrs_view = ClassVariableItemView()
+        self.class_attrs_view = ClassVariableItemView(
+            acceptedType=(Orange.data.DiscreteVariable,
+                          Orange.data.ContinuousVariable))
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.class_attrs_view))
@@ -347,7 +376,8 @@ class OWSelectAttributes(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Meta Attributes",
                             addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
-        self.meta_attrs_view = VariablesListItemView()
+        self.meta_attrs_view = VariablesListItemView(
+            acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
         self.meta_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.meta_attrs_view))
