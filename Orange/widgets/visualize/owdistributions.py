@@ -91,9 +91,11 @@ class OWDistributions(widget.OWWidget):
     disc_cont = settings.Setting(False)
 
     smoothing_index = settings.Setting(5)
+    show_prob = settings.Setting(False)
 
     want_graph = True
     ASH_HIST = 50
+    M_EST = 5
 
     bins = [ 2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50 ]
     smoothing_facs = list(reversed([ 0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 4, 6, 10 ]))
@@ -143,6 +145,9 @@ class OWDistributions(widget.OWWidget):
         self.cb_rel_freq = gui.checkBox(
             box, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed)
+        self.cb_prob = gui.checkBox(
+            box, self, "show_prob", "Show probabilities",
+            callback=self._on_relative_freq_changed)
 
         plotview = pg.PlotWidget(background=None)
         self.mainArea.layout().addWidget(plotview)
@@ -151,10 +156,26 @@ class OWDistributions(widget.OWWidget):
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
 
         self.plot = pg.PlotItem()
-        self.plot.getViewBox().setMouseEnabled(False, False)
-        self.plot.getViewBox().setMenuEnabled(False)
-        self.plot.hideButtons()
+        self.plot.hideButtons() 
         plotview.setCentralItem(self.plot)
+
+        self.plot_prob = pg.ViewBox()
+        self.plot.hideAxis('right')
+        self.plot.scene().addItem(self.plot_prob)
+        self.plot.getAxis("right").linkToView(self.plot_prob)
+        self.plot.getAxis("right").setLabel("Probability")
+        self.plot_prob.setZValue(10)
+        self.plot_prob.setXLink(self.plot)
+        self.update_views()
+        self.plot.vb.sigResized.connect(self.update_views)
+        self.plot_prob.setRange(yRange=[0,1])
+
+        def disable_mouse(plot):
+            plot.setMouseEnabled(False, False)
+            plot.setMenuEnabled(False)
+ 
+        disable_mouse(self.plot.getViewBox())
+        disable_mouse(self.plot_prob)
 
         pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
         for axis in ("left", "bottom"):
@@ -165,6 +186,10 @@ class OWDistributions(widget.OWWidget):
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
         self.graphButton.clicked.connect(self.save_graph)
+
+    def update_views(self):
+        self.plot_prob.setGeometry(self.plot.vb.sceneBoundingRect())
+        self.plot_prob.linkedViewChanged(self.plot.vb, self.plot_prob.XAxis)
 
     def set_data(self, data):
         self.closeContext()
@@ -193,6 +218,7 @@ class OWDistributions(widget.OWWidget):
 
     def clear(self):
         self.plot.clear()
+        self.plot_prob.clear()
         self.varmodel[:] = []
         self.groupvarmodel = []
         self.variable_idx = -1
@@ -213,6 +239,7 @@ class OWDistributions(widget.OWWidget):
 
     def _setup(self):
         self.plot.clear()
+        self.plot_prob.clear()
         self._legend.clear()
         self._legend.hide()
 
@@ -248,6 +275,8 @@ class OWDistributions(widget.OWWidget):
         var = self.var
         assert len(dist) > 0
         self.plot.clear()
+        self.plot_prob.clear()
+        self.plot.hideAxis('right')
 
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
@@ -290,7 +319,13 @@ class OWDistributions(widget.OWWidget):
         var, cvar = self.var, self.cvar
         assert len(cont) > 0
         self.plot.clear()
+        self.plot_prob.clear()
         self._legend.clear()
+
+        if var.is_discrete and self.show_prob:
+            self.plot.showAxis('right')
+        else:
+            self.plot.hideAxis('right')
 
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
@@ -335,6 +370,7 @@ class OWDistributions(widget.OWWidget):
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
+            ncval = len(cvar_values)
 
             maxh = 0 #maximal column height
             maxrh = 0 #maximal relative column height
@@ -355,6 +391,17 @@ class OWDistributions(widget.OWWidget):
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
 
+                if self.show_prob:
+                    for ic,a in enumerate(dist):
+                        item = pg.ScatterPlotItem()
+                        pen = QtGui.QPen(QtGui.QBrush(Qt.black), 2)
+                        pen.setCosmetic(True)
+                        prob = (a+self.M_EST/ncval)/(dsum+self.M_EST)
+                        item.setData([i], [prob], antialias=True, stepMode=False,
+                                 fillLevel=None, pxMode=True, size=10,
+                                 brush=QtGui.QBrush(colors[ic]), pen=pen)
+                        self.plot_prob.addItem(item)
+
         for color, name in zip(colors, cvar_values):
             self._legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
@@ -372,6 +419,7 @@ class OWDistributions(widget.OWWidget):
                       [self.cvar is not None and self.relative_freq])
 
     def enable_disable_rel_freq(self):
+        self.cb_prob.setDisabled(self.var is None or self.cvar is None or self.var.is_continuous)
         self.cb_rel_freq.setDisabled(
             self.var is None or self.cvar is None)
 
