@@ -228,7 +228,8 @@ class OWTestLearners(widget.OWWidget):
     #: Bootstrap sampling p
     sample_p = settings.Setting(75)
 
-    class_selection = settings.ContextSetting("(None)")
+    TARGET_AVERAGE = "(Average over classes)"
+    class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -507,7 +508,8 @@ class OWTestLearners(widget.OWWidget):
 
         target_index = None
         class_var = self.train_data.domain.class_var
-        if class_var.is_discrete and self.class_selection != "(None)":
+        if class_var.is_discrete and \
+                self.class_selection != self.TARGET_AVERAGE:
             target_index = class_var.values.index(self.class_selection)
 
         for slot in self.learners.values():
@@ -553,7 +555,7 @@ class OWTestLearners(widget.OWWidget):
         if self.train_data.domain.has_discrete_class:
             self.cbox.setVisible(True)
             class_var = self.train_data.domain.class_var
-            items = ["(None)"] + class_var.values
+            items = [self.TARGET_AVERAGE] + class_var.values
             self.class_selection_combo.addItems(items)
 
             class_index = 0
