@@ -555,24 +555,35 @@ class OWSelectAttributes(widget.OWWidget):
             if view is not focus and not view.hasFocus() and self.selected_rows(view):
                 view.selectionModel().clear()
 
-        available_selected = bool(self.selected_rows(self.available_attrs_view))
+        def selected_vars(view):
+            model = source_model(view)
+            return [model[i] for i in self.selected_rows(view)]
 
-        move_attr_enabled = bool(self.selected_rows(self.available_attrs_view) or \
-                                self.selected_rows(self.used_attrs_view))
-        self.move_attr_button.setEnabled(move_attr_enabled)
+        available_selected = selected_vars(self.available_attrs_view)
+        attrs_selected = selected_vars(self.used_attrs_view)
+        class_selected = selected_vars(self.class_attrs_view)
+        meta_selected = selected_vars(self.meta_attrs_view)
+
+        available_types = set(map(type, available_selected))
+        all_primitive = all(var.is_primitive()
+                            for var in available_types)
+
+        move_attr_enabled = (available_selected and all_primitive) or \
+                            attrs_selected
+
+        self.move_attr_button.setEnabled(bool(move_attr_enabled))
         if move_attr_enabled:
             self.move_attr_button.setText(">" if available_selected else "<")
 
-        move_class_enabled = bool(len(self.selected_rows(self.available_attrs_view)) == 1 or \
-                                  self.selected_rows(self.class_attrs_view))
+        move_class_enabled = (len(available_selected) == 1 and all_primitive) or \
+                             class_selected
 
-        self.move_class_button.setEnabled(move_class_enabled)
+        self.move_class_button.setEnabled(bool(move_class_enabled))
         if move_class_enabled:
             self.move_class_button.setText(">" if available_selected else "<")
+        move_meta_enabled = available_selected or meta_selected
 
-        move_meta_enabled = bool(self.selected_rows(self.available_attrs_view) or \
-                                 self.selected_rows(self.meta_attrs_view))
-        self.move_meta_button.setEnabled(move_meta_enabled)
+        self.move_meta_button.setEnabled(bool(move_meta_enabled))
         if move_meta_enabled:
             self.move_meta_button.setText(">" if available_selected else "<")
 
