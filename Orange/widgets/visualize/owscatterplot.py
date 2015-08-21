@@ -258,15 +258,6 @@ class OWScatterPlot(OWWidget):
         else:
             self.attribute_selection_list = None
 
-    # Callback from VizRank dialog
-    def show_selected_attributes(self):
-        val = self.vizrank.get_selected_projection()
-        if not val:
-            return
-        if self.data.domain.class_var:
-            self.graph.attr_color = self.data.domain.class_var.name
-        self.update_graph(val[3])
-
     def get_shown_attributes(self):
         return self.attr_x, self.attr_y
 
@@ -332,10 +323,6 @@ class OWScatterPlot(OWWidget):
         if not self.graph.have_data:
             return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
-
-    def saveSettings(self):
-        OWWidget.saveSettings(self)
-        # self.vizrank.saveSettings()
 
     def selection_changed(self):
         self.send_data()
