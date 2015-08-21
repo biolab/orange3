@@ -192,8 +192,13 @@ class VariablesListItemView(QtGui.QListView):
 
     def acceptsDropEvent(self, event):
         """
-        Should the drop event be accepted.
+        Should the drop event be accepted?
         """
+        # disallow drag/drops between windows
+        if event.source() is not None and \
+                event.source().window() is not self.window():
+            return False
+
         mime = event.mimeData()
         vars = source_model(self).items_from_mime_data(mime)
         if vars is None:
