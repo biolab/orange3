@@ -9,8 +9,9 @@ def configuration(parent_package='', top_path=None):
         libraries.append('m')
 
     config = Configuration('visualize', parent_package, top_path)
-    config.add_extension('_grid_knn',
-                         sources=['_grid_knn.cpp'],
+    config.add_extension('_grid_density',
+                         language='c++',
+                         sources=['_grid_density.cpp'],
                          include_dirs=[],
                          libraries=libraries,
                          export_symbols=["compute_density"]

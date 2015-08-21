@@ -1,36 +1,15 @@
 from unittest import TestCase
 
-from collections import Counter
 from math import *
 import numpy as np
-from numpy.random import random, randint, shuffle, uniform
+from numpy.random import random, randint, uniform
 
 from PyQt4.QtGui import QColor
-from sklearn.neighbors import NearestNeighbors
 
-from Orange.widgets.visualize.owscatterplotgraph import compute_density as compute_density_cpp
+from Orange.widgets.visualize.owscatterplotgraph import compute_density, grid_sample
 
 
 class TestScatterplotDensity(TestCase):
-
-    # reference Python implementation
-    def compute_density_py(self, x_grid, y_grid, x_data, y_data, rgb_data):
-        k = int(len(x_data)**0.5)
-        distinct_colors = len(set(rgb_data))
-        lo, hi = ceil(k/distinct_colors), k
-        # find nearest neighbours of all grid points
-        grid = [[x, y] for x in x_grid for y in y_grid]
-        clf = NearestNeighbors()
-        clf.fit(np.column_stack((x_data, y_data)))
-        dist, ind = clf.kneighbors(grid, k)
-        # combine colors of found neighbours
-        colors = []
-        for neigh in ind:
-            cnt = Counter(rgb_data[i] for i in neigh)
-            main_color, color_count = cnt.most_common(1)[0]
-            a = int(128*((color_count-lo)/(hi-lo))) if lo != hi else 128
-            colors += [(main_color[0], main_color[1], main_color[2], a)]
-        return np.array(colors).reshape((len(x_grid), len(y_grid), 4))
 
     def random_data(self, n_grid, n_colors, n_data):
         mx, Mx = 200, 2000
@@ -58,29 +37,18 @@ class TestScatterplotDensity(TestCase):
 
     def test_random(self):
         x_grid, y_grid, x_data, y_data, rgb_data = self.random_data(n_grid=50, n_colors=5, n_data=121)
-        img_py = self.compute_density_py(x_grid, y_grid, x_data, y_data, rgb_data)
-        img_cpp = compute_density_cpp(x_grid, y_grid, x_data, y_data, rgb_data)
-        self.assertGreater(np.sum(img_py == img_cpp)/img_py.size, 0.9)
+        img = compute_density(x_grid, y_grid, x_data, y_data, rgb_data)
+        self.assertTrue(img.shape == (50, 50, 4))
+        self.assertTrue(np.all(0 <= img) and np.all(img < 256))
 
-    def test_few_colors(self):
-        for c in [1, 2]:
-            x_grid, y_grid, x_data, y_data, rgb_data = self.random_data(n_grid=50, n_colors=c, n_data=121)
-            img_py = self.compute_density_py(x_grid, y_grid, x_data, y_data, rgb_data)
-            img_cpp = compute_density_cpp(x_grid, y_grid, x_data, y_data, rgb_data)
-            self.assertTrue(np.all(img_py == img_cpp))
+    def test_single_class(self):
+        x_grid, y_grid, x_data, y_data, rgb_data = self.random_data(n_grid=50, n_colors=1, n_data=100)
+        img = compute_density(x_grid, y_grid, x_data, y_data, rgb_data)
+        self.assertTrue(np.all(img[:, :, 3] == 128))
 
-    def test_grid_data(self):
-        x_coord = uniform(-1, 1, 13)
-        y_coord = uniform(-1, 1, 13)
-        xy = [(x,y) for x in x_coord for y in y_coord]
-        xy = xy*3
-        shuffle(xy)
-        x_data, y_data = zip(*xy)
-        rgb_data = [(255,0,0) if x < y else (0,0,255) for x, y in xy]
-
-        x_grid = sorted(uniform(-2, 2, 31))
-        y_grid = sorted(uniform(-2, 2, 31))
-
-        img_py = self.compute_density_py(x_grid, y_grid, x_data, y_data, rgb_data)
-        img_cpp = compute_density_cpp(x_grid, y_grid, x_data, y_data, rgb_data)
-        self.assertTrue(np.all(img_py == img_cpp))
+    def test_sampling(self):
+        x_data = [4, 1] + list(uniform(10, 20, 1000))
+        y_data = [95, 3] + list(uniform(15, 20, 1000))
+        sample = grid_sample(x_data, y_data, k=30, g=10)
+        self.assertIn(0, sample)
+        self.assertIn(1, sample)
