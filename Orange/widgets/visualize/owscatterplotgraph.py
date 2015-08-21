@@ -605,8 +605,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             sample = range(self.n_points)
             if self.n_points > 1000:
                 sample = grid_sample(x_data, y_data, 1000)
-            img = compute_density(x_grid, y_grid,
-                                  np.array(x_data)[sample], np.array(y_data)[sample], np.array(rgb_data)[sample])
+            x_data_norm = (np.array(x_data)-min_x)/(max_x-min_x)
+            y_data_norm = (np.array(y_data)-min_y)/(max_y-min_y)
+            x_grid_norm = (np.array(x_grid)-min_x)/(max_x-min_x)
+            y_grid_norm = (np.array(y_grid)-min_y)/(max_y-min_y)
+            img = compute_density(x_grid_norm, y_grid_norm,
+                                  x_data_norm[sample], y_data_norm[sample], np.array(rgb_data)[sample])
             self.density_img = ImageItem(img, autoLevels=False)
             self.density_img.setRect(QRectF(min_x-x_sz/2, min_y-y_sz/2,
                                             max_x-min_x+x_sz, max_y-min_y+y_sz))

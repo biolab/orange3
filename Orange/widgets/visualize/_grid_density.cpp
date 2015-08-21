@@ -1,4 +1,5 @@
 #include <map>
+#include <algorithm>
 using namespace std;
 
 #ifdef _WIN32
@@ -31,7 +32,9 @@ void compute_density(int r, double *gx, double *gy, int n, double *dx, double *d
 		}
 		color[i] = color2ind[c];
 	}
-	double diag=(gx[r-1]-gx[0])*(gx[r-1]-gx[0])+(gy[r-1]-gy[0])*(gy[r-1]-gy[0]);
+	double min_x = *min_element(dx,dx+n), max_x = *max_element(dx,dx+n);
+	double min_y = *min_element(dy,dy+n), max_y = *max_element(dy,dy+n);
+	double diag = (max_x-min_x)*(max_x-min_x) + (max_y-min_y)*(max_y-min_y);
 	double lo=1.0/colors, hi=1.0;
 	double f[colors];
 	for (int i=0;i<r;i++) {
