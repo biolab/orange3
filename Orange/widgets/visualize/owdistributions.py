@@ -156,7 +156,7 @@ class OWDistributions(widget.OWWidget):
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
 
         self.plot = pg.PlotItem()
-        self.plot.hideButtons() 
+        self.plot.hideButtons()
         plotview.setCentralItem(self.plot)
 
         self.plot_prob = pg.ViewBox()
@@ -173,7 +173,7 @@ class OWDistributions(widget.OWWidget):
         def disable_mouse(plot):
             plot.setMouseEnabled(False, False)
             plot.setMenuEnabled(False)
- 
+
         disable_mouse(self.plot.getViewBox())
         disable_mouse(self.plot_prob)
 
@@ -394,12 +394,11 @@ class OWDistributions(widget.OWWidget):
                 if self.show_prob:
                     for ic,a in enumerate(dist):
                         item = pg.ScatterPlotItem()
-                        pen = QtGui.QPen(QtGui.QBrush(Qt.black), 2)
-                        pen.setCosmetic(True)
                         prob = (a+self.M_EST/ncval)/(dsum+self.M_EST)
-                        item.setData([i], [prob], antialias=True, stepMode=False,
-                                 fillLevel=None, pxMode=True, size=10,
-                                 brush=QtGui.QBrush(colors[ic]), pen=pen)
+                        col = colors[ic].darker(0.2)
+                        item.setData([i], [prob], antialias=True, symbol="x",
+                                 fillLevel=None, pxMode=True, size=14,
+                                 brush=QtGui.QColor(1), pen=col)
                         self.plot_prob.addItem(item)
 
         for color, name in zip(colors, cvar_values):
