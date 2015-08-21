@@ -130,8 +130,8 @@ class OWMPR(OWWidget):
 
     def on_selection_changed(self, selected, deselected):
         """Called when the ranks view selection changes."""
-        a1 = selected.indexes()[1].data().replace('D_', '')
-        a2 = selected.indexes()[2].data().replace('D_', '')
+        a1 = selected.indexes()[1].data()
+        a2 = selected.indexes()[2].data()
         d = self.data.domain
         self.send("Features", AttributeList([d[a1], d[a2]]))
 
