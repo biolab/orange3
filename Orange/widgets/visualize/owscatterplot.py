@@ -264,8 +264,8 @@ class OWScatterPlot(OWWidget):
     def init_attr_values(self):
         self.cb_attr_x.clear()
         self.cb_attr_y.clear()
-        self.attr_x = ""
-        self.attr_y = ""
+        self.attr_x = None
+        self.attr_y = None
         self.cb_attr_color.clear()
         self.cb_attr_color.addItem("(Same color)")
         self.cb_attr_label.clear()
