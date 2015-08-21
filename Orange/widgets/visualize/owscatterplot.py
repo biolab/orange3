@@ -464,8 +464,12 @@ class OWScatterPlot(OWWidget):
             self.information(0)
             if self.parent_widget.data:
                 if not self.parent_widget.data.domain.class_var:
-                    self.information(0,
-                            "VizRank requires data with a class variable.")
+                    self.information(
+                        0, "Data with a class variable is required.")
+                    return
+                if len(self.parent_widget.data.domain.attributes) < 2:
+                    self.information(
+                        0, 'At least 2 unique features are needed.')
                     return
                 self.attrs = [a.name for a in
                               self.parent_widget.data.domain.attributes]
