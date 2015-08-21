@@ -346,7 +346,7 @@ class OWMDS(widget.OWWidget):
     def set_data(self, data):
         self.signal_data = data
 
-        if self.matrix and data is not None and len(self.matrix) == len(data):
+        if self.matrix is not None and data is not None and len(self.matrix) == len(data):
             self.closeContext()
             self.data = data
             self.update_controls()
@@ -357,7 +357,7 @@ class OWMDS(widget.OWWidget):
 
     def set_disimilarity(self, matrix):
         self.matrix = matrix
-        if matrix and matrix.row_items:
+        if matrix is not None and matrix.row_items:
             self.matrix_data = matrix.row_items
         if matrix is None:
             self.matrix_data = None
@@ -456,7 +456,7 @@ class OWMDS(widget.OWWidget):
         elif self.matrix_data:
             self.data = self.matrix_data
 
-        if self.matrix:
+        if self.matrix is not None:
             self._effective_matrix = self.matrix
             if self.matrix.axis == 0:
                 self.data = None
@@ -489,7 +489,7 @@ class OWMDS(widget.OWWidget):
             self.__set_update_loop(None)
 
     def __start(self):
-        X = self._effective_matrix.X
+        X = self._effective_matrix
         if self.spread_equal_points:
             maxval = numpy.max(X)
             X = numpy.clip(X, maxval / 10, maxval)
@@ -620,7 +620,7 @@ class OWMDS(widget.OWWidget):
         if self.__update_loop is not None:
             self.__set_update_loop(None)
 
-        X = self._effective_matrix.X
+        X = self._effective_matrix
 
         if self.initialization == OWMDS.PCA:
             self.embedding = torgerson(X)
@@ -778,7 +778,7 @@ class OWMDS(widget.OWWidget):
             size_index = self.cb_size_value.currentIndex()
             if have_data and size_index == 1:
                 # size by stress
-                size_data = stress(self.embedding, self._effective_matrix.X)
+                size_data = stress(self.embedding, self._effective_matrix)
                 size_data = scale(size_data)
                 size_data = MinPointSize + size_data * point_size
             elif have_data and size_index > 0:
@@ -823,10 +823,10 @@ class OWMDS(widget.OWWidget):
                 # Assuming that MDS can't show so many points that memory could
                 # become an issue, I preferred using simpler code.
                 m = self._effective_matrix
-                n = m.dim[0]
+                n = len(m)
                 p = (n * (n - 1) // 2 * self.connected_pairs) // 100
                 indcs = numpy.triu_indices(n, 1)
-                sorted = numpy.argsort(m.X[indcs])[:p]
+                sorted = numpy.argsort(m[indcs])[:p]
                 self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
                 fpairs[::2] = indcs[0][sorted]
                 fpairs[1::2] = indcs[1][sorted]

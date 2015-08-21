@@ -944,8 +944,8 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if distances is not None:
             # Convert to flat upper triangular distances
-            i, j = numpy.triu_indices(distances.X.shape[0], k=1)
-            distances = distances.X[i, j]
+            i, j = numpy.triu_indices(distances.shape[0], k=1)
+            distances = numpy.asarray(distances[i, j])
 
             method = LINKAGE[self.linkage].lower()
             Z = scipy.cluster.hierarchy.linkage(
