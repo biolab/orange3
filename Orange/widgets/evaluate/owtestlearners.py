@@ -296,6 +296,9 @@ class OWTestLearners(widget.OWWidget):
         self.__loop.finished.connect(self.__on_finished)
         self.__loop.returned.connect(self.__on_returned)
 
+    def sizeHint(self):
+        return QSize(780, 1)
+
     def set_learner(self, learner, key):
         """
         Set the input `learner` for `key`.
