@@ -77,3 +77,19 @@ class FeatureScoringTest(unittest.TestCase):
         scorer = score.UnivariateLinearRegression()
         sc = [scorer(data, a) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
+
+    def test_relieff(self):
+        weights = score.ReliefF()(self.zoo, None)
+        self.assertEqual([self.zoo.domain[attr].name
+                          for attr in reversed(weights.argsort()[-5:])],
+                         ['milk', 'legs', 'eggs', 'toothed', 'hair'])
+
+    def test_rrelieff(self):
+        scorer = score.RReliefF()
+        score.RReliefF.__init__(scorer, n_iterations=100, k_nearest=70)
+        weights = scorer(self.housing, None)
+        best_five = [self.housing.domain[attr].name
+                     for attr in reversed(weights.argsort()[-5:])]
+        self.assertTrue('AGE' in best_five)
+        self.assertTrue('NOX' in best_five)
+        self.assertTrue('INDUS' in best_five)
