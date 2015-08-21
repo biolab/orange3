@@ -11,6 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 import Orange
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
+from Orange.preprocess.score import ReliefF
 from Orange.widgets import gui, widget
 from Orange.widgets.io import FileFormats
 from Orange.widgets.settings import \
@@ -427,6 +428,7 @@ class OWScatterPlot(OWWidget):
             self.parent_widget = parent_widget
 
             self.running = False
+            self.progress = None
             self.k = 10
 
             self.projectionTable = QTableView()
@@ -455,11 +457,14 @@ class OWScatterPlot(OWWidget):
             self.button.setText("Start evaluation")
             self.button.setEnabled(False)
             self.pause = False
-            self.scores = []
-            self.attrs = []
             self.data = None
-            self.progress = None
+            self.attrs = []
+            self.scores = []
             self.i, self.j = 0, 0
+            if self.progress:
+                self.progress.finish()
+            self.progress = None
+
 
             self.information(0)
             if self.parent_widget.data:
@@ -471,10 +476,6 @@ class OWScatterPlot(OWWidget):
                     self.information(
                         0, 'At least 2 unique features are needed.')
                     return
-                self.attrs = [a.name for a in
-                              self.parent_widget.data.domain.attributes]
-                self.progress = gui.ProgressBar(
-                    self, len(self.attrs) * (len(self.attrs) - 1) / 2)
                 self.button.setEnabled(True)
 
         def on_selection_changed(self, selected, deselected):
@@ -484,19 +485,23 @@ class OWScatterPlot(OWWidget):
             self.parent_widget.update_attr(attributes=(a1, a2))
 
         def toggle(self):
+            self.running ^= 1
             if self.running:
-                self.running = False
-                self.button.setText("Continue")
-                self.button.setEnabled(False)
-            elif self.progress:
-                self.running = True
                 self.button.setText("Pause")
                 self.run()
+            else:
+                self.button.setText("Continue")
+                self.button.setEnabled(False)
 
         def run(self):
             graph = self.parent_widget.graph
             y_full = self.parent_widget.data.Y
             norm = 1 / (len(y_full) * self.k)
+            if not self.attrs:
+                self.attrs = self.score_heuristic()
+            if not self.progress:
+                self.progress = gui.ProgressBar(
+                    self, len(self.attrs) * (len(self.attrs) - 1) / 2)
             for i in range(self.i, len(self.attrs)):
                 ind1 = graph.attribute_name_index[self.attrs[i]]
                 for j in range(self.j, i):
@@ -528,6 +533,14 @@ class OWScatterPlot(OWWidget):
                 self.projectionTable.selectRow(0)
             self.button.setText("Finished")
             self.button.setEnabled(False)
+
+        def score_heuristic(self):
+            data = Orange.data.Table(self.parent_widget.graph.scaled_data.T,
+                                     self.parent_widget.data.Y)
+            weights = ReliefF(n_iterations=100, k_nearest=self.k)(data)
+            attrs = sorted(zip(weights,
+                               self.parent_widget.data.domain.attributes))
+            return [a.name for s, a in attrs][::-1]
 
 
 def test_main(argv=None):
