@@ -314,7 +314,8 @@ class OWDistributions(widget.OWWidget):
             weights = numpy.array(weights)
             weights /= numpy.sum(weights)
             colors = cols
-            curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
+            curves = [(X, Y * (w if not self.relative_freq else 1))
+                      for (X, Y), w in zip(curves, weights)]
 
             for t in [ "fill", "line" ]:
                 for (X, Y), color in reversed(list(zip(curves, colors))):
@@ -337,15 +338,19 @@ class OWDistributions(widget.OWWidget):
 
             maxh = 0 #maximal column height
             maxrh = 0 #maximal relative column height
+            scvar = cont.sum(axis=1)
+            #a cvar with sum=0 with allways have distribution counts 0,
+            #therefore we can divide it by anything
+            scvar[scvar==0] = 1
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 maxh = max(maxh, max(dist))
-                maxrh = max(maxrh, max(dist/sum(dist)))
+                maxrh = max(maxrh, max(dist/scvar))
 
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
                 geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
                                      if self.relative_freq else maxh)
-                item = DistributionBarItem(geom, dist/dsum/maxrh
+                item = DistributionBarItem(geom, dist/scvar/maxrh
                                            if self.relative_freq
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
@@ -360,14 +365,15 @@ class OWDistributions(widget.OWWidget):
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
         if self.var and self.var.is_continuous:
-            set_label("Density")
+            set_label(["Density", "Relative density"]
+                      [self.cvar is not None and self.relative_freq])
         else:
             set_label(["Frequency", "Relative frequency"]
                       [self.cvar is not None and self.relative_freq])
 
     def enable_disable_rel_freq(self):
         self.cb_rel_freq.setDisabled(
-            self.var is None or self.cvar is None or self.var.is_continuous)
+            self.var is None or self.cvar is None)
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
