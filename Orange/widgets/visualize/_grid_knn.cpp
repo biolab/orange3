@@ -12,6 +12,11 @@ using namespace std;
 #endif // _WIN32
 
 struct point {
+	point(double x_, double y_, int id_, int ind_):
+		x(x_), y(y_), id(id_), ind(ind_) {};
+
+	point(): x(0), y(0), id(0), ind(0) {};
+
 	double x,y;
 	int id, ind;
 };
@@ -60,8 +65,8 @@ void knn_line(int r, double *gx, double gy, int n, point *data, pair<double,int>
 			h++;
 		}
 		// search the relevant vertical part of the active set
-		lo=active.lower_bound((point){0,gy-hint,0,0});
-		hi=active.upper_bound((point){0,gy+hint,0,0});
+		lo=active.lower_bound(point(0,gy-hint,0,0));
+		hi=active.upper_bound(point(0,gy+hint,0,0));
 		int a=0;
 		for (it=lo; it!=hi; it++,a++) {
 			dist[a]=make_pair(distance(gx[i],gy,*it), it->ind);
@@ -81,7 +86,7 @@ void knn_line(int r, double *gx, double gy, int n, point *data, pair<double,int>
 void knn_sweep(int r, double *gx, double *gy, int n, double *dx, double *dy, int k, int *knn) {
 	// sort data points horizontally
 	point *data = new point[n];
-	for (int i=0;i<n;i++) data[i] = (point){dx[i], dy[i], i, -1};
+	for (int i=0;i<n;i++) data[i] = point(dx[i], dy[i], i, -1);
 	sort(data, data+n, point_cmpx());
 	for (int i=0;i<n;i++) data[i].ind = i;
 	pair<double,int> *dist = new pair<double,int>[n];
@@ -115,7 +120,7 @@ void combine_colors(int k, int *knn, int *drgb, int lo, int hi, int *rgba) {
 
 DLLEXPORT
 void compute_density(int r, double *gx, double *gy, int n, double *dx, double *dy, int *drgb, int *rgba) {
-	int k = sqrt(n);
+	int k = sqrt(double(n));
 	set<int> colors;
 	for (int i=0;i<n;i++) {
 		colors.insert(drgb[i*3+0]*256*256+drgb[i*3+1]*256+drgb[i*3+2]);
@@ -132,4 +137,26 @@ void compute_density(int r, double *gx, double *gy, int n, double *dx, double *d
 		}
 	}
 	delete knn;
+}
+
+
+// Empty python module definition
+#include "Python.h"
+
+static PyModuleDef _grid_knn_module = {
+	PyModuleDef_HEAD_INIT,
+	"_grid_knn",
+	NULL,
+	-1,
+};
+
+
+
+PyMODINIT_FUNC
+PyInit__grid_knn(void) {
+	PyObject * mod;
+	mod = PyModule_Create(&_grid_knn_module);
+	if (mod == NULL)
+		return NULL;
+	return mod;
 }
