@@ -431,8 +431,27 @@ def compute_density(x_grid, y_grid, x_data, y_data, rgb_data):
     img = np.swapaxes(img, 0, 1)
     return img
 
-def grid_sample(x_data, y_data, k):
-    return np.random.permutation(len(x_data))[:k]
+def grid_sample(x_data, y_data, k=1000, g=10):
+    n = len(x_data)
+    min_x, max_x = min(x_data), max(x_data)
+    min_y, max_y = min(y_data), max(y_data)
+    dx, dy = (max_x-min_x)/g, (max_y-min_y)/g
+    grid = [[[] for j in range(g)] for i in range(g)]
+    for i in range(n):
+        y = int(min((y_data[i]-min_y)/dy, g-1))
+        x = int(min((x_data[i]-min_x)/dx, g-1))
+        grid[y][x].append(i)
+    for y in range(g):
+        for x in range(g):
+            np.random.shuffle(grid[y][x])
+    sample = []
+    while len(sample) < k:
+        for y in range(g):
+            for x in range(g):
+                if len(grid[y][x]) != 0:
+                    sample.append(grid[y][x].pop())
+    np.random.shuffle(sample)
+    return sample[:k]
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
