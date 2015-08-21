@@ -1,7 +1,6 @@
-
 import collections
 from collections import namedtuple
-import copy
+from functools import reduce
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
@@ -9,16 +8,19 @@ from PyQt4.QtGui import (
     QVBoxLayout, QStackedLayout, QComboBox, QLineEdit,
     QDoubleValidator, QButtonGroup
 )
-
 from PyQt4.QtCore import Qt, QMargins
+import numpy as np
 
 import Orange.data
 from Orange.base import Model, Learner
 from Orange.data import filter as data_filter
-
+from Orange.statistics import basic_stats
+from Orange.statistics import distribution
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget
+from Orange.classification.naive_bayes import NaiveBayesLearner
 from Orange.widgets.utils import itemmodels, vartype
+from Orange.preprocess.transformation import Transformation, Lookup, Identity
 
 
 def _margins(margins, container):
@@ -513,13 +515,11 @@ def learn_model_for(learner, variable, data):
     return learner(data)
 
 
-from Orange.classification.naive_bayes import NaiveBayesLearner
-
-
 def column_imputer_by_model(variable, table, *, learner=NaiveBayesLearner()):
     model = learn_model_for(learner, variable, table)
     assert model.domain.class_vars == (variable,)
-    return ColumnImputerFromModel(table.domain, model.domain.class_vars, model)
+    var = variable.copy(compute_value=model)
+    return ColumnImputerFromModel(table.domain, (var,), model)
 
 
 class ColumnImputerFromModel(ColumnImputerModel):
@@ -536,13 +536,9 @@ class ColumnImputerFromModel(ColumnImputerModel):
 
         domain = Orange.data.Domain([trans.variable])
         X = Orange.data.Table.from_table(domain, data)
-        mask = numpy.isnan(X.X[:, 0])
+        mask = np.isnan(X.X[:, 0])
         X.X[mask, 0] = values
         return X
-
-
-from Orange.statistics import basic_stats
-from Orange.statistics import distribution
 
 
 def column_imputer_defaults(variable, table, default):
@@ -579,8 +575,8 @@ class ColumnImputerDefaults(ColumnImputerModel):
 
     def __call__(self, data, weight=None):
         data = translate_domain(data, self.codomain)
-        defaults, X = numpy.broadcast_arrays([self.defaults], data.X)
-        X = numpy.where(numpy.isnan(X), defaults, X)
+        defaults, X = np.broadcast_arrays([self.defaults], data.X)
+        X = np.where(np.isnan(X), defaults, X)
         return Orange.data.Table.from_numpy(self.codomain, X)
 
 
@@ -594,7 +590,7 @@ def column_imputer_as_value(variable, table):
             base_value=variable.base_value,
             compute_value=Lookup(
                 variable,
-                numpy.arange(len(variable.values), dtype=int),
+                np.arange(len(variable.values), dtype=int),
                 unknown=len(variable.values)
             ))
         codomain = [var]
@@ -641,7 +637,8 @@ def column_imputer_random(variable, data):
     elif variable.is_continuous:
         dist = distribution.get_distribution(data, variable)
         transformer = RandomTransform(variable, dist)
-    return RandomImputerModel((variable,), (variable,), (transformer,))
+    var = variable.copy(compute_value=transformer)
+    return RandomImputerModel((variable,), (var,), (transformer,))
 
 
 class RandomImputerModel(ColumnImputerModel):
@@ -651,7 +648,7 @@ class RandomImputerModel(ColumnImputerModel):
         values = trans(data).reshape((-1, 1))
 
         X = data[:, trans.variable].X
-        values = numpy.where(numpy.isnan(X), values, X)
+        values = np.where(np.isnan(X), values, X)
         return Orange.data.Table.from_numpy(self.codomain, values)
 
 
@@ -665,15 +662,9 @@ class NullColumnImputer(ColumnImputerModel):
         return data
 
 
-from functools import reduce
-import numpy
-from Orange.preprocess.transformation import \
-    Transformation, Lookup, Identity
-
-
 class IsDefined(Transformation):
     def transform(self, c):
-        return ~numpy.isnan(c)
+        return ~np.isnan(c)
 
 
 class Lookup(Lookup):
@@ -683,14 +674,14 @@ class Lookup(Lookup):
 
     def transform(self, column):
         if self.unknown is None:
-            unknown = numpy.nan
+            unknown = np.nan
         else:
             unknown = self.unknown
 
-        mask = numpy.isnan(column)
-        column_valid = numpy.where(mask, 0, column)
-        values = self.lookup_table[numpy.array(column_valid, dtype=int)]
-        return numpy.where(mask, unknown, values)
+        mask = np.isnan(column)
+        column_valid = np.where(mask, 0, column)
+        values = self.lookup_table[np.array(column_valid, dtype=int)]
+        return np.where(mask, unknown, values)
 
 
 class ReplaceUnknowns(Transformation):
@@ -699,7 +690,7 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        return numpy.where(numpy.isnan(c), self.value, c)
+        return np.where(np.isnan(c), self.value, c)
 
 
 class RandomTransform(Transformation):
@@ -708,37 +699,37 @@ class RandomTransform(Transformation):
         self.dist = dist
         if dist is not None:
             if variable.is_discrete:
-                dist = numpy.array(self.dist)
+                dist = np.array(self.dist)
             elif variable.is_continuous:
-                dist = numpy.array(self.dist[1, :])
+                dist = np.array(self.dist[1, :])
             else:
                 raise TypeError("Only discrete and continuous "
                                 "variables are supported")
-            dsum = numpy.sum(dist)
+            dsum = np.sum(dist)
             if dsum > 0:
-                self.sample_prob = numpy.array(dist) / dsum
+                self.sample_prob = np.array(dist) / dsum
             else:
-                self.sample_prob = numpy.ones_like(dist) / len(dist)
+                self.sample_prob = np.ones_like(dist) / len(dist)
         else:
             self.sample_prob = None
 
     def transform(self, c):
         if self.variable.is_discrete:
             if self.dist is not None:
-                c = numpy.random.choice(
+                rnd = np.random.choice(
                     len(self.variable.values), size=c.shape, replace=True,
                     p=self.sample_prob)
             else:
-                c = numpy.random.randint(
+                rnd = np.random.randint(
                     len(self.variable.values), size=c.shape)
         else:
             if self.dist is not None:
-                c = numpy.random.choice(
-                    numpy.asarray(self.dist[0, :]), size=c.shape,
+                rnd = np.random.choice(
+                    np.asarray(self.dist[0, :]), size=c.shape,
                     replace=True, p=self.sample_prob)
             else:
-                c = numpy.random.normal(size=c.shape)
-        return c
+                rnd = np.random.normal(size=c.shape)
+        return np.where(np.isnan(c), rnd, c)
 
 
 class ModelTransform(Transformation):
@@ -751,7 +742,7 @@ class ModelTransform(Transformation):
 
 
 # Rename to TableImputer (Model?)
-class ImputerModel(object):
+class ImputerModel:
     """
     A fitted Imputation model.
 
@@ -891,7 +882,7 @@ class MeanPredictor(Model):
         self.mean = distribution.mean()
 
     def predict(self, X):
-        return numpy.zeros(len(X)) + self.mean
+        return np.zeros(len(X)) + self.mean
 
 
 import unittest
@@ -899,13 +890,13 @@ import unittest
 
 class Test(unittest.TestCase):
     def test_impute_defaults(self):
-        nan = numpy.nan
+        nan = np.nan
         data = [
             [1.0, nan, 0.0],
             [2.0, 1.0, 3.0],
             [nan, nan, nan]
         ]
-        data = Orange.data.Table.from_numpy(None, numpy.array(data))
+        data = Orange.data.Table.from_numpy(None, np.array(data))
 
         cimp1 = column_imputer_average(data.domain[0], data)
         self.assertIsInstance(cimp1.transformers[0], ReplaceUnknowns)
@@ -934,7 +925,7 @@ class Test(unittest.TestCase):
                           [1.5, 1.0, 0.0]])
 
     def test_impute_as_value(self):
-        nan = numpy.nan
+        nan = np.nan
         data = [
             [1.0, nan, 0.0],
             [2.0, 1.0, 3.0],
@@ -945,7 +936,7 @@ class Test(unittest.TestCase):
              Orange.data.ContinuousVariable("B"),
              Orange.data.ContinuousVariable("C"))
         )
-        data = Orange.data.Table.from_numpy(domain, numpy.array(data))
+        data = Orange.data.Table.from_numpy(domain, np.array(data))
 
         cimp1 = column_imputer_as_value(domain[0], data)
         self.assertEqual(len(cimp1.codomain), 1)
@@ -994,7 +985,7 @@ class Test(unittest.TestCase):
     def test_impute_by_model(self):
         from Orange.classification.majority import MajorityLearner
 
-        nan = numpy.nan
+        nan = np.nan
         data = [
             [1.0, nan, 0.0],
             [2.0, 1.0, 3.0],
@@ -1005,7 +996,7 @@ class Test(unittest.TestCase):
              Orange.data.ContinuousVariable("B"),
              Orange.data.ContinuousVariable("C"))
         )
-        data = Orange.data.Table.from_numpy(domain, numpy.array(data))
+        data = Orange.data.Table.from_numpy(domain, np.array(data))
 
         cimp1 = column_imputer_by_model(domain[0], data,
                                         learner=MajorityLearner())
@@ -1027,7 +1018,7 @@ class Test(unittest.TestCase):
                           [1.0, 1.0, 1.5]])
 
     def test_impute_random(self):
-        nan = numpy.nan
+        nan = np.nan
         data = [
             [1.0, nan, 0.0],
             [2.0, 1.0, 3.0],
@@ -1038,16 +1029,16 @@ class Test(unittest.TestCase):
              Orange.data.ContinuousVariable("B"),
              Orange.data.ContinuousVariable("C"))
         )
-        data = Orange.data.Table.from_numpy(domain, numpy.array(data))
+        data = Orange.data.Table.from_numpy(domain, np.array(data))
 
         cimp1 = column_imputer_random(domain[0], data)
-        self.assertTrue(not numpy.any(numpy.isnan(cimp1(data).X)))
+        self.assertTrue(not np.any(np.isnan(cimp1(data).X)))
 
         cimp2 = column_imputer_random(domain[1], data)
-        self.assertTrue(not numpy.any(numpy.isnan(cimp2(data).X)))
+        self.assertTrue(not np.any(np.isnan(cimp2(data).X)))
 
         cimp3 = column_imputer_random(domain[2], data)
-        self.assertTrue(not numpy.any(numpy.isnan(cimp3(data).X)))
+        self.assertTrue(not np.any(np.isnan(cimp3(data).X)))
 
         imputer = ImputerModel(
             data.domain,
@@ -1056,15 +1047,15 @@ class Test(unittest.TestCase):
              data.domain[2]: cimp3}
         )
         idata = imputer(data)
-        self.assertTrue(not numpy.any(numpy.isnan(idata.X)))
+        self.assertTrue(not np.any(np.isnan(idata.X)))
 
-        definedmask = ~numpy.isnan(data.X)
+        definedmask = ~np.isnan(data.X)
         self.assertClose(data.X[definedmask],
                          idata.X[definedmask])
 
     def assertClose(self, X, Y, delta=1e-9, msg=None):
-        X, Y = numpy.asarray(X), numpy.asarray(Y)
-        if not (numpy.abs(X - Y) <= delta).all():
+        X, Y = np.asarray(X), np.asarray(Y)
+        if not (np.abs(X - Y) <= delta).all():
             standardMsg = "%s != %s to within delta %f" % (X, Y, delta)
             msg = self._formatMessage(msg, standardMsg)
             raise self.failureException(msg)
