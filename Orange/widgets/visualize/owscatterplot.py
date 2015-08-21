@@ -383,8 +383,12 @@ class OWScatterPlot(OWWidget):
         return c
 
     def closeEvent(self, ce):
-        # self.vizrank.close()
+        self.vizrank.close()
         super().closeEvent(ce)
+
+    def hideEvent(self, he):
+        self.vizrank.hide()
+        super().hideEvent(he)
 
     def sendReport(self):
         self.startReport(
