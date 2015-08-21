@@ -310,15 +310,19 @@ class OWDistributions(widget.OWWidget):
 
             maxh = 0 #maximal column height
             maxrh = 0 #maximal relative column height
+            scvar = cont.sum(axis=1)
+            #a cvar with sum=0 with allways have distribution counts 0,
+            #therefore we can divide it by anything
+            scvar[scvar==0] = 1
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 maxh = max(maxh, max(dist))
-                maxrh = max(maxrh, max(dist/sum(dist)))
+                maxrh = max(maxrh, max(dist/scvar))
 
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
                 geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
                                      if self.relative_freq else maxh)
-                item = DistributionBarItem(geom, dist/dsum/maxrh
+                item = DistributionBarItem(geom, dist/scvar/maxrh
                                            if self.relative_freq
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
