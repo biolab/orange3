@@ -29,9 +29,33 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont["fish"], [4, 9])
         np.testing.assert_almost_equal(cont,
             [[1, 3], [11, 9], [4, 9], [7, 1], [2, 8], [19, 22], [1, 4]])
+        self.assertEqual(cont.unknown_rows, 0)
+
+    def test_discrete_missing(self):
+        d = data.Table("zoo")
+        d.Y[25] = float("nan")
+        d[0][0] = float("nan")
+        cont = contingency.Discrete(d, 0)
+        np.testing.assert_almost_equal(cont["amphibian"], [3, 0])
+        np.testing.assert_almost_equal(cont,
+            [[3, 0], [20, 0], [13, 0], [4, 4], [10, 0], [2, 38], [5, 0]])
+        np.testing.assert_almost_equal(cont.unknowns,
+            [0, 0, 0, 0, 0, 1, 0])
+        self.assertEqual(cont.unknown_rows, 1)
+
+        d = data.Table("zoo")
+        d.Y[2] = float("nan")
+        d[2]["predator"] = float("nan")
+        cont = contingency.Discrete(d, "predator")
+        np.testing.assert_almost_equal(cont["fish"], [4, 8])
+        np.testing.assert_almost_equal(cont,
+            [[1, 3], [11, 9], [4, 8], [7, 1], [2, 8], [19, 22], [1, 4]])
+        self.assertEqual(cont.unknown_rows, 1)
+        np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0, 0, 0, 0, 0])
 
     def test_discrete_with_fallback(self):
         d = data.Table("zoo")
+        d.Y[25] = None
         default = contingency.Discrete(d, 0)
 
         d._compute_contingency = Mock(side_effect=NotImplementedError)
@@ -39,6 +63,7 @@ class Discrete_Test(unittest.TestCase):
 
         np.testing.assert_almost_equal(fallback, default)
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
+        np.testing.assert_almost_equal(fallback.unknown_rows, default.unknown_rows)
 
     def test_continuous(self):
         d = data.Table("iris")
@@ -46,12 +71,57 @@ class Discrete_Test(unittest.TestCase):
         correct = [[2.3, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7,
                     3.8, 3.9, 4.0, 4.1, 4.2, 4.4],
                    [1, 1, 6, 5, 5, 2, 9, 6, 2, 3, 4, 2, 1, 1, 1, 1]]
+        np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0])
         np.testing.assert_almost_equal(cont["Iris-setosa"], correct)
+        self.assertEqual(cont.unknown_rows, 0)
 
         correct = [[2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8],
                    [1, 4, 2, 4, 8, 2, 12, 4, 5, 3, 2, 1, 2]]
         np.testing.assert_almost_equal(cont[d.domain.class_var.values.index("Iris-virginica")], correct)
+        np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0])
+        self.assertEqual(cont.unknown_rows, 0)
 
+    def test_continuous_missing(self):
+        d = data.Table("iris")
+        d[1][1] = float("nan")
+        cont = contingency.Continuous(d, "sepal width")
+        correct = [[2.3, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7,
+                    3.8, 3.9, 4.0, 4.1, 4.2, 4.4],
+                   [1, 1, 5, 5, 5, 2, 9, 6, 2, 3, 4, 2, 1, 1, 1, 1]]
+        np.testing.assert_almost_equal(cont.unknowns, [1, 0, 0])
+        np.testing.assert_almost_equal(cont["Iris-setosa"], correct)
+        self.assertEqual(cont.unknown_rows, 0)
+
+        d.Y[0] = float("nan")
+        cont = contingency.Continuous(d, "sepal width")
+        correct = [[2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8],
+                   [1, 4, 2, 4, 8, 2, 12, 4, 5, 3, 2, 1, 2]]
+        np.testing.assert_almost_equal(cont[d.domain.class_var.values.index("Iris-virginica")], correct)
+        np.testing.assert_almost_equal(cont.unknowns, [1, 0, 0])
+        self.assertEqual(cont.unknown_rows, 1)
+
+        d.Y[1] = float("nan")
+        cont = contingency.Continuous(d, "sepal width")
+        np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0])
+        self.assertEqual(cont.unknown_rows, 2)
+
+    def test_mixedtype_metas(self):
+        import Orange
+        zoo = Orange.data.Table("zoo")
+        dom = Orange.data.Domain(zoo.domain.attributes, zoo.domain.class_var, zoo.domain.metas + zoo.domain.attributes[:2])
+        t = Orange.data.Table(dom, zoo)
+        cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
+        np.testing.assert_almost_equal(cont["1"], [38, 5])
+        np.testing.assert_almost_equal(cont, [[  4,  54],
+                                              [ 38,   5]])
+        zoo[25][t.domain.metas[1]] = float("nan")
+        zoo[0][2] = float("nan")
+        cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
+        np.testing.assert_almost_equal(cont["1"], [37, 5])
+        np.testing.assert_almost_equal(cont, [[  4,  53],
+                                              [ 37,   5]])
+        np.testing.assert_almost_equal(cont.unknowns, [0,1])
+        self.assertEqual(cont.unknown_rows, 1)
 
     @staticmethod
     def _construct_sparse():

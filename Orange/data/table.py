@@ -1304,6 +1304,7 @@ class Table(MutableSequence, Storage):
             row_data = self._Y[:, row_indi - n_atts]
 
         W = self.W if self.has_weights() else None
+        nan_inds = None
 
         col_desc = [self.domain[var] for var in col_vars]
         col_indi = [self.domain.index(var) for var in col_vars]
@@ -1313,16 +1314,25 @@ class Table(MutableSequence, Storage):
             raise ValueError("contingency can be computed only for discrete "
                              "and continuous values")
 
-        if any(var.is_continuous for var in col_desc):
-            if bn.countnans(row_data):
-                raise ValueError("cannot compute contigencies with missing "
-                                 "row data")
+        if row_data.dtype.kind != "f": #meta attributes can be stored as type object
+            row_data = row_data.astype(float)
+
+        unknown_rows = bn.countnans(row_data)
+        if unknown_rows:
+            nan_inds = np.isnan(row_data)
+            row_data = row_data[~nan_inds]
+            if W:
+                W = W[~nan_inds]
+                unknown_rows = np.sum(W[nan_inds])
 
         contingencies = [None] * len(col_desc)
         for arr, f_cond, f_ind in (
                 (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
                 (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
                 (self.metas, lambda i: i < 0, lambda i: -1 - i)):
+
+            if nan_inds is not None:
+                arr = arr[~nan_inds]
 
             arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
 
@@ -1367,7 +1377,7 @@ class Table(MutableSequence, Storage):
                         col_data, classes_, n_rows, W_)
                     contingencies[col_i] = ([U, C], unknown)
 
-        return contingencies
+        return contingencies, unknown_rows
 
 
 def _check_arrays(*arrays, dtype=None):
