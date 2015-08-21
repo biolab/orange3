@@ -15,10 +15,11 @@ class Scorer:
     class_type = None
     preprocessors = ()
 
-    def __new__(cls, *args):
+    def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
         self.preprocessors = list(self.preprocessors)
         if args:
+            self.__init__(**kwargs)
             return self(*args)
         else:
             return self
