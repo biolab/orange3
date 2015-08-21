@@ -18,7 +18,7 @@ cimport numpy as np
 import numpy as np
 
 from libc.stdlib cimport rand
-from libc.math cimport isnan, fabs, exp, INFINITY
+from libc.math cimport fabs, exp, INFINITY
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from libcpp.algorithm cimport make_heap, pop_heap
@@ -30,6 +30,10 @@ ctypedef double[:, :]   arr_f2_t
 ctypedef double[:]      arr_f1_t
 ctypedef pair[double, Py_ssize_t] HeapPair
 ctypedef cpp_map[Py_ssize_t, arr_f2_t] Contingencies
+
+
+cdef extern from "<cmath>" namespace "std":
+    bint isnan(double x) nogil
 
 
 cdef inline double nansum(arr_f1_t A) nogil:
