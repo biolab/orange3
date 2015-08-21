@@ -11,6 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 import Orange
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
+from Orange.preprocess.score import ReliefF
 from Orange.widgets import gui, widget
 from Orange.widgets.io import FileFormats
 from Orange.widgets.settings import \
@@ -93,6 +94,15 @@ class OWScatterPlot(OWWidget):
         self.cb_attr_y = gui.comboBox(box, self, "attr_y", label="Axis y:",
                                       callback=self.update_attr,
                                       **common_options)
+
+        self.vizrank = self.VizRank(self)
+        vizrank_box = gui.widgetBox(box, None, orientation='horizontal')
+        gui.separator(vizrank_box, width=common_options["labelWidth"])
+        gui.button(vizrank_box, self, "Rank projections",
+                   callback=self.vizrank.reshow,
+                   tooltip="Find projections with good class separation")
+        gui.separator(box)
+
         gui.valueSlider(
             box, self, value='graph.jitter_size',  label='Jittering: ',
             values=self.jitter_sizes, callback=self.reset_graph_data,
@@ -101,13 +111,6 @@ class OWScatterPlot(OWWidget):
         gui.checkBox(
             gui.indentedBox(box), self, 'graph.jitter_continuous',
             'Jitter continuous values', callback=self.reset_graph_data)
-
-        self.vizrank = self.VizRank(self)
-        self.optimizationButtons = gui.widgetBox(
-            self.controlArea, "Optimization", orientation="horizontal")
-        gui.button(self.optimizationButtons, self, "VizRank",
-                   callback=self.vizrank.reshow,
-                   tooltip="Find projections with good class separation")
 
         box = gui.widgetBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
@@ -255,23 +258,14 @@ class OWScatterPlot(OWWidget):
         else:
             self.attribute_selection_list = None
 
-    # Callback from VizRank dialog
-    def show_selected_attributes(self):
-        val = self.vizrank.get_selected_projection()
-        if not val:
-            return
-        if self.data.domain.class_var:
-            self.graph.attr_color = self.data.domain.class_var.name
-        self.update_graph(val[3])
-
     def get_shown_attributes(self):
         return self.attr_x, self.attr_y
 
     def init_attr_values(self):
         self.cb_attr_x.clear()
         self.cb_attr_y.clear()
-        self.attr_x = ""
-        self.attr_y = ""
+        self.attr_x = None
+        self.attr_y = None
         self.cb_attr_color.clear()
         self.cb_attr_color.addItem("(Same color)")
         self.cb_attr_label.clear()
@@ -330,10 +324,6 @@ class OWScatterPlot(OWWidget):
             return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
-    def saveSettings(self):
-        OWWidget.saveSettings(self)
-        # self.vizrank.saveSettings()
-
     def selection_changed(self):
         self.send_data()
 
@@ -380,8 +370,12 @@ class OWScatterPlot(OWWidget):
         return c
 
     def closeEvent(self, ce):
-        # self.vizrank.close()
+        self.vizrank.close()
         super().closeEvent(ce)
+
+    def hideEvent(self, he):
+        self.vizrank.hide()
+        super().hideEvent(he)
 
     def sendReport(self):
         self.startReport(
@@ -418,13 +412,14 @@ class OWScatterPlot(OWWidget):
 
 
     class VizRank(OWWidget):
-        name = "VizRank"
+        name = "Rank projections (Scatter Plot)"
 
         def __init__(self, parent_widget):
             super().__init__(self, want_control_area=0)
             self.parent_widget = parent_widget
 
             self.running = False
+            self.progress = None
             self.k = 10
 
             self.projectionTable = QTableView()
@@ -437,7 +432,7 @@ class OWScatterPlot(OWWidget):
             self.projectionTable.selectionModel().selectionChanged.connect(
                 self.on_selection_changed)
 
-            self.button = gui.button(self.mainArea, self, "Rank projections",
+            self.button = gui.button(self.mainArea, self, "Start evaluation",
                                      callback=self.toggle, default=True)
             self.resize(380, 512)
             self._initialize()
@@ -450,20 +445,28 @@ class OWScatterPlot(OWWidget):
             self.projectionTable.setColumnWidth(0, 60)
             self.projectionTable.setColumnWidth(1, 120)
             self.projectionTable.setColumnWidth(2, 120)
-            self.button.setText("Rank projections")
+            self.button.setText("Start evaluation")
             self.button.setEnabled(False)
             self.pause = False
-            self.scores = []
-            self.attrs = []
             self.data = None
-            self.progress = None
+            self.attrs = []
+            self.scores = []
             self.i, self.j = 0, 0
+            if self.progress:
+                self.progress.finish()
+            self.progress = None
 
+
+            self.information(0)
             if self.parent_widget.data:
-                self.attrs = [a.name for a in
-                              self.parent_widget.data.domain.attributes]
-                self.progress = gui.ProgressBar(
-                    self, len(self.attrs) * (len(self.attrs) - 1) / 2)
+                if not self.parent_widget.data.domain.class_var:
+                    self.information(
+                        0, "Data with a class variable is required.")
+                    return
+                if len(self.parent_widget.data.domain.attributes) < 2:
+                    self.information(
+                        0, 'At least 2 unique features are needed.')
+                    return
                 self.button.setEnabled(True)
 
         def on_selection_changed(self, selected, deselected):
@@ -473,19 +476,23 @@ class OWScatterPlot(OWWidget):
             self.parent_widget.update_attr(attributes=(a1, a2))
 
         def toggle(self):
+            self.running ^= 1
             if self.running:
-                self.running = False
-                self.button.setText("Continue")
-                self.button.setEnabled(False)
-            elif self.progress:
-                self.running = True
                 self.button.setText("Pause")
                 self.run()
+            else:
+                self.button.setText("Continue")
+                self.button.setEnabled(False)
 
         def run(self):
             graph = self.parent_widget.graph
             y_full = self.parent_widget.data.Y
             norm = 1 / (len(y_full) * self.k)
+            if not self.attrs:
+                self.attrs = self.score_heuristic()
+            if not self.progress:
+                self.progress = gui.ProgressBar(
+                    self, len(self.attrs) * (len(self.attrs) - 1) / 2)
             for i in range(self.i, len(self.attrs)):
                 ind1 = graph.attribute_name_index[self.attrs[i]]
                 for j in range(self.j, i):
@@ -517,6 +524,14 @@ class OWScatterPlot(OWWidget):
                 self.projectionTable.selectRow(0)
             self.button.setText("Finished")
             self.button.setEnabled(False)
+
+        def score_heuristic(self):
+            data = Orange.data.Table(self.parent_widget.graph.scaled_data.T,
+                                     self.parent_widget.data.Y)
+            weights = ReliefF(n_iterations=100, k_nearest=self.k)(data)
+            attrs = sorted(zip(weights,
+                               self.parent_widget.data.domain.attributes))
+            return [a.name for s, a in attrs][::-1]
 
 
 def test_main(argv=None):
