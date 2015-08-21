@@ -29,8 +29,6 @@ from Orange.preprocess.transformation import \
 
 from functools import reduce
 import numpy as np
-import warnings
-
 
 
 def _margins(margins, container):
@@ -353,21 +351,22 @@ class OWImpute(OWWidget):
                     if learner is None:
                         learner = learner_pointer
                     else:
-                        print("Multiple regression models ; using %s" \
+
+                        print("Multiple regression models ; using %s"
                               % str(learner.name))
                 if not var.is_continuous and \
                         isinstance(learner_pointer, LearnerClassification):
                     if learner is None:
                         learner = learner_pointer
                     else:
-                        print("Multiple classification models ; using %s" \
+                        print("Multiple classification models ; using %s"
                               % str(learner.name))
 
             # No suitable model was found for this variable type,
             # default to MeanLearner
             if learner is None:
-                print("No suitable model for attribute \"%s\"; " + \
-                      " imputing average/most frequent." % var.name)
+                print("No suitable model for attribute \"%s\"; " % var.name + \
+                      " imputing average/most frequent." )
                 learner = MeanLearner()
             return column_imputer_by_model(var, data, learner=learner)
 
