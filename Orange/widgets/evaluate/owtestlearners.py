@@ -249,22 +249,20 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "k_folds", 2, 50, label="Number of folds:",
-                 callback=self.kfold_changed)
+                 callback=self.kfold_changed, callbackOnReturn=True)
         gui.appendRadioButton(rbox, "Leave one out")
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test",
-                 callback=self.bootstrap_changed)
+                 callback=self.bootstrap_changed, callbackOnReturn=True)
         gui.widgetLabel(ibox, "Relative training set size:")
-        gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
-                    ticks=20, vertical=False, labelFormat="%d %%",
-                    callback=self.bootstrap_changed)
+        slider = gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
+                             ticks=20, vertical=False, labelFormat="%d %%",
+                             callback=self.bootstrap_changed)
+        slider.setTracking(False)
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
-
-        rbox.layout().addSpacing(5)
-        gui.button(rbox, self, "Apply", callback=self.apply)
 
         self.cbox = gui.widgetBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
@@ -587,6 +585,7 @@ class OWTestLearners(widget.OWWidget):
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
+        self.apply()
 
     def apply(self):
         self._update_header()
