@@ -366,10 +366,20 @@ class ClassificationTreeNode(GraphicsNode):
         :return: split condition to reach a particular node.
         """
         if self.i > 0:
-            sign = [">", "<="][self.tree.children_left[self.parent.i] == self.i]
-            thresh = self.tree.threshold[self.parent.i]
-            return "%s %s" % (
-                sign, self.domain.attributes[self.attribute()].str_val(thresh))
+            attribute = self.domain.attributes[self.attribute()]
+            parent_attr = self.domain.attributes[self.parent.attribute()]
+            parent_attr_cv = parent_attr.compute_value
+            is_left_child = self.tree.children_left[self.parent.i] == self.i
+            if isinstance(parent_attr_cv, Indicator) and \
+                    hasattr(parent_attr_cv.variable, "values"):
+                values = parent_attr_cv.variable.values
+                return values[abs(parent_attr_cv.value - is_left_child)] \
+                    if len(values) == 2 \
+                    else "≠ " * is_left_child + values[parent_attr_cv.value]
+            else:
+                thresh = self.tree.threshold[self.parent.i]
+                return "%s %s" % ([">", "<="][is_left_child],
+                                  attribute.str_val(thresh))
         else:
             return ""
 
