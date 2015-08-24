@@ -5,6 +5,7 @@ Distributions
 A widget for plotting attribute distributions.
 
 """
+from math import sqrt
 import sys
 import collections
 from xml.sax.saxutils import escape
@@ -95,7 +96,6 @@ class OWDistributions(widget.OWWidget):
 
     want_graph = True
     ASH_HIST = 50
-    M_EST = 5
 
     bins = [ 2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50 ]
     smoothing_facs = list(reversed([ 0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 4, 6, 10 ]))
@@ -386,20 +386,37 @@ class OWDistributions(widget.OWWidget):
                 dsum = sum(dist)
                 geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
                                      if self.relative_freq else maxh)
+                if self.show_prob:
+                    prob = dist / dsum
+                    ci = 1.96 * numpy.sqrt(prob * (1 - prob) / dsum)
+                else:
+                    ci = None
                 item = DistributionBarItem(geom, dist/scvar/maxrh
                                            if self.relative_freq
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
 
                 if self.show_prob:
-                    for ic,a in enumerate(dist):
-                        item = pg.ScatterPlotItem()
-                        prob = (a+self.M_EST/ncval)/(dsum+self.M_EST)
-                        col = colors[ic].darker(0.2)
-                        item.setData([i], [prob], antialias=True, symbol="x",
-                                 fillLevel=None, pxMode=True, size=14,
-                                 brush=QtGui.QColor(1), pen=col)
-                        self.plot_prob.addItem(item)
+                    for ic, a in enumerate(dist):
+                        position = -0.333 + ((ic+0.5)*0.666/len(dist))
+                        if dsum < 1e-6:
+                            continue
+                        prob = a / dsum
+                        if not 1e-6 < prob < 1 - 1e-6:
+                            continue
+                        ci = 1.96 * sqrt(prob * (1 - prob) / dsum)
+                        mark = pg.ScatterPlotItem()
+                        bar = pg.ErrorBarItem()
+                        pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0)), 1)
+                        pen.setCosmetic(True)
+                        bar.setData(x=[i+position], y=[prob], height=numpy.array([2 * ci]),
+                                     beam=numpy.array([0.05]),
+                                     brush=QtGui.QColor(1), pen=pen)
+                        mark.setData([i+position], [prob], antialias=True, symbol="o",
+                                 fillLevel=None, pxMode=True, size=10,
+                                 brush=QtGui.QColor(colors[ic]), pen=pen)
+                        self.plot_prob.addItem(bar)
+                        self.plot_prob.addItem(mark)
 
         for color, name in zip(colors, cvar_values):
             self._legend.addItem(
