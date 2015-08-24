@@ -8,6 +8,7 @@ from Orange.widgets.classify.owtreeviewer2d import *
 
 from Orange.data import Table
 from Orange.classification.tree import TreeClassifier
+from Orange.preprocess.transformation import Indicator
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 
 from Orange.widgets.settings import \
@@ -111,8 +112,10 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             text += "{:2.1f}%, {}/{}".format(100 * tabs,
                                              int(total * tabs), total)
         if not node.is_leaf():
-            text += "<hr/>{}".format(
-                self.domain.attributes[node.attribute()].name)
+            attribute = self.domain.attributes[node.attribute()]
+            if isinstance(attribute.compute_value, Indicator):
+                attribute = attribute.compute_value.variable
+            text += "<hr/>{}".format(attribute.name)
         node.setHtml('<p style="line-height: 120%; margin-bottom: 0">'
                      '{}</p>'.
                      format(text))
