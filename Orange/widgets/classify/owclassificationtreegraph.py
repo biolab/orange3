@@ -201,7 +201,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
     def node_tooltip(self, node):
         if node.i > 0:
-            text = "<br/> AND ".join(
+            text = " AND<br/>".join(
                 "%s %s %.3f" % (self.domain.attributes[a].name, s, t)
                 for a, s, t in node.rule())
         else:
