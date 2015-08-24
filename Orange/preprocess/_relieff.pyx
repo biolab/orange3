@@ -18,11 +18,16 @@ cimport numpy as np
 import numpy as np
 
 from libc.stdlib cimport rand
-from libc.math cimport fabs, exp, INFINITY
+from libc.math cimport fabs, exp
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from libcpp.algorithm cimport make_heap, pop_heap
 from libcpp.map cimport map as cpp_map
+
+# Import C99 features from numpy's npy_math (MSVC 2010)
+# Note we cannot import isnan due to mixing C++ and C
+# (at least on OSX the <cmath> undefines the isnan macro)
+from numpy.math cimport INFINITY
 
 ctypedef np.float64_t   double
 ctypedef np.int32_t[:]  arr_i1_t
@@ -32,8 +37,8 @@ ctypedef pair[double, Py_ssize_t] HeapPair
 ctypedef cpp_map[Py_ssize_t, arr_f2_t] Contingencies
 
 
-cdef extern from "<cmath>" namespace "std":
-    bint isnan(double x) nogil
+cdef inline bint isnan(double x) nogil:
+    return x != x
 
 
 cdef inline double nansum(arr_f1_t A) nogil:

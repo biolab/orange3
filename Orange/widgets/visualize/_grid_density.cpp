@@ -36,7 +36,7 @@ void compute_density(int r, double *gx, double *gy, int n, double *dx, double *d
 	double min_y = *min_element(dy,dy+n), max_y = *max_element(dy,dy+n);
 	double diag = (max_x-min_x)*(max_x-min_x) + (max_y-min_y)*(max_y-min_y);
 	double lo=1.0/colors, hi=1.0;
-	double f[colors];
+	double *f = new double[colors];
 	for (int i=0;i<r;i++) {
 		for (int j=0;j<r;j++) {
 			double total=0;
@@ -62,6 +62,7 @@ void compute_density(int r, double *gx, double *gy, int n, double *dx, double *d
 		}
 	}
 	delete color;
+	delete f;
 }
 
 
