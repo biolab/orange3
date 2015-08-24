@@ -16,17 +16,48 @@ class UtilTest(unittest.TestCase):
 
     def test_abstract(self):
         @abstract
-        class AbstractClass: pass
+        class AbstractClass:
+            pass
 
-        class ClassWithAbstractMethod:
+        class Class:
             @abstract
             def method(self): pass
 
-        with self.assertRaises(NotImplementedError) as cm: AbstractClass()
+            @staticmethod
+            @abstract
+            def staticmethod_(arg): pass
+
+            @classmethod
+            @abstract
+            def classmethod_(cls): pass
+
+            @property
+            @abstract
+            def property_(self): pass
+
+        def invalid_order():
+            class Invalid:
+                @abstract      # This way reads nicer,
+                @staticmethod  # but it doesn't work
+                def non_method_descriptor(arg): pass
+
+        with self.assertRaises(NotImplementedError) as cm:
+            AbstractClass()
         self.assertRegex(cm.exception.args[0], 'AbstractClass')
-        with self.assertRaises(NotImplementedError) as cm: ClassWithAbstractMethod().method()
-        self.assertRegex(cm.exception.args[0], 'ClassWithAbstractMethod')
-        self.assertRegex(cm.exception.args[0], 'method')
+
+        for attr in ('method',
+                     'staticmethod_',
+                     'classmethod_',
+                     'property_'):
+            with self.assertRaises(NotImplementedError) as cm:
+                getattr(Class(), attr)()
+            self.assertRegex(cm.exception.args[0], 'Class')
+            self.assertRegex(cm.exception.args[0], attr)
+
+        with self.assertRaises(TypeError) as cm:
+            invalid_order()
+        self.assertRegex(cm.exception.args[0], '@abstract')
+
 
     def test_export_globals(self):
         self.assertEqual(sorted(export_globals(globals(), __name__)),

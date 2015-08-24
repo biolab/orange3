@@ -807,7 +807,7 @@ class ImputerModel(object):
         Xp = translate_domain(X, self.codomain)
 
         if Xp is X:
-            Xp = Orange.data.Table(Xp)
+            Xp = X.copy()
 
         nattrs = len(Xp.domain.attributes)
         for var in X.domain:
@@ -1000,6 +1000,8 @@ class Test(unittest.TestCase):
             [2.0, 1.0, 3.0],
             [nan, nan, nan]
         ]
+        unknowns = numpy.isnan(data)
+
         domain = Orange.data.Domain(
             (Orange.data.DiscreteVariable("A", values=["0", "1", "2"]),
              Orange.data.ContinuousVariable("B"),
@@ -1021,6 +1023,10 @@ class Test(unittest.TestCase):
              data.domain[2]: cimp3}
         )
         idata = imputer(data)
+
+        # Original data should keep unknowns
+        self.assertClose(numpy.isnan(data.X), unknowns)
+
         self.assertClose(idata.X,
                          [[1.0, 1.0, 0.0],
                           [2.0, 1.0, 3.0],
@@ -1033,6 +1039,8 @@ class Test(unittest.TestCase):
             [2.0, 1.0, 3.0],
             [nan, nan, nan]
         ]
+        unknowns = numpy.isnan(data)
+
         domain = Orange.data.Domain(
             (Orange.data.DiscreteVariable("A", values=["0", "1", "2"]),
              Orange.data.ContinuousVariable("B"),
@@ -1056,6 +1064,10 @@ class Test(unittest.TestCase):
              data.domain[2]: cimp3}
         )
         idata = imputer(data)
+
+        # Original data should keep unknowns
+        self.assertClose(numpy.isnan(data.X), unknowns)
+
         self.assertTrue(not numpy.any(numpy.isnan(idata.X)))
 
         definedmask = ~numpy.isnan(data.X)

@@ -90,8 +90,13 @@ class OWDistributions(widget.OWWidget):
     relative_freq = settings.Setting(False)
     disc_cont = settings.Setting(False)
 
+    smoothing_index = settings.Setting(5)
+
     want_graph = True
     ASH_HIST = 50
+
+    bins = [ 2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50 ]
+    smoothing_facs = list(reversed([ 0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 4, 6, 10 ]))
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -116,11 +121,20 @@ class OWDistributions(widget.OWWidget):
             self._on_variable_idx_changed)
         varbox.layout().addWidget(self.varview)
 
-        self.cb_disc_cont = gui.checkBox(
-            self.controlArea, self, "disc_cont", "Discretize continuous variables",
-            callback=self._on_groupvar_idx_changed)
+        box = gui.widgetBox(self.controlArea, "Precision")
 
-        gui.separator(self.controlArea, 8, 8)
+        gui.separator(self.controlArea, 4, 4)
+
+        box2 = gui.widgetBox(box, orientation="horizontal")
+        self.l_smoothing_l = gui.widgetLabel(box2, "Smooth")
+        gui.hSlider(box2, self, "smoothing_index",
+                    minValue=0, maxValue=len(self.smoothing_facs) - 1,
+                    callback=self._on_set_smoothing, createLabel=False)
+        self.l_smoothing_r = gui.widgetLabel(box2, "Precise")
+
+        self.cb_disc_cont = gui.checkBox(
+            box, self, "disc_cont", "Bin continuous variables",
+            callback=self._on_groupvar_idx_changed)
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
@@ -139,7 +153,7 @@ class OWDistributions(widget.OWWidget):
         self.plot = pg.PlotItem()
         self.plot.getViewBox().setMouseEnabled(False, False)
         self.plot.getViewBox().setMenuEnabled(False)
-        self.plot.hideButtons() 
+        self.plot.hideButtons()
         plotview.setCentralItem(self.plot)
 
         pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
@@ -186,6 +200,17 @@ class OWDistributions(widget.OWWidget):
         self._legend.clear()
         self._legend.hide()
 
+    def _setup_smoothing(self):
+        if not self.disc_cont and self.var and self.var.is_continuous:
+            self.cb_disc_cont.setText("Bin continuous variables")
+            self.l_smoothing_l.setText("Smooth")
+            self.l_smoothing_r.setText("Precise")
+        else:
+            self.cb_disc_cont.setText("Bin continuous variables into {} bins".
+                                      format(self.bins[self.smoothing_index]))
+            self.l_smoothing_l.setText(" " + str(self.bins[0]))
+            self.l_smoothing_r.setText(" " + str(self.bins[-1]))
+
     def _setup(self):
         self.plot.clear()
         self._legend.clear()
@@ -198,11 +223,12 @@ class OWDistributions(widget.OWWidget):
         if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
         data = self.data
+        self._setup_smoothing()
         if self.var is None:
             return
         if self.disc_cont:
             data = self.data[:, (self.var, self.cvar) if self.cvar else self.var ]
-            disc = Orange.preprocess.discretize.EqualWidth(n=10)
+            disc = Orange.preprocess.discretize.EqualWidth(n=self.bins[self.smoothing_index])
             data = Orange.preprocess.Discretize(data, method=disc)
             self.var = data.domain.variables[0]
         self.set_left_axis_name()
@@ -229,7 +255,8 @@ class OWDistributions(widget.OWWidget):
         self.set_left_axis_name()
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
-            edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST)
+            edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST,
+                smoothing_factor=self.smoothing_facs[self.smoothing_index])
             edges = edges + (edges[1] - edges[0])/2
             edges = edges[:-1]
             item = pg.PlotCurveItem()
@@ -282,11 +309,13 @@ class OWDistributions(widget.OWWidget):
                     weights.append(numpy.sum(W))
                     cols.append(colors[i])
                     cvar_values.append(cvar.values[i])
-                    curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST))
+                    curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST,
+                        smoothing_factor=self.smoothing_facs[self.smoothing_index]))
             weights = numpy.array(weights)
             weights /= numpy.sum(weights)
             colors = cols
-            curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
+            curves = [(X, Y * (w if not self.relative_freq else 1))
+                      for (X, Y), w in zip(curves, weights)]
 
             for t in [ "fill", "line" ]:
                 for (X, Y), color in reversed(list(zip(curves, colors))):
@@ -309,15 +338,19 @@ class OWDistributions(widget.OWWidget):
 
             maxh = 0 #maximal column height
             maxrh = 0 #maximal relative column height
+            scvar = cont.sum(axis=1)
+            #a cvar with sum=0 with allways have distribution counts 0,
+            #therefore we can divide it by anything
+            scvar[scvar==0] = 1
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 maxh = max(maxh, max(dist))
-                maxrh = max(maxrh, max(dist/sum(dist)))
+                maxrh = max(maxrh, max(dist/scvar))
 
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
                 geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
                                      if self.relative_freq else maxh)
-                item = DistributionBarItem(geom, dist/dsum/maxrh
+                item = DistributionBarItem(geom, dist/scvar/maxrh
                                            if self.relative_freq
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
@@ -332,20 +365,24 @@ class OWDistributions(widget.OWWidget):
     def set_left_axis_name(self):
         set_label = self.plot.getAxis("left").setLabel
         if self.var and self.var.is_continuous:
-            set_label("Density")
+            set_label(["Density", "Relative density"]
+                      [self.cvar is not None and self.relative_freq])
         else:
             set_label(["Frequency", "Relative frequency"]
                       [self.cvar is not None and self.relative_freq])
 
     def enable_disable_rel_freq(self):
         self.cb_rel_freq.setDisabled(
-            self.var is None or self.cvar is None or self.var.is_continuous)
+            self.var is None or self.cvar is None)
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
         self._setup()
 
     def _on_groupvar_idx_changed(self):
+        self._setup()
+
+    def _on_set_smoothing(self):
         self._setup()
 
     def onDeleteWidget(self):
@@ -380,7 +417,7 @@ def dist_sum(D1, D2):
     return unique, W
 
 
-def ash_curve(dist, cont=None, bandwidth=None, m=3):
+def ash_curve(dist, cont=None, bandwidth=None, m=3, smoothing_factor=1):
     dist = numpy.asarray(dist)
     X, W = dist
     if bandwidth is None:
@@ -396,11 +433,12 @@ def ash_curve(dist, cont=None, bandwidth=None, m=3):
             size = X.size
         bandwidth = 3.5 * std * (size ** (-1 / 3))
 
-    hist, edges = average_shifted_histogram(X, bandwidth, m, weights=W)
+    hist, edges = average_shifted_histogram(X, bandwidth, m, weights=W,
+                                            smoothing=smoothing_factor)
     return edges, hist
 
 
-def average_shifted_histogram(a, h, m=3, weights=None):
+def average_shifted_histogram(a, h, m=3, weights=None, smoothing=1):
     """
     Compute the average shifted histogram.
 
@@ -426,11 +464,12 @@ def average_shifted_histogram(a, h, m=3, weights=None):
     a = a.ravel()
 
     amin, amax = a.min(), a.max()
+    h = h * 0.5 * smoothing
     delta = h / m
     wfac = 4 #extended windows for gaussian smoothing
     offset = (wfac * m - 1) * delta
     nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m * wfac - 1)
-    
+
     bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
                           endpoint=True)
     hist, edges = numpy.histogram(a, bins, weights=weights, density=True)

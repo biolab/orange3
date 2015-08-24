@@ -45,6 +45,9 @@ def abstract(obj):
         obj.__new__ = _refuse__new__
         return obj
     else:
+        if not hasattr(obj, '__qualname__'):
+            raise TypeError('Put @abstract decorator below (evaluated before) '
+                            'any of @staticmethod, @classmethod, or @property.')
         cls_name = obj.__qualname__.rsplit('.', 1)[0]
         def _refuse__call__(*args, **kwargs):
             raise NotImplementedError("Can't call abstract method {} of class {}"

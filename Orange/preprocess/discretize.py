@@ -24,21 +24,24 @@ class Discretizer(Transformation):
 
     @staticmethod
     def _fmt_interval(low, high, decimals):
+        assert low is not None or high is not None
         assert low is None or high is None or low < high
         assert decimals >= 0
 
-        def fmt_value(value, decimals):
-            return (("%%.%if" % decimals) % value).rstrip("0").rstrip(".")
+        def fmt_value(value):
+            if value is None or np.isinf(value):
+                return None
+            val = str(round(value, decimals))
+            if val.endswith(".0"):
+                return val[:-2]
+            return val
 
-        if (low is None or np.isinf(low)) and \
-                not (high is None or np.isinf(high)):
-            return "<{}".format(fmt_value(high, decimals))
-        elif (high is None or np.isinf(high)) and \
-                not (low is None or np.isinf(low)):
-            return ">={}".format(fmt_value(low, decimals))
-        else:
-            return "[{}, {})".format(fmt_value(low, decimals),
-                                     fmt_value(high, decimals))
+        low, high = fmt_value(low), fmt_value(high)
+        if not low:
+            return "< {}".format(high)
+        if not high:
+            return "≥ {}".format(low)
+        return "{} - {}".format(low, high)
 
     @classmethod
     def create_discretized_var(cls, var, points):
@@ -52,7 +55,7 @@ class Discretizer(Transformation):
             values = ["single_value"]
             to_sql = SingleValueSql(values[0])
 
-        dvar = DiscreteVariable(name="D_" + var.name, values=values,
+        dvar = DiscreteVariable(name=var.name, values=values,
                                 compute_value=cls(var, points))
         dvar.source_variable = var
         dvar.to_sql = to_sql

@@ -90,29 +90,24 @@ class VariablesListItemModel(itemmodels.VariableListModel):
     def mimeData(self, indexlist):
         descriptors = []
         vars = []
-        item_data = []
         for index in indexlist:
             var = self[index.row()]
             descriptors.append((var.name, vartype(var)))
             vars.append(var)
-            item_data.append(self.itemData(index))
         mime = QtCore.QMimeData()
         mime.setData(self.MIME_TYPE, QtCore.QByteArray(str(descriptors)))
         mime._vars = vars
-        mime._item_data = item_data
         return mime
 
     def dropMimeData(self, mime, action, row, column, parent):
         if action == Qt.IgnoreAction:
             return True
-        vars, item_data = self.items_from_mime_data(mime)
+        vars = self.items_from_mime_data(mime)
         if vars is None:
             return False
         if row == -1:
             row = len(self)
         self[row:row] = vars
-        for i, data in enumerate(item_data):
-            self.setItemData(self.index(row + i), data)
         return True
 
     def items_from_mime_data(self, mime):
@@ -120,8 +115,7 @@ class VariablesListItemModel(itemmodels.VariableListModel):
             return None, None
         if hasattr(mime, "_vars"):
             vars = mime._vars
-            item_data = mime._item_data
-            return vars, item_data
+            return vars
         else:
             #TODO: get vars from orange.Variable.getExisting
             return None, None
@@ -131,7 +125,7 @@ class ClassVarListItemModel(VariablesListItemModel):
     def dropMimeData(self, mime, action, row, column, parent):
         """ Ensure only one variable can be dropped onto the view.
         """
-        vars, _ = self.items_from_mime_data(mime)
+        vars = self.items_from_mime_data(mime)
         if vars is None or len(self) + len(vars) > 1:
             return False
         if action == Qt.IgnoreAction:
@@ -204,7 +198,7 @@ class ClassVariableItemView(VariablesListItemView):
 
     def accepts_drop(self, event):
         mime = event.mimeData()
-        vars, _ = self.model().items_from_mime_data(mime)
+        vars = self.model().items_from_mime_data(mime)
         if vars is None:
             return event.ignore()
 
@@ -339,7 +333,8 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
-        box = gui.widgetBox(self.controlArea, "Class", addToLayout=False)
+        box = gui.widgetBox(self.controlArea, "Target Variable",
+                            addToLayout=False)
         self.class_attrs = ClassVarListItemModel()
         self.class_attrs_view = ClassVariableItemView()
         self.class_attrs_view.setModel(self.class_attrs)
@@ -623,15 +618,26 @@ class OWSelectAttributes(widget.OWWidget):
                      (len(removed), ", ".join(x.name for x in removed)))])
 
 
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+def test_main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QtGui.QApplication(list(argv))
+
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "brown-selected"
+
     w = OWSelectAttributes()
-#    data = Orange.data.Table("rep:dicty-express.tab")
-    data = Orange.data.Table("brown-selected.tab")
+    data = Orange.data.Table(filename)
     w.set_data(data)
     w.show()
-    app.exec_()
+    w.raise_()
+    rval = app.exec_()
     w.set_data(None)
     w.saveSettings()
+    return rval
 
-
+if __name__ == "__main__":
+    sys.exit(test_main())

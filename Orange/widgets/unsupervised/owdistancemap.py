@@ -370,7 +370,7 @@ class OWDistanceMap(widget.OWWidget):
         self.clear()
         self.error(0)
         if matrix is not None:
-            N, _ = matrix.X.shape
+            N, _ = matrix.shape
             if N < 2:
                 self.error(0, "Empty distance matrix.")
                 matrix = None

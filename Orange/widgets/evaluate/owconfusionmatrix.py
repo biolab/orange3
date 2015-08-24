@@ -89,6 +89,9 @@ class OWConfusionMatrix(widget.OWWidget):
         grid.addWidget(self.tableview, 1, 1)
         self.mainArea.layout().addLayout(grid)
 
+    def sizeHint(self):
+        return QSize(750, 600)
+
     def set_results(self, results):
         """Set the input results."""
 
