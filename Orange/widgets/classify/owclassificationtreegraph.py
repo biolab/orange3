@@ -8,6 +8,7 @@ from Orange.widgets.classify.owtreeviewer2d import *
 
 from Orange.data import Table
 from Orange.classification.tree import TreeClassifier
+from Orange.preprocess.transformation import Indicator
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 
 from Orange.widgets.settings import \
@@ -111,8 +112,10 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             text += "{:2.1f}%, {}/{}".format(100 * tabs,
                                              int(total * tabs), total)
         if not node.is_leaf():
-            text += "<hr/>{}".format(
-                self.domain.attributes[node.attribute()].name)
+            attribute = self.domain.attributes[node.attribute()]
+            if isinstance(attribute.compute_value, Indicator):
+                attribute = attribute.compute_value.variable
+            text += "<hr/>{}".format(attribute.name)
         node.setHtml('<p style="line-height: 120%; margin-bottom: 0">'
                      '{}</p>'.
                      format(text))
@@ -198,9 +201,8 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
     def node_tooltip(self, node):
         if node.i > 0:
-            text = "<br/> AND ".join(
-                "%s %s %.3f" % (self.domain.attributes[a].name, s, t)
-                for a, s, t in node.rule())
+            text = " AND<br/>".join(
+                "%s %s %s" % (n, s, v) for n, s, v in node.rule())
         else:
             text = "Root"
         return text
@@ -363,10 +365,20 @@ class ClassificationTreeNode(GraphicsNode):
         :return: split condition to reach a particular node.
         """
         if self.i > 0:
-            sign = [">", "<="][self.tree.children_left[self.parent.i] == self.i]
-            thresh = self.tree.threshold[self.parent.i]
-            return "%s %s" % (
-                sign, self.domain.attributes[self.attribute()].str_val(thresh))
+            attribute = self.domain.attributes[self.attribute()]
+            parent_attr = self.domain.attributes[self.parent.attribute()]
+            parent_attr_cv = parent_attr.compute_value
+            is_left_child = self.tree.children_left[self.parent.i] == self.i
+            if isinstance(parent_attr_cv, Indicator) and \
+                    hasattr(parent_attr_cv.variable, "values"):
+                values = parent_attr_cv.variable.values
+                return values[abs(parent_attr_cv.value - is_left_child)] \
+                    if len(values) == 2 \
+                    else "≠ " * is_left_child + values[parent_attr_cv.value]
+            else:
+                thresh = self.tree.threshold[self.parent.i]
+                return "%s %s" % ([">", "<="][is_left_child],
+                                  attribute.str_val(thresh))
         else:
             return ""
 
@@ -383,15 +395,26 @@ class ClassificationTreeNode(GraphicsNode):
         :param i:
             Index of current node.
         :return:
-            Rule to reach node i, represented as list of tuples (attr index,
+            Rule to reach node i, represented as list of tuples (attr name,
             sign, threshold)
         """
         if i > 0:
-            sign = "<=" if self.tree.children_left[self.parent.i] == i else ">"
-            thresh = self.tree.threshold[self.parent.i]
-            attr = self.parent.attribute()
+            parent_attr = self.domain.attributes[self.parent.attribute()]
+            parent_attr_cv = parent_attr.compute_value
+            is_left_child = self.tree.children_left[self.parent.i] == i
             pr = self.parent.rule()
-            pr.append((attr, sign, thresh))
+            if isinstance(parent_attr_cv, Indicator) and \
+                    hasattr(parent_attr_cv.variable, "values"):
+                values = parent_attr_cv.variable.values
+                attr_name = parent_attr_cv.variable.name
+                sign = ["=", "≠"][is_left_child * (len(values) != 2)]
+                value = values[abs(parent_attr_cv.value -
+                                   is_left_child * (len(values) == 2))]
+            else:
+                attr_name = parent_attr.name
+                sign = [">", "<="][is_left_child]
+                value = "%.3f" % self.tree.threshold[self.parent.i]
+            pr.append((attr_name, sign, value))
             return pr
         else:
             return []
