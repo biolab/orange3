@@ -202,8 +202,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     def node_tooltip(self, node):
         if node.i > 0:
             text = " AND<br/>".join(
-                "%s %s %.3f" % (self.domain.attributes[a].name, s, t)
-                for a, s, t in node.rule())
+                "%s %s %s" % (n, s, v) for n, s, v in node.rule())
         else:
             text = "Root"
         return text
@@ -396,15 +395,26 @@ class ClassificationTreeNode(GraphicsNode):
         :param i:
             Index of current node.
         :return:
-            Rule to reach node i, represented as list of tuples (attr index,
+            Rule to reach node i, represented as list of tuples (attr name,
             sign, threshold)
         """
         if i > 0:
-            sign = "<=" if self.tree.children_left[self.parent.i] == i else ">"
-            thresh = self.tree.threshold[self.parent.i]
-            attr = self.parent.attribute()
+            parent_attr = self.domain.attributes[self.parent.attribute()]
+            parent_attr_cv = parent_attr.compute_value
+            is_left_child = self.tree.children_left[self.parent.i] == i
             pr = self.parent.rule()
-            pr.append((attr, sign, thresh))
+            if isinstance(parent_attr_cv, Indicator) and \
+                    hasattr(parent_attr_cv.variable, "values"):
+                values = parent_attr_cv.variable.values
+                attr_name = parent_attr_cv.variable.name
+                sign = ["=", "≠"][is_left_child * (len(values) != 2)]
+                value = values[abs(parent_attr_cv.value -
+                                   is_left_child * (len(values) == 2))]
+            else:
+                attr_name = parent_attr.name
+                sign = [">", "<="][is_left_child]
+                value = "%.3f" % self.tree.threshold[self.parent.i]
+            pr.append((attr_name, sign, value))
             return pr
         else:
             return []
