@@ -274,7 +274,7 @@ class OWLinearProjection(widget.OWWidget):
             dragDropOverwriteMode=False,
             dragDropMode=QListView.DragDrop,
             showDropIndicator=True,
-            minimumHeight=50,
+            minimumHeight=100,
         )
 
         view.viewport().setAcceptDrops(True)
@@ -306,7 +306,7 @@ class OWLinearProjection(widget.OWWidget):
             dragDropOverwriteMode=False,
             dragDropMode=QListView.DragDrop,
             showDropIndicator=True,
-            minimumHeight=50
+            minimumHeight=150
         )
         view.viewport().setAcceptDrops(True)
         moveup = QtGui.QAction(
@@ -379,6 +379,9 @@ class OWLinearProjection(widget.OWWidget):
         toolbox.layout().addLayout(toollayout)
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
+
+        self.controlArea.setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # Main area plot
         self.view = pg.GraphicsView(background="w")
