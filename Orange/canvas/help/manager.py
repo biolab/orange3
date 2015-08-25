@@ -16,7 +16,7 @@ import pkg_resources
 
 from . import provider
 
-from PyQt4.QtCore import QObject, QUrl
+from PyQt4.QtCore import QObject, QUrl, QDir
 
 log = logging.getLogger(__name__)
 
@@ -251,6 +251,13 @@ def _replacements_for_dist(dist):
     return replacements
 
 
+def qurl_from_path(urlpath):
+    if QDir(urlpath).isAbsolute():
+        # deal with absolute paths including windows drive letters
+        return QUrl.fromLocalFile(urlpath)
+    return QUrl(urlpath, QUrl.TolerantMode)
+
+
 def create_intersphinx_provider(entry_point):
     locations = entry_point.load()
     replacements = _replacements_for_dist(entry_point.dist)
@@ -275,13 +282,11 @@ def create_intersphinx_provider(entry_point):
         if inventory:
             inventory = formatter.format(inventory, **replacements)
 
-        targeturl = QUrl(target)
+        targeturl = qurl_from_path(target)
         if not targeturl.isValid():
             continue
 
-        islocal = targeturl.scheme() == "" or targeturl.scheme() == "file"
-
-        if islocal:
+        if targeturl.isLocalFile():
             if os.path.exists(os.path.join(target, "objects.inv")):
                 inventory = QUrl.fromLocalFile(
                     os.path.join(target, "objects.inv"))
@@ -292,7 +297,7 @@ def create_intersphinx_provider(entry_point):
         else:
             if not inventory:
                 # Default inventory location
-                inventory = QUrl(target).resolved(QUrl("objects.inv"))
+                inventory = targeturl.resolved(QUrl("objects.inv"))
 
         if inventory is not None:
             return provider.IntersphinxHelpProvider(
@@ -317,13 +322,11 @@ def create_html_provider(entry_point):
             continue
         target = formatter.format(target, **replacements)
 
-        targeturl = QUrl(target)
+        targeturl = qurl_from_path(target)
         if not targeturl.isValid():
             continue
 
-        islocal = targeturl.scheme() == "" or targeturl.scheme() == "file"
-
-        if islocal:
+        if targeturl.isLocalFile():
             if not os.path.exists(target):
                 log.info("Local doc root '%s' does not exist.", target)
                 continue
@@ -356,13 +359,11 @@ def create_html_inventory_provider(entry_point):
 
         target = formatter.format(target, **replacements)
 
-        targeturl = QUrl(target)
+        targeturl = qurl_from_path(target)
         if not targeturl.isValid():
             continue
 
-        islocal = targeturl.scheme() == "" or targeturl.scheme() == "file"
-
-        if islocal:
+        if targeturl.isLocalFile():
             if not os.path.exists(target):
                 log.info("Local doc root '%s' does not exist", target)
                 continue
