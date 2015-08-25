@@ -42,7 +42,7 @@ class OWVennDiagram(widget.OWWidget):
     icon = "icons/VennDiagram.svg"
 
     inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]
-    outputs = [("Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.Table)]
 
     # Selected disjoint subset indices
     selection = settings.Setting([])
@@ -552,7 +552,7 @@ class OWVennDiagram(widget.OWWidget):
         else:
             data = None
 
-        self.send("Data", data)
+        self.send("Selected Data", data)
 
     def getSettings(self, *args, **kwargs):
         self._storeHints()
