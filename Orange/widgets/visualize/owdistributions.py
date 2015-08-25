@@ -322,7 +322,7 @@ class OWDistributions(widget.OWWidget):
         self.plot_prob.clear()
         self._legend.clear()
 
-        if var.is_discrete and self.show_prob:
+        if self.show_prob:
             self.plot.showAxis('right')
         else:
             self.plot.hideAxis('right')
@@ -347,24 +347,48 @@ class OWDistributions(widget.OWWidget):
                     curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST,
                         smoothing_factor=self.smoothing_facs[self.smoothing_index]))
             weights = numpy.array(weights)
-            weights /= numpy.sum(weights)
+            sumw = numpy.sum(weights)
+            weights /= sumw
             colors = cols
-            curves = [(X, Y * (w if not self.relative_freq else 1))
-                      for (X, Y), w in zip(curves, weights)]
+            curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
+            ncval = len(cvar_values)
+
+            curvesline = [] #from histograms to lines
+            for (X,Y) in curves:
+                X = X + (X[1] - X[0])/2
+                X = X[:-1]
+                X = numpy.array(X)
+                Y = numpy.array(Y)
+                curvesline.append((X,Y))
 
             for t in [ "fill", "line" ]:
-                for (X, Y), color in reversed(list(zip(curves, colors))):
-                    X = X + (X[1] - X[0])/2
-                    X = X[:-1]
+                for (X, Y), color, w in reversed(list(zip(curvesline, colors, weights))):
                     item = pg.PlotCurveItem()
                     pen = QtGui.QPen(QtGui.QBrush(color), 3)
                     pen.setCosmetic(True)
                     color = QtGui.QColor(color)
                     color.setAlphaF(0.2)
-                    item.setData(X, Y, antialias=True, stepMode=False,
+                    item.setData(X, Y/(w if self.relative_freq else 1), antialias=True, stepMode=False,
                          fillLevel=0 if t == "fill" else None,
                          brush=QtGui.QBrush(color), pen=pen)
                     self.plot.addItem(item)
+
+            if self.show_prob:
+                M_EST = 5 #for M estimate
+                all_X = numpy.array(numpy.unique(numpy.hstack([X for X,_ in curvesline])))
+                inter_X = numpy.array(numpy.linspace(all_X[0], all_X[-1], len(all_X)*2))
+                curvesinterp = [ numpy.interp(inter_X, X, Y) for (X,Y) in curvesline ]
+                sumprob = numpy.sum(curvesinterp, axis=0)
+                allcorrection = M_EST/sumw*numpy.sum(sumprob)/len(inter_X)
+
+                for Y, color in reversed(list(zip(curvesinterp, colors))):
+                    item = pg.PlotCurveItem()
+                    pen = QtGui.QPen(QtGui.QBrush(color), 3, style=QtCore.Qt.DotLine)
+                    pen.setCosmetic(True)
+                    prob = (Y+allcorrection/ncval)/(sumprob+allcorrection)
+                    item.setData(inter_X, prob, antialias=True, stepMode=False,
+                         fillLevel=None, brush=None, pen=pen)
+                    self.plot_prob.addItem(item)
 
         elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
@@ -435,7 +459,7 @@ class OWDistributions(widget.OWWidget):
                       [self.cvar is not None and self.relative_freq])
 
     def enable_disable_rel_freq(self):
-        self.cb_prob.setDisabled(self.var is None or self.cvar is None or self.var.is_continuous)
+        self.cb_prob.setDisabled(self.var is None or self.cvar is None)
         self.cb_rel_freq.setDisabled(
             self.var is None or self.cvar is None)
 
