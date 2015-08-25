@@ -214,7 +214,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     name = 'skl learner'
     preprocessors = [Continuize(),
                      RemoveNaNColumns(),
-                     SklImpute(force=True)]
+                     SklImpute()]
 
     @property
     def params(self):
