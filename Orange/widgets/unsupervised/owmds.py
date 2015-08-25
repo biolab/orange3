@@ -749,9 +749,10 @@ class OWMDS(widget.OWWidget):
                 else:
                     pen_data = numpy.full(len(self.data), pen_data,
                                           dtype=object)
-                brush_data = numpy.full(len(self.data),
-                                        QtGui.QColor(Qt.lightGray),
-                                        dtype=object)
+                brush_data = numpy.full(
+                    len(self.data),
+                    pg.mkColor((192, 192, 192, self.symbol_opacity)),
+                    dtype=object)
 
             self._pen_data = pen_data
             self._brush_data = brush_data
