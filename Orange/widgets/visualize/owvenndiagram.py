@@ -589,7 +589,7 @@ def domain_eq(d1, d2):
 
 
 # Comparing/hashing Orange.data.Instance across domains ignoring metas.
-class ComparableInstance(object):
+class ComparableInstance:
     __slots__ = ["inst", "domain"]
 
     def __init__(self, inst):

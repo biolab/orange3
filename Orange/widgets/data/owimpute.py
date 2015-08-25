@@ -487,7 +487,7 @@ def column_imputer(variable, table):
     pass
 
 
-class ColumnImputerModel(object):
+class ColumnImputerModel:
     def __init__(self, domain, codomain, transformers):
         if isinstance(domain, tuple):
             domain = Orange.data.Domain(domain)
@@ -751,7 +751,7 @@ class ModelTransform(Transformation):
 
 
 # Rename to TableImputer (Model?)
-class ImputerModel(object):
+class ImputerModel:
     """
     A fitted Imputation model.
 
