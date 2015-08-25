@@ -98,9 +98,10 @@ class OWScatterPlot(OWWidget):
         self.vizrank = self.VizRank(self)
         vizrank_box = gui.widgetBox(box, None, orientation='horizontal')
         gui.separator(vizrank_box, width=common_options["labelWidth"])
-        gui.button(vizrank_box, self, "Rank projections",
-                   callback=self.vizrank.reshow,
-                   tooltip="Find projections with good class separation")
+        self.vizrank_button = gui.button(
+            vizrank_box, self, "Rank projections", callback=self.vizrank.reshow,
+            tooltip="Find projections with good class separation")
+        self.vizrank_button.setEnabled(False)
         gui.separator(box)
 
         gui.valueSlider(
@@ -234,6 +235,9 @@ class OWScatterPlot(OWWidget):
         if not same_domain:
             self.init_attr_values()
         self.vizrank._initialize()
+        self.vizrank_button.setEnabled(
+            self.data is not None and self.data.domain.class_var is not None
+            and len(self.data.domain.attributes) > 1)
         self.openContext(self.data)
 
     def set_subset_data(self, subset_data):
