@@ -518,8 +518,8 @@ class OWScatterPlot(OWWidget):
                     self.projectionTableModel.insertRow(
                         len(self.scores) - pos,
                         [QStandardItem("{:.4f}".format(score)),
-                         QStandardItem(self.attrs[i]),
-                         QStandardItem(self.attrs[j])])
+                         QStandardItem(self.attrs[j]),
+                         QStandardItem(self.attrs[i])])
                     self.scores.insert(pos, score)
                     self.progress.advance()
                 self.j = 0
