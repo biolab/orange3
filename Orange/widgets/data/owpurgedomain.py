@@ -1,7 +1,6 @@
 from PyQt4 import QtGui
 
-import Orange
-
+from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.preprocess.remove import Remove
@@ -15,8 +14,8 @@ class OWPurgeDomain(widget.OWWidget):
     category = "Data"
     keywords = ["data", "purge", "domain"]
 
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Table, "setData")]
+    outputs = [("Data", Table)]
 
     removeValues = Setting(1)
     removeAttributes = Setting(1)
@@ -33,9 +32,6 @@ class OWPurgeDomain(widget.OWWidget):
         super().__init__(parent)
         self.data = None
 
-        self.preRemoveValues = 1
-        self.preRemoveClasses = 1
-
         self.removedAttrs = "-"
         self.reducedAttrs = "-"
         self.resortedAttrs = "-"
@@ -43,53 +39,42 @@ class OWPurgeDomain(widget.OWWidget):
         self.reducedClasses = "-"
         self.resortedClasses = "-"
 
-        boxAt = gui.widgetBox(self.controlArea, "Attributes")
-        gui.checkBox(boxAt, self, 'sortValues', 'Sort attribute values',
+        boxAt = gui.widgetBox(self.controlArea, "Features")
+        gui.checkBox(boxAt, self, 'sortValues',
+                     'Sort discrete feature values',
                      callback=self.optionsChanged)
         gui.separator(boxAt, 2)
-        rua = gui.checkBox(
-            boxAt, self, "removeAttributes",
-            "Remove attributes with less than two values",
-            callback=self.removeAttributesChanged)
-        ruv = gui.checkBox(
-            gui.indentedBox(boxAt, sep=gui.checkButtonOffsetHint(rua)),
-            self,
-            "removeValues",
-            "Remove unused attribute values",
-            callback=self.optionsChanged
-        )
-        rua.disables = [ruv]
-        rua.makeConsistent()
+        gui.checkBox(boxAt, self, "removeValues",
+                     "Remove unused feature values",
+                     callback=self.optionsChanged)
+        gui.separator(boxAt, 2)
+        gui.checkBox(boxAt, self, "removeAttributes",
+                     "Remove constant features",
+                     callback=self.optionsChanged)
 
         boxAt = gui.widgetBox(self.controlArea, "Classes", addSpace=True)
-        gui.checkBox(boxAt, self, 'sortClasses', 'Sort classes',
+        gui.checkBox(boxAt, self, 'sortClasses',
+                     'Sort discrete class variable values',
                      callback=self.optionsChanged)
         gui.separator(boxAt, 2)
-        rua = gui.checkBox(
-            boxAt, self, "removeClassAttribute",
-            "Remove class attribute if there are less than two classes",
-            callback=self.removeClassesChanged
-        )
-        ruv = gui.checkBox(
-            gui.indentedBox(boxAt, sep=gui.checkButtonOffsetHint(rua)),
-            self,
-            "removeClasses",
-            "Remove unused class values",
-            callback=self.optionsChanged
-        )
-        rua.disables = [ruv]
-        rua.makeConsistent()
+        gui.checkBox(boxAt, self, "removeClasses",
+                     "Remove unused class variable values",
+                     callback=self.optionsChanged)
+        gui.separator(boxAt, 2)
+        gui.checkBox(boxAt, self, "removeClassAttribute",
+                     "Remove constant class variables",
+                     callback=self.optionsChanged)
 
         box3 = gui.widgetBox(self.controlArea, 'Statistics', addSpace=True)
-        gui.label(box3, self, "Removed attributes: %(removedAttrs)s")
-        gui.label(box3, self, "Reduced attributes: %(reducedAttrs)s")
-        gui.label(box3, self, "Resorted attributes: %(resortedAttrs)s")
+        gui.label(box3, self, "Removed features: %(removedAttrs)s")
+        gui.label(box3, self, "Reduced features: %(reducedAttrs)s")
+        gui.label(box3, self, "Resorted features: %(resortedAttrs)s")
         gui.label(box3, self, "Removed classes: %(removedClasses)s")
         gui.label(box3, self, "Reduced classes: %(reducedClasses)s")
         gui.label(box3, self, "Resorted classes: %(resortedClasses)s")
 
         gui.auto_commit(self.controlArea, self, "autoSend", "Send Data",
-                        checkbox_label="Send automatically",
+                        checkbox_label="Send automatically  ",
                         orientation="horizontal")
         gui.rubber(self.controlArea)
 
@@ -106,22 +91,6 @@ class OWPurgeDomain(widget.OWWidget):
             self.resortedClasses = "-"
             self.send("Data", None)
             self.data = None
-
-    def removeAttributesChanged(self):
-        if not self.removeAttributes:
-            self.preRemoveValues = self.removeValues
-            self.removeValues = False
-        else:
-            self.removeValues = self.preRemoveValues
-        self.optionsChanged()
-
-    def removeClassesChanged(self):
-        if not self.removeClassAttribute:
-            self.preRemoveClasses = self.removeClasses
-            self.removeClasses = False
-        else:
-            self.removeClasses = self.preRemoveClasses
-        self.optionsChanged()
 
     def optionsChanged(self):
         self.commit()
@@ -154,10 +123,10 @@ class OWPurgeDomain(widget.OWWidget):
 if __name__ == "__main__":
     appl = QtGui.QApplication([])
     ow = OWPurgeDomain()
-    data = Orange.data.Table("car.tab")
+    data = Table("car.tab")
     subset = [inst for inst in data
               if inst["buying"] == "v-high"]
-    subset = Orange.data.Table(data.domain, subset)
+    subset = Table(data.domain, subset)
     # The "buying" should be removed and the class "y" reduced
     ow.setData(subset)
     ow.show()

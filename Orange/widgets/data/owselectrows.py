@@ -90,13 +90,13 @@ class OWSelectRows(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
         box_setting = gui.widgetBox(box, 'Purging')
-        cb = gui.checkBox(box_setting, self, "purge_attributes",
-                          "Remove unused values/features",
-                          callback=self.on_purge_change)
-        self.purgeClassesCB = gui.checkBox(
-            gui.indentedBox(box_setting, sep=gui.checkButtonOffsetHint(cb)),
-            self, "purge_classes", "Remove unused classes",
-            callback=self.on_purge_change)
+        gui.checkBox(box_setting, self, "purge_attributes",
+                     "Remove unused features",
+                     callback=self.conditions_changed)
+        gui.separator(box_setting, height=1)
+        gui.checkBox(box_setting, self, "purge_classes",
+                     "Remove unused classes",
+                     callback=self.conditions_changed)
         gui.auto_commit(box, self, "auto_commit", label="Commit",
                         checkbox_label="Commit on change")
         self.set_data(None)
@@ -286,18 +286,6 @@ class OWSelectRows(widget.OWWidget):
             if attr in attrs:
                 self.add_row(attrs.index(attr), cond_type, cond_value)
         self.unconditional_commit()
-
-    def on_purge_change(self):
-        if self.purge_attributes:
-            if not self.purgeClassesCB.isEnabled():
-                self.purgeClassesCB.setEnabled(True)
-                self.purge_classes = self.old_purge_classes
-        else:
-            if self.purgeClassesCB.isEnabled():
-                self.purgeClassesCB.setEnabled(False)
-                self.old_purge_classes = self.purge_classes
-                self.purge_classes = False
-        self.conditions_changed()
 
     def conditions_changed(self):
         try:
