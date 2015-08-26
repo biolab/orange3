@@ -228,7 +228,8 @@ class OWTestLearners(widget.OWWidget):
     #: Bootstrap sampling p
     sample_p = settings.Setting(75)
 
-    class_selection = settings.ContextSetting("(None)")
+    TARGET_AVERAGE = "(Average over classes)"
+    class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -249,22 +250,20 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "k_folds", 2, 50, label="Number of folds:",
-                 callback=self.kfold_changed)
+                 callback=self.kfold_changed, callbackOnReturn=True)
         gui.appendRadioButton(rbox, "Leave one out")
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test",
-                 callback=self.bootstrap_changed)
+                 callback=self.bootstrap_changed, callbackOnReturn=True)
         gui.widgetLabel(ibox, "Relative training set size:")
-        gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
-                    ticks=20, vertical=False, labelFormat="%d %%",
-                    callback=self.bootstrap_changed)
+        slider = gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
+                             ticks=20, vertical=False, labelFormat="%d %%",
+                             callback=self.bootstrap_changed)
+        slider.setTracking(False)
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
-
-        rbox.layout().addSpacing(5)
-        gui.button(rbox, self, "Apply", callback=self.apply)
 
         self.cbox = gui.widgetBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
@@ -297,6 +296,9 @@ class OWTestLearners(widget.OWWidget):
         self.__loop.yielded.connect(self.__add_result)
         self.__loop.finished.connect(self.__on_finished)
         self.__loop.returned.connect(self.__on_returned)
+
+    def sizeHint(self):
+        return QSize(780, 1)
 
     def set_learner(self, learner, key):
         """
@@ -506,7 +508,8 @@ class OWTestLearners(widget.OWWidget):
 
         target_index = None
         class_var = self.train_data.domain.class_var
-        if class_var.is_discrete and self.class_selection != "(None)":
+        if class_var.is_discrete and \
+                self.class_selection != self.TARGET_AVERAGE:
             target_index = class_var.values.index(self.class_selection)
 
         for slot in self.learners.values():
@@ -552,7 +555,7 @@ class OWTestLearners(widget.OWWidget):
         if self.train_data.domain.has_discrete_class:
             self.cbox.setVisible(True)
             class_var = self.train_data.domain.class_var
-            items = ["(None)"] + class_var.values
+            items = [self.TARGET_AVERAGE] + class_var.values
             self.class_selection_combo.addItems(items)
 
             class_index = 0
@@ -587,6 +590,7 @@ class OWTestLearners(widget.OWWidget):
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
+        self.apply()
 
     def apply(self):
         self._update_header()
