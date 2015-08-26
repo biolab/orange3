@@ -499,6 +499,10 @@ class OWLinearProjection(widget.OWWidget):
         self.shapevar_model[:] = []
         self.labelvar_model[:] = []
 
+        self.color_index = 0
+        self.size_index = 0
+        self.shape_index = 0
+
         self.clear_plot()
 
     def clear_plot(self):
@@ -561,6 +565,16 @@ class OWLinearProjection(widget.OWWidget):
             )
             self.varmodel_selected[:] = selected
             self.varmodel_other[:] = other
+
+            def clip_index(value, maxv):
+                return max(0, min(value, maxv))
+
+            self.color_index = clip_index(
+                self.color_index, len(self.colorvar_model) - 1)
+            self.shape_index = clip_index(
+                self.shape_index, len(self.shapevar_model) - 1)
+            self.size_index = clip_index(
+                self.size_index, len(self.sizevar_model) - 1)
 
             self._invalidate_plot()
 
