@@ -220,9 +220,8 @@ class OWLinearProjection(widget.OWWidget):
     priority = 2000
 
     inputs = [("Data", Orange.data.Table, "set_data", widget.Default),
-              ("Data Subset", Orange.data.Table, "set_subset_data")]
-#              #TODO: Allow for axes to be supplied from an external source.
-#               ("Projection", numpy.ndarray, "set_axes"),]
+              ("Data Subset", Orange.data.Table, "set_subset_data"),
+              ("Projection", Orange.data.Table, "set_projection")]
     outputs = [("Selected Data", Orange.data.Table)]
 
     settingsHandler = settings.DomainContextHandler()
@@ -250,6 +249,7 @@ class OWLinearProjection(widget.OWWidget):
         super().__init__(parent)
 
         self.data = None
+        self.projection = None
         self.subset_data = None
         self._subset_mask = None
         self._selection_mask = None
@@ -523,6 +523,15 @@ class OWLinearProjection(widget.OWWidget):
             QApplication.postEvent(self, QEvent(self.ReplotRequest),
                                    Qt.LowEventPriority - 10)
 
+    def set_projection(self, projection):
+        if projection and len(projection) < 2:
+            self.warning(0, "Input projection has less than 2 components")
+            self.projection = None
+        else:
+            self.warning(0)
+            self.projection = projection
+        self._invalidate_plot()
+
     def set_data(self, data):
         """
         Set the input dataset.
@@ -707,6 +716,12 @@ class OWLinearProjection(widget.OWWidget):
         assert N == len(self.data), p == len(variables)
 
         axes = linproj.defaultaxes(len(variables))
+        self.warning(0)
+        if self.projection is not None:
+            if set(self.projection.domain.attributes).issuperset(variables):
+                axes = self.projection[:2, variables].X
+            else:
+                self.warning(0, "Projection and Data domains do not match.")
 
         assert axes.shape == (2, p)
 
