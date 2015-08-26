@@ -444,7 +444,6 @@ class OWLinearProjection(widget.OWWidget):
         actions.select.setChecked(True)
 
         currenttool = self.selection
-        self.selection.setViewBox(None)
 
         def activated(action):
             nonlocal currenttool
