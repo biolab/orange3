@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt, QTimer
 import numpy
 import pyqtgraph as pg
 
-import Orange.data
+from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable
 import Orange.projection
 from Orange.widgets import widget, gui, settings
@@ -23,9 +23,9 @@ class OWPCA(widget.OWWidget):
     icon = "icons/PCA.svg"
     priority = 3050
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Transformed data", Orange.data.Table),
-               ("Components", Orange.data.Table)]
+    inputs = [("Data", Table, "set_data")]
+    outputs = [("Transformed data", Table),
+               ("Components", Table)]
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
@@ -285,19 +285,24 @@ class OWPCA(widget.OWWidget):
     def commit(self):
         transformed = components = None
         if self._pca is not None:
-            components = self._pca.components_
             if self._transformed is None:
                 # Compute the full transform (all components) only once.
                 self._transformed = self._pca(self.data)
             transformed = self._transformed
 
-            domain = Orange.data.Domain(
+            domain = Domain(
                 transformed.domain.attributes[:self.ncomponents],
                 self.data.domain.class_vars,
                 self.data.domain.metas
             )
             transformed = transformed.from_table(domain, transformed)
-            components = Orange.data.Table.from_numpy(None, components)
+            dom = Domain(self._pca.orig_domain.attributes,
+                         metas=[StringVariable(name='component')])
+            metas = numpy.array([['PC{}'.format(i + 1)
+                                  for i in range(self.ncomponents)]],
+                                dtype=object).T
+            components = Table(dom, self._pca.components_[:self.ncomponents],
+                               metas=metas)
             components.name = 'components'
 
         self.send("Transformed data", transformed)
@@ -315,9 +320,9 @@ def main():
     import gc
     app = QApplication([])
     w = OWPCA()
-#     data = Orange.data.Table("iris.tab")
-    data = Orange.data.Table("housing.tab")
-#     data = Orange.data.Table("wine.tab")
+    # data = Table("iris")
+    # data = Table("wine")
+    data = Table("housing")
     w.set_data(data)
     w.show()
     w.raise_()
