@@ -227,15 +227,11 @@ class OWLinearProjection(widget.OWWidget):
 
     settingsHandler = settings.DomainContextHandler()
 
-    selected_variables = settings.ContextSetting(
-        [], required=settings.ContextSetting.REQUIRED
-    )
     variable_state = settings.ContextSetting({})
 
     color_index = settings.ContextSetting(0)
     shape_index = settings.ContextSetting(0)
     size_index = settings.ContextSetting(0)
-    label_index = settings.ContextSetting(0)
 
     point_size = settings.Setting(10)
     alpha_value = settings.Setting(255)
@@ -333,7 +329,6 @@ class OWLinearProjection(widget.OWWidget):
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
         self.shapevar_model = itemmodels.VariableListModel(parent=self)
         self.sizevar_model = itemmodels.VariableListModel(parent=self)
-        self.labelvar_model = itemmodels.VariableListModel(parent=self)
 
         form = QtGui.QFormLayout(
             formAlignment=Qt.AlignLeft,
@@ -497,7 +492,6 @@ class OWLinearProjection(widget.OWWidget):
         self.colorvar_model[:] = []
         self.sizevar_model[:] = []
         self.shapevar_model[:] = []
-        self.labelvar_model[:] = []
 
         self.color_index = 0
         self.size_index = 0
@@ -660,8 +654,6 @@ class OWLinearProjection(widget.OWWidget):
                      if var.is_continuous]
         disc_vars = [var for var in data.domain.variables
                      if var.is_discrete]
-        string_vars = [var for var in data.domain.variables
-                       if var.is_string]
 
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]
@@ -670,7 +662,6 @@ class OWLinearProjection(widget.OWWidget):
         self.colorvar_model[:] = ["Same color"] + all_vars
         self.sizevar_model[:] = ["Same size"] + cont_vars
         self.shapevar_model[:] = ["Same shape"] + disc_vars
-        self.labelvar_model[:] = ["No label"] + string_vars
 
         if data.domain.has_discrete_class:
             self.color_index = all_vars.index(data.domain.class_var) + 1
