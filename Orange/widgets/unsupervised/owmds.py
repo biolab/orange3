@@ -315,8 +315,7 @@ class OWMDS(widget.OWWidget):
         self.plot.getPlotItem().hideButtons()
         self.mainArea.layout().addWidget(self.plot)
 
-        self.selection_tool = PlotSelectionTool(
-            parent=self, selectionMode=PlotSelectionTool.Lasso)
+        self.selection_tool = PlotSelectionTool(parent=self)
         self.zoom_tool = PlotZoomTool(parent=self)
         self.pan_tool = PlotPanTool(parent=self)
         self.pinch_tool = PlotPinchZoomTool(parent=self)
