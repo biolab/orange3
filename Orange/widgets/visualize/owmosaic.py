@@ -202,10 +202,10 @@ class OWMosaicDisplay(OWWidget):
         #self.permutationList.hide()
 
         box5 = gui.widgetBox(self.controlArea, "Visual Settings")
-        gui.comboBox(box5, self, "interior_coloring",
-                     label="Color", orientation="horizontal",
-                     items=self.interior_coloring_opts,
-                     callback=self.updateGraph)
+        self.cb_color = gui.comboBox(box5, self, "interior_coloring",
+                                     label="Color", orientation="horizontal",
+                                     items=self.interior_coloring_opts,
+                                     callback=self.updateGraph)
 
         gui.checkBox(box5, self, "remove_unused_labels",
                      "Remove unused attribute labels",
@@ -351,6 +351,11 @@ class OWMosaicDisplay(OWWidget):
             self.information(2, "Unused attribute values were removed.")
         """
 
+        if self.data.domain.class_var is None:
+            self.cb_color.removeItem(CLASS_DISTRIBUTION)
+        elif self.cb_color.count() < len(self.interior_coloring_opts):
+            self.cb_color.addItem(
+                self.interior_coloring_opts[CLASS_DISTRIBUTION])
         if self.data.domain.has_discrete_class:
             self.interior_coloring = CLASS_DISTRIBUTION
             self.colorPalette.set_number_of_colors(
