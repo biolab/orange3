@@ -768,8 +768,8 @@ class OWLinearProjection(widget.OWWidget):
                 color_data = color_data[mask]
 
             pen_data = numpy.array(
-                [pg.mkPen((r, g, b, self.alpha_value / 2))
-                 for r, g, b in color_data],
+                [pg.mkPen((r, g, b), width=1.5)
+                 for r, g, b in color_data * 0.8],
                 dtype=object)
 
             brush_data = numpy.array(
@@ -777,11 +777,10 @@ class OWLinearProjection(widget.OWWidget):
                  for r, g, b in color_data],
                 dtype=object)
         else:
-            color = QtGui.QColor(Qt.lightGray)
-            color.setAlpha(self.alpha_value)
-            pen_data = QtGui.QPen(color)
-            pen_data.setCosmetic(True)
             color = QtGui.QColor(Qt.darkGray)
+            pen_data = QtGui.QPen(color, 1.5)
+            pen_data.setCosmetic(True)
+            color = QtGui.QColor(Qt.lightGray)
             color.setAlpha(self.alpha_value)
             brush_data = QtGui.QBrush(color)
 
