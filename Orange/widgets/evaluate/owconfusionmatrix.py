@@ -2,7 +2,7 @@ import unicodedata
 
 from PyQt4.QtGui import (
     QGridLayout, QLabel, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont
+    QItemSelectionModel, QItemSelection, QFont, QHeaderView
 )
 from PyQt4.QtCore import Qt
 
@@ -81,12 +81,13 @@ class OWConfusionMatrix(widget.OWWidget):
         grid.addWidget(VerticalLabel("Actual Class"), 1, 0, Qt.AlignCenter)
 
         self.tablemodel = QStandardItemModel(self)
-        self.tableview = QTableView(editTriggers=QTableView.NoEditTriggers)
-        self.tableview.setModel(self.tablemodel)
-        self.tableview.selectionModel().selectionChanged.connect(
-            self._invalidate
-        )
-        grid.addWidget(self.tableview, 1, 1)
+        view = self.tableview = QTableView(
+            editTriggers=QTableView.NoEditTriggers)
+        view.setModel(self.tablemodel)
+        view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
+        view.horizontalHeader().setMinimumSectionSize(60)
+        view.selectionModel().selectionChanged.connect(self._invalidate)
+        grid.addWidget(view, 1, 1)
         self.mainArea.layout().addLayout(grid)
 
     def sizeHint(self):
