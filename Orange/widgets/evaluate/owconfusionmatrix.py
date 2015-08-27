@@ -44,6 +44,7 @@ class OWConfusionMatrix(widget.OWWidget):
         self.data = None
         self.results = None
         self.learners = []
+        self.headers = []
 
         box = gui.widgetBox(self.controlArea, "Learners")
 
@@ -84,7 +85,6 @@ class OWConfusionMatrix(widget.OWWidget):
         view = self.tableview = QTableView(
             editTriggers=QTableView.NoEditTriggers)
         view.setModel(self.tablemodel)
-        view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         view.horizontalHeader().setMinimumSectionSize(60)
         view.selectionModel().selectionChanged.connect(self._invalidate)
         grid.addWidget(view, 1, 1)
@@ -120,7 +120,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         if results is not None:
             nmodels, ntests = results.predicted.shape
-            headers = class_values + [unicodedata.lookup("N-ARY SUMMATION")]
+            self.headers = class_values + [unicodedata.lookup("N-ARY SUMMATION")]
 
             # NOTE: The 'learner_names' is set in 'Test Learners' widget.
             if hasattr(results, "learner_names"):
@@ -128,8 +128,15 @@ class OWConfusionMatrix(widget.OWWidget):
             else:
                 self.learners = ["L %i" % (i + 1) for i in range(nmodels)]
 
-            self.tablemodel.setVerticalHeaderLabels(headers)
-            self.tablemodel.setHorizontalHeaderLabels(headers)
+            self.tablemodel.setVerticalHeaderLabels(self.headers)
+            self.tablemodel.setHorizontalHeaderLabels(self.headers)
+            if len(' '.join(self.headers)) < 120:
+                self.tableview.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
+            else:
+                self.tableview.horizontalHeader().setDefaultSectionSize(60)
+                self.tableview.horizontalHeader().setResizeMode(QHeaderView.Interactive)
+                for i, h in enumerate(self.headers):
+                    self.tablemodel.horizontalHeaderItem(i).setToolTip(h)
             self.tablemodel.setRowCount(len(class_values) + 1)
             self.tablemodel.setColumnCount(len(class_values) + 1)
             self.selected_learner = [0]
@@ -139,6 +146,7 @@ class OWConfusionMatrix(widget.OWWidget):
         self.results = None
         self.data = None
         self.tablemodel.clear()
+        self.headers = []
         # Clear learners last. This action will invoke `_learner_changed`
         # method
         self.learners = []
@@ -265,6 +273,8 @@ class OWConfusionMatrix(widget.OWWidget):
                     item.setData(value(i, j), Qt.DisplayRole)
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    item.setToolTip("actual: {}\npredicted: {}".format(
+                        self.headers[i], self.headers[j]))
                     model.setItem(i, j, item)
 
             font = model.invisibleRootItem().font()
