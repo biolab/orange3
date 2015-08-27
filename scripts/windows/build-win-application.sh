@@ -1,4 +1,7 @@
-#!/bin/bash -e
+#!/bin/bash
+
+# set exit on error
+set -e
 
 function print_usage {
     echo 'build-win-application.sh
