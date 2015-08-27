@@ -145,8 +145,10 @@ class OWDistributions(widget.OWWidget):
         self.cb_rel_freq = gui.checkBox(
             box, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed)
-        self.cb_prob = gui.checkBox(
-            box, self, "show_prob", "Show probabilities",
+        gui.separator(box)
+        self.cb_prob = gui.comboBox(
+            box, self, "show_prob", label="Show probabilities",
+            orientation="horizontal",
             callback=self._on_relative_freq_changed)
 
         plotview = pg.PlotWidget(background=None)
@@ -203,11 +205,16 @@ class OWDistributions(widget.OWWidget):
             self.groupvarmodel = \
                 ["(None)"] + [var for var in domain if var.is_discrete]
             self.groupvarview.addItem("(None)")
+            self.cb_prob.clear()
+            self.cb_prob.addItem("(None)")
             for var in self.groupvarmodel[1:]:
                 self.groupvarview.addItem(self.icons[var], var.name)
             if domain.has_discrete_class:
                 self.groupvar_idx = \
                     self.groupvarmodel.index(domain.class_var)
+                self.cb_prob.addItems(domain.class_var.values)
+                self.cb_prob.addItem("(All)")
+            self.show_prob = 0
             self.openContext(domain)
             self.variable_idx = min(max(self.variable_idx, 0),
                                     len(self.varmodel) - 1)
@@ -380,15 +387,22 @@ class OWDistributions(widget.OWWidget):
                 curvesinterp = [ numpy.interp(inter_X, X, Y) for (X,Y) in curvesline ]
                 sumprob = numpy.sum(curvesinterp, axis=0)
                 allcorrection = M_EST/sumw*numpy.sum(sumprob)/len(inter_X)
+                legal = sumprob * sumw * len(inter_X) > 10
+                print(sumprob * sumw, len(inter_X))
 
+                i = len(curvesinterp) + 1
+                show_all = self.show_prob == i
                 for Y, color in reversed(list(zip(curvesinterp, colors))):
-                    item = pg.PlotCurveItem()
-                    pen = QtGui.QPen(QtGui.QBrush(color), 3, style=QtCore.Qt.DotLine)
-                    pen.setCosmetic(True)
-                    prob = (Y+allcorrection/ncval)/(sumprob+allcorrection)
-                    item.setData(inter_X, prob, antialias=True, stepMode=False,
-                         fillLevel=None, brush=None, pen=pen)
-                    self.plot_prob.addItem(item)
+                    i -= 1
+                    if show_all or self.show_prob == i:
+                        item = pg.PlotCurveItem()
+                        pen = QtGui.QPen(QtGui.QBrush(color), 3, style=QtCore.Qt.DotLine)
+                        pen.setCosmetic(True)
+                        #prob = (Y+allcorrection/ncval)/(sumprob+allcorrection)
+                        prob = Y[legal] / sumprob[legal]
+                        item.setData(inter_X[legal], prob, antialias=True, stepMode=False,
+                             fillLevel=None, brush=None, pen=pen)
+                        self.plot_prob.addItem(item)
 
         elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
