@@ -2,6 +2,7 @@ import os
 import sys
 import math
 from numbers import Number
+from collections import Iterable
 
 import numpy as np
 from PyQt4 import QtCore
@@ -597,66 +598,52 @@ class ExtendedContinuousPaletteGenerator:
 
 
 class ColorPaletteGenerator:
-    maxHueVal = 260
 
-    def __init__(self, number_of_colors=None, rgb_colors=DefaultRGBColors):
+    def __init__(self, number_of_colors=0, rgb_colors=DefaultRGBColors):
         self.number_of_colors = 0
-        self.rgb_colors = self.default_colors = rgb_colors
-        self.rgb_array = None  # np.ndarray
-        self.rgba_array = None  # np.ndarray
+        self.rgb_colors = rgb_colors
+        self.rgb_array = []
         if isinstance(rgb_colors, dict):
-            self.rgb_colors_dict = rgb_colors
-            self.set_number_of_colors(max(rgb_colors.keys()))
-        else:
-            self.rgb_colors_dict = None
-            self.set_number_of_colors(number_of_colors)
+            number_of_colors = max(rgb_colors.keys())
+        self.set_number_of_colors(number_of_colors)
 
-    def set_number_of_colors(self, number_of_colors=None):
+    def set_number_of_colors(self, number_of_colors=0):
         """Change the palette if there are palettes for different number of
-           colors. Else, just copy rgbColors to numpy array"""
+           colors. Else, just copy colors as numpy array"""
         self.number_of_colors = number_of_colors
-        if self.rgb_colors_dict is not None:
+        if isinstance(self.rgb_colors, dict):
             number_of_colors = max(3, number_of_colors)
-            if number_of_colors not in self.rgb_colors_dict:
-                keys = [n for n in self.rgb_colors_dict
-                        if n >= number_of_colors]
-                if keys:
-                    number_of_colors = min(keys)
-                else:
+            if number_of_colors not in self.rgb_colors:
+                try:
+                    number_of_colors = min([n for n in self.rgb_colors
+                                            if n >= number_of_colors])
+                except ValueError:
                     raise ValueError("Not enough colors")
-
-            self.rgb_colors = \
-                self.rgb_colors_dict[number_of_colors]
-
-        elif number_of_colors is None or \
-                number_of_colors < len(self.rgb_colors):
-            self.rgb_colors = self.default_colors
+            rgb_colors = self.rgb_colors[number_of_colors]
+        elif number_of_colors <= len(self.rgb_colors):
+            rgb_colors = self.rgb_colors
         else:
-            self.rgb_colors = []
+            rgb_colors = []
             for i in range(self.number_of_colors):
                 col = QColor()
                 col.setHsv(360 / number_of_colors * i, 255, 255)
-                self.rgb_colors.append(col.getRgb()[:3])
-        self.rgb_array = np.array(self.rgb_colors)
-        self.rgba_array = np.hstack([
-            self.rgb_array, np.full((len(self.rgb_colors), 1), 255)])
+                rgb_colors.append(col.getRgb()[:3])
+        self.rgb_array = np.vstack((rgb_colors, [NAN_GREY]))
 
-    def __getitem__(self, index):
-        return QColor(*self.getRGB(index))
+    def __getitem__(self, value):
+        if isinstance(value, Iterable):
+            return [QColor(*c) for c in self.getRGB(value)]
+        return QColor(*self.getRGB(value))
 
-    # noinspection PyPep8Naming
-    def getRGB(self, index):
-        if isinstance(index, np.ndarray):
-            return self.rgb_array[index.astype(int)]
+    def getRGB(self, value):
+        if isinstance(value, Iterable):
+            value, nans = np.asarray(value, dtype=int), np.isnan(value)
+            if nans.any():
+                value = value.copy()
+                value[nans] = -1
+            return self.rgb_array[value]
         else:
-            return self.rgb_colors[int(index)]
-
-    # noinspection PyPep8Naming
-    def getRGBA(self, index):
-        if isinstance(index, np.ndarray):
-            return self.rgba_array[index.astype(int)]
-        else:
-            return self.rgba_colors[int(index)]
+            return self.rgb_array[-1 if np.isnan(value) else int(value)]
 
     getColor = getRGB
 
