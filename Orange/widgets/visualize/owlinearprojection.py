@@ -959,20 +959,23 @@ class OWLinearProjection(widget.OWWidget):
                    for spot in item.points()
                    if selectionshape.contains(spot.pos())]
 
-        if QApplication.keyboardModifiers() & Qt.ControlModifier:
-            self.select_indices(indices)
-        else:
-            self._selection_mask = None
-            self.select_indices(indices)
+        self.select_indices(indices, QApplication.keyboardModifiers())
 
-    def select_indices(self, indices):
+    def select_indices(self, indices, modifiers=Qt.NoModifier):
         if self.data is None:
             return
 
-        if self._selection_mask is None:
+        if self._selection_mask is None or \
+                not modifiers & (Qt.ControlModifier | Qt.ShiftModifier |
+                                 Qt.AltModifier):
             self._selection_mask = numpy.zeros(len(self.data), dtype=bool)
 
-        self._selection_mask[indices] = True
+        if modifiers & Qt.ControlModifier:
+            self._selection_mask[indices] = False
+        elif modifiers & Qt.AltModifier:
+            self._selection_mask[indices] = ~self._selection_mask[indices]
+        else:
+            self._selection_mask[indices] = True
 
         self._on_color_change()
         self.commit()
