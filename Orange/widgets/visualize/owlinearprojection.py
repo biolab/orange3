@@ -227,15 +227,11 @@ class OWLinearProjection(widget.OWWidget):
 
     settingsHandler = settings.DomainContextHandler()
 
-    selected_variables = settings.ContextSetting(
-        [], required=settings.ContextSetting.REQUIRED
-    )
     variable_state = settings.ContextSetting({})
 
     color_index = settings.ContextSetting(0)
     shape_index = settings.ContextSetting(0)
     size_index = settings.ContextSetting(0)
-    label_index = settings.ContextSetting(0)
 
     point_size = settings.Setting(10)
     alpha_value = settings.Setting(255)
@@ -274,7 +270,7 @@ class OWLinearProjection(widget.OWWidget):
             dragDropOverwriteMode=False,
             dragDropMode=QListView.DragDrop,
             showDropIndicator=True,
-            minimumHeight=50,
+            minimumHeight=100,
         )
 
         view.viewport().setAcceptDrops(True)
@@ -306,7 +302,7 @@ class OWLinearProjection(widget.OWWidget):
             dragDropOverwriteMode=False,
             dragDropMode=QListView.DragDrop,
             showDropIndicator=True,
-            minimumHeight=50
+            minimumHeight=150
         )
         view.viewport().setAcceptDrops(True)
         moveup = QtGui.QAction(
@@ -333,7 +329,6 @@ class OWLinearProjection(widget.OWWidget):
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
         self.shapevar_model = itemmodels.VariableListModel(parent=self)
         self.sizevar_model = itemmodels.VariableListModel(parent=self)
-        self.labelvar_model = itemmodels.VariableListModel(parent=self)
 
         form = QtGui.QFormLayout(
             formAlignment=Qt.AlignLeft,
@@ -380,6 +375,9 @@ class OWLinearProjection(widget.OWWidget):
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
 
+        self.controlArea.setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding)
+
         # Main area plot
         self.view = pg.GraphicsView(background="w")
         self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
@@ -390,8 +388,7 @@ class OWLinearProjection(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.view)
 
-        self.selection = PlotSelectionTool(
-            self, selectionMode=PlotSelectionTool.Lasso)
+        self.selection = PlotSelectionTool(self)
         self.selection.setViewBox(self.viewbox)
         self.selection.selectionFinished.connect(self._selection_finish)
 
@@ -446,7 +443,6 @@ class OWLinearProjection(widget.OWWidget):
         actions.select.setChecked(True)
 
         currenttool = self.selection
-        self.selection.setViewBox(None)
 
         def activated(action):
             nonlocal currenttool
@@ -494,7 +490,10 @@ class OWLinearProjection(widget.OWWidget):
         self.colorvar_model[:] = []
         self.sizevar_model[:] = []
         self.shapevar_model[:] = []
-        self.labelvar_model[:] = []
+
+        self.color_index = 0
+        self.size_index = 0
+        self.shape_index = 0
 
         self.clear_plot()
 
@@ -558,6 +557,16 @@ class OWLinearProjection(widget.OWWidget):
             )
             self.varmodel_selected[:] = selected
             self.varmodel_other[:] = other
+
+            def clip_index(value, maxv):
+                return max(0, min(value, maxv))
+
+            self.color_index = clip_index(
+                self.color_index, len(self.colorvar_model) - 1)
+            self.shape_index = clip_index(
+                self.shape_index, len(self.shapevar_model) - 1)
+            self.size_index = clip_index(
+                self.size_index, len(self.sizevar_model) - 1)
 
             self._invalidate_plot()
 
@@ -643,8 +652,6 @@ class OWLinearProjection(widget.OWWidget):
                      if var.is_continuous]
         disc_vars = [var for var in data.domain.variables
                      if var.is_discrete]
-        string_vars = [var for var in data.domain.variables
-                       if var.is_string]
 
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]
@@ -653,7 +660,6 @@ class OWLinearProjection(widget.OWWidget):
         self.colorvar_model[:] = ["Same color"] + all_vars
         self.sizevar_model[:] = ["Same size"] + cont_vars
         self.shapevar_model[:] = ["Same shape"] + disc_vars
-        self.labelvar_model[:] = ["No label"] + string_vars
 
         if data.domain.has_discrete_class:
             self.color_index = all_vars.index(data.domain.class_var) + 1
@@ -760,8 +766,8 @@ class OWLinearProjection(widget.OWWidget):
                 color_data = color_data[mask]
 
             pen_data = numpy.array(
-                [pg.mkPen((r, g, b, self.alpha_value / 2))
-                 for r, g, b in color_data],
+                [pg.mkPen((r, g, b), width=1.5)
+                 for r, g, b in color_data * 0.8],
                 dtype=object)
 
             brush_data = numpy.array(
@@ -769,11 +775,10 @@ class OWLinearProjection(widget.OWWidget):
                  for r, g, b in color_data],
                 dtype=object)
         else:
-            color = QtGui.QColor(Qt.lightGray)
-            color.setAlpha(self.alpha_value)
-            pen_data = QtGui.QPen(color)
-            pen_data.setCosmetic(True)
             color = QtGui.QColor(Qt.darkGray)
+            pen_data = QtGui.QPen(color, 1.5)
+            pen_data.setCosmetic(True)
+            color = QtGui.QColor(Qt.lightGray)
             color.setAlpha(self.alpha_value)
             brush_data = QtGui.QBrush(color)
 
@@ -954,20 +959,23 @@ class OWLinearProjection(widget.OWWidget):
                    for spot in item.points()
                    if selectionshape.contains(spot.pos())]
 
-        if QApplication.keyboardModifiers() & Qt.ControlModifier:
-            self.select_indices(indices)
-        else:
-            self._selection_mask = None
-            self.select_indices(indices)
+        self.select_indices(indices, QApplication.keyboardModifiers())
 
-    def select_indices(self, indices):
+    def select_indices(self, indices, modifiers=Qt.NoModifier):
         if self.data is None:
             return
 
-        if self._selection_mask is None:
+        if self._selection_mask is None or \
+                not modifiers & (Qt.ControlModifier | Qt.ShiftModifier |
+                                 Qt.AltModifier):
             self._selection_mask = numpy.zeros(len(self.data), dtype=bool)
 
-        self._selection_mask[indices] = True
+        if modifiers & Qt.ControlModifier:
+            self._selection_mask[indices] = False
+        elif modifiers & Qt.AltModifier:
+            self._selection_mask[indices] = ~self._selection_mask[indices]
+        else:
+            self._selection_mask[indices] = True
 
         self._on_color_change()
         self.commit()
