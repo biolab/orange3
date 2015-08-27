@@ -491,7 +491,7 @@ class OWFeatureConstructor(widget.OWWidget):
         self.editors = {}
 
         box = QtGui.QGroupBox(
-            title=self.tr("Attribute Definitions")
+            title=self.tr("Feature Definitions")
         )
 
         box.setLayout(QtGui.QHBoxLayout())
