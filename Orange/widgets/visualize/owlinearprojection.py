@@ -388,8 +388,7 @@ class OWLinearProjection(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.view)
 
-        self.selection = PlotSelectionTool(
-            self, selectionMode=PlotSelectionTool.Lasso)
+        self.selection = PlotSelectionTool(self)
         self.selection.setViewBox(self.viewbox)
         self.selection.selectionFinished.connect(self._selection_finish)
 
