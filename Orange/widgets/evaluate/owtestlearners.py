@@ -201,7 +201,7 @@ Try.register = lambda cls: raise_(TypeError())
 
 
 class OWTestLearners(widget.OWWidget):
-    name = "Test Learners"
+    name = "Test & Score"
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
