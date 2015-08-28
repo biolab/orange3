@@ -78,6 +78,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
             return v
 
         super().__init__(proj=proj)
+        self.orig_domain = domain
         self.n_components = self.components_.shape[0]
         self.domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
