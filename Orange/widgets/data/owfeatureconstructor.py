@@ -491,7 +491,7 @@ class OWFeatureConstructor(widget.OWWidget):
         self.editors = {}
 
         box = QtGui.QGroupBox(
-            title=self.tr("Attribute Definitions")
+            title=self.tr("Feature Definitions")
         )
 
         box.setLayout(QtGui.QHBoxLayout())
@@ -817,10 +817,13 @@ def bind_variable(descriptor, env):
     source_vars = [(name, variables[name]) for name in freev
                    if name in variables]
 
-    return (descriptor, FeatureFunc(exp_ast, source_vars))
+    values = []
+    if isinstance(descriptor, DiscreteDescriptor):
+        values = [sanitized_name(v) for v in descriptor.values]
+    return descriptor, FeatureFunc(exp_ast, source_vars, values)
 
 
-def make_lambda(expression, args):
+def make_lambda(expression, args, values):
     def make_arg(name):
         if sys.version_info >= (3, 0):
             return ast.arg(arg=name, annotation=None)
@@ -829,19 +832,20 @@ def make_lambda(expression, args):
 
     lambda_ = ast.Lambda(
         args=ast.arguments(
-            args=[make_arg(arg) for arg in args],
+            args=[make_arg(arg) for arg in args + values],
             varargs=None,
             varargannotation=None,
             kwonlyargs=[],
             kwarg=None,
             kwargannotation=None,
-            defaults=[],
+            defaults=[ast.Num(i) for i in range(len(values))],
             kw_defaults=[]),
         body=expression.body,
     )
     lambda_ = ast.copy_location(lambda_, expression.body)
     exp = ast.Expression(body=lambda_, lineno=1, col_offset=0)
     ast.dump(exp)
+    ast.fix_missing_locations(exp)
     return eval(compile(exp, "<lambda>", "eval"), __GLOBALS)
 
 
@@ -878,10 +882,11 @@ __GLOBALS.update({
 
 
 class FeatureFunc:
-    def __init__(self, expression, args):
+    def __init__(self, expression, args, values):
         self.expression = expression
         self.args = args
-        self.func = make_lambda(expression, [name for name, _ in args])
+        self.values = values
+        self.func = make_lambda(expression, [name for name, _ in args], values)
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
