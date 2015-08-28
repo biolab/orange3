@@ -83,6 +83,7 @@ class OWScatterPlot(OWWidget):
 
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
+        self.data_metas_X = None  # self.data, where primitive metas are moved to X
         self.attribute_selection_list = None  # list of Orange.data.Variable
 
         common_options = {"labelWidth": 50, "orientation": "horizontal",
@@ -227,6 +228,7 @@ class OWScatterPlot(OWWidget):
             self.data and data and \
             data.domain.checksum() == self.data.domain.checksum()
         self.data = data
+        self.data_metas_X = self.move_primitive_metas_to_X(data)
 
         # TODO: adapt scatter plot to work on SqlTables (avoid use of X and Y)
         if isinstance(self.data, SqlTable):
@@ -240,12 +242,21 @@ class OWScatterPlot(OWWidget):
             and len(self.data.domain.attributes) > 1)
         self.openContext(self.data)
 
+    def move_primitive_metas_to_X(self, data):
+        if data is not None:
+            new_attrs = [a for a in data.domain.attributes + data.domain.metas
+                         if a.is_primitive()]
+            new_metas = [m for m in data.domain.metas if not m.is_primitive()]
+            data = Table.from_table(Domain(new_attrs, data.domain.class_vars,
+                                           new_metas), data)
+        return data
+
     def set_subset_data(self, subset_data):
-        self.subset_data = subset_data
+        self.subset_data = self.move_primitive_metas_to_X(subset_data)
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.new_data(self.data, self.subset_data)
+        self.graph.new_data(self.data_metas_X, self.subset_data)
         if self.attribute_selection_list and \
                 all(attr.name in self.graph.attribute_name_index
                     for attr in self.attribute_selection_list):
@@ -282,7 +293,8 @@ class OWScatterPlot(OWWidget):
             return
 
         for var in self.data.domain.metas:
-            self.cb_attr_label.addItem(self.icons[var], var.name)
+            if not var.is_primitive():
+                self.cb_attr_label.addItem(self.icons[var], var.name)
         for attr in self.data.domain.variables:
             self.cb_attr_x.addItem(self.icons[attr], attr.name)
             self.cb_attr_y.addItem(self.icons[attr], attr.name)
@@ -292,6 +304,16 @@ class OWScatterPlot(OWWidget):
             else:
                 self.cb_attr_size.addItem(self.icons[attr], attr.name)
             self.cb_attr_label.addItem(self.icons[attr], attr.name)
+        for var in self.data.domain.metas:
+            if var.is_primitive():
+                self.cb_attr_x.addItem(self.icons[var], var.name)
+                self.cb_attr_y.addItem(self.icons[var], var.name)
+                self.cb_attr_color.addItem(self.icons[var], var.name)
+                if var.is_discrete:
+                    self.cb_attr_shape.addItem(self.icons[var], var.name)
+                else:
+                    self.cb_attr_size.addItem(self.icons[var], var.name)
+                self.cb_attr_label.addItem(self.icons[var], var.name)
 
         self.attr_x = self.cb_attr_x.itemText(0)
         if self.cb_attr_y.count() > 1:
