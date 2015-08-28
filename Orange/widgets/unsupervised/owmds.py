@@ -741,10 +741,17 @@ class OWMDS(widget.OWWidget):
                 brush_data = mdsplotutils.brush_data(color_data)
             else:
                 pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
-                pen_data = numpy.full(len(self.data), pen_data, dtype=object)
-                brush_data = numpy.full(len(self.data),
-                                        QtGui.QColor(Qt.lightGray),
-                                        dtype=object)
+                if self._selection_mask is not None:
+                    pen_data = numpy.array(
+                        [pen_data, mdsplotutils.plotstyle.selected_pen])
+                    pen_data = pen_data[self._selection_mask.astype(int)]
+                else:
+                    pen_data = numpy.full(len(self.data), pen_data,
+                                          dtype=object)
+                brush_data = numpy.full(
+                    len(self.data),
+                    pg.mkColor((192, 192, 192, self.symbol_opacity)),
+                    dtype=object)
 
             self._pen_data = pen_data
             self._brush_data = brush_data
