@@ -228,6 +228,8 @@ class OWLinearProjection(widget.OWWidget):
 
     variable_state = settings.ContextSetting({})
 
+    optimization = settings.Setting(0)
+
     color_index = settings.ContextSetting(0)
     shape_index = settings.ContextSetting(0)
     size_index = settings.ContextSetting(0)
@@ -316,6 +318,16 @@ class OWLinearProjection(widget.OWWidget):
         view.setModel(model)
 
         box1.layout().addWidget(view)
+
+        box = gui.widgetBox(self.controlArea, "Optimization")
+        self.opt_radio = gui.radioButtonsInBox(
+            box, self, "optimization",
+            btnLabels=["Circular (no optimization)",
+                       "LDA",
+                       "Use input projection"],
+            callback=self._invalidate_plot
+        )
+        box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         box = gui.widgetBox(self.controlArea, "Jittering")
         gui.comboBox(box, self, "jitter_value",
@@ -524,12 +536,11 @@ class OWLinearProjection(widget.OWWidget):
                                    Qt.LowEventPriority - 10)
 
     def set_projection(self, projection):
+        self.warning(0)
         if projection and len(projection) < 2:
             self.warning(0, "Input projection has less than 2 components")
-            self.projection = None
-        else:
-            self.warning(0)
-            self.projection = projection
+            projection = None
+        self.projection = projection
         self._invalidate_plot()
 
     def set_data(self, data):
@@ -586,7 +597,20 @@ class OWLinearProjection(widget.OWWidget):
         self.subset_data = subset
         self._subset_mask = None
 
+    def check_possible_opt(self):
+        for b in self.opt_radio.buttons:
+            b.setEnabled(True)
+        if self.data and not self.data.domain.has_discrete_class:
+            self.opt_radio.buttons[1].setEnabled(False)
+            if self.optimization == 1:
+                self.optimization = 0
+        if not self.projection:
+            self.opt_radio.buttons[2].setEnabled(False)
+            if self.optimization == 2:
+                self.optimization = 0
+
     def handleNewSignals(self):
+        self.check_possible_opt()
         if self.subset_data is not None and self._subset_mask is None:
             # Update the plot's highlight items
             if self.data is not None:
@@ -595,7 +619,6 @@ class OWLinearProjection(widget.OWWidget):
                 self._subset_mask = numpy.in1d(
                     dataids, subsetids, assume_unique=True)
                 self._invalidate_plot()
-
         self.commit()
 
     def customEvent(self, event):
@@ -702,6 +725,14 @@ class OWLinearProjection(widget.OWWidget):
         X, _ = self.data.get_column_view(var)
         return X.ravel()
 
+    def lda(self, data):
+        import sklearn.lda as skl_lda
+        from Orange.preprocess import Impute
+        data = Impute(data)
+        lda = skl_lda.LDA(solver='eigen', n_components=2)
+        lda.fit(data.X, data.Y)
+        return lda.scalings_[:, :2].T
+
     def _setup_plot(self):
         self.__replot_requested = False
         self.clear_plot()
@@ -717,9 +748,13 @@ class OWLinearProjection(widget.OWWidget):
 
         axes = linproj.defaultaxes(len(variables))
         self.warning(0)
-        if self.projection is not None:
+        if self.optimization == 1:
+            axes = self.lda(self.data[:, variables + [self.data.domain.class_var]])
+        if self.optimization == 2 and self.projection:
             if set(self.projection.domain.attributes).issuperset(variables):
                 axes = self.projection[:2, variables].X
+            elif set(f.name for f in self.projection.domain.attributes).issuperset(f.name for f in variables):
+                axes = self.projection[:2, [f.name for f in variables]].X
             else:
                 self.warning(0, "Projection and Data domains do not match.")
 
