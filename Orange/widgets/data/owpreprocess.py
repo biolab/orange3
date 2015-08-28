@@ -736,7 +736,7 @@ class Randomize(BaseEditor):
 # general framework (this is not the only place where such
 # functionality is desired (for instance in Orange v2.* Rank widget
 # already defines its own entry point).
-class Description(object):
+class Description:
     """
     A description of an action/function.
     """
@@ -755,7 +755,7 @@ class Description(object):
         self.helptopic = helptopic
 
 
-class PreprocessAction(object):
+class PreprocessAction:
     def __init__(self, name, qualname, category, description, viewclass):
         self.name = name
         self.qualname = qualname

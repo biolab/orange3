@@ -143,7 +143,7 @@ class AsyncUpdateLoop(QObject):
 class Try(abc.ABC):
     # Try to walk in a Turing tar pit.
 
-    class Success(object):
+    class Success:
         __slots__ = ("__value",)
 #         __bool__ = lambda self: True
         success = property(lambda self: True)
@@ -162,7 +162,7 @@ class Try(abc.ABC):
         def map(self, fn):
             return Try(lambda: fn(self.value))
 
-    class Fail(object):
+    class Fail:
         __slots__ = ("__exception")
 #         __bool__ = lambda self: False
         success = property(lambda self: False)

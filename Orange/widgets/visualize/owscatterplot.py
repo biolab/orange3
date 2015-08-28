@@ -12,7 +12,7 @@ import Orange
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess.score import ReliefF
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.io import FileFormats
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
@@ -45,7 +45,7 @@ class OWScatterPlot(OWWidget):
               ("Data Subset", Table, "set_subset_data"),
               ("Features", AttributeList, "set_shown_attributes")]
 
-    outputs = [("Selected Data", Table, widget.Default),
+    outputs = [("Selected Data", Table, Default),
                ("Other Data", Table),
                ("Features", Table)]
 
@@ -311,7 +311,6 @@ class OWScatterPlot(OWWidget):
         self.update_graph(attributes=attributes)
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.send_features()
-
 
     def update_colors(self):
         self.graph.update_colors()
