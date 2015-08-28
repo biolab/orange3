@@ -30,8 +30,8 @@ _score_meta = namedtuple(
      "score",
      "supports_regression",
      "supports_classification",
-     "handles_discrete",
-     "handles_continuous"]
+     "handles_continuous",
+     "handles_discrete"]
 )
 
 
@@ -43,7 +43,7 @@ class score_meta(_score_meta):
         return _score_meta.__new__(
             cls, name, shortname, score,
             supports_regression, supports_classification,
-            handles_discrete, handles_continuous
+            handles_continuous, handles_discrete
         )
 
 # Default scores.
@@ -57,13 +57,21 @@ SCORES = [
     score_meta(
         "Gain Ratio", "Gain Ratio", score.GainRatio,
         supports_regression=False,
+        supports_classification=True,
         handles_continuous=False,
         handles_discrete=True),
     score_meta(
         "Gini Gain", "Gini", score.Gini,
         supports_regression=False,
         supports_classification=True,
-        handles_continuous=False),
+        handles_continuous=False,
+        handles_discrete=True),
+    score_meta(
+        "ReliefF", "ReliefF", score.ReliefF,
+        supports_regression=False,
+        supports_classification=True,
+        handles_continuous=True,
+        handles_discrete=True),
 ]
 
 _DEFAULT_SELECTED = set(m.name for m in SCORES)
@@ -316,18 +324,7 @@ class OWRank(widget.OWWidget):
             else:
                 attr_map, data = {}, self.data
 
-            attr_scores = []
-            for attr in data.domain.attributes:
-                attr = attr_map.get(attr, attr)
-                s = None
-                if attr is not None:
-                    try:
-                        s = float(estimator(data, attr))
-                    except Exception as ex:
-                        self.warning(index, "Error evaluating %r: %r" %
-                                     (meas.name, str(ex)))
-                attr_scores.append(s)
-            self.measure_scores[index] = attr_scores
+            self.measure_scores[index] = estimator(data)
 
         self.updateRankModel(measuresMask)
         self.ranksProxyModel.invalidate()
