@@ -1,518 +1,82 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="Hierarchical clustering. The workflow clusters the data items in Iris data set by first estimating the distances between data instances. Distance matrix is passed to hierarchical clustering, which renders the dendrogram. Select different parts of the dendrogram to further analyze the corresponding data.&#10;&#10;Notice that hierarchical clustering can only handle small data sets, that is, those that contain only a small number of data instances. For larger data sets the distance matrix may get too big and may not fit in the memory. An alternative method that can consider such data sets is k-means clustering." title="Hierarchical Clustering" version="2.0">
+<scheme description="The workflow clusters the data items in Iris data set by first estimating the distances between data instances. Distance matrix is passed to hierarchical clustering, which renders the dendrogram. Select different parts of the dendrogram to further analyze the corresponding data.&#10;&#10;Notice that hierarchical clustering can only handle small data sets, that is, those that contain only a small number of data instances. For larger data sets the distance matrix may get too big and may not fit in the memory. An alternative method that can consider such data sets is k-means clustering." title="Hierarchical Clustering" version="2.0">
 	<nodes>
-		<node id="0" name="File" position="(150, 150)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWFile.OWFile" title="File" version="" />
-		<node id="1" name="Data Table" position="(318.0, 131.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWDataTable.OWDataTable" title="Data Table" version="" />
-		<node id="2" name="Example Distance" position="(292.0, 285.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Unsupervised.OWExampleDistance.OWExampleDistance" title="Example Distance" version="" />
-		<node id="3" name="Hierarchical Clustering" position="(454.0, 308.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Unsupervised.OWHierarchicalClustering.OWHierarchicalClustering" title="Hierarchical Clustering" version="" />
-		<node id="4" name="Distance Map" position="(454.0, 208.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Unsupervised.OWDistanceMap.OWDistanceMap" title="Distance Map" version="" />
-		<node id="5" name="Data Table" position="(640.0, 308.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWDataTable.OWDataTable" title="Data Table (1)" version="" />
+		<node id="0" name="File" position="(164.0, 145.0)" project_name="Orange" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Data Table" position="(335.0, 64.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="2" name="Distances" position="(283.0, 248.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owdistances.OWDistances" title="Distances" version="" />
+		<node id="3" name="Distance Map" position="(406.0, 196.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owdistancemap.OWDistanceMap" title="Distance Map" version="" />
+		<node id="4" name="Hierarchical Clustering" position="(410.0, 317.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owhierarchicalclustering.OWHierarchicalClustering" title="Hierarchical Clustering" version="" />
+		<node id="5" name="Data Table" position="(521.0, 317.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table (1)" version="" />
 	</nodes>
 	<links>
 		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
 		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="0" />
 		<link enabled="true" id="2" sink_channel="Distances" sink_node_id="3" source_channel="Distances" source_node_id="2" />
 		<link enabled="true" id="3" sink_channel="Distances" sink_node_id="4" source_channel="Distances" source_node_id="2" />
-		<link enabled="true" id="4" sink_channel="Data" sink_node_id="5" source_channel="Selected Data" source_node_id="3" />
+		<link enabled="true" id="4" sink_channel="Data" sink_node_id="5" source_channel="Selected Data" source_node_id="4" />
 	</links>
 	<annotations>
-		<arrow end="(285.0, 341.0)" fill="#C1272D" id="0" start="(261.0, 393.0)" />
-		<text font-family="Helvetica" font-size="12" id="1" rect="(192.0, 393.0, 142.0, 48.0)">Compute the distance
-between data samples.
-		</text>
-		<arrow end="(491.0, 189.99999999999994)" fill="#C1272D" id="2" start="(515.0, 136.99999999999997)" />
-		<text font-family="Helvetica" font-size="12" id="3" rect="(499.0, 98.0, 150.0, 20.0)">Visualize the distance in
-a heat map.
-		</text>
-		<arrow end="(136.0, 119.0)" fill="#C1272D" id="4" start="(112.0, 80.0)" />
-		<text font-family="Helvetica" font-size="12" id="5" rect="(75.0, 16.0, 150.0, 60.0)">Read the data. Try this workflow with the Iris data set (from data sets that come with Orange).
-		</text>
-		<arrow end="(445.0, 373.0)" fill="#C1272D" id="6" start="(455.0, 420.0)" />
-		<text font-family="Helvetica" font-size="12" id="7" rect="(405.0, 427.0, 100.0, 36.0)">Hierarchically cluster the data.
-		</text>
-		<text font-family="Helvetica" font-size="12" id="8" rect="(530.0, 385.0, 150.0, 144.0)">Choose any part of the clustering dendrogram. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this workflow into interactive data analysis.
-		</text>
+		<text font-family="Helvetica" font-size="14" id="0" rect="(35.0, 22.0, 150.0, 96.0)">Read the data. Try this schema with the brown-selected set (from data sets that come with Orange).</text>
+		<text font-family="Helvetica" font-size="14" id="1" rect="(447.0, 79.0, 170.0, 54.0)">Visualize the data distances in a heat map.</text>
+		<text font-family="Helvetica" font-size="14" id="2" rect="(129.0, 329.0, 150.0, 54.0)">Compute the distances between the data samples.</text>
+		<text font-family="Helvetica" font-size="14" id="3" rect="(287.0, 424.0, 150.0, 40.0)">Hierarchically cluster the data.</text>
+		<arrow end="(133.0, 142.0)" fill="#C1272D" id="4" start="(92.0, 107.0)" />
+		<arrow end="(262.0, 305.0)" fill="#C1272D" id="5" start="(229.0, 341.0)" />
+		<arrow end="(408.0, 162.0)" fill="#C1272D" id="6" start="(443.0, 101.0)" />
+		<arrow end="(373.0, 379.0)" fill="#C1272D" id="7" start="(348.0, 422.0)" />
+		<text font-family="Helvetica" font-size="14" id="8" rect="(594.0, 146.0, 239.0, 128.0)">Choose any part of the clustering dendrogram. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this schema into interactive data analysis.</text>
 	</annotations>
 	<thumbnail />
 	<node_properties>
-		<properties format="pickle" node_id="0">(dp1
-S'widgetShown'
-p2
-I0
-sS'showAdvanced'
-p3
-I0
-sS'createNewOn'
-p4
-I1
-sS'savedWidgetGeometry'
-p5
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\xab\x00\x00\x00\x9d\x00\x00\x02w\x00\x00\x01\xba\x00\x00\x00\xab\x00\x00\x00\xb3\x00\x00\x02w\x00\x00\x01\xba\x00\x00\x00\x00\x00\x00'
-p6
-sS'recentFiles'
-p7
-(lp8
-V/Users/blaz/Documents/dev/nice/Orange/datasets/iris.tab
-p9
-as.</properties>
-		<properties format="pickle" node_id="1">(dp1
-S'autoCommit'
-p2
-I00
-sS'showMeta'
-p3
-I1
-sS'distColorRgb'
-p4
-(I220
-I220
-I220
-I255
-tp5
-sS'showAttributeLabels'
-p6
-I1
-sS'showDistributions'
-p7
-I00
-sS'widgetShown'
-p8
-I0
-sS'savedWidgetGeometry'
-p9
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\x04\x00\x00\x00\x16\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x04\x00\x00\x00,\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x00\x00\x00'
-p10
-sS'selectedSchemaIndex'
-p11
-I0
-sS'colorByClass'
-p12
-I00
-s.</properties>
-		<properties format="pickle" node_id="2">(dp1
-S'Metrics'
-p2
-I0
-sS'Normalize'
-p3
-I01
-sS'savedWidgetGeometry'
-p4
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x03C\x00\x00\x01\xdb\x00\x00\x04&gt;\x00\x00\x02\xd3\x00\x00\x03C\x00\x00\x01\xf1\x00\x00\x04&gt;\x00\x00\x02\xd3\x00\x00\x00\x00\x00\x00'
-p5
-sS'widgetShown'
-p6
-I0
-s.</properties>
-		<properties format="pickle" node_id="3">(dp1
-S'HDSize'
-p2
-I500
-sS'TextSize'
-p3
-I8
-sS'LineSpacing'
-p4
-I4
-sS'addIdAs'
-p5
-I0
-sS'PrintDepth'
-p6
-I10
-sS'AppendClusters'
-p7
-I0
-sS'CommitOnChange'
-p8
-I01
-sS'AutoResize'
-p9
-I0
-sS'widgetShown'
-p10
-I0
-sS'savedWidgetGeometry'
-p11
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\xce\x00\x00\x00%\x00\x00\x04\xce\x00\x00\x03^\x00\x00\x00\xce\x00\x00\x00;\x00\x00\x04\xce\x00\x00\x03^\x00\x00\x00\x00\x00\x00'
-p12
-sS'ClassifyName'
-p13
-S'HC_class'
-p14
-sS'PrintDepthCheck'
-p15
-I0
-sS'SelectionMode'
-p16
-I00
-sS'VDSize'
-p17
-I800
-sS'Annotation'
-p18
-I6
-sS'Linkage'
-p19
-I3
-sS'ManualHorSize'
-p20
-I0
-s.</properties>
-		<properties format="pickle" node_id="4">(dp1
-S'Sort'
-p2
-I0
-sS'CellWidth'
-p3
-F6
-sS'ShowLegend'
-p4
-I1
-sS'ShowBalloon'
-p5
-I1
-sS'CutEnabled'
-p6
-I0
-sS'ShowLabels'
-p7
-I1
-sS'savedGrid'
-p8
-I1
-sS'palette'
-p9
-(lp10
-L4278190335L
-aL4278256125L
-aL4278321916L
-aL4278387707L
-aL4278453498L
-aL4278519289L
-aL4278585080L
-aL4278650871L
-aL4278716662L
-aL4278782453L
-aL4278848244L
-aL4278914035L
-aL4278979826L
-aL4279045617L
-aL4279111408L
-aL4279177199L
-aL4279242990L
-aL4279308781L
-aL4279374572L
-aL4279440363L
-aL4279506154L
-aL4279571945L
-aL4279637736L
-aL4279703527L
-aL4279769318L
-aL4279835109L
-aL4279900900L
-aL4279966691L
-aL4280032482L
-aL4280098273L
-aL4280164064L
-aL4280229855L
-aL4280295646L
-aL4280361437L
-aL4280427228L
-aL4280493019L
-aL4280558810L
-aL4280624601L
-aL4280690392L
-aL4280756183L
-aL4280821974L
-aL4280887765L
-aL4280953556L
-aL4281019347L
-aL4281085138L
-aL4281150929L
-aL4281216720L
-aL4281282511L
-aL4281348302L
-aL4281414093L
-aL4281479884L
-aL4281545675L
-aL4281611466L
-aL4281677257L
-aL4281743048L
-aL4281808839L
-aL4281874630L
-aL4281940421L
-aL4282006212L
-aL4282072003L
-aL4282137794L
-aL4282203585L
-aL4282269376L
-aL4282335167L
-aL4282400958L
-aL4282466749L
-aL4282532540L
-aL4282598331L
-aL4282664122L
-aL4282729913L
-aL4282795704L
-aL4282861495L
-aL4282927286L
-aL4282993077L
-aL4283058868L
-aL4283124659L
-aL4283190450L
-aL4283256241L
-aL4283322032L
-aL4283387823L
-aL4283453614L
-aL4283519405L
-aL4283585196L
-aL4283650987L
-aL4283782570L
-aL4283848360L
-aL4283914151L
-aL4283979942L
-aL4284045733L
-aL4284111524L
-aL4284177315L
-aL4284243106L
-aL4284308897L
-aL4284374688L
-aL4284440479L
-aL4284506270L
-aL4284572061L
-aL4284637852L
-aL4284703643L
-aL4284769434L
-aL4284835225L
-aL4284901016L
-aL4284966807L
-aL4285032598L
-aL4285098389L
-aL4285164180L
-aL4285229971L
-aL4285295762L
-aL4285361553L
-aL4285427344L
-aL4285493135L
-aL4285558926L
-aL4285624717L
-aL4285690508L
-aL4285756299L
-aL4285822090L
-aL4285887881L
-aL4285953672L
-aL4286019463L
-aL4286085254L
-aL4286151045L
-aL4286216836L
-aL4286282627L
-aL4286348418L
-aL4286414209L
-aL4286480000L
-aL4286545791L
-aL4286611582L
-aL4286677373L
-aL4286743164L
-aL4286808955L
-aL4286874746L
-aL4286940537L
-aL4287006328L
-aL4287072119L
-aL4287137910L
-aL4287203701L
-aL4287269492L
-aL4287335283L
-aL4287401074L
-aL4287466865L
-aL4287532656L
-aL4287598447L
-aL4287664238L
-aL4287730029L
-aL4287795820L
-aL4287861611L
-aL4287927402L
-aL4287993193L
-aL4288058984L
-aL4288124775L
-aL4288190566L
-aL4288256357L
-aL4288322148L
-aL4288387939L
-aL4288453730L
-aL4288519521L
-aL4288585312L
-aL4288651103L
-aL4288716894L
-aL4288782685L
-aL4288848476L
-aL4288914267L
-aL4288980058L
-aL4289045849L
-aL4289111640L
-aL4289177431L
-aL4289243222L
-aL4289374805L
-aL4289440595L
-aL4289506386L
-aL4289572177L
-aL4289637968L
-aL4289703759L
-aL4289769550L
-aL4289835341L
-aL4289901132L
-aL4289966923L
-aL4290032714L
-aL4290098505L
-aL4290164296L
-aL4290230087L
-aL4290295878L
-aL4290361669L
-aL4290427460L
-aL4290493251L
-aL4290559042L
-aL4290624833L
-aL4290690624L
-aL4290756415L
-aL4290822206L
-aL4290887997L
-aL4290953788L
-aL4291019579L
-aL4291085370L
-aL4291151161L
-aL4291216952L
-aL4291282743L
-aL4291348534L
-aL4291414325L
-aL4291480116L
-aL4291545907L
-aL4291611698L
-aL4291677489L
-aL4291743280L
-aL4291809071L
-aL4291874862L
-aL4291940653L
-aL4292006444L
-aL4292072235L
-aL4292138026L
-aL4292203817L
-aL4292269608L
-aL4292335399L
-aL4292401190L
-aL4292466981L
-aL4292532772L
-aL4292598563L
-aL4292664354L
-aL4292730145L
-aL4292795936L
-aL4292861727L
-aL4292927518L
-aL4292993309L
-aL4293059100L
-aL4293124891L
-aL4293190682L
-aL4293256473L
-aL4293322264L
-aL4293388055L
-aL4293453846L
-aL4293519637L
-aL4293585428L
-aL4293651219L
-aL4293717010L
-aL4293782801L
-aL4293848592L
-aL4293914383L
-aL4293980174L
-aL4294045965L
-aL4294111756L
-aL4294177547L
-aL4294243338L
-aL4294309129L
-aL4294374920L
-aL4294440711L
-aL4294506502L
-aL4294572293L
-aL4294638084L
-aL4294703875L
-aL4294967295L
-aL4294967295L
-aL4294967295L
-aL4294967295L
-aL4278190080L
-aL4288716964L
-asS'ShowItemsInBalloon'
-p11
-I1
-sS'CutLow'
-p12
-I0
-sS'Merge'
-p13
-I1
-sS'savedWidgetGeometry'
-p14
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x01\xe0\x00\x00\x01h\x00\x00\x06Z\x00\x00\x04[\x00\x00\x01\xe0\x00\x00\x01~\x00\x00\x06Z\x00\x00\x04[\x00\x00\x00\x00\x00\x00'
-p15
-sS'colorSettings'
-p16
-NsS'Grid'
-p17
-I0
-sS'widgetShown'
-p18
-I0
-sS'SendOnRelease'
-p19
-I1
-sS'SquareCells'
-p20
-I01
-sS'selectedSchemaIndex'
-p21
-I0
-sS'CutHigh'
-p22
-I0
-sS'Gamma'
-p23
-I1
-sS'CellHeight'
-p24
-F6
-s.</properties>
-		<properties format="pickle" node_id="5">(dp1
-S'autoCommit'
-p2
-I00
-sS'showMeta'
-p3
-I1
-sS'distColorRgb'
-p4
-(I220
-I220
-I220
-I255
-tp5
-sS'showAttributeLabels'
-p6
-I1
-sS'showDistributions'
-p7
-I00
-sS'widgetShown'
-p8
-I0
-sS'savedWidgetGeometry'
-p9
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\x04\x00\x00\x00\x16\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x04\x00\x00\x00,\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x00\x00\x00'
-p10
-sS'selectedSchemaIndex'
-p11
-I0
-sS'colorByClass'
-p12
-I00
-s.</properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWA0AAABuZXdfdmFyaWFibGVzcQGJWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQJjc2lw
+Cl91bnBpY2tsZV90eXBlCnEDWAwAAABQeVF0NC5RdENvcmVxBFgKAAAAUUJ5dGVBcnJheXEFQy4B
+2dDLAAEAAAAAA5QAAAHFAAAFhAAAAqcAAAOUAAAB2wAABYQAAAKnAAAAAAAAcQaFcQeHcQhScQlY
+DAAAAHJlY2VudF9maWxlc3EKXXELKFgwAAAAL1VzZXJzL2JsYXovZGV2L29yYW5nZTMvT3Jhbmdl
+L2RhdGFzZXRzL2lyaXMudGFicQxYOgAAAC9Vc2Vycy9ibGF6L2Rldi9vcmFuZ2UzL09yYW5nZS9k
+YXRhc2V0cy9icm93bi1zZWxlY3RlZC50YWJxDVg0AAAAL1VzZXJzL2JsYXovRGVza3RvcC9kYXRh
+LW1vdmllbGVucy9tb3ZpZXMtZ2VucmVzLnRhYnEOWDMAAAAvVXNlcnMvYmxhei9kZXYvb3Jhbmdl
+My9PcmFuZ2UvZGF0YXNldHMvdGl0YW5pYy50YWJxD1gyAAAAL1VzZXJzL2JsYXovZGV2L29yYW5n
+ZTMvT3JhbmdlL2RhdGFzZXRzL2xlbnNlcy50YWJxEFgxAAAAL1VzZXJzL2JsYXovZGV2L29yYW5n
+ZTMvT3JhbmdlL2RhdGFzZXRzL2dsYXNzLnRhYnERWFgAAAAvVXNlcnMvYmxhei9Eb2N1bWVudHMv
+YWN0LzE1LWJheWxvci1kYXRhIG1pbmluZyBjb3Vyc2UvbWF0ZXJpYWwvZ3JhZGVzLXNtYWxsLWhl
+YWRlci54bHN4cRJYUQAAAC9Vc2Vycy9ibGF6L0RvY3VtZW50cy9hY3QvMTUtYmF5bG9yLWRhdGEg
+bWluaW5nIGNvdXJzZS9tYXRlcmlhbC9ncmFkZXMtc21hbGwueGxzeHETZXUu
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxAYhYCwAAAGF1dG9fY29tbWl0cQKIWBIA
+AABzaG93X2Rpc3RyaWJ1dGlvbnNxA4lYCwAAAHNlbGVjdF9yb3dzcQSIWA4AAABkaXN0X2NvbG9y
+X1JHQnEFKEvcS9xL3Ev/dHEGWA4AAABjb2xvcl9zZXR0aW5nc3EHTlgTAAAAc2F2ZWRXaWRnZXRH
+ZW9tZXRyeXEIY3NpcApfdW5waWNrbGVfdHlwZQpxCVgMAAAAUHlRdDQuUXRDb3JlcQpYCgAAAFFC
+eXRlQXJyYXlxC0MuAdnQywABAAAAAAGYAAABlAAABYIAAANwAAABmAAAAaoAAAWCAAADcAAAAAAA
+AHEMhXENh3EOUnEPWBUAAABzZWxlY3RlZF9zY2hlbWFfaW5kZXhxEEsAWA4AAABjb2xvcl9ieV9j
+bGFzc3ERiHUu
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWAoAAABhdXRvY29tbWl0cQGJWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQJjc2lwCl91
+bnBpY2tsZV90eXBlCnEDWAwAAABQeVF0NC5RdENvcmVxBFgKAAAAUUJ5dGVBcnJheXEFQy4B2dDL
+AAEAAAAAA6MAAAEyAAAEZAAAAiMAAAOjAAABSAAABGQAAAIjAAAAAAAAcQaFcQeHcQhScQlYCgAA
+AG1ldHJpY19pZHhxCksEWAQAAABheGlzcQtLAHUu
+</properties>
+		<properties format="pickle" node_id="3">gAN9cQAoWAoAAABhdXRvY29tbWl0cQGIWAkAAABjb2xvcl9sb3dxAkcAAAAAAAAAAFgHAAAAc29y
+dGluZ3EDSwJYCgAAAGNvbG9yX2hpZ2hxBEc/8AAAAAAAAFgIAAAAY29sb3JtYXBxBUsMWAsAAABj
+b2xvcl9nYW1tYXEGRwAAAAAAAAAAWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQdjc2lwCl91bnBp
+Y2tsZV90eXBlCnEIWAwAAABQeVF0NC5RdENvcmVxCVgKAAAAUUJ5dGVBcnJheXEKQy4B2dDLAAEA
+AAAAABgAAAA6AAAFZQAAA2wAAAAYAAAAUAAABWUAAANsAAAAAAAAcQuFcQyHcQ1ScQ5YDgAAAGFu
+bm90YXRpb25faWR4cQ9LAHUu
+</properties>
+		<properties format="pickle" node_id="4">gAN9cQAoWAcAAABwcnVuaW5ncQFLAFgMAAAAY2x1c3Rlcl9uYW1lcQJYBwAAAENsdXN0ZXJxA1gJ
+AAAAY3V0X3JhdGlvcQRHQFLAAAAAAABYCQAAAG1heF9kZXB0aHEFSwpYEwAAAHNhdmVkV2lkZ2V0
+R2VvbWV0cnlxBmNzaXAKX3VucGlja2xlX3R5cGUKcQdYDAAAAFB5UXQ0LlF0Q29yZXEIWAoAAABR
+Qnl0ZUFycmF5cQlDLgHZ0MsAAQAAAAACKAAAADkAAAVHAAACdAAAAigAAABPAAAFRwAAAnQAAAAA
+AABxCoVxC4dxDFJxDVgMAAAAY2x1c3Rlcl9yb2xlcQ5LAlgQAAAAc2VsZWN0aW9uX21ldGhvZHEP
+SwBYBwAAAGxpbmthZ2VxEEsDWA4AAABhbm5vdGF0aW9uX2lkeHERSwFYCgAAAGF1dG9jb21taXRx
+EohYDwAAAGFwcGVuZF9jbHVzdGVyc3ETiFgFAAAAdG9wX25xFEsDdS4=
+</properties>
+		<properties format="pickle" node_id="5">gAN9cQAoWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxAYhYCwAAAGF1dG9fY29tbWl0cQKIWBIA
+AABzaG93X2Rpc3RyaWJ1dGlvbnNxA4lYCwAAAHNlbGVjdF9yb3dzcQSIWA4AAABkaXN0X2NvbG9y
+X1JHQnEFKEvcS9xL3Ev/dHEGWA4AAABjb2xvcl9zZXR0aW5nc3EHTlgTAAAAc2F2ZWRXaWRnZXRH
+ZW9tZXRyeXEIY3NpcApfdW5waWNrbGVfdHlwZQpxCVgMAAAAUHlRdDQuUXRDb3JlcQpYCgAAAFFC
+eXRlQXJyYXlxC0MuAdnQywABAAAAAAGYAAABlAAABYIAAANwAAABmAAAAaoAAAWCAAADcAAAAAAA
+AHEMhXENh3EOUnEPWBUAAABzZWxlY3RlZF9zY2hlbWFfaW5kZXhxEEsAWA4AAABjb2xvcl9ieV9j
+bGFzc3ERiHUu
+</properties>
 	</node_properties>
 </scheme>

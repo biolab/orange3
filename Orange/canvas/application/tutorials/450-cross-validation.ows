@@ -1,265 +1,93 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="How good are supervised data mining methods on your classification data set? Here's a workflow that scores various classification techniques on a data set from medicine. A central widget here is the one for evaluation, which is given the data and a set of learners, does cross-validation and scores predictive accuracy, and outputs the scores for further examination." title="Cross-Validation" version="2.0">
+<scheme description="How good are supervised data mining methods on your classification data set? Here's a workflow that scores various classification techniques on a data set from medicine. The central widget here is the one for testing and scoring, which is given the data and a set of learners, does cross-validation and scores predictive accuracy, and outputs the scores for further examination." title="Cross-Validation" version="2.0">
 	<nodes>
-		<node id="0" name="File" position="(96.0, 134.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWFile.OWFile" title="File" version="" />
-		<node id="1" name="Naive Bayes" position="(175.0, 253.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Classify.OWNaiveBayes.OWNaiveBayes" title="Naive Bayes" version="" />
-		<node id="2" name="k Nearest Neighbours" position="(170.0, 448.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Classify.OWKNN.OWKNN" title="k Nearest Neighbours" version="" />
-		<node id="3" name="Random Forest" position="(169.0, 356.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Classify.OWRandomForest.OWRandomForest" title="Random Forest" version="" />
-		<node id="4" name="Test Learners" position="(350.0, 188.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Evaluate.OWTestLearners.OWTestLearners" title="Test Learners" version="" />
-		<node id="5" name="Data Table" position="(285.0, 58.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWDataTable.OWDataTable" title="Data Table" version="" />
-		<node id="6" name="Confusion Matrix" position="(535.0, 188.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Evaluate.OWConfusionMatrix.OWConfusionMatrix" title="Confusion Matrix" version="" />
-		<node id="7" name="Data Table" position="(735.0, 188.0)" project_name="Orange" qualified_name="Orange.OrangeWidgets.Data.OWDataTable.OWDataTable" title="Data Table (1)" version="" />
+		<node id="0" name="File" position="(91.0, 148.0)" project_name="Orange" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Test &amp; Score" position="(350.0, 185.0)" project_name="Orange" qualified_name="Orange.widgets.evaluate.owtestlearners.OWTestLearners" title="Test &amp; Score" version="" />
+		<node id="2" name="Data Table" position="(287.0, 61.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="3" name="Logistic Regression" position="(173.0, 218.0)" project_name="Orange" qualified_name="Orange.widgets.classify.owlogisticregression.OWLogisticRegression" title="Logistic Regression" version="" />
+		<node id="4" name="Random Forest" position="(190.0, 307.0)" project_name="Orange" qualified_name="Orange.widgets.classify.owrandomforest.OWRandomForest" title="Random Forest" version="" />
+		<node id="5" name="SVM" position="(235.0, 392.0)" project_name="Orange" qualified_name="Orange.widgets.classify.owsvmclassification.OWSVMClassification" title="SVM" version="" />
+		<node id="6" name="Confusion Matrix" position="(486.0, 195.0)" project_name="Orange" qualified_name="Orange.widgets.evaluate.owconfusionmatrix.OWConfusionMatrix" title="Confusion Matrix" version="" />
+		<node id="7" name="Data Table" position="(625.0, 196.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table (1)" version="" />
 	</nodes>
 	<links>
-		<link enabled="true" id="0" sink_channel="Data" sink_node_id="5" source_channel="Data" source_node_id="0" />
-		<link enabled="true" id="1" sink_channel="Learner" sink_node_id="4" source_channel="Learner" source_node_id="1" />
-		<link enabled="true" id="2" sink_channel="Learner" sink_node_id="4" source_channel="Learner" source_node_id="3" />
-		<link enabled="true" id="3" sink_channel="Learner" sink_node_id="4" source_channel="Learner" source_node_id="2" />
-		<link enabled="true" id="4" sink_channel="Data" sink_node_id="4" source_channel="Data" source_node_id="0" />
-		<link enabled="true" id="5" sink_channel="Evaluation Results" sink_node_id="6" source_channel="Evaluation Results" source_node_id="4" />
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="2" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="3" />
+		<link enabled="true" id="3" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="4" />
+		<link enabled="true" id="4" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="5" />
+		<link enabled="true" id="5" sink_channel="Evaluation Results" sink_node_id="6" source_channel="Evaluation Results" source_node_id="1" />
 		<link enabled="true" id="6" sink_channel="Data" sink_node_id="7" source_channel="Selected Data" source_node_id="6" />
 	</links>
 	<annotations>
 		<text font-family="Helvetica" font-size="12" id="0" rect="(34.0, 30.0, 96.0, 48.0)">Class-labeled
 data set</text>
 		<arrow end="(82.0, 104.0)" fill="#C1272D" id="1" start="(63.0, 71.0)" />
-		<arrow end="(262.0, 411.0)" fill="#C1272D" id="2" start="(309.0, 458.0)" />
-		<text font-family="Helvetica" font-size="12" id="3" rect="(319.0, 446.0, 150.0, 48.0)">Several learners can be
+		<arrow end="(174.0, 374.0)" fill="#C1272D" id="2" start="(126.0, 415.0)" />
+		<text font-family="Helvetica" font-size="12" id="3" rect="(52.0, 429.0, 150.0, 77.4375)">Several learners can be
 scored in cross-validation
 at the same time.</text>
 		<arrow end="(331.0, 63.0)" fill="#C1272D" id="4" start="(403.0, 61.0)" />
 		<text font-family="Helvetica" font-size="12" id="5" rect="(413.0, 44.0, 150.0, 36.0)">It's always a good idea to check out the data first.</text>
 		<arrow end="(360.0, 239.0)" fill="#C1272D" id="6" start="(378.0, 294.0)" />
 		<text font-family="Helvetica" font-size="12" id="7" rect="(305.0, 302.0, 150.0, 60.0)">Cross-validation takes place here. Double click to see the performance scores.</text>
-		<arrow end="(543.0, 249.0)" fill="#C1272D" id="8" start="(557.0, 304.0)" />
-		<text font-family="Helvetica" font-size="12" id="9" rect="(510.0, 309.0, 159.0, 48.0)">Use for additional analysis of cross-validation results.</text>
+		<arrow end="(497.0000000000001, 254.0)" fill="#C1272D" id="8" start="(511.0000000000001, 309.0)" />
+		<text font-family="Helvetica" font-size="12" id="9" rect="(481.0, 315.0, 159.0, 61.078125)">Use for additional analysis of cross-validation results.</text>
 		<arrow end="(641.0, 161.0)" fill="#C1272D" id="10" start="(667.0, 113.0)" />
 		<text font-family="Helvetica" font-size="12" id="11" rect="(624.0, 51.0, 163.0, 64.0)">Select a cell in confusion matrix to obtain related data instances. Here we examine them in the spreadheet.</text>
 	</annotations>
 	<thumbnail />
 	<node_properties>
-		<properties format="pickle" node_id="0">(dp1
-S'widgetShown'
-p2
-I0
-sS'showAdvanced'
-p3
-I0
-sS'createNewOn'
-p4
-I1
-sS'savedWidgetGeometry'
-p5
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\xab\x00\x00\x00\x9d\x00\x00\x02w\x00\x00\x01\xba\x00\x00\x00\xab\x00\x00\x00\xb3\x00\x00\x02w\x00\x00\x01\xba\x00\x00\x00\x00\x00\x00'
-p6
-sS'recentFiles'
-p7
-(lp8
-V/Users/blaz/Documents/dev/nice/Orange/datasets/heart_disease.tab
-p9
-aV/Users/blaz/Documents/dev/nice/Orange/datasets/iris.tab
-p10
-as.</properties>
-		<properties format="pickle" node_id="1">(dp1
-S'adjustThreshold'
-p2
-I0
-sS'name'
-p3
-S'Naive Bayes'
-p4
-sS'probEstimation'
-p5
-I0
-sS'm_estimator.m'
-p6
-F2
-sS'condProbEstimation'
-p7
-I0
-sS'savedWidgetGeometry'
-p8
-NsS'widgetShown'
-p9
-NsS'windowProportion'
-p10
-F0.5
-s.</properties>
-		<properties format="pickle" node_id="2">(dp1
-S'normalize'
-p2
-I1
-sS'widgetShown'
-p3
-NsS'name'
-p4
-S'kNN'
-p5
-sS'ranks'
-p6
-I0
-sS'k'
-I5
-sS'ignoreUnknowns'
-p7
-I0
-sS'metrics'
-p8
-I0
-sS'savedWidgetGeometry'
-p9
-Ns.</properties>
-		<properties format="pickle" node_id="3">(dp1
-S'widgetShown'
-p2
-I0
-sS'attributesP'
-p3
-I5
-sS'name'
-p4
-S'Random Forest'
-p5
-sS'trees'
-p6
-I100
-sS'rseed'
-p7
-I0
-sS'savedWidgetGeometry'
-p8
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x01\xf5\x00\x00\x00\xde\x00\x00\x03\x9b\x00\x00\x02\x82\x00\x00\x01\xf5\x00\x00\x00\xf4\x00\x00\x03\x9b\x00\x00\x02\x82\x00\x00\x00\x00\x00\x00'
-p9
-sS'limitDepth'
-p10
-I0
-sS'limitDepthP'
-p11
-I3
-sS'preNodeInstP'
-p12
-I5
-sS'attributes'
-p13
-I0
-sS'preNodeInst'
-p14
-I1
-s.</properties>
-		<properties format="pickle" node_id="4">(dp1
-S'selectedCScores'
-p2
-(lp3
-I0
-aI1
-aI2
-aI3
-aI8
-asS'selectedRScores'
-p4
-(lp5
-I1
-aI4
-aI6
-asS'pLearning'
-p6
-I70
-sS'precision'
-p7
-I4
-sS'widgetShown'
-p8
-I0
-sS'pRepeat'
-p9
-I10
-sS'resampling'
-p10
-I0
-sS'savedWidgetGeometry'
-p11
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x01t\x00\x00\x00\x89\x00\x00\x04\x1b\x00\x00\x02\xd7\x00\x00\x01t\x00\x00\x00\x9f\x00\x00\x04\x1b\x00\x00\x02\xd7\x00\x00\x00\x00\x00\x00'
-p12
-sS'nFolds'
-p13
-I5
-sS'applyOnAnyChange'
-p14
-I01
-s.</properties>
-		<properties format="pickle" node_id="5">(dp1
-S'autoCommit'
-p2
-I00
-sS'showMeta'
-p3
-I1
-sS'distColorRgb'
-p4
-(I220
-I220
-I220
-I255
-tp5
-sS'showAttributeLabels'
-p6
-I1
-sS'showDistributions'
-p7
-I00
-sS'widgetShown'
-p8
-I0
-sS'savedWidgetGeometry'
-p9
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\x04\x00\x00\x00\x16\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x04\x00\x00\x00,\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x00\x00\x00'
-p10
-sS'selectedSchemaIndex'
-p11
-I0
-sS'colorByClass'
-p12
-I00
-s.</properties>
-		<properties format="pickle" node_id="6">(dp1
-S'widgetShown'
-p2
-NsS'savedWidgetGeometry'
-p3
-Ns.</properties>
-		<properties format="pickle" node_id="7">(dp1
-S'autoCommit'
-p2
-I00
-sS'showMeta'
-p3
-I1
-sS'distColorRgb'
-p4
-(I220
-I220
-I220
-I255
-tp5
-sS'showAttributeLabels'
-p6
-I1
-sS'showDistributions'
-p7
-I00
-sS'widgetShown'
-p8
-I0
-sS'savedWidgetGeometry'
-p9
-S'\x01\xd9\xd0\xcb\x00\x01\x00\x00\x00\x00\x00\x04\x00\x00\x00\x16\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x04\x00\x00\x00,\x00\x00\x03\x1f\x00\x00\x02W\x00\x00\x00\x00\x00\x00'
-p10
-sS'selectedSchemaIndex'
-p11
-I0
-sS'colorByClass'
-p12
-I00
-s.</properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWA0AAABuZXdfdmFyaWFibGVzcQGJWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQJjc2lw
+Cl91bnBpY2tsZV90eXBlCnEDWAwAAABQeVF0NC5RdENvcmVxBFgKAAAAUUJ5dGVBcnJheXEFQy4B
+2dDLAAEAAAAAA5QAAAHFAAAFhAAAAqcAAAOUAAAB2wAABYQAAAKnAAAAAAAAcQaFcQeHcQhScQlY
+DAAAAHJlY2VudF9maWxlc3EKXXELKFgwAAAAL1VzZXJzL2JsYXovZGV2L29yYW5nZTMvT3Jhbmdl
+L2RhdGFzZXRzL2lyaXMudGFicQxYOgAAAC9Vc2Vycy9ibGF6L2Rldi9vcmFuZ2UzL09yYW5nZS9k
+YXRhc2V0cy9icm93bi1zZWxlY3RlZC50YWJxDVg0AAAAL1VzZXJzL2JsYXovRGVza3RvcC9kYXRh
+LW1vdmllbGVucy9tb3ZpZXMtZ2VucmVzLnRhYnEOWDMAAAAvVXNlcnMvYmxhei9kZXYvb3Jhbmdl
+My9PcmFuZ2UvZGF0YXNldHMvdGl0YW5pYy50YWJxD1gyAAAAL1VzZXJzL2JsYXovZGV2L29yYW5n
+ZTMvT3JhbmdlL2RhdGFzZXRzL2xlbnNlcy50YWJxEFgxAAAAL1VzZXJzL2JsYXovZGV2L29yYW5n
+ZTMvT3JhbmdlL2RhdGFzZXRzL2dsYXNzLnRhYnERWFgAAAAvVXNlcnMvYmxhei9Eb2N1bWVudHMv
+YWN0LzE1LWJheWxvci1kYXRhIG1pbmluZyBjb3Vyc2UvbWF0ZXJpYWwvZ3JhZGVzLXNtYWxsLWhl
+YWRlci54bHN4cRJYUQAAAC9Vc2Vycy9ibGF6L0RvY3VtZW50cy9hY3QvMTUtYmF5bG9yLWRhdGEg
+bWluaW5nIGNvdXJzZS9tYXRlcmlhbC9ncmFkZXMtc21hbGwueGxzeHETZXUu
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFjc2lwCl91bnBpY2tsZV90eXBlCnECWAwA
+AABQeVF0NC5RdENvcmVxA1gKAAAAUUJ5dGVBcnJheXEEQy4B2dDLAAEAAAAAAcsAAAD1AAADxQAA
+AmoAAAHLAAABCwAAA8UAAAJqAAAAAAAAcQWFcQaHcQdScQhYEAAAAGNvbnRleHRfc2V0dGluZ3Nx
+CV1xCihjT3JhbmdlLndpZGdldHMuc2V0dGluZ3MKQ29udGV4dApxCymBcQx9cQ0oWAYAAAB2YWx1
+ZXNxDn1xDyhoAWgCaANYCgAAAFFCeXRlQXJyYXlxEEMuAdnQywABAAAAAAHLAAAA9QAAA8UAAAJq
+AAABywAAAQsAAAPFAAACagAAAAAAAHERhXESh3ETUnEUWAgAAABuX3JlcGVhdHEVSwpYCgAAAHJl
+c2FtcGxpbmdxFksAWAgAAABzYW1wbGVfcHEXS0tYBwAAAGtfZm9sZHNxGEsKWA8AAABjbGFzc19z
+ZWxlY3Rpb25xGVgWAAAAKEF2ZXJhZ2Ugb3ZlciBjbGFzc2VzKXEadVgHAAAAY2xhc3Nlc3EbXXEc
+KFgLAAAASXJpcy1zZXRvc2FxHVgPAAAASXJpcy12ZXJzaWNvbG9ycR5YDgAAAElyaXMtdmlyZ2lu
+aWNhcR9lWAQAAAB0aW1lcSBHQdV4GffUXRx1YmgLKYFxIX1xIihoDn1xIyhYEwAAAHNhdmVkV2lk
+Z2V0R2VvbWV0cnlxJGgCaANYCgAAAFFCeXRlQXJyYXlxJUMuAdnQywABAAAAAAHLAAAA9QAAA8UA
+AAJqAAABywAAAQsAAAPFAAACagAAAAAAAHEmhXEnh3EoUnEpWAgAAABuX3JlcGVhdHEqSwpYCgAA
+AHJlc2FtcGxpbmdxK0sAWAgAAABzYW1wbGVfcHEsS0tYBwAAAGtfZm9sZHNxLUsKWA8AAABjbGFz
+c19zZWxlY3Rpb25xLlgWAAAAKEF2ZXJhZ2Ugb3ZlciBjbGFzc2VzKXEvdWgbXXEwKFgHAAAAUHJv
+dGVhc3ExWAQAAABSZXNwcTJYBAAAAFJpYm9xM2VoIEdB1XgYeGd+Y3ViZWgWSwBoF0tLaBhLCmgV
+Swp1Lg==
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWA4AAABjb2xvcl9ieV9jbGFzc3EBiFgVAAAAc2hvd19hdHRyaWJ1dGVfbGFiZWxzcQKI
+WAsAAABhdXRvX2NvbW1pdHEDiFgLAAAAc2VsZWN0X3Jvd3NxBIhYEwAAAHNhdmVkV2lkZ2V0R2Vv
+bWV0cnlxBWNzaXAKX3VucGlja2xlX3R5cGUKcQZYDAAAAFB5UXQ0LlF0Q29yZXEHWAoAAABRQnl0
+ZUFycmF5cQhDLgHZ0MsAAQAAAAABmAAAAZQAAAWCAAADcAAAAZgAAAGqAAAFggAAA3AAAAAAAABx
+CYVxCodxC1JxDFgOAAAAZGlzdF9jb2xvcl9SR0JxDShL3EvcS9xL/3RxDlgVAAAAc2VsZWN0ZWRf
+c2NoZW1hX2luZGV4cQ9LAFgOAAAAY29sb3Jfc2V0dGluZ3NxEE5YEgAAAHNob3dfZGlzdHJpYnV0
+aW9uc3ERiXUu
+</properties>
+		<properties format="literal" node_id="3">{'savedWidgetGeometry': None, 'learner_name': 'Logistic Regression', 'penalty_type': 1, 'C_index': 61}</properties>
+		<properties format="literal" node_id="4">{'learner_name': 'Random Forest Learner', 'max_features': 5, 'max_leaf_nodes': 5, 'use_random_state': False, 'savedWidgetGeometry': None, 'index_output': 0, 'n_estimators': 10, 'use_max_leaf_nodes': True, 'random_state': 0, 'max_depth': 3, 'use_max_depth': False, 'use_max_features': False}</properties>
+		<properties format="literal" node_id="5">{'svmtype': 0, 'limit_iter': True, 'tol': 0.001, 'learner_name': 'SVM Learner', 'kernel_type': 0, 'degree': 3, 'savedWidgetGeometry': None, 'nu': 0.5, 'probability': False, 'max_iter': 100, 'coef0': 0.0, 'C': 1.0, 'gamma': 0.0}</properties>
+		<properties format="literal" node_id="6">{'append_probabilities': False, 'savedWidgetGeometry': None, 'autocommit': True, 'append_predictions': True, 'selected_quantity': 0, 'selected_learner': [0]}</properties>
+		<properties format="pickle" node_id="7">gAN9cQAoWA4AAABjb2xvcl9ieV9jbGFzc3EBiFgVAAAAc2hvd19hdHRyaWJ1dGVfbGFiZWxzcQKI
+WAsAAABhdXRvX2NvbW1pdHEDiFgLAAAAc2VsZWN0X3Jvd3NxBIhYEwAAAHNhdmVkV2lkZ2V0R2Vv
+bWV0cnlxBWNzaXAKX3VucGlja2xlX3R5cGUKcQZYDAAAAFB5UXQ0LlF0Q29yZXEHWAoAAABRQnl0
+ZUFycmF5cQhDLgHZ0MsAAQAAAAABmAAAAZQAAAWCAAADcAAAAZgAAAGqAAAFggAAA3AAAAAAAABx
+CYVxCodxC1JxDFgOAAAAZGlzdF9jb2xvcl9SR0JxDShL3EvcS9xL/3RxDlgVAAAAc2VsZWN0ZWRf
+c2NoZW1hX2luZGV4cQ9LAFgOAAAAY29sb3Jfc2V0dGluZ3NxEE5YEgAAAHNob3dfZGlzdHJpYnV0
+aW9uc3ERiXUu
+</properties>
 	</node_properties>
 </scheme>
