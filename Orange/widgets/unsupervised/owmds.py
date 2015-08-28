@@ -240,13 +240,13 @@ class OWMDS(widget.OWWidget):
                                 minValue=100, maxValue=255, step=100,
                                 callback=self._on_color_index_changed,
                                 createLabel=False))
-        form.addRow("Show similar pairs",
-                    gui.hSlider(
-                        gui.widgetBox(self.controlArea,
-                                      orientation="horizontal"),
-                        self, "connected_pairs", minValue=0, maxValue=20,
-                        createLabel=False,
-                        callback=self._on_connected_changed))
+        #form.addRow("Show similar pairs",
+        #            gui.hSlider(
+        #                gui.widgetBox(self.controlArea,
+        #                              orientation="horizontal"),
+        #                self, "connected_pairs", minValue=0, maxValue=20,
+        #                createLabel=False,
+        #                callback=self._on_connected_changed))
         box.layout().addLayout(form)
 
         gui.rubber(self.controlArea)
@@ -815,6 +815,8 @@ class OWMDS(widget.OWWidget):
 
         emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
 
+        # TODO: enable drawing similar pairs within reasonable time
+        self.connected_pairs = 0
         if self.connected_pairs:
             if self._similar_pairs is None:
                 # This code requires storing lower triangle of X (n x n / 2
