@@ -82,7 +82,8 @@ class OWDistributions(widget.OWWidget):
     inputs = [InputSignal("Data", Orange.data.Table, "set_data",
                           doc="Set the input data set")]
 
-    settingsHandler = settings.DomainContextHandler()
+    settingsHandler = settings.DomainContextHandler(
+        match_values=settings.DomainContextHandler.MATCH_VALUES_ALL)
     #: Selected variable index
     variable_idx = settings.ContextSetting(-1)
     #: Selected group variable
@@ -92,7 +93,7 @@ class OWDistributions(widget.OWWidget):
     disc_cont = settings.Setting(False)
 
     smoothing_index = settings.Setting(5)
-    show_prob = settings.Setting(False)
+    show_prob = settings.ContextSetting(0)
 
     want_graph = True
     ASH_HIST = 50
@@ -135,19 +136,21 @@ class OWDistributions(widget.OWWidget):
         self.l_smoothing_r = gui.widgetLabel(box2, "Precise")
 
         self.cb_disc_cont = gui.checkBox(
-            box, self, "disc_cont", "Bin continuous variables",
+            gui.indentedBox(box, sep=4),
+            self, "disc_cont", "Bin continuous variables",
             callback=self._on_groupvar_idx_changed)
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
         self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
              callback=self._on_groupvar_idx_changed, valueType=str)
+        box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
-            box, self, "relative_freq", "Show relative frequencies",
+            box2, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed)
-        gui.separator(box)
+        gui.separator(box2)
         self.cb_prob = gui.comboBox(
-            box, self, "show_prob", label="Show probabilities",
+            box2, self, "show_prob", label="Show probabilities",
             orientation="horizontal",
             callback=self._on_relative_freq_changed)
 
@@ -386,9 +389,8 @@ class OWDistributions(widget.OWWidget):
                 inter_X = numpy.array(numpy.linspace(all_X[0], all_X[-1], len(all_X)*2))
                 curvesinterp = [ numpy.interp(inter_X, X, Y) for (X,Y) in curvesline ]
                 sumprob = numpy.sum(curvesinterp, axis=0)
-                allcorrection = M_EST/sumw*numpy.sum(sumprob)/len(inter_X)
-                legal = sumprob * sumw * len(inter_X) > 10
-                print(sumprob * sumw, len(inter_X))
+                # allcorrection = M_EST/sumw*numpy.sum(sumprob)/len(inter_X)
+                legal = sumprob > 0.05 * numpy.max(sumprob)
 
                 i = len(curvesinterp) + 1
                 show_all = self.show_prob == i
@@ -436,6 +438,9 @@ class OWDistributions(widget.OWWidget):
 
                 if self.show_prob:
                     for ic, a in enumerate(dist):
+                        if self.show_prob - 1 != ic and \
+                                self.show_prob - 1 != len(dist):
+                            continue
                         position = -0.333 + ((ic+0.5)*0.666/len(dist))
                         if dsum < 1e-6:
                             continue
@@ -447,7 +452,9 @@ class OWDistributions(widget.OWWidget):
                         bar = pg.ErrorBarItem()
                         pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0)), 1)
                         pen.setCosmetic(True)
-                        bar.setData(x=[i+position], y=[prob], height=numpy.array([2 * ci]),
+                        bar.setData(x=[i+position], y=[prob],
+                                    bottom=min(numpy.array([ci]), prob),
+                                    top=min(numpy.array([ci]), 1 - prob),
                                      beam=numpy.array([0.05]),
                                      brush=QtGui.QColor(1), pen=pen)
                         mark.setData([i+position], [prob], antialias=True, symbol="o",
