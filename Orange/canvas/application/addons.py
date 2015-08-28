@@ -34,6 +34,13 @@ from ..gui.utils import message_warning, message_information, \
                         message_critical as message_error
 from ..help.manager import get_dist_meta, trim
 
+OFFICIAL_ADDONS = [
+    "Orange-Bioinformatics",
+    "Orange3-DataFusion",
+    "Orange3-Prototypes",
+    "Orange3-Text",
+]
+
 Installable = namedtuple(
     "Installable",
     ["name",
@@ -546,6 +553,12 @@ def list_pypi_addons():
     pypi = xmlrpc.client.ServerProxy("http://pypi.python.org/pypi")
     addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
 
+    for addon in OFFICIAL_ADDONS:
+        if not any(a for a in addons if a['name'] == addon):
+            versions = pypi.package_releases(addon)
+            if versions:
+                addons.append({"name": addon, "version": max(versions)})
+
     multicall = xmlrpc.client.MultiCall(pypi)
     for addon in addons:
         name, version = addon["name"], addon["version"]
@@ -556,6 +569,7 @@ def list_pypi_addons():
     release_data = results[::2]
     release_urls = results[1::2]
     packages = []
+
     for release, urls in zip(release_data, release_urls):
         urls = [ReleaseUrl(url["filename"], url["url"],
                            url["size"], url["python_version"],
