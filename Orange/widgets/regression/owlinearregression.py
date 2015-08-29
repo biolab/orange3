@@ -26,6 +26,7 @@ class OWLinearRegression(widget.OWWidget):
     reg_type = settings.Setting(OLS)
     ridgealpha = settings.Setting(1.0)
     lassoalpha = settings.Setting(1.0)
+    autosend = settings.Setting(True)
 
     want_main_area = False
 
@@ -46,37 +47,39 @@ class OWLinearRegression(widget.OWWidget):
         gui.appendRadioButton(box, "Ridge regression")
         ibox = gui.indentedBox(box)
         gui.doubleSpin(ibox, self, "ridgealpha",
-                       0.0, 1000.0, step=0.01, decimals=2, label="alpha:")
+                       0.0, 1000.0, step=0.01, decimals=2, label="alpha:",
+                       callback=self.commit)
         self.ridge_box = ibox
         gui.appendRadioButton(box, "Lasso regression")
         ibox = gui.indentedBox(box)
         gui.doubleSpin(ibox, self, "lassoalpha",
-                       0.0, 1000.0, step=0.01, label="alpha", decimals=2)
+                       0.0, 1000.0, step=0.01, label="alpha", decimals=2,
+                       callback=self.commit)
         self.lasso_box = ibox
 
-        gui.button(self.controlArea, self, "Apply", callback=self.apply,
-                   default=True)
+        gui.auto_commit(self.controlArea, self, "autosend", "Apply",
+                        checkbox_label="Apply on every change")
 
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
         self.ridge_box.setEnabled(self.reg_type == self.Ridge)
         self.lasso_box.setEnabled(self.reg_type == self.Lasso)
 
-        self.apply()
+        self.commit()
 
     def set_data(self, data):
         self.data = data
         if data is not None:
-            self.apply()
+            self.commit()
 
     def set_preprocessor(self, preproc):
         if preproc is None:
             self.preprocessors = None
         else:
             self.preprocessors = (preproc,)
-        self.apply()
+        self.commit()
 
-    def apply(self):
+    def commit(self):
         args = {"preprocessors": self.preprocessors}
         if self.reg_type == OWLinearRegression.OLS:
             learner = LinearRegressionLearner(**args)
@@ -86,8 +89,6 @@ class OWLinearRegression(widget.OWWidget):
         elif self.reg_type == OWLinearRegression.Lasso:
             learner = RidgeRegressionLearner(
                 alpha=self.lassoalpha, **args)
-        else:
-            assert False
 
         learner.name = self.learner_name
         predictor = None
@@ -106,6 +107,7 @@ class OWLinearRegression(widget.OWWidget):
     def _reg_type_changed(self):
         self.ridge_box.setEnabled(self.reg_type == self.Ridge)
         self.lasso_box.setEnabled(self.reg_type == self.Lasso)
+        self.commit()
 
 
 if __name__ == "__main__":
