@@ -34,6 +34,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.domain = None
         self.classifier = None
         self.dataset = None
+        self.clf_dataset = None
 
         self.scene = TreeGraphicsScene(self)
         self.scene_view = TreeGraphicsView(self.scene)
@@ -165,6 +166,11 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
             self.tree = clf.skl_model.tree_
             self.domain = clf.domain
             self.dataset = getattr(clf, "instances", None)
+            if self.dataset is not None and self.dataset.domain != self.domain:
+                self.clf_dataset = \
+                    Table.from_table(self.classifier.domain, self.dataset)
+            else:
+                self.clf_dataset = self.dataset
             self.target_combo.clear()
             self.target_combo.addItem("None")
             self.target_combo.addItems(self.domain.class_vars[0].values)
@@ -210,10 +216,6 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     def update_selection(self):
         if self.dataset is None or self.classifier is None or self.tree is None:
             return
-        data = self.dataset
-        if data.domain != self.classifier.domain:
-            self.dataset = data.from_table(self.classifier.domain, data)
-
         items = [item for item in self.scene.selectedItems()
                  if isinstance(item, ClassificationTreeNode)]
 
@@ -227,7 +229,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
 
         if len(selected_leaves) > 0:
             ind = numpy.searchsorted(all_leaves, selected_leaves, side="left")
-            leaf_samples = _assign_samples(self.tree, self.dataset.X)
+            leaf_samples = _assign_samples(self.tree, self.clf_dataset.X)
             leaf_samples = [leaf_samples[i] for i in ind]
             indices = numpy.hstack(leaf_samples)
         else:
