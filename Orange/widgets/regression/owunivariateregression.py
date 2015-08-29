@@ -51,21 +51,29 @@ class OWUnivariateRegression(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Learner/Predictor Name")
         gui.lineEdit(box, self, "learner_name")
 
-        box = gui.widgetBox(self.controlArea, "Input")
+        box = gui.widgetBox(self.controlArea, "Variables")
 
         self.x_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesX = gui.comboBox(
             box, self, value='x_var_index',
+            label="Input ", orientation="horizontal",
             callback=self.apply)
+        self.comboBoxAttributesX.setSizePolicy(
+            QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         self.comboBoxAttributesX.setModel(self.x_var_model)
-
-        gui.doubleSpin(box, self, "polynomialexpansion", 0, 10,
+        gui.doubleSpin(
+            gui.indentedBox(box),
+            self, "polynomialexpansion", 0, 10,
             label="Polynomial expansion:", callback=self.apply)
 
+        gui.separator(box, height=8)
         self.y_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesY = gui.comboBox(
-            self.controlArea, self, value='y_var_index', box='Target',
+            box, self, value='y_var_index',
+            label='Target', orientation="horizontal",
             callback=self.apply)
+        self.comboBoxAttributesY.setSizePolicy(
+            QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         self.comboBoxAttributesY.setModel(self.y_var_model)
 
         gui.rubber(self.controlArea)
