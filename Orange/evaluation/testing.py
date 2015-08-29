@@ -62,7 +62,8 @@ class Results:
     def __init__(self, data=None, nmethods=0, nrows=None, nclasses=None,
                  store_data=False, store_models=False, domain=None,
                  actual=None, row_indices=None,
-                 predicted=None, probabilities=None):
+                 predicted=None, probabilities=None,
+                 preprocessor=None, callback=None):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -99,6 +100,8 @@ class Results:
         self.models = None
         self.folds = None
         dtype = np.float32
+        self.preprocessor = preprocessor
+        self.callback = callback
 
         def set_or_raise(value, exp_values, msg):
             for exp_value in exp_values:
@@ -196,9 +199,10 @@ class CrossValidation(Results):
 
     """
     def __init__(self, data, learners, k=10, random_state=0, store_data=False,
-                 store_models=False):
+                 store_models=False, preprocessor=None, callback=None):
         super().__init__(data, len(learners), store_data=store_data,
-                         store_models=store_models)
+                         store_models=store_models, preprocessor=preprocessor,
+                         callback=callback)
         self.k = k
         self.random_state = random_state
         Y = data.Y.copy().flatten()
@@ -211,13 +215,14 @@ class CrossValidation(Results):
                 len(Y), self.k, shuffle=True, random_state=self.random_state
             )
 
-
         self.folds = []
         if self.store_models:
             self.models = []
         ptr = 0
         for train, test in indices:
             train_data, test_data = data[train], data[test]
+            if self.preprocessor is not None:
+                train_data = self.preprocessor(train_data)
             if len(test_data) == 0:
                 raise RuntimeError("One of the test folds is empty.")
             fold_slice = slice(ptr, ptr + len(test))
@@ -231,7 +236,6 @@ class CrossValidation(Results):
                 model = learner(train_data)
                 if self.store_models:
                     fold_models.append(model)
-
                 if data.domain.has_discrete_class:
                     values, probs = model(test_data, model.ValueProbs)
                     self.predicted[i][fold_slice] = values
@@ -246,10 +250,11 @@ class CrossValidation(Results):
 class LeaveOneOut(Results):
     """Leave-one-out testing"""
 
-    def __init__(self, data, learners, store_data=False, store_models=False):
+    def __init__(self, data, learners, store_data=False, store_models=False,
+                 preprocessor=None, callback=None):
         super().__init__(data, len(learners), store_data=store_data,
-                         store_models=store_models)
-
+                         store_models=store_models, preprocessor=preprocessor,
+                         callback=callback)
         domain = data.domain
         X = data.X.copy()
         Y = data._Y.copy()
@@ -276,6 +281,8 @@ class LeaveOneOut(Results):
                 W[[0, test_idx]] = W[[test_idx, 0]]
             test_data = Table.from_numpy(domain, teX, teY, te_metas, teW)
             train_data = Table.from_numpy(domain, trX, trY, tr_metas, trW)
+            if self.preprocessor is not None:
+                train_data = self.preprocessor(train_data)
             if self.store_models:
                 fold_models = []
                 self.models.append(fold_models)
@@ -296,16 +303,22 @@ class LeaveOneOut(Results):
 class TestOnTrainingData(Results):
     """Trains and test on the same data"""
 
-    def __init__(self, data, learners, store_data=False, store_models=False):
+    def __init__(self, data, learners, store_data=False, store_models=False,
+                 preprocessor=None, callback=None):
         super().__init__(data, len(learners), store_data=store_data,
-                         store_models=store_models)
+                         store_models=store_models, preprocessor=preprocessor,
+                         callback=callback)
         self.row_indices = np.arange(len(data))
         if self.store_models:
             models = []
             self.models = [models]
         self.actual = data.Y.flatten()
+        if self.preprocessor is not None:
+            train_data = self.preprocessor(data)
+        else:
+            train_data = data
         for i, learner in enumerate(learners):
-            model = learner(data)
+            model = learner(train_data)
             if self.store_models:
                 models.append(model)
 
@@ -320,9 +333,11 @@ class TestOnTrainingData(Results):
 
 class Bootstrap(Results):
     def __init__(self, data, learners, n_resamples=10, p=0.75, random_state=0,
-                 store_data=False, store_models=False):
+                 store_data=False, store_models=False, preprocessor=None,
+                 callback=None):
         super().__init__(data, len(learners), store_data=store_data,
-                         store_models=store_models)
+                         store_models=store_models, preprocessor=preprocessor,
+                         callback=callback)
         self.store_models = store_models
         self.n_resamples = n_resamples
         self.p = p
@@ -344,6 +359,8 @@ class Bootstrap(Results):
         fold_start = 0
         for train, test in indices:
             train_data, test_data = data[train], data[test]
+            if preprocessor is not None:
+                train_data = self.preprocessor(train_data)
             self.folds.append(slice(fold_start, fold_start + len(test)))
             row_indices.append(test)
             actual.append(test_data.Y.flatten())
@@ -387,15 +404,18 @@ class TestOnTestData(Results):
     Test on a separate test data set.
     """
     def __init__(self, train_data, test_data, learners, store_data=False,
-                 store_models=False):
+                 store_models=False, preprocessor=None, callback=None):
         super().__init__(test_data, len(learners), store_data=store_data,
-                         store_models=store_models)
+                         store_models=store_models, preprocessor=preprocessor,
+                         callback=callback)
         if self.store_models:
             self.models = []
 
         self.row_indices = np.arange(len(test_data))
         self.actual = test_data.Y.flatten()
 
+        if self.preprocessor is not None:
+            train_data = self.preprocessor(train_data)
         for i, learner in enumerate(learners):
             model = learner(train_data)
             if train_data.domain.has_discrete_class:

@@ -346,17 +346,12 @@ class OWTestLearners(widget.OWWidget):
         Set the input preprocessor to apply on the training data.
         """
         self.preprocessor = preproc
-        self.train_data = None
         self._invalidate()
 
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         if self.train_data is None:
-            if self.preprocessor and self.orig_train_data:
-                self.train_data = self.preprocessor(self.orig_train_data)
-            else:
-                self.train_data = self.orig_train_data
-
+            self.train_data = self.orig_train_data
             self._update_class_selection()
 
         self._update_header()
@@ -408,25 +403,34 @@ class OWTestLearners(widget.OWWidget):
         if self.resampling == OWTestLearners.KFold:
             def evaluate(learner, data=self.train_data, k=self.k_folds):
                 return Orange.evaluation.CrossValidation(
-                    data, [learner], k=k, random_state=rstate, store_data=True)
+                    data, [learner], k=k, random_state=rstate, store_data=True,
+                    preprocessor=self.preprocessor)
         elif self.resampling == OWTestLearners.LeaveOneOut:
             def evaluate(learner, data=self.train_data):
                 return Orange.evaluation.LeaveOneOut(
-                    data, [learner], store_data=True)
+                    data, [learner], store_data=True,
+                    preprocessor=self.preprocessor
+                )
         elif self.resampling == OWTestLearners.Bootstrap:
             def evaluate(learner, data=self.train_data,
                          n_resamples=self.n_repeat, p=self.sample_p / 100.0):
                 return Orange.evaluation.Bootstrap(
                     data, [learner], n_resamples=n_resamples, p=p,
-                    random_state=rstate, store_data=True)
+                    random_state=rstate, store_data=True,
+                    preprocessor=self.preprocessor
+                )
         elif self.resampling == OWTestLearners.TestOnTrain:
             def evaluate(learner, data=self.train_data):
                 return Orange.evaluation.TestOnTrainingData(
-                    data, [learner], store_data=True)
+                    data, [learner], store_data=True,
+                    preprocessor=self.preprocessor
+                )
         elif self.resampling == OWTestLearners.TestOnTest:
             def evaluate(learner, train=self.train_data, test=self.test_data):
                 return Orange.evaluation.TestOnTestData(
-                    train, test, [learner], store_data=True)
+                    train, test, [learner], store_data=True,
+                    preprocessor=self.preprocessor
+                )
         else:
             assert False
 
@@ -464,8 +468,7 @@ class OWTestLearners(widget.OWWidget):
             if slot.learner is learner:
                 self.learners[key] = slot._replace(results=result, stats=stats)
 
-        self.progressBarSet(100 * step / len(self.learners),
-                            processEvents=False)
+        self.progressBarSet(100 * step / len(self.learners))
 
     def __on_finished(self):
         # The update coroutine has finished normally, by
