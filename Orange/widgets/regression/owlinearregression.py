@@ -45,11 +45,13 @@ class OWLinearRegression(widget.OWWidget):
         gui.appendRadioButton(box, "Ordinary linear regression")
         gui.appendRadioButton(box, "Ridge regression")
         ibox = gui.indentedBox(box)
-        gui.doubleSpin(ibox, self, "ridgealpha", 0.0, 1000.0, label="alpha:")
+        gui.doubleSpin(ibox, self, "ridgealpha",
+                       0.0, 1000.0, step=0.01, decimals=2, label="alpha:")
         self.ridge_box = ibox
         gui.appendRadioButton(box, "Lasso regression")
         ibox = gui.indentedBox(box)
-        gui.doubleSpin(ibox, self, "lassoalpha", 0.0, 1000.0, label="alpha")
+        gui.doubleSpin(ibox, self, "lassoalpha",
+                       0.0, 1000.0, step=0.01, label="alpha", decimals=2)
         self.lasso_box = ibox
 
         gui.button(self.controlArea, self, "Apply", callback=self.apply,
