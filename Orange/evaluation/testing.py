@@ -93,6 +93,11 @@ class Results:
         :param store_models: A flag that tells whether to store the models;
             this argument can be given only as keyword argument
         :type store_models: bool
+        :param preprocessor: Preprocessor for training data
+        :type preprocessor: Orange.preprocess.Preprocess
+        :param callback: Function for reporting back the progress as a value
+            between 0 and 1
+        :type callback: callable
         """
         self.store_data = store_data
         self.store_models = store_models
@@ -140,6 +145,9 @@ class Results:
         except AttributeError:  # no data or no Y or not numpy
             pass
 
+        if nmethods is not None:
+            self.failed = [False] * nmethods
+
         if actual is not None:
             self.actual = actual
         elif nrows is not None:
@@ -161,6 +169,19 @@ class Results:
                 nclasses is not None:
             self.probabilities = \
                 np.empty((nmethods, nrows, nclasses), dtype=np.float32)
+
+    def train_if_succ(self, learner_index, learner, data):
+        if self.failed[learner_index]:
+            return False
+        try:
+            return learner(data)
+        except Exception as ex:
+            self.failed[learner_index] = ex
+            return False
+
+    def call_callback(self, progress):
+        if self.callback:
+            self.callback(progress)
 
     def get_fold(self, fold):
         results = Results()
@@ -219,7 +240,9 @@ class CrossValidation(Results):
         if self.store_models:
             self.models = []
         ptr = 0
-        for train, test in indices:
+        nmethods = len(learners)
+        n_callbacks = nmethods * self.k
+        for fold_idx, (train, test) in enumerate(indices):
             train_data, test_data = data[train], data[test]
             if self.preprocessor is not None:
                 train_data = self.preprocessor(train_data)
@@ -230,12 +253,15 @@ class CrossValidation(Results):
             self.row_indices[fold_slice] = test
             self.actual[fold_slice] = test_data.Y.flatten()
             if self.store_models:
-                fold_models = []
+                fold_models = [None] * nmethods
                 self.models.append(fold_models)
             for i, learner in enumerate(learners):
-                model = learner(train_data)
+                model = self.train_if_succ(i, learner, train_data)
+                self.call_callback((fold_idx * nmethods + i) / n_callbacks)
+                if not model:
+                    continue
                 if self.store_models:
-                    fold_models.append(model)
+                    fold_models[i] = model
                 if data.domain.has_discrete_class:
                     values, probs = model(test_data, model.ValueProbs)
                     self.predicted[i][fold_slice] = values
@@ -243,8 +269,8 @@ class CrossValidation(Results):
                 elif data.domain.has_continuous_class:
                     values = model(test_data, model.Value)
                     self.predicted[i][fold_slice] = values
-
             ptr += len(test)
+        self.call_callback(1)
 
 
 class LeaveOneOut(Results):
@@ -273,6 +299,8 @@ class LeaveOneOut(Results):
         if self.store_models:
             self.models = []
         self.actual = Y.flatten()
+        nmethods = len(learners)
+        n_callbacks = nmethods * len(data)
         for test_idx in self.row_indices:
             X[[0, test_idx]] = X[[test_idx, 0]]
             Y[[0, test_idx]] = Y[[test_idx, 0]]
@@ -284,13 +312,15 @@ class LeaveOneOut(Results):
             if self.preprocessor is not None:
                 train_data = self.preprocessor(train_data)
             if self.store_models:
-                fold_models = []
+                fold_models = [None] * nmethods
                 self.models.append(fold_models)
             for i, learner in enumerate(learners):
-                model = learner(train_data)
+                model = self.train_if_succ(i, learner, train_data)
+                self.call_callback((test_idx * nmethods + i) / n_callbacks)
+                if not model:
+                    continue
                 if self.store_models:
-                    fold_models.append(model)
-
+                    fold_models[i] = model
                 if data.domain.has_discrete_class:
                     values, probs = model(test_data, model.ValueProbs)
                     self.predicted[i][test_idx] = values
@@ -309,8 +339,9 @@ class TestOnTrainingData(Results):
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback)
         self.row_indices = np.arange(len(data))
+        nmethods = len(learners)
         if self.store_models:
-            models = []
+            models = [None] * nmethods
             self.models = [models]
         self.actual = data.Y.flatten()
         if self.preprocessor is not None:
@@ -318,10 +349,12 @@ class TestOnTrainingData(Results):
         else:
             train_data = data
         for i, learner in enumerate(learners):
-            model = learner(train_data)
+            model = self.train_if_succ(i, learner, train_data)
+            self.call_callback(i / nmethods)
+            if not model:
+                continue
             if self.store_models:
-                models.append(model)
-
+                models[i] = model
             if data.domain.has_discrete_class:
                 values, probs = model(data, model.ValueProbs)
                 self.predicted[i] = values
@@ -357,7 +390,9 @@ class Bootstrap(Results):
         predicted = [[] for _ in learners]
         probabilities = [[] for _ in learners]
         fold_start = 0
-        for train, test in indices:
+        nmethods = len(learners)
+        n_callbacks = self.n_resamples * nmethods
+        for samp_idx, (train, test) in enumerate(indices):
             train_data, test_data = data[train], data[test]
             if preprocessor is not None:
                 train_data = self.preprocessor(train_data)
@@ -365,21 +400,28 @@ class Bootstrap(Results):
             row_indices.append(test)
             actual.append(test_data.Y.flatten())
             if self.store_models:
-                fold_models = []
+                fold_models = [None] * nmethods
                 self.models.append(fold_models)
 
             for i, learner in enumerate(learners):
-                model = learner(train_data)
-                if self.store_models:
-                    fold_models.append(model)
-
-                if data.domain.has_discrete_class:
-                    values, probs = model(test_data, model.ValueProbs)
-                    predicted[i].append(values)
-                    probabilities[i].append(probs)
-                elif data.domain.has_continuous_class:
-                    values = model(test_data, model.Value)
-                    predicted[i].append(values)
+                model = self.train_if_succ(i, learner, train_data)
+                self.call_callback((samp_idx * nmethods + i ) / n_callbacks)
+                if model:
+                    if self.store_models:
+                        fold_models[i] = model
+                    if data.domain.has_discrete_class:
+                        values, probs = model(test_data, model.ValueProbs)
+                        predicted[i].append(values)
+                        probabilities[i].append(probs)
+                    elif data.domain.has_continuous_class:
+                        values = model(test_data, model.Value)
+                        predicted[i].append(values)
+                else:
+                    predicted[i].append(np.zeros((len(test_data),)))
+                    if data.domain.has_discrete_class:
+                        probabilities[i].append(
+                            np.zeros((len(test_data),
+                                      len(data.domain.class_var.values))))
 
             fold_start += len(test)
 
@@ -408,8 +450,9 @@ class TestOnTestData(Results):
         super().__init__(test_data, len(learners), store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback)
+        nmethods = len(learners)
         if self.store_models:
-            self.models = []
+            self.models = [None] * nmethods
 
         self.row_indices = np.arange(len(test_data))
         self.actual = test_data.Y.flatten()
@@ -417,7 +460,10 @@ class TestOnTestData(Results):
         if self.preprocessor is not None:
             train_data = self.preprocessor(train_data)
         for i, learner in enumerate(learners):
-            model = learner(train_data)
+            model = self.train_if_succ(i, learner, train_data)
+            self.call_callback(i / nmethods)
+            if not model:
+                continue
             if train_data.domain.has_discrete_class:
                 values, probs = model(test_data, model.ValueProbs)
                 self.predicted[i] = values
@@ -425,9 +471,8 @@ class TestOnTestData(Results):
             elif train_data.domain.has_continuous_class:
                 values = model(test_data, model.Value)
                 self.predicted[i] = values
-
             if self.store_models:
-                self.models.append(model)
+                self.models[i] = model
 
         self.nrows = len(test_data)
         self.folds = [slice(0, len(test_data))]
