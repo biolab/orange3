@@ -328,6 +328,7 @@ class LeaveOneOut(Results):
                 elif data.domain.has_continuous_class:
                     values = model(test_data, model.Value)
                     self.predicted[i][test_idx] = values
+        self.call_callback(1)
 
 
 class TestOnTrainingData(Results):
@@ -362,6 +363,7 @@ class TestOnTrainingData(Results):
             elif data.domain.has_continuous_class:
                 values = model(data, model.Value)
                 self.predicted[i] = values
+        self.call_callback(1)
 
 
 class Bootstrap(Results):
@@ -439,6 +441,7 @@ class Bootstrap(Results):
         self.predicted = predicted.reshape(nmodels, nrows)
         if data.domain.has_discrete_class:
             self.probabilities = probabilities
+        self.call_callback(1)
 
 
 class TestOnTestData(Results):
@@ -476,6 +479,7 @@ class TestOnTestData(Results):
 
         self.nrows = len(test_data)
         self.folds = [slice(0, len(test_data))]
+        self.call_callback(1)
 
 
 def sample(table, n=0.7, stratified=False, replace=False,
