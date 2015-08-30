@@ -26,7 +26,49 @@ class TestingTestCase(unittest.TestCase):
                           learners=[NaiveBayesLearner()])
 
 
-class CrossValidationTestCase(unittest.TestCase):
+# noinspection PyUnresolvedReferences
+class CommonSamplingTests:
+    def run_test_failed(self, method, succ_calls):
+        # Can't use mocking helpers here (wrong result type for Majority,
+        # exception caught for fails)
+        def major(*args):
+            nonlocal major_call
+            major_call += 1
+            return MajorityLearner()(*args)
+
+        def fails(_):
+            nonlocal fail_calls
+            fail_calls += 1
+            raise SystemError("failing learner")
+
+        major_call = 0
+        fail_calls = 0
+        res = method(random_data(50, 4), [major, fails, major])
+        self.assertFalse(res.failed[0])
+        self.assertIsInstance(res.failed[1], Exception)
+        self.assertFalse(res.failed[2])
+        self.assertEqual(major_call, succ_calls)
+        self.assertEqual(fail_calls, 1)
+
+    def run_test_callback(self, method, expected_progresses):
+        def record_progress(p):
+            progress.append(p)
+        progress = []
+        method(random_data(50, 4), [MajorityLearner(), MajorityLearner()],
+               callback=record_progress)
+        np.testing.assert_almost_equal(np.array(progress), expected_progresses)
+
+    def run_test_preprocessor(self, method, expected_sizes):
+        def preprocessor(data):
+            data_sizes.append(len(data))
+            return data
+        data_sizes = []
+        method(Table('iris'), [MajorityLearner(), MajorityLearner()],
+               preprocessor=preprocessor)
+        self.assertEqual(data_sizes, expected_sizes)
+
+
+class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
     def test_results(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
@@ -132,8 +174,17 @@ class CrossValidationTestCase(unittest.TestCase):
         res = CrossValidation(data, [MajorityLearner()], k=3)
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
+    def test_failed(self):
+        self.run_test_failed(CrossValidation, 20)
 
-class LeaveOneOutTestCase(unittest.TestCase):
+    def test_callback(self):
+        self.run_test_callback(CrossValidation, np.arange(0, 1.05, 0.05))
+
+    def test_preprocessor(self):
+        self.run_test_preprocessor(CrossValidation, [135] * 10)
+
+
+class LeaveOneOutTestCase(unittest.TestCase, CommonSamplingTests):
     def test_results(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
@@ -230,9 +281,17 @@ class LeaveOneOutTestCase(unittest.TestCase):
         np.testing.assert_equal(res.predicted[0],
                                 1 - data.Y[res.row_indices].flatten())
 
+    def test_failed(self):
+        self.run_test_failed(LeaveOneOut, 100)
+
+    def test_callback(self):
+        self.run_test_callback(LeaveOneOut, np.arange(0, 1.005, 0.01))
+
+    def test_preprocessor(self):
+        self.run_test_preprocessor(LeaveOneOut, [149] * 150)
 
 
-class TestOnTrainingTestCase(unittest.TestCase):
+class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
     def test_results(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
@@ -316,6 +375,15 @@ class TestOnTrainingTestCase(unittest.TestCase):
         data = Table(x, y)
         res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
+
+    def test_failed(self):
+        self.run_test_failed(TestOnTrainingData, 2)
+
+    def test_callback(self):
+        self.run_test_callback(TestOnTrainingData, np.array([0, 0.5, 1]))
+
+    def test_preprocessor(self):
+        self.run_test_preprocessor(TestOnTrainingData, [150])
 
 
 class TestTrainTestSplit(unittest.TestCase):
