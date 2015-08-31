@@ -3,8 +3,9 @@ from PyQt4.QtGui import QLayout
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
-                                      LinearRegressionLearner)
+from Orange.regression.linear import (
+    LassoRegressionLearner, LinearModel, LinearRegressionLearner,
+    RidgeRegressionLearner)
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -106,7 +107,7 @@ class OWLinearRegression(widget.OWWidget):
         elif self.reg_type == OWLinearRegression.Ridge:
             learner = RidgeRegressionLearner(alpha=alpha, **args)
         elif self.reg_type == OWLinearRegression.Lasso:
-            learner = RidgeRegressionLearner(alpha=alpha, **args)
+            learner = LassoRegressionLearner(alpha=alpha, **args)
 
         learner.name = self.learner_name
         predictor = None
