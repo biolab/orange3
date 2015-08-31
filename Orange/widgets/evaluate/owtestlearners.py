@@ -11,8 +11,7 @@ from PyQt4.QtGui import (
     QTreeView, QStandardItemModel, QStandardItem, QHeaderView,
     QStyledItemDelegate
 )
-from PyQt4.QtCore import Qt, QSize, QObject, QEvent, QCoreApplication
-from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import Qt, QSize
 
 import Orange.data
 import Orange.evaluation
@@ -62,84 +61,6 @@ class ItemDelegate(QStyledItemDelegate):
         return QSize(size.width(), size.height() + 6)
 
 
-class AsyncUpdateLoop(QObject):
-    Next = QEvent.registerEventType()
-
-    #: State flags
-    Idle, Running, Cancelled, Finished = 0, 1, 2, 3
-    yielded = Signal(object)
-    finished = Signal()
-
-    returned = Signal(object)
-    raised = Signal(object)
-    cancelled = Signal()
-
-    def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
-        self.__update_loop = None
-        self.__next_pending = False
-        self.__in_next = False
-        self.__state = AsyncUpdateLoop.Idle
-
-    def set_update_loop(self, loop):
-        if self.__update_loop is not None:
-            self.__update_loop.close()
-            self.__update_loop = None
-            self.__state = AsyncUpdateLoop.Cancelled
-
-            self.cancelled.emit()
-            self.finished.emit()
-
-        if loop is not None:
-            self.__update_loop = loop
-            self.__state = AsyncUpdateLoop.Running
-            self.__schedule_next()
-
-    def cancel(self):
-        self.set_update_loop(None)
-
-    def state(self):
-        return self.__state
-
-    def __schedule_next(self):
-        if not self.__next_pending:
-            self.__next_pending = True
-            QCoreApplication.postEvent(
-                self, QEvent(AsyncUpdateLoop.Next), Qt.LowEventPriority)
-
-    def __next(self):
-        if self.__update_loop is not None:
-            try:
-                rval = next(self.__update_loop)
-            except StopIteration as stop:
-                self.__state = AsyncUpdateLoop.Finished
-                self.returned.emit(stop.value)
-                self.finished.emit()
-                self.__update_loop = None
-            except BaseException as er:
-                self.__state = AsyncUpdateLoop.Finished
-                self.raised.emit(er)
-                self.finished.emit()
-                self.__update_loop = None
-            else:
-                self.yielded.emit(rval)
-                self.__schedule_next()
-
-    def customEvent(self, event):
-        if event.type() == AsyncUpdateLoop.Next:
-            assert self.__next_pending
-            self.__next_pending = False
-            if not self.__in_next:
-                self.__in_next = True
-                try:
-                    self.__next()
-                finally:
-                    self.__in_next = False
-            else:
-                # warn
-                self.__schedule_next()
-
-
 class Try(abc.ABC):
     # Try to walk in a Turing tar pit.
 
@@ -163,7 +84,7 @@ class Try(abc.ABC):
             return Try(lambda: fn(self.value))
 
     class Fail:
-        __slots__ = ("__exception")
+        __slots__ = ("__exception", )
 #         __bool__ = lambda self: False
         success = property(lambda self: False)
         exception = property(lambda self: self.__exception)
@@ -172,7 +93,7 @@ class Try(abc.ABC):
             self.__exception = exception
 
         def __getnewargs__(self):
-            return (self.exception,)
+            return (self.exception, )
 
         def __repr__(self):
             return "{}({!r})".format(self.__class__.__qualname__,
@@ -234,8 +155,7 @@ class OWTestLearners(widget.OWWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.orig_train_data = None
-        self.train_data = None
+        self.data = None
         self.test_data = None
         self.preprocessor = None
 
@@ -292,11 +212,6 @@ class OWTestLearners(widget.OWWidget):
         box = gui.widgetBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.view)
 
-        self.__loop = AsyncUpdateLoop(parent=self)
-        self.__loop.yielded.connect(self.__add_result)
-        self.__loop.finished.connect(self.__on_finished)
-        self.__loop.returned.connect(self.__on_returned)
-
     def sizeHint(self):
         return QSize(780, 1)
 
@@ -321,8 +236,7 @@ class OWTestLearners(widget.OWWidget):
             self.error(0, "Train data input requires a class variable")
             data = None
 
-        self.orig_train_data = data
-        self.train_data = None
+        self.data = data
         self.closeContext()
         if data is not None:
             self.openContext(data.domain.class_var)
@@ -346,19 +260,11 @@ class OWTestLearners(widget.OWWidget):
         Set the input preprocessor to apply on the training data.
         """
         self.preprocessor = preproc
-        self.train_data = None
         self._invalidate()
 
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
-        if self.train_data is None:
-            if self.preprocessor and self.orig_train_data:
-                self.train_data = self.preprocessor(self.orig_train_data)
-            else:
-                self.train_data = self.orig_train_data
-
-            self._update_class_selection()
-
+        self._update_class_selection()
         self._update_header()
         self.apply()
 
@@ -380,16 +286,16 @@ class OWTestLearners(widget.OWWidget):
         self.warning([1, 2])
         self.error(2)
 
-        if self.train_data is None:
+        if self.data is None:
             return
+
+        class_var = self.data.domain.class_var
 
         if self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
                 self.warning(2, "Missing separate test data input")
                 return
-
-            elif self.test_data.domain.class_var != \
-                    self.train_data.domain.class_var:
+            elif self.test_data.domain.class_var != class_var:
                 self.error(2, ("Inconsistent class variable between test " +
                                "and train data sets"))
                 return
@@ -405,84 +311,67 @@ class OWTestLearners(widget.OWWidget):
                             "Select 'Test on test data' to use it.")
 
         rstate = 42
+        def update_progress(finished):
+            self.progressBarSet(100 * finished)
+        common_args = dict(
+            store_data=True,
+            preprocessor=self.preprocessor,
+            callback=update_progress)
+        self.setStatusMessage("Running")
+        self.progressBarInit()
         if self.resampling == OWTestLearners.KFold:
-            def evaluate(learner, data=self.train_data, k=self.k_folds):
-                return Orange.evaluation.CrossValidation(
-                    data, [learner], k=k, random_state=rstate, store_data=True)
+            results = Orange.evaluation.CrossValidation(
+                self.data, learners, k=self.k_folds, random_state=rstate,
+                **common_args)
         elif self.resampling == OWTestLearners.LeaveOneOut:
-            def evaluate(learner, data=self.train_data):
-                return Orange.evaluation.LeaveOneOut(
-                    data, [learner], store_data=True)
+            results = Orange.evaluation.LeaveOneOut(
+                self.data, learners, **common_args)
         elif self.resampling == OWTestLearners.Bootstrap:
-            def evaluate(learner, data=self.train_data,
-                         n_resamples=self.n_repeat, p=self.sample_p / 100.0):
-                return Orange.evaluation.Bootstrap(
-                    data, [learner], n_resamples=n_resamples, p=p,
-                    random_state=rstate, store_data=True)
+            results = Orange.evaluation.Bootstrap(
+                self.data, learners, n_resamples=self.n_repeat,
+                p=self.sample_p / 100, random_state=rstate,
+                **common_args)
         elif self.resampling == OWTestLearners.TestOnTrain:
-            def evaluate(learner, data=self.train_data):
-                return Orange.evaluation.TestOnTrainingData(
-                    data, [learner], store_data=True)
+            results = Orange.evaluation.TestOnTrainingData(
+                self.data, learners, **common_args)
         elif self.resampling == OWTestLearners.TestOnTest:
-            def evaluate(learner, train=self.train_data, test=self.test_data):
-                return Orange.evaluation.TestOnTestData(
-                    train, test, [learner], store_data=True)
+            results = Orange.evaluation.TestOnTestData(
+                self.data, self.test_data, learners, **common_args)
         else:
             assert False
 
-        def update_loop(learners):
-            for i, learner in enumerate(learners):
-                yield (i, learner, Try(lambda: evaluate(learner)))
-
-        self.setStatusMessage("Running")
-        self.progressBarInit(processEvents=None)
-        self.__loop.set_update_loop(update_loop(learners))
-
-    def __add_result(self, r):
-        # add evaluation results for a single learner.
-        # :type r: (int, Learner, Try[Results])
-        step, learner, result = r
-
-        if not result.success:
-            sys.excepthook(type(result.exception), result.exception, None)
-            # Strip the captured traceback from the exception.
-            result = Try.Fail(type(result.exception)(*result.exception.args))
-
-        class_var = self.train_data.domain.class_var
-
-        if result.success and class_var.is_discrete:
-            stats = [Try(lambda: score(result.value))
-                     for score in classification_stats.scores]
-        elif result.success:
-            assert class_var.is_continuous
-            stats = [Try(lambda: score(result.value))
-                     for score in regression_stats.scores]
-        else:
+        learner_key = {slot.learner: key for key, slot in self.learners.items()}
+        for learner, result in zip(learners, split_by_model(results)):
             stats = None
+            if class_var.is_discrete:
+                scorers = classification_stats.scores
+            elif class_var.is_continuous:
+                scorers = regression_stats.scores
+            else:
+                scorers = None
+            if scorers:
+                ex = result.failed[0]
+                if ex:
+                    stats = [Try.Fail(ex)] * len(scorers)
+                    result = Try.Fail(ex)
+                else:
+                    stats = [Try(lambda: score(result)) for score in scorers]
+                    result = Try.Success(result)
+            key = learner_key[learner]
+            self.learners[key] = \
+                self.learners[key]._replace(results=result, stats=stats)
 
-        for key, slot in list(self.learners.items()):
-            if slot.learner is learner:
-                self.learners[key] = slot._replace(results=result, stats=stats)
-
-        self.progressBarSet(100 * step / len(self.learners),
-                            processEvents=False)
-
-    def __on_finished(self):
-        # The update coroutine has finished normally, by
-        # error or by interruption.
         self.setStatusMessage("")
-        self.progressBarFinished(processEvents=None)
+        self.progressBarFinished()
 
-    def __on_returned(self, rval):
-        # The update coroutine has returned in a normal fashion.
         self._update_stats_model()
         self.commit()
 
     def _update_header(self):
         # Set the correct horizontal header labels on the results_model.
         headers = ["Method"]
-        if self.train_data is not None:
-            if self.train_data.domain.has_discrete_class:
+        if self.data is not None:
+            if self.data.domain.has_discrete_class:
                 headers.extend(classification_stats.headers)
             else:
                 headers.extend(regression_stats.headers)
@@ -503,11 +392,11 @@ class OWTestLearners(widget.OWWidget):
         for r in reversed(range(model.rowCount())):
             model.takeRow(r)
 
-        if self.train_data is None:
+        if self.data is None:
             return
 
         target_index = None
-        class_var = self.train_data.domain.class_var
+        class_var = self.data.domain.class_var
         if class_var.is_discrete and \
                 self.class_selection != self.TARGET_AVERAGE:
             target_index = class_var.values.index(self.class_selection)
@@ -549,12 +438,12 @@ class OWTestLearners(widget.OWWidget):
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
         self.class_selection_combo.clear()
-        if not self.train_data:
+        if not self.data:
             return
 
-        if self.train_data.domain.has_discrete_class:
+        if self.data.domain.has_discrete_class:
             self.cbox.setVisible(True)
-            class_var = self.train_data.domain.class_var
+            class_var = self.data.domain.class_var
             items = [self.TARGET_AVERAGE] + class_var.values
             self.class_selection_combo.addItems(items)
 
@@ -574,8 +463,6 @@ class OWTestLearners(widget.OWWidget):
         if which is None:
             which = self.learners.keys()
 
-        self.__loop.set_update_loop(None)
-
         all_keys = list(self.learners.keys())
         model = self.view.model()
 
@@ -594,7 +481,7 @@ class OWTestLearners(widget.OWWidget):
 
     def apply(self):
         self._update_header()
-        if self.train_data is not None:
+        if self.data is not None:
             self._start_update()
         else:
             # Clear the output
@@ -611,9 +498,6 @@ class OWTestLearners(widget.OWWidget):
             combined = None
         self.send("Evaluation Results", combined)
 
-    def onDeleteWidget(self):
-        super().onDeleteWidget()
-        self.__loop.set_update_loop(None)
 
 
 def learner_name(learner):
@@ -643,6 +527,7 @@ def split_by_model(results):
         if results.folds:
             res.folds = results.folds
 
+        res.failed = [results.failed[i]]
         yield res
 
 
