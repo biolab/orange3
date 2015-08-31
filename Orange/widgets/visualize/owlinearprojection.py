@@ -502,17 +502,19 @@ class OWLinearProjection(widget.OWWidget):
 
         self.clear_plot()
 
-    def clear_plot(self):
+    def clear_item(self):
         if self._item is not None:
             self._item.setParentItem(None)
             self.viewbox.removeItem(self._item)
             self._item = None
 
+    def clear_density_img(self):
         if self._density_img is not None:
             self._density_img.setParentItem(None)
             self.viewbox.removeItem(self._density_img)
             self._density_img = None
 
+    def clear_legend(self):
         if self.__legend is not None:
             anchor = legend_anchor_pos(self.__legend)
             if anchor is not None:
@@ -522,6 +524,10 @@ class OWLinearProjection(widget.OWWidget):
             self.__legend.clear()
             self.__legend.setVisible(False)
 
+    def clear_plot(self):
+        self.clear_item()
+        self.clear_density_img()
+        self.clear_legend()
         self.viewbox.clear()
 
     def _invalidate_plot(self):
@@ -848,8 +854,15 @@ class OWLinearProjection(widget.OWWidget):
         else:
             self._item.setBrush(brush[self._item._mask])
 
-        if self.class_density:
-            self._setup_plot(reset_view=False)
+        color_var = self.color_var()
+        if color_var is not None and color_var.is_discrete:
+            self.cb_class_density.setEnabled(True)
+            if self.class_density:
+                self._setup_plot(reset_view=False)
+        else:
+            self.clear_density_img()
+            self.cb_class_density.setEnabled(False)
+
 
         self._update_legend()
 
