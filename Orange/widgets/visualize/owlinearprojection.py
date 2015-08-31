@@ -322,13 +322,7 @@ class OWLinearProjection(widget.OWWidget):
 
         box1.layout().addWidget(view)
 
-        box = gui.widgetBox(self.controlArea, "Jittering")
-        gui.comboBox(box, self, "jitter_value",
-                     items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
-                     callback=self._invalidate_plot)
-        box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        box = gui.widgetBox(self.controlArea, "Points")
+        box = gui.widgetBox(self.controlArea, "Plot Properties")
         box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
@@ -346,38 +340,39 @@ class OWLinearProjection(widget.OWWidget):
         cb = gui.comboBox(box, self, "color_index",
                           callback=self._on_color_change)
         cb.setModel(self.colorvar_model)
-
         form.addRow("Colors", cb)
+
         alpha_slider = QSlider(
             Qt.Horizontal, minimum=10, maximum=255, pageStep=25,
             tickPosition=QSlider.TicksBelow, value=self.alpha_value)
         alpha_slider.valueChanged.connect(self._set_alpha)
-
         form.addRow("Opacity", alpha_slider)
 
         cb = gui.comboBox(box, self, "shape_index",
                           callback=self._on_shape_change)
         cb.setModel(self.shapevar_model)
-
         form.addRow("Shape", cb)
 
         cb = gui.comboBox(box, self, "size_index",
                           callback=self._on_size_change)
         cb.setModel(self.sizevar_model)
-
         form.addRow("Size", cb)
+
         size_slider = QSlider(
             Qt.Horizontal,  minimum=3, maximum=30, value=self.point_size,
             pageStep=3,
             tickPosition=QSlider.TicksBelow)
-
         size_slider.valueChanged.connect(self._set_size)
         form.addRow("", size_slider)
 
-        box = gui.widgetBox(self.controlArea, "Plot Properties")
-        self.cb_class_density = gui.checkBox(
-            box, self, value='class_density', label='Show class density',
-            callback=self._update_density)
+        cb = gui.comboBox(box, self, "jitter_value",
+                          items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
+                          callback=self._invalidate_plot)
+        form.addRow("Jittering", cb)
+
+        self.cb_class_density = gui.checkBox(box, self, "class_density", label="",
+                                             callback=self._update_density)
+        form.addRow("Class density", self.cb_class_density)
 
         toolbox = gui.widgetBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()
