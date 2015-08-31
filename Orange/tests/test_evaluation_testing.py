@@ -386,6 +386,59 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         self.run_test_preprocessor(TestOnTrainingData, [150])
 
 
+class TestOnTestingTestCase(unittest.TestCase):
+    def test_results(self):
+        nrows, ncols = 50, 10
+        t = random_data(nrows, ncols)
+        res = TestOnTestData(t, t, [NaiveBayesLearner()])
+        y = t.Y
+        np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
+        np.testing.assert_equal(res.predicted[0],
+                                y[res.row_indices].reshape(nrows))
+        np.testing.assert_equal(np.argmax(res.probabilities[0], axis=1),
+                                y[res.row_indices].reshape(nrows))
+        np.testing.assert_equal(res.row_indices, np.arange(nrows))
+
+    def test_probs(self):
+        iris = Table('iris')
+        data = iris[30:130]
+        learners = [MajorityLearner(), MajorityLearner()]
+        results = TestOnTestData(data, data, learners)
+
+        self.assertEqual(results.predicted.shape, (2, len(data)))
+        np.testing.assert_equal(results.predicted, np.ones((2, 100)))
+        probs = results.probabilities
+        self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
+        self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
+
+        train = iris[50:120]
+        test = iris[:50]
+        results = TestOnTestData(train, test, learners)
+        self.assertEqual(results.predicted.shape, (2, len(test)))
+        np.testing.assert_equal(results.predicted, np.ones((2, 50)))
+        probs = results.probabilities
+        self.assertTrue((probs[:, :, 0] == 0).all())
+
+
+def test_miss_majority(self):
+        x = np.zeros((50, 3))
+        y = x[:, -1]
+        x[49] = 1
+        data = Table(x, y)
+        res = TestOnTrainingData(data, [MajorityLearner()])
+        np.testing.assert_equal(res.predicted[0][:49], 0)
+
+        x[49] = 0
+        res = TestOnTrainingData(data, [MajorityLearner()])
+        np.testing.assert_equal(res.predicted[0][:49], 0)
+
+        x[25:] = 1
+        y = x[:, -1]
+        data = Table(x, y)
+        res = TestOnTrainingData(data, [MajorityLearner()])
+        np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
+
+
 class TestTrainTestSplit(unittest.TestCase):
     def test_fixed_training_size(self):
         data = Orange.data.Table("iris")
