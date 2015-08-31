@@ -77,14 +77,14 @@ class OWLinearRegression(widget.OWWidget):
 
     def set_data(self, data):
         self.data = data
-        if data is not None:
-            self.commit()
 
     def set_preprocessor(self, preproc):
         if preproc is None:
             self.preprocessors = None
         else:
             self.preprocessors = (preproc,)
+
+    def handleNewSignals(self):
         self.commit()
 
     def _reg_type_changed(self):
