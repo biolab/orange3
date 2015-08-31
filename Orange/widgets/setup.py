@@ -8,7 +8,7 @@ def configuration(parent_package='', top_path=None):
         libraries.append('m')
 
     config = Configuration('widgets', parent_package, top_path)
-    config.add_subpackage('visualize')
+    config.add_subpackage('utils')
 
     return config
 

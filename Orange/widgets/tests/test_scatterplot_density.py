@@ -6,7 +6,7 @@ from numpy.random import random, randint, uniform
 
 from PyQt4.QtGui import QColor
 
-from Orange.widgets.visualize.owscatterplotgraph import compute_density, grid_sample
+from Orange.widgets.utils.classdensity import compute_density, grid_sample
 
 
 class TestScatterplotDensity(TestCase):
