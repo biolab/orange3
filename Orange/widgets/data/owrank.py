@@ -12,6 +12,7 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import Orange
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.preprocess import score
 import Orange.preprocess.discretize
 from Orange.widgets import widget, settings, gui
@@ -23,55 +24,19 @@ def table(shape, fill=None):
     return [[fill for j in range(shape[1])] for i in range(shape[0])]
 
 
-_score_meta = namedtuple(
-    "_score_meta",
+score_meta = namedtuple(
+    "score_meta",
     ["name",
      "shortname",
-     "score",
-     "supports_regression",
-     "supports_classification",
-     "handles_continuous",
-     "handles_discrete"]
+     "score"]
 )
-
-
-class score_meta(_score_meta):
-    # Add sensible defaults to __new__
-    def __new__(cls, name, shortname, score,
-                supports_regression=True, supports_classification=True,
-                handles_continuous=True, handles_discrete=True):
-        return _score_meta.__new__(
-            cls, name, shortname, score,
-            supports_regression, supports_classification,
-            handles_continuous, handles_discrete
-        )
 
 # Default scores.
 SCORES = [
-    score_meta(
-        "Information Gain", "Inf. gain", score.InfoGain,
-        supports_regression=False,
-        supports_classification=True,
-        handles_continuous=False,
-        handles_discrete=True),
-    score_meta(
-        "Gain Ratio", "Gain Ratio", score.GainRatio,
-        supports_regression=False,
-        supports_classification=True,
-        handles_continuous=False,
-        handles_discrete=True),
-    score_meta(
-        "Gini Gain", "Gini", score.Gini,
-        supports_regression=False,
-        supports_classification=True,
-        handles_continuous=False,
-        handles_discrete=True),
-    score_meta(
-        "ReliefF", "ReliefF", score.ReliefF,
-        supports_regression=False,
-        supports_classification=True,
-        handles_continuous=True,
-        handles_discrete=True),
+    score_meta("Information Gain", "Inf. gain", score.InfoGain),
+    score_meta("Gain Ratio", "Gain Ratio", score.GainRatio),
+    score_meta("Gini Gain", "Gini", score.Gini),
+    score_meta("ReliefF", "ReliefF", score.ReliefF),
 ]
 
 _DEFAULT_SELECTED = set(m.name for m in SCORES)
@@ -111,9 +76,9 @@ class OWRank(widget.OWWidget):
         self.data = None
 
         self.discMeasures = [m for m in self.all_measures
-                             if m.supports_classification]
+                             if issubclass(DiscreteVariable, m.score.class_type)]
         self.contMeasures = [m for m in self.all_measures
-                             if m.supports_regression]
+                             if issubclass(ContinuousVariable, m.score.class_type)]
 
         selMethBox = gui.widgetBox(
             self.controlArea, "Select attributes", addSpace=True)
@@ -317,7 +282,7 @@ class OWRank(widget.OWWidget):
                 continue
             estimator = meas.score()
 
-            if not meas.handles_continuous:
+            if not isinstance(ContinuousVariable, meas.score.feature_type):
                 data = self.getDiscretizedData()
                 attr_map = data.attrDict
                 data = self.data
