@@ -258,6 +258,7 @@ class OWLinearProjection(widget.OWWidget):
         self._subset_mask = None
         self._selection_mask = None
         self._item = None
+        self._density_img = None
         self.__legend = None
         self.__selection_item = None
         self.__replot_requested = False
@@ -376,7 +377,7 @@ class OWLinearProjection(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Plot Properties")
         self.cb_class_density = gui.checkBox(
             box, self, value='class_density', label='Show class density',
-            callback=self._invalidate_plot)
+            callback=self._update_density)
 
         toolbox = gui.widgetBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()
@@ -511,6 +512,11 @@ class OWLinearProjection(widget.OWWidget):
             self._item.setParentItem(None)
             self.viewbox.removeItem(self._item)
             self._item = None
+
+        if self._density_img is not None:
+            self._density_img.setParentItem(None)
+            self.viewbox.removeItem(self._density_img)
+            self._density_img = None
 
         if self.__legend is not None:
             anchor = legend_anchor_pos(self.__legend)
@@ -702,7 +708,7 @@ class OWLinearProjection(widget.OWWidget):
         X, _ = self.data.get_column_view(var)
         return X.ravel()
 
-    def _setup_plot(self):
+    def _setup_plot(self, reset_view=True):
         self.__replot_requested = False
         self.clear_plot()
 
@@ -758,16 +764,17 @@ class OWLinearProjection(widget.OWWidget):
                                  label=variables[i].name)
             self.viewbox.addItem(axis_item)
 
-        self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
+        if reset_view:
+            self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
         self._update_legend()
 
         color_var = self.color_var()
         if self.class_density and color_var is not None and color_var.is_discrete:
             [min_x, max_x], [min_y, max_y] = self.viewbox.viewRange()
-            rgb_data = [pen.color().getRgb()[:3] for pen in pen_data]
-            self.density_img = classdensity.class_density_image(min_x, max_x, min_y, max_y, self.resolution,
+            rgb_data = [brush.color().getRgb()[:3] for brush in brush_data]
+            self._density_img = classdensity.class_density_image(min_x, max_x, min_y, max_y, self.resolution,
                                                                 X, Y, rgb_data)
-            self.viewbox.addItem(self.density_img)
+            self.viewbox.addItem(self._density_img)
 
     def _color_data(self, mask=None):
         color_var = self.color_var()
@@ -847,7 +854,7 @@ class OWLinearProjection(widget.OWWidget):
             self._item.setBrush(brush[self._item._mask])
 
         if self.class_density:
-            self._invalidate_plot()
+            self._setup_plot(reset_view=False)
 
         self._update_legend()
 
@@ -897,6 +904,9 @@ class OWLinearProjection(widget.OWWidget):
         if self.data is None:
             return
         self.set_size(self._size_data(mask=None))
+
+    def _update_density(self):
+        self._setup_plot(reset_view=False)
 
     def _update_legend(self):
         if self.__legend is None:
