@@ -112,8 +112,8 @@ class OWLinearRegression(widget.OWWidget):
         learner.name = self.learner_name
         predictor = None
 
+        self.error(0)
         if self.data is not None:
-            self.error(0)
             if not learner.check_learner_adequacy(self.data.domain):
                 self.error(0, learner.learner_adequacy_err_msg)
             else:
