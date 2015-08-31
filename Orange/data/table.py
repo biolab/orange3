@@ -1,4 +1,5 @@
 import os
+import re
 import zlib
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
@@ -7,7 +8,7 @@ import operator
 from functools import reduce
 from warnings import warn
 from threading import Lock
-import tempfile
+from tempfile import NamedTemporaryFile
 import urllib.parse
 import urllib.request
 
@@ -523,13 +524,22 @@ class Table(MutableSequence, Storage):
 
     @classmethod
     def from_url(cls, url):
-        name = os.path.basename(urllib.parse.urlparse(url)[2])
-        f = tempfile.NamedTemporaryFile(suffix=name, delete=False)
-        fname = f.name
-        f.close()
-        urllib.request.urlretrieve(url, fname)
-        data = cls.from_file(f.name)
-        os.remove(fname)
+        name = urllib.parse.urlparse(url)[2].replace('/', '_')
+
+        def suggested_filename(content_disposition):
+            # See https://tools.ietf.org/html/rfc6266#section-4.1
+            matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
+                                 content_disposition or '')
+            return urllib.parse.unquote(matches[-1]) if matches else ''
+
+        with urllib.request.urlopen(url, timeout=10) as response:
+            name = suggested_filename(response.headers['content-disposition']) or name
+            with NamedTemporaryFile(suffix=name) as f:
+                f.write(response.read())
+                f.flush()
+                data = cls.from_file(f.name)
+        # Override name set in from_file() to avoid holding the temp prefix
+        data.name = os.path.splitext(name)[0]
         return data
 
     # Helper function for __setitem__ and insert:
