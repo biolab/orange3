@@ -32,7 +32,7 @@ class OWLinearRegression(widget.OWWidget):
 
     want_main_area = False
 
-    alphas = list(chain([x / 10000 for x in range(10)],
+    alphas = list(chain([x / 10000 for x in range(1, 10)],
                         [x / 1000 for x in range(1, 20)],
                         [x / 100 for x in range(2, 20)],
                         [x / 10 for x in range(2, 9)],
