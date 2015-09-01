@@ -164,6 +164,7 @@ class OWMDS(widget.OWWidget):
         self.__update_loop = None
         self.__state = OWMDS.Waiting
         self.__in_next_step = False
+        self.__draw_similar_pairs = False
 
         box = gui.widgetBox(self.controlArea, "MDS Optimization")
         form = QtGui.QFormLayout(
@@ -240,13 +241,13 @@ class OWMDS(widget.OWWidget):
                                 minValue=100, maxValue=255, step=100,
                                 callback=self._on_color_index_changed,
                                 createLabel=False))
-        #form.addRow("Show similar pairs",
-        #            gui.hSlider(
-        #                gui.widgetBox(self.controlArea,
-        #                              orientation="horizontal"),
-        #                self, "connected_pairs", minValue=0, maxValue=20,
-        #                createLabel=False,
-        #                callback=self._on_connected_changed))
+        form.addRow("Show similar pairs",
+                    gui.hSlider(
+                        gui.widgetBox(self.controlArea,
+                                      orientation="horizontal"),
+                        self, "connected_pairs", minValue=0, maxValue=20,
+                        createLabel=False,
+                        callback=self._on_connected_changed))
         box.layout().addLayout(form)
 
         gui.rubber(self.controlArea)
@@ -276,7 +277,8 @@ class OWMDS(widget.OWWidget):
             "Zoom to fit", self, icon=icon("zoom_reset"),
             shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_0))
         action_reset_zoom.triggered.connect(
-            lambda: self.plot.autoRange(padding=0.1))
+            lambda: self.plot.autoRange(padding=0.1,
+                                        items=[self._scatter_item]))
         group.addAction(action_select)
         group.addAction(action_zoom)
         group.addAction(action_pan)
@@ -313,6 +315,7 @@ class OWMDS(widget.OWWidget):
         self.plot.getPlotItem().hideAxis("bottom")
         self.plot.getPlotItem().hideAxis("left")
         self.plot.getPlotItem().hideButtons()
+        self.plot.setRenderHint(QtGui.QPainter.Antialiasing)
         self.mainArea.layout().addWidget(self.plot)
 
         self.selection_tool = PlotSelectionTool(parent=self)
@@ -440,7 +443,6 @@ class OWMDS(widget.OWWidget):
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
-            self._update_plot()
             return
 
         if self.signal_data and self.matrix_data and len(self.signal_data) != len(self.matrix_data):
@@ -488,6 +490,7 @@ class OWMDS(widget.OWWidget):
             self.__set_update_loop(None)
 
     def __start(self):
+        self.__draw_similar_pairs = False
         X = self._effective_matrix
         if self.spread_equal_points:
             maxval = numpy.max(X)
@@ -584,11 +587,14 @@ class OWMDS(widget.OWWidget):
         except StopIteration:
             self.__set_update_loop(None)
             self.unconditional_commit()
+            self.__draw_similar_pairs = True
+            self._update_plot()
+            self.plot.autoRange(padding=0.1, items=[self._scatter_item])
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
             self._update_plot()
-            self.plot.autoRange(padding=0.1)
+            self.plot.autoRange(padding=0.1, items=[self._scatter_item])
             # schedule next update
             QtGui.QApplication.postEvent(
                 self, QEvent(QEvent.User), Qt.LowEventPriority)
@@ -627,7 +633,7 @@ class OWMDS(widget.OWWidget):
             self.embedding = numpy.random.rand(len(X), 2)
 
         self._update_plot()
-        self.plot.autoRange(padding=0.1)
+        self.plot.autoRange(padding=0.1, items=[self._scatter_item])
 
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
@@ -650,7 +656,7 @@ class OWMDS(widget.OWWidget):
             self._invalidated = False
             self._initialize()
             self.start()
-
+        self.__draw_similar_pairs = False
         self._update_plot()
         self.plot.autoRange(padding=0.1)
         self.unconditional_commit()
@@ -815,9 +821,7 @@ class OWMDS(widget.OWWidget):
 
         emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
 
-        # TODO: enable drawing similar pairs within reasonable time
-        self.connected_pairs = 0
-        if self.connected_pairs:
+        if self.connected_pairs and self.__draw_similar_pairs:
             if self._similar_pairs is None:
                 # This code requires storing lower triangle of X (n x n / 2
                 # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
@@ -838,18 +842,17 @@ class OWMDS(widget.OWWidget):
                 self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
                 fpairs[::2] = indcs[0][sorted]
                 fpairs[1::2] = indcs[1][sorted]
-            curve = pg.PlotCurveItem(emb_x[self._similar_pairs],
-                                     emb_y[self._similar_pairs],
-                                     pen=pg.mkPen(0.8, width=2),
-                                     connect="pairs", antialias=True)
-            self.plot.addItem(curve)
-            item = ScatterPlotItem(
-                x=emb_x, y=emb_y,
-                pen=1.0, brush=1.0, symbol=self._shape_data,
-                size=self._size_data + 3,
-                antialias=True
-            )
-            self.plot.addItem(item)
+            for i in range(int(len(emb_x[self._similar_pairs]) / 2)):
+                item = QtGui.QGraphicsLineItem(
+                    emb_x[self._similar_pairs][i * 2],
+                    emb_y[self._similar_pairs][i * 2],
+                    emb_x[self._similar_pairs][i * 2 + 1],
+                    emb_y[self._similar_pairs][i * 2 + 1]
+                )
+                pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(204, 204, 204)), 2)
+                pen.setCosmetic(True)
+                item.setPen(pen)
+                self.plot.addItem(item)
 
         data = numpy.arange(len(self.data if have_data else self.matrix))
         self._scatter_item = item = ScatterPlotItem(
