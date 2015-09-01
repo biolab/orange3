@@ -291,6 +291,9 @@ function prepare_orange {
         build --compiler=msvc \
         bdist_wheel -d "$BUILDBASE/wheelhouse"
 
+	# Ensure all install_requires dependencies are available in the wheelhouse
+	prepare_req --only-binary numpy,scipy -r Orange.egg-info/requires.txt
+
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
     echo "Orange==$version" >> "$BUILDBASE/requirements.txt"
 }
