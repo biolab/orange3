@@ -14,5 +14,6 @@ recursive-include Orange/widgets/utils/plot/primitives *.obj
 recursive-include Orange/widgets/utils/plot *.fs *.vs *.gs
 
 include requirements.txt
+include README.md
 include COPYING
 include LICENSE
