@@ -30,3 +30,40 @@ class TestDatasets(unittest.TestCase):
             if ext != '.tab':
                 continue
             self.assertIn(name, Orange.datasets)
+
+    def test_datasets_info_features(self):
+        for dataset, info in Orange.datasets.items():
+
+            Orange.data.Variable._clear_all_caches()
+
+            if info['location'].startswith('http'): continue  # Tested elsewhere
+
+            table = Orange.data.Table(dataset)
+            domain = table.domain
+
+            # Test features
+            self.assertEqual(table.X.shape[0], info['rows'], dataset)
+            self.assertEqual(table.has_missing(), info['missing'], dataset)
+            self.assertEqual(len(domain.metas), info['features']['meta'], dataset)
+            self.assertEqual(sum(i.is_discrete for i in domain.attributes),
+                             info['features']['discrete'],
+                             dataset)
+            self.assertEqual(sum(i.is_continuous for i in domain.attributes),
+                             info['features']['continuous'],
+                             dataset)
+
+            # Test class vars
+            if len(domain.class_vars) > 1:
+                self.assertEqual(['discrete' if i.is_discrete else 'continuous'
+                                  for i in domain.class_vars],
+                                 info['target']['type'],
+                                 dataset)
+            elif len(domain.class_vars) == 1:
+                cls = domain.class_var
+                self.assertEqual('discrete' if cls.is_discrete else 'continuous',
+                                 info['target']['type'],
+                                 dataset)
+                if cls.is_discrete:
+                    self.assertEqual(len(cls.values), info['target']['values'], dataset)
+            else:
+                self.assertEqual(False, info['target']['type'], dataset)
