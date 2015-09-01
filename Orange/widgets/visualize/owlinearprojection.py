@@ -23,7 +23,6 @@ from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import numpy
 
 import pyqtgraph.graphicsItems.ScatterPlotItem
-from pyqtgraph.graphicsItems.ImageItem import ImageItem
 import pyqtgraph as pg
 import Orange
 
@@ -31,62 +30,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
 from Orange.widgets.io import FileFormats
-
-
-import os
-import ctypes
-import sysconfig
-import numpy as np
-
-# load C++ library
-path = os.path.dirname(os.path.abspath(__file__))
-lib = ctypes.pydll.LoadLibrary(os.path.join(path, "_grid_density" + sysconfig.get_config_var("SO")))
-
-# compute the color density image
-def compute_density(x_grid, y_grid, x_data, y_data, rgb_data):
-    fun = lib.compute_density
-    fun.restype = None
-    fun.argtypes = [ctypes.c_int,
-                    np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
-                    np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
-                    ctypes.c_int,
-                    np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
-                    np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),
-                    np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS"),
-                    np.ctypeslib.ndpointer(ctypes.c_int, flags="C_CONTIGUOUS")]
-    gx = np.ascontiguousarray(x_grid, dtype=np.float64)
-    gy = np.ascontiguousarray(y_grid, dtype=np.float64)
-    dx = np.ascontiguousarray(x_data, dtype=np.float64)
-    dy = np.ascontiguousarray(y_data, dtype=np.float64)
-    drgb = np.ascontiguousarray(rgb_data, dtype=np.int32)
-    resolution = len(x_grid)
-    n_points = len(x_data)
-    img = np.ascontiguousarray(np.zeros((resolution, resolution, 4)), dtype=np.int32)
-    fun(resolution, gx, gy, n_points, dx, dy, drgb, img)
-    img = np.swapaxes(img, 0, 1)
-    return img
-
-def grid_sample(x_data, y_data, k=1000, g=10):
-    n = len(x_data)
-    min_x, max_x = min(x_data), max(x_data)
-    min_y, max_y = min(y_data), max(y_data)
-    dx, dy = (max_x-min_x)/g, (max_y-min_y)/g
-    grid = [[[] for j in range(g)] for i in range(g)]
-    for i in range(n):
-        y = int(min((y_data[i]-min_y)/dy, g-1))
-        x = int(min((x_data[i]-min_x)/dx, g-1))
-        grid[y][x].append(i)
-    for y in range(g):
-        for x in range(g):
-            np.random.shuffle(grid[y][x])
-    sample = []
-    while len(sample) < k:
-        for y in range(g):
-            for x in range(g):
-                if len(grid[y][x]) != 0:
-                    sample.append(grid[y][x].pop())
-    np.random.shuffle(sample)
-    return sample[:k]
+from Orange.widgets.utils import classdensity
 
 
 class DnDVariableListModel(itemmodels.VariableListModel):
@@ -314,6 +258,7 @@ class OWLinearProjection(widget.OWWidget):
         self._subset_mask = None
         self._selection_mask = None
         self._item = None
+        self._density_img = None
         self.__legend = None
         self.__selection_item = None
         self.__replot_requested = False
@@ -377,13 +322,7 @@ class OWLinearProjection(widget.OWWidget):
 
         box1.layout().addWidget(view)
 
-        box = gui.widgetBox(self.controlArea, "Jittering")
-        gui.comboBox(box, self, "jitter_value",
-                     items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
-                     callback=self._invalidate_plot)
-        box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        box = gui.widgetBox(self.controlArea, "Points")
+        box = gui.widgetBox(self.controlArea, "Plot Properties")
         box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
@@ -401,38 +340,39 @@ class OWLinearProjection(widget.OWWidget):
         cb = gui.comboBox(box, self, "color_index",
                           callback=self._on_color_change)
         cb.setModel(self.colorvar_model)
-
         form.addRow("Colors", cb)
+
         alpha_slider = QSlider(
             Qt.Horizontal, minimum=10, maximum=255, pageStep=25,
             tickPosition=QSlider.TicksBelow, value=self.alpha_value)
         alpha_slider.valueChanged.connect(self._set_alpha)
-
         form.addRow("Opacity", alpha_slider)
 
         cb = gui.comboBox(box, self, "shape_index",
                           callback=self._on_shape_change)
         cb.setModel(self.shapevar_model)
-
         form.addRow("Shape", cb)
 
         cb = gui.comboBox(box, self, "size_index",
                           callback=self._on_size_change)
         cb.setModel(self.sizevar_model)
-
         form.addRow("Size", cb)
+
         size_slider = QSlider(
             Qt.Horizontal,  minimum=3, maximum=30, value=self.point_size,
             pageStep=3,
             tickPosition=QSlider.TicksBelow)
-
         size_slider.valueChanged.connect(self._set_size)
         form.addRow("", size_slider)
 
-        box = gui.widgetBox(self.controlArea, "Plot Properties")
-        self.cb_class_density = gui.checkBox(
-            box, self, value='class_density', label='Show class density',
-            callback=self._invalidate_plot)
+        cb = gui.comboBox(box, self, "jitter_value",
+                          items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
+                          callback=self._invalidate_plot)
+        form.addRow("Jittering", cb)
+
+        self.cb_class_density = gui.checkBox(box, self, "class_density", label="",
+                                             callback=self._update_density)
+        form.addRow("Class density", self.cb_class_density)
 
         toolbox = gui.widgetBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()
@@ -562,12 +502,19 @@ class OWLinearProjection(widget.OWWidget):
 
         self.clear_plot()
 
-    def clear_plot(self):
+    def clear_item(self):
         if self._item is not None:
             self._item.setParentItem(None)
             self.viewbox.removeItem(self._item)
             self._item = None
 
+    def clear_density_img(self):
+        if self._density_img is not None:
+            self._density_img.setParentItem(None)
+            self.viewbox.removeItem(self._density_img)
+            self._density_img = None
+
+    def clear_legend(self):
         if self.__legend is not None:
             anchor = legend_anchor_pos(self.__legend)
             if anchor is not None:
@@ -577,6 +524,10 @@ class OWLinearProjection(widget.OWWidget):
             self.__legend.clear()
             self.__legend.setVisible(False)
 
+    def clear_plot(self):
+        self.clear_item()
+        self.clear_density_img()
+        self.clear_legend()
         self.viewbox.clear()
 
     def _invalidate_plot(self):
@@ -758,7 +709,7 @@ class OWLinearProjection(widget.OWWidget):
         X, _ = self.data.get_column_view(var)
         return X.ravel()
 
-    def _setup_plot(self):
+    def _setup_plot(self, reset_view=True):
         self.__replot_requested = False
         self.clear_plot()
 
@@ -814,34 +765,17 @@ class OWLinearProjection(widget.OWWidget):
                                  label=variables[i].name)
             self.viewbox.addItem(axis_item)
 
-        self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
+        if reset_view:
+            self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
         self._update_legend()
 
         color_var = self.color_var()
         if self.class_density and color_var is not None and color_var.is_discrete:
             [min_x, max_x], [min_y, max_y] = self.viewbox.viewRange()
-            x_data = X
-            y_data = Y
-            x_sz = (max_x-min_x)/(self.resolution-1)
-            y_sz = (max_y-min_y)/(self.resolution-1)
-            x_grid = [min_x+i*x_sz for i in range(self.resolution)]
-            y_grid = [min_y+i*y_sz for i in range(self.resolution)]
-            rgb_data = [pen.color().getRgb()[:3] for pen in pen_data]
-            n_points = len(x_data)
-            sample = range(n_points)
-            if n_points > 1000:
-                sample = grid_sample(x_data, y_data, 1000)
-            x_data_norm = (np.array(x_data)-min_x)/(max_x-min_x)
-            y_data_norm = (np.array(y_data)-min_y)/(max_y-min_y)
-            x_grid_norm = (np.array(x_grid)-min_x)/(max_x-min_x)
-            y_grid_norm = (np.array(y_grid)-min_y)/(max_y-min_y)
-            img = compute_density(x_grid_norm, y_grid_norm,
-                                  x_data_norm[sample], y_data_norm[sample], np.array(rgb_data)[sample])
-            self.density_img = ImageItem(img, autoLevels=False)
-            self.density_img.setRect(QRectF(min_x-x_sz/2, min_y-y_sz/2,
-                                            max_x-min_x+x_sz, max_y-min_y+y_sz))
-            self.density_img.setZValue(-1)
-            self.viewbox.addItem(self.density_img)
+            rgb_data = [brush.color().getRgb()[:3] for brush in brush_data]
+            self._density_img = classdensity.class_density_image(min_x, max_x, min_y, max_y, self.resolution,
+                                                                X, Y, rgb_data)
+            self.viewbox.addItem(self._density_img)
 
     def _color_data(self, mask=None):
         color_var = self.color_var()
@@ -920,8 +854,15 @@ class OWLinearProjection(widget.OWWidget):
         else:
             self._item.setBrush(brush[self._item._mask])
 
-        if self.class_density:
-            self._invalidate_plot()
+        color_var = self.color_var()
+        if color_var is not None and color_var.is_discrete:
+            self.cb_class_density.setEnabled(True)
+            if self.class_density:
+                self._setup_plot(reset_view=False)
+        else:
+            self.clear_density_img()
+            self.cb_class_density.setEnabled(False)
+
 
         self._update_legend()
 
@@ -971,6 +912,9 @@ class OWLinearProjection(widget.OWWidget):
         if self.data is None:
             return
         self.set_size(self._size_data(mask=None))
+
+    def _update_density(self):
+        self._setup_plot(reset_view=False)
 
     def _update_legend(self):
         if self.__legend is None:
