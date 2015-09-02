@@ -249,7 +249,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             if geometry is not None:
                 restored = self.restoreGeometry(QByteArray(geometry))
 
-            if restored:
+            if restored and not self.windowState() & \
+                    (Qt.WindowMaximized | Qt.WindowFullScreen):
                 space = qApp.desktop().availableGeometry(self)
                 frame, geometry = self.frameGeometry(), self.geometry()
 
