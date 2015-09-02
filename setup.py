@@ -5,6 +5,8 @@ import os
 import sys
 import subprocess
 
+import setuptools
+
 NAME = 'Orange'
 
 VERSION = '3.2'
@@ -44,6 +46,7 @@ CLASSIFIERS = (
     'Intended Audience :: Developers',
 )
 
+
 INSTALL_REQUIRES = (
     'setuptools',
     'numpy>=1.9.0',
@@ -56,22 +59,11 @@ INSTALL_REQUIRES = (
 if sys.version_info < (3, 4):
     INSTALL_REQUIRES = INSTALL_REQUIRES + ("singledispatch",)
 
-if len({'develop', 'release', 'bdist_egg', 'bdist_rpm', 'bdist_wininst',
-        'install_egg_info', 'build_sphinx', 'egg_info', 'easy_install',
-        'upload', 'test'}.intersection(sys.argv)) > 0:
-    import setuptools
-    extra_setuptools_args = dict(
-        zip_safe=False,  # the package can run out of an .egg file
-        include_package_data=True,
-        test_suite='Orange.tests.test_suite',
-        install_requires=INSTALL_REQUIRES,
-        entry_points={
-            "orange.canvas.help": (
-                "html-index = Orange.widgets:WIDGET_HELP_PATH",)
-        }
-    )
-else:
-    extra_setuptools_args = dict()
+
+ENTRY_POINTS = {
+    "orange.canvas.help": (
+        "html-index = Orange.widgets:WIDGET_HELP_PATH",)
+}
 
 
 # Return the git revision as a string
@@ -234,7 +226,12 @@ def setup_package():
         classifiers=CLASSIFIERS,
         packages=PACKAGES,
         package_data=PACKAGE_DATA,
-        **extra_setuptools_args
+        install_requires=INSTALL_REQUIRES,
+        entry_points=ENTRY_POINTS,
+        zip_safe=False,
+        include_package_data=True,
+        test_suite='Orange.tests.test_suite',
+
     )
 
 if __name__ == '__main__':
