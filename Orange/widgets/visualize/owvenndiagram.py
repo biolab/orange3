@@ -52,7 +52,7 @@ class OWVennDiagram(widget.OWWidget):
     inputhints = settings.Setting({})
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_graph = True
 
