@@ -910,9 +910,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
             self.selection = np.full(len(self.raw_data), False, dtype=np.bool)
         indices = [p.data() for p in points]
-        if keys & Qt.ControlModifier:
+        if keys & Qt.AltModifier:
             self.selection[indices] = False
-        elif keys & Qt.AltModifier:
+        elif keys & Qt.ControlModifier:
             self.selection[indices] = ~self.selection[indices]
         else:  # Handle shift and no modifiers
             self.selection[indices] = True
