@@ -87,8 +87,9 @@ class OWDataSampler(widget.OWWidget):
                         addToLayout=False,
                         callback=self.number_of_folds_changed))
         self.selected_fold_spin = gui.spin(
-            ibox, self, "selectedFold", 1, 100, addToLayout=False,
-            callback=self.fold_changed)
+            ibox, self, "selectedFold", 1, self.number_of_folds,
+            addToLayout=False, callback=self.fold_changed)
+
         form.addRow("Selected fold", self.selected_fold_spin)
 
         box = gui.widgetBox(self.controlArea, "Options")
