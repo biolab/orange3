@@ -242,7 +242,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def prepareDataReport(self, data):
         pass
 
-    def restoreWidgetPosition(self):
+    def __restoreWidgetGeometry(self):
         restored = False
         if self.save_position:
             geometry = self.savedWidgetGeometry
@@ -270,7 +270,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return restored
 
     def __updateSavedGeometry(self):
-        if self.__was_restored:
+        if self.__was_restored and self.isVisible():
             # Update the saved geometry only between explicit show/hide
             # events (i.e. changes initiated by the user not by Qt's default
             # window management).
@@ -281,8 +281,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         QDialog.resizeEvent(self, ev)
         # Don't store geometry if the widget is not visible
         # (the widget receives a resizeEvent (with the default sizeHint)
-        # before showEvent and we must not overwrite the the savedGeometry
-        # with it)
+        # before first showEvent and we must not overwrite the the
+        # savedGeometry with it)
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
 
@@ -295,21 +295,19 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def hideEvent(self, ev):
         if self.save_position:
             self.__updateSavedGeometry()
-        self.__was_restored = False
         QDialog.hideEvent(self, ev)
 
     def closeEvent(self, ev):
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
-        self.__was_restored = False
         QDialog.closeEvent(self, ev)
 
     def showEvent(self, ev):
         QDialog.showEvent(self, ev)
-        if self.save_position:
+        if self.save_position and not self.__was_restored:
             # Restore saved geometry on show
-            self.restoreWidgetPosition()
-        self.__was_restored = True
+            self.__restoreWidgetGeometry()
+            self.__was_restored = True
 
     def wheelEvent(self, event):
         """ Silently accept the wheel event. This is to ensure combo boxes
