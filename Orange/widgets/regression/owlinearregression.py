@@ -3,8 +3,9 @@ from PyQt4.QtGui import QLayout
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
-                                      LinearRegressionLearner)
+from Orange.regression.linear import (
+    LassoRegressionLearner, LinearModel, LinearRegressionLearner,
+    RidgeRegressionLearner)
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 
@@ -31,7 +32,7 @@ class OWLinearRegression(widget.OWWidget):
 
     want_main_area = False
 
-    alphas = list(chain([x / 10000 for x in range(10)],
+    alphas = list(chain([x / 10000 for x in range(1, 10)],
                         [x / 1000 for x in range(1, 20)],
                         [x / 100 for x in range(2, 20)],
                         [x / 10 for x in range(2, 9)],
@@ -76,14 +77,14 @@ class OWLinearRegression(widget.OWWidget):
 
     def set_data(self, data):
         self.data = data
-        if data is not None:
-            self.commit()
 
     def set_preprocessor(self, preproc):
         if preproc is None:
             self.preprocessors = None
         else:
             self.preprocessors = (preproc,)
+
+    def handleNewSignals(self):
         self.commit()
 
     def _reg_type_changed(self):
@@ -106,13 +107,13 @@ class OWLinearRegression(widget.OWWidget):
         elif self.reg_type == OWLinearRegression.Ridge:
             learner = RidgeRegressionLearner(alpha=alpha, **args)
         elif self.reg_type == OWLinearRegression.Lasso:
-            learner = RidgeRegressionLearner(alpha=alpha, **args)
+            learner = LassoRegressionLearner(alpha=alpha, **args)
 
         learner.name = self.learner_name
         predictor = None
 
+        self.error(0)
         if self.data is not None:
-            self.error(0)
             if not learner.check_learner_adequacy(self.data.domain):
                 self.error(0, learner.learner_adequacy_err_msg)
             else:
