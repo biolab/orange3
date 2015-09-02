@@ -769,6 +769,19 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
                 newf = expanded_features[source_var][group]
                 instance[newf] = source_inst[source_var]
 
+    group_metas = [(group_name, meta) for group_name in group_names
+                   for meta in newmetas if group_name in meta.name
+                   and meta.is_discrete]
+
+    for (group_name, meta) in group_metas:
+        for row in range(len(newtable)):
+            if numpy.isnan(newtable[row, meta]):
+                indices = inst_by_id[inst_key(newtable[row], idvarlist)]
+                for i in indices:
+                    if table[i, groupvarlist[0]].value == group_name:
+                        newtable[row, meta] = table[i, meta]
+                        break
+
     return newtable
 
 
