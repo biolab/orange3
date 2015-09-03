@@ -401,6 +401,9 @@ class OWTestLearners(widget.OWWidget):
                 self.class_selection != self.TARGET_AVERAGE:
             target_index = class_var.values.index(self.class_selection)
 
+        errors = []
+        has_missing_scores = False
+
         for slot in self.learners.values():
             name = learner_name(slot.learner)
             head = QStandardItem(name)
@@ -409,6 +412,9 @@ class OWTestLearners(widget.OWWidget):
                 head.setToolTip(str(slot.results.exception))
                 head.setText("{} (error)".format(name))
                 head.setForeground(QtGui.QBrush(Qt.red))
+                errors.append("{name} failed with error:\n"
+                              "{exc.__class__.__name__}: {exc!s}"
+                              .format(name=name, exc=slot.results.exception))
 
             row = [head]
 
@@ -431,9 +437,20 @@ class OWTestLearners(widget.OWWidget):
                         item.setText("{:.3f}".format(stat.value[0]))
                     else:
                         item.setToolTip(str(stat.exception))
+                        has_missing_scores = True
                     row.append(item)
 
             model.appendRow(row)
+
+        if errors:
+            self.error(3, "\n".join(errors))
+        else:
+            self.error(3)
+
+        if has_missing_scores:
+            self.warning(3, "Some scores could not be computed")
+        else:
+            self.warning(3)
 
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
