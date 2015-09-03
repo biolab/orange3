@@ -400,10 +400,10 @@ class OWTestLearners(widget.OWWidget):
         errors = []
         has_missing_scores = False
 
-        for slot in self.learners.values():
+        for key, slot in self.learners.items():
             name = learner_name(slot.learner)
             head = QStandardItem(name)
-
+            head.setData(key, Qt.UserRole)
             if isinstance(slot.results, Try.Fail):
                 head.setToolTip(str(slot.results.exception))
                 head.setText("{} (error)".format(name))
@@ -479,15 +479,16 @@ class OWTestLearners(widget.OWWidget):
         if which is None:
             which = self.learners.keys()
 
-        all_keys = list(self.learners.keys())
         model = self.view.model()
+        statmodelkeys = [model.item(row, 0).data(Qt.UserRole)
+                         for row in range(model.rowCount())]
 
         for key in which:
             self.learners[key] = \
                 self.learners[key]._replace(results=None, stats=None)
 
-            if key in self.learners:
-                row = all_keys.index(key)
+            if key in statmodelkeys:
+                row = statmodelkeys.index(key)
                 for c in range(1, model.columnCount()):
                     item = model.item(row, c)
                     if item is not None:
