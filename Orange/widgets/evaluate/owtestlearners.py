@@ -224,8 +224,7 @@ class OWTestLearners(widget.OWWidget):
             del self.learners[key]
         else:
             self.learners[key] = Input(learner, None, None)
-
-        self._update_stats_model()
+            self._invalidate([key])
 
     def set_train_data(self, data):
         """
@@ -278,6 +277,7 @@ class OWTestLearners(widget.OWWidget):
 
     def _param_changed(self):
         self._invalidate()
+        self.apply()
 
     def _start_update(self):
         """
@@ -477,6 +477,8 @@ class OWTestLearners(widget.OWWidget):
         self._update_stats_model()
 
     def _invalidate(self, which=None):
+        # Invalidate learner results for `which` input keys
+        # (if None then all learner results are invalidated)
         if which is None:
             which = self.learners.keys()
 
@@ -494,7 +496,6 @@ class OWTestLearners(widget.OWWidget):
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
-        self.apply()
 
     def apply(self):
         self._update_header()
