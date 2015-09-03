@@ -192,7 +192,7 @@ class GainRatio(ClassificationScorer):
     """
     def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
-        h_residual = _entropy(cont)
+        h_residual = _entropy(np.compress(np.sum(cont, axis=0), cont, axis=1))
         h_attribute = _entropy(np.sum(cont, axis=0))
         return nan_adjustment * (h_class - h_residual) / h_attribute
 
