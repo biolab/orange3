@@ -205,7 +205,7 @@ class OWTestLearners(widget.OWWidget):
         header.setStretchLastSection(False)
 
         self.result_model = QStandardItemModel(self)
-        self.result_model.setHorizontalHeaderLabels(["Model"])
+        self.result_model.setHorizontalHeaderLabels(["Method"])
         self.view.setModel(self.result_model)
         self.view.setItemDelegate(ItemDelegate())
 
