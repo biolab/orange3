@@ -264,7 +264,6 @@ class OWTestLearners(widget.OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self._update_header()
         self.apply()
 
     def kfold_changed(self):
@@ -279,7 +278,7 @@ class OWTestLearners(widget.OWWidget):
         self._invalidate()
         self.apply()
 
-    def _start_update(self):
+    def _update_results(self):
         """
         Run/evaluate the learners.
         """
@@ -364,9 +363,6 @@ class OWTestLearners(widget.OWWidget):
         self.setStatusMessage("")
         self.progressBarFinished()
 
-        self._update_stats_model()
-        self.commit()
-
     def _update_header(self):
         # Set the correct horizontal header labels on the results_model.
         headers = ["Method"]
@@ -392,14 +388,14 @@ class OWTestLearners(widget.OWWidget):
         for r in reversed(range(model.rowCount())):
             model.takeRow(r)
 
-        if self.data is None:
-            return
-
         target_index = None
-        class_var = self.data.domain.class_var
-        if class_var.is_discrete and \
-                self.class_selection != self.TARGET_AVERAGE:
-            target_index = class_var.values.index(self.class_selection)
+        if self.data is not None:
+            class_var = self.data.domain.class_var
+            if class_var.is_discrete and \
+                    self.class_selection != self.TARGET_AVERAGE:
+                target_index = class_var.values.index(self.class_selection)
+        else:
+            class_var = None
 
         errors = []
         has_missing_scores = False
@@ -418,8 +414,9 @@ class OWTestLearners(widget.OWWidget):
 
             row = [head]
 
-            if class_var.is_discrete and target_index is not None:
-                if slot.results.success:
+            if class_var is not None and class_var.is_discrete and \
+                    target_index is not None:
+                if slot.results is not None and slot.results.success:
                     ovr_results = results_one_vs_rest(
                         slot.results.value, target_index)
 
@@ -499,11 +496,11 @@ class OWTestLearners(widget.OWWidget):
 
     def apply(self):
         self._update_header()
-        if self.data is not None:
-            self._start_update()
-        else:
-            # Clear the output
-            self.commit()
+        # Update the view to display the model names
+        self._update_stats_model()
+        self._update_results()
+        self._update_stats_model()
+        self.commit()
 
     def commit(self):
         valid = [slot for slot in self.learners.values()
