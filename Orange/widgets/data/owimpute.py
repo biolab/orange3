@@ -563,8 +563,13 @@ def column_imputer_minimal(variable, table):
 
 
 def column_imputer_average(variable, table):
-    stats = basic_stats.BasicStats(table, variable)
-    return column_imputer_defaults(variable, table, stats.mean)
+    if variable.is_continuous:
+        stats = basic_stats.BasicStats(table, variable)
+        val = stats.mean
+    else:
+        dist = distribution.get_distribution(table, variable)
+        val = dist.modus()
+    return column_imputer_defaults(variable, table, val)
 
 
 def column_imputer_modus(variable, table):
