@@ -1212,7 +1212,7 @@ class CreateTableWithFilename(TableTests):
                         {'.xlsx': lambda: reader_instance}):
             table = data.Table.from_file("test.xlsx")
 
-        reader_instance.read_file.assert_called_with("test.xlsx", data.Table)
+        reader_instance.read_file.assert_called_with("test.xlsx", None)
         self.assertEqual(table, table_mock)
 
     @patch("os.path.exists", Mock(return_value=False))

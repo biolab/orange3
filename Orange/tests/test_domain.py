@@ -427,7 +427,7 @@ class TestDomainInit(unittest.TestCase):
         x, y, metas = domain.convert([42, 13, "White"])
         assert_array_equal(x, np.array([42, 13]))
         assert_array_equal(y, np.array([0]))
-        assert_array_equal(metas, np.array([Unknown, Unknown, None]))
+        assert_array_equal(metas, np.array([Unknown, Unknown, Unknown], dtype=object))
 
         x, y, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
         assert_array_equal(x, np.array([42, 13]))
