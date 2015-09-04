@@ -208,16 +208,11 @@ class OWDistributions(widget.OWWidget):
             self.groupvarmodel = \
                 ["(None)"] + [var for var in domain if var.is_discrete]
             self.groupvarview.addItem("(None)")
-            self.cb_prob.clear()
-            self.cb_prob.addItem("(None)")
             for var in self.groupvarmodel[1:]:
                 self.groupvarview.addItem(self.icons[var], var.name)
             if domain.has_discrete_class:
                 self.groupvar_idx = \
                     self.groupvarmodel.index(domain.class_var)
-                self.cb_prob.addItems(domain.class_var.values)
-                self.cb_prob.addItem("(All)")
-            self.show_prob = 0
             self.openContext(domain)
             self.variable_idx = min(max(self.variable_idx, 0),
                                     len(self.varmodel) - 1)
@@ -259,6 +254,12 @@ class OWDistributions(widget.OWWidget):
             self.var = self.varmodel[varidx]
         if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
+            self.cb_prob.clear()
+            self.cb_prob.addItem("(None)")
+            self.cb_prob.addItems(self.cvar.values)
+            self.cb_prob.addItem("(All)")
+            self.show_prob = min(max(self.show_prob, 0),
+                    len(self.cvar.values) + 1)
         data = self.data
         self._setup_smoothing()
         if self.var is None:
