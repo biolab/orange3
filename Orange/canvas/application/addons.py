@@ -39,6 +39,7 @@ OFFICIAL_ADDONS = [
     "Orange3-DataFusion",
     "Orange3-Prototypes",
     "Orange3-Text",
+    "Orange3-Network",
 ]
 
 Installable = namedtuple(
