@@ -554,9 +554,12 @@ class OWScatterPlot(OWWidget):
             data = Orange.data.Table(self.parent_widget.graph.scaled_data.T,
                                      self.parent_widget.data.Y)
             weights = ReliefF(n_iterations=100, k_nearest=self.k)(data)
-            attrs = sorted(zip(weights,
-                               self.parent_widget.data.domain.attributes))
-            return [a.name for s, a in attrs][::-1]
+            attrs = sorted(
+                zip(weights,
+                    (x.name for x in self.parent_widget.data.domain.attributes)
+                    ),
+                reverse=True)
+            return [a for _, a in attrs]
 
 
 def test_main(argv=None):
