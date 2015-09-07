@@ -29,7 +29,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 
 # TODO Move utility classes to another module, so they can be used elsewhere
 
-SELECTION_WIDTH = 4
+SELECTION_WIDTH = 5
 
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
@@ -559,8 +559,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
-        self.plot_widget.addItem(self.scatterplot_item)
         self.plot_widget.addItem(self.scatterplot_item_sel)
+        self.plot_widget.addItem(self.scatterplot_item)
 
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
