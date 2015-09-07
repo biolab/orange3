@@ -1081,6 +1081,7 @@ class mdsplotutils(plotutils):
             col = mdsplotutils.column_data(table, var, mask)
             if var.is_discrete:
                 palette = plotstyle.discrete_palette
+                palette.set_number_of_colors(len(var.values))
                 color_data = plotutils.discrete_colors(
                     col, nvalues=len(var.values), palette=palette)
             elif var.is_continuous:
