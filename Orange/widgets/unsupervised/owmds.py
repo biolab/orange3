@@ -693,6 +693,7 @@ class OWMDS(widget.OWWidget):
     def _setup_plot(self):
         have_data = self.data is not None
         have_matrix_transposed = self.matrix is not None and not self.matrix.axis
+        plotstyle = mdsplotutils.plotstyle
 
         def column(data, variable):
             a, _ = data.get_column_view(variable)
@@ -723,11 +724,12 @@ class OWMDS(widget.OWWidget):
                     palette = colorpalette.ColorPaletteGenerator(
                         len(color_var.values)
                     )
+                    plotstyle = plotstyle.updated(discrete_palette=palette)
                 else:
                     palette = None
 
                 color_data = mdsplotutils.color_data(
-                    self.data, color_var, plotstyle=mdsplotutils.plotstyle)
+                    self.data, color_var, plotstyle=plotstyle)
                 color_data = numpy.hstack(
                     (color_data,
                      numpy.full((len(color_data), 1), self.symbol_opacity))
@@ -749,7 +751,7 @@ class OWMDS(widget.OWWidget):
                 pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
                 if self._selection_mask is not None:
                     pen_data = numpy.array(
-                        [pen_data, mdsplotutils.plotstyle.selected_pen])
+                        [pen_data, plotstyle.selected_pen])
                     pen_data = pen_data[self._selection_mask.astype(int)]
                 else:
                     pen_data = numpy.full(len(self.data), pen_data,
@@ -886,7 +888,7 @@ class OWMDS(widget.OWWidget):
                 (color_var is not None and color_var.is_discrete):
 
             legend_data = mdsplotutils.legend_data(
-                color_var, shape_var, plotstyle=mdsplotutils.plotstyle)
+                color_var, shape_var, plotstyle=plotstyle)
 
             for color, symbol, text in legend_data:
                 self._legend_item.addItem(
@@ -1033,6 +1035,13 @@ from Orange.widgets.visualize.owlinearprojection import \
 from Orange.widgets.visualize.owlinearprojection import plotutils
 
 
+class namespace(namespace):
+    def updated(self, **kwargs):
+        ns = self.__dict__.copy()
+        ns.update(**kwargs)
+        return namespace(**ns)
+
+
 class mdsplotutils(plotutils):
     NoFlags, Selected, Highlight = 0, 1, 2
     NoFill, Filled = 0, 1
@@ -1042,7 +1051,7 @@ class mdsplotutils(plotutils):
         highligh_pen=QtGui.QPen(Qt.blue, 1),
         selected_brush=None,
         default_color=QtGui.QColor(Qt.darkGray).rgba(),
-        discrete_palette=colorpalette.ColorPaletteHSV(),
+        discrete_palette=colorpalette.ColorPaletteGenerator(),
         continuous_palette=colorpalette.ContinuousPaletteGenerator(
             QtGui.QColor(220, 220, 220),
             QtGui.QColor(0, 0, 0),
@@ -1081,6 +1090,9 @@ class mdsplotutils(plotutils):
             col = mdsplotutils.column_data(table, var, mask)
             if var.is_discrete:
                 palette = plotstyle.discrete_palette
+                if len(var.values) >= palette.number_of_colors:
+                    palette = colorpalette.ColorPaletteGenerator(len(var.values))
+
                 color_data = plotutils.discrete_colors(
                     col, nvalues=len(var.values), palette=palette)
             elif var.is_continuous:
@@ -1197,7 +1209,13 @@ class mdsplotutils(plotutils):
         if color_var is None and shape_var is None:
             return []
 
-        palette = plotstyle.discrete_palette
+        if color_var is not None:
+            palette = plotstyle.discrete_palette
+            if len(color_var.values) >= palette.number_of_colors:
+                palette = colorpalette.ColorPaletteGenerator(len(color_var.values))
+        else:
+            palette = None
+
         symbols = list(plotstyle.symbols)
 
         if shape_var is color_var:
