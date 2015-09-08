@@ -1025,8 +1025,18 @@ class OWMosaicDisplay(OWWidget):
     # ########################################
     # cell/example selection
     def sendSelectedData(self):
-        # send the selected examples
-        self.send("Selected Data", self.getSelectedExamples())
+        if self.data is None:
+            return None
+
+        attributes = self.getShownAttributeList()
+        row_indices = []
+        for i, row in enumerate(self.data):
+            for condition in self.selectionConditions:
+                if len([attr for attr, val in zip(attributes, condition)
+                        if row[attr] == val]) == len(condition):
+                    row_indices.append(i)
+        selected_data = Table.from_table_rows(self.data, row_indices)
+        self.send("Selected Data", selected_data)
 
     # add a new rectangle. update the graph and see which mosaics does it intersect. add this mosaics to the recentlyAdded list
     def addSelection(self, rect):
@@ -1042,30 +1052,6 @@ class OWMosaicDisplay(OWWidget):
         self.selectionConditions = []
         ##        self.optimizationDlg.mtUpdateState()       # removeAllSelections is always called before updateGraph() - where mtUpdateState is called
         self.sendSelectedData()
-
-    # return examples in currently selected boxes as example table or array of 0/1 values
-    def getSelectedExamples(self, asExampleTable=1, negate=0, selectionConditions=None, data=None, attrs=None):
-        if attrs == None:     attrs = self.getShownAttributeList()
-        if data == None:      data = self.data
-        if selectionConditions == None:    selectionConditions = self.selectionConditions
-
-        if attrs == [] or not data:
-            return None
-
-        # TODO: poglej kaj je s tem
-        # pp = orange.Preprocessor_take()
-        sumIndices = numpy.zeros(len(data))
-        # for val in selectionConditions:
-        #     for i, attr in enumerate(attrs):
-        #         pp.values[data.domain[attr]] = val[i]
-        #     indices = numpy.array(pp.selectionVector(data))
-        #     sumIndices += indices
-        selectedIndices = list(numpy.where(sumIndices > 0, 1 - negate, 0 + negate))
-
-        # if asExampleTable:
-        #     return data.selectref(selectedIndices)
-        # else:
-        #     return selectedIndices
 
     def saveSettings(self):
         OWWidget.saveSettings(self)
