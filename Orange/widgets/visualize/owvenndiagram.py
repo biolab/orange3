@@ -966,6 +966,22 @@ class VennIntersectionArea(QGraphicsPathItem):
         self.setZValue(self.zValue() - 1)
         return QGraphicsPathItem.hoverLeaveEvent(self, event)
 
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if event.modifiers() & Qt.AltModifier:
+                self.setSelected(False)
+            elif event.modifiers() & Qt.ControlModifier:
+                self.setSelected(not self.isSelected())
+            elif event.modifiers() & Qt.ShiftModifier:
+                self.setSelected(True)
+            else:
+                for area in self.parentWidget().vennareas():
+                    area.setSelected(False)
+                self.setSelected(True)
+
+    def mouseReleaseEvent(self, event):
+        pass
+
     def paint(self, painter, option, widget=None):
         painter.save()
         path = self.path()
