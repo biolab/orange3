@@ -99,7 +99,7 @@ class OWMDS(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]
     outputs = [("Data", Orange.data.Table, widget.Default),
-               ("Data Subset", Orange.data.Table)]
+               ("Selected Data", Orange.data.Table)]
 
     #: Initialization type
     PCA, Random = 0, 1
@@ -936,7 +936,7 @@ class OWMDS(widget.OWWidget):
             subset = output[self._selection_mask]
         else:
             subset = None
-        self.send("Data Subset", subset)
+        self.send("Selected Data", subset)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
