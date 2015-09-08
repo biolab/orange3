@@ -157,6 +157,7 @@ class OWMosaicDisplay(OWWidget):
         self.selectionRectangle = None
         self.selectionConditionsHistorically = []
         self.selectionConditions = []
+        self.recentlyAdded = []
         self.key_modifier = Qt.NoModifier
 
         # color paletes for visualizing pearsons residuals
@@ -798,8 +799,7 @@ class OWMosaicDisplay(OWWidget):
                                                      | Qt.ControlModifier):
                 self.selectionConditions.remove(tuple(used_vals))
             elif tuple(used_vals) not in self.selectionConditions:
-                self.recentlyAdded = getattr(self, "recentlyAdded", []) \
-                                     + [tuple(used_vals)]
+                self.recentlyAdded += [tuple(used_vals)]
                 if self.key_modifier & (Qt.ControlModifier | Qt.ShiftModifier):
                     self.selectionConditions = self.selectionConditions \
                                                + [tuple(used_vals)]
@@ -1035,9 +1035,8 @@ class OWMosaicDisplay(OWWidget):
         self.updateGraph(drillUpdateSelection=0)
         self.sendSelectedData()
 
-        if getattr(self, "recentlyAdded", []):
-            self.selectionConditionsHistorically = self.selectionConditionsHistorically + [self.recentlyAdded]
-            self.recentlyAdded = []
+        self.selectionConditionsHistorically += self.recentlyAdded
+        self.recentlyAdded = []
 
         # self.optimizationDlg.mtUpdateState()  # we have already called this in self.updateGraph() call
         self.selectionRectangle = None
