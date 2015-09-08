@@ -85,9 +85,7 @@ class MosaicSceneView(QGraphicsView):
         self.bMouseDown = False
         self.widget.key_modifier = ev.modifiers()
 
-        if ev.button() == Qt.RightButton:
-            self.widget.removeLastSelection()
-        elif self.tempRect:
+        if self.tempRect:
             if ev.button() == Qt.LeftButton and not ev.modifiers() & \
                     (Qt.AltModifier | Qt.ControlModifier | Qt.ShiftModifier):
                 self.widget.selectionConditions = []
@@ -155,7 +153,6 @@ class OWMosaicDisplay(OWWidget):
         self.activeRule = None
 
         self.selectionRectangle = None
-        self.selectionConditionsHistorically = []
         self.selectionConditions = []
         self.recentlyAdded = []
         self.key_modifier = Qt.NoModifier
@@ -1034,28 +1031,13 @@ class OWMosaicDisplay(OWWidget):
         self.selectionRectangle = rect
         self.updateGraph(drillUpdateSelection=0)
         self.sendSelectedData()
-
-        self.selectionConditionsHistorically += self.recentlyAdded
         self.recentlyAdded = []
 
         # self.optimizationDlg.mtUpdateState()  # we have already called this in self.updateGraph() call
         self.selectionRectangle = None
 
-    # remove the mosaics that were added with the last selection rectangle
-    def removeLastSelection(self):
-        if self.selectionConditionsHistorically:
-            vals = self.selectionConditionsHistorically.pop()
-            for val in vals:
-                if tuple(val) in self.selectionConditions:
-                    self.selectionConditions.remove(tuple(val))
-
-        self.updateGraph()
-        ##        self.optimizationDlg.mtUpdateState()       # we have already called this in self.updateGraph() call
-        self.sendSelectedData()
-
     def removeAllSelections(self):
         self.selectionConditions = []
-        self.selectionConditionsHistorically = []
         ##        self.optimizationDlg.mtUpdateState()       # removeAllSelections is always called before updateGraph() - where mtUpdateState is called
         self.sendSelectedData()
 
