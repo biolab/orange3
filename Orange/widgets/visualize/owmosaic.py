@@ -83,10 +83,14 @@ class MosaicSceneView(QGraphicsView):
     # mouse button was released #########################################
     def mouseReleaseEvent(self, ev):
         self.bMouseDown = False
+        self.widget.key_modifier = ev.modifiers()
 
         if ev.button() == Qt.RightButton:
             self.widget.removeLastSelection()
         elif self.tempRect:
+            if ev.button() == Qt.LeftButton and not ev.modifiers() & \
+                    (Qt.AltModifier | Qt.ControlModifier | Qt.ShiftModifier):
+                self.widget.selectionConditions = []
             self.widget.addSelection(self.tempRect)
             self.scene().removeItem(self.tempRect)
             self.tempRect = None
@@ -153,6 +157,7 @@ class OWMosaicDisplay(OWWidget):
         self.selectionRectangle = None
         self.selectionConditionsHistorically = []
         self.selectionConditions = []
+        self.key_modifier = Qt.NoModifier
 
         # color paletes for visualizing pearsons residuals
         self.blue_colors = [QColor(255, 255, 255), QColor(210, 210, 255),
@@ -784,11 +789,23 @@ class OWMosaicDisplay(OWWidget):
 
         if not self.conditionalDict[attrVals]: return
 
-        # we have to remember which conditions were new in this update so that when we right click we can only remove the last added selections
-        if self.selectionRectangle != None and self.selectionRectangle.collidesWithItem(outerRect) and tuple(
-                used_vals) not in self.selectionConditions:
-            self.recentlyAdded = getattr(self, "recentlyAdded", []) + [tuple(used_vals)]
-            self.selectionConditions = self.selectionConditions + [tuple(used_vals)]
+        # we have to remember which conditions were new in this update so that
+        #  when we right click we can only remove the last added selections
+        if self.selectionRectangle is not None and \
+                self.selectionRectangle.collidesWithItem(outerRect):
+            if tuple(used_vals) in self.selectionConditions and \
+                            self.key_modifier & (Qt.AltModifier
+                                                     | Qt.ControlModifier):
+                self.selectionConditions.remove(tuple(used_vals))
+            elif tuple(used_vals) not in self.selectionConditions:
+                self.recentlyAdded = getattr(self, "recentlyAdded", []) \
+                                     + [tuple(used_vals)]
+                if self.key_modifier & (Qt.ControlModifier | Qt.ShiftModifier):
+                    self.selectionConditions = self.selectionConditions \
+                                               + [tuple(used_vals)]
+                elif not self.key_modifier & (Qt.AltModifier | Qt.ShiftModifier
+                                                  | Qt.ControlModifier):
+                    self.selectionConditions = self.recentlyAdded
 
         # show rectangle selected or not
         if tuple(used_vals) in self.selectionConditions:
