@@ -1008,9 +1008,9 @@ class OWLinearProjection(widget.OWWidget):
                                  Qt.AltModifier):
             self._selection_mask = numpy.zeros(len(self.data), dtype=bool)
 
-        if modifiers & Qt.ControlModifier:
+        if modifiers & Qt.AltModifier:
             self._selection_mask[indices] = False
-        elif modifiers & Qt.AltModifier:
+        elif modifiers & Qt.ControlModifier:
             self._selection_mask[indices] = ~self._selection_mask[indices]
         else:
             self._selection_mask[indices] = True
