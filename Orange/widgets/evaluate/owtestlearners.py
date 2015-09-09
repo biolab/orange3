@@ -205,7 +205,7 @@ class OWTestLearners(widget.OWWidget):
         header.setStretchLastSection(False)
 
         self.result_model = QStandardItemModel(self)
-        self.result_model.setHorizontalHeaderLabels(["Model"])
+        self.result_model.setHorizontalHeaderLabels(["Method"])
         self.view.setModel(self.result_model)
         self.view.setItemDelegate(ItemDelegate())
 
@@ -224,8 +224,7 @@ class OWTestLearners(widget.OWWidget):
             del self.learners[key]
         else:
             self.learners[key] = Input(learner, None, None)
-
-        self._update_stats_model()
+            self._invalidate([key])
 
     def set_train_data(self, data):
         """
@@ -265,7 +264,6 @@ class OWTestLearners(widget.OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self._update_header()
         self.apply()
 
     def kfold_changed(self):
@@ -278,8 +276,9 @@ class OWTestLearners(widget.OWWidget):
 
     def _param_changed(self):
         self._invalidate()
+        self.apply()
 
-    def _start_update(self):
+    def _update_results(self):
         """
         Run/evaluate the learners.
         """
@@ -364,9 +363,6 @@ class OWTestLearners(widget.OWWidget):
         self.setStatusMessage("")
         self.progressBarFinished()
 
-        self._update_stats_model()
-        self.commit()
-
     def _update_header(self):
         # Set the correct horizontal header labels on the results_model.
         headers = ["Method"]
@@ -392,28 +388,35 @@ class OWTestLearners(widget.OWWidget):
         for r in reversed(range(model.rowCount())):
             model.takeRow(r)
 
-        if self.data is None:
-            return
-
         target_index = None
-        class_var = self.data.domain.class_var
-        if class_var.is_discrete and \
-                self.class_selection != self.TARGET_AVERAGE:
-            target_index = class_var.values.index(self.class_selection)
+        if self.data is not None:
+            class_var = self.data.domain.class_var
+            if class_var.is_discrete and \
+                    self.class_selection != self.TARGET_AVERAGE:
+                target_index = class_var.values.index(self.class_selection)
+        else:
+            class_var = None
 
-        for slot in self.learners.values():
+        errors = []
+        has_missing_scores = False
+
+        for key, slot in self.learners.items():
             name = learner_name(slot.learner)
             head = QStandardItem(name)
-
+            head.setData(key, Qt.UserRole)
             if isinstance(slot.results, Try.Fail):
                 head.setToolTip(str(slot.results.exception))
                 head.setText("{} (error)".format(name))
                 head.setForeground(QtGui.QBrush(Qt.red))
+                errors.append("{name} failed with error:\n"
+                              "{exc.__class__.__name__}: {exc!s}"
+                              .format(name=name, exc=slot.results.exception))
 
             row = [head]
 
-            if class_var.is_discrete and target_index is not None:
-                if slot.results.success:
+            if class_var is not None and class_var.is_discrete and \
+                    target_index is not None:
+                if slot.results is not None and slot.results.success:
                     ovr_results = results_one_vs_rest(
                         slot.results.value, target_index)
 
@@ -431,9 +434,20 @@ class OWTestLearners(widget.OWWidget):
                         item.setText("{:.3f}".format(stat.value[0]))
                     else:
                         item.setToolTip(str(stat.exception))
+                        has_missing_scores = True
                     row.append(item)
 
             model.appendRow(row)
+
+        if errors:
+            self.error(3, "\n".join(errors))
+        else:
+            self.error(3)
+
+        if has_missing_scores:
+            self.warning(3, "Some scores could not be computed")
+        else:
+            self.warning(3)
 
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
@@ -460,32 +474,34 @@ class OWTestLearners(widget.OWWidget):
         self._update_stats_model()
 
     def _invalidate(self, which=None):
+        # Invalidate learner results for `which` input keys
+        # (if None then all learner results are invalidated)
         if which is None:
             which = self.learners.keys()
 
-        all_keys = list(self.learners.keys())
         model = self.view.model()
+        statmodelkeys = [model.item(row, 0).data(Qt.UserRole)
+                         for row in range(model.rowCount())]
 
         for key in which:
             self.learners[key] = \
                 self.learners[key]._replace(results=None, stats=None)
 
-            if key in self.learners:
-                row = all_keys.index(key)
+            if key in statmodelkeys:
+                row = statmodelkeys.index(key)
                 for c in range(1, model.columnCount()):
                     item = model.item(row, c)
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
-        self.apply()
 
     def apply(self):
         self._update_header()
-        if self.data is not None:
-            self._start_update()
-        else:
-            # Clear the output
-            self.commit()
+        # Update the view to display the model names
+        self._update_stats_model()
+        self._update_results()
+        self._update_stats_model()
+        self.commit()
 
     def commit(self):
         valid = [slot for slot in self.learners.values()
