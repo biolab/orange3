@@ -402,13 +402,6 @@ class OWLinearProjection(widget.OWWidget):
         self.pinchtool = PlotPinchZoomTool(self)
         self.pinchtool.setViewBox(self.viewbox)
 
-        self.continuous_palette = colorpalette.ContinuousPaletteGenerator(
-            QtGui.QColor(220, 220, 220),
-            QtGui.QColor(0, 0, 0),
-            False
-        )
-        self.discrete_palette = colorpalette.ColorPaletteGenerator(13)
-
         def icon(name):
             path = "icons/Dlg_{}.png".format(name)
             path = pkg_resources.resource_filename(widget.__name__, path)
@@ -784,8 +777,10 @@ class OWLinearProjection(widget.OWWidget):
             if color_var.is_continuous:
                 color_data = plotutils.continuous_colors(color_data)
             else:
+                palette = colorpalette.ColorPaletteGenerator(
+                    len(color_var.values))
                 color_data = plotutils.discrete_colors(
-                    color_data, len(color_var.values)
+                    color_data, len(color_var.values), palette=palette
                 )
             if mask is not None:
                 color_data = color_data[mask]
@@ -940,7 +935,8 @@ class OWLinearProjection(widget.OWWidget):
                 legend.setParentItem(self.viewbox)
             legend.setVisible(True)
 
-        palette = self.discrete_palette
+        palette = colorpalette.ColorPaletteGenerator(
+            len(color_var.values) if color_var is not None else 0)
         symbols = list(ScatterPlotItem.Symbols)
 
         if shape_var is color_var:
@@ -1558,13 +1554,13 @@ class plotutils:
 
     @staticmethod
     def discrete_colors(data, nvalues, palette=None):
-        if palette is None:
+        if palette is None or nvalues >= palette.number_of_colors:
             palette = colorpalette.ColorPaletteGenerator(nvalues)
 
-        color_index = palette.getRGB(numpy.arange(nvalues + 1))
+        color_index = palette.getRGB(numpy.arange(nvalues))
         # Unknown values as gray
         # TODO: This should already be a part of palette
-        color_index[nvalues] = (128, 128, 128)
+        color_index = numpy.vstack((color_index, [[128, 128, 128]]))
 
         data = numpy.where(numpy.isnan(data), nvalues, data)
         data = data.astype(int)
