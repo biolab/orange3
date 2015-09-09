@@ -414,15 +414,14 @@ class OWMDS(widget.OWWidget):
             cd_vars = [var for var in all_vars if var.is_primitive()]
             disc_vars = [var for var in all_vars if var.is_discrete]
             cont_vars = [var for var in all_vars if var.is_continuous]
-            str_vars = [var for var in all_vars
-                            if var.is_discrete or var.is_string]
-
+            shape_vars = [var for var in disc_vars
+                          if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
             self.colorvar_model[:] = chain(["Same color"],
                                            [self.colorvar_model.Separator],
                                            cd_vars)
             self.shapevar_model[:] = chain(["Same shape"],
                                            [self.shapevar_model.Separator],
-                                           disc_vars)
+                                           shape_vars)
             self.sizevar_model[:] = chain(["Same size", "Stress"],
                                           [self.sizevar_model.Separator],
                                           cont_vars)
