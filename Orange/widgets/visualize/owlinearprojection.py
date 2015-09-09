@@ -668,6 +668,8 @@ class OWLinearProjection(widget.OWWidget):
                      if var.is_continuous]
         disc_vars = [var for var in data.domain.variables
                      if var.is_discrete]
+        shape_vars = [var for var in disc_vars
+                      if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
 
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]
@@ -675,7 +677,7 @@ class OWLinearProjection(widget.OWWidget):
 
         self.colorvar_model[:] = ["Same color"] + all_vars
         self.sizevar_model[:] = ["Same size"] + cont_vars
-        self.shapevar_model[:] = ["Same shape"] + disc_vars
+        self.shapevar_model[:] = ["Same shape"] + shape_vars
 
         if data.domain.has_discrete_class:
             self.color_index = all_vars.index(data.domain.class_var) + 1
