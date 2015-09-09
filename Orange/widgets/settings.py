@@ -35,6 +35,7 @@ import os
 import pickle
 import time
 import warnings
+from Orange.util import abstract
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
@@ -535,7 +536,10 @@ class Context:
 
 
 class ContextHandler(SettingsHandler):
-    """Base class for setting handlers that can handle contexts."""
+    """Base class for setting handlers that can handle contexts.
+
+    Classes deriving from it need to implement method `match`.
+    """
 
     MAX_SAVED_CONTEXTS = 50
 
@@ -608,6 +612,7 @@ class ContextHandler(SettingsHandler):
         else:
             self.settings_to_widget(widget)
 
+    @abstract
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
         passed in additional arguments). A match of 0 zero indicates that
@@ -618,7 +623,7 @@ class ContextHandler(SettingsHandler):
         return 0 and 2.
 
         Derived classes must overload this method."""
-        raise TypeError(self.__class__.__name__ + " does not overload match")
+        pass
 
     def find_or_create_context(self, widget, *args):
         """Find the best matching context or create a new one if nothing
