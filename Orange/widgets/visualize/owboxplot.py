@@ -181,8 +181,6 @@ class OWBoxPlot(widget.OWWidget):
             self.controlArea, self, 'stretched', "Stretch bars", box='Display',
             callback=self.display_changed).box
 
-        # gui.rubber(self.controlArea)
-
         gui.widgetBox(self.mainArea, addSpace=True)
         self.box_scene = QtGui.QGraphicsScene()
         self.box_view = QtGui.QGraphicsView(self.box_scene)
