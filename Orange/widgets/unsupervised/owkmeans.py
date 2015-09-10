@@ -315,7 +315,7 @@ class OWKMeans(widget.OWWidget):
         else:
             km = self.km
         if not self.data or not km:
-            self.send("Data", None)
+            self.send("Annotated Data", None)
             self.send("Centroids", None)
             return
 
