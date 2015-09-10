@@ -6,6 +6,7 @@ import numpy as np
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+from PyQt4.QtGui import QSizePolicy
 
 import scipy.special
 
@@ -154,13 +155,17 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_list_box = gui.listBox(
             self.controlArea, self, "attributes_select", "attributes",
             box="Variable", callback=self.attr_changed,
-            sizeHint=QtCore.QSize(200, 250))
+            sizeHint=QtCore.QSize(200, 150))
+        self.attr_list_box.setSizePolicy(QSizePolicy.Fixed,
+                                         QSizePolicy.MinimumExpanding)
 
         box = gui.widgetBox(self.controlArea, "Grouping")
         self.group_list_box = gui.listBox(
             box, self, 'grouping_select', "grouping",
             callback=self.attr_changed,
-            sizeHint=QtCore.QSize(200, 150))
+            sizeHint=QtCore.QSize(200, 100))
+        self.group_list_box.setSizePolicy(QSizePolicy.Fixed,
+                                          QSizePolicy.MinimumExpanding)
 
         # TODO: move Compare median/mean to grouping box
         self.display_box = gui.widgetBox(self.controlArea, "Display")
@@ -176,7 +181,7 @@ class OWBoxPlot(widget.OWWidget):
             self.controlArea, self, 'stretched', "Stretch bars", box='Display',
             callback=self.display_changed).box
 
-        gui.rubber(self.controlArea)
+        # gui.rubber(self.controlArea)
 
         gui.widgetBox(self.mainArea, addSpace=True)
         self.box_scene = QtGui.QGraphicsScene()
