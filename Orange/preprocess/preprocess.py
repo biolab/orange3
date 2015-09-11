@@ -155,20 +155,12 @@ class SklImpute(Preprocess):
         if not self.force and not np.isnan(data.X).any():
             return data
         self.imputer = skl_preprocessing.Imputer(strategy=self.strategy)
-        self.imputer.fit(data.X)
-        self.fix_statistics_for_discrete_vars(data)
-        X = self.imputer.transform(data.X)
+        X = self.imputer.fit_transform(data.X)
         features = [impute.Average()(data, var, value) for var, value in
                     zip(data.domain.attributes, self.imputer.statistics_)]
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, X, data.Y, data.metas)
-
-    def fix_statistics_for_discrete_vars(self, data):
-        for i, v in enumerate(data.domain.attributes):
-            if v.is_discrete:
-                dist = distribution.get_distribution(data, v)
-                self.imputer.statistics_[i] = dist.modus()
 
 
 class RemoveConstant(Preprocess):

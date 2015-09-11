@@ -324,7 +324,10 @@ class OWImpute(OWWidget):
         if method.short == "leave":
             return None
         elif method.short == "avg":
-            return column_imputer_average(var, data)
+            if var.is_continuous:
+                return column_imputer_average(var, data)
+            else:
+                return column_imputer_modus(var, data)
         elif method.short == "model":
             learner = self.learner if self.learner is not None else MeanLearner()
             return column_imputer_by_model(var, data, learner=learner)
@@ -563,18 +566,13 @@ def column_imputer_minimal(variable, table):
 
 
 def column_imputer_average(variable, table):
-    if variable.is_continuous:
-        stats = basic_stats.BasicStats(table, variable)
-        val = stats.mean
-    else:
-        dist = distribution.get_distribution(table, variable)
-        val = dist.modus()
-    return column_imputer_defaults(variable, table, val)
+    stats = basic_stats.BasicStats(table, variable)
+    return column_imputer_defaults(variable, table, stats.mean)
 
 
 def column_imputer_modus(variable, table):
     stat = distribution.get_distribution(table, variable)
-    column_imputer_defaults(variable, table, stat.modus())
+    return column_imputer_defaults(variable, table, stat.modus())
 
 
 class ColumnImputerDefaults(ColumnImputerModel):

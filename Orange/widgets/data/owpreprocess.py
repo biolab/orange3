@@ -366,7 +366,7 @@ class ImputeEditor(BaseEditor):
         if method == ImputeEditor.NoImputation:
             return None
         elif method == ImputeEditor.Average:
-            return preprocess.SklImpute()
+            return preprocess.Impute()
         elif method == ImputeEditor.Model:
             return preprocess.Impute(method=preprocess.impute.Model())
         elif method == ImputeEditor.DropRows:
