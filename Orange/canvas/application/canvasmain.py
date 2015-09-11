@@ -953,7 +953,8 @@ class CanvasMainWindow(QMainWindow):
         from a saved `filename`. Return `None` if an error occurs.
 
         """
-        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
+        new_scheme = widgetsscheme.WidgetsScheme(
+            parent=self, basedir=os.path.dirname(filename))
         errors = []
         try:
             scheme_load(new_scheme, open(filename, "rb"),

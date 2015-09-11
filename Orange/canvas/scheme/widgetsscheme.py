@@ -47,14 +47,19 @@ class WidgetsScheme(Scheme):
     (creation/deletion, etc.) of `OWBaseWidget` instances corresponding to
     the nodes in the scheme. It also delegates the interwidget signal
     propagation to an instance of `WidgetsSignalManager`.
-
     """
-    def __init__(self, parent=None, title=None, description=None):
+
+    def __init__(self, parent=None, title=None, description=None,
+                 basedir=None):
         Scheme.__init__(self, parent, title, description)
+        self.__basedir = basedir
 
         self.signal_manager = WidgetsSignalManager(self)
         self.widget_manager = WidgetManager()
         self.widget_manager.set_scheme(self)
+
+    def basedir(self):
+        return self.__basedir
 
     def widget_for_node(self, node):
         """
@@ -297,7 +302,8 @@ class WidgetManager(QObject):
             klass,
             None,
             signal_manager=self.signal_manager(),
-            stored_settings=node.properties
+            stored_settings=node.properties,
+            env={"basedir": self.scheme().basedir()}
         )
 
         # Init the node/widget mapping and state before calling __init__

@@ -110,6 +110,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.settingsHandler.initialize(self, stored_settings)
 
         self.signalManager = kwargs.get('signal_manager', None)
+        self.__env = kwargs.get("env", {})
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self.__reportData = None
@@ -670,6 +671,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def resetSettings(self):
         self.settingsHandler.reset_settings(self)
+
+    def getWorkflowEnv(self):
+        return dict(self.__env)
 
 
 # Pull signal constants from canvas to widget namespace
