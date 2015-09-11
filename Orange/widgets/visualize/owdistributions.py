@@ -191,6 +191,7 @@ class OWDistributions(widget.OWWidget):
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
         self.graphButton.clicked.connect(self.save_graph)
+        self.controlArea.setMaximumWidth(260)
 
     def update_views(self):
         self.plot_prob.setGeometry(self.plot.vb.sceneBoundingRect())
