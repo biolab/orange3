@@ -14,7 +14,8 @@ class TestWidgetOutputs(unittest.TestCase):
             signal_names = {output.name for output in desc.outputs}
             module_name, class_name = desc.qualified_name.rsplit(".", 1)
             fname = importlib.util.find_spec(module_name).origin
-            widget_code = open(fname).read()
+            with open(fname) as f:
+                widget_code = f.read()
             used = set(re_send.findall(widget_code))
             undeclared = used - signal_names
             if undeclared:
