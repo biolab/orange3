@@ -46,8 +46,10 @@ class OWFile(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.domain = None
-        self.recent_files = [fn for fn in self.recent_files
-                             if os.path.exists(fn)]
+        self.recent_files = [
+            fn for fn in self.recent_files
+            if os.path.exists(fn) or
+            os.path.exists(os.path.join(".", os.path.split(fn)[1]))]
         self.loaded_file = ""
 
         vbox = gui.widgetBox(self.controlArea, "Data File", addSpace=True)
