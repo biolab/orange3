@@ -46,9 +46,8 @@ class OWFile(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.domain = None
-        self.recent_files = [fn for fn in self.recent_files
-                             if os.path.exists(fn)]
         self.loaded_file = ""
+        self._relocate_recent_files()
 
         vbox = gui.widgetBox(self.controlArea, "Data File", addSpace=True)
         box = gui.widgetBox(vbox, orientation=0)
@@ -85,6 +84,17 @@ class OWFile(widget.OWWidget):
         self.set_file_list()
         if len(self.recent_files) > 0:
             self.open_file(self.recent_files[0])
+
+    def _relocate_recent_files(self):
+        rec = []
+        for fn in self.recent_files:
+            if os.path.exists(fn):
+                rec.append(fn)
+            else:
+                name = os.path.split(fn)[1]
+                if os.path.exists(name):
+                    rec.append(name)
+        self.recent_files = rec
 
     def set_file_list(self):
         self.file_combo.clear()

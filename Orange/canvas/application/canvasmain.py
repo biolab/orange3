@@ -938,6 +938,7 @@ class CanvasMainWindow(QMainWindow):
         dirname = os.path.dirname(filename)
 
         self.last_scheme_dir = dirname
+        os.chdir(dirname)
 
         new_scheme = self.new_scheme_from(filename)
         if new_scheme is not None:
