@@ -2,11 +2,10 @@ import numpy as np
 
 import sklearn.cross_validation as skl_cross_validation
 
-import Orange.data
-from Orange.data import Domain, Table
+from Orange.data import Table
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
-           "Bootstrap", "TestOnTestData", "sample"]
+           "ShuffleSplit", "TestOnTestData", "sample"]
 
 
 class Results:
@@ -366,21 +365,22 @@ class TestOnTrainingData(Results):
         self.call_callback(1)
 
 
-class Bootstrap(Results):
-    def __init__(self, data, learners, n_resamples=10, p=0.75, random_state=0,
-                 store_data=False, store_models=False, preprocessor=None,
-                 callback=None):
+class ShuffleSplit(Results):
+    def __init__(self, data, learners, n_resamples=10, train_size=None,
+                 test_size=0.1, random_state=0, store_data=False,
+                 store_models=False, preprocessor=None, callback=None):
         super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback)
         self.store_models = store_models
         self.n_resamples = n_resamples
-        self.p = p
+        self.train_size = train_size
+        self.test_size = test_size
         self.random_state = random_state
 
-        indices = skl_cross_validation.Bootstrap(
-            len(data), n_iter=self.n_resamples, train_size=self.p,
-            random_state=self.random_state
+        indices = skl_cross_validation.ShuffleSplit(
+            len(data), n_iter=self.n_resamples, train_size=self.train_size,
+            test_size=test_size, random_state=self.random_state
         )
 
         self.folds = []

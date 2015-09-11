@@ -460,3 +460,14 @@ class TestTrainTestSplit(unittest.TestCase):
         train, test = Orange.evaluation.sample(data, 0.9, replace=True)
         self.assertEqual(len(train), 135)
         self.assertGreater(len(train) + len(test), len(data))
+
+
+class TestShuffleSplit(unittest.TestCase):
+    def test_results(self):
+        nrows, ncols = 100, 10
+        data = random_data(nrows, ncols)
+        train_size, n_resamples = 0.6, 10
+        res = ShuffleSplit(data, [NaiveBayesLearner()], train_size=train_size,
+                           test_size=1 - train_size, n_resamples=n_resamples)
+        self.assertEqual(len(res.predicted[0]),
+                         n_resamples * nrows * (1 - train_size))
