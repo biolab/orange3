@@ -18,6 +18,8 @@ class OWKMeans(widget.OWWidget):
     icon = "icons/KMeans.svg"
     priority = 2100
 
+    max_control_area_width = None
+
     inputs = [("Data", Table, "set_data")]
 
     outputs = [("Annotated Data", Table, widget.Default),
