@@ -88,6 +88,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     want_status_bar = False
     no_report = False
 
+    max_control_area_width = 260
+
     save_position = True
     resizing_enabled = True
 
@@ -190,6 +192,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if self.want_control_area:
             self.controlArea = gui.widgetBox(self.leftWidgetPart,
                                              orientation="vertical", margin=4)
+            if self.want_main_area and self.max_control_area_width is not None:
+                self.controlArea.setMaximumWidth(self.max_control_area_width)
 
         if self.want_graph and self.show_save_graph:
             graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
