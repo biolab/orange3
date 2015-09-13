@@ -3129,6 +3129,39 @@ class VerticalLabel(QtGui.QLabel):
             Qt.AlignCenter, self.text())
         painter.end()
 
+
+class VerticalItemDelegate(QtGui.QItemDelegate):
+    def sizeHint(self, option, index):
+        metrics = QtGui.QFontMetrics(option.font)
+        rect = metrics.boundingRect(index.data(Qt.DisplayRole))
+        size = QtCore.QSize(rect.height() + 2, rect.width() + 2)
+        return size
+
+    def paint(self, painter, option, index):
+        text = index.data(Qt.DisplayRole)
+        if not text:
+            return
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewRow, option, painter,
+            option.widget)
+        cell_rect = option.rect
+
+        painter.save()
+        painter.setFont(option.font)
+        painter.translate(cell_rect.x(), cell_rect.y() + cell_rect.height())
+        painter.rotate(-90)
+        # TODO Replace hardcoded alignment
+        painter.drawText(
+            QtCore.QRect(QtCore.QPoint(0, 0),
+                         QtCore.QSize(cell_rect.height(),
+                                      cell_rect.width() - 6)),
+            Qt.AlignHCenter | Qt.AlignBottom, text)
+        painter.restore()
+
 ##############################################################################
 # progress bar management
 
