@@ -2,7 +2,7 @@ import unicodedata
 
 from PyQt4.QtGui import (
     QGridLayout, QLabel, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont, QHeaderView
+    QItemSelectionModel, QItemSelection, QFont, QHeaderView, QBrush, QColor
 )
 from PyQt4.QtCore import Qt
 
@@ -77,21 +77,28 @@ class OWConfusionMatrix(widget.OWWidget):
                         "Send Data", "Auto send is on")
 
         grid = QGridLayout()
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.addWidget(QLabel("Predicted"), 0, 1, Qt.AlignCenter)
-        grid.addWidget(VerticalLabel("Actual Class"), 1, 0, Qt.AlignCenter)
 
         self.tablemodel = QStandardItemModel(self)
         view = self.tableview = QTableView(
             editTriggers=QTableView.NoEditTriggers)
         view.setModel(self.tablemodel)
+        view.horizontalHeader().hide()
+        view.verticalHeader().hide()
         view.horizontalHeader().setMinimumSectionSize(60)
         view.selectionModel().selectionChanged.connect(self._invalidate)
-        grid.addWidget(view, 1, 1)
+        view.setShowGrid(False)
+        view.clicked.connect(self.cell_clicked)
+        grid.addWidget(view, 0, 0)
         self.mainArea.layout().addLayout(grid)
 
     def sizeHint(self):
-        return QSize(750, 600)
+        return QSize(750, 490)
+
+    def _item(self, i, j):
+        return self.tablemodel.item(i, j) or QStandardItem()
+
+    def _setItem(self, i, j, item):
+        self.tablemodel.setItem(i, j, item)
 
     def set_results(self, results):
         """Set the input results."""
@@ -128,17 +135,45 @@ class OWConfusionMatrix(widget.OWWidget):
             else:
                 self.learners = ["L %i" % (i + 1) for i in range(nmodels)]
 
-            self.tablemodel.setVerticalHeaderLabels(self.headers)
-            self.tablemodel.setHorizontalHeaderLabels(self.headers)
+            item = self._item(0, 2)
+            item.setData("Predicted", Qt.DisplayRole)
+            item.setTextAlignment(Qt.AlignCenter)
+            item.setFlags(Qt.NoItemFlags)
+            self._setItem(0, 2, item)
+            item = self._item(2, 0)
+            item.setData("Actual", Qt.DisplayRole)
+            item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            item.setFlags(Qt.NoItemFlags)
+            self._setItem(2, 0, item)
+            self.tableview.setSpan(0, 2, 1, len(class_values))
+            self.tableview.setSpan(2, 0, len(class_values), 1)
+
+            for i in (0, 1):
+                for j in (0, 1):
+                    item = self._item(i, j)
+                    item.setFlags(Qt.NoItemFlags)
+                    self._setItem(i, j, item)
+
+            for p, label in enumerate(self.headers):
+                for i, j in ((1, p + 2), (p + 2, 1)):
+                    item = self._item(i, j)
+                    item.setData(label, Qt.DisplayRole)
+                    item.setData(QBrush(QColor(208, 208, 208)),
+                                 Qt.BackgroundColorRole)
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    item.setFlags(Qt.ItemIsEnabled)
+                    self._setItem(i, j, item)
+
+            hor_header = self.tableview.horizontalHeader()
             if len(' '.join(self.headers)) < 120:
-                self.tableview.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
+                hor_header.setResizeMode(QHeaderView.ResizeToContents)
             else:
-                self.tableview.horizontalHeader().setDefaultSectionSize(60)
-                self.tableview.horizontalHeader().setResizeMode(QHeaderView.Interactive)
+                hor_header.setDefaultSectionSize(60)
+                hor_header.setResizeMode(QHeaderView.Interactive)
                 for i, h in enumerate(self.headers):
                     self.tablemodel.horizontalHeaderItem(i).setToolTip(h)
-            self.tablemodel.setRowCount(len(class_values) + 1)
-            self.tablemodel.setColumnCount(len(class_values) + 1)
+            self.tablemodel.setRowCount(len(class_values) + 3)
+            self.tablemodel.setColumnCount(len(class_values) + 3)
             self.selected_learner = [0]
             self._update()
 
@@ -154,7 +189,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def select_correct(self):
         selection = QItemSelection()
         n = self.tablemodel.rowCount()
-        for i in range(n):
+        for i in range(2, n):
             index = self.tablemodel.index(i, i)
             selection.select(index, index)
 
@@ -166,7 +201,7 @@ class OWConfusionMatrix(widget.OWWidget):
         selection = QItemSelection()
         n = self.tablemodel.rowCount()
 
-        for i in range(n):
+        for i in range(2, n):
             for j in range(i + 1, n):
                 index = self.tablemodel.index(i, j)
                 selection.select(index, index)
@@ -179,6 +214,24 @@ class OWConfusionMatrix(widget.OWWidget):
 
     def select_none(self):
         self.tableview.selectionModel().clear()
+
+    def cell_clicked(self, model_index):
+        i, j = model_index.row(), model_index.column()
+        if not i or not j:
+            return
+        n = self.tablemodel.rowCount()
+        index = self.tablemodel.index
+        selection = None
+        if i == j == 1 or i == j == n - 1:
+            selection = QItemSelection(index(2, 2), index(n - 1, n - 1))
+        elif i in (1, n - 1):
+            selection = QItemSelection(index(2, j), index(n - 1, j))
+        elif j in (1, n - 1):
+            selection = QItemSelection(index(i, 2), index(i, n - 1))
+        if selection is not None:
+            self.tableview.selectionModel().select(
+                selection, QItemSelectionModel.ClearAndSelect
+            )
 
     def commit(self):
         if self.results is not None and self.data is not None \
@@ -264,19 +317,17 @@ class OWConfusionMatrix(widget.OWWidget):
             else:
                 assert False
 
-            model = self.tablemodel
             for i, row in enumerate(cmatrix):
                 for j, _ in enumerate(row):
-                    item = model.item(i, j)
-                    if item is None:
-                        item = QStandardItem()
+                    item = self._item(i + 2, j + 2)
                     item.setData(value(i, j), Qt.DisplayRole)
-                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                    item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                     item.setToolTip("actual: {}\npredicted: {}".format(
                         self.headers[i], self.headers[j]))
-                    model.setItem(i, j, item)
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    self._setItem(i + 2, j + 2, item)
 
+            model = self.tablemodel
             font = model.invisibleRootItem().font()
             bold_font = QFont(font)
             bold_font.setBold(True)
@@ -291,10 +342,10 @@ class OWConfusionMatrix(widget.OWWidget):
 
             N = len(colsum)
             for i in range(N):
-                model.setItem(N, i, sum_item(int(colsum[i])))
-                model.setItem(i, N, sum_item(int(rowsum[i])))
+                model.setItem(N + 2, i + 2, sum_item(int(colsum[i])))
+                model.setItem(i + 2, N + 2, sum_item(int(rowsum[i])))
 
-            model.setItem(N, N, sum_item(int(total)))
+            model.setItem(N + 2, N + 2, sum_item(int(total)))
 
 from PyQt4.QtGui import QSizePolicy, QFontMetrics, QPainter
 from PyQt4.QtCore import QRect, QPoint, QSize
