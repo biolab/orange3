@@ -347,39 +347,6 @@ class OWConfusionMatrix(widget.OWWidget):
 
             model.setItem(N + 2, N + 2, sum_item(int(total)))
 
-from PyQt4.QtGui import QSizePolicy, QFontMetrics, QPainter
-from PyQt4.QtCore import QRect, QPoint, QSize
-
-
-class VerticalLabel(QLabel):
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
-        self.setMaximumWidth(self.sizeHint().width() + 2)
-        self.setMargin(4)
-
-    def sizeHint(self):
-        metrics = QFontMetrics(self.font())
-        rect = metrics.boundingRect(self.text())
-        size = QSize(rect.height() + self.margin(),
-                     rect.width() + self.margin())
-        return size
-
-    def setGeometry(self, rect):
-        super().setGeometry(rect)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        rect = self.geometry()
-        text_rect = QRect(0, 0, rect.width(), rect.height())
-
-        painter.translate(text_rect.bottomLeft())
-        painter.rotate(-90)
-        painter.drawText(QRect(QPoint(0, 0),
-                               QSize(rect.height(), rect.width())),
-                         Qt.AlignCenter, self.text())
-        painter.end()
-
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
