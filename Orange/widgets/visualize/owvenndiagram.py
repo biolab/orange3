@@ -95,7 +95,9 @@ class OWVennDiagram(widget.OWWidget):
                                 addSpace=False)
             box.setFlat(True)
             model = itemmodels.VariableListModel(parent=self)
-            cb = QComboBox()
+            cb = QComboBox(
+                minimumContentsLength=12,
+                sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
             cb.setModel(model)
             cb.activated[int].connect(self._on_inputAttrActivated)
             box.setEnabled(False)

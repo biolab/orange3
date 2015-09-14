@@ -107,7 +107,9 @@ class OWSelectRows(widget.OWWidget):
         row = model.rowCount()
         model.insertRow(row)
 
-        attr_combo = QtGui.QComboBox()
+        attr_combo = QtGui.QComboBox(
+            minimumContentsLength=12,
+            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row
         for var in chain(self.data.domain.variables, self.data.domain.metas):
             attr_combo.addItem(*gui.attributeItem(var))
