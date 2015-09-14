@@ -1710,6 +1710,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
              orientation='vertical', items=(), callback=None,
              sendSelectedValue=False, valueType=str,
              control2attributeDict=None, emptyString=None, editable=False,
+             contentsLengthHint=None,
              **misc):
     """
     Construct a combo box.
@@ -1753,6 +1754,13 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type emptyString: str
     :param editable: a flag telling whether the combo is editable
     :type editable: bool
+    :param int contentsLengthHint: Contents character length to use for the
+        size hint. Equivalent to::
+
+            combo.setSizeAdjustPolicy(
+                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(contentsLengthHint)
+
     :rtype: PyQt4.QtGui.QComboBox
     """
     if box or label:
@@ -1763,6 +1771,11 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
         hb = widget
     combo = QtGui.QComboBox(hb)
     combo.setEditable(editable)
+    if contentsLengthHint is not None:
+        combo.setSizeAdjustPolicy(
+            QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        combo.setMinimumContentsLength(contentsLengthHint)
+
     combo.box = hb
     for item in items:
         if isinstance(item, (tuple, list)):
