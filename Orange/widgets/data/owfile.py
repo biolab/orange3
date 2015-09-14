@@ -30,6 +30,14 @@ RecentPath = namedtuple(
 
 
 class RecentPath(RecentPath):
+    def __new__(cls, abspath, prefix, relpath):
+        if os.name == "nt":
+            # always use a cross-platform pathname component separator
+            abspath = abspath.replace(os.path.sep, "/")
+            if relpath is not None:
+                relpath = relpath.replace(os.path.sep, "/")
+        return super(RecentPath, cls).__new__(cls, abspath, prefix, relpath)
+
     @staticmethod
     def create(path, searchpaths):
         """
@@ -46,12 +54,22 @@ class RecentPath(RecentPath):
             (note: the first matching prefixed path is chosen).
 
         """
+        def isprefixed(prefix, path):
+            """
+            Is `path` contained within the directory `prefix`.
+
+            >>> isprefixed("/usr/local/", "/usr/local/shared")
+            True
+            """
+            normalize = lambda path: os.path.normcase(os.path.normpath(path))
+            prefix, path = normalize(prefix), normalize(path)
+            if not prefix.endswith(os.path.sep):
+                prefix = prefix + os.path.sep
+            return os.path.commonprefix([prefix, path]) == prefix
+
         abspath = os.path.normpath(os.path.abspath(path))
         for prefix, base in searchpaths:
-            base = os.path.normpath(base)
-            if not base.endswith("/"):
-                base = base + "/"
-            if os.path.commonprefix([base, abspath]) == base:
+            if isprefixed(base, abspath):
                 relpath = os.path.relpath(abspath, base)
                 return RecentPath(abspath, prefix, relpath)
 
@@ -75,13 +93,13 @@ class RecentPath(RecentPath):
 
         """
         if os.path.exists(self.abspath):
-            return self.abspath
+            return os.path.normpath(self.abspath)
 
         for prefix, base in searchpaths:
             if self.prefix == prefix:
                 path = os.path.join(base, self.relpath)
                 if os.path.exists(path):
-                    return path
+                    return os.path.normpath(path)
         else:
             return None
 
