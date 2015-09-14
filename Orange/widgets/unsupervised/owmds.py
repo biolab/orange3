@@ -200,7 +200,8 @@ class OWMDS(widget.OWWidget):
         self.colorvar_model = itemmodels.VariableListModel()
 
         common_options = {"sendSelectedValue": True, "valueType": str,
-                          "orientation": "horizontal", "labelWidth": 50, }
+                          "orientation": "horizontal", "labelWidth": 50,
+                          "contentsLengthHint": 12}
 
         self.cb_color_value = gui.comboBox(
             box, self, "color_value", label="Color",

@@ -57,7 +57,8 @@ class OWUnivariateRegression(widget.OWWidget):
         self.comboBoxAttributesX = gui.comboBox(
             box, self, value='x_var_index',
             label="Input ", orientation="horizontal",
-            callback=self.apply)
+            callback=self.apply,
+            contentsLengthHint=12)
         self.comboBoxAttributesX.setSizePolicy(
             QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         self.comboBoxAttributesX.setModel(self.x_var_model)
@@ -71,7 +72,8 @@ class OWUnivariateRegression(widget.OWWidget):
         self.comboBoxAttributesY = gui.comboBox(
             box, self, value='y_var_index',
             label='Target', orientation="horizontal",
-            callback=self.apply)
+            callback=self.apply,
+            contentsLengthHint=12)
         self.comboBoxAttributesY.setSizePolicy(
             QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         self.comboBoxAttributesY.setModel(self.y_var_model)

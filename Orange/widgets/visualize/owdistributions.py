@@ -143,7 +143,8 @@ class OWDistributions(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
         self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
-             callback=self._on_groupvar_idx_changed, valueType=str)
+             callback=self._on_groupvar_idx_changed, valueType=str,
+             contentsLengthHint=12)
         box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
