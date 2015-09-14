@@ -233,7 +233,10 @@ class OWImpute(OWWidget):
         assert self.METHODS[-1].short == "value"
 
         self.value_stack = value_stack = QStackedLayout()
-        self.value_combo = QComboBox(activated=self._on_value_changed)
+        self.value_combo = QComboBox(
+            minimumContentsLength=8,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            activated=self._on_value_changed)
         self.value_line = QLineEdit(editingFinished=self._on_value_changed)
         self.value_line.setValidator(QDoubleValidator())
         value_stack.addWidget(self.value_combo)
