@@ -103,6 +103,18 @@ class RecentPath(RecentPath):
         else:
             return None
 
+    def resolve(self, searchpaths):
+        if self.prefix is None and os.path.exists(self.abspath):
+            return self
+        elif self.prefix is not None:
+            for prefix, base in searchpaths:
+                if self.prefix == prefix:
+                    path = os.path.join(base, self.relpath)
+                    if os.path.exists(path):
+                        return RecentPath(
+                            os.path.normpath(path), self.prefix, self.relpath)
+        return None
+
     @property
     def basename(self):
         return os.path.basename(self.abspath)
@@ -189,10 +201,9 @@ class OWFile(widget.OWWidget):
 
         rec = []
         for recent in self.recent_paths:
-            resolved = recent.search(paths)
+            resolved = recent.resolve(paths)
             if resolved is not None:
-                recent = RecentPath.create(resolved, paths)
-                rec.append(recent)
+                rec.append(resolved)
 
         self.recent_paths = rec
 
