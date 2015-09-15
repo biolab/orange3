@@ -203,7 +203,9 @@ class OWFile(widget.OWWidget):
         for recent in self.recent_paths:
             resolved = recent.resolve(paths)
             if resolved is not None:
-                rec.append(resolved)
+                rec.append(RecentPath.create(resolved.abspath, paths))
+            elif recent.search(paths) is not None:
+                rec.append(RecentPath.create(recent.search(paths), paths))
 
         self.recent_paths = rec
 
