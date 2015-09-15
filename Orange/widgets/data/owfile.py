@@ -214,8 +214,9 @@ class OWFile(widget.OWWidget):
             self.file_combo.addItem("(none)")
             self.file_combo.model().item(0).setEnabled(False)
         else:
-            for recent in self.recent_paths:
+            for i, recent in enumerate(self.recent_paths):
                 self.file_combo.addItem(recent.basename)
+                self.file_combo.model().item(i).setToolTip(recent.abspath)
         self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
