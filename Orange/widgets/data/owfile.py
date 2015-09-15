@@ -141,7 +141,11 @@ class OWFile(widget.OWWidget):
 
     want_main_area = False
 
+    #: back-compatibility: List[str] saved files list
+    recent_files = Setting([])
+    #: List[RecentPath]
     recent_paths = Setting([])
+
     new_variables = Setting(False)
 
     dlgFormats = (
@@ -194,6 +198,14 @@ class OWFile(widget.OWWidget):
             self.open_file(self.recent_paths[0].abspath)
 
     def _relocate_recent_files(self):
+        if self.recent_files and not self.recent_paths:
+            # backward compatibility settings restore
+            existing = [path for path in self.recent_files
+                        if os.path.exists(path)]
+            existing = [RecentPath(path, None, None) for path in existing]
+            self.recent_paths.extend(existing)
+            self.recent_files = []
+
         paths = [("sample-datasets", get_sample_datasets_dir())]
         basedir = self.getWorkflowEnv().get("basedir", None)
         if basedir is not None:
