@@ -166,6 +166,7 @@ class WidgetManager(QObject):
         )
         scheme.node_added.connect(self.add_widget_for_node)
         scheme.node_removed.connect(self.remove_widget_for_node)
+        scheme.runtime_env_changed.connect(self.__on_env_changed)
         scheme.installEventFilter(self)
 
     def scheme(self):
@@ -539,6 +540,11 @@ class WidgetManager(QObject):
             self.__delay_delete.remove(widget)
             widget.deleteLater()
             del self.__widget_processing_state[widget]
+
+    def __on_env_changed(self, key, newvalue, oldvalue):
+        # Notify widgets of a runtime environment change
+        for widget in self.__widget_for_node.values():
+            widget.workflowEnvChanged(key, newvalue, oldvalue)
 
 
 def user_message_from_state(widget, message_type, message_id, message_value):
