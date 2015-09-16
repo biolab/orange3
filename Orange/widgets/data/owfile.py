@@ -377,6 +377,12 @@ class OWFile(widget.OWWidget):
                      self.loaded_file)[1], "unknown format"))])
             self.reportData(self.dataReport)
 
+    def workflowEnvChanged(self, key, value, oldvalue):
+        if key == "basedir":
+            self._relocate_recent_files()
+            self.set_file_list()
+
+
 if __name__ == "__main__":
     a = QtGui.QApplication(sys.argv)
     ow = OWFile()
