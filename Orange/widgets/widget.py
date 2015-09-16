@@ -680,7 +680,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def resetSettings(self):
         self.settingsHandler.reset_settings(self)
 
-    def getWorkflowEnv(self):
+    def workflowEnv(self):
         """
         Return (a view to) the workflow runtime environment.
 

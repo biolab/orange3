@@ -207,7 +207,7 @@ class OWFile(widget.OWWidget):
             self.recent_files = []
 
         paths = [("sample-datasets", get_sample_datasets_dir())]
-        basedir = self.getWorkflowEnv().get("basedir", None)
+        basedir = self.workflowEnv().get("basedir", None)
         if basedir is not None:
             paths.append(("basedir", basedir))
 
@@ -281,7 +281,7 @@ class OWFile(widget.OWWidget):
             return
 
         searchpaths = [("sample-datasets", get_sample_datasets_dir())]
-        basedir = self.getWorkflowEnv().get("basedir", None)
+        basedir = self.workflowEnv().get("basedir", None)
         if basedir is not None:
             searchpaths.append(("basedir", basedir))
 
