@@ -25,8 +25,8 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import colorpalette, datacaching
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
+from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.itemmodels import TableModel
 
 
@@ -58,7 +58,7 @@ class RichTableDecorator(QIdentityProxyModel):
 
     def setSourceModel(self, source):
         if source is not None and \
-                not isinstance(source, itemmodels.TableModel):
+                not isinstance(source, TableModel):
             raise TypeError()
 
         if source is not None:
@@ -358,13 +358,10 @@ class OWDataTable(widget.OWWidget):
                ("Other Data", Table)]
 
     show_distributions = Setting(False)
-    dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
     select_rows = Setting(True)
     auto_commit = Setting(True)
 
-    color_settings = Setting(None)
-    selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
     def __init__(self, parent=None):
@@ -372,7 +369,8 @@ class OWDataTable(widget.OWWidget):
 
         self.inputs = OrderedDict()
 
-        self.dist_color = QtGui.QColor(*self.dist_color_RGB)
+        self.dist_color = QtGui.QColor(0xd0, 0xd0, 0xd0)
+        self.discPalette = {}
 
         info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
@@ -403,8 +401,6 @@ class OWDataTable(widget.OWWidget):
                      callback=self._on_distribution_color_changed)
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self._on_distribution_color_changed)
-        gui.button(box, self, "Set colors", self.set_colors, autoDefault=False,
-                   tooltip="Set the background color and color palette")
 
         box = gui.widgetBox(self.controlArea, "Selection")
 
@@ -416,9 +412,6 @@ class OWDataTable(widget.OWWidget):
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selected Rows", "Auto send is on")
 
-        dlg = self.create_color_dialog()
-        self.discPalette = dlg.getDiscretePalette("discPalette")
-
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
@@ -429,29 +422,6 @@ class OWDataTable(widget.OWWidget):
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)
-
-    def create_color_dialog(self):
-        c = colorpalette.ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        box = c.createBox("otherColors", "Other Colors")
-        c.createColorButton(box, "Default", "Default color",
-                            QtGui.QColor(self.dist_color))
-        c.setColorSchemas(self.color_settings, self.selected_schema_index)
-        return c
-
-    def set_colors(self):
-        dlg = self.create_color_dialog()
-        if dlg.exec():
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selectedSchemaIndex
-            self.discPalette = dlg.getDiscretePalette("discPalette")
-            self.dist_color = QtGui.QColor(dlg.getColor("Default"))
-            self.dist_color_RGB = (
-                self.dist_color.red(), self.dist_color.green(),
-                self.dist_color.blue(), self.dist_color.alpha()
-            )
-            if self.show_distributions:
-                self._on_distribution_color_changed()
 
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
@@ -488,9 +458,14 @@ class OWDataTable(widget.OWWidget):
                 header.sortIndicatorChanged.connect(sort_reset)
 
             view.dataset = data
-            self.tabs.addTab(view, getattr(data, "name", "Data"))
+            tab_name = getattr(data, "name", "Data")
+            self.tabs.addTab(view, tab_name)
 
-            self._setup_table_view(view, data)
+            setattr(view, 'table_id', tid)
+            self.discPalette[tid] = get_colorpalette(data)
+
+
+            self._setup_table_view(view, data, tid)
             slot = TableSlot(tid, data, table_summary(data), view)
             view._input_slot = slot
             self.inputs[tid] = slot
@@ -512,6 +487,7 @@ class OWDataTable(widget.OWWidget):
             view.hide()
             view.deleteLater()
             self.tabs.removeTab(self.tabs.indexOf(view))
+            del self.discPalette[tid]
 
             current = self.tabs.currentWidget()
             if current is not None:
@@ -519,7 +495,7 @@ class OWDataTable(widget.OWWidget):
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
 
-    def _setup_table_view(self, view, data):
+    def _setup_table_view(self, view, data, tid):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
         """
         if data is None:
@@ -531,7 +507,7 @@ class OWDataTable(widget.OWWidget):
 
         rowcount = data.approx_len()
 
-        color_schema = self.discPalette if self.color_by_class else None
+        color_schema = self.discPalette[tid] if self.color_by_class else None
         if self.show_distributions:
             view.setItemDelegate(
                 gui.TableBarItem(
@@ -674,7 +650,8 @@ class OWDataTable(widget.OWWidget):
 
     def _on_distribution_color_changed(self):
         for ti in range(self.tabs.count()):
-            color_schema = self.discPalette if self.color_by_class else None
+            tid = self.tabs.widget(ti).table_id
+            color_schema = self.discPalette[tid] if self.color_by_class else None
             if self.show_distributions:
                 delegate = gui.TableBarItem(self, color=self.dist_color,
                                             color_schema=color_schema)
@@ -955,6 +932,12 @@ def format_summary(summary):
              + format_part(summary.M)]
 
     return text
+
+
+def get_colorpalette(table):
+    if len(table.domain.class_vars) > 1 or not table.domain.has_discrete_class:
+        return None
+    return ColorPaletteGenerator(len(table.domain.class_var.values))
 
 
 def is_sortable(table):
