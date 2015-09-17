@@ -33,10 +33,10 @@ The widget also supports manual selection of data instances.
 
 ![Data table with Iris data set](images/DataTable-stamped.png)
 
-1.  Use '*Restore Order*' button to
-    reorder data instance after attribute-based sorting.
-2.  Info on current data set size and the number and types of
+1.  Info on the current data set size and the number and types of
     attributes.
+2.  Use '*Restore Order*' button to
+    reorder data instance after attribute-based sorting.
 3.  Values of continuous attributes can be visualized with bars; colors can be attributed to different classes.
 4.  Data instances (rows) can be selected and sent to the widget's
     output channel.
