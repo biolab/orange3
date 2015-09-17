@@ -24,24 +24,24 @@ Description
 -----------
 
 **Data Table** widget receives one or more data sets in its input and
-presents them as a spreadsheet. Data instances may be sorted by
-attribute values. Widget also supports manual selection of data
-instances.
+presents them as a spreadsheet. Columns in white are regular attributes with
+either discrete or continuous values. Columns in grey are class attribues, while
+columns in light navy are meta attributes. Data instances may be sorted by any
+attribute value. 
+
+The widget also supports manual selection of data instances.
 
 ![Data table with Iris data set](images/DataTable-stamped.png)
 
-1.  The name of the data set (usually the input
-    data file). Data instances are in rows and their
-    attribute values in columns. In this example the data set is
-    sorted by the attribute "sepal length".
-2.  Use '*Restore Order*' button to
+1.  Use '*Restore Order*' button to
     reorder data instance after attribute-based sorting.
-3.  Info on current data set size and the number and types of
+2.  Info on current data set size and the number and types of
     attributes.
-4.  Values of continuous attributes can be visualized with bars; colors can be attributed to different classes.
-5.  Data instances (rows) can be selected and sent to the widget's
+3.  Values of continuous attributes can be visualized with bars; colors can be attributed to different classes.
+4.  Data instances (rows) can be selected and sent to the widget's
     output channel.
-6.  While auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press '*Send Selected Rows*'.
+5.  While *Auto-send is on*, all changes will be automatically communicated to other widgets. 
+    Alternatively press '*Send Selected Rows*'.
 
 Example
 -------
