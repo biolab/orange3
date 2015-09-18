@@ -577,23 +577,21 @@ class ExcelFormat(FileFormat):
             filename, sheet_name = sheet_name, ''
         import xlrd
         wb = xlrd.open_workbook(filename, on_demand=True)
-        for i in range(wb.nsheets):
-            ss = wb.sheet_by_index(i)
-            if sheet_name and ss.name != sheet_name:
-                continue
-            try:
-                first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
-                first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
-                row_len = ss.row_len(first_row)
-                cells = filter(any,
-                               [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
-                                 for col in range(first_col, row_len)]
-                                for row in range(first_row, ss.nrows)])
-                table = cls.data_table(cells)
-            except Exception: continue
-            break
+        if sheet_name:
+            ss = wb.sheet_by_name(sheet_name)
         else:
-            raise IOError('No sheets given for Excel document')
+            ss = wb.sheet_by_index(0)
+        try:
+            first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
+            first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
+            row_len = ss.row_len(first_row)
+            cells = filter(any,
+                           [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
+                             for col in range(first_col, row_len)]
+                            for row in range(first_row, ss.nrows)])
+            table = cls.data_table(cells)
+        except Exception:
+            raise IOError("Couldn't load spreadsheet from " + filename)
         return wrapper(table)
 
 
