@@ -776,6 +776,7 @@ class OWPaintData(widget.OWWidget):
     density = Setting(7)
 
     want_graph = True
+    want_report = True
 
     def __init__(self):
         super().__init__()
@@ -1214,6 +1215,15 @@ class OWPaintData(widget.OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def send_report(self):
+        if self.data is None:
+            return
+        settings = []
+        if self.attr1 != "x" or self.attr2 != "y":
+            settings += [("Axis x", self.attr1), ("Axis y", self.attr2)]
+        settings += [("Number of points", len(self.data))]
+        self.report_settings("Painted data", settings)
+        self.report_plot("", self.plot)
 
 def test():
     import gc
