@@ -1,3 +1,4 @@
+from itertools import chain
 import sys
 import time
 import os
@@ -331,37 +332,40 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         elif isinstance(plot, PlotWidget):
             self.report_html += OWReport.get_html_img(plot.plotItem)
 
-    def report_table(self, name, table, head_column=True):
+    def report_table(self, name, table, header_rows=0, header_columns=0):
+        join = "".join
+
+        def report_model(model):
+            content = ((model.item(row, col).data(Qt.DisplayRole)
+                        for col in range(model.columnCount())
+                        ) for row in range(model.rowCount()))
+            has_header = not table.isHeaderHidden()
+            if has_header:
+                header = (model.horizontalHeaderItem(col).data(Qt.DisplayRole)
+                          for col in range(model.columnCount())),
+                content = chain(header, content)
+            return report_list(content, header_rows + has_header)
+
+        def report_list(data,
+                        header_rows=header_rows, header_columns=header_columns):
+            cells = ["<td>{}</td>", "<th>{}</th>"]
+            return join("  <tr>\n    {}</tr>\n".format(
+                join(cells[rowi < header_rows or coli < header_columns]
+                     .format(elm) for coli, elm in enumerate(row))
+                ) for rowi, row in enumerate(data))
+
+        def tabled(s):
+            return "<table>\n" + s + "</table>"
+
         from Orange.canvas.report.owreport import OWReport
         from PyQt4.QtGui import QTreeView
 
-        t = ""
-        if isinstance(table, QTreeView):
-            model = table.model()
-            rows = model.rowCount()
-            columns = model.columnCount()
-            t = "<table>\n"
-            if not table.isHeaderHidden():
-                t += "  <tr>\n"
-                t += "".join("    <th>{}</th>\n".format(
-                    model.horizontalHeaderItem(col).data(Qt.DisplayRole))
-                    for col in range(columns))
-                t += "  </tr>\n"
-
-            for row in range(rows):
-                t += "  <tr>\n"
-                if head_column and columns:
-                    t += "    <th>{}</th>".format(
-                        model.item(row, 0).data(Qt.DisplayRole))
-                t += "".join("    <td>{}</td>\n".format(
-                    model.item(row, col).data(Qt.DisplayRole))
-                             for col in range(head_column, columns))
-                t += "  </tr>\n"
-            t += "</table>"
         if name != "":
             self.report_html += OWReport.get_html_subsection(name)
-        if t:
-            self.report_html += t
+        if isinstance(table, QTreeView):
+            self.report_html += tabled(report_model(table.model()))
+        elif isinstance(table, list):
+            self.report_html += tabled(report_list(table))
 
     def report_raw(self, name, html):
         from Orange.canvas.report.owreport import OWReport
