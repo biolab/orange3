@@ -117,7 +117,7 @@ class Flags:
     @staticmethod
     def join(iterable, *args):
         return Flags.DELIMITER.join(i.strip().replace(Flags.DELIMITER, '\\' + Flags.DELIMITER)
-                                    for i in chain(iterable, args))
+                                    for i in chain(iterable, args)).lstrip()
 
     @staticmethod
     def split(s):
@@ -435,20 +435,26 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @staticmethod
     def header_types(data):
-        return list(chain(repeat('c', data.W.shape[1]),
-                          (v.__class__.__name__[0].lower()
+        def _vartype(var):
+            if var.is_continuous or var.is_string:
+                return var.TYPE_HEADERS[0]
+            elif var.is_discrete:
+                return Flags.join(var.values) if var.ordered else var.TYPE_HEADERS[0]
+            raise NotImplementedError
+        return list(chain(repeat('continuous', data.W.shape[1]),
+                          (_vartype(v)
                            for v in chain(data.domain.attributes,
                                           data.domain.class_vars,
                                           data.domain.metas))))
 
     @staticmethod
     def header_flags(data):
-        return list(chain(repeat('w', data.W.shape[1]),
-                          (Flags.join(flag, *('{}={}'.format(*a)
-                                              for a in var.attributes.items()))
+        return list(chain(repeat('weight', data.W.shape[1]),
+                          (Flags.join([flag], *('{}={}'.format(*a)
+                                                for a in sorted(var.attributes.items())))
                            for flag, var in chain(zip(repeat(''),  data.domain.attributes),
-                                                  zip(repeat('c'), data.domain.class_vars),
-                                                  zip(repeat('m'), data.domain.metas)))))
+                                                  zip(repeat('class'), data.domain.class_vars),
+                                                  zip(repeat('meta'), data.domain.metas)))))
 
     @classmethod
     def write_headers(cls, write, data):
