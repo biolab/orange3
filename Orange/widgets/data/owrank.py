@@ -62,8 +62,11 @@ class OWRank(widget.OWWidget):
     # Header state for discrete/continuous scores
     headerState = settings.Setting((None, None))
 
+    want_report = True
+
     def __init__(self):
         super().__init__()
+        self.output_data_description = "None"
 
         self.all_measures = SCORES
 
@@ -456,19 +459,22 @@ class OWRank(widget.OWWidget):
             gui.ColoredBarItemDelegate(self)
         )
 
-    def sendReport(self):
-        self.reportData(self.data)
-        self.reportRaw(gui.reportTable(self.ranksView))
+    def send_report(self):
+        self.report_data("Input data", self.data)
+        self.report_table("Ranks", self.ranksView, num_format="{:.3f}")
+        self.report_raw("Output data", self.output_data_description)
 
     def commit(self):
         selected = self.selectedAttrs()
         if not self.data or not selected:
             self.send("Reduced Data", None)
+            self.output_data_description = "None"
         else:
             domain = Orange.data.Domain(selected, self.data.domain.class_var,
                                         metas=self.data.domain.metas)
             data = Orange.data.Table(domain, self.data)
             self.send("Reduced Data", data)
+            self.output_data_description = self.describe_data(data)
 
     def selectedAttrs(self):
         if self.data:
