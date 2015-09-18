@@ -135,6 +135,22 @@ class OWReport(OWWidget):
         return "<ul><img src='%s%s'/></ul>" % (OWReport.report_url_pref,
                                                filename)
 
+    @staticmethod
+    def clip_string(s, limit=1000, sep=None):
+        if len(s) < limit:
+            return s
+        s = s[:limit - 3]
+        if sep is None:
+            return s
+        sep_pos = s.rfind(sep)
+        if sep_pos == -1:
+            return s
+        return s[:sep_pos + len(sep)] + "..."
+
+    @staticmethod
+    def clipped_list(s, limit=1000):
+        return OWReport.clip_string(", ".join(s), limit, ", ")
+
     def _get_unique_filename(self, name, ext):
         for i in range(1000000):
             filename = os.path.join(self.report_temp_dir,
