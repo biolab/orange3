@@ -1,3 +1,4 @@
+from math import log
 from collections import Iterable
 from itertools import chain
 from numbers import Integral
@@ -142,33 +143,46 @@ class Domain:
         :return: a new domain
         :rtype: :class:`Domain`
         """
+        def get_places(max_index):
+            return 0 if max_index == 1 else int(log(max_index, 10)) + 1
+
+        def get_name(base, index, places):
+            return base if not places \
+                else "{} {:0{}}".format(base, index + 1, places)
+
         if X.ndim != 2:
             raise ValueError('X must be a 2-dimensional array')
-        attr_vars = [ContinuousVariable(name="Feature %i" % (a + 1))
-                     for a in range(X.shape[1])]
+        n_attrs = X.shape[1]
+        places = get_places(n_attrs)
+        attr_vars = [ContinuousVariable(name=get_name("Feature", a, places))
+                     for a in range(n_attrs)]
         class_vars = []
         if Y is not None:
             if Y.ndim == 1:
                 Y = Y.reshape(len(Y), 1)
             elif Y.ndim != 2:
                 raise ValueError('Y has invalid shape')
+            n_classes = Y.shape[1]
+            places = get_places(n_classes)
             for i, class_ in enumerate(Y.T):
                 mn, mx = np.min(class_), np.max(class_)
                 if 0 <= mn <= mx <= 20:
                     values = np.unique(class_)
                     if all(int(x) == x and 0 <= x <= 19 for x in values):
                         mx = int(mx)
-                        places = 1 + (mx >= 10)
-                        values = ["v%*i" % (places, i + 1)
+                        val_places = 1 + (mx >= 10)
+                        values = ["v%*i" % (val_places, i + 1)
                                   for i in range(mx + 1)]
-                        name = "Class %i" % (i + 1)
+                        name = get_name("Class", i, places)
                         class_vars.append(DiscreteVariable(name, values))
                         continue
                 class_vars.append(
-                    ContinuousVariable(name="Target %i" % (i + 1)))
+                    ContinuousVariable(name=get_name("Target", i + 1, places)))
         if metas is not None:
-            meta_vars = [StringVariable(name="Meta %i" % m)
-                         for m in range(metas.shape[1])]
+            n_metas = metas.shape[1]
+            places = get_places(n_metas)
+            meta_vars = [StringVariable(get_name("Meta", m, places))
+                         for m in range(n_metas)]
         else:
             meta_vars = []
 
