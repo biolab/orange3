@@ -449,8 +449,10 @@ class OWSelectAttributes(widget.OWWidget):
             domain_hints.update({var_sig(attr): ("meta", i)
                                 for i, attr in enumerate(data.domain.metas)})
 
-            if data.domain.class_var:
-                domain_hints[var_sig(data.domain.class_var)] = ("class", 0)
+            if data.domain.class_vars:
+                domain_hints.update(
+                    {var_sig(attr): ("class", i)
+                     for i, attr in enumerate(data.domain.class_vars)})
 
             # update the hints from context settings
             domain_hints.update(self.domain_role_hints)
