@@ -330,13 +330,37 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         elif isinstance(plot, PlotWidget):
             self.report_html += OWReport.get_html_img(plot.plotItem)
 
-    def report_table(self, name, table):
+    def report_table(self, name, table, head_column=True):
         from Orange.canvas.report.owreport import OWReport
+        from PyQt4.QtGui import QTreeView
 
-        # TODO
+        t = ""
+        if isinstance(table, QTreeView):
+            model = table.model()
+            rows = model.rowCount()
+            columns = model.columnCount()
+            t = "<table>\n"
+            if not table.isHeaderHidden():
+                t += "  <tr>\n"
+                t += "".join("    <th>{}</th>\n".format(
+                    model.horizontalHeaderItem(col).data(Qt.DisplayRole))
+                    for col in range(columns))
+                t += "  </tr>\n"
+
+            for row in range(rows):
+                t += "  <tr>\n"
+                if head_column and columns:
+                    t += "    <th>{}</th>".format(
+                        model.item(row, 0).data(Qt.DisplayRole))
+                t += "".join("    <td>{}</td>\n".format(
+                    model.item(row, col).data(Qt.DisplayRole))
+                             for col in range(head_column, columns))
+                t += "  </tr>\n"
+            t += "</table>"
         if name != "":
             self.report_html += OWReport.get_html_subsection(name)
-        pass
+        if t:
+            self.report_html += t
 
     def report_raw(self, name, html):
         from Orange.canvas.report.owreport import OWReport
