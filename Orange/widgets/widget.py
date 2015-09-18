@@ -7,11 +7,11 @@ import types
 from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
-    QEventLoop, QSettings, QUrl
+    QEventLoop, QSettings, QUrl, QAbstractItemModel
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
-    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle, \
-    QGraphicsScene
+    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle,\
+    QGraphicsScene, QStandardItemModel
 from pyqtgraph import PlotWidget, PlotItem
 
 from Orange.data import Table
@@ -374,10 +374,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         elif isinstance(plot, PlotWidget):
             self.report_html += OWReport.get_html_img(plot.plotItem)
 
+    # noinspection PyBroadException
     def report_table(self, name, table, header_rows=0, header_columns=0):
         join = "".join
 
-        def report_model(model):
+        def report_standard_model(model):
             content = ((model.item(row, col).data(Qt.DisplayRole)
                         for col in range(model.columnCount())
                         ) for row in range(model.rowCount()))
@@ -388,6 +389,20 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 content = chain(header, content)
             return report_list(content, header_rows + has_header)
 
+        # noinspection PyBroadException
+        def report_abstract_model(model):
+            content = ((model.data(model.index(row, col))
+                        for col in range(model.columnCount())
+                        ) for row in range(model.rowCount()))
+            try:
+                header = [model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
+                               for col in range(model.columnCount())]
+            except Exception:
+                header = None
+            if header:
+                content = chain([header], content)
+            return report_list(content, header_rows + bool(header))
+
         def report_list(data,
                         header_rows=header_rows, header_columns=header_columns):
             cells = ["<td>{}</td>", "<th>{}</th>"]
@@ -396,18 +411,25 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                      .format(elm) for coli, elm in enumerate(row))
                 ) for rowi, row in enumerate(data))
 
-        def tabled(s):
-            return "<table>\n" + s + "</table>"
-
         from Orange.canvas.report.owreport import OWReport
-        from PyQt4.QtGui import QTreeView
 
         if name != "":
             self.report_html += OWReport.get_html_subsection(name)
-        if isinstance(table, QTreeView):
-            self.report_html += tabled(report_model(table.model()))
+
+        try:
+            model = table.model()
+        except Exception:
+            model = None
+        if isinstance(model, QStandardItemModel):
+            body = report_standard_model(table.model())
+        elif isinstance(model, QAbstractItemModel):
+            body = report_abstract_model(model)
         elif isinstance(table, list):
-            self.report_html += tabled(report_list(table))
+            body = report_list(table)
+        else:
+            body = None
+        if body:
+            self.report_html += "<table>\n" + body + "</table>"
 
     def report_raw(self, name, html):
         from Orange.canvas.report.owreport import OWReport
