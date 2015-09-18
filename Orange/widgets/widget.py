@@ -339,22 +339,27 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.report_html += OWReport.get_html_paragraph(items)
 
     def report_data(self, name, data):
-        from Orange.canvas.report.owreport import OWReport
-        clipped_list = OWReport.clipped_list
+        def clipped_list(items, s):
+            from Orange.canvas.report.owreport import OWReport
+            r = OWReport.clipped_list(a.name for a in items)
+            if len(items) > 10:
+                r += " (total: {} {})".format(len(items), s)
+            return r
 
         if data is None:
             self.report_raw("No data.")
         else:
-            items = [("Data instances", len(data)),
-                     ("Features",
-                      clipped_list(a.name for a in data.domain.attributes))]
+            items = [
+                ("Data instances", len(data)),
+                ("Features", clipped_list(data.domain.attributes, "features"))]
             if data.domain.metas:
-                items.append(("Meta attributes",
-                              clipped_list(m.name for m in data.domain.metas)))
+                items.append(
+                    ("Meta attributes",
+                     clipped_list(data.domain.metas, "meta attributes")))
             if data.domain.class_vars:
-                items.append(("Target",
-                              clipped_list(c.name
-                                           for c in data.domain.class_vars)))
+                items.append(
+                    ("Target",
+                     clipped_list(data.domain.class_vars, "targets variables")))
             self.report_settings(name, items)
 
     def report_plot(self, name, plot):
