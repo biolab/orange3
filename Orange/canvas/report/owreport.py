@@ -119,7 +119,7 @@ class OWReport(OWWidget):
         return "<h2>%s</h2>" % name
 
     @staticmethod
-    def get_html_paragraph(items):
+    def render_items(items):
         return "<ul>" + "".join("<b>%s:</b> %s</br>" % i
                                 for i in items) + "</ul>"
 

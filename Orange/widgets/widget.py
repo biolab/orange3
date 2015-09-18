@@ -335,21 +335,25 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def report_settings(self, name, items):
         from Orange.canvas.report.owreport import OWReport
+        self.report_name(name)
+        self.report_html += OWReport.render_items(items)
 
+    def report_name(self, name):
+        from Orange.canvas.report.owreport import OWReport
         if name != "":
             self.report_html += OWReport.get_html_subsection(name)
-        self.report_html += OWReport.get_html_paragraph(items)
 
-    def report_data(self, name, data):
+    def describe_data(self, data):
+        from Orange.canvas.report.owreport import OWReport
+
         def clipped_list(items, s):
-            from Orange.canvas.report.owreport import OWReport
             r = OWReport.clipped_list(a.name for a in items)
             if len(items) > 10:
                 r += " (total: {} {})".format(len(items), s)
             return r
 
         if data is None:
-            self.report_raw("No data.")
+            return "No data."
         else:
             items = [
                 ("Data instances", len(data)),
@@ -362,7 +366,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 items.append(
                     ("Target",
                      clipped_list(data.domain.class_vars, "targets variables")))
-            self.report_settings(name, items)
+            return OWReport.render_items(items)
+
+    def report_data(self, name, data):
+        self.report_name(name)
+        self.report_html += self.describe_data(data)
 
     def report_data_brief(self, name, data):
         domain = data.domain
@@ -384,9 +392,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def report_plot(self, name, plot):
         from Orange.canvas.report.owreport import OWReport
-
-        if name != "":
-            self.report_html += OWReport.get_html_subsection(name)
+        self.report_name(name)
         if isinstance(plot, QGraphicsScene) or isinstance(plot, PlotItem):
             self.report_html += OWReport.get_html_img(plot)
         elif isinstance(plot, PlotWidget):
@@ -428,11 +434,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 join(cells[rowi < header_rows or coli < header_columns]
                      .format(elm) for coli, elm in enumerate(row))
                 ) for rowi, row in enumerate(data))
-
-        from Orange.canvas.report.owreport import OWReport
-
-        if name != "":
-            self.report_html += OWReport.get_html_subsection(name)
+        self.report_name(name)
 
         try:
             model = table.model()
@@ -450,10 +452,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.report_html += "<table>\n" + body + "</table>"
 
     def report_raw(self, name, html):
-        from Orange.canvas.report.owreport import OWReport
-
-        if name != "":
-            self.report_html += OWReport.get_html_subsection(name)
+        self.report_name(name)
         self.report_html += html
 
     def updateStatusBarState(self):
