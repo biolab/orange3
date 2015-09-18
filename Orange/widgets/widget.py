@@ -372,7 +372,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.report_name(name)
         self.report_html += self.describe_data(data)
 
-    def report_data_brief(self, name, data):
+    def describe_data_brief_items(self, data):
         domain = data.domain
         items = [
             ("Data instances", len(data)),
@@ -388,6 +388,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                                                       ))]
         elif domain.class_vars:
             items += [("Targets", len(domain.class_vars))]
+        return items
+
+    def describe_data_brief(self, data):
+        from Orange.canvas.report.owreport import OWReport
+        items = self.describe_data_brief_items(data)
+        return OWReport.render_items(items)
+
+    def report_data_brief(self, name, data):
+        items = self.describe_data_brief_items(data)
         self.report_settings(name, items)
 
     def report_plot(self, name, plot):
@@ -399,7 +408,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.report_html += OWReport.get_html_img(plot.plotItem)
 
     # noinspection PyBroadException
-    def report_table(self, name, table, header_rows=0, header_columns=0):
+    def report_table(self, name, table, header_rows=0, header_columns=0,
+                     num_format=None):
         join = "".join
 
         def report_standard_model(model):
@@ -427,12 +437,21 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 content = chain([header], content)
             return report_list(content, header_rows + bool(header))
 
+        if num_format:
+            def fmtnum(s):
+                try:
+                    return num_format.format(float(s))
+                except:
+                    return s
+        else:
+            def fmtnum(s):
+                return s
         def report_list(data,
                         header_rows=header_rows, header_columns=header_columns):
             cells = ["<td>{}</td>", "<th>{}</th>"]
             return join("  <tr>\n    {}</tr>\n".format(
                 join(cells[rowi < header_rows or coli < header_columns]
-                     .format(elm) for coli, elm in enumerate(row))
+                     .format(fmtnum(elm)) for coli, elm in enumerate(row))
                 ) for rowi, row in enumerate(data))
         self.report_name(name)
 
