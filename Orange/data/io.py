@@ -130,7 +130,7 @@ _RE_DISCRETE_LIST = re.compile(r'^\s*[^\s]+(\s[^\s]+)+\s*$')
 _RE_TYPES = re.compile(r'^\s*({}|{}|)\s*$'.format(_RE_DISCRETE_LIST.pattern,
                                                   '|'.join(flatten(getattr(vartype, 'TYPE_HEADERS')
                                                                    for vartype in Variable.registry.values()))))
-_RE_FLAGS = re.compile(r'^\s*( |{})*\s*$'.format('|'.join(flatten(filter(None, i) for i in Flags.ALL.items()))))
+_RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format('|'.join(flatten(filter(None, i) for i in Flags.ALL.items()))))
 
 
 class FileFormatMeta(Registry):
@@ -235,7 +235,7 @@ class FileFormat(metaclass=FileFormatMeta):
     def parse_headers(data):
         """Return (header rows, rest of data) as discerned from `data`"""
         all_digits = lambda i: str(i).replace('.', '').replace(',', '').isdigit()
-        HEADER_TESTS = [
+        HEADER_TEST = ['',
             # First line is not a header if more than a fraction of values consist of digits only
             lambda items: sum(all_digits(i) for i in items) / len(items) < .1,
             # Second row items are type identifiers
@@ -243,18 +243,23 @@ class FileFormat(metaclass=FileFormatMeta):
             # Third row items are flags and column attributes (attr=value)
             lambda items: all(map(_RE_FLAGS.match, items)),
         ]
+        data = iter(data)
         header_rows = []
-        first_nonheader_row = []
-        for test in HEADER_TESTS:
-            try: row = next(data)
-            except StopIteration: break
-            if not isinstance(row, (list, tuple)):
-                row = list(row)
-            if not test(row):
-                first_nonheader_row = [row]
-                break
-            header_rows.append([i.strip() for i in row])
-        return header_rows, chain(first_nonheader_row, data)
+        nonheader_rows = []
+        try:
+            row1 = list(next(data))
+            # Allow either a single-line header or a three-line header
+            if HEADER_TEST[1](row1):
+                header_rows.append(row1)
+                row2, row3 = list(next(data)), list(next(data))
+                if HEADER_TEST[2](row2) and HEADER_TEST[3](row3):
+                    header_rows.extend([row2, row3])
+                else:
+                    nonheader_rows = [row2, row3]
+            else:
+                nonheader_rows = [row1]
+        except StopIteration: pass
+        return header_rows, chain(nonheader_rows, data)
 
     @classmethod
     def data_table(self, data, headers=None):
