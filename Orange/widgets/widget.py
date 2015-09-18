@@ -329,7 +329,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if hasattr(self, "box_scene"):
             self.report_plot(self.box_scene)
         if hasattr(self, "plot"):
-            self.report_plot(self.plot)
+            self.report_plot("", self.plot)
 
     def report_settings(self, name, items):
         from Orange.canvas.report.owreport import OWReport
