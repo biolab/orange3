@@ -13,6 +13,7 @@ class FeatureScoringTest(unittest.TestCase):
         self.zoo = Table("zoo")  # disc. features, disc. class
         self.housing = Table("housing")  # cont. features, cont. class
         self.monk = Table("monks-1")
+        self.adult = Table("adult_sample")
 
     def test_info_gain(self):
         scorer = score.InfoGain()
@@ -80,10 +81,19 @@ class FeatureScoringTest(unittest.TestCase):
         self.assertTrue(np.argmax(sc) == 1)
 
     def test_relieff(self):
+        old_monk = self.monk.copy()
         weights = score.ReliefF()(self.monk, None)
         found = [self.monk.domain[attr].name for attr in reversed(weights.argsort()[-3:])]
         reference = ['a', 'b', 'e']
         self.assertEqual(sorted(found), reference)
+        # Original data is unchanged
+        np.testing.assert_equal(old_monk.X, self.monk.X)
+        np.testing.assert_equal(old_monk.Y, self.monk.Y)
+        # Ensure it doesn't crash on adult dataset
+        weights = score.ReliefF()(self.adult, None)
+        found = sorted([self.adult.domain[attr].name for attr in weights.argsort()[-2:]])
+        reference = ['marital-status', 'relationship']
+        self.assertEqual(found, reference)
 
     def test_rrelieff(self):
         scorer = score.RReliefF()

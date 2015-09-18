@@ -228,7 +228,7 @@ class ReliefF(Scorer):
         from Orange.preprocess._relieff import relieff
         weights = np.asarray(relieff(data.X, data.Y,
                                      self.n_iterations, self.k_nearest,
-                                     np.array([a.is_discrete for a in data.domain.attributes], dtype=np.int32)))
+                                     np.array([a.is_discrete for a in data.domain.attributes])))
         if feature:
             return weights[0]
         return weights
@@ -251,7 +251,7 @@ class RReliefF(Scorer):
         from Orange.preprocess._relieff import rrelieff
         weights = np.asarray(rrelieff(data.X, data.Y,
                                       self.n_iterations, self.k_nearest,
-                                      np.array([a.is_discrete for a in data.domain.attributes], dtype=np.int32)))
+                                      np.array([a.is_discrete for a in data.domain.attributes])))
         if feature:
             return weights[0]
         return weights
