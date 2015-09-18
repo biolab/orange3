@@ -200,27 +200,28 @@ class OWMDS(widget.OWWidget):
         self.colorvar_model = itemmodels.VariableListModel()
 
         common_options = {"sendSelectedValue": True, "valueType": str,
-                          "orientation": "horizontal", "labelWidth": 50, }
+                          "orientation": "horizontal", "labelWidth": 50,
+                          "contentsLengthHint": 8}
 
-        self.cb_color_value = gui.comboBox(
+        self.cb_color_value = gui.varComboBox(
             box, self, "color_value", label="Color",
             callback=self._on_color_index_changed, **common_options)
         self.cb_color_value.setModel(self.colorvar_model)
 
         self.shapevar_model = itemmodels.VariableListModel()
-        self.cb_shape_value = gui.comboBox(
+        self.cb_shape_value = gui.varComboBox(
             box, self, "shape_value", label="Shape",
             callback=self._on_shape_index_changed, **common_options)
         self.cb_shape_value.setModel(self.shapevar_model)
 
         self.sizevar_model = itemmodels.VariableListModel()
-        self.cb_size_value = gui.comboBox(
+        self.cb_size_value = gui.varComboBox(
             box, self, "size_value", label="Size",
             callback=self._on_size_index_changed, **common_options)
         self.cb_size_value.setModel(self.sizevar_model)
 
         self.labelvar_model = itemmodels.VariableListModel()
-        self.cb_label_value = gui.comboBox(
+        self.cb_label_value = gui.varComboBox(
             box, self, "label_value", label="Label",
             callback=self._on_label_index_changed, **common_options)
         self.cb_label_value.setModel(self.labelvar_model)

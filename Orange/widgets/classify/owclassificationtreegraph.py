@@ -44,9 +44,10 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.selectionChanged.connect(self.update_selection)
 
         box = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
-        self.target_combo = gui.comboBox(
+        self.target_combo = gui.varComboBox(
             box, self, "target_class_index", orientation=0, items=[],
-            label="Target class", callback=self.toggle_target_class)
+            label="Target class", callback=self.toggle_target_class,
+            contentsLengthHint=8)
         gui.separator(box)
         gui.button(box, self, "Set Colors", callback=self.set_colors)
         dlg = self.create_color_dialog()

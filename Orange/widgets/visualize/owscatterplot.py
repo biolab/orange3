@@ -89,12 +89,12 @@ class OWScatterPlot(OWWidget):
         common_options = {"labelWidth": 50, "orientation": "horizontal",
                           "sendSelectedValue": True, "valueType": str}
         box = gui.widgetBox(self.controlArea, "Axis Data")
-        self.cb_attr_x = gui.comboBox(box, self, "attr_x", label="Axis x:",
-                                      callback=self.update_attr,
-                                      **common_options)
-        self.cb_attr_y = gui.comboBox(box, self, "attr_y", label="Axis y:",
-                                      callback=self.update_attr,
-                                      **common_options)
+        self.cb_attr_x = gui.varComboBox(box, self, "attr_x", label="Axis x:",
+                                         callback=self.update_attr,
+                                         **common_options)
+        self.cb_attr_y = gui.varComboBox(box, self, "attr_y", label="Axis y:",
+                                         callback=self.update_attr,
+                                         **common_options)
 
         self.vizrank = self.VizRank(self)
         vizrank_box = gui.widgetBox(box, None, orientation='horizontal')
@@ -115,19 +115,19 @@ class OWScatterPlot(OWWidget):
             'Jitter continuous values', callback=self.reset_graph_data)
 
         box = gui.widgetBox(self.controlArea, "Points")
-        self.cb_attr_color = gui.comboBox(
+        self.cb_attr_color = gui.varComboBox(
             box, self, "graph.attr_color", label="Color:",
             emptyString="(Same color)", callback=self.update_colors,
             **common_options)
-        self.cb_attr_label = gui.comboBox(
+        self.cb_attr_label = gui.varComboBox(
             box, self, "graph.attr_label", label="Label:",
             emptyString="(No labels)", callback=self.graph.update_labels,
             **common_options)
-        self.cb_attr_shape = gui.comboBox(
+        self.cb_attr_shape = gui.varComboBox(
             box, self, "graph.attr_shape", label="Shape:",
             emptyString="(Same shape)", callback=self.graph.update_shapes,
             **common_options)
-        self.cb_attr_size = gui.comboBox(
+        self.cb_attr_size = gui.varComboBox(
             box, self, "graph.attr_size", label="Size:",
             emptyString="(Same size)", callback=self.graph.update_sizes,
             **common_options)

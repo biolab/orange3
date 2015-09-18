@@ -78,12 +78,12 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         axes_box = gui.widgetBox(self.controlArea, "Axes")
         box = gui.widgetBox(axes_box, "Axis X", margin=0)
         box.setFlat(True)
-        self.axis_x_cb = gui.comboBox(
+        self.axis_x_cb = gui.varComboBox(
             box, self, "component_x", callback=self._component_changed)
 
         box = gui.widgetBox(axes_box, "Axis Y", margin=0)
         box.setFlat(True)
-        self.axis_y_cb = gui.comboBox(
+        self.axis_y_cb = gui.varComboBox(
             box, self, "component_y", callback=self._component_changed)
 
         self.infotext = gui.widgetLabel(

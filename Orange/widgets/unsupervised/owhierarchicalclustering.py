@@ -708,9 +708,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                      callback=self._invalidate_clustering)
 
         box = gui.widgetBox(self.controlArea, "Annotation")
-        self.label_cb = gui.comboBox(
+        self.label_cb = gui.varComboBox(
             box, self, "annotation_idx", callback=self._update_labels)
-
         self.label_cb.setModel(itemmodels.VariableListModel())
         self.label_cb.model()[:] = ["None", "Enumeration"]
 

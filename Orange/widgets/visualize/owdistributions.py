@@ -142,17 +142,17 @@ class OWDistributions(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
-        self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
+        self.groupvarview = gui.varComboBox(box, self, "groupvar_idx",
              callback=self._on_groupvar_idx_changed, valueType=str)
         box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed)
         gui.separator(box2)
-        self.cb_prob = gui.comboBox(
+        self.cb_prob = gui.varComboBox(
             box2, self, "show_prob", label="Show probabilities",
             orientation="horizontal",
-            callback=self._on_relative_freq_changed)
+            callback=self._on_relative_freq_changed, contentsLengthHint=8)
 
         plotview = pg.PlotWidget(background=None)
         self.mainArea.layout().addWidget(plotview)

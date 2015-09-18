@@ -314,8 +314,9 @@ class OWROCAnalysis(widget.OWWidget):
         tbox = gui.widgetBox(box, "Target Class")
         tbox.setFlat(True)
 
-        self.target_cb = gui.comboBox(
-            tbox, self, "target_index", callback=self._on_target_changed)
+        self.target_cb = gui.varComboBox(
+            tbox, self, "target_index", callback=self._on_target_changed,
+            contentsLengthHint=8)
 
         cbox = gui.widgetBox(box, "Classifiers")
         cbox.setFlat(True)
