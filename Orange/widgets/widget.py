@@ -323,6 +323,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                      clipped_list(data.domain.class_vars, "targets variables")))
             self.report_settings(name, items)
 
+    def report_data_brief(self, name, data):
+        domain = data.domain
+        items = [
+            ("Data instances", len(data)),
+            ("Features", len(domain.attributes) or "None"),
+            ("Meta attributes", len(domain.metas) or "None")]
+        if domain.has_discrete_class:
+            items += [("Target",
+                       "Discrete class '{}'".format(data.domain.class_var.name))
+                      ]
+        elif domain.has_continuous_class:
+            items += [("Target",
+                       "Numeric variable '{}'".format(data.domain.class_var.name
+                                                      ))]
+        elif domain.class_vars:
+            items += [("Targets", len(domain.class_vars))]
+        self.report_settings(name, items)
+
     def report_plot(self, name, plot):
         from Orange.canvas.report.owreport import OWReport
 
