@@ -173,7 +173,9 @@ class OWFile(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.domain = None
-
+        self.data = None
+        self.recent_files = [fn for fn in self.recent_files
+                             if os.path.exists(fn)]
         self.loaded_file = ""
         self._relocate_recent_files()
 
@@ -447,10 +449,19 @@ class OWFile(widget.OWWidget):
         self.send("Data", data)
 
     def send_report(self):
-        self.report_settings("File", [("File name", self.loaded_file),
-                                      ("Format", self._get_ext_name(
-                                          self.loaded_file))])
-        self.report_data("Input data", self.data)
+        if self.data is None:
+            self.report_raw("File", "No file.")
+            return
+
+        from os.path import expanduser
+        home = expanduser("~")
+        if self.loaded_file.startswith(home):
+            name = "~/" + self.loaded_file[len(home):]
+        else:
+            name = self.loaded_file
+        self.report_settings("File", [("File name", name),
+                                      ("Format", self._get_ext_name(name))])
+        self.report_data("Data", self.data)
 
     def _get_ext_name(self, filename):
         try:
