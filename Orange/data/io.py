@@ -396,7 +396,12 @@ class FileFormat(metaclass=FileFormatMeta):
             cols, domain_vars = append_to
             cols.append(col)
             if domain_vars is not None:
-                var = coltype.make(names[col] if names and names[col] else next(NAMEGEN), **coltype_kwargs)
+                if names and names[col]:
+                    # Use existing variable if available
+                    var = coltype.make(names[col].strip(), **coltype_kwargs)
+                else:
+                    # Never use existing for un-named variables
+                    var = coltype(next(NAMEGEN), **coltype_kwargs)
                 var.attributes.update(flag.attributes)
                 domain_vars.append(var)
 
