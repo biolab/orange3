@@ -456,7 +456,8 @@ class OWFile(widget.OWWidget):
         from os.path import expanduser
         home = expanduser("~")
         if self.loaded_file.startswith(home):
-            name = "~/" + self.loaded_file[len(home):]
+            # os.path.join does not like ~
+            name = "~/" + self.loaded_file[len(home):].lstrip("/").lstrip("\\")
         else:
             name = self.loaded_file
         self.report_settings("File", [("File name", name),
