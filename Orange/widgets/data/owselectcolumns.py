@@ -420,7 +420,7 @@ class OWSelectAttributes(widget.OWWidget):
         gui.button(bbox, self, "Reset", callback=self.reset)
 
         layout.addWidget(bbox, 3, 0, 1, 3)
-
+        bbox.layout().addWidget(self.report_button)
         layout.setRowStretch(0, 4)
         layout.setRowStretch(1, 0)
         layout.setRowStretch(2, 2)
@@ -428,7 +428,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.controlArea.setLayout(layout)
 
         self.data = None
-        self.output_report = None
+        self.output_data = None
         self.original_completer_items = []
 
         self.resize(500, 600)
@@ -636,12 +636,11 @@ class OWSelectAttributes(widget.OWWidget):
 
             domain = Orange.data.Domain(attributes, class_var, metas)
             newdata = self.data.from_table(domain, self.data)
-            self.output_report = self.prepareDataReport(newdata)
-            self.output_domain = domain
+            self.output_data = newdata
             self.send("Data", newdata)
             self.send("Features", widget.AttributeList(attributes))
         else:
-            self.output_report = []
+            self.output_data = None
             self.send("Data", None)
             self.send("Features", None)
 
@@ -653,17 +652,16 @@ class OWSelectAttributes(widget.OWWidget):
             self.meta_attrs[:] = self.data.domain.metas
             self.update_domain_role_hints()
 
-    def sendReport(self):
-        self.reportData(self.data, "Input data")
-        self.reportData(self.output_report, "Output data")
-        if self.data:
-            all_vars = self.data.domain.variables + self.data.domain.metas
-            used_vars = self.output_domain.variables + self.output_domain.metas
-            if len(all_vars) != len(used_vars):
-                removed = set(all_vars).difference(set(used_vars))
-                self.reportSettings("",
-                    [("Removed", "%i (%s)" %
-                     (len(removed), ", ".join(x.name for x in removed)))])
+    def send_report(self):
+        self.report_data("Input data", self.data)
+        self.report_data("Output data", self.output_data)
+        in_domain, out_domain = self.data.domain, self.output_data.domain
+        if in_domain and out_domain:
+            diff = list(set(in_domain.variables + in_domain.metas) -
+                        set(out_domain.variables + out_domain.metas))
+            if diff:
+                text = "%i (%s)" % (len(diff), ", ".join(x.name for x in diff))
+                self.report_settings("", [("Removed", text)])
 
 
 def test_main(argv=None):

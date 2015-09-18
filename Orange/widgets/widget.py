@@ -1,4 +1,3 @@
-
 import sys
 import time
 import os
@@ -10,8 +9,11 @@ from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
     QEventLoop, QSettings, QUrl
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
-    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle
+    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle, \
+    QGraphicsScene
+from pyqtgraph import PlotWidget, PlotItem
 
+from Orange.data import Table
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 
@@ -116,7 +118,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     want_control_area = True
     want_graph = False
     want_status_bar = False
-    no_report = False
+    want_report = False
+    report_html = ""
 
     save_position = True
 
@@ -294,6 +297,85 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
 
+        if self.want_report:
+            self.report_button_background = gui.widgetBox(
+                self.leftWidgetPart,
+                orientation="horizontal", margin=4
+            )
+            self.report_button = gui.button(
+                self.report_button_background,
+                self, "&Report", callback=self.show_report)
+            self.report_button.setAutoDefault(0)
+
+    def show_report(self):
+        from Orange.canvas.report.owreport import OWReport
+
+        report = OWReport.get_instance()
+        self.create_report_html()
+        report.make_report(self)
+        report.show()
+
+    def create_report_html(self):
+        from Orange.canvas.report.owreport import OWReport
+
+        self.report_html = OWReport.get_html_section(self.name)
+        self.send_report()
+
+    def send_report(self):
+        if hasattr(self, "data"):
+            self.report_data("Data", self.data)
+        if hasattr(self, "canvas"):
+            self.report_plot(self.canvas)
+        if hasattr(self, "box_scene"):
+            self.report_plot(self.box_scene)
+        if hasattr(self, "plot"):
+            self.report_plot(self.plot)
+
+    def report_settings(self, name, items):
+        from Orange.canvas.report.owreport import OWReport
+
+        if name != "":
+            self.report_html += OWReport.get_html_subsection(name)
+        self.report_html += OWReport.get_html_paragraph(items)
+
+    def report_data(self, name, data):
+        if isinstance(data, Table):
+            attr_names = [a.name for a in data.domain.attributes]
+            meta_names = [m.name for m in data.domain.metas]
+            class_names = [c.name for c in data.domain.class_vars]
+            items = [("Examples", len(data)),
+                     ("Features", ", ".join(attr_names))]
+            if meta_names:
+                items.append(("Meta attributes", ", ".join(meta_names)))
+            if class_names:
+                items.append(("Class", ", ".join(class_names)))
+            self.report_settings(name, items)
+
+    def report_plot(self, name, plot):
+        from Orange.canvas.report.owreport import OWReport
+
+        if name != "":
+            self.report_html += OWReport.get_html_subsection(name)
+        if isinstance(plot, QGraphicsScene) or isinstance(plot, PlotItem):
+            self.report_html += OWReport.get_html_img(plot)
+        elif isinstance(plot, PlotWidget):
+            self.report_html += OWReport.get_html_img(plot.plotItem)
+
+    def report_table(self, name, table):
+        from Orange.canvas.report.owreport import OWReport
+
+        # TODO
+        if name != "":
+            self.report_html += OWReport.get_html_subsection(name)
+        pass
+
+    def report_raw(self, name, html):
+        from Orange.canvas.report.owreport import OWReport
+
+        if name != "":
+            self.report_html += OWReport.get_html_subsection(name)
+        self.report_html += html
+
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
             return
@@ -305,10 +387,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def setStatusBarText(self, text, timeout=5000):
         if hasattr(self, "widgetStatusBar"):
             self.widgetStatusBar.showMessage(" " + text, timeout)
-
-    # TODO add!
-    def prepareDataReport(self, data):
-        pass
 
     def __restoreWidgetGeometry(self):
         restored = False

@@ -411,7 +411,7 @@ class OWFile(widget.OWWidget):
             progress.finish()
 
         if data is None:
-            self.dataReport = None
+            self.data = None
         else:
             domain = data.domain
             text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
@@ -443,18 +443,21 @@ class OWFile(widget.OWWidget):
             try: del self.recent_paths[self.recent_paths.index(rp, 1)]
             except ValueError: pass
 
-            self.dataReport = self.prepareDataReport(data)
+            self.data = data
         self.send("Data", data)
 
-    def sendReport(self):
-        dataReport = getattr(self, "dataReport", None)
-        if dataReport:
-            self.reportSettings(
-                "File",
-                [("File name", self.loaded_file),
-                 ("Format", self.formats.get(os.path.splitext(
-                     self.loaded_file)[1], "unknown format"))])
-            self.reportData(self.dataReport)
+    def send_report(self):
+        self.report_settings("File", [("File name", self.loaded_file),
+                                      ("Format", self._get_ext_name(
+                                          self.loaded_file))])
+        self.report_data("Input data", self.data)
+
+    def _get_ext_name(self, filename):
+        try:
+            return FileFormat.names[os.path.splitext(filename)[1]]
+        except KeyError:
+            return "unknown format"
+
 
     def workflowEnvChanged(self, key, value, oldvalue):
         if key == "basedir":
