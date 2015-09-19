@@ -1,3 +1,6 @@
+import itertools
+
+
 def plural(s, number):
     return s.format(number=number, s="s" if number % 100 != 1 else "")
 
@@ -23,6 +26,10 @@ def clip_string(s, limit=1000, sep=None):
     return s[:sep_pos + len(sep)] + "..."
 
 
-def clipped_list(s, limit=1000):
-    return clip_string(", ".join(s), limit, ", ")
+def clipped_list(s, limit=1000, less_lookups=False):
+    if less_lookups:
+        s = ", ".join(itertools.islice(s, (limit + 2) // 3))
+    else:
+        s = ", ".join(s)
+    return clip_string(s, limit, ", ")
 
