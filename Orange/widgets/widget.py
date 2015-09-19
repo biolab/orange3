@@ -17,7 +17,7 @@ from pyqtgraph import PlotWidget, PlotItem
 from Orange.data import Table
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-
+from Orange.canvas.report import clipped_list
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -346,8 +346,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def describe_data(self, data):
         from Orange.canvas.report.owreport import OWReport
 
-        def clipped_list(items, s):
-            r = OWReport.clipped_list(a.name for a in items)
+        def clip_attrs(items, s):
+            r = clipped_list(a.name for a in items)
             if len(items) > 10:
                 r += " (total: {} {})".format(len(items), s)
             return r
@@ -357,15 +357,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         else:
             items = [
                 ("Data instances", len(data)),
-                ("Features", clipped_list(data.domain.attributes, "features"))]
+                ("Features", clip_attrs(data.domain.attributes, "features"))]
             if data.domain.metas:
                 items.append(
                     ("Meta attributes",
-                     clipped_list(data.domain.metas, "meta attributes")))
+                     clip_attrs(data.domain.metas, "meta attributes")))
             if data.domain.class_vars:
                 items.append(
                     ("Target",
-                     clipped_list(data.domain.class_vars, "targets variables")))
+                     clip_attrs(data.domain.class_vars, "targets variables")))
             return OWReport.render_items(items)
 
     def report_data(self, name, data):
