@@ -431,7 +431,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             try:
                 header = [model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
                                for col in range(model.columnCount())]
-            except Exception:
+            except:
                 header = None
             if header:
                 content = chain([header], content)
@@ -446,6 +446,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         else:
             def fmtnum(s):
                 return s
+
         def report_list(data,
                         header_rows=header_rows, header_columns=header_columns):
             cells = ["<td>{}</td>", "<th>{}</th>"]
@@ -453,11 +454,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 join(cells[rowi < header_rows or coli < header_columns]
                      .format(fmtnum(elm)) for coli, elm in enumerate(row))
                 ) for rowi, row in enumerate(data))
-        self.report_name(name)
 
+        self.report_name(name)
         try:
             model = table.model()
-        except Exception:
+        except:
             model = None
         if isinstance(model, QStandardItemModel):
             body = report_standard_model(table.model())
@@ -469,6 +470,24 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             body = None
         if body:
             self.report_html += "<table>\n" + body + "</table>"
+
+    # noinspection PyBroadException
+    def report_list(self, name, data, limit=1000):
+        def report_abstract_model(model):
+            content = (model.data(model.index(row, 0))
+                       for row in range(model.rowCount()))
+            return clipped_list(content, limit, less_lookups=True)
+
+        self.report_name(name)
+        try:
+            model = data.model()
+        except:
+            model = None
+        if isinstance(model, QAbstractItemModel):
+            txt = report_abstract_model(model)
+        else:
+            txt = ""
+        self.report_html += txt
 
     def report_raw(self, name, html):
         self.report_name(name)
