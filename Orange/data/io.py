@@ -487,23 +487,30 @@ class CSVFormat(FileFormat):
     @classmethod
     def read_file(cls, filename, wrapper=None):
         wrapper = wrapper or _IDENTITY
-        encoding = detect_encoding(filename)
         import csv
-        with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
-            # Sniff the CSV dialect (delimiter, quotes, ...)
-            try:
-                dialect = csv.Sniffer().sniff(file.read(1024), list(',;:$ \t'))
-            except csv.Error:
-                dialect = csv.excel()
-                dialect.delimiter = cls.DELIMITER
-            finally:
+        for encoding in (lambda: 'us-ascii',
+                         lambda: detect_encoding(filename)):
+            encoding = encoding()
+            with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
+                # Sniff the CSV dialect (delimiter, quotes, ...)
+                try:
+                    dialect = csv.Sniffer().sniff(file.read(1024), list(',\t;:$ '))
+                except UnicodeDecodeError:
+                    continue
+                except csv.Error:
+                    dialect = csv.excel()
+                    dialect.delimiter = cls.DELIMITER
+
                 file.seek(0)
                 dialect.skipinitialspace = True
-            try:
-                reader = csv.reader(file, dialect=dialect)
-                return wrapper(cls.data_table(reader))
-            except Exception as e:
-                raise ValueError('Cannot parse dataset {}: {}'.format(filename, e))
+
+                try:
+                    reader = csv.reader(file, dialect=dialect)
+                    return wrapper(cls.data_table(reader))
+                except Exception as e:
+                    error = e
+                    continue
+        raise ValueError('Cannot parse dataset {}: {}'.format(filename, error))
 
     @classmethod
     def write_file(cls, filename, data):
