@@ -272,6 +272,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.create_report_html()
         report.make_report(self)
         report.show()
+        report.raise_()
 
     def create_report_html(self):
         from Orange.canvas.report.owreport import OWReport
