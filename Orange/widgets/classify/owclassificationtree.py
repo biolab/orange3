@@ -20,6 +20,7 @@ class OWClassificationTree(widget.OWWidget):
         ("Tree", TreeClassifier)
     ]
     want_main_area = False
+    want_report = True
     resizing_enabled = False
 
     LEARNER = TreeLearner
@@ -65,18 +66,20 @@ class OWClassificationTree(widget.OWWidget):
 
         self.set_learner()
 
-    def sendReport(self):
-        self.reportSettings(
+    def send_report(self):
+        from Orange.canvas.report import plural_w
+        self.report_settings(
             "Model parameters",
-            [("Attribute selection", self.scores[self.attribute_score][0]),
+            [("Split selection", self.scores[self.attribute_score][0]),
              ("Pruning", ", ".join(s for s, c in (
-                 ("%i instances in leaves" % self.min_leaf,
-                  self.limit_min_leaf),
-                 ("%i instance in internal node" % self.min_internal,
-                  self.limit_min_internal),
-                 ("maximum depth %i" % self.max_depth, self.limit_depth)) if c)
-              or ": None")])
-        self.reportData(self.data)
+                 (plural_w("at least {number} instance{s} in leaves",
+                           self.min_leaf), self.limit_min_leaf),
+                 (plural_w("at least {number} instance{s} in internal nodes",
+                           self.min_internal), self.limit_min_internal),
+                 ("maximum depth {}".format(self.max_depth),
+                  self.limit_depth))
+              if c) or "None")])
+        self.report_data("Data", self.data)
 
     def set_learner(self):
         self.learner = self.LEARNER(
