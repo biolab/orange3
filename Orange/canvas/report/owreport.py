@@ -1,9 +1,7 @@
 import os
 import time
-import tempfile
-import shutil
 import pkg_resources
-from PyQt4.QtCore import Qt, QUrl
+from PyQt4.QtCore import Qt, QUrl, QByteArray, QBuffer, QIODevice
 from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon,
                          QPrintDialog, QFileDialog, QMenu)
 from Orange.widgets import gui
@@ -16,7 +14,6 @@ class OWReport(OWWidget):
     name = "Report"
     save_dir = Setting("")
     report_url_pref = "file:///"
-    report_temp_dir = tempfile.mkdtemp("", "Orange3_report")
 
     def __init__(self):
         super().__init__()
@@ -128,12 +125,13 @@ class OWReport(OWWidget):
 
     @staticmethod
     def get_html_img(scene):
-        filename = OWReport._get_unique_filename(OWReport.get_instance(),
-                                                 "img", "png")
+        byte_array = QByteArray()
+        filename = QBuffer(byte_array)
+        filename.open(QIODevice.WriteOnly)
         writer = PngFormat()
         writer.write(filename, scene)
-        return "<ul><img src='%s%s'/></ul>" % (OWReport.report_url_pref,
-                                               filename)
+        img_encoded = byte_array.toBase64().data().decode("utf-8")
+        return "<ul><img src='data:image/png;base64,%s'/></ul>" % img_encoded
 
     @staticmethod
     def clip_string(s, limit=1000, sep=None):
@@ -150,16 +148,6 @@ class OWReport(OWWidget):
     @staticmethod
     def clipped_list(s, limit=1000):
         return OWReport.clip_string(", ".join(s), limit, ", ")
-
-    def _get_unique_filename(self, name, ext):
-        for i in range(1000000):
-            filename = os.path.join(self.report_temp_dir,
-                                    "%s%f.%s" % (name, i, ext))
-            if not os.path.exists(filename):
-                return filename
-
-    def _remove_temp_dir(self):
-        shutil.rmtree(self.report_temp_dir)
 
     def _save_report(self):
         filename = QFileDialog.getSaveFileName(self, "Save Report",
@@ -191,7 +179,6 @@ class OWReport(OWWidget):
             report = OWReport()
             app_inst._report_window = report
             app_inst.sendPostedEvents(report, 0)
-            app_inst.aboutToQuit.connect(report._remove_temp_dir)
             app_inst.aboutToQuit.connect(report.deleteLater)
         return app_inst._report_window
 

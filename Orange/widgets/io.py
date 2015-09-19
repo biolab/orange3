@@ -74,7 +74,7 @@ class PngFormat(ImgFormat):
 
     @staticmethod
     def _save_buffer(buffer, filename):
-        buffer.save(filename)
+        buffer.save(filename, "png")
 
     @staticmethod
     def _get_exporter():

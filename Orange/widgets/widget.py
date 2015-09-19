@@ -283,9 +283,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         if hasattr(self, "data") and isinstance(self.data, Table):
             self.report_data("Data", self.data)
         if hasattr(self, "canvas"):
-            self.report_plot(self.canvas)
+            self.report_plot("", self.canvas)
         if hasattr(self, "box_scene"):
-            self.report_plot(self.box_scene)
+            self.report_plot("", self.box_scene)
         if hasattr(self, "plot"):
             self.report_plot("", self.plot)
 
