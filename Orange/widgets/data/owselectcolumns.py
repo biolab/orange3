@@ -653,10 +653,15 @@ class OWSelectAttributes(widget.OWWidget):
             self.update_domain_role_hints()
 
     def send_report(self):
-        self.report_data("Input data", self.data)
-        self.report_data("Output data", self.output_data)
+        if not self.data or not self.output_data:
+            return
         in_domain, out_domain = self.data.domain, self.output_data.domain
-        if in_domain and out_domain:
+        self.report_data("Input data", self.data)
+        if (in_domain.attributes, in_domain.class_vars, in_domain.metas) == (
+                out_domain.attributes, out_domain.class_vars, out_domain.metas):
+            self.report_raw("Output data", "No changes.")
+        else:
+            self.report_data("Output data", self.output_data)
             diff = list(set(in_domain.variables + in_domain.metas) -
                         set(out_domain.variables + out_domain.metas))
             if diff:
