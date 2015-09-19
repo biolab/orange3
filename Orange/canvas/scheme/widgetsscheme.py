@@ -86,8 +86,8 @@ class WidgetsScheme(Scheme):
         return changed
 
     def show_report_view(self):
-        from OWReport import get_instance
-        inst = get_instance()
+        from Orange.canvas.report.owreport import OWReport
+        inst = OWReport.get_instance()
         inst.show()
         inst.raise_()
 
