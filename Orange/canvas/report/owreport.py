@@ -133,22 +133,6 @@ class OWReport(OWWidget):
         img_encoded = byte_array.toBase64().data().decode("utf-8")
         return "<ul><img src='data:image/png;base64,%s'/></ul>" % img_encoded
 
-    @staticmethod
-    def clip_string(s, limit=1000, sep=None):
-        if len(s) < limit:
-            return s
-        s = s[:limit - 3]
-        if sep is None:
-            return s
-        sep_pos = s.rfind(sep)
-        if sep_pos == -1:
-            return s
-        return s[:sep_pos + len(sep)] + "..."
-
-    @staticmethod
-    def clipped_list(s, limit=1000):
-        return OWReport.clip_string(", ".join(s), limit, ", ")
-
     def _save_report(self):
         filename = QFileDialog.getSaveFileName(self, "Save Report",
                                                self.save_dir,
