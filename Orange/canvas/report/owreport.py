@@ -1,19 +1,19 @@
 import os
 import time
 import pkg_resources
-from PyQt4.QtCore import Qt, QUrl, QByteArray, QBuffer, QIODevice
+from PyQt4.QtCore import Qt, QByteArray, QBuffer, QIODevice
 from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon,
                          QPrintDialog, QFileDialog, QMenu)
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.widgets.io import PngFormat
+from Orange.canvas.application.canvasmain import CanvasMainWindow
 
 
 class OWReport(OWWidget):
     name = "Report"
     save_dir = Setting("")
-    report_url_pref = "file:///"
 
     def __init__(self):
         super().__init__()
@@ -35,6 +35,8 @@ class OWReport(OWWidget):
             self.controlArea, self, "Print", callback=self._print_report
         )
 
+        self.widget_list_items_schemas = {}
+
         self.report_view_items = {}
         self.report_view = gui.WebviewWidget(self.mainArea)
         frame = self.report_view.page().mainFrame()
@@ -44,16 +46,27 @@ class OWReport(OWWidget):
         index_file = pkg_resources.resource_filename(__name__, "index.html")
         self.report_html_template = open(index_file, "r").read()
 
-        self.setModal(False)
-
     def _reload(self):
         self._build_html()
 
     def _show_menu(self, pos):
         widget_list_menu = QMenu(self)
+        widget_list_menu.addAction("Show scheme", self._show_scheme)
         widget_list_menu.addAction("Remove", self._remove_widget_item)
         widget_list_menu.addAction("Remove All", self._clear)
         widget_list_menu.popup(self.mapToGlobal(pos))
+
+    def _show_scheme(self):
+        selected_row = self.widget_list.currentRow()
+        if selected_row >= 0:
+            selected_item = self.widget_list_items[selected_row]
+            scheme = self.widget_list_items_schemas[selected_item]
+            canvas = self.get_canvas_instance()
+            canvas.load_scheme_xml(scheme)
+
+    def _get_scheme(self):
+        canvas = self.get_canvas_instance()
+        return canvas.get_scheme_xml()
 
     def _clear(self):
         self.widget_list_items = []
@@ -78,6 +91,8 @@ class OWReport(OWWidget):
         items.append((widget.name, icon))
         self.report_view_items[(widget.name, icon)] = widget.report_html
         self.widget_list_items = items
+        self.widget_list_items_schemas[(widget.name,
+                                        icon)] = self._get_scheme()
 
     def _build_html(self):
         n_widgets = len(self.widget_list_items)
@@ -98,7 +113,7 @@ class OWReport(OWWidget):
                 self.report_view_items[(item_name, item_icon)]
             )
         html += "</body></html>"
-        self.report_view.setHtml(html, QUrl(self.report_url_pref))
+        self.report_view.setHtml(html)
 
         if selected_row < len(self.widget_list_items):
             self.javascript(
@@ -171,6 +186,12 @@ class OWReport(OWWidget):
             app_inst.sendPostedEvents(report, 0)
             app_inst.aboutToQuit.connect(report.deleteLater)
         return app_inst._report_window
+
+    @staticmethod
+    def get_canvas_instance():
+        for widget in QApplication.topLevelWidgets():
+            if isinstance(widget, CanvasMainWindow):
+                return widget
 
 
 if __name__ == "__main__":

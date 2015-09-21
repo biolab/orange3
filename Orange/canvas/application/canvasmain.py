@@ -948,6 +948,23 @@ class CanvasMainWindow(QMainWindow):
 
             self.add_recent_scheme(new_scheme.title, filename)
 
+    def load_scheme_xml(self, xml):
+        document = self.current_document()
+        if document.isModifiedStrict():
+            if self.ask_save_changes() == QDialog.Rejected:
+                return QDialog.Rejected
+
+        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
+        scheme_load(new_scheme, xml)
+        self.set_new_scheme(new_scheme)
+        return QDialog.Accepted
+
+    def get_scheme_xml(self):
+        buffer = BytesIO()
+        curr_scheme = self.current_document().scheme()
+        curr_scheme.save_to(buffer, pretty=True, pickle_fallback=True)
+        return buffer.getvalue().decode("utf-8")
+
     def new_scheme_from(self, filename):
         """Create and return a new :class:`widgetsscheme.WidgetsScheme`
         from a saved `filename`. Return `None` if an error occurs.
