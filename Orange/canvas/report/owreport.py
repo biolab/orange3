@@ -51,7 +51,7 @@ class OWReport(OWWidget):
         widget_list_menu = QMenu(self)
         widget_list_menu.addAction("Show scheme", self._show_scheme)
         widget_list_menu.addAction("Remove", self._remove_widget_item)
-        widget_list_menu.addAction("Remove All", self._clear)
+        widget_list_menu.addAction("Clear", self._clear)
         widget_list_menu.popup(self.mapToGlobal(pos))
 
     def _show_scheme(self):
@@ -96,6 +96,7 @@ class OWReport(OWWidget):
     def _build_html(self):
         n_widgets = len(self.widget_list_items)
         if not n_widgets:
+            self.report_view.setHtml("")
             return
 
         selected_row = self.widget_list.currentRow()
