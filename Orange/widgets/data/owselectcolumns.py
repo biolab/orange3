@@ -666,7 +666,7 @@ class OWSelectAttributes(widget.OWWidget):
                         set(out_domain.variables + out_domain.metas))
             if diff:
                 text = "%i (%s)" % (len(diff), ", ".join(x.name for x in diff))
-                self.report_settings("", [("Removed", text)])
+                self.report_items("", [("Removed", text)])
 
 
 def test_main(argv=None):
