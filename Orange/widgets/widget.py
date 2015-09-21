@@ -402,10 +402,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def report_plot(self, name, plot):
         from Orange.canvas.report.owreport import OWReport
         self.report_name(name)
-        if isinstance(plot, QGraphicsScene) or isinstance(plot, PlotItem):
+        if isinstance(plot, QGraphicsScene):
             self.report_html += OWReport.get_html_img(plot)
+        elif isinstance(plot, PlotItem):
+            self.report_html += OWReport.get_html_img(plot.scene())
         elif isinstance(plot, PlotWidget):
-            self.report_html += OWReport.get_html_img(plot.plotItem)
+            self.report_html += OWReport.get_html_img(plot.plotItem.scene())
 
     # noinspection PyBroadException
     def report_table(self, name, table, header_rows=0, header_columns=0,
