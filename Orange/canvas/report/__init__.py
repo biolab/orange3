@@ -237,10 +237,19 @@ def describe_data(data):
     return items
 
 
-def describe_data_brief(data):
-    domain = data.domain
+def describe_domain_brief(domain):
+    """
+    Return an :obj:`OrderedDict` with the number of features, metas and classes
+
+    Description contains "Features" and "Meta attributes" with the number of
+    featuers, and "Targets" that contains either a name, if there is a single
+    target, or the number of targets if there are multiple.
+
+    :param domain: data
+    :type domain: Orange.data.Domain
+    :rtype: OrderedDict
+    """
     items = OrderedDict([
-        ("Data instances", len(data)),
         ("Features", len(domain.attributes) or "None"),
         ("Meta attributes", len(domain.metas) or "None")])
     if domain.has_discrete_class:
@@ -252,4 +261,23 @@ def describe_data_brief(data):
         items["Targets"] = len(domain.class_vars)
     else:
         items["Targets"] = False
+    return items
+
+
+def describe_data_brief(data):
+    """
+    Return an :obj:`OrderedDict` with a brief description of data.
+
+    Description contains keys "Data instances" with the number of instances,
+    "Features" and "Meta attributes" with the corresponding numbers, and
+    "Targets", which contains a name, if there is a single target, or the
+    number of targets if there are multiple.
+
+    :param data: data
+    :type data: Orange.data.Table
+    :rtype: OrderedDict
+    """
+    items = OrderedDict()
+    items["Data instances"] = len(data)
+    items.update(describe_domain_brief(data.domain))
     return items
