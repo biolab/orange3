@@ -17,7 +17,9 @@ from pyqtgraph import PlotWidget, PlotItem
 from Orange.data import Table
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas.report import clipped_list
+from Orange.canvas.report import (clipped_list, get_html_section,
+                                  get_html_subsection, render_items,
+                                  get_html_img)
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -318,9 +320,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         report.raise_()
 
     def create_report_html(self):
-        from Orange.canvas.report.owreport import OWReport
-
-        self.report_html = OWReport.get_html_section(self.name)
+        self.report_html = get_html_section(self.name)
         self.send_report()
 
     def send_report(self):
@@ -334,18 +334,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.report_plot("", self.plot)
 
     def report_settings(self, name, items):
-        from Orange.canvas.report.owreport import OWReport
         self.report_name(name)
-        self.report_html += OWReport.render_items(items)
+        self.report_html += render_items(items)
 
     def report_name(self, name):
-        from Orange.canvas.report.owreport import OWReport
         if name != "":
-            self.report_html += OWReport.get_html_subsection(name)
+            self.report_html += get_html_subsection(name)
 
     def describe_data(self, data):
-        from Orange.canvas.report.owreport import OWReport
-
         def clip_attrs(items, s):
             r = clipped_list(a.name for a in items)
             if len(items) > 10:
@@ -366,7 +362,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 items.append(
                     ("Target",
                      clip_attrs(data.domain.class_vars, "targets variables")))
-            return OWReport.render_items(items)
+            return render_items(items)
 
     def report_data(self, name, data):
         self.report_name(name)
@@ -391,23 +387,21 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return items
 
     def describe_data_brief(self, data):
-        from Orange.canvas.report.owreport import OWReport
         items = self.describe_data_brief_items(data)
-        return OWReport.render_items(items)
+        return render_items(items)
 
     def report_data_brief(self, name, data):
         items = self.describe_data_brief_items(data)
         self.report_settings(name, items)
 
     def report_plot(self, name, plot):
-        from Orange.canvas.report.owreport import OWReport
         self.report_name(name)
         if isinstance(plot, QGraphicsScene):
-            self.report_html += OWReport.get_html_img(plot)
+            self.report_html += get_html_img(plot)
         elif isinstance(plot, PlotItem):
-            self.report_html += OWReport.get_html_img(plot.scene())
+            self.report_html += get_html_img(plot.scene())
         elif isinstance(plot, PlotWidget):
-            self.report_html += OWReport.get_html_img(plot.plotItem.scene())
+            self.report_html += get_html_img(plot.plotItem.scene())
 
     # noinspection PyBroadException
     def report_table(self, name, table, header_rows=0, header_columns=0,
