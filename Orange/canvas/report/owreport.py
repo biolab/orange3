@@ -136,17 +136,23 @@ class OWReport(OWWidget):
     def _save_report(self):
         filename = QFileDialog.getSaveFileName(self, "Save Report",
                                                self.save_dir,
-                                               "PDF (*.pdf)")
+                                               "HTML (*.html);;PDF (*.pdf)")
         if not filename:
             return
 
         self.save_dir = os.path.dirname(filename)
         self.saveSettings()
-        printer = QPrinter()
-        printer.setPageSize(QPrinter.A4)
-        printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setOutputFileName(filename)
-        self.report_view.print_(printer)
+        _, extension = os.path.splitext(filename)
+        if extension == ".pdf":
+            printer = QPrinter()
+            printer.setPageSize(QPrinter.A4)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(filename)
+            self.report_view.print_(printer)
+        else:
+            frame = self.report_view.page().currentFrame()
+            with open(filename, "w") as f:
+                f.write(frame.documentElement().toInnerXml())
 
     def _print_report(self):
         printer = QPrinter()
