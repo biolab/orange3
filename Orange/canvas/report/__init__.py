@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import time
 import itertools
 import time
 from PyQt4.QtCore import QByteArray, QBuffer, QIODevice
