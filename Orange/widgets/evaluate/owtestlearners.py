@@ -185,7 +185,8 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Test on test data")
 
         rbox.layout().addSpacing(5)
-        gui.button(rbox, self, "Apply", callback=self.apply)
+        self.apply_button = gui.button(
+            rbox, self, "Apply", callback=self.apply, default=True)
 
         self.cbox = gui.widgetBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
@@ -496,7 +497,10 @@ class OWTestLearners(widget.OWWidget):
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
 
+        self.apply_button.setEnabled(True)
+
     def apply(self):
+        self.apply_button.setEnabled(False)
         self._update_header()
         # Update the view to display the model names
         self._update_stats_model()
