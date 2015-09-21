@@ -143,7 +143,7 @@ echo "============================="
 echo "Installing Orange"
 echo "================="
 
-"$PYTHON" setup.py install
+"$PIP" install .
 
 cat <<-'EOF' > "$TEMPLATE"/Contents/MacOS/Orange
 	#!/bin/bash
@@ -162,12 +162,8 @@ EOF
 
 chmod +x "$TEMPLATE"/Contents/MacOS/Orange
 
-echo "Installing dependencies"
-echo "======================="
-# Running 'pip install Orange' will install/upgrade any dependencies not already
-# satisfied
-"$PIP" install Orange
-
+echo "Installing extra dependencies"
+echo "============================="
 # Install a delocated pygraphviz wheel (https://pypi.python.org/pypi/delocate).
 "$PIP" install --no-index --trusted-host orange.biolab.si \
                --find-links http://orange.biolab.si/download/files/wheelhouse/ \

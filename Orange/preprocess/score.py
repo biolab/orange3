@@ -176,7 +176,7 @@ class InfoGain(ClassificationScorer):
     """
     def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
-        h_residual = _entropy(cont)
+        h_residual = _entropy(np.compress(np.sum(cont, axis=0), cont, axis=1))
         return nan_adjustment * (h_class - h_residual)
 
 
@@ -192,8 +192,10 @@ class GainRatio(ClassificationScorer):
     """
     def from_contingency(self, cont, nan_adjustment):
         h_class = _entropy(np.sum(cont, axis=1))
-        h_residual = _entropy(cont)
+        h_residual = _entropy(np.compress(np.sum(cont, axis=0), cont, axis=1))
         h_attribute = _entropy(np.sum(cont, axis=0))
+        if h_attribute == 0:
+            h_attribute = 1
         return nan_adjustment * (h_class - h_residual) / h_attribute
 
 
@@ -226,7 +228,7 @@ class ReliefF(Scorer):
         from Orange.preprocess._relieff import relieff
         weights = np.asarray(relieff(data.X, data.Y,
                                      self.n_iterations, self.k_nearest,
-                                     np.array([a.is_discrete for a in data.domain.attributes], dtype=np.int32)))
+                                     np.array([a.is_discrete for a in data.domain.attributes])))
         if feature:
             return weights[0]
         return weights
@@ -249,7 +251,7 @@ class RReliefF(Scorer):
         from Orange.preprocess._relieff import rrelieff
         weights = np.asarray(rrelieff(data.X, data.Y,
                                       self.n_iterations, self.k_nearest,
-                                      np.array([a.is_discrete for a in data.domain.attributes], dtype=np.int32)))
+                                      np.array([a.is_discrete for a in data.domain.attributes])))
         if feature:
             return weights[0]
         return weights

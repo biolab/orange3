@@ -109,7 +109,7 @@ class Value(float):
     @property
     def value(self):
         if self.variable.is_discrete:
-            return self.variable.values[int(self)]
+            return Unknown if isnan(self) else self.variable.values[int(self)]
         if self.variable.is_string:
             return self._value
         return float(self)

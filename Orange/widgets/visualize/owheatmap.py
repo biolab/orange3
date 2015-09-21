@@ -1034,10 +1034,14 @@ class OWHeatMap(widget.OWWidget):
         except IndexError:
             pass
         else:
+            key = QtGui.QApplication.keyboardModifiers()
+            clear = not (key & ((Qt.ControlModifier | Qt.ShiftModifier |
+                                 Qt.AltModifier)))
+            remove = (key & (Qt.ControlModifier | Qt.AltModifier))
+            append = (key & Qt.ControlModifier)
             self.selection_manager.selection_add(
                 node.value.first, node.value.last - 1, hm,
-                clear=not (QtGui.QApplication.keyboardModifiers() &
-                           Qt.ControlModifier))
+                clear=clear, remove=remove, append=append)
 
     def __update_selection_geometry(self):
         for item in self.selection_rects:
@@ -1415,7 +1419,7 @@ class HeatmapScene(QGraphicsScene):
     def heatmap_widgets(self):
         return self._items(None, GraphicsHeatmapWidget)
 
-    def select_from_dendrogram(self, dendrogram, clear=True):
+    def select_from_dendrogram(self, dendrogram, key):
         """Select all heatmap rows which belong to the dendrogram.
         """
         dendrogram_widget = dendrogram.parentWidget()
@@ -1437,7 +1441,12 @@ class HeatmapScene(QGraphicsScene):
             start, end = heatmap.mapFromScene(start), heatmap.mapFromScene(end)
             start, _ = heatmap.cell_at(QPointF(b_rect.center().x(), start.y()))
             end, _ = heatmap.cell_at(QPointF(b_rect.center().x(), end.y()))
-            self.selection_manager.selection_add(start, end, heatmap, clear=clear)
+            clear = not (key & ((Qt.ControlModifier | Qt.ShiftModifier |
+                                 Qt.AltModifier)))
+            remove = (key & (Qt.ControlModifier | Qt.AltModifier))
+            append = (key & Qt.ControlModifier)
+            self.selection_manager.selection_add(
+                start, end, heatmap, clear=clear, remove=remove, append=append)
         return
 
     def mousePressEvent(self, event):
@@ -1450,7 +1459,7 @@ class HeatmapScene(QGraphicsScene):
         dendrogram = self.dendrogram_at_pos(pos)
         if dendrogram and event.button() & Qt.LeftButton:
             if dendrogram.orientation == Qt.Vertical:
-                self.select_from_dendrogram(dendrogram, clear=not event.modifiers() & Qt.ControlModifier)
+                self.select_from_dendrogram(dendrogram, event.modifiers())
             return
 
         return QGraphicsScene.mousePressEvent(self, event)
@@ -1705,6 +1714,7 @@ class HeatmapSelectionManager(QObject):
         QObject.__init__(self, parent)
         self.selections = []
         self.selection_ranges = []
+        self.selection_ranges_temp = []
         self.heatmap_widgets = []
         self.selection_rects = []
         self.heatmaps = []
@@ -1777,8 +1787,16 @@ class HeatmapSelectionManager(QObject):
         row = start + row
         self._start_row = row
         range = (row, row)
+        self.selection_ranges_temp = []
         if event.modifiers() & Qt.ControlModifier:
+            self.selection_ranges_temp = self.selection_ranges
+            self.selection_ranges = self.remove_range(
+                self.selection_ranges, row, row, append=True)
+        elif event.modifiers() & Qt.ShiftModifier:
             self.selection_ranges.append(range)
+        elif event.modifiers() & Qt.AltModifier:
+            self.selection_ranges = self.remove_range(
+                self.selection_ranges, row, row, append=False)
         else:
             self.selection_ranges = [range]
         self.select_rows(self.combined_ranges(self.selection_ranges))
@@ -1793,10 +1811,17 @@ class HeatmapSelectionManager(QObject):
 
         start, _ = self._heatmap_ranges[heatmap_widget]
         row = start + row
-        if self.selection_ranges:
-            self.selection_ranges[-1] = (self._start_row, row)
+        if event.modifiers() & Qt.ControlModifier:
+            self.selection_ranges = self.remove_range(
+                self.selection_ranges_temp, self._start_row, row, append=True)
+        elif event.modifiers() & Qt.AltModifier:
+            self.selection_ranges = self.remove_range(
+                self.selection_ranges, self._start_row, row, append=False)
         else:
-            self.selection_ranges = [(row, row)]
+            if self.selection_ranges:
+                self.selection_ranges[-1] = (self._start_row, row)
+            else:
+                self.selection_ranges = [(row, row)]
 
         self.select_rows(self.combined_ranges(self.selection_ranges))
 
@@ -1807,14 +1832,19 @@ class HeatmapSelectionManager(QObject):
         row, _ = heatmap_widget.cell_at(pos)
         start, _ = self._heatmap_ranges[heatmap_widget]
         row = start + row
-        range = (self._start_row, row)
-        self.selection_ranges[-1] = range
-        self.select_rows(self.combined_ranges(self.selection_ranges),
-                         clear=not event.modifiers() & Qt.ControlModifier)
+        if event.modifiers() & Qt.ControlModifier:
+            pass
+        elif event.modifiers() & Qt.AltModifier:
+            self.selection_ranges = self.remove_range(
+                self.selection_ranges, self._start_row, row, append=False)
+        else:
+            self.selection_ranges[-1] = (self._start_row, row)
+        self.select_rows(self.combined_ranges(self.selection_ranges))
         self.selection_finished.emit()
 
-    def selection_add(self, start, end, heatmap=None, clear=True):
-        """ Add a selection range from `start` to `end`.
+    def selection_add(self, start, end, heatmap=None, clear=True,
+                      remove=False, append=False):
+        """ Add/remove a selection range from `start` to `end`.
         """
         if heatmap is not None:
             _start, _ = self._heatmap_ranges[heatmap]
@@ -1823,9 +1853,37 @@ class HeatmapSelectionManager(QObject):
 
         if clear:
             self.selection_ranges = []
-        self.selection_ranges.append((start, end))
+        if remove:
+            self.selection_ranges = self.remove_range(
+                self.selection_ranges, start, end, append=append)
+        else:
+            self.selection_ranges.append((start, end))
         self.select_rows(self.combined_ranges(self.selection_ranges))
         self.selection_finished.emit()
+
+    def remove_range(self, ranges, start, end, append=False):
+        if start > end:
+            start, end = end, start
+        comb_ranges = [i for i in self.combined_ranges(ranges)
+                       if i > end or i < start]
+        if append:
+            comb_ranges += [i for i in range(start, end + 1)
+                            if i not in self.combined_ranges(ranges)]
+            comb_ranges = sorted(comb_ranges)
+        return self.combined_to_ranges(comb_ranges)
+
+    def combined_to_ranges(self, comb_ranges):
+        ranges = []
+        if len(comb_ranges) > 0:
+            i, start, end = 0, comb_ranges[0], comb_ranges[0]
+            for val in comb_ranges[1:]:
+                i += 1
+                if start + i < val:
+                    ranges.append((start, end))
+                    i, start = 0, val
+                end = val
+            ranges.append((start, end))
+        return ranges
 
     def update_selection_rects(self):
         """ Update the selection rects.

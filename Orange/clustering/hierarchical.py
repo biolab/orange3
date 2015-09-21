@@ -115,7 +115,7 @@ ClusterData = namedtuple("Cluster", ["range", "height"])
 SingletonData = namedtuple("Singleton", ["range", "height", "index"])
 
 
-class _Ranged(object):
+class _Ranged:
 
     @property
     def first(self):

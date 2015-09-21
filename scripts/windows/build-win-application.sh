@@ -1,4 +1,7 @@
-#!/bin/bash -e
+#!/bin/bash
+
+# set exit on error
+set -e
 
 function print_usage {
     echo 'build-win-application.sh
@@ -158,7 +161,7 @@ function md5sum_check {
     local checksum=${2:?}
     local md5=
 
-    if [[ -x $(which md5) ]]; then
+    if [[ -x $(which md5 &> /dev/null) ]]; then
         md5=$(md5 -q "$filepath")
     else
         md5=$(md5sum "$filepath" | cut -d " " -f 1)
@@ -287,6 +290,9 @@ function prepare_orange {
     python setup.py egg_info \
         build --compiler=msvc \
         bdist_wheel -d "$BUILDBASE/wheelhouse"
+
+	# Ensure all install_requires dependencies are available in the wheelhouse
+	prepare_req --only-binary numpy,scipy -r Orange.egg-info/requires.txt
 
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
     echo "Orange==$version" >> "$BUILDBASE/requirements.txt"

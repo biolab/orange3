@@ -12,8 +12,8 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import Orange
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.preprocess import score
-import Orange.preprocess.discretize
 from Orange.widgets import widget, settings, gui
 
 
@@ -23,47 +23,20 @@ def table(shape, fill=None):
     return [[fill for j in range(shape[1])] for i in range(shape[0])]
 
 
-_score_meta = namedtuple(
-    "_score_meta",
+score_meta = namedtuple(
+    "score_meta",
     ["name",
      "shortname",
-     "score",
-     "supports_regression",
-     "supports_classification",
-     "handles_discrete",
-     "handles_continuous"]
+     "score"]
 )
-
-
-class score_meta(_score_meta):
-    # Add sensible defaults to __new__
-    def __new__(cls, name, shortname, score,
-                supports_regression=True, supports_classification=True,
-                handles_continuous=True, handles_discrete=True):
-        return _score_meta.__new__(
-            cls, name, shortname, score,
-            supports_regression, supports_classification,
-            handles_discrete, handles_continuous
-        )
 
 # Default scores.
 SCORES = [
-    score_meta(
-        "Information Gain", "Inf. gain", score.InfoGain,
-        supports_regression=False,
-        supports_classification=True,
-        handles_continuous=False,
-        handles_discrete=True),
-    score_meta(
-        "Gain Ratio", "Gain Ratio", score.GainRatio,
-        supports_regression=False,
-        handles_continuous=False,
-        handles_discrete=True),
-    score_meta(
-        "Gini Gain", "Gini", score.Gini,
-        supports_regression=False,
-        supports_classification=True,
-        handles_continuous=False),
+    score_meta("Information Gain", "Inf. gain", score.InfoGain),
+    score_meta("Gain Ratio", "Gain Ratio", score.GainRatio),
+    score_meta("Gini Gain", "Gini", score.Gini),
+    score_meta("ReliefF", "ReliefF", score.ReliefF),
+    score_meta("RReliefF", "RReliefF", score.RReliefF),
 ]
 
 _DEFAULT_SELECTED = set(m.name for m in SCORES)
@@ -103,9 +76,9 @@ class OWRank(widget.OWWidget):
         self.data = None
 
         self.discMeasures = [m for m in self.all_measures
-                             if m.supports_classification]
+                             if issubclass(DiscreteVariable, m.score.class_type)]
         self.contMeasures = [m for m in self.all_measures
-                             if m.supports_regression]
+                             if issubclass(ContinuousVariable, m.score.class_type)]
 
         selMethBox = gui.widgetBox(
             self.controlArea, "Select attributes", addSpace=True)
@@ -308,26 +281,7 @@ class OWRank(widget.OWWidget):
             if not mask:
                 continue
             estimator = meas.score()
-
-            if not meas.handles_continuous:
-                data = self.getDiscretizedData()
-                attr_map = data.attrDict
-                data = self.data
-            else:
-                attr_map, data = {}, self.data
-
-            attr_scores = []
-            for attr in data.domain.attributes:
-                attr = attr_map.get(attr, attr)
-                s = None
-                if attr is not None:
-                    try:
-                        s = float(estimator(data, attr))
-                    except Exception as ex:
-                        self.warning(index, "Error evaluating %r: %r" %
-                                     (meas.name, str(ex)))
-                attr_scores.append(s)
-            self.measure_scores[index] = attr_scores
+            self.measure_scores[index] = estimator(data)
 
         self.updateRankModel(measuresMask)
         self.ranksProxyModel.invalidate()
@@ -367,7 +321,6 @@ class OWRank(widget.OWWidget):
 
     def resetInternals(self):
         self.data = None
-        self.discretizedData = None
         self.usefulAttributes = []
         self.ranksModel.setRowCount(0)
 
@@ -394,25 +347,6 @@ class OWRank(widget.OWWidget):
         self.selectMethod = OWRank.SelectNBest
         self.selectButtons.button(self.selectMethod).setChecked(True)
         self.selectMethodChanged()
-
-    def getDiscretizedData(self):
-        if not self.discretizedData:
-            discretizer = Orange.preprocess.discretize.EqualFreq(n=4)
-            contAttrs = [attr for attr in self.data.domain.attributes
-                         if attr.is_continuous]
-            at = []
-            attrDict = {}
-            for attri in contAttrs:
-                try:
-                    nattr = discretizer(attri, self.data)
-                    at.append(nattr)
-                    attrDict[attri] = nattr
-                except:
-                    pass
-            domain = Orange.data.Domain(at, self.data.domain.class_var)
-            self.discretizedData = Orange.data.Table(domain, self.data)
-            self.discretizedData.attrDict = attrDict
-        return self.discretizedData
 
     def autoSelection(self):
         selModel = self.ranksView.selectionModel()

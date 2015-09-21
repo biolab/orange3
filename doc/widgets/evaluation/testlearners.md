@@ -1,5 +1,5 @@
-Test Learners
-=============
+Test & Score
+============
 
 ![image](icons/test-learners.png)
 
@@ -81,7 +81,7 @@ Example
 
 In a typical use of the widget, we give it a data set and a few learning
 algorithms and we observe their performance in the table inside the
-**Test Learners** widget and in the **ROC**. The data is often preprocessed before testing; in
+**Test & Score** widget and in the **ROC**. The data is often preprocessed before testing; in
 this case we did some manual feature selection (**Select Columns** widget) on *Titanic* data set, where
 we want to know only the sex and status of the survived and omit the age.
 

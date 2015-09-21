@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 DefDroppletBrush = QBrush(Qt.darkGray)
 
 
-class GraphNode(object):
+class GraphNode:
     def __init__(self, *_, **kwargs):
         self.edges = kwargs.get("edges", set())
 
@@ -28,7 +28,7 @@ class GraphNode(object):
         pass
 
 
-class GraphEdge(object):
+class GraphEdge:
     def __init__(self, node1=None, node2=None, atype=1):
         self.node1 = node1
         self.node2 = node2

@@ -10,12 +10,13 @@ import bottlechest
 import Orange.data
 from Orange.data import Table
 from . import impute, discretize
+from Orange.statistics import distribution
 from ..misc.enum import Enum
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute", "Normalize", "Randomize"]
 
 
-class Preprocess(object):
+class Preprocess:
     """
     A generic preprocessor class. All preprocessors need to inherit this
     class. Preprocessors can be instantiated without the data set to return
@@ -325,7 +326,7 @@ class Randomize(Preprocess):
             np.random.shuffle(table)
 
 
-class PreprocessorList(object):
+class PreprocessorList:
     """
     Store a list of preprocessors and on call apply them to the data set.
 

@@ -223,7 +223,7 @@ class DistanceMapItem(pg.ImageItem):
         super().hoverMoveEvent(event)
         i, j = self._cellAt(event.pos())
         if i != -1 and j != -1:
-            d = self.image[i, self.image.shape[1] - j - 1]
+            d = self.image[i, j]
             self.setToolTip("{}, {}: {:.3f}".format(i, j, d))
         else:
             self.setToolTip("")

@@ -324,7 +324,10 @@ class OWImpute(OWWidget):
         if method.short == "leave":
             return None
         elif method.short == "avg":
-            return column_imputer_average(var, data)
+            if var.is_continuous:
+                return column_imputer_average(var, data)
+            else:
+                return column_imputer_modus(var, data)
         elif method.short == "model":
             learner = self.learner if self.learner is not None else MeanLearner()
             return column_imputer_by_model(var, data, learner=learner)
@@ -487,7 +490,7 @@ def column_imputer(variable, table):
     pass
 
 
-class ColumnImputerModel(object):
+class ColumnImputerModel:
     def __init__(self, domain, codomain, transformers):
         if isinstance(domain, tuple):
             domain = Orange.data.Domain(domain)
@@ -569,7 +572,7 @@ def column_imputer_average(variable, table):
 
 def column_imputer_modus(variable, table):
     stat = distribution.get_distribution(table, variable)
-    column_imputer_defaults(variable, table, stat.modus())
+    return column_imputer_defaults(variable, table, stat.modus())
 
 
 class ColumnImputerDefaults(ColumnImputerModel):
@@ -751,7 +754,7 @@ class ModelTransform(Transformation):
 
 
 # Rename to TableImputer (Model?)
-class ImputerModel(object):
+class ImputerModel:
     """
     A fitted Imputation model.
 

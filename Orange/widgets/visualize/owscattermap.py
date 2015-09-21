@@ -452,7 +452,7 @@ def resample(node, samplewidth):
 
 class OWScatterMap(widget.OWWidget):
     name = "Scatter Map"
-    description = "Draw a two dimentional rectangular bin density plot."
+    description = "Draw a two dimensional rectangular bin density plot."
     icon = "icons/Scattermap.svg"
     priority = 100
 

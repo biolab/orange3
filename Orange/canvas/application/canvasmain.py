@@ -953,7 +953,8 @@ class CanvasMainWindow(QMainWindow):
         from a saved `filename`. Return `None` if an error occurs.
 
         """
-        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
+        new_scheme = widgetsscheme.WidgetsScheme(
+            parent=self, env={"basedir": os.path.dirname(filename)})
         errors = []
         try:
             scheme_load(new_scheme, open(filename, "rb"),
@@ -1174,6 +1175,7 @@ class CanvasMainWindow(QMainWindow):
         try:
             with open(filename, "wb") as f:
                 f.write(buffer.getvalue())
+            scheme.set_runtime_env("basedir", os.path.dirname(filename))
             return True
         except (IOError, OSError) as ex:
             log.error("%s saving '%s'", type(ex).__name__, filename,

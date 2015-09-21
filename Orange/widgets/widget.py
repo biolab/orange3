@@ -3,6 +3,7 @@ import sys
 import time
 import os
 import warnings
+import types
 from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
@@ -16,6 +17,13 @@ from Orange.canvas.registry import description as widget_description
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
+
+
+def _asmappingproxy(mapping):
+    if isinstance(mapping, types.MappingProxyType):
+        return mapping
+    else:
+        return types.MappingProxyType(mapping)
 
 
 class WidgetMetaClass(type(QDialog)):
@@ -110,6 +118,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.settingsHandler.initialize(self, stored_settings)
 
         self.signalManager = kwargs.get('signal_manager', None)
+        self.__env = _asmappingproxy(kwargs.get("env", {}))
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self.__reportData = None
@@ -242,14 +251,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def prepareDataReport(self, data):
         pass
 
-    def restoreWidgetPosition(self):
+    def __restoreWidgetGeometry(self):
         restored = False
         if self.save_position:
             geometry = self.savedWidgetGeometry
             if geometry is not None:
                 restored = self.restoreGeometry(QByteArray(geometry))
 
-            if restored:
+            if restored and not self.windowState() & \
+                    (Qt.WindowMaximized | Qt.WindowFullScreen):
                 space = qApp.desktop().availableGeometry(self)
                 frame, geometry = self.frameGeometry(), self.geometry()
 
@@ -270,7 +280,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return restored
 
     def __updateSavedGeometry(self):
-        if self.__was_restored:
+        if self.__was_restored and self.isVisible():
             # Update the saved geometry only between explicit show/hide
             # events (i.e. changes initiated by the user not by Qt's default
             # window management).
@@ -281,8 +291,8 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         QDialog.resizeEvent(self, ev)
         # Don't store geometry if the widget is not visible
         # (the widget receives a resizeEvent (with the default sizeHint)
-        # before showEvent and we must not overwrite the the savedGeometry
-        # with it)
+        # before first showEvent and we must not overwrite the the
+        # savedGeometry with it)
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
 
@@ -295,21 +305,19 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     def hideEvent(self, ev):
         if self.save_position:
             self.__updateSavedGeometry()
-        self.__was_restored = False
         QDialog.hideEvent(self, ev)
 
     def closeEvent(self, ev):
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
-        self.__was_restored = False
         QDialog.closeEvent(self, ev)
 
     def showEvent(self, ev):
         QDialog.showEvent(self, ev)
-        if self.save_position:
+        if self.save_position and not self.__was_restored:
             # Restore saved geometry on show
-            self.restoreWidgetPosition()
-        self.__was_restored = True
+            self.__restoreWidgetGeometry()
+            self.__was_restored = True
 
     def wheelEvent(self, event):
         """ Silently accept the wheel event. This is to ensure combo boxes
@@ -671,6 +679,27 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def resetSettings(self):
         self.settingsHandler.reset_settings(self)
+
+    def workflowEnv(self):
+        """
+        Return (a view to) the workflow runtime environment.
+
+        Returns
+        -------
+        env : types.MappingProxyType
+        """
+        return self.__env
+
+    def workflowEnvChanged(self, key, value, oldvalue):
+        """
+        A workflow environment variable `key` has changed to value.
+
+        Called by the canvas framework to notify widget of a change
+        in the workflow runtime environment.
+
+        The default implementation does nothing.
+        """
+        pass
 
 
 # Pull signal constants from canvas to widget namespace

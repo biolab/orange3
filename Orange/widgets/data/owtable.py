@@ -951,7 +951,7 @@ def format_summary(summary):
         c_text += format_part(summary.Y)
         text += [c_text]
 
-    text += [("%s meta attributes%s" % sp(len(summary.domain.metas)))
+    text += [("%s meta attribute%s" % sp(len(summary.domain.metas)))
              + format_part(summary.M)]
 
     return text

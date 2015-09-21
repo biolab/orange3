@@ -30,7 +30,7 @@ from libcpp.map cimport map as cpp_map
 from numpy.math cimport INFINITY
 
 ctypedef np.float64_t   double
-ctypedef np.int32_t[:]  arr_i1_t
+ctypedef np.int8_t[:]   arr_i1_t
 ctypedef double[:, :]   arr_f2_t
 ctypedef double[:]      arr_f1_t
 ctypedef pair[double, Py_ssize_t] HeapPair
@@ -82,7 +82,7 @@ cdef inline void calc_difference(arr_f2_t X,
                                  Py_ssize_t j,
                                  arr_i1_t is_discrete,
                                  arr_f2_t attr_stats,
-                                 Contingencies contingencies,
+                                 Contingencies &contingencies,
                                  arr_f1_t difference) nogil:
     """Calculate difference between two instance vectors."""
     cdef:
@@ -99,6 +99,7 @@ cdef inline void calc_difference(arr_f2_t X,
             xi, xj = X[i, a], X[j, a]
             if is_discrete[a]:
                 cont = contingencies[a]
+                # TODO: what if the attribute only has a single non-nan value?
                 if isnan(xi) and isnan(xj):
                     # ibid. §2.2, eq. 4
                     val = 0
@@ -132,7 +133,7 @@ cdef void k_nearest_reg(arr_f2_t X,
                         Py_ssize_t k_nearest,
                         arr_i1_t is_discrete,
                         arr_f2_t attr_stats,
-                        Contingencies contingencies,
+                        Contingencies &contingencies,
                         arr_f1_t difference,
                         double * Nc,
                         arr_f1_t Na,
@@ -187,7 +188,7 @@ cdef void k_nearest_per_class(arr_f2_t X,
                               Py_ssize_t n_classes,
                               arr_i1_t is_discrete,
                               arr_f2_t attr_stats,
-                              Contingencies contingencies,
+                              Contingencies &contingencies,
                               arr_f2_t weights_adj,
                               arr_f1_t difference) nogil:
     """The k-nearest search for ReliefF."""
@@ -226,7 +227,7 @@ cdef arr_f1_t _relieff_reg_(arr_f2_t X,
                             int k_nearest,
                             arr_i1_t is_discrete,
                             arr_f2_t attr_stats,
-                            Contingencies contingencies):
+                            Contingencies &contingencies):
     """
     The main loop of the RReliefF for regression (ibid. §2.3, Figure 3).
     """
@@ -240,17 +241,17 @@ cdef arr_f1_t _relieff_reg_(arr_f2_t X,
 
         arr_f1_t weights = np.zeros(X.shape[1])
         arr_f1_t difference = np.empty(X.shape[1])
-    k_nearest = min(k_nearest, X.shape[0] - 1)
-    # TODO: stratify per class value?
-    for _ in range(n_iter):
-        # Select a random instance
-        i = randint(X.shape[0])
-        # Put the weight adjustments k-nearest-of-each-class make into weights_adj
-        k_nearest_reg(X, y, i, k_nearest,
-                      is_discrete, attr_stats, contingencies, difference,
-                      &Nc, Na, Nca, dist)
-    # Update weights
     with nogil:
+        k_nearest = min(k_nearest, X.shape[0] - 1)
+        # TODO: stratify per class value?
+        for _ in range(n_iter):
+            # Select a random instance
+            i = randint(X.shape[0])
+            # Put the weight adjustments k-nearest-of-each-class make into weights_adj
+            k_nearest_reg(X, y, i, k_nearest,
+                          is_discrete, attr_stats, contingencies, difference,
+                          &Nc, Na, Nca, dist)
+        # Update weights
         for a in range(X.shape[1]):
             weights[a] = Nca[a] / Nc - (Na[a] - Nca[a]) / (n_iter - Nc)
     return weights
@@ -264,7 +265,7 @@ cdef arr_f1_t _relieff_cls_(arr_f2_t X,
                             arr_i1_t is_discrete,
                             arr_f1_t prior_proba,
                             arr_f2_t attr_stats,
-                            Contingencies contingencies):
+                            Contingencies &contingencies):
     """
     The main loop of the ReliefF for classification (ibid. §2.1, Figure 2).
     """
@@ -283,9 +284,8 @@ cdef arr_f1_t _relieff_cls_(arr_f2_t X,
             # Select a random instance
             i = randint(X.shape[0])
             # Put the weight adjustments k-nearest-of-each-class make into weights_adj
-            with gil:
-                k_nearest_per_class(X, y, i, k_nearest, n_classes,
-                                    is_discrete, attr_stats, contingencies, weights_adj, difference)
+            k_nearest_per_class(X, y, i, k_nearest, n_classes,
+                                is_discrete, attr_stats, contingencies, weights_adj, difference)
             # Update the weights for each class
             yi = <Py_ssize_t>y[i]
             for a in range(X.shape[1]):
@@ -300,28 +300,32 @@ cdef arr_f1_t _relieff_cls_(arr_f2_t X,
     return weights
 
 
-cpdef inline arr_f2_t contingency_table(np.ndarray x1,
-                                        int n_unique1,
-                                        np.ndarray x2,
-                                        int n_unique2):
+cdef inline void contingency_table(np.ndarray x1,
+                                    int n_unique1,
+                                    np.ndarray x2,
+                                    int n_unique2,
+                                    Contingencies &tables,
+                                    Py_ssize_t attribute):
     cdef:
-        np.ndarray table
+        np.ndarray table = np.zeros((n_unique1, n_unique2))
+        np.ndarray row_sums
         double x1i, x2i
-    table = np.zeros((n_unique1, n_unique2))
     for i in range(x1.shape[0]):
         x1i, x2i = x1[i], x2[i]
         if isnan(x1i) and isnan(x2i): pass
         elif isnan(x1i): table[:, <Py_ssize_t>x2i] += 1
         elif isnan(x2i): table[<Py_ssize_t>x1i, :] += 1
         else: table[<Py_ssize_t>x1i, <Py_ssize_t>x2i] += 1
-    table /= table.sum(0)
-    return table
+    row_sums = table.sum(0)
+    row_sums[row_sums == 0] = np.inf  # Avoid zero-division
+    table /= row_sums
+    tables.insert((attribute, table))
 
 
 cdef void contingency_tables(np.ndarray X,
                              np.ndarray y,
                              arr_i1_t is_discrete,
-                             Contingencies tables):
+                             Contingencies &tables):
     """
     Populate contingency tables between attributes of `X` and class values `y`.
     """
@@ -331,18 +335,23 @@ cdef void contingency_tables(np.ndarray X,
         if (is_discrete[a] and
             # Don't calculate+store contingencies if not required
             np.isnan(X[:, a]).any()):
-            tables[a] = contingency_table(X[:, a],
-                                          int(nanmax(X[:, a]) + 1),
-                                          y,
-                                          ny)
+            contingency_table(X[:, a], int(nanmax(X[:, a]) + 1),
+                              y, ny, tables, a)
 
 
-cdef tuple prepare(X, y, is_discrete, Contingencies contingencies):
-    X /= np.nanmax(X, 0) - np.nanmin(X, 0)  # FIXME: problem for discrete multi-valued attrs
-    y = np.asarray(y, dtype=np.float64)
+cdef tuple prepare(X, y, is_discrete, Contingencies &contingencies):
+    X = np.array(X, dtype=np.float64, order='C')
+    is_discrete = np.asarray(is_discrete, dtype=np.bool8)
+    is_continuous = ~is_discrete
+    if is_continuous.any():
+        row_ptp = np.nanmax(X[:, is_continuous], 0) - np.nanmin(X[:, is_continuous], 0)
+        row_ptp[row_ptp == 0] = np.inf  # Avoid zero-division
+        X[:, is_continuous] /= row_ptp
+    y = np.array(y, dtype=np.float64)
     attr_stats = np.row_stack((np.nanmean(X, 0), np.nanstd(X, 0)))
+    is_discrete = np.asarray(is_discrete, dtype=np.int8)
     contingency_tables(X, y, is_discrete, contingencies)
-    return X, y, attr_stats
+    return X, y, attr_stats, is_discrete
 
 
 cpdef arr_f1_t relieff(np.ndarray X,
@@ -355,11 +364,12 @@ cpdef arr_f1_t relieff(np.ndarray X,
     """
     cdef:
         Contingencies contingencies = Contingencies()
-    X, y, attr_stats = prepare(X, y, is_discrete, contingencies)
+    X, y, attr_stats, is_discrete = prepare(X, y, is_discrete, contingencies)
     prior_proba = np.bincount(y.astype(int)).astype(np.float64) / len(y)
     n_classes = int(nanmax(y) + 1)
-    return _relieff_cls_(X, y, n_classes,
-                    n_iter, k_nearest, is_discrete, prior_proba, attr_stats, contingencies)
+    return _relieff_cls_(X, y, n_classes, n_iter, k_nearest,
+                         is_discrete, prior_proba, attr_stats, contingencies)
+
 
 cpdef arr_f1_t rrelieff(np.ndarray X,
                         np.ndarray y,
@@ -371,6 +381,6 @@ cpdef arr_f1_t rrelieff(np.ndarray X,
     """
     cdef:
         Contingencies contingencies = Contingencies()
-    X, y, attr_stats = prepare(X, y, is_discrete, contingencies)
-    return _relieff_reg_(X, y,
-                    n_iter, k_nearest, is_discrete, attr_stats, contingencies)
+    X, y, attr_stats, is_discrete = prepare(X, y, is_discrete, contingencies)
+    return _relieff_reg_(X, y, n_iter, k_nearest,
+                         is_discrete, attr_stats, contingencies)
