@@ -1,13 +1,11 @@
 import os
-import time
 import pkg_resources
-from PyQt4.QtCore import Qt, QByteArray, QBuffer, QIODevice
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon,
                          QPrintDialog, QFileDialog, QMenu)
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.widgets.io import PngFormat
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 
 
@@ -62,11 +60,12 @@ class OWReport(OWWidget):
             selected_item = self.widget_list_items[selected_row]
             scheme = self.widget_list_items_schemas[selected_item]
             canvas = self.get_canvas_instance()
-            canvas.load_scheme_xml(scheme)
+            if canvas:
+                canvas.load_scheme_xml(scheme)
 
     def _get_scheme(self):
         canvas = self.get_canvas_instance()
-        return canvas.get_scheme_xml()
+        return canvas.get_scheme_xml() if canvas else None
 
     def _clear(self):
         self.widget_list_items = []
@@ -123,30 +122,6 @@ class OWReport(OWWidget):
     def make_report(self, widget):
         self._add_widget_item(widget)
         self._build_html()
-
-    @staticmethod
-    def get_html_section(name):
-        datetime = time.strftime("%a %b %d %y, %H:%M:%S")
-        return "<h1>%s <span class='timestamp'>%s</h1>" % (name, datetime)
-
-    @staticmethod
-    def get_html_subsection(name):
-        return "<h2>%s</h2>" % name
-
-    @staticmethod
-    def render_items(items):
-        return "<ul>" + "".join("<b>%s:</b> %s</br>" % i
-                                for i in items) + "</ul>"
-
-    @staticmethod
-    def get_html_img(scene):
-        byte_array = QByteArray()
-        filename = QBuffer(byte_array)
-        filename.open(QIODevice.WriteOnly)
-        writer = PngFormat()
-        writer.write(filename, scene)
-        img_encoded = byte_array.toBase64().data().decode("utf-8")
-        return "<ul><img src='data:image/png;base64,%s'/></ul>" % img_encoded
 
     def _save_report(self):
         filename = QFileDialog.getSaveFileName(self, "Save Report",
@@ -234,15 +209,3 @@ if __name__ == "__main__":
     assert len(main.widget_list_items) == 5
 
     sys.exit(app.exec_())
-
-    # DATA - File, Discretize, Continuize, Impute, DataTable, Rank, Concatenate, SelectRows, SelectColumns, DataSampler
-
-    # VISUALIZE - Distributions, BoxPlot, ScatterMap, ScatterPlot, Mosaic, Parallel, Linear, HeatMap, Sieve, Venn
-
-    # CLASSIFY - ClassificationTree, ClassificationTreeViewer, SVM, NN, Logistic, Bayes, RForest, Majority
-
-    # REGRESSION - NN, Linear, Mean, Stochastic, Univariate, SVM
-
-    # EVALUATE - vse..
-
-    # UNSUPERVISED - ...

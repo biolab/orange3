@@ -1,4 +1,7 @@
 import itertools
+import time
+from PyQt4.QtCore import QByteArray, QBuffer, QIODevice
+from Orange.widgets.io import PngFormat
 
 
 def plural(s, number):
@@ -33,3 +36,25 @@ def clipped_list(s, limit=1000, less_lookups=False):
         s = ", ".join(s)
     return clip_string(s, limit, ", ")
 
+
+def get_html_section(name):
+    datetime = time.strftime("%a %b %d %y, %H:%M:%S")
+    return "<h1>%s <span class='timestamp'>%s</h1>" % (name, datetime)
+
+
+def get_html_subsection(name):
+    return "<h2>%s</h2>" % name
+
+
+def render_items(items):
+    return "<ul>" + "".join("<b>%s:</b> %s</br>" % i for i in items) + "</ul>"
+
+
+def get_html_img(scene):
+    byte_array = QByteArray()
+    filename = QBuffer(byte_array)
+    filename.open(QIODevice.WriteOnly)
+    writer = PngFormat()
+    writer.write(filename, scene)
+    img_encoded = byte_array.toBase64().data().decode("utf-8")
+    return "<ul><img src='data:image/png;base64,%s'/></ul>" % img_encoded
