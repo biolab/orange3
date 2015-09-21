@@ -278,7 +278,6 @@ class OWTestLearners(widget.OWWidget):
 
     def _param_changed(self):
         self._invalidate()
-        self.apply()
 
     def _update_results(self):
         """
