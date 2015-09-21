@@ -611,7 +611,7 @@ class OWTestLearners(widget.OWWidget):
         if self.data.domain.has_discrete_class:
             items += [("Target class", self.class_selection.strip("()"))]
         if items:
-            self.report_settings("Settings", items)
+            self.report_items("Settings", items)
         self.report_table("Scores", self.view)
 
 

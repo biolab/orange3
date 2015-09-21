@@ -460,8 +460,8 @@ class OWFile(widget.OWWidget):
             name = "~/" + self.loaded_file[len(home):].lstrip("/").lstrip("\\")
         else:
             name = self.loaded_file
-        self.report_settings("File", [("File name", name),
-                                      ("Format", self._get_ext_name(name))])
+        self.report_items("File", [("File name", name),
+                                   ("Format", self._get_ext_name(name))])
         self.report_data("Data", self.data)
 
     def _get_ext_name(self, filename):

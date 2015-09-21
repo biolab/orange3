@@ -68,7 +68,7 @@ class OWClassificationTree(widget.OWWidget):
 
     def send_report(self):
         from Orange.canvas.report import plural_w
-        self.report_settings(
+        self.report_items(
             "Model parameters",
             [("Split selection", self.scores[self.attribute_score][0]),
              ("Pruning", ", ".join(s for s, c in (

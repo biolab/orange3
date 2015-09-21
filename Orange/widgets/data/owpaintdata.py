@@ -1222,7 +1222,7 @@ class OWPaintData(widget.OWWidget):
         if self.attr1 != "x" or self.attr2 != "y":
             settings += [("Axis x", self.attr1), ("Axis y", self.attr2)]
         settings += [("Number of points", len(self.data))]
-        self.report_settings("Painted data", settings)
+        self.report_items("Painted data", settings)
         self.report_plot("", self.plot)
 
 def test():

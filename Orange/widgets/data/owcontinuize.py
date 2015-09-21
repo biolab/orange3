@@ -128,7 +128,7 @@ class OWContinuize(widget.OWWidget):
     def send_report(self):
         if self.data is not None:
             self.report_data("Input data", self.data)
-        self.report_settings(
+        self.report_items(
             "Settings",
             [("Multinominal attributes",
               self.multinomial_treats[self.multinomial_treatment][0]),

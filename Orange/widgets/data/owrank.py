@@ -14,6 +14,7 @@ from PyQt4.QtCore import Qt
 import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.preprocess import score
+from Orange.canvas import report
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.sql import check_sql_input
 
@@ -66,7 +67,7 @@ class OWRank(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.output_data_description = "None"
+        self.out_domain_desc = None
 
         self.all_measures = SCORES
 
@@ -460,21 +461,24 @@ class OWRank(widget.OWWidget):
         )
 
     def send_report(self):
-        self.report_data("Input data", self.data)
+        if not self.data:
+            return
+        self.report_domain("Input domain", self.data.domain)
         self.report_table("Ranks", self.ranksView, num_format="{:.3f}")
-        self.report_raw("Output data", self.output_data_description)
+        if self.out_domain_desc is not None:
+            self.report_items("Output domain", self.out_domain_desc)
 
     def commit(self):
         selected = self.selectedAttrs()
         if not self.data or not selected:
             self.send("Reduced Data", None)
-            self.output_data_description = "None"
+            self.out_domain_desc = None
         else:
             domain = Orange.data.Domain(selected, self.data.domain.class_var,
                                         metas=self.data.domain.metas)
             data = Orange.data.Table(domain, self.data)
             self.send("Reduced Data", data)
-            self.output_data_description = self.describe_data(data)
+            self.out_domain_desc = report.describe_domain(data.domain)
 
     def selectedAttrs(self):
         if self.data:

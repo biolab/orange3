@@ -17,9 +17,7 @@ from pyqtgraph import PlotWidget, PlotItem
 from Orange.data import Table
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas.report import (clipped_list, get_html_section,
-                                  get_html_subsection, render_items,
-                                  get_html_img)
+from Orange.canvas import report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -320,88 +318,44 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         report.raise_()
 
     def create_report_html(self):
-        self.report_html = get_html_section(self.name)
+        self.report_html = report.get_html_section(self.name)
         self.send_report()
 
     def send_report(self):
         if hasattr(self, "data") and isinstance(self.data, Table):
             self.report_data("Data", self.data)
-        if hasattr(self, "canvas"):
-            self.report_plot("", self.canvas)
-        if hasattr(self, "box_scene"):
-            self.report_plot("", self.box_scene)
-        if hasattr(self, "plot"):
-            self.report_plot("", self.plot)
+        for attr in ("canvas", "box_scene", "plot"):
+            if hasattr(self, attr):
+                self.report_plot("", getattr(self, attr))
 
-    def report_settings(self, name, items):
+    def report_items(self, name, items, order=None, exclude=None):
         self.report_name(name)
-        self.report_html += render_items(items)
+        self.report_html += report.render_items(items, order, exclude)
 
     def report_name(self, name):
         if name != "":
-            self.report_html += get_html_subsection(name)
+            self.report_html += report.get_html_subsection(name)
 
-    def describe_data(self, data):
-        def clip_attrs(items, s):
-            r = clipped_list(a.name for a in items)
-            if len(items) > 10:
-                r += " (total: {} {})".format(len(items), s)
-            return r
+    def report_data(self, name, data, order=None, exclude=None):
+        self.report_items(name, report.describe_data(data),
+                          order=order, exclude=exclude)
 
-        if data is None:
-            return "No data."
-        else:
-            items = [
-                ("Data instances", len(data)),
-                ("Features", clip_attrs(data.domain.attributes, "features"))]
-            if data.domain.metas:
-                items.append(
-                    ("Meta attributes",
-                     clip_attrs(data.domain.metas, "meta attributes")))
-            if data.domain.class_vars:
-                items.append(
-                    ("Target",
-                     clip_attrs(data.domain.class_vars, "targets variables")))
-            return render_items(items)
+    def report_domain(self, name, domain, order=None, exclude=None):
+        self.report_items(name, report.describe_domain(domain),
+                          order=order, exclude=exclude)
 
-    def report_data(self, name, data):
-        self.report_name(name)
-        self.report_html += self.describe_data(data)
-
-    def describe_data_brief_items(self, data):
-        domain = data.domain
-        items = [
-            ("Data instances", len(data)),
-            ("Features", len(domain.attributes) or "None"),
-            ("Meta attributes", len(domain.metas) or "None")]
-        if domain.has_discrete_class:
-            items += [("Target",
-                       "Discrete class '{}'".format(data.domain.class_var.name))
-                      ]
-        elif domain.has_continuous_class:
-            items += [("Target",
-                       "Numeric variable '{}'".format(data.domain.class_var.name
-                                                      ))]
-        elif domain.class_vars:
-            items += [("Targets", len(domain.class_vars))]
-        return items
-
-    def describe_data_brief(self, data):
-        items = self.describe_data_brief_items(data)
-        return render_items(items)
-
-    def report_data_brief(self, name, data):
-        items = self.describe_data_brief_items(data)
-        self.report_settings(name, items)
+    def report_data_brief(self, name, data, order=None, exclude=None):
+        self.report_items(name, report.describe_data_brief(data),
+                          order=order, exclude=exclude)
 
     def report_plot(self, name, plot):
         self.report_name(name)
         if isinstance(plot, QGraphicsScene):
-            self.report_html += get_html_img(plot)
+            self.report_html += report.get_html_img(plot)
         elif isinstance(plot, PlotItem):
-            self.report_html += get_html_img(plot.scene())
+            self.report_html += report.get_html_img(plot.scene())
         elif isinstance(plot, PlotWidget):
-            self.report_html += get_html_img(plot.plotItem.scene())
+            self.report_html += report.get_html_img(plot.plotItem.scene())
 
     # noinspection PyBroadException
     def report_table(self, name, table, header_rows=0, header_columns=0,
@@ -472,7 +426,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         def report_abstract_model(model):
             content = (model.data(model.index(row, 0))
                        for row in range(model.rowCount()))
-            return clipped_list(content, limit, less_lookups=True)
+            return report.clipped_list(content, limit, less_lookups=True)
 
         self.report_name(name)
         try:
