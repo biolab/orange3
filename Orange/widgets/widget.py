@@ -278,7 +278,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     def create_report_html(self):
         self.report_html = report.get_html_section(self.name)
+        self.report_html += '<div class="content">\n'
         self.send_report()
+        self.report_html += '</div>\n\n'
 
     def send_report(self):
         if hasattr(self, "data") and isinstance(self.data, Table):
