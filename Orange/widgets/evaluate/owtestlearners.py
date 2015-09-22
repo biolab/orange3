@@ -170,20 +170,23 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "k_folds", 2, 50, label="Number of folds:",
-                 callback=self.kfold_changed, callbackOnReturn=True)
+                 callback=self.kfold_changed)
         gui.appendRadioButton(rbox, "Leave one out")
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test",
-                 callback=self.bootstrap_changed, callbackOnReturn=True)
+                 callback=self.bootstrap_changed)
         gui.widgetLabel(ibox, "Relative training set size:")
-        slider = gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
-                             ticks=20, vertical=False, labelFormat="%d %%",
-                             callback=self.bootstrap_changed)
-        slider.setTracking(False)
+        gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=100,
+                    ticks=20, vertical=False, labelFormat="%d %%",
+                    callback=self.bootstrap_changed)
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
+
+        rbox.layout().addSpacing(5)
+        self.apply_button = gui.button(
+            rbox, self, "Apply", callback=self.apply, default=True)
 
         self.cbox = gui.widgetBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
@@ -276,7 +279,6 @@ class OWTestLearners(widget.OWWidget):
 
     def _param_changed(self):
         self._invalidate()
-        self.apply()
 
     def _update_results(self):
         """
@@ -495,7 +497,10 @@ class OWTestLearners(widget.OWWidget):
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
 
+        self.apply_button.setEnabled(True)
+
     def apply(self):
+        self.apply_button.setEnabled(False)
         self._update_header()
         # Update the view to display the model names
         self._update_stats_model()
