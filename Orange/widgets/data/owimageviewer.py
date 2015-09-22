@@ -351,7 +351,8 @@ class OWImageViewer(widget.OWWidget):
             box="Image Filename Attribute",
             tooltip="Attribute with image filenames",
             callback=[self.clearScene, self.setupScene],
-            addSpace=True
+            contentsLengthHint=12,
+            addSpace=True,
         )
 
         self.titleAttrCB = gui.comboBox(
@@ -359,6 +360,7 @@ class OWImageViewer(widget.OWWidget):
             box="Title Attribute",
             tooltip="Attribute with image title",
             callback=self.updateTitles,
+            contentsLengthHint=12,
             addSpace=True
         )
 

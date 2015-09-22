@@ -305,7 +305,8 @@ class OWDistanceMap(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Annotations")
         self.annot_combo = gui.comboBox(box, self, "annotation_idx",
-                                        callback=self._invalidate_annotations)
+                                        callback=self._invalidate_annotations,
+                                        contentsLengthHint=12)
         self.annot_combo.setModel(itemmodels.VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         self.controlArea.layout().addStretch()

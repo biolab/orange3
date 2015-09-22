@@ -212,7 +212,9 @@ class FeatureEditor(QtGui.QFrame):
         self.expressionedit = QtGui.QLineEdit()
 
         self.attrs_model = itemmodels.VariableListModel(["Select feature"])
-        self.attributescb = QtGui.QComboBox()
+        self.attributescb = QtGui.QComboBox(
+            minimumContentsLength=12,
+            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self.attributescb.setModel(self.attrs_model)
 
         sorted_funcs = sorted(self.FUNCTIONS)
