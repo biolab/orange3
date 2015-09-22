@@ -12,7 +12,6 @@ from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
     QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle,\
     QGraphicsScene, QStandardItemModel
-from pyqtgraph import PlotWidget, PlotItem
 
 from Orange.data import Table
 from Orange.widgets import settings, gui
@@ -351,6 +350,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                           order=order, exclude=exclude)
 
     def report_plot(self, name, plot):
+        from pyqtgraph import PlotWidget, PlotItem
         self.report_name(name)
         if isinstance(plot, QGraphicsScene):
             self.report_html += report.get_html_img(plot)
