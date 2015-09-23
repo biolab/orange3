@@ -1764,7 +1764,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
              orientation='vertical', items=(), callback=None,
              sendSelectedValue=False, valueType=str,
              control2attributeDict=None, emptyString=None, editable=False,
-             maximumContentsLength=25,
+             contentsLength=None, maximumContentsLength=25,
              **misc):
     """
     Construct a combo box.
@@ -1808,6 +1808,12 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type emptyString: str
     :param editable: a flag telling whether the combo is editable
     :type editable: bool
+    :param int contentsLength: Contents character length to use as a
+        fixed size hint. When not None, equivalent to::
+
+            combo.setSizeAdjustPolicy(
+                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(contentsLength)
     :param int maximumContentsLength: Specifies the upper bound on the
         `sizeHint` and `minimumSizeHint` width specified in character
         length (default: 25, use 0 to disable)
@@ -1823,6 +1829,11 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     combo = OrangeComboBox(
         hb, maximumContentsLength=maximumContentsLength,
         editable=editable)
+
+    if contentsLength is not None:
+        combo.setSizeAdjustPolicy(
+            QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        combo.setMinimumContentsLength(contentsLength)
 
     combo.box = hb
     for item in items:
