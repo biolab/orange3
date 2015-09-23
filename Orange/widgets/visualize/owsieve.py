@@ -64,14 +64,31 @@ class OWSieveDiagram(OWWidget):
         #GUI
         self.attrSelGroup = gui.widgetBox(self.controlArea, box = "Shown attributes")
 
-        self.attrXCombo = gui.comboBox(self.attrSelGroup, self, value="attrX", label="X attribute:", orientation="horizontal", tooltip = "Select an attribute to be shown on the X axis", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, labelWidth = 70)
-        self.attrYCombo = gui.comboBox(self.attrSelGroup, self, value="attrY", label="Y attribute:", orientation="horizontal", tooltip = "Select an attribute to be shown on the Y axis", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, labelWidth = 70)
+        self.attrXCombo = gui.comboBox(
+            self.attrSelGroup, self, value="attrX", label="X attribute:",
+            orientation="horizontal", tooltip="Select an attribute to be shown on the X axis",
+            callback=self.updateGraph, sendSelectedValue=1, valueType=str,
+            labelWidth=70, contentsLength=12)
+
+        self.attrYCombo = gui.comboBox(
+            self.attrSelGroup, self, value="attrY", label="Y attribute:",
+            orientation="horizontal", tooltip="Select an attribute to be shown on the Y axis",
+            callback=self.updateGraph, sendSelectedValue=1, valueType=str,
+            labelWidth=70, contentsLength=12)
 
         gui.separator(self.controlArea)
 
         self.conditionGroup = gui.widgetBox(self.controlArea, box = "Condition")
-        self.attrConditionCombo      = gui.comboBox(self.conditionGroup, self, value="attrCondition", label="Attribute:", orientation="horizontal", callback = self.updateConditionAttr, sendSelectedValue = 1, valueType = str, labelWidth = 70)
-        self.attrConditionValueCombo = gui.comboBox(self.conditionGroup, self, value="attrConditionValue", label="Value:", orientation="horizontal", callback = self.updateGraph, sendSelectedValue = 1, valueType = str, labelWidth = 70)
+        self.attrConditionCombo = gui.comboBox(
+            self.conditionGroup, self, value="attrCondition",
+            label="Attribute:", orientation="horizontal",
+            callback=self.updateConditionAttr, sendSelectedValue=True,
+            valueType=str, labelWidth=70, contentsLength=12)
+        self.attrConditionValueCombo = gui.comboBox(
+            self.conditionGroup, self, value="attrConditionValue",
+            label="Value:", orientation="horizontal", callback=self.updateGraph,
+            sendSelectedValue=True, valueType=str, labelWidth=70,
+            contentsLength=10)
 
         gui.separator(self.controlArea)
 

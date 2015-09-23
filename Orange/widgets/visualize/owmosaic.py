@@ -181,7 +181,8 @@ class OWMosaicDisplay(OWWidget):
                                  # label="Variable {}".format(i),
                                  orientation="horizontal",
                                  callback=self.updateGraphAndPermList,
-                                 sendSelectedValue=True, valueType=str)
+                                 sendSelectedValue=True, valueType=str,
+                                 contentsLength=12)
 
             butt = gui.button(inbox, self, "", callback=self.orderAttributeValues,
                               tooltip="Change the order of attribute values")
