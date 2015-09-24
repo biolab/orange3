@@ -132,21 +132,21 @@ class OWReport(OWWidget):
         html += "<body>"
         for i in range(self.table_model.rowCount()):
             item = self.table_model.item(i)
-            html += "<div id='%s' class='normal' " \
-                    "onClick='pybridge._select_item(this.id)'>%s</div>" % \
-                    (item.id, item.html)
+            html += "<div id='{}' class='normal' " \
+                    "onClick='pybridge._select_item(this.id)'>{}</div>" \
+                .format(item.id, item.html)
         html += "</body></html>"
         self.report_view.setHtml(html)
 
     def _scroll_to_item(self, item):
-        self.report_view.evalJS("document.getElementById('%s')."
-                                "scrollIntoView();" % item.id)
+        self.report_view.evalJS("document.getElementById('{}')."
+                                "scrollIntoView();".format(item.id))
 
     def _change_selected_item(self, item):
         self.report_view.evalJS("document.getElementsByClassName('selected')"
                                 "[0].className = 'normal';")
-        self.report_view.evalJS("document.getElementById('%s')."
-                                "className = 'selected';" % item.id)
+        self.report_view.evalJS("document.getElementById('{}')."
+                                "className = 'selected';".format(item.id))
 
     @pyqtSlot(str)
     def _select_item(self, item_id):
