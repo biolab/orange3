@@ -14,8 +14,7 @@ from Orange.canvas.application.canvasmain import CanvasMainWindow
 class Column(IntEnum):
     item = 0
     remove = 1
-    space = 2
-    scheme = 3
+    scheme = 2
 
 
 class ReportItem(QStandardItem):
@@ -61,7 +60,17 @@ class ReportTable(QTableView):
 
     def mouseMoveEvent(self, event):
         self._clear_icons()
-        index = self.indexAt(event.pos())
+        self._repaint(self.indexAt(event.pos()))
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self._clear_icons()
+        self._repaint(self.indexAt(event.pos()))
+
+    def leaveEvent(self, _):
+        self._clear_icons()
+
+    def _repaint(self, index):
         row, column = index.row(), index.column()
         if column in (Column.remove, Column.scheme):
             self.setCursor(QCursor(Qt.PointingHandCursor))
@@ -70,9 +79,6 @@ class ReportTable(QTableView):
         if row >= 0:
             self.model().item(row, Column.remove).setIcon(self._icon_remove)
             self.model().item(row, Column.scheme).setIcon(self._icon_scheme)
-
-    def leaveEvent(self, _):
-        self._clear_icons()
 
     def _clear_icons(self):
         model = self.model()
@@ -100,9 +106,8 @@ class OWReport(OWWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setVisible(False)
         self.table.setFixedWidth(250)
-        self.table.setColumnWidth(Column.item, 192)
+        self.table.setColumnWidth(Column.item, 200)
         self.table.setColumnWidth(Column.remove, 23)
-        self.table.setColumnWidth(Column.space, 8)
         self.table.setColumnWidth(Column.scheme, 25)
         self.table.clicked.connect(self._table_clicked)
         self.controlArea.layout().addWidget(self.table)
@@ -124,23 +129,20 @@ class OWReport(OWWidget):
         self.report_html_template = open(index_file, "r").read()
 
     def _table_clicked(self, index):
-        if index.column() == Column.item:
-            item = self.table_model.item(index.row())
-            self._scroll_to_item(item)
-            self._change_selected_item(item)
+        item = self.table_model.item(index.row())
         if index.column() == Column.remove:
             self._remove_item(index.row())
+            indexes = self.table.selectionModel().selectedIndexes()
+            item = self.table_model.item(indexes[0].row()) if indexes else None
         if index.column() == Column.scheme:
             self._show_scheme(index.row())
+        if item:
+            self._scroll_to_item(item)
+            self._change_selected_item(item)
 
     def _remove_item(self, row):
         self.table_model.removeRow(row)
         self._build_html()
-        indexes = self.table.selectionModel().selectedIndexes()
-        if indexes:
-            item = self.table_model.item(indexes[0].row())
-            self._scroll_to_item(item)
-            self._change_selected_item(item)
 
     def _add_item(self, widget, name=None):
         path = pkg_resources.resource_filename(widget.__module__, widget.icon)
