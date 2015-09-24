@@ -453,8 +453,7 @@ class OWFile(widget.OWWidget):
             self.report_raw("File", "No file.")
             return
 
-        from os.path import expanduser
-        home = expanduser("~")
+        home = os.path.expanduser("~")
         if self.loaded_file.startswith(home):
             # os.path.join does not like ~
             name = "~/" + self.loaded_file[len(home):].lstrip("/").lstrip("\\")
@@ -464,7 +463,8 @@ class OWFile(widget.OWWidget):
                                    ("Format", self._get_ext_name(name))])
         self.report_data("Data", self.data)
 
-    def _get_ext_name(self, filename):
+    @staticmethod
+    def _get_ext_name(filename):
         try:
             return FileFormat.names[os.path.splitext(filename)[1]]
         except KeyError:
