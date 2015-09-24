@@ -528,7 +528,8 @@ class CanvasMainWindow(QMainWindow):
 
         self.show_report_action = \
             QAction(self.tr("Show Report View"), self,
-                    triggered=self.show_report_view
+                    triggered=self.show_report_view,
+                    shortcut=QKeySequence(Qt.ShiftModifier | Qt.Key_R)
                     )
 
         if sys.platform == "darwin":
