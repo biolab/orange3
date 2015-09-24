@@ -1,13 +1,21 @@
 import os
 import pkg_resources
+from enum import IntEnum
 from PyQt4.QtCore import Qt, pyqtSlot
-from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon,
-                         QPrintDialog, QFileDialog, QTableView, QCursor,
+from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QCursor,
+                         QPrintDialog, QFileDialog, QTableView,
                          QStandardItemModel, QStandardItem, QHeaderView)
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.canvas.application.canvasmain import CanvasMainWindow
+
+
+class Column(IntEnum):
+    item = 0
+    remove = 1
+    space = 2
+    scheme = 3
 
 
 class ReportItem(QStandardItem):
@@ -24,9 +32,9 @@ class ReportItemModel(QStandardItemModel):
 
     def add_item(self, item):
         row = self.rowCount()
-        self.setItem(row, 0, item)
-        self.setItem(row, 1, self._icon_item("Remove", "icons/delete.png"))
-        self.setItem(row, 2, self._icon_item("Scheme", "icons/scheme.png"))
+        self.setItem(row, Column.item, item)
+        self.setItem(row, Column.remove, self._icon_item("Remove"))
+        self.setItem(row, Column.scheme, self._icon_item("Scheme"))
 
     def get_item_by_id(self, item_id):
         for i in range(self.rowCount()):
@@ -36,13 +44,41 @@ class ReportItemModel(QStandardItemModel):
         return None
 
     @staticmethod
-    def _icon_item(tooltip, path):
-        path = pkg_resources.resource_filename(__name__, path)
+    def _icon_item(tooltip):
         item = QStandardItem()
-        item.setIcon(QIcon(path))
         item.setEditable(False)
         item.setToolTip(tooltip)
         return item
+
+
+class ReportTable(QTableView):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._icon_remove = QIcon(pkg_resources.resource_filename(
+            __name__, "icons/delete.png"))
+        self._icon_scheme = QIcon(pkg_resources.resource_filename(
+            __name__, "icons/scheme.png"))
+
+    def mouseMoveEvent(self, event):
+        self._clear_icons()
+        index = self.indexAt(event.pos())
+        row, column = index.row(), index.column()
+        if column in (Column.remove, Column.scheme):
+            self.setCursor(QCursor(Qt.PointingHandCursor))
+        else:
+            self.setCursor(QCursor(Qt.ArrowCursor))
+        if row >= 0:
+            self.model().item(row, Column.remove).setIcon(self._icon_remove)
+            self.model().item(row, Column.scheme).setIcon(self._icon_scheme)
+
+    def leaveEvent(self, _):
+        self._clear_icons()
+
+    def _clear_icons(self):
+        model = self.model()
+        for i in range(model.rowCount()):
+            model.item(i, Column.remove).setIcon(QIcon())
+            model.item(i, Column.scheme).setIcon(QIcon())
 
 
 class OWReport(OWWidget):
@@ -51,8 +87,8 @@ class OWReport(OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.table_model = ReportItemModel(0, 3)
-        self.table = QTableView(self.controlArea)
+        self.table_model = ReportItemModel(0, len(Column.__members__))
+        self.table = ReportTable(self.controlArea)
         self.table.setModel(self.table_model)
         self.table.setShowGrid(False)
         self.table.setSelectionBehavior(QTableView.SelectRows)
@@ -63,12 +99,12 @@ class OWReport(OWWidget):
         self.table.verticalHeader().setDefaultSectionSize(20)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setVisible(False)
-        self.table.setFixedWidth(252)
-        self.table.setColumnWidth(0, 200)
-        self.table.setColumnWidth(1, 25)
-        self.table.setColumnWidth(2, 25)
+        self.table.setFixedWidth(250)
+        self.table.setColumnWidth(Column.item, 192)
+        self.table.setColumnWidth(Column.remove, 23)
+        self.table.setColumnWidth(Column.space, 8)
+        self.table.setColumnWidth(Column.scheme, 25)
         self.table.clicked.connect(self._table_clicked)
-        self.table.entered.connect(self._table_entered)
         self.controlArea.layout().addWidget(self.table)
 
         self.last_scheme = None
@@ -88,20 +124,14 @@ class OWReport(OWWidget):
         self.report_html_template = open(index_file, "r").read()
 
     def _table_clicked(self, index):
-        if index.column() == 0:
+        if index.column() == Column.item:
             item = self.table_model.item(index.row())
             self._scroll_to_item(item)
             self._change_selected_item(item)
-        if index.column() == 1:
+        if index.column() == Column.remove:
             self._remove_item(index.row())
-        if index.column() == 2:
+        if index.column() == Column.scheme:
             self._show_scheme(index.row())
-
-    def _table_entered(self, index):
-        if index.column() in (1, 2):
-            self.table.setCursor(QCursor(Qt.PointingHandCursor))
-        else:
-            self.table.setCursor(QCursor(Qt.ArrowCursor))
 
     def _remove_item(self, row):
         self.table_model.removeRow(row)
