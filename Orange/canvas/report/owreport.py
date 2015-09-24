@@ -1,7 +1,7 @@
 import os
 import pkg_resources
 from PyQt4.QtCore import Qt, pyqtSlot
-from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QFont,
+from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon,
                          QPrintDialog, QFileDialog, QTableView, QCursor,
                          QStandardItemModel, QStandardItem, QHeaderView)
 from Orange.widgets import gui
@@ -16,9 +16,6 @@ class ReportItem(QStandardItem):
         self.id = id(icon)
         self.html = html
         self.scheme = scheme
-        font = QFont()
-        font.setPointSize(12)
-        self.setFont(font)
 
 
 class ReportItemModel(QStandardItemModel):
