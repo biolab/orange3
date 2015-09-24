@@ -496,18 +496,18 @@ class OWScatterMap(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Axes")
         self.x_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesX = gui.comboBox(
+        self.comboBoxAttributesX = gui.varComboBox(
             box, self, value='x_var_index', callback=self.replot)
         self.comboBoxAttributesX.setModel(self.x_var_model)
 
         self.y_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesY = gui.comboBox(
+        self.comboBoxAttributesY = gui.varComboBox(
             box, self, value='y_var_index', callback=self.replot)
         self.comboBoxAttributesY.setModel(self.y_var_model)
 
         box = gui.widgetBox(self.controlArea, "Color")
         self.z_var_model = itemmodels.VariableListModel()
-        self.comboBoxClassvars = gui.comboBox(
+        self.comboBoxClassvars = gui.varComboBox(
             box, self, value='z_var_index',
             callback=self._on_z_var_changed)
         self.comboBoxClassvars.setModel(self.z_var_model)

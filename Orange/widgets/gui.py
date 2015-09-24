@@ -1701,18 +1701,21 @@ def valueSlider(widget, master, value, box=None, label=None,
     return slider
 
 
-# TODO comboBox looks overly complicated:
+# TODO varComboBox looks overly complicated:
 # - is the argument control2attributeDict needed? doesn't emptyString do the
 #    job?
-# - can valueType be anything else than str?
 # - sendSelectedValue is not a great name
-def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
-             orientation='vertical', items=(), callback=None,
-             sendSelectedValue=False, valueType=str,
-             control2attributeDict=None, emptyString=None, editable=False,
-             **misc):
+def varComboBox(widget, master, value, box=None, label=None, labelWidth=None,
+                orientation='vertical', items=(), callback=None,
+                sendSelectedValue=False, valueType=str,
+                control2attributeDict=None, emptyString=None, editable=False,
+                contentsLengthHint=12, **misc):
     """
-    Construct a combo box.
+    Construct a combo box suitable for variable content.
+
+    This function is recommended over `comboBox` since it sets the hint to 12
+    by default, thus preventing extending of the combo by long variable or
+    attribute names.
 
     The `value` attribute of the `master` contains either the index of the
     selected row (if `sendSelected` is left at default, `False`) or a value
@@ -1753,6 +1756,13 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type emptyString: str
     :param editable: a flag telling whether the combo is editable
     :type editable: bool
+    :param int contentsLengthHint: Contents character length to use for the
+        size hint. Default is 12. Equivalent to::
+
+            combo.setSizeAdjustPolicy(
+                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(contentsLengthHint)
+
     :rtype: PyQt4.QtGui.QComboBox
     """
     if box or label:
@@ -1763,6 +1773,11 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
         hb = widget
     combo = QtGui.QComboBox(hb)
     combo.setEditable(editable)
+    if contentsLengthHint is not None:
+        combo.setSizeAdjustPolicy(
+            QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        combo.setMinimumContentsLength(contentsLengthHint)
+
     combo.box = hb
     for item in items:
         if isinstance(item, (tuple, list)):
@@ -1797,6 +1812,47 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
                 CallFrontComboBox(combo, None, control2attributeDict))
     miscellanea(combo, hb, widget, **misc)
     return combo
+
+
+def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
+             orientation='vertical', items=(), callback=None,
+             contentsLengthHint=None, **misc):
+    """
+    Construct a combo box.
+
+    Calls varComboBox with contentsLengthHint set to `None`, thus the width
+    adjusts to the content.
+
+    :param widget: the widget into which the box is inserted
+    :type widget: PyQt4.QtGui.QWidget or None
+    :param master: master widget
+    :type master: OWWidget or OWComponent
+    :param value: the master's attribute with which the value is synchronized
+    :type value:  str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :param orientation: orientation of the layout in the box
+    :type orientation: str or int or bool
+    :param label: a label that is inserted into the box
+    :type label: str
+    :param labelWidth: the width of the label
+    :type labelWidth: int
+    :param callback: a function that is called when the value is changed
+    :type callback: function
+    :param items: items (optionally with data) that are put into the box
+    :type items: tuple of str or tuples
+    :param int contentsLengthHint: Contents character length to use for the
+        size hint. Equivalent to::
+
+            combo.setSizeAdjustPolicy(
+                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(contentsLengthHint)
+
+    :rtype: PyQt4.QtGui.QComboBox
+    """
+    return varComboBox(widget, master, value, box, label, labelWidth,
+                       orientation, items, callback,
+                       contentsLengthHint=contentsLengthHint, **misc)
 
 
 class OrangeListBox(QtGui.QListWidget):

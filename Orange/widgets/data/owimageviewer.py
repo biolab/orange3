@@ -346,7 +346,7 @@ class OWImageViewer(widget.OWWidget):
             "Waiting for input\n"
         )
 
-        self.imageAttrCB = gui.comboBox(
+        self.imageAttrCB = gui.varComboBox(
             self.controlArea, self, "imageAttr",
             box="Image Filename Attribute",
             tooltip="Attribute with image filenames",
@@ -354,7 +354,7 @@ class OWImageViewer(widget.OWWidget):
             addSpace=True
         )
 
-        self.titleAttrCB = gui.comboBox(
+        self.titleAttrCB = gui.varComboBox(
             self.controlArea, self, "titleAttr",
             box="Title Attribute",
             tooltip="Attribute with image title",

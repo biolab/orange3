@@ -189,10 +189,11 @@ class OWTestLearners(widget.OWWidget):
             rbox, self, "Apply", callback=self.apply, default=True)
 
         self.cbox = gui.widgetBox(self.controlArea, "Target class")
-        self.class_selection_combo = gui.comboBox(
+        self.class_selection_combo = gui.varComboBox(
             self.cbox, self, "class_selection", items=[],
             sendSelectedValue=True, valueType=str,
-            callback=self._on_target_class_changed)
+            callback=self._on_target_class_changed,
+            contentsLengthHint=8)
 
         gui.rubber(self.controlArea)
 

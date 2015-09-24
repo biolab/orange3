@@ -177,11 +177,11 @@ class OWMosaicDisplay(OWWidget):
         box = gui.widgetBox(self.controlArea, "Variables")
         for i in range(1, 5):
             inbox = gui.widgetBox(box, orientation="horizontal")
-            combo = gui.comboBox(inbox, self, value="variable{}".format(i),
-                                 # label="Variable {}".format(i),
-                                 orientation="horizontal",
-                                 callback=self.updateGraphAndPermList,
-                                 sendSelectedValue=True, valueType=str)
+            combo = gui.varComboBox(inbox, self, value="variable{}".format(i),
+                                    # label="Variable {}".format(i),
+                                    orientation="horizontal",
+                                    callback=self.updateGraphAndPermList,
+                                    sendSelectedValue=True, valueType=str)
 
             butt = gui.button(inbox, self, "", callback=self.orderAttributeValues,
                               tooltip="Change the order of attribute values")
@@ -204,10 +204,10 @@ class OWMosaicDisplay(OWWidget):
         # self.permutationList.hide()
 
         box5 = gui.widgetBox(self.controlArea, "Visual Settings")
-        self.cb_color = gui.comboBox(box5, self, "interior_coloring",
-                                     label="Color", orientation="horizontal",
-                                     items=self.interior_coloring_opts,
-                                     callback=self.updateGraph)
+        self.cb_color = gui.varComboBox(box5, self, "interior_coloring",
+                                        label="Color", orientation="horizontal",
+                                        items=self.interior_coloring_opts,
+                                        callback=self.updateGraph)
 
         gui.checkBox(box5, self, "remove_unused_labels",
                      "Remove unused attribute labels",

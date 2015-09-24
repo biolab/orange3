@@ -34,11 +34,9 @@ class OWLoadClassifier(widget.OWWidget):
             self.controlArea, self.tr("File"), orientation=QtGui.QHBoxLayout()
         )
 
-        self.filesCB = gui.comboBox(
-            box, self, "selectedIndex", callback=self._on_recent)
-        self.filesCB.setMinimumContentsLength(20)
-        self.filesCB.setSizeAdjustPolicy(
-            QtGui.QComboBox.AdjustToMinimumContentsLength)
+        self.filesCB = gui.varComboBox(
+            box, self, "selectedIndex", callback=self._on_recent,
+            contentsLengthHint=20)
 
         self.loadbutton = gui.button(box, self, "...", callback=self.browse)
         self.loadbutton.setIcon(

@@ -54,12 +54,10 @@ class OWUnivariateRegression(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Variables")
 
         self.x_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesX = gui.comboBox(
+        self.comboBoxAttributesX = gui.varComboBox(
             box, self, value='x_var_index',
             label="Input ", orientation="horizontal",
             callback=self.apply)
-        self.comboBoxAttributesX.setSizePolicy(
-            QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         self.comboBoxAttributesX.setModel(self.x_var_model)
         gui.doubleSpin(
             gui.indentedBox(box),
@@ -68,12 +66,10 @@ class OWUnivariateRegression(widget.OWWidget):
 
         gui.separator(box, height=8)
         self.y_var_model = itemmodels.VariableListModel()
-        self.comboBoxAttributesY = gui.comboBox(
+        self.comboBoxAttributesY = gui.varComboBox(
             box, self, value='y_var_index',
             label='Target', orientation="horizontal",
             callback=self.apply)
-        self.comboBoxAttributesY.setSizePolicy(
-            QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         self.comboBoxAttributesY.setModel(self.y_var_model)
 
         gui.rubber(self.controlArea)

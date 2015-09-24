@@ -337,8 +337,8 @@ class OWLinearProjection(widget.OWWidget):
         )
         box.layout().addLayout(form)
 
-        cb = gui.comboBox(box, self, "color_index",
-                          callback=self._on_color_change)
+        cb = gui.varComboBox(box, self, "color_index",
+                             callback=self._on_color_change)
         cb.setModel(self.colorvar_model)
         form.addRow("Colors", cb)
 
@@ -348,13 +348,13 @@ class OWLinearProjection(widget.OWWidget):
         alpha_slider.valueChanged.connect(self._set_alpha)
         form.addRow("Opacity", alpha_slider)
 
-        cb = gui.comboBox(box, self, "shape_index",
-                          callback=self._on_shape_change)
+        cb = gui.varComboBox(box, self, "shape_index",
+                             callback=self._on_shape_change)
         cb.setModel(self.shapevar_model)
         form.addRow("Shape", cb)
 
-        cb = gui.comboBox(box, self, "size_index",
-                          callback=self._on_size_change)
+        cb = gui.varComboBox(box, self, "size_index",
+                             callback=self._on_size_change)
         cb.setModel(self.sizevar_model)
         form.addRow("Size", cb)
 

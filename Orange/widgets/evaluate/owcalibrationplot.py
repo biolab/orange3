@@ -53,8 +53,9 @@ class OWCalibrationPlot(widget.OWWidget):
         tbox = gui.widgetBox(box, "Target Class")
         tbox.setFlat(True)
 
-        self.target_cb = gui.comboBox(
-            tbox, self, "target_index", callback=self._replot)
+        self.target_cb = gui.varComboBox(
+            tbox, self, "target_index", callback=self._replot,
+            contentsLengthHint=8)
 
         cbox = gui.widgetBox(box, "Classifier")
         cbox.setFlat(True)
