@@ -949,11 +949,6 @@ class CanvasMainWindow(QMainWindow):
             self.add_recent_scheme(new_scheme.title, filename)
 
     def load_scheme_xml(self, xml):
-        document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                return QDialog.Rejected
-
         new_scheme = widgetsscheme.WidgetsScheme(parent=self)
         scheme_load(new_scheme, xml)
         self.set_new_scheme(new_scheme)

@@ -71,6 +71,11 @@ class OWReport(OWWidget):
         self.table.entered.connect(self._table_entered)
         self.controlArea.layout().addWidget(self.table)
 
+        self.last_scheme = None
+        self.scheme_button = gui.button(
+            self.controlArea, self, "Last scheme",
+            callback=self._show_last_scheme
+        )
         self.save_button = gui.button(
             self.controlArea, self, "Save", callback=self._save_report
         )
@@ -102,6 +107,9 @@ class OWReport(OWWidget):
         scheme = self.table_model.item(row).scheme
         canvas = self.get_canvas_instance()
         if canvas:
+            document = canvas.current_document()
+            if document.isModifiedStrict():
+                self.last_scheme = canvas.get_scheme_xml()
             canvas.load_scheme_xml(scheme)
 
     def _get_scheme(self):
@@ -157,6 +165,12 @@ class OWReport(OWWidget):
         self._scroll_to_item(item)
         self._change_selected_item(item)
         self.table.selectRow(self.table_model.rowCount() - 1)
+
+    def _show_last_scheme(self):
+        if self.last_scheme:
+            canvas = self.get_canvas_instance()
+            if canvas:
+                canvas.load_scheme_xml(self.last_scheme)
 
     def _save_report(self):
         filename = QFileDialog.getSaveFileName(self, "Save Report",
