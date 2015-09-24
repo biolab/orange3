@@ -103,19 +103,6 @@ class OWReport(OWWidget):
         else:
             self.table.setCursor(QCursor(Qt.ArrowCursor))
 
-    def _show_scheme(self, row):
-        scheme = self.table_model.item(row).scheme
-        canvas = self.get_canvas_instance()
-        if canvas:
-            document = canvas.current_document()
-            if document.isModifiedStrict():
-                self.last_scheme = canvas.get_scheme_xml()
-            canvas.load_scheme_xml(scheme)
-
-    def _get_scheme(self):
-        canvas = self.get_canvas_instance()
-        return canvas.get_scheme_xml() if canvas else None
-
     def _remove_item(self, row):
         self.table_model.removeRow(row)
         self._build_html()
@@ -165,6 +152,19 @@ class OWReport(OWWidget):
         self._scroll_to_item(item)
         self._change_selected_item(item)
         self.table.selectRow(self.table_model.rowCount() - 1)
+
+    def _get_scheme(self):
+        canvas = self.get_canvas_instance()
+        return canvas.get_scheme_xml() if canvas else None
+
+    def _show_scheme(self, row):
+        scheme = self.table_model.item(row).scheme
+        canvas = self.get_canvas_instance()
+        if canvas:
+            document = canvas.current_document()
+            if document.isModifiedStrict():
+                self.last_scheme = canvas.get_scheme_xml()
+            canvas.load_scheme_xml(scheme)
 
     def _show_last_scheme(self):
         if self.last_scheme:
