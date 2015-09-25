@@ -52,7 +52,7 @@ class OWVennDiagram(widget.OWWidget):
     inputhints = settings.Setting({})
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_graph = True
 
@@ -529,8 +529,10 @@ class OWVennDiagram(widget.OWWidget):
 
             # add columns with source table id and set id
 
-            id_column = [[instance_key(inst)] for inst in subset]
-            source_names = numpy.array([[names[i]]] * len(subset))
+            id_column = numpy.array([[instance_key(inst)] for inst in subset],
+                                    dtype=object)
+            source_names = numpy.array([[names[i]]] * len(subset),
+                                       dtype=object)
 
             subset = append_column(subset, "M", source_var, source_names)
             subset = append_column(subset, "M", item_id_var, id_column)
@@ -757,10 +759,19 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
     domain = Orange.data.Domain(newfeatures, newclass_vars, newmetas)
     prototype_indices = [inst_by_id[inst_id][0] for inst_id in ids]
     newtable = Orange.data.Table.from_table(domain, table)[prototype_indices]
+    in_expanded = set(f for efd in expanded_features.values() for f in efd.values())
 
     for i, inst_id in enumerate(ids):
         indices = inst_by_id[inst_id]
         instance = newtable[i]
+
+        for var in domain.variables + domain.metas:
+            if var in idvarlist or var in in_expanded:
+                continue
+            if numpy.isnan(instance[var]):
+                for ind in indices:
+                    if not numpy.isnan(table[ind, var]):
+                        newtable[i, var] = table[ind, var]
 
         for index in indices:
             source_inst = table[index]
