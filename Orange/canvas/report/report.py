@@ -30,13 +30,6 @@ class Report:
         self.send_report()
         self.report_html += '</div>\n\n'
 
-    def send_report(self):
-        if hasattr(self, "data") and isinstance(self.data, Table):
-            self.report_data("Data", self.data)
-        for attr in ("canvas", "box_scene", "plot"):
-            if hasattr(self, attr):
-                self.report_plot("", getattr(self, attr))
-
     def report_items(self, name, items, order=None, exclude=None):
         self.report_name(name)
         self.report_html += render_items(items, order, exclude)

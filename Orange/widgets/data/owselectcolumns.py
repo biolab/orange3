@@ -301,7 +301,6 @@ class OWSelectAttributes(widget.OWWidget):
 
     want_main_area = False
     want_control_area = False
-    want_report = True
     settingsHandler = SelectAttributesDomainContextHandler()
     domain_role_hints = ContextSetting({})
 

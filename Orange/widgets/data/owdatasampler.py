@@ -44,8 +44,6 @@ class OWDataSampler(widget.OWWidget):
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
 
-    want_report = True
-
     def __init__(self):
         super().__init__()
         self.data = None

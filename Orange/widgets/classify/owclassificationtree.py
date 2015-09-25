@@ -20,7 +20,6 @@ class OWClassificationTree(widget.OWWidget):
         ("Classification Tree", TreeClassifier)
     ]
     want_main_area = False
-    want_report = True
     resizing_enabled = False
 
     model_name = Setting("Classification Tree")
