@@ -63,9 +63,9 @@ class Report:
         if isinstance(plot, QGraphicsScene):
             self.report_html += get_html_img(plot)
         elif isinstance(plot, PlotItem):
-            self.report_html += get_html_img(plot.scene())
+            self.report_html += get_html_img(plot)
         elif isinstance(plot, PlotWidget):
-            self.report_html += get_html_img(plot.plotItem.scene())
+            self.report_html += get_html_img(plot.plotItem)
 
     # noinspection PyBroadException
     def report_table(self, name, table, header_rows=0, header_columns=0,
@@ -149,9 +149,20 @@ class Report:
             txt = ""
         self.report_html += txt
 
+    def report_paragraph(self, text):
+        self.report_html += "<p>{}</p>".format(text)
+
+    def report_caption(self, text):
+        self.report_html += "<p class='caption'>{}</p>".format(text)
+
     def report_raw(self, name, html):
         self.report_name(name)
         self.report_html += html
+
+    def combo_value(self, combo):
+        text = combo.currentText()
+        if text != combo.emptyString:
+            return text
 
 
 def plural(s, number, suffix="s"):
@@ -336,7 +347,7 @@ def get_html_img(scene):
     writer = PngFormat()
     writer.write(filename, scene)
     img_encoded = byte_array.toBase64().data().decode("utf-8")
-    return "<ul><img src='data:image/png;base64,%s'/></ul>" % img_encoded
+    return "<img src='data:image/png;base64,%s'/>" % img_encoded
 
 
 def describe_domain(domain):
