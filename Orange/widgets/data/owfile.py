@@ -448,9 +448,9 @@ class OWFile(widget.OWWidget):
             self.data = data
         self.send("Data", data)
 
-    def get_widget_name_report(self):
-        path, name = os.path.split(self.loaded_file)
-        return "File - {}".format(name)
+    def get_widget_name_extension(self):
+        _, name = os.path.split(self.loaded_file)
+        return os.path.splitext(name)[0]
 
     def send_report(self):
         if self.data is None:

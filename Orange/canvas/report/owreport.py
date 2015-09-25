@@ -154,7 +154,9 @@ class OWReport(OWWidget):
 
     def _add_item(self, widget):
         path = pkg_resources.resource_filename(widget.__module__, widget.icon)
-        item = ReportItem(QIcon(path), widget.get_widget_name_report(),
+        name = widget.get_widget_name_extension()
+        name = "{} - {}".format(widget.name, name) if name else widget.name
+        item = ReportItem(QIcon(path), name,
                           widget.report_html, self._get_scheme())
         self.table_model.add_item(item)
         return item

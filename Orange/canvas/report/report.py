@@ -21,8 +21,8 @@ class Report:
         report.show()
         report.raise_()
 
-    def get_widget_name_report(self):
-        return self.name
+    def get_widget_name_extension(self):
+        return None
 
     def create_report_html(self):
         self.report_html = get_html_section(self.name)
