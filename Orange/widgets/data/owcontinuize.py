@@ -126,8 +126,6 @@ class OWContinuize(widget.OWWidget):
             self.send("Data", None)
 
     def send_report(self):
-        if self.data is not None:
-            self.report_data("Input data", self.data)
         self.report_items(
             "Settings",
             [("Multinominal attributes",
