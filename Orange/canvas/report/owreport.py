@@ -63,7 +63,8 @@ class ReportTable(QTableView):
         self._repaint(self.indexAt(event.pos()))
 
     def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
+        if event.button() == Qt.LeftButton:
+            super().mouseReleaseEvent(event)
         self._clear_icons()
         self._repaint(self.indexAt(event.pos()))
 
@@ -110,6 +111,8 @@ class OWReport(OWWidget):
         self.table.setColumnWidth(Column.remove, 23)
         self.table.setColumnWidth(Column.scheme, 25)
         self.table.clicked.connect(self._table_clicked)
+        self.table.selectionModel().selectionChanged.connect(
+            self._table_selection_changed)
         self.controlArea.layout().addWidget(self.table)
 
         self.last_scheme = None
@@ -129,14 +132,19 @@ class OWReport(OWWidget):
         self.report_html_template = open(index_file, "r").read()
 
     def _table_clicked(self, index):
-        item = self.table_model.item(index.row())
         if index.column() == Column.remove:
             self._remove_item(index.row())
             indexes = self.table.selectionModel().selectedIndexes()
-            item = self.table_model.item(indexes[0].row()) if indexes else None
+            if indexes:
+                item = self.table_model.item(indexes[0].row())
+                self._scroll_to_item(item)
+                self._change_selected_item(item)
         if index.column() == Column.scheme:
             self._show_scheme(index.row())
-        if item:
+
+    def _table_selection_changed(self, new_selection, _):
+        if new_selection.indexes():
+            item = self.table_model.item(new_selection.indexes()[0].row())
             self._scroll_to_item(item)
             self._change_selected_item(item)
 
