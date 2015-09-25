@@ -10,6 +10,7 @@ from Orange.widgets.io import PngFormat
 
 class Report:
     report_html = ""
+    name = ""
 
     def show_report(self):
         from Orange.canvas.report.owreport import OWReport
@@ -19,6 +20,9 @@ class Report:
         report.make_report(self)
         report.show()
         report.raise_()
+
+    def get_widget_name_report(self):
+        return self.name
 
     def create_report_html(self):
         self.report_html = get_html_section(self.name)
