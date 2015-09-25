@@ -656,12 +656,12 @@ class OWSelectAttributes(widget.OWWidget):
         if not self.data or not self.output_data:
             return
         in_domain, out_domain = self.data.domain, self.output_data.domain
-        self.report_data("Input data", self.data)
+        self.report_domain("Input data", self.data.domain)
         if (in_domain.attributes, in_domain.class_vars, in_domain.metas) == (
                 out_domain.attributes, out_domain.class_vars, out_domain.metas):
             self.report_raw("Output data", "<p>No changes.</p>")
         else:
-            self.report_data("Output data", self.output_data)
+            self.report_domain("Output data", self.output_data.domain)
             diff = list(set(in_domain.variables + in_domain.metas) -
                         set(out_domain.variables + out_domain.metas))
             if diff:
