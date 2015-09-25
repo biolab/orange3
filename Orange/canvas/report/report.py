@@ -382,9 +382,9 @@ def describe_data(data):
     :type data: Orange.data.Table
     :rtype: OrderedDict
     """
-    if data is None:
-        return OrderedDict()
     items = OrderedDict()
+    if data is None:
+        return items
     items["Data instances"] = len(data)
     items.update(describe_domain(data.domain))
     return items
@@ -402,9 +402,11 @@ def describe_domain_brief(domain):
     :type domain: Orange.data.Domain
     :rtype: OrderedDict
     """
-    items = OrderedDict([
-        ("Features", len(domain.attributes) or "None"),
-        ("Meta attributes", len(domain.metas) or "None")])
+    items = OrderedDict()
+    if domain is None:
+        return items
+    items["Features"] = len(domain.attributes) or "None"
+    items["Meta attributes"] = len(domain.metas) or "None"
     if domain.has_discrete_class:
         items["Target"] = "Class '{}'".format(domain.class_var.name)
     elif domain.has_continuous_class:
@@ -431,6 +433,8 @@ def describe_data_brief(data):
     :rtype: OrderedDict
     """
     items = OrderedDict()
+    if data is None:
+        return items
     items["Data instances"] = len(data)
     items.update(describe_domain_brief(data.domain))
     return items
