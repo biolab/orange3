@@ -461,10 +461,10 @@ class OWRank(widget.OWWidget):
     def send_report(self):
         if not self.data:
             return
-        self.report_domain("Input domain", self.data.domain)
+        self.report_domain("Input", self.data.domain)
         self.report_table("Ranks", self.ranksView, num_format="{:.3f}")
         if self.out_domain_desc is not None:
-            self.report_items("Output domain", self.out_domain_desc)
+            self.report_items("Output", self.out_domain_desc)
 
     def commit(self):
         selected = self.selectedAttrs()
