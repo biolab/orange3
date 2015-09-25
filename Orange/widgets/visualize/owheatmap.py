@@ -465,17 +465,18 @@ class OWHeatMap(widget.OWWidget):
             else:
                 cluster_ord = None
 
-            need_dist = cluster is None or (ordered and cluster_ord is None)
-            if need_dist:
-                subset = data[row.indices]
-                subset = Orange.distance._preprocess(subset)
-                matrix = Orange.distance.Euclidean(subset)
+            if len(row.indices) > 0:
+                need_dist = cluster is None or (ordered and cluster_ord is None)
+                if need_dist:
+                    subset = data[row.indices]
+                    subset = Orange.distance._preprocess(subset)
+                    matrix = Orange.distance.Euclidean(subset)
 
-            if cluster is None:
-                cluster = hierarchical.dist_matrix_clustering(matrix)
+                if cluster is None:
+                    cluster = hierarchical.dist_matrix_clustering(matrix)
 
-            if ordered and cluster_ord is None:
-                cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
+                if ordered and cluster_ord is None:
+                    cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
 
             row_groups.append(namespace(title=row.title, indices=row.indices,
                                         cluster=cluster, cluster_ord=cluster_ord))
@@ -891,11 +892,11 @@ class OWHeatMap(widget.OWWidget):
         row_annot = self.row_annotation_widgets
 
         for hm, annot, dendrogram in zip(hm_row, col_annot, dendrogram_col):
-            width = hm.size().width()
             left_offset = offset(hm)
-            col_count = hm.heatmap_data().shape[1]
-            half_col = (width - left_offset) / col_count / 2
             if dendrogram is not None:
+                width = hm.size().width()
+                col_count = hm.heatmap_data().shape[1]
+                half_col = (width - left_offset) / col_count / 2
                 _, top, _, bottom = dendrogram.getContentsMargins()
                 dendrogram.setContentsMargins(
                     left_offset + half_col, top, half_col, bottom)
@@ -906,10 +907,10 @@ class OWHeatMap(widget.OWWidget):
             annot[1].setContentsMargins(left_offset, top, right, bottom)
 
         for hm, annot, dendrogram in zip(hm_col, row_annot, dendrogram_row):
-            height = hm.size().height()
-            row_count = hm.heatmap_data().shape[0]
-            half_row = height / row_count / 2
             if dendrogram is not None:
+                height = hm.size().height()
+                row_count = hm.heatmap_data().shape[0]
+                half_row = height / row_count / 2
                 left, _, right, _ = dendrogram.getContentsMargins()
                 dendrogram.setContentsMargins(left, half_row, right, half_row)
 
@@ -1375,9 +1376,10 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
     def hoverMoveEvent(self, event):
         pos = event.pos()
         row, column = self.cell_at(pos)
-        tooltip = self.cell_tool_tip(row, column)
-        # TODO: Move/delegate to (Scene) helpEvent
-        self.setToolTip(tooltip)
+        if row != -1:
+            tooltip = self.cell_tool_tip(row, column)
+            # TODO: Move/delegate to (Scene) helpEvent
+            self.setToolTip(tooltip)
         return super().hoverMoveEvent(event)
 
 
