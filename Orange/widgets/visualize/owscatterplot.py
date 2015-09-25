@@ -473,6 +473,24 @@ class OWScatterPlot(OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def send_report(self):
+        disc_attr = False
+        if self.data:
+            domain = self.data.domain
+            disc_attr = domain[self.attr_x].is_discrete or \
+                        domain[self.attr_y].is_discrete
+        self.report_items(
+            "",
+            [("Axis x", self.combo_value(self.cb_attr_x)),
+             ("Axis y", self.combo_value(self.cb_attr_y)),
+             ("Jittering", (self.graph.jitter_continuous or disc_attr)
+              and self.graph.jitter_size),
+             ("Color", self.combo_value(self.cb_attr_color)),
+             ("Label", self.combo_value(self.cb_attr_label)),
+             ("Shape", self.combo_value(self.cb_attr_shape)),
+             ("Size", self.combo_value(self.cb_attr_size))])
+        self.report_plot("", self.graph.plot_widget)
+
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
