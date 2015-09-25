@@ -229,6 +229,15 @@ class OWLiftCurve(widget.OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def send_report(self):
+        self.report_items(
+            "Settings",
+            [("Target class",
+              self.combo_value(self.target_cb)),
+             ("Classifiers",
+              ", ".join(name for i, name in enumerate(self.classifier_names)
+                        if i in self.selected_classifiers))])
+        self.report_plot("", self.plot)
 
 def lift_curve_from_results(results, target, clf_idx, subset=slice(0, -1)):
     actual = results.actual[subset]
