@@ -1701,6 +1701,60 @@ def valueSlider(widget, master, value, box=None, label=None,
     return slider
 
 
+class OrangeComboBox(QtGui.QComboBox):
+    """
+    A QtGui.QComboBox subclass extened to support bounded contents width hint.
+    """
+    def __init__(self, parent=None, maximumContentsLength=-1, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__maximumContentsLength = maximumContentsLength
+
+    def setMaximumContentsLength(self, length):
+        """
+        Set the maximum contents length hint.
+
+        The hint specifies the upper bound on the `sizeHint` and
+        `minimumSizeHint` width specified in character length.
+        Set to 0 or negative value to disable.
+
+        .. note::
+             This property does not affect the widget's `maximumSize`.
+             The widget can still grow depending in it's sizePolicy.
+
+        Parameters
+        ----------
+        lenght : int
+            Maximum contents length hint.
+        """
+        if self.__maximumContentsLength != length:
+            self.__maximumContentsLength = length
+            self.updateGeometry()
+
+    def maximumContentsLength(self):
+        """
+        Return the maximum contents length hint.
+        """
+        return self.__maximumContentsLength
+
+    def sizeHint(self):
+        # reimplemented
+        sh = super().sizeHint()
+        if self.__maximumContentsLength > 0:
+            width = (self.fontMetrics().width("X") * self.__maximumContentsLength
+                     + self.iconSize().width() + 4)
+            sh = sh.boundedTo(QtCore.QSize(width, sh.height()))
+        return sh
+
+    def minimumSizeHint(self):
+        # reimplemented
+        sh = super().minimumSizeHint()
+        if self.__maximumContentsLength > 0:
+            width = (self.fontMetrics().width("X") * self.__maximumContentsLength
+                     + self.iconSize().width() + 4)
+            sh = sh.boundedTo(QtCore.QSize(width, sh.height()))
+        return sh
+
+
 # TODO comboBox looks overly complicated:
 # - is the argument control2attributeDict needed? doesn't emptyString do the
 #    job?
@@ -1710,6 +1764,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
              orientation='vertical', items=(), callback=None,
              sendSelectedValue=False, valueType=str,
              control2attributeDict=None, emptyString=None, editable=False,
+             contentsLength=None, maximumContentsLength=25,
              **misc):
     """
     Construct a combo box.
@@ -1753,6 +1808,15 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type emptyString: str
     :param editable: a flag telling whether the combo is editable
     :type editable: bool
+    :param int contentsLength: Contents character length to use as a
+        fixed size hint. When not None, equivalent to::
+
+            combo.setSizeAdjustPolicy(
+                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(contentsLength)
+    :param int maximumContentsLength: Specifies the upper bound on the
+        `sizeHint` and `minimumSizeHint` width specified in character
+        length (default: 25, use 0 to disable)
     :rtype: PyQt4.QtGui.QComboBox
     """
     if box or label:
@@ -1761,8 +1825,16 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
             widgetLabel(hb, label, labelWidth)
     else:
         hb = widget
-    combo = QtGui.QComboBox(hb)
-    combo.setEditable(editable)
+
+    combo = OrangeComboBox(
+        hb, maximumContentsLength=maximumContentsLength,
+        editable=editable)
+
+    if contentsLength is not None:
+        combo.setSizeAdjustPolicy(
+            QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        combo.setMinimumContentsLength(contentsLength)
+
     combo.box = hb
     for item in items:
         if isinstance(item, (tuple, list)):
