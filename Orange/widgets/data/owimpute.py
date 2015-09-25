@@ -385,6 +385,33 @@ class OWImpute(OWWidget):
         self.send("Data", data)
         self.modified = False
 
+    def send_report(self):
+        specific = []
+        for var in self.varmodel:
+            state = self.variable_methods.get(variable_key(var), None)
+            if state is not None and state.method.short:
+                if state.method.short == "value":
+                    if var.is_continuous:
+                        specific.append(
+                            "{} (impute value {})".
+                            format(var.name, float(state.params[0])))
+                    else:
+                        specific.append(
+                            "{} (impute value '{}'".
+                            format(var.name, var.values[state.params[0]]))
+                else:
+                    specific.append(
+                        "{} ({})".
+                        format(var.name, state.method.name.lower()))
+        default = self.METHODS[self.default_method].name
+        if specific:
+            self.report_items("", (
+                ("Default method", default),
+                ("Specific imputers", ", ".join(specific))
+            ))
+        else:
+            self.report_items("", {"Method": default})
+
     def _invalidate(self):
         self.modified = True
         self.commit()
