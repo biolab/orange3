@@ -13,7 +13,7 @@ from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
 
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas.report.report import Report
+from Orange.canvas.report import Report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype

@@ -152,9 +152,9 @@ class OWReport(OWWidget):
         self.table_model.removeRow(row)
         self._build_html()
 
-    def _add_item(self, widget, name=None):
+    def _add_item(self, widget):
         path = pkg_resources.resource_filename(widget.__module__, widget.icon)
-        item = ReportItem(QIcon(path), name if name else widget.name,
+        item = ReportItem(QIcon(path), widget.get_widget_name_report(),
                           widget.report_html, self._get_scheme())
         self.table_model.add_item(item)
         return item
@@ -186,8 +186,8 @@ class OWReport(OWWidget):
         self.table.selectRow(self.table_model.indexFromItem(item).row())
         self._change_selected_item(item)
 
-    def make_report(self, widget, name=None):
-        item = self._add_item(widget, name)
+    def make_report(self, widget):
+        item = self._add_item(widget)
         self._build_html()
         self._scroll_to_item(item)
         self._change_selected_item(item)

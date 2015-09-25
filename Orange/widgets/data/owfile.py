@@ -9,7 +9,6 @@ from Orange.widgets.settings import Setting
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat
 from Orange.widgets.widget import OutputSignal
-from Orange.canvas.report.owreport import OWReport
 
 
 def add_origin(examples, filename):
@@ -449,13 +448,9 @@ class OWFile(widget.OWWidget):
             self.data = data
         self.send("Data", data)
 
-    def show_report(self):
-        report = OWReport.get_instance()
-        self.create_report_html()
+    def get_widget_name_report(self):
         path, name = os.path.split(self.loaded_file)
-        report.make_report(self, "File - {}".format(name))
-        report.show()
-        report.raise_()
+        return "File - {}".format(name)
 
     def send_report(self):
         if self.data is None:
