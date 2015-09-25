@@ -1407,15 +1407,6 @@ class HeatmapScene(QGraphicsScene):
         else:
             return None
 
-    def dendrogram_at_pos(self, pos):
-        return None
-
-        items = list(self._items(pos, DendrogramItem))
-        if items:
-            return items[0]
-        else:
-            return None
-
     def heatmap_widgets(self):
         return self._items(None, GraphicsHeatmapWidget)
 
@@ -1455,13 +1446,6 @@ class HeatmapScene(QGraphicsScene):
         if heatmap and event.button() & Qt.LeftButton:
             row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
             self.selection_manager.selection_start(heatmap, event)
-
-        dendrogram = self.dendrogram_at_pos(pos)
-        if dendrogram and event.button() & Qt.LeftButton:
-            if dendrogram.orientation == Qt.Vertical:
-                self.select_from_dendrogram(dendrogram, event.modifiers())
-            return
-
         return QGraphicsScene.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
@@ -1470,11 +1454,6 @@ class HeatmapScene(QGraphicsScene):
         if heatmap and event.buttons() & Qt.LeftButton:
             row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
             self.selection_manager.selection_update(heatmap, event)
-
-        dendrogram = self.dendrogram_at_pos(pos)
-        if dendrogram and dendrogram.orientation == Qt.Horizontal:  # Filter mouse move events
-            return
-
         return QGraphicsScene.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
@@ -1483,18 +1462,9 @@ class HeatmapScene(QGraphicsScene):
         if heatmap:
             row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
             self.selection_manager.selection_finish(heatmap, event)
-
-        dendrogram = self.dendrogram_at_pos(pos)
-        if dendrogram and dendrogram.orientation == Qt.Horizontal:  # Filter mouse events
-            return
-
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
-        pos = event.scenePos()
-        dendrogram = self.dendrogram_at_pos(pos)
-        if dendrogram:  # Filter mouse events
-            return
         return QGraphicsScene.mouseDoubleClickEvent(self, event)
 
 
