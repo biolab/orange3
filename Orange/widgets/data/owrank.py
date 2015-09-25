@@ -63,8 +63,6 @@ class OWRank(widget.OWWidget):
     # Header state for discrete/continuous scores
     headerState = settings.Setting((None, None))
 
-    want_report = True
-
     def __init__(self):
         super().__init__()
         self.out_domain_desc = None

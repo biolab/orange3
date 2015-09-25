@@ -281,19 +281,8 @@ if __name__ == "__main__":
     table.create_report_html()
     main.make_report(table)
 
-    main = OWReport.get_instance()
-    disc = OWDiscretize()
-    disc.set_data(zoo)
-    disc.create_report_html()
-    main.make_report(disc)
-
-    rf = OWRandomForest()
-    rf.set_data(iris)
-    rf.create_report_html()
-    main.make_report(rf)
-
     main.show()
     main.saveSettings()
-    assert main.table_model.rowCount() == 4
+    assert main.table_model.rowCount() == 2
 
     sys.exit(app.exec_())
