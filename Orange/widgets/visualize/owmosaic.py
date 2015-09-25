@@ -335,6 +335,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.closeContext()
         self.data = data
+        self.initCombos(self.data)
         self.bestPlacements = None
         self.manualAttributeValuesDict = {}
         self.attributeValuesDict = {}
@@ -366,7 +367,6 @@ class OWMosaicDisplay(OWWidget):
         else:
             self.interior_coloring = PEARSON
 
-        self.initCombos(self.data)
         self.openContext(self.data)
 
         # if we first received subset data
