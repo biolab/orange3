@@ -3130,17 +3130,21 @@ class VerticalLabel(QtGui.QLabel):
         painter.end()
 
 
-class VerticalItemDelegate(QtGui.QItemDelegate):
+class VerticalItemDelegate(QtGui.QStyledItemDelegate):
+    # Extra text top/bottom margin.
+    Margin = 6
+
     def sizeHint(self, option, index):
-        metrics = QtGui.QFontMetrics(option.font)
-        rect = metrics.boundingRect(index.data(Qt.DisplayRole))
-        size = QtCore.QSize(rect.height() + 2, rect.width() + 2)
-        return size
+        sh = super().sizeHint(option, index)
+        return QtCore.QSize(sh.height() + self.Margin * 2, sh.width())
 
     def paint(self, painter, option, index):
-        text = index.data(Qt.DisplayRole)
-        if not text:
+        option = QtGui.QStyleOptionViewItemV4(option)
+        self.initStyleOption(option, index)
+
+        if not option.text:
             return
+
         if option.widget is not None:
             style = option.widget.style()
         else:
@@ -3149,17 +3153,28 @@ class VerticalItemDelegate(QtGui.QItemDelegate):
             QtGui.QStyle.PE_PanelItemViewRow, option, painter,
             option.widget)
         cell_rect = option.rect
+        itemrect = QtCore.QRect(0, 0, cell_rect.height(), cell_rect.width())
+        opt = QtGui.QStyleOptionViewItemV4(option)
+        opt.rect = itemrect
+        textrect = style.subElementRect(
+            QtGui.QStyle.SE_ItemViewItemText, opt, opt.widget)
 
         painter.save()
         painter.setFont(option.font)
-        painter.translate(cell_rect.x(), cell_rect.y() + cell_rect.height())
+
+        if option.displayAlignment & (Qt.AlignTop | Qt.AlignBottom):
+            brect = painter.boundingRect(
+                textrect, option.displayAlignment, option.text)
+            diff = textrect.height() - brect.height()
+            offset = max(min(diff / 2, self.Margin), 0)
+            if option.displayAlignment & Qt.AlignBottom:
+                offset = -offset
+
+            textrect.translate(0, offset)
+
+        painter.translate(option.rect.x(), option.rect.bottom())
         painter.rotate(-90)
-        # TODO Replace hardcoded alignment
-        painter.drawText(
-            QtCore.QRect(QtCore.QPoint(0, 0),
-                         QtCore.QSize(cell_rect.height(),
-                                      cell_rect.width() - 6)),
-            Qt.AlignHCenter | Qt.AlignBottom, text)
+        painter.drawText(textrect, option.displayAlignment, option.text)
         painter.restore()
 
 ##############################################################################
