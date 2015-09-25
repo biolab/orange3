@@ -145,7 +145,7 @@ class OWConfusionMatrix(widget.OWWidget):
             self._set_item(0, 2, item)
             item = self._item(2, 0)
             item.setData("Actual", Qt.DisplayRole)
-            item.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+            item.setTextAlignment(Qt.AlignHCenter | Qt.AlignBottom)
             item.setFlags(Qt.NoItemFlags)
             self.tableview.setItemDelegateForColumn(
                 0, gui.VerticalItemDelegate())
@@ -366,7 +366,8 @@ if __name__ == "__main__":
     w.show()
     data = Orange.data.Table("iris")
     res = Orange.evaluation.CrossValidation(
-        data, [Orange.classification.ClassificationTreeLearner()],
+        data, [Orange.classification.TreeLearner(),
+               Orange.classification.MajorityLearner()],
         store_data=True)
     w.set_results(res)
     app.exec_()
