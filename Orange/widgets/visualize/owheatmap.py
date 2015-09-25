@@ -1808,7 +1808,8 @@ class HeatmapSelectionManager(QObject):
             self.selection_ranges = self.remove_range(
                 self.selection_ranges, self._start_row, row, append=False)
         else:
-            self.selection_ranges[-1] = (self._start_row, row)
+            if len(self.selection_ranges) > 0:
+                self.selection_ranges[-1] = (self._start_row, row)
         self.select_rows(self.combined_ranges(self.selection_ranges))
         self.selection_finished.emit()
 
