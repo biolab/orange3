@@ -1,4 +1,3 @@
-from itertools import chain
 import sys
 import time
 import os
@@ -7,16 +6,14 @@ import types
 from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
-    QEventLoop, QSettings, QUrl, QAbstractItemModel
+    QEventLoop, QSettings, QUrl
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
-    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle,\
-    QGraphicsScene, QStandardItemModel
+    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle
 
-from Orange.data import Table
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas import report
+from Orange.canvas.report.report import Report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -65,7 +62,7 @@ class WidgetMetaClass(type(QDialog)):
         return cls
 
 
-class OWWidget(QDialog, metaclass=WidgetMetaClass):
+class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     # Global widget count
     widget_id = 0
 
@@ -119,7 +116,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     want_graph = False
     want_status_bar = False
     want_report = False
-    report_html = ""
 
     save_position = True
 
@@ -306,144 +302,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 self.report_button_background,
                 self, "&Report", callback=self.show_report)
             self.report_button.setAutoDefault(0)
-
-    def show_report(self):
-        from Orange.canvas.report.owreport import OWReport
-
-        report = OWReport.get_instance()
-        self.create_report_html()
-        report.make_report(self)
-        report.show()
-        report.raise_()
-
-    def create_report_html(self):
-        self.report_html = report.get_html_section(self.name)
-        self.report_html += '<div class="content">\n'
-        self.send_report()
-        self.report_html += '</div>\n\n'
-
-    def send_report(self):
-        if hasattr(self, "data") and isinstance(self.data, Table):
-            self.report_data("Data", self.data)
-        for attr in ("canvas", "box_scene", "plot"):
-            if hasattr(self, attr):
-                self.report_plot("", getattr(self, attr))
-
-    def report_items(self, name, items, order=None, exclude=None):
-        self.report_name(name)
-        self.report_html += report.render_items(items, order, exclude)
-
-    def report_name(self, name):
-        if name != "":
-            self.report_html += report.get_html_subsection(name)
-
-    def report_data(self, name, data, order=None, exclude=None):
-        self.report_items(name, report.describe_data(data),
-                          order=order, exclude=exclude)
-
-    def report_domain(self, name, domain, order=None, exclude=None):
-        self.report_items(name, report.describe_domain(domain),
-                          order=order, exclude=exclude)
-
-    def report_data_brief(self, name, data, order=None, exclude=None):
-        self.report_items(name, report.describe_data_brief(data),
-                          order=order, exclude=exclude)
-
-    def report_plot(self, name, plot):
-        from pyqtgraph import PlotWidget, PlotItem
-        self.report_name(name)
-        if isinstance(plot, QGraphicsScene):
-            self.report_html += report.get_html_img(plot)
-        elif isinstance(plot, PlotItem):
-            self.report_html += report.get_html_img(plot.scene())
-        elif isinstance(plot, PlotWidget):
-            self.report_html += report.get_html_img(plot.plotItem.scene())
-
-    # noinspection PyBroadException
-    def report_table(self, name, table, header_rows=0, header_columns=0,
-                     num_format=None):
-        join = "".join
-
-        def report_standard_model(model):
-            content = ((model.item(row, col).data(Qt.DisplayRole)
-                        for col in range(model.columnCount())
-                        ) for row in range(model.rowCount()))
-            has_header = not table.isHeaderHidden()
-            if has_header:
-                header = (model.horizontalHeaderItem(col).data(Qt.DisplayRole)
-                          for col in range(model.columnCount())),
-                content = chain(header, content)
-            return report_list(content, header_rows + has_header)
-
-        # noinspection PyBroadException
-        def report_abstract_model(model):
-            content = ((model.data(model.index(row, col))
-                        for col in range(model.columnCount())
-                        ) for row in range(model.rowCount()))
-            try:
-                header = [model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
-                               for col in range(model.columnCount())]
-            except:
-                header = None
-            if header:
-                content = chain([header], content)
-            return report_list(content, header_rows + bool(header))
-
-        if num_format:
-            def fmtnum(s):
-                try:
-                    return num_format.format(float(s))
-                except:
-                    return s
-        else:
-            def fmtnum(s):
-                return s
-
-        def report_list(data,
-                        header_rows=header_rows, header_columns=header_columns):
-            cells = ["<td>{}</td>", "<th>{}</th>"]
-            return join("  <tr>\n    {}</tr>\n".format(
-                join(cells[rowi < header_rows or coli < header_columns]
-                     .format(fmtnum(elm)) for coli, elm in enumerate(row))
-                ) for rowi, row in enumerate(data))
-
-        self.report_name(name)
-        try:
-            model = table.model()
-        except:
-            model = None
-        if isinstance(model, QStandardItemModel):
-            body = report_standard_model(table.model())
-        elif isinstance(model, QAbstractItemModel):
-            body = report_abstract_model(model)
-        elif isinstance(table, list):
-            body = report_list(table)
-        else:
-            body = None
-        if body:
-            self.report_html += "<table>\n" + body + "</table>"
-
-    # noinspection PyBroadException
-    def report_list(self, name, data, limit=1000):
-        def report_abstract_model(model):
-            content = (model.data(model.index(row, 0))
-                       for row in range(model.rowCount()))
-            return report.clipped_list(content, limit, less_lookups=True)
-
-        self.report_name(name)
-        try:
-            model = data.model()
-        except:
-            model = None
-        if isinstance(model, QAbstractItemModel):
-            txt = report_abstract_model(model)
-        else:
-            txt = ""
-        self.report_html += txt
-
-    def report_raw(self, name, html):
-        self.report_name(name)
-        self.report_html += html
 
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
