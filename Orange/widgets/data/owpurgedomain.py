@@ -29,6 +29,22 @@ class OWPurgeDomain(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
+    feature_options = (('sortValues', 'Sort discrete feature values'),
+                       ('removeValues', 'Remove unused feature values'),
+                       ('removeAttributes', 'Remove constant features'))
+
+    class_options = (('sortClasses', 'Sort discrete class variable values'),
+                     ('removeClasses', 'Remove unused class variable values'),
+                     ('removeClassAttribute', 'Remove constant class variables'
+                      ))
+
+    stat_labels = (('Removed features', 'removedAttrs'),
+                   ('Reduced features', 'reducedAttrs'),
+                   ('Resorted features', 'resortedAttrs'),
+                   ('Removed classes', 'removedClasses'),
+                   ('Reduced classes', 'reducedClasses'),
+                   ('Resorted classes', 'resortedClasses'))
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -41,41 +57,25 @@ class OWPurgeDomain(widget.OWWidget):
         self.resortedClasses = "-"
 
         boxAt = gui.widgetBox(self.controlArea, "Features")
-        gui.checkBox(boxAt, self, 'sortValues',
-                     'Sort discrete feature values',
-                     callback=self.optionsChanged)
-        gui.separator(boxAt, 2)
-        gui.checkBox(boxAt, self, "removeValues",
-                     "Remove unused feature values",
-                     callback=self.optionsChanged)
-        gui.separator(boxAt, 2)
-        gui.checkBox(boxAt, self, "removeAttributes",
-                     "Remove constant features",
-                     callback=self.optionsChanged)
+        for not_first, (value, label) in enumerate(self.feature_options):
+            if not_first:
+                gui.separator(boxAt, 2)
+            gui.checkBox(boxAt, self, value, label,
+                         callback=self.optionsChanged)
 
         boxAt = gui.widgetBox(self.controlArea, "Classes", addSpace=True)
-        gui.checkBox(boxAt, self, 'sortClasses',
-                     'Sort discrete class variable values',
-                     callback=self.optionsChanged)
-        gui.separator(boxAt, 2)
-        gui.checkBox(boxAt, self, "removeClasses",
-                     "Remove unused class variable values",
-                     callback=self.optionsChanged)
-        gui.separator(boxAt, 2)
-        gui.checkBox(boxAt, self, "removeClassAttribute",
-                     "Remove constant class variables",
-                     callback=self.optionsChanged)
+        for not_first, (value, label) in enumerate(self.class_options):
+            if not_first:
+                gui.separator(boxAt, 2)
+            gui.checkBox(boxAt, self, value, label,
+                         callback=self.optionsChanged)
 
         box3 = gui.widgetBox(self.controlArea, 'Statistics', addSpace=True)
-        gui.label(box3, self, "Removed features: %(removedAttrs)s")
-        gui.label(box3, self, "Reduced features: %(reducedAttrs)s")
-        gui.label(box3, self, "Resorted features: %(resortedAttrs)s")
-        gui.label(box3, self, "Removed classes: %(removedClasses)s")
-        gui.label(box3, self, "Reduced classes: %(reducedClasses)s")
-        gui.label(box3, self, "Resorted classes: %(resortedClasses)s")
+        for label, value in self.stat_labels:
+            gui.label(box3, self, "{}: %({})s".format(label, value))
 
         gui.auto_commit(self.controlArea, self, "autoSend", "Send Data",
-                        checkbox_label="Send automatically  ",
+                        checkbox_label="Send automatically",
                         orientation="horizontal")
         gui.rubber(self.controlArea)
 
@@ -120,6 +120,21 @@ class OWPurgeDomain(widget.OWWidget):
         self.resortedClasses = class_res['sorted']
 
         self.send("Data", data)
+
+    def send_report(self):
+        def list_opts(opts):
+            return "; ".join(label.lower()
+                             for value, label in opts
+                             if getattr(self, value)) or "no changes"
+
+        self.report_items("Settings", (
+            ("Features", list_opts(self.feature_options)),
+            ("Classes", list_opts(self.class_options))))
+        if self.data:
+            self.report_items("Statistics", (
+                (label, getattr(self, value))
+                for label, value in self.stat_labels
+            ))
 
 
 if __name__ == "__main__":
