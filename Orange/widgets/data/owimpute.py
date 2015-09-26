@@ -258,9 +258,11 @@ class OWImpute(OWWidget):
         self.varmethodbox = methodbox
         self.varbgroup = bgroup
 
-        gui.auto_commit(self.controlArea, self, "autocommit", "Commit",
-                        orientation="horizontal",
-                        checkbox_label="Commit on any change")
+        box = gui.auto_commit(
+            self.controlArea, self, "autocommit", "Commit",
+            orientation="horizontal", checkbox_label="Commit on any change")
+        box.layout().insertSpacing(0, 80)
+        box.layout().insertWidget(0, self.report_button)
         self.data = None
         self.learner = None
 
