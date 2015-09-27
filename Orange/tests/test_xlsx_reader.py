@@ -76,7 +76,7 @@ class TestExcelHeader1(unittest.TestCase):
             self.assertEqual(var.name, n)
         self.assertIsInstance(domain.metas[0], DiscreteVariable)
         self.assertEqual(domain.metas[0].values, ["green", "red"])
-        self.assertIsInstance(domain.metas[1], DiscreteVariable)
+        self.assertIsInstance(domain.metas[1], ContinuousVariable)
         np.testing.assert_almost_equal(
             table.metas[:, 0], np.array([1, 1, 0] * 7 + [1, 1]))
         np.testing.assert_almost_equal(

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.preprocess import score
 from Orange import preprocess
 
@@ -57,7 +57,11 @@ class FeatureScoringTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.randint(4, size=(nrows, ncols))
         y = 10 + (-3*X[:, 1] + X[:, 3]) // 2
-        data = preprocess.Discretize()(Table(X, y))
+        domain = Domain.from_numpy(X, y)
+        domain = Domain(domain.attributes,
+                        DiscreteVariable('c', values=np.unique(y)))
+        table = Table(domain, X, y)
+        data = preprocess.Discretize()(table)
         scorer = score.Chi2()
         sc = [scorer(data, a) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
@@ -66,7 +70,10 @@ class FeatureScoringTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
         y = 4 + (-3*X[:, 1] + X[:, 3]) // 2
-        data = Table(X, y)
+        domain = Domain.from_numpy(X, y)
+        domain = Domain(domain.attributes,
+                        DiscreteVariable('c', values=np.unique(y)))
+        data = Table(domain, X, y)
         scorer = score.ANOVA()
         sc = [scorer(data, a) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)

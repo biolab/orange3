@@ -161,17 +161,17 @@ class TestDomainInit(unittest.TestCase):
         self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2)), np.zeros((2, 2, 2)))
 
     def test_from_numpy_values(self):
-        d = Domain.from_numpy(np.zeros((1, 1)), np.arange(10, 15).reshape(5, 1))
-        self.assertTrue(d.anonymous)
-        self.assertIsInstance(d.class_var, DiscreteVariable)
-        self.assertEqual(d.class_var.values, ["v{:2}".format(i)
-                                              for i in range(1, 16)])
-
-        d = Domain.from_numpy(np.zeros((1, 1)), np.arange(8).reshape(8, 1))
+        d = Domain.from_numpy(np.zeros((1, 1)), np.arange(1, 3).reshape(2, 1))
         self.assertTrue(d.anonymous)
         self.assertIsInstance(d.class_var, DiscreteVariable)
         self.assertEqual(d.class_var.values, ["v{}".format(i)
-                                              for i in range(1, 9)])
+                                              for i in range(1, 4)])
+
+        d = Domain.from_numpy(np.zeros((1, 1)), np.arange(2).reshape(2, 1))
+        self.assertTrue(d.anonymous)
+        self.assertIsInstance(d.class_var, DiscreteVariable)
+        self.assertEqual(d.class_var.values, ["v{}".format(i)
+                                              for i in range(1, 3)])
 
         d = Domain.from_numpy(np.zeros((1, 1)), np.arange(18, 23).reshape(5, 1))
         self.assertTrue(d.anonymous)

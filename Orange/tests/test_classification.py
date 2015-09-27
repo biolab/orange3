@@ -11,7 +11,7 @@ from Orange.base import SklLearner
 import Orange.classification
 from Orange.classification import (
     Learner, Model, NaiveBayesLearner, LogisticRegressionLearner)
-from Orange.data import DiscreteVariable, Domain, Table, Variable
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table, Variable
 from Orange.data.io import BasketFormat
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
@@ -85,7 +85,10 @@ class ModelTest(unittest.TestCase):
         y = np.random.random_integers(1, 5, (nrows, 2))
         y[:, 0] = y[:, 0] // 3          # majority = 1
         y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
-        t = Table(x, y)
+        domain = Domain([ContinuousVariable('i' + str(i)) for i in range(ncols)],
+                        [DiscreteVariable('c' + str(i), values=range(4))
+                         for i in range(y.shape[1])])
+        t = Table(domain, x, y)
         learn = DummyMulticlassLearner()
         clf = learn(t)
         clf.ret = Model.Probs
@@ -116,7 +119,10 @@ class ModelTest(unittest.TestCase):
         y = np.random.random_integers(1, 5, (nrows, 2))
         y[:, 0] = y[:, 0] // 3          # majority = 1
         y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
-        t = Table(x, y)
+        domain = Domain([ContinuousVariable('i' + str(i)) for i in range(ncols)],
+                        [DiscreteVariable('c' + str(i), values=range(4))
+                         for i in range(y.shape[1])])
+        t = Table(domain, x, y)
         learn = DummyMulticlassLearner()
         clf = learn(t)
         clf.ret = Model.Value
