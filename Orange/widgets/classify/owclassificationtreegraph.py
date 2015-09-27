@@ -54,21 +54,16 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
         gui.rubber(self.controlArea)
 
-    def sendReport(self):
-        if self.tree:
-            tclass = str(self.targetCombo.currentText())
-            tsize = "%i nodes, %i leaves" % (orngTree.countNodes(self.tree),
-                                             orngTree.countLeaves(self.tree))
-        else:
-            tclass = tsize = "N/A"
-        self.reportSettings(
-            "Information",
-            [("Target class", tclass),
-             ("Line widths",
-                 ["Constant", "Proportion of all instances",
-                  "Proportion of parent's instances"][self.line_width_method]),
-             ("Tree size", tsize)])
-        super().sendReport()
+    def send_report(self):
+        if not self.tree:
+            return
+        self.report_items("", (
+            ("Tree size", self.info.text()),
+            ("Edge widths",
+             ("Fixed", "Relative to root", "Relative to parent")[
+                 self.line_width_method]),
+            ("Target class", self.target_combo.currentText())))
+        self.report_plot("", self.scene)
 
     def set_colors(self):
         dlg = self.create_color_dialog()
