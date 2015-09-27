@@ -194,14 +194,14 @@ class OWSVMClassification(widget.OWWidget):
         if self.kernel_type == 0:
             items["Kernel"] = "Linear"
         elif self.kernel_type == 1:
-            items["Kernel"] = "Polynomial, ({g} x∙y + {c})^{d}".format(
+            items["Kernel"] = "Polynomial, ({g:.4} x∙y + {c:.4})^{d}".format(
                 g=self.gamma, c=self.coef0, d=self.degree)
         elif self.kernel_type == 2:
-            items["Kernel"] = "RBF, exp(-{}|x-y|²)".format(self.gamma)
+            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(self.gamma)
         else:
-            items["Kernel"] = "Sigmoid, tanh({g} x∙y + {c})".format(
+            items["Kernel"] = "Sigmoid, tanh({g:.4} x∙y + {c:.4})".format(
                 g=self.gamma, c=self.coef0)
-        items["Numerical tolerance"] = self.tol
+        items["Numerical tolerance"] = "{:.6}".format(self.tol)
         items["Iteration limt"] = \
             self.max_iter if self.limit_iter else "unlimited"
         self.report_items("Model parameters", items)
