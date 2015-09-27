@@ -264,11 +264,10 @@ class OWDistanceMap(widget.OWWidget):
         self._selection = None
 
         box = gui.widgetBox(self.controlArea, "Element sorting", margin=0)
-        gui.comboBox(box, self, "sorting",
-                     items=["None", "Clustering",
-                            "Clustering with ordered leaves"
-                            ],
-                     callback=self._invalidate_ordering)
+        self.sorting_combo = gui.comboBox(
+            box, self, "sorting",
+            items=["None", "Clustering", "Clustering with ordered leaves"],
+            callback=self._invalidate_ordering)
 
         box = gui.widgetBox(self.controlArea, "Colors")
 
@@ -593,6 +592,17 @@ class OWDistanceMap(widget.OWWidget):
         save_img = OWSave(data=self.grid_widget,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def send_report(self):
+        annot = self.annot_combo.currentText()
+        if self.annotation_idx <= 1:
+            annot = annot.lower()
+        self.report_items("", (
+            ("Sorting", self.sorting_combo.currentText().lower()),
+            ("Annotations", annot)
+        ))
+        self.report_plot("", self.grid_widget)
+
 
 
 class TextList(GraphicsSimpleTextList):
