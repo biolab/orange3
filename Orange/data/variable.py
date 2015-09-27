@@ -15,7 +15,7 @@ Unknown = ValueUnknown = float("nan")
 # For checking for unknowns
 MISSING_VALUES = {"?", ".", "", "NA", "~", None}
 
-DISCRETE_INT_MAX_VALUES = 16
+DISCRETE_MAX_VALUES = 3  # == 2 + nan
 
 
 def make_variable(cls, compute_value, *args):
@@ -41,10 +41,10 @@ def is_discrete_values(values):
         [float(v) for _, v in zip(range(min(3, len(values))), values)]
     except ValueError:
         is_numeric = False
-        max_values = int(max(len(values)**.6, DISCRETE_INT_MAX_VALUES))
+        max_values = int(max(len(values)**.6, DISCRETE_MAX_VALUES))
     else:
         is_numeric = True
-        max_values = DISCRETE_INT_MAX_VALUES
+        max_values = DISCRETE_MAX_VALUES
 
     # If more than max values => not discrete
     unique = set()
@@ -71,12 +71,9 @@ def is_discrete_values(values):
         # string values and discrete.
         return unique
 
-    # Finally discern between integers or floats
-    return (min(unique_float) >= 0 and
-            max(unique_float) <= max_values and
-            all(i == int(i) for i in unique_float) and
-            # return original unique sans nans
-            unique)
+    # If only values are {0, 1} or {1, 2} (or a subset of those sets) => discrete
+    return (not (unique_float - {0, 1}) or
+            not (unique_float - {1, 2})) and unique
 
 
 class Value(float):
