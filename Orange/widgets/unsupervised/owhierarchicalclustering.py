@@ -740,6 +740,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Cluster variable domain role
     AttributeRole, ClassRole, MetaRole = 0, 1, 2
 
+    cluster_roles = ["Attribute", "Class variable", "Meta variable"]
+
     def __init__(self):
         super().__init__()
 
@@ -848,9 +850,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         cb = gui.comboBox(
             ibox, self, "cluster_role", callback=self._invalidate_output,
-            items=["Attribute",
-                   "Class variable",
-                   "Meta variable"]
+            items=self.cluster_roles
         )
         form = QFormLayout(
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
@@ -1338,6 +1338,30 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.labels.setFont(font)
         self.dendrogram.setFont(font)
         self.__update_size_constraints()
+
+    def send_report(self):
+        annot = self.label_cb.currentText()
+        if self.annotation_idx <= 1:
+            annot = annot.lower()
+        if self.selection_method == 0:
+            sel = "manual"
+        elif self.selection_method == 1:
+            sel = "at {:.1f} of height".format(self.cut_ratio)
+        else:
+            sel = "top {} clusters".format(self.top_n)
+        self.report_items("", (
+            ("Linkage", LINKAGE[self.linkage].lower()),
+            ("Annotation", annot),
+            ("Prunning",
+             self.pruning != 0 and "{} levels".format(self.max_depth)),
+            ("Selection", sel),
+            ("Cluster ID in output",
+             self.append_clusters and
+             "{} (as {})".format(
+                 self.cluster_name,
+                 self.cluster_roles[self.cluster_role].lower()))
+        ))
+        self.report_plot("", self.scene)
 
 
 def qfont_scaled(font, factor):
