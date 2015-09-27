@@ -640,6 +640,16 @@ class OWDistanceMap(widget.OWWidget):
         super().onDeleteWidget()
         self.clear()
 
+    def send_report(self):
+        annot = self.annot_combo.currentText()
+        if self.annotation_idx <= 1:
+            annot = annot.lower()
+        self.report_items("", (
+            ("Sorting", self.sorting_combo.currentText().lower()),
+            ("Annotations", annot)
+        ))
+        self.report_plot("", self.grid_widget)
+
 
 class TextList(GraphicsSimpleTextList):
     def resizeEvent(self, event):
