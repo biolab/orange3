@@ -89,3 +89,9 @@ class OWDistances(widget.OWWidget):
 
     def _invalidate(self):
         self.commit()
+
+    def send_report(self):
+        self.report_items("", (
+            ("Distances between", ["rows", "columns"][self.axis]),
+            ("Metric", _METRICS[self.metric_idx][0])
+        ))
