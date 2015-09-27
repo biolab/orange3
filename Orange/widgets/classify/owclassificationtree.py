@@ -59,7 +59,10 @@ class OWClassificationTree(widget.OWWidget):
         gui.spin(box, self, "max_depth", 1, 1000,
                  label="Limit the depth to ", checked="limit_depth")
 
-        self.btn_apply = gui.button(self.controlArea, self, "&Apply",
+        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
+        box.layout().addWidget(self.report_button)
+        gui.separator(box, 20)
+        self.btn_apply = gui.button(box, self, "&Apply",
                                     callback=self.set_learner, disabled=0,
                                     default=True)
 
@@ -67,6 +70,7 @@ class OWClassificationTree(widget.OWWidget):
 
     def send_report(self):
         from Orange.canvas.report import plural_w
+        self.report_items("", (("Name", self.model_name),))
         self.report_items(
             "Model parameters",
             [("Split selection", self.scores[self.attribute_score][0]),
@@ -78,7 +82,8 @@ class OWClassificationTree(widget.OWWidget):
                  ("maximum depth {}".format(self.max_depth),
                   self.limit_depth))
               if c) or "None")])
-        self.report_data("Data", self.data)
+        if self.data:
+            self.report_data("Data", self.data)
 
     def set_learner(self):
         self.learner = self.LEARNER(
