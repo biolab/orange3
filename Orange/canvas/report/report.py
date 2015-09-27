@@ -51,7 +51,7 @@ class Report:
                           order=order, exclude=exclude)
 
     def report_plot(self, name, plot):
-        from pyqtgraph import PlotWidget, PlotItem
+        from pyqtgraph import PlotWidget, PlotItem, GraphicsWidget
         self.report_name(name)
         if isinstance(plot, QGraphicsScene):
             self.report_html += get_html_img(plot)
@@ -59,6 +59,8 @@ class Report:
             self.report_html += get_html_img(plot)
         elif isinstance(plot, PlotWidget):
             self.report_html += get_html_img(plot.plotItem)
+        elif isinstance(plot, GraphicsWidget):
+            self.report_html += get_html_img(plot.scene())
 
     # noinspection PyBroadException
     def report_table(self, name, table, header_rows=0, header_columns=0,
