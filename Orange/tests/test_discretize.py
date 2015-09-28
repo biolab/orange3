@@ -6,6 +6,7 @@ import numpy as np
 
 from Orange.preprocess import discretize, Discretize
 from Orange import data
+from Orange.data import Table, Instance
 
 
 # noinspection PyPep8Naming
@@ -249,3 +250,10 @@ class TestDiscretizeTable(TestCase):
         self.assertIs(dom[2], table.domain[2])
         self.assertIs(dom.class_var, table.domain.class_var)
 
+
+class TestInstanceConversion(TestCase):
+    def test_single_instance(self):
+        iris = Table("iris")
+        inst = Instance(iris.domain, [5.2, 3.8, 1.4, 0.5, "Iris-virginica"])
+        d_iris = Discretize(iris)
+        Instance(d_iris.domain, inst)
