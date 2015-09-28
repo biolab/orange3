@@ -53,6 +53,7 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
         dlg = self.create_color_dialog()
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
         gui.rubber(self.controlArea)
+        self.inline_graph_report()
 
     def send_report(self):
         if not self.tree:
