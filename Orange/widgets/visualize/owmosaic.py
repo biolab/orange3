@@ -1026,17 +1026,16 @@ class OWMosaicDisplay(OWWidget):
     # ########################################
     # cell/example selection
     def sendSelectedData(self):
-        if self.data is None:
-            return None
-
-        attributes = self.getShownAttributeList()
-        row_indices = []
-        for i, row in enumerate(self.data):
-            for condition in self.selectionConditions:
-                if len([attr for attr, val in zip(attributes, condition)
-                        if row[attr] == val]) == len(condition):
-                    row_indices.append(i)
-        selected_data = Table.from_table_rows(self.data, row_indices)
+        selected_data = None
+        if self.data and not isinstance(self.data, SqlTable):
+            attributes = self.getShownAttributeList()
+            row_indices = []
+            for i, row in enumerate(self.data):
+                for condition in self.selectionConditions:
+                    if len([attr for attr, val in zip(attributes, condition)
+                            if row[attr] == val]) == len(condition):
+                        row_indices.append(i)
+            selected_data = Table.from_table_rows(self.data, row_indices)
         self.send("Selected Data", selected_data)
 
     # add a new rectangle. update the graph and see which mosaics does it intersect. add this mosaics to the recentlyAdded list
