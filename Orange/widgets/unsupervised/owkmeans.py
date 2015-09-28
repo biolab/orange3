@@ -355,33 +355,29 @@ class OWKMeans(widget.OWWidget):
             self.data = data
             self.run()
 
-    def sendReport(self):
-        settings = [("Distance measure",
-                     self.distanceMeasures[self.distanceMeasure][0]),
-                    ("Initialization",
-                     self.initializations[self.initializationType][0]),
-                    ("Restarts",
-                     self.restarts)]
-        if self.optimized:
-            self.reportSettings("Settings", settings)
-            self.reportSettings("Optimization",
-                                [("Minimum num. of clusters",
-                                  self.optimizationFrom),
-                                 ("Maximum num. of clusters",
-                                  self.optimizationTo),
-                                 ("Scoring method",
-                                  self.scoringMethods[self.scoring][0])])
-        else:
-            self.reportSettings("Settings",
-                                settings + [("Number of clusters (K)",
-                                             self.K)])
-
-        self.reportData(self.data)
-        if self.optimized:
-            import OWReport
-
-            self.reportSection("Cluster size optimization report")
-            self.reportRaw(OWReport.reportTable(self.table_view))
+    def send_report(self):
+        self.report_items("",(
+            ("Number of clusters",
+             self.optimization_runs[self.selected_row()][1].k
+             if self.optimize_k else self.k),
+            ("Optimization",
+             self.optimize_k != 0 and
+             "{}, {} re-runs limited to {} steps".format(
+                 self.INIT_METHODS[self.smart_init].lower(),
+                 self.n_init, self.max_iterations)),
+            ("Cluster ID in output",
+             self.append_cluster_ids and
+             "'{}' (as {})".format(
+                 self.output_name,
+                 self.OUTPUT_METHODS[self.place_cluster_ids].lower()))
+        ))
+        if self.data:
+            self.report_data("Data", self.data)
+            if self.optimize_k:
+                self.report_table(
+                    "Scoring by {}".format(self.SCORING_METHODS[self.scoring][0]
+                                           ),
+                    self.table_view)
 
 
 if __name__ == "__main__":
