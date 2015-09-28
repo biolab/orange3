@@ -71,11 +71,15 @@ class Report:
             content = ((model.item(row, col).data(Qt.DisplayRole)
                         for col in range(model.columnCount())
                         ) for row in range(model.rowCount()))
-            has_header = not table.isHeaderHidden()
+            has_header = not hasattr(table, "isHeaderHidden") or \
+                not table.isHeaderHidden()
             if has_header:
-                header = (model.horizontalHeaderItem(col).data(Qt.DisplayRole)
-                          for col in range(model.columnCount())),
-                content = chain(header, content)
+                try:
+                    header = (model.horizontalHeaderItem(col).data(Qt.DisplayRole)
+                              for col in range(model.columnCount())),
+                    content = chain(header, content)
+                except:
+                    has_header = False
             return report_list(content, header_rows + has_header)
 
         # noinspection PyBroadException
@@ -111,12 +115,15 @@ class Report:
             ) for rowi, row in enumerate(data))
 
         self.report_name(name)
-        try:
-            model = table.model()
-        except:
-            model = None
+        if isinstance(table, QAbstractItemModel):
+            model = table
+        else:
+            try:
+                model = table.model()
+            except:
+                model = None
         if isinstance(model, QStandardItemModel):
-            body = report_standard_model(table.model())
+            body = report_standard_model(model)
         elif isinstance(model, QAbstractItemModel):
             body = report_abstract_model(model)
         elif isinstance(table, list):
