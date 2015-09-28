@@ -245,6 +245,25 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def send_report(self):
+        if self.data is None:
+            return
+
+        vars = self.selected_vars()
+        if not vars:
+            return
+
+        items = OrderedDict()
+        items["Data instances"] = len(self.data)
+        if len(vars) == 1:
+            items["Selected variable"] = vars[0]
+        else:
+            items["Selected variables"] = "{} and {}".format(
+                ", ".join(var.name for var in vars[:-1]), vars[-1].name)
+        self.report_items("", items)
+
+        self.report_plot("", self.plot)
+
 
 def burt_table(data, variables):
     """
@@ -318,7 +337,7 @@ def correspondence(A):
 
     return CA(U, D, V, F, G, row_sum, col_sum)
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 CA = namedtuple("CA", ["U", "D", "V", "row_factors", "col_factors",
                        "row_sums", "column_sums"])
