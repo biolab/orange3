@@ -338,6 +338,14 @@ class OWPCA(widget.OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def send_report(self):
+        if self.data is None:
+            return
+        self.report_items("", (
+            ("Selected components", self.ncomponents),
+            ("Explained variance", "{:.3f} %".format(self.variance_covered))
+        ))
+        self.report_plot("", self.plot)
 
 def main():
     import gc
