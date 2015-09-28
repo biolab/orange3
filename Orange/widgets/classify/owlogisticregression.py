@@ -120,7 +120,7 @@ class OWLogisticRegression(widget.OWWidget):
         self.send("Classifier", classifier)
 
     def send_report(self):
-        self.report_items("", (("Name", self.learner_name),))
+        self.report_items((("Name", self.learner_name),))
         self.report_items("Model parameters", (
             ("Regularization", "{}, C={}".format(
                 self.penalty_types[self.penalty_type], self.C_s[self.C_index])),

@@ -864,8 +864,8 @@ class OWDataTable(widget.OWWidget):
         if not view or not view.model():
             return
         model = self._get_model(view)
-        self.report_data_brief("", model.source)
-        self.report_table("", view)
+        self.report_data_brief(model.source)
+        self.report_table(view)
 
 # Table Summary
 

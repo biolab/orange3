@@ -176,7 +176,7 @@ class OWRandomForest(widget.OWWidget):
         self._max_leaf_nodes_spin.setEnabled(self.use_max_leaf_nodes)
 
     def send_report(self):
-        self.report_items("", (("Name", self.learner_name),))
+        self.report_items((("Name", self.learner_name),))
         self.report_items(
             "Model parameters",
             (("Number of trees", self.n_estimators),

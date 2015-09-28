@@ -356,7 +356,7 @@ class OWKMeans(widget.OWWidget):
             self.run()
 
     def send_report(self):
-        self.report_items("",(
+        self.report_items((
             ("Number of clusters",
              self.optimization_runs[self.selected_row()][1].k
              if self.optimize_k else self.k),

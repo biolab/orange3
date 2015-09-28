@@ -645,12 +645,12 @@ class OWDistanceMap(widget.OWWidget):
         annot = self.annot_combo.currentText()
         if self.annotation_idx <= 1:
             annot = annot.lower()
-        self.report_items("", (
+        self.report_items((
             ("Sorting", self.sorting_combo.currentText().lower()),
             ("Annotations", annot)
         ))
         if self.matrix is not None:
-            self.report_plot("", self.grid_widget)
+            self.report_plot(self.grid_widget)
 
 
 class TextList(GraphicsSimpleTextList):

@@ -1222,7 +1222,7 @@ class OWPaintData(widget.OWWidget):
             settings += [("Axis x", self.attr1), ("Axis y", self.attr2)]
         settings += [("Number of points", len(self.data))]
         self.report_items("Painted data", settings)
-        self.report_plot("", self.plot)
+        self.report_plot(self.plot)
 
 def test():
     import gc

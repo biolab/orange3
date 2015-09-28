@@ -184,7 +184,7 @@ class OWSVMClassification(widget.OWWidget):
             spin.setEnabled(enabled)
 
     def send_report(self):
-        self.report_items("", (("Name", self.learner_name),))
+        self.report_items((("Name", self.learner_name),))
 
         items = OrderedDict()
         if self.svmtype == 0:

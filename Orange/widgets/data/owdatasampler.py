@@ -280,7 +280,7 @@ class OWDataSampler(widget.OWWidget):
                 ("Sample", "{} instances".format(self.sampled_instances)),
                 ("Remaining", "{} instances".format(self.remaining_instances)),
             ]
-        self.report_items("", items)
+        self.report_items(items)
 
 
 def sample_fold_indices(table, folds=10, stratified=False, random_state=None):

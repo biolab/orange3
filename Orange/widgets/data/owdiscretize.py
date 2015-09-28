@@ -450,9 +450,8 @@ class OWDiscretize(widget.OWWidget):
         }
 
     def send_report(self):
-        self.report_items(
-            "",
-            (("Default method", self.options[self.default_method + 1]),))
+        self.report_items((
+            ("Default method", self.options[self.default_method + 1]),))
         if self.varmodel:
             self.report_items("Thresholds", [
                 (var.name,

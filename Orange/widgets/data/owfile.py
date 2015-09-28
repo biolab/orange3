@@ -454,7 +454,7 @@ class OWFile(widget.OWWidget):
 
     def send_report(self):
         if self.data is None:
-            self.report_raw("File", "No file.")
+            self.report_paragraph("File", "No file.")
             return
 
         home = os.path.expanduser("~")

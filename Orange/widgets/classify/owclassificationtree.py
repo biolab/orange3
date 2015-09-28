@@ -70,7 +70,7 @@ class OWClassificationTree(widget.OWWidget):
 
     def send_report(self):
         from Orange.canvas.report import plural_w
-        self.report_items("", (("Name", self.model_name),))
+        self.report_items((("Name", self.model_name),))
         self.report_items(
             "Model parameters",
             [("Split selection", self.scores[self.attribute_score][0]),

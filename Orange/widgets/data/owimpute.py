@@ -407,12 +407,12 @@ class OWImpute(OWWidget):
                         format(var.name, state.method.name.lower()))
         default = self.METHODS[self.default_method].name
         if specific:
-            self.report_items("", (
+            self.report_items((
                 ("Default method", default),
                 ("Specific imputers", ", ".join(specific))
             ))
         else:
-            self.report_items("", {"Method": default})
+            self.report_items((("Method", default),))
 
     def _invalidate(self):
         self.modified = True

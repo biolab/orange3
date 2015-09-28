@@ -192,7 +192,7 @@ class OWConcatenate(widget.OWWidget):
             items["Source data ID"] = "{} (as {})".format(
                 self.source_attr_name,
                 self.id_roles[self.source_column_role].lower())
-        self.report_items("", items)
+        self.report_items(items)
 
 
 def concat(tables):

@@ -480,7 +480,6 @@ class OWScatterPlot(OWWidget):
             disc_attr = domain[self.attr_x].is_discrete or \
                         domain[self.attr_y].is_discrete
         self.report_items(
-            "",
             [("Axis x", self.combo_value(self.cb_attr_x)),
              ("Axis y", self.combo_value(self.cb_attr_y)),
              ("Jittering", (self.graph.jitter_continuous or disc_attr)
@@ -489,7 +488,7 @@ class OWScatterPlot(OWWidget):
              ("Label", self.combo_value(self.cb_attr_label)),
              ("Shape", self.combo_value(self.cb_attr_shape)),
              ("Size", self.combo_value(self.cb_attr_size))])
-        self.report_plot("", self.graph.plot_widget)
+        self.report_plot(self.graph.plot_widget)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()

@@ -261,9 +261,9 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         else:
             items["Selected variables"] = "{} and {}".format(
                 ", ".join(var.name for var in vars[:-1]), vars[-1].name)
-        self.report_items("", items)
+        self.report_items(items)
 
-        self.report_plot("", self.plot)
+        self.report_plot(self.plot)
 
 
 def burt_table(data, variables):

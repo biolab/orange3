@@ -1351,7 +1351,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             sel = "at {:.1f} of height".format(self.cut_ratio)
         else:
             sel = "top {} clusters".format(self.top_n)
-        self.report_items("", (
+        self.report_items((
             ("Linkage", LINKAGE[self.linkage].lower()),
             ("Annotation", annot),
             ("Prunning",
@@ -1363,7 +1363,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                  self.cluster_name,
                  self.cluster_roles[self.cluster_role].lower()))
         ))
-        self.report_plot("", self.scene)
+        self.report_plot(self.scene)
 
 
 def qfont_scaled(font, factor):
