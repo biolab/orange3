@@ -59,7 +59,7 @@ class OWMean(widget.OWWidget):
         self.send("Predictor", predictor)
 
     def send_report(self):
-        self.report_items("", (("Name", self.learner_name),))
+        self.report_items((("Name", self.learner_name),))
 
 
 if __name__ == "__main__":

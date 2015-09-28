@@ -58,13 +58,13 @@ class OWClassificationTreeGraph(OWTreeViewer2D):
     def send_report(self):
         if not self.tree:
             return
-        self.report_items("", (
+        self.report_items((
             ("Tree size", self.info.text()),
             ("Edge widths",
              ("Fixed", "Relative to root", "Relative to parent")[
                  self.line_width_method]),
             ("Target class", self.target_combo.currentText())))
-        self.report_plot("", self.scene)
+        self.report_plot(self.scene)
 
     def set_colors(self):
         dlg = self.create_color_dialog()

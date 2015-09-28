@@ -176,7 +176,7 @@ class OWDataInfo(widget.OWWidget):
 
     def send_report(self):
         if self.data_desc:
-            self.report_items("", self.data_desc)
+            self.report_items(self.data_desc)
 
 if __name__ == "__main__":
     a = QtGui.QApplication([])

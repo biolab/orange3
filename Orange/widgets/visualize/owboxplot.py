@@ -796,7 +796,7 @@ class OWBoxPlot(widget.OWWidget):
             return self.attributes[self.attributes_select[0]][0]
 
     def send_report(self):
-        self.report_plot("", self.box_scene)
+        self.report_plot(self.box_scene)
         text = ""
         if self.attributes_select:
             text += "Box plot for attribute '{}' ".format(
