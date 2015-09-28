@@ -35,6 +35,7 @@ class OWTreeGraph(OWTreeViewer2D):
 
         dlg = self.create_color_dialog()
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
+        self.inline_graph_report()
 
     def set_colors(self):
         dlg = self.create_color_dialog()

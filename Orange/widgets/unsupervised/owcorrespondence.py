@@ -91,6 +91,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         )
 
         gui.rubber(self.controlArea)
+        self.inline_graph_report()
 
         self.plot = pg.PlotWidget(background="w")
         self.plot.setMenuEnabled(False)

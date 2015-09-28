@@ -316,6 +316,7 @@ class OWMDS(widget.OWWidget):
         gui.auto_commit(box, self, "autocommit", "Send data",
                         checkbox_label="Send after any change",
                         box=None)
+        self.inline_graph_report()
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
         self.plot.getPlotItem().hideAxis("bottom")

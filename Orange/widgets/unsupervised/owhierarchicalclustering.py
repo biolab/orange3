@@ -946,6 +946,8 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._set_cut_line_visible(self.selection_method == 1)
         self.graphButton.clicked.connect(self.save_graph)
 
+        self.inline_graph_report()
+
     def set_distances(self, matrix):
         self.error(0)
         self._set_items(None)

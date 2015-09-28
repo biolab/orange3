@@ -193,6 +193,13 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         """QDialog __init__ was already called in __new__,
         please do not call it here."""
 
+    def inline_graph_report(self):
+        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        box.layout().addWidget(self.graphButton)
+        box.layout().addWidget(self.report_button)
+        self.report_button_background.hide()
+        self.graphButtonBackground.hide()
+
     @classmethod
     def get_flags(cls):
         return (Qt.Window if cls.resizing_enabled
