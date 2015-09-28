@@ -306,12 +306,13 @@ class OWMDS(widget.OWWidget):
         self.controlArea.layout().addWidget(box)
 
         box = gui.widgetBox(self.controlArea, "Output")
-        gui.comboBox(box, self, "output_embedding_role",
-                     items=["Original features only",
-                            "Coordinates only",
-                            "Coordinates as features",
-                            "Coordinates as meta attributes"],
-                     callback=self._invalidate_output, addSpace=4)
+        self.output_combo = gui.comboBox(
+            box, self, "output_embedding_role",
+            items=["Original features only",
+                   "Coordinates only",
+                   "Coordinates as features",
+                   "Coordinates as meta attributes"],
+            callback=self._invalidate_output, addSpace=4)
         gui.auto_commit(box, self, "autocommit", "Send data",
                         checkbox_label="Send after any change",
                         box=None)
@@ -1007,6 +1008,18 @@ class OWMDS(widget.OWWidget):
         save_img = OWSave(data=self.plot.plotItem,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def send_report(self):
+        if self.data is None:
+            return
+        self.report_items("", (
+            ("Color", self.color_value != "Same color" and self.color_value),
+            ("Shape", self.shape_value != "Same shape" and self.shape_value),
+            ("Size",  self.size_value != "Same size" and self.size_value),
+            ("Labels", self.label_value != "No labels" and self.label_value),
+            ("Output", self.output_combo.currentText())
+        ))
+        self.report_plot("", self.plot)
 
 
 def colors(data, variable, palette=None):
