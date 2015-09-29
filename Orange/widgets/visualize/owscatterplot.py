@@ -11,6 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 import Orange
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable
+from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
@@ -177,6 +178,7 @@ class OWScatterPlot(OWWidget):
 
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
                         "Send Selection")
+        self.inline_graph_report()
 
         def zoom(s):
             """Zoom in/out by factor `s`."""
@@ -473,22 +475,27 @@ class OWScatterPlot(OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def get_widget_name_extension(self):
+        if self.data is not None:
+            return "{} vs {}".format(self.combo_value(self.cb_attr_x),
+                                     self.combo_value(self.cb_attr_y))
+
     def send_report(self):
         disc_attr = False
         if self.data:
             domain = self.data.domain
             disc_attr = domain[self.attr_x].is_discrete or \
                         domain[self.attr_y].is_discrete
-        self.report_items(
-            [("Axis x", self.combo_value(self.cb_attr_x)),
-             ("Axis y", self.combo_value(self.cb_attr_y)),
-             ("Jittering", (self.graph.jitter_continuous or disc_attr)
-              and self.graph.jitter_size),
+        caption = report.render_items_vert((
              ("Color", self.combo_value(self.cb_attr_color)),
              ("Label", self.combo_value(self.cb_attr_label)),
              ("Shape", self.combo_value(self.cb_attr_shape)),
-             ("Size", self.combo_value(self.cb_attr_size))])
+             ("Size", self.combo_value(self.cb_attr_size)),
+             ("Jittering", (self.graph.jitter_continuous or disc_attr) and
+              self.graph.jitter_size)))
         self.report_plot(self.graph.plot_widget)
+        if caption:
+            self.report_caption(caption)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
