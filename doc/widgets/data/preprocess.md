@@ -37,7 +37,9 @@ Preprocessing is crucial for achieving better-quality analysis results. The **Pr
 4. Impute missing values or remove them
 5. Select the most relevant features by information gain, gain ratio, Gini index
 6. Centering and scaling of features
-7. Press '*Commit*' or select auto-commit (tick a box)
+7. Shuffling of features.
+8. When the box is ticked (*Auto commit is on*), the widget will communicate the changes automatically.
+  Alternatively, click *Commit*.
 
 Example
 -------
@@ -48,4 +50,4 @@ discrete values (age, education and marital status...) as *one attribute per val
 and centered them by mean and scaled by span. We can observe the changes in a **Data Table** and compare it
 to the non-processed data.
 
-<img src="images/Preprocess-Example1.png" alt="image" width="400">
+<img src="images/Preprocess-Example1.png" alt="image" width="600">

@@ -69,7 +69,7 @@ input of the **Merge Data** widget, and the *zoo-only-images.tab* data to the
 connected to the **Data Table** widget. In the latter, the
 **Merged Data A+B** are shown, where image attributes are added to the original data.
 
-<img src="images/MergeData2.png" alt="image" width="600">
+<img src="images/MergeData-Example.png" alt="image" width="600">
 
 Hint
 ----
