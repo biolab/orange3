@@ -28,6 +28,7 @@ from Orange.widgets.utils import itemmodels, colorpalette
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
 from Orange.widgets.io import FileFormat
 from Orange.widgets.utils import classdensity
+from Orange.canvas import report
 
 
 class DnDVariableListModel(itemmodels.VariableListModel):
@@ -367,9 +368,10 @@ class OWLinearProjection(widget.OWWidget):
         size_slider.valueChanged.connect(self._set_size)
         form.addRow("", size_slider)
 
-        cb = gui.comboBox(box, self, "jitter_value",
-                          items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
-                          callback=self._invalidate_plot)
+        cb = self.jitter_combo = gui.comboBox(
+            box, self, "jitter_value",
+            items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
+            callback=self._invalidate_plot)
         form.addRow("Jittering", cb)
 
         self.cb_class_density = gui.checkBox(box, self, "class_density", label="",
@@ -381,6 +383,7 @@ class OWLinearProjection(widget.OWWidget):
         toolbox.layout().addLayout(toollayout)
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
+        self.inline_graph_report()
 
         self.controlArea.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Expanding)
@@ -1041,6 +1044,22 @@ class OWLinearProjection(widget.OWWidget):
         save_img = OWSave(data=self.viewbox,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def send_report(self):
+        self.report_plot(self.viewbox)
+        caption = report.render_items_vert((
+            ("Colors",
+             self.color_index > 0 and self.colorvar_model[self.color_index]),
+            ("Shape",
+             self.shape_index > 0 and self.shapevar_model[self.shape_index]),
+            ("Size",
+             self.size_index > 0 and self.sizevar_model[self.size_index])
+        ))
+        jitter_caption = report.render_items_vert(
+            (("Jittering",
+              self.jitter_value > 0 and self.jitter_combo.currentText()),))
+        caption = ";<br/>".join(x for x in (caption, jitter_caption) if x)
+        self.report_caption(caption)
 
 
 class PlotTool(QObject):
