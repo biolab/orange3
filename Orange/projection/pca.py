@@ -151,6 +151,8 @@ class RemotePCA:
         save_state(model)
         for i in range(max_iter if percent < 100 else 0):
             data_sample = data.sample_percentage(percent, no_cache=True)
+            if not data_sample:
+                continue
             data_sample.download_data(1000000)
             data_sample = Orange.data.Table.from_numpy(
                 Orange.data.Domain(data_sample.domain.attributes),
