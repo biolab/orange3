@@ -447,27 +447,6 @@ class OWScatterPlot(OWWidget):
         self.vizrank.hide()
         super().hideEvent(he)
 
-    def sendReport(self):
-        self.startReport(
-            "%s [%s - %s]" % (self.windowTitle(), self.attr_x, self.attr_y))
-        self.reportSettings(
-            "Visualized attributes",
-            [("X", self.attr_x),
-             ("Y", self.attr_y),
-             self.graph.attr_color and ("Color", self.graph.attr_color),
-             self.graph.attr_label and ("Label", self.graph.attr_label),
-             self.graph.attr_shape and ("Shape", self.graph.attr_shape),
-             self.graph.attr_size and ("Size", self.graph.attr_size)])
-        self.reportSettings(
-            "Settings",
-            [("Symbol size", self.graph.point_width),
-             ("Opacity", self.graph.alpha_value),
-             ("Jittering", self.graph.jitter_size),
-             ("Jitter continuous attributes",
-              gui.YesNo[self.graph.jitter_continuous])])
-        self.reportSection("Graph")
-        self.reportImage(self.graph.save_to_file, QSize(400, 400))
-
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
