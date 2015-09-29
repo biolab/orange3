@@ -597,6 +597,8 @@ class SqlTable(table.Table):
         return "'%s'" % value
 
     def sample_percentage(self, percentage, no_cache=False):
+        if percentage >= 100:
+            return self
         return self._sample('system', percentage,
                             no_cache=no_cache)
 
