@@ -213,7 +213,11 @@ class OWHeatMap(widget.OWWidget):
 
         self.palette = None
         self.keep_aspect = False
+        #: The data striped of discrete features
         self.data = None
+        #: The original data with all features (retained to
+        #: preserve the domain on the output)
+        self.input_data = None
 
         self.annotation_vars = ['(None)']
         self.__rows_cache = {}
@@ -359,6 +363,7 @@ class OWHeatMap(widget.OWWidget):
 
     def clear(self):
         self.data = None
+        self.input_data = None
         self.annotations_cb.clear()
         self.annotations_cb.addItem('(None)')
         self.split_lb.clear()
@@ -386,7 +391,27 @@ class OWHeatMap(widget.OWWidget):
         self.closeContext()
         self.clear()
 
+        self.error(0)
+        self.warning(0)
+        input_data = data
+        if data is not None and \
+                any(var.is_discrete for var in data.domain.attributes):
+            ndisc = sum(var.is_discrete for var in data.domain.attributes)
+            data = data.from_table(
+                Orange.data.Domain([var for var in data.domain.attributes
+                                    if var.is_continuous],
+                                   data.domain.class_vars,
+                                   data.domain.metas),
+                data)
+            if not data.domain.attributes:
+                self.error(0, "No continuous feature columns")
+                input_data = data = None
+            else:
+                self.warning(0, "{} discrete column{} removed"
+                                .format(ndisc, "s" if ndisc > 1 else ""))
+
         self.data = data
+        self.input_data = input_data
         if data is not None:
             variables = self.data.domain.class_vars + self.data.domain.metas
             variables = [var for var in variables
@@ -1065,10 +1090,10 @@ class OWHeatMap(widget.OWWidget):
 
     def commit(self):
         data = None
-        if self.data is not None and self.selected_rows:
+        if self.input_data is not None and self.selected_rows:
             sortind = np.hstack([labels._indices for labels in self.row_annotation_widgets])
             indices = sortind[self.selected_rows]
-            data = self.data[indices]
+            data = self.input_data[indices]
 
         self.send("Selected Data", data)
 
