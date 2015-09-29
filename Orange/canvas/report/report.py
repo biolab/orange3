@@ -343,6 +343,23 @@ def render_items(items):
         if value is not None and value is not False) + "</ul>"
 
 
+def render_items_vert(items):
+    """
+    Render a sequence of pairs or an `OrderedDict` as a comma-separated list.
+
+    The function skips the items whose values are `None` or `False`.
+
+    :param items: a list or dictionary of items
+    :type items: dict or list
+    :return: rendered content
+    :rtype: str
+    """
+    if isinstance(items, dict):
+        items = items.items()
+    return ", ".join("<b>{}</b>: {}".format(key, value) for key, value in items
+                     if value is not None and value is not False)
+
+
 def get_html_img(scene):
     byte_array = QByteArray()
     filename = QBuffer(byte_array)
