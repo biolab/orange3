@@ -249,6 +249,9 @@ class OWParallelCoordinates(OWVisWidget):
 
             self.send_shown_attributes()
 
+    def send_report(self):
+        self.report_plot(self.graph)
+
 
 #test widget appearance
 if __name__ == "__main__":
