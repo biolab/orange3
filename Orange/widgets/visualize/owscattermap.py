@@ -20,6 +20,7 @@ from Orange.preprocess.discretize import EqualWidth, Discretizer
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.io import FileFormat
+from Orange.canvas import report
 
 
 def is_not_none(obj):
@@ -982,6 +983,21 @@ class OWScatterMap(widget.OWWidget):
         save_img = OWSave(data=self.plot.plotItem,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def get_widget_name_extension(self):
+        if self.dataset is None:
+            return
+        return "{} vs {}".format(
+            self.x_var_model[self.x_var_index],
+            self.y_var_model[self.y_var_index])
+
+    def send_report(self):
+        if self.dataset is None:
+            return
+        caption = report.list_legend(self.z_values_view,
+                                     self.selected_z_values)
+        self.report_plot(self.plot.plotItem)
+        self.report_caption(caption)
 
 
 def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
