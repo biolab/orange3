@@ -350,7 +350,7 @@ def render_items_vert(items):
     The function skips the items whose values are `None` or `False`.
 
     :param items: a list or dictionary of items
-    :type items: dict or list
+    :type items: list or tuple or OrderedDict
     :return: rendered content
     :rtype: str
     """
