@@ -131,8 +131,7 @@ class OWPCA(widget.OWWidget):
             with remote.server(self.address):
                 from Orange.projection.pca import RemotePCA
                 maxiter = (1e5 + self.data.approx_len()) / self.batch_size * 3
-                self.rpca = RemotePCA(self.data, self.address,
-                                      self.batch_size, int(maxiter))
+                self.rpca = RemotePCA(self.data, self.batch_size, int(maxiter))
             self.update_model()
             self.start_button.setText("Abort remote computation")
 
