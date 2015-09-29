@@ -1108,7 +1108,10 @@ class OWMosaicDisplay(OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def send_report(self):
+        self.report_plot(self.canvas)
 
+        
 class OWCanvasText(QGraphicsTextItem):
     def __init__(self, canvas, text="", x=0, y=0, alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
                  htmlText=None, tooltip=None, show=1, vertical=False):
