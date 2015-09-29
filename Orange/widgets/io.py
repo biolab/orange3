@@ -35,10 +35,10 @@ class ImgFormat(FileFormat):
     def write_image(cls, filename, scene):
         from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
 
-        if isinstance(scene, GraphicsWidget):
+        try:
             exporter = cls._get_exporter()
             cls._export(exporter(scene), filename)
-        else:
+        except:
             source = scene.itemsBoundingRect().adjusted(-15, -15, 15, 15)
             buffer = cls._get_buffer(source.size(), filename)
 
