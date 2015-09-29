@@ -5,7 +5,7 @@ ROC Analysis Widget
 """
 import operator
 from functools import reduce, wraps
-from collections import namedtuple, deque
+from collections import namedtuple, deque, OrderedDict
 
 import numpy
 import sklearn.metrics as skl_metrics
@@ -18,6 +18,7 @@ import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.io import FileFormat
+from Orange.canvas import report
 
 
 #: Points on a ROC curve
@@ -394,6 +395,7 @@ class OWROCAnalysis(widget.OWWidget):
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
         self.graphButton.clicked.connect(self.save_graph)
+        self.inline_graph_report()
 
     def set_results(self, results):
         """Set the input evaluation results."""
@@ -620,6 +622,21 @@ class OWROCAnalysis(widget.OWWidget):
         save_img = OWSave(data=self.plot,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def send_report(self):
+        if self.results is None:
+            return
+        items = OrderedDict()
+        items["Target class"] = self.target_cb.currentText()
+        if self.display_perf_line:
+            items["Costs"] = \
+                "FP = {}, FN = {}".format(self.fp_cost, self.fn_cost)
+            items["Target probability"] = "{} %".format(self.target_prior)
+        caption = report.list_legend(self.classifiers_list_box,
+                                     self.selected_classifiers)
+        self.report_items(items)
+        self.report_plot(self.plot)
+        self.report_caption(caption)
 
 
 def interp(x, xp, fp, left=None, right=None):
