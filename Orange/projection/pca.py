@@ -1,5 +1,14 @@
 import sklearn.decomposition as skl_decomposition
 
+try:
+    from orangecontrib.remote import aborted, save_state
+except ImportError:
+    def aborted():
+        return False
+
+    def save_state(_):
+        pass
+
 import Orange.data
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
@@ -99,6 +108,9 @@ class IncrementalPCA(SklProjector):
         proj = proj.fit(X, Y)
         return IncrementalPCAModel(proj, self.domain)
 
+    def partial_fit(self, data):
+        return self(data)
+
 
 class IncrementalPCAModel(PCAModel):
     def partial_fit(self, data):
@@ -132,24 +144,11 @@ class Projector:
 
 class RemotePCA:
     def __new__(cls, data, batch=100, max_iter=100):
-        from orangecontrib.remote import aborted, save_state
-        import Orange.data.sql.table
-
         cont = Continuize(multinomial_treatment=Continuize.Remove)
         data = cont(data)
-        pca = Orange.projection.IncrementalPCA()
+        model = Orange.projection.IncrementalPCA()
         percent = batch / data.approx_len() * 100
-        if percent < 100:
-            data_sample = data.sample_percentage(percent, no_cache=True)
-        else:
-            data_sample = data
-        data_sample.download_data(1000000)
-        data_sample = Orange.data.Table.from_numpy(
-            Orange.data.Domain(data_sample.domain.attributes),
-            data_sample.X)
-        model = pca(data_sample)
-        save_state(model)
-        for i in range(max_iter if percent < 100 else 0):
+        for i in range(max_iter):
             data_sample = data.sample_percentage(percent, no_cache=True)
             if not data_sample:
                 continue
@@ -157,9 +156,9 @@ class RemotePCA:
             data_sample = Orange.data.Table.from_numpy(
                 Orange.data.Domain(data_sample.domain.attributes),
                 data_sample.X)
-            model.partial_fit(data_sample)
+            model = model.partial_fit(data_sample)
             model.iteration = i
             save_state(model)
-            if aborted():
+            if aborted() or data_sample is data:
                 break
         return model
