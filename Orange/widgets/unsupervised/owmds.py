@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.io import FileFormat
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.canvas import report
 
 
 def torgerson(distances, n_components=2):
@@ -1013,14 +1014,16 @@ class OWMDS(widget.OWWidget):
     def send_report(self):
         if self.data is None:
             return
-        self.report_items((
+        self.report_plot(self.plot)
+        caption = report.render_items_vert((
             ("Color", self.color_value != "Same color" and self.color_value),
             ("Shape", self.shape_value != "Same shape" and self.shape_value),
-            ("Size",  self.size_value != "Same size" and self.size_value),
-            ("Labels", self.label_value != "No labels" and self.label_value),
-            ("Output", self.output_combo.currentText())
-        ))
-        self.report_plot(self.plot)
+            ("Size", self.size_value != "Same size" and self.size_value),
+            ("Labels", self.label_value != "No labels" and self.label_value)))
+        if caption:
+            self.report_caption(caption)
+        self.report_items((("Output", self.output_combo.currentText()),))
+
 
 
 def colors(data, variable, palette=None):
