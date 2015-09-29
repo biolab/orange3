@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict
 from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
-from PyQt4.QtGui import QGraphicsScene, QStandardItemModel
+from PyQt4.QtGui import QGraphicsScene, QStandardItemModel, QColor
 from Orange.widgets.io import PngFormat
 
 
@@ -465,3 +465,22 @@ def describe_data_brief(data):
     items["Data instances"] = len(data)
     items.update(describe_domain_brief(data.domain))
     return items
+
+
+def list_legend(model, selected=None):
+    if hasattr(model, "model"):
+        model = model.model()
+    legend = ""
+    for row in range(model.rowCount()):
+        if selected is not None and row not in selected:
+            continue
+        index = model.index(row, 0)
+        icon = model.data(index, Qt.DecorationRole)
+        r, g, b, a = QColor(
+            icon.pixmap(12, 12).toImage().pixel(0, 0)).getRgb()
+        text = model.data(index, Qt.DisplayRole)
+        legend += '<span class="legend-square" ' \
+                  'style="background-color: rgb({}, {}, {})"></span>' \
+                  '<span class="legend-item">{}</span>'.format(
+                      r, g, b, text)
+    return legend
