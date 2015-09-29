@@ -131,7 +131,7 @@ class Projector:
 
 
 class RemotePCA:
-    def __new__(cls, data, address='localhost:9465', batch=100, max_iter=100):
+    def __new__(cls, data, batch=100, max_iter=100):
         from orangecontrib.remote import aborted, save_state
         import Orange.data.sql.table
 
