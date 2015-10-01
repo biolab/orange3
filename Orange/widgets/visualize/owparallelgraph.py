@@ -779,7 +779,7 @@ def create_contingencies(X, callback=None):
     X_ = Discretize(method=EqualFreq(n=10))(X)
     m = []
     for i, var in enumerate(X_.domain):
-        cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=').split(',')))
+        cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=≥').split('-')))
                           for v in var.values]
         try:
             float_values = [[float(v) for v in vals] for vals in cleaned_values]
