@@ -85,7 +85,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         self.clear()
 
-        if not (self.have_data or self.have_subset_data):
+        if not (self.have_data):
             return
         if len(attributes) < 2:
             return
