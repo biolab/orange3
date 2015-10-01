@@ -178,7 +178,7 @@ class OWParallelGraph(OWPlot, ScaleData):
             if any(np.isnan(v) for v in row.x):
                 continue
 
-            color = self.select_color(row_idx)
+            color = tuple(self.select_color(row_idx))
 
             if is_selected(row):
                 color += (self.alpha_value,)
@@ -235,7 +235,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                 nsigma2 = math.sqrt(sigma2) / diff[i + 1]
 
                 polygon = ParallelCoordinatePolygon(i, nmu1, nmu2, nsigma1, nsigma2, phi,
-                                                    self.discrete_palette.getRGB(j))
+                                                    tuple(self.discrete_palette.getRGB(j)))
                 polygon.attach(self)
 
         self.replot()
