@@ -616,7 +616,9 @@ class WidgetsSignalManager(SignalManager):
         SignalManager.send(self, node, channel, value, signal_id)
 
     def is_blocking(self, node):
-        return self.scheme().widget_manager.node_processing_state(node) != 0
+        """Reimplemented from `SignalManager`"""
+        return (self.scheme().widget_manager.node_processing_state(node) &
+                (WidgetManager.InputUpdate | WidgetManager.BlockingUpdate))
 
     def send_to_node(self, node, signals):
         """
