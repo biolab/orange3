@@ -58,7 +58,7 @@ class DistanceMapItem(pg.ImageItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setAcceptedMouseButtons(Qt.LeftButton)
+        self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.setAcceptHoverEvents(True)
 
         self.__selections = []
@@ -143,6 +143,8 @@ class DistanceMapItem(pg.ImageItem):
                 self.__select(QRect(), self.Clear)
                 selrange = QRect(c, r, 1, 1)
                 self.__elastic_band_select(selrange, self.Select | self.Clear)
+        elif event.button() == Qt.RightButton:
+            self.__select(QRect(), self.Clear)
 
         super().mousePressEvent(event)
         event.accept()
@@ -321,7 +323,7 @@ class OWDistanceMap(widget.OWWidget):
         self.grid = QGraphicsGridLayout()
         self.grid_widget.setLayout(self.grid)
 
-        self.viewbox = pg.ViewBox(enableMouse=False)
+        self.viewbox = pg.ViewBox(enableMouse=False, enableMenu=False)
         self.viewbox.setAcceptedMouseButtons(Qt.NoButton)
         self.viewbox.setAcceptHoverEvents(False)
         self.grid.addItem(self.viewbox, 1, 1)
