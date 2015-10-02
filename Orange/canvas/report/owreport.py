@@ -278,11 +278,21 @@ if __name__ == "__main__":
     main.make_report(file)
 
     table = OWDataTable()
+    table.set_dataset(zoo)
+    table.create_report_html()
+    main.make_report(table)
+
+    main = OWReport.get_instance()
+    table = OWDiscretize()
+    table.create_report_html()
+    main.make_report(table)
+
+    table = OWRandomForest()
     table.create_report_html()
     main.make_report(table)
 
     main.show()
     main.saveSettings()
-    assert main.table_model.rowCount() == 2
+    assert main.table_model.rowCount() == 4
 
     sys.exit(app.exec_())
