@@ -803,6 +803,7 @@ class OWPaintData(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     autocommit = Setting(False)
+    table_name = Setting("data")
     attr1 = Setting("x")
     attr2 = Setting("y")
 
@@ -843,6 +844,9 @@ class OWPaintData(widget.OWWidget):
     def _init_ui(self):
         namesBox = gui.widgetBox(self.controlArea, "Names")
 
+        gui.lineEdit(namesBox, self, "table_name", "Table",
+                     controlWidth=80, orientation="horizontal",
+                     enterPlaceholder=True, callback=self._attr_name_changed)
         gui.lineEdit(namesBox, self, "attr1", "Variable X ",
                      controlWidth=80, orientation="horizontal",
                      enterPlaceholder=True, callback=self._attr_name_changed)
@@ -1173,7 +1177,7 @@ class OWPaintData(widget.OWWidget):
         else:
             domain = Orange.data.Domain(attrs)
             data = Orange.data.Table.from_numpy(domain, X)
-
+        data.name = self.table_name
         self.send("Data", data)
 
     def sizeHint(self):
