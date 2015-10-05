@@ -23,6 +23,7 @@ class ReportItem(QStandardItem):
         self.id = id(icon)
         self.html = html
         self.scheme = scheme
+        self.comment = ""
 
 
 class ReportItemModel(QStandardItemModel):
@@ -167,8 +168,11 @@ class OWReport(OWWidget):
         for i in range(self.table_model.rowCount()):
             item = self.table_model.item(i)
             html += "<div id='{}' class='normal' " \
-                    "onClick='pybridge._select_item(this.id)'>{}</div>" \
-                .format(item.id, item.html)
+                    "onClick='pybridge._select_item(this.id)'>{}<div " \
+                    "class='textwrapper'><textarea required='required' " \
+                    "onInput='pybridge._add_comment(this.parentNode." \
+                    "parentNode.id, this.value)'>{}</textarea></div>" \
+                    "</div>".format(item.id, item.html, item.comment)
         html += "</body></html>"
         self.report_view.setHtml(html)
 
@@ -177,8 +181,10 @@ class OWReport(OWWidget):
                                 "scrollIntoView();".format(item.id))
 
     def _change_selected_item(self, item):
-        self.report_view.evalJS("document.getElementsByClassName('selected')"
-                                "[0].className = 'normal';")
+        self.report_view.evalJS((
+            "var sel_el = document.getElementsByClassName('selected')[0]; "
+            "if (sel_el.id != {}) "
+            "   sel_el.className = 'normal';").format(item.id))
         self.report_view.evalJS("document.getElementById('{}')."
                                 "className = 'selected';".format(item.id))
 
@@ -187,6 +193,11 @@ class OWReport(OWWidget):
         item = self.table_model.get_item_by_id(item_id)
         self.table.selectRow(self.table_model.indexFromItem(item).row())
         self._change_selected_item(item)
+
+    @pyqtSlot(str, str)
+    def _add_comment(self, item_id, value):
+        item = self.table_model.get_item_by_id(item_id)
+        item.comment = value
 
     def make_report(self, widget):
         item = self._add_item(widget)
