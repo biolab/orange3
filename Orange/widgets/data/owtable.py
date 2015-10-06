@@ -13,7 +13,8 @@ import numpy
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from PyQt4.QtGui import QIdentityProxyModel, QTableView, QItemSelectionModel
+from PyQt4.QtGui import (QIdentityProxyModel, QTableView, QItemSelectionModel,
+                         QItemSelection)
 from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
@@ -24,7 +25,8 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import (Setting, ContextSetting,
+                                     DomainContextHandler)
 from Orange.widgets.utils import colorpalette, datacaching
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.itemmodels import TableModel
@@ -366,6 +368,10 @@ class OWDataTable(widget.OWWidget):
     color_settings = Setting(None)
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
+    settingsHandler = DomainContextHandler(
+        match_values=DomainContextHandler.MATCH_VALUES_ALL)
+    selected_rows = ContextSetting([])
+    selected_cols = ContextSetting([])
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -455,7 +461,7 @@ class OWDataTable(widget.OWWidget):
 
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
-
+        self.closeContext()
         if data is not None:
             if tid in self.inputs:
                 # update existing input slot
@@ -518,6 +524,10 @@ class OWDataTable(widget.OWWidget):
                 self.set_info(current._input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
+        self.selected_rows = []
+        self.selected_cols = []
+        self.openContext(data)
+        self.set_selection()
 
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
@@ -729,6 +739,19 @@ class OWDataTable(widget.OWWidget):
     def update_selection(self, *_):
         self.commit()
 
+    def set_selection(self):
+        if len(self.selected_rows) and len(self.selected_cols):
+            view = self.tabs.currentWidget()
+            selection = QItemSelection()
+            temp_selection = QItemSelection()
+            for row in self.selected_rows:
+                for col in self.selected_cols:
+                    index = view.model().index(row, col)
+                    temp_selection.select(index, index)
+                    selection.merge(temp_selection, QItemSelectionModel.Select)
+            view.selectionModel().select(selection,
+                                         QItemSelectionModel.ClearAndSelect)
+
     def get_selection(self, view):
         """
         Return the selected row and column indices of the selection in view.
@@ -763,6 +786,7 @@ class OWDataTable(widget.OWWidget):
 
             table = model.source  # The input data table
             rowsel, colsel = self.get_selection(view)
+            self.selected_rows, self.selected_cols = rowsel, colsel
 
             def select(data, rows, domain):
                 """
