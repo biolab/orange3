@@ -66,9 +66,9 @@ class ReportTable(QTableView):
     def __init__(self, parent):
         super().__init__(parent)
         self._icon_remove = QIcon(pkg_resources.resource_filename(
-            __name__, "icons/delete.png"))
+            __name__, "icons/delete.svg"))
         self._icon_scheme = QIcon(pkg_resources.resource_filename(
-            __name__, "icons/scheme.png"))
+            __name__, "icons/scheme.svg"))
 
     def mouseMoveEvent(self, event):
         self._clear_icons()
