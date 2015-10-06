@@ -10,6 +10,7 @@ from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.canvas.application.canvasmain import CanvasMainWindow
+from Orange.canvas.gui.utils import message_critical
 
 
 class Column(IntEnum):
@@ -262,7 +263,7 @@ class OWReport(OWWidget):
     def _save_report(self):
         filename = QFileDialog.getSaveFileName(
             self, "Save Report", self.save_dir,
-            "HTML (*.html);;PDF (*.pdf);;Pickle (*.pickle)")
+            "HTML (*.html);;PDF (*.pdf);;Report (*.report)")
         if not filename:
             return
 
@@ -275,7 +276,7 @@ class OWReport(OWWidget):
             printer.setOutputFormat(QPrinter.PdfFormat)
             printer.setOutputFileName(filename)
             self.report_view.print_(printer)
-        elif extension == ".pickle":
+        elif extension == ".report":
             with open(filename, 'wb') as f:
                 pickle.dump(self, f)
         else:
@@ -293,15 +294,25 @@ class OWReport(OWWidget):
 
     def open_report(self):
         filename = QFileDialog.getOpenFileName(
-            self, "Open Report", self.open_dir, "Pickle (*.pickle)")
+            self, "Open Report", self.open_dir, "Report (*.report)")
         if not filename:
             return
 
         self.open_dir = os.path.dirname(filename)
         self.saveSettings()
 
-        with open(filename, 'rb') as f:
-            report = pickle.load(f)
+        try:
+            with open(filename, 'rb') as f:
+                report = pickle.load(f)
+        except (IOError, AttributeError) as e:
+            message_critical(
+                 self.tr("Could not load an Orange Report file"),
+                 title=self.tr("Error"),
+                 informative_text=self.tr("An unexpected error occurred "
+                                          "while loading '%s'.") % filename,
+                 exc_info=True,
+                 parent=self)
+            return
         self.set_instance(report)
         self = report
         self._build_html()
