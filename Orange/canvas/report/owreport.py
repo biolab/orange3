@@ -1,5 +1,6 @@
 import os
 import pkg_resources
+import pickle
 from enum import IntEnum
 from PyQt4.QtCore import Qt, pyqtSlot
 from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QCursor,
@@ -18,12 +19,22 @@ class Column(IntEnum):
 
 
 class ReportItem(QStandardItem):
-    def __init__(self, icon, text, html, scheme):
-        super().__init__(icon, text)
-        self.id = id(icon)
+    def __init__(self, name, html, scheme, module, icon_name, comment=""):
+        self.name = name
         self.html = html
         self.scheme = scheme
-        self.comment = ""
+        self.module = module
+        self.icon_name = icon_name
+        self.comment = comment
+        try:
+            path = pkg_resources.resource_filename(module, icon_name)
+        except ImportError:
+            path = ""
+        except ValueError:
+            path = ""
+        icon = QIcon(path)
+        self.id = id(icon)
+        super().__init__(icon, name)
 
 
 class ReportItemModel(QStandardItemModel):
@@ -92,9 +103,15 @@ class ReportTable(QTableView):
 class OWReport(OWWidget):
     name = "Report"
     save_dir = Setting("")
+    open_dir = Setting("")
 
     def __init__(self):
         super().__init__()
+        self._setup_ui_()
+        index_file = pkg_resources.resource_filename(__name__, "index.html")
+        self.report_html_template = open(index_file, "r").read()
+
+    def _setup_ui_(self):
         self.table_model = ReportItemModel(0, len(Column.__members__))
         self.table = ReportTable(self.controlArea)
         self.table.setModel(self.table_model)
@@ -127,10 +144,26 @@ class OWReport(OWWidget):
         self.print_button = gui.button(
             self.controlArea, self, "Print", callback=self._print_report
         )
-
         self.report_view = gui.WebviewWidget(self.mainArea, bridge=self)
-        index_file = pkg_resources.resource_filename(__name__, "index.html")
-        self.report_html_template = open(index_file, "r").read()
+
+    def __getstate__(self):
+        rep_dict = self.__dict__.copy()
+        for key in ('_OWWidget__env', 'controlArea', 'mainArea',
+                    'report_view', 'table', 'table_model'):
+            del rep_dict[key]
+        items_len = self.table_model.rowCount()
+        return rep_dict, [self.table_model.item(i) for i in range(items_len)]
+
+    def __setstate__(self, state):
+        rep_dict, items = state
+        self.__dict__.update(rep_dict)
+        self._setup_ui_()
+        for i in range(len(items)):
+            item = items[i]
+            self.table_model.add_item(
+                ReportItem(item.name, item.html, item.scheme,
+                           item.module, item.icon_name, item.comment)
+            )
 
     def _table_clicked(self, index):
         if index.column() == Column.remove:
@@ -154,11 +187,10 @@ class OWReport(OWWidget):
         self._build_html()
 
     def _add_item(self, widget):
-        path = pkg_resources.resource_filename(widget.__module__, widget.icon)
         name = widget.get_widget_name_extension()
         name = "{} - {}".format(widget.name, name) if name else widget.name
-        item = ReportItem(QIcon(path), name,
-                          widget.report_html, self._get_scheme())
+        item = ReportItem(name, widget.report_html, self._get_scheme(),
+                          widget.__module__, widget.icon)
         self.table_model.add_item(item)
         return item
 
@@ -181,10 +213,10 @@ class OWReport(OWWidget):
                                 "scrollIntoView();".format(item.id))
 
     def _change_selected_item(self, item):
-        self.report_view.evalJS((
+        self.report_view.evalJS(
             "var sel_el = document.getElementsByClassName('selected')[0]; "
             "if (sel_el.id != {}) "
-            "   sel_el.className = 'normal';").format(item.id))
+            "   sel_el.className = 'normal';".format(item.id))
         self.report_view.evalJS("document.getElementById('{}')."
                                 "className = 'selected';".format(item.id))
 
@@ -203,7 +235,6 @@ class OWReport(OWWidget):
         item = self._add_item(widget)
         self._build_html()
         self._scroll_to_item(item)
-        self._change_selected_item(item)
         self.table.selectRow(self.table_model.rowCount() - 1)
 
     def _get_scheme(self):
@@ -226,9 +257,9 @@ class OWReport(OWWidget):
                 canvas.load_scheme_xml(self.last_scheme)
 
     def _save_report(self):
-        filename = QFileDialog.getSaveFileName(self, "Save Report",
-                                               self.save_dir,
-                                               "HTML (*.html);;PDF (*.pdf)")
+        filename = QFileDialog.getSaveFileName(
+            self, "Save Report", self.save_dir,
+            "HTML (*.html);;PDF (*.pdf);;Pickle (*.pickle)")
         if not filename:
             return
 
@@ -241,6 +272,9 @@ class OWReport(OWWidget):
             printer.setOutputFormat(QPrinter.PdfFormat)
             printer.setOutputFileName(filename)
             self.report_view.print_(printer)
+        elif extension == ".pickle":
+            with open(filename, 'wb') as f:
+                pickle.dump(self, f)
         else:
             frame = self.report_view.page().currentFrame()
             with open(filename, "w") as f:
@@ -253,6 +287,29 @@ class OWReport(OWWidget):
         if print_dialog.exec_() != QDialog.Accepted:
             return
         self.report_view.print_(printer)
+
+    def open_report(self):
+        filename = QFileDialog.getOpenFileName(
+            self, "Open Report", self.open_dir, "Pickle (*.pickle)")
+        if not filename:
+            return
+
+        self.open_dir = os.path.dirname(filename)
+        self.saveSettings()
+
+        with open(filename, 'rb') as f:
+            report = pickle.load(f)
+        self.set_instance(report)
+        self = report
+        self._build_html()
+        self.table.selectRow(0)
+        self.show()
+        self.raise_()
+
+    @staticmethod
+    def set_instance(report):
+        app_inst = QApplication.instance()
+        app_inst._report_window = report
 
     @staticmethod
     def get_instance():
@@ -280,7 +337,6 @@ if __name__ == "__main__":
     from Orange.widgets.classify.owrandomforest import OWRandomForest
 
     iris = Table("iris")
-    zoo = Table("zoo")
     app = QApplication(sys.argv)
 
     main = OWReport.get_instance()
@@ -289,18 +345,18 @@ if __name__ == "__main__":
     main.make_report(file)
 
     table = OWDataTable()
-    table.set_dataset(zoo)
+    table.set_dataset(iris)
     table.create_report_html()
     main.make_report(table)
 
     main = OWReport.get_instance()
-    table = OWDiscretize()
-    table.create_report_html()
-    main.make_report(table)
+    disc = OWDiscretize()
+    disc.create_report_html()
+    main.make_report(disc)
 
-    table = OWRandomForest()
-    table.create_report_html()
-    main.make_report(table)
+    learner = OWRandomForest()
+    learner.create_report_html()
+    main.make_report(learner)
 
     main.show()
     main.saveSettings()

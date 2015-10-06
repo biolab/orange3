@@ -400,6 +400,12 @@ class CanvasMainWindow(QMainWindow):
                     triggered=self.open_and_freeze_scheme
                     )
 
+        self.open_report_action = \
+            QAction(self.tr("Open Report"), self,
+                    objectName="action-open-report",
+                    triggered=self.open_report,
+                    )
+
         self.save_action = \
             QAction(self.tr("Save"), self,
                     objectName="action-save",
@@ -594,6 +600,7 @@ class CanvasMainWindow(QMainWindow):
         # File -> Open Recent submenu
         self.recent_menu = QMenu(self.tr("Open Recent"), file_menu)
         file_menu.addMenu(self.recent_menu)
+        file_menu.addAction(self.open_report_action)
         file_menu.addSeparator()
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
@@ -896,6 +903,11 @@ class CanvasMainWindow(QMainWindow):
             return QDialog.Accepted
         else:
             return QDialog.Rejected
+
+    def open_report(self):
+        from Orange.canvas.report.owreport import OWReport
+        rep = OWReport()
+        rep.open_report()
 
     def open_and_freeze_scheme(self):
         """
