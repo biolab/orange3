@@ -474,7 +474,6 @@ class OWFile(widget.OWWidget):
         except KeyError:
             return "unknown format"
 
-
     def workflowEnvChanged(self, key, value, oldvalue):
         if key == "basedir":
             self._relocate_recent_files()
