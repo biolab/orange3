@@ -45,7 +45,7 @@ class ReportItemModel(QStandardItemModel):
         row = self.rowCount()
         self.setItem(row, Column.item, item)
         self.setItem(row, Column.remove, self._icon_item("Remove"))
-        self.setItem(row, Column.scheme, self._icon_item("Scheme"))
+        self.setItem(row, Column.scheme, self._icon_item("Open Scheme"))
 
     def get_item_by_id(self, item_id):
         for i in range(self.rowCount()):
@@ -135,14 +135,16 @@ class OWReport(OWWidget):
 
         self.last_scheme = None
         self.scheme_button = gui.button(
-            self.controlArea, self, "Last scheme",
+            self.controlArea, self, "Back to Last Scheme",
             callback=self._show_last_scheme
         )
+        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        box.setContentsMargins(-6, 0, -6, 0)
         self.save_button = gui.button(
-            self.controlArea, self, "Save", callback=self._save_report
+            box, self, "Save", callback=self._save_report
         )
         self.print_button = gui.button(
-            self.controlArea, self, "Print", callback=self._print_report
+            box, self, "Print", callback=self._print_report
         )
         self.report_view = gui.WebviewWidget(self.mainArea, bridge=self)
 
