@@ -154,7 +154,12 @@ class OWFile(widget.OWWidget):
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
-    recent_files = Setting(["(none)"])
+
+    #: back-compatibility: List[str] saved files list
+    recent_files = Setting([])
+    #: List[RecentPath]
+    recent_paths = Setting([])
+
     new_variables = Setting(False)
 
     dlgFormats = (
@@ -463,7 +468,6 @@ class OWFile(widget.OWWidget):
             return FileFormats.names[os.path.splitext(filename)[1]]
         except KeyError:
             return "unknown format"
-
 
     def workflowEnvChanged(self, key, value, oldvalue):
         if key == "basedir":
