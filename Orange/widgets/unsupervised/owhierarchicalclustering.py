@@ -641,7 +641,7 @@ class DendrogramWidget(QGraphicsWidget):
                     self.selectionEdited.emit()
                 self.itemClicked.emit(obj)
                 event.accept()
-            return True
+                return True
 
         if event.type() == QEvent.GraphicsSceneHoverLeave:
             self._set_hover_item(None)
@@ -907,6 +907,8 @@ class OWHierarchicalClustering(widget.OWWidget):
         if matrix is not None:
             self._set_items(matrix.row_items, matrix.axis)
 
+        self.unconditional_commit()
+
     def _set_items(self, items, axis=1):
         self.items = items
         model = self.label_cb.model()
@@ -931,9 +933,6 @@ class OWHierarchicalClustering(widget.OWWidget):
             model[:] = ["None", "Enumeration"]
         self.annotation_idx = min(self.annotation_idx,
                                   len(model) - 1)
-
-    def handleNewSignals(self):
-        self._update_labels()
 
     def _clear_plot(self):
         self.labels.set_labels([])
