@@ -41,8 +41,8 @@ class OWSql(widget.OWWidget):
     sql = Setting("")
     guess_values = Setting(True)
 
-    def __init__(self, parent=None):
-        super(OWSql, self).__init__(parent=parent)
+    def __init__(self):
+        super().__init__()
 
         self._connection = None
 

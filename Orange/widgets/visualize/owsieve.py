@@ -37,8 +37,8 @@ class OWSieveDiagram(OWWidget):
 
     want_graph = True
 
-    def __init__(self,parent=None, signalManager = None):
-        OWWidget.__init__(self, parent, signalManager, "Sieve diagram", True)
+    def __init__(self):
+        super().__init__()
 
         #self.controlArea.setMinimumWidth(250)
 
@@ -458,7 +458,7 @@ class OWSieveDiagram(OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.canvas,
+        save_img = OWSave(data=self.canvas,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 

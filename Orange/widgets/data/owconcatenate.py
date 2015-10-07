@@ -50,8 +50,8 @@ class OWConcatenate(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.primary_data = None
         self.more_data = OrderedDict()

@@ -1424,8 +1424,8 @@ class OWPreprocess(widget.OWWidget):
     storedsettings = settings.Setting({})
     autocommit = settings.Setting(False)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.data = None
         self._invalidated = False

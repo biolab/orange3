@@ -426,7 +426,7 @@ class OWScatterPlot(OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.graph.plot_widget.plotItem,
+        save_img = OWSave(data=self.graph.plot_widget.plotItem,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
@@ -440,9 +440,9 @@ class OWScatterPlot(OWWidget):
         name = "Rank projections (Scatter Plot)"
 
         def __init__(self, parent_widget):
-            super().__init__(self, want_control_area=0)
+            super().__init__()
             self.parent_widget = parent_widget
-
+            self.want_control_area = False
             self.running = False
             self.progress = None
             self.k = 10

@@ -775,7 +775,7 @@ class OWBoxPlot(widget.OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.box_scene,
+        save_img = OWSave(data=self.box_scene,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 

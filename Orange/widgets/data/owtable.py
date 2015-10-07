@@ -367,8 +367,8 @@ class OWDataTable(widget.OWWidget):
     selected_schema_index = Setting(0)
     color_by_class = Setting(True)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.inputs = OrderedDict()
 

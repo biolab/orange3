@@ -481,8 +481,8 @@ class OWScatterMap(widget.OWWidget):
 
     want_graph = True
 
-    def __init__(self, parent=None):
-        super().__init__(self, parent)
+    def __init__(self):
+        super().__init__()
 
         self.dataset = None
         self.z_values = []
@@ -981,7 +981,7 @@ class OWScatterMap(widget.OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.plot.plotItem,
+        save_img = OWSave(data=self.plot.plotItem,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 
