@@ -641,7 +641,7 @@ class DendrogramWidget(QGraphicsWidget):
                     self.selectionEdited.emit()
                 self.itemClicked.emit(obj)
                 event.accept()
-            return True
+                return True
 
         if event.type() == QEvent.GraphicsSceneHoverLeave:
             self._set_hover_item(None)
