@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sys
 
 from collections import namedtuple, OrderedDict
 from itertools import chain
@@ -13,7 +14,7 @@ from PyQt4.QtGui import (
     QGraphicsScene, QGraphicsView, QTransform, QPainterPath,
     QColor, QBrush, QPen, QFontMetrics, QGridLayout, QFormLayout,
     QSizePolicy, QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
-    QGraphicsPolygonItem, QGraphicsLayoutItem
+    QGraphicsLayoutItem
 )
 
 from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
@@ -117,8 +118,8 @@ def dendrogram_path(tree, orientation=Left):
         else:
             left, right = paths[node.left], paths[node.right]
             lines = (left.anchor,
-                     transform(start, node.value.height),
-                     transform(end, node.value.height),
+                     Point(*transform(start, node.value.height)),
+                     Point(*transform(end, node.value.height)),
                      right.anchor)
             anchor = Point(*transform(center, node.value.height))
             paths[node] = Element(anchor, lines)
@@ -163,6 +164,7 @@ def path_stroke(path, width=1, join_style=Qt.MiterJoin):
     stroke = QPainterPathStroker()
     stroke.setWidth(width)
     stroke.setJoinStyle(join_style)
+    stroke.setMiterLimit(1.0)
     return stroke.createStroke(path)
 
 
@@ -431,38 +433,36 @@ class DendrogramWidget(QGraphicsWidget):
         """Add selection rooted at item
         """
         outline = self._selection_poly(item)
-        selection_item = QGraphicsPolygonItem(self)
-#         selection_item = QGraphicsPathItem(self)
+        selection_item = QGraphicsPathItem(self)
         selection_item.setPos(self.contentsRect().topLeft())
-#         selection_item.setPen(QPen(Qt.NoPen))
         selection_item.setPen(make_pen(width=1, cosmetic=True))
 
         transform = self._itemgroup.transform()
         path = transform.map(outline)
         margin = 4
-        if item.node.is_leaf:
-            path = QPolygonF(path.boundingRect()
-                             .adjusted(-margin, -margin, margin, margin))
-        else:
-            pass
-#             ppath = QPainterPath()
-#             ppath.addPolygon(path)
-#             path = path_outline(ppath, width=margin).toFillPolygon()
 
-        selection_item.setPolygon(path)
-#         selection_item.setPath(path_outline(path, width=4))
+        if item.node.is_leaf:
+            ppath = QPainterPath()
+            ppath.addRect(path.boundingRect()
+                          .adjusted(-margin, -margin, margin, margin))
+        else:
+            ppath = QPainterPath()
+            ppath.addPolygon(path)
+            ppath = path_outline(ppath, width=margin * 2,)
+
+        selection_item.setPath(ppath)
         selection_item.unscaled_path = outline
         self._selection[item] = selection_item
 
     def _remove_selection(self, item):
         """Remove selection rooted at item."""
 
-        selection_poly = self._selection[item]
+        selection_item = self._selection[item]
 
-        selection_poly.hide()
-        selection_poly.setParentItem(None)
+        selection_item.hide()
+        selection_item.setParentItem(None)
         if self.scene():
-            self.scene().removeItem(selection_poly)
+            self.scene().removeItem(selection_item)
 
         del self._selection[item]
 
@@ -507,34 +507,64 @@ class DendrogramWidget(QGraphicsWidget):
     def _selection_poly(self, item):
         """Return an selection item covering the selection rooted at item.
         """
-        def branches(item):
-            return [self._items[ch] for ch in item.node.branches]
-
         def left(item):
             return [self._items[ch] for ch in item.node.branches[:1]]
 
         def right(item):
             return [self._items[ch] for ch in item.node.branches[-1:]]
 
-        allitems = list(preorder(item, left)) + list(preorder(item, right))[1:]
+        itemsleft = list(preorder(item, left))[::-1]
+        itemsright = list(preorder(item, right))
+        # itemsleft + itemsright walks from the leftmost leaf up to the root
+        # and down to the rightmost leaf
+        assert itemsleft[0].node.is_leaf
+        assert itemsright[-1].node.is_leaf
 
-        if len(allitems) == 1:
-            assert(allitems[0].node.is_leaf)
+        if item.node.is_leaf:
+            # a single anchor point
+            vert = [itemsleft[0].element.anchor]
         else:
-            allitems = [item for item in allitems if not item.node.is_leaf]
+            vert = []
+            for it in itemsleft[1:]:
+                vert.extend([it.element.path[0], it.element.path[1],
+                             it.element.anchor])
+            for it in itemsright[:-1]:
+                vert.extend([it.element.anchor,
+                             it.element.path[-2], it.element.path[-1]])
+            # close the polygon
+            vert.append(vert[0])
 
-        brects = [QPolygonF(item.boundingRect()) for item in allitems if item.boundingRect().isValid()]
-        return reduce(QPolygonF.united, brects, QPolygonF())
+            def isclose(a, b, rel_tol=1e-6):
+                return abs(a - b) < rel_tol * max(abs(a), abs(b))
+
+            def isclose_p(p1, p2, rel_tol=1e-6):
+                return isclose(p1.x, p2.x, rel_tol) and \
+                       isclose(p1.y, p2.y, rel_tol)
+
+            # merge consecutive vertices that are (too) close
+            acc = [vert[0]]
+            for v in vert[1:]:
+                if not isclose_p(v, acc[-1]):
+                    acc.append(v)
+            vert = acc
+
+        return QPolygonF([QPointF(*p) for p in vert])
 
     def _update_selection_items(self):
         """Update the shapes of selection items after a scale change.
         """
         transform = self._itemgroup.transform()
-        for _, selection in self._selection.items():
+        for item, selection in self._selection.items():
             path = transform.map(selection.unscaled_path)
-            selection.setPolygon(path)
-#             selection.setPath(path)
-#             selection.setPath(path_outline(path, width=4))
+            ppath = QPainterPath()
+            margin = 4
+            if item.node.is_leaf:
+                ppath.addRect(path.boundingRect()
+                              .adjusted(-margin, -margin, margin, margin))
+            else:
+                ppath.addPolygon(path)
+                ppath = path_outline(ppath, width=margin * 2)
+            selection.setPath(ppath)
 
     def _relayout(self):
         if not self._root:
@@ -1498,22 +1528,33 @@ def clusters_at_height(root, height):
     return cluster_list
 
 
-def test_main():
+def main(argv=None):
     from PyQt4.QtGui import QApplication
     import sip
     import Orange.distance as distance
 
-    app = QApplication([])
+    if argv is None:
+        argv = sys.argv
+    argv = list(argv)
+    app = QApplication(argv)
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "iris.tab"
+
     w = OWHierarchicalClustering()
 
-    data = Orange.data.Table("iris.tab")
-    matrix = distance.Euclidean(data)
+    data = Orange.data.Table(filename)
+    matrix = distance.Euclidean(distance._preprocess(data))
 
     w.set_distances(matrix)
     w.handleNewSignals()
     w.show()
     w.raise_()
     rval = app.exec_()
+    w.set_distances(None)
+    w.handleNewSignals()
+
     w.onDeleteWidget()
     sip.delete(w)
     del w
@@ -1521,5 +1562,4 @@ def test_main():
     return rval
 
 if __name__ == "__main__":
-    import sys
-    sys.exit(test_main())
+    sys.exit(main())
