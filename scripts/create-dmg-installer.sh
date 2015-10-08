@@ -116,11 +116,11 @@ chmod -Rf go-w "$TMP_TEMPLATE" || true
 bless -openfolder "$MOUNT_POINT"
 
 # Hides background directory even more
-/Developer/Tools/SetFile -a V "$MOUNT_POINT/.background/"
+SetFile -a V "$MOUNT_POINT/.background/"
 
 # Sets the custom icon volume flag so that volume has nice
 # Orange icon after mount (.VolumeIcon.icns)
-/Developer/Tools/SetFile -a C "$MOUNT_POINT"
+SetFile -a C "$MOUNT_POINT"
 
 hdiutil detach "$DEV_NAME" -force
 
