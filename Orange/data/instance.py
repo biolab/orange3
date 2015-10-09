@@ -1,6 +1,6 @@
 from itertools import chain
 from numbers import Real, Integral
-from ..data.value import Value, Unknown
+from ..data.variable import Value, Unknown
 from math import isnan
 import numpy as np
 

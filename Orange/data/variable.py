@@ -1,14 +1,21 @@
-from numbers import Real, Integral
-from math import isnan, floor
+from numbers import Number, Real, Integral
+from math import isnan, floor, sqrt
 import numpy as np
 from pickle import PickleError
 
-from ..data.value import Value, Unknown
 import collections
 
 from . import _variable
 
-ValueUnknown = Unknown  # Shadowing within classes
+from Orange.util import Registry
+
+
+# For storing unknowns
+Unknown = ValueUnknown = float("nan")
+# For checking for unknowns
+MISSING_VALUES = {"?", ".", "", "NA", "~", None}
+
+DISCRETE_MAX_VALUES = 3  # == 2 + nan
 
 
 def make_variable(cls, compute_value, *args):
@@ -17,15 +24,182 @@ def make_variable(cls, compute_value, *args):
     return cls.make(*args)
 
 
-class VariableMeta(type):
-    # noinspection PyMethodParameters
-    def __new__(mcs, name, *args):
-        cls = type.__new__(mcs, name, *args)
-        if not hasattr(cls, '_all_vars') or cls._all_vars is Variable._all_vars:
-            cls._all_vars = {}
-        if name != "Variable":
-            Variable._variable_types.append(cls)
-        return cls
+def is_discrete_values(values):
+    """
+    Return set of uniques if `values` is an iterable of discrete values
+    else False if non-discrete, or None if indeterminate.
+
+    Note
+    ----
+    Assumes consistent type of items of `values`.
+    """
+    if not len(values): return None
+    # If the first few values are, or can be converted to, floats,
+    # the type is numeric
+    try:
+        isinstance(next(iter(values)), Number) or \
+        [float(v) for _, v in zip(range(min(3, len(values))), values)]
+    except ValueError:
+        is_numeric = False
+        max_values = int(max(len(values)**.6, DISCRETE_MAX_VALUES))
+    else:
+        is_numeric = True
+        max_values = DISCRETE_MAX_VALUES
+
+    # If more than max values => not discrete
+    unique = set()
+    for i in values:
+        unique.add(i)
+        if len(unique) > max_values:
+            return False
+
+    # Strip NaN from unique
+    unique = {i for i in unique if not (isinstance(i, Number) and np.isnan(i))}
+
+    # All NaNs => indeterminate
+    if not unique: return None
+
+    # Strings with |values| < max_unique
+    if not is_numeric:
+        return unique
+
+    # Handle numbers
+    try: unique_float = set(map(float, unique))
+    except ValueError:
+        # Converting all the values to floats resulted in an error.
+        # Since the values have enough unique values, they are probably
+        # string values and discrete.
+        return unique
+
+    # If only values are {0, 1} or {1, 2} (or a subset of those sets) => discrete
+    return (not (unique_float - {0, 1}) or
+            not (unique_float - {1, 2})) and unique
+
+
+class Value(float):
+    """
+    The class representing a value. The class is not used to store values but
+    only to return them in contexts in which we want the value to be accompanied
+    with the descriptor, for instance to print the symbolic value of discrete
+    variables.
+
+    The class is derived from `float`, with an additional attribute `variable`
+    which holds the descriptor of type :obj:`Orange.data.Variable`. If the
+    value continuous or discrete, it is stored as a float. Other types of
+    values, like strings, are stored in the attribute `value`.
+
+    The class overloads the methods for printing out the value:
+    `variable.repr_val` and `variable.str_val` are used to get a suitable
+    representation of the value.
+
+    Equivalence operator is overloaded as follows:
+
+    - unknown values are equal; if one value is unknown and the other is not,
+      they are different;
+
+    - if the value is compared with the string, the value is converted to a
+      string using `variable.str_val` and the two strings are compared
+
+    - if the value is stored in attribute `value`, it is compared with the
+      given other value
+
+    - otherwise, the inherited comparison operator for `float` is called.
+
+    Finally, value defines a hash, so values can be put in sets and appear as
+    keys in dictionaries.
+
+    .. attribute:: variable (:obj:`Orange.data.Variable`)
+
+        Descriptor; used for printing out and for comparing with strings
+
+    .. attribute:: value
+
+        Value; the value can be of arbitrary type and is used only for variables
+        that are neither discrete nor continuous. If `value` is `None`, the
+        derived `float` value is used.
+    """
+    __slots__ = "variable", "_value"
+
+    def __new__(cls, variable, value=Unknown):
+        """
+        Construct a new instance of Value with the given descriptor and value.
+        If the argument `value` can be converted to float, it is stored as
+        `float` and the attribute `value` is set to `None`. Otherwise, the
+        inherited float is set to `Unknown` and the value is held by the
+        attribute `value`.
+
+        :param variable: descriptor
+        :type variable: Orange.data.Variable
+        :param value: value
+        """
+        if not isinstance(value, str):
+            try:
+                self = super().__new__(cls, value)
+            except:
+                self = super().__new__(cls, -1)
+        else:
+            self = super().__new__(cls, -1)
+        self._value = value
+        self.variable = variable
+        return self
+
+    def __init__(self, _, __=Unknown):
+        pass
+
+    def __repr__(self):
+        return "Value('%s', %s)" % (self.variable.name,
+                                    self.variable.repr_val(self))
+
+    def __str__(self):
+        return self.variable.str_val(self)
+
+    def __eq__(self, other):
+        if isinstance(self, Real) and isnan(self):
+            return (isinstance(other, Real) and isnan(other)
+                    or other in self.variable.unknown_str)
+        if isinstance(other, str):
+            return self.variable.str_val(self) == other
+        if isinstance(other, Value):
+            return self.value == other.value
+        return super().__eq__(other)
+
+    def __contains__(self, other):
+        if (self.value is not None
+                and isinstance(self.value, str)
+                and isinstance(other, str)):
+            return other in self.value
+        raise TypeError("invalid operation on Value()")
+
+    def __hash__(self):
+        if self.value is None:
+            return super().__hash__()
+        else:
+            return super().__hash__() ^ hash(self.value)
+
+    @property
+    def value(self):
+        if self.variable.is_discrete:
+            return Unknown if isnan(self) else self.variable.values[int(self)]
+        if self.variable.is_string:
+            return self._value
+        return float(self)
+
+    def __getnewargs__(self):
+        return self.variable, float(self)
+
+    def __getstate__(self):
+        return dict(value=getattr(self, '_value', None))
+
+    def __setstate__(self, state):
+        self._value = state.get('value', None)
+
+
+class VariableMeta(Registry):
+    def __new__(cls, name, bases, attrs):
+        obj = super().__new__(cls, name, bases, attrs)
+        if not hasattr(obj, '_all_vars') or obj._all_vars is Variable._all_vars:
+            obj._all_vars = {}
+        return obj
 
 
 class Variable(metaclass=VariableMeta):
@@ -58,10 +232,6 @@ class Variable(metaclass=VariableMeta):
 
         A dictionary with user-defined attributes of the variable
     """
-
-    _DefaultUnknownStr = {"?", ".", "", "NA", "~", None}
-
-    _variable_types = []
     Unknown = ValueUnknown
 
     def __init__(self, name="", compute_value=None):
@@ -70,7 +240,7 @@ class Variable(metaclass=VariableMeta):
         """
         self.name = name
         self._compute_value = compute_value
-        self.unknown_str = set(Variable._DefaultUnknownStr)
+        self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.attributes = {}
         if name and compute_value is None:
@@ -96,25 +266,21 @@ class Variable(metaclass=VariableMeta):
         """
         cls._all_vars.clear()
 
-    @classmethod
-    def _clear_all_caches(cls):
+    @staticmethod
+    def _clear_all_caches():
         """
         Clears list of stored variables for all subclasses
         """
-        for cls0 in cls._variable_types:
-            cls0._clear_cache()
+        for cls in Variable.registry.values():
+            cls._clear_cache()
 
-    @staticmethod
-    def is_primitive():
+    @classmethod
+    def is_primitive(cls):
         """
         `True` if the variable's values are stored as floats.
-        Primitive variables are :obj:`~data.DiscreteVariable` and
-        :obj:`~data.ContinuousVariable`. Non-primitive variables can appear
-        in the data only as meta attributes.
-
-        Derived classes must overload the function.
+        Non-primitive variables can appear in the data only as meta attributes.
         """
-        raise RuntimeError("variable descriptors must overload is_primitive()")
+        return cls in (DiscreteVariable, ContinuousVariable)
 
     @property
     def is_discrete(self):
@@ -145,7 +311,7 @@ class Variable(metaclass=VariableMeta):
         Convert the given argument to a value of the variable. The
         argument can be a string, a number or `None`. For primitive variables,
         the base class provides a method that returns
-        :obj:`~Orange.data.value.Unknown` if `s` is found in
+        :obj:`~Orange.data.Unknown` if `s` is found in
         :obj:`~Orange.data.Variable.unknown_str`, and raises an exception
         otherwise. For non-primitive variables it returns the argument itself.
 
@@ -225,6 +391,8 @@ class ContinuousVariable(Variable):
     set to 0 to prevent changes by `to_val`.
     """
 
+    TYPE_HEADERS = ('continuous', 'c')
+
     def __init__(self, name="", number_of_decimals=None, compute_value=None):
         """
         Construct a new continuous variable. The number of decimals is set to
@@ -247,11 +415,6 @@ class ContinuousVariable(Variable):
         self._number_of_decimals = x
         self.adjust_decimals = 0
         self._out_format = "%.{}f".format(self.number_of_decimals)
-
-    @staticmethod
-    def is_primitive():
-        """ Return `True`: continuous variables are stored as floats."""
-        return True
 
     def to_val(self, s):
         """
@@ -305,6 +468,9 @@ class DiscreteVariable(Variable):
         used in some methods like, for instance, when creating dummy variables
         for regression.
     """
+
+    TYPE_HEADERS = ('discrete', 'd')
+
     _all_vars = collections.defaultdict(list)
     presorted_values = []
 
@@ -328,11 +494,6 @@ class DiscreteVariable(Variable):
         if self.base_value >= 0:
             args += ", base_value={}".format(self.base_value)
         return "{}('{}', {})".format(self.__class__.__name__, self.name, args)
-
-    @staticmethod
-    def is_primitive():
-        """ Return `True`: discrete variables are stored as floats. """
-        return True
 
     def to_val(self, s):
         """
@@ -523,12 +684,7 @@ class StringVariable(Variable):
     Descriptor for string variables. String variables can only appear as
     meta attributes.
     """
-    Unknown = None
-
-    @staticmethod
-    def is_primitive():
-        """Return `False`: string variables are not stored as floats."""
-        return False
+    TYPE_HEADERS = ('string', 's', 'text')
 
     def to_val(self, s):
         """

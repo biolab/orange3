@@ -16,7 +16,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -241,7 +241,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.plot.plotItem,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

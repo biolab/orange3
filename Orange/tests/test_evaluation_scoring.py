@@ -37,7 +37,7 @@ class Scoring_CA_Test(unittest.TestCase):
         np.testing.assert_almost_equal(ca(res), [0.99, 0])
 
     def test_bayes(self):
-        x = np.random.random_integers(1, 3, (100, 5))
+        x = np.random.random_integers(0, 1, (100, 5))
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
         t = Orange.data.Table(x, y)
@@ -47,7 +47,7 @@ class Scoring_CA_Test(unittest.TestCase):
         res = Orange.evaluation.TestOnTrainingData(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
 
-        t.Y[-20:] = 4 - t.Y[-20:]
+        t.Y[-20:] = 1 - t.Y[-20:]
         res = Orange.evaluation.TestOnTrainingData(t, [nb])
         self.assertGreaterEqual(CA(res)[0], 0.75)
         self.assertLess(CA(res)[0], 1)

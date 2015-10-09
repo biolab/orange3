@@ -21,7 +21,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
@@ -504,7 +504,7 @@ class OWDistributions(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.plot,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

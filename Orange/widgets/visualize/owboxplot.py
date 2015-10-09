@@ -17,7 +17,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.widgets.utils import datacaching, colorpalette, vartype
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 def compute_scale(min_, max_):
@@ -776,7 +776,7 @@ class OWBoxPlot(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.box_scene,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

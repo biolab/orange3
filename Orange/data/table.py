@@ -16,7 +16,8 @@ from scipy import sparse as sp
 
 from .instance import *
 from Orange.util import flatten
-from Orange.data import (Domain, io, Variable, StringVariable)
+from Orange.data import Domain, io, Variable, StringVariable
+from Orange.data.io import FileFormat
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -467,10 +468,6 @@ class Table(MutableSequence, Storage):
             cls._next_instance_id += 1
             return id
 
-    FILE_FORMATS = {
-        ".tab": (io.TabDelimFormat, )
-    }
-
     def save(self, filename):
         """
         Save a data table to a file. The path can be absolute or relative.
@@ -479,9 +476,9 @@ class Table(MutableSequence, Storage):
         :type filename: str
         """
         ext = os.path.splitext(filename)[1]
-        writer = io.FileFormats.writers.get(ext)
+        writer = FileFormat.writers.get(ext)
         if not writer:
-            desc = io.FileFormats.names.get(ext)
+            desc = FileFormat.names.get(ext)
             if desc:
                 raise IOError("Writing of {}s is not supported".
                     format(desc.lower()))
@@ -489,8 +486,8 @@ class Table(MutableSequence, Storage):
                 raise IOError("Unknown file name extension.")
         writer().write_file(filename, self)
 
-    @classmethod
-    def from_file(cls, filename):
+    @staticmethod
+    def from_file(filename, wrapper=None):
         """
         Read a data table from a file. The path can be absolute or relative.
 
@@ -500,13 +497,15 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
         for dir in dataset_dirs:
-            ext = os.path.splitext(filename)[1]
             absolute_filename = os.path.join(dir, filename)
-            if not ext:
-                for ext in io.FileFormats.readers:
-                    if os.path.exists(absolute_filename + ext):
-                        absolute_filename += ext
-                        break
+            if os.path.exists(absolute_filename):
+                break
+            for ext in FileFormat.readers:
+                if filename.endswith(ext):
+                    break
+                if os.path.exists(absolute_filename + ext):
+                    absolute_filename += ext
+                    break
             if os.path.exists(absolute_filename):
                 break
         else:
@@ -514,15 +513,7 @@ class Table(MutableSequence, Storage):
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
-        reader = io.FileFormats.readers.get(ext)
-        if not reader:
-            desc = io.FileFormats.names.get(ext)
-            if desc:
-                raise IOError("Reading {}s is not supported".
-                    format(desc.lower()))
-            else:
-                raise IOError("Unknown file name extension.")
-        data = reader().read_file(absolute_filename, cls)
+        data = FileFormat.read(absolute_filename, wrapper)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids

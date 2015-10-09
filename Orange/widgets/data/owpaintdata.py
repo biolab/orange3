@@ -25,7 +25,7 @@ import Orange.data
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 def indices_to_mask(indices, size):
@@ -803,7 +803,7 @@ class OWPaintData(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     autocommit = Setting(False)
-    table_name = Setting("data")
+    table_name = Setting("Painted data")
     attr1 = Setting("x")
     attr2 = Setting("y")
 
@@ -844,9 +844,6 @@ class OWPaintData(widget.OWWidget):
     def _init_ui(self):
         namesBox = gui.widgetBox(self.controlArea, "Names")
 
-        gui.lineEdit(namesBox, self, "table_name", "Table",
-                     controlWidth=80, orientation="horizontal",
-                     enterPlaceholder=True, callback=self._attr_name_changed)
         gui.lineEdit(namesBox, self, "attr1", "Variable X ",
                      controlWidth=80, orientation="horizontal",
                      enterPlaceholder=True, callback=self._attr_name_changed)
@@ -1191,7 +1188,7 @@ class OWPaintData(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.plotview.plotItem,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

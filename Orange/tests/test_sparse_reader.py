@@ -7,7 +7,6 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import ContinuousVariable, DiscreteVariable
-from Orange.data.io import TabDelimFormat
 
 
 simple_file = """\

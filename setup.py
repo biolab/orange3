@@ -52,8 +52,9 @@ INSTALL_REQUIRES = (
     'numpy>=1.9.0',
     'scipy',
     'scikit-learn>=0.16',
+    'chardet>=2.3.0',
     'bottlechest',
-    'openpyxl>=2.1.2',
+    'xlrd>=0.9.2',
 )
 
 if sys.version_info < (3, 4):

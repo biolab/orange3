@@ -12,7 +12,6 @@ class MajorityTest(unittest.TestCase):
         ncols = 10
         x = np.random.random_integers(1, 3, (nrows, ncols))
         y = np.random.random_integers(1, 3, (nrows, 1)) // 2
-        y[0] = 4
         t = Table(x, y)
         learn = MajorityLearner()
         clf = learn(t)
@@ -25,16 +24,15 @@ class MajorityTest(unittest.TestCase):
         nrows = 100
         ncols = 10
         x = np.random.random_integers(1, 3, (nrows, ncols))
-        y = np.random.random_integers(1, 5, (nrows, 1))
-        heavy = 3
-        w = (y == heavy) * 123 + 1
+        y = np.array(70*[0] + 30*[1]).reshape((nrows, 1))
+        heavy_class = 1
+        w = (y == heavy_class) * 2 + 1
         t = Table(x, y, W=w)
         learn = MajorityLearner()
         clf = learn(t)
 
-        x2 = np.random.random_integers(1, 3, (nrows, ncols))
-        y2 = clf(x2)
-        self.assertTrue((y2 == heavy).all())
+        y2 = clf(x)
+        self.assertTrue((y2 == heavy_class).all())
 
     def test_empty(self):
         iris = Table('iris')

@@ -12,7 +12,7 @@ from Orange.preprocess import discretize, preprocess
 
 def random_data(nrows, ncols):
     np.random.seed(42)
-    x = np.random.random_integers(1, 3, (nrows, ncols))
+    x = np.random.random_integers(0, 1, (nrows, ncols))
     col = np.random.randint(ncols)
     y = x[:nrows, col].reshape(nrows, 1)
     table = Table(x, y)

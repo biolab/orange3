@@ -28,7 +28,7 @@ import Orange.data
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
@@ -566,7 +566,7 @@ class OWVennDiagram(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.scene,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

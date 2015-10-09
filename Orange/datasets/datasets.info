@@ -160,7 +160,7 @@
         "name": "bridges",
         "rows": 108,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -175,7 +175,13 @@
         "name": "bridges.mt1",
         "rows": 108,
         "target": {
-            "type": "continuous",
+            "type": [
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete"
+            ],
             "values": null
         }
     },
@@ -190,7 +196,13 @@
         "name": "bridges.mt2",
         "rows": 108,
         "target": {
-            "type": "continuous",
+            "type": [
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete"
+            ],
             "values": null
         }
     },
@@ -265,7 +277,7 @@
         "name": "echocardiogram",
         "rows": 132,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -280,7 +292,14 @@
         "name": "emotions",
         "rows": 593,
         "target": {
-            "type": "continuous",
+            "type": [
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete",
+                "discrete"
+            ],
             "values": null
         }
     },
@@ -295,7 +314,7 @@
         "name": "flag",
         "rows": 194,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -310,7 +329,7 @@
         "name": "flare1",
         "rows": 323,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -325,7 +344,7 @@
         "name": "flare2",
         "rows": 1066,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -370,7 +389,7 @@
         "name": "hair-eye-sex",
         "rows": 584,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -445,7 +464,7 @@
         "name": "horse-colic_learn",
         "rows": 300,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -460,7 +479,7 @@
         "name": "horse-colic_test",
         "rows": 68,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -595,7 +614,7 @@
         "name": "market-basket",
         "rows": 5,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -745,7 +764,12 @@
         "name": "multitarget-synthetic",
         "rows": 100,
         "target": {
-            "type": "continuous",
+            "type": [
+                "continuous",
+                "continuous",
+                "continuous",
+                "continuous"
+            ],
             "values": null
         }
     },
@@ -850,7 +874,7 @@
         "name": "smokers_ct",
         "rows": 193,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -865,7 +889,7 @@
         "name": "sponge",
         "rows": 76,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },
@@ -880,7 +904,12 @@
         "name": "test-pls",
         "rows": 100,
         "target": {
-            "type": "continuous",
+            "type": [
+                "continuous",
+                "continuous",
+                "continuous",
+                "continuous"
+            ],
             "values": null
         }
     },
@@ -955,7 +984,7 @@
         "name": "water-treatment",
         "rows": 527,
         "target": {
-            "type": "continuous",
+            "type": false,
             "values": null
         }
     },

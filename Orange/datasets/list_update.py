@@ -12,6 +12,7 @@ def data_info(name, location):
     print(location)
     Orange.data.Variable._clear_all_caches()
     data = Orange.data.Table(location)
+    domain = data.domain
     attr = data.domain.attributes
     class_var = data.domain.class_var
     return {
@@ -21,12 +22,16 @@ def data_info(name, location):
         'features': {
             'discrete': sum(a.is_discrete for a in attr),
             'continuous': sum(a.is_continuous for a in attr),
-            'meta': len(data.domain.metas),
+            'meta': len(domain.metas),
         },
         'missing': bool(data.has_missing()),
         'target': {
-            'type': 'discrete' if data.domain.has_discrete_class else 'continuous',
-            'values': len(class_var.values) if data.domain.has_discrete_class else None,
+            'type': ('discrete' if domain.has_discrete_class else
+                     'continuous' if domain.has_continuous_class else
+                     ['discrete' if i.is_discrete else 'continuous'
+                      for i in domain.class_vars] if len(domain.class_vars) > 1 else
+                     False),
+            'values': len(class_var.values) if domain.has_discrete_class else None,
         }
     }
 

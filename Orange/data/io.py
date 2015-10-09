@@ -1,384 +1,560 @@
-import csv
 import re
-import sys
-import pickle
-from itertools import chain
+import logging
+import subprocess
+from os import path
+from itertools import chain, repeat
+from functools import lru_cache
+from collections import OrderedDict
 
 import bottlechest as bn
 import numpy as np
-from scipy import sparse
-# We are not loading openpyxl here since it takes some time
 
-from Orange.data import Domain
+from chardet.universaldetector import UniversalDetector
+
 from Orange.data.variable import *
+from Orange.util import abstract, Registry, flatten, namegen
 
 
-# A singleton simulated with a class
-class FileFormats:
-    formats = []
-    names = {}
-    writers = {}
-    readers = {}
-    img_writers = {}
-    graph_writers = {}
+log = logging.getLogger()
 
-    @classmethod
-    def register(cls, name, extension):
-        def f(format):
-            cls.NAME = name
-            cls.formats.append(format)
-            cls.names[extension] = name
-            if hasattr(format, "write_file"):
-                cls.writers[extension] = format
-            if hasattr(format, "read_file"):
-                cls.readers[extension] = format
-            if hasattr(format, "write_image"):
-                cls.img_writers[extension] = format
-            if hasattr(format, "write_graph"):
-                cls.graph_writers[extension] = format
-            return format
-
-        return f
+_IDENTITY = lambda i: i
 
 
-class FileReader:
-    def prescan_file(self, f, delim, nvars, disc_cols, cont_cols):
-        values = [set() for _ in range(nvars)]
-        decimals = [-1] * nvars
-        for lne in f:
-            lne = lne.split(delim)
-            for vs, col in zip(values, disc_cols):
-                vs[col].add(lne[col])
-            for col in cont_cols:
-                val = lne[col]
-                if not col in Variable._DefaultUnknownStr and "." in val:
-                    decs = len(val) - val.find(".") - 1
-                    if decs > decimals[col]:
-                        decimals[col] = decs
-        return values, decimals
+class Compression:
+    GZIP = '.gz'
+    BZIP2 = '.bz2'
+    XZ = '.xz'
+    all = (GZIP, BZIP2, XZ)
 
 
-@FileFormats.register("Tab-delimited file", ".tab")
-class TabDelimFormat:
-    non_escaped_spaces = re.compile(r"(?<!\\) +")
+def open_compressed(filename, *args, _open=open, **kwargs):
+    """Return seamlessly decompressed open file handle for `filename`"""
+    if isinstance(filename, str):
+        if filename.endswith(Compression.GZIP):
+            from gzip import open as _open
+        elif filename.endswith(Compression.BZIP2):
+            from bz2 import open as _open
+        elif filename.endswith(Compression.XZ):
+            from lzma import open as _open
+        return _open(filename, *args, **kwargs)
+    # Else already a file, just pass it through
+    return filename
 
-    def read_header(self, f):
-        f.seek(0)
-        names = [x.strip() for x in f.readline().strip("\n\r").split("\t")]
-        types = [x.strip() for x in f.readline().strip("\n\r").split("\t")]
-        flags = [x.strip() for x in f.readline().strip("\n\r").split("\t")]
-        self.n_columns = len(names)
-        if len(types) != self.n_columns:
-            raise ValueError("File contains %i variable names and %i types" %
-                             (len(names), len(types)))
-        if len(flags) > self.n_columns:
-            raise ValueError("There are more flags than variables")
-        else:
-            flags += [""] * self.n_columns
 
-        attributes = []
-        class_vars = []
-        metas = []
-
-        self.attribute_columns = []
-        self.classvar_columns = []
-        self.meta_columns = []
-        self.weight_column = -1
-        self.basket_column = -1
-
-        for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
-            tpe = tpe.strip()
-            flag = self.non_escaped_spaces.split(flag)
-            flag = [f.replace("\\ ", " ") for f in flag]
-            if "i" in flag or "ignore" in flag:
-                continue
-            if "b" in flag or "basket" in flag:
-                self.basket_column = col
-                continue
-            is_class = "class" in flag
-            is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
-            is_weight = "w" in flag or "weight" in flag \
-                        or tpe in ["w", "weight"]
-
-            attrs = [f.split("=", 1) for f in flag if "=" in f]
-
-            if is_weight:
-                if is_class:
-                    raise ValueError("Variable {} (column {}) is marked as "
-                                     "class and weight".format(name, col))
-                self.weight_column = col
-                continue
-
-            if tpe in ["c", "continuous"]:
-                var = ContinuousVariable.make(name)
-            elif tpe in ["w", "weight"]:
-                var = None
-            elif tpe in ["d", "discrete"]:
-                var = DiscreteVariable()  # no name to bypass caching
-                var.name = name
-                var.fix_order = True
-            elif tpe in ["s", "string"]:
-                var = StringVariable.make(name)
-            else:
-                values = [v.replace("\\ ", " ")
-                          for v in self.non_escaped_spaces.split(tpe)]
-                var = DiscreteVariable.make(name, values, True)
-            var.attributes.update(attrs)
-
-            if is_class:
-                if is_meta:
-                    raise ValueError(
-                        "Variable {} (column {}) is marked as "
-                        "class and meta attribute".format(name, col))
-                class_vars.append(var)
-                self.classvar_columns.append((col, var.val_from_str_add))
-            elif is_meta:
-                metas.append(var)
-                self.meta_columns.append((col, var.val_from_str_add))
-            else:
-                attributes.append(var)
-                self.attribute_columns.append((col, var.val_from_str_add))
-
-        domain = Domain(attributes, class_vars, metas)
-        return domain
-
-    def count_lines(self, file):
-        file.seek(0)
-        i = -3
-        for _ in file:
-            i += 1
-        return i
-
-    def read_data(self, f, table):
-        X, Y = table.X, table._Y
-        W = table.W if table.W.shape[-1] else None
-        f.seek(0)
-        f.readline()
-        f.readline()
-        f.readline()
-        padding = [""] * self.n_columns
-        if self.basket_column >= 0:
-            # TODO how many columns?!
-            table._Xsparse = sparse.lil_matrix(len(X), 100)
-        table.metas = metas = (
-            np.empty((len(X), len(self.meta_columns)), dtype=object))
-        line_count = 0
-        Xr = None
-        for lne in f:
-            values = lne
-            if not values.strip():
-                continue
-            values = values.split("\t")
-            if len(values) > self.n_columns:
-                raise ValueError("Too many columns in line {}".
-                                 format(4 + line_count))
-            elif len(values) < self.n_columns:
-                values += padding
-            if self.attribute_columns:
-                Xr = X[line_count]
-                for i, (col, reader) in enumerate(self.attribute_columns):
-                    Xr[i] = reader(values[col].strip())
-            for i, (col, reader) in enumerate(self.classvar_columns):
-                Y[line_count, i] = reader(values[col].strip())
-            if W is not None:
-                W[line_count] = float(values[self.weight_column])
-            for i, (col, reader) in enumerate(self.meta_columns):
-                metas[line_count, i] = reader(values[col].strip())
-            line_count += 1
-        if line_count != len(X):
-            del Xr, X, Y, W, metas
-            table.X.resize(line_count, len(table.domain.attributes))
-            table._Y.resize(line_count, len(table.domain.class_vars))
-            if table.W.ndim == 1:
-                table.W.resize(line_count)
-            else:
-                table.W.resize((line_count, 0))
-            table.metas.resize((line_count, len(self.meta_columns)))
-        table.n_rows = line_count
-
-    def reorder_values_array(self, arr, variables):
-        newvars = []
-        for col, var in enumerate(variables):
-            if getattr(var, "fix_order", False):
-                nvar = var.make(var.name, var.values, var.ordered)
-                nvar.attributes = var.attributes
-                move = len(var.values)
-                if nvar.values != var.values:
-                    arr[:, col] += move
-                    for i, val in enumerate(var.values):
-                        bn.replace(arr[:, col], move + i, nvar.values.index(val))
-                var = nvar
-            newvars.append(var)
-        return newvars
-
-    def reorder_values(self, table):
-        attrs = self.reorder_values_array(table.X, table.domain.attributes)
-        classes = self.reorder_values_array(table._Y, table.domain.class_vars)
-        metas = self.reorder_values_array(table.metas, table.domain.metas)
-        table.domain = Domain(attrs, classes, metas=metas)
-
-    def read_file(self, filename, cls=None):
-        with open(filename) as file:
-            return self._read_file(file, cls)
-
-    def _read_file(self, file, cls=None):
-        from ..data import Table
-
-        if cls is None:
-            cls = Table
-        domain = self.read_header(file)
-        nExamples = self.count_lines(file)
-        table = cls.from_domain(domain, nExamples, self.weight_column >= 0)
-        self.read_data(file, table)
-        self.reorder_values(table)
-        return table
-
-    @classmethod
-    def _write_fast(cls, f, data):
-        wa = [var.str_val for var in data.domain.variables + data.domain.metas]
-        for Xi, Yi, Mi in zip(data.X, data._Y, data.metas):
-            f.write("\t".join(w(val) for val, w in zip(chain(Xi, Yi, Mi), wa)))
-            f.write("\n")
-
-    @classmethod
-    def write_file(cls, filename, data):
-        """
-        Save data to file.
-
-        Function uses fast implementation in case of numpy data, and slower
-        fall-back for general storage.
-
-        :param filename: the name of the file
-        :type filename: str
-        :param data: the data to be saved
-        :type data: Orange.data.Storage
-        """
-        if isinstance(filename, str):
-            f = open(filename, "w")
-        else:
-            f = filename
-        domain_vars = data.domain.variables + data.domain.metas
-        # first line
-        f.write("\t".join([str(j.name) for j in domain_vars]))
-        f.write("\n")
-
-        # second line
-        # TODO Basket column.
-        t = {"ContinuousVariable": "c", "DiscreteVariable": "d",
-             "StringVariable": "string", "Basket": "basket"}
-
-        f.write("\t".join([t[type(j).__name__] for j in domain_vars]))
-        f.write("\n")
-
-        # third line
-        m = list(data.domain.metas)
-        c = list(data.domain.class_vars)
-        r = []
-        for i in domain_vars:
-            r1 = ["{}={}".format(k, v).replace(" ", "\\ ")
-                  for k, v in i.attributes.items()]
-            if i in m:
-                r1.append("m")
-            elif i in c:
-                r1.append("class")
-            r.append(" ".join(r1))
-        f.write("\t".join(r))
-        f.write("\n")
-
-        # data
-        # noinspection PyBroadException
+def detect_encoding(filename):
+    """
+    Detect encoding of `filename`, which can be a ``str`` filename, a
+    ``file``-like object, or ``bytes``.
+    """
+    # Try with Unix file utility first because it's faster (~10ms vs 100ms)
+    if isinstance(filename, str) and not filename.endswith(Compression.all):
         try:
-            cls._write_fast(f, data)
-        except:
-            domain_vars = [data.domain.index(var) for var in domain_vars]
-            for i in data:
-                f.write("\t".join(str(i[j]) for j in domain_vars) + "\n")
-        f.close()
+            with subprocess.Popen(('file', '--brief', '--mime-encoding', filename),
+                                  stdout=subprocess.PIPE) as process:
+                process.wait()
+                if process.returncode == 0:
+                    encoding = process.stdout.read().strip()
+                    # file only supports these encodings; for others it says
+                    # unknown-8bit or binary. So we give chardet a chance to do
+                    # better
+                    if encoding in (b'utf-8', b'us-ascii', b'iso-8859-1',
+                                    b'utf-7', b'utf-16le', b'utf-16be', b'ebcdic'):
+                        return encoding.decode('us-ascii')
+        except OSError: pass  # windoze
 
-    def write(self, filename, data):
-        self.write_file(filename, data)
+    # file not available or unable to guess the encoding, have chardet do it
+    detector = UniversalDetector()
+
+    def _from_file(f):
+        for line in f:
+            detector.feed(line)
+            if detector.done: break
+        detector.close()
+        return detector.result.get('encoding')
+
+    if isinstance(filename, str):
+        with open_compressed(filename, 'rb') as f:
+            return _from_file(f)
+    elif isinstance(filename, bytes):
+        detector.feed(filename)
+        detector.close()
+        return detector.result.get('encoding')
+    elif hasattr(filename, 'encoding'):
+        return filename.encoding
+    else:  # assume file-like object that you can iter through
+        return _from_file(filename)
 
 
-@FileFormats.register("Comma-separated file", ".csv")
-class TxtFormat:
-    MISSING_VALUES = frozenset({"", "NA", "?"})
+class Flags:
+    """Parser for column flags (i.e. third header row)"""
+    DELIMITER = ' '
+    _RE_SPLIT = re.compile(r'(?<!\\)' + DELIMITER)
+    ALL = OrderedDict((
+        ('class',     'c'),
+        ('ignore',    'i'),
+        ('meta',      'm'),
+        ('weight',    'w'),
+        ('.+?=.*?',    ''),  # general key=value attributes
+    ))
+    _RE_ALL = re.compile(r'^({})$'.format('|'.join(filter(None, flatten(ALL.items())))))
+
+    def __init__(self, flags):
+        for v in filter(None, self.ALL.values()):
+            setattr(self, v, False)
+        self.attributes = {}
+        for flag in flags or []:
+            flag = flag.strip()
+            if self._RE_ALL.match(flag):
+                if '=' in flag:
+                    k, v = flag.split('=', 1)
+                    self.attributes[k] = v
+                else:
+                    setattr(self, flag, True)
+                    setattr(self, self.ALL.get(flag, ''), True)
+            elif flag:
+                log.warning('Invalid attribute flag \'{}\''.format(flag))
 
     @staticmethod
-    def read_header(file, delimiter=None):
-        first_line = file.readline()
-        file.seek(0)
-        if delimiter is None:
-            for delimiter in "\t,; ":
-                if delimiter in first_line:
-                    break
-            else:
-                delimiter = None
-        if delimiter == " ":
-            delimiter = None
-        atoms = first_line.split(delimiter)
-        try:
-            [float(atom) for atom in set(atoms) - TxtFormat.MISSING_VALUES]
-            header_lines = 0
-            names = ["Var{:04}".format(i + 1) for i in range(len(atoms))]
-        except ValueError:
-            names = [atom.strip() for atom in atoms]
-            header_lines = 1
-        domain = Domain([ContinuousVariable.make(name) for name in names])
-        return domain, header_lines, delimiter
+    def join(iterable, *args):
+        return Flags.DELIMITER.join(i.strip().replace(Flags.DELIMITER, '\\' + Flags.DELIMITER)
+                                    for i in chain(iterable, args)).lstrip()
 
-    def read_file(self, filename, cls=None):
-        from ..data import Table
+    @staticmethod
+    def split(s):
+        return [i.replace('\\' + Flags.DELIMITER, Flags.DELIMITER)
+                for i in Flags._RE_SPLIT.split(s)]
 
-        if cls is None:
-            cls = Table
-        with open(filename, "rt") as file:
-            domain, header_lines, delimiter = self.read_header(file)
-        with open(filename, "rb") as file:
-            arr = np.genfromtxt(file, delimiter=delimiter,
-                                skip_header=header_lines,
-                                missing_values=self.MISSING_VALUES)
-        table = cls.from_numpy(domain, arr)
-        return table
+
+# Matches discrete specification where all the values are listed, space-separated
+_RE_DISCRETE_LIST = re.compile(r'^\s*[^\s]+(\s[^\s]+)+\s*$')
+_RE_TYPES = re.compile(r'^\s*({}|{}|)\s*$'.format(_RE_DISCRETE_LIST.pattern,
+                                                  '|'.join(flatten(getattr(vartype, 'TYPE_HEADERS')
+                                                                   for vartype in Variable.registry.values()))))
+_RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format('|'.join(flatten(filter(None, i) for i in Flags.ALL.items()))))
+
+
+class FileFormatMeta(Registry):
+
+    def __new__(cls, name, bases, attrs):
+        newcls = super().__new__(cls, name, bases, attrs)
+
+        # Optionally add compressed versions of extensions as supported
+        if getattr(newcls, 'SUPPORT_COMPRESSED', False):
+            new_extensions = list(getattr(newcls, 'EXTENSIONS', ()))
+            for compression in Compression.all:
+                for ext in newcls.EXTENSIONS:
+                    new_extensions.append(ext + compression)
+            newcls.EXTENSIONS = tuple(new_extensions)
+
+        return newcls
+
+    @property
+    def formats(self):
+        return self.registry.values()
+
+    @lru_cache(5)
+    def _ext_to_attr_if_attr2(self, attr, attr2):
+        """
+        Return ``{ext: `attr`, ...}`` dict if ``cls`` has `attr2`.
+        If `attr` is '', return ``{ext: cls, ...}`` instead.
+        """
+        return OrderedDict((ext, getattr(cls, attr, cls))
+                            for cls in self.registry.values()
+                            if hasattr(cls, attr2)
+                            for ext in getattr(cls, 'EXTENSIONS', []))
+
+    @property
+    def names(self):
+        return self._ext_to_attr_if_attr2('DESCRIPTION', '__class__')
+
+    @property
+    def writers(self):
+        return self._ext_to_attr_if_attr2('', 'write_file')
+
+    @property
+    def readers(self):
+        return self._ext_to_attr_if_attr2('', 'read_file')
+
+    @property
+    def img_writers(self):
+        return self._ext_to_attr_if_attr2('', 'write_image')
+
+    @property
+    def graph_writers(self):
+        return self._ext_to_attr_if_attr2('', 'write_graph')
+
+
+@abstract
+class FileFormat(metaclass=FileFormatMeta):
+    """
+    Subclasses set the following attributes and override the following methods:
+
+        EXTENSIONS = ('.ext1', '.ext2', ...)
+        DESCRIPTION = 'human-readable file format description'
+        SUPPORT_COMPRESSED = False
+
+        @classmethod
+        def read_file(cls, filename, wrapper=_IDENTITY):
+            ...  # load headers, data, ...
+            return wrapper(self.data_table(data, headers))
+
+        @classmethod
+        def write_file(cls, filename, data):
+            ...
+            self.write_headers(writer.write, data)
+            writer.writerows(data)
+
+    Wrapper FileFormat.data_table() returns Orange.data.Table from `data`
+    iterable (list (rows) of lists of values (cols)). `wrapper` is the
+    desired output class (if other than Table).
+    """
+    @staticmethod
+    def open(filename, *args, **kwargs):
+        """
+        Format handlers can use this method instead of the builtin ``open()``
+        to transparently (de)compress files if requested (according to
+        `filename` extension). Set ``SUPPORT_COMPRESSED=True`` if you use this.
+        """
+        return open_compressed(filename, *args, **kwargs)
 
     @classmethod
-    def csv_saver(cls, filename, data, delimiter='\t'):
-        with open(filename, 'w') as csvfile:
-            writer = csv.writer(csvfile, delimiter=delimiter)
-            all_vars = data.domain.variables + data.domain.metas
-            writer.writerow([v.name for v in all_vars])  # write variable names
-            if delimiter == '\t':
-                flags = ([''] * len(data.domain.attributes)) + \
-                        (['class'] * len(data.domain.class_vars)) + \
-                        (['m'] * len(data.domain.metas))
+    def read(cls, filename, wrapper=None):
+        for ext, reader in cls.readers.items():
+            if filename.endswith(ext):
+                return reader.read_file(filename, wrapper)
+        else: raise IOError('No readers for file "{}"'.format(filename))
 
-                for i, var in enumerate(all_vars):
-                    attrs = ["{0!s}={1!s}".format(*item).replace(" ", "\\ ")
-                             for item in var.attributes.items()]
-                    if attrs:
-                        flags[i] += (" " if flags[i] else "") + (" ".join(attrs))
+    @classmethod
+    def write(cls, filename, data):
+        for ext, writer in cls.writers.items():
+            if filename.endswith(ext):
+                return writer.write_file(filename, data)
+        else: raise IOError('No writers for file "{}"'.format(filename))
 
-                writer.writerow([type(v).__name__.replace("Variable", "").lower()
-                                 for v in all_vars])  # write variable types
-                writer.writerow(flags)  # write flags
-            for ex in data:  # write examples
-                writer.writerow(ex)
+    @staticmethod
+    def parse_headers(data):
+        """Return (header rows, rest of data) as discerned from `data`"""
+        all_digits = lambda i: str(i).replace('.', '').replace(',', '').isdigit()
+        HEADER_TEST = ['',
+            # First line is not a header if more than a fraction of values consist of digits only
+            lambda items: sum(all_digits(i) for i in items) / len(items) < .1,
+            # Second row items are type identifiers
+            lambda items: all(map(_RE_TYPES.match, items)),
+            # Third row items are flags and column attributes (attr=value)
+            lambda items: all(map(_RE_FLAGS.match, items)),
+        ]
+        data = iter(data)
+        header_rows = []
+        nonheader_rows = []
+        try:
+            row1 = list(next(data))
+            # Allow either a single-line header or a three-line header
+            if HEADER_TEST[1](row1):
+                header_rows.append(row1)
+                row2, row3 = list(next(data)), list(next(data))
+                if HEADER_TEST[2](row2) and HEADER_TEST[3](row3):
+                    header_rows.extend([row2, row3])
+                else:
+                    nonheader_rows = [row2, row3]
+            else:
+                nonheader_rows = [row1]
+        except StopIteration: pass
+        return header_rows, chain(nonheader_rows, data)
+
+    @classmethod
+    def data_table(self, data, headers=None):
+        """
+        Return Orange.data.Table given rows of `headers` (iterable of iterable)
+        and rows of `data` (iterable of iterable; if ``numpy.ndarray``, might
+        as well **have it sorted column-major**, e.g. ``order='F'``).
+
+        Basically, the idea of subclasses is to produce those two iterables,
+        however they might.
+
+        If `headers` is not provided, the header rows are extracted from `data`,
+        assuming they precede it.
+        """
+        if not headers:
+            headers, data = self.parse_headers(data)
+
+        # Consider various header types (single-row, two-row, three-row, none)
+        if 3 == len(headers):
+            names, types, flags = map(list, headers)
+        else:
+            if 1 == len(headers):
+                HEADER1_FLAG_SEP = '#'
+                # First row format either:
+                #   1) delimited column names
+                #   2) -||- with type and flags prepended, separated by #,
+                #      e.g. d#sex,c#age,cC#IQ
+                _flags, names = zip(*[i.split(HEADER1_FLAG_SEP, 1) if HEADER1_FLAG_SEP in i else ('', i)
+                                      for i in headers[0]])
+                names = list(names)
+            elif 2 == len(headers):
+                names, _flags = map(list, headers)
+            else:
+                # Use heuristics for everything
+                names, _flags = [], []
+            types = [''.join(filter(str.isupper, flag)).lower() for flag in _flags]
+            flags = [Flags.join(filter(str.islower, flag)) for flag in _flags]
+
+        # Determine maximum row length
+        rowlen = max(map(len, (names, types, flags)))
+
+        def _equal_length(lst):
+            lst.extend(['']*(rowlen - len(lst)))
+            return lst
+
+        # Ensure all data is of equal width in a column-contiguous array
+        data = np.array([_equal_length(list(row)) for row in data if any(row)],
+                        copy=False, dtype=object, order='F')
+
+        # Data may actually be longer than headers were
+        try: rowlen = data.shape[1]
+        except IndexError: pass
+        else:
+            for lst in (names, types, flags):
+                _equal_length(lst)
+
+        NAMEGEN = namegen('Feature ', 1)
+        Xcols, attrs = [], []
+        Mcols, metas = [], []
+        Ycols, clses = [], []
+        Wcols = []
+
+        # Iterate through the columns
+        for col in range(rowlen):
+            flag = Flags(Flags.split(flags[col]))
+            if flag.i: continue
+
+            try:
+                orig_values = [np.nan if i.strip() in MISSING_VALUES else i.strip()
+                               for i in data[:, col]]
+            except IndexError:
+                # No data instances leads here
+                orig_values = []
+                # In this case, coltype could be anything. It's set as-is
+                # only to satisfy test_table.TableTestCase.test_append
+                coltype = DiscreteVariable
+
+            type_flag = types and types[col].strip()
+            coltype_kwargs = {}
+            valuemap = []
+            values = orig_values
+
+            if type_flag in StringVariable.TYPE_HEADERS:
+                coltype = StringVariable
+
+            elif type_flag in ContinuousVariable.TYPE_HEADERS:
+                coltype = ContinuousVariable
+                values = [float(i) for i in orig_values]
+
+            elif (type_flag in DiscreteVariable.TYPE_HEADERS or
+                  _RE_DISCRETE_LIST.match(type_flag)):
+                if _RE_DISCRETE_LIST.match(type_flag):
+                    valuemap = Flags.split(type_flag)
+                    coltype_kwargs.update(ordered=True)
+                else:
+                    valuemap = sorted(set(orig_values) - {np.nan})
+
+            else:
+                # No known type specified, use heuristics
+                is_discrete = is_discrete_values(orig_values)
+                if is_discrete:
+                    valuemap = sorted(is_discrete)
+                else:
+                    try: values = [float(i) for i in orig_values]
+                    except ValueError:
+                        coltype = StringVariable
+                    else:
+                        coltype = ContinuousVariable
+
+            if valuemap:
+                # Map discrete data to ints
+                def valuemap_index(val):
+                    try: return valuemap.index(val)
+                    except ValueError: return np.nan
+
+                values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
+                coltype = DiscreteVariable
+                coltype_kwargs.update(values=valuemap)
+
+            # Write back the changed data. This is needeed to pass the
+            # correct, converted values into Table.from_numpy below
+            try: data[:, col] = values
+            except IndexError: pass
+
+            if flag.m or coltype is StringVariable:
+                append_to = (Mcols, metas)
+            elif flag.w:
+                append_to = (Wcols, None)
+            elif flag.c:
+                append_to = (Ycols, clses)
+            else:
+                append_to = (Xcols, attrs)
+
+            cols, domain_vars = append_to
+            cols.append(col)
+            if domain_vars is not None:
+                if names and names[col]:
+                    # Use existing variable if available
+                    var = coltype.make(names[col].strip(), **coltype_kwargs)
+                else:
+                    # Never use existing for un-named variables
+                    var = coltype(next(NAMEGEN), **coltype_kwargs)
+                var.attributes.update(flag.attributes)
+                domain_vars.append(var)
+
+                # Reorder discrete values to match existing variable
+                if var.is_discrete and not var.ordered:
+                    new_order, old_order = var.values, coltype_kwargs.get('values', var.values)
+                    if new_order != old_order:
+                        offset = len(new_order)
+                        column = data[:, col] if data.ndim > 1 else data
+                        column += offset
+                        for i, val in enumerate(var.values):
+                            try: oldval = old_order.index(val)
+                            except ValueError: continue
+                            bn.replace(column, offset + oldval, new_order.index(val))
+
+        # If single-header or no-header mode and no class variable marked,
+        # use the last attribute as class var
+        if len(headers) <= 1 and not clses and len(attrs) > 1:
+            clses.append(attrs.pop())
+            Ycols.append(Xcols.pop())
+
+        from Orange.data import Table, Domain
+        domain = Domain(attrs, clses, metas)
+
+        if not data.size:
+            return Table.from_domain(domain, 0)
+
+        table = Table.from_numpy(domain,
+                                 data[:, Xcols].astype(float, order='C'),
+                                 data[:, Ycols].astype(float, order='C'),
+                                 data[:, Mcols].astype(object, order='C'),
+                                 data[:, Wcols].astype(float, order='C'))
+        return table
+
+    @staticmethod
+    def header_names(data):
+        return [v.name for v in chain(namegen('weights_', data.W.shape[1], count=range),
+                                      data.domain.attributes,
+                                      data.domain.class_vars,
+                                      data.domain.metas)]
+
+    @staticmethod
+    def header_types(data):
+        def _vartype(var):
+            if var.is_continuous or var.is_string:
+                return var.TYPE_HEADERS[0]
+            elif var.is_discrete:
+                return Flags.join(var.values) if var.ordered else var.TYPE_HEADERS[0]
+            raise NotImplementedError
+        return list(chain(repeat('continuous', data.W.shape[1]),
+                          (_vartype(v)
+                           for v in chain(data.domain.attributes,
+                                          data.domain.class_vars,
+                                          data.domain.metas))))
+
+    @staticmethod
+    def header_flags(data):
+        return list(chain(repeat('weight', data.W.shape[1]),
+                          (Flags.join([flag], *('{}={}'.format(*a)
+                                                for a in sorted(var.attributes.items())))
+                           for flag, var in chain(zip(repeat(''),  data.domain.attributes),
+                                                  zip(repeat('class'), data.domain.class_vars),
+                                                  zip(repeat('meta'), data.domain.metas)))))
+
+    @classmethod
+    def write_headers(cls, write, data):
+        """`write` is a callback that accepts an iterable"""
+        write(cls.header_names(data))
+        write(cls.header_types(data))
+        write(cls.header_flags(data))
+
+    @classmethod
+    def write(cls, filename, data):
+        return cls.write_file(filename, data)
+
+
+class CSVFormat(FileFormat):
+    EXTENSIONS = ('.csv',)
+    DESCRIPTION = 'Comma-separated values'
+    DELIMITER = ','
+    SUPPORT_COMPRESSED = True
+
+    @classmethod
+    def read_file(cls, filename, wrapper=None):
+        wrapper = wrapper or _IDENTITY
+        import csv
+        for encoding in (lambda: 'us-ascii',
+                         lambda: detect_encoding(filename)):
+            encoding = encoding()
+            with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
+                # Sniff the CSV dialect (delimiter, quotes, ...)
+                try:
+                    dialect = csv.Sniffer().sniff(file.read(1024), list(',\t;:$ '))
+                except UnicodeDecodeError:
+                    continue
+                except csv.Error:
+                    dialect = csv.excel()
+                    dialect.delimiter = cls.DELIMITER
+
+                file.seek(0)
+                dialect.skipinitialspace = True
+
+                try:
+                    reader = csv.reader(file, dialect=dialect)
+                    return wrapper(cls.data_table(reader))
+                except Exception as e:
+                    error = e
+                    continue
+        raise ValueError('Cannot parse dataset {}: {}'.format(filename, error))
 
     @classmethod
     def write_file(cls, filename, data):
-        cls.csv_saver(filename, data, ',')
+        import csv
+        with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=cls.DELIMITER)
+            cls.write_headers(writer.writerow, data)
+            writer.writerows(data)
 
-    def write(self, filename, data):
-        self.write_file(filename, data)
+
+class TabFormat(CSVFormat):
+    EXTENSIONS = ('.tab', '.tsv')
+    DESCRIPTION = 'Tab-separated values'
+    DELIMITER = '\t'
 
 
-@FileFormats.register("Basket file", ".basket")
-class BasketFormat:
+class PickleFormat(FileFormat):
+    EXTENSIONS = ('.pickle', '.pkl')
+    DESCRIPTION = 'Pickled Python object file'
+
+    @staticmethod
+    def read_file(filename, wrapper=None):
+        wrapper = wrapper or _IDENTITY
+        import pickle
+        with open(filename, 'rb') as f:
+            return wrapper(pickle.load(f))
+
+    @staticmethod
+    def write_file(filename, data):
+        import pickle
+        with open(filename, 'wb') as f:
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+
+class BasketFormat(FileFormat):
+    EXTENSIONS = ('.basket', '.bsk')
+    DESCRIPTION = 'Basket file'
+
     @classmethod
     def read_file(cls, filename, storage_class=None):
-        from Orange.data import _io
-
+        from Orange.data import _io, Table, Domain
+        import sys
         if storage_class is None:
-            from ..data import Table as storage_class
+            storage_class = Table
 
         def constr_vars(inds):
             if inds:
@@ -396,301 +572,48 @@ class BasketFormat:
             domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
-@FileFormats.register("Excel file", ".xlsx")
-class ExcelFormat:
-    non_escaped_spaces = re.compile(r"(?<!\\) +")
+class ExcelFormat(FileFormat):
+    EXTENSIONS = ('.xls', '.xlsx')
+    DESCRIPTION = 'Mircosoft Excel spreadsheet'
 
-    def __init__(self):
-        self.attribute_columns = []
-        self.classvar_columns = []
-        self.meta_columns = []
-        self.weight_column = -1
-        self.basket_column = -1
-
-        self.n_columns = self.first_data_row = 0
-
-    def open_workbook(self, f):
-        from openpyxl import load_workbook
-
-        if isinstance(f, str) and ":" in f[2:]:
-            f, sheet = f.rsplit(":", 1)
+    @classmethod
+    def read_file(cls, filename, wrapper=None):
+        wrapper = wrapper or _IDENTITY
+        filename, _, sheet_name = filename.rpartition(':')
+        if not filename:
+            filename, sheet_name = sheet_name, ''
+        import xlrd
+        wb = xlrd.open_workbook(filename, on_demand=True)
+        if sheet_name:
+            ss = wb.sheet_by_name(sheet_name)
         else:
-            sheet = None
-        wb = load_workbook(f, use_iterators=True,
-                           read_only=True, data_only=True)
-        ws = wb.get_sheet_by_name(sheet) if sheet else wb.get_active_sheet()
-        self.n_columns = ws.get_highest_column()
-        return ws
-
-    # noinspection PyBroadException
-    def read_header_3(self, worksheet):
-        cols = self.n_columns
+            ss = wb.sheet_by_index(0)
         try:
-            names, types, flags = [
-                [cell.value.strip() if cell.value is not None else ""
-                 for cell in row]
-                for row in worksheet.get_squared_range(1, 1, cols, 3)]
-        except:
-            return False
-        if not (all(tpe in ("", "c", "d", "s", "continuous", "discrete",
-                            "string", "w", "weight") or " " in tpe
-                    for tpe in types) and
-                    all(flg in ("", "i", "ignore", "m", "meta", "w", "weight",
-                                "b", "basket", "class") or "=" in flg
-                        for flg in flags)):
-            return False
-        attributes = []
-        class_vars = []
-        metas = []
-        for col, (name, tpe, flag) in enumerate(zip(names, types, flags)):
-            flag = self.non_escaped_spaces.split(flag)
-            if "i" in flag or "ignore" in flag:
-                continue
-            if "b" in flag or "basket" in flag:
-                self.basket_column = col
-                continue
-            is_class = "class" in flag
-            is_meta = "m" in flag or "meta" in flag or tpe in ["s", "string"]
-            is_weight = "w" in flag or "weight" in flag \
-                        or tpe in ["w", "weight"]
-            attrs = [f.split("=", 1) for f in flag if "=" in f]
-            if is_weight:
-                if is_class:
-                    raise ValueError("Variable {} (column {}) is marked as "
-                                     "class and weight".format(name, col + 1))
-                self.weight_column = col
-                continue
-            if tpe in ["c", "continuous"]:
-                var = ContinuousVariable.make(name)
-            elif tpe in ["w", "weight"]:
-                var = None
-            elif tpe in ["d", "discrete"]:
-                var = DiscreteVariable.make(name)
-                var.fix_order = True
-            elif tpe in ["s", "string"]:
-                var = StringVariable.make(name)
-            else:
-                values = [v.replace("\\ ", " ")
-                          for v in self.non_escaped_spaces.split(tpe)]
-                var = DiscreteVariable.make(name, values, True)
-            var.attributes.update(attrs)
-            if is_class:
-                if is_meta:
-                    raise ValueError(
-                        "Variable {} (column {}) is marked as "
-                        "class and meta attribute".format(name, col))
-                class_vars.append(var)
-                self.classvar_columns.append((col, var.val_from_str_add))
-            elif is_meta:
-                metas.append(var)
-                self.meta_columns.append((col, var.val_from_str_add))
-            else:
-                attributes.append(var)
-                self.attribute_columns.append((col, var.val_from_str_add))
-        self.first_data_row = 4
-        return Domain(attributes, class_vars, metas)
+            first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
+            first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
+            row_len = ss.row_len(first_row)
+            cells = filter(any,
+                           [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
+                             for col in range(first_col, row_len)]
+                            for row in range(first_row, ss.nrows)])
+            table = cls.data_table(cells)
+        except Exception:
+            raise IOError("Couldn't load spreadsheet from " + filename)
+        return wrapper(table)
 
-    # noinspection PyBroadException
-    def read_header_0(self, worksheet):
-        try:
-            [float(cell.value) if cell.value is not None else None
-             for cell in
-             worksheet.get_squared_range(1, 1, self.n_columns, 3).__next__()]
-        except:
-            return False
-        self.first_data_row = 1
-        attrs = [ContinuousVariable.make("Var{:04}".format(i + 1))
-                 for i in range(self.n_columns)]
-        self.attribute_columns = [(i, var.val_from_str_add)
-                                  for i, var in enumerate(attrs)]
-        return Domain(attrs)
 
-    def read_header_1(self, worksheet):
-        import openpyxl.cell.cell
+class DotFormat(FileFormat):
+    EXTENSIONS = ('.dot', '.gv')
+    DESCRIPTION = 'Dot graph description'
+    SUPPORT_COMPRESSED = True
 
-        if worksheet.get_highest_column() < 2 or \
-                        worksheet.get_highest_row() < 2:
-            return False
-        cols = self.n_columns
-        names = [cell.value.strip() if cell.value is not None else ""
-                 for cell in
-                 worksheet.get_squared_range(1, 1, cols, 3).__next__()]
-        row2 = list(worksheet.get_squared_range(1, 2, cols, 3).__next__())
-        attributes = []
-        class_vars = []
-        metas = []
-        for col, name in enumerate(names):
-            if "#" in name:
-                flags, name = name.split("#", 1)
-            else:
-                flags = ""
-            if "i" in flags:
-                continue
-            if "b" in flags:
-                self.basket_column = col
-                continue
-            is_class = "c" in flags
-            is_meta = "m" in flags or "s" in flags
-            is_weight = "W" in flags or "w" in flags
-            if is_weight:
-                if is_class:
-                    raise ValueError("Variable {} (column {}) is marked as "
-                                     "class and weight".format(name, col))
-                self.weight_column = col
-                continue
-            if "C" in flags:
-                var = ContinuousVariable.make(name)
-            elif is_weight:
-                var = None
-            elif "D" in flags:
-                var = DiscreteVariable.make(name)
-                var.fix_order = True
-            elif "S" in flags:
-                var = StringVariable.make(name)
-            elif row2[col].data_type == "n":
-                var = ContinuousVariable.make(name)
-            else:
-                if len(set(row[col].value for row in worksheet.rows)) > 20:
-                    var = StringVariable.make(name)
-                    is_meta = True
-                else:
-                    var = DiscreteVariable.make(name)
-                    var.fix_order = True
-            if is_class:
-                if is_meta:
-                    raise ValueError(
-                        "Variable {} (column {}) is marked as "
-                        "class and meta attribute".format(
-                            name, openpyxl.cell.cell.get_column_letter(col + 1))
-                    )
-                class_vars.append(var)
-                self.classvar_columns.append((col, var.val_from_str_add))
-            elif is_meta:
-                metas.append(var)
-                self.meta_columns.append((col, var.val_from_str_add))
-            else:
-                attributes.append(var)
-                self.attribute_columns.append((col, var.val_from_str_add))
-        if attributes and not class_vars:
-            class_vars.append(attributes.pop(-1))
-            self.classvar_columns.append(self.attribute_columns.pop(-1))
-        self.first_data_row = 2
-        return Domain(attributes, class_vars, metas)
-
-    def read_header(self, worksheet):
-        domain = self.read_header_3(worksheet) or \
-                 self.read_header_0(worksheet) or \
-                 self.read_header_1(worksheet)
-        if domain is False:
-            raise ValueError("Invalid header")
-        return domain
-
-    # noinspection PyPep8Naming,PyProtectedMember
-    def read_data(self, worksheet, table):
-        X, Y = table.X, table._Y
-        W = table.W if table.W.shape[-1] else None
-        if self.basket_column >= 0:
-            # TODO how many columns?!
-            table._Xsparse = sparse.lil_matrix(len(X), 100)
-        table.metas = metas = (
-            np.empty((len(X), len(self.meta_columns)), dtype=object))
-        sheet_rows = worksheet.rows
-        for _ in range(1, self.first_data_row):
-            sheet_rows.__next__()
-        line_count = 0
-        Xr = None
-        for row in sheet_rows:
-            values = [cell.value for cell in row]
-            if all(value is None for value in values):
-                continue
-            if self.attribute_columns:
-                Xr = X[line_count]
-                for i, (col, reader) in enumerate(self.attribute_columns):
-                    v = values[col]
-                    Xr[i] = reader(v.strip() if isinstance(v, str) else v)
-            for i, (col, reader) in enumerate(self.classvar_columns):
-                v = values[col]
-                Y[line_count, i] = reader(
-                    v.strip() if isinstance(v, str) else v)
-            if W is not None:
-                W[line_count] = float(values[self.weight_column])
-            for i, (col, reader) in enumerate(self.meta_columns):
-                v = values[col]
-                metas[line_count, i] = reader(
-                    v.strip() if isinstance(v, str) else v)
-            line_count += 1
-        if line_count != len(X):
-            del Xr, X, Y, W, metas
-            table.X.resize(line_count, len(table.domain.attributes))
-            table._Y.resize(line_count, len(table.domain.class_vars))
-            if table.W.ndim == 1:
-                table.W.resize(line_count)
-            else:
-                table.W.resize((line_count, 0))
-            table.metas.resize((line_count, len(self.meta_columns)))
-        table.n_rows = line_count
-
-    # noinspection PyUnresolvedReferences
     @staticmethod
-    def reorder_values_array(arr, variables):
-        for col, var in enumerate(variables):
-            if getattr(var, "fix_order", False) and len(var.values) < 1000:
-                new_order = var.ordered_values(var.values)
-                if new_order == var.values:
-                    continue
-                arr[:, col] += 1000
-                for i, val in enumerate(var.values):
-                    bn.replace(arr[:, col], 1000 + i, new_order.index(val))
-                var.values = new_order
-                delattr(var, "fix_order")
-
-    # noinspection PyProtectedMember
-    def reorder_values(self, table):
-        self.reorder_values_array(table.X, table.domain.attributes)
-        self.reorder_values_array(table._Y, table.domain.class_vars)
-        self.reorder_values_array(table.metas, table.domain.metas)
-
-    def read_file(self, file, cls=None):
-        from Orange.data import Table
-
-        if cls is None:
-            cls = Table
-        worksheet = self.open_workbook(file)
-        domain = self.read_header(worksheet)
-        table = cls.from_domain(
-            domain,
-            worksheet.get_highest_row() - self.first_data_row + 1,
-            self.weight_column >= 0)
-        self.read_data(worksheet, table)
-        self.reorder_values(table)
-        return table
-
-
-@FileFormats.register("Pickled table", ".pickle")
-class PickleFormat:
-    @classmethod
-    def read_file(cls, file, _=None):
-        with open(file, "rb") as f:
-            return pickle.load(f)
-
-    @classmethod
-    def write_file(cls, filename, table):
-        with open(filename, "wb") as f:
-            pickle.dump(table, f)
-
-    def write(self, filename, table):
-        self.write_file(filename, table)
-
-
-@FileFormats.register("Dot Tree File", ".dot")
-class DotFormat:
-    @classmethod
     def write_graph(cls, filename, graph):
         from sklearn import tree
+        tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))
 
-        tree.export_graphviz(graph, out_file=filename)
-
-    def write(self, filename, tree):
+    @classmethod
+    def write(cls, filename, tree):
         if type(tree) == dict:
             tree = tree['tree']
-        self.write_graph(filename, tree)
+        cls.write_graph(filename, tree)

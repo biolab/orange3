@@ -2,7 +2,7 @@ from itertools import chain
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -543,6 +543,6 @@ class OWTreeViewer2D(OWWidget):
 
         save_img = OWSave(data={'scene': self.scene, 'tree': self.tree},
                           file_formats=dict(chain(
-                              FileFormats.img_writers.items(),
-                              FileFormats.graph_writers.items())))
+                              FileFormat.img_writers.items(),
+                              FileFormat.graph_writers.items())))
         save_img.exec_()

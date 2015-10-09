@@ -1,31 +1,34 @@
-from Orange.data.io import FileFormats
 from PyQt4 import QtGui, QtCore, QtSvg
+
+from Orange.util import abstract
+from Orange.data.io import FileFormat
 
 from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
 from pyqtgraph.exporters.SVGExporter import SVGExporter
 from pyqtgraph.exporters.ImageExporter import ImageExporter
 
 
-class ImgFormat:
+@abstract
+class ImgFormat(FileFormat):
     @staticmethod
+    @abstract
     def _get_buffer(size, filename):
-        raise NotImplementedError(
-            "Descendants of ImgFormat must override method _get_buffer")
+        pass
 
     @staticmethod
-    def _get_target(self, scene, painter, buffer):
-        raise NotImplementedError(
-            "Descendants of ImgFormat must override method _get_target")
+    @abstract
+    def _get_target(scene, painter, buffer):
+        pass
 
     @staticmethod
-    def _save_buffer(self, buffer, filename):
-        raise NotImplementedError(
-            "Descendants of ImgFormat must override method _save_buffer")
+    @abstract
+    def _save_buffer(buffer, filename):
+        pass
 
     @staticmethod
-    def _get_exporter(self):
-        raise NotImplementedError(
-            "Descendants of ImgFormat must override method _get_exporter")
+    @abstract
+    def _get_exporter():
+        pass
 
     @classmethod
     def write_image(cls, filename, scene):
@@ -46,14 +49,17 @@ class ImgFormat:
             cls._save_buffer(buffer, filename)
             painter.end()
 
-    def write(self, filename, scene):
+    @classmethod
+    def write(cls, filename, scene):
         if type(scene) == dict:
             scene = scene['scene']
-        self.write_image(filename, scene)
+        cls.write_image(filename, scene)
 
 
-@FileFormats.register("Portable Network Graphics", ".png")
 class PngFormat(ImgFormat):
+    EXTENSIONS = ('.png',)
+    DESCRIPTION = 'Portable Network Graphics'
+
     @staticmethod
     def _get_buffer(size, filename):
         return QtGui.QPixmap(int(size.width()), int(size.height()))
@@ -75,8 +81,10 @@ class PngFormat(ImgFormat):
         return ImageExporter
 
 
-@FileFormats.register("Scalable Vector Graphics", ".svg")
 class SvgFormat(ImgFormat):
+    EXTENSIONS = ('.svg',)
+    DESCRIPTION = 'Scalable Vector Graphics'
+
     @staticmethod
     def _get_buffer(size, filename):
         buffer = QtSvg.QSvgGenerator()

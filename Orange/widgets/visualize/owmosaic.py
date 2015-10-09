@@ -23,7 +23,7 @@ from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg, DefaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 PEARSON = 0
 CLASS_DISTRIBUTION = 1
@@ -1105,7 +1105,7 @@ class OWMosaicDisplay(OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.canvas,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

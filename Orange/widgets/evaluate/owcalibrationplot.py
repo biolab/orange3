@@ -12,7 +12,7 @@ import pyqtgraph as pg
 import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
-from Orange.widgets.io import FileFormats
+from Orange.widgets.io import FileFormat
 
 
 Curve = namedtuple(
@@ -184,7 +184,7 @@ class OWCalibrationPlot(widget.OWWidget):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.plot,
-                          file_formats=FileFormats.img_writers)
+                          file_formats=FileFormat.img_writers)
         save_img.exec_()
 
 

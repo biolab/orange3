@@ -1,9 +1,11 @@
 """Various small utilities that might be useful everywhere"""
 
 from functools import wraps
-from itertools import chain
-import numpy as np
+from itertools import chain, count
+from collections import OrderedDict
 import logging
+
+import numpy as np
 
 
 log = logging.getLogger()
@@ -53,6 +55,32 @@ def abstract(obj):
             raise NotImplementedError("Can't call abstract method {} of class {}"
                                       .format(obj.__name__, cls_name))
         return _refuse__call__
+
+
+class Registry(type):
+    """Metaclass that registers subtypes."""
+    def __new__(cls, name, bases, attrs):
+        obj = type.__new__(cls, name, bases, attrs)
+        if not hasattr(cls, 'registry'):
+            cls.registry = OrderedDict()
+        else:
+            cls.registry[name] = obj
+        return obj
+
+    def __iter__(cls):
+        return iter(cls.registry)
+
+    def __str__(cls):
+        if cls in cls.registry.values():
+            return cls.__name__
+        return '{}({{{}}})'.format(cls.__name__, ', '.join(cls.registry))
+
+
+def namegen(prefix='_', *args, count=count, **kwargs):
+    """Continually generate names with `prefix`, e.g. '_1', '_2', ..."""
+    count = iter(count(*args, **kwargs))
+    while True:
+        yield prefix + str(next(count))
 
 
 def export_globals(globals, module_name):

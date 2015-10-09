@@ -7,7 +7,7 @@ from PyQt4 import QtGui
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormats
+from Orange.data.io import FileFormat
 from Orange.widgets.widget import OutputSignal
 
 
@@ -149,10 +149,11 @@ class OWFile(widget.OWWidget):
     new_variables = Setting(False)
 
     dlgFormats = (
-        "All readable files ({})\n".format(
-            " ".join("*" + c for c in FileFormats.readers)) +
-        "\n".join("{} (*{})".format(FileFormats.names[ext], ext)
-                  for ext in FileFormats.readers))
+        "All readable files ({});;".format(
+            '*' + ' *'.join(FileFormat.readers.keys())) +
+        ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
+                  for f in sorted(set(FileFormat.readers.values()),
+                                  key=list(FileFormat.readers.values()).index)))
 
     def __init__(self):
         super().__init__()
