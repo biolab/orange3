@@ -275,6 +275,9 @@ class OWDistanceMap(widget.OWWidget):
         )
         self.colormap_cb.setIconSize(QSize(64, 16))
         self.palettes = list(sorted(load_default_palettes()))
+        for i, pcolor in enumerate(self.palettes):
+            if pcolor[0] == 'Blue-Yellow':
+                self.colormap = i
         init_color_combo(self.colormap_cb, self.palettes, QSize(64, 16))
         self.colormap_cb.setCurrentIndex(self.colormap)
 
