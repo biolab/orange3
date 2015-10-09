@@ -14,7 +14,8 @@ from Orange.statistics import distribution
 from ..misc.enum import Enum
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
-           "Normalize", "Randomize", "RemoveNaNClasses"]
+           "Normalize", "Randomize", "RemoveNaNClasses",
+           "ProjectPCA", "ProjectCUR"]
 
 
 class Preprocess:
@@ -351,6 +352,31 @@ class Randomize(Preprocess):
                 np.random.shuffle(table[:,i])
         else:
             np.random.shuffle(table)
+
+
+class ProjectPCA(Preprocess):
+
+    def __init__(self, n_components=None):
+        self.n_components = n_components
+
+    def __call__(self, data):
+        pca = Orange.projection.PCA(n_components=self.n_components)(data)
+        return pca(data)
+
+
+class ProjectCUR(Preprocess):
+
+    def __init__(self, rank=3, max_error=1):
+        self.rank = rank
+        self.max_error = max_error
+
+    def __call__(self, data):
+        rank = min(self.rank, min(data.X.shape)-1)
+        cur = Orange.projection.CUR(
+            rank=rank, max_error=self.max_error,
+            compute_U=False,
+        )(data)
+        return cur(data)
 
 
 class PreprocessorList:

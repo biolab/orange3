@@ -22,7 +22,8 @@ from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import Orange.data
 from Orange import preprocess
 from Orange.statistics import distribution
-from Orange.preprocess import Continuize, Randomize as Random
+from Orange.preprocess import Continuize, ProjectPCA, \
+    ProjectCUR, Randomize as Random
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
@@ -726,6 +727,89 @@ class Randomize(BaseEditor):
         return _Randomize(rand_type=rand_type)
 
 
+class PCA(BaseEditor):
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        self.n_components = 10
+
+        form = QFormLayout()
+        self.cspin = QSpinBox(minimum=1, value=self.n_components)
+        self.cspin.valueChanged[int].connect(self.setC)
+        self.cspin.editingFinished.connect(self.edited)
+
+        form.addRow("Components", self.cspin)
+        self.layout().addLayout(form)
+
+    def setParameters(self, params):
+        self.n_components = params.get("n_components", 10)
+
+    def parameters(self):
+        return {"n_components": self.n_components}
+
+    def setC(self, n_components):
+        if self.n_components != n_components:
+            self.n_components = n_components
+            self.cspin.setValue(n_components)
+            self.changed.emit()
+
+    @staticmethod
+    def createinstance(params):
+        n_components = params.get("n_components", 10)
+        return ProjectPCA(n_components=n_components)
+
+
+class CUR(BaseEditor):
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        self.rank = 10
+        self.max_error = 1
+
+        form = QFormLayout()
+        self.rspin = QSpinBox(minimum=2, value=self.rank)
+        self.rspin.valueChanged[int].connect(self.setR)
+        self.rspin.editingFinished.connect(self.edited)
+        self.espin = QDoubleSpinBox(
+            minimum=0.1, maximum=100.0, singleStep=0.1,
+            value=self.max_error)
+        self.espin.valueChanged[float].connect(self.setE)
+        self.espin.editingFinished.connect(self.edited)
+
+        form.addRow("Rank", self.rspin)
+        form.addRow("Relative error", self.espin)
+        self.layout().addLayout(form)
+
+    def setParameters(self, params):
+        self.setR(params.get("rank", 10))
+        self.setE(params.get("max_error", 1))
+
+    def parameters(self):
+        return {"rank": self.rank, "max_error": self.max_error}
+
+    def setR(self, rank):
+        if self.rank != rank:
+            self.rank = rank
+            self.rspin.setValue(rank)
+            self.changed.emit()
+
+    def setE(self, max_error):
+        if self.max_error != max_error:
+            self.max_error = max_error
+            self.espin.setValue(max_error)
+            self.changed.emit()
+
+    @staticmethod
+    def createinstance(params):
+        rank = params.get("rank", 10)
+        max_error = params.get("max_error", 1)
+        return ProjectCUR(rank=rank, max_error=max_error)
+
+
 # This is intended for future improvements.
 # I.e. it should be possible to add/register preprocessor actions
 # through entry points (for use by add-ons). Maybe it should be a
@@ -800,6 +884,18 @@ PREPROCESSORS = [
         Description("Randomize",
                     icon_path("Random.svg")),
         Randomize
+    ),
+    PreprocessAction(
+        "PCA", "orange.preprocess.preprocess", "PCA",
+        Description("Principal Component Analysis",
+                    icon_path("PCA.svg")),
+        PCA
+    ),
+    PreprocessAction(
+        "CUR", "orange.preprocess.preprocess", "CUR",
+        Description("CUR Matrix Decomposition",
+                    icon_path("SelectColumns.svg")),
+        CUR
     )
 ]
 
