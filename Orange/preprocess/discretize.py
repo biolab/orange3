@@ -156,6 +156,8 @@ class EqualWidth(Discretization):
 
     @staticmethod
     def _split_eq_width(dist, n):
+        if not len(dist[0]):  # All NaNs
+            return []
         min = dist[0][0]
         max = dist[0][-1]
         if min == max:
