@@ -41,8 +41,8 @@ class OWCalibrationPlot(widget.OWWidget):
 
     want_graph = True
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.results = None
         self.classifier_names = []
@@ -183,7 +183,7 @@ class OWCalibrationPlot(widget.OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.plot,
+        save_img = OWSave(data=self.plot,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 

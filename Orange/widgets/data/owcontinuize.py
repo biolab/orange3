@@ -55,8 +55,8 @@ class OWContinuize(widget.OWWidget):
 
     value_ranges = ["from -1 to 1", "from 0 to 1"]
 
-    def __init__(self, parent=None):
-        widget.OWWidget.__init__(self, parent)
+    def __init__(self):
+        super().__init__()
 
         box = gui.widgetBox(self.controlArea, "Multinomial attributes")
         gui.radioButtonsInBox(

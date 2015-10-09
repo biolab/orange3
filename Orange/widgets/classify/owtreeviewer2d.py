@@ -541,8 +541,7 @@ class OWTreeViewer2D(OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self,
-                          data={'scene': self.scene, 'tree': self.tree},
+        save_img = OWSave(data={'scene': self.scene, 'tree': self.tree},
                           file_formats=dict(chain(
                               FileFormats.img_writers.items(),
                               FileFormats.graph_writers.items())))

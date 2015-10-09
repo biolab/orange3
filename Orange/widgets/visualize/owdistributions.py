@@ -101,8 +101,8 @@ class OWDistributions(widget.OWWidget):
     bins = [ 2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50 ]
     smoothing_facs = list(reversed([ 0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 4, 6, 10 ]))
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.data = None
 
         self.distributions = None
@@ -503,7 +503,7 @@ class OWDistributions(widget.OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.plot,
+        save_img = OWSave(data=self.plot,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 

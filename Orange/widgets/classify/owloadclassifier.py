@@ -26,8 +26,8 @@ class OWLoadClassifier(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.selectedIndex = -1
 
         box = gui.widgetBox(

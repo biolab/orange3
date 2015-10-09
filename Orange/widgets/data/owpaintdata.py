@@ -812,8 +812,8 @@ class OWPaintData(widget.OWWidget):
 
     want_graph = True
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.data = None
         self.current_tool = None
@@ -1190,7 +1190,7 @@ class OWPaintData(widget.OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(parent=self, data=self.plotview.plotItem,
+        save_img = OWSave(data=self.plotview.plotItem,
                           file_formats=FileFormats.img_writers)
         save_img.exec_()
 

@@ -109,7 +109,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     savedWidgetGeometry = settings.Setting(None)
 
-    def __new__(cls, parent=None, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
 

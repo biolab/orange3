@@ -27,8 +27,8 @@ class OWKNNRegression(widget.OWWidget):
     n_neighbors = Setting(5)
     metric_index = Setting(0)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.preprocessors = ()
         self.data = None

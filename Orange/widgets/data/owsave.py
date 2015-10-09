@@ -23,9 +23,8 @@ class OWSave(widget.OWWidget):
 
     last_dir = Setting("")
 
-    def __init__(self, parent=None, signalManager=None, settings=None,
-                 data=None, file_formats=None):
-        super().__init__(self, parent, signalManager, settings, "Save")
+    def __init__(self, data=None, file_formats=None):
+        super().__init__()
         self.data = None
         self.filename = ""
         self.format_index = 0

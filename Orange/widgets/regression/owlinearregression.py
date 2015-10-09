@@ -40,8 +40,8 @@ class OWLinearRegression(widget.OWWidget):
                         range(20, 100, 5),
                         range(100, 1001, 100)))
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self.data = None
         self.preprocessors = None
