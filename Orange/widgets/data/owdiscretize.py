@@ -134,8 +134,8 @@ class OWDiscretize(widget.OWWidget):
     settingsHandler = settings.DomainContextHandler()
     saved_var_states = settings.ContextSetting({})
 
-    default_method = settings.Setting(0)
-    default_k = settings.Setting(5)
+    default_method = settings.Setting(2)
+    default_k = settings.Setting(3)
     autosend = settings.Setting(True)
 
     #: Discretization methods
