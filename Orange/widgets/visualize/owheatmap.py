@@ -326,7 +326,9 @@ class OWHeatMap(widget.OWWidget):
         self.sceneView = QGraphicsView(
             self.scene,
             verticalScrollBarPolicy=policy,
-            horizontalScrollBarPolicy=policy)
+            horizontalScrollBarPolicy=policy,
+            viewportUpdateMode=QGraphicsView.FullViewportUpdate,
+        )
 
         self.sceneView.viewport().installEventFilter(self)
 
