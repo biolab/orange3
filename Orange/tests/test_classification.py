@@ -104,21 +104,24 @@ class ModelTest(unittest.TestCase):
         x = np.random.random_integers(0, 1, (nrows, ncols))
 
         # single class variable
-        y = np.random.random_integers(1, 2, (nrows, 1))
-        t = Table(x, y)
+        y = np.random.random_integers(0, 1, (nrows, 1))
+        t = Table(Domain([DiscreteVariable('v' + str(i), values=np.unique(x[:, i]))
+                          for i in range(ncols)],
+                         DiscreteVariable('c', values=[1, 2])),
+                  x, y)
         learn = DummyLearner()
         clf = learn(t)
         clf.ret = Model.Value
         y2 = clf(x, ret=Model.Probs)
-        self.assertTrue(y2.shape == (nrows, 3))
+        self.assertEqual(y2.shape, (nrows, 2))
         y2, probs = clf(x, ret=Model.ValueProbs)
-        self.assertTrue(y2.shape == (nrows, ))
-        self.assertTrue(probs.shape == (nrows, 3))
+        self.assertEqual(y2.shape, (nrows, ))
+        self.assertEqual(probs.shape, (nrows, 2))
 
         # multitarget
         y = np.random.random_integers(1, 5, (nrows, 2))
-        y[:, 0] = y[:, 0] // 3          # majority = 1
-        y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
+        y[:, 0] = y[:, 0] // 3             # majority = 1
+        y[:, 1] = (y[:, 1] + 4) // 3 - 1   # majority = 1
         domain = Domain([ContinuousVariable('i' + str(i)) for i in range(ncols)],
                         [DiscreteVariable('c' + str(i), values=range(4))
                          for i in range(y.shape[1])])

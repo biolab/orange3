@@ -143,7 +143,7 @@ class TestDomainInit(unittest.TestCase):
         self.assertTrue(d.anonymous)
         self.assertEqual([var.name for var in d.attributes],
                          ["Feature {}".format(i) for i in range(1, 4)])
-        self.assertEqual(d.class_var.name, "Class")
+        self.assertEqual(d.class_var.name, "Target")
         self.assertEqual([var.name for var in d.metas],
                          ["Meta {:03}".format(i) for i in range(1, 101)])
 
@@ -163,9 +163,7 @@ class TestDomainInit(unittest.TestCase):
     def test_from_numpy_values(self):
         d = Domain.from_numpy(np.zeros((1, 1)), np.arange(1, 3).reshape(2, 1))
         self.assertTrue(d.anonymous)
-        self.assertIsInstance(d.class_var, DiscreteVariable)
-        self.assertEqual(d.class_var.values, ["v{}".format(i)
-                                              for i in range(1, 4)])
+        self.assertIsInstance(d.class_var, ContinuousVariable)
 
         d = Domain.from_numpy(np.zeros((1, 1)), np.arange(2).reshape(2, 1))
         self.assertTrue(d.anonymous)

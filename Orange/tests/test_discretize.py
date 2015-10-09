@@ -6,7 +6,7 @@ import numpy as np
 
 from Orange.preprocess import discretize, Discretize
 from Orange import data
-from Orange.data import Table, Instance
+from Orange.data import Table, Instance, Domain, ContinuousVariable, DiscreteVariable
 
 
 # noinspection PyPep8Naming
@@ -89,8 +89,10 @@ class TestEntropyMDL(TestCase):
         self.assertEqual(dvar.compute_value.points, [])
 
     def test_entropy_constant(self):
-        X = np.ones((100, 1))
-        table = data.Table(X, X)
+        X = np.zeros((100, 1))
+        domain = Domain([ContinuousVariable('v1')],
+                        [DiscreteVariable('c1', values=[1])])
+        table = data.Table(domain, X, X)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain.variables[0])
         self.assertEqual(len(dvar.values), 1)

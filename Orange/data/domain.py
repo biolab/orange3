@@ -129,8 +129,8 @@ class Domain:
         is usually invoked from :meth:`Orange.data.Table.from_numpy`.
 
         All attributes are assumed to be continuous and are named
-        "Feature <n>". Target variables are discrete if all values are
-        integers between 0 and 19; otherwise they are continuous. Discrete
+        "Feature <n>". Target variables are discrete if the only two values
+        are 0 and 1; otherwise they are continuous. Discrete
         targets are named "Class <n>" and continuous are named "Target <n>".
         Domain is marked as :attr:`anonymous`, so data from any other domain of
         the same shape can be converted into this one and vice-versa.
@@ -164,17 +164,14 @@ class Domain:
                 raise ValueError('Y has invalid shape')
             n_classes = Y.shape[1]
             places = get_places(n_classes)
-            for i, class_ in enumerate(Y.T):
-                if is_discrete_values(class_):
-                    mn, mx = np.min(class_), int(np.max(class_))
-                    val_places = 1 + (mx >= 10)
-                    values = ["v%*i" % (val_places, i + 1)
-                              for i in range(mx + 1)]
-                    name = get_name("Class", i, places)
+            for i, values in enumerate(Y.T):
+                if set(values) == {0, 1}:
+                    name = get_name('Class', i, places)
+                    values = ['v1', 'v2']
                     class_vars.append(DiscreteVariable(name, values))
-                    continue
-                class_vars.append(
-                    ContinuousVariable(name=get_name("Target", i + 1, places)))
+                else:
+                    name = get_name('Target', i + 1, places)
+                    class_vars.append(ContinuousVariable(name))
         if metas is not None:
             n_metas = metas.shape[1]
             places = get_places(n_metas)
