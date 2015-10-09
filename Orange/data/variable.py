@@ -2,6 +2,7 @@ from numbers import Number, Real, Integral
 from math import isnan, floor, sqrt
 import numpy as np
 from pickle import PickleError
+import copy
 
 import collections
 
@@ -233,6 +234,12 @@ class Variable(metaclass=VariableMeta):
     .. attribute:: attributes
 
         A dictionary with user-defined attributes of the variable
+
+    .. attribute:: master
+
+        The variable that this variable is a copy of. If a copy is made from a
+        copy, the copy has a reference to the original master. If the variable
+        is not a copy, it is its own master.
     """
     Unknown = ValueUnknown
 
@@ -245,12 +252,31 @@ class Variable(metaclass=VariableMeta):
         self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.attributes = {}
+        self.master = self
         if name and compute_value is None:
             if isinstance(self._all_vars, collections.defaultdict):
                 self._all_vars[name].append(self)
             else:
                 self._all_vars[name] = self
 
+    def make_proxy(self):
+        """
+        Copy the variable and set the master to `self.master` or to `self`.
+
+        :return: copy of self
+        :rtype: Variable
+        """
+        var = copy.copy(self)
+        var.master = self.master
+        return var
+
+    def __eq__(self, other):
+        """Two variables are equivalent if the originate from the same master"""
+        return self.master is other.master
+
+    def __hash__(self):
+        return super().__hash__()
+    
     @classmethod
     def make(cls, name):
         """

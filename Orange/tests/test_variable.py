@@ -154,5 +154,44 @@ PickleStringVariable = create_pickling_tests(
 )
 
 
+@variabletest(DiscreteVariable)
+class VariableTestMakeProxy(unittest.TestCase):
+    def test_make_proxy_disc(self):
+        abc = DiscreteVariable("abc", values="abc", ordered=True)
+        abc1 = abc.make_proxy()
+        abc2 = abc1.make_proxy()
+        self.assertIs(abc.master, abc)
+        self.assertIs(abc1.master, abc)
+        self.assertIs(abc2.master, abc)
+        self.assertEqual(abc, abc1)
+        self.assertEqual(abc, abc2)
+        self.assertEqual(abc1, abc2)
+
+        abcx = DiscreteVariable("abc", values="abc", ordered=True)
+        self.assertNotEqual(abc, abcx)
+
+        abc1p = pickle.loads(pickle.dumps(abc1))
+        self.assertIs(abc1p.master, abc)
+        self.assertEqual(abc1p, abc)
+
+        abcp, abc1p, abc2p = pickle.loads(pickle.dumps((abc, abc1, abc2)))
+        self.assertIs(abcp.master, abcp)
+        self.assertIs(abc1p.master, abcp)
+        self.assertIs(abc2p.master, abcp)
+        self.assertEqual(abcp, abc1p)
+        self.assertEqual(abcp, abc2p)
+        self.assertEqual(abc1p, abc2p)
+
+    def test_make_proxy_cont(self):
+        abc = ContinuousVariable("abc")
+        abc1 = abc.make_proxy()
+        abc2 = abc1.make_proxy()
+        self.assertIs(abc.master, abc)
+        self.assertIs(abc1.master, abc)
+        self.assertIs(abc2.master, abc)
+        self.assertEqual(abc, abc1)
+        self.assertEqual(abc, abc2)
+        self.assertEqual(abc1, abc2)
+
 if __name__ == "__main__":
     unittest.main()
