@@ -1,12 +1,15 @@
 import math
 import unittest
 import pickle
+from io import StringIO
 
 import numpy as np
 
 from Orange.testing import create_pickling_tests
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
+from Orange.data import Table
+from Orange.data.io import CSVFormat
 
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
@@ -285,6 +288,21 @@ class TimeVariableTest(VariableTest):
         ts = var.parse('16:20')  # parse time
         # observe have datetime
         self.assertEqual(var.repr_val(ts), '1970-01-01 16:20:00')
+
+    def test_read_timevariable(self):
+        example_csv = StringIO("""\
+Date,Feature
+time,continuous
+,
+1920-12-12,1
+1920-12-13,3
+1920-12-14,5.5
+""")
+        table = CSVFormat.read_file(example_csv)
+        self.assertIsInstance(table.domain['Date'], TimeVariable)
+        self.assertEqual(table[0, 'Date'], '1920-12-12')
+        # Dates before 1970 are negative
+        self.assertTrue(all(inst['Date'] < 0 for inst in table))
 
 
 PickleContinuousVariable = create_pickling_tests(

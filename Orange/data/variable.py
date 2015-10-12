@@ -16,7 +16,7 @@ from Orange.util import Registry, color_to_hex, hex_to_color
 # For storing unknowns
 Unknown = ValueUnknown = float("nan")
 # For checking for unknowns
-MISSING_VALUES = {"?", "nan", ".", "", "NA", "~", None}
+MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
 
 DISCRETE_MAX_VALUES = 3  # == 2 + nan
 
@@ -313,7 +313,7 @@ class Variable(metaclass=VariableMeta):
         `True` if the variable's values are stored as floats.
         Non-primitive variables can appear in the data only as meta attributes.
         """
-        return cls in (DiscreteVariable, ContinuousVariable)
+        return issubclass(cls, (DiscreteVariable, ContinuousVariable))
 
     @property
     def is_discrete(self):

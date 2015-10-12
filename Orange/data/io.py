@@ -380,6 +380,9 @@ class FileFormat(metaclass=FileFormatMeta):
                                      'line {}, column {}'.format(row + len(headers) + 1,
                                                                  col + 1))
 
+            elif type_flag in TimeVariable.TYPE_HEADERS:
+                coltype = TimeVariable
+
             elif (type_flag in DiscreteVariable.TYPE_HEADERS or
                   _RE_DISCRETE_LIST.match(type_flag)):
                 if _RE_DISCRETE_LIST.match(type_flag):
@@ -396,7 +399,12 @@ class FileFormat(metaclass=FileFormatMeta):
                 else:
                     try: values = [float(i) for i in orig_values]
                     except ValueError:
-                        coltype = StringVariable
+                        tvar = TimeVariable('_')
+                        try: values = [tvar.parse(i) for i in orig_values]
+                        except ValueError:
+                            coltype = StringVariable
+                        else:
+                            coltype = TimeVariable
                     else:
                         coltype = ContinuousVariable
 
@@ -413,11 +421,6 @@ class FileFormat(metaclass=FileFormatMeta):
             if coltype is StringVariable:
                 values = ['' if i is np.nan else i
                           for i in orig_values]
-
-            # Write back the changed data. This is needeed to pass the
-            # correct, converted values into Table.from_numpy below
-            try: data[:, col] = values
-            except IndexError: pass
 
             if flag.m or coltype is StringVariable:
                 append_to = (Mcols, metas)
@@ -445,12 +448,22 @@ class FileFormat(metaclass=FileFormatMeta):
                     new_order, old_order = var.values, coltype_kwargs.get('values', var.values)
                     if new_order != old_order:
                         offset = len(new_order)
-                        column = data[:, col] if data.ndim > 1 else data
+                        column = values if data.ndim > 1 else data
                         column += offset
                         for i, val in enumerate(var.values):
                             try: oldval = old_order.index(val)
                             except ValueError: continue
                             bn.replace(column, offset + oldval, new_order.index(val))
+
+            if coltype is TimeVariable:
+                # Re-parse the values because only now after coltype.make call
+                # above, variable var is the correct one
+                values = [var.parse(i) for i in orig_values]
+
+            # Write back the changed data. This is needeed to pass the
+            # correct, converted values into Table.from_numpy below
+            try: data[:, col] = values
+            except IndexError: pass
 
         from Orange.data import Table, Domain
         domain = Domain(attrs, clses, metas)
