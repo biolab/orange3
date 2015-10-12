@@ -16,7 +16,7 @@ class OWSVMRegression(widget.OWWidget):
     icon = "icons/SVMRegression.svg"
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", SVRLearner),
+    outputs = [("Learner", SVRLearner, widget.Default),
                ("Predictor", SklModel),
                ("Support vectors", Table)]
 

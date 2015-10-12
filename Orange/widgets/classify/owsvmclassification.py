@@ -17,7 +17,7 @@ class OWSVMClassification(widget.OWWidget):
 
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", SVMLearner),
+    outputs = [("Learner", SVMLearner, widget.Default),
                ("Classifier", SVMClassifier),
                ("Support vectors", Table)]
 
