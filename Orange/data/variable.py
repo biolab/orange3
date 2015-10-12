@@ -1,3 +1,4 @@
+import re
 from numbers import Number, Real, Integral
 from math import isnan, floor, sqrt
 import numpy as np
@@ -5,6 +6,7 @@ from pickle import PickleError
 import copy
 
 import collections
+from datetime import datetime, timedelta, timezone
 
 from . import _variable
 
@@ -788,3 +790,126 @@ class StringVariable(Variable):
     def repr_val(self, val):
         """Return a string representation of the value."""
         return '"{}"'.format(self.str_val(val))
+
+
+class TimeVariable(ContinuousVariable):
+    """
+    TimeVariable is a continuous variable with Unix epoch
+    (1970-01-01 00:00:00+0000) as the origin (0.0). Later dates are positive
+    real numbers (equivalent to Unix timestamp, with microseconds in the
+    fraction part), and the dates before it map to the negative real numbers.
+
+    Unfortunately due to limitation of Python datetime, only dates
+    with year >= 1 (A.D.) are supported.
+
+    If time is specified without a date, Unix epoch is assumed.
+
+    If time is specified wihout an UTC offset, localtime is assumed.
+    """
+    TYPE_HEADERS = ('time', 't')
+    UNIX_EPOCH = datetime(1970, 1, 1)
+    _ISO_FORMATS = [
+        # have_date, have_time, format_str
+        # in order of decreased probability
+        (1, 1, '%Y-%m-%d %H:%M:%S%z'),
+        (1, 1, '%Y-%m-%d %H:%M:%S'),
+        (1, 1, '%Y-%m-%d %H:%M'),
+        (1, 1, '%Y-%m-%dT%H:%M:%S%z'),
+        (1, 1, '%Y-%m-%dT%H:%M:%S'),
+
+        (1, 0, '%Y-%m-%d'),
+
+        (1, 1, '%Y-%m-%d %H:%M:%S.%f%z'),
+        (1, 1, '%Y-%m-%dT%H:%M:%S.%f%z'),
+
+        (1, 1, '%Y%m%dT%H%M%S%z'),
+        (1, 1, '%Y%m%d%H%M%S%z'),
+
+        (0, 1, '%H:%M:%S.%f'),
+        (0, 1, '%H:%M:%S'),
+        (0, 1, '%H:%M'),
+
+        # These parse as continuous features (plain numbers)
+        (1, 1, '%Y%m%dT%H%M%S'),
+        (1, 1, '%Y%m%d%H%M%S'),
+        (1, 0, '%Y%m%d'),
+        (1, 0, '%Y%j'),
+        (1, 0, '%Y'),
+        (0, 1, '%H%M%S.%f'),
+
+        # BUG: In Python as in C, %j doesn't necessitate 0-padding,
+        # so these two lines must be in this order
+        (1, 0, '%Y-%m'),
+        (1, 0, '%Y-%j'),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.have_date = 0
+        self.have_time = 0
+
+    @staticmethod
+    def _tzre_sub(s, _subtz=re.compile(r'([+-])(\d\d):(\d\d)$').sub):
+        # Replace +ZZ:ZZ with ISO-compatible +ZZZZ, or strip +0000
+        return s[:-6] if s.endswith(('+00:00', '-00:00')) else _subtz(r'\1\2\3', s)
+
+    def repr_val(self, val):
+        if val < 0:
+            date = str(datetime.fromtimestamp(0, tz=timezone.utc) + timedelta(seconds=val))
+        else:
+            date = str(datetime.fromtimestamp(val, tz=timezone.utc))
+        if self.have_date and not self.have_time:
+            date = date.split()[0]
+        elif not self.have_date and self.have_time:
+            date = date.split()[1]
+        date = self._tzre_sub(date)
+        return date
+
+    str_val = repr_val
+
+    def parse(self, datestr):
+        """
+        Return `datestr`, a datetime provided in one of ISO 8601 formats,
+        parsed as a real number. Value 0 marks the Unix epoch, positive values
+        are the dates after it, negative before.
+
+        If date is unspecified, epoch date is assumed.
+
+        If time is unspecified, 00:00:00.0 is assumed.
+
+        If timezone is unspecified, local time is assumed.
+        """
+        if datestr in MISSING_VALUES:
+            return Unknown
+        datestr = datestr.strip().rstrip('Z')
+        for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
+            try:
+                dt = datetime.strptime(datestr, fmt)
+            except ValueError:
+                continue
+            else:
+                # Pop this most-recently-used format to front
+                if 0 < i < len(self._ISO_FORMATS) - 2:
+                    self._ISO_FORMATS[i], self._ISO_FORMATS[0] = \
+                        self._ISO_FORMATS[0], self._ISO_FORMATS[i]
+
+                self.have_date |= have_date
+                self.have_time |= have_time
+                if not have_date:
+                    dt = dt.replace(self.UNIX_EPOCH.year,
+                                    self.UNIX_EPOCH.month,
+                                    self.UNIX_EPOCH.day)
+                break
+        else:
+            raise ValueError('Invalid datetime format. Only ISO 8601 supported.')
+
+        # Convert time to UTC timezone. In dates without timezone,
+        # localtime is assumed. See also:
+        # https://docs.python.org/3.4/library/datetime.html#datetime.datetime.timestamp
+        if dt.tzinfo: dt -= dt.utcoffset()
+        dt = dt.replace(tzinfo=timezone.utc)
+
+        # Unix epoch is the origin, older dates are negative
+        try: return dt.timestamp()
+        except OverflowError:
+            return -(self.UNIX_EPOCH - dt).total_seconds()
