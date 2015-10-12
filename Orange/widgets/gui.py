@@ -3169,6 +3169,86 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
             bar_brush = self.color
         return QtGui.QBrush(bar_brush)
 
+
+class VerticalLabel(QtGui.QLabel):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setSizePolicy(QtGui.QSizePolicy.Preferred,
+                           QtGui.QSizePolicy.MinimumExpanding)
+        self.setMaximumWidth(self.sizeHint().width() + 2)
+        self.setMargin(4)
+
+    def sizeHint(self):
+        metrics = QtGui.QFontMetrics(self.font())
+        rect = metrics.boundingRect(self.text())
+        size = QtCore.QSize(rect.height() + self.margin(),
+                            rect.width() + self.margin())
+        return size
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        rect = self.geometry()
+        text_rect = QtCore.QRect(0, 0, rect.width(), rect.height())
+
+        painter.translate(text_rect.bottomLeft())
+        painter.rotate(-90)
+        painter.drawText(
+            QtCore.QRect(QtCore.QPoint(0, 0),
+                         QtCore.QSize(rect.height(), rect.width())),
+            Qt.AlignCenter, self.text())
+        painter.end()
+
+
+class VerticalItemDelegate(QtGui.QStyledItemDelegate):
+    # Extra text top/bottom margin.
+    Margin = 6
+
+    def sizeHint(self, option, index):
+        sh = super().sizeHint(option, index)
+        return QtCore.QSize(sh.height() + self.Margin * 2, sh.width())
+
+    def paint(self, painter, option, index):
+        option = QtGui.QStyleOptionViewItemV4(option)
+        self.initStyleOption(option, index)
+
+        if not option.text:
+            return
+
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewRow, option, painter,
+            option.widget)
+        cell_rect = option.rect
+        itemrect = QtCore.QRect(0, 0, cell_rect.height(), cell_rect.width())
+        opt = QtGui.QStyleOptionViewItemV4(option)
+        opt.rect = itemrect
+        textrect = style.subElementRect(
+            QtGui.QStyle.SE_ItemViewItemText, opt, opt.widget)
+
+        painter.save()
+        painter.setFont(option.font)
+
+        if option.displayAlignment & (Qt.AlignTop | Qt.AlignBottom):
+            brect = painter.boundingRect(
+                textrect, option.displayAlignment, option.text)
+            diff = textrect.height() - brect.height()
+            offset = max(min(diff / 2, self.Margin), 0)
+            if option.displayAlignment & Qt.AlignBottom:
+                offset = -offset
+
+            textrect.translate(0, offset)
+
+        painter.translate(option.rect.x(), option.rect.bottom())
+        painter.rotate(-90)
+        painter.drawText(textrect, option.displayAlignment, option.text)
+        painter.restore()
+
 ##############################################################################
 # progress bar management
 
