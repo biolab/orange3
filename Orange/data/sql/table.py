@@ -313,6 +313,9 @@ class SqlTable(table.Table):
 
     _X = None
     _Y = None
+    _metas = None
+    _W = None
+    _ids = None
 
     def download_data(self, limit=None):
         """Download SQL data and store it in memory as numpy matrices."""
@@ -320,6 +323,9 @@ class SqlTable(table.Table):
             raise ValueError("Too many rows to download the data into memory.")
         self._X = np.vstack(row._x for row in self)
         self._Y = np.vstack(row._y for row in self)
+        self._metas = np.vstack(row._metas for row in self)
+        self._W = np.empty((self._X.shape[0], 0))
+        self._init_ids(self)
         self._cached__len__ = self._X.shape[0]
 
     @property
@@ -335,6 +341,35 @@ class SqlTable(table.Table):
         if self._Y is None:
             self.download_data(1000)
         return self._Y
+
+    @property
+    def metas(self):
+        """Numpy array with class values."""
+        if self._metas is None:
+            self.download_data(1000)
+        return self._metas
+
+    @property
+    def W(self):
+        """Numpy array with class values."""
+        if self._W is None:
+            self.download_data(1000)
+        return self._W
+
+    @property
+    def ids(self):
+        """Numpy array with class values."""
+        if self._ids is None:
+            self.download_data(1000)
+        return self._ids
+
+    @ids.setter
+    def ids(self, value):
+        self._ids = value
+
+    @ids.deleter
+    def ids(self):
+        del self._ids
 
     def has_weights(self):
         return False

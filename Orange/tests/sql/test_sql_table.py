@@ -79,6 +79,16 @@ class SqlTableTests(PostgresTest):
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
+    def test_download_data(self):
+        mat = np.random.randint(0, 2, (20, 3))
+        conn, table_name = self.create_sql_table(mat)
+        for member in ('X', 'Y', 'metas', 'W', 'ids'):
+            sql_table = SqlTable(conn, table_name,
+                                 type_hints=Domain([], DiscreteVariable(
+                                    name='col2', values=['0', '1', '2'])))
+            self.assertFalse(getattr(sql_table, member) is None)
+        # has all necessary class members to create a standard Table
+        Table(sql_table.domain, sql_table)
 
     def test_query_all(self):
         table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
