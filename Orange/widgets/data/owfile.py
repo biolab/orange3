@@ -1,6 +1,6 @@
 import os
 import sys
-
+import urllib
 from collections import namedtuple
 
 from PyQt4 import QtGui
@@ -116,12 +116,26 @@ class RecentPath(RecentPath):
         return None
 
     @property
-    def basename(self):
+    def value(self):
+        if self.prefix == "url-datasets":
+            return self.abspath
         return os.path.basename(self.abspath)
+
+    @property
+    def icon(self):
+        provider = QtGui.QFileIconProvider()
+        if self.prefix == "url-datasets":
+            return provider.icon(QtGui.QFileIconProvider.Network)
+        return provider.icon(QtGui.QFileIconProvider.Drive)
 
     @property
     def dirname(self):
         return os.path.dirname(self.abspath)
+
+
+class RecentPathDelegate(QtGui.QStyledItemDelegate):
+    def displayText(self, value, locale):
+        return os.path.basename(value)
 
 
 class OWFile(widget.OWWidget):
@@ -161,20 +175,25 @@ class OWFile(widget.OWWidget):
         self.loaded_file = ""
         self._relocate_recent_files()
 
-        vbox = gui.widgetBox(self.controlArea, "Data File", addSpace=True)
+        vbox = gui.widgetBox(self.controlArea, "Data File / URL",
+                             addSpace=True)
         box = gui.widgetBox(vbox, orientation=0)
         self.file_combo = QtGui.QComboBox(box)
         self.file_combo.setMinimumWidth(300)
+        self.file_combo.setEditable(True)
+        self.file_combo.setItemDelegate(RecentPathDelegate())
+        self.file_combo.lineEdit().setStyleSheet("padding-left: 1px;")
         box.layout().addWidget(self.file_combo)
         self.file_combo.activated[int].connect(self.select_file)
 
-        button = gui.button(box, self, '...', callback=self.browse_file)
+        button = gui.button(box, self, '...', callback=self.browse_file,
+                            autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
         button.setSizePolicy(
             QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
 
         button = gui.button(box, self, "Reload",
-                            callback=self.reload, default=True)
+                            callback=self.reload, autoDefault=False)
         button.setIcon(
             self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         button.setSizePolicy(
@@ -218,6 +237,10 @@ class OWFile(widget.OWWidget):
                 rec.append(RecentPath.create(resolved.abspath, paths))
             elif recent.search(paths) is not None:
                 rec.append(RecentPath.create(recent.search(paths), paths))
+            elif recent.prefix == "url-datasets":
+                valid, _ = self.is_url_valid(recent.abspath)
+                if valid:
+                    rec.append(recent)
 
         self.recent_paths = rec
 
@@ -229,13 +252,15 @@ class OWFile(widget.OWWidget):
             self.file_combo.model().item(0).setEnabled(False)
         else:
             for i, recent in enumerate(self.recent_paths):
-                self.file_combo.addItem(recent.basename)
+                self.file_combo.addItem(recent.icon, recent.value)
                 self.file_combo.model().item(i).setToolTip(recent.abspath)
         self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
         if self.recent_paths:
-            return self.open_file(self.recent_paths[0].abspath)
+            if self.file_combo.currentText() == self.recent_paths[0].relpath:
+                return self.open_file(self.recent_paths[0].abspath)
+        self.select_file(len(self.recent_paths) + 1)
 
     def select_file(self, n):
         if n < len(self.recent_paths):
@@ -243,7 +268,24 @@ class OWFile(widget.OWWidget):
             del self.recent_paths[n]
             self.recent_paths.insert(0, recent)
         elif n:
-            self.browse_file(True)
+            path = self.file_combo.currentText()
+            if path == "Browse documentation data sets...":
+                self.browse_file(True)
+            elif os.path.exists(path):
+                self._add_path(path)
+            else:
+                valid, err = self.is_url_valid(path)
+                if valid:
+                    _, filename = os.path.split(path)
+                    recent = RecentPath(path, "url-datasets", filename)
+                    if recent in self.recent_paths:
+                        self.recent_paths.remove(recent)
+                    self.recent_paths.insert(0, recent)
+                else:
+                    self.error(0, err)
+                    self.file_combo.removeItem(n)
+                    self.file_combo.lineEdit().setText(path)
+                    return
 
         if len(self.recent_paths) > 0:
             self.set_file_list()
@@ -280,6 +322,11 @@ class OWFile(widget.OWWidget):
         if not filename:
             return
 
+        self._add_path(filename)
+        self.set_file_list()
+        self.open_file(self.recent_paths[0].abspath)
+
+    def _add_path(self, filename):
         searchpaths = [("sample-datasets", get_sample_datasets_dir())]
         basedir = self.workflowEnv().get("basedir", None)
         if basedir is not None:
@@ -291,15 +338,28 @@ class OWFile(widget.OWWidget):
             self.recent_paths.remove(recent)
 
         self.recent_paths.insert(0, recent)
-        self.set_file_list()
-        self.open_file(self.recent_paths[0].abspath)
+
+    @staticmethod
+    def is_url_valid(url):
+        try:
+            with urllib.request.urlopen(url) as f:
+                pass
+            return bool(f), ""
+        except urllib.error.HTTPError:
+            return False, "File '{}' is unavailable".format(os.path.basename(url))
+        except urllib.error.URLError:
+            return False, "URL '{}' is unavailable".format(url)
+        except ValueError:
+            return False, "Unknown file/URL '{}' ".format(url)
+        except (OSError, Exception) as e:
+            return False, str(e)
 
     # Open a file, create data from it and send it over the data channel
     def open_file(self, fn):
         self.error()
         self.warning()
         self.information()
-
+        fn_original = fn
         if not os.path.exists(fn):
             dir_name, basename = os.path.split(fn)
             if os.path.exists(os.path.join(".", basename)):
@@ -331,6 +391,17 @@ class OWFile(widget.OWWidget):
                 except:
                     data = None
         if err_value is not None:
+            if fn.startswith("http"):
+                err_value = "File '{}' does not contain valid data".format(
+                    os.path.basename(fn)
+                )
+            ind = self.file_combo.currentIndex()
+            text = self.file_combo.currentText()
+            self.file_combo.removeItem(ind)
+            self.file_combo.lineEdit().setText(text)
+            if ind < len(self.recent_paths) and \
+                            self.recent_paths[ind].abspath == fn_original:
+                del self.recent_paths[ind]
             self.error(err_value)
             self.infoa.setText('Data was not loaded due to an error.')
             self.infob.setText('Error:')
