@@ -565,7 +565,7 @@ class AddonManagerDialog(QDialog):
 
     def __on_installer_finished(self):
         message_information(
-            "Please restart the application for changes to take effect.",
+            "Please restart Orange for changes to take effect.",
             parent=self)
         self.accept()
 
