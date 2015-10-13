@@ -9,7 +9,8 @@ from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
 from sklearn.neighbors import NearestNeighbors
 
 import Orange
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
+                        DiscreteVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess.score import ReliefF
 from Orange.widgets import gui
@@ -551,8 +552,12 @@ class OWScatterPlot(OWWidget):
             self.button.setEnabled(False)
 
         def score_heuristic(self):
-            data = Orange.data.Table(self.parent_widget.graph.scaled_data.T,
-                                     self.parent_widget.data.Y)
+            X = self.parent_widget.graph.scaled_data.T
+            Y = self.parent_widget.data.Y
+            dom = Orange.data.Domain([ContinuousVariable(str(i))
+                                      for i in range(X.shape[1])],
+                                     self.parent_widget.data.domain.class_vars)
+            data = Orange.data.Table(dom, X, Y)
             weights = ReliefF(n_iterations=100, k_nearest=self.k)(data)
             attrs = sorted(
                 zip(weights,
