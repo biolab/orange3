@@ -197,8 +197,7 @@ class HtmlIndexProvider(BaseInventoryProvider):
             log.exception("Error parsing")
 
     def _parse(self, stream):
-        parser = HtmlIndexProvider._XHTMLParser(
-            strict=True, convert_charrefs=True)
+        parser = HtmlIndexProvider._XHTMLParser(convert_charrefs=True)
         parser.feed(stream)
         self.root = parser.builder.close()
 
