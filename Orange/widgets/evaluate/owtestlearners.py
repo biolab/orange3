@@ -267,6 +267,7 @@ class OWTestLearners(widget.OWWidget):
         self.data = data
         self.closeContext()
         if data is not None:
+            self._update_class_selection()
             self.openContext(data.domain.class_var)
         self._invalidate()
 
