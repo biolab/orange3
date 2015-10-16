@@ -781,15 +781,10 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         session_hist.beginGroup(namespace)
         messages = self.UserAdviceMessages
 
-        def key(msg):
-            if msg.persistent_id is None:
-                return str(hash(msg.text))
-            else:
-                return msg.persistent_id
-
         def ispending(msg):
             return not session_hist.value(
-                "{}/confirmed".format(key(msg)), defaultValue=False, type=bool)
+                "{}/confirmed".format(msg.persistent_id),
+                defaultValue=False, type=bool)
         messages = list(filter(ispending, messages))
 
         if not messages:
@@ -804,7 +799,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             session_hist = QSettings(filename, QSettings.IniFormat)
             session_hist.beginGroup(namespace)
             session_hist.setValue(
-                "{}/confirmed".format(key(message)), True)
+                "{}/confirmed".format(message.persistent_id), True)
             session_hist.sync()
 
         self.__msgwidget.accepted.connect(userconfirmed)
@@ -815,12 +810,12 @@ class Message(object):
     A user message.
 
     :param str text: Message text
+    :param str persistent_id:
+        A persistent message id.
     :param icon: Message icon
     :type icon: QIcon or QStyle.StandardPixmap
     :param str moreurl:
         An url to open when a user clicks a 'Learn more' button.
-    :param str persistent_id:
-        Required! A persistent message id
 
     .. seealso:: OWWidget.UserAdviceMessages
 
@@ -831,7 +826,7 @@ class Message(object):
     Warning = QStyle.SP_MessageBoxWarning
     Critical = QStyle.SP_MessageBoxCritical
 
-    def __init__(self, text, icon=None, moreurl=None, persistent_id=None):
+    def __init__(self, text, persistent_id, icon=None, moreurl=None):
         assert isinstance(text, str)
         assert isinstance(icon, (type(None), QIcon, QStyle.StandardPixmap))
         assert persistent_id is not None
