@@ -309,10 +309,10 @@ class CrossValidation(Results):
         n_callbacks = nmethods * self.k
         for fold_idx, (train, test) in enumerate(indices):
             train_data, test_data = data[train], data[test]
+            if len(train_data) == 0 or len(test_data) == 0:
+                raise RuntimeError("One of the train or test folds is empty.")
             if self.preprocessor is not None:
                 train_data = self.preprocessor(train_data)
-            if len(test_data) == 0:
-                raise RuntimeError("One of the test folds is empty.")
             fold_slice = slice(ptr, ptr + len(test))
             self.folds.append(fold_slice)
             self.row_indices[fold_slice] = test
