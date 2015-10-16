@@ -470,8 +470,8 @@ class OWDataTable(widget.OWWidget):
             self.tabs.addTab(view, tab_name)
 
             setattr(view, 'table_id', tid)
-            self.discPalette[tid] = get_colorpalette(data)
-
+            class_var = data.domain.class_var
+            self.discPalette[tid] = ColorPaletteGenerator.palette(class_var)
 
             self._setup_table_view(view, data, tid)
             slot = TableSlot(tid, data, table_summary(data), view)
@@ -967,11 +967,6 @@ def format_summary(summary):
 
     return text
 
-
-def get_colorpalette(table):
-    if len(table.domain.class_vars) > 1 or not table.domain.has_discrete_class:
-        return None
-    return ColorPaletteGenerator(len(table.domain.class_var.values))
 
 
 def is_sortable(table):
