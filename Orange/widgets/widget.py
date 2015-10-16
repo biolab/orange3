@@ -7,9 +7,10 @@ import types
 from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
-    QEventLoop
+    QEventLoop, QSettings, QUrl
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
-    qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QApplication
+    qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
+    QShortcut, QKeySequence, QDesktopServices
 
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
@@ -17,6 +18,7 @@ from Orange.canvas.registry import description as widget_description
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
+from .utils.overlay import MessageOverlayWidget
 
 
 def _asmappingproxy(mapping):
@@ -109,6 +111,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     savedWidgetGeometry = settings.Setting(None)
 
+    #: A list of user advice messages to display to the user.
+    #: When a widget is first shown a message tom this list is selected
+    #: for display. If a user accepts (clicks 'Ok. Got it') the choice is
+    #: recorded and the message is never shown again (closing the message
+    #: will not mark it as seen). Messages can be displayed again by pressing
+    #: Shift + F1
+    #: :type: List[Message]
+    UserAdviceMessages = []
+
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
@@ -136,6 +147,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
 
         self.__blocking = False
+
         # flag indicating if the widget's position was already restored
         self.__was_restored = False
 
@@ -143,8 +155,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.__progressState = 0
         self.__statusMessage = ""
 
+        self.__msgwidget = None
+        self.__msgchoice = 0
+
         if self.want_basic_layout:
             self.insertLayout()
+
+        sc = QShortcut(QKeySequence(Qt.ShiftModifier | Qt.Key_F1), self)
+        sc.activated.connect(self.__quicktip)
 
         return self
 
@@ -318,6 +336,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             # Restore saved geometry on show
             self.__restoreWidgetGeometry()
             self.__was_restored = True
+        self.__quicktipOnce()
 
     def wheelEvent(self, event):
         """ Silently accept the wheel event. This is to ensure combo boxes
@@ -700,6 +719,121 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         The default implementation does nothing.
         """
         pass
+
+    def __showMessage(self, message):
+        if self.__msgwidget is not None:
+            self.__msgwidget.hide()
+            self.__msgwidget.deleteLater()
+            self.__msgwidget = None
+
+        if message is None:
+            return
+
+        buttons = MessageOverlayWidget.Ok | MessageOverlayWidget.Close
+        if message.moreurl is not None:
+            buttons |= MessageOverlayWidget.Help
+
+        if message.icon is not None:
+            icon = message.icon
+        else:
+            icon = Message.Information
+
+        self.__msgwidget = MessageOverlayWidget(
+            parent=self, text=message.text, icon=icon, wordWrap=True,
+            standardButtons=buttons)
+
+        b = self.__msgwidget.button(MessageOverlayWidget.Ok)
+        b.setText("Ok, got it")
+
+        self.__msgwidget.setStyleSheet("""
+            MessageOverlayWidget {
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 0, y2: 1,
+                    stop:0 #666, stop:0.3 #6D6D6D, stop:1 #666)
+            }
+            MessageOverlayWidget QLabel#text-label {
+                color: white;
+            }"""
+        )
+
+        if message.moreurl is not None:
+            helpbutton = self.__msgwidget.button(MessageOverlayWidget.Help)
+            helpbutton.setText("Learn more\N{HORIZONTAL ELLIPSIS}")
+            self.__msgwidget.helpRequested.connect(
+                lambda: QDesktopServices.openUrl(QUrl(message.moreurl)))
+
+        self.__msgwidget.setWidget(self)
+        self.__msgwidget.show()
+
+    def __quicktip(self):
+        messages = list(self.UserAdviceMessages)
+        if messages:
+            message = messages[self.__msgchoice % len(messages)]
+            self.__msgchoice += 1
+            self.__showMessage(message)
+
+    def __quicktipOnce(self):
+        filename = os.path.join(settings.widget_settings_dir(),
+                               "user-session-state.ini")
+        namespace = ("user-message-history/{0.__module__}.{0.__qualname__}"
+                     .format(type(self)))
+        session_hist = QSettings(filename, QSettings.IniFormat)
+        session_hist.beginGroup(namespace)
+        messages = self.UserAdviceMessages
+
+        def ispending(msg):
+            return not session_hist.value(
+                "{}/confirmed".format(msg.persistent_id),
+                defaultValue=False, type=bool)
+        messages = list(filter(ispending, messages))
+
+        if not messages:
+            return
+
+        message = messages[self.__msgchoice % len(messages)]
+        self.__msgchoice += 1
+
+        self.__showMessage(message)
+
+        def userconfirmed():
+            session_hist = QSettings(filename, QSettings.IniFormat)
+            session_hist.beginGroup(namespace)
+            session_hist.setValue(
+                "{}/confirmed".format(message.persistent_id), True)
+            session_hist.sync()
+
+        self.__msgwidget.accepted.connect(userconfirmed)
+
+
+class Message(object):
+    """
+    A user message.
+
+    :param str text: Message text
+    :param str persistent_id:
+        A persistent message id.
+    :param icon: Message icon
+    :type icon: QIcon or QStyle.StandardPixmap
+    :param str moreurl:
+        An url to open when a user clicks a 'Learn more' button.
+
+    .. seealso:: OWWidget.UserAdviceMessages
+
+    """
+    #: QStyle.SP_MessageBox* pixmap enums repeated for easier access
+    Question = QStyle.SP_MessageBoxQuestion
+    Information = QStyle.SP_MessageBoxInformation
+    Warning = QStyle.SP_MessageBoxWarning
+    Critical = QStyle.SP_MessageBoxCritical
+
+    def __init__(self, text, persistent_id, icon=None, moreurl=None):
+        assert isinstance(text, str)
+        assert isinstance(icon, (type(None), QIcon, QStyle.StandardPixmap))
+        assert persistent_id is not None
+        self.text = text
+        self.icon = icon
+        self.moreurl = moreurl
+        self.persistent_id = persistent_id
 
 
 # Pull signal constants from canvas to widget namespace

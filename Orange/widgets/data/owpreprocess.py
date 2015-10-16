@@ -30,6 +30,7 @@ from Orange.statistics import distribution
 from Orange.preprocess import Continuize, Randomize as Random
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.overlay import OverlayWidget
 from .owimpute import RandomTransform
 
 
@@ -1465,6 +1466,14 @@ class OWPreprocess(widget.OWWidget):
         self.flow_view = SequenceFlow()
         self.controler = Controller(self.flow_view, parent=self)
 
+        self.overlay = OverlayWidget(self)
+        self.overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.overlay.setWidget(self.flow_view)
+        self.overlay.setLayout(QVBoxLayout())
+        self.overlay.layout().addWidget(
+            QtGui.QLabel("Drag items from the list on the left",
+                         wordWrap=True))
+
         self.scroll_area = QtGui.QScrollArea(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn
         )
@@ -1562,17 +1571,27 @@ class OWPreprocess(widget.OWWidget):
 
     def set_model(self, ppmodel):
         if self.preprocessormodel:
-            self.preprocessormodel.dataChanged.disconnect(self.commit)
-            self.preprocessormodel.rowsInserted.disconnect(self.commit)
-            self.preprocessormodel.rowsRemoved.disconnect(self.commit)
+            self.preprocessormodel.dataChanged.disconnect(self.__on_modelchanged)
+            self.preprocessormodel.rowsInserted.disconnect(self.__on_modelchanged)
+            self.preprocessormodel.rowsRemoved.disconnect(self.__on_modelchanged)
             self.preprocessormodel.deleteLater()
 
         self.preprocessormodel = ppmodel
         self.controler.setModel(ppmodel)
         if ppmodel is not None:
-            self.preprocessormodel.dataChanged.connect(self.commit)
-            self.preprocessormodel.rowsInserted.connect(self.commit)
-            self.preprocessormodel.rowsRemoved.connect(self.commit)
+            self.preprocessormodel.dataChanged.connect(self.__on_modelchanged)
+            self.preprocessormodel.rowsInserted.connect(self.__on_modelchanged)
+            self.preprocessormodel.rowsRemoved.connect(self.__on_modelchanged)
+
+    def __on_modelchanged(self):
+        if self.preprocessormodel is None or self.preprocessormodel.rowCount() == 0:
+            self.overlay.setWidget(self.flow_view)
+            self.overlay.show()
+        else:
+            self.overlay.setWidget(None)
+            self.overlay.hide()
+
+        self.commit()
 
     def set_data(self, data=None):
         """Set the input data set."""
