@@ -491,12 +491,16 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
                     m, k = left_inner.start + i, right_inner.start + j
                     score = M[u, m] + M[k, w] + distances[m, k]
                     M[u, w] = M[w, u] = score
-                    ordering[u, w] = (u, m, k, w)
+                    ordering[u, w] = (m, k)
 
         return M, ordering
 
     subtrees = list(postorder(tree))
-    ordering = {}
+    ordering_dtype = numpy.dtype(
+        [("m", numpy.uint32),
+         ("k", numpy.uint32)])
+
+    ordering = numpy.empty(distances.shape, dtype=ordering_dtype)
 
     for i, subtree in enumerate(subtrees):
         M, ordering = optimal_ordering(subtree, M, ordering)
@@ -534,12 +538,12 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
                 assert u in range(*tree.value.range)
                 assert w in range(*tree.value.range)
                 if u < w:
-                    u, m, k, w = ordering[u, w]
+                    m, k = ordering[u, w]
 
                     opt_uw[tree.left] = (u, m)
                     opt_uw[tree.right] = (k, w)
                 else:
-                    w, k, m, u = ordering[w, u]
+                    k, m = ordering[w, u]
                     opt_uw[tree.right] = (u, m)
 
                     opt_uw[tree.left] = (k, w)
