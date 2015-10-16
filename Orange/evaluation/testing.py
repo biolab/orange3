@@ -455,7 +455,8 @@ class TestOnTestData(Results):
                          callback=callback)
         nmethods = len(learners)
         if self.store_models:
-            self.models = [None] * nmethods
+            models = [None] * nmethods
+            self.models = [models]
 
         self.row_indices = np.arange(len(test_data))
         self.actual = test_data.Y.flatten()
@@ -475,7 +476,7 @@ class TestOnTestData(Results):
                 values = model(test_data, model.Value)
                 self.predicted[i] = values
             if self.store_models:
-                self.models[i] = model
+                models[i] = model
 
         self.nrows = len(test_data)
         self.folds = [slice(0, len(test_data))]

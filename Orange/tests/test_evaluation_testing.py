@@ -386,7 +386,7 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         self.run_test_preprocessor(TestOnTrainingData, [150])
 
 
-class TestOnTestingTestCase(unittest.TestCase):
+class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
     def test_results(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
@@ -419,8 +419,53 @@ class TestOnTestingTestCase(unittest.TestCase):
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] == 0).all())
 
+    def test_store_data(self):
+        nrows, ncols = 50, 10
+        data = random_data(nrows, ncols)
+        train = data[:80]
+        test = data[80:]
+        learners = [MajorityLearner()]
 
-def test_miss_majority(self):
+        res = TestOnTestData(train, test, learners)
+        self.assertIsNone(res.data)
+
+        res = TestOnTestData(train, test, learners, store_data=True)
+        self.assertIs(res.data, test)
+
+        res = TestOnTestData(train, test, learners)
+        self.assertIsNone(res.data)
+
+        res = TestOnTestData(train, test, learners, store_data=True)
+        self.assertIs(res.data, test)
+
+    def test_store_models(self):
+        nrows, ncols = 50, 10
+        data = random_data(nrows, ncols)
+        train = data[:80]
+        test = data[80:]
+        learners = [NaiveBayesLearner(), MajorityLearner()]
+
+        res = TestOnTestData(train, test, learners)
+        self.assertIsNone(res.models)
+
+        res = TestOnTestData(train, test, learners, store_models=True)
+        self.assertEqual(len(res.models), 1)
+        for models in res.models:
+            self.assertEqual(len(models), 2)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
+
+        res = TestOnTestData(train, test, learners)
+        self.assertIsNone(res.models)
+
+        res = TestOnTestData(train, test, learners, store_models=True)
+        self.assertEqual(len(res.models), 1)
+        for models in res.models:
+            self.assertEqual(len(models), 2)
+            self.assertIsInstance(models[0], NaiveBayesModel)
+            self.assertIsInstance(models[1], ConstantModel)
+
+    def test_miss_majority(self):
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1
@@ -437,6 +482,51 @@ def test_miss_majority(self):
         data = Table(x, y)
         res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
+
+    def run_test_failed(self, method, succ_calls):
+        # Can't use mocking helpers here (wrong result type for Majority,
+        # exception caught for fails)
+        def major(*args):
+            nonlocal major_call
+            major_call += 1
+            return MajorityLearner()(*args)
+
+        def fails(_):
+            nonlocal fail_calls
+            fail_calls += 1
+            raise SystemError("failing learner")
+
+        major_call = 0
+        fail_calls = 0
+        data = random_data(50, 4)
+        res = TestOnTestData(data, data, [major, fails, major])
+        self.assertFalse(res.failed[0])
+        self.assertIsInstance(res.failed[1], Exception)
+        self.assertFalse(res.failed[2])
+        self.assertEqual(major_call, 2)
+        self.assertEqual(fail_calls, 1)
+
+    def test_callback(self):
+        def record_progress(p):
+            progress.append(p)
+
+        progress = []
+        data = random_data(50, 4)
+        TestOnTestData(data, data, [MajorityLearner(), MajorityLearner()],
+                       callback=record_progress)
+        self.assertEqual(progress, [0, 0.5, 1])
+
+    def test_preprocessor(self):
+        def preprocessor(data):
+            data_sizes.append(len(data))
+            return data
+
+        data_sizes = []
+        data = random_data(50, 5)
+        TestOnTestData(data[:30], data[-20:],
+                       [MajorityLearner(), MajorityLearner()],
+                       preprocessor=preprocessor)
+        self.assertEqual(data_sizes, [30])
 
 
 class TestTrainTestSplit(unittest.TestCase):
