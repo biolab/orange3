@@ -518,7 +518,7 @@ class CSVFormat(FileFormat):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITER)
             cls.write_headers(writer.writerow, data)
-            writer.writerows(data)
+            writer.writerows(inst.list for inst in data)
 
 
 class TabFormat(CSVFormat):
