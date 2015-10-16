@@ -41,7 +41,7 @@ def is_discrete_values(values):
         [float(v) for _, v in zip(range(min(3, len(values))), values)]
     except ValueError:
         is_numeric = False
-        max_values = int(max(len(values)**.6, DISCRETE_MAX_VALUES))
+        max_values = int(round(len(values)**.7))
     else:
         is_numeric = True
         max_values = DISCRETE_MAX_VALUES
