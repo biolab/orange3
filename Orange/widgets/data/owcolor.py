@@ -150,7 +150,7 @@ class ContColorTableModel(ColorTableModel):
         return True
 
 
-class TableWithMouse(QTableView):
+class ColorTable(QTableView):
     def __init__(self, model):
         QTableView.__init__(self)
         self.horizontalHeader().hide()
@@ -167,7 +167,7 @@ class TableWithMouse(QTableView):
         self.handle_click(index, ev.pos().x() - rect.x())
 
 
-class DiscreteTable(TableWithMouse):
+class DiscreteTable(ColorTable):
     def handle_click(self, index, x_offset):
         if index.column() == 0 or x_offset > 24:
             self.edit(index)
@@ -184,9 +184,9 @@ class DiscreteTable(TableWithMouse):
             self.model().setData(index, color.getRgb(), ColorRole)
 
 
-class ContinuousTable(TableWithMouse):
+class ContinuousTable(ColorTable):
     def __init__(self, master, model):
-        TableWithMouse.__init__(self, model)
+        ColorTable.__init__(self, model)
         self.master = master
 
     def handle_click(self, index, _):
@@ -262,14 +262,17 @@ class OWColor(widget.OWWidget):
                     if hasattr(var, "colors"):
                         var.colors = copy.copy(var.colors)
                     if var.is_discrete:
+                        var.values = var.values[:]
                         if not hasattr(var, "colors"):
                             n_values = len(var.values)
                             palette = ColorPaletteGenerator(n_values)
                             var.colors = palette.getRGB(range(n_values))
+                        # TODO: This is OK for model, but not for settings
                         self.disc_colors.append(var)
                     else:
                         if not hasattr(var, "colors"):
                             var.colors = ((0, 0, 255), (255, 255, 0), False)
+                        # TODO: This is OK for model, but not for settings
                         self.cont_colors.append(var)
                     vars.append(var)
                 return vars
