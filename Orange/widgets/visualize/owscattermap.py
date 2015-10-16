@@ -1265,7 +1265,7 @@ def create_image(contingencies, palette=None, scale=None):
         colors = 255 - colors[argmax.ravel()]
 
         # XXX: Non linear intensity scaling
-        colors *= P_max.ravel().reshape(-1, 1)
+        colors = colors * P_max.ravel().reshape(-1, 1)
         colors = colors.reshape(P_max.shape + (3,))
         colors = 255 - colors
     elif P.ndim == 2:
@@ -1279,10 +1279,10 @@ def create_image(contingencies, palette=None, scale=None):
 #         mix /= mix.max() if total else 1.0
 
         colors = np.zeros((np.prod(mix.shape), 3)) + 255
-        colors -= mix.ravel().reshape(-1, 1) * 255
+        colors = colors - mix.ravel().reshape(-1, 1) * 255
         colors = colors.reshape(mix.shape + (3,))
 
-    return colors
+    return colors.astype(int)
 
 
 def score_candidate_rects(node, region):
