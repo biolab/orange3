@@ -1,4 +1,5 @@
 import sys
+import sysconfig
 import os
 import errno
 import shlex
@@ -22,7 +23,7 @@ from PyQt4.QtGui import (
     QTextBrowser, QTextOption, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QPalette, QStandardItemModel, QStandardItem,
     QSortFilterProxyModel, QItemSelectionModel, QStyle, QStyledItemDelegate,
-    QStyleOptionViewItemV4, QApplication
+    QStyleOptionViewItemV4, QApplication, QHBoxLayout
 )
 
 from PyQt4.QtCore import (
@@ -390,6 +391,16 @@ class AddonManagerDialog(QDialog):
 
         self.addonwidget = AddonManagerWidget()
         self.layout().addWidget(self.addonwidget)
+
+        info_bar = QWidget()
+        info_layout = QHBoxLayout()
+        info_bar.setLayout(info_layout)
+        info_icon = QLabel()
+        info_text = QLabel()
+        info_layout.addWidget(info_icon)
+        info_layout.addWidget(info_text)
+        self.layout().addWidget(info_bar)
+
         buttons = QDialogButtonBox(
             orientation=Qt.Horizontal,
             standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -398,6 +409,20 @@ class AddonManagerDialog(QDialog):
         buttons.rejected.connect(self.reject)
 
         self.layout().addWidget(buttons)
+
+        if not os.access(sysconfig.get_path("purelib"), os.W_OK):
+            if sysconfig.get_platform().startswith("macosx"):
+                info = "You must install Orange by dragging it into" \
+                       " Applications before installing add-ons."
+            else:
+                info = "You do not have permissions to write into Orange " \
+                       "directory.\nYou may need to contact an administrator " \
+                       "for assistance."
+            info_text.setText(info)
+            style = QApplication.instance().style()
+            info_icon.setPixmap(style.standardIcon(
+                QStyle.SP_MessageBoxCritical).pixmap(14, 14))
+            buttons.button(QDialogButtonBox.Ok ).setEnabled(False)
 
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         if AddonManagerDialog._packages is None:
@@ -540,7 +565,7 @@ class AddonManagerDialog(QDialog):
 
     def __on_installer_finished(self):
         message_information(
-            "Please restart the application for changes to take effect.",
+            "Please restart Orange for changes to take effect.",
             parent=self)
         self.accept()
 
