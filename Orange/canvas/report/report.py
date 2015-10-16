@@ -8,10 +8,16 @@ from Orange.widgets.io import PngFormat
 
 
 class Report:
+    """
+    A class that adds report-related methods to the widget.
+    """
     report_html = ""
     name = ""
 
     def show_report(self):
+        """
+        Raise the report window.
+        """
         from Orange.canvas.report.owreport import OWReport
 
         report = OWReport.get_instance()
@@ -21,9 +27,19 @@ class Report:
         report.raise_()
 
     def get_widget_name_extension(self):
+        """
+        Return the text that is added to the section name in the report.
+
+        For instance, the Distribution widget adds the name of the attribute
+        whose distribution is shown.
+
+        :return: str or None
+        """
         return None
 
     def create_report_html(self):
+        """ Start a new section in report and call :obj:`send_report` method
+        to add content."""
         self.report_html = get_html_section(self.name)
         self.report_html += '<div class="content">\n'
         self.send_report()
@@ -37,27 +53,87 @@ class Report:
             return name, items
 
     def report_items(self, name, items=None):
+        """
+        Add a sequence of pairs or an `OrderedDict` as a HTML list to report.
+
+        The first argument, `name` can be omitted.
+
+        :param name: report section name (can be omitted)
+        :param name: str or tuple or OrderedDict
+        :param items: a sequence of items
+        :type items: list or tuple or OrderedDict
+        """
         name, items = self._fix_args(name, items)
         self.report_name(name)
         self.report_html += render_items(items)
 
     def report_name(self, name):
+        """ Add a section name to the report"""
         if name != "":
             self.report_html += get_html_subsection(name)
 
     def report_data(self, name, data=None):
+        """
+        Add description of data table to the report.
+
+        See :obj:`describe_data` for details.
+
+        The first argument, `name` can be omitted.
+
+        :param name: report section name (can be omitted)
+        :param name: str or tuple or OrderedDict
+        :param data: data whose description is added to the report
+        :type data: Orange.data.Table
+        """
+
         name, data = self._fix_args(name, data)
         self.report_items(name, describe_data(data))
 
     def report_domain(self, name, domain=None):
+        """
+        Add description of domain to the report.
+
+        See :obj:`describe_domain` for details.
+
+        The first argument, `name` can be omitted.
+
+        :param name: report section name (can be omitted)
+        :param name: str or tuple or OrderedDict
+        :param domain: domain whose description is added to the report
+        :type domain: Orange.data.Domain
+        """
         name, domain = self._fix_args(name, domain)
         self.report_items(name, describe_domain(domain))
 
     def report_data_brief(self, name, data=None):
+        """
+        Add description of data table to the report.
+
+        See :obj:`describe_data_brief` for details.
+
+        The first argument, `name` can be omitted.
+
+        :param name: report section name (can be omitted)
+        :param name: str or tuple or OrderedDict
+        :param data: data whose description is added to the report
+        :type data: Orange.data.Table
+        """
         name, data = self._fix_args(name, data)
         self.report_items(name, describe_data_brief(data))
 
     def report_plot(self, name, plot=None):
+        """
+        Add a plot to the report.
+
+        The first argument, `name` can be omitted.
+
+        :param name: report section name (can be omitted)
+        :param name: str or tuple or OrderedDict
+        :param plot: plot widget
+        :type plot:
+            QGraphicsScene or pyqtgraph.PlotItem or pyqtgraph.PlotWidget
+            or pyqtgraph.GraphicsWidget
+        """
         name, plot = self._fix_args(name, plot)
         from pyqtgraph import PlotWidget, PlotItem, GraphicsWidget
         self.report_name(name)
@@ -73,6 +149,28 @@ class Report:
     # noinspection PyBroadException
     def report_table(self, name, table=None, header_rows=0, header_columns=0,
                      num_format=None):
+        """
+        Add content of a table to the report.
+
+        The method accepts different kinds of two-dimensional data, including
+        Qt's views and models.
+
+        The first argument, `name` can be omitted if other arguments (except
+        `table`) are passed as keyword arguments.
+
+        :param name: name of the section
+        :type name: str
+        :param table: table to be reported
+        :type table:
+            QAbstractItemModel or QStandardItemModel or two-dimensional list or
+            any object with method `model()` that returns one of the above
+        :param header_rows: the number of rows that are marked as header rows
+        :type header_rows: int
+        :param header_columns:
+            the number of columns that are marked as header columns
+        :type header_columns: int
+        :param num_format: numeric format, e.g. `{:.3}`
+        """
         name, table = self._fix_args(name, table)
         join = "".join
 
@@ -144,6 +242,23 @@ class Report:
 
     # noinspection PyBroadException
     def report_list(self, name, data=None, limit=1000):
+        """
+        Add a list to the report.
+
+        The method accepts different kinds of one-dimensional data, including
+        Qt's views and models.
+
+        The first argument, `name` can be omitted.
+
+        :param name: name of the section
+        :type name: str
+        :param data: table to be reported
+        :type data:
+            QAbstractItemModel or any object with method `model()` that
+            returns QAbstractItemModel
+        :param limit: the maximal number of reported items (default: 1000)
+        :type limit: int
+        """
         name, data = self._fix_args(name, data)
 
         def report_abstract_model(model):
@@ -163,19 +278,42 @@ class Report:
         self.report_html += txt
 
     def report_paragraph(self, name, text=None):
+        """
+        Add a paragraph to the report.
+
+        The first argument, `name` can be omitted.
+
+        :param name: name of the section
+        :type name: str
+        :param text: text of the paragraph
+        :type text: str
+        """
         name, text = self._fix_args(name, text)
         self.report_name(name)
         self.report_html += "<p>{}</p>".format(text)
 
     def report_caption(self, text):
+        """
+        Add caption to the report.
+        """
         self.report_html += "<p class='caption'>{}</p>".format(text)
 
     def report_raw(self, name, html=None):
+        """
+        Add raw HTML to the report.
+        """
         name, html = self._fix_args(name, html)
         self.report_name(name)
         self.report_html += html
 
     def combo_value(self, combo):
+        """
+        Add the value of a combo box to the report.
+
+        The methods assumes that the combo box was created by
+        :obj:`Orange.widget.gui.comboBox`. If the value of the combo equals
+        `combo.emptyString`, this function returns None.
+        """
         text = combo.currentText()
         if text != combo.emptyString:
             return text
@@ -361,6 +499,9 @@ def render_items_vert(items):
 
 
 def get_html_img(scene):
+    """
+    Create HTML img element with base64-encoded image from the scene
+    """
     byte_array = QByteArray()
     filename = QBuffer(byte_array)
     filename.open(QIODevice.WriteOnly)
@@ -468,6 +609,20 @@ def describe_data_brief(data):
 
 
 def list_legend(model, selected=None):
+    """
+    Create HTML with a legend constructed from a Qt model or a view.
+
+    This function can be used for reporting the legend for graph in widgets
+    in which the colors representing different values are shown in a listbox
+    with colored icons. The function returns a string with values from the
+    listbox, preceded by squares of the corresponding colors.
+
+    The model must return data for Qt.DecorationRole. If a view is passed as
+    an argument, it has to have method `model()`.
+
+    :param model: model or view, usually a list box
+    :param selected: if given, only items with the specified indices are shown
+    """
     if hasattr(model, "model"):
         model = model.model()
     legend = ""
