@@ -465,7 +465,7 @@ class OWFile(widget.OWWidget):
     @staticmethod
     def _get_ext_name(filename):
         try:
-            return FileFormats.names[os.path.splitext(filename)[1]]
+            return FileFormat.names[os.path.splitext(filename)[1]]
         except KeyError:
             return "unknown format"
 
