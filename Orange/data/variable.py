@@ -276,7 +276,7 @@ class Variable(metaclass=VariableMeta):
 
     def __hash__(self):
         return super().__hash__()
-    
+
     @classmethod
     def make(cls, name):
         """
