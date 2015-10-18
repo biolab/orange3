@@ -843,6 +843,12 @@ class TimeVariable(ContinuousVariable):
         (1, 0, '%Y-%j'),
     ]
 
+    # UTC offset and associated timezone. If parsed datetime values provide an
+    # offset, it is used for display. If not all values have the same offset,
+    # +0000 (=UTC) timezone is used and utc_offset is set to False.
+    utc_offset = None
+    timezone = timezone.utc
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.have_date = 0
@@ -855,9 +861,9 @@ class TimeVariable(ContinuousVariable):
 
     def repr_val(self, val):
         if val < 0:
-            date = str(datetime.fromtimestamp(0, tz=timezone.utc) + timedelta(seconds=val))
+            date = str(datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=val))
         else:
-            date = str(datetime.fromtimestamp(val, tz=timezone.utc))
+            date = str(datetime.fromtimestamp(val, tz=self.timezone))
         if self.have_date and not self.have_time:
             date = date.split()[0]
         elif not self.have_date and self.have_time:
@@ -902,6 +908,17 @@ class TimeVariable(ContinuousVariable):
                 break
         else:
             raise ValueError('Invalid datetime format. Only ISO 8601 supported.')
+
+        # Remember UTC offset. If not all parsed values share the same offset,
+        # remember none of it.
+        offset = dt.utcoffset()
+        if self.utc_offset is not False:
+            if offset and self.utc_offset is None:
+                self.utc_offset = offset
+                self.timezone = timezone(offset)
+            elif self.utc_offset != offset:
+                self.utc_offset = False
+                self.timezone = timezone.utc
 
         # Convert time to UTC timezone. In dates without timezone,
         # localtime is assumed. See also:

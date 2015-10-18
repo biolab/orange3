@@ -249,12 +249,12 @@ class StringVariableTest(VariableTest):
 class TimeVariableTest(VariableTest):
     TESTS = [
         # in str, UTC timestamp, out str (in UTC)
-        ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 12:13:11.009999'),
-        ('2015-10-12T14:13:11.01+0200', 1444651991.01, '2015-10-12 12:13:11.009999'),
-        ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 12:13:11'),
-        ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 12:13:11'),
-        ('20151012T141311+0200',     1444651991, '2015-10-12 12:13:11'),
-        ('20151012141311+0200',      1444651991, '2015-10-12 12:13:11'),
+        ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.009999+0200'),
+        ('2015-10-12T14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.009999+0200'),
+        ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
+        ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
+        ('20151012T141311+0200',     1444651991, '2015-10-12 14:13:11+0200'),
+        ('20151012141311+0200',      1444651991, '2015-10-12 14:13:11+0200'),
         ('2015-10-12 14:13:11', 1444659191, '2015-10-12 14:13:11'),
         ('2015-10-12T14:13:11', 1444659191, '2015-10-12 14:13:11'),
         ('2015-10-12 14:13',    1444659180, '2015-10-12 14:13:00'),
@@ -280,6 +280,16 @@ class TimeVariableTest(VariableTest):
             ts = var.parse(datestr)
             self.assertEqual(ts, timestamp, msg=datestr)
             self.assertEqual(var.repr_val(ts), outstr, msg=datestr)
+
+    def test_parse_utc(self):
+        var = TimeVariable('time')
+        datestr, offset = '2015-10-18 22:48:20', '+0200'
+        ts1 = var.parse(datestr + offset)
+        self.assertEqual(var.repr_val(ts1), datestr + offset)
+        # Once a value is without a TZ, all the values lose it
+        ts2 = var.parse(datestr)
+        self.assertEqual(var.repr_val(ts2), datestr)
+        self.assertEqual(var.repr_val(ts1), '2015-10-18 20:48:20')
 
     def test_have_date(self):
         var = TimeVariable('time')
