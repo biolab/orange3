@@ -785,6 +785,14 @@ class OWDataTable(widget.OWWidget):
                 model = model.sourceModel()
 
             table = model.source  # The input data table
+
+            # Selections of individual instances are not implemented
+            # for SqlTables
+            if isinstance(table, SqlTable):
+                self.send("Selected Data", selected_data)
+                self.send("Other Data", other_data)
+                return
+
             rowsel, colsel = self.get_selection(view)
             self.selected_rows, self.selected_cols = rowsel, colsel
 
