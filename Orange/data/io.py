@@ -579,11 +579,11 @@ class ExcelFormat(FileFormat):
     @classmethod
     def read_file(cls, filename, wrapper=None):
         wrapper = wrapper or _IDENTITY
-        filename, _, sheet_name = filename.rpartition(':')
-        if not filename:
-            filename, sheet_name = sheet_name, ''
+        file_name, _, sheet_name = filename.rpartition(':')
+        if not path.isfile(file_name):
+            file_name, sheet_name = filename, ''
         import xlrd
-        wb = xlrd.open_workbook(filename, on_demand=True)
+        wb = xlrd.open_workbook(file_name, on_demand=True)
         if sheet_name:
             ss = wb.sheet_by_name(sheet_name)
         else:
@@ -598,7 +598,7 @@ class ExcelFormat(FileFormat):
                             for row in range(first_row, ss.nrows)])
             table = cls.data_table(cells)
         except Exception:
-            raise IOError("Couldn't load spreadsheet from " + filename)
+            raise IOError("Couldn't load spreadsheet from " + file_name)
         return wrapper(table)
 
 
