@@ -504,7 +504,7 @@ class FileFormat(metaclass=FileFormatMeta):
 class CSVFormat(FileFormat):
     EXTENSIONS = ('.csv',)
     DESCRIPTION = 'Comma-separated values'
-    DELIMITER = ','
+    DELIMITERS = ',;:\t$ '
     SUPPORT_COMPRESSED = True
 
     @classmethod
@@ -517,12 +517,12 @@ class CSVFormat(FileFormat):
             with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
-                    dialect = csv.Sniffer().sniff(file.read(1024), list(',\t;:$ '))
+                    dialect = csv.Sniffer().sniff(file.read(1024), cls.DELIMITERS)
                 except UnicodeDecodeError:
                     continue
                 except csv.Error:
                     dialect = csv.excel()
-                    dialect.delimiter = cls.DELIMITER
+                    dialect.delimiter = cls.DELIMITERS[0]
 
                 file.seek(0)
                 dialect.skipinitialspace = True
@@ -539,7 +539,7 @@ class CSVFormat(FileFormat):
     def write_file(cls, filename, data):
         import csv
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=cls.DELIMITER)
+            writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data)
             writer.writerows(inst.list for inst in data)
 
@@ -547,7 +547,7 @@ class CSVFormat(FileFormat):
 class TabFormat(CSVFormat):
     EXTENSIONS = ('.tab', '.tsv')
     DESCRIPTION = 'Tab-separated values'
-    DELIMITER = '\t'
+    DELIMITERS = '\t'
 
 
 class PickleFormat(FileFormat):
