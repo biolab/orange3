@@ -107,7 +107,7 @@ class ColorPaletteDlg(QDialog):
 
     def createContinuousPalette(self, paletteName, boxCaption,
                                 passThroughBlack=0,
-                                initialColor1=Qt.white, initialColor2=Qt.black):
+                                initialColor1=Qt.blue, initialColor2=Qt.yellow):
         buttBox = gui.widgetBox(self.mainArea, boxCaption)
         box = gui.widgetBox(buttBox, orientation="horizontal")
 

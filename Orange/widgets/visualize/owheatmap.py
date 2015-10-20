@@ -228,13 +228,18 @@ class OWHeatMap(widget.OWWidget):
         self.color_cb = gui.comboBox(colorbox, self, "palette_index")
         self.color_cb.setIconSize(QSize(64, 16))
         palettes = sorted(colorbrewer.colorSchemes["sequential"].items())
-        palettes += [("Green-Black-Red",
-                      {3: [(0, 255, 0), (0, 0, 0), (255, 0, 0)]})]
+        palettes += [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]}),
+            ("Green-Black-Red", {3: [(0, 255, 0), (0, 0, 0), (255, 0, 0)]})]
         palettes += self.user_palettes
+        for i, pcolor in enumerate(palettes):
+            if pcolor[0] == 'Blue-Yellow':
+                self.palette_index = i
+
         model = color_palette_model(palettes, self.color_cb.iconSize())
         model.setParent(self)
         self.color_cb.setModel(model)
         self.color_cb.activated.connect(self.update_color_schema)
+
         self.color_cb.setCurrentIndex(self.palette_index)
         # TODO: Add 'Manage/Add/Remove' action.
 
