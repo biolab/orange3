@@ -165,22 +165,78 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
 
 
 def color_palette_table(colors, samples=255,
-                        threshold_low=0.0, threshold_high=1.0):
+                        threshold_low=0.0, threshold_high=1.0, gamma=None):
     N = len(colors)
     colors = np.array(colors, dtype=np.ubyte)
     low, high = threshold_low * 255, threshold_high * 255
     points = np.linspace(low, high, N)
     space = np.linspace(0, 255, 255)
 
-    r = np.interp(space, points, colors[:, 0], left=255, right=0)
-    g = np.interp(space, points, colors[:, 1], left=255, right=0)
-    b = np.interp(space, points, colors[:, 2], left=255, right=0)
+    if gamma is None or gamma < 0.0001:
+        r = np.interp(space, points, colors[:, 0], left=255, right=0)
+        g = np.interp(space, points, colors[:, 1], left=255, right=0)
+        b = np.interp(space, points, colors[:, 2], left=255, right=0)
+    else:
+        r = interp_exp(space, points, colors[:, 0], left=255, right=0,
+                       gamma=gamma)
+        g = interp_exp(space, points, colors[:, 1], left=255, right=0,
+                       gamma=gamma)
+        b = interp_exp(space, points, colors[:, 2], left=255, right=0,
+                       gamma=gamma)
     return np.c_[r, g, b]
+
+
+def interp_exp(x, xp, fp, gamma=0.0, left=None, right=None,):
+    assert np.all(np.diff(xp) > 0)
+    x = np.asanyarray(x)
+    xp = np.asanyarray(xp)
+    fp = np.asanyarray(fp)
+
+    if xp.shape != fp.shape:
+        raise ValueError("xp and fp must have the same shape")
+
+    ind = np.searchsorted(xp, x, side="right")
+
+    f = np.zeros(len(x))
+
+    under = ind == 0
+    over = ind == len(xp)
+    between = ~under & ~over
+
+    f[under] = left if left is not None else fp[0]
+    f[over] = right if right is not None else fp[-1]
+
+    if right is not None:
+        # Fix points exactly on the right boundary.
+        f[x == xp[-1]] = fp[-1]
+
+    ind = ind[between]
+
+    def exp_ramp(x, gamma):
+        assert gamma >= 0
+        if gamma < np.finfo(float).eps:
+            return x
+        else:
+            return (np.exp(gamma * x) - 1) / (np.exp(gamma) - 1.)
+
+    def gamma_fun(x, gamma):
+        out = np.array(x)
+        out[x < 0.5] = exp_ramp(x[x < 0.5] * 2, gamma) / 2
+        out[x > 0.5] = 1 - exp_ramp((1 - x[x > 0.5]) * 2, gamma) / 2
+        return out
+
+    y0, y1 = fp[ind - 1], fp[ind]
+    x0, x1 = xp[ind - 1], xp[ind]
+
+    m = (x[between] - x0) / (x1 - x0)
+    m = gamma_fun(m, gamma)
+    f[between] = (1 - m) * y0 + m * y1
+
+    return f
 
 # TODO:
 #     * Richer Tool Tips
 #     * Color map edit/manage
-#     * 'Gamma' color transform (nonlinear exponential interpolation)
 #     * Restore saved row selection (?)
 #     * 'namespace' use cleanup
 
@@ -402,9 +458,16 @@ class OWHeatMap(widget.OWWidget):
             colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema)
+        gammaslider = gui.hSlider(
+            colorbox, self, "gamma", minValue=0.0, maxValue=20.0,
+            step=1.0, ticks=True, intOnly=False,
+            createLabel=False, callback=self.update_color_schema
+        )
 
         form.addRow("Low:", lowslider)
         form.addRow("High:", highslider)
+        form.addRow("Gamma:", gammaslider)
+
         colorbox.layout().addLayout(form)
 
         sortbox = gui.widgetBox(self.controlArea, "Sorting")
@@ -502,7 +565,8 @@ class OWHeatMap(widget.OWWidget):
             _, colors = max(data.items())
             return color_palette_table(
                 colors, threshold_low=self.threshold_low,
-                threshold_high=self.threshold_high)
+                threshold_high=self.threshold_high,
+                gamma=self.gamma)
 
     def selected_split_label(self):
         """Return the current selected split label."""
