@@ -1,9 +1,10 @@
 import io
+from os import path
 import unittest
 
 import numpy as np
 
-from Orange.data import ContinuousVariable, DiscreteVariable
+from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.data.io import TabFormat
 
 
@@ -112,3 +113,18 @@ class TestTabReader(unittest.TestCase):
 
         self.assertSequenceEqual(t2.domain['x'].values, 'abcdgh')
         np.testing.assert_almost_equal(t2.X.ravel(), [5, 4, 0, 2, 1])
+
+    def test_dataset_with_weird_names_and_column_attributes(self):
+        data = Table(path.join(path.dirname(__file__), 'weird.tab'))
+        self.assertEqual(len(data), 6)
+        self.assertEqual(len(data.domain), 1)
+        self.assertEqual(len(data.domain.metas), 1)
+        NAME = "['5534fab7fad58d5df50061f1', '5534fab8fad58d5de20061f8']"
+        self.assertEqual(data.domain[0].name, NAME)
+        ATTRIBUTES = dict(
+            Timepoint='20',
+            id=NAME,
+            Name="['Gene expressions (dd_AX4_on_Ka_20Hr_bio1_mapped.bam)', 'Gene expressions (dd_AX4_on_Ka_20Hr_bio2_mapped.bam)']",
+            Replicate="['1', '2']",
+        )
+        self.assertEqual(data.domain[0].attributes, ATTRIBUTES)
