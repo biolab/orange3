@@ -368,6 +368,7 @@ class OWHeatMap(widget.OWWidget):
         (Clustering, "Clustering"),
         (OrderedClustering, "Clustering with leaf ordering")
     ]
+    MaxClusteringInputSize = 1000
 
     gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
@@ -584,6 +585,7 @@ class OWHeatMap(widget.OWWidget):
         self.selected_rows = []
         self.__columns_cache.clear()
         self.__rows_cache.clear()
+        self.__update_clustering_enable_state()
 
     def clear_scene(self):
         self.selection_manager.set_heatmap_widgets([[]])
@@ -624,6 +626,8 @@ class OWHeatMap(widget.OWWidget):
 
         self.data = data
         self.input_data = input_data
+        self.__update_clustering_enable_state()
+
         if data is not None:
             variables = self.data.domain.class_vars + self.data.domain.metas
             variables = [var for var in variables
@@ -779,11 +783,13 @@ class OWHeatMap(widget.OWWidget):
                     for row in parts.rows]
             parts = parts._replace(rows=rows)
         elif self.sort_rows != OWHeatMap.NoSorting:
+            assert len(self.data) < OWHeatMap.MaxClusteringInputSize
             parts = self.cluster_rows(
                 self.data, parts,
                 ordered=self.sort_rows == OWHeatMap.OrderedClustering)
 
         if self.sort_columns != OWHeatMap.NoSorting:
+            assert len(self.data.domain.attributes) < OWHeatMap.MaxClusteringInputSize
             parts = self.cluster_columns(
                 self.data, parts,
                 ordered=self.sort_columns == OWHeatMap.OrderedClustering)
@@ -1158,6 +1164,47 @@ class OWHeatMap(widget.OWWidget):
                 half_row = height / row_count / 2
                 left, _, right, _ = dendrogram.getContentsMargins()
                 dendrogram.setContentsMargins(left, half_row, right, half_row)
+
+    def __update_clustering_enable_state(self):
+        def enable(item, state):
+            """Set QStandardItem's enabled state to `state`."""
+            flags = item.flags()
+            if state:
+                item.setFlags(flags | Qt.ItemIsEnabled)
+            else:
+                item.setFlags(flags & ~Qt.ItemIsEnabled)
+
+        rowclust_enabled = (len(self.data) < OWHeatMap.MaxClusteringInputSize
+                            if self.data is not None else True)
+        colclust_enabled = (len(self.data.domain.attributes) < OWHeatMap.MaxClusteringInputSize
+                            if self.data is not None else True)
+
+        # Disable/enable the combobox items for the clustering methods
+        for i in range(self.rowsortcb.count()):
+            item = self.rowsortcb.model().item(i)
+            sorting = self.RowOrdering[i][0]
+            if sorting == OWHeatMap.Clustering or \
+                    sorting == OWHeatMap.OrderedClustering:
+                enable(item, rowclust_enabled)
+
+        for i in range(self.colsortcb.count()):
+            item = self.colsortcb.model().item(i)
+            sorting = self.ColumnOrdering[i][0]
+            if sorting == OWHeatMap.Clustering or \
+                sorting == OWHeatMap.OrderedClustering:
+                enable(item, colclust_enabled)
+
+        # Ensure the current selected method is not a clustring method
+        # if it is disabled
+        if not rowclust_enabled and \
+                (self.sort_rows == OWHeatMap.Clustering or
+                 self.sort_rows == OWHeatMap.OrderedClustering):
+            self.sort_rows_idx = 0
+
+        if not colclust_enabled and \
+                (self.sort_columns == OWHeatMap.Clustering or
+                 self.sort_columns == OWHeatMap.OrderedClustering):
+            self.sort_columns_idx = 0
 
     def heatmap_widgets(self):
         """Iterate over heatmap widgets.
