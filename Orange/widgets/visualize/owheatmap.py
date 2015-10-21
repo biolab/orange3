@@ -15,6 +15,7 @@ from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
 from Orange.data import Domain, Table, DiscreteVariable, StringVariable
+from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical
@@ -601,9 +602,18 @@ class OWHeatMap(widget.OWWidget):
         """Set the input dataset to display."""
         self.closeContext()
         self.clear()
-
         self.error(0)
-        self.information(0)
+        self.information([0, 1])
+
+        if isinstance(data, SqlTable):
+            if data.approx_len() < 4000:
+                data = Table(data)
+            else:
+                self.information(0, "Data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(2000, partial=True)
+                data = Table(data_sample)
+
         input_data = data
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
@@ -618,7 +628,7 @@ class OWHeatMap(widget.OWWidget):
                 self.error(0, "No continuous feature columns")
                 input_data = data = None
             else:
-                self.information(0, "{} discrete column{} removed"
+                self.information(1, "{} discrete column{} ignored"
                                 .format(ndisc, "s" if ndisc > 1 else ""))
 
         self.data = data
