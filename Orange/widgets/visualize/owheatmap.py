@@ -604,7 +604,7 @@ class OWHeatMap(widget.OWWidget):
         self.clear()
 
         self.error(0)
-        self.warning(0)
+        self.information(0)
         input_data = data
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
@@ -619,7 +619,7 @@ class OWHeatMap(widget.OWWidget):
                 self.error(0, "No continuous feature columns")
                 input_data = data = None
             else:
-                self.warning(0, "{} discrete column{} removed"
+                self.information(0, "{} discrete column{} removed"
                                 .format(ndisc, "s" if ndisc > 1 else ""))
 
         self.data = data
