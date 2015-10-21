@@ -531,12 +531,10 @@ class OWHeatMap(widget.OWWidget):
         self.heatmap_scene.itemsBoundingRect()
         self.heatmap_scene.removeItem(item)
 
-        policy = (Qt.ScrollBarAlwaysOn if self.keep_aspect
-                  else Qt.ScrollBarAlwaysOff)
         self.sceneView = QGraphicsView(
             self.scene,
-            verticalScrollBarPolicy=policy,
-            horizontalScrollBarPolicy=policy,
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
+            horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             viewportUpdateMode=QGraphicsView.FullViewportUpdate,
         )
 
@@ -1059,12 +1057,18 @@ class OWHeatMap(widget.OWWidget):
                 # into account
                 minsize = widget.minimumSize()
                 size = size.expandedTo(minsize)
-                widget.resize(size)
+                preferred = widget.effectiveSizeHint(Qt.PreferredSize)
+                widget.resize(preferred.boundedTo(size))
             else:
                 # First set/update the widget's width (the layout will
                 # distribute the available width to heatmap widgets in
                 # the grid)
                 minsize = widget.minimumSize()
+                preferred = widget.effectiveSizeHint(Qt.PreferredSize)
+
+                if preferred.width() < size.expandedTo(minsize).width():
+                    size = preferred
+
                 widget.resize(size.expandedTo(minsize).width(),
                               widget.size().height())
                 # calculate and set the heatmap row's heights based on
@@ -1102,17 +1106,6 @@ class OWHeatMap(widget.OWWidget):
         self.__update_selection_geometry()
 
     def __aspect_mode_changed(self):
-        if self.keep_aspect:
-            policy = Qt.ScrollBarAlwaysOn
-        else:
-            policy = Qt.ScrollBarAlwaysOff
-
-        viewport = self.sceneView.viewport()
-        # Temp. remove the event filter so we won't process the resize twice
-        viewport.removeEventFilter(self)
-        self.sceneView.setVerticalScrollBarPolicy(policy)
-        self.sceneView.setHorizontalScrollBarPolicy(policy)
-        viewport.installEventFilter(self)
         self.__update_size_constraints()
 
     def eventFilter(self, reciever, event):
@@ -1612,6 +1605,13 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
 
         self.heatmap_item.setPixmap(self.__pixmap)
         self.averages_item.setPixmap(self.__avgpixmap)
+        hmsize = QSizeF(self.__pixmap.size())
+        avsize = QSizeF(self.__avgpixmap.size())
+
+        self.heatmap_item.setMinimumSize(hmsize)
+        self.averages_item.setMinimumSize(avsize)
+        self.heatmap_item.setPreferredSize(hmsize * 10)
+        self.averages_item.setPreferredSize(avsize * 10)
         self.layout().invalidate()
 
     def cell_at(self, pos):
@@ -1863,6 +1863,18 @@ class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
     def sizeHint(self, which, constraint=QRectF()):
         if not self.isVisible():
             return QSizeF(0, 0)
+        elif which == Qt.PreferredSize:
+            fm = QFontMetrics(QtGui.QApplication.instance().font())
+            brects = [fm.boundingRect(item.text_item.text())
+                      for item in self.label_items]
+            spacing = self.layout().spacing()
+            height = sum((r.height() + spacing for r in brects), 0)
+            width = max((r.width() for r in brects), default=0)
+
+            if self.orientation == Qt.Vertical:
+                return QSizeF(width, height)
+            else:
+                return QSizeF(height, width)
         else:
             return super().sizeHint(which, constraint)
 
