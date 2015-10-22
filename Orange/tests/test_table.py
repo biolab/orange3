@@ -725,16 +725,31 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("zoo")
         d.save("test-zoo.tab")
         dd = data.Table("test-zoo")
-
         try:
             self.assertTupleEqual(d.domain.metas, dd.domain.metas, msg="Meta attributes don't match.")
             self.assertTupleEqual(d.domain.variables, dd.domain.variables, msg="Attributes don't match.")
 
+            np.testing.assert_almost_equal(d.W, dd.W, err_msg="Weights don't match.")
             for i in range(10):
                 for j in d.domain.variables:
                     self.assertEqual(d[i][j], dd[i][j])
         finally:
             os.remove("test-zoo.tab")
+
+        d = data.Table("zoo")
+        d.set_weights(range(len(d)))
+        d.save("test-zoo-weights.tab")
+        dd = data.Table("test-zoo-weights")
+        try:
+            self.assertTupleEqual(d.domain.metas, dd.domain.metas, msg="Meta attributes don't match.")
+            self.assertTupleEqual(d.domain.variables, dd.domain.variables, msg="Attributes don't match.")
+
+            np.testing.assert_almost_equal(d.W, dd.W, err_msg="Weights don't match.")
+            for i in range(10):
+                for j in d.domain.variables:
+                    self.assertEqual(d[i][j], dd[i][j])
+        finally:
+            os.remove("test-zoo-weights.tab")
 
     def test_save_pickle(self):
         table = data.Table("iris")
@@ -1441,7 +1456,8 @@ class CreateTableWithData(TableTests):
         domain = self.mock_domain()
         table = data.Table.from_numpy(domain, self.data, W=self.weight_data)
 
-        np.testing.assert_almost_equal(table.W, self.weight_data)
+        np.testing.assert_equal(table.W.shape, (len(self.data), ))
+        np.testing.assert_almost_equal(table.W.flatten(), self.weight_data.flatten())
 
     def test_splits_X_and_Y_if_given_in_same_array(self):
         joined_data = np.column_stack((self.data, self.class_data))

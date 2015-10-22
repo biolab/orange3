@@ -403,7 +403,7 @@ class Table(MutableSequence, Storage):
         if W is None or W.size == 0:
             W = np.empty((X.shape[0], 0))
         else:
-            W = W.reshape(W.size, 1)
+            W = W.reshape(W.size)
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
