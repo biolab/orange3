@@ -438,8 +438,8 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @staticmethod
     def header_names(data):
-        return [v.name for v in chain(namegen('weights_', data.W.shape[1], count=range),
-                                      data.domain.attributes,
+        return ['weights'] * data.has_weights() + \
+               [v.name for v in chain(data.domain.attributes,
                                       data.domain.class_vars,
                                       data.domain.metas)]
 
@@ -451,15 +451,14 @@ class FileFormat(metaclass=FileFormatMeta):
             elif var.is_discrete:
                 return Flags.join(var.values) if var.ordered else var.TYPE_HEADERS[0]
             raise NotImplementedError
-        return list(chain(repeat('continuous', data.W.shape[1]),
-                          (_vartype(v)
-                           for v in chain(data.domain.attributes,
-                                          data.domain.class_vars,
-                                          data.domain.metas))))
+        return ['continuous'] * data.has_weights() + \
+               [_vartype(v) for v in chain(data.domain.attributes,
+                                           data.domain.class_vars,
+                                           data.domain.metas)]
 
     @staticmethod
     def header_flags(data):
-        return list(chain(repeat('weight', data.W.shape[1]),
+        return list(chain(['weight'] * data.has_weights(),
                           (Flags.join([flag], *('{}={}'.format(*a)
                                                 for a in sorted(var.attributes.items())))
                            for flag, var in chain(zip(repeat(''),  data.domain.attributes),
@@ -518,7 +517,8 @@ class CSVFormat(FileFormat):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITER)
             cls.write_headers(writer.writerow, data)
-            writer.writerows(inst.list for inst in data)
+            writer.writerows([[inst.weight] * data.has_weights() +
+                              inst.list for inst in data])
 
 
 class TabFormat(CSVFormat):
