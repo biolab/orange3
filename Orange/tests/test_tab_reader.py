@@ -74,6 +74,32 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
 
+    def test_read_data_oneline_header(self):
+        samplefile = """\
+        data1\tdata2\tdata3
+        0.1\t0.2\t0.3
+        1.1\t1.2\t1.5
+        """
+        file = io.StringIO(samplefile)
+        table = TabFormat().read_file(file)
+
+        self.assertEqual(len(table), 2)
+        self.assertEqual(len(table.domain), 3)
+        self.assertEqual(table.domain[0].name, 'data1')
+
+    def test_read_data_no_header(self):
+        samplefile = """\
+        0.1\t0.2\t0.3
+        1.1\t1.2\t1.5
+        """
+        file = io.StringIO(samplefile)
+        table = TabFormat().read_file(file)
+
+        self.assertEqual(len(table), 2)
+        self.assertEqual(len(table.domain), 3)
+        self.assertTrue(table.domain[0].is_continuous)
+        self.assertEqual(table.domain[0].name, 'Feature 1')
+
     def test_reuse_variables(self):
         file1 = io.StringIO("\n".join("xd dbac"))
         t1 = TabFormat().read_file(file1)
