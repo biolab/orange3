@@ -234,32 +234,55 @@ class FileFormat(metaclass=FileFormatMeta):
     @staticmethod
     def parse_headers(data):
         """Return (header rows, rest of data) as discerned from `data`"""
-        all_digits = lambda i: str(i).replace('.', '').replace(',', '').isdigit()
-        HEADER_TEST = ['',
-            # First line is not a header if more than a fraction of values consist of digits only
-            lambda items: sum(all_digits(i) for i in items) / len(items) < .1,
-            # Second row items are type identifiers
-            lambda items: all(map(_RE_TYPES.match, items)),
-            # Third row items are flags and column attributes (attr=value)
-            lambda items: all(map(_RE_FLAGS.match, items)),
-        ]
+
+        def is_digit(item):
+            try: float(item)
+            except ValueError: return False
+            return True
+        # Second row items are type identifiers
+        def header_test2(items):
+            return all(map(_RE_TYPES.match, items))
+        # Third row items are flags and column attributes (attr=value)
+        def header_test3(items):
+            return all(map(_RE_FLAGS.match, items))
+
         data = iter(data)
         header_rows = []
-        nonheader_rows = []
+        try_single_header = False
+
+        # Try to parse a three-line header
+        lines = []
         try:
-            row1 = list(next(data))
-            # Allow either a single-line header or a three-line header
-            if HEADER_TEST[1](row1):
-                header_rows.append(row1)
-                row2, row3 = list(next(data)), list(next(data))
-                if HEADER_TEST[2](row2) and HEADER_TEST[3](row3):
-                    header_rows.extend([row2, row3])
-                else:
-                    nonheader_rows = [row2, row3]
+            lines.append(list(next(data)))
+            lines.append(list(next(data)))
+            lines.append(list(next(data)))
+        except StopIteration:
+            lines, data = [], chain(lines, data)
+        if lines:
+            l1, l2, l3 = lines
+            # Three-line header if line 2 & 3 match (1st line can be anything)
+            if header_test2(l2) and header_test3(l3):
+                header_rows = [l1, l2, l3]
             else:
-                nonheader_rows = [row1]
-        except StopIteration: pass
-        return header_rows, chain(nonheader_rows, data)
+                lines, data = [], chain((l1, l2, l3), data)
+
+        # Try to parse a single-line header
+        if not header_rows:
+            try:
+                lines.append(list(next(data)))
+                lines.append(list(next(data)))
+            except StopIteration:
+                lines, data = [], chain(lines, data)
+            if lines:
+                l1, l2 = lines
+                # Header if line 1 & 2 DON'T have the same type of fields in all the same places
+                if not all(is_digit(i) == is_digit(j) for i, j in zip(l1, l2)):
+                    header_rows = [l1]
+                    data = chain((l2,), data)
+                else:
+                    data = chain((l1, l2), data)
+
+        return header_rows, data
 
     @classmethod
     def data_table(self, data, headers=None):
@@ -480,7 +503,7 @@ class FileFormat(metaclass=FileFormatMeta):
 class CSVFormat(FileFormat):
     EXTENSIONS = ('.csv',)
     DESCRIPTION = 'Comma-separated values'
-    DELIMITER = ','
+    DELIMITERS = ',;:\t$ '
     SUPPORT_COMPRESSED = True
 
     @classmethod
@@ -493,12 +516,12 @@ class CSVFormat(FileFormat):
             with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
-                    dialect = csv.Sniffer().sniff(file.read(1024), list(',\t;:$ '))
+                    dialect = csv.Sniffer().sniff(file.read(1024), cls.DELIMITERS)
                 except UnicodeDecodeError:
                     continue
                 except csv.Error:
                     dialect = csv.excel()
-                    dialect.delimiter = cls.DELIMITER
+                    dialect.delimiter = cls.DELIMITERS[0]
 
                 file.seek(0)
                 dialect.skipinitialspace = True
@@ -515,7 +538,7 @@ class CSVFormat(FileFormat):
     def write_file(cls, filename, data):
         import csv
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=cls.DELIMITER)
+            writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data)
             writer.writerows([[inst.weight] * data.has_weights() +
                               inst.list for inst in data])
@@ -524,7 +547,7 @@ class CSVFormat(FileFormat):
 class TabFormat(CSVFormat):
     EXTENSIONS = ('.tab', '.tsv')
     DESCRIPTION = 'Tab-separated values'
-    DELIMITER = '\t'
+    DELIMITERS = '\t'
 
 
 class PickleFormat(FileFormat):
