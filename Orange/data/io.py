@@ -235,7 +235,7 @@ class FileFormat(metaclass=FileFormatMeta):
     def parse_headers(data):
         """Return (header rows, rest of data) as discerned from `data`"""
 
-        def is_digit(item):
+        def is_number(item):
             try: float(item)
             except ValueError: return False
             return True
@@ -268,19 +268,14 @@ class FileFormat(metaclass=FileFormatMeta):
 
         # Try to parse a single-line header
         if not header_rows:
-            try:
-                lines.append(list(next(data)))
-                lines.append(list(next(data)))
-            except StopIteration:
-                lines, data = [], chain(lines, data)
+            try: lines.append(list(next(data)))
+            except StopIteration: pass
             if lines:
-                l1, l2 = lines
-                # Header if line 1 & 2 DON'T have the same type of fields in all the same places
-                if not all(is_digit(i) == is_digit(j) for i, j in zip(l1, l2)):
-                    header_rows = [l1]
-                    data = chain((l2,), data)
+                # Header if none of the values in line 1 parses as a number
+                if not any(is_number(i) for i in lines[0]):
+                    header_rows = [lines[0]]
                 else:
-                    data = chain((l1, l2), data)
+                    data = chain(lines, data)
 
         return header_rows, data
 
