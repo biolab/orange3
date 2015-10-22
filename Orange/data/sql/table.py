@@ -17,6 +17,7 @@ from .. import domain, variable, table, instance, filter,\
 from Orange.data.sql import filter as sql_filter
 
 LARGE_TABLE = 100000
+AUTO_DL_LIMIT = 10000
 DEFAULT_SAMPLE_TIME = 1
 
 
@@ -332,35 +333,35 @@ class SqlTable(table.Table):
     def X(self):
         """Numpy array with attribute values."""
         if self._X is None:
-            self.download_data(1000)
+            self.download_data(AUTO_DL_LIMIT)
         return self._X
 
     @property
     def Y(self):
         """Numpy array with class values."""
         if self._Y is None:
-            self.download_data(1000)
+            self.download_data(AUTO_DL_LIMIT)
         return self._Y
 
     @property
     def metas(self):
         """Numpy array with class values."""
         if self._metas is None:
-            self.download_data(1000)
+            self.download_data(AUTO_DL_LIMIT)
         return self._metas
 
     @property
     def W(self):
         """Numpy array with class values."""
         if self._W is None:
-            self.download_data(1000)
+            self.download_data(AUTO_DL_LIMIT)
         return self._W
 
     @property
     def ids(self):
         """Numpy array with class values."""
         if self._ids is None:
-            self.download_data(1000)
+            self.download_data(AUTO_DL_LIMIT)
         return self._ids
 
     @ids.setter
