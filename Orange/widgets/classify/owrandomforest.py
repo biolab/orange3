@@ -19,7 +19,7 @@ class OWRandomForest(widget.OWWidget):
 
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", RandomForestLearner),
+    outputs = [("Random Forest", RandomForestLearner),
                ("Model", RandomForestClassifier)]
 
     want_main_area = False
@@ -164,7 +164,7 @@ class OWRandomForest(widget.OWWidget):
                 model = learner(self.data)
                 model.name = self.learner_name
 
-        self.send("Learner", learner)
+        self.send("Random Forest", learner)
         self.send("Model", model)
 
     def settingsChanged(self):

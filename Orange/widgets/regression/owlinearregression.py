@@ -21,8 +21,8 @@ class OWLinearRegression(widget.OWWidget):
 
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
-    outputs = [("Learner", RidgeRegressionLearner),
-               ("Predictor", LinearModel)]
+    outputs = [("Linear Regression", LinearRegressionLearner),
+               ("Model", LinearModel)]
 
     #: Types
     OLS, Ridge, Lasso = 0, 1, 2
@@ -137,8 +137,8 @@ class OWLinearRegression(widget.OWWidget):
                 predictor = learner(self.data)
                 predictor.name = self.learner_name
 
-        self.send("Learner", learner)
-        self.send("Predictor", predictor)
+        self.send("Linear Regression", learner)
+        self.send("Model", predictor)
 
 
 

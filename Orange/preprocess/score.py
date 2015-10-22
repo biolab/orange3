@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import numpy as np
 from sklearn import feature_selection as skl_fss
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -112,6 +113,29 @@ class UnivariateLinearRegression(SklScorer):
     def score(self, X, y):
         f, p = skl_fss.f_regression(X, y)
         return f
+
+
+class LearnerScorer(Scorer):
+    def score_data(self, data, feature=None):
+        model = self(data)
+        scores = self.score(model)
+
+        if data.domain != self.domain:
+            scores_grouped = OrderedDict()
+            for attr, score in zip(self.domain.attributes, scores):
+                if hasattr(attr.compute_value, "variable"):
+                    attr = attr.compute_value.variable
+                if attr in scores_grouped:
+                    scores_grouped[attr].append(score)
+                else:
+                    scores_grouped[attr] = [score]
+            scores = [sum(scores_grouped[attr]) /
+                      len(scores_grouped[attr])
+                      if attr in scores_grouped else 0
+                      for attr in data.domain.attributes]
+
+        return scores[data.domain.attributes.index(feature)] if feature \
+            else scores
 
 
 class ClassificationScorer(Scorer):

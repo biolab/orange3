@@ -1,5 +1,5 @@
 import unittest
-
+import numpy as np
 from Orange.data import Table
 from Orange.evaluation import CrossValidation, CA, RMSE
 from Orange.classification import RandomForestLearner
@@ -66,3 +66,20 @@ class RandomForestTest(unittest.TestCase):
         pred = model(table.X)
         self.assertEqual(len(table), len(pred))
         self.assertTrue(all(pred) > 0)
+
+    def test_scorer(self):
+        data = Table('test4.tab')
+        learner = RandomForestLearner()
+        scores = learner.score_data(data)
+        self.assertEqual(len(scores), len(data.domain.attributes))
+        self.assertNotEqual(sum(scores), 0)
+
+    def test_scorer_feature(self):
+        np.random.seed(42)
+        data = Table('test4.tab')
+        learner = RandomForestLearner()
+        scores = learner.score_data(data)
+        for i, attr in enumerate(data.domain.attributes):
+            np.random.seed(42)
+            score = learner.score_data(data, attr)
+            self.assertEqual(score, scores[i])

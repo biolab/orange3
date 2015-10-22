@@ -1,15 +1,25 @@
 import sklearn.ensemble as skl_ensemble
 
 from Orange.classification import SklLearner, SklModel
+from Orange.data import Variable, DiscreteVariable
+from Orange.preprocess.score import LearnerScorer
 
 __all__ = ["RandomForestLearner"]
+
+
+class _FeatureScorerMixin(LearnerScorer):
+    feature_type = Variable
+    class_type = DiscreteVariable
+
+    def score(self, model):
+        return model.skl_model.feature_importances_
 
 
 class RandomForestClassifier(SklModel):
     pass
 
 
-class RandomForestLearner(SklLearner):
+class RandomForestLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_ensemble.RandomForestClassifier
     __returns__ = RandomForestClassifier
     name = 'random forest'
