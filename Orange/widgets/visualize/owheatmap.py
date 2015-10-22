@@ -539,11 +539,6 @@ class OWHeatMap(widget.OWWidget):
                      "Keep aspect ratio", box="Resize",
                      callback=self.__aspect_mode_changed)
 
-        splitbox = gui.widgetBox(self.controlArea, "Split By")
-        self.split_lb = QtGui.QListWidget()
-        self.split_lb.itemSelectionChanged.connect(self.update_heatmaps)
-        splitbox.layout().addWidget(self.split_lb)
-
         gui.rubber(self.controlArea)
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
 
@@ -596,11 +591,6 @@ class OWHeatMap(widget.OWWidget):
                 threshold_high=self.threshold_high,
                 gamma=self.gamma)
 
-    def selected_split_label(self):
-        """Return the current selected split label."""
-        item = self.split_lb.currentItem()
-        return str(item.text()) if item else None
-
     def clear(self):
         self.data = None
         self.input_data = None
@@ -609,7 +599,6 @@ class OWHeatMap(widget.OWWidget):
         self.merge_indices = None
         self.annotations_cb.clear()
         self.annotations_cb.addItem('(None)')
-        self.split_lb.clear()
         self.annotation_vars = ['(None)']
         self.clear_scene()
         self.selected_rows = []
@@ -667,8 +656,6 @@ class OWHeatMap(widget.OWWidget):
             for var in variables:
                 self.annotations_cb.addItem(*gui.attributeItem(var))
 
-            self.split_lb.addItems(candidate_split_labels(data))
-
             self.openContext(self.data)
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
@@ -680,7 +667,7 @@ class OWHeatMap(widget.OWWidget):
     def update_heatmaps(self):
         if self.data is not None:
             self.clear_scene()
-            self.construct_heatmaps(self.data, self.selected_split_label())
+            self.construct_heatmaps(self.data)
             self.construct_heatmaps_scene(
                 self.heatmapparts, self.effective_data)
         else:
