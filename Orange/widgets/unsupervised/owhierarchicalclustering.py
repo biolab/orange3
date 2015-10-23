@@ -1072,7 +1072,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             if self.append_clusters:
                 clust_var = Orange.data.DiscreteVariable(
                     str(self.cluster_name),
-                    values=["Cluster {}".format(i + 1)
+                    values=["C{}".format(i + 1)
                             for i in range(len(maps))] +
                            ["Other"]
                 )
