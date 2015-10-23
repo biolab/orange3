@@ -509,7 +509,7 @@ class CSVFormat(FileFormat):
     def read_file(cls, filename, wrapper=None):
         wrapper = wrapper or _IDENTITY
         import csv
-        for encoding in (lambda: 'us-ascii',
+        for encoding in (lambda: 'utf-8',
                          lambda: detect_encoding(filename)):
             encoding = encoding()
             with cls.open(filename, mode='rt', newline='', encoding=encoding) as file:
