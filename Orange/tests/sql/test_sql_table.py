@@ -1,4 +1,5 @@
 import unittest
+#from unittest.mock import patch
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -8,6 +9,7 @@ from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+
 
 @sql_test
 class SqlTableTests(PostgresTest):
@@ -63,9 +65,10 @@ class SqlTableTests(PostgresTest):
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
-    @unittest.skip("Current table creation too slow.")
+    @unittest.mock.patch("Orange.data.sql.table.AUTO_DL_LIMIT", 100)
     def test_XY_large(self):
-        mat = np.random.randint(0, 2, (10020, 3))
+        from Orange.data.sql.table import AUTO_DL_LIMIT as DLL
+        mat = np.random.randint(0, 2, (DLL + 100, 3))
         conn, table_name = self.create_sql_table(mat)
         sql_table = SqlTable(conn, table_name,
                              type_hints=Domain([], DiscreteVariable(
@@ -75,11 +78,11 @@ class SqlTableTests(PostgresTest):
         with self.assertRaises(ValueError):
             sql_table.Y
         with self.assertRaises(ValueError):
-            sql_table.download_data(10019)
+            sql_table.download_data(DLL + 10)
         # Download partial data
-        sql_table.download_data(100, partial=True)
-        assert_almost_equal(sql_table.X, mat[:100, :2])
-        assert_almost_equal(sql_table.Y.flatten()[:100], mat[:100, 2])
+        sql_table.download_data(DLL + 10, partial=True)
+        assert_almost_equal(sql_table.X, mat[:DLL + 10, :2])
+        assert_almost_equal(sql_table.Y.flatten()[:DLL + 10], mat[:DLL + 10, 2])
         # Download all data
         sql_table.download_data()
         assert_almost_equal(sql_table.X, mat[:, :2])
