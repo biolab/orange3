@@ -202,13 +202,16 @@ class Results:
 
         return results
 
-    def get_augmented_data(self, model_names):
+    def get_augmented_data(self, model_names, include_attrs=True, include_predictions=True, include_probabilities=True):
         """
         Return the data, augmented with predictions, probabilities (if the task is classification) and folds info.
         Predictions, probabilities and folds are inserted as meta attributes.
 
         Args:
             model_names (list): A list of strings containing learners' names.
+            include_attrs (bool): Flag that tells whether to include original attributes.
+            include_predictions (bool): Flag that tells whether to include predictions.
+            include_probabilities (bool): Flag that tells whether to include probabilities.
 
         Returns:
             Orange.data.Table: Data augmented with predictions, (probabilities) and (fold).
@@ -225,19 +228,21 @@ class Results:
 
         if classification:
             # predictions
-            new_meta_attr.extend(DiscreteVariable(name=name, values=class_var.values)
-                                 for name in model_names)
-            new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
+            if include_predictions:
+                new_meta_attr.extend(DiscreteVariable(name=name, values=class_var.values)
+                                     for name in model_names)
+                new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
             # probabilities
-            for name in model_names:
-                new_meta_attr.extend(ContinuousVariable(name="%s (%s)" % (name, value))
-                                     for value in class_var.values)
+            if include_probabilities:
+                for name in model_names:
+                    new_meta_attr.extend(ContinuousVariable(name="%s (%s)" % (name, value))
+                                         for value in class_var.values)
 
-            for i in self.probabilities:
-                new_meta_vals = np.hstack((new_meta_vals, i))
+                for i in self.probabilities:
+                    new_meta_vals = np.hstack((new_meta_vals, i))
 
-        else:
+        elif include_predictions:
             # regression
             new_meta_attr.extend(ContinuousVariable(name=name)
                                  for name in model_names)
@@ -255,8 +260,11 @@ class Results:
         new_meta_attr = list(data.domain.metas) + new_meta_attr
         new_meta_vals = np.hstack((data.metas, new_meta_vals))
 
-        domain = Domain(data.domain.attributes, data.domain.class_vars, metas=new_meta_attr)
-        predictions = Table.from_numpy(domain, data.X, data.Y, metas=new_meta_vals)
+        X = data.X if include_attrs else np.empty((len(data), 0))
+        attrs = data.domain.attributes if include_attrs else []
+
+        domain = Domain(attrs, data.domain.class_vars, metas=new_meta_attr)
+        predictions = Table.from_numpy(domain, X, data.Y, metas=new_meta_vals)
         predictions.name = data.name
         return predictions
 
