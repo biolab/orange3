@@ -4,7 +4,6 @@ import sys
 import unicodedata
 import itertools
 from functools import partial
-from itertools import count
 
 import numpy
 
@@ -26,6 +25,8 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.io import FileFormat
+
+from Orange.util import scale, namegen
 
 
 def indices_to_mask(indices, size):
@@ -799,6 +800,7 @@ class OWPaintData(widget.OWWidget):
     keywords = ["data", "paint", "create"]
 
     outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.Table, "set_data")]
 
     autocommit = Setting(False)
     table_name = Setting("Painted data")
@@ -1011,18 +1013,34 @@ class OWPaintData(widget.OWWidget):
                 self._replot()
         self.undo_stack.push(SimpleUndoCommand(redo, undo))
 
-    def add_new_class_label(self):
+    def set_data(self, data):
+        if data:
+            try:
+                y = next(cls for cls in data.domain.class_vars if cls.is_discrete)
+            except StopIteration:
+                y = np.ones(X.shape[0])
+            else:
+                y = data[:, y].Y
+            while len(self.class_model) < numpy.unique(y).size:
+                self.add_new_class_label(undoable=False)
 
-        labels = ("C%i" % i for i in count(1))
-        labels = filter(lambda label: label not in self.class_model,
-                        labels)
-        newlabel = next(labels)
+            X = numpy.array([scale(vals) for vals in data.X[:, :2].T]).T
+            self.data = numpy.column_stack((X, y))
+            self._replot()
+
+    def add_new_class_label(self, undoable=True):
+
+        newlabel = next(label for label in namegen('C', 1)
+                        if label not in self.class_model)
 
         command = SimpleUndoCommand(
             lambda: self.class_model.append(newlabel),
             lambda: self.class_model.__delitem__(-1)
         )
-        self.undo_stack.push(command)
+        if undoable:
+            self.undo_stack.push(command)
+        else:
+            command.redo()
 
     def remove_selected_class_label(self):
         index = self.selected_class_label()
