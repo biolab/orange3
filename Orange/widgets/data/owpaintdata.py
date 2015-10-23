@@ -234,6 +234,9 @@ class DataTool(QObject):
     # Makes for a checkable push-button
     checkable = True
 
+    # The tool only works if (at least) two dimensions
+    only2d = True
+
     def __init__(self, parent, plot):
         super().__init__(parent)
         self._cursor = Qt.ArrowCursor
@@ -287,6 +290,8 @@ class PutInstanceTool(DataTool):
     """
     Add a single data instance with a mouse click.
     """
+    only2d = False
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.editingStarted.emit()
@@ -335,6 +340,8 @@ class AirBrushTool(DataTool):
     """
     Add points with an 'air brush'.
     """
+    only2d = False
+
     def __init__(self, parent, plot):
         super().__init__(parent, plot)
         self.__timer = QTimer(self, interval=50)
@@ -600,6 +607,8 @@ class SelectTool(DataTool):
 class ClearTool(DataTool):
     cursor = None
     checkable = False
+    only2d = False
+
     def activate(self):
         self.issueCommand.emit(SelectRegion(self._plot.rect()))
         self.issueCommand.emit(DeleteSelection())
@@ -795,6 +804,7 @@ class OWPaintData(widget.OWWidget):
     table_name = Setting("Painted data")
     attr1 = Setting("x")
     attr2 = Setting("y")
+    hasAttr2 = Setting(True)
 
     brushRadius = Setting(75)
     density = Setting(7)
@@ -833,15 +843,21 @@ class OWPaintData(widget.OWWidget):
     def _init_ui(self):
         namesBox = gui.widgetBox(self.controlArea, "Names")
 
-        gui.lineEdit(namesBox, self, "attr1", "Variable X ",
+        hbox = gui.widgetBox(namesBox, orientation='horizontal', margin=0, spacing=0)
+        gui.lineEdit(hbox, self, "attr1", "Variable X ",
                      controlWidth=80, orientation="horizontal",
                      enterPlaceholder=True, callback=self._attr_name_changed)
-        gui.lineEdit(namesBox, self, "attr2", "Variable Y ",
-                     controlWidth=80, orientation="horizontal",
-                     enterPlaceholder=True, callback=self._attr_name_changed)
+        gui.separator(hbox, 18)
+        hbox = gui.widgetBox(namesBox, orientation='horizontal', margin=0, spacing=0)
+        attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y ",
+                             controlWidth=80, orientation="horizontal",
+                             enterPlaceholder=True, callback=self._attr_name_changed)
+        gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
+                     labelWidth=0,
+                     callback=self.set_dimensions)
         gui.separator(namesBox)
 
-        gui.widgetLabel(namesBox, "Class labels")
+        gui.widgetLabel(namesBox, "Labels")
         self.classValuesView = listView = QListView(
             selectionMode=QListView.SingleSelection,
             sizePolicy=QSizePolicy(QSizePolicy.Ignored,
@@ -876,6 +892,7 @@ class OWPaintData(widget.OWWidget):
 
         self.toolActions = QtGui.QActionGroup(self)
         self.toolActions.setExclusive(True)
+        self.toolButtons = []
 
         for i, (name, tooltip, tool, icon) in enumerate(self.TOOLS):
             action = QAction(
@@ -893,6 +910,7 @@ class OWPaintData(widget.OWWidget):
                                        QSizePolicy.Fixed)
             )
             button.setDefaultAction(action)
+            self.toolButtons.append((button, tool))
 
             toolsBox.layout().addWidget(button, i / 3, i % 3)
             self.toolActions.addAction(action)
@@ -954,10 +972,12 @@ class OWPaintData(widget.OWWidget):
         axis.setLabel(self.attr2)
         axis.setPen(axis_pen)
         axis.setTickFont(tickfont)
+        if not self.hasAttr2:
+            self.plot.hideAxis('left')
 
         self.plot.hideButtons()
-        self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0),
-                           disableAutoRange=True)
+        self.plot.setXRange(0, 1, padding=0)
+        self._reset_dimensions()
 
         self.mainArea.layout().addWidget(self.plotview)
 
@@ -965,6 +985,31 @@ class OWPaintData(widget.OWWidget):
         self.toolActions.actions()[0].setChecked(True)
         self.set_current_tool(self.TOOLS[0][2])
         self.graphButton.clicked.connect(self.save_graph)
+
+    def _reset_dimensions(self):
+        if self.hasAttr2:
+            self.plot.setYRange(0, 1, padding=0)
+            self.plot.showAxis('left')
+        else:
+            self.plot.setYRange(-.5, .5, padding=0)
+            self.plot.hideAxis('left')
+        for button, tool in self.toolButtons:
+            if tool.only2d:
+                button.setDisabled(not self.hasAttr2)
+
+    def set_dimensions(self):
+        if self.hasAttr2:
+            undo, redo = self._reset_dimensions, self._reset_dimensions
+        else:
+            def redo():
+                self.data[:, 1] = 0
+                self._reset_dimensions()
+                self._replot()
+            def undo(prev_values=self.data[:, 1].copy() if self.data[:, 1].any() else 0):
+                self.data[:, 1] = prev_values
+                self._reset_dimensions()
+                self._replot()
+        self.undo_stack.push(SimpleUndoCommand(redo, undo))
 
     def add_new_class_label(self):
 
@@ -1078,9 +1123,15 @@ class OWPaintData(widget.OWWidget):
     def _add_command(self, cmd):
         name = "Name"
 
+        if (not self.hasAttr2 and
+            isinstance(cmd, (Move, MoveSelection, Jitter, Magnet))):
+            # tool only supported if both x and y are enabled
+            return
+
         if isinstance(cmd, Append):
             cls = self.selected_class_label()
-            points = numpy.array([[p.x(), p.y(), cls] for p in cmd.points])
+            points = numpy.array([(p.x(), p.y() if self.hasAttr2 else 0, cls)
+                                  for p in cmd.points])
             self.undo_stack.push(UndoCommand(Append(points), self, text=name))
         elif isinstance(cmd, Move):
             self.undo_stack.push(UndoCommand(cmd, self, text=name))
@@ -1156,9 +1207,13 @@ class OWPaintData(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        X, Y = self.data[:, :2], self.data[:, 2]
-        attrs = (Orange.data.ContinuousVariable(self.attr1),
-                 Orange.data.ContinuousVariable(self.attr2))
+        if self.hasAttr2:
+            X, Y = self.data[:, :2], self.data[:, 2]
+            attrs = (Orange.data.ContinuousVariable(self.attr1),
+                     Orange.data.ContinuousVariable(self.attr2))
+        else:
+            X, Y = self.data[:, numpy.newaxis, 0], self.data[:, 2]
+            attrs = (Orange.data.ContinuousVariable(self.attr1),)
         if len(self.class_model) > 1:
             domain = Orange.data.Domain(
                 attrs,
