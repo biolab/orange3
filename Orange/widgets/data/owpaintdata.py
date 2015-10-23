@@ -231,6 +231,9 @@ class DataTool(QObject):
     #: Emits a data transformation command
     issueCommand = Signal(object)
 
+    # Makes for a checkable push-button
+    checkable = True
+
     def __init__(self, parent, plot):
         super().__init__(parent)
         self._cursor = Qt.ArrowCursor
@@ -594,27 +597,13 @@ class SelectTool(DataTool):
             self.editingFinished.emit()
 
 
-class ZoomTool(DataTool):
-
+class ClearTool(DataTool):
     cursor = None
-
-    def __init__(self, parent, plot):
-        super().__init__(parent, plot)
-
-    def mousePressEvent(self, event):
-        return False
-
-    def mouseMoveEvent(self, event):
-        return False
-
-    def mouseReleaseEvent(self, event):
-        return False
-
+    checkable = False
     def activate(self):
-        pass
-
-    def deactivate(self):
-        pass
+        self.issueCommand.emit(SelectRegion(self._plot.rect()))
+        self.issueCommand.emit(DeleteSelection())
+        self.editingFinished.emit()
 
 
 class SimpleUndoCommand(QtGui.QUndoCommand):
@@ -790,7 +779,7 @@ class OWPaintData(widget.OWWidget):
             _i("select-transparent_42px.png")),
         ("Jitter", "Jitter instances", JitterTool, _i("jitter.svg")),
         ("Magnet", "Attract multiple instances", MagnetTool, _i("magnet.svg")),
-        ("Zoom", "Zoom", ZoomTool, _i("Dlg_zoom2.png"))
+        ("Clear", "Clear the plot", ClearTool, _i("../../../icons/Dlg_clear.png"))
     ]
 
     name = "Paint Data"
@@ -892,7 +881,7 @@ class OWPaintData(widget.OWWidget):
             action = QAction(
                 name, self,
                 toolTip=tooltip,
-                checkable=True,
+                checkable=tool.checkable,
                 icon=QIcon(icon),
             )
             action.triggered.connect(partial(self.set_current_tool, tool))
@@ -946,7 +935,7 @@ class OWPaintData(widget.OWWidget):
                         "Send", "Send on change")
 
         # main area GUI
-        viewbox = PaintViewBox()
+        viewbox = PaintViewBox(enableMouse=False)
         self.plotview = pg.PlotWidget(background="w", viewBox=viewbox)
         self.plot = self.plotview.getPlotItem()
 
@@ -966,6 +955,7 @@ class OWPaintData(widget.OWWidget):
         axis.setPen(axis_pen)
         axis.setTickFont(tickfont)
 
+        self.plot.hideButtons()
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0),
                            disableAutoRange=True)
 
@@ -1038,6 +1028,8 @@ class OWPaintData(widget.OWWidget):
             return None
 
     def set_current_tool(self, tool):
+        prev_tool = self.current_tool.__class__
+
         if self.current_tool is not None:
             self.current_tool.deactivate()
             self.current_tool.editingStarted.disconnect(
@@ -1059,6 +1051,9 @@ class OWPaintData(widget.OWWidget):
         tool.editingStarted.connect(self._on_editing_started)
         tool.editingFinished.connect(self._on_editing_finished)
         tool.activate()
+
+        if not tool.checkable:
+            self.set_current_tool(prev_tool)
 
     def _on_editing_started(self):
         self.undo_stack.beginMacro("macro")
