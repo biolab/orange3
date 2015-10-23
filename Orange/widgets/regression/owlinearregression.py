@@ -2,7 +2,7 @@ from itertools import chain
 from PyQt4.QtGui import QLayout
 from PyQt4.QtCore import Qt
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearModel, LinearRegressionLearner,
     RidgeRegressionLearner)
@@ -19,7 +19,8 @@ class OWLinearRegression(widget.OWWidget):
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", RidgeRegressionLearner),
-               ("Predictor", LinearModel)]
+               ("Predictor", LinearModel),
+               ("Coefficients", Table)]
 
     #: Types
     OLS, Ridge, Lasso = 0, 1, 2
@@ -111,6 +112,7 @@ class OWLinearRegression(widget.OWWidget):
 
         learner.name = self.learner_name
         predictor = None
+        coef_table = None
 
         self.error(0)
         if self.data is not None:
@@ -119,9 +121,18 @@ class OWLinearRegression(widget.OWWidget):
             else:
                 predictor = learner(self.data)
                 predictor.name = self.learner_name
+                domain = Domain(
+                    [ContinuousVariable("coef", number_of_decimals=7)],
+                    metas=[StringVariable("name")])
+                coefs = [predictor.skl_model.intercept_] + \
+                        list(predictor.skl_model.coef_)
+                names = ["intercept"] + \
+                        [attr.name for attr in predictor.domain.attributes]
+                coef_table = Table(domain, list(zip(coefs, names)))
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
+        self.send("Coefficients", coef_table)
 
 
 
