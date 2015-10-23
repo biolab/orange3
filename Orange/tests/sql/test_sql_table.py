@@ -63,8 +63,9 @@ class SqlTableTests(PostgresTest):
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
+    @unittest.skip("Current table creation too slow.")
     def test_XY_large(self):
-        mat = np.random.randint(0, 2, (1020, 3))
+        mat = np.random.randint(0, 2, (10020, 3))
         conn, table_name = self.create_sql_table(mat)
         sql_table = SqlTable(conn, table_name,
                              type_hints=Domain([], DiscreteVariable(
@@ -74,7 +75,12 @@ class SqlTableTests(PostgresTest):
         with self.assertRaises(ValueError):
             sql_table.Y
         with self.assertRaises(ValueError):
-            sql_table.download_data(1019)
+            sql_table.download_data(10019)
+        # Download partial data
+        sql_table.download_data(100, partial=True)
+        assert_almost_equal(sql_table.X, mat[:100, :2])
+        assert_almost_equal(sql_table.Y.flatten()[:100], mat[:100, 2])
+        # Download all data
         sql_table.download_data()
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
