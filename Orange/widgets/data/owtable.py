@@ -89,6 +89,8 @@ class RichTableDecorator(QIdentityProxyModel):
                 return (val - dist.min) / (dist.max - dist.min)
             else:
                 return None
+        elif role == Qt.TextAlignmentRole and self._continuous[index.column()]:
+            return Qt.AlignRight | Qt.AlignVCenter
         else:
             return super().data(index, role)
 
