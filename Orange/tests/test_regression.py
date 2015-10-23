@@ -6,7 +6,7 @@ import traceback
 import Orange
 from Orange.data import Table
 from Orange.regression import Learner
-
+from Orange.regression import LinearRegressionLearner
 
 class RegressionLearnersTest(unittest.TestCase):
     def all_learners(self):
@@ -33,3 +33,16 @@ class RegressionLearnersTest(unittest.TestCase):
             except TypeError as err:
                 traceback.print_exc()
                 continue
+
+    def test_coefficients(self):
+        data = Table([[11], [12], [13]], [0, 1, 2])
+        model = LinearRegressionLearner()(data)
+        self.assertAlmostEqual(float(model.intercept), -11)
+        self.assertEqual(len(model.coefficients), 1)
+        self.assertAlmostEqual(float(model.coefficients[0]), 1)
+
+        for learner in self.all_learners():
+            if isinstance(learner, LinearRegressionLearner):
+                data = Table([[1, 2, 3], [1, 2, 3]], [0, 1.1])
+                model = learner()(data)
+                self.assertEqual(len(model.coefficients), 3)

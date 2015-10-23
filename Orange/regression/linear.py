@@ -30,12 +30,12 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
 
     def fit(self, X, Y, W):
-        sk = skl_linear_model.LinearRegression()
+        sk = self.__wraps__()
         sk.fit(X, Y)
         return LinearModel(sk)
 
 
-class RidgeRegressionLearner(SklLearner, _FeatureScorerMixin):
+class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
     name = 'ridge'
 
@@ -46,7 +46,7 @@ class RidgeRegressionLearner(SklLearner, _FeatureScorerMixin):
         self.params = vars()
 
 
-class LassoRegressionLearner(SklLearner, _FeatureScorerMixin):
+class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
     name = 'lasso'
 
@@ -58,7 +58,7 @@ class LassoRegressionLearner(SklLearner, _FeatureScorerMixin):
         self.params = vars()
 
 
-class ElasticNetLearner(SklLearner):
+class ElasticNetLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNet
     name = 'elastic'
 
@@ -70,7 +70,7 @@ class ElasticNetLearner(SklLearner):
         self.params = vars()
 
 
-class ElasticNetCVLearner(SklLearner):
+class ElasticNetCVLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNetCV
     name = 'elasticCV'
 
@@ -82,7 +82,7 @@ class ElasticNetCVLearner(SklLearner):
         self.params = vars()
 
 
-class SGDRegressionLearner(SklLearner):
+class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
     name = 'sgd'
 
@@ -121,6 +121,17 @@ class PolynomialLearner(Learner):
 
 
 class LinearModel(SklModel):
+    def __init__(self, model):
+        self.model = model
+
+    @property
+    def intercept(self):
+        return self.model.intercept_
+
+    @property
+    def coefficients(self):
+        return self.model.coef_
+
     def predict(self, X):
         vals = self.skl_model.predict(X)
         if len(vals.shape) == 1:
