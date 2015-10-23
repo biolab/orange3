@@ -5,6 +5,7 @@ import functools
 import re
 import threading
 from contextlib import contextmanager
+from itertools import islice
 
 import numpy as np
 
@@ -318,16 +319,18 @@ class SqlTable(table.Table):
     _W = None
     _ids = None
 
-    def download_data(self, limit=None):
+    def download_data(self, limit=None, partial=False):
         """Download SQL data and store it in memory as numpy matrices."""
-        if limit and len(self) > limit: #TODO: faster check for size limit
+        if limit and not partial and len(self) > limit:
+        #TODO: faster check for size limit
             raise ValueError("Too many rows to download the data into memory.")
-        self._X = np.vstack(row._x for row in self)
-        self._Y = np.vstack(row._y for row in self)
-        self._metas = np.vstack(row._metas for row in self)
+        self._X = np.vstack(row._x for row in islice(self, limit))
+        self._Y = np.vstack(row._y for row in islice(self, limit))
+        self._metas = np.vstack(row._metas for row in islice(self, limit))
         self._W = np.empty((self._X.shape[0], 0))
         self._init_ids(self)
-        self._cached__len__ = self._X.shape[0]
+        if not partial or limit and self._X.shape[0] < limit:
+            self._cached__len__ = self._X.shape[0]
 
     @property
     def X(self):
