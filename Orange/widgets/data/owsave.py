@@ -31,7 +31,7 @@ class OWSave(widget.OWWidget):
         self.file_formats = file_formats or FileFormat.writers
         self.formats = [(f.DESCRIPTION, f.EXTENSIONS)
                         for f in sorted(set(self.file_formats.values()),
-                                        key=list(self.file_formats.values()).index)]
+                                        key=lambda f: f.OWSAVE_PRIORITY)]
         self.comboBoxFormat = gui.comboBox(
             self.controlArea, self, value='format_index',
             items=['{} (*{})'.format(x[0], ' *'.join(x[1]))
