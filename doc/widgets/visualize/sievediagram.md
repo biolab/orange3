@@ -54,9 +54,8 @@ for female passengers than expected (0.06 vs. 0.15).
 
 ![image](images/SieveDiagram-Titanic.png)
 
-Pairs of attributes with interesting associations are shown with shading 
-the most interesting attribute pair in the *Titanic* data set, which is
-indeed the one we show in the above snapshot. For contrast, a sieve
+Pairs of attributes with interesting associations have a strong shading, such as the
+diagram we show in the above snapshot. For contrast, a sieve
 diagram of the least interesting pair (age vs. survival) is shown below.
 
 ![image](images/SieveDiagram-Titanic-age-survived.png)
