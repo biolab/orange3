@@ -359,7 +359,8 @@ class OWSelectRows(widget.OWWidget):
                                   Remove.RemoveUnusedValues * purge_attrs])
                 class_flags = sum([Remove.RemoveConstant * purge_classes,
                                   Remove.RemoveUnusedValues * purge_classes])
-                remover = Remove(attr_flags, class_flags)
+                # same settings used for attributes and meta features
+                remover = Remove(attr_flags, class_flags, attr_flags)
 
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
