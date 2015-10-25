@@ -142,6 +142,7 @@ class OWDiscretize(widget.OWWidget):
     Default, Leave, MDL, EqualFreq, EqualWidth, Remove, Custom = range(7)
 
     want_main_area = False
+    resizing_enabled = False
 
     def  __init__(self):
         super().__init__()

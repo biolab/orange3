@@ -184,6 +184,7 @@ class OWImpute(OWWidget):
     autocommit = settings.Setting(True)
 
     want_main_area = False
+    resizing_enabled = False
 
     def __init__(self):
         super().__init__()
