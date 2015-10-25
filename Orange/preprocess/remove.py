@@ -48,11 +48,13 @@ class Remove(Preprocess):
 
     SortValues, RemoveConstant, RemoveUnusedValues = 1, 2, 4
 
-    def __init__(self, attr_flags=0, class_flags=0):
+    def __init__(self, attr_flags=0, class_flags=0, meta_flags=0):
         self.attr_flags = attr_flags
         self.class_flags = class_flags
+        self.meta_flags = meta_flags
         self.attr_results = None
         self.class_results = None
+        self.meta_results = None
 
     def __call__(self, data):
         """
@@ -77,11 +79,14 @@ class Remove(Preprocess):
                        for var in domain.attributes]
         class_state = [purge_var_M(var, data, self.class_flags)
                        for var in domain.class_vars]
+        metas_state = [purge_var_M(var, data, self.meta_flags)
+                       for var in domain.metas]
 
         att_vars, self.attr_results = self.get_vars_and_results(attrs_state)
         cls_vars, self.class_results = self.get_vars_and_results(class_state)
+        meta_vars, self.meta_results = self.get_vars_and_results(metas_state)
 
-        domain = Domain(att_vars, cls_vars, domain.metas)
+        domain = Domain(att_vars, cls_vars, meta_vars)
         return data.from_table(domain, data)
 
     def get_vars_and_results(self, state):
@@ -242,7 +247,7 @@ def remove_unused_values(var, data):
         if np.isfinite(base):
             base_value = int(base)
 
-    return DiscreteVariable("R_{}".format(var.name),
+    return DiscreteVariable("{}".format(var.name),
                             values=used_values,
                             base_value=base_value,
                             compute_value=Lookup(var, translation_table)
@@ -265,6 +270,7 @@ def sort_var_values(var):
 
 class Lookup(Lookup):
     def transform(self, column):
+        column = np.array(column, dtype=np.float64)
         mask = np.isnan(column)
         column_valid = np.where(mask, 0, column)
         values = self.lookup_table[np.array(column_valid, dtype=int)]

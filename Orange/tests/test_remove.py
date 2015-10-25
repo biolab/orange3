@@ -80,7 +80,7 @@ class TestRemover(unittest.TestCase):
         np.testing.assert_equal(new_data.X, data.X)
         np.testing.assert_equal(new_data.Y, data.Y)
         self.assertEqual([a.name for a in new_data.domain.attributes],
-                         ["c1", "c0", "d1", "R_d0"])
+                         ["c1", "c0", "d1", "d0"])
         self.assertEqual([c.name for c in new_data.domain.class_vars],
                          ["cl1", "cl0", "cl3", "cl4"])
         self.assertEqual([a.values for a in new_data.domain.attributes
@@ -106,7 +106,7 @@ class TestRemover(unittest.TestCase):
         self.assertEqual([a.name for a in new_data.domain.attributes],
                          ["c1", "c0", "d1", "d0"])
         self.assertEqual([c.name for c in new_data.domain.class_vars],
-                         ["R_cl1", "cl0", "cl3", "cl4"])
+                         ["cl1", "cl0", "cl3", "cl4"])
         self.assertEqual([a.values for a in new_data.domain.attributes
                           if a.is_discrete], [['1'], ['4', '6']])
         self.assertEqual([c.values for c in new_data.domain.class_vars
@@ -115,3 +115,14 @@ class TestRemover(unittest.TestCase):
                              {'removed': 0, 'reduced': 0, 'sorted': 0})
         self.assertDictEqual(class_res,
                              {'removed': 0, 'reduced': 1, 'sorted': 0})
+
+    def test_remove_unused_values_metas(self):
+        data = Table("test9.tab")
+        subset = data[:4]
+        res = Remove(subset,
+                     attr_flags=Remove.RemoveUnusedValues,
+                     meta_flags=Remove.RemoveUnusedValues)
+
+        self.assertEqual(res.domain["b"].values, res.domain["c"].values)
+        self.assertEqual(res.domain["d"].values, ["1", "2"])
+        self.assertEqual(res.domain["f"].values, ['1', 'hey'])
