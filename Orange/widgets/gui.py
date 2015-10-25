@@ -2,6 +2,7 @@ import math
 import os
 import re
 import itertools
+from types import LambdaType
 
 import pkg_resources
 import numpy
@@ -15,6 +16,7 @@ from Orange.widgets.utils import getdeepattr
 from Orange.data import ContinuousVariable, StringVariable, DiscreteVariable, Variable
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
+from Orange.util import namegen
 
 YesNo = NoYes = ("No", "Yes")
 _enter_icon = None
@@ -22,6 +24,8 @@ __re_label = re.compile(r"(^|[^%])%\((?P<value>[a-zA-Z]\w*)\)")
 
 
 OrangeUserRole = itertools.count(Qt.UserRole)
+
+LAMBDA_NAME = namegen('_lambda_')
 
 
 def resource_filename(path):
@@ -2239,7 +2243,8 @@ class widgetHider(QtGui.QWidget):
 
 
 def auto_commit(widget, master, value, label, auto_label=None, box=True,
-                checkbox_label=None, orientation=None, **misc):
+                checkbox_label=None, orientation=None, commit=None,
+                callback=None, **misc):
     """
     Add a commit button with auto-commit check box.
 
@@ -2269,11 +2274,15 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     :param label: The label used when auto-commit is on; default is
         `"Auto " + label`
     :type label: str
+    :param commit: master's method to override ('commit' by default)
+    :type commit: function
+    :param callback: function to call whenever the checkbox's statechanged
+    :type callback: function
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :return: the box
     """
-    def u():
+    def checkbox_toggled():
         if getattr(master, value):
             btn.setText(auto_label)
             btn.setEnabled(False)
@@ -2282,23 +2291,28 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
         else:
             btn.setText(label)
             btn.setEnabled(True)
+        if callback:
+            callback()
 
-    def commit():
+    def unconditional_commit(*args, **kwargs):
         nonlocal dirty
         if getattr(master, value):
-            do_commit()
+            do_commit(*args, **kwargs)
         else:
             dirty = True
 
-    def do_commit():
+    def do_commit(*args, **kwargs):
         nonlocal dirty
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        master.unconditional_commit()
+        commit(*args, **kwargs)
         QApplication.restoreOverrideCursor()
         dirty = False
 
     dirty = False
-    master.unconditional_commit = master.commit
+    commit = commit or getattr(master, 'commit')
+    commit_name = next(LAMBDA_NAME) if isinstance(commit, LambdaType) else commit.__name__
+    setattr(master, 'unconditional_' + commit_name, commit)
+
     if not auto_label:
         if checkbox_label:
             auto_label = label
@@ -2314,16 +2328,16 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
         b.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
 
     b.checkbox = cb = checkBox(b, master, value, checkbox_label,
-                               callback=u, tooltip=auto_label)
+                               callback=checkbox_toggled, tooltip=auto_label)
     if checkbox_label and orientation == 'horizontal' or not orientation:
         b.layout().insertSpacing(-1, 10)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-    b.button = btn = button(b, master, label, callback=do_commit)
+    b.button = btn = button(b, master, label, callback=lambda: do_commit())
     if not checkbox_label:
         btn.setSizePolicy(QtGui.QSizePolicy.Expanding,
                           QtGui.QSizePolicy.Preferred)
-    u()
-    master.commit = commit
+    checkbox_toggled()
+    setattr(master, commit_name, unconditional_commit)
     miscellanea(b, widget, widget,
                 addToLayout=not isinstance(box, QtGui.QWidget), **misc)
     return b
