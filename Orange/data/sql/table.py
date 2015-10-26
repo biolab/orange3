@@ -321,12 +321,16 @@ class SqlTable(table.Table):
 
     def download_data(self, limit=None, partial=False):
         """Download SQL data and store it in memory as numpy matrices."""
-        if limit and not partial and len(self) > limit:
-        #TODO: faster check for size limit
+        if limit and not partial and self.approx_len() > limit:
             raise ValueError("Too many rows to download the data into memory.")
-        self._X = np.vstack(row._x for row in islice(self, limit))
-        self._Y = np.vstack(row._y for row in islice(self, limit))
-        self._metas = np.vstack(row._metas for row in islice(self, limit))
+        X, Y, metas = [], [], []
+        for row in islice(self, limit):
+            X.append(row._x)
+            Y.append(row._y)
+            metas.append(row._metas)
+        self._X = np.vstack(X)
+        self._Y = np.vstack(Y)
+        self._metas = np.vstack(metas)
         self._W = np.empty((self._X.shape[0], 0))
         self._init_ids(self)
         if not partial or limit and self._X.shape[0] < limit:
