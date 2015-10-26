@@ -3,6 +3,7 @@ from Orange.classification import KNNLearner, SklModel
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWKNNLearner(widget.OWWidget):
@@ -43,6 +44,7 @@ class OWKNNLearner(widget.OWWidget):
 
         self.apply()
 
+    @check_sql_input
     def set_data(self, data):
         self.data = data
         if data is not None:

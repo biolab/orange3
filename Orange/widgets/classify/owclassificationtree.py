@@ -3,6 +3,7 @@ from Orange.preprocess.preprocess import Preprocess
 from Orange.classification.tree import TreeLearner, TreeClassifier
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWClassificationTree(widget.OWWidget):
@@ -99,6 +100,7 @@ class OWClassificationTree(widget.OWWidget):
         self.send("Learner", self.learner)
         self.send("Classification Tree", self.classifier)
 
+    @check_sql_input
     def set_data(self, data):
         self.error(0)
         self.data = data

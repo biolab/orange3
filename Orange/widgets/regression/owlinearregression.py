@@ -8,6 +8,7 @@ from Orange.regression.linear import (
     RidgeRegressionLearner)
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWLinearRegression(widget.OWWidget):
@@ -75,6 +76,7 @@ class OWLinearRegression(widget.OWWidget):
         self.alpha_slider.setEnabled(self.reg_type != self.OLS)
         self.commit()
 
+    @check_sql_input
     def set_data(self, data):
         self.data = data
 
