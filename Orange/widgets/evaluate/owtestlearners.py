@@ -13,7 +13,8 @@ from PyQt4.QtGui import (
 )
 from PyQt4.QtCore import Qt, QSize
 
-import Orange.data
+from Orange.data import Table
+from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
 import Orange.classification
 import Orange.regression
@@ -129,8 +130,8 @@ class OWTestLearners(widget.OWWidget):
 
     inputs = [("Learner", Learner,
                "set_learner", widget.Multiple),
-              ("Data", Orange.data.Table, "set_train_data", widget.Default),
-              ("Test Data", Orange.data.Table, "set_test_data"),
+              ("Data", Table, "set_train_data", widget.Default),
+              ("Test Data", Table, "set_test_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
     outputs = [("Evaluation Results", Orange.evaluation.Results)]
@@ -235,9 +236,19 @@ class OWTestLearners(widget.OWWidget):
         Set the input training dataset.
         """
         self.error(0)
+        self.information(0)
         if data and not data.domain.class_var:
             self.error(0, "Train data input requires a class variable")
             data = None
+
+        if isinstance(data, SqlTable):
+            if data.approx_len() < AUTO_DL_LIMIT:
+                data = Table(data)
+            else:
+                self.information(0, "Train data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(AUTO_DL_LIMIT, partial=True)
+                data = Table(data_sample)
 
         self.data = data
         self.closeContext()
@@ -250,9 +261,19 @@ class OWTestLearners(widget.OWWidget):
         Set the input separate testing dataset.
         """
         self.error(1)
+        self.information(1)
         if data and not data.domain.class_var:
             self.error(1, "Test data input requires a class variable")
             data = None
+
+        if isinstance(data, SqlTable):
+            if data.approx_len() < AUTO_DL_LIMIT:
+                data = Table(data)
+            else:
+                self.information(1, "Test data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(AUTO_DL_LIMIT, partial=True)
+                data = Table(data_sample)
 
         self.test_data = data
         if self.resampling == OWTestLearners.TestOnTest:
@@ -606,7 +627,7 @@ def main(argv=None):
     else:
         filename = "iris"
 
-    data = Orange.data.Table(filename)
+    data = Table(filename)
     class_var = data.domain.class_var
 
     if class_var is None:
