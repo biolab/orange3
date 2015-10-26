@@ -1,0 +1,27 @@
+import Orange
+import pandas as pd
+import numpy as np
+
+
+def construct_domain(df):
+    columns = OrderedDict(df.dtypes)
+
+    def create_variable(col):
+        if col[1].__str__().startswith('float'):
+            return Orange.data.ContinuousVariable(col[0])
+        if col[1].__str__().startswith('int') and len(df[col[0]].unique()) > 50:
+            return Orange.data.ContinuousVariable(col[0])
+        if col[1].__str__().startswith('date'):
+            df[col[0]] = df[col[0]].values.astype(np.str)
+        if col[1].__str__() == 'object':
+            df[col[0]] = df[col[0]].astype(type(""))
+
+        return Orange.data.DiscreteVariable(col[0], values = df[col[0]].unique().tolist())
+
+    return Orange.data.Domain(list(map(create_variable, columns.items())))
+    
+    
+def pandas_to_orange(df):
+    domain = construct_domain(df)
+    orange_table = Orange.data.Table.from_list(domain = domain, rows = df.values.tolist())
+    return orange_table
