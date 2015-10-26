@@ -10,7 +10,8 @@ from PyQt4 import QtCore, QtGui
 
 import Orange
 from Orange.base import Model
-from Orange.data import ContinuousVariable, DiscreteVariable
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
+from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
@@ -37,10 +38,10 @@ class OWPredictions(widget.OWWidget):
     icon = "icons/Predictions.svg"
     priority = 200
     description = "Display predictions of models for an input data set."
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Table, "set_data"),
               ("Predictors", Model,
                "set_predictor", widget.Multiple)]
-    outputs = [("Predictions", Orange.data.Table),
+    outputs = [("Predictions", Table),
                ("Evaluation Results", Orange.evaluation.Results)]
 
     show_attrs = Setting(True)
@@ -80,6 +81,14 @@ class OWPredictions(widget.OWWidget):
         self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
     def set_data(self, data):
+        self.error(1)
+        if isinstance(data, SqlTable):
+            if data.approx_len() < AUTO_DL_LIMIT:
+                data = Table(data)
+            else:
+                self.error(1, "Download (and sample if necessary) "
+                              "the SQL data first.")
+                data = None
         self.data = data
         self.invalidate_predictions()
 
@@ -196,8 +205,8 @@ class OWPredictions(widget.OWWidget):
         else:
             X = []
             attrs = newattrs
-        domain = Orange.data.Domain(attrs, self.data.domain.class_var,
-                                    metas=self.data.domain.metas)
+        domain = Domain(attrs, self.data.domain.class_var,
+                        metas=self.data.domain.metas)
 
         if newcolumns:
             X.extend(numpy.atleast_2d(cols) for cols in newcolumns)
@@ -206,8 +215,8 @@ class OWPredictions(widget.OWWidget):
         else:
             X = numpy.zeros((len(self.data), 0))
 
-        predictions = Orange.data.Table.from_numpy(
-            domain, X, self.data.Y, metas=self.data.metas)
+        predictions = Table.from_numpy(domain, X, self.data.Y,
+                                       metas=self.data.metas)
         predictions.name = self.data.name
 
         results = None
@@ -249,7 +258,7 @@ class OWPredictions(widget.OWWidget):
 if __name__ == "__main__":
     app = QtGui.QApplication([])
     w = OWPredictions()
-    data = Orange.data.Table("iris")
+    data = Table("iris")
 #    svm_clf = Orange.classification.SVMLearner(probability=True)(data)
 #    lr_clf = Orange.classification.LogisticRegressionLearner()(data)
     svm_clf = Orange.regression.RidgeRegressionLearner(alpha=1.0)(data)
