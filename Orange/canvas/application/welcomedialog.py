@@ -6,7 +6,7 @@ Orange Canvas Welcome Dialog
 from PyQt4.QtGui import (
     QDialog, QWidget, QToolButton, QCheckBox, QAction,
     QHBoxLayout, QVBoxLayout, QFont, QSizePolicy,
-    QPixmap, QIcon, QPainter, QColor, QBrush
+    QPixmap, QIcon, QPainter, QColor, QBrush, QLabel
 )
 
 from PyQt4.QtCore import Qt, QRect, QPoint
@@ -117,8 +117,15 @@ class WelcomeDialog(QDialog):
 
         self.__showAtStartupCheck = check
 
+        feedback = QLabel(
+            '<a href="http://orange.biolab.si/survey/long.html">Help us improve!</a>')
+        feedback.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        feedback.setOpenExternalLinks(True)
+
         bottom_bar_layout.addWidget(check, alignment=Qt.AlignVCenter | \
                                     Qt.AlignLeft)
+        bottom_bar_layout.addWidget(feedback, alignment=Qt.AlignVCenter | \
+                                    Qt.AlignRight)
 
         self.layout().addWidget(bottom_bar, alignment=Qt.AlignBottom,
                                 stretch=1)

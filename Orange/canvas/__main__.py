@@ -16,8 +16,8 @@ import signal
 
 import pkg_resources
 
-from PyQt4.QtGui import QFont, QColor
-from PyQt4.QtCore import Qt, QDir
+from PyQt4.QtGui import QFont, QColor, QDesktopServices
+from PyQt4.QtCore import Qt, QDir, QUrl
 
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
@@ -355,6 +355,13 @@ def main(argv=None):
     if stderr_redirect:
         sys.excepthook = ExceptHook()
         sys.excepthook.handledException.connect(output_view.parent().show)
+
+    # If run for the first time, open a browser tab with a survey
+    first_run = settings.value("startup/first-run", True, type=bool)
+    if first_run:
+        success = QDesktopServices.openUrl(
+            QUrl("http://orange.biolab.si/survey/short.html"));
+        settings.setValue("startup/first-run", not success)
 
     with redirect_stdout(stdout), redirect_stderr(stderr):
         log.info("Entering main event loop.")
