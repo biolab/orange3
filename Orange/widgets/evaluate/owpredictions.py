@@ -13,6 +13,7 @@ from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.sql import check_sql_input
 
 
 # Input slot for the Predictors channel
@@ -79,6 +80,7 @@ class OWPredictions(widget.OWWidget):
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
         self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
+    @check_sql_input
     def set_data(self, data):
         self.data = data
         self.invalidate_predictions()

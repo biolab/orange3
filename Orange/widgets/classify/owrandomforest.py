@@ -9,6 +9,7 @@ from Orange.preprocess.preprocess import Preprocess
 from Orange.classification.random_forest import (RandomForestLearner,
                                                  RandomForestClassifier)
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWRandomForest(widget.OWWidget):
@@ -124,6 +125,7 @@ class OWRandomForest(widget.OWWidget):
         self.settingsChanged()
         self.apply()
 
+    @check_sql_input
     def set_data(self, data):
         """Set the input train data set."""
         self.data = data

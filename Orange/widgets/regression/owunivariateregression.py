@@ -14,6 +14,7 @@ from Orange.regression import Learner
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWUnivariateRegression(widget.OWWidget):
@@ -124,6 +125,7 @@ class OWUnivariateRegression(widget.OWWidget):
 
         self.plotview.clear()
 
+    @check_sql_input
     def set_data(self, data):
         self.clear()
         self.data = data

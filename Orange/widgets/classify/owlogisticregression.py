@@ -6,6 +6,7 @@ from Orange.data import Table
 from Orange.classification import logistic_regression as lr
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWLogisticRegression(widget.OWWidget):
@@ -75,6 +76,7 @@ class OWLogisticRegression(widget.OWWidget):
             frmt = "C={:.3f}"
         self.c_label.setText(frmt.format(self.C))
 
+    @check_sql_input
     def set_data(self, data):
         self.data = data
         if data is not None:
