@@ -14,7 +14,8 @@ from PyQt4.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
-import Orange.data
+from Orange.data import Domain, Table, DiscreteVariable, StringVariable
+from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical
@@ -38,8 +39,7 @@ def split_domain(domain, split_label):
 
     domains = []
     for value, attrs in groups.items():
-        group_domain = Orange.data.Domain(
-            attrs, domain.class_vars, domain.metas)
+        group_domain = Domain(attrs, domain.class_vars, domain.metas)
 
         domains.append((value, group_domain))
 
@@ -51,7 +51,7 @@ def split_domain(domain, split_label):
 
 def vstack_by_subdomain(data, sub_domains):
     domain = sub_domains[0]
-    newtable = Orange.data.Table(domain)
+    newtable = Table(domain)
 
     for sub_dom in sub_domains:
         sub_data = data.from_table(sub_dom, data)
@@ -349,8 +349,8 @@ class OWHeatMap(widget.OWWidget):
     icon = "icons/Heatmap.svg"
     priority = 1040
 
-    inputs = [("Data", Orange.data.Table, "set_dataset")]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default)]
+    inputs = [("Data", Table, "set_dataset")]
+    outputs = [("Selected Data", Table, widget.Default)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -602,24 +602,33 @@ class OWHeatMap(widget.OWWidget):
         """Set the input dataset to display."""
         self.closeContext()
         self.clear()
-
         self.error(0)
-        self.warning(0)
+        self.information([0, 1])
+
+        if isinstance(data, SqlTable):
+            if data.approx_len() < 4000:
+                data = Table(data)
+            else:
+                self.information(0, "Data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(2000, partial=True)
+                data = Table(data_sample)
+
         input_data = data
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
             ndisc = sum(var.is_discrete for var in data.domain.attributes)
             data = data.from_table(
-                Orange.data.Domain([var for var in data.domain.attributes
-                                    if var.is_continuous],
-                                   data.domain.class_vars,
-                                   data.domain.metas),
+                Domain([var for var in data.domain.attributes
+                        if var.is_continuous],
+                       data.domain.class_vars,
+                       data.domain.metas),
                 data)
             if not data.domain.attributes:
                 self.error(0, "No continuous feature columns")
                 input_data = data = None
             else:
-                self.warning(0, "{} discrete column{} removed"
+                self.information(1, "{} discrete column{} ignored"
                                 .format(ndisc, "s" if ndisc > 1 else ""))
 
         self.data = data
@@ -629,8 +638,7 @@ class OWHeatMap(widget.OWWidget):
         if data is not None:
             variables = self.data.domain.class_vars + self.data.domain.metas
             variables = [var for var in variables
-                         if isinstance(var, (Orange.data.DiscreteVariable,
-                                             Orange.data.StringVariable))]
+                         if isinstance(var, (DiscreteVariable, StringVariable))]
             self.annotation_vars.extend(variables)
 
             for var in variables:
@@ -2234,7 +2242,7 @@ def test_main(argv=sys.argv):
     app = QtGui.QApplication(argv)
     ow = OWHeatMap()
 
-    ow.set_dataset(Orange.data.Table(filename))
+    ow.set_dataset(Table(filename))
     ow.handleNewSignals()
     ow.show()
     ow.raise_()
