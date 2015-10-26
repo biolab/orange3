@@ -14,7 +14,7 @@ from PyQt4.QtGui import (
     QGraphicsScene, QGraphicsView, QTransform, QPainterPath,
     QColor, QBrush, QPen, QFontMetrics, QGridLayout, QFormLayout,
     QSizePolicy, QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
-    QGraphicsLayoutItem
+    QGraphicsLayoutItem, QAction, QKeySequence, QFont
 )
 
 from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
@@ -727,6 +727,9 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Number of top clusters to select
     top_n = settings.Setting(3)
 
+    #: Dendrogram zoom factor
+    zoom_factor = settings.Setting(0)
+
     append_clusters = settings.Setting(True)
     cluster_role = settings.Setting(2)
     cluster_name = settings.Setting("Cluster")
@@ -811,6 +814,27 @@ class OWHierarchicalClustering(widget.OWWidget):
                                    callback=self._selection_method_changed)
         grid.addWidget(self.top_n_spin, 2, 1)
         box.layout().addLayout(grid)
+
+        zoom_box = gui.widgetBox(self.controlArea, "Zoom")
+        self.zoom_slider = gui.hSlider(
+            zoom_box, self, "zoom_factor", minValue=-6, maxValue=3, step=1,
+            ticks=True, createLabel=False,
+            callback=self.__zoom_factor_changed)
+
+        zoom_in = QAction(
+            "Zoom in", self, shortcut=QKeySequence.ZoomIn,
+            triggered=self.__zoom_in
+        )
+        zoom_out = QAction(
+            "Zoom out", self, shortcut=QKeySequence.ZoomOut,
+            triggered=self.__zoom_out
+        )
+        zoom_reset = QAction(
+            "Reset zoom", self,
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
+            triggered=self.__zoom_reset
+        )
+        self.addActions([zoom_in, zoom_out, zoom_reset])
 
         self.controlArea.layout().addStretch()
 
@@ -1163,6 +1187,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.top_axis.line.setValue(cut.x())
             # update the line visibility, output, ...
             self._selection_method_changed()
+        elif obj is self._main_graphics and \
+                event.type() == QEvent.LayoutRequest:
+            self.__update_size_constraints()
 
         return super().eventFilter(obj, event)
 
@@ -1277,6 +1304,50 @@ class OWHierarchicalClustering(widget.OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
+    def __zoom_in(self):
+        def clip(minval, maxval, val):
+            return min(max(val, minval), maxval)
+        self.zoom_factor = clip(self.zoom_slider.minimum(),
+                                self.zoom_slider.maximum(),
+                                self.zoom_factor + 1)
+        self.__zoom_factor_changed()
+
+    def __zoom_out(self):
+        def clip(minval, maxval, val):
+            return min(max(val, minval), maxval)
+        self.zoom_factor = clip(self.zoom_slider.minimum(),
+                                self.zoom_slider.maximum(),
+                                self.zoom_factor - 1)
+        self.__zoom_factor_changed()
+
+    def __zoom_reset(self):
+        self.zoom_factor = 0
+        self.__zoom_factor_changed()
+
+    def __update_size_constraints(self):
+        size = self._main_graphics.size()
+        preferred = self._main_graphics.sizeHint(
+            Qt.PreferredSize, constraint=QSizeF(size.width(), -1))
+        self._main_graphics.resize(QSizeF(size.width(), preferred.height()))
+        self._main_graphics.layout().activate()
+
+    def __zoom_factor_changed(self):
+        font = self.scene.font()
+        factor = (1.25 ** self.zoom_factor)
+        font = qfont_scaled(font, factor)
+        self.labels.setFont(font)
+        self.dendrogram.setFont(font)
+        self.__update_size_constraints()
+
+
+def qfont_scaled(font, factor):
+    scaled = QFont(font)
+    if font.pointSizeF() != -1:
+        scaled.setPointSizeF(font.pointSizeF() * factor)
+    elif font.pixelSize() != -1:
+        scaled.setPixelSize(int(font.pixelSize() * factor))
+    return scaled
+
 
 class GraphicsSimpleTextList(QGraphicsWidget):
     """A simple text list widget."""
@@ -1335,21 +1406,24 @@ class GraphicsSimpleTextList(QGraphicsWidget):
         QGraphicsWidget.setVisible(self, visible)
         self.updateGeometry()
 
-    def setFont(self, font):
-        """Set the font for the text."""
-        QGraphicsWidget.setFont(self, font)
+    def changeEvent(self, event):
+        if event.type() == QEvent.FontChange:
+            self.__update_font()
+        return super().changeEvent(event)
+
+    def __iter__(self):
+        return iter(self.label_items)
+
+    def __update_font(self):
         for item in self.label_items:
-            item.setFont(font)
+            item.setFont(self.font())
 
         layout = self.layout()
         for i in range(layout.count()):
             layout.itemAt(i).updateGeometry()
 
-        self.layout().activate()
+        self.layout().invalidate()
         self.updateGeometry()
-
-    def __iter__(self):
-        return iter(self.label_items)
 
 
 class WrapperLayoutItem(QGraphicsLayoutItem):
