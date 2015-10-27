@@ -1,12 +1,15 @@
 from itertools import chain
+
 from PyQt4 import QtGui, Qt, QtCore
+
+from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
+                         Table)
+import Orange.data.filter as data_filter
+from Orange.data.sql.table import SqlTable
+from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import *
 from Orange.widgets.utils import vartype
-from Orange.data.table import Table
-from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
-from Orange.preprocess import Remove
-import Orange.data.filter as data_filter
 
 
 class OWSelectRows(widget.OWWidget):
