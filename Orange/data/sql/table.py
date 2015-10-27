@@ -328,9 +328,9 @@ class SqlTable(table.Table):
             X.append(row._x)
             Y.append(row._y)
             metas.append(row._metas)
-        self._X = np.vstack(X)
-        self._Y = np.vstack(Y)
-        self._metas = np.vstack(metas)
+        self._X = np.vstack(X).astype(np.float64)
+        self._Y = np.vstack(Y).astype(np.float64)
+        self._metas = np.vstack(metas).astype(object)
         self._W = np.empty((self._X.shape[0], 0))
         self._init_ids(self)
         if not partial or limit and self._X.shape[0] < limit:
@@ -718,7 +718,7 @@ class SqlRowInstance(instance.Instance):
         nvar = len(domain.variables)
         super().__init__(domain, data[:nvar])
         if len(data) > nvar:
-            self._metas = data[nvar:]
+            self._metas = np.asarray(data[nvar:], dtype=object)
 
 
 class ToSql:
