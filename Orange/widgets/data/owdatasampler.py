@@ -35,6 +35,7 @@ class OWDataSampler(widget.OWWidget):
     use_seed = Setting(False)
     replacement = Setting(False)
     stratify = Setting(False)
+    sql_dl = Setting(False)
     sampling_type = Setting(FixedProportion)
     sampleSizeNumber = Setting(1)
     sampleSizePercentage = Setting(70)
@@ -95,16 +96,7 @@ class OWDataSampler(widget.OWWidget):
         self.selected_fold_spin = gui.spin(
             ibox, self, "selectedFold", 1, self.number_of_folds,
             addToLayout=False, callback=self.fold_changed)
-
         form.addRow("Selected fold", self.selected_fold_spin)
-
-        self.options_box = gui.widgetBox(self.controlArea, "Options")
-        gui.checkBox(self.options_box, self, "use_seed",
-                     "Replicable (deterministic) sampling",
-                     callback=self.settings_changed)
-        gui.checkBox(self.options_box, self, "stratify",
-                     "Stratify sample (when possible)",
-                     callback=self.settings_changed)
 
         self.sql_box = gui.widgetBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sql_box, self, "sampling_type",
@@ -121,6 +113,19 @@ class OWDataSampler(widget.OWWidget):
                         callback=set_sampling_type(self.FixedProportion))
         spin.setSuffix(" %")
         self.sql_box.setVisible(False)
+
+        self.options_box = gui.widgetBox(self.controlArea, "Options")
+        self.cb_seed = gui.checkBox(
+            self.options_box, self, "use_seed",
+            "Replicable (deterministic) sampling",
+            callback=self.settings_changed)
+        self.cb_stratify = gui.checkBox(
+            self.options_box, self, "stratify",
+            "Stratify sample (when possible)", callback=self.settings_changed)
+        self.cb_sql_dl = gui.checkBox(
+            self.options_box, self, "sql_dl", "Download data to local memory",
+            callback=self.settings_changed)
+        self.cb_sql_dl.setVisible(False)
 
         gui.button(self.controlArea, self, "Sample Data",
                    callback=self.commit)
@@ -145,8 +150,10 @@ class OWDataSampler(widget.OWWidget):
         if dataset is not None:
             sql = isinstance(dataset, SqlTable)
             self.sampling_box.setVisible(not sql)
-            self.options_box.setVisible(not sql)
             self.sql_box.setVisible(sql)
+            self.cb_seed.setVisible(not sql)
+            self.cb_stratify.setVisible(not sql)
+            self.cb_sql_dl.setVisible(sql)
             self.dataInfoLabel.setText(
                 '{}{} instances in input data set.'.format(*(
                     ('~', dataset.approx_len()) if sql else
@@ -172,6 +179,8 @@ class OWDataSampler(widget.OWWidget):
             else:
                 sample = self.data.sample_time(
                     self.sampleSizeSqlTime, no_cache=True)
+            if self.sql_dl:
+                sample = Table(sample)
         else:
             if self.indices is None or not self.use_seed:
                 self.updateindices()
