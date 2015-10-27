@@ -93,13 +93,13 @@ class OWSelectRows(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
         box_setting = gui.widgetBox(box, 'Purging')
-        gui.checkBox(box_setting, self, "purge_attributes",
-                     "Remove unused features",
-                     callback=self.conditions_changed)
+        self.cb_pa = gui.checkBox(
+            box_setting, self, "purge_attributes", "Remove unused features",
+            callback=self.conditions_changed)
         gui.separator(box_setting, height=1)
-        gui.checkBox(box_setting, self, "purge_classes",
-                     "Remove unused classes",
-                     callback=self.conditions_changed)
+        self.cb_pc = gui.checkBox(
+            box_setting, self, "purge_classes", "Remove unused classes",
+            callback=self.conditions_changed)
         gui.auto_commit(box, self, "auto_commit", label="Commit",
                         checkbox_label="Commit on change")
         self.set_data(None)
@@ -272,6 +272,8 @@ class OWSelectRows(widget.OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.data = data
+        self.cb_pa.setEnabled(not isinstance(data, SqlTable))
+        self.cb_pc.setEnabled(not isinstance(data, SqlTable))
         self.remove_all_rows()
         self.add_button.setDisabled(data is None)
         self.add_all_button.setDisabled(
@@ -357,7 +359,8 @@ class OWSelectRows(widget.OWWidget):
 
             purge_attrs = self.purge_attributes
             purge_classes = self.purge_classes
-            if purge_attrs or purge_classes:
+            if (purge_attrs or purge_classes) and \
+                    not isinstance(self.data, SqlTable):
                 attr_flags = sum([Remove.RemoveConstant * purge_attrs,
                                   Remove.RemoveUnusedValues * purge_attrs])
                 class_flags = sum([Remove.RemoveConstant * purge_classes,
