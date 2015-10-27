@@ -1,7 +1,8 @@
 from itertools import chain
 from PyQt4 import QtGui, Qt, QtCore
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import *
+from Orange.widgets.settings import \
+    PerfectDomainContextHandler, Setting, ContextSetting
 from Orange.widgets.utils import vartype
 from Orange.data.table import Table
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
@@ -23,8 +24,7 @@ class OWSelectRows(widget.OWWidget):
 
     want_main_area = False
 
-    settingsHandler = DomainContextHandler(
-        match_values=DomainContextHandler.MATCH_VALUES_ALL)
+    settingsHandler = PerfectDomainContextHandler()
     conditions = ContextSetting([])
     update_on_change = Setting(True)
     purge_attributes = Setting(True)
@@ -278,7 +278,11 @@ class OWSelectRows(widget.OWWidget):
             self.commit()
             return
         self.conditions = []
-        self.openContext(data)
+        try:
+            self.openContext(data)
+        except Exception:
+            pass
+
         if not self.conditions and len(data.domain.variables):
             self.add_row()
         self.update_info(data, self.data_in_variables)
