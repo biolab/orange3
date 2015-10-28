@@ -350,7 +350,7 @@ class OWKMeans(widget.OWWidget):
     def set_data(self, data):
         self.data = data
         if data is None:
-            self.table_view.setRowCount(0)
+            self.table_model.setRowCount(0)
         else:
             self.data = data
             self.run()
