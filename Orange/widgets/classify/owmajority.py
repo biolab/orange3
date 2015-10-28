@@ -36,6 +36,10 @@ class OWMajority(widget.OWWidget):
         self.apply()
 
     def set_data(self, data):
+        self.error(0)
+        if data is not None and not data.domain.has_discrete_class:
+            self.error(0, "Data does not have a discrete target variable")
+            data = None
         self.data = data
         if data is not None:
             self.apply()
