@@ -1,29 +1,24 @@
+from itertools import chain
+import pkg_resources
 import sys
 import warnings
 from xml.sax.saxutils import escape
 
-import pkg_resources
-
 import numpy
 import scipy.spatial.distance
-from itertools import chain
-
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, QEvent
-
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
-
-from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalette
-
-from Orange.widgets.utils import itemmodels
 
 import Orange.data
 import Orange.projection
 import Orange.distance
 import Orange.misc
+from Orange.widgets import widget, gui, settings
 from Orange.widgets.io import FileFormat
+from Orange.widgets.utils import colorpalette, itemmodels
+from Orange.widgets.utils.sql import check_sql_input
 
 
 def torgerson(distances, n_components=2):
@@ -346,6 +341,7 @@ class OWMDS(widget.OWWidget):
 
         self._initialize()
 
+    @check_sql_input
     def set_data(self, data):
         self.signal_data = data
 

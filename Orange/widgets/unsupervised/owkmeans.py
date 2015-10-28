@@ -1,14 +1,15 @@
 import math
-import numpy as np
 
+import numpy as np
 from PyQt4.QtGui import QGridLayout, QSizePolicy, \
     QTableView, QStandardItemModel, QStandardItem, QIntValidator
 from PyQt4.QtCore import Qt, QTimer
 
+from Orange.clustering import KMeans
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.data import Table, Domain, DiscreteVariable
-from Orange.clustering import KMeans
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWKMeans(widget.OWWidget):
@@ -347,6 +348,7 @@ class OWKMeans(widget.OWWidget):
         self.send("Annotated Data", new_table)
         self.send("Centroids", centroids)
 
+    @check_sql_input
     def set_data(self, data):
         self.data = data
         if data is None:
