@@ -259,7 +259,9 @@ class OWFile(widget.OWWidget):
 
     def reload(self):
         if self.recent_paths:
-            if self.file_combo.currentText() == self.recent_paths[0].relpath:
+            basename = self.file_combo.currentText()
+            if (basename == self.recent_paths[0].relpath or
+                basename == os.path.basename(self.recent_paths[0].abspath)):
                 return self.open_file(self.recent_paths[0].abspath)
         self.select_file(len(self.recent_paths) + 1)
 
