@@ -9,7 +9,8 @@ import sklearn.cross_validation as skl_cross_validation
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.data.table import Table
+from Orange.data import Table
+from Orange.data.sql.table import SqlTable
 
 
 class OWDataSampler(widget.OWWidget):
@@ -21,19 +22,25 @@ class OWDataSampler(widget.OWWidget):
     category = "Data"
     keywords = ["data", "sample"]
     inputs = [("Data", Table, "set_data")]
-    outputs = [("Data Sample", Table, widget.Default), ("Remaining Data", Table)]
+    outputs = [("Data Sample", Table, widget.Default),
+               ("Remaining Data", Table)]
 
     want_main_area = False
+    resizing_enabled = False
 
     RandomSeed = 42
     FixedProportion, FixedSize, CrossValidation = range(3)
+    SqlTime, SqlProportion = range(2)
 
     use_seed = Setting(False)
     replacement = Setting(False)
     stratify = Setting(False)
+    sql_dl = Setting(False)
     sampling_type = Setting(FixedProportion)
     sampleSizeNumber = Setting(1)
     sampleSizePercentage = Setting(70)
+    sampleSizeSqlTime = Setting(1)
+    sampleSizeSqlPercentage = Setting(0.1)
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
 
@@ -46,9 +53,9 @@ class OWDataSampler(widget.OWWidget):
         self.dataInfoLabel = gui.widgetLabel(box, 'No data on input.')
         self.outputInfoLabel = gui.widgetLabel(box, ' ')
 
-        box = gui.widgetBox(self.controlArea, "Sampling Type")
-        sampling = gui.radioButtons(
-            box, self, "sampling_type", callback=self.sampling_type_changed)
+        self.sampling_box = gui.widgetBox(self.controlArea, "Sampling Type")
+        sampling = gui.radioButtons(self.sampling_box, self, "sampling_type",
+                                    callback=self.sampling_type_changed)
 
         def set_sampling_type(i):
             def f():
@@ -89,21 +96,39 @@ class OWDataSampler(widget.OWWidget):
         self.selected_fold_spin = gui.spin(
             ibox, self, "selectedFold", 1, self.number_of_folds,
             addToLayout=False, callback=self.fold_changed)
-
         form.addRow("Selected fold", self.selected_fold_spin)
 
-        box = gui.widgetBox(self.controlArea, "Options")
-        gui.checkBox(box, self, "use_seed",
-                     "Replicable (deterministic) sampling",
-                     callback=self.settings_changed)
-        gui.checkBox(box, self, "stratify",
-                     "Stratify sample (when possible)",
-                     callback=self.settings_changed)
+        self.sql_box = gui.widgetBox(self.controlArea, "Sampling Type")
+        sampling = gui.radioButtons(self.sql_box, self, "sampling_type",
+                                    callback=self.sampling_type_changed)
+        gui.appendRadioButton(sampling, "Time:")
+        ibox = gui.indentedBox(sampling)
+        spin = gui.spin(ibox, self, "sampleSizeSqlTime", minv=1, maxv=3600,
+                        callback=set_sampling_type(self.FixedSize))
+        spin.setSuffix(" sec")
+        gui.appendRadioButton(sampling, "Percentage")
+        ibox = gui.indentedBox(sampling)
+        spin = gui.spin(ibox, self, "sampleSizeSqlPercentage", spinType=float,
+                        minv=0.0001, maxv=100, step=0.1, decimals=4,
+                        callback=set_sampling_type(self.FixedProportion))
+        spin.setSuffix(" %")
+        self.sql_box.setVisible(False)
+
+        self.options_box = gui.widgetBox(self.controlArea, "Options")
+        self.cb_seed = gui.checkBox(
+            self.options_box, self, "use_seed",
+            "Replicable (deterministic) sampling",
+            callback=self.settings_changed)
+        self.cb_stratify = gui.checkBox(
+            self.options_box, self, "stratify",
+            "Stratify sample (when possible)", callback=self.settings_changed)
+        self.cb_sql_dl = gui.checkBox(
+            self.options_box, self, "sql_dl", "Download data to local memory",
+            callback=self.settings_changed)
+        self.cb_sql_dl.setVisible(False)
 
         gui.button(self.controlArea, self, "Sample Data",
                    callback=self.commit)
-
-        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
     def sampling_type_changed(self):
         self.settings_changed()
@@ -123,10 +148,19 @@ class OWDataSampler(widget.OWWidget):
     def set_data(self, dataset):
         self.data = dataset
         if dataset is not None:
+            sql = isinstance(dataset, SqlTable)
+            self.sampling_box.setVisible(not sql)
+            self.sql_box.setVisible(sql)
+            self.cb_seed.setVisible(not sql)
+            self.cb_stratify.setVisible(not sql)
+            self.cb_sql_dl.setVisible(sql)
             self.dataInfoLabel.setText(
-                '%d instances in input data set.' % len(dataset))
-            self.sampleSizeSpin.setMaximum(len(dataset))
-            self.updateindices()
+                '{}{} instances in input data set.'.format(*(
+                    ('~', dataset.approx_len()) if sql else
+                    ('', len(dataset)))))
+            if not sql:
+                self.sampleSizeSpin.setMaximum(len(dataset))
+                self.updateindices()
         else:
             self.dataInfoLabel.setText('No data on input.')
             self.outputInfoLabel.setText('')
@@ -137,6 +171,16 @@ class OWDataSampler(widget.OWWidget):
         if self.data is None:
             sample = other = None
             self.outputInfoLabel.setText("")
+        elif isinstance(self.data, SqlTable):
+            other = None
+            if self.sampling_type == self.SqlProportion:
+                sample = self.data.sample_percentage(
+                    self.sampleSizeSqlPercentage, no_cache=True)
+            else:
+                sample = self.data.sample_time(
+                    self.sampleSizeSqlTime, no_cache=True)
+            if self.sql_dl:
+                sample = Table(sample)
         else:
             if self.indices is None or not self.use_seed:
                 self.updateindices()
