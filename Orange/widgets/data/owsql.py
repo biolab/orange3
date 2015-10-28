@@ -6,10 +6,13 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QCursor, QMessageBox
 
 from Orange.data import Table
-from Orange.data.sql.table import SqlTable, LARGE_TABLE
+from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.widget import OutputSignal
+
+
+MAX_DL_LIMIT = 1000000
 
 
 class OWSql(widget.OWWidget):
@@ -40,6 +43,7 @@ class OWSql(widget.OWWidget):
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
+    download = Setting(False)
 
     def __init__(self):
         super().__init__()
@@ -97,8 +101,13 @@ class OWSql(widget.OWWidget):
         box.layout().addWidget(self.custom_sql)
 
         gui.checkBox(box, self, "guess_values",
-                     "Auto-discover discrete variables.",
+                     "Auto-discover discrete variables",
                      callback=self.open_table)
+
+        gui.checkBox(box, self, "download",
+                     "Download data to local memory",
+                     callback=self.open_table)
+
         self.connect()
         if self.table:
             self.open_table()
@@ -220,6 +229,24 @@ class OWSql(widget.OWWidget):
                 domain = table.get_domain(guess_values=True)
             QApplication.restoreOverrideCursor()
             table.domain = domain
+
+        if self.download:
+            if table.approx_len() > MAX_DL_LIMIT:
+                QMessageBox.warning(
+                    self, 'Warning', "Data is too big to download.\n"
+                    "Consider using the Data Sampler widget to download "
+                    "a sample instead.")
+                self.download = False
+            elif table.approx_len() > AUTO_DL_LIMIT:
+                confirm = QMessageBox.question(
+                    self, 'Question', "Data appears to be big. Do you really "
+                                      "want to download it to local memory?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if confirm == QMessageBox.No:
+                    self.download = False
+        if self.download:
+            table.download_data(MAX_DL_LIMIT)
+            table = Table(table)
 
         self.send("Data", table)
 
