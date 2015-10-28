@@ -174,24 +174,35 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
 
 
 def color_palette_table(colors, samples=255,
-                        threshold_low=0.0, threshold_high=1.0, gamma=None):
+                        threshold_low=0.0, threshold_high=1.0,
+                        underflow=None, overflow=None,
+                        gamma=None):
     N = len(colors)
     colors = np.array(colors, dtype=np.ubyte)
     low, high = threshold_low * 255, threshold_high * 255
     points = np.linspace(low, high, N)
     space = np.linspace(0, 255, 255)
 
+    if underflow is None:
+        underflow = [None, None, None]
+
+    if overflow is None:
+        overflow = [None, None, None]
+
     if gamma is None or gamma < 0.0001:
-        r = np.interp(space, points, colors[:, 0], left=255, right=0)
-        g = np.interp(space, points, colors[:, 1], left=255, right=0)
-        b = np.interp(space, points, colors[:, 2], left=255, right=0)
+        r = np.interp(space, points, colors[:, 0],
+                      left=underflow[0], right=overflow[0])
+        g = np.interp(space, points, colors[:, 1],
+                      left=underflow[1], right=overflow[1])
+        b = np.interp(space, points, colors[:, 2],
+                      left=underflow[2], right=overflow[2])
     else:
-        r = interp_exp(space, points, colors[:, 0], left=255, right=0,
-                       gamma=gamma)
-        g = interp_exp(space, points, colors[:, 1], left=255, right=0,
-                       gamma=gamma)
-        b = interp_exp(space, points, colors[:, 2], left=255, right=0,
-                       gamma=gamma)
+        r = interp_exp(space, points, colors[:, 0], gamma=gamma,
+                       left=underflow[0], right=overflow[0])
+        g = interp_exp(space, points, colors[:, 1], gamma=gamma,
+                       left=underflow[0], right=overflow[0])
+        b = interp_exp(space, points, colors[:, 2], gamma=gamma,
+                       left=underflow[0], right=overflow[0])
     return np.c_[r, g, b]
 
 
