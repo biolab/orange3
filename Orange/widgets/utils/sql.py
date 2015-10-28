@@ -12,7 +12,7 @@ def check_sql_input(f):
     :param f: widget's `set_data` method to wrap
     :return: wrapped method that handles SQL data inputs
     """
-    def new_f(self, data):
+    def new_f(self, data, *args, **kwargs):
         self.error(219)
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
@@ -21,6 +21,6 @@ def check_sql_input(f):
                 self.error(219, "Download (and sample if necessary) "
                                 "the SQL data first")
                 data = None
-        return f(self, data)
+        return f(self, data, *args, **kwargs)
 
     return new_f
